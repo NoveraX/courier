@@ -21,7 +21,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "../src/apply-icons";
 import type { CourierIcons } from "../src/icon-files";
-import { elsewhere, executed, installed, settings } from "./vscode-stand-in";
+import {
+  elsewhere,
+  env,
+  executed,
+  installed,
+  settings,
+  workspace,
+  workspaceSettings,
+} from "./vscode-stand-in";
 
 const FILES = "material-icon-theme.files.associations";
 const FOLDERS = "material-icon-theme.folders.associations";
@@ -67,6 +75,9 @@ beforeEach(() => {
 
 afterEach(() => {
   settings.clear();
+  workspaceSettings.clear();
+  workspace.isTrusted = true;
+  env.remoteName = undefined;
   installed.clear();
   elsewhere.length = 0;
   executed.length = 0;
@@ -318,5 +329,52 @@ describe("Courier's icons in several profiles on one computer", () => {
 
     expect(kept).toHaveLength(4);
     expect(existsSync(home)).toBe(false);
+  });
+});
+
+describe("an icon theme that does not run here", () => {
+  it("takes no icons and is said not to be installed, nothing written", async () => {
+    installed.delete("vscode-icons-team.vscode-icons");
+
+    const why = await applyIcons(icons, "vsicons");
+
+    expect(why).toBe("vscode-icons is not installed.");
+    expect(existsSync(custom)).toBe(false);
+    expect(settings.has("vsicons.associations.files")).toBe(false);
+  });
+
+  it("is said to run on the remote machine in a remote window, where its icons cannot be written from here", async () => {
+    installed.clear();
+    env.remoteName = "ssh-remote";
+
+    const why = await applyIcons(icons, "material");
+
+    expect(why).toContain(
+      "Material Icon Theme does not run on this computer in this remote window",
+    );
+    expect(existsSync(home)).toBe(false);
+    expect(settings.has(FILES)).toBe(false);
+  });
+});
+
+describe("vscode-icons' custom icons folder in a workspace not trusted", () => {
+  it("comes from the user's settings alone, so the workspace cannot choose where Courier writes", async () => {
+    const chosen = join(custom, "..", "..", "chosen-by-workspace");
+    workspaceSettings.set("vsicons.customIconFolderPath", chosen);
+    workspace.isTrusted = false;
+
+    await applyIcons(icons, "vsicons");
+
+    expect(copiesIn(custom)).toHaveLength(6);
+    expect(existsSync(chosen)).toBe(false);
+  });
+
+  it("comes from the workspace's settings once it is trusted, as vscode-icons reads it", async () => {
+    const chosen = join(custom, "..", "..", "chosen-by-workspace");
+    workspaceSettings.set("vsicons.customIconFolderPath", chosen);
+
+    await applyIcons(icons, "vsicons");
+
+    expect(copiesIn(join(chosen, "vsicons-custom-icons"))).toHaveLength(6);
   });
 });

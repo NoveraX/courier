@@ -19,7 +19,9 @@ import {
   configurationListeners,
   configWatchers,
   executed,
+  extensionListeners,
   installed,
+  logged,
   registered,
   settings,
   shown,
@@ -51,6 +53,9 @@ beforeEach(() => {
     extensionPath: join(root, "vsicons"),
     isActive: true,
   });
+  installed.set("PKief.material-icon-theme", {
+    extensionPath: join(root, "extensions", "pkief.material-icon-theme-5.39.0"),
+  });
   settings.set("vsicons.customIconFolderPath", join(root, "custom"));
   custom = join(root, "custom", "vsicons-custom-icons");
   workspaceConfigs.splice(0, Infinity, join(root, "shop", "courier.config.ts"));
@@ -69,6 +74,8 @@ afterEach(() => {
   installed.clear();
   configurationListeners.clear();
   configWatchers.dispose();
+  extensionListeners.dispose();
+  logged.length = 0;
   settings.clear();
   shown.infos.length = 0;
   asked.buttons.length = 0;
@@ -123,6 +130,18 @@ describe("the offer of Courier's file icons", () => {
     expect(shown.infos).toHaveLength(1);
   });
 
+  it("is not made for a theme in use that does not run here, which the log says once", async () => {
+    settings.set("workbench.iconTheme", "vscode-icons");
+    installed.delete("vscode-icons-team.vscode-icons");
+    registerFileIcons(context);
+    await settle();
+    configWatchers.fire();
+    await settle();
+
+    expect(shown.infos).toEqual([]);
+    expect(logged).toEqual([["info", "vscode-icons is not installed."]]);
+  });
+
   it("is not made for a theme that takes no icons, outside a Courier project, or when the settings say no", async () => {
     settings.set("workbench.iconTheme", "vs-seti");
     registerFileIcons(context);
@@ -172,6 +191,26 @@ describe("Courier's icons, once agreed to", () => {
     expect(shown.infos).toEqual([]);
     expect(settings.get("vsicons.associations.files")).toHaveLength(2);
     expect(existsSync(join(custom, "folder_type_courier.svg"))).toBe(true);
+  });
+
+  it("go into a theme installed later, once it runs here", async () => {
+    settings.set("workbench.iconTheme", "vscode-icons");
+    settings.set("material-icon-theme.files.associations", {
+      "courier.config.ts": "../../.noverax-courier-icons/courier-config",
+    });
+    const vsicons = installed.get("vscode-icons-team.vscode-icons");
+    installed.delete("vscode-icons-team.vscode-icons");
+    registerFileIcons(context);
+    await settle();
+    const before = settings.has("vsicons.associations.files");
+
+    if (vsicons) installed.set("vscode-icons-team.vscode-icons", vsicons);
+    extensionListeners.fire();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(before).toBe(false);
+    expect(settings.get("vsicons.associations.files")).toHaveLength(2);
+    expect(shown.infos).toEqual([]);
   });
 
   it("are not offered again where Settings Sync brought them from another machine", async () => {

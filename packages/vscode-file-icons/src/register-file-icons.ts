@@ -6,6 +6,7 @@ import { type CourierWorkspace, watchCourierWorkspace } from "./courier-workspac
 import { type CourierIcons, ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
 import { iconsLog, logFailure } from "./icons-log";
 import { MATERIAL_FILES, MATERIAL_FOLDERS } from "./material-icons";
+import { notHere } from "./theme-reach";
 import { VSICONS_FILES, VSICONS_FOLDERS } from "./vscode-icons";
 
 /* The themes Courier's icons were offered for on this machine, as its state keeps them. */
@@ -72,7 +73,8 @@ export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disp
         why ?? `Courier's icons went into ${ICON_THEMES[theme].label}, the icon theme in use`,
       );
     });
-  const follow = () => void followThemeInUse(context.globalState, workspace, carry);
+  const following: Following = { state: context.globalState, workspace, carry, told: new Set() };
+  const follow = () => void followThemeInUse(following);
   let settling: ReturnType<typeof setTimeout> | undefined;
   void keep();
   follow();
@@ -81,6 +83,12 @@ export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disp
     vscode.commands.registerCommand("courier.fileIcons.show", show),
     vscode.commands.registerCommand("courier.fileIcons.remove", remove),
     workspace.onDidChange(follow),
+    /* A theme installed or taken out later, and a workspace trusted later, which may name another custom icons folder. */
+    vscode.extensions.onDidChange(() => {
+      void keep();
+      follow();
+    }),
+    vscode.workspace.onDidGrantWorkspaceTrust(() => void keep()),
     vscode.workspace.onDidChangeConfiguration((change) => {
       if (change.affectsConfiguration("workbench.iconTheme")) follow();
       if (!ASSOCIATIONS.some((key) => change.affectsConfiguration(key))) return;
@@ -91,17 +99,26 @@ export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disp
   );
 }
 
+/* What following the theme in use needs: the profile's state, the workspace, how to carry the icons over, the themes said not to run here. */
+interface Following {
+  readonly state: vscode.Memento;
+  readonly workspace: CourierWorkspace;
+  readonly carry: (theme: IconTheme) => Promise<unknown>;
+  readonly told: Set<IconTheme>;
+}
+
 /*
- * The icons for the theme in use: in already, nothing to do; agreed to in the other theme, carried over;
- * agreed to nowhere, offered — once per theme.
+ * The icons for the theme in use: in already, nothing to do; running elsewhere than here, said once in the log;
+ * agreed to in the other theme, carried over; agreed to nowhere, offered — once per theme.
  */
-async function followThemeInUse(
-  state: vscode.Memento,
-  workspace: CourierWorkspace,
-  carry: (theme: IconTheme) => Promise<unknown>,
-): Promise<void> {
+async function followThemeInUse({ state, workspace, carry, told }: Following): Promise<void> {
   const theme = themeInUse();
   if (!theme || hasCourierIcons(theme)) return;
+  if (!vscode.extensions.getExtension(ICON_THEMES[theme].extension)) {
+    if (!told.has(theme)) iconsLog().info(notHere(theme));
+    told.add(theme);
+    return;
+  }
   if (ICON_THEME_IDS.some((other) => hasCourierIcons(other))) {
     await carry(theme);
     return;

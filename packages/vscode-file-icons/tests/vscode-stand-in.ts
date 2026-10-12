@@ -58,6 +58,9 @@ export const workspaceConfigs: string[] = [];
 /** Who watches the workspace's Courier configs come and go. */
 export const configWatchers = new EventEmitter<void>();
 
+/** Who listens for the user trusting the workspace. */
+export const trustGranted = new EventEmitter<void>();
+
 const configuration = (section?: string) => {
   const full = (key: string) => (section ? `${section}.${key}` : key);
   return {
@@ -94,6 +97,7 @@ export const workspace = {
     dispose: () => undefined,
   }),
   onDidChangeWorkspaceFolders: () => ({ dispose: () => undefined }),
+  onDidGrantWorkspaceTrust: trustGranted.event,
 };
 
 /** The extensions installed where this extension runs, by id, as a test installs them. */

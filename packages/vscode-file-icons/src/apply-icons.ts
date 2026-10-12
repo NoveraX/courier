@@ -25,9 +25,7 @@ export async function applyIcons(
   icons: CourierIcons,
   theme: IconTheme,
 ): Promise<string | undefined> {
-  if (theme === "material") return applyMaterial(icons);
-  await applyVsicons(icons);
-  return undefined;
+  return theme === "material" ? applyMaterial(icons) : applyVsicons(icons);
 }
 
 /**

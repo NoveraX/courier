@@ -15,6 +15,7 @@ import {
   withCourier,
   withoutCourier,
 } from "./material-icons";
+import { notHere } from "./theme-reach";
 import { changeThemeSettings, type RebuiltTheme } from "./theme-rewrites";
 import { userSetting } from "./user-settings";
 
@@ -34,7 +35,7 @@ import { userSetting } from "./user-settings";
  */
 export async function applyMaterial(icons: CourierIcons): Promise<string | undefined> {
   const material = vscode.extensions.getExtension(ICON_THEMES.material.extension);
-  if (!material) return `${ICON_THEMES.material.label} is not installed.`;
+  if (!material) return notHere("material");
   await copyIcons(copiesFor(icons.dir, material.extensionPath));
   await usersOf(material.extensionPath, icons).add();
   const plan = materialPlan();

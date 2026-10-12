@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import { copyIcons, removeCopies } from "./icon-copies";
 import { type CourierIcons, ICON_THEMES } from "./icon-files";
 import { type IconUsers, iconUsers } from "./icon-users";
+import { notHere } from "./theme-reach";
 import { changeThemeSettings, type RebuiltTheme } from "./theme-rewrites";
 import { userSetting } from "./user-settings";
 import {
@@ -22,18 +23,21 @@ import {
 /**
  * Put Courier's icons into vscode-icons: copied into its custom icons
  * folder, this profile counted among those that use them, then its
- * associations for them after the user's own.
+ * associations for them after the user's own — when vscode-icons runs
+ * here, beside this extension, and reads the folder written to.
  *
  * @param icons - Courier's icons, and the profile that puts them in
+ * @returns Why vscode-icons cannot take them, or `undefined` once they are in
  * @example
  * ```ts
  * await applyVsicons(icons);
  * ```
  */
-export async function applyVsicons(icons: CourierIcons): Promise<void> {
+export async function applyVsicons(icons: CourierIcons): Promise<string | undefined> {
   const vsicons = vscode.extensions.getExtension(ICON_THEMES.vsicons.extension);
+  if (!vsicons) return notHere("vsicons");
   const copied = await copyIcons(copiesFor(icons.dir));
-  if (vsicons) await usersOf(vsicons.extensionPath, icons).add();
+  await usersOf(vsicons.extensionPath, icons).add();
   await changeThemeSettings(
     vsiconsTheme(vsicons),
     [
@@ -42,6 +46,7 @@ export async function applyVsicons(icons: CourierIcons): Promise<void> {
     ],
     copied,
   );
+  return undefined;
 }
 
 /**
@@ -159,9 +164,13 @@ function vsiconsTheme(vsicons: vscode.Extension<unknown> | undefined): RebuiltTh
   };
 }
 
+/* A workspace not trusted does not choose where Courier writes: the folder then comes from the user's settings alone. */
 function customFolder(): string {
+  const setting = vscode.workspace.isTrusted
+    ? vscode.workspace.getConfiguration().get<unknown>(VSICONS_FOLDER_PATH)
+    : userSetting(VSICONS_FOLDER_PATH);
   return vsiconsFolder({
-    setting: vscode.workspace.getConfiguration().get<string>(VSICONS_FOLDER_PATH, ""),
+    setting: typeof setting === "string" ? setting : "",
     workspaces: (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
     appName: vscode.env.appName,
     platform: process.platform,

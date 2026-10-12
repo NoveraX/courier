@@ -10,7 +10,6 @@ import { registerStatus } from "./core/register-status";
 import { registerStudioLog } from "./core/register-studio-log";
 import { registerWorkflows } from "./core/register-workflows";
 import { registerCliCommands } from "./generate/cli-commands";
-import { registerFileIcons } from "./icons/register-file-icons";
 import { registerLiveViews } from "./live/register-live-views";
 import { closeCourierLog, courierLog } from "./log/courier-log";
 import { registerFailureNotices } from "./notify/register-failure-notices";
@@ -25,10 +24,11 @@ import { fetchSites } from "./studio/studio-api";
  * own; the Studio of the file in front in the status bar; the commands
  * that start Studio, set Courier up, add an endpoint, import an API and
  * check what a change breaks; Courier's tasks, and the recorded calls in
- * the Test Explorer; `@courier` in the chat; Courier's own icons in the
- * icon themes that take them; Courier's log in the Output panel; a notice
- * when a call fails, when asked for; and the MCP servers offered to VS
- * Code's agent.
+ * the Test Explorer; `@courier` in the chat; Courier's log in the Output
+ * panel; a notice when a call fails, when asked for; and the MCP servers
+ * offered to VS Code's agent. Courier's own file icons come from Courier
+ * File Icons, which VS Code installs with it and runs beside the icon
+ * themes — on this computer, in a remote window too.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -57,7 +57,6 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCliCommands(core),
     registerWorkflows(core),
     registerChat(core),
-    registerFileIcons(core),
     registerStudioLog(core),
     registerFailureNotices(core),
     vscode.commands.registerCommand("courier.showLog", () => courierLog().show()),

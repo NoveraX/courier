@@ -52,11 +52,13 @@ export function profileFor(theme, settings = () => ({}), keys = []) {
   writeFileSync(join(root, "user", "User", "settings.json"), JSON.stringify(user));
   writeFileSync(join(root, "user", "User", "keybindings.json"), JSON.stringify(keys));
   const dirs = [`--user-data-dir=${join(root, "user")}`, `--extensions-dir=${join(root, "ext")}`];
-  execFileSync(CLI, [
-    ...dirs,
-    "--install-extension",
-    join(ROOT, "packages/vscode/dist/courier.vsix"),
-  ]);
+  /* Courier File Icons first: Courier's extension pack names it, and it is found installed already. */
+  for (const vsix of [
+    "packages/vscode-file-icons/dist/courier-file-icons.vsix",
+    "packages/vscode/dist/courier.vsix",
+  ]) {
+    execFileSync(CLI, [...dirs, "--install-extension", join(ROOT, vsix)]);
+  }
   return { root, dirs };
 }
 

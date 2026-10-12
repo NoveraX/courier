@@ -12,7 +12,7 @@ import {
   vsiconsFolder,
   withCourierEntries,
   withoutCourierEntries,
-} from "../src/icons/vscode-icons";
+} from "../src/vscode-icons";
 
 const home = (change: Partial<Parameters<typeof vsiconsFolder>[0]> = {}) => ({
   setting: "",

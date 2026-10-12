@@ -12,8 +12,9 @@
  * `media/walkthrough/` too.
  *
  * It needs VS Code — `VSCODE_PATH` and `VSCODE_CLI` name its program and its
- * command line, macOS's places by default — the extension packaged, with
- * `npm run package -w courier-vscode`, and Studio running for the demo shop
+ * command line, macOS's places by default — both extensions packaged, with
+ * `npm run package -w courier-file-icons` and `npm run package -w
+ * courier-vscode`, and Studio running for the demo shop
  * as a project's own Studio, its traffic flowing, at `STUDIO_PORT` (6280 by
  * default). `npm run demo` serves a public demo, which writes no address
  * file for an editor to find, so start the parts in examples/demo-shop

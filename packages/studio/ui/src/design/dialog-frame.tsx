@@ -31,7 +31,8 @@ const FULL_SCREEN =
  * The frame of the new shell's dialogs: a dimmed backdrop, the header with
  * an icon, the title, what it is for and a close button, the steps when it
  * has some, a body that scrolls, and the footer. On a phone it takes the
- * whole screen.
+ * whole screen, and what it is for runs onto more lines rather than being
+ * cut short.
  *
  * @param props - Whether it is open, what closes it and when it may, its title, icon, width, header extras, footer and body
  * @returns The dialog
@@ -85,7 +86,7 @@ export function DialogFrame({
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <Dialog.Title className="text-prompt font-semibold">{title}</Dialog.Title>
                 {description && (
-                  <Dialog.Description className="truncate text-small text-fg-subtle">
+                  <Dialog.Description className="truncate text-small text-fg-subtle max-sm:whitespace-normal">
                     {description}
                   </Dialog.Description>
                 )}
@@ -93,7 +94,7 @@ export function DialogFrame({
               {closable && (
                 <Dialog.Close
                   aria-label={`Close ${title}`}
-                  className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:-mr-1 pointer-coarse:size-9"
+                  className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:size-9"
                 >
                   <X aria-hidden="true" className="size-3.75" />
                 </Dialog.Close>

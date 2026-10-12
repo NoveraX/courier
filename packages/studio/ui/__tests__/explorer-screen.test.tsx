@@ -132,6 +132,10 @@ const rowWith = (list: HTMLElement, text: string) => {
 };
 
 beforeEach(() => {
+  /* The figures count calls by how long ago they came: the clock stands at
+     the moment the calls are dated from, however slowly the file runs. */
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
@@ -142,7 +146,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe("the Explorer's graph", () => {
   it("draws every source, group and endpoint with its health and figure", async () => {

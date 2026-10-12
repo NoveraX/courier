@@ -86,8 +86,9 @@ export function createStudioSockets(
   const uiNamespace = io.of("/ui");
   uiNamespace.use((socket, next) => {
     const { origin, host } = socket.handshake.headers;
+    const caller = origin ?? "a caller that names no origin";
     if (policy.isUiCaller(origin, host)) next();
-    else next(new Error(`The Studio UI namespace does not answer ${origin}`));
+    else next(new Error(`The Studio UI namespace does not answer ${caller}`));
   });
   const runtimeNamespace = io.of("/runtime");
   for (const [namespace, who] of [

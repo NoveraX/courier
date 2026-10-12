@@ -69,6 +69,22 @@ describe("Studio's API", () => {
 
     expect(next).toHaveBeenCalled();
   });
+
+  it("refuses a caller that names no origin by a name DNS could rebind, saying so", () => {
+    const guard = createOriginGuard(
+      createStudioOriginPolicy({ bindHost: () => "0.0.0.0", extraOrigins: [] }),
+    );
+    const next = vi.fn();
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+
+    guard({ headers: { host: "studio.example.test" } } as never, res as never, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json.mock.calls[0]?.[0]).toMatchObject({
+      error: expect.stringMatching(/^Studio does not answer a caller that names no origin\./),
+    });
+  });
 });
 
 /* A name in a private network. It also resolves to this machine, first, where

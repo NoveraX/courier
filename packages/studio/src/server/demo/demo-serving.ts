@@ -7,11 +7,13 @@ import type { Server, ServerOptions } from "node:http";
 import type { RequestHandler } from "express-serve-static-core";
 
 import type { StudioSocketOptions } from "../socket-server";
+import type { StudioDemo } from "../types";
 import type { VisitorPolicy } from "../ui-token-guard";
 import { createDemoConnections } from "./demo-connections";
 import { demoHttpGuard } from "./demo-http-guard";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
 import { DEMO_MAX_MESSAGE_BYTES, type DemoVisitorsDeps, demoVisitors } from "./demo-visitors";
+import { type TrustedProxies, trustedProxies } from "./trusted-proxies";
 
 /**
  * How long a demo's HTTP server waits for what a connection is sending —
@@ -40,10 +42,12 @@ export const DEMO_REPLAY_BYTES = 2 * 1024 * 1024;
 /** A public demo's counts, the guard on its HTTP server, how its sockets take messages, and its visitors' rule. */
 export interface DemoServing {
   limits: DemoLimits;
+  /** The proxies a visitor's address is read past in `X-Forwarded-For`. */
+  trusted: TrustedProxies;
   httpGuard: RequestHandler;
   sockets: StudioSocketOptions;
   /** The rule a page without the token is held to, counted with the rest. */
-  visitors(deps: Omit<DemoVisitorsDeps, "limits">): VisitorPolicy;
+  visitors(deps: Omit<DemoVisitorsDeps, "limits" | "trusted">): VisitorPolicy;
   /** The options the HTTP server is made with: its timeouts. */
   serverOptions: ServerOptions;
   /** Hold the HTTP server to the demo's connection count. */
@@ -52,27 +56,32 @@ export interface DemoServing {
 
 /**
  * The guards a public demo serves its visitors with: one count of what they
- * do, on the sockets, the API and every HTTP request alike; sockets that
+ * do, on the sockets, the API and every HTTP request alike, each visitor by
+ * the address the proxies in front of the demo report; sockets that
  * compress, take smaller messages and are counted by address.
  *
+ * @param demo - How the demo runs: the proxies it is reached through
  * @returns What the demo adds to Studio's servers
+ * @throws {CourierError} `STUDIO_DEMO_PROXY_INVALID` for a trusted proxy that is no address or range
  * @example
  * ```ts
- * const serving = demo ? demoServing() : undefined;
+ * const serving = demo ? demoServing(demo) : undefined;
  * if (serving) app.use(serving.httpGuard);
  * ```
  */
-export function demoServing(): DemoServing {
+export function demoServing(demo: StudioDemo = {}): DemoServing {
   const limits = createDemoLimits();
+  const trusted = trustedProxies(demo.trustedProxies);
   return {
     limits,
-    httpGuard: demoHttpGuard(limits),
+    trusted,
+    httpGuard: demoHttpGuard(limits, trusted),
     sockets: {
       maxMessageBytes: DEMO_MAX_MESSAGE_BYTES,
       compress: true,
-      connections: createDemoConnections(limits),
+      connections: createDemoConnections(limits, trusted),
     },
-    visitors: (deps) => demoVisitors({ ...deps, limits }),
+    visitors: (deps) => demoVisitors({ ...deps, limits, trusted }),
     serverOptions: DEMO_SERVER_OPTIONS,
     holdServer(server) {
       server.maxConnections = DEMO_MAX_CONNECTIONS;

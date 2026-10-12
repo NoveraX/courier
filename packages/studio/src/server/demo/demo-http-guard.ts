@@ -5,6 +5,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express-serve-static-core";
 
 import { DEMO_WINDOW_MS, type DemoLimits } from "./demo-limits";
+import { NO_TRUSTED_PROXIES, type TrustedProxies } from "./trusted-proxies";
 import { visitorAddress } from "./visitor-address";
 
 /**
@@ -20,12 +21,15 @@ import { visitorAddress } from "./visitor-address";
  * app.use(demoHttpGuard(limits));
  * ```
  */
-export function demoHttpGuard(limits: DemoLimits): RequestHandler {
+export function demoHttpGuard(
+  limits: DemoLimits,
+  trusted: TrustedProxies = NO_TRUSTED_PROXIES,
+): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const address = visitorAddress({
-      peer: req.socket.remoteAddress,
-      forwardedFor: req.headers["x-forwarded-for"],
-    });
+    const address = visitorAddress(
+      { peer: req.socket.remoteAddress, forwardedFor: req.headers["x-forwarded-for"] },
+      trusted,
+    );
     const refusal = limits.take({ address }, "http");
     if (refusal === null) {
       next();

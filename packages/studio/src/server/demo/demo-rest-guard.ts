@@ -7,6 +7,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express-se
 import type { StudioToken } from "../studio-token";
 import { TOKEN_HEADER } from "../token-guard";
 import type { DemoLimits } from "./demo-limits";
+import { NO_TRUSTED_PROXIES, type TrustedProxies } from "./trusted-proxies";
 import { visitorAddress } from "./visitor-address";
 
 /** The largest body a demo's API reads: a spec pasted in, the log exported. */
@@ -36,17 +37,21 @@ export const DEMO_REST_BUSY =
  * app.use("/api", demoRestGuard(token, limits));
  * ```
  */
-export function demoRestGuard(token: StudioToken, limits: DemoLimits): RequestHandler {
+export function demoRestGuard(
+  token: StudioToken,
+  limits: DemoLimits,
+  trusted: TrustedProxies = NO_TRUSTED_PROXIES,
+): RequestHandler {
   let inFlight = 0;
   return (req: Request, res: Response, next: NextFunction): void => {
     if (req.method !== "POST" || token.matches(req.get(TOKEN_HEADER))) {
       next();
       return;
     }
-    const address = visitorAddress({
-      peer: req.socket.remoteAddress,
-      forwardedFor: req.headers["x-forwarded-for"],
-    });
+    const address = visitorAddress(
+      { peer: req.socket.remoteAddress, forwardedFor: req.headers["x-forwarded-for"] },
+      trusted,
+    );
     const refusal =
       inFlight >= DEMO_REST_IN_FLIGHT ? DEMO_REST_BUSY : limits.take({ address }, "rest");
     if (refusal !== null) {

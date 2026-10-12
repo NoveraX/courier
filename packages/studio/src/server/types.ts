@@ -61,6 +61,18 @@ export interface StudioDemo {
    * copy of the project — in epoch milliseconds. Pages count down to it.
    */
   resetsAt?: number | undefined;
+  /**
+   * The proxies the demo is reached through besides the one in front of
+   * Studio — a CDN, a WAF or a DDoS filter — by address or CIDR range, IPv4
+   * and IPv6. Studio counts each visitor by the address `X-Forwarded-For`
+   * reports, read past these proxies' own entries; the proxy in front of
+   * Studio, on this machine or a private network, needs no entry. Name only
+   * what is yours or your provider's: an entry is believed about whoever it
+   * reports. The proxy in front of Studio must pass these proxies' entries
+   * on rather than replace them, or every visitor is counted as one of the
+   * filter's addresses. Pages are not told them.
+   */
+  trustedProxies?: readonly string[] | undefined;
 }
 
 /** Where Studio listens, and what the project asked of it when it started. */

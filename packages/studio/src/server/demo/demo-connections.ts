@@ -6,6 +6,7 @@
 import type { IncomingMessage } from "node:http";
 
 import type { DemoLimits } from "./demo-limits";
+import { NO_TRUSTED_PROXIES, type TrustedProxies } from "./trusted-proxies";
 import { type VisitorConnection, visitorAddress } from "./visitor-address";
 
 /** How many sockets one address, and every visitor together, may hold open at once. */
@@ -43,18 +44,21 @@ export interface DemoConnections {
  * io.engine.on("connection", (socket) => connections.count(socket));
  * ```
  */
-export function createDemoConnections(limits: DemoLimits): DemoConnections {
+export function createDemoConnections(
+  limits: DemoLimits,
+  trusted: TrustedProxies = NO_TRUSTED_PROXIES,
+): DemoConnections {
   const open = new Map<string, number>();
   let total = 0;
   return {
     admits(request) {
-      const address = visitorAddress(connectionOf(request));
+      const address = visitorAddress(connectionOf(request), trusted);
       const held = open.get(address) ?? 0;
       if (held >= DEMO_CONNECTIONS.address || total >= DEMO_CONNECTIONS.all) return false;
       return limits.take({ address }, "connect") === null;
     },
     count(socket) {
-      const address = visitorAddress(connectionOf(socket.request));
+      const address = visitorAddress(connectionOf(socket.request), trusted);
       open.set(address, (open.get(address) ?? 0) + 1);
       total++;
       socket.once("close", () => {

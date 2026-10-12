@@ -10,6 +10,7 @@ import { type ContractRouteDeps, registerContractRoutes } from "./contract-drift
 import type { DemoLimits } from "./demo/demo-limits";
 import { DEMO_WRITE_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_BODY, demoRestGuard } from "./demo/demo-rest-guard";
+import type { TrustedProxies } from "./demo/trusted-proxies";
 import { type EditorRouteDeps, registerEditorRoutes } from "./editor/editor-routes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
@@ -56,8 +57,8 @@ export interface RestApiDeps {
   webhooks?: WebhookDirectory | undefined;
   /** The token a writing route asks for. */
   token: StudioToken;
-  /** The visitors' counts, when Studio serves a public demo. */
-  demo?: { limits: DemoLimits } | undefined;
+  /** The visitors' counts, and the proxies a visitor's address is read past, when Studio serves a public demo. */
+  demo?: { limits: DemoLimits; trusted?: TrustedProxies | undefined } | undefined;
 }
 
 /**
@@ -97,7 +98,7 @@ export function registerRestApi(
   /* Before anything reads a body: the API is for the Studio UI, not for every
      page the developer happens to have open. */
   app.use("/api", createOriginGuard(policy));
-  if (demo) app.use("/api", demoRestGuard(token, demo.limits));
+  if (demo) app.use("/api", demoRestGuard(token, demo.limits, demo.trusted));
   app.use(tokenGuard(token, demo ? DEMO_WRITE_REFUSAL : undefined));
   app.use("/api", express.json({ limit: demo ? DEMO_MAX_BODY : MAX_MESSAGE_BYTES }));
 

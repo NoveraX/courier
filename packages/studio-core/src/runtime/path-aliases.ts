@@ -14,7 +14,7 @@
  * TypeScript does, would put its target before every path it loads.
  */
 
-import { resolve } from "node:path";
+import { normalize, resolve } from "node:path";
 
 import { type InstalledPackages, installedPackages, packageNameOf } from "./installed-packages";
 import { scopeAliases, scopeOf } from "./scope-alias";
@@ -113,7 +113,8 @@ function candidatesOf(
   if (name !== null && installed.has(name)) return [];
 
   const matched = specifier.slice(best.prefix.length, specifier.length - best.suffix.length);
-  return best.targets.map((target) => target.replace("*", matched));
+  /* The matched part keeps the specifier's forward slashes: each candidate is named as the system names files. */
+  return best.targets.map((target) => normalize(target.replace("*", matched)));
 }
 
 function matches(entry: AliasEntry, specifier: string): boolean {

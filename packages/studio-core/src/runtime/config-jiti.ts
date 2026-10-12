@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Jiti, JitiOptions } from "jiti";
 import { readPathAliases } from "./path-aliases";
@@ -109,11 +109,13 @@ export async function createConfigJiti(
   const cached: Transform = transformCache
     ? (transformOptions) => transformCache.transform(transformOptions, compute)
     : compute;
-  const transform: Transform = onModule
-    ? (transformOptions) => {
-        if (transformOptions.filename !== undefined) onModule(transformOptions.filename);
-        return cached(transformOptions);
-      }
-    : cached;
+  /* jiti names a file with forward slashes on Windows: each is named as the system names it,
+     as the watcher and the cache of another process name it too. */
+  const transform: Transform = (given) => {
+    const transformOptions =
+      given.filename === undefined ? given : { ...given, filename: normalize(given.filename) };
+    if (onModule && transformOptions.filename !== undefined) onModule(transformOptions.filename);
+    return cached(transformOptions);
+  };
   return createJiti(file, { ...options, transform });
 }

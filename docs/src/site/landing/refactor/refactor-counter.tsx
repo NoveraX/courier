@@ -29,7 +29,7 @@ export function RefactorCounter({ struck, filesLeft, linesLeft }: RefactorCounte
       <div className="min-w-0 flex-1">
         <div className="h-1 overflow-hidden rounded-full bg-raised">
           <div
-            className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-tone-red),var(--color-ok))] shadow-[0_0_12px_rgb(94_211_163/0.5)] transition-[width] duration-300"
+            className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-tone-red),var(--color-ok))] shadow-[0_0_12px_rgb(94_211_163/0.5)] transition-[width] duration-300 motion-reduce:transition-none"
             style={{ width: `${Math.round((struck / OLD_LINES.length) * 100)}%` }}
           />
         </div>

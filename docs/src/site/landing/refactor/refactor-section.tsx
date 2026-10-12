@@ -4,9 +4,10 @@ import { Scissors } from "lucide-react"
 import { cn } from "@/site/cn"
 import type { CodeToken } from "@/site/code/highlight-tokens"
 import { useElementHeight } from "@/site/landing/use-element-height"
+import { useSmallViewport } from "@/site/landing/use-small-viewport"
 import { RefactorCounter } from "./refactor-counter"
 import { RefactorEditor } from "./refactor-editor"
-import { refactorFrame } from "./refactor-frame"
+import { refactorFrame, refactorStop } from "./refactor-frame"
 import { codeLineHeight } from "./refactor-layout"
 import { RefactorSteps } from "./refactor-steps"
 import { useScrollProgress } from "./use-scroll-progress"
@@ -36,10 +37,14 @@ function Eyebrow() {
  * ```
  */
 export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
-  const [sectionRef, { progress, width, height }] = useScrollProgress<HTMLElement>()
+  const room = useSmallViewport()
+  const [sectionRef, progress] = useScrollProgress<HTMLElement>({
+    height: room.height,
+    snap: refactorStop,
+  })
   const [narrativeRef, narrative] = useElementHeight<HTMLDivElement>()
   const frame = refactorFrame(progress)
-  const lineHeight = codeLineHeight({ width, height, narrative: narrative || 90 })
+  const lineHeight = codeLineHeight({ ...room, narrative: narrative || 90 })
   return (
     <>
       <div className="mx-auto mt-28 max-w-[1200px] px-5 min-[980px]:hidden">
@@ -58,7 +63,7 @@ export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
           <div
             aria-hidden="true"
             className={cn(
-              "pointer-events-none absolute inset-0 transition-opacity duration-600",
+              "pointer-events-none absolute inset-0 transition-opacity duration-600 motion-reduce:transition-none",
               "bg-[radial-gradient(50%_60%_at_70%_45%,rgb(240_128_106/0.06),transparent_70%)]",
               frame.done && "opacity-0"
             )}
@@ -66,11 +71,11 @@ export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
           <div
             aria-hidden="true"
             className={cn(
-              "pointer-events-none absolute inset-0 bg-[radial-gradient(50%_60%_at_70%_45%,rgb(94_211_163/0.09),transparent_70%)] transition-opacity duration-600",
+              "pointer-events-none absolute inset-0 bg-[radial-gradient(50%_60%_at_70%_45%,rgb(94_211_163/0.09),transparent_70%)] transition-opacity duration-600 motion-reduce:transition-none",
               !frame.done && "opacity-0"
             )}
           />
-          <div className="relative mx-auto max-w-[1200px] px-5 pt-[clamp(16px,3vh,32px)]">
+          <div className="relative mx-auto max-w-[1200px] px-5 pt-[clamp(16px,3svh,32px)]">
             <div className="grid grid-cols-1 items-start gap-4.5 min-[980px]:grid-cols-[minmax(0,380px)_minmax(0,1fr)] min-[980px]:gap-14">
               <div ref={narrativeRef} className="min-w-0">
                 <div className="hidden min-[980px]:block">

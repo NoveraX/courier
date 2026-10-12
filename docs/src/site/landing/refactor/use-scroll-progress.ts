@@ -4,50 +4,48 @@ import { useEffect, useState } from "react"
 
 const HEADER = 56
 
-/** How far through a tall section the reader is, and the window it is read in. */
-export interface ScrollProgress {
-  progress: number
-  width: number
+interface ScrollProgressOptions {
+  /** The window's height the section is laid out for: its small height, which holds still. */
   height: number
+  /** The progress the section shows for a given one: where the frame shown there begins. */
+  snap: (progress: number) => number
 }
 
-function measure(node: HTMLElement): ScrollProgress {
+function measure(node: HTMLElement, height: number): number {
   const rect = node.getBoundingClientRect()
-  const span = rect.height - (window.innerHeight - HEADER)
-  const progress = Math.max(0, Math.min(1, (HEADER - rect.top) / (span > 0 ? span : 1)))
-  return { progress, width: window.innerWidth, height: window.innerHeight }
+  const span = rect.height - (height - HEADER)
+  return Math.max(0, Math.min(1, (HEADER - rect.top) / (span > 0 ? span : 1)))
 }
 
 /**
  * How far the reader has scrolled through a section taller than the
  * window: 0 when its top meets the header, 1 when its bottom meets the
- * window's — measured once a frame while scrolling or resizing.
+ * window's. It is measured once a frame while scrolling, against the
+ * window's small height so that a phone's toolbars sliding away and back do
+ * not move it, and handed on snapped to where the section's frame changes —
+ * the section re-renders as the reader crosses such a point, not on every
+ * frame of the scroll.
  *
- * @returns A ref to put on the section, and the progress with the window's size
+ * @param options - The window's small height, and how a progress snaps to the frame it shows
+ * @returns A ref to put on the section, and the snapped progress
  * @example
  * ```tsx
- * const [ref, { progress }] = useScrollProgress<HTMLElement>()
+ * const { height } = useSmallViewport()
+ * const [ref, progress] = useScrollProgress<HTMLElement>({ height, snap: refactorStop })
  * ```
  */
-export function useScrollProgress<TElement extends HTMLElement>(): [
-  (node: TElement | null) => void,
-  ScrollProgress,
-] {
+export function useScrollProgress<TElement extends HTMLElement>({
+  height,
+  snap,
+}: ScrollProgressOptions): [(node: TElement | null) => void, number] {
   const [node, setNode] = useState<TElement | null>(null)
-  const [state, setState] = useState<ScrollProgress>({ progress: 0, width: 1200, height: 900 })
+  const [progress, setProgress] = useState(0)
   useEffect(() => {
     if (!node) return
     let frame = 0
     const update = () => {
       frame = 0
-      const next = measure(node)
-      setState((last) =>
-        Math.abs(next.progress - last.progress) > 0.002 ||
-        next.width !== last.width ||
-        next.height !== last.height
-          ? next
-          : last
-      )
+      setProgress(snap(measure(node, height)))
     }
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update)
@@ -60,6 +58,6 @@ export function useScrollProgress<TElement extends HTMLElement>(): [
       window.removeEventListener("scroll", schedule)
       window.removeEventListener("resize", schedule)
     }
-  }, [node])
-  return [setNode, state]
+  }, [node, height, snap])
+  return [setNode, progress]
 }

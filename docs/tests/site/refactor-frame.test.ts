@@ -7,7 +7,9 @@
 import { describe, expect, it } from "vitest"
 
 import { NEW_LINES, OLD_LINES } from "@/site/landing/refactor/refactor-code"
-import { refactorFrame } from "@/site/landing/refactor/refactor-frame"
+import { refactorFrame, refactorStop } from "@/site/landing/refactor/refactor-frame"
+
+const SAMPLES = Array.from({ length: 4001 }, (_, at) => at / 4000)
 
 describe("the refactor as it is scrolled", () => {
   it("starts with every hand-written line, three files and nothing added", () => {
@@ -44,5 +46,36 @@ describe("the refactor as it is scrolled", () => {
     expect(frame.lines.slice(OLD_LINES.length)).toEqual(NEW_LINES.map(() => "added"))
     expect(frame).toMatchObject({ struck: 20, done: true, filesLeft: 1, linesLeft: 3 })
     expect(frame.steps).toEqual(["done", "done", "done", "won"])
+  })
+})
+
+/**
+ * The section re-renders only when the scroll crosses a stop, so a stop
+ * must show exactly the frame of every point up to the next one — or the
+ * reader would see the refactor lag behind the scroll.
+ */
+describe("the stops the refactor's frame changes at", () => {
+  const stops = [...new Set(SAMPLES.map(refactorStop))]
+
+  it("shows at each point the frame of the stop it snaps to", () => {
+    for (const progress of SAMPLES) {
+      expect(refactorFrame(refactorStop(progress))).toEqual(refactorFrame(progress))
+    }
+  })
+
+  it("changes the frame at every stop, and at no point just before one", () => {
+    for (const stop of stops.slice(1)) {
+      const before = stop - 1e-9
+
+      expect(refactorStop(stop)).toBe(stop)
+      expect(refactorFrame(stop)).not.toEqual(refactorFrame(before))
+      expect(refactorFrame(refactorStop(before))).toEqual(refactorFrame(before))
+    }
+  })
+
+  it("comes to a few dozen through the whole scroll, not one per frame", () => {
+    expect(stops[0]).toBe(0)
+    expect(stops.length).toBeGreaterThan(20)
+    expect(stops.length).toBeLessThan(60)
   })
 })

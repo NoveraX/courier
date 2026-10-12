@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { LOCKFILE_SYNC, publishCommand } from "./release.ts";
+import { LOCKFILE_SYNC, publishCommand, versionedDirs } from "./release.ts";
 
 describe("publishCommand", () => {
   it("runs npm in the package's folder, never naming the folder", () => {
@@ -45,6 +45,22 @@ describe("a release commit", () => {
       "--ignore-scripts",
       "--no-audit",
       "--no-fund",
+    ]);
+  });
+});
+
+describe("the version a release writes", () => {
+  it("goes into every package and both editor extensions", () => {
+    expect(versionedDirs("0.1.0", ["packages/core"], ["packages/vscode"])).toEqual([
+      "packages/core",
+      "packages/vscode",
+    ]);
+  });
+
+  /* The marketplaces refuse a version with a prerelease part. */
+  it("leaves the extensions as they were for a prerelease", () => {
+    expect(versionedDirs("0.2.0-beta.1", ["packages/core"], ["packages/vscode"])).toEqual([
+      "packages/core",
     ]);
   });
 });

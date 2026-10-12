@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
      repository rather than from npm. */
   output: "standalone",
   outputFileTracingRoot: path.join(import.meta.dirname, ".."),
+  /* A shared build server renders a page's first batch slower than a
+     developer's machine; a page that runs out of time fails the build. */
+  staticPageGenerationTimeout: 180,
   serverExternalPackages: ["@noverax/courier"],
   /* Next.js otherwise writes its own guidance files into the project on
      every dev start; the site's tree holds only its own sources. */

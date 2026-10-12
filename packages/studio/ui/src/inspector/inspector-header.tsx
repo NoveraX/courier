@@ -1,4 +1,5 @@
 import { Copy, Pin, RotateCcw, Square, Terminal, X } from "lucide-react";
+import { Fragment } from "react";
 
 import { methodChip } from "@/design/method-color";
 import { OverflowMenu } from "@/design/overflow-menu";
@@ -72,8 +73,8 @@ export function InspectorHeader({
           </span>
         </div>
         <h2 className="m-0 truncate font-mono text-heading font-medium tracking-[-0.015em] max-sm:line-clamp-2 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">
-          <span className="text-fg-subtle">{prefix}</span>
-          {name}
+          <span className="text-fg-subtle">{dottedBreaks(prefix)}</span>
+          {dottedBreaks(name)}
         </h2>
         {request.url && (
           <button
@@ -151,4 +152,19 @@ function Chip({ className, children }: { className: string; children: string }):
       {children}
     </span>
   );
+}
+
+/* A dotted name wraps after a dot before it wraps inside a word: `payments.charges.` above `create`. */
+function dottedBreaks(text: string): React.ReactNode[] {
+  let offset = 0;
+  return text.split(".").map((part, at, parts) => {
+    const start = offset;
+    offset += part.length + 1;
+    if (at === parts.length - 1) return part;
+    return (
+      <Fragment key={start}>
+        {part}.<wbr />
+      </Fragment>
+    );
+  });
 }

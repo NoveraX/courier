@@ -1,8 +1,9 @@
 import { dirname, join } from "node:path";
 import * as vscode from "vscode";
 
+import { builtWithCourier } from "./built-theme";
 import { copyIcons, removeCopies } from "./icon-copies";
-import { type CourierIcons, ICON_FILES, ICON_THEMES } from "./icon-files";
+import { type CourierIcons, ICON_FILES, ICON_THEMES, ICONS_HOME } from "./icon-files";
 import { type IconUsers, iconUsers } from "./icon-users";
 import { isRecord } from "./is-record";
 import {
@@ -76,7 +77,8 @@ export async function removeMaterial(icons: CourierIcons): Promise<void> {
  * here or elsewhere — the copies go too, when this profile put them in and
  * no other profile on this computer uses them. A profile that never put
  * them in leaves them alone: the copies are every profile's, the settings
- * each its own.
+ * each its own. The theme's built file is every profile's too: built
+ * without them for another profile, it is built again for this one.
  *
  * @param icons - Courier's icons, and the profile that keeps them
  * @example
@@ -96,9 +98,22 @@ export async function keepMaterialCurrent(icons: CourierIcons): Promise<void> {
   await copyIcons(copiesFor(icons.dir, material.extensionPath));
   await users.add();
   const plan = materialPlan();
-  await changeThemeSettings(materialTheme(material.extensionPath), [
+  const theme = materialTheme(material.extensionPath);
+  await changeThemeSettings(theme, [
     moved(MATERIAL_FILES, plan.files),
     moved(MATERIAL_FOLDERS, plan.folders),
+  ]);
+  if ((await builtWithCourier(theme.files[0] ?? "", ICONS_HOME)) !== false) return;
+  /*
+   * Built without them for another profile, the theme looks again only when its settings change — it compares
+   * them with those it last built from in this profile, regardless of order — and has no command to build: Courier's
+   * folder entry goes out and comes back.
+   */
+  if (!material.isActive) await material.activate();
+  const folders = withoutCourier(associations(MATERIAL_FOLDERS));
+  await changeThemeSettings(theme, [
+    [MATERIAL_FOLDERS, folders],
+    [MATERIAL_FOLDERS, withCourier(folders, plan.folders)],
   ]);
 }
 

@@ -27,6 +27,7 @@ import {
   executed,
   installed,
   settings,
+  settingsChanged,
   workspace,
   workspaceSettings,
 } from "./vscode-stand-in";
@@ -74,6 +75,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  settingsChanged.length = 0;
   settings.clear();
   workspaceSettings.clear();
   workspace.isTrusted = true;
@@ -395,4 +397,91 @@ describe("vscode-icons' custom icons folder in a workspace not trusted", () => {
 
     expect(copiesIn(join(chosen, "vsicons-custom-icons"))).toHaveLength(6);
   });
+});
+
+describe("an icon theme built for another profile", () => {
+  /* The theme's built file, as another profile's settings had it built. */
+  const built = (file: string, text: string) => {
+    mkdirSync(join(file, ".."), { recursive: true });
+    writeFileSync(file, text);
+  };
+
+  it("has vscode-icons build it again with Courier's icons for a profile that put them in", async () => {
+    const manifest = join(
+      iconsDir,
+      "..",
+      "..",
+      "..",
+      "vscode-icons-team.vscode-icons-13.0.0",
+      "dist",
+      "src",
+      "vsicons-icon-theme.json",
+    );
+    await applyIcons(icons, "vsicons");
+    built(manifest, '{"iconDefinitions":{"_f_typescript":{}}}');
+    executed.length = 0;
+
+    await keepIconsCurrent(icons);
+
+    expect(executed).toEqual([["vscode-icons.regenerateIcons"]]);
+  });
+
+  it("has vscode-icons build it again without them for a profile that never put them in, the copies left", async () => {
+    const manifest = join(
+      iconsDir,
+      "..",
+      "..",
+      "..",
+      "vscode-icons-team.vscode-icons-13.0.0",
+      "dist",
+      "src",
+      "vsicons-icon-theme.json",
+    );
+    await applyIcons(icons, "vsicons");
+    settings.delete("vsicons.associations.files");
+    settings.delete("vsicons.associations.folders");
+    built(
+      manifest,
+      '{"iconDefinitions":{"_f_courier-config":{"iconPath":"custom/file_type_courier-config.svg"}}}',
+    );
+    executed.length = 0;
+
+    await keepIconsCurrent({ dir: iconsDir, profile: "profile-b" });
+
+    expect(executed).toEqual([["vscode-icons.regenerateIcons"]]);
+    expect(copiesIn(custom)).toHaveLength(6);
+  });
+
+  it("takes Courier's folder entry out of Material Icon Theme's settings and back, which has it build again", async () => {
+    const material = join(iconsDir, "..", "..", "..", "pkief.material-icon-theme-5.39.0");
+    const manifest = join(material, "dist", "material-icons.json");
+    let started = false;
+    installed.set("PKief.material-icon-theme", {
+      extensionPath: material,
+      isActive: false,
+      activate: async () => {
+        started = true;
+        return undefined;
+      },
+    });
+    await applyIcons(icons, "material");
+    built(manifest, '{"fileNames":{}}');
+    const seen: unknown[] = [];
+    settingsChanged.push((key) => {
+      if (key !== FOLDERS) return;
+      seen.push(settings.get(FOLDERS));
+      writeFileSync(manifest, JSON.stringify({ folders: settings.get(FOLDERS) ?? {} }));
+    });
+
+    await keepIconsCurrent(icons);
+
+    expect(started).toBe(true);
+    expect(seen).toEqual([
+      undefined,
+      { ".courier": "../../../../.noverax-courier-icons/folder-courier" },
+    ]);
+    expect(settings.get(FOLDERS)).toEqual({
+      ".courier": "../../../../.noverax-courier-icons/folder-courier",
+    });
+  }, 15_000);
 });

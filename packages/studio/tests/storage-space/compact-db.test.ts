@@ -31,7 +31,10 @@ describe("a database that gives back the room its deleted rows took", () => {
     const old = new DatabaseSync(file);
     old.exec("CREATE TABLE filler (body TEXT)");
     const insert = old.prepare("INSERT INTO filler (body) VALUES (?)");
+    /* One transaction: a flush per row takes Windows past the test's time. */
+    old.exec("BEGIN");
     for (let i = 0; i < 400; i++) insert.run("z".repeat(64 * 1024));
+    old.exec("COMMIT");
     old.exec("DELETE FROM filler");
     old.close();
     const before = statSync(file).size;
@@ -50,7 +53,9 @@ describe("a database that gives back the room its deleted rows took", () => {
     cleanups.push(() => studio.close());
     studio.db.exec("CREATE TABLE filler (body TEXT)");
     const insert = studio.db.prepare("INSERT INTO filler (body) VALUES (?)");
+    studio.db.exec("BEGIN");
     for (let i = 0; i < 400; i++) insert.run("z".repeat(64 * 1024));
+    studio.db.exec("COMMIT");
     studio.db.exec("DELETE FROM filler");
     const free = () => Number(studio.db.prepare("PRAGMA freelist_count").get()?.freelist_count);
     expect(free()).toBeGreaterThan(1000);

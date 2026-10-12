@@ -190,6 +190,15 @@ While the packages are below 1.0, a breaking change — a `!` or a
 that says so in `.releaserc.json` is removed to cut 1.0. Before anything is
 tagged, the release checks that its npm token is accepted.
 
+Work that changes no package — the scopes `docs`, `site`, `landing`,
+`examples`, `scripts` and `release` — releases nothing whatever its type, and
+the release notes leave it out. A commit that also names a package's scope,
+such as `fix(docs,core)`, counts as the package's. A release that deserves
+more than a list of its commits, the first or a major one, has its notes
+written in `.github/release-notes/v<version>.md`; the release takes them in
+place of the list, under the same heading, for the GitHub release, the
+changelog and the release commit.
+
 A push to `master` only checks. A release is cut by running the CI workflow
 by hand on `master` (Actions → CI → Run workflow): every check runs, then the
 release job waits for approval in the `release` environment, which holds the

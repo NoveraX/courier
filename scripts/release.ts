@@ -18,7 +18,7 @@ import { copyFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { packageDirs, publishOrder, readPkg, SCOPE } from "./release-order";
+import { extensionDirs, packageDirs, publishOrder, readPkg, SCOPE } from "./release-order";
 
 export function updateVersion(pkgDir: string, ver: string): void {
   const pkg = readPkg(pkgDir);
@@ -93,8 +93,33 @@ export function publishCommand(
   return { args, cwd: resolve(dir) };
 }
 
+/* The marketplaces take a version of three numbers alone. */
+const MARKETPLACE_VERSION = /^\d+\.\d+\.\d+$/;
+
+/**
+ * The packages a release writes its version into: every package published
+ * to npm, and the editor extensions — but a prerelease from the beta branch
+ * leaves the extensions at the last version they had.
+ *
+ * @param version - The version released
+ * @param packages - The packages published to npm
+ * @param extensions - The editor extensions
+ * @returns The folders whose manifests take the version
+ * @example
+ * ```ts
+ * versionedDirs("0.2.0-beta.1", ["packages/core"], ["packages/vscode"]); // ["packages/core"]
+ * ```
+ */
+export function versionedDirs(
+  version: string,
+  packages: readonly string[],
+  extensions: readonly string[],
+): string[] {
+  return MARKETPLACE_VERSION.test(version) ? [...packages, ...extensions] : [...packages];
+}
+
 function prepare(version: string, dirs: readonly string[]): void {
-  for (const dir of dirs) updateVersion(dir, version);
+  for (const dir of versionedDirs(version, dirs, extensionDirs())) updateVersion(dir, version);
   execFileSync("npm", [...LOCKFILE_SYNC], { stdio: "inherit" });
   for (const dir of dirs) copyFileSync("LICENSE", join(dir, "LICENSE"));
   execFileSync("npx", ["turbo", "run", "build"], { stdio: "inherit" });

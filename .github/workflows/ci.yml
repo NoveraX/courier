@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  # A release: every check, then the release job, which waits for the
+  # approval the `release` environment asks for
+  workflow_dispatch:
 
 # A newer push supersedes a pull request's run; on master it waits, so a
 # release job already publishing is never cancelled half-way.
@@ -308,10 +311,14 @@ jobs:
         run: npm run build
         working-directory: docs
 
+  # Cut by hand from master: a push only checks. The `release` environment
+  # holds the npm and Open VSX tokens and the Marketplace identity, and asks
+  # for its reviewers' approval before the job starts.
   release:
-    needs: [ci, platforms, react-native, browser, frameworks, quickstart]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [ci, platforms, react-native, browser, editor, frameworks, quickstart]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    environment: release
     concurrency:
       group: release
       cancel-in-progress: false
@@ -319,7 +326,8 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-      # npm mints the provenance attestation from this token
+      # npm mints the provenance attestation from this token, and the
+      # Marketplace identity signs in to Microsoft Entra ID with it
       id-token: write
     steps:
       - uses: actions/checkout@v7
@@ -336,10 +344,40 @@ jobs:
 
       - run: npm ci
 
+      # The version released is the tag the run adds; none when the commits
+      # since the last release call for none.
       - name: Release
+        id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           HUSKY: "0"
-        run: npx semantic-release
+        run: |
+          before=$(git tag --list 'v*' | sort)
+          npx semantic-release
+          after=$(git tag --list 'v*' | sort)
+          released=$(comm -13 <(echo "$before") <(echo "$after") | head -n 1)
+          echo "version=${released#v}" >> "$GITHUB_OUTPUT"
+
+      # The editor extensions, at the version the release gave them, on the
+      # Visual Studio Marketplace and Open VSX. A prerelease has no version
+      # the marketplaces take; until the Marketplace identity is set up, the
+      # Extensions workflow publishes them by hand.
+      - name: Sign in to Microsoft Entra ID as the Marketplace publisher
+        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID != ''
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish the editor extensions
+        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID != ''
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx tsx scripts/publish-extensions.ts
+
+      - name: Say the extensions wait
+        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID == ''
+        run: echo "::warning::The editor extensions were not published, as the release environment names no Marketplace identity. Publish them with the Extensions workflow once it does."

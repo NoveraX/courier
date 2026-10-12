@@ -14,8 +14,14 @@ interface PackageJson {
   name: string;
   version: string;
   private?: boolean;
+  engines?: Record<string, string>;
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  /** An editor extension's publisher, and the extensions it installs */
+  publisher?: string;
+  extensionPack?: string[];
+  extensionDependencies?: string[];
 }
 
 /** Packages under this scope are the ones published together. */
@@ -25,18 +31,36 @@ export function readPkg(pkgDir: string): PackageJson {
   return JSON.parse(readFileSync(join(pkgDir, "package.json"), "utf8"));
 }
 
-/** Every publishable package directory, in a stable listing order. */
-export function packageDirs(): string[] {
+/** Every package directory, in a stable listing order, with what its manifest says. */
+function workspaces(): Array<{ dir: string; pkg: PackageJson }> {
   return readdirSync("packages")
     .sort()
     .map((name) => join("packages", name))
-    .filter((dir) => {
-      try {
-        return statSync(join(dir, "package.json")).isFile() && !readPkg(dir).private;
-      } catch {
-        return false;
-      }
-    });
+    .filter((dir) => statSync(join(dir, "package.json"), { throwIfNoEntry: false })?.isFile())
+    .map((dir) => ({ dir, pkg: readPkg(dir) }));
+}
+
+/** Every publishable package directory, in a stable listing order. */
+export function packageDirs(): string[] {
+  return workspaces()
+    .filter(({ pkg }) => !pkg.private)
+    .map(({ dir }) => dir);
+}
+
+/**
+ * The editor extensions: released with the packages, at their version, but
+ * published to the extension marketplaces rather than to npm.
+ *
+ * @returns The directories of the packages that name the VS Code version they need
+ * @example
+ * ```ts
+ * extensionDirs(); // ["packages/vscode", "packages/vscode-file-icons"]
+ * ```
+ */
+export function extensionDirs(): string[] {
+  return workspaces()
+    .filter(({ pkg }) => pkg.engines?.vscode !== undefined)
+    .map(({ dir }) => dir);
 }
 
 /**

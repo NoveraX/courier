@@ -206,7 +206,7 @@
           "suspicious": {
             "noUndeclaredEnvVars": {
               "level": "error",
-              "options": { "allowedEnvVars": ["GITHUB_ACTIONS"] }
+              "options": { "allowedEnvVars": ["GITHUB_ACTIONS", "OVSX_PAT"] }
             }
           }
         }

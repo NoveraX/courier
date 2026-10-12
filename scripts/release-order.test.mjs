@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   dependencyGraph,
+  extensionDirs,
   orderByDependency,
   packageDirs,
   publishOrder,
@@ -140,5 +141,14 @@ describe("the real workspace", () => {
     expect(publishOrder(dirs).map((dir) => readPkg(dir).name)).not.toContain(
       "@noverax/courier-studio-ui",
     );
+  });
+});
+
+describe("the editor extensions", () => {
+  it("are the packages that name a VS Code version, none of them published to npm", () => {
+    const dirs = extensionDirs();
+
+    expect(dirs).toEqual(["packages/vscode", "packages/vscode-file-icons"]);
+    for (const dir of dirs) expect(packageDirs()).not.toContain(dir);
   });
 });

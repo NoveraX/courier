@@ -1,0 +1,59 @@
+name: Extensions
+
+# Courier for VS Code and Courier File Icons, published by hand to the Visual
+# Studio Marketplace and Open VSX at a version already released: again after
+# a marketplace failed it, or for a release cut before the Marketplace
+# identity was set up. A release publishes them itself. With `identify`, the
+# run only prints the id the Marketplace knows the identity by, which the
+# publisher adds as a member once.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The released version, without its v; empty with identify
+        type: string
+        default: ""
+      identify:
+        description: Only print the id the Marketplace knows this workflow's identity by
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  extensions:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      # Signs in to Microsoft Entra ID as the Marketplace publisher's identity
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.identify && github.ref || format('v{0}', inputs.version) }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build the extensions
+        if: ${{ !inputs.identify }}
+        run: npx turbo run build --filter=courier-vscode... --filter=courier-file-icons...
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish, or name the identity
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          MODE: ${{ inputs.identify && '--identify' || '' }}
+        run: npx tsx scripts/publish-extensions.ts $MODE

@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type * as Testing from "@noverax/courier-mock/testing";
 import { type ArgsDef, defineCommand } from "citty";
@@ -112,7 +112,7 @@ async function checkAll(
   const files: CheckedFile[] = [];
   const skipped: SkippedFile[] = [];
   for (const path of [...named, ...found]) {
-    const file = relative(root, path) || path;
+    const file = relative(root, path).split(sep).join("/") || path;
     let recordings: Testing.Fixture[];
     try {
       recordings = testing.readRecordings(path);

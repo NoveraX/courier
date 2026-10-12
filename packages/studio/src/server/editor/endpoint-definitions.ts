@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { relative, sep } from "node:path";
 
 import { declarationOf } from "../contract-drift/schema-edit/endpoint-declaration";
 import { type SourceModules, sourceModules } from "../contract-drift/schema-edit/source-modules";
@@ -19,7 +19,7 @@ export interface EndpointDefinition extends TextSpan {
   readonly source: string;
   /** Its call in the client: `orders.place` */
   readonly endpoint: string;
-  /** The file, relative to the project's root */
+  /** The file, relative to the project's root with forward slashes: `src/api/orders.ts` */
   readonly file: string;
   /** Its absolute path, links resolved */
   readonly path: string;
@@ -64,7 +64,8 @@ export function endpointDefinitions(
     }
     const name = spanOf(place, property.key.start, property.key.end);
     const span = spanOf(place, property.start, property.end);
-    return [{ source, endpoint, file: relative(modules.root, path), path, ...name, span }];
+    const file = relative(modules.root, path).split(sep).join("/");
+    return [{ source, endpoint, file, path, ...name, span }];
   });
 }
 

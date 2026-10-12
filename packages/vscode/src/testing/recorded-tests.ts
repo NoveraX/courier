@@ -1,7 +1,7 @@
-import { relative } from "node:path";
 import * as vscode from "vscode";
 
 import type { CourierProject, CourierProjects } from "../projects/courier-projects";
+import { recordingName } from "./recording-name";
 import { runVerify } from "./run-verify";
 import { problemText, type VerifyReport } from "./verify-report";
 
@@ -34,7 +34,11 @@ export function createRecordedTests(projects: CourierProjects): vscode.Disposabl
     for (const project of await projects.list()) {
       const pattern = new vscode.RelativePattern(project.root, RECORDINGS);
       for (const uri of await vscode.workspace.findFiles(pattern)) {
-        const item = controller.createTestItem(uri.fsPath, relative(project.root, uri.fsPath), uri);
+        const item = controller.createTestItem(
+          uri.fsPath,
+          recordingName(project.root, uri.fsPath),
+          uri,
+        );
         item.description = project.name;
         owners.set(item, project);
         items.push(item);
@@ -76,7 +80,7 @@ async function run(
     for (const item of items) testRun.started(item);
     const outcome = await runVerify(
       project.root,
-      items.map((item) => relative(project.root, item.id)),
+      items.map((item) => recordingName(project.root, item.id)),
       stop.signal,
     );
     if ("failure" in outcome) {
@@ -122,7 +126,7 @@ function record(
   report: VerifyReport,
 ): void {
   for (const item of items) {
-    const file = relative(project.root, item.id);
+    const file = recordingName(project.root, item.id);
     const checked = report.files.find((each) => each.file === file);
     const skipped = report.skipped.find((each) => each.file === file);
     if (!checked) {

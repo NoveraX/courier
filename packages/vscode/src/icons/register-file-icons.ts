@@ -3,20 +3,27 @@ import * as vscode from "vscode";
 
 import type { CourierCore } from "../core/courier-core";
 import { logFailure } from "../log/courier-log";
-import { applyIcons, keepIconsCurrent, removeIcons } from "./apply-icons";
+import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "./apply-icons";
 import { ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
+import { MATERIAL_FILES, MATERIAL_FOLDERS } from "./material-icons";
+import { VSICONS_FILES, VSICONS_FOLDERS } from "./vscode-icons";
 
-/* The themes Courier's icons were put into, and the themes they were offered for, as the user's state keeps them. */
-const APPLIED = "courier.fileIcons.themes";
+/* The themes Courier's icons were offered for on this machine, as its state keeps them. */
 const OFFERED = "courier.fileIcons.offered";
+/* The settings that say Courier's icons are in a theme — which Settings Sync brings from the user's other machines. */
+const ASSOCIATIONS = [MATERIAL_FILES, MATERIAL_FOLDERS, VSICONS_FILES, VSICONS_FOLDERS];
+/* Settings Sync writes settings one after another; the icons are kept current once they have all arrived. */
+const SETTLE_MS = 1_500;
 
 /**
  * Courier's own icons for `courier.config.*`, `courier.mocks.*` and the
  * `.courier` folder in the icon themes that take custom icons — Material
- * Icon Theme and vscode-icons: commands that put them in and take them out
- * through the user's settings, offered once per theme when it is the one in
- * use in a Courier project — as Courier starts, and when the user picks it
- * later — and kept current as Courier updates.
+ * Icon Theme and vscode-icons. The user agrees once: an offer, once per
+ * theme, when it is the one in use in a Courier project — as Courier
+ * starts, or when the user picks it later — or the command. From then on
+ * the icons follow the user's settings by themselves: on this machine and
+ * on every other one Settings Sync brings them to, across Courier's
+ * updates, and out again everywhere when taken out.
  *
  * @param core - The extension's core
  * @returns What removes the commands
@@ -26,44 +33,53 @@ const OFFERED = "courier.fileIcons.offered";
  * ```
  */
 export function registerFileIcons(core: CourierCore): vscode.Disposable {
-  const state = core.context.globalState;
   const iconsDir = join(core.context.extensionPath, "media", "icons");
-  const applied = () => state.get<IconTheme[]>(APPLIED, []);
+  /* One change to the icons at a time: the themes rebuild on each, and an offer, a command and a sync may come together. */
+  let queue: Promise<unknown> = Promise.resolve();
+  const inTurn = (what: string, change: () => Promise<unknown>) => {
+    queue = queue.then(change).catch((error: unknown) => logFailure(what, error));
+    return queue;
+  };
   const show = async (asked?: unknown) => {
     const theme = isTheme(asked) ? asked : await chooseTheme();
     if (!theme) return;
-    const why = await applyIcons(iconsDir, theme);
-    if (why) {
-      void vscode.window.showWarningMessage(why);
-      return;
-    }
-    await state.update(APPLIED, [...new Set([...applied(), theme])]);
-    void vscode.window.showInformationMessage(
-      `Courier's icons are in ${ICON_THEMES[theme].label}. "Courier: Remove Courier's Icons from the File Icon Theme" takes them out.`,
-    );
+    await inTurn("Courier could not put its file icons in", async () => {
+      const why = await applyIcons(iconsDir, theme);
+      if (why) void vscode.window.showWarningMessage(why);
+      else
+        void vscode.window.showInformationMessage(
+          `Courier's icons are in ${ICON_THEMES[theme].label}. "Courier: Remove Courier's Icons from the File Icon Theme" takes them out.`,
+        );
+    });
   };
-  const remove = async () => {
-    for (const theme of applied()) await removeIcons(theme);
-    await state.update(APPLIED, []);
-  };
-  void Promise.all(applied().map((theme) => keepIconsCurrent(iconsDir, theme))).catch(
-    (error: unknown) => logFailure("Courier could not keep its file icons current", error),
-  );
+  const remove = () =>
+    inTurn("Courier could not take its file icons out", async () => {
+      await removeIcons();
+      void vscode.window.showInformationMessage("Courier's icons are out of the file icon themes.");
+    });
+  const keep = () =>
+    inTurn("Courier could not keep its file icons current", () => keepIconsCurrent(iconsDir));
+  let settling: ReturnType<typeof setTimeout> | undefined;
+  void keep();
   return vscode.Disposable.from(
     vscode.commands.registerCommand("courier.fileIcons.show", show),
     vscode.commands.registerCommand("courier.fileIcons.remove", remove),
-    core.onRestart(() => void offerOnce(core, applied)),
+    core.onRestart(() => void offerOnce(core)),
     vscode.workspace.onDidChangeConfiguration((change) => {
-      if (change.affectsConfiguration("workbench.iconTheme")) void offerOnce(core, applied);
+      if (change.affectsConfiguration("workbench.iconTheme")) void offerOnce(core);
+      if (!ASSOCIATIONS.some((key) => change.affectsConfiguration(key))) return;
+      clearTimeout(settling);
+      settling = setTimeout(() => void keep(), SETTLE_MS);
     }),
+    { dispose: () => clearTimeout(settling) },
   );
 }
 
-async function offerOnce(core: CourierCore, applied: () => readonly IconTheme[]): Promise<void> {
+async function offerOnce(core: CourierCore): Promise<void> {
   const theme = themeInUse();
   const state = core.context.globalState;
   const offered = state.get<IconTheme[]>(OFFERED, []);
-  if (!theme || offered.includes(theme) || applied().includes(theme)) return;
+  if (!theme || offered.includes(theme) || hasCourierIcons(theme)) return;
   if (!core.settings().get<boolean>("fileIcons.offer", true)) return;
   if ((await core.projects.list()).length === 0) return;
   await state.update(OFFERED, [...offered, theme]);

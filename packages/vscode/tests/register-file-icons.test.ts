@@ -5,7 +5,7 @@
  * theme later — never once declined; shown in the theme in use by the
  * command, and taken out of every theme they were put into.
  */
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -16,6 +16,7 @@ import {
   asked,
   configurationListeners,
   executed,
+  installed,
   registered,
   settings,
   shown,
@@ -23,6 +24,7 @@ import {
 } from "./vscode-stand-in";
 
 let restarted: () => unknown;
+let custom: string;
 let projects: unknown[];
 let state: Map<string, unknown>;
 let core: CourierCore;
@@ -34,7 +36,12 @@ beforeEach(() => {
   for (const name of ["courier-config", "courier-mocks", "folder-courier", "folder-courier-open"]) {
     writeFileSync(join(icons, `${name}.svg`), "<svg/>");
   }
+  installed.set("vscode-icons-team.vscode-icons", {
+    extensionPath: join(root, "vsicons"),
+    isActive: true,
+  });
   settings.set("vsicons.customIconFolderPath", join(root, "custom"));
+  custom = join(root, "custom", "vsicons-custom-icons");
   projects = [{ root: "/work/shop", name: "shop" }];
   state = new Map();
   core = {
@@ -55,6 +62,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  installed.clear();
   configurationListeners.clear();
   settings.clear();
   shown.infos.length = 0;
@@ -116,19 +124,51 @@ describe("the offer of Courier's file icons", () => {
 });
 
 describe("the file icon commands", () => {
-  it("show the icons in the theme in use, and take them out of every theme they went into", async () => {
+  it("show the icons in the theme in use, and take them out of every theme they are in", async () => {
     settings.set("workbench.iconTheme", "vscode-icons");
     registerFileIcons(core);
 
     await registered.get("courier.fileIcons.show")?.();
-    const applied = state.get("courier.fileIcons.themes");
     const entries = settings.get("vsicons.associations.files");
     await registered.get("courier.fileIcons.remove")?.();
 
-    expect(applied).toEqual(["vsicons"]);
     expect(entries).toHaveLength(2);
-    expect(shown.infos.at(0)).toContain("Courier's icons are in vscode-icons.");
+    expect(shown.infos).toEqual([
+      expect.stringContaining("Courier's icons are in vscode-icons."),
+      "Courier's icons are out of the file icon themes.",
+    ]);
     expect(settings.has("vsicons.associations.files")).toBe(false);
-    expect(state.get("courier.fileIcons.themes")).toEqual([]);
+  });
+});
+
+describe("Courier's icons, once agreed to", () => {
+  it("are not offered again where Settings Sync brought them from another machine", async () => {
+    settings.set("workbench.iconTheme", "vscode-icons");
+    settings.set("vsicons.associations.files", [
+      { icon: "courier-config", extensions: ["courier.config.ts"] },
+    ]);
+    registerFileIcons(core);
+
+    restarted();
+    await settle();
+
+    expect(shown.infos).toEqual([]);
+  });
+
+  it("are copied once the settings Settings Sync brings have settled", async () => {
+    registerFileIcons(core);
+    await settle();
+    settings.set("vsicons.associations.files", [
+      { icon: "courier-config", extensions: ["courier.config.ts"] },
+    ]);
+
+    for (const listener of configurationListeners) {
+      listener({ affectsConfiguration: (key) => key === "vsicons.associations.files" });
+    }
+    const early = existsSync(join(custom, "file_type_courier-config.svg"));
+    await new Promise((resolve) => setTimeout(resolve, 1_800));
+
+    expect(early).toBe(false);
+    expect(existsSync(join(custom, "file_type_courier-config.svg"))).toBe(true);
   });
 });

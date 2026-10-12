@@ -16,6 +16,22 @@ export const ICONS = {
   folder: "folder-courier",
 } as const;
 
+/** Courier's icon files, as it ships them in `media/icons`. */
+export const ICON_FILES: readonly string[] = [
+  `${ICONS.config}.svg`,
+  `${ICONS.mocks}.svg`,
+  `${ICONS.folder}.svg`,
+  `${ICONS.folder}-open.svg`,
+];
+
+/**
+ * The folder in the editor's extensions folder that keeps Courier's icons
+ * for Material Icon Theme whatever Courier's version, so the paths in the
+ * settings never change; its dot keeps the editor from reading it as an
+ * extension of its own.
+ */
+export const ICONS_HOME = ".noverax-courier-icons";
+
 /** The icon themes that take Courier's icons, by the extension that makes each. */
 export const ICON_THEMES = {
   material: {

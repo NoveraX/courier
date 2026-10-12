@@ -180,7 +180,10 @@ export const configurationListeners = new Set<
 >();
 
 /** The extensions installed, by id, as a test installs them. */
-export const installed = new Map<string, { extensionPath: string }>();
+export const installed = new Map<
+  string,
+  { extensionPath: string; isActive?: boolean; activate?: () => Promise<unknown> }
+>();
 
 export const extensions = {
   getExtension: (id: string) => installed.get(id),

@@ -1,12 +1,17 @@
-import { applyMaterial, keepMaterialCurrent, removeMaterial } from "./apply-material";
-import { applyVsicons, keepVsiconsCurrent, removeVsicons } from "./apply-vsicons";
+import {
+  applyMaterial,
+  hasMaterialIcons,
+  keepMaterialCurrent,
+  removeMaterial,
+} from "./apply-material";
+import { applyVsicons, hasVsiconsIcons, keepVsiconsCurrent, removeVsicons } from "./apply-vsicons";
 import type { IconTheme } from "./icon-files";
 
 /**
  * Put Courier's icons into an icon theme, through the user settings the
- * theme takes custom icons by: Material Icon Theme's associations to the
- * icons Courier ships, or vscode-icons' associations and its custom icons
- * folder. The user's own associations stay.
+ * theme takes custom icons by: Material Icon Theme's associations to
+ * Courier's icons beside it, or vscode-icons' associations and its custom
+ * icons folder. The user's own associations stay.
  *
  * @param iconsDir - Courier's `media/icons` folder
  * @param theme - The theme
@@ -23,32 +28,50 @@ export async function applyIcons(iconsDir: string, theme: IconTheme): Promise<st
 }
 
 /**
- * Take Courier's icons out of an icon theme: its associations from the
- * user settings — the user's own kept — and, for vscode-icons, its icons
- * from the custom icons folder.
+ * Take Courier's icons out of every icon theme they are in: the
+ * associations from the user's settings — which Settings Sync takes out on
+ * the user's other machines too — the user's own kept, and the icons'
+ * copies.
  *
- * @param theme - The theme
  * @example
  * ```ts
- * await removeIcons("vsicons");
+ * await removeIcons();
  * ```
  */
-export async function removeIcons(theme: IconTheme): Promise<void> {
-  await (theme === "material" ? removeMaterial() : removeVsicons());
+export async function removeIcons(): Promise<void> {
+  await removeMaterial();
+  await removeVsicons();
 }
 
 /**
- * Keep the icons Courier put into a theme current after Courier updated:
- * Material Icon Theme's paths name the folder of Courier's version, and
- * vscode-icons keeps copies. What the user took out stays out.
+ * Keep Courier's icons in each icon theme as the user's settings say, on
+ * this machine too: the icons copied and every path Courier wrote current
+ * while the settings hold Courier's associations — brought by Settings
+ * Sync, or written by an older Courier — and the copies taken away once
+ * they hold none.
  *
  * @param iconsDir - Courier's `media/icons` folder
- * @param theme - The theme the icons were put into
  * @example
  * ```ts
- * await keepIconsCurrent(iconsDir, "material");
+ * await keepIconsCurrent(iconsDir);
  * ```
  */
-export async function keepIconsCurrent(iconsDir: string, theme: IconTheme): Promise<void> {
-  await (theme === "material" ? keepMaterialCurrent(iconsDir) : keepVsiconsCurrent(iconsDir));
+export async function keepIconsCurrent(iconsDir: string): Promise<void> {
+  await keepMaterialCurrent(iconsDir);
+  await keepVsiconsCurrent(iconsDir);
+}
+
+/**
+ * Whether the user's settings already hold Courier's icons for a theme —
+ * put in here, or brought by Settings Sync from another machine.
+ *
+ * @param theme - The theme
+ * @returns Whether they do
+ * @example
+ * ```ts
+ * if (hasCourierIcons("vsicons")) return;
+ * ```
+ */
+export function hasCourierIcons(theme: IconTheme): boolean {
+  return theme === "material" ? hasMaterialIcons() : hasVsiconsIcons();
 }

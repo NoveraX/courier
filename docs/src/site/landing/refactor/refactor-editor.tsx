@@ -4,6 +4,7 @@ import { NEW_LINES, OLD_LINES, REFACTOR_TABS } from "./refactor-code"
 import type { RefactorFrame } from "./refactor-frame"
 import { codeFontSize } from "./refactor-layout"
 import { RefactorLine } from "./refactor-line"
+import { codeScroll } from "./refactor-scroll"
 import { RefactorTabs } from "./refactor-tabs"
 
 interface RefactorEditorProps {
@@ -11,6 +12,8 @@ interface RefactorEditorProps {
   lineHeight: number
   /** The hand-written lines, then the new ones, highlighted. */
   lines: readonly CodeToken[][]
+  /** The window onto the lines when they do not all fit, in px; none when they do. */
+  window?: number | undefined
 }
 
 const LINE_KEYS = Array.from(
@@ -29,17 +32,19 @@ function status(frame: RefactorFrame): { text: string; tone: string } {
  * The refactor's editor: the hand-written code struck and removed line by
  * line, then the typed lines added — with its files as tabs that close as
  * they empty, and a status line saying where it stands, two lines tall on
- * a phone so that it shows whole.
+ * a phone so that it shows whole. Where not every line fits, it shows them
+ * through a window that follows the line changed last.
  *
- * @param props - The frame, the line height and the highlighted lines
+ * @param props - The frame, the line height, the highlighted lines and the window onto them
  * @returns The editor
  * @example
  * ```tsx
  * <RefactorEditor frame={frame} lineHeight={23} lines={lines} />
  * ```
  */
-export function RefactorEditor({ frame, lineHeight, lines }: RefactorEditorProps) {
+export function RefactorEditor({ frame, lineHeight, lines, window }: RefactorEditorProps) {
   const { text, tone } = status(frame)
+  const scroll = window === undefined ? 0 : codeScroll(frame.lines, lineHeight, window)
   const diff = frame.done
     ? { label: `−${OLD_LINES.length} +${NEW_LINES.length}`, tone: "text-ok" }
     : frame.struck
@@ -56,10 +61,19 @@ export function RefactorEditor({ frame, lineHeight, lines }: RefactorEditorProps
     >
       <div className="overflow-hidden rounded-[14px] bg-panel">
         <RefactorTabs frame={frame} diff={diff} />
-        <div className="dots relative overflow-x-auto py-3">
+        <div
+          className={cn(
+            "dots relative overflow-x-auto py-3",
+            window !== undefined && "overflow-y-hidden"
+          )}
+          style={window === undefined ? undefined : { height: `${window + 24}px` }}
+        >
           <div
-            className="min-w-max font-mono text-fg-muted"
-            style={{ fontSize: `${codeFontSize(lineHeight)}px` }}
+            className="min-w-max font-mono text-fg-muted transition-transform duration-450 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none"
+            style={{
+              fontSize: `${codeFontSize(lineHeight)}px`,
+              transform: scroll ? `translateY(-${scroll}px)` : undefined,
+            }}
           >
             {lines.map((line, at) => (
               <RefactorLine

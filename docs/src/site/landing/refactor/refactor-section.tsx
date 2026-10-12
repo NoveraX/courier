@@ -8,7 +8,7 @@ import { useSmallViewport } from "@/site/landing/use-small-viewport"
 import { RefactorCounter } from "./refactor-counter"
 import { RefactorEditor } from "./refactor-editor"
 import { refactorFrame, refactorStop } from "./refactor-frame"
-import { codeLineHeight } from "./refactor-layout"
+import { codeLineHeight, codeWindow, narrativeBeside, TWO_COLUMNS } from "./refactor-layout"
 import { RefactorSteps } from "./refactor-steps"
 import { useScrollProgress } from "./use-scroll-progress"
 
@@ -27,7 +27,9 @@ function Eyebrow() {
  * What Courier replaces, deleted as the reader scrolls: a call written by
  * hand — the fetch, a proxy route, query keys — struck chunk by chunk and
  * replaced by three typed lines, with the steps and the count beside it.
- * The stage holds still below the header while the section scrolls past.
+ * The stage holds still below the header while the section scrolls past;
+ * on a phone held sideways the count sits beside the code, and where the
+ * code does not fit whole it shows through a window onto the lines.
  *
  * @param props - The hand-written lines, then the new ones, highlighted
  * @returns The section, with its heading above it on a narrow screen
@@ -44,7 +46,9 @@ export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
   })
   const [narrativeRef, narrative] = useElementHeight<HTMLDivElement>()
   const frame = refactorFrame(progress)
-  const lineHeight = codeLineHeight({ ...room, narrative: narrative || 90 })
+  const stage = { ...room, narrative: narrative || 90 }
+  const lineHeight = codeLineHeight(stage)
+  const sideways = narrativeBeside(room) && room.width < TWO_COLUMNS
   return (
     <>
       <div className="mx-auto mt-28 max-w-[1200px] px-5 min-[980px]:hidden">
@@ -77,7 +81,12 @@ export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
             )}
           />
           <div className="relative mx-auto max-w-[1200px] px-5 pt-[clamp(16px,3svh,32px)]">
-            <div className="grid grid-cols-1 items-start gap-4.5 min-[980px]:grid-cols-[minmax(0,380px)_minmax(0,1fr)] min-[980px]:gap-14">
+            <div
+              className={cn(
+                "grid grid-cols-1 items-start gap-4.5 min-[980px]:grid-cols-[minmax(0,380px)_minmax(0,1fr)] min-[980px]:gap-14",
+                sideways && "grid-cols-[minmax(0,200px)_minmax(0,1fr)] gap-6"
+              )}
+            >
               <div ref={narrativeRef} className="min-w-0">
                 <div className="hidden min-[980px]:block">
                   <Eyebrow />
@@ -94,9 +103,15 @@ export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
                   struck={frame.struck}
                   filesLeft={frame.filesLeft}
                   linesLeft={frame.linesLeft}
+                  stacked={sideways}
                 />
               </div>
-              <RefactorEditor frame={frame} lineHeight={lineHeight} lines={lines} />
+              <RefactorEditor
+                frame={frame}
+                lineHeight={lineHeight}
+                lines={lines}
+                window={codeWindow(stage, lineHeight)}
+              />
             </div>
           </div>
         </div>

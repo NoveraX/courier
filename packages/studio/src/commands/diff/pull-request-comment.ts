@@ -17,6 +17,9 @@ export interface ReportComment {
 const LONGEST = 65_000;
 const PAGE = 100;
 const MOST_PAGES = 30;
+/* Who the token GitHub gives a job posts as. It is an app's token, which
+   `/user` refuses to name. */
+const ACTIONS_BOT = "github-actions[bot]";
 
 /**
  * Post the report on a pull request as one comment, and keep it current:
@@ -27,6 +30,13 @@ const MOST_PAGES = 30;
  * posted before is edited to say so, once the change it reported is gone.
  * A report longer than a comment holds is cut at a line, saying where the
  * whole of it is.
+ *
+ * Anyone who may comment can write the mark, so only a comment the token's
+ * own identity wrote is taken for the report: someone else's would have the
+ * job edit a comment its author can rewrite after it, or fail on it. GitHub
+ * names the person a token belongs to, but not an app: an app's token is
+ * taken to post as GitHub Actions' bot, as the token a job is given does,
+ * and another app's then finds no earlier report and posts a new one.
  *
  * @param target - The pull request, and the token that may post on it
  * @param report - The report, and the project it is about
@@ -45,8 +55,9 @@ export async function postReportComment(
 ): Promise<CommentOutcome> {
   const mark = `<!-- courier-studio diff: ${report.project.replaceAll("--", "- -")} -->`;
   const body = `${mark}\n${fitted(report.markdown)}`;
-  const github = caller(target, request);
-  const found = await commentWith(github, target, mark);
+  const send = sender(target, request);
+  const github = caller(send);
+  const found = await commentWith(github, target, mark, () => posterOf(send));
   if (found) {
     if (found.body.replaceAll("\r\n", "\n") === body) return "unchanged";
     await github("PATCH", `/repos/${target.repository}/issues/comments/${found.id}`, { body });
@@ -57,11 +68,12 @@ export async function postReportComment(
   return "created";
 }
 
+type Send = (method: string, path: string, body?: { body: string }) => Promise<Response>;
 type GitHubCall = (method: string, path: string, body?: { body: string }) => Promise<unknown>;
 
-function caller(target: PullRequestTarget, request: typeof fetch): GitHubCall {
-  return async (method, path, body) => {
-    const response = await request(`${target.api}${path}`, {
+function sender(target: PullRequestTarget, request: typeof fetch): Send {
+  return (method, path, body) =>
+    request(`${target.api}${path}`, {
       method,
       headers: {
         accept: "application/vnd.github+json",
@@ -72,6 +84,11 @@ function caller(target: PullRequestTarget, request: typeof fetch): GitHubCall {
       },
       ...(body && { body: JSON.stringify(body) }),
     });
+}
+
+function caller(send: Send): GitHubCall {
+  return async (method, path, body) => {
+    const response = await send(method, path, body);
     if (!response.ok) throw new Error(await refusal(method, path, response));
     return response.json();
   };
@@ -81,7 +98,9 @@ async function commentWith(
   github: GitHubCall,
   target: PullRequestTarget,
   mark: string,
+  poster: () => Promise<string>,
 ): Promise<{ id: number; body: string } | undefined> {
+  let self: string | undefined;
   for (let page = 1; page <= MOST_PAGES; page++) {
     const listed = await github(
       "GET",
@@ -91,12 +110,30 @@ async function commentWith(
     for (const comment of comments) {
       if (!isObject(comment) || typeof comment.id !== "number") continue;
       const { body } = comment;
-      if (typeof body === "string" && body.split(/\r?\n/, 1)[0] === mark)
-        return { id: comment.id, body };
+      if (typeof body !== "string" || body.split(/\r?\n/, 1)[0] !== mark) continue;
+      self ??= await poster();
+      if (loginOf(comment.user) === self) return { id: comment.id, body };
     }
     if (comments.length < PAGE) return undefined;
   }
   return undefined;
+}
+
+/* Who the token posts as, asked only once a comment carries the mark. A 403 is
+   GitHub declining to name an app's token; any other refusal is the call's. */
+async function posterOf(send: Send): Promise<string> {
+  const response = await send("GET", "/user");
+  if (response.status === 403) {
+    await response.body?.cancel();
+    return ACTIONS_BOT;
+  }
+  if (!response.ok) throw new Error(await refusal("GET", "/user", response));
+  return loginOf(await response.json()) ?? ACTIONS_BOT;
+}
+
+/* A login in one case: GitHub's logins are unique whatever their case. */
+function loginOf(user: unknown): string | undefined {
+  return isObject(user) && typeof user.login === "string" ? user.login.toLowerCase() : undefined;
 }
 
 function fitted(markdown: string): string {

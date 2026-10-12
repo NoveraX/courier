@@ -2,9 +2,11 @@
  * The diff report on a pull request: the pull request is read from the
  * environment GitHub Actions gives a job, and the report is posted as one
  * comment per project — found again by its mark on the next run, across
- * pages of comments, and edited only when the report changed. A definition
- * that did not change starts no comment; a report too long for a comment is
- * cut at a line; GitHub's refusal says what the job lacks.
+ * pages of comments, and edited only when the report changed. Only a comment
+ * the token's own identity wrote is taken for the report, whoever else
+ * writes the mark. A definition that did not change starts no comment; a
+ * report too long for a comment is cut at a line; GitHub's refusal says what
+ * the job lacks.
  */
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
@@ -19,6 +21,7 @@ import { type PullRequestTarget, pullRequestOf } from "../src/commands/diff/pull
 interface Comment {
   id: number;
   body: string;
+  user?: { login: string; type: "User" | "Bot" };
 }
 
 interface FakeGitHub {
@@ -28,16 +31,27 @@ interface FakeGitHub {
   headers: IncomingMessage["headers"][];
 }
 
+interface FakeOptions {
+  /** A refusal for every call. */
+  refuse?: { status: number; message: string };
+  /** The person the token belongs to; left out, it is an app's token, posting as the Actions bot. */
+  person?: string;
+  /** How GitHub answers `/user`, when not as it does for the token. */
+  user?: { status: number; message: string };
+}
+
+const BOT = { login: "github-actions[bot]", type: "Bot" } as const;
 const servers: Server[] = [];
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((s) => new Promise((done) => s.close(done))));
 });
 
-/* GitHub's issue comment routes for pull request 12 of acme/shop, or a refusal for every call. */
-async function fakeGitHub(refuse?: { status: number; message: string }): Promise<FakeGitHub> {
+/* GitHub's issue comment routes for pull request 12 of acme/shop, as a token's owner sees them. */
+async function fakeGitHub({ refuse, person, user }: FakeOptions = {}): Promise<FakeGitHub> {
   const comments: Comment[] = [];
   const calls: string[] = [];
   const headers: IncomingMessage["headers"][] = [];
+  const author = person ? ({ login: person, type: "User" } as const) : BOT;
   const server = createServer(async (req, res) => {
     let text = "";
     for await (const chunk of req) text += chunk;
@@ -47,13 +61,18 @@ async function fakeGitHub(refuse?: { status: number; message: string }): Promise
     const send = (status: number, value: unknown) =>
       res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(value));
     if (refuse) return send(refuse.status, { message: refuse.message });
+    if (req.method === "GET" && url.pathname === "/user") {
+      if (user) return send(user.status, { message: user.message });
+      if (person) return send(200, { login: person, type: "User" });
+      return send(403, { message: "Resource not accessible by integration" });
+    }
     if (req.method === "GET" && url.pathname === "/repos/acme/shop/issues/12/comments") {
       const size = Number(url.searchParams.get("per_page"));
       const page = Number(url.searchParams.get("page"));
       return send(200, comments.slice((page - 1) * size, page * size));
     }
     if (req.method === "POST" && url.pathname === "/repos/acme/shop/issues/12/comments") {
-      const comment = { id: 1000 + comments.length, body: JSON.parse(text).body };
+      const comment = { id: 1000 + comments.length, body: JSON.parse(text).body, user: author };
       comments.push(comment);
       return send(201, comment);
     }
@@ -104,6 +123,7 @@ describe("the report on a pull request", () => {
       {
         id: 1100,
         body: "<!-- courier-studio diff: . -->\n## API definition changes\n\n**1 endpoint changed: 2 breaking**\n",
+        user: BOT,
       },
     ]);
     expect(github.calls.filter((call) => !call.startsWith("GET"))).toEqual([
@@ -142,6 +162,7 @@ describe("the report on a pull request", () => {
     github.comments[0] = {
       id: 1000,
       body: (github.comments[0]?.body ?? "").replaceAll("\n", "\r\n"),
+      user: BOT,
     };
     const resolved = await postReportComment(github.target, {
       project: "apps/shop",
@@ -177,8 +198,7 @@ describe("the report on a pull request", () => {
 
   it("says what the job lacks when GitHub refuses", async () => {
     const github = await fakeGitHub({
-      status: 403,
-      message: "Resource not accessible by integration",
+      refuse: { status: 403, message: "Resource not accessible by integration" },
     });
 
     await expect(
@@ -186,6 +206,101 @@ describe("the report on a pull request", () => {
     ).rejects.toThrow(
       "GitHub answered GET /repos/acme/shop/issues/12/comments with 403: Resource not accessible by integration — the job needs `permissions: pull-requests: write`, and a pull request from a fork gets a token that cannot write",
     );
+  });
+});
+
+/**
+ * Anyone who may comment on the pull request can write the mark first. The
+ * job then edited their comment, which its author could rewrite after it to
+ * say anything, or failed on it; only the token's own identity's comment is
+ * the report.
+ */
+describe("a comment someone else marked", () => {
+  const MARK = "<!-- courier-studio diff: . -->";
+  const forged = (id: number, login: string, type: "User" | "Bot" = "User"): Comment => ({
+    id,
+    body: `${MARK}\n## API definition changes\n\n**No endpoint changed**\n`,
+    user: { login, type },
+  });
+
+  it("is left alone, and the job's own report posted beside it and kept current", async () => {
+    const github = await fakeGitHub();
+    github.comments.push(forged(7, "mallory"), forged(8, "renovate[bot]", "Bot"));
+    const forgeries = structuredClone(github.comments);
+
+    const first = await postReportComment(github.target, {
+      project: ".",
+      markdown: REPORT,
+      changed: true,
+    });
+    const again = await postReportComment(github.target, {
+      project: ".",
+      markdown: REPORT,
+      changed: true,
+    });
+    const quiet = await postReportComment(github.target, {
+      project: ".",
+      markdown: "## API definition changes\n\n**No endpoint changed**\n",
+      changed: false,
+    });
+
+    expect([first, again, quiet]).toEqual(["created", "unchanged", "updated"]);
+    expect(github.comments.slice(0, 2)).toEqual(forgeries);
+    expect(github.comments[2]).toMatchObject({ id: 1002, user: BOT });
+    expect(github.calls.filter((call) => !call.startsWith("GET"))).toEqual([
+      "POST /repos/acme/shop/issues/12/comments",
+      "PATCH /repos/acme/shop/issues/comments/1002",
+    ]);
+  });
+
+  it("starts no comment of its own for a definition that did not change", async () => {
+    const github = await fakeGitHub();
+    github.comments.push(forged(7, "mallory"));
+
+    const outcome = await postReportComment(github.target, {
+      project: ".",
+      markdown: REPORT,
+      changed: false,
+    });
+
+    expect(outcome).toBe("skipped");
+    expect(github.calls.filter((call) => !call.startsWith("GET"))).toEqual([]);
+  });
+
+  it("is told from the report of a person's token, named by GitHub in any case", async () => {
+    const github = await fakeGitHub({ person: "Octo-Dev" });
+    github.comments.push(forged(7, "mallory"), forged(8, "github-actions[bot]", "Bot"));
+    github.comments.push({ ...forged(9, "octo-dev"), body: `${MARK}\n${REPORT}` });
+
+    const outcome = await postReportComment(github.target, {
+      project: ".",
+      markdown: REPORT.replace("1 breaking", "2 breaking"),
+      changed: true,
+    });
+
+    expect(outcome).toBe("updated");
+    expect(github.calls).toContain("GET /user");
+    expect(github.calls.filter((call) => !call.startsWith("GET"))).toEqual([
+      "PATCH /repos/acme/shop/issues/comments/9",
+    ]);
+  });
+
+  it("asks who the token is only once a comment carries the mark", async () => {
+    const github = await fakeGitHub();
+
+    await postReportComment(github.target, { project: ".", markdown: REPORT, changed: true });
+
+    expect(github.calls).not.toContain("GET /user");
+  });
+
+  it("says so when GitHub cannot say who the token is", async () => {
+    const github = await fakeGitHub({ user: { status: 502, message: "Bad Gateway" } });
+    github.comments.push(forged(7, "mallory"));
+
+    await expect(
+      postReportComment(github.target, { project: ".", markdown: REPORT, changed: true }),
+    ).rejects.toThrow("GitHub answered GET /user with 502: Bad Gateway");
+    expect(github.calls.filter((call) => !call.startsWith("GET"))).toEqual([]);
   });
 });
 

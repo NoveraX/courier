@@ -83,12 +83,19 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       set({ activeServerId: serverId });
     },
 
-    setServerCollections(serverId: string, collections: MockCollectionEntry[], storeSeq: number) {
+    setServerCollections(
+      serverId: string,
+      collections: MockCollectionEntry[],
+      storeSeq: number,
+      recordsLoaded: boolean,
+    ) {
       /* The dashboard's counts follow the store as it was last reported. */
       const recordCount = collections.reduce((sum, collection) => sum + collection.count, 0);
       set((state) =>
         patchServer(state, serverId, {
           collections,
+          recordsLoaded,
+          ...(recordsLoaded ? { recordsProblem: undefined } : {}),
           storeSeq,
           collectionCount: collections.length,
           recordCount,

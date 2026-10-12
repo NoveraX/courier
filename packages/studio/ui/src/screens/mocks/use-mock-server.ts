@@ -1,3 +1,4 @@
+import { shownMockServer } from "@/mocks/shown-mock-server";
 import type { MockServerInfo } from "@/store/mock-slice";
 import { useAllServers, useMockStore } from "@/store/mock-slice";
 
@@ -14,5 +15,5 @@ import { useAllServers, useMockStore } from "@/store/mock-slice";
 export function useMockServer(): { server: MockServerInfo | undefined; servers: MockServerInfo[] } {
   const servers = useAllServers();
   const activeId = useMockStore((s) => s.activeServerId);
-  return { server: servers.find((s) => s.serverId === activeId) ?? servers[0], servers };
+  return { server: shownMockServer(servers, activeId), servers };
 }

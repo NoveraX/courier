@@ -62,6 +62,14 @@ export interface MockServerInfo {
   lastError?: string | undefined;
   /** Per-server data */
   collections: MockCollectionEntry[];
+  /**
+   * `false` while the page holds each collection's count but not its
+   * records: Studio sends a mock's records only to a page that shows them,
+   * and the page asks for them then.
+   */
+  recordsLoaded?: boolean | undefined;
+  /** Why Studio did not send the records the page asked for; the page keeps asking. */
+  recordsProblem?: string | undefined;
   /** The number of the last report of the store applied to `collections`; 0 for the store the mock started with. */
   storeSeq: number;
   routes: MockRouteEntry[];
@@ -162,11 +170,12 @@ export interface MockSliceState {
   forgetManagedServers: () => void;
   updateServer: (serverId: string, patch: Partial<MockServerInfo>) => void;
   selectServer: (serverId: string | null) => void;
-  /** The store as a report of it left it, and that report's number. */
+  /** The store as a report of it left it, that report's number, and whether the records came with it or the counts alone. */
   setServerCollections: (
     serverId: string,
     collections: MockCollectionEntry[],
     storeSeq: number,
+    recordsLoaded: boolean,
   ) => void;
   setServerRoutes: (serverId: string, routes: MockRouteEntry[]) => void;
   setServerScenarios: (serverId: string, scenarios: MockScenarioEntry[]) => void;

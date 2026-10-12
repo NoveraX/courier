@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   isMockScenarioEntry,
   readList,
+  readMockCollections,
   readMockRoutes,
   readNetworkConfig,
   readOneOf,
@@ -123,5 +124,39 @@ describe("the payload readers", () => {
     });
     expect(readNetworkConfig({ ...sent, latency: 0 })?.latency).toBe(0);
     expect(readNetworkConfig({ ...sent, distribution: "spiky" })).toBeUndefined();
+  });
+});
+
+describe("a mock's collections, as a state or an answer carries them", () => {
+  it("read the counts alone as no records held, and records as held", () => {
+    expect(readMockCollections([{ name: "users", count: 2 }])).toEqual({
+      collections: [{ name: "users", count: 2, records: [] }],
+      withRecords: false,
+    });
+    expect(readMockCollections([{ name: "users", count: 1, records: [{ id: 1 }] }])).toEqual({
+      collections: [{ name: "users", count: 1, records: [{ id: 1 }] }],
+      withRecords: true,
+    });
+  });
+
+  it("read a store with no collection as one whose records are all held", () => {
+    expect(readMockCollections([])).toEqual({ collections: [], withRecords: true });
+  });
+
+  it("read records held for some collections and not others as not held", () => {
+    const read = readMockCollections([
+      { name: "users", count: 1, records: [{ id: 1 }] },
+      { name: "posts", count: 3 },
+    ]);
+
+    expect(read?.withRecords).toBe(false);
+  });
+
+  it("read nothing of another shape", () => {
+    expect(readMockCollections({ users: 2 })).toBeUndefined();
+    expect(readMockCollections([{ name: "users" }])).toBeUndefined();
+    expect(readMockCollections([{ name: "users", count: "2" }])).toBeUndefined();
+    expect(readMockCollections([{ name: "users", count: 1, records: { id: 1 } }])).toBeUndefined();
+    expect(readMockCollections(["users"])).toBeUndefined();
   });
 });

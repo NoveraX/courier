@@ -13,7 +13,6 @@ import { mockServerOf } from "./mock-server-of";
 import { useMockStore } from "./mock-slice";
 import type { MockServerInfo, MockSliceState, ProcessStatus } from "./mock-slice-types";
 import {
-  isMockCollectionEntry,
   isMockScenarioEntry,
   readList,
   readMockRoutes,
@@ -21,6 +20,7 @@ import {
   readOneOf,
 } from "./payload";
 import { mergeRouteStats } from "./route-stats";
+import { storePatchOf } from "./store-patch-of";
 
 const LATENCY_PRESETS = ["none", "3g", "4g", "satellite", "custom"] as const;
 const CHAOS_PRESETS = ["none", "degraded", "unstable", "down", "custom"] as const;
@@ -35,7 +35,6 @@ const PROCESS_STATUSES: readonly ProcessStatus[] = [
 ];
 
 const routesOf = (event: MockEvent) => readMockRoutes(event.routes);
-const collectionsOf = (event: MockEvent) => readList(event.collections, isMockCollectionEntry);
 const scenariosOf = (event: MockEvent) => readList(event.scenarios, isMockScenarioEntry);
 const namesOf = (value: unknown) =>
   readList(value, (item): item is string => typeof item === "string");
@@ -66,7 +65,6 @@ function reconnectServer(
   event: MockEvent,
 ): void {
   const incomingScenarios = scenariosOf(event);
-  const incomingCollections = collectionsOf(event);
   const incomingRoutes = routesOf(event) ?? existing.routes;
   // Preserve client-side hits/avgLatency when server re-sends route list
   const mergedRoutes = mergeRouteStats(existing.routes, incomingRoutes);
@@ -88,8 +86,7 @@ function reconnectServer(
     activeScenario: optStr(event.activeScenario) ?? null,
     availableScenarios: namesOf(event.availableScenarios) ?? [],
     scenarios: incomingScenarios?.length ? incomingScenarios : existing.scenarios,
-    collections: incomingCollections ?? existing.collections,
-    storeSeq: incomingCollections ? num(event.storeSeq) : existing.storeSeq,
+    ...storePatchOf(existing, event),
     routes: mergedRoutes,
     processStatus: readOneOf(event.processStatus, PROCESS_STATUSES) ?? existing.processStatus,
     ...buildNetworkPatch(event),
@@ -120,8 +117,7 @@ function registerNewServer(store: Store, serverId: string, event: MockEvent): vo
     lastError: optStr(event.lastError),
     origin: event.origin === "studio" ? "studio" : "external",
     filePath: optStr(event.filePath),
-    collections: collectionsOf(event) ?? [],
-    storeSeq: num(event.storeSeq),
+    ...storePatchOf(undefined, event),
     routes: routesOf(event) ?? [],
     scenarios: scenariosOf(event) ?? [],
   });

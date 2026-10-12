@@ -32,13 +32,12 @@ import { isMockScenarioEntry, readList, readMockRoutes } from "./payload";
  * Route a `mock:*` event to the mock store.
  *
  * @param event - The event
- * @returns `false` when the page's copy of the mock's store fell out of step with it, and the mock is to send its store whole
  * @example
  * ```ts
- * if (!handleMockEvent(event)) askForStore(str(event.serverId));
+ * handleMockEvent(event);
  * ```
  */
-export function handleMockEvent(event: MockEvent): boolean {
+export function handleMockEvent(event: MockEvent): void {
   const store = useMockStore.getState();
   const serverId = str(event.serverId);
 
@@ -56,7 +55,8 @@ export function handleMockEvent(event: MockEvent): boolean {
       store.setServerRoutes(serverId, readMockRoutes(event.routes) ?? []);
       break;
     case "mock:store:changes":
-      return handleStoreChanges(serverId, event);
+      handleStoreChanges(serverId, event);
+      break;
     case "mock:scenario:list":
       store.setServerScenarios(serverId, readList(event.scenarios, isMockScenarioEntry) ?? []);
       break;
@@ -84,7 +84,6 @@ export function handleMockEvent(event: MockEvent): boolean {
     default:
       break;
   }
-  return true;
 }
 
 /** Check if an event type belongs to the mock namespace */

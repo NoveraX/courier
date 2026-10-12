@@ -32,6 +32,7 @@ import { type StudioInfo, studioInfo } from "./studio-info";
 import type { StudioToken } from "./studio-token";
 import type { StudioDemo } from "./types";
 import { bindBodies } from "./ui-bodies";
+import { bindMockStore } from "./ui-mock-store";
 import { bindPageState } from "./ui-page-state";
 import { bindPlaygroundHistory } from "./ui-playground-history";
 import { bindRequestPins } from "./ui-request-pins";
@@ -185,6 +186,8 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     /* A request's whole body, which its event carried only a part of. */
     bindBodies(socket, (command) => mockManager?.forwardStoreCommand(command));
+    /* A mock's records, for the page that shows them. */
+    bindMockStore(socket, mockManager);
 
     // Managed mock server lifecycle commands
     socket.on("mock:managed", (rawData: unknown) => {

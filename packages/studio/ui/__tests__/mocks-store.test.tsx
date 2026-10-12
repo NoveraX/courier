@@ -12,6 +12,7 @@ const command = vi.hoisted(() => vi.fn());
 
 vi.mock("@/socket", () => ({
   getSocket: () => ({
+    connected: true,
     emit: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
@@ -124,6 +125,62 @@ describe("the Store tab", () => {
       { action: "mock:store:delete", serverId: "api-mock", collection: "users", id: "u2" },
       { action: "mock:store:seed", serverId: "api-mock", collection: "*" },
     ]);
+  });
+});
+
+describe("the Store tab of a mock whose records the page does not hold yet", () => {
+  type Answer = (error: Error | null, reply: unknown) => void;
+  const askFor = () =>
+    command.mock.calls.filter(([event]) => event === "mock:store:get") as unknown as Array<
+      [string, unknown, Answer]
+    >;
+
+  beforeEach(() => {
+    useMockStore.setState({
+      servers: {
+        "api-mock": mockServer({
+          collections: [{ ...USERS, records: [] }],
+          routes: [ROUTE],
+          recordsLoaded: false,
+        }),
+      },
+    });
+  });
+
+  it("shows each collection's count, asks Studio for the records once, then shows them", async () => {
+    await openShell("/mocks/store");
+    const nav = screen.getByRole("navigation", { name: "Collections" });
+
+    const users = within(nav).getByRole("button", { name: /^users/ });
+
+    expect(within(users).getByText("2")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toBe("Loading the records");
+    expect(askFor().map(([, payload]) => payload)).toEqual([{ serverId: "api-mock" }]);
+
+    const reply = {
+      ok: true,
+      serverId: "api-mock",
+      startedAt: 1,
+      storeSeq: 0,
+      collections: [USERS],
+    };
+    await settle(() => askFor()[0]?.[2](null, reply));
+
+    expect(screen.getByRole("button", { name: "Ada" })).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("says why Studio did not send the records", async () => {
+    const refusal =
+      "The demo takes up to 10 requests for a mock's records every 10 s from one page. Try again in a moment.";
+    await openShell("/mocks/store");
+
+    await settle(() => askFor()[0]?.[2](null, { ok: false, error: refusal }));
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      `Studio did not send the records: ${refusal} The page asks again on its own.`,
+    );
+    expect(screen.queryByRole("button", { name: "Ada" })).toBeNull();
   });
 });
 

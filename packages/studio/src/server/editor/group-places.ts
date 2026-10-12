@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { relative, sep } from "node:path";
 import type { Expression, ObjectExpression } from "oxc-parser";
 
 import { endpointsOf } from "../contract-drift/schema-edit/endpoint-declaration";
@@ -13,7 +13,7 @@ export interface GroupPlace {
   readonly source: string;
   /** The group's names from the source down: `admin.orders`; empty for the source itself */
   readonly group: string;
-  /** The file, relative to the project's root */
+  /** The file, relative to the project's root with forward slashes: `src/api/orders.ts` */
   readonly file: string;
   /** Its absolute path, links resolved */
   readonly path: string;
@@ -64,7 +64,7 @@ export function groupPlaces(
       {
         source,
         group: groups.join("."),
-        file: relative(modules.root, found.path),
+        file: relative(modules.root, found.path).split(sep).join("/"),
         path: found.path,
         open: place(literal.start),
         close: place(literal.end - 1),

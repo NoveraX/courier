@@ -43,10 +43,17 @@ function Panel({ count, className }: { count: number; className?: string }): Rea
  * if (!server) return loading ? <MocksSkeleton view="dashboard" /> : <NoServers />;
  * ```
  */
-export function MocksSkeleton({ view }: { view: "dashboard" | "list" }): React.ReactNode {
-  if (view === "list") {
+export function MocksSkeleton({
+  view,
+}: {
+  view: "dashboard" | "list" | "records";
+}): React.ReactNode {
+  if (view === "list" || view === "records") {
     return (
-      <LoadingRegion label="Loading the mock servers" className="flex flex-col p-5">
+      <LoadingRegion
+        label={view === "list" ? "Loading the mock servers" : "Loading the records"}
+        className="flex flex-col p-5"
+      >
         <Panel count={8} />
       </LoadingRegion>
     );

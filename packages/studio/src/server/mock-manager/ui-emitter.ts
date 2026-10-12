@@ -60,11 +60,8 @@ function serverStateData(state: ServerState): Record<string, unknown> {
     activeScenario: state.activeScenario ?? null,
     availableScenarios: state.scenarios.map((s) => s.name),
     scenarios: state.scenarios,
-    collections: state.collections.map((c) => ({
-      name: c.name,
-      count: c.count,
-      records: c.records ?? [],
-    })),
+    /* Every page is told each collection's count; its records only the page that shows them, which asks. */
+    collections: state.collections.map((c) => ({ name: c.name, count: c.count })),
     storeSeq: state.storeSeq,
     routes: state.routes,
     managed: true,

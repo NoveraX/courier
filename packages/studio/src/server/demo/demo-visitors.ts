@@ -103,6 +103,8 @@ export function demoVisitors({
       case "mock:body":
       case "request:body":
         return verdict(limits.take(visitor, "body"));
+      case "mock:store:get":
+        return verdict(limits.take(visitor, "store"));
       default:
         return WRITING_EVENTS.has(event) ? { kind: "refuse", reason: DEMO_SHARED_REFUSAL } : RUN;
     }

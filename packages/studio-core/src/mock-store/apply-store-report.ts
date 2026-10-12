@@ -26,7 +26,8 @@ function edited(
  * Edits apply only to the collections as the report before left them: when
  * one names a record or a collection they do not hold, or leaves a
  * collection with another count than the mock's, the result is `undefined`,
- * and whoever holds the collections asks the mock for its store whole.
+ * and whoever holds the collections asks for the store whole: Studio asks
+ * the mock, and a page that shows the records asks Studio.
  *
  * @param collections - The collections as the reports before left them
  * @param report - The report that follows them

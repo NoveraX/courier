@@ -142,3 +142,21 @@ describe("a demo visitor's asks for whole bodies", () => {
     });
   });
 });
+
+describe("a demo visitor's asks for a mock's records", () => {
+  it("are counted, and refused past ten a page in a window", () => {
+    const visitors = demoVisitors({ callsInFlight: () => 0 });
+    const visitor = { page: "page-1", address: "1.1.1.1" };
+
+    const decisions = Array.from({ length: 11 }, () =>
+      visitors.decide(visitor, "mock:store:get", [{ serverId: "shop" }]),
+    );
+
+    expect(decisions.slice(0, 10).every((d) => d.kind === "run")).toBe(true);
+    expect(decisions[10]).toMatchObject({
+      kind: "refuse",
+      reason:
+        "The demo takes up to 10 requests for a mock's records every 10 s from one page. Try again in a moment.",
+    });
+  });
+});

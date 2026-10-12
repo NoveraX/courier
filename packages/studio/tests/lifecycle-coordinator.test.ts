@@ -27,6 +27,8 @@ const fake = {
   children: new Map<string, SpawnRequest>(),
   spawned: [] as SpawnRequest[],
   killDelay: 0,
+  /* The store each worker starts with. */
+  collections: [] as Array<{ name: string; count: number; records: object[] }>,
 };
 
 vi.mock("../src/server/mock-manager/process-manager", () => ({
@@ -51,7 +53,7 @@ vi.mock("../src/server/mock-manager/process-manager", () => ({
             port: request.port,
             url,
             routes: [],
-            collections: [],
+            collections: fake.collections,
             scenarios: [],
             network: { latency: 0, errorRate: 0, latencyPreset: "none", chaosPreset: "none" },
           });
@@ -87,6 +89,7 @@ type Emitted = {
   port?: number;
   filePath?: string;
   source?: string | null;
+  collections?: unknown;
 };
 
 const MOCKS_FILE = "/p/courier.mocks.ts";
@@ -129,6 +132,7 @@ afterEach(() => {
   fake.children.clear();
   fake.spawned.length = 0;
   fake.killDelay = 0;
+  fake.collections = [];
 });
 
 describe("a declared mock", () => {
@@ -361,6 +365,21 @@ describe("what the UI is told", () => {
 
     expect(last("a")).not.toHaveProperty("requestsServed");
     expect(last("a")).not.toHaveProperty("errorCount");
+    await coordinator.stop();
+  });
+
+  it("tells every page each collection's count, and keeps the records for a page that asks", async () => {
+    const users = { name: "users", count: 2, records: [{ id: 1 }, { id: 2 }] };
+    fake.collections = [users];
+    const { coordinator, declare, last } = studio();
+    declare({ a: defineMockServer({ source: api, autoStart: true }) });
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
+
+    expect(last("a")?.collections).toEqual([{ name: "users", count: 2 }]);
+    expect(coordinator.describeServers().find((each) => each.serverId === "a")).toMatchObject({
+      storeSeq: 0,
+      collections: [users],
+    });
     await coordinator.stop();
   });
 

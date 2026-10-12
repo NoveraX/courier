@@ -6,8 +6,10 @@ import { inspectorOf } from "@/features/requests/inspector-of";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStoreCrud } from "@/mocks/use-store-crud";
+import type { MockCollectionEntry, MockServerInfo } from "@/store/mock-slice";
 import { CollectionTable } from "./collection-table";
 import { MocksSkeleton } from "./mocks-skeleton";
+import { useMockRecords } from "./use-mock-records";
 import { useMockServer } from "./use-mock-server";
 
 /**
@@ -28,6 +30,7 @@ export function MockStoreScreen(): React.ReactNode {
   const search: MockStoreSearch = useSearch({ from: "/mocks/store" });
   const navigate = useNavigate({ from: "/mocks/store" });
   const crud = useStoreCrud();
+  const waiting = useMockRecords(server);
   if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   const open =
     server.collections.find((c) => c.name === search.collection) ?? server.collections[0];
@@ -84,11 +87,33 @@ export function MockStoreScreen(): React.ReactNode {
           </>
         )}
       </nav>
-      {open ? (
-        <CollectionTable serverId={server.serverId} collection={open} routes={server.routes} />
-      ) : (
-        <p className="p-10 text-center text-control text-fg-subtle">No collection to show</p>
-      )}
+      <RecordsPane server={server} open={open} waiting={waiting} />
     </div>
   );
+}
+
+/* The open collection's records; while the page waits for them, why they have not come when Studio said. */
+function RecordsPane({
+  server,
+  open,
+  waiting,
+}: {
+  server: MockServerInfo;
+  open: MockCollectionEntry | undefined;
+  waiting: boolean;
+}): React.ReactNode {
+  if (!open) {
+    return <p className="p-10 text-center text-control text-fg-subtle">No collection to show</p>;
+  }
+  if (waiting && server.recordsProblem) {
+    return (
+      <div className="p-5">
+        <p role="alert" className="m-0 rounded-panel bg-err-dim px-3 py-2.5 text-control text-err">
+          Studio did not send the records: {server.recordsProblem} The page asks again on its own.
+        </p>
+      </div>
+    );
+  }
+  if (waiting) return <MocksSkeleton view="records" />;
+  return <CollectionTable serverId={server.serverId} collection={open} routes={server.routes} />;
 }

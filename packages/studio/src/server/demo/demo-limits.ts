@@ -6,7 +6,15 @@
  */
 
 /** What a visitor does that the demo counts. */
-export type DemoAction = "send" | "command" | "lifecycle" | "rest" | "body" | "http" | "connect";
+export type DemoAction =
+  | "send"
+  | "command"
+  | "lifecycle"
+  | "rest"
+  | "body"
+  | "store"
+  | "http"
+  | "connect";
 
 /** How long a count lasts. */
 export const DEMO_WINDOW_MS = 10_000;
@@ -30,6 +38,7 @@ export const DEMO_LIMITS: Readonly<Record<DemoAction, DemoLimit>> = {
   lifecycle: { page: 5, address: 10, all: 20 },
   rest: { address: 20, all: 60 },
   body: { page: 10, address: 15, all: 30 },
+  store: { page: 10, address: 15, all: 30 },
   http: { address: 600, all: 6000 },
   connect: { address: 10, all: 40 },
 };
@@ -40,6 +49,7 @@ const NAMES: Readonly<Record<DemoAction, string>> = {
   lifecycle: "mock starts and stops",
   rest: "requests to Studio's API",
   body: "whole bodies",
+  store: "requests for a mock's records",
   http: "requests",
   connect: "sockets opened",
 };

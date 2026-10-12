@@ -44,7 +44,7 @@ export function handleCommand(
     send({ type: "command-result", requestId: msg.requestId, ...result });
     return;
   }
-  /* A page whose copy of the store fell out of step with it asks for it whole. */
+  /* Studio, whose copy of the store fell out of step with it, asks for it whole. */
   if (action === "mock:store:resend") {
     feed.resend();
     send({ type: "command-result", requestId: msg.requestId, ok: true });

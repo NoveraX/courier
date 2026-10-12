@@ -29,7 +29,7 @@ export function RefactorTabs({ frame, diff }: RefactorTabsProps) {
             key={name}
             aria-hidden={tab?.closed}
             className={cn(
-              "flex items-center gap-2 overflow-hidden border-r font-mono text-[11.5px] tracking-normal whitespace-nowrap transition-[max-width,opacity,padding] duration-500 ease-[cubic-bezier(.16,1,.3,1)]",
+              "flex items-center gap-2 overflow-hidden border-r font-mono text-[11.5px] tracking-normal whitespace-nowrap transition-[max-width,opacity,padding] duration-500 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none",
               tab?.closed
                 ? "max-w-0 border-transparent px-0 opacity-0"
                 : "max-w-65 border-line px-3.5 opacity-100",
@@ -37,7 +37,7 @@ export function RefactorTabs({ frame, diff }: RefactorTabsProps) {
               tab?.active ? "text-fg" : "text-fg-subtle"
             )}
           >
-            {name}
+            <span className="min-w-0 truncate">{name}</span>
           </div>
         )
       })}

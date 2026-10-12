@@ -27,7 +27,21 @@ const STRIKE_AT: readonly number[] = OLD_LINES.map((line, at) => {
   const mates = OLD_LINES.flatMap((other, index) => (other.chunk === line.chunk ? [index] : []))
   return from + (to - from) * (mates.indexOf(at) / mates.length)
 })
-const GONE_AT: readonly number[] = OLD_LINES.map((line) => (CHUNKS[line.chunk]?.[1] ?? 0) + 0.02)
+const CHUNK_DONE_AT: readonly number[] = CHUNKS.map(([, to]) => to + 0.02)
+const GONE_AT: readonly number[] = OLD_LINES.map((line) => CHUNK_DONE_AT[line.chunk] ?? 1)
+const ADD_AT: readonly number[] = NEW_LINES.map((_, at) => NEW_FROM + at * 0.035)
+
+/* Every point at which the frame changes, in order: between two of them it holds still. */
+const STOPS: readonly number[] = [
+  ...new Set([
+    ...STRIKE_AT,
+    ...GONE_AT,
+    ...ADD_AT,
+    NEW_FROM,
+    ...CHUNKS.map(([from]) => from),
+    ...CHUNK_DONE_AT,
+  ]),
+].sort((a, b) => a - b)
 
 function oldLineState(at: number, progress: number): LineState {
   if (progress >= (GONE_AT[at] ?? 1)) return "gone"
@@ -59,12 +73,12 @@ function stepState(
  */
 export function refactorFrame(progress: number): RefactorFrame {
   const old = OLD_LINES.map((_, at) => oldLineState(at, progress))
-  const added = NEW_LINES.map(
-    (_, at): LineState => (progress >= NEW_FROM + at * 0.035 ? "added" : "hidden")
-  )
+  const added = ADD_AT.map((from): LineState => (progress >= from ? "added" : "hidden"))
   const struck = old.filter((state) => state !== "kept").length
-  const chunkDone = CHUNKS.map(([, to]) => progress >= to + 0.02)
-  const chunkActive = CHUNKS.map(([from, to]) => progress >= from && progress < to + 0.02)
+  const chunkDone = CHUNK_DONE_AT.map((from) => progress >= from)
+  const chunkActive = CHUNKS.map(
+    ([from], at) => progress >= from && progress < (CHUNK_DONE_AT[at] ?? 1)
+  )
   const done = progress >= NEW_FROM
   const filesLeft = 1 + (chunkDone[1] ? 0 : 1) + (chunkDone[2] ? 0 : 1)
   return {
@@ -79,4 +93,27 @@ export function refactorFrame(progress: number): RefactorFrame {
     filesLeft,
     linesLeft: OLD_LINES.length - struck + (done ? NEW_LINES.length : 0),
   }
+}
+
+/**
+ * Where the frame shown at a point of the scroll begins: the last point
+ * before it at which anything changed, or 0. Every point between two such
+ * stops shows the same frame, so the section re-renders only as the reader
+ * crosses one — a few dozen times through the whole scroll, not every frame.
+ *
+ * @param progress - How far through the section the reader is, 0 to 1
+ * @returns The stop at or before it
+ * @example
+ * ```ts
+ * refactorStop(0.05) // 0 — nothing is struck before 0.1
+ * refactorFrame(refactorStop(0.3)) // the same frame as refactorFrame(0.3)
+ * ```
+ */
+export function refactorStop(progress: number): number {
+  let stop = 0
+  for (const at of STOPS) {
+    if (at > progress) break
+    stop = at
+  }
+  return stop
 }

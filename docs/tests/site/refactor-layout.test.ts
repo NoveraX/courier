@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { codeFontSize, codeLineHeight } from "@/site/landing/refactor/refactor-layout"
+import { codeFontSize, codeLineHeight, STATUS_WRAPS } from "@/site/landing/refactor/refactor-layout"
 
 describe("the refactor's code size", () => {
   it("uses the full line height in a tall window", () => {
@@ -25,5 +25,13 @@ describe("the refactor's code size", () => {
 
     expect(wide).toBe(21)
     expect(narrow).toBe(15)
+  })
+
+  it("leaves room for the status line's second line on a phone", () => {
+    const phablet = codeLineHeight({ width: STATUS_WRAPS, height: 710, narrative: 34 })
+    const phone = codeLineHeight({ width: STATUS_WRAPS - 1, height: 710, narrative: 34 })
+
+    expect(phablet).toBe(22)
+    expect(phone).toBe(21)
   })
 })

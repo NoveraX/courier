@@ -3,6 +3,7 @@ import { OLD_LINES } from "./refactor-code"
 /** The room the refactor's stage has: the window, and the narrative above the code on a narrow one. */
 export interface StageRoom {
   width: number
+  /** The window's height with a phone's toolbars shown, so the code fits while they show. */
   height: number
   /** The narrative's height, which sits above the code below 980 px. */
   narrative: number
@@ -10,6 +11,9 @@ export interface StageRoom {
 
 /** From this width the narrative and the code sit side by side. */
 export const TWO_COLUMNS = 980
+
+/** Below this width the editor's status line is two lines tall, so that it shows whole. */
+export const STATUS_WRAPS = 420
 
 /**
  * How tall a line of the refactor's code is, so that all twenty hand-written
@@ -26,7 +30,8 @@ export function codeLineHeight({ width, height, narrative }: StageRoom): number 
   const twoColumns = width >= TWO_COLUMNS
   const top = Math.max(16, Math.min(32, height * 0.03)) + 28
   const above = twoColumns ? 0 : narrative + 14
-  const room = height - 56 - top - above - 42 - 24 - 34 - 16
+  const status = width < STATUS_WRAPS ? 44 : 34
+  const room = height - 56 - top - above - 42 - 24 - status - 16
   return Math.max(14, Math.min(23, Math.floor(room / OLD_LINES.length)))
 }
 

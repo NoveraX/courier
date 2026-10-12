@@ -38,20 +38,25 @@ export function RefactorSteps({ states }: { states: readonly StepState[] }) {
           <li
             key={step.title}
             className={cn(
-              "flex items-center gap-3 rounded-[11px] border px-3 py-2.5 transition-all duration-350",
+              "flex items-center gap-3 rounded-[11px] border px-3 py-2.5 transition-all duration-350 motion-reduce:transition-none",
               look.row
             )}
           >
             <span
               className={cn(
-                "grid size-6 shrink-0 place-items-center rounded-full border font-mono text-micro tracking-normal transition-all duration-350",
+                "grid size-6 shrink-0 place-items-center rounded-full border font-mono text-micro tracking-normal transition-all duration-350 motion-reduce:transition-none",
                 look.tone
               )}
             >
               {state === "done" || state === "won" ? "✓" : at + 1}
             </span>
             <span className="min-w-0 flex-1">
-              <span className={cn("block text-nav transition-colors duration-350", look.title)}>
+              <span
+                className={cn(
+                  "block text-nav transition-colors duration-350 motion-reduce:transition-none",
+                  look.title
+                )}
+              >
                 {step.title}
               </span>
               <span className="mt-0.5 block text-label text-fg-subtle">{step.sub}</span>

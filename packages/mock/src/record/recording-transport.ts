@@ -1,6 +1,10 @@
 import type { HttpResponse } from "@noverax/courier";
 import type { AnyDefinedApi } from "@noverax/courier/define";
-import { createDirectHTTPExecutor, createProxyHTTPExecutor } from "@noverax/courier/internal";
+import {
+  createDirectHTTPExecutor,
+  createProxyHTTPExecutor,
+  withoutTrailingSlashes,
+} from "@noverax/courier/internal";
 
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
 import type { RouteInfo } from "../auto/route-types";
@@ -53,7 +57,7 @@ export function createRecordingTransport(
     };
   }
 
-  const baseURL = (config.targetUrl ?? baseUrlOf(config.source)).replace(/\/+$/, "");
+  const baseURL = withoutTrailingSlashes(config.targetUrl ?? baseUrlOf(config.source));
   const target = config.targetUrl
     ? { ...config.source, options: { ...config.source.options, baseURL } }
     : config.source;

@@ -1,7 +1,8 @@
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
+
 import type { PrefixMapping } from "../server/prefix-route-types";
 import { prop } from "./schema-introspect/prop";
 
-const TRAILING_SLASHES = /\/+$/;
 const LEADING_SLASHES = /^\/+/;
 
 /**
@@ -40,6 +41,6 @@ function basePathOf(baseURL: unknown): string | undefined {
   if (typeof baseURL !== "string" || !URL.canParse(baseURL, "http://base.invalid")) {
     return undefined;
   }
-  const path = new URL(baseURL, "http://base.invalid").pathname.replace(TRAILING_SLASHES, "");
+  const path = withoutTrailingSlashes(new URL(baseURL, "http://base.invalid").pathname);
   return path === "" ? undefined : path;
 }

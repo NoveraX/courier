@@ -6,13 +6,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { acquireConnection, clearWSConnectionPool } from "../src/realtime/caller-ws";
-import type { WSClientSocket } from "../src/realtime/ws/ws-types";
+import type { WSClientSocket, WSCloseEventLike } from "../src/realtime/ws/ws-types";
 
 class FakeSocket implements WSClientSocket {
   static opened: FakeSocket[] = [];
   onopen: ((ev: Event) => void) | null = null;
   onmessage: ((ev: MessageEvent) => void) | null = null;
-  onclose: ((ev: CloseEvent) => void) | null = null;
+  onclose: ((ev: WSCloseEventLike) => void) | null = null;
   onerror: ((ev: Event) => void) | null = null;
   readyState = 0;
   bufferedAmount = 0;
@@ -32,9 +32,10 @@ class FakeSocket implements WSClientSocket {
     this.onopen?.(new Event("open"));
   }
 
+  /* Node 22 has no global CloseEvent: a close is what the client reads of one. */
   drop(code: number): void {
     this.readyState = 3;
-    this.onclose?.(new CloseEvent("close", { code }));
+    this.onclose?.({ code, reason: "" });
   }
 }
 

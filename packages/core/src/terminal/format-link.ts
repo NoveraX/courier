@@ -1,8 +1,9 @@
 import type { TerminalStyle } from "./terminal-style";
 
 /* Scheme and host — a bracketed IPv6 address included — then the port, the
-   path, and the fragment. */
-const URL_PARTS = /^(https?:\/\/(?:\[[^\]]*\]|[^/:#?]*))(?::(\d+))?([^#]*)(#.*)?$/;
+   path, and the fragment. The fragment runs to the end whatever it holds, so
+   once the scheme matches the whole does, and nothing is tried twice. */
+const URL_PARTS = /^(https?:\/\/(?:\[[^\]]*\]|[^/:#?]*))(?::(\d+))?([^#]*)(#[\s\S]*)?$/;
 
 /**
  * An address as a banner shows it: the port in bold, and a fragment — the

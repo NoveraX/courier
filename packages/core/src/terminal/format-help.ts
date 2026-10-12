@@ -39,8 +39,9 @@ export interface HelpCommand {
   readonly description: string;
 }
 
-/* A flag in the accent colour; the value it takes, `<port>`, dimmed. */
-const FLAG_PARTS = /(<[^>]+>)|([^\s,<]+)/g;
+/* A flag in the accent colour; the value it takes, `<port>`, dimmed. A value
+   holds no `<`, so a run of them is passed over in linear time. */
+const FLAG_PARTS = /(<[^<>]+>)|([^\s,<]+)/g;
 
 function styleFlags(flags: string, { cyan, dim }: TerminalStyle): string {
   return flags.replace(FLAG_PARTS, (part, value?: string) => (value ? dim(part) : cyan(part)));

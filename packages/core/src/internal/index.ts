@@ -122,6 +122,7 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 export {
   type KnownWebhook,
   knownWebhooks,

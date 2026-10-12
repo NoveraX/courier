@@ -33,4 +33,10 @@ describe("formatLink", () => {
   it("finds the port after a bracketed IPv6 address", () => {
     expect(formatLink("http://[2001:db8::5]:6280", style)).toContain("\x1b[1m6280\x1b[22m");
   });
+
+  it("styles an address with a long fragment that holds a line break at once", () => {
+    const url = `http://${'"'.repeat(200_000)}#token\nk3y`;
+
+    expect(formatLink(url, style).replace(ESCAPE, "")).toBe(url);
+  });
 });

@@ -80,9 +80,11 @@ describe("readRegularFile", () => {
       code: "NOT_REGULAR_FILE",
       path,
       message: `${path} is a symbolic link, not a regular file.`,
-      /* The open refuses the link; Windows opens through it, and the name is looked at after. */
-      cause: IS_WINDOWS ? undefined : { code: "ELOOP" },
     });
+    /* The open refuses the link; Windows opens through it, and the name is looked at after. */
+    expect(Reflect.get(Object(error), "cause")).toEqual(
+      IS_WINDOWS ? undefined : expect.objectContaining({ code: "ELOOP" }),
+    );
   });
 
   it("refuses a directory", () => {

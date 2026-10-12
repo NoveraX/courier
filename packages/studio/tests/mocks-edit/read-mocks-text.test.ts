@@ -129,12 +129,7 @@ describe("readMocksText", () => {
 
     expect(error).toMatchObject({
       code: "MOCKS_CHANGED_SINCE_LOAD",
-      /* The open refuses the link; Windows opens through it, and the name is looked at after. */
-      cause: {
-        code: "NOT_REGULAR_FILE",
-        found: "a symbolic link",
-        cause: process.platform === "win32" ? undefined : { code: "ELOOP" },
-      },
+      cause: { code: "NOT_REGULAR_FILE", found: "a symbolic link" },
     });
   });
 

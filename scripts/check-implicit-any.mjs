@@ -23,11 +23,12 @@
 import { createRequire } from "node:module";
 import { relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 /* The Studio UI sits one directory deeper than the root program reaches, so
    it is checked through its own. */

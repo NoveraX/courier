@@ -15,8 +15,9 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { argv } from "node:process";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const CONFIGS = ["biome.json", "docs/biome.json"];
 
 /**

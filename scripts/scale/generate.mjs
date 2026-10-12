@@ -14,11 +14,12 @@
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { argv } from "node:process";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { writeFixture } from "./fixture/write-fixture.mjs";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "../..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "../..");
 const { values } = parseArgs({
   args: argv.slice(2),
   options: {

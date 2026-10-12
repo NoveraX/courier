@@ -24,6 +24,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
+import { fileURLToPath } from "node:url";
 
 import { extractSamples, importHeader, samplePages } from "./doc-samples.mjs";
 import { placeSamples } from "./page-modules.mjs";
@@ -32,7 +33,7 @@ import { isOmission, samplesLeavingOut } from "./sample-omissions.mjs";
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 /* Inside node_modules, so the samples resolve the packages as a reader's code would. */
 const OUT = join(ROOT, "node_modules/.cache/courier-doc-samples");
 
@@ -172,4 +173,4 @@ function main() {
   exit(1);
 }
 
-if (argv[1] && resolve(argv[1]) === resolve(new URL(import.meta.url).pathname)) main();
+if (argv[1] && resolve(argv[1]) === resolve(fileURLToPath(import.meta.url))) main();

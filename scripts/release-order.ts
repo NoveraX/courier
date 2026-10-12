@@ -8,7 +8,7 @@
  * in whatever order the filesystem happened to return.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 
 interface PackageJson {
   name: string;
@@ -33,11 +33,14 @@ export function readPkg(pkgDir: string): PackageJson {
 
 /** Every package directory, in a stable listing order, with what its manifest says. */
 function workspaces(): Array<{ dir: string; pkg: PackageJson }> {
-  return readdirSync("packages")
-    .sort()
-    .map((name) => join("packages", name))
-    .filter((dir) => statSync(join(dir, "package.json"), { throwIfNoEntry: false })?.isFile())
-    .map((dir) => ({ dir, pkg: readPkg(dir) }));
+  return (
+    readdirSync("packages")
+      .sort()
+      /* Written with forward slashes on every system: a folder is named as the repository names it. */
+      .map((name) => posix.join("packages", name))
+      .filter((dir) => statSync(join(dir, "package.json"), { throwIfNoEntry: false })?.isFile())
+      .map((dir) => ({ dir, pkg: readPkg(dir) }))
+  );
 }
 
 /** Every publishable package directory, in a stable listing order. */

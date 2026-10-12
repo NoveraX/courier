@@ -15,10 +15,10 @@
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { argv, exit } from "node:process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "@playwright/test";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const ASSETS = join(ROOT, ".github", "assets");
 
 /** Each image, at the size its page is laid out for. */

@@ -1,8 +1,10 @@
+import { escapeForRegex } from "../escape-for-regex";
 import type { ParsedImport } from "../merge/types";
 
 function uses(text: string, name: string, member = false): boolean {
-  const escaped = name.replace(/[$]/g, "\\$");
-  return new RegExp(`(?<![\\w$.])${escaped}${member ? "\\." : "(?![\\w$])"}`).test(text);
+  return new RegExp(`(?<![\\w$.])${escapeForRegex(name)}${member ? "\\." : "(?![\\w$])"}`).test(
+    text,
+  );
 }
 
 /* The name a specifier binds: `b` for `a as b`. */

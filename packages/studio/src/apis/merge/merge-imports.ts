@@ -8,6 +8,7 @@
  * exports it.
  */
 
+import { escapeForRegex } from "../escape-for-regex";
 import { namedStatement } from "../generator/named-statement";
 import type { MergeChange, ParsedImport } from "./types";
 
@@ -51,7 +52,7 @@ export function mergeImports(
 
 function uses(code: string, specifier: string): boolean {
   const local = specifier.split(/\s+as\s+/).at(-1) ?? specifier;
-  return new RegExp(`(?<![\\w$])${local.replaceAll("$", "\\$")}(?![\\w$])`).test(code);
+  return new RegExp(`(?<![\\w$])${escapeForRegex(local)}(?![\\w$])`).test(code);
 }
 
 function unionImport(generated: ParsedImport, existing: ParsedImport, code: string): ParsedImport {

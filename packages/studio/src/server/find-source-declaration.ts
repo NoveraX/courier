@@ -14,6 +14,8 @@
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 
+import { escapeForRegex } from "../apis/escape-for-regex";
+
 /** Files larger than this are not where a `defineApi` call lives. */
 const MAX_BYTES = 512 * 1024;
 
@@ -58,8 +60,4 @@ function read(path: string): string | undefined {
     /* A dependency that cannot be read simply does not answer for the name. */
     return undefined;
   }
-}
-
-function escapeForRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

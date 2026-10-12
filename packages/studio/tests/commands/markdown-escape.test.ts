@@ -1,11 +1,14 @@
 /**
  * What a report quotes, placed in GitHub's Markdown so it shows as written:
- * running text with every formatting character escaped, and code spans with
- * only what would end them or split a table's cell.
+ * running text with every formatting character escaped and nothing GitHub
+ * would link or typeset, and code spans with only what would end them or
+ * split a table's cell.
  */
 import { describe, expect, it } from "vitest";
 
 import { markdownCode, markdownText } from "../../src/commands/markdown-escape";
+
+const ZWSP = "\u200B";
 
 describe("markdownText", () => {
   it("escapes what Markdown reads as formatting, a pipe among them", () => {
@@ -13,7 +16,7 @@ describe("markdownText", () => {
       "was string \\| number, now Array\\<string\\>",
     );
     expect(markdownText("*bold* _em_ ~gone~ `code` [a](b) [c][d] &amp; &#39;")).toBe(
-      "\\*bold\\* \\_em\\_ \\~gone\\~ \\`code\\` [a\\](b) [c\\][d] \\&amp; \\&#39;",
+      `\\*bold\\* \\_em\\_ \\~gone\\~ \\\`code\\\` [a\\](b) [c\\][d] \\&amp; \\&#${ZWSP}39;`,
     );
   });
 
@@ -36,6 +39,37 @@ describe("markdownText", () => {
       "body.items[].user_id & [courier] p_1",
     );
   });
+
+  /**
+   * GitHub links a mention and a reference to an issue, and typesets math,
+   * in the text a backslash leaves, so an escape does not stop them: a name
+   * in a definition would notify someone, or list the pull request on an
+   * issue. A zero-width space after the sign, and before a dollar sign,
+   * shows as nothing and leaves nothing to link.
+   */
+  it("keeps a mention, a reference to an issue and math from being read as such", () => {
+    expect(markdownText("ask @octocat or @acme/core")).toBe(
+      `ask @${ZWSP}octocat or @${ZWSP}acme/core`,
+    );
+    expect(markdownText("see #12, acme/shop#3, acme#4, GH-5 and gh-6")).toBe(
+      `see #${ZWSP}12, acme/shop#${ZWSP}3, acme#${ZWSP}4, GH-${ZWSP}5 and gh-${ZWSP}6`,
+    );
+    expect(markdownText("$x^2$ costs $$5$$")).toBe(
+      `${ZWSP}\\$x^2${ZWSP}\\$ costs ${ZWSP}\\$${ZWSP}\\$5${ZWSP}\\$${ZWSP}\\$`,
+    );
+  });
+
+  it("keeps them so after a backslash of the text's own", () => {
+    expect(markdownText("\\@octocat \\#7 \\$x$")).toBe(
+      `\\\\@${ZWSP}octocat \\\\#${ZWSP}7 \\\\${ZWSP}\\$x${ZWSP}\\$`,
+    );
+  });
+
+  it("leaves an address, a word that ends in GH and a pointer as they are", () => {
+    expect(markdownText("api@example.com xGH-2 #/components/schemas/User")).toBe(
+      "api@example.com xGH-2 #/components/schemas/User",
+    );
+  });
 });
 
 describe("markdownCode", () => {
@@ -49,6 +83,24 @@ describe("markdownCode", () => {
 
   it("leaves a backslash as it is: a code span shows it so", () => {
     expect(markdownCode("C:\\path\\file")).toBe("C:\\path\\file");
+  });
+
+  /**
+   * A backslash of the text's own before a pipe met the pipe's escape as two
+   * backslashes: GitHub reads the pipe as escaped, but micromark and marked
+   * read an escaped backslash and end the cell at the pipe, so the rest of
+   * the text — HTML included — left the code span.
+   */
+  it("parts a backslash from the pipe after it in a table cell", () => {
+    expect(markdownCode("a\\|b")).toBe(`a\\${ZWSP}\\|b`);
+    expect(markdownCode("x\\|<img src=x onerror=alert(1)>")).toBe(
+      `x\\${ZWSP}\\|<img src=x onerror=alert(1)>`,
+    );
+    expect(markdownCode("a\\\\|b")).toBe(`a\\\\${ZWSP}\\|b`);
+  });
+
+  it("leaves a backslash before a pipe alone outside a table", () => {
+    expect(markdownCode("a\\|b", { table: false })).toBe("a\\|b");
   });
 
   it("writes its line breaks as spaces", () => {

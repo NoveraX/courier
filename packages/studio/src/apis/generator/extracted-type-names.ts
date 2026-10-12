@@ -8,12 +8,16 @@
  * export only once.
  */
 
+import { toSafeIdentifier } from "../parser/naming-utils";
 import { isTopLevel } from "../parser/top-level";
 import type { ParsedEndpoint, ParsedGroup, ParsedSchema } from "../parser/types";
 import { bodyToExtract, paramsToExtract, responseToExtract } from "./extract-endpoint-types";
 
 /** What an extracted type describes. */
 export type ExtractedKind = "Response" | "Params" | "Body";
+
+/** A name JavaScript reads as an identifier: letters, digits, `_` and `$`, no digit first. */
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
 const EXTRACTORS: Readonly<Record<ExtractedKind, (ep: ParsedEndpoint) => ParsedSchema | null>> = {
   Response: responseToExtract,
@@ -43,7 +47,9 @@ export interface ExtractedTypeNames {
  * `ItemsListItemsResponse` — by `Api` for an endpoint of the API itself —
  * and numbered if that is taken as well. The whole import is named at once,
  * whatever is selected, so an endpoint added later is named as it would
- * have been from the start.
+ * have been from the start. An endpoint whose name is no identifier once
+ * capitalised — an operation `3d` — is named by the identifier made of it,
+ * `_3dResponse`, as is a group's.
  *
  * @param groups - Every group of the import, as it is generated
  * @param declared - The names of the specification's own schemas
@@ -78,7 +84,7 @@ export function extractedTypeNames(
 
   return {
     nameOf: (group, endpoint, kind) =>
-      names.get(keyOf(group, endpoint, kind)) ?? `${pascal(endpoint)}${kind}`,
+      names.get(keyOf(group, endpoint, kind)) ?? `${typeName(endpoint)}${kind}`,
   };
 }
 
@@ -93,7 +99,7 @@ function wantedTypes(
         .map((kind) => ({
           key: keyOf(group.name, ep.name, kind),
           group: group.name,
-          base: `${pascal(ep.name)}${kind}`,
+          base: `${typeName(ep.name)}${kind}`,
         })),
     ),
   );
@@ -110,11 +116,15 @@ function free(name: string, taken: ReadonlySet<string>): string {
   return candidate;
 }
 
-function pascal(name: string): string {
-  return name.charAt(0).toUpperCase() + name.slice(1);
+/* The name capitalised, as a type is named after it; where that reads as no
+   identifier — `3d`, `2fa-verify` — the identifier made of it. A name that
+   reads as one keeps the type names it has always had. */
+function typeName(name: string): string {
+  const capitalised = name.charAt(0).toUpperCase() + name.slice(1);
+  return IDENTIFIER.test(capitalised) ? capitalised : toSafeIdentifier(name);
 }
 
 /* What a type is qualified by: its group, or `Api` for the API's own endpoints, which have none. */
 function qualifier(group: string): string {
-  return isTopLevel(group) ? "Api" : pascal(group);
+  return isTopLevel(group) ? "Api" : typeName(group);
 }

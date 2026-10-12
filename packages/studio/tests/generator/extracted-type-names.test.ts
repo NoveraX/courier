@@ -8,6 +8,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { generateCode } from "../../src/apis/generator";
+import { extractedTypeNames } from "../../src/apis/generator/extracted-type-names";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import {
@@ -160,5 +161,89 @@ describe("the name a type takes", () => {
     const schemas = selected.find((f) => f.path.endsWith("/b/schemas.ts"))?.content ?? "";
 
     expect(schemas).toContain("export type BListResponse");
+  });
+});
+
+describe("a type extracted from an endpoint whose name starts with a digit", () => {
+  const object = (property: string) => ({
+    type: "object",
+    properties: { [property]: { type: "string" } },
+  });
+  const ok = (property: string) => ({ "200": { description: "ok", ...json(object(property)) } });
+  const DIGITS = parseSpec(
+    JSON.stringify({
+      openapi: "3.0.3",
+      info: { title: "Shop", version: "1" },
+      servers: [{ url: "https://shop.example" }],
+      paths: {
+        "/a/model": {
+          get: {
+            operationId: "3d",
+            tags: ["a"],
+            parameters: [query("q", "string")],
+            responses: ok("x"),
+          },
+        },
+        "/a/verify": {
+          post: {
+            operationId: "2fa-verify",
+            tags: ["a"],
+            requestBody: { required: true, ...json(object("code")) },
+            responses: ok("passed"),
+          },
+        },
+        "/b/model": { get: { operationId: "3d", tags: ["b"], responses: ok("y") } },
+        "/top": { get: { operationId: "7up", responses: ok("z") } },
+      },
+    }),
+  );
+  const DIGITS_CONSUMER = `import { shopApi } from "./src/api/shop";
+import type {
+  A_3dResponse,
+  B_3dResponse,
+  _2faVerifyParams,
+  _2faVerifyResponse,
+  _7upResponse,
+} from "./src/api/shop";
+
+export async function calls(): Promise<void> {
+  const a: A_3dResponse = await shopApi.a["3d"]({ q: "cube" });
+  const b: B_3dResponse = await shopApi.b["3d"]();
+  const code: _2faVerifyParams = { code: "123456" };
+  const verified: _2faVerifyResponse = await shopApi.a["2faVerify"](code);
+  const top: _7upResponse = await shopApi["7up"]();
+  void [a.x, b.y, verified.passed, top.z];
+}
+`;
+
+  it.each(["zod", "valibot", "arktype", "none"] as const)(
+    "is an identifier, unique, and named alike wherever %s code uses it",
+    (validation) => {
+      const files = generateCode(
+        DIGITS,
+        { type: "openapi", outputDir: "src/api", validation },
+        "shop",
+      );
+      const dir = writeProject(`extracted-type-names/digits-${validation}`, files, {
+        "consumer.ts": DIGITS_CONSUMER,
+      });
+
+      expect(compileProject(dir, ["consumer.ts", ...files.map((file) => file.path)])).toEqual([]);
+    },
+    60_000,
+  );
+
+  it("leaves a name that reads as an identifier already as it always was", () => {
+    const [group] = DIGITS.groups.filter((candidate) => candidate.name === "b");
+    if (group === undefined) throw new Error("the spec has no group b");
+    const renamed = {
+      ...group,
+      endpoints: group.endpoints.map((ep) => ({ ...ep, name: "getHTTPStatus" })),
+    };
+
+    const names = extractedTypeNames([renamed], []);
+
+    expect(names.nameOf("b", "getHTTPStatus", "Response")).toBe("GetHTTPStatusResponse");
+    expect(extractedTypeNames([group], []).nameOf("b", "3d", "Response")).toBe("_3dResponse");
   });
 });

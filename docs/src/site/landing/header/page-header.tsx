@@ -55,7 +55,7 @@ export function PageHeader({ page, brand, brandLabel, action, install }: PageHea
         <TopLink
           href={page}
           label={brandLabel}
-          className="flex shrink-0 items-center gap-2.25 text-fg hover:text-fg"
+          className="flex shrink-0 items-center gap-2.25 self-stretch text-fg hover:text-fg"
         >
           {brand}
         </TopLink>
@@ -87,7 +87,7 @@ export function PageHeader({ page, brand, brandLabel, action, install }: PageHea
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Courier on GitHub"
-          className="hidden text-fg-muted hover:text-fg min-[480px]:flex"
+          className="-m-1.5 hidden p-1.5 text-fg-muted hover:text-fg min-[480px]:flex"
         >
           <GitHubMark />
         </a>

@@ -78,8 +78,8 @@ export function HeroEditor({ sources, calls }: HeroEditorProps) {
             ))}
           </div>
         </div>
-        <div className="relative min-h-80 min-w-0 overflow-x-auto py-4.5">
-          <div className="relative min-w-max pb-22.5 font-mono text-[12.4px] text-code-plain">
+        <div className="@container relative min-h-80 min-w-0 overflow-x-auto py-4.5">
+          <div className="relative min-w-max pb-22.5 font-mono text-[12.4px] text-code-plain max-[480px]:pb-28">
             {shownCalls(calls, frame).map((line, at) => (
               <span key={CALL_KEYS[at]} className={LINE}>
                 <TokenLine tokens={line} />

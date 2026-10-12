@@ -84,7 +84,7 @@ export function AdapterPicker({
         />
       </div>
       <section aria-label={`${adapter.label} adapter`} className="flex min-w-0 flex-col">
-        <div className="flex h-10.5 min-w-0 items-center gap-3 border-b border-line px-4">
+        <div className="flex min-h-10.5 min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2">
           <span className="min-w-0 truncate font-mono text-label tracking-normal text-fg">
             {adapter.file}
           </span>
@@ -93,7 +93,7 @@ export function AdapterPicker({
           </span>
           <PageLink
             href={adapter.guide}
-            className="ml-auto shrink-0 text-[12.5px] whitespace-nowrap text-fg-muted transition-colors hover:text-fg"
+            className="-my-1 ml-auto shrink-0 py-1 text-[12.5px] whitespace-nowrap text-fg-muted transition-colors hover:text-fg"
           >
             {adapter.label} guide <span aria-hidden="true">→</span>
           </PageLink>

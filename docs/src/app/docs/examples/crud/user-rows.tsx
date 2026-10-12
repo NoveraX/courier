@@ -15,7 +15,11 @@ export type User = {
 const ICON =
   "grid size-7 cursor-pointer place-items-center rounded-chip text-fg-subtle transition-colors hover:bg-raised hover:text-fg disabled:cursor-default disabled:opacity-50"
 
-/** The backend's users, each with buttons to pick it for an update and to delete it. */
+/**
+ * The backend's users, each with buttons to pick it for an update and to
+ * delete it — the email and the role under the name where the row is too
+ * narrow for them all.
+ */
 export function UserRows({
   users,
   loading,
@@ -41,10 +45,12 @@ export function UserRows({
             selected?.id === user.id && "bg-brand-dim"
           )}
         >
-          <span className="font-medium text-fg">{user.name}</span>
-          <span className="min-w-0 truncate text-fg-subtle">{user.email}</span>
-          <span className="rounded-chip bg-raised px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">
-            {user.role}
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            <span className="font-medium text-fg">{user.name}</span>
+            <span className="min-w-0 truncate text-fg-subtle">{user.email}</span>
+            <span className="rounded-chip bg-raised px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">
+              {user.role}
+            </span>
           </span>
           <span className="ml-auto flex gap-0.5">
             <button

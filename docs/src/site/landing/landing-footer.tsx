@@ -4,7 +4,8 @@ import { FOOTER_COLUMNS } from "./footer-columns"
 import { InstallButton } from "./install-button"
 import { PageLink } from "./page-link"
 
-const LINK = "text-nav text-fg-muted hover:text-fg"
+/* The gap between links is shared out to them, so a finger has more to land on. */
+const LINK = "-my-1.25 py-1.25 text-nav text-fg-muted hover:text-fg"
 
 /**
  * The landing page's footer: Courier in a line with its install command,
@@ -23,7 +24,10 @@ export function LandingFooter({ version }: { version: string }) {
       <div className="mx-auto max-w-[1200px] px-5 pt-14">
         <div className="grid grid-cols-1 gap-10 min-[900px]:grid-cols-[minmax(0,320px)_minmax(0,1fr)] min-[900px]:gap-16">
           <div className="flex max-w-80 flex-col gap-4">
-            <TopLink href="/" className="flex items-center gap-2.25 text-fg hover:text-fg">
+            <TopLink
+              href="/"
+              className="-my-1 flex items-center gap-2.25 py-1 text-fg hover:text-fg"
+            >
               <CourierMark width={19} />
               <span className="text-[15px] font-semibold tracking-[-0.02em]">courier</span>
             </TopLink>

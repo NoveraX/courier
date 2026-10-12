@@ -1,5 +1,7 @@
 import type { ReactNode } from "react"
 
+import { BreakableText } from "@/site/code/breakable-text"
+
 interface SandboxProps {
   /** What the sandbox calls, as its header names it. */
   label: string
@@ -13,7 +15,8 @@ interface SandboxProps {
  * A call to try on the page: its name, the inputs and the button that sends
  * it on the left, what it answered on the right — stacked wherever the
  * sandbox itself is narrower than 560 px, on a phone or in a narrow column,
- * so the answer always has the width to be read.
+ * so the answer always has the width to be read. A name too long for the
+ * header wraps between its members rather than being cut.
  *
  * @param props - The call's name, its controls and its result
  * @returns The sandbox
@@ -25,9 +28,11 @@ interface SandboxProps {
 export function Sandbox({ label, controls, result }: SandboxProps) {
   return (
     <div className="overflow-hidden rounded-panel border border-line bg-panel shadow-panel">
-      <div className="flex h-9.5 items-center gap-2.5 border-b border-line bg-bg-subtle px-3.5">
-        <span className="min-w-0 truncate font-mono text-label text-fg-muted">{label}</span>
-        <span className="ml-auto font-mono text-micro tracking-[0.06em] text-fg-subtle">
+      <div className="flex min-h-9.5 items-center gap-2.5 border-b border-line bg-bg-subtle px-3.5 py-1.5">
+        <span className="min-w-0 font-mono text-label wrap-break-word text-fg-muted">
+          <BreakableText text={label} after="." />
+        </span>
+        <span className="ml-auto shrink-0 font-mono text-micro tracking-[0.06em] text-fg-subtle">
           SANDBOX
         </span>
       </div>

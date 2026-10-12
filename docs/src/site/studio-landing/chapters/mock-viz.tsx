@@ -28,9 +28,10 @@ const OUTCOME: Readonly<Record<CallOutcome, string>> = {
 }
 
 /**
- * Chaos on a mock backend: the presets with the one in force lit, its
- * error rate on a slider, and the latest calls coming back — red as often
- * as the preset says. The presets step through on their own.
+ * Chaos on a mock backend: the presets with the one in force lit — two by
+ * two in a frame too narrow for their names in a row — its error rate on a
+ * slider, and the latest calls coming back, red as often as the preset
+ * says. The presets step through on their own.
  *
  * @returns The visual
  * @example
@@ -54,7 +55,7 @@ export function MockViz() {
         aria-label={`Chaos preset ${CHAOS_PRESETS[preset]?.label}: ${rate}% of calls fail`}
         className="flex flex-col gap-3.5 p-4.5"
       >
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2 @max-[380px]:grid-cols-2">
           {CHAOS_PRESETS.map((item, at) => {
             const Icon = ICONS[at] ?? ShieldCheck
             const on = at === preset

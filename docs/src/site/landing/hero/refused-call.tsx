@@ -4,7 +4,8 @@ const CREATE_LINE = 7
 
 /**
  * The type checker refusing the create: a wavy line under the argument and
- * the message an editor shows for it, word for word.
+ * the message an editor shows for it, word for word — moved left as far as
+ * it must be to show whole in the editor's width, on a phone too.
  *
  * @returns The underline and the message
  * @example
@@ -24,8 +25,11 @@ export function RefusedCall() {
       </span>
       <div
         role="status"
-        className="absolute z-3 max-w-[340px] animate-[landing-rise_0.2s_ease_both] overflow-hidden rounded-[9px] border border-tone-red/40 bg-raised shadow-overlay"
-        style={{ top: `${CREATE_LINE * 23 + 29}px`, left: "calc(18px + 20ch)" }}
+        className="absolute z-3 max-w-(--width) animate-[landing-rise_0.2s_ease_both] overflow-hidden rounded-[9px] border border-tone-red/40 bg-raised shadow-overlay [--width:min(340px,calc(100cqw-24px))]"
+        style={{
+          top: `${CREATE_LINE * 23 + 29}px`,
+          left: "min(calc(18px + 20ch), calc(100cqw - var(--width) - 12px))",
+        }}
       >
         <div className="flex items-center gap-1.75 border-b border-line px-2.75 py-1.75 text-micro text-tone-red">
           ✕ ts(2345)

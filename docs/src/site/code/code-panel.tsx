@@ -1,5 +1,6 @@
 import { FileCode } from "lucide-react"
 
+import { BreakableText } from "./breakable-text"
 import { CodeBody } from "./code-body"
 import { CopyButton } from "./copy-button"
 import { highlight } from "./highlight"
@@ -18,8 +19,9 @@ interface CodePanelProps {
 /**
  * A block of code as the site shows it: a header naming its file — or
  * captioning a plain-text block, or naming its language when nothing else
- * does — a Copy button, and the highlighted code. A block drawn in
- * box-drawing glyphs is set as a drawing.
+ * does — a Copy button, and the highlighted code. A name longer than a
+ * phone's header goes on over a second line, broken between its folders. A
+ * block drawn in box-drawing glyphs is set as a drawing.
  *
  * @param props - The code, its language and its file
  * @returns The panel
@@ -37,12 +39,14 @@ export async function CodePanel({ code, language, filename }: CodePanelProps) {
       data-slot="code-panel"
       className="overflow-hidden rounded-panel border border-line bg-panel shadow-panel"
     >
-      <div className="flex h-10 items-center gap-2 border-b border-line bg-bg-subtle pr-2 pl-3.5 font-mono text-label text-fg-muted">
+      <div className="flex min-h-10 items-center gap-2 border-b border-line bg-bg-subtle py-1.5 pr-2 pl-3.5 font-mono text-label text-fg-muted">
         {filename && language !== "text" && (
           <FileCode aria-hidden="true" className="size-3.25 shrink-0 text-fg-subtle" />
         )}
-        <span className="min-w-0 truncate">{label}</span>
-        <CopyButton text={code} className="ml-auto" />
+        <span className="min-w-0 wrap-break-word">
+          <BreakableText text={label} after="/" />
+        </span>
+        <CopyButton text={code} className="ml-auto shrink-0" />
       </div>
       <CodeBody html={html} drawing={drawing} />
     </div>

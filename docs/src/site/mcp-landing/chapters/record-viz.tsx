@@ -84,7 +84,8 @@ const VERB_LOOK = { GET: "text-verb-get", POST: "text-verb-post" } as const
 
 /**
  * Studio's timeline with agents at work: their calls marked `agent` beside
- * the app's own, a declined confirmation and a policy's 403 among them.
+ * the app's own, a declined confirmation and a policy's 403 among them. In
+ * a narrow frame each call takes two lines, its endpoint whole on the first.
  *
  * @returns The visual
  * @example
@@ -109,15 +110,15 @@ export function RecordViz() {
             {/* Dimmed inside the part that animates in, whose entrance ends fully opaque. */}
             <div
               className={cn(
-                "grid grid-cols-[42px_minmax(0,1fr)_auto_64px_48px] items-center gap-3 rounded-[7px] px-2.5 py-1.75 font-mono text-[11.5px]",
+                "grid grid-cols-[42px_minmax(0,1fr)_auto_64px_48px] items-center gap-3 rounded-[7px] px-2.5 py-1.75 font-mono text-[11.5px] @max-[420px]:grid-cols-[42px_auto_minmax(0,1fr)_auto] @max-[420px]:gap-y-1",
                 row.mode !== "agent" && "opacity-40"
               )}
             >
               <span className={VERB_LOOK[row.verb]}>{row.verb}</span>
-              <span className="truncate text-fg">{row.endpoint}</span>
+              <span className="truncate text-fg @max-[420px]:col-span-3">{row.endpoint}</span>
               <span
                 className={cn(
-                  "rounded-chip px-1.5 py-px font-sans text-[10px] font-medium",
+                  "rounded-chip px-1.5 py-px font-sans text-[10px] font-medium @max-[420px]:col-start-2",
                   MODE_LOOK[row.mode]
                 )}
               >

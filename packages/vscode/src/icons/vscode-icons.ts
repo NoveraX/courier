@@ -1,4 +1,4 @@
-import { isAbsolute, join } from "node:path";
+import { posix, win32 } from "node:path";
 
 import { isRecord } from "../studio/studio-guards";
 import { CONFIG_FILES, ICONS, MOCKS_FILES, STATE_FOLDER, VSICONS_FOLDER_ICON } from "./icon-files";
@@ -115,6 +115,8 @@ export interface VsiconsHome {
  * ```
  */
 export function vsiconsFolder(home: VsiconsHome): string {
+  /* Paths as the system the editor runs on writes them, whichever system works them out. */
+  const { isAbsolute, join } = home.platform === "win32" ? win32 : posix;
   const setting = home.setting.trim();
   if (!setting) return join(userFolder(home), "vsicons-custom-icons");
   const base =
@@ -133,12 +135,13 @@ function userFolder({ appName, platform, env, home }: VsiconsHome): string {
         : dev
           ? "code-oss-dev"
           : "Code";
+  const { join } = platform === "win32" ? win32 : posix;
   return join(env.VSCODE_PORTABLE ?? appData(platform, env, home), build, "User");
 }
 
 function appData(platform: NodeJS.Platform, env: VsiconsHome["env"], home: string): string {
-  if (platform === "darwin") return join(home, "Library", "Application Support");
-  if (platform === "linux") return join(home, ".config");
-  if (platform === "win32") return env.APPDATA ?? join(home, "AppData", "Roaming");
+  if (platform === "darwin") return posix.join(home, "Library", "Application Support");
+  if (platform === "linux") return posix.join(home, ".config");
+  if (platform === "win32") return env.APPDATA ?? win32.join(home, "AppData", "Roaming");
   return "/var/local";
 }

@@ -1,0 +1,6 @@
+{
+  "name": "npm",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Takes the place of the npm CLI that semantic-release's npm plugin depends on. The release never runs that plugin — scripts/release.ts publishes with the npm that comes with Node — so the CLI, and the old dependencies it bundles, are not installed."
+}

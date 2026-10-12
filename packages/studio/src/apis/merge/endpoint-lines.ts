@@ -4,16 +4,24 @@ import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { docCommentBefore } from "../manage/doc-comment-before";
 import { findGroupDeclaration } from "../manage/group-declaration";
+import { leadingCommentsStart } from "./leading-comments";
 import { lineFinder } from "./line-index";
 
 /** The lines one endpoint of a file takes, counted from 0 on its `\n`-split lines. */
 export interface EndpointLines {
   name: string;
+  /**
+   * Where the comments the user wrote above its doc comment start — a
+   * heading, a reminder; where its doc comment starts when there are none.
+   */
+  noteStart: number;
   /** Where its doc comment starts; its own first line when it has none. */
   commentStart: number;
   start: number;
   /** Its last line, the one its expression ends on. */
   end: number;
+  /** The comments written inside it, or at the end of one of its lines, as written. */
+  comments: string[];
 }
 
 /** An entry of an `endpoints` object and its lines; no name for a spread or a computed key. */
@@ -70,6 +78,22 @@ export function entryLines(
     const start = lineOf(property.start);
     const doc = docCommentBefore(content, comments, property.start);
     const commentStart = doc === null ? start : lineOf(doc.start);
-    return { name, commentStart, start, end: lineOf(property.end) };
+    const noteStart = lineOf(leadingCommentsStart(content, comments, doc?.start ?? property.start));
+    const inside = commentsWithin(content, comments, property);
+    return { name, noteStart, commentStart, start, end: lineOf(property.end), comments: inside };
   });
+}
+
+/* The comments on an entry's own lines, from its first line's start to its last line's end. */
+function commentsWithin(
+  content: string,
+  comments: readonly Comment[],
+  { start, end }: { start: number; end: number },
+): string[] {
+  const from = content.lastIndexOf("\n", start - 1) + 1;
+  const lineEnd = content.indexOf("\n", end);
+  const to = lineEnd === -1 ? content.length : lineEnd;
+  return comments
+    .filter((comment) => comment.start >= from && comment.end <= to)
+    .map((comment) => content.slice(comment.start, comment.end));
 }

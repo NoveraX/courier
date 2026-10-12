@@ -148,7 +148,7 @@ function assemble(
   /* What the file already declares wins, so a base someone renamed or
      configured survives; the generated one is used only for a file that had none. */
   const preamble = own.info.preamble.length > 0 ? own.info.preamble : fresh.info.preamble;
-  const endpoints = entries.flatMap((e) => (e.comment ? [e.comment, e.code] : [e.code]));
+  const endpoints = entries.flatMap((e) => [e.note, e.comment, e.code].filter(isText));
   const helpers = missingHelpers(own.layout, fresh.layout, changes);
   const gap = trailingCode.length > 0 && helpers.length > 0 ? [""] : [];
   const trailing = [...trailingCode, ...gap, ...helpers];
@@ -166,4 +166,8 @@ function conflict(generatedContent: string, detail: string): MergeResult {
     status: "conflict",
     changes: [{ type: "updated", target: "file", detail }],
   };
+}
+
+function isText(part: string | undefined): part is string {
+  return part !== undefined && part !== "";
 }

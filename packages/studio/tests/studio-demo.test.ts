@@ -48,7 +48,11 @@ beforeEach(async () => {
       port: 0,
       host: "127.0.0.1",
       projectRoot: root,
-      demo: { resetsAt: RESETS_AT, trustedProxies: [FILTER_RANGE] },
+      demo: {
+        resetsAt: RESETS_AT,
+        trustedProxies: [FILTER_RANGE],
+        addressHeader: "DDG-Connecting-IP",
+      },
       onReady: resolve,
       onError: reject,
     });
@@ -362,12 +366,12 @@ describe("the demo's HTTP server", () => {
 
 describe("the demo's sockets, counted by address", () => {
   /* A page reached through a proxy on this machine, which says who opened it. */
-  async function visit(visitor: string): Promise<boolean> {
+  async function visit(visitor: string, headers: Record<string, string> = {}): Promise<boolean> {
     const socket = connect(`${url}/ui`, {
       transports: ["websocket"],
       forceNew: true,
       reconnection: false,
-      extraHeaders: { "x-forwarded-for": visitor },
+      extraHeaders: { ...headers, "x-forwarded-for": visitor },
     });
     sockets.push(socket);
     return new Promise<boolean>((resolve) => {
@@ -402,6 +406,18 @@ describe("the demo's sockets, counted by address", () => {
     expect(await visit(`192.0.2.220, ${FILTER_NODE}`)).toBe(false);
     expect(await visit(`192.0.2.221, ${FILTER_NODE}`)).toBe(true);
     expect(await visit(`192.0.2.220, 192.0.2.221, ${FILTER_NODE}`)).toBe(true);
+  });
+
+  it("are counted by the address the filter names, when the proxy reported only the filter's", async () => {
+    const named = (visitor: string) => ({ "ddg-connecting-ip": visitor });
+    const opened: boolean[] = [];
+    for (let n = 0; n < 10; n++) opened.push(await visit(FILTER_NODE, named("192.0.2.230")));
+
+    expect(opened.every(Boolean)).toBe(true);
+    expect(await visit(FILTER_NODE, named("192.0.2.230"))).toBe(false);
+    expect(await visit(FILTER_NODE, named("192.0.2.231"))).toBe(true);
+    /* A visitor that came past the filter is counted by its own address, whatever it names. */
+    expect(await visit("192.0.2.230", named("192.0.2.232"))).toBe(false);
   });
 });
 

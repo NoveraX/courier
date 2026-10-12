@@ -72,5 +72,5 @@ export function createDemoConnections(
 }
 
 function connectionOf(request: IncomingMessage): VisitorConnection {
-  return { peer: request.socket.remoteAddress, forwardedFor: request.headers["x-forwarded-for"] };
+  return { peer: request.socket.remoteAddress, headers: request.headers };
 }

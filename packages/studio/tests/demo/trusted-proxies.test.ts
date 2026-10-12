@@ -1,7 +1,8 @@
 /**
  * The proxies a public demo is reached through besides the one in front of
  * Studio — a CDN, a WAF, a DDoS filter — named by address or range, IPv4 and
- * IPv6, whose `X-Forwarded-For` entries Studio reads past.
+ * IPv6, whose `X-Forwarded-For` entries Studio reads past, and the header
+ * they name the visitor in.
  */
 import { CourierError } from "@noverax/courier";
 import { describe, expect, it } from "vitest";
@@ -12,14 +13,14 @@ import {
   trustedProxies,
 } from "../../src/server/demo/trusted-proxies";
 
-function refusal(entry: string): CourierError {
+function refusal(entry: string, addressHeader?: string): CourierError {
   try {
-    trustedProxies([entry]);
+    trustedProxies([entry], addressHeader);
   } catch (error) {
     if (error instanceof CourierError) return error;
     throw error;
   }
-  throw new Error(`"${entry}" was taken`);
+  throw new Error(`"${entry}" and "${addressHeader}" were taken`);
 }
 
 describe("trustedProxies", () => {
@@ -96,6 +97,26 @@ describe("trustedProxies", () => {
       expect(error.code).toBe("STUDIO_DEMO_PROXY_INVALID");
       expect(error.message).toContain("takes in every address");
     }
+  });
+});
+
+describe("trustedProxies' address header", () => {
+  it("names the header lower-cased, as Node gives headers", () => {
+    expect(trustedProxies(["198.51.100.0/24"], " DDG-Connecting-IP ").addressHeader).toBe(
+      "ddg-connecting-ip",
+    );
+  });
+
+  it("names none when the demo names none", () => {
+    expect(trustedProxies(["198.51.100.0/24"]).addressHeader).toBeUndefined();
+    expect(trustedProxies(["198.51.100.0/24"], "  ").addressHeader).toBeUndefined();
+  });
+
+  it("refuses a header that is no header's name, saying which option it came from", () => {
+    const error = refusal("198.51.100.0/24", "Connecting IP");
+
+    expect(error.code).toBe("STUDIO_DEMO_PROXY_INVALID");
+    expect(error.message).toContain('"Connecting IP" in the demo\'s addressHeader');
   });
 });
 

@@ -5,6 +5,7 @@
 
 import type { Socket } from "socket.io";
 
+import type { TrustedProxies } from "./demo/trusted-proxies";
 import { visitorAddress } from "./demo/visitor-address";
 import { isPlainObject } from "./is-plain-object";
 import { READ_ONLY_PAGES, TOKEN_PAGES } from "./live-events";
@@ -54,6 +55,8 @@ export interface VisitorPolicy {
   decide(visitor: VisitorPage, event: string, args: readonly unknown[]): VisitorDecision;
   /** Forget what was counted for a page that left. */
   forget(pageId: string): void;
+  /** The proxies a visitor's address is read past in `X-Forwarded-For`; none unless the demo names them. */
+  readonly trusted?: TrustedProxies | undefined;
 }
 
 const RUN: VisitorDecision = { kind: "run" };
@@ -103,7 +106,7 @@ export function guardUiWrites(
   const { address: peer, headers } = socket.handshake;
   const visitor = {
     page: socket.id,
-    address: visitorAddress({ peer, forwardedFor: headers["x-forwarded-for"] }),
+    address: visitorAddress({ peer, forwardedFor: headers["x-forwarded-for"] }, visitors.trusted),
   };
   socket.use((packet, next) => {
     const [event] = packet;

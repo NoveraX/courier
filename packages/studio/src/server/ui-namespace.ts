@@ -28,7 +28,7 @@ import type { PlaygroundHistory } from "./storage/playground-history";
 import type { RequestPins } from "./storage/request-pins";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
-import { type StudioInfo, studioInfo } from "./studio-info";
+import { pageDemo, type StudioInfo, studioInfo } from "./studio-info";
 import type { StudioToken } from "./studio-token";
 import type { StudioDemo } from "./types";
 import { bindBodies } from "./ui-bodies";
@@ -95,7 +95,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { project, projectRoot, token, visitors, demo, databaseSize, pageState, pins } = deps;
   /* Read once: the version cannot change while Studio runs, and a renamed
      package shows after a restart. */
-  const info: StudioInfo = { ...studioInfo(projectRoot), ...(demo && { demo }) };
+  const info: StudioInfo = { ...studioInfo(projectRoot), ...(demo && { demo: pageDemo(demo) }) };
 
   uiNamespace.on("connection", (socket) => {
     const trusted = guardUiWrites(socket, token, visitors);

@@ -66,7 +66,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   app.disable("x-powered-by");
   app.use(securityHeaders);
   /* A public demo counts what its visitors send, on the sockets and the API alike. */
-  const serving = demo ? demoServing() : undefined;
+  const serving = demo ? demoServing(demo) : undefined;
   if (serving) app.use(serving.httpGuard);
   const httpServer = createServer(serving?.serverOptions ?? {}, app);
   serving?.holdServer(httpServer);

@@ -27,6 +27,9 @@ import { TOKEN_HEADER } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
 
 const RESETS_AT = Date.UTC(2026, 9, 5, 18, 0);
+/* A DDoS filter in front of the demo's proxy, one of whose nodes every visitor below comes through. */
+const FILTER_RANGE = "198.51.100.128/25";
+const FILTER_NODE = "198.51.100.200";
 
 let root: string;
 let url: string;
@@ -45,7 +48,7 @@ beforeEach(async () => {
       port: 0,
       host: "127.0.0.1",
       projectRoot: root,
-      demo: { resetsAt: RESETS_AT },
+      demo: { resetsAt: RESETS_AT, trustedProxies: [FILTER_RANGE] },
       onReady: resolve,
       onError: reject,
     });
@@ -137,7 +140,7 @@ async function localSpec(): Promise<{ url: string; close: () => Promise<void> }>
 }
 
 describe("a page of the demo", () => {
-  it("is told it is a demo, and when the demo resets", async () => {
+  it("is told it is a demo and when it resets, and nothing of the proxies it trusts", async () => {
     const socket = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true });
     sockets.push(socket);
 
@@ -389,6 +392,16 @@ describe("the demo's sockets, counted by address", () => {
 
     expect(await visit("192.0.2.210")).toBe(false);
     expect(await visit("192.0.2.211")).toBe(true);
+  });
+
+  it("are counted by the address a trusted filter saw, not the filter's own", async () => {
+    const opened: boolean[] = [];
+    for (let n = 0; n < 10; n++) opened.push(await visit(`192.0.2.220, ${FILTER_NODE}`));
+
+    expect(opened.every(Boolean)).toBe(true);
+    expect(await visit(`192.0.2.220, ${FILTER_NODE}`)).toBe(false);
+    expect(await visit(`192.0.2.221, ${FILTER_NODE}`)).toBe(true);
+    expect(await visit(`192.0.2.220, 192.0.2.221, ${FILTER_NODE}`)).toBe(true);
   });
 });
 

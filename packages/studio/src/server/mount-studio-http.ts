@@ -86,7 +86,7 @@ export function mountStudioHttp(
       : { project, requestLog, root, audit: auditInputsOf(project, root), mocks: mockManager },
     webhooks: serving ? undefined : parts.webhooks,
     token,
-    demo: serving && { limits: serving.limits },
+    demo: serving && { limits: serving.limits, trusted: serving.trusted },
   });
   if (!serving) {
     mountStudioMcp(app, {

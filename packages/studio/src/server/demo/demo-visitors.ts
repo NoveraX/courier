@@ -7,6 +7,7 @@ import { WRITING_EVENTS } from "../ui-token-guard";
 import { demoCommandProblem, type RecordsIn } from "./demo-command-bounds";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
 import { DEMO_SHARED_REFUSAL } from "./demo-refusals";
+import type { TrustedProxies } from "./trusted-proxies";
 
 /** The most a Playground call or a message to a channel may weigh, as JSON. */
 export const DEMO_MAX_PAYLOAD = 64 * 1024;
@@ -40,6 +41,8 @@ export interface DemoVisitorsDeps {
   limits?: DemoLimits | undefined;
   /** How many records a mock's collection holds, for the demo's bound on them. */
   recordsIn?: RecordsIn | undefined;
+  /** The proxies a visitor's address is read past in `X-Forwarded-For`. */
+  trusted?: TrustedProxies | undefined;
 }
 
 /**
@@ -63,6 +66,7 @@ export function demoVisitors({
   callsInFlight,
   limits = createDemoLimits(),
   recordsIn,
+  trusted,
 }: DemoVisitorsDeps): VisitorPolicy {
   const openProblem = (pageId: string): string | null => {
     const { page, all } = DEMO_OPEN_CALLS;
@@ -109,7 +113,7 @@ export function demoVisitors({
         return WRITING_EVENTS.has(event) ? { kind: "refuse", reason: DEMO_SHARED_REFUSAL } : RUN;
     }
   };
-  return { decide, forget: (pageId) => limits.forget(pageId) };
+  return { decide, forget: (pageId) => limits.forget(pageId), trusted };
 }
 
 function verdict(problem: string | null): VisitorDecision {

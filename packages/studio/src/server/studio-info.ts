@@ -17,8 +17,8 @@ export interface StudioInfo {
     /** The packages it depends on, dev ones included, by name and sorted. */
     dependencies: string[];
   };
-  /** How Studio runs as a public demo; absent when it does not. */
-  demo?: StudioDemo;
+  /** When the public demo Studio runs as resets; absent when it runs as none. */
+  demo?: Pick<StudioDemo, "resetsAt">;
 }
 
 interface Manifest {
@@ -82,4 +82,20 @@ export function studioInfo(
       dependencies: manifest.dependencies,
     },
   };
+}
+
+/**
+ * What a page is told of the public demo Studio runs as: when it resets.
+ * How visitors reach it — the proxies it trusts — stays on the server.
+ *
+ * @param demo - How Studio runs as a public demo
+ * @returns The part every page is sent
+ * @example
+ * ```ts
+ * pageDemo({ resetsAt: 1_760_000_000_000, trustedProxies: ["198.51.100.0/24"] });
+ * // { resetsAt: 1760000000000 }
+ * ```
+ */
+export function pageDemo({ resetsAt }: StudioDemo): Pick<StudioDemo, "resetsAt"> {
+  return { resetsAt };
 }

@@ -1,4 +1,4 @@
-import { relative } from "node:path";
+import { relative, sep } from "node:path";
 import type { ObjectExpression, ObjectProperty } from "oxc-parser";
 
 import type { TextEdit } from "../../mocks-edit/types";
@@ -169,5 +169,6 @@ function editsByFile(
 }
 
 function notLoaded(modules: SourceModules, path: string): string {
-  return `${relative(modules.root, path)} is not among the files the config loads, so Studio does not change it`;
+  const file = relative(modules.root, path).split(sep).join("/");
+  return `${file} is not among the files the config loads, so Studio does not change it`;
 }

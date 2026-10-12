@@ -1,7 +1,7 @@
 {
   "name": "courier-vscode",
   "displayName": "Courier",
-  "description": "Courier Studio in your editor: every endpoint and how its calls went, above each call and in views of their own; Studio in a tab beside your code; from a call to its endpoint and back; requests and mocks live; new endpoints written for you; recorded calls as tests; @courier in the chat; Courier's own file icons; and your API offered to VS Code's agent.",
+  "description": "Courier Studio in your editor: every endpoint and how its calls went, above each call and in views of their own; Studio in a tab beside your code; from a call to its endpoint and back; requests and mocks live; new endpoints written for you; recorded calls as tests; @courier in the chat; Courier's own file icons, through Courier File Icons, which comes with it; and your API offered to VS Code's agent.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#08090a",
@@ -62,6 +62,9 @@
     "onLanguage:astro"
   ],
   "main": "./dist/extension.cjs",
+  "extensionPack": [
+    "noverax.courier-file-icons"
+  ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
@@ -267,17 +270,6 @@
         "icon": "$(add)"
       },
       {
-        "command": "courier.fileIcons.show",
-        "title": "Show Courier's Icons in the File Icon Theme",
-        "category": "Courier",
-        "icon": "$(symbol-file)"
-      },
-      {
-        "command": "courier.fileIcons.remove",
-        "title": "Remove Courier's Icons from the File Icon Theme",
-        "category": "Courier"
-      },
-      {
         "command": "courier.showLog",
         "title": "Show Log",
         "category": "Courier",
@@ -427,11 +419,6 @@
           "command": "courier.openStudioInBrowser",
           "when": "view == courier.endpoints",
           "group": "courier@5"
-        },
-        {
-          "command": "courier.fileIcons.show",
-          "when": "view == courier.endpoints",
-          "group": "courier@6"
         },
         {
           "command": "courier.showLog",
@@ -594,11 +581,6 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Offer VS Code's agent the MCP servers of each Courier project that has their package installed: its API as tools (`@noverax/courier-mcp`), and its running Studio (`@noverax/courier-studio mcp`)."
-        },
-        "courier.fileIcons.offer": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Offer once, in a Courier project, to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and `.courier` when the icon theme in use is Material Icon Theme or vscode-icons — as Courier starts, or when you pick such a theme. The icons go in through that theme's own settings, in your user settings, and follow them to your other machines; **Courier: Remove Courier's Icons from the File Icon Theme** takes them out everywhere."
         }
       }
     },
@@ -735,7 +717,8 @@
           {
             "id": "icons",
             "title": "Mark Courier's files",
-            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, the folder drawn in each theme's own style. Agree once: they follow you into the other theme, to your other machines through Settings Sync, through Courier's updates, and come out again everywhere just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
+            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, the folder drawn in each theme's own style — by Courier File Icons, which comes with Courier and runs beside your icon theme, in a remote window too. Agree once: they follow you into the other theme, to your other machines through Settings Sync, through updates, and come out again everywhere just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
+            "when": "courier.fileIconsReady",
             "media": {
               "image": {
                 "light": "media/walkthrough/icons-light.png",

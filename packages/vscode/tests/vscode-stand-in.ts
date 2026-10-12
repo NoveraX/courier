@@ -146,9 +146,6 @@ export const settings = new Map<string, unknown>();
 
 export const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 } as const;
 
-/** What another extension does when a setting changes, as a test has it react. */
-export const settingsChanged: ((key: string) => void)[] = [];
-
 export const workspace = {
   workspaceFolders: undefined as { uri: { fsPath: string } }[] | undefined,
   getWorkspaceFolder: (uri: { fsPath: string }) => ({
@@ -162,7 +159,6 @@ export const workspace = {
       update: async (key: string, value: unknown) => {
         if (value === undefined) settings.delete(full(key));
         else settings.set(full(key), value);
-        for (const listener of settingsChanged) listener(full(key));
       },
     };
   },
@@ -174,20 +170,10 @@ export const workspace = {
   },
 };
 
-/** Who listens for changes of the settings, as the code registered them. */
-export const configurationListeners = new Set<
+/* Who listens for changes of the settings, as the code registered them. */
+const configurationListeners = new Set<
   (change: { affectsConfiguration(key: string): boolean }) => unknown
 >();
-
-/** The extensions installed, by id, as a test installs them. */
-export const installed = new Map<
-  string,
-  { extensionPath: string; isActive?: boolean; activate?: () => Promise<unknown> }
->();
-
-export const extensions = {
-  getExtension: (id: string) => installed.get(id),
-};
 
 /** What the code showed the user, and the pages it opened. */
 export const shown = { warnings: [] as string[], infos: [] as string[], opened: [] as string[] };
@@ -245,18 +231,8 @@ export const commands = {
     registered.set(name, handler);
     return { dispose: () => registered.delete(name) };
   },
-  executeCommand: async (name: string, ...args: unknown[]) => {
-    executed.push([name, ...args]);
-    return undefined;
-  },
-  getCommands: async () => [...registered.keys(), ...elsewhere],
+  executeCommand: async () => undefined,
 };
-
-/** The commands the code ran, each with its arguments. */
-export const executed: unknown[][] = [];
-
-/** Commands other extensions registered, as a test has them. */
-export const elsewhere: string[] = [];
 
 /** VS Code's agent API, which a test fills in as the editor at hand would. */
 export const lm: {

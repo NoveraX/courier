@@ -1,6 +1,7 @@
 /*
- * The extension inside VS Code itself: a stand-in Studio answers as the real
- * one does, a workspace's project says where it runs, and the suite opens a
+ * The extension inside VS Code itself, Courier File Icons beside it as the
+ * extension pack installs it: a stand-in Studio answers as the real one
+ * does, a workspace's project says where it runs, and the suite opens a
  * file there and reads the hints the editor shows over its calls, and the
  * audit's findings it marks at them.
  *
@@ -26,6 +27,7 @@ import { runTests } from "@vscode/test-electron";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const extension = join(here, "../..");
+const fileIcons = join(here, "../../../vscode-file-icons");
 const MAC_CODE = "/Applications/Visual Studio Code.app/Contents/MacOS/Code";
 
 /* Which VS Code to run, as runTests takes it. */
@@ -165,7 +167,7 @@ const report = join(scratch, "report.json");
 try {
   await runTests({
     ...editorToRun(),
-    extensionDevelopmentPath: extension,
+    extensionDevelopmentPath: [extension, fileIcons],
     extensionTestsPath: join(here, "suite.cjs"),
     extensionTestsEnv: { COURIER_EDITOR_REPORT: report, COURIER_EDITOR_STUDIO: url },
     launchArgs: [

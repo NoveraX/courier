@@ -1,7 +1,7 @@
 import { posix, win32 } from "node:path";
 
-import { isRecord } from "../studio/studio-guards";
 import { CONFIG_FILES, ICONS, MOCKS_FILES, STATE_FOLDER, VSICONS_FOLDER_ICON } from "./icon-files";
+import { isRecord } from "./is-record";
 
 /** vscode-icons' settings, and its command that applies them. */
 export const VSICONS_FILES = "vsicons.associations.files";

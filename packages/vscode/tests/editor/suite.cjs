@@ -3,8 +3,9 @@
  * hints over its call, and checks the line above it, the hover over it, the
  * audit's finding marked at it, going to the endpoint's declaration and
  * back, the lines over the declaration, the endpoint in Go to Symbol, the
- * commands the extension offers and its snippets. What it saw is written to
- * COURIER_EDITOR_REPORT; a mismatch fails the run.
+ * commands the extension offers and its snippets — and Courier File Icons
+ * beside it, running where the editor's window runs, with its commands.
+ * What it saw is written to COURIER_EDITOR_REPORT; a mismatch fails the run.
  */
 const assert = require("node:assert/strict");
 const { writeFileSync } = require("node:fs");
@@ -101,6 +102,16 @@ async function addedEndpoint(folder) {
   return document.lineAt(3).text;
 }
 
+/* Courier File Icons as the editor runs it: where, and the commands it registered once started. */
+async function fileIcons() {
+  const extension = vscode.extensions.getExtension("noverax.courier-file-icons");
+  await extension?.activate();
+  const commands = (await vscode.commands.getCommands(true))
+    .filter((name) => name.startsWith("courier.fileIcons."))
+    .sort();
+  return { kind: extension?.packageJSON.extensionKind, commands };
+}
+
 exports.run = async function run() {
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
   assert.ok(folder, "VS Code opened no workspace");
@@ -140,6 +151,7 @@ exports.run = async function run() {
     panel: await studioTab(),
     added: await addedEndpoint(folder),
     tasks: (await vscode.tasks.fetchTasks({ type: "courier" })).map((task) => task.name),
+    fileIcons: await fileIcons(),
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -186,6 +198,11 @@ exports.run = async function run() {
     "a new endpoint goes after the group's last, its variables and response to fill in",
   );
   assert.deepEqual(report.tasks, ["studio", "verify", "openapi", "diff", "agents"]);
+  assert.deepEqual(
+    report.fileIcons,
+    { kind: ["ui"], commands: ["courier.fileIcons.remove", "courier.fileIcons.show"] },
+    "Courier File Icons runs where the window runs, its commands registered",
+  );
   assert.deepEqual(report.snippets, [
     "courier-api",
     "courier-boundary",

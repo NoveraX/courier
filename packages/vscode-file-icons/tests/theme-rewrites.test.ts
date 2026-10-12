@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { changeThemeSettings, type RebuiltTheme } from "../src/icons/theme-rewrites";
+import { changeThemeSettings, type RebuiltTheme } from "../src/theme-rewrites";
 import { settings, settingsChanged } from "./vscode-stand-in";
 
 const FILES = "vsicons.associations.files";

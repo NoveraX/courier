@@ -19,13 +19,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  applyIcons,
-  hasCourierIcons,
-  keepIconsCurrent,
-  removeIcons,
-} from "../src/icons/apply-icons";
-import type { CourierIcons } from "../src/icons/icon-files";
+import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "../src/apply-icons";
+import type { CourierIcons } from "../src/icon-files";
 import { elsewhere, executed, installed, settings } from "./vscode-stand-in";
 
 const FILES = "material-icon-theme.files.associations";

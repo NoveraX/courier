@@ -1,10 +1,10 @@
 import { dirname, join } from "node:path";
 import * as vscode from "vscode";
 
-import { isRecord } from "../studio/studio-guards";
 import { copyIcons, removeCopies } from "./icon-copies";
 import { type CourierIcons, ICON_FILES, ICON_THEMES } from "./icon-files";
 import { type IconUsers, iconUsers } from "./icon-users";
+import { isRecord } from "./is-record";
 import {
   type Associations,
   iconsHomeOf,

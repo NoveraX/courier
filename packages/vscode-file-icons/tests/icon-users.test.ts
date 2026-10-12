@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { iconUsers } from "../src/icons/icon-users";
+import { iconUsers } from "../src/icon-users";
 
 let extensions: string;
 let courier: string;

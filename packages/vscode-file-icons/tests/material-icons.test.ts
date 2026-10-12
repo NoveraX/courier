@@ -17,7 +17,7 @@ import {
   materialPlan,
   withCourier,
   withoutCourier,
-} from "../src/icons/material-icons";
+} from "../src/material-icons";
 
 describe("Courier's associations for Material Icon Theme", () => {
   it("names each file by its path from the theme's icons folder, and the folder from one deeper", () => {

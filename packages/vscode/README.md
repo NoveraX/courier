@@ -88,7 +88,7 @@ You find out an endpoint is slow, or failing, where you are already looking: in 
     </td>
     <td width="33%" valign="top">
       <h4>Courier's file icons</h4>
-      Its own icons for <code>courier.config.ts</code>, <code>courier.mocks.ts</code> and <code>.courier</code> in Material Icon Theme and vscode-icons, put in and taken out when you ask.
+      Its own icons for <code>courier.config.ts</code>, <code>courier.mocks.ts</code> and <code>.courier</code> in Material Icon Theme and vscode-icons, through Courier File Icons, which comes with it — in remote windows too.
     </td>
     <td width="33%" valign="top">
       <h4>Stays on your machine</h4>
@@ -179,7 +179,9 @@ Studio's audit reads the requests it recorded; the extension marks its findings 
 
 ## Courier's file icons
 
-With Material Icon Theme or vscode-icons in use in a Courier project, the extension offers once to show its own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read — one click, no reload. The folder is drawn in each theme's own style. From then on they follow you: into the other theme when you pick it, onto your other machines through Settings Sync, across Courier's updates, and out again everywhere with **Courier: Remove Courier's Icons from the File Icon Theme**.
+With Material Icon Theme or vscode-icons in use in a Courier project, [Courier File Icons](https://github.com/NoveraX/courier/tree/master/packages/vscode-file-icons) offers once to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read — one click, no reload. The folder is drawn in each theme's own style. From then on they follow you: into the other theme when you pick it, onto your other machines through Settings Sync, into remote windows, across updates, each profile as its own settings say, and out again everywhere with **Courier: Remove Courier's Icons from the File Icon Theme**.
+
+This extension installs Courier File Icons with it. Icon themes run where the editor's window runs, and so does Courier File Icons, beside them — on this computer in a remote window too, while this extension runs where your code is.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/icons-dark.png" />
@@ -215,7 +217,7 @@ The extension sends Studio the text of the files you open, so it talks only to a
 - **Courier: Set Up Courier** — run Create Courier in a terminal, in the workspace folder you pick
 - **Courier: New Endpoint…** — add an endpoint to a group, as its file writes them
 - **Courier: Import an API…**, **Show OpenAPI Document…**, **Check API Changes…** — Studio's own commands, for the project you pick
-- **Courier: Show Courier's Icons in the File Icon Theme** / **Remove Courier's Icons from the File Icon Theme**
+- **Courier: Show Courier's Icons in the File Icon Theme** / **Remove Courier's Icons from the File Icon Theme** — from Courier File Icons
 - **Courier: Refresh Endpoint Hints** — find the calls again and bring the figures up to date
 - **Courier: Show Log** — Courier's log in the Output panel: each Studio starting and stopping, and why a question to one found no answer
 
@@ -234,7 +236,7 @@ From Studio the other way round: each call site in **Called from** opens in your
 | `courier.audit.diagnostics` | Mark the audit's findings at the calls they concern (default: on) |
 | `courier.notifications.failures` | Tell with a notification when a call fails while you work, at most once a minute per endpoint (default: off) |
 | `courier.agents.mcpServers` | Offer VS Code's agent each project's MCP servers (default: on) |
-| `courier.fileIcons.offer` | Offer once to put Courier's icons into the icon theme in use (default: on) |
+| `courier.fileIcons.offer` | Offer once to put Courier's icons into the icon theme in use (default: on) — a setting of Courier File Icons |
 | `courier.studio.url` | Studio's address, when it runs for a project outside this workspace — on this machine, in your user settings |
 
 <br />

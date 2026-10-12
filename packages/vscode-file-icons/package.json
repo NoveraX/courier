@@ -1,0 +1,101 @@
+{
+  "name": "courier-file-icons",
+  "displayName": "Courier File Icons",
+  "description": "Courier's own icons for courier.config.ts, courier.mocks.ts and the .courier folder in Material Icon Theme and vscode-icons, the folder drawn in each theme's own style. Agree once: they follow you into the other theme, onto your other machines, into remote windows and through updates.",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#08090a",
+    "theme": "dark"
+  },
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "noverax",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/vscode-file-icons"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/studio/editor#courier-file-icons",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "keywords": [
+    "courier",
+    "icons",
+    "file icons",
+    "icon theme",
+    "material icon theme",
+    "vscode-icons"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.cjs",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In a workspace you have not trusted, Courier File Icons takes the folder vscode-icons reads custom icons from out of your own settings only, never out of the workspace's, so the workspace cannot choose where Courier's icons are written."
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "courier.fileIcons.show",
+        "title": "Show Courier's Icons in the File Icon Theme",
+        "category": "Courier",
+        "icon": "$(symbol-file)"
+      },
+      {
+        "command": "courier.fileIcons.remove",
+        "title": "Remove Courier's Icons from the File Icon Theme",
+        "category": "Courier"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "courier.fileIcons.show",
+          "when": "view == courier.endpoints",
+          "group": "courier@6"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Courier File Icons",
+      "properties": {
+        "courier.fileIcons.offer": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Offer once, in a Courier project, to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and `.courier` when the icon theme in use is Material Icon Theme or vscode-icons — as the editor starts, or when you pick such a theme. Once you agree in one theme, the icons go into the other by themselves when you pick it. Off: run **Courier: Show Courier's Icons in the File Icon Theme** when you want them."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch",
+    "prepackage": "node -e \"require('node:fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
+    "package": "vsce package --no-dependencies --out dist/courier-file-icons.vsix"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.95.0",
+    "@vscode/vsce": "4.0.0"
+  }
+}

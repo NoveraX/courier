@@ -27,7 +27,7 @@ export function demoHttpGuard(
 ): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const address = visitorAddress(
-      { peer: req.socket.remoteAddress, forwardedFor: req.headers["x-forwarded-for"] },
+      { peer: req.socket.remoteAddress, headers: req.headers },
       trusted,
     );
     const refusal = limits.take({ address }, "http");

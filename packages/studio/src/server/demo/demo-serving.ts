@@ -60,7 +60,7 @@ export interface DemoServing {
  * the address the proxies in front of the demo report; sockets that
  * compress, take smaller messages and are counted by address.
  *
- * @param demo - How the demo runs: the proxies it is reached through
+ * @param demo - How the demo runs: the proxies it is reached through, and the header they name a visitor in
  * @returns What the demo adds to Studio's servers
  * @throws {CourierError} `STUDIO_DEMO_PROXY_INVALID` for a trusted proxy that is no address or range
  * @example
@@ -71,7 +71,7 @@ export interface DemoServing {
  */
 export function demoServing(demo: StudioDemo = {}): DemoServing {
   const limits = createDemoLimits();
-  const trusted = trustedProxies(demo.trustedProxies);
+  const trusted = trustedProxies(demo.trustedProxies, demo.addressHeader);
   return {
     limits,
     trusted,

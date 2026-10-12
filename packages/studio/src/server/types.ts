@@ -73,6 +73,17 @@ export interface StudioDemo {
    * filter's addresses. Pages are not told them.
    */
   trustedProxies?: readonly string[] | undefined;
+  /**
+   * The header `trustedProxies` set to the address that connected to them,
+   * such as DDoS-Guard's `DDG-Connecting-IP` or Cloudflare's
+   * `CF-Connecting-IP`. Studio reads it only from a request that came
+   * through one of them — straight from it, or through the proxy in front of
+   * Studio, whose `X-Forwarded-For` entry is then the trusted proxy's — so
+   * the proxy in front of Studio need not pass their `X-Forwarded-For`
+   * entries on. A visitor that reaches Studio another way is counted by its
+   * own address, whatever the header says.
+   */
+  addressHeader?: string | undefined;
 }
 
 /** Where Studio listens, and what the project asked of it when it started. */

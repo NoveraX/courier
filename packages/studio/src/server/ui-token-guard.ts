@@ -106,7 +106,7 @@ export function guardUiWrites(
   const { address: peer, headers } = socket.handshake;
   const visitor = {
     page: socket.id,
-    address: visitorAddress({ peer, forwardedFor: headers["x-forwarded-for"] }, visitors.trusted),
+    address: visitorAddress({ peer, headers }, visitors.trusted),
   };
   socket.use((packet, next) => {
     const [event] = packet;

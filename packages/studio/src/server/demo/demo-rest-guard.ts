@@ -49,7 +49,7 @@ export function demoRestGuard(
       return;
     }
     const address = visitorAddress(
-      { peer: req.socket.remoteAddress, forwardedFor: req.headers["x-forwarded-for"] },
+      { peer: req.socket.remoteAddress, headers: req.headers },
       trusted,
     );
     const refusal =

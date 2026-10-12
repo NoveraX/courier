@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { createLogger } from "@noverax/courier";
 import type { TransformCache } from "@noverax/courier-studio-core/config";
+import { createModuleCache } from "./create-module-cache";
 import { type CourierModuleCache, loadCourierEntry } from "./load-courier-entry";
 import { withFreshJson } from "./with-fresh-json";
 
@@ -115,7 +116,7 @@ async function evaluateBoth(
   mocksFile: string | null,
   transformCache: TransformCache,
 ): Promise<EvaluatedCourierFiles> {
-  const cache: CourierModuleCache = {};
+  const cache = createModuleCache();
   const config = await defaultExport(await loadCourierEntry(configFile, cache, transformCache));
   forgetUnfinished(cache);
   if (mocksFile === null) return { config, mocksError: null };

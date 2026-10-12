@@ -8,7 +8,7 @@
 import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, normalize } from "node:path";
 import { createTransformCache } from "@noverax/courier-studio-core/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type CourierModuleCache, loadCourierEntry } from "../src/server/load-courier-entry";
@@ -21,6 +21,12 @@ const COUNTED =
   "evaluations.courierTestEntryEvaluations = (evaluations.courierTestEntryEvaluations ?? 0) + 1;\n";
 
 let dir: string;
+
+/* The load keys a module as its loader names it: with forward slashes on Windows. */
+function entryOf(cache: CourierModuleCache, file: string): CourierModuleCache[string] | undefined {
+  const key = Object.keys(cache).find((each) => normalize(each) === file);
+  return key === undefined ? undefined : cache[key];
+}
 
 beforeEach(() => {
   dir = realpathSync(mkdtempSync(join(tmpdir(), "courier-load-entry-")));
@@ -55,9 +61,9 @@ describe("loadCourierEntry", () => {
 
     const namespace = await loadCourierEntry(file, cache, createTransformCache());
 
-    expect(cache[file]).toMatchObject({ loaded: true, exports: { apiMock: {} } });
-    expect(cache[file]).toBe(createRequire(file).cache[file]);
-    expect(namespace).toEqual({ default: cache[file]?.exports });
+    expect(entryOf(cache, file)).toMatchObject({ loaded: true, exports: { apiMock: {} } });
+    expect(entryOf(cache, file)).toBe(createRequire(file).cache[file]);
+    expect(namespace).toEqual({ default: entryOf(cache, file)?.exports });
   });
 
   it("transpiles a CommonJS file Node cannot run, as the runtime's loader does", async () => {
@@ -68,7 +74,7 @@ describe("loadCourierEntry", () => {
     const namespace = await loadCourierEntry(file, cache, createTransformCache());
 
     expect(namespace).toMatchObject({ default: { apiMock: {} } });
-    expect(cache[file]).toMatchObject({ loaded: true });
+    expect(entryOf(cache, file)).toMatchObject({ loaded: true });
   });
 
   it("does not evaluate again a file the cache already holds, loaded", async () => {

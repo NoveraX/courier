@@ -45,6 +45,11 @@ import { undoUnfinishedImportWrites } from "../../src/server/import-files/undo-u
 import { withConfirmations } from "../../src/server/import-files/with-confirmations";
 import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
+/* A path as these checks spell it, with forward slashes, which Windows does not write. */
+function slashed(path: Fs.PathLike): string {
+  return String(path).replaceAll("\\", "/");
+}
+
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
   return { ...actual, renameSync: vi.fn(actual.renameSync), linkSync: vi.fn(actual.linkSync) };
@@ -190,7 +195,7 @@ describe("applyFilePlan", () => {
   it("undoes everything when a file cannot be put in place halfway", async () => {
     const actual = await vi.importActual<typeof Fs>("node:fs");
     vi.mocked(renameSync).mockImplementation((from, to) => {
-      if (String(to).endsWith(`${DIR}/new/index.ts`)) {
+      if (slashed(to).endsWith(`${DIR}/new/index.ts`)) {
         throw Object.assign(new Error("EIO: injected"), { code: "EIO" });
       }
       actual.renameSync(from, to);
@@ -255,8 +260,8 @@ describe("applyFilePlan", () => {
     const actual = await vi.importActual<typeof Fs>("node:fs");
     vi.mocked(renameSync).mockImplementation((from, to) => {
       if (
-        String(from).includes(".courier.import.") &&
-        String(to).endsWith(`proj/${DIR}/index.ts`)
+        slashed(from).includes(".courier.import.") &&
+        slashed(to).endsWith(`proj/${DIR}/index.ts`)
       ) {
         throw Object.assign(new Error("EIO: injected"), { code: "EIO" });
       }
@@ -274,7 +279,7 @@ describe("applyFilePlan", () => {
     const actual = await vi.importActual<typeof Fs>("node:fs");
     let journalSaves = 0;
     vi.mocked(renameSync).mockImplementation((from, to) => {
-      if (String(to).includes(".courier/journal/") && ++journalSaves === 2) {
+      if (slashed(to).includes(".courier/journal/") && ++journalSaves === 2) {
         throw Object.assign(new Error("ENOSPC: injected"), { code: "ENOSPC" });
       }
       actual.renameSync(from, to);
@@ -291,8 +296,8 @@ describe("applyFilePlan", () => {
     const actual = await vi.importActual<typeof Fs>("node:fs");
     vi.mocked(renameSync).mockImplementation((from, to) => {
       if (
-        String(from).includes(".courier/backups/") &&
-        String(to).endsWith(`proj/${DIR}/index.ts`)
+        slashed(from).includes(".courier/backups/") &&
+        slashed(to).endsWith(`proj/${DIR}/index.ts`)
       ) {
         throw Object.assign(new Error("EIO: injected"), { code: "EIO" });
       }

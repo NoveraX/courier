@@ -66,6 +66,9 @@ async function startMock(): Promise<{
     onExited: vi.fn(),
     onEvents: vi.fn(),
   };
+  /* Made first, so the worker has stopped before its folder goes: Windows
+     keeps a folder a running process works in. */
+  const mocksFile = project();
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => null,
     storeFile: () => null,
@@ -74,7 +77,7 @@ async function startMock(): Promise<{
   const port = await freePort();
   pm.spawn({
     serverId: "apiMock",
-    mocksFile: project(),
+    mocksFile,
     mockKey: "apiMock",
     port,
     strictPort: true,

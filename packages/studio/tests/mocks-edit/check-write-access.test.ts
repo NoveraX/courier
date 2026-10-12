@@ -8,6 +8,8 @@ import { MocksEditRefusal } from "../../src/server/mocks-edit/mocks-edit-refusal
 
 /* Root may write anything, so permission bits cannot refuse it. */
 const RUNS_AS_ROOT = process.getuid?.() === 0;
+/* What refusing to write a read-only file reports: Windows has only the read-only flag to refuse it by. */
+const READ_ONLY = process.platform === "win32" ? "EPERM" : "EACCES";
 const NOTHING_THROWN = Symbol("nothing thrown");
 
 let dir: string;
@@ -50,32 +52,36 @@ describe("checkWriteAccess", () => {
     expect(error).toBeInstanceOf(MocksEditRefusal);
     expect(error).toMatchObject({
       code: "MOCKS_NOT_WRITABLE",
-      message: "Studio may not write courier.mocks.ts (EACCES). It is read-only.",
-      cause: { code: "EACCES" },
+      message: `Studio may not write courier.mocks.ts (${READ_ONLY}). It is read-only.`,
+      cause: { code: READ_ONLY },
       source: null,
     });
   });
 
-  it.skipIf(RUNS_AS_ROOT)("refuses a directory it may not create files in", () => {
-    const project = join(dir, "app");
-    mkdirSync(project);
-    chmodSync(project, 0o555);
+  /* Windows keeps no write permission in a folder's mode. */
+  it.skipIf(RUNS_AS_ROOT || process.platform === "win32")(
+    "refuses a directory it may not create files in",
+    () => {
+      const project = join(dir, "app");
+      mkdirSync(project);
+      chmodSync(project, 0o555);
 
-    const error = thrownBy(() =>
-      checkWriteAccess(
-        project,
-        "the project directory",
-        "Studio would create courier.mocks.ts there.",
-      ),
-    );
-    chmodSync(project, 0o755);
+      const error = thrownBy(() =>
+        checkWriteAccess(
+          project,
+          "the project directory",
+          "Studio would create courier.mocks.ts there.",
+        ),
+      );
+      chmodSync(project, 0o755);
 
-    expect(error).toMatchObject({
-      code: "MOCKS_NOT_WRITABLE",
-      message:
-        "Studio may not write the project directory (EACCES). Studio would create courier.mocks.ts there.",
-    });
-  });
+      expect(error).toMatchObject({
+        code: "MOCKS_NOT_WRITABLE",
+        message:
+          "Studio may not write the project directory (EACCES). Studio would create courier.mocks.ts there.",
+      });
+    },
+  );
 
   it("refuses a path that does not exist, naming ENOENT", () => {
     const missing = join(dir, "gone");

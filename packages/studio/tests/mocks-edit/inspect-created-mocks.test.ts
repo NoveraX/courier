@@ -143,16 +143,20 @@ describe("inspectCreatedMocks", () => {
     },
   );
 
-  it.skipIf(RUNS_AS_ROOT)("refuses when the project directory is read-only", () => {
-    const config = writeConfig("courier.config.ts");
-    chmodSync(root, 0o555);
+  /* Windows keeps no write permission in a folder's mode. */
+  it.skipIf(RUNS_AS_ROOT || process.platform === "win32")(
+    "refuses when the project directory is read-only",
+    () => {
+      const config = writeConfig("courier.config.ts");
+      chmodSync(root, 0o555);
 
-    const error = thrownBy(() => inspectCreatedMocks(root, config));
+      const error = thrownBy(() => inspectCreatedMocks(root, config));
 
-    expect(error).toMatchObject({
-      code: "MOCKS_NOT_WRITABLE",
-      message:
-        "Studio may not write the project directory (EACCES). Studio would create courier.mocks.ts there.",
-    });
-  });
+      expect(error).toMatchObject({
+        code: "MOCKS_NOT_WRITABLE",
+        message:
+          "Studio may not write the project directory (EACCES). Studio would create courier.mocks.ts there.",
+      });
+    },
+  );
 });

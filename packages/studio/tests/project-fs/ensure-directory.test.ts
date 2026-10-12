@@ -62,8 +62,9 @@ describe("ensureDirectory", () => {
   it("stops at a file where a directory should be", () => {
     writeFileSync(join(root.path, "src"), "a file\n");
 
+    /* Windows finds no such path under a file, where POSIX finds the file is not a directory. */
     expect(() => ensureDirectory(root, join(root.path, "src/api"))).toThrow(
-      expect.objectContaining({ code: "ENOTDIR" }),
+      expect.objectContaining({ code: IS_WINDOWS ? "ENOENT" : "ENOTDIR" }),
     );
   });
 });

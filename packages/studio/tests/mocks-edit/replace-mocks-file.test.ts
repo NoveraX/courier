@@ -228,7 +228,8 @@ describe("replaceMocksFile", () => {
     vi.mocked(renameSync).mockImplementationOnce(() => {
       throw renameError;
     });
-    vi.mocked(unlinkSync).mockImplementationOnce(() => {
+    /* Every time: Windows tries a refused removal again before giving up. */
+    vi.mocked(unlinkSync).mockImplementation(() => {
       throw unlinkError;
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -246,6 +247,7 @@ describe("replaceMocksFile", () => {
       unlinkError,
     );
     expect(readdirSync(dir).sort()).toEqual([basename(tmp), "courier.mocks.ts"].sort());
+    vi.mocked(unlinkSync).mockReset();
     unlinkSync(tmp);
   });
 

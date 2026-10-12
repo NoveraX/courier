@@ -26,6 +26,7 @@ import { exactHash } from "../src/server/import-files/exact-hash";
 import { readGeneratedFile, signGeneratedFile } from "../src/server/import-files/generated-header";
 import { saveImportEntry } from "../src/server/import-files/save-import-entry";
 import type { StudioServer } from "../src/server/types";
+import { forgetCourierState } from "./helpers/forget-courier-state";
 import { tokenHeader } from "./helpers/token-header";
 
 const IS_WINDOWS = process.platform === "win32";
@@ -338,7 +339,7 @@ describe("removing an import Studio has no record of", () => {
   it("offers its files, which Studio's header claims, ticked for removal", async () => {
     const url = await start();
     await post(url, "/api/apis/write", WRITE);
-    rmSync(join(root, ".courier"), { recursive: true, force: true });
+    forgetCourierState(root);
 
     const preview = await post(url, "/api/apis/imports/remove/preview", { name: "pets" });
     const { digest, pending } = planOf(preview);

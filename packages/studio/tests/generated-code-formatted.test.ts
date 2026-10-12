@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseSpec } from "../src/apis/parser/parse-spec";
@@ -147,7 +147,7 @@ function written(): Record<string, string> {
     for (const entry of readdirSync(at, { withFileTypes: true })) {
       const path = join(at, entry.name);
       if (entry.isDirectory()) walk(path);
-      else files[relative(root, path)] = readFileSync(path, "utf8");
+      else files[relative(root, path).split(sep).join("/")] = readFileSync(path, "utf8");
     }
   };
   walk(dir);

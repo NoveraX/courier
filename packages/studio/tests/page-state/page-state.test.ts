@@ -25,11 +25,14 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0).reverse()) cleanup();
 });
 
-function database(root = mkdtempSync(join(tmpdir(), "courier-page-state-"))) {
-  const studio = openStudioDb(root);
-  cleanups.push(() => rmSync(root, { recursive: true, force: true }));
+function database(root?: string) {
+  const folder = root ?? mkdtempSync(join(tmpdir(), "courier-page-state-"));
+  /* Removed once, after every database opened in it has closed: Windows
+     keeps a folder that holds an open file. */
+  if (root === undefined) cleanups.push(() => rmSync(folder, { recursive: true, force: true }));
+  const studio = openStudioDb(folder);
   cleanups.push(() => studio.close());
-  return { db: studio.db, root };
+  return { db: studio.db, root: folder };
 }
 
 describe("the page state", () => {

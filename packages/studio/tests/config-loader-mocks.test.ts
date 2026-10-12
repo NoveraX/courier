@@ -287,7 +287,8 @@ describe("loadCourierConfig with a mocks file", () => {
     expect(String(loaded.mocks.error)).toContain("src/missing");
   });
 
-  it.skipIf(process.getuid?.() === 0)(
+  /* Windows keeps no read permission in a file's mode. */
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     "keeps the config working when the mocks file cannot be read",
     async () => {
       const file = writeMocks("export default {};\n");

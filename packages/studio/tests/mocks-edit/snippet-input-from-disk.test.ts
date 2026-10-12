@@ -39,7 +39,8 @@ describe("snippetInputFromDisk", () => {
     });
   });
 
-  it.skipIf(process.getuid?.() === 0)(
+  /* Windows keeps no read permission in a file's mode. */
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     "names an existing file it cannot read, without its text",
     () => {
       writeFileSync(join(root, "courier.mocks.ts"), "export default {};\n");

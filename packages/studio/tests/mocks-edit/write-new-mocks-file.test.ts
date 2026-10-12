@@ -137,7 +137,8 @@ describe("writeNewMocksFile", () => {
 
   it("keeps the created file and returns the temporary file it could not remove", () => {
     const unlinkError = errnoError("EBUSY");
-    vi.mocked(unlinkSync).mockImplementationOnce(() => {
+    /* Every time: Windows tries a refused removal again before giving up. */
+    vi.mocked(unlinkSync).mockImplementation(() => {
       throw unlinkError;
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -156,6 +157,7 @@ describe("writeNewMocksFile", () => {
       ),
       unlinkError,
     );
+    vi.mocked(unlinkSync).mockReset();
     unlinkSync(String(tmp));
   });
 });

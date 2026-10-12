@@ -110,6 +110,9 @@ async function started(): Promise<string> {
     onExited: vi.fn<(serverId: string, reason: string) => void>(),
     onEvents: vi.fn(),
   } satisfies ProcessManagerEvents;
+  /* Made first, so the worker has stopped before its folder goes: Windows
+     keeps a folder a running process works in. */
+  const mocksFile = project();
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => null,
     storeFile: () => null,
@@ -118,7 +121,7 @@ async function started(): Promise<string> {
   /* Port 0: the system picks one as the worker binds, which no other test can take in between. */
   pm.spawn({
     serverId: "petMock",
-    mocksFile: project(),
+    mocksFile,
     mockKey: "petMock",
     port: 0,
     strictPort: true,

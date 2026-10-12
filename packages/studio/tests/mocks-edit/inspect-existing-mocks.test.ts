@@ -21,6 +21,8 @@ import { MocksEditRefusal } from "../../src/server/mocks-edit/mocks-edit-refusal
 
 /* Root may write anything, so permission bits cannot refuse it. */
 const RUNS_AS_ROOT = process.getuid?.() === 0;
+/* What refusing to write a read-only file reports: Windows has only the read-only flag to refuse it by. */
+const READ_ONLY = process.platform === "win32" ? "EPERM" : "EACCES";
 const MOCKS = "export default defineMocks({});\n";
 const NOTHING_THROWN = Symbol("nothing thrown");
 
@@ -67,7 +69,8 @@ describe("inspectExistingMocks", () => {
       bytes,
       text: `\uFEFF${MOCKS}`,
       hash: createHash("sha256").update(bytes).digest("hex"),
-      mode: 0o664,
+      /* Windows keeps only whether a file is read-only. */
+      mode: process.platform === "win32" ? 0o666 : 0o664,
       configName: "courier.config.ts",
     });
   });
@@ -211,23 +214,26 @@ describe("inspectExistingMocks", () => {
 
     expect(error).toMatchObject({
       code: "MOCKS_NOT_WRITABLE",
-      message:
-        "Studio may not write courier.mocks.ts (EACCES). Studio does not edit a file that is read-only to it.",
+      message: `Studio may not write courier.mocks.ts (${READ_ONLY}). Studio does not edit a file that is read-only to it.`,
     });
   });
 
-  it.skipIf(RUNS_AS_ROOT)("refuses when the project directory is read-only", () => {
-    writeFileSync(join(root, "courier.mocks.ts"), MOCKS);
-    chmodSync(root, 0o555);
+  /* Windows keeps no write permission in a folder's mode. */
+  it.skipIf(RUNS_AS_ROOT || process.platform === "win32")(
+    "refuses when the project directory is read-only",
+    () => {
+      writeFileSync(join(root, "courier.mocks.ts"), MOCKS);
+      chmodSync(root, 0o555);
 
-    const error = thrownBy(() => inspect());
+      const error = thrownBy(() => inspect());
 
-    expect(error).toMatchObject({
-      code: "MOCKS_NOT_WRITABLE",
-      message:
-        "Studio may not write the project directory (EACCES). Studio saves an edit to courier.mocks.ts by writing a new file there and renaming it over the old one.",
-    });
-  });
+      expect(error).toMatchObject({
+        code: "MOCKS_NOT_WRITABLE",
+        message:
+          "Studio may not write the project directory (EACCES). Studio saves an edit to courier.mocks.ts by writing a new file there and renaming it over the old one.",
+      });
+    },
+  );
 
   it("refuses a file larger than 1 MiB", () => {
     writeFileSync(join(root, "courier.mocks.ts"), "a".repeat(1024 * 1024 + 1));

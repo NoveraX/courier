@@ -14,7 +14,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -91,7 +91,7 @@ describe("courier-studio", () => {
 
     expect(result.status).toBe(1);
     const output = result.stdout + result.stderr;
-    expect(output).toContain("/definitely/not/a/project is not a directory");
+    expect(output).toContain(`${resolve("/definitely/not/a/project")} is not a directory`);
     expect(output).not.toContain("    at ");
   });
 
@@ -131,39 +131,44 @@ describe("courier-studio", () => {
     expect(result.stdout).toMatch(/--open +Open a browser on start/);
   });
 
-  it("closes and reports the signal that ended it", async () => {
-    const cwd = mkdtempSync(join(tmpdir(), "courier-studio-cli-"));
-    const probe = createServer();
-    await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-    const { port } = probe.address() as { port: number };
-    await new Promise<void>((resolve) => probe.close(() => resolve()));
-    const child = spawn(
-      process.execPath,
-      ["--import", TSX, CLI, "--port", String(port), "--host", "127.0.0.1"],
-      {
-        cwd,
-        env: ENV,
-      },
-    );
-    for (let waited = 0; waited < 15_000; waited += 100) {
-      if (
-        await fetch(`http://127.0.0.1:${port}/api/health`).then(
-          (r) => r.ok,
-          () => false,
+  /* Windows cannot send a process a signal it can handle: `kill` ends it at once. */
+  it.skipIf(process.platform === "win32")(
+    "closes and reports the signal that ended it",
+    async () => {
+      const cwd = mkdtempSync(join(tmpdir(), "courier-studio-cli-"));
+      const probe = createServer();
+      await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+      const { port } = probe.address() as { port: number };
+      await new Promise<void>((resolve) => probe.close(() => resolve()));
+      const child = spawn(
+        process.execPath,
+        ["--import", TSX, CLI, "--port", String(port), "--host", "127.0.0.1"],
+        {
+          cwd,
+          env: ENV,
+        },
+      );
+      for (let waited = 0; waited < 15_000; waited += 100) {
+        if (
+          await fetch(`http://127.0.0.1:${port}/api/health`).then(
+            (r) => r.ok,
+            () => false,
+          )
         )
-      )
-        break;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+          break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
 
-    child.kill("SIGTERM");
-    const status = await new Promise<number | null>((resolve) =>
-      child.once("exit", (code) => resolve(code)),
-    );
-    rmSync(cwd, { recursive: true, force: true });
+      child.kill("SIGTERM");
+      const status = await new Promise<number | null>((resolve) =>
+        child.once("exit", (code) => resolve(code)),
+      );
+      rmSync(cwd, { recursive: true, force: true });
 
-    expect(status).toBe(143);
-  }, 30_000);
+      expect(status).toBe(143);
+    },
+    30_000,
+  );
 
   it("listens where its flags say when courier.config never finishes loading", async () => {
     const cwd = mkdtempSync(join(tmpdir(), "courier-studio-cli-"));

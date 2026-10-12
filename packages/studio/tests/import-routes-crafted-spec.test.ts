@@ -23,6 +23,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../src/apis/parser/types";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import { forgetCourierState } from "./helpers/forget-courier-state";
 import { tokenHeader } from "./helpers/token-header";
 
 const CONFIG = 'export default { sources: { api: { baseURL: "https://api.example" } } };\n';
@@ -220,7 +221,7 @@ describe("POST /api/apis/write with a crafted parsed spec", () => {
     vi.restoreAllMocks();
     /* Each case starts from no import: forget what the previous one wrote. */
     rmSync(join(root, "src"), { recursive: true, force: true });
-    rmSync(join(root, ".courier"), { recursive: true, force: true });
+    forgetCourierState(root);
   });
 
   it.each(CRAFTED)(

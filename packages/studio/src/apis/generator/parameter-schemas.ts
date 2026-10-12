@@ -4,7 +4,8 @@
  */
 
 import type { ParsedParameter } from "../parser/types";
-import { jsLiteral, objectKey } from "./literals";
+import { arkProperty } from "./ark-property";
+import { objectKey } from "./literals";
 import { parameterProperty } from "./parameter-property";
 import type { GeneratorSettings } from "./types";
 import { propToArkType } from "./validation-arktype";
@@ -85,7 +86,7 @@ export function objectWithBody(
     const body = optional ? `v.optional(${bodyExpr})` : bodyExpr;
     return `v.object({ ${[...fields, `${objectKey(key)}: ${body}`].join(", ")} })`;
   }
-  return `type({ ${[...fields, `${jsLiteral(optional ? `${key}?` : key)}: ${bodyExpr}`].join(", ")} })`;
+  return `type({ ${[...fields, arkProperty(key, optional, bodyExpr)].join(", ")} })`;
 }
 
 /**
@@ -143,5 +144,5 @@ function parameterField(param: ParsedParameter, options: GeneratorSettings): str
     const valibot = propToValibot(prop);
     return `${objectKey(param.name)}: ${optional ? `v.optional(${valibot})` : valibot}`;
   }
-  return `${jsLiteral(optional ? `${param.name}?` : param.name)}: ${propToArkType(prop)}`;
+  return arkProperty(param.name, optional, propToArkType(prop));
 }

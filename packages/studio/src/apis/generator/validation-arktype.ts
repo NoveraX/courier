@@ -5,6 +5,7 @@
  */
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
+import { arkProperty } from "./ark-property";
 import { arkExpressionOf, withArkChecks } from "./arktype-checks";
 import { arkExpression, enumerated } from "./arktype-expression";
 import { jsLiteral } from "./literals";
@@ -55,8 +56,7 @@ export function schemaToArkType(schema: ParsedSchema, lazy?: LazyTargets): strin
     const propLines: string[] = [];
     for (const [name, prop] of Object.entries(schema.properties)) {
       if (!name) continue;
-      const key = required.has(name) ? name : `${name}?`;
-      propLines.push(`  ${jsLiteral(key)}: ${propToArkType(prop, lazy)}`);
+      propLines.push(`  ${arkProperty(name, !required.has(name), propToArkType(prop, lazy))}`);
     }
     if (propLines.length === 0) return mapOf(schema.valueType, lazy);
     return objectOf(propLines);

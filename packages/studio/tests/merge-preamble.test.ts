@@ -129,3 +129,54 @@ export const users = defineGroup({
     );
   });
 });
+
+describe("a file whose imports wrap over lines", () => {
+  const WRAPPED = `import { courier, defineGroup } from "@noverax/courier/define";
+import {
+  AVeryLongSchemaNameNumberOne,
+  AVeryLongSchemaNameNumberThree,
+  AVeryLongSchemaNameNumberTwo,
+} from "./schemas";
+
+const { endpoint } = courier();
+
+export const users = defineGroup({
+  prefix: "/users",
+  endpoints: {
+    one: endpoint.get("one").response(AVeryLongSchemaNameNumberOne),
+    two: endpoint.get("two").response(AVeryLongSchemaNameNumberTwo),
+    three: endpoint.get("three").response(AVeryLongSchemaNameNumberThree),
+  },
+});
+`;
+
+  it("takes no line of the import for the preamble", () => {
+    expect(parseExistingGroup(WRAPPED).preamble).toEqual(["const { endpoint } = courier();"]);
+  });
+
+  it("is merged, keeping the endpoint the user edited", () => {
+    const fingerprints: FingerprintResult = {
+      endpoints: { one: "safe", two: "modified", three: "safe" },
+      existingCode: {},
+    };
+    const onDisk = WRAPPED.replace('get("two")', 'get("two-edited")');
+
+    const result = mergeGroupFile(onDisk, WRAPPED, fingerprints);
+
+    expect(result.status).toBe("merged");
+    expect(result.content).toBe(onDisk);
+  });
+});
+
+describe("what sits above a file's first import", () => {
+  it("is kept through a merge", () => {
+    const onDisk = `/* Licence: the user's own. */
+"use client";
+${GENERATED}`;
+    const fingerprints: FingerprintResult = { endpoints: { getAll: "safe" }, existingCode: {} };
+
+    const { content } = mergeGroupFile(onDisk, GENERATED, fingerprints);
+
+    expect(content.startsWith(`/* Licence: the user's own. */\n"use client";\nimport `)).toBe(true);
+  });
+});

@@ -1,15 +1,16 @@
-/* A declaration the generator writes at the start of a line: `export const XSchema`, `export type X`. */
-const EXPORT_DECLARATION = /^export (const|type) ([A-Za-z_$][\w$]*)/gm;
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 
 /** Whether a name a generated module exports is a value, or only a type. */
 export type DeclaredKind = "value" | "type";
 
 /**
  * The names a generated schemas or types module exports, in the order it
- * declares them, each a value or only a type. The generator declares each
- * export at the start of a line, so the declarations are read from there;
- * a name declared as both a value and a type is a value, which a
- * re-export by name carries with its type.
+ * declares them, each a value or only a type: its `export const` and
+ * `export type` declarations, read from the module's syntax. A description
+ * the specification wrote into a doc comment may hold a line reading
+ * `export const X`, which a barrel re-exporting it would name though the
+ * module declares no such thing. A name declared as both a value and a type
+ * is a value, which a re-export by name carries with its type.
  *
  * @param content - The module the generator wrote
  * @returns Each exported name and its kind
@@ -21,9 +22,16 @@ export type DeclaredKind = "value" | "type";
  */
 export function declaredExports(content: string): Map<string, DeclaredKind> {
   const names = new Map<string, DeclaredKind>();
-  for (const [, keyword, name] of content.matchAll(EXPORT_DECLARATION)) {
-    if (name === undefined || names.get(name) === "value") continue;
-    names.set(name, keyword === "const" ? "value" : "type");
+  for (const statement of parseSource("module.ts", content).program.body) {
+    if (statement.type !== "ExportNamedDeclaration") continue;
+    const { declaration } = statement;
+    if (declaration?.type === "TSTypeAliasDeclaration") {
+      if (!names.has(declaration.id.name)) names.set(declaration.id.name, "type");
+    } else if (declaration?.type === "VariableDeclaration" && declaration.kind === "const") {
+      for (const { id } of declaration.declarations) {
+        if (id.type === "Identifier") names.set(id.name, "value");
+      }
+    }
   }
   return names;
 }

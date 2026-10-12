@@ -2,6 +2,8 @@ import { pathSegments, rebaseEntryPath } from "../manage/rebase-entry-path";
 
 /** An endpoint in a merged group, and whether its code is the user's, from the file on disk. */
 export interface MergedEntry {
+  /** The key it is declared under. */
+  name: string;
   comment?: string | undefined;
   code: string;
   kept: boolean;

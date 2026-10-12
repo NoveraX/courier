@@ -1,15 +1,13 @@
 import type { ObjectExpression } from "oxc-parser";
 
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
-import { findGroupDeclaration } from "../manage/group-declaration";
-import { findEndpointsBlock } from "./endpoints-block";
+import { type DeclarationLayout, readLayout } from "./declaration-layout";
 
 /** A declaration's lines around its endpoints, and the options the user added to it. */
 export interface MergedShell {
-  /** From the declaration to the line opening `endpoints`. */
+  /** From the declaration to the `{` opening `endpoints`. */
   header: string[];
-  /** From the line closing `endpoints` to the declaration's end. */
+  /** From the `}` closing `endpoints` to the declaration's end. */
   footer: string[];
   /** The options the file has and a generated one does not: the user's own. */
   kept: string[];
@@ -28,43 +26,66 @@ interface Edit {
  * file, the declaration dropped what the user had added, such as a group's
  * `headers` or a source's `proxyPath`.
  *
- * @param existing - The file on disk
- * @param generated - The file the import generated
- * @returns The merged lines, or `null` when either file has no declaration to read
+ * @param own - The file on disk, laid out
+ * @param fresh - The file the import generated, laid out
+ * @param prefix - The prefix the merged group declares where the generated one declares one
+ * @returns The merged lines, or `null` when the file with the options written cannot be laid out
  * @example
  * ```ts
- * mergedShell(onDisk, fresh)?.kept; // ["proxyPath"]
+ * mergedShell(readLayout(onDisk), readLayout(fresh), "/users")?.kept; // ["proxyPath"]
  * ```
  */
-export function mergedShell(existing: string, generated: string): MergedShell | null {
-  const own = findGroupDeclaration(parseSource("existing.ts", existing).program);
-  const fresh = findGroupDeclaration(parseSource("generated.ts", generated).program);
-  if (own === null || fresh === null) return null;
-  const freshOptions = options(fresh.config, generated);
-  const ownOptions = options(own.config, existing);
-  const endpoints = own.config.properties.find(
-    (property) => property.type === "Property" && propertyKeyName(property.key) === "endpoints",
-  );
-  if (endpoints === undefined) return null;
-  const edits: Edit[] = [];
-  const lineStart = existing.lastIndexOf("\n", endpoints.start - 1) + 1;
-  const indent = existing.slice(lineStart, endpoints.start);
-  for (const [name, text] of freshOptions) {
-    const at = ownOptions.get(name);
-    if (at === undefined) {
-      edits.push({ start: lineStart, end: lineStart, text: `${indent}${text.text},\n` });
-    } else if (at.text !== text.text) {
-      edits.push({ start: at.start, end: at.end, text: text.text });
-    }
+export function mergedShell(
+  own: DeclarationLayout,
+  fresh: DeclarationLayout,
+  prefix: string,
+): MergedShell | null {
+  const freshOptions = options(fresh.declaration.config, fresh.parsed.text);
+  const ownOptions = options(own.declaration.config, own.parsed.text);
+  const generatedPrefix = freshOptions.get("prefix");
+  if (generatedPrefix !== undefined && prefix !== fresh.declaration.prefix) {
+    freshOptions.set("prefix", { ...generatedPrefix, text: `prefix: ${JSON.stringify(prefix)}` });
   }
-  const lines = applied(existing, edits).split("\n");
-  const block = findEndpointsBlock(lines);
-  if (block === null) return null;
+  const edits = optionEdits(own, ownOptions, freshOptions);
+  const layout = edits && readLayout(applied(own.parsed.text, edits), own.declaration.name);
+  if (!layout) return null;
   return {
-    header: lines.slice(block.declaration, block.open + 1),
-    footer: lines.slice(block.close, block.end + 1),
+    header: layout.header,
+    footer: layout.footer,
     kept: [...ownOptions.keys()].filter((name) => !freshOptions.has(name)),
   };
+}
+
+/* The edits writing each generated option into the file's declaration;
+   `null` when it has no `endpoints` to write them before. */
+function optionEdits(
+  own: DeclarationLayout,
+  ownOptions: ReadonlyMap<string, Edit>,
+  freshOptions: ReadonlyMap<string, Edit>,
+): Edit[] | null {
+  const existing = own.parsed.text;
+  const endpoints = own.declaration.config.properties.find(
+    (property) =>
+      property.type === "Property" &&
+      !property.computed &&
+      propertyKeyName(property.key) === "endpoints",
+  );
+  if (endpoints === undefined) return null;
+  const lineStart = existing.lastIndexOf("\n", endpoints.start - 1) + 1;
+  const indent = existing.slice(lineStart, endpoints.start);
+  /* An option the file lacks goes on a line of its own above `endpoints`, or
+     just before it when `endpoints` shares its line with something else. */
+  const added = (text: string): Edit =>
+    indent.trim() === ""
+      ? { start: lineStart, end: lineStart, text: `${indent}${text},\n` }
+      : { start: endpoints.start, end: endpoints.start, text: `${text}, ` };
+  const edits: Edit[] = [];
+  for (const [name, option] of freshOptions) {
+    const at = ownOptions.get(name);
+    if (at === undefined) edits.push(added(option.text));
+    else if (at.text !== option.text) edits.push({ ...at, text: option.text });
+  }
+  return edits;
 }
 
 /* Each option a declaration's object names, but its endpoints, as its text and where it is. */

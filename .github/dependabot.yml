@@ -21,6 +21,11 @@ updates:
       runtime:
         dependency-type: production
         update-types: [minor, patch]
+    ignore:
+      # semantic-release's plugins write notes with conventional-changelog-writer 8,
+      # which the preset refuses from version 10 on; the release tests say when it may move.
+      - dependency-name: conventional-changelog-conventionalcommits
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /

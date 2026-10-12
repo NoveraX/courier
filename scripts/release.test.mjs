@@ -4,11 +4,15 @@
  * failed to publish; and the lockfile was left at the old versions, so the
  * release commit's lockfile did not describe its packages.
  */
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import commitRules from "./commit-rules.cjs";
 import { LOCKFILE_SYNC, publishCommand, versionedDirs } from "./release.ts";
+
+const { bodyNoLabelLines } = commitRules;
 
 describe("publishCommand", () => {
   it("runs npm in the package's folder, never naming the folder", () => {
@@ -93,34 +97,87 @@ describe("semantic-release's npm plugin, which a release leaves out", () => {
 });
 
 describe("the notes a release writes", () => {
+  const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
+  const options = (name) => config.plugins.find((plugin) => plugin[0] === name)?.[1] ?? {};
+  const quiet = { log() {}, error() {}, success() {}, warn() {} };
+  const release = (commits, version = "0.2.0", cwd = process.cwd()) => ({
+    cwd,
+    env: {},
+    logger: quiet,
+    commits: commits.map((message, at) => ({ hash: String(at).repeat(40), message })),
+    lastRelease: { gitTag: "v0.1.0", version: "0.1.0", gitHead: "" },
+    nextRelease: { gitTag: `v${version}`, version },
+    options: { repositoryUrl: "https://github.com/NoveraX/courier" },
+  });
+
   it("come out of the preset and the writer the release loads, sorted by type", async () => {
-    const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
-    const options = (name) => config.plugins.find((plugin) => plugin[0] === name)?.[1] ?? {};
     const { analyzeCommits } = await import("@semantic-release/commit-analyzer");
-    const { generateNotes } = await import("@semantic-release/release-notes-generator");
-    const quiet = { log() {}, error() {}, success() {}, warn() {} };
-    const context = {
-      cwd: process.cwd(),
-      env: {},
-      logger: quiet,
-      commits: [
-        { hash: "a".repeat(40), message: "feat(core): ✨ answer in one line" },
-        { hash: "b".repeat(40), message: "fix(studio): 🐛 keep the open request" },
-      ],
-      lastRelease: { gitTag: "v0.1.0", version: "0.1.0", gitHead: "" },
-      nextRelease: { gitTag: "v0.2.0", version: "0.2.0" },
-      options: { repositoryUrl: "https://github.com/NoveraX/courier" },
-    };
+    const { generateNotes } = await import("./release-notes.mjs");
+    const context = release([
+      "feat(core): ✨ answer in one line",
+      "fix(studio): 🐛 keep the open request",
+    ]);
 
     const type = await analyzeCommits(options("@semantic-release/commit-analyzer"), context);
-    const notes = await generateNotes(
-      options("@semantic-release/release-notes-generator"),
-      context,
-    );
+    const notes = await generateNotes(options("./scripts/release-notes.mjs"), context);
 
     expect(type).toBe("minor");
     expect(notes).toContain("### Features");
     expect(notes).toContain("**core:** ✨ answer in one line");
     expect(notes).toContain("### Bug Fixes");
+  });
+
+  it("leave out, and release nothing for, work on the site, the examples and the tooling", async () => {
+    const { analyzeCommits } = await import("@semantic-release/commit-analyzer");
+    const { generateNotes } = await import("./release-notes.mjs");
+    const internal = release([
+      "feat(site): ✨ show the quick start first",
+      "fix(examples): 🐛 pack the demo's MCP server",
+      "fix(scripts): 🐛 read the paths Windows gives",
+    ]);
+    const mixed = release(["fix(docs,core): 🐛 name the option the guide shows"]);
+
+    expect(await analyzeCommits(options("@semantic-release/commit-analyzer"), internal)).toBe(null);
+    expect(await generateNotes(options("./scripts/release-notes.mjs"), internal)).not.toMatch(
+      /quick start|MCP server|Windows/,
+    );
+    expect(await analyzeCommits(options("@semantic-release/commit-analyzer"), mixed)).toBe("patch");
+    expect(await generateNotes(options("./scripts/release-notes.mjs"), mixed)).toContain(
+      "name the option the guide shows",
+    );
+  });
+
+  it("leave out the scopes the release does not release for", () => {
+    const silent = options("@semantic-release/commit-analyzer")
+      .releaseRules.filter((rule) => rule.release === false)
+      .map((rule) => rule.scope);
+
+    expect(options("./scripts/release-notes.mjs").leaveOut).toEqual(silent);
+  });
+
+  it("are those written for the release, where there are some, under the generated heading", async () => {
+    const { generateNotes } = await import("./release-notes.mjs");
+    const cwd = mkdtempSync(join(tmpdir(), "courier-release-notes-"));
+    mkdirSync(join(cwd, ".github", "release-notes"), { recursive: true });
+    writeFileSync(join(cwd, ".github", "release-notes", "v0.2.0.md"), "Written by hand.\n");
+
+    const notes = await generateNotes(
+      options("./scripts/release-notes.mjs"),
+      release(["fix(core): 🐛 keep the cookie"], "0.2.0", cwd),
+    );
+    rmSync(cwd, { recursive: true, force: true });
+
+    expect(notes).toMatch(
+      /^## \[0\.2\.0\]\(https:\/\/github\.com\/NoveraX\/courier\/compare\/v0\.1\.0\.\.\.v0\.2\.0\)/,
+    );
+    expect(notes).toContain("\n\nWritten by hand.\n");
+    expect(notes).not.toContain("keep the cookie");
+  });
+
+  it("for 0.1.0 are written by hand, and read as a commit's body the checks accept", () => {
+    const written = readFileSync(".github/release-notes/v0.1.0.md", "utf8");
+
+    expect(written).toContain("Courier's first public release.");
+    expect(bodyNoLabelLines({ body: written, footer: null })).toEqual([true, ""]);
   });
 });

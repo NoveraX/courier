@@ -15,14 +15,39 @@
           {
             "breaking": true,
             "release": "minor"
+          },
+          {
+            "scope": "docs",
+            "release": false
+          },
+          {
+            "scope": "site",
+            "release": false
+          },
+          {
+            "scope": "landing",
+            "release": false
+          },
+          {
+            "scope": "examples",
+            "release": false
+          },
+          {
+            "scope": "scripts",
+            "release": false
+          },
+          {
+            "scope": "release",
+            "release": false
           }
         ]
       }
     ],
     [
-      "@semantic-release/release-notes-generator",
+      "./scripts/release-notes.mjs",
       {
-        "preset": "conventionalcommits"
+        "preset": "conventionalcommits",
+        "leaveOut": ["docs", "site", "landing", "examples", "scripts", "release"]
       }
     ],
     [

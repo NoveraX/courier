@@ -1,3 +1,4 @@
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
 import { isSafeHttpOrigin } from "@noverax/courier-studio-core";
 
 import type { CatalogEntry } from "@/store/types-ui";
@@ -37,7 +38,7 @@ function displayOf(
 ): Pick<ProxyRoute, "display" | "kind"> {
   if (ABSOLUTE_URL.test(raw)) return { display: raw, kind: "absolute" };
   if (!appOrigin || !isSafeHttpOrigin(appOrigin)) return { display: raw, kind: "unresolved" };
-  const url = `${appOrigin.replace(/\/+$/, "")}${raw.startsWith("/") ? raw : `/${raw}`}`;
+  const url = `${withoutTrailingSlashes(appOrigin)}${raw.startsWith("/") ? raw : `/${raw}`}`;
   /* A relative WebSocket route is opened on the app's origin with `ws://`. */
   return { display: transport === "ws" ? url.replace(/^http/i, "ws") : url, kind: "resolved" };
 }

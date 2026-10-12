@@ -1,4 +1,4 @@
-import { sendsVariablesInQuery } from "@noverax/courier/internal";
+import { sendsVariablesInQuery, withoutTrailingSlashes } from "@noverax/courier/internal";
 
 import type { SnippetInput } from "@/lib/snippets";
 import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
@@ -32,7 +32,8 @@ export function endpointUrl(
   return [source.baseURL, prefix, endpoint.path]
     .filter((part) => part !== "")
     .reduce(
-      (url, part) => (url === "" ? part : `${url.replace(/\/+$/, "")}/${part.replace(/^\/+/, "")}`),
+      (url, part) =>
+        url === "" ? part : `${withoutTrailingSlashes(url)}/${part.replace(/^\/+/, "")}`,
       "",
     );
 }

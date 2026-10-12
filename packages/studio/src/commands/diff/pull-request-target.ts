@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
 
 import { ownValue } from "../../apis/own-value";
 import { messageOf } from "../../server/message-of";
@@ -43,7 +44,8 @@ export function pullRequestOf(env: JobEnvironment): PullRequestTarget | string {
     return "GITHUB_REPOSITORY names no repository — --comment posts from a GitHub Actions job";
   const number = eventNumber(env.GITHUB_EVENT_PATH);
   if (typeof number === "string") return number;
-  return { api: (env.GITHUB_API_URL || PUBLIC_API).replace(/\/+$/, ""), repository, number, token };
+  const api = withoutTrailingSlashes(env.GITHUB_API_URL || PUBLIC_API);
+  return { api, repository, number, token };
 }
 
 /* The pull request's number in the event the job runs for, or why the event names none. */

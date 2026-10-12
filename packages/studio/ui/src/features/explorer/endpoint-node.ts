@@ -1,3 +1,5 @@
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
+
 import { joinPath } from "@/lib/join-path";
 import type { CatalogEndpoint, RequestEntry } from "@/store/types";
 import type { EndpointRef } from "./endpoint-key";
@@ -18,7 +20,7 @@ function lastCalledPath(calls: readonly RequestEntry[], baseURL: string): string
   const url = calls.find((call) => call.url !== undefined && URL.canParse(call.url))?.url;
   if (url === undefined) return null;
   const path = new URL(url).pathname;
-  const base = URL.canParse(baseURL) ? new URL(baseURL).pathname.replace(/\/+$/, "") : "";
+  const base = URL.canParse(baseURL) ? withoutTrailingSlashes(new URL(baseURL).pathname) : "";
   if (base === "" || (path !== base && !path.startsWith(`${base}/`))) return path;
   return path.slice(base.length) || "/";
 }
@@ -69,7 +71,7 @@ export function endpointOf(
     transport: def.transport ?? "http",
     type: def.type,
     path,
-    url: `${baseURL.replace(/\/+$/, "")}${path}`,
+    url: `${withoutTrailingSlashes(baseURL)}${path}`,
     middleware: def.middleware ?? [],
     hasVariablesSchema: def.hasVariablesSchema,
     hasResponseSchema: def.hasResponseSchema,

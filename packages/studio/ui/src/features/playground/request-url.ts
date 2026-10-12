@@ -1,4 +1,4 @@
-import { sendsVariablesInQuery } from "@noverax/courier/internal";
+import { sendsVariablesInQuery, withoutTrailingSlashes } from "@noverax/courier/internal";
 
 import type { PlaygroundEndpoint } from "./endpoint-choices";
 import { queryString } from "./query-string";
@@ -30,7 +30,7 @@ function fieldsOf(variables: unknown): Record<string, unknown> {
  * ```
  */
 export function requestUrlParts(endpoint: PlaygroundEndpoint, variables: unknown): UrlPart[] {
-  const base = endpoint.entry.baseURL.replace(/\/+$/, "");
+  const base = withoutTrailingSlashes(endpoint.entry.baseURL);
   const origin = endpoint.transport === "ws" ? base.replace(/^http/i, "ws") : base;
   const fields = fieldsOf(variables);
   const used = new Set<string>();

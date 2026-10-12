@@ -1,5 +1,7 @@
 import type { RecordingCheck } from "@noverax/courier-mock/testing";
 
+import { markdownCode, markdownText } from "../markdown-escape";
+
 /** The checks of one recordings file. */
 export interface CheckedFile {
   /** The file, relative to the project root */
@@ -103,7 +105,7 @@ export function markdownReport(
   ];
   const rows = brokenGroups(files).map(
     ({ endpoint, kinds, first, count, file }) =>
-      `| \`${cell(endpoint)}\` | ${count} | ${cell(kinds)} — ${cell(first)}${count > 1 ? ` (the first of ${count})` : ""} | \`${cell(file)}\` |`,
+      `| \`${markdownCode(endpoint)}\` | ${count} | ${markdownText(kinds)} — ${markdownText(first)}${count > 1 ? ` (the first of ${count})` : ""} | \`${markdownCode(file)}\` |`,
   );
   if (rows.length > 0)
     lines.push(
@@ -118,11 +120,16 @@ export function markdownReport(
   if (partly.length > 0) {
     lines.push("", `<details><summary>${partly.length} calls partly unchecked</summary>`, "");
     for (const check of partly)
-      lines.push(`- \`${cell(check.label)}\`: ${cell(check.unchecked.join("; "))}`);
+      lines.push(
+        `- \`${markdownCode(check.label, { table: false })}\`: ${markdownText(check.unchecked.join("; "))}`,
+      );
     lines.push("", "</details>");
   }
   for (const { file, reason } of skipped)
-    lines.push("", `\`${cell(file)}\` was passed over: ${cell(reason)}`);
+    lines.push(
+      "",
+      `\`${markdownCode(file, { table: false })}\` was passed over: ${markdownText(reason)}`,
+    );
   return `${lines.join("\n")}\n`;
 }
 
@@ -133,14 +140,6 @@ function problemText(problem: RecordingCheck["problems"][number]): string {
 function problemDetail(problem: RecordingCheck["problems"][number]): string {
   const issues = problem.issues?.map((issue) => `${issue.path} ${issue.message}`).join("; ");
   return `${problem.message}${issues ? ` (${issues})` : ""}`;
-}
-
-/* A table cell holds no pipe or line break of its own, and no backtick that would end the code span. */
-function cell(text: string): string {
-  return text
-    .replace(/\|/g, "\\|")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/`/g, "'");
 }
 
 /** The broken calls of an endpoint that broke the same way, in one file. */

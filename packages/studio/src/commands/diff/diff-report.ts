@@ -1,3 +1,4 @@
+import { markdownCode, markdownText } from "../markdown-escape";
 import type { EndpointChanges } from "./definition-diff";
 
 /** What the recorded calls say of the changes: how many each endpoint has, and how many no longer fit. */
@@ -81,14 +82,15 @@ export function diffMarkdown(changed: readonly EndpointChanges[], impact: Record
       .filter((change) => change.severity !== "info")
       .map(
         (change) =>
-          `| ${change.severity === "breaking" ? "Breaking" : "May break"} | \`${cell(`${entry.source} ${entry.endpoint}`)}\` | ${cell(change.message)} | ${impact.calls.get(`${entry.source} ${entry.endpoint}`) ?? 0} |`,
+          `| ${change.severity === "breaking" ? "Breaking" : "May break"} | \`${markdownCode(`${entry.source} ${entry.endpoint}`)}\` | ${markdownText(change.message)} | ${impact.calls.get(`${entry.source} ${entry.endpoint}`) ?? 0} |`,
       ),
   );
   const safe = changed.flatMap((entry) =>
     entry.changes
       .filter((change) => change.severity === "info")
       .map(
-        (change) => `- \`${cell(`${entry.source} ${entry.endpoint}`)}\`: ${cell(change.message)}`,
+        (change) =>
+          `- \`${markdownCode(`${entry.source} ${entry.endpoint}`, { table: false })}\`: ${markdownText(change.message)}`,
       ),
   );
   const lines = ["## API definition changes", "", `**${summaryOf(changed, impact)}**`];
@@ -119,12 +121,4 @@ function summaryOf(changed: readonly EndpointChanges[], impact: RecordedImpact):
   const failing =
     impact.failing === undefined ? "" : `; ${impact.failing} recorded calls no longer fit`;
   return `${endpoints} endpoints changed: ${breaking} breaking, ${warnings} that may break, ${safe} safe${failing}`;
-}
-
-/* A table cell holds no pipe or line break of its own, and no backtick that would end the code span. */
-function cell(text: string): string {
-  return text
-    .replace(/\|/g, "\\|")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/`/g, "'");
 }

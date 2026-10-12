@@ -1,3 +1,4 @@
+import { markdownCode, markdownText } from "../markdown-escape";
 import type { AgentChanges, OfferedTool } from "./agent-access";
 
 /**
@@ -81,7 +82,7 @@ export function agentAccessMarkdown(changes: AgentChanges): string {
       ...rows,
     );
   }
-  for (const problem of changes.problems) lines.push("", `> ${problemText(problem)}`);
+  for (const problem of changes.problems) lines.push("", `> ${markdownText(problemText(problem))}`);
   return `${lines.join("\n")}\n`;
 }
 
@@ -116,5 +117,5 @@ function renamed(before: OfferedTool, after: OfferedTool): string {
 }
 
 function row(kind: string, path: string, tool: string, call: string, by: string): string {
-  return `| ${kind} | \`${path}\` | \`${tool}\` | ${call} | ${by.replace(/\|/g, "\\|")} |`;
+  return `| ${kind} | \`${markdownCode(path)}\` | \`${markdownCode(tool)}\` | ${markdownText(call)} | ${markdownText(by)} |`;
 }

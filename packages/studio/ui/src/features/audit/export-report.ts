@@ -3,7 +3,27 @@ import { markdownCode, markdownText } from "@/lib/markdown-escape";
 import { CATEGORY_LABEL, CATEGORY_ORDER } from "./audit-meta";
 import type { AuditItem, AuditResult } from "./types";
 
-/** Generate a markdown audit report for clipboard/PR. */
+/* What begins a block at the start of a line — a heading, a list item, a
+   link's definition — and the number that begins an ordered list's item. */
+const BLOCK_SIGN = /^[#+[-]/;
+const ITEM_NUMBER = /^(\d{1,9})(?=[.)])/;
+
+/**
+ * The audit as Markdown, to paste into a pull request or a document.
+ *
+ * A finding's title, description and suggestion are plain text — the screen
+ * shows them so — and carry names the app's runtime reported, so they are
+ * escaped to read as written rather than as formatting, a link, a mention or
+ * HTML. Its code suggestion is fenced so that nothing inside can close the
+ * block.
+ *
+ * @param result - The audit to write out
+ * @returns The report, as Markdown
+ * @example
+ * ```ts
+ * await navigator.clipboard.writeText(exportAsMarkdown(result));
+ * ```
+ */
 export function exportAsMarkdown(result: AuditResult): string {
   const lines: string[] = [];
 
@@ -23,20 +43,21 @@ export function exportAsMarkdown(result: AuditResult): string {
 
     for (const item of items) {
       const icon = severityIcon(item);
-      lines.push(`### ${icon} ${item.title}`);
+      lines.push(`### ${icon} ${markdownText(item.title)}`);
       lines.push("");
-      lines.push(item.description);
+      lines.push(paragraph(item.description));
 
       if (item.suggestion) {
         lines.push("");
-        lines.push(`> **Suggestion:** ${item.suggestion}`);
+        lines.push(`> **Suggestion:** ${markdownText(item.suggestion)}`);
       }
 
       if (item.codeSuggestion) {
+        const fence = fenceFor(item.codeSuggestion);
         lines.push("");
-        lines.push("```ts");
+        lines.push(`${fence}ts`);
         lines.push(item.codeSuggestion);
-        lines.push("```");
+        lines.push(fence);
       }
 
       if (item.endpoints && item.endpoints.length > 0) {
@@ -61,4 +82,19 @@ export function exportAsMarkdown(result: AuditResult): string {
 function severityIcon(item: AuditItem): string {
   const map = { error: "🔴", warning: "🟡", hint: "🔵", pass: "🟢" };
   return map[item.severity];
+}
+
+/* Text that starts its own line, where a leading `#`, `-`, `+`, `[` or `1.`
+   would begin a heading, a list or a link's definition rather than read as
+   written. */
+function paragraph(text: string): string {
+  return markdownText(text.trimStart()).replace(BLOCK_SIGN, "\\$&").replace(ITEM_NUMBER, "$1\\");
+}
+
+/* A block closes at a line of at least as many backticks as opened it, so a
+   fence longer than every run of them in the code is one nothing in it ends. */
+function fenceFor(code: string): string {
+  const runs = code.match(/`+/g) ?? [];
+  const longest = runs.reduce((most, run) => Math.max(most, run.length), 0);
+  return "`".repeat(Math.max(3, longest + 1));
 }

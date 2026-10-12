@@ -73,6 +73,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "test:scale": "node scripts/scale/run.mjs",
     "test:frameworks": "node scripts/test-frameworks.mjs",
     "test:quickstart": "node scripts/test-quickstart.mjs",
     "test:watch": "vitest",

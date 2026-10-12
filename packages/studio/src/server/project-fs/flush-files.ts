@@ -3,8 +3,11 @@ import { open } from "node:fs/promises";
 /* Enough flushes at once to keep the disk busy, few enough to stay far from the open-file limit. */
 const AT_ONCE = 16;
 
+/* Windows flushes a file only through a handle that may write to it; a read-only one fails with EPERM. */
+const FLUSH_FLAGS = process.platform === "win32" ? "r+" : "r";
+
 async function flushFile(path: string): Promise<void> {
-  const handle = await open(path, "r");
+  const handle = await open(path, FLUSH_FLAGS);
   try {
     await handle.sync();
   } finally {

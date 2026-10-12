@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CARRIED_BODY_BYTES, carriedBody } from "../src/studio/carried-body";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const orders = (count: number) =>
   Array.from({ length: count }, (_, id) => ({ id, userId: `user-${id % 7}`, total: id * 3 }));
@@ -78,6 +82,18 @@ describe("carriedBody", () => {
     const body = "ж".repeat(10_000) + "😀".repeat(5000);
 
     expect(carriedBody(body).whole?.bytes).toBe(Buffer.byteLength(JSON.stringify(body)));
+  });
+
+  it("counts them as UTF-8 too where the platform has no Buffer, as in a page", async () => {
+    vi.resetModules();
+    vi.stubGlobal("Buffer", undefined);
+    const { carriedBody: inPage } = await import("../src/studio/carried-body");
+    vi.unstubAllGlobals();
+    const ascii = Array.from({ length: 2000 }, (_, id) => ({ id, name: "x".repeat(20) }));
+    const wide = `${"ж".repeat(10_000)}${"😀".repeat(5000)}`;
+
+    expect(inPage(ascii).whole?.bytes).toBe(Buffer.byteLength(JSON.stringify(ascii)));
+    expect(inPage(wide).whole?.bytes).toBe(Buffer.byteLength(JSON.stringify(wide)));
   });
 
   it("carries a note in place of a body with no JSON", () => {

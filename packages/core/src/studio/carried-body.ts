@@ -82,8 +82,25 @@ function cut(value: unknown, room: number): unknown {
   return value;
 }
 
+/* A text of none but ASCII characters is as many bytes as characters. */
+const NON_ASCII = /[\u0080-\uffff]/;
+
+/* Node counts a text's bytes natively; a body of megabytes took a loop over each character as long as writing it. */
+const nativeByteLength = byteLengthOfPlatform();
+
+function byteLengthOfPlatform(): ((text: string) => number) | undefined {
+  const buffer: unknown = Reflect.get(globalThis, "Buffer");
+  const byteLength: unknown =
+    typeof buffer === "function" ? Reflect.get(buffer, "byteLength") : undefined;
+  return typeof byteLength === "function"
+    ? (text) => Number(Reflect.apply(byteLength, buffer, [text, "utf8"]))
+    : undefined;
+}
+
 /* Its size in UTF-8, without encoding it: a pair of surrogates is four bytes. */
 function bytesOf(text: string): number {
+  if (nativeByteLength) return nativeByteLength(text);
+  if (!NON_ASCII.test(text)) return text.length;
   let bytes = text.length;
   for (let index = 0; index < text.length; index++) {
     const code = text.charCodeAt(index);

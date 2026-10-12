@@ -13,6 +13,7 @@ import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { toWebRequest } from "../src/node";
@@ -64,7 +65,7 @@ describe("toWebRequest with its response", () => {
   });
 
   it("still hears the client leave once the request was let go of and collected", () => {
-    const tsx = createRequire(import.meta.url).resolve("tsx");
+    const tsx = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
     const script = join(__dirname, "fixtures/request-signal-after-collection.ts");
 
     const run = spawnSync(process.execPath, ["--expose-gc", "--import", tsx, script], {

@@ -68,6 +68,17 @@ describe("changing an icon theme's settings", () => {
     expect(theme.apply).toHaveBeenCalledTimes(1);
   }, 10_000);
 
+  it("leaves the theme alone when nothing changed, and asks it to apply when only its icons did", async () => {
+    settings.set(FILES, [{ icon: "courier-config" }]);
+
+    await changeThemeSettings(theme, [[FILES, [{ icon: "courier-config" }]]]);
+    const idle = theme.apply.mock.calls.length;
+    await changeThemeSettings(theme, [[FILES, [{ icon: "courier-config" }]]], true);
+
+    expect(idle).toBe(0);
+    expect(theme.apply).toHaveBeenCalledTimes(1);
+  });
+
   it("leaves a setting that already holds the value alone, and waits for no theme it cannot find", async () => {
     settings.set(FILES, [{ icon: "courier-config" }]);
     settingsChanged.push((key) => happened.push(`changed ${key}`));

@@ -16,7 +16,10 @@ export const ICONS = {
   folder: "folder-courier",
 } as const;
 
-/** Courier's icon files, as it ships them in `media/icons`. */
+/** The `.courier` folder's icon drawn as vscode-icons draws its folders; `-light` is its look in a light colour theme, `-open` the open folder's. */
+export const VSICONS_FOLDER_ICON = "folder-courier-vsicons";
+
+/** Courier's icon files for Material Icon Theme, as it ships them in `media/icons`. */
 export const ICON_FILES: readonly string[] = [
   `${ICONS.config}.svg`,
   `${ICONS.mocks}.svg`,

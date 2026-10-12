@@ -84,3 +84,36 @@ describe("the npm CLI a release leaves out", () => {
     expect(stand).not.toHaveProperty("bin");
   });
 });
+
+describe("the notes a release writes", () => {
+  it("come out of the preset and the writer the release loads, sorted by type", async () => {
+    const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
+    const options = (name) => config.plugins.find((plugin) => plugin[0] === name)?.[1] ?? {};
+    const { analyzeCommits } = await import("@semantic-release/commit-analyzer");
+    const { generateNotes } = await import("@semantic-release/release-notes-generator");
+    const quiet = { log() {}, error() {}, success() {}, warn() {} };
+    const context = {
+      cwd: process.cwd(),
+      env: {},
+      logger: quiet,
+      commits: [
+        { hash: "a".repeat(40), message: "feat(core): ✨ answer in one line" },
+        { hash: "b".repeat(40), message: "fix(studio): 🐛 keep the open request" },
+      ],
+      lastRelease: { gitTag: "v0.1.0", version: "0.1.0", gitHead: "" },
+      nextRelease: { gitTag: "v0.2.0", version: "0.2.0" },
+      options: { repositoryUrl: "https://github.com/NoveraX/courier" },
+    };
+
+    const type = await analyzeCommits(options("@semantic-release/commit-analyzer"), context);
+    const notes = await generateNotes(
+      options("@semantic-release/release-notes-generator"),
+      context,
+    );
+
+    expect(type).toBe("minor");
+    expect(notes).toContain("### Features");
+    expect(notes).toContain("**core:** ✨ answer in one line");
+    expect(notes).toContain("### Bug Fixes");
+  });
+});

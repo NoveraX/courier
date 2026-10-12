@@ -35,6 +35,8 @@ const STREAM = "stream";
 const UNREADABLE = "Studio cannot cut the file on disk into its parts, so it cannot keep its edits";
 const MISREAD =
   "Studio's merge of the file does not read back as it was meant to, so it cannot keep its edits";
+const UNPLACEABLE =
+  "The group's prefix changed, and Studio cannot write every endpoint you kept under a prefix that keeps its URL — one names its path other than as a string";
 
 /** A file laid out for a merge, and its parts. */
 interface Side {
@@ -69,7 +71,9 @@ export function mergeGroupFile(
   const merged = renamed(mergeEndpoints(read.info, fresh.info, fingerprints, changes), read, fresh);
   const own = withFirstStream(read, merged);
   if (own === null) return conflict(generatedContent, UNREADABLE);
-  const { prefix, entries } = underPrefix(merged, own, fresh, changes);
+  const placed = underPrefix(merged, own, fresh, changes);
+  if (placed === null) return conflict(generatedContent, UNPLACEABLE);
+  const { prefix, entries } = placed;
   /* The declaration keeps the options the user added; the generator's come from the spec. */
   const shell = mergedShell(own.layout, fresh.layout, prefix);
   if (shell === null) return conflict(generatedContent, UNREADABLE);
@@ -100,17 +104,18 @@ function renamed(entries: MergedEntry[], own: Side, fresh: Side): MergedEntry[] 
   }));
 }
 
-/* The prefix the merged group declares, and each endpoint's path written under it. */
+/* The prefix the merged group declares, and each endpoint's path written under it;
+   `null` when no prefix keeps every endpoint's URL, which the user then decides. */
 function underPrefix(
   entries: MergedEntry[],
   own: Side,
   fresh: Side,
   changes: MergeChange[],
-): { prefix: string; entries: MergedEntry[] } {
+): { prefix: string; entries: MergedEntry[] } | null {
   /* A kept endpoint's path is relative to the file's prefix, a generated one's to the spec's. */
   const bases = [own.info.baseName, own.info.streamBaseName ?? STREAM];
   const placed = placeUnderPrefix(entries, bases, own.layout.declaration.prefix, fresh.info.prefix);
-  if (placed === null) return { prefix: fresh.info.prefix, entries };
+  if (placed === null) return null;
   if (placed.prefix !== fresh.info.prefix) {
     changes.push({
       type: "updated",

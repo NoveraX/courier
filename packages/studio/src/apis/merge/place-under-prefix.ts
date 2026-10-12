@@ -13,14 +13,16 @@ export interface MergedEntry {
  * Choose the prefix a merged group declares, and write each endpoint's path
  * under it, so every endpoint calls the URL it called — the user's, under
  * the prefix the file had — or the one the specification now gives it: the
- * generated prefix when every endpoint the user kept fits under it, and
- * otherwise the part both prefixes share.
+ * generated prefix when every endpoint the user kept fits under it,
+ * otherwise the part both prefixes share, and otherwise the file's own
+ * prefix, which leaves the user's paths as they are.
  *
  * @param entries - The merged endpoints, their code naming one of the builders `bases`
  * @param bases - The names the file calls its builders by: `endpoint`, `stream`
  * @param filePrefix - The prefix the file on disk declares, or `null` when Studio cannot read it
  * @param generatedPrefix - The prefix the specification gives the group
- * @returns The prefix, and the endpoints with their paths under it; `null` when a kept path cannot be read
+ * @returns The prefix, and the endpoints with their paths under it; `null`
+ *   when no prefix keeps every endpoint's URL
  * @example
  * ```ts
  * placeUnderPrefix(entries, ["endpoint"], "/v1/customers", "/v1").prefix; // "/v1"
@@ -49,7 +51,7 @@ export function placeUnderPrefix(
     return placed;
   };
   const shared = sharedPrefix(filePrefix, generatedPrefix);
-  for (const prefix of [generatedPrefix, shared]) {
+  for (const prefix of [generatedPrefix, shared, filePrefix]) {
     const placed = under(prefix);
     if (placed !== null) return { prefix, entries: placed };
   }

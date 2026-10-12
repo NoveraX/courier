@@ -7,8 +7,9 @@ export interface ScriptBlock {
   readonly fileName: string;
 }
 
-/* An end tag may hold white space before its `>`: `</script >` ends the block too. */
-const SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+/* An end tag ends the block whatever it holds before its `>` — white space,
+   even attributes, which a parser passes over: `</script >`, `</script x>`. */
+const SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
 const LANG = /\blang\s*=\s*["']?(tsx?|jsx?)["']?/i;
 const FRONTMATTER = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---/;
 const COMPONENT = /\.(vue|svelte|astro)$/i;

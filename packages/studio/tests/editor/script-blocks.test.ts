@@ -17,14 +17,21 @@ describe("scriptBlocks", () => {
     expect(text.slice(block?.offset ?? 0).startsWith("\nconst a = 1;")).toBe(true);
   });
 
-  it("ends a block at an end tag with white space before its bracket", () => {
-    const text =
-      '<script>\nconst a = 1;\n</script >\n<p>after</p>\n<script lang="js">b()</script\n>';
+  it("ends a block at an end tag with white space or attributes before its bracket", () => {
+    const text = [
+      "<script>\nconst a = 1;\n</script >",
+      '<script lang="js">b()</script\t\n bar>',
+      "<script>c()</scripts></script>",
+    ].join("\n<p>after</p>\n");
 
     const blocks = scriptBlocks("Page.svelte", text);
 
-    expect(blocks.map((block) => block.code)).toEqual(["\nconst a = 1;\n", "b()"]);
-    expect(blocks.map((block) => block.fileName)).toEqual(["component.ts", "component.js"]);
+    expect(blocks.map((block) => block.code)).toEqual(["\nconst a = 1;\n", "b()", "c()</scripts>"]);
+    expect(blocks.map((block) => block.fileName)).toEqual([
+      "component.ts",
+      "component.js",
+      "component.ts",
+    ]);
   });
 
   it("reads all of a script", () => {

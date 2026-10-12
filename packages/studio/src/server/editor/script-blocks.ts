@@ -7,7 +7,8 @@ export interface ScriptBlock {
   readonly fileName: string;
 }
 
-const SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+/* An end tag may hold white space before its `>`: `</script >` ends the block too. */
+const SCRIPT = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
 const LANG = /\blang\s*=\s*["']?(tsx?|jsx?)["']?/i;
 const FRONTMATTER = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---/;
 const COMPONENT = /\.(vue|svelte|astro)$/i;

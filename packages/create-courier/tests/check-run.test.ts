@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { checkRun } from "../src/check-run";
@@ -24,7 +24,9 @@ describe("checkRun", () => {
 
   it("refuses a specification file that is not there, naming where it looked", () => {
     expect(() => checkRun({ openapi: "./no-such-spec.json" })).toThrow(
-      /^--openapi: there is no \.\/no-such-spec\.json here, at \/.+no-such-spec\.json$/,
+      new Error(
+        `--openapi: there is no ./no-such-spec.json here, at ${resolve("no-such-spec.json")}`,
+      ),
     );
   });
 

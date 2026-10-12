@@ -214,6 +214,55 @@ describe("loadCourierConfig — transform cache", () => {
   });
 });
 
+describe("loadCourierConfig — the project's transforms", () => {
+  beforeEach(() => {
+    /* The suite keeps no transforms on disk; these tests are about keeping them. */
+    vi.stubEnv("COURIER_TRANSFORM_CACHE", "1");
+    writeConfig("sources.ts", "export const sources: Record<string, object> = { first: {} };\n");
+    writeConfig(
+      "courier.config.ts",
+      'import { sources } from "./sources";\nexport default { sources };\n',
+    );
+  });
+
+  /* What a process that loads the project once finds kept, as a mock worker reads it. */
+  function reader(): CountingCache {
+    const directory = join(realpathSync(dir), "node_modules", ".cache", "courier", "transform");
+    const inner = createTransformCache({ directory, readOnly: true, maxMemoryChars: 0 });
+    const computed: string[] = [];
+    const cache: TransformCache = {
+      transform: (options, compute) =>
+        inner.transform(options, (miss) => {
+          computed.push(miss.filename ?? "");
+          return compute(miss);
+        }),
+    };
+    return { cache, computed };
+  }
+
+  it("are kept in node_modules/.cache, where the next process finds every one", async () => {
+    mkdirSync(join(dir, "node_modules"));
+
+    const loaded = await loadCourierConfig({ cwd: dir, projectTransforms: true });
+    const next = reader();
+    await loadCourierConfig({ cwd: dir, transformCache: next.cache });
+
+    expect(Object.keys(loaded?.config.sources ?? {})).toEqual(["first"]);
+    expect(next.computed).toEqual([]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("are neither kept nor looked for in a project without node_modules", async () => {
+    const loaded = await loadCourierConfig({ cwd: dir, projectTransforms: true });
+
+    expect(Object.keys(loaded?.config.sources ?? {})).toEqual(["first"]);
+    expect(existsSync(join(dir, "node_modules"))).toBe(false);
+  });
+});
+
 describe("loadCourierConfigFile — path aliases", () => {
   beforeEach(() => {
     writeConfig(

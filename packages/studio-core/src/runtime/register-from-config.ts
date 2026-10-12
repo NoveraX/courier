@@ -40,9 +40,11 @@ export async function registerFromConfig(
        cost nothing until a server attaches. */
     const { loadCourierConfig } = await import("./load-config");
     const modules = new Set<string>();
-    const loaded: LoadedCourierConfig | null = await loadCourierConfig(
-      registration.followFiles === true ? { onModule: (file) => modules.add(file) } : {},
-    );
+    const loaded: LoadedCourierConfig | null = await loadCourierConfig({
+      /* A server in production writes nothing into its node_modules: they may be read-only. */
+      projectTransforms: process.env.NODE_ENV !== "production",
+      ...(registration.followFiles === true && { onModule: (file) => modules.add(file) }),
+    });
     if (loaded) {
       /* Registration is inside the same try: a config that loads but declares
          no usable `sources` is the same kind of failure as one that will not
@@ -61,7 +63,7 @@ export async function registerFromConfig(
           registerSources(config.sources);
         });
       } else if (process.env.NODE_ENV !== "production") {
-        await followConfig(loadCourierConfig, reloaded);
+        await followConfig(() => loadCourierConfig({ projectTransforms: true }), reloaded);
       }
       const projectRoot = dirname(loaded.configFile);
       return {

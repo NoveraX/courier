@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import {
   type LoadedCourierConfig,
   loadCourierConfig,
   loadCourierConfigFile,
+  projectTransformCache,
 } from "@noverax/courier-studio-core/config";
 
 /** The config the CLI serves, or why it has none. */
@@ -33,7 +34,11 @@ export async function loadCliConfig(cwd: string, file?: string): Promise<CliConf
 }
 
 async function discover(cwd: string): Promise<CliConfig> {
-  const loaded = await loadCourierConfig({ cwd, requireAtCwd: true });
+  const loaded = await loadCourierConfig({
+    cwd,
+    requireAtCwd: true,
+    projectTransforms: process.env.NODE_ENV !== "production",
+  });
   return (
     loaded ?? {
       problem: `No courier.config.* in ${cwd}. Create one there, or pass --config <path>.`,
@@ -44,5 +49,7 @@ async function discover(cwd: string): Promise<CliConfig> {
 async function named(cwd: string, file: string): Promise<CliConfig> {
   const path = resolve(cwd, file);
   if (!existsSync(path)) return { problem: `--config ${file}: there is no file at ${path}.` };
-  return loadCourierConfigFile(path);
+  const transformCache =
+    process.env.NODE_ENV === "production" ? undefined : projectTransformCache(dirname(path));
+  return loadCourierConfigFile(path, { transformCache });
 }

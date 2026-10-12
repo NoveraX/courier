@@ -6,8 +6,9 @@
  * where Import reads the API defaults — or Discard drops it; a theme shown
  * as soon as it is picked; an ignore pattern that is not
  * a regular expression refused with the reason; a setting saved elsewhere
- * followed; the saved sessions with a delete that asks; and the captured
- * requests cleared after asking.
+ * followed; the saved sessions with a delete that asks; the captured
+ * requests cleared after asking; and, on a window too narrow for the side
+ * list, the title heading the page over a row of section chips.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -60,7 +61,18 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
+
+/* A window narrower than the 860 pixels the side list needs: only that query matches. */
+function narrowWindow(): void {
+  vi.stubGlobal("matchMedia", (media: string) => ({
+    media,
+    matches: media === "(max-width: 859px)",
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
 
 describe("Settings", () => {
   it("marks a change, counts it in the bar, and keeps it on Save", async () => {
@@ -151,6 +163,36 @@ describe("Settings", () => {
     await settle(() => fireEvent.click(saved.getByRole("button", { name: "Delete session" })));
 
     expect(vi.mocked(post)).toHaveBeenCalledWith("/api/sessions/delete", { id: "s1" });
+  });
+
+  it("heads a narrow window's page with its title, over a row of the sections as chips", async () => {
+    narrowWindow();
+    await openShell("/settings");
+
+    const nav = within(screen.getByRole("navigation", { name: "Settings sections" }));
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeTruthy();
+    expect(nav.queryByRole("heading", { name: "Settings" })).toBeNull();
+    expect(nav.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Appearance",
+      "Connection",
+      "Editor",
+      "Recording",
+      "Display",
+      "Notifications",
+      "Export",
+      "API defaults",
+      "Session history",
+      "Storage",
+      "Danger zone",
+    ]);
+    expect(nav.getByRole("link", { name: "Appearance" }).getAttribute("aria-current")).toBe(
+      "location",
+    );
+
+    await settle(() =>
+      fireEvent.click(section("Display").getByRole("button", { name: "4 spaces" })),
+    );
+    expect(nav.getByRole("link", { name: /Display.*unsaved changes/ })).toBeTruthy();
   });
 
   it("clears the captured requests after asking", async () => {

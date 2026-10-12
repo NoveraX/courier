@@ -40,7 +40,8 @@ interface StatusChartProps {
 
 /**
  * How the calls ended: a ring of the groups' shares with the success rate
- * in its middle, and a row a group with its count, share and bar.
+ * in its middle, and a row a group with its count, share and bar — beside
+ * the ring, or under it on a phone, where the rows need the whole width.
  *
  * @param props - The groups, the calls they are of, and the success rate
  * @returns The chart
@@ -62,9 +63,9 @@ export function StatusChart({ groups, total, successRate }: StatusChartProps): R
         </span>
       }
     >
-      <div className="flex flex-1 items-center gap-5.5">
+      <div className="flex flex-1 items-center gap-5.5 max-sm:flex-col max-sm:items-stretch">
         <div
-          className="relative size-34 shrink-0 rounded-full"
+          className="relative size-34 shrink-0 rounded-full max-sm:self-center"
           style={{ background: ringOf(groups) }}
         >
           <div className="absolute inset-4.25 flex flex-col items-center justify-center gap-0.75 rounded-full bg-panel">

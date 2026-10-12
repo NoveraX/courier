@@ -6,7 +6,10 @@ import type { SessionSummary } from "@/features/settings/session-summary";
 import { cn } from "@/lib/utils";
 
 const ICON_BUTTON =
-  "flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-brand";
+  "flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:size-9";
+/* In a list too narrow for one line, the actions take a line under the name. */
+const ROW =
+  "grid min-h-12.5 grid-cols-[30px_minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-line px-3 py-1.5 last:border-b-0 @max-[25rem]:grid-cols-[30px_minmax(0,1fr)_auto] @max-[25rem]:gap-y-2 @max-[25rem]:py-2.5";
 
 interface SavedSessionRowProps {
   session: SessionSummary;
@@ -22,7 +25,8 @@ interface SavedSessionRowProps {
 
 /**
  * A saved session: its name, how many requests and when it was saved, its
- * errors, and Load, Export, Share, Save as a test and Delete — Delete asking first.
+ * errors, and Load, Export, Share, Save as a test and Delete — Delete asking
+ * first. In a narrow list the actions take a line under the name.
  *
  * @param props - The session, the time now, and what loads, exports, shares, tests and deletes it
  * @returns The row
@@ -49,14 +53,14 @@ export function SavedSessionRow({
         <button
           type="button"
           onClick={() => setAsking(false)}
-          className="h-7 cursor-pointer rounded-control border border-line-strong bg-panel px-2.5 text-small"
+          className="h-7 cursor-pointer rounded-control border border-line-strong bg-panel px-2.5 text-small pointer-coarse:h-9"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={onDelete}
-          className="h-7 cursor-pointer rounded-control bg-err px-3 text-small font-semibold text-bg"
+          className="h-7 cursor-pointer rounded-control bg-err px-3 text-small font-semibold text-bg pointer-coarse:h-9"
         >
           Delete session
         </button>
@@ -64,7 +68,7 @@ export function SavedSessionRow({
     );
   }
   return (
-    <li className="grid min-h-12.5 grid-cols-[30px_minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-line px-3 py-1.5 last:border-b-0">
+    <li className={ROW}>
       <span className="flex size-7.5 items-center justify-center rounded-card bg-raised text-fg-subtle">
         <Archive aria-hidden="true" className="size-3.25" />
       </span>
@@ -80,7 +84,7 @@ export function SavedSessionRow({
       >
         {errors > 0 ? `${errors} error${errors === 1 ? "" : "s"}` : "no errors"}
       </span>
-      <span className="flex gap-1">
+      <span className="flex gap-1 @max-[25rem]:col-span-2 @max-[25rem]:col-start-2">
         <button
           type="button"
           title="Load"

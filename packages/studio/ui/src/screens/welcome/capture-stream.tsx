@@ -23,6 +23,11 @@ function pathOf(request: RequestEntry): string {
   return [request.group, request.method].filter(Boolean).join(".");
 }
 
+/* Narrower than its five columns allow, a row puts its method, endpoint and status on a line over
+   its time and duration, and the column heads, which no longer line up, are left out. */
+const ROW =
+  "relative grid h-8.25 w-full cursor-pointer grid-cols-[78px_50px_minmax(0,1fr)_34px_84px] items-center gap-2.5 border-b border-line px-3.5 text-left transition-colors duration-400 hover:bg-raised @max-[25rem]:h-auto @max-[25rem]:grid-cols-[50px_minmax(0,1fr)_84px] @max-[25rem]:gap-y-1 @max-[25rem]:py-2";
+
 function Row({ request, newest }: { request: RequestEntry; newest: boolean }): React.ReactNode {
   const navigate = useNavigate();
   const code = request.statusCode;
@@ -32,16 +37,15 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
     <button
       type="button"
       onClick={() => void navigate({ to: "/timeline", search: { req: request.id } })}
-      className={cn(
-        "relative grid h-8.25 w-full cursor-pointer grid-cols-[78px_50px_minmax(0,1fr)_34px_84px] items-center gap-2.5 border-b border-line px-3.5 text-left transition-colors duration-400 hover:bg-raised",
-        newest ? "bg-brand-tint" : failed && "bg-err-dim",
-      )}
+      className={cn(ROW, newest ? "bg-brand-tint" : failed && "bg-err-dim")}
     >
       <span
         aria-hidden="true"
         className={cn("absolute inset-y-0 left-0 w-0.5", newest ? "bg-brand" : failed && "bg-err")}
       />
-      <span className="text-fg-subtle tabular-nums">{clock(request.startedAt)}</span>
+      <span className="text-fg-subtle tabular-nums @max-[25rem]:col-span-2 @max-[25rem]:row-start-2">
+        {clock(request.startedAt)}
+      </span>
       <span className={cn("text-meta font-semibold", methodText(request.httpMethod ?? ""))}>
         {request.httpMethod ?? "—"}
       </span>
@@ -51,7 +55,7 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
       </span>
       <span
         className={cn(
-          "tabular-nums",
+          "tabular-nums @max-[25rem]:text-right",
           code === undefined
             ? "text-fg-subtle"
             : code >= 500
@@ -63,7 +67,7 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
       >
         {code ?? "—"}
       </span>
-      <span className="flex items-center justify-end gap-1.75">
+      <span className="flex items-center justify-end gap-1.75 @max-[25rem]:col-start-3 @max-[25rem]:row-start-2">
         <span className="flex h-0.75 flex-1 justify-end overflow-hidden rounded-[2px] bg-raised">
           {ms !== undefined && (
             <span
@@ -85,7 +89,8 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
 
 /**
  * The capture panel once requests arrive: four numbers, then the latest
- * ten calls — each opens in the Timeline.
+ * ten calls — each opens in the Timeline. A panel as narrow as a phone's
+ * sets the numbers two by two and each call on two lines.
  *
  * @returns The panel's body
  * @example
@@ -113,12 +118,17 @@ export function CaptureStream(): React.ReactNode {
     },
   ];
   return (
-    <div className={cn("flex flex-col transition-opacity duration-300", !live && "opacity-50")}>
-      <div className="grid grid-cols-4 border-b border-line">
+    <div
+      className={cn(
+        "@container flex flex-col transition-opacity duration-300",
+        !live && "opacity-50",
+      )}
+    >
+      <div className="grid grid-cols-4 border-b border-line @max-[25rem]:grid-cols-2">
         {cells.map((cell) => (
           <div
             key={cell.label}
-            className="flex flex-col gap-1 border-r border-line px-3.5 py-3 last:border-r-0"
+            className="flex flex-col gap-1 border-r border-line px-3.5 py-3 last:border-r-0 @max-[25rem]:even:border-r-0 @max-[25rem]:[&:nth-child(-n+2)]:border-b"
           >
             <span className="font-mono text-micro tracking-[0.1em] text-fg-subtle uppercase">
               {cell.label}
@@ -134,7 +144,7 @@ export function CaptureStream(): React.ReactNode {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-[78px_50px_minmax(0,1fr)_34px_84px] gap-2.5 border-b border-line px-3.5 py-2 font-mono text-micro tracking-[0.08em] text-fg-subtle uppercase">
+      <div className="grid grid-cols-[78px_50px_minmax(0,1fr)_34px_84px] gap-2.5 border-b border-line px-3.5 py-2 font-mono text-micro tracking-[0.08em] text-fg-subtle uppercase @max-[25rem]:hidden">
         <span>Time</span>
         <span>Method</span>
         <span>Source</span>

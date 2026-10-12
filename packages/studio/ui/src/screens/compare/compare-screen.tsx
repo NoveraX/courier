@@ -1,4 +1,4 @@
-import { ArrowLeftRight, GitCompare } from "lucide-react";
+import { ArrowLeftRight, ArrowUpDown, GitCompare } from "lucide-react";
 
 import { compareSummary } from "@/features/compare/compare-summary";
 import { useFirstLoad } from "@/hooks/use-first-load";
@@ -25,7 +25,8 @@ function NotEnough(): React.ReactNode {
 /**
  * The Compare page: two captured calls side by side — picked, swapped or
  * taken from a ready-made pair — what moved between them at a glance, and
- * their responses, headers, timing and variables diffed.
+ * their responses, headers, timing and variables diffed. A phone puts the
+ * two calls one over the other, with the swap between them.
  *
  * @returns The page
  * @example
@@ -38,7 +39,7 @@ export function CompareScreen(): React.ReactNode {
   const { pair } = model;
   const loading = useFirstLoad();
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4 px-6 pt-6 pb-12">
+    <div className="mx-auto flex w-full max-w-320 flex-col gap-4 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
       <CompareHeader preset={pair ? model.preset : undefined} onPreset={model.applyPreset} />
       {loading.requests ? (
         <CompareSkeleton />
@@ -46,7 +47,7 @@ export function CompareScreen(): React.ReactNode {
         <NotEnough />
       ) : (
         <>
-          <div className="grid grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)] items-stretch gap-2.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)] items-stretch gap-2.5 max-sm:grid-cols-1 max-sm:gap-2">
             <RequestSlot
               side="a"
               request={pair[0]}
@@ -58,9 +59,10 @@ export function CompareScreen(): React.ReactNode {
               title="Swap A and B"
               aria-label="Swap A and B"
               onClick={model.swap}
-              className="flex size-9 cursor-pointer items-center justify-center self-center rounded-full border border-line-strong bg-panel text-fg-muted hover:border-fg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+              className="flex size-9 cursor-pointer items-center justify-center self-center rounded-full border border-line-strong bg-panel text-fg-muted hover:border-fg-subtle hover:text-fg focus-visible:outline-2 focus-visible:outline-brand max-sm:justify-self-center"
             >
-              <ArrowLeftRight aria-hidden="true" className="size-3.5" />
+              <ArrowLeftRight aria-hidden="true" className="size-3.5 max-sm:hidden" />
+              <ArrowUpDown aria-hidden="true" className="size-3.5 sm:hidden" />
             </button>
             <RequestSlot
               side="b"

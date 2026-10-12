@@ -70,7 +70,7 @@ export function AuditScreen(): React.ReactNode {
     "best-practices": categoryTally(items, "best-practices"),
   };
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12">
+    <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
       <AuditHeader
         report={report}
         newSince={newSince}

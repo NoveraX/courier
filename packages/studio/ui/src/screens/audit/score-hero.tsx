@@ -41,9 +41,9 @@ export function ScoreHero(props: ScoreHeroProps): React.ReactNode {
   return (
     <section
       aria-label="Score"
-      className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] overflow-hidden rounded-[16px] border border-line bg-panel"
+      className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] overflow-hidden rounded-[16px] border border-line bg-panel"
     >
-      <div className="-mb-px flex items-center gap-5.5 border-r border-b border-line px-6 py-5.5">
+      <div className="-mb-px flex items-center gap-5.5 border-r border-b border-line px-6 py-5.5 max-sm:gap-4.5 max-sm:border-r-0 max-sm:px-4.5">
         <div
           className="relative size-31 shrink-0 rounded-full"
           style={{

@@ -5,7 +5,8 @@
  * ready-made pair it is, what moved at a glance, the responses diffed and
  * narrowed to the changes, the headers with what changed — kept in the
  * address apart from the inspector's tab — a swap, a call picked for a
- * side, a link naming a call no longer held, and too little traffic.
+ * side, a link naming a call no longer held, too little traffic, and the
+ * side of the diff a phone shows, one at a time.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -166,6 +167,22 @@ describe("Compare", () => {
     expect(screen.getByRole("button", { name: "Request B: api.users.get" }).textContent).toContain(
       "503",
     );
+  });
+
+  it("marks one side of the diff for a phone to show, and switches to the other", async () => {
+    await openShell("/compare");
+    const [a, b] = [...document.querySelectorAll("pre")].map((pre) => pre.parentElement);
+    const sides = within(screen.getByRole("group", { name: "Side shown" }));
+    expect(sides.getByRole("button", { name: "A" }).getAttribute("aria-pressed")).toBe("true");
+    expect(a?.classList.contains("max-sm:hidden")).toBe(false);
+    expect(b?.classList.contains("max-sm:hidden")).toBe(true);
+
+    await settle(() => fireEvent.click(sides.getByRole("button", { name: "B" })));
+
+    expect(a?.classList.contains("max-sm:hidden")).toBe(true);
+    expect(b?.classList.contains("max-sm:hidden")).toBe(false);
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Headers/ })));
+    expect(screen.queryByRole("group", { name: "Side shown" })).toBeNull();
   });
 
   it("says when a call the link named is no longer held", async () => {

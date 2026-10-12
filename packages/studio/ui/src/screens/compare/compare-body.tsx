@@ -14,7 +14,13 @@ import { formatAbsoluteTime } from "@/lib/formatters";
 import { useStudioStore } from "@/store";
 import { DiffView } from "./diff-view";
 import { HeadersTable } from "./headers-table";
+import type { Side } from "./side-tag";
 import { TimingTable } from "./timing-table";
+
+const SIDES: readonly SegmentedOption<Side>[] = [
+  { value: "a", label: "A" },
+  { value: "b", label: "B" },
+];
 
 function counted(value: CompareTab, label: string, count: number): SegmentedOption<CompareTab> {
   return { value, label, count, countTone: count > 0 ? "warn" : "subtle" };
@@ -29,7 +35,8 @@ interface CompareBodyProps {
 /**
  * The two calls diffed: their responses and variables line against line
  * — every line, or only the changes — their headers, and their timing,
- * each tab saying how much changed.
+ * each tab saying how much changed. A phone, too narrow for the two texts
+ * side by side, shows one at a time and switches between A and B.
  *
  * @param props - The pair, the tab shown, and what switches it
  * @returns The diffs
@@ -42,6 +49,7 @@ export function CompareBody({ pair, tab, onTab }: CompareBodyProps): React.React
   const [a, b] = pair;
   const indent = useStudioStore((s) => s.settings.jsonIndent);
   const [onlyChanges, setOnlyChanges] = useState(false);
+  const [side, setSide] = useState<Side>("a");
   const lines = (text: (r: typeof a, indent: number) => string) =>
     lineDiff(text(a, indent).split("\n"), text(b, indent).split("\n"));
   const response = lines(responseText);
@@ -58,14 +66,21 @@ export function CompareBody({ pair, tab, onTab }: CompareBodyProps): React.React
   return (
     <>
       <div className="flex flex-wrap items-center gap-2.5">
-        <Segmented label="Show" options={tabs} value={tab} onChange={onTab} />
+        <div className="scroll-row min-w-0 max-sm:w-full">
+          <Segmented label="Show" options={tabs} value={tab} onChange={onTab} />
+        </div>
+        {textual && (
+          <div className="sm:hidden">
+            <Segmented label="Side shown" options={SIDES} value={side} onChange={setSide} />
+          </div>
+        )}
         <div className="flex-1" />
         {textual && (
           <button
             type="button"
             aria-pressed={onlyChanges}
             onClick={() => setOnlyChanges((on) => !on)}
-            className="flex h-7 cursor-pointer items-center gap-1.75 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex h-7 cursor-pointer items-center gap-1.75 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
           >
             <Fold aria-hidden="true" className="size-3" />
             {onlyChanges ? "Show all lines" : "Only changes"}
@@ -79,12 +94,14 @@ export function CompareBody({ pair, tab, onTab }: CompareBodyProps): React.React
             a: `A · ${formatAbsoluteTime(a.startedAt)}`,
             b: `B · ${formatAbsoluteTime(b.startedAt)}`,
           }}
+          shown={side}
         />
       )}
       {tab === "variables" && (
         <DiffView
           rows={diffRows(variables, onlyChanges)}
           titles={{ a: "Variables", b: "Variables" }}
+          shown={side}
         />
       )}
       {tab === "headers" && <HeadersTable rows={headers} />}

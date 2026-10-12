@@ -1,16 +1,15 @@
+import type { LucideIcon } from "lucide-react";
 import { ChevronDown, ChevronRight, SquareArrowOutUpRight } from "lucide-react";
 
-import { methodText } from "@/design/method-color";
 import { TONE_TEXT } from "@/design/tone";
 import { durationLabel } from "@/features/analytics/duration-label";
 import type { EndpointRow as Row } from "@/features/analytics/endpoint-rows";
-import { errorHealth, latencyHealth } from "@/features/analytics/health";
+import { latencyHealth } from "@/features/analytics/health";
 import { formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { EndpointCalls } from "./endpoint-calls";
 import { ENDPOINT_GRID, WIDE_ONLY } from "./endpoint-columns";
-
-const BAR_FILL = { ok: "bg-ok", warn: "bg-warn", err: "bg-err" } as const;
+import { EndpointName, ErrorFigure, P95Figure } from "./endpoint-figures";
 
 interface EndpointRowProps {
   row: Row;
@@ -18,28 +17,80 @@ interface EndpointRowProps {
   slowestP95: number;
   slowMs: number;
   open: boolean;
+  /** Puts the figures on a line under the name: a table too narrow for its columns. */
+  stacked: boolean;
   onToggle: () => void;
   onOpenCall: (id: string) => void;
 }
 
+type CellsProps = Pick<EndpointRowProps, "row" | "slowestP95" | "slowMs"> & {
+  caret: LucideIcon;
+};
+
+function avgTone(row: Row, slowMs: number): string {
+  return row.avg === null ? "text-fg-subtle" : TONE_TEXT[latencyHealth(row.avg, slowMs)];
+}
+
+function ColumnCells({ row, slowestP95, slowMs, caret }: CellsProps): React.ReactNode {
+  return (
+    <>
+      <EndpointName row={row} caret={caret} />
+      <span className="text-right text-fg-muted">{row.calls}</span>
+      <span className={cn("text-right", avgTone(row, slowMs))}>{durationLabel(row.avg)}</span>
+      <span className={cn(WIDE_ONLY, "text-right text-fg-muted")}>{durationLabel(row.p50)}</span>
+      <P95Figure row={row} slowestP95={slowestP95} slowMs={slowMs} />
+      <span className={cn(WIDE_ONLY, "text-right text-fg-muted")}>{durationLabel(row.p99)}</span>
+      <span className={cn(WIDE_ONLY, "text-right text-fg-subtle")}>
+        {formatSize(Math.round(row.size))}
+      </span>
+      <ErrorFigure row={row} />
+    </>
+  );
+}
+
+/* The name and its failures on the first line; calls, average and p95, each named, under it. */
+function StackedCells({ row, slowestP95, slowMs, caret }: CellsProps): React.ReactNode {
+  return (
+    <>
+      <span className="flex min-w-0 items-center gap-3">
+        <EndpointName row={row} caret={caret} className="flex-1" />
+        <ErrorFigure row={row} className="shrink-0" />
+      </span>
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-4.5 text-label text-fg-subtle">
+        <span className="whitespace-nowrap">
+          <span className="text-fg-muted">{row.calls}</span> {row.calls === 1 ? "call" : "calls"}
+        </span>
+        <span className="whitespace-nowrap">
+          avg <span className={avgTone(row, slowMs)}>{durationLabel(row.avg)}</span>
+        </span>
+        <span className="flex items-center gap-2 whitespace-nowrap">
+          p95
+          <P95Figure row={row} slowestP95={slowestP95} slowMs={slowMs} fixedBar />
+        </span>
+      </span>
+    </>
+  );
+}
+
 /**
  * One endpoint of the table: its method and name, calls, response times
- * with its p95 drawn against the slowest, size and failures. A click opens
- * its newest calls under it — or, for an endpoint called once, that call.
+ * with its p95 drawn against the slowest, size and failures — in columns,
+ * or, in a table too narrow for them, on a line under the name. A click
+ * opens its newest calls under it — or, for an endpoint called once, that
+ * call.
  *
- * @param props - The row, the slowest p95, the slow threshold, whether it is open, and what opens it and its calls
+ * @param props - The row, the slowest p95, the slow threshold, whether it is open and stacked, and what opens it and its calls
  * @returns The row
  * @example
  * ```tsx
- * <EndpointRow row={row} slowestP95={2270} slowMs={500} open={false} onToggle={toggle} onOpenCall={open} />
+ * <EndpointRow row={row} slowestP95={2270} slowMs={500} open={false} stacked={false} onToggle={toggle} onOpenCall={open} />
  * ```
  */
 export function EndpointRow(props: EndpointRowProps): React.ReactNode {
-  const { row, slowestP95, slowMs, open, onToggle, onOpenCall } = props;
+  const { row, slowestP95, slowMs, open, stacked, onToggle, onOpenCall } = props;
   const single = row.calls === 1;
-  const Caret = single ? SquareArrowOutUpRight : open ? ChevronDown : ChevronRight;
-  const p95Tone = row.p95 === null ? null : latencyHealth(row.p95, slowMs);
-  const errorTone = errorHealth(row.errorRate);
+  const caret = single ? SquareArrowOutUpRight : open ? ChevronDown : ChevronRight;
+  const Cells = stacked ? StackedCells : ColumnCells;
   return (
     <div className="border-b border-line last:border-b-0">
       <button
@@ -48,63 +99,18 @@ export function EndpointRow(props: EndpointRowProps): React.ReactNode {
         aria-controls={single || !open ? undefined : `calls-${row.key}`}
         onClick={onToggle}
         className={cn(
-          ENDPOINT_GRID,
-          "h-10 w-full cursor-pointer items-center px-4.5 text-left font-mono text-small tabular-nums hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+          "w-full cursor-pointer px-4.5 text-left font-mono text-small tabular-nums hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+          stacked
+            ? "flex min-h-13 flex-col justify-center gap-1.25 py-2"
+            : cn(ENDPOINT_GRID, "h-10 items-center pointer-coarse:h-11"),
           open && "bg-brand-tint",
         )}
       >
-        <span className="flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap">
-          <Caret aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
-          <span
-            className={cn(
-              "w-8.5 shrink-0 text-meta font-semibold min-[1184px]:w-11",
-              methodText(row.httpMethod),
-            )}
-          >
-            {row.httpMethod}
-          </span>
-          <span className="truncate">
-            <span className="text-fg-subtle">{row.prefix}</span>
-            <span className="text-fg">{row.name}</span>
-          </span>
-        </span>
-        <span className="text-right text-fg-muted">{row.calls}</span>
-        <span
-          className={cn(
-            "text-right",
-            row.avg === null ? "text-fg-subtle" : TONE_TEXT[latencyHealth(row.avg, slowMs)],
-          )}
-        >
-          {durationLabel(row.avg)}
-        </span>
-        <span className={cn(WIDE_ONLY, "text-right text-fg-muted")}>{durationLabel(row.p50)}</span>
-        <span className="flex items-center justify-end gap-2">
-          <span className="flex h-1 max-w-10 flex-1 justify-end overflow-hidden rounded-[2px] bg-raised min-[1184px]:max-w-22.5">
-            <span
-              className={cn("h-full rounded-[2px]", p95Tone && BAR_FILL[p95Tone])}
-              style={{ width: `${((row.p95 ?? 0) / slowestP95) * 100}%` }}
-            />
-          </span>
-          <span
-            className={cn("min-w-12 text-right", p95Tone ? TONE_TEXT[p95Tone] : "text-fg-subtle")}
-          >
-            {durationLabel(row.p95)}
-          </span>
-        </span>
-        <span className={cn(WIDE_ONLY, "text-right text-fg-muted")}>{durationLabel(row.p99)}</span>
-        <span className={cn(WIDE_ONLY, "text-right text-fg-subtle")}>
-          {formatSize(Math.round(row.size))}
-        </span>
-        <span className="flex items-center justify-end gap-1.5">
-          <span className={TONE_TEXT[errorTone]}>{row.errorRate.toFixed(1)}%</span>
-          {row.failed > 0 && (
-            <span className="flex h-4.25 items-center rounded-chip bg-err-dim px-1.25 text-micro font-semibold text-err">
-              {row.failed}
-            </span>
-          )}
-        </span>
+        <Cells row={row} slowestP95={slowestP95} slowMs={slowMs} caret={caret} />
       </button>
-      {open && !single && <EndpointCalls row={row} slowMs={slowMs} onOpenCall={onOpenCall} />}
+      {open && !single && (
+        <EndpointCalls row={row} slowMs={slowMs} stacked={stacked} onOpenCall={onOpenCall} />
+      )}
     </div>
   );
 }

@@ -16,7 +16,9 @@ interface ImpactTableProps {
 /**
  * The endpoints whose calls spend most time in middleware: each with a bar
  * of what each middleware takes against the costliest, its time a call,
- * and the share of its calls' time that is — opening its newest chain.
+ * and the share of its calls' time that is — opening its newest chain. In
+ * a table too narrow for the four columns, the share follows the name and
+ * the bar and the time take a line under it.
  *
  * @param props - The endpoints, the middleware's looks, and what opens a chain
  * @returns The table
@@ -30,7 +32,7 @@ export function ImpactTable({ rows, looks, onTrace }: ImpactTableProps): React.R
   return (
     <section
       aria-label="Impact by endpoint"
-      className="flex flex-col overflow-hidden rounded-sheet border border-line bg-panel"
+      className="@container flex flex-col overflow-hidden rounded-sheet border border-line bg-panel"
     >
       <div className="flex min-h-12.5 flex-wrap items-center gap-3 border-b border-line px-4.5 py-2">
         <h2 className="m-0 text-ui font-semibold">Impact by endpoint</h2>
@@ -53,7 +55,7 @@ export function ImpactTable({ rows, looks, onTrace }: ImpactTableProps): React.R
           key={row.key}
           type="button"
           onClick={() => onTrace(row.newestId)}
-          className="grid min-h-10.5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_minmax(120px,1.4fr)_60px_56px] items-center gap-3.5 border-b border-line px-4.5 text-left last:border-b-0 hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
+          className="grid min-h-10.5 w-full cursor-pointer grid-cols-[minmax(0,1fr)_minmax(120px,1.4fr)_60px_56px] items-center gap-3.5 border-b border-line px-4.5 text-left last:border-b-0 hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand pointer-coarse:min-h-11 @max-[35rem]:grid-cols-[minmax(0,1fr)_auto] @max-[35rem]:gap-y-1.5 @max-[35rem]:py-2"
         >
           <span className="flex min-w-0 items-center gap-2.25 font-mono text-small">
             <span
@@ -83,7 +85,7 @@ export function ImpactTable({ rows, looks, onTrace }: ImpactTableProps): React.R
           <span className="text-right font-mono text-small">{formatDuration(row.perCall)}</span>
           <span
             className={cn(
-              "text-right font-mono text-label",
+              "text-right font-mono text-label @max-[35rem]:col-start-2 @max-[35rem]:row-start-1",
               row.share > NOTICEABLE ? "text-warn" : "text-fg-subtle",
             )}
           >{`${row.share.toFixed(0)}%`}</span>

@@ -77,7 +77,7 @@ export function MiddlewareScreen(): React.ReactNode {
   };
   const chosen = calls.find((r) => r.id === search.trace) ?? calls[0];
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12">
+    <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
       <header className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Middleware</h1>
@@ -88,14 +88,16 @@ export function MiddlewareScreen(): React.ReactNode {
           )}
         </div>
         <div className="flex-1" />
-        <Segmented
-          label="View"
-          options={VIEWS}
-          value={view}
-          onChange={(v) =>
-            go({ view: v === "chain" ? "chain" : undefined, trace: search.trace }, true)
-          }
-        />
+        <div className="scroll-row min-w-0 max-sm:w-full">
+          <Segmented
+            label="View"
+            options={VIEWS}
+            value={view}
+            onChange={(v) =>
+              go({ view: v === "chain" ? "chain" : undefined, trace: search.trace }, true)
+            }
+          />
+        </div>
       </header>
       {loading.requests && <MiddlewareSkeleton />}
       {!loading.requests && !chosen && <NoMiddleware />}

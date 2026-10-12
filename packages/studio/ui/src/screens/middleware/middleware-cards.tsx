@@ -22,7 +22,8 @@ function Stat({ label, value }: { label: string; value: string }): React.ReactNo
 /**
  * A card a middleware: what it does and where it runs, its calls, average
  * and p95 time, its share of all middleware time, the headers it adds and
- * the runs that failed — opening the chain of a call it ran in.
+ * the runs that failed — opening the chain of a call it ran in. On a phone
+ * what it does wraps rather than being cut.
  *
  * @param props - The middleware, their looks, and what opens a chain
  * @returns The cards
@@ -55,7 +56,9 @@ export function MiddlewareCards({ stats, looks, onTrace }: MiddlewareCardsProps)
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="font-mono text-item font-semibold">{s.name}</span>
-                <span className="truncate text-label text-fg-subtle">{look?.description}</span>
+                <span className="truncate text-label text-fg-subtle max-sm:whitespace-normal">
+                  {look?.description}
+                </span>
               </span>
               <span className="flex h-5 shrink-0 items-center rounded-[5px] border border-line px-1.75 text-meta text-fg-muted">
                 {s.phase}

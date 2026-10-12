@@ -44,7 +44,9 @@ function Bar({
 
 /**
  * The two calls' time phase by phase: a bar for A and for B against the
- * longer whole call, and how each phase moved.
+ * longer whole call, and how each phase moved. In a table too narrow for
+ * the three columns, the bars take the whole line under the phase and its
+ * move.
  *
  * @param props - The phases
  * @returns The table
@@ -58,24 +60,24 @@ export function TimingTable({ rows }: { rows: readonly TimingRow[] }): React.Rea
   return (
     <section
       aria-label="Timing"
-      className="flex flex-col overflow-hidden rounded-sheet border border-line bg-panel"
+      className="@container flex flex-col overflow-hidden rounded-sheet border border-line bg-panel"
     >
       {rows.map((row) => (
         <div
           key={row.label}
-          className="grid min-h-15 grid-cols-[130px_minmax(0,1fr)_110px] items-center gap-4 border-b border-line px-4.5 py-2 last:border-b-0"
+          className="grid min-h-15 grid-cols-[130px_minmax(0,1fr)_110px] items-center gap-4 border-b border-line px-4.5 py-2 last:border-b-0 @max-[35rem]:grid-cols-[minmax(0,1fr)_auto] @max-[35rem]:gap-y-2 @max-[35rem]:py-3"
         >
           <span className="flex items-center gap-2 text-control text-fg-muted">
             <span className={cn("size-2 rounded-[2px] bg-current", row.tone)} />
             {row.label}
           </span>
-          <div className="flex flex-col gap-1.25">
+          <div className="flex flex-col gap-1.25 @max-[35rem]:col-span-2 @max-[35rem]:row-start-2">
             <Bar side="a" ms={row.a} longest={longest} tone={row.tone} />
             <Bar side="b" ms={row.b} longest={longest} tone={row.tone} />
           </div>
           <span
             className={cn(
-              "flex h-5.5 items-center gap-1 justify-self-end rounded-full px-2 font-mono text-badge font-semibold",
+              "flex h-5.5 items-center gap-1 justify-self-end rounded-full px-2 font-mono text-badge font-semibold @max-[35rem]:col-start-2 @max-[35rem]:row-start-1",
               TONE_TEXT[row.delta.tone],
               TONE_DIM[row.delta.tone],
             )}

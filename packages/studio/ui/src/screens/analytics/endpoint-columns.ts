@@ -26,3 +26,10 @@ export const ENDPOINT_GRID =
 
 /** A cell only a wide table shows. */
 export const WIDE_ONLY = "hidden min-[1184px]:block";
+
+/**
+ * The table's width from which it shows all eight columns: its width
+ * beside the sidebar on the window `WIDE_ONLY` shows them from. Below
+ * `STACKED_BELOW`, each row puts its figures under its name instead.
+ */
+export const ENDPOINTS_WIDE_FROM = 898;

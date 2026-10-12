@@ -37,7 +37,7 @@ export function SnippetStep({ step, side, onCopied }: SnippetStepProps): React.R
         <div
           role="tablist"
           aria-label="Variant"
-          className="flex w-max max-w-full gap-1 rounded-card border border-line bg-inset p-0.75"
+          className="scroll-row w-max max-w-full gap-1 rounded-card border border-line bg-inset p-0.75"
         >
           {step.variants.map((v, index) => (
             <button
@@ -47,7 +47,7 @@ export function SnippetStep({ step, side, onCopied }: SnippetStepProps): React.R
               aria-selected={index === variant}
               onClick={() => setVariant(index)}
               className={cn(
-                "h-6.5 cursor-pointer rounded-md border px-2.75 text-small font-strong whitespace-nowrap transition-colors",
+                "h-6.5 shrink-0 cursor-pointer rounded-md border px-2.75 text-small font-strong whitespace-nowrap transition-colors pointer-coarse:h-9",
                 index === variant
                   ? "border-line bg-panel text-fg"
                   : "border-transparent text-fg-subtle hover:text-fg-muted",

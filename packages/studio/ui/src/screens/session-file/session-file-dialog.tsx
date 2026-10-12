@@ -17,10 +17,12 @@ function close(): void {
 function Contents({ draft }: { draft: SessionFileDraft }): React.ReactNode {
   const replaced = draft.redactions.length;
   return (
-    <div className="flex flex-col gap-4.5">
-      <div className="flex items-center gap-3 rounded-panel bg-inset px-3.5 py-2.5">
-        <span className="min-w-0 truncate font-mono text-small">{sessionFileName(draft.name)}</span>
-        <span className="ml-auto shrink-0 text-small text-fg-subtle tabular-nums">
+    <div className="@container flex flex-col gap-4.5">
+      <div className="flex items-center gap-3 rounded-panel bg-inset px-3.5 py-2.5 @max-[30rem]:flex-col @max-[30rem]:items-start @max-[30rem]:gap-1">
+        <span className="min-w-0 truncate font-mono text-small @max-[30rem]:break-all @max-[30rem]:whitespace-normal">
+          {sessionFileName(draft.name)}
+        </span>
+        <span className="ml-auto shrink-0 text-small text-fg-subtle tabular-nums @max-[30rem]:ml-0">
           {draft.requests} request{draft.requests === 1 ? "" : "s"}
           {draft.failed > 0 && <span className="text-err"> · {draft.failed} failed</span>}
         </span>
@@ -70,7 +72,8 @@ function Body({ state }: { state: DraftState }): React.ReactNode {
  * A session file looked over before it is saved: its name and how many
  * requests it holds, what was left out of it — the values replaced, each
  * by its request and place — and the environment it names. Download saves
- * exactly the file shown.
+ * exactly the file shown. On a phone the name gets a line of its own, and
+ * the environment puts each value under its name.
  *
  * @returns The dialog, open while a session file is asked for
  * @example
@@ -101,7 +104,7 @@ export function SessionFileDialog(): React.ReactNode {
           <button
             type="button"
             onClick={close}
-            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg"
+            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-9"
           >
             Cancel
           </button>
@@ -109,7 +112,7 @@ export function SessionFileDialog(): React.ReactNode {
             type="button"
             disabled={state.kind !== "ready"}
             onClick={() => state.kind === "ready" && save(state.draft)}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-brand px-3.5 text-control font-semibold text-bg hover:bg-brand/90 disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-brand px-3.5 text-control font-semibold text-bg hover:bg-brand/90 disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
           >
             <Download aria-hidden="true" className="size-3.25" />
             Download

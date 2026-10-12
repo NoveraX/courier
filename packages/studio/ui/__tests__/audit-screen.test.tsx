@@ -5,8 +5,9 @@
  * first finding open with its fix and the fixing line drawn out, the
  * severity, category and search filters kept in the address, an endpoint's
  * calls one link away, a report that holds still until Re-run and says what
- * came since, one opened before any request arrived, and the page with no
- * traffic at all.
+ * came since — Re-run and Copy report also in the "⋯" menu a phone's head
+ * keeps them in — one opened before any request arrived, and the page with
+ * no traffic at all.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -140,6 +141,29 @@ describe("the Audit page", () => {
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Re-run" })));
     expect(screen.getByText(/^9 requests/)).toBeTruthy();
+  });
+
+  it("offers Re-run and Copy report in a menu beside Export, for a head too narrow for all three", async () => {
+    await openShell("/audit");
+    await settle(() =>
+      useStudioStore.setState((s) => ({
+        requests: [call("late", { method: "list", startedAt: Date.now() + 1_000 }), ...s.requests],
+      })),
+    );
+    expect(screen.queryByRole("menuitem", { name: "Re-run" })).toBeNull();
+
+    await settle(() =>
+      fireEvent.pointerDown(screen.getByRole("button", { name: "More actions" }), {
+        button: 0,
+        ctrlKey: false,
+        pointerType: "mouse",
+      }),
+    );
+    expect(screen.getByRole("menuitem", { name: "Copy report" })).toBeTruthy();
+    await settle(() => fireEvent.click(screen.getByRole("menuitem", { name: "Re-run" })));
+
+    expect(screen.getByText(/^9 requests/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Export .md" })).toBeTruthy();
   });
 
   it("reads the requests that arrive after it opened with none", async () => {

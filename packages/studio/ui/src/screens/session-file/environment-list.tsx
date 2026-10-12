@@ -17,7 +17,8 @@ interface EnvironmentListProps {
  * An environment line by line — Studio, Node.js and the platform, each
  * package's version, each source's definition fingerprint — with, beside
  * each line that differs from the environment it is set beside, what that
- * one has instead.
+ * one has instead. Inside a container too narrow for two columns, each
+ * value goes under its name.
  *
  * @param props - The environment, and the one it is compared with
  * @returns The list
@@ -33,16 +34,18 @@ export function EnvironmentList({
 }: EnvironmentListProps): React.ReactNode {
   const lines = environmentLines(environment, other);
   return (
-    <dl className="m-0 grid grid-cols-[minmax(0,max-content)_minmax(0,1fr)] items-center gap-x-5 gap-y-1.25">
+    <dl className="m-0 grid grid-cols-[minmax(0,max-content)_minmax(0,1fr)] items-center gap-x-5 gap-y-1.25 @max-[30rem]:grid-cols-1 @max-[30rem]:gap-y-0.5">
       {GROUPS.map((group) => {
         const rows = lines.filter((line) => line.group === group);
         if (rows.length === 0) return null;
         return (
           <Fragment key={group}>
-            <dt className="col-span-2 mt-1.5 text-caption text-fg-subtle first:mt-0">{group}</dt>
+            <dt className="col-span-full mt-1.5 text-caption text-fg-subtle first:mt-0">{group}</dt>
             {rows.map((line) => (
               <Fragment key={`${group}:${line.name}`}>
-                <dt className="truncate font-mono text-small text-fg-muted">{line.name}</dt>
+                <dt className="truncate font-mono text-small text-fg-muted @max-[30rem]:mt-1">
+                  {line.name}
+                </dt>
                 <dd className="m-0 flex min-w-0 items-center gap-2 font-mono text-small">
                   <span className="truncate">{line.value}</span>
                   {line.other !== undefined && (

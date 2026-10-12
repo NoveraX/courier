@@ -38,14 +38,14 @@ function Confirm({ danger, onCancel }: { danger: Danger; onCancel: () => void })
       <button
         type="button"
         onClick={onCancel}
-        className="h-7 cursor-pointer rounded-control border border-line-strong bg-panel px-2.5 text-small text-fg"
+        className="h-7 cursor-pointer rounded-control border border-line-strong bg-panel px-2.5 text-small text-fg pointer-coarse:h-9"
       >
         Cancel
       </button>
       <button
         type="button"
         onClick={danger.run}
-        className="h-7 cursor-pointer rounded-control bg-err px-3 text-small font-semibold text-bg"
+        className="h-7 cursor-pointer rounded-control bg-err px-3 text-small font-semibold text-bg pointer-coarse:h-9"
       >
         {danger.confirm}
       </button>
@@ -124,7 +124,7 @@ export function DangerSection({ history, onResetSettings }: DangerSectionProps):
               <button
                 type="button"
                 onClick={() => setAsking(danger.action)}
-                className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-card border border-err/40 bg-panel px-3 text-control font-strong whitespace-nowrap text-err hover:bg-err-dim focus-visible:outline-2 focus-visible:outline-brand"
+                className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-card border border-err/40 bg-panel px-3 text-control font-strong whitespace-nowrap text-err hover:bg-err-dim focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
               >
                 <Icon aria-hidden="true" className="size-3.25" />
                 {danger.button}

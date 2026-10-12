@@ -53,7 +53,7 @@ export function StorageKindRow(props: StorageKindRowProps): React.ReactNode {
             aria-label={`Clear ${label.toLowerCase()}`}
             disabled={busy || kind.bytes === 0}
             onClick={onAsk}
-            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-panel px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-panel px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
           >
             <Trash2 aria-hidden="true" className="size-3" />
             Clear
@@ -76,7 +76,7 @@ export function StorageKindRow(props: StorageKindRowProps): React.ReactNode {
           <button
             type="button"
             onClick={onCancel}
-            className="h-7 cursor-pointer rounded-control border border-line-strong bg-panel px-2.5 text-small text-fg"
+            className="h-7 cursor-pointer rounded-control border border-line-strong bg-panel px-2.5 text-small text-fg pointer-coarse:h-9"
           >
             Cancel
           </button>
@@ -84,7 +84,7 @@ export function StorageKindRow(props: StorageKindRowProps): React.ReactNode {
             type="button"
             disabled={busy}
             onClick={onClear}
-            className="h-7 cursor-pointer rounded-control bg-err px-3 text-small font-semibold text-bg disabled:opacity-60"
+            className="h-7 cursor-pointer rounded-control bg-err px-3 text-small font-semibold text-bg disabled:opacity-60 pointer-coarse:h-9"
           >
             Delete
           </button>

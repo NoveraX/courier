@@ -1,39 +1,35 @@
-import { useEffect, useState } from "react";
-
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { Settings } from "@/store/types-ui";
+import { SectionChips } from "./section-chips";
 import { SECTION_GROUPS } from "./settings-sections";
+import { scrollToSection, useSectionInView } from "./use-section-in-view";
 
-const IDS = SECTION_GROUPS.flatMap((group) => group.sections.map((s) => s.id));
+/* Narrower than this, the page has no room for the list beside the sections (the CSS of
+   settings-screen switches at the same width). */
+const NARROW = "(max-width: 859px)";
 
-/* The section nearest the top of the view is the one in view; the observer reports as they cross it. */
-function useSectionInView(): string {
-  const [inView, setInView] = useState(IDS[0] ?? "");
-  useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const top = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (top) setInView(top.target.id.replace(/^settings-/, ""));
-      },
-      { rootMargin: "0px 0px -70% 0px" },
-    );
-    for (const id of IDS) {
-      const section = document.getElementById(`settings-${id}`);
-      if (section) observer.observe(section);
-    }
-    return () => observer.disconnect();
-  }, []);
-  return inView;
+function Title({ className }: { className?: string | undefined }): React.ReactNode {
+  const writable = useStudioStore((s) => s.projectWritable);
+  return (
+    <div className={cn("flex flex-col gap-1", className)}>
+      <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Settings</h1>
+      <span className="text-small text-fg-subtle">
+        {writable ? "Kept in the project" : "Kept in this browser"}
+      </span>
+    </div>
+  );
 }
 
 /**
  * Settings' navigation: what the page is, and its sections by group — the
- * one in view lit, «unsaved» beside each with unsaved changes — each scrolling
- * its section into view.
+ * one in view lit, «unsaved» beside each with unsaved changes — each
+ * scrolling its section into view. Beside the sections it is a list that
+ * stays in place; on a window too narrow for that, the title heads the
+ * page and the sections become a row of chips that stays at the top of the
+ * view, so the first section is not pushed below the fold.
  *
  * @param props - The settings the draft changed
  * @returns The navigation
@@ -47,19 +43,23 @@ export function SettingsNav({
 }: {
   changed: ReadonlySet<keyof Settings>;
 }): React.ReactNode {
-  const inView = useSectionInView();
-  const writable = useStudioStore((s) => s.projectWritable);
+  const narrow = useMediaQuery(NARROW);
+  const inView = useSectionInView(narrow);
+  const still = useReducedMotion();
+  if (narrow) {
+    return (
+      <>
+        <Title />
+        <SectionChips inView={inView} changed={changed} />
+      </>
+    );
+  }
   return (
     <nav
       aria-label="Settings sections"
       className="flex flex-col gap-4 min-[860px]:sticky min-[860px]:top-6"
     >
-      <div className="flex flex-col gap-1 px-2.5 pb-1">
-        <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Settings</h1>
-        <span className="text-small text-fg-subtle">
-          {writable ? "Kept in the project" : "Kept in this browser"}
-        </span>
-      </div>
+      <Title className="px-2.5 pb-1" />
       {SECTION_GROUPS.map((group) => (
         <div key={group.label} className="flex flex-col gap-px">
           <span className="px-2.5 pb-1.25 text-label font-medium text-fg-subtle">
@@ -75,12 +75,10 @@ export function SettingsNav({
                 aria-current={on ? "location" : undefined}
                 onClick={(e) => {
                   e.preventDefault();
-                  document
-                    .getElementById(`settings-${section.id}`)
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  scrollToSection(section.id, still);
                 }}
                 className={cn(
-                  "flex h-8 items-center gap-2.25 rounded-control px-2.5 text-control hover:bg-raised hover:text-fg",
+                  "flex h-8 items-center gap-2.25 rounded-control px-2.5 text-control hover:bg-raised hover:text-fg pointer-coarse:h-10",
                   on ? "bg-raised font-semibold text-fg" : "text-fg-muted",
                 )}
               >

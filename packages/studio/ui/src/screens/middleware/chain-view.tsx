@@ -39,7 +39,7 @@ function Pick({
       aria-current={on}
       onClick={onChoose}
       className={cn(
-        "grid h-8.5 w-full cursor-pointer grid-cols-[36px_minmax(0,1fr)_36px_44px] items-center gap-2 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+        "grid h-8.5 w-full cursor-pointer grid-cols-[36px_minmax(0,1fr)_36px_44px] items-center gap-2 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand pointer-coarse:h-11",
         on && "bg-brand-dim",
       )}
     >
@@ -58,7 +58,8 @@ function Pick({
 /**
  * The chain inspector: the newest calls that ran through middleware to
  * pick from, and the one picked traced — its lanes against its time, and
- * its pipeline step by step — with a way into the inspector.
+ * its pipeline step by step — with a way into the inspector. Where the two
+ * stack, a phone keeps the list short, so the chain shows under it.
  *
  * @param props - The calls, the one picked, the middleware's looks, and what picks and inspects
  * @returns The view
@@ -81,7 +82,7 @@ export function ChainView({
     <div className="grid grid-cols-1 items-start gap-4 min-[1000px]:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
       <section
         aria-label="Requests"
-        className="flex max-h-[calc(100vh-170px)] flex-col overflow-hidden rounded-sheet border border-line bg-panel min-[1000px]:sticky min-[1000px]:top-0"
+        className="flex max-h-[calc(100dvh-170px)] flex-col overflow-hidden rounded-sheet border border-line bg-panel max-sm:max-h-75 min-[1000px]:sticky min-[1000px]:top-0"
       >
         <div className="flex h-11.5 shrink-0 items-center gap-2 border-b border-line px-3.5">
           <h2 className="m-0 text-ui font-semibold">Requests</h2>
@@ -120,7 +121,7 @@ export function ChainView({
           <button
             type="button"
             onClick={() => onInspect(chosen.id)}
-            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
           >
             <PanelRight aria-hidden="true" className="size-3" />
             Inspect

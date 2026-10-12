@@ -2,6 +2,7 @@ import { ClipboardCopy, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import type { AuditReport } from "@/audit/use-audit-report";
+import { OverflowMenu } from "@/design/overflow-menu";
 import { Skeleton } from "@/design/skeleton";
 import { exportAsMarkdown } from "@/features/audit/export-report";
 import { shortAgo } from "@/features/explorer/endpoint-key";
@@ -9,8 +10,8 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/export";
 
 const BUTTON =
-  "flex h-8 cursor-pointer items-center gap-1.75 rounded-card px-3 text-control whitespace-nowrap focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50";
-const OUTLINE = `${BUTTON} border border-line bg-panel text-fg-muted hover:border-line-strong hover:text-fg`;
+  "flex h-8 cursor-pointer items-center gap-1.75 rounded-card px-3 text-control whitespace-nowrap focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9";
+const OUTLINE = `${BUTTON} border border-line bg-panel text-fg-muted hover:border-line-strong hover:text-fg max-sm:hidden`;
 
 interface AuditHeaderProps {
   report: AuditReport;
@@ -28,7 +29,8 @@ function analysedAgo(at: number, now: number): string {
 
 /**
  * The Audit page's head: what the report read and when — with the
- * requests that came since — and Re-run, Copy report and Export .md.
+ * requests that came since — and Re-run, Copy report and Export .md. A
+ * phone keeps Export .md and puts the other two in a "⋯" menu beside it.
  *
  * @param props - The report, the traffic since, the time now, and what runs it again
  * @returns The header
@@ -46,6 +48,7 @@ export function AuditHeader({
 }: AuditHeaderProps): React.ReactNode {
   const empty = report.requests === 0;
   const markdown = (): string => exportAsMarkdown(report.result);
+  const copy = (): void => void copyToClipboard(markdown(), "report");
   const download = (): void => {
     downloadFile(markdown(), "courier-audit.md", "text/markdown");
     toast.success("Downloaded courier-audit.md");
@@ -55,7 +58,7 @@ export function AuditHeader({
       <div className="flex min-w-0 flex-col gap-1">
         <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Audit</h1>
         {loading ? (
-          <Skeleton className="my-0.75 h-3 w-64" />
+          <Skeleton className="my-0.75 h-3 w-64 max-w-full" />
         ) : (
           <span className="text-control text-fg-subtle">
             {`${report.requests} requests · ${report.endpoints} endpoints · ${analysedAgo(report.at, now)}`}
@@ -64,28 +67,39 @@ export function AuditHeader({
         )}
       </div>
       <div className="flex-1" />
-      <button type="button" onClick={onRerun} className={OUTLINE}>
-        <RefreshCw aria-hidden="true" className="size-3.25" />
-        Re-run
-      </button>
-      <button
-        type="button"
-        disabled={empty}
-        onClick={() => void copyToClipboard(markdown(), "report")}
-        className={OUTLINE}
-      >
-        <ClipboardCopy aria-hidden="true" className="size-3.25" />
-        Copy report
-      </button>
-      <button
-        type="button"
-        disabled={empty}
-        onClick={download}
-        className={`${BUTTON} bg-fg font-semibold text-bg hover:bg-fg/90`}
-      >
-        <Download aria-hidden="true" className="size-3.25" />
-        Export .md
-      </button>
+      <div className="flex items-end gap-3 max-sm:w-full max-sm:items-center max-sm:justify-end">
+        <button type="button" onClick={onRerun} className={OUTLINE}>
+          <RefreshCw aria-hidden="true" className="size-3.25" />
+          Re-run
+        </button>
+        <button type="button" disabled={empty} onClick={copy} className={OUTLINE}>
+          <ClipboardCopy aria-hidden="true" className="size-3.25" />
+          Copy report
+        </button>
+        <button
+          type="button"
+          disabled={empty}
+          onClick={download}
+          className={`${BUTTON} bg-fg font-semibold text-bg hover:bg-fg/90`}
+        >
+          <Download aria-hidden="true" className="size-3.25" />
+          Export .md
+        </button>
+        <OverflowMenu
+          label="More actions"
+          actions={[
+            { key: "rerun", label: "Re-run", icon: RefreshCw, onSelect: onRerun },
+            {
+              key: "copy",
+              label: "Copy report",
+              icon: ClipboardCopy,
+              onSelect: copy,
+              disabled: empty,
+            },
+          ]}
+          className="sm:hidden"
+        />
+      </div>
     </header>
   );
 }

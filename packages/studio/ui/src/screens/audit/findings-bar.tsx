@@ -21,7 +21,8 @@ const COUNT_TONE = { error: "err", warning: "warn", hint: "subtle", pass: "subtl
 /**
  * The findings' filters: a severity with how many each has, the category
  * chosen above as a chip that clears it, and a search of the titles and
- * summaries.
+ * summaries. On a phone the severities and the chip share a row that
+ * scrolls sideways, and the search takes the line under them.
  *
  * @param props - The filters, the counts, and what changes the filters
  * @returns The bar
@@ -42,30 +43,33 @@ export function FindingsBar({ search, counts, onSearch }: FindingsBarProps): Rea
   ];
   return (
     <div className="flex flex-wrap items-center gap-2.5">
-      <Segmented
-        label="Severity"
-        options={options}
-        value={search.sev ?? "all"}
-        onChange={(sev) => onSearch({ ...search, sev: sev === "all" ? undefined : sev })}
-      />
-      {search.cat && (
-        <button
-          type="button"
-          aria-label={`${CATEGORY_LOOK[search.cat].label} only — show every category`}
-          onClick={() => onSearch({ ...search, cat: undefined })}
-          className="flex h-7.5 cursor-pointer items-center gap-1.5 rounded-control border border-brand/40 bg-brand-dim px-2.5 text-small font-strong text-brand focus-visible:outline-2 focus-visible:outline-brand"
-        >
-          {CATEGORY_LOOK[search.cat].label}
-          <X aria-hidden="true" className="size-3" />
-        </button>
-      )}
+      {/* The padding, given back by the margin, keeps the chip's focus ring inside the scrolling row. */}
+      <div className="scroll-row -m-0.5 min-w-0 items-center gap-2.5 p-0.5 max-sm:w-full">
+        <Segmented
+          label="Severity"
+          options={options}
+          value={search.sev ?? "all"}
+          onChange={(sev) => onSearch({ ...search, sev: sev === "all" ? undefined : sev })}
+        />
+        {search.cat && (
+          <button
+            type="button"
+            aria-label={`${CATEGORY_LOOK[search.cat].label} only — show every category`}
+            onClick={() => onSearch({ ...search, cat: undefined })}
+            className="flex h-7.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-brand/40 bg-brand-dim px-2.5 text-small font-strong whitespace-nowrap text-brand focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
+          >
+            {CATEGORY_LOOK[search.cat].label}
+            <X aria-hidden="true" className="size-3" />
+          </button>
+        )}
+      </div>
       <div className="flex-1" />
       <SearchField
         value={search.q ?? ""}
         onChange={(q) => onSearch({ ...search, q: q || undefined })}
         placeholder="Search findings…"
         label="Search findings"
-        className="w-60 max-w-full"
+        className="w-60 max-w-full max-sm:w-full"
       />
     </div>
   );

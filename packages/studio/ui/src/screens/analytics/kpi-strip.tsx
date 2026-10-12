@@ -37,8 +37,11 @@ function TrendMark({ trend }: { trend: Trend }): React.ReactNode {
 
 /**
  * Analytics' six headline figures across the top: each with its value in
- * the colour it reads in, its move since the first half of the range, a
- * sparkline across the range and a line of context.
+ * the colour it reads in, its move since the first half of the range — under
+ * the value when a phone's half width has no room beside it — a sparkline
+ * across the range and a line of context. A figure as narrow as a phone's
+ * half width sets its value a size down, and the narrowest phones' two
+ * sizes down, so a value like "152.8/min" keeps every character.
  *
  * @param props - The figures
  * @returns The strip
@@ -54,7 +57,10 @@ export function KpiStrip({ figures }: { figures: readonly KpiFigure[] }): React.
       className="grid grid-cols-2 gap-px overflow-hidden rounded-sheet border border-line bg-line min-[701px]:grid-cols-3 min-[1360px]:grid-cols-6"
     >
       {figures.map((figure) => (
-        <div key={figure.key} className="flex min-w-0 flex-col gap-3 bg-panel px-4.5 pt-4 pb-3.5">
+        <div
+          key={figure.key}
+          className="@container flex min-w-0 flex-col gap-3 bg-panel px-4.5 pt-4 pb-3.5"
+        >
           <span className="flex min-w-0 items-center gap-2">
             <span
               aria-hidden="true"
@@ -67,10 +73,10 @@ export function KpiStrip({ figures }: { figures: readonly KpiFigure[] }): React.
               {figure.label}
             </span>
           </span>
-          <span className="flex min-w-0 items-baseline gap-2.5">
+          <span className="flex min-w-0 items-baseline gap-2.5 max-sm:flex-wrap max-sm:gap-y-1">
             <span
               className={cn(
-                "truncate font-mono text-kpi leading-none font-medium tracking-[-0.04em] tabular-nums",
+                "truncate font-mono text-kpi leading-none font-medium tracking-[-0.04em] tabular-nums @max-[8.5rem]:text-stat @max-[7rem]:text-metric",
                 TONE_TEXT[figure.tone],
               )}
             >
@@ -79,7 +85,9 @@ export function KpiStrip({ figures }: { figures: readonly KpiFigure[] }): React.
             <TrendMark trend={figure.trend} />
           </span>
           <SparkLine spark={figure.spark} tone={SPARK_TEXT[figure.sparkTone]} />
-          <span className="truncate text-label text-fg-subtle">{figure.sub}</span>
+          <span className="truncate text-label text-fg-subtle max-sm:whitespace-normal">
+            {figure.sub}
+          </span>
         </div>
       ))}
     </section>

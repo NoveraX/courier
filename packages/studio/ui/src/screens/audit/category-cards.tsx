@@ -21,7 +21,8 @@ function tallyLine({ open, passed }: CategoryTally): string {
 /**
  * A card a category — its icon, name and score with a bar, and what it
  * found — that narrows the findings to it, or, chosen, shows them all
- * again.
+ * again. On a phone's half width the score moves to the end of its bar,
+ * leaving the name its whole line.
  *
  * @param props - The categories' scores and tallies, the one chosen, and what chooses
  * @returns The cards, two by two
@@ -51,10 +52,11 @@ export function CategoryCards({
             onClick={() => onChoose(category)}
             className={cn(
               "flex min-w-0 cursor-pointer flex-col gap-2.5 px-4.5 py-4 text-left transition-colors hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+              "max-sm:grid max-sm:grid-cols-[auto_minmax(0,1fr)_auto] max-sm:items-center max-sm:gap-x-2 max-sm:px-3.5",
               chosen === category ? "bg-brand-tint" : "bg-panel",
             )}
           >
-            <span className="flex w-full min-w-0 items-center gap-2">
+            <span className="flex w-full min-w-0 items-center gap-2 max-sm:contents">
               <span
                 className={cn(
                   "flex size-6.5 shrink-0 items-center justify-center rounded-[7px] bg-[color-mix(in_srgb,currentColor_13%,transparent)]",
@@ -63,20 +65,27 @@ export function CategoryCards({
               >
                 <Icon aria-hidden="true" className="size-3.25" />
               </span>
-              <span className="min-w-0 flex-1 truncate text-control font-semibold">
+              <span className="min-w-0 flex-1 truncate text-control font-semibold max-sm:col-span-2">
                 {look.label}
               </span>
-              <span className={cn("shrink-0 font-mono text-prompt font-medium", TONE_TEXT[tone])}>
+              <span
+                className={cn(
+                  "shrink-0 font-mono text-prompt font-medium max-sm:col-start-3 max-sm:row-start-2",
+                  TONE_TEXT[tone],
+                )}
+              >
                 {score}
               </span>
             </span>
-            <span className="h-1 w-full overflow-hidden rounded-[2px] bg-raised">
+            <span className="h-1 w-full overflow-hidden rounded-[2px] bg-raised max-sm:col-span-2 max-sm:col-start-1 max-sm:row-start-2">
               <span
                 className={cn("block h-full rounded-[2px]", TONE_FILL[tone])}
                 style={{ width: `${score}%` }}
               />
             </span>
-            <span className="text-label text-fg-subtle">{tallyLine(tallies[category])}</span>
+            <span className="text-label text-fg-subtle max-sm:col-span-3">
+              {tallyLine(tallies[category])}
+            </span>
           </button>
         );
       })}

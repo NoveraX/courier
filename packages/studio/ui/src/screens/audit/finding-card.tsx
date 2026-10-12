@@ -16,6 +16,9 @@ interface FindingCardProps {
   onOpenCall: (id: string) => void;
 }
 
+/* On a phone the chevron stays beside the title, and the chips take a line under it. */
+const END = "max-sm:col-start-3 max-sm:row-start-1 max-sm:self-center";
+
 interface HeadProps extends Pick<FindingCardProps, "item" | "open" | "endpoints"> {
   /** Whether the finding has more to show when open. */
   expandable: boolean;
@@ -37,9 +40,16 @@ function Head({ item, open, endpoints, expandable }: HeadProps): React.ReactNode
       </span>
       <span className="flex min-w-0 flex-col gap-0.75">
         <span className="text-item font-semibold">{item.title}</span>
-        <span className="truncate text-small text-fg-subtle">{summaryOf(item)}</span>
+        <span className="truncate text-small text-fg-subtle max-sm:whitespace-normal">
+          {summaryOf(item)}
+        </span>
       </span>
-      <span className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          "flex items-center gap-1.5 max-sm:col-start-2 max-sm:row-start-2",
+          endpoints.length === 0 && "max-sm:hidden",
+        )}
+      >
         <span className="flex h-5 items-center rounded-[5px] bg-raised px-1.75 text-badge text-fg-muted max-[1100px]:hidden">
           {CATEGORY_LOOK[item.category].label}
         </span>
@@ -50,11 +60,11 @@ function Head({ item, open, endpoints, expandable }: HeadProps): React.ReactNode
         )}
       </span>
       {!expandable ? (
-        <span />
+        <span className={END} />
       ) : open ? (
-        <ChevronUp aria-hidden="true" className="size-3.25 text-fg-subtle" />
+        <ChevronUp aria-hidden="true" className={cn(END, "size-3.25 text-fg-subtle")} />
       ) : (
-        <ChevronDown aria-hidden="true" className="size-3.25 text-fg-subtle" />
+        <ChevronDown aria-hidden="true" className={cn(END, "size-3.25 text-fg-subtle")} />
       )}
     </>
   );
@@ -63,7 +73,9 @@ function Head({ item, open, endpoints, expandable }: HeadProps): React.ReactNode
 /**
  * One finding: its severity, title, a line on what was seen, its category
  * and how many endpoints it names; open, what it means, the suggested fix
- * and its code, and the endpoints with a way to their calls.
+ * and its code, and the endpoints with a way to their calls. On a phone the
+ * line on what was seen wraps rather than being cut, and the count of
+ * endpoints goes under it.
  *
  * @param props - The finding, its endpoints, whether it is open, and what opens it and a call
  * @returns The card
@@ -87,7 +99,7 @@ export function FindingCard({
   const shown = open && expandable;
   const body = `finding-${item.id}`;
   const row =
-    "grid min-h-14.5 w-full grid-cols-[30px_minmax(0,1fr)_auto_14px] items-center gap-3 px-4 py-2.5 text-left";
+    "grid min-h-14.5 w-full grid-cols-[30px_minmax(0,1fr)_auto_14px] items-center gap-3 px-4 py-2.5 text-left max-sm:grid-cols-[30px_minmax(0,1fr)_14px] max-sm:items-start max-sm:gap-y-2";
   return (
     <article
       aria-label={item.title}
@@ -117,7 +129,7 @@ export function FindingCard({
       {shown && (
         <div
           id={body}
-          className="flex flex-col gap-3.5 border-t border-line bg-bg-subtle pt-4 pr-4 pb-4.5 pl-14.5"
+          className="flex flex-col gap-3.5 border-t border-line bg-bg-subtle pt-4 pr-4 pb-4.5 pl-14.5 max-sm:pl-4"
         >
           {describes && (
             <p className="m-0 max-w-190 text-ui leading-[1.6] text-pretty text-fg-muted">

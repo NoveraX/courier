@@ -5,8 +5,9 @@
  * figures, the charts' data in words, a range kept in the address that
  * narrows every figure, the endpoints sorted by a column's head, an
  * endpoint opening its newest calls with the Timeline searched for the
- * rest, one called once opening that call, and what it says with nothing
- * in range.
+ * rest, one called once opening that call, what it says with nothing in
+ * range, and the endpoints of a table as narrow as a phone's, each with its
+ * figures under its name.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -148,6 +149,32 @@ describe("Analytics", () => {
     expect(screen.getByText("No request completed in the last minute")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Endpoints" })).toBeNull();
     expect(screen.getByRole("button", { name: "Session" })).toBeTruthy();
+  });
+
+  it("puts each endpoint's figures under its name in a table as narrow as a phone's", async () => {
+    const measured = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get: () => 343,
+    });
+    try {
+      await openShell("/analytics");
+
+      const row = endpoints().getByRole("button", { name: /invoices\.list/ });
+      expect(row.children).toHaveLength(2);
+      expect(row.children[0]?.textContent).toMatch(/^GET.*invoices\.list10\.0% errors1$/);
+      expect(row.children[1]?.textContent).toMatch(/^10 calls ?avg .*p95/);
+      expect(endpoints().getByRole("button", { name: /^P95, sorted descending/ })).toBeTruthy();
+      expect(endpoints().queryByRole("button", { name: /^P50/ })).toBeNull();
+
+      await settle(() => fireEvent.click(row));
+
+      expect(row.getAttribute("aria-expanded")).toBe("true");
+      const calls = document.getElementById("calls-billing.invoices.list");
+      expect(calls?.querySelectorAll("button")).toHaveLength(8);
+    } finally {
+      if (measured) Object.defineProperty(HTMLElement.prototype, "clientWidth", measured);
+    }
   });
 
   it("reads a saved session against its end, so its last minute is not empty", async () => {

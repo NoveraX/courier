@@ -51,6 +51,18 @@ describe("a release commit", () => {
       "--no-fund",
     ]);
   });
+
+  it("is deployed like any other push, so the sites show the version it writes", () => {
+    const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
+    const git = config.plugins.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === "@semantic-release/git",
+    );
+
+    /* The keywords a host skips a deployment for, as GitHub skips a workflow run. */
+    for (const skip of ["[skip ci]", "[ci skip]", "[no ci]", "[skip actions]", "[actions skip]"]) {
+      expect(git[1].message).not.toContain(skip);
+    }
+  });
 });
 
 describe("the version a release writes", () => {

@@ -69,7 +69,7 @@ describe("readRegularFile", () => {
     expect(readRegularFile(path)).toBeNull();
   });
 
-  it.skipIf(IS_WINDOWS)("refuses a symbolic link, even to a regular file", () => {
+  it("refuses a symbolic link, even to a regular file", () => {
     writeFileSync(join(dir, "elsewhere.ts"), "export default {};\n");
     symlinkSync(join(dir, "elsewhere.ts"), path);
 
@@ -80,7 +80,8 @@ describe("readRegularFile", () => {
       code: "NOT_REGULAR_FILE",
       path,
       message: `${path} is a symbolic link, not a regular file.`,
-      cause: { code: "ELOOP" },
+      /* The open refuses the link; Windows opens through it, and the name is looked at after. */
+      cause: IS_WINDOWS ? undefined : { code: "ELOOP" },
     });
   });
 
@@ -102,7 +103,8 @@ describe("readRegularFile", () => {
     });
   });
 
-  it.skipIf(RUNS_AS_ROOT)("rethrows any other failure to open the file", () => {
+  /* Windows keeps no read permission in a file's mode. */
+  it.skipIf(RUNS_AS_ROOT || IS_WINDOWS)("rethrows any other failure to open the file", () => {
     writeFileSync(path, "export default {};\n");
     chmodSync(path, 0o200);
 

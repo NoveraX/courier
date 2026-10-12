@@ -51,7 +51,9 @@ describe("readMocksText", () => {
 
     const read = readMocksText(path, lstatSync(path), NAME);
 
-    expect(read).toEqual({ bytes, text: "\uFEFFexport default {}; // é\n", mode: 0o640 });
+    /* Windows keeps only whether a file is read-only. */
+    const mode = process.platform === "win32" ? 0o666 : 0o640;
+    expect(read).toEqual({ bytes, text: "\uFEFFexport default {}; // é\n", mode });
   });
 
   it("refuses bytes that are not UTF-8", () => {
@@ -127,7 +129,12 @@ describe("readMocksText", () => {
 
     expect(error).toMatchObject({
       code: "MOCKS_CHANGED_SINCE_LOAD",
-      cause: { code: "NOT_REGULAR_FILE", cause: { code: "ELOOP" } },
+      /* The open refuses the link; Windows opens through it, and the name is looked at after. */
+      cause: {
+        code: "NOT_REGULAR_FILE",
+        found: "a symbolic link",
+        cause: process.platform === "win32" ? undefined : { code: "ELOOP" },
+      },
     });
   });
 

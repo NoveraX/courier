@@ -1,12 +1,24 @@
-import { closeSync, constants, fstatSync, openSync, readFileSync, type Stats } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  type Stats,
+} from "node:fs";
 import { errnoCode } from "./errno-code";
 import { NotRegularFileError } from "./not-regular-file-error";
 
 /* Not following a link, so a link swapped in fails the open; not blocking,
    so a FIFO swapped in opens at once and is then refused by its fstat
    instead of hanging the event loop until a writer appears. Windows has
-   neither flag and needs neither. */
+   neither flag: it has no FIFO at a file's name, and its links are looked
+   for once the file is open. */
 const READ_FLAGS = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
+
+/* Where the open itself follows a link at the name. */
+const OPENS_THROUGH_LINKS = constants.O_NOFOLLOW === undefined;
 
 /* What an open that refuses to follow a link reports: ELOOP on Linux and
    macOS, EMLINK on FreeBSD. */
@@ -41,11 +53,24 @@ export function readRegularFile(path: string): RegularFile | null {
   const fd = openNoFollow(path);
   if (fd === null) return null;
   try {
+    if (OPENS_THROUGH_LINKS) refuseLinkAtName(path, fd);
     const stats = fstatSync(fd);
     if (!stats.isFile()) throw new NotRegularFileError(path, describeKind(stats));
     return { bytes: readFileSync(fd), stats };
   } finally {
     closeSync(fd);
+  }
+}
+
+/* The name holds a link, or no longer the file that was opened through it:
+   either way the descriptor does not read the regular file at the name. */
+function refuseLinkAtName(path: string, fd: number): void {
+  const named = lstatSync(path, { bigint: true, throwIfNoEntry: false });
+  if (named === undefined) return;
+  if (named.isSymbolicLink()) throw new NotRegularFileError(path, "a symbolic link");
+  const opened = fstatSync(fd, { bigint: true });
+  if (named.dev !== opened.dev || named.ino !== opened.ino) {
+    throw new NotRegularFileError(path, "a file other than the one opened");
   }
 }
 

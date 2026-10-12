@@ -94,9 +94,11 @@ npx playwright install chromium webkit firefox
 npm run test:e2e
 ```
 
-The VS Code extension runs inside VS Code itself: a stand-in Studio answers
-as the real one does, and a suite opens a project's file and reads the hints
-the editor shows over its calls. It runs the VS Code at `VSCODE_PATH`; or
+The VS Code extension runs inside VS Code itself, Courier File Icons beside
+it as Courier's extension pack installs it: a stand-in Studio answers as the
+real one does, and a suite opens a project's file and reads the hints the
+editor shows over its calls, and checks that Courier File Icons runs where
+the editor's window runs. It runs the VS Code at `VSCODE_PATH`; or
 the version `VSCODE_VERSION` names — `stable`, a version number, or
 `minimum`, the oldest the extension's `engines` field takes — downloaded for
 the run; or else the one installed on a Mac, or the latest stable. CI runs

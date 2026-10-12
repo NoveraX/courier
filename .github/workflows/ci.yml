@@ -370,9 +370,9 @@ jobs:
           echo "version=${released#v}" >> "$GITHUB_OUTPUT"
 
       # The editor extensions, at the version the release gave them, on the
-      # Visual Studio Marketplace and Open VSX. A prerelease has no version
-      # the marketplaces take; until the Marketplace identity is set up, the
-      # Extensions workflow publishes them by hand.
+      # Visual Studio Marketplace and Open VSX — each the release has a way
+      # in to; the Extensions workflow publishes a released version by hand
+      # once the other is set up. A prerelease has no version they take.
       - name: Sign in to Microsoft Entra ID as the Marketplace publisher
         if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID != ''
         uses: azure/login@v3
@@ -382,11 +382,8 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Publish the editor extensions
-        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID != ''
+        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-')
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          MARKETPLACE_SIGNED_IN: ${{ vars.AZURE_CLIENT_ID != '' }}
         run: npx tsx scripts/publish-extensions.ts
-
-      - name: Say the extensions wait
-        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID == ''
-        run: echo "::warning::The editor extensions were not published, as the release environment names no Marketplace identity. Publish them with the Extensions workflow once it does."

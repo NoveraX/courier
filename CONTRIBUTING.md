@@ -195,8 +195,9 @@ by hand on `master` (Actions → CI → Run workflow): every check runs, then th
 release job waits for approval in the `release` environment, which holds the
 npm and Open VSX tokens and the Marketplace publisher's identity. It publishes
 every package to npm, and the editor extensions, at the same version, to the
-Visual Studio Marketplace and Open VSX. The Extensions workflow publishes the
-extensions by hand at a version already released.
+Visual Studio Marketplace and Open VSX, each the environment gives it a way in
+to. The Extensions workflow publishes the extensions by hand at a version
+already released.
 
 ## Pull requests
 

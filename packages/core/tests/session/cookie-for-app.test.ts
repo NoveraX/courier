@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cookieForApp } from "../../src/session/cookie-for-app";
+import type { SetCookie } from "../../src/session/set-cookie";
 
 describe("cookieForApp", () => {
   it("sets the API's cookie for every path of the application, secure over HTTPS", () => {
@@ -41,13 +42,19 @@ describe("cookieForApp", () => {
     expect(made.cookie).not.toHaveProperty("domain");
   });
 
-  it("keeps Secure on the local machine over plain HTTP, where browsers keep it", () => {
-    expect(cookieForApp({ name: "sid", value: "a1" }, "http://localhost:3000").cookie?.secure).toBe(
-      true,
-    );
-    expect(cookieForApp({ name: "sid", value: "a1" }, "http://127.0.0.1:3000").cookie?.secure).toBe(
-      true,
-    );
+  /* WebKit on Linux keeps no secure cookie for http://localhost, where Chrome, Firefox and Safari do. */
+  it("keeps the API's own Secure on the local machine over plain HTTP, and adds none", () => {
+    const local = (cookie: SetCookie, origin = "http://localhost:3000") =>
+      cookieForApp(cookie, origin).cookie;
+
+    expect(local({ name: "sid", value: "a1" })?.secure).toBe(false);
+    expect(local({ name: "sid", value: "a1" }, "http://127.0.0.1:3000")?.secure).toBe(false);
+    expect(local({ name: "sid", value: "a1", secure: true })?.secure).toBe(true);
+    expect(local({ name: "sid", value: "a1", secure: true, sameSite: "None" })).toMatchObject({
+      secure: true,
+      sameSite: "None",
+    });
+    expect(local({ name: "__Host-sid", value: "a1", secure: true })?.secure).toBe(true);
   });
 
   it("drops Secure, and what needs it, on a plain-HTTP origin elsewhere", () => {

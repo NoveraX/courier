@@ -225,7 +225,7 @@ It needs a request being served, as every server-side call does, and answers whe
 When the API renews the session, or ends it on signing out, its cookies are carried on — from an error answer as from a success:
 
 - The calls still to come for the same request send the new value at once.
-- The browser is handed them on the response being prepared, made for your application's origin: set for every path, since the API's path names its own routes; a `Domain` kept only where it covers your host; `Secure` over HTTPS and on the local machine. A `__Host-` or `__Secure-` cookie your origin cannot keep is not handed over, and the log says why.
+- The browser is handed them on the response being prepared, made for your application's origin: set for every path, since the API's path names its own routes; a `Domain` kept only where it covers your host; `Secure` over HTTPS, and on the local machine only where the API set it, as WebKit on Linux keeps no secure cookie for `http://localhost`. A `__Host-` or `__Secure-` cookie your origin cannot keep is not handed over, and the log says why.
 
 Cookies the session does not name stay with the API. Set `relay: false` to keep even the session's own within the request.
 

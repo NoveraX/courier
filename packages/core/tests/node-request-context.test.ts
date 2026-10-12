@@ -95,6 +95,6 @@ describe("a Node server serving many users at once", () => {
   it("hands the browser the session cookie the API renewed, on its own response", async () => {
     const response = await fetch(`${appUrl}/renew`, { headers: { cookie: "sid=ada" } });
 
-    expect(response.headers.getSetCookie()).toEqual(["sid=ada-renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=ada-renewed; Path=/; HttpOnly"]);
   });
 });

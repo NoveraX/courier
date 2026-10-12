@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 
-import { writeUserSetting } from "./user-settings";
+import { type SettingsScope, writeSetting } from "./user-settings";
 
 /* How long a theme gets to start rewriting itself after a change, and how long it must then stay still. */
 const REACTION_MS = 3_000;
@@ -30,6 +30,7 @@ export interface RebuiltTheme {
  * @param theme - The theme's files, and how to ask it to apply its settings
  * @param changes - Each setting's full key and its new value
  * @param iconsChanged - Whether the icon files the theme reads changed, which it would not notice by itself
+ * @param scope - Whose settings change: the user's unless said
  * @example
  * ```ts
  * await changeThemeSettings(vsiconsTheme(), [[VSICONS_FILES, files], [VSICONS_FOLDERS, folders]]);
@@ -39,12 +40,13 @@ export async function changeThemeSettings(
   theme: RebuiltTheme,
   changes: readonly (readonly [string, unknown])[],
   iconsChanged = false,
+  scope: SettingsScope = "user",
 ): Promise<void> {
   let written = false;
   let rewritten = false;
   for (const [key, value] of changes) {
     const before = await timesOf(theme.files);
-    if (!(await writeUserSetting(key, value))) continue;
+    if (!(await writeSetting(key, value, scope))) continue;
     written = true;
     rewritten = (await rewriteOf(theme.files, before)) || rewritten;
   }

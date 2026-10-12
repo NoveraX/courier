@@ -1,4 +1,3 @@
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import * as vscode from "vscode";
 
@@ -6,19 +5,17 @@ import { copyIcons, removeCopies } from "./icon-copies";
 import { type CourierIcons, ICON_THEMES } from "./icon-files";
 import { type IconUsers, iconUsers } from "./icon-users";
 import { notHere } from "./theme-reach";
-import { changeThemeSettings, type RebuiltTheme } from "./theme-rewrites";
-import { userSetting } from "./user-settings";
+import { changeThemeSettings } from "./theme-rewrites";
+import { settingIn, userSetting } from "./user-settings";
 import {
   hasCourierEntries,
-  VSICONS_APPLY,
   VSICONS_FILES,
-  VSICONS_FOLDER_PATH,
   VSICONS_FOLDERS,
   VSICONS_PLAN,
-  vsiconsFolder,
   withCourierEntries,
   withoutCourierEntries,
 } from "./vscode-icons";
+import { customFolder, vsiconsTheme } from "./vsicons-theme";
 
 /**
  * Put Courier's icons into vscode-icons: copied into its custom icons
@@ -105,6 +102,11 @@ export async function keepVsiconsCurrent(icons: CourierIcons): Promise<void> {
     await changeThemeSettings(vsiconsTheme(vsicons), changes, copied);
     return;
   }
+  /* A team's own settings may name Courier's icons for its workspace: in one trusted, they are copied for it. */
+  if (sharedHere()) {
+    if (await copyIcons(copiesFor(icons.dir))) await vsiconsTheme(vsicons).apply?.();
+    return;
+  }
   if (!(await users.has()) || !(await users.release())) return;
   const anywhere = vscode.workspace.getConfiguration();
   const used = [VSICONS_FILES, VSICONS_FOLDERS].some((key) => hasCourierEntries(anywhere.get(key)));
@@ -127,6 +129,14 @@ export function hasVsiconsIcons(): boolean {
   );
 }
 
+/* Whether the settings of a workspace the user trusts hold Courier's entries for vscode-icons. */
+function sharedHere(): boolean {
+  return (
+    vscode.workspace.isTrusted &&
+    [VSICONS_FILES, VSICONS_FOLDERS].some((key) => hasCourierEntries(settingIn("workspace", key)))
+  );
+}
+
 /* The profiles on this computer that use the copies in vscode-icons' custom icons folder. */
 function usersOf(vsiconsDir: string, icons: CourierIcons): IconUsers {
   return iconUsers(dirname(vsiconsDir), customFolder(), icons.profile);
@@ -144,37 +154,4 @@ function copiesFor(iconsDir: string): Map<string, string> {
   return new Map(
     [...VSICONS_PLAN.copies].map(([ours, theirs]) => [join(folder, theirs), join(iconsDir, ours)]),
   );
-}
-
-/* vscode-icons' theme as it rewrites it, and its own command that applies its settings. */
-function vsiconsTheme(vsicons: vscode.Extension<unknown> | undefined): RebuiltTheme {
-  const folder = vsicons && join(vsicons.extensionPath, "dist", "src");
-  return {
-    files: folder
-      ? [join(folder, "vsicons-icon-theme.json"), join(folder, "vsicons-icon-theme-zed.json")]
-      : [],
-    async apply() {
-      if (!vsicons) return;
-      /* Asked before it started, vscode-icons would hear nothing: it is started first, and asked once its own start is done. */
-      if (!vsicons.isActive) await vsicons.activate();
-      if ((await vscode.commands.getCommands(true)).includes(VSICONS_APPLY)) {
-        await vscode.commands.executeCommand(VSICONS_APPLY);
-      }
-    },
-  };
-}
-
-/* A workspace not trusted does not choose where Courier writes: the folder then comes from the user's settings alone. */
-function customFolder(): string {
-  const setting = vscode.workspace.isTrusted
-    ? vscode.workspace.getConfiguration().get<unknown>(VSICONS_FOLDER_PATH)
-    : userSetting(VSICONS_FOLDER_PATH);
-  return vsiconsFolder({
-    setting: typeof setting === "string" ? setting : "",
-    workspaces: (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri.fsPath),
-    appName: vscode.env.appName,
-    platform: process.platform,
-    env: process.env,
-    home: homedir(),
-  });
 }

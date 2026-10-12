@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import { ICON_THEMES, type IconTheme } from "./icon-files";
+import { ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
 
 /**
  * Why an icon theme takes no icons from here: it does not run where this
@@ -20,4 +20,18 @@ export function notHere(theme: IconTheme): string {
   const { label } = ICON_THEMES[theme];
   if (!vscode.env.remoteName) return `${label} is not installed.`;
   return `${label} does not run on this computer in this remote window, so Courier's icons cannot go into it from here. Install ${label} on this computer as well: VS Code then runs it here, beside Courier File Icons, which puts the icons in.`;
+}
+
+/**
+ * The icon theme in use, when it is one that takes Courier's icons.
+ *
+ * @returns The theme, or `undefined` for any other
+ * @example
+ * ```ts
+ * if (themeInUse() === "vsicons") tellHiddenHere(state, show);
+ * ```
+ */
+export function themeInUse(): IconTheme | undefined {
+  const id = vscode.workspace.getConfiguration("workbench").get<string>("iconTheme");
+  return ICON_THEME_IDS.find((theme) => ICON_THEMES[theme].theme === id);
 }

@@ -11,6 +11,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # The packages are libraries: a range they declare, a peer's above all,
+    # stays as wide as it is, and only the lockfile moves, unless a new
+    # version falls outside it.
+    versioning-strategy: increase-if-necessary
     commit-message:
       prefix: "fix(deps): 🐛 "
       prefix-development: "chore(deps): 🔧 "

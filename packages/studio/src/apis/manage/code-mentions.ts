@@ -1,5 +1,6 @@
 import type { ImportDeclaration } from "oxc-parser";
 import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
+import { escapeForRegex } from "../escape-for-regex";
 
 /* The code with its imports and comments blanked out, offsets kept. */
 function codeOnly(text: string, spans: ReadonlyArray<{ start: number; end: number }>): string {
@@ -27,5 +28,5 @@ export function codeMentions(parsed: ParsedSource): (name: string) => boolean {
     (s): s is ImportDeclaration => s.type === "ImportDeclaration",
   );
   const code = codeOnly(parsed.text, [...imports, ...parsed.comments]);
-  return (name) => new RegExp(`(?<![\\w$])${name.replaceAll("$", "\\$")}(?![\\w$])`).test(code);
+  return (name) => new RegExp(`(?<![\\w$])${escapeForRegex(name)}(?![\\w$])`).test(code);
 }

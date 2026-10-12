@@ -9,7 +9,9 @@ import { createServer, type Server, type Socket } from "node:net";
 import { brotliCompressSync, deflateSync, gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { DEMO_MAX_BODY } from "../src/server/demo/demo-rest-guard";
 import { fetchSpec } from "../src/server/fetch-spec";
+import { PUBLIC_SPEC_MAX_BYTES } from "../src/server/read-spec-body";
 import { SpecFetchError } from "../src/server/spec-fetch-error";
 import type { SpecHostAllowlist } from "../src/server/spec-host-allowlist";
 import { requestSpec } from "../src/server/spec-request";
@@ -193,6 +195,27 @@ describe("readSpecBody", () => {
       message: `${url} sent a gzip body that does not decompress (incorrect header check).`,
     });
     expect(closed).toBe(true);
+  });
+
+  it("stops reading a body past the limit it is given", async () => {
+    const body = Buffer.alloc(PUBLIC_SPEC_MAX_BYTES + 1);
+    const url = await serveRaw((socket) =>
+      socket.end(Buffer.concat([Buffer.from(head("identity", body.length)), body])),
+    );
+
+    const { error } = await failure(() =>
+      requestSpec(new URL(url), ON_THIS_MACHINE, 30_000, { maxBytes: PUBLIC_SPEC_MAX_BYTES }),
+    );
+
+    expect(error).toMatchObject({
+      code: "SPEC_TOO_LARGE",
+      message: `${url} is larger than 16 MB.`,
+    });
+  });
+
+  /* A demo's visitor has Studio read from a URL no more than the demo takes pasted in. */
+  it("gives a public demo's visitor the demo's own limit", () => {
+    expect(PUBLIC_SPEC_MAX_BYTES).toBe(DEMO_MAX_BODY);
   });
 
   it("stops reading a compressed body that unfolds past 64 MB", async () => {

@@ -4,7 +4,7 @@ import { isIP } from "node:net";
 import { approveSpecAddresses } from "./approve-spec-addresses";
 import { errnoCode } from "./errno-code";
 import type { LookupPolicy } from "./guarded-lookup";
-import { readSpecBody } from "./read-spec-body";
+import { readSpecBody, SPEC_MAX_BYTES } from "./read-spec-body";
 import { type RequestClock, requestClock } from "./request-clock";
 import { SpecFetchError } from "./spec-fetch-error";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
@@ -22,6 +22,8 @@ export interface SpecRequestOptions {
   readonly headers?: Readonly<Record<string, string>> | undefined;
   /** Whether it may go through the proxy Node's own requests use (default `true`) */
   readonly proxy?: boolean | undefined;
+  /** The most the body may be, decompressed (default {@link SPEC_MAX_BYTES}) */
+  readonly maxBytes?: number | undefined;
 }
 
 const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
@@ -67,7 +69,7 @@ export function requestSpec(
   url: URL,
   policy: LookupPolicy,
   timeoutMs: number,
-  { headers = {}, proxy = true }: SpecRequestOptions = {},
+  { headers = {}, proxy = true, maxBytes = SPEC_MAX_BYTES }: SpecRequestOptions = {},
 ): Promise<SpecAnswer> {
   const clock = requestClock(url, policy, timeoutMs);
   return new Promise<SpecAnswer>((resolve, reject) => {
@@ -83,7 +85,7 @@ export function requestSpec(
         /* Time that ran out while the route was found leaves nothing to send. */
         if (clock.expired) throw clock.expired;
         request = open(url, route, headers);
-        return exchange(request, url, clock, route);
+        return exchange(request, url, clock, route, maxBytes);
       })
       .then(resolve, reject)
       .finally(() => clearTimeout(deadline));
@@ -117,11 +119,12 @@ function exchange(
   url: URL,
   clock: RequestClock,
   route: SpecRoute,
+  maxBytes: number,
 ): Promise<SpecAnswer> {
   return new Promise<SpecAnswer>((resolve, reject) => {
     request.on("response", (response) => {
       clock.answered = true;
-      answer(response, url, route).then(resolve, reject);
+      answer(response, url, route, maxBytes).then(resolve, reject);
     });
     request.on("error", (error) => reject(failure(error, url, clock.answered, route)));
     request.end();
@@ -147,7 +150,12 @@ function unparsable(url: URL, code: string, cause: Error): SpecFetchError {
   );
 }
 
-async function answer(response: IncomingMessage, url: URL, route: SpecRoute): Promise<SpecAnswer> {
+async function answer(
+  response: IncomingMessage,
+  url: URL,
+  route: SpecRoute,
+  maxBytes: number,
+): Promise<SpecAnswer> {
   const status = response.statusCode ?? 0;
   /* Through a proxy the socket's address is the proxy's, which may well be this machine. */
   const remoteAddress = route.proxy === undefined ? (response.socket.remoteAddress ?? null) : null;
@@ -164,5 +172,5 @@ async function answer(response: IncomingMessage, url: URL, route: SpecRoute): Pr
     response.destroy();
     throw new SpecFetchError("SPEC_HTTP_STATUS", `${url.href} answered ${status}.`);
   }
-  return { kind: "body", text: await readSpecBody(response, url), remoteAddress };
+  return { kind: "body", text: await readSpecBody(response, url, maxBytes), remoteAddress };
 }

@@ -1,6 +1,7 @@
 import { addressKindHere } from "./address-kind-here";
 import type { LookupPolicy } from "./guarded-lookup";
 import { readInterfaces } from "./own-addresses";
+import { PUBLIC_SPEC_MAX_BYTES, SPEC_MAX_BYTES } from "./read-spec-body";
 import { SpecFetchError } from "./spec-fetch-error";
 import type { SpecHostAllowlist, SpecHosts } from "./spec-host-allowlist";
 import { specHostMatches } from "./spec-host-matches";
@@ -44,7 +45,8 @@ const DEADLINE_MS = 60_000;
  * to use one — `NODE_USE_ENV_PROXY=1` — for every host `NO_PROXY` does not
  * name, checking each host as this machine resolves it first; this machine
  * is always reached directly. A public demo's visitor never goes through it:
- * what this machine cannot check, the visitor cannot reach.
+ * what this machine cannot check, the visitor cannot reach; and a visitor
+ * has Studio read no more from a URL than the demo takes pasted in.
  *
  * A URL Studio refuses is the request's fault: its error is `refused`.
  * Everything that goes wrong once a request is sent is the host's — no
@@ -86,7 +88,11 @@ export async function fetchSpec(
       current,
       hopPolicy(current, loopback, reach === "public" ? null : allowlist, hop === 0 ? null : url),
       remaining,
-      { headers: current.origin === origin ? headers : {}, proxy: reach === "project" },
+      {
+        headers: current.origin === origin ? headers : {},
+        proxy: reach === "project",
+        maxBytes: reach === "public" ? PUBLIC_SPEC_MAX_BYTES : SPEC_MAX_BYTES,
+      },
     );
     if (answer.kind === "body") return answer.text;
     /* A redirect may lead to this machine only from this machine: once a hop

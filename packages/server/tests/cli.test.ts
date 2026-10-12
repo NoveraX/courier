@@ -21,11 +21,19 @@ import manifest from "../package.json" with { type: "json" };
 const CLI = join(__dirname, "../src/cli.ts");
 const TSX = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 
-const cleanups: Array<() => void> = [];
+const cleanups: Array<() => Promise<void> | void> = [];
 
-afterEach(() => {
-  for (const cleanup of cleanups.splice(0).reverse()) cleanup();
+afterEach(async () => {
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
 });
+
+/* Waits for the exit too: Windows keeps the folder a running process works in. */
+function stop(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+  child.kill("SIGKILL");
+  return exited;
+}
 
 /** A project under the repository's node_modules, so its config resolves the workspace packages. */
 function project(serverBlock?: string): string {
@@ -71,7 +79,7 @@ async function serve(cwd: string, ...args: string[]): Promise<string> {
     cwd,
     env: { ...process.env, NO_COLOR: "1" },
   });
-  cleanups.push(() => child.kill("SIGKILL"));
+  cleanups.push(() => stop(child));
   const port = args[args.indexOf("--port") + 1];
   const url = `http://127.0.0.1:${port}`;
   for (let waited = 0; waited < 15_000; waited += 100) {
@@ -122,7 +130,7 @@ describe("courier-server", () => {
     const holder = createNetServer();
     const port = await freePort();
     await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
-    cleanups.push(() => holder.close());
+    cleanups.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));
 
     const result = run(root, "--host", "127.0.0.1", "--port", String(port));
 

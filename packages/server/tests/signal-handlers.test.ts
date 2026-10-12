@@ -67,7 +67,8 @@ function signalled(file: string, signal: NodeJS.Signals): Promise<Run> {
   });
 }
 
-describe("a server with default signal handling", () => {
+/* Windows cannot send a process a signal it can handle: `kill` ends it at once. */
+describe.skipIf(process.platform === "win32")("a server with default signal handling", () => {
   it("lets a host that handles SIGTERM itself finish its cleanup", async () => {
     const file = host(
       [

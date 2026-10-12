@@ -17,7 +17,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { createServer } from "node:net";
+import { createServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createTransformCache, type TransformCache } from "@noverax/courier-studio-core/config";
@@ -74,6 +74,12 @@ async function freePort(): Promise<number> {
   const { port } = probe.address() as { port: number };
   await new Promise<void>((resolve) => probe.close(() => resolve()));
   return port;
+}
+
+/* Another process's server on a port: a connection it accepts and its peer
+   resets, as Windows resets one a process leaves open as it exits, ends. */
+function portHolder(): Server {
+  return createServer((socket) => socket.on("error", () => socket.destroy()));
 }
 
 function manager(transformCacheDirectory: string | null = null) {
@@ -188,7 +194,7 @@ describe("a managed mock server", () => {
   }, 20_000);
 
   it("takes the first free port from the one Studio assigned, past the ones other mocks were given", async () => {
-    const holder = createServer();
+    const holder = portHolder();
     const port = await freePort();
     await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
     cleanups.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));
@@ -211,7 +217,7 @@ describe("a managed mock server", () => {
   }, 20_000);
 
   it("reports its declared port taken instead of moving to another", async () => {
-    const holder = createServer();
+    const holder = portHolder();
     const port = await freePort();
     await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
     cleanups.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));

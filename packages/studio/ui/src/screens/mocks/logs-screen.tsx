@@ -1,10 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import type { LucideIcon } from "lucide-react";
-import { Download, Pause, Play, Trash2 } from "lucide-react";
 
-import { SearchField } from "@/design/search-field";
 import type { SegmentedOption } from "@/design/segmented";
-import { Segmented } from "@/design/segmented";
 import type { LogFilter, MockLogsSearch } from "@/features/mocks/logs-view";
 import { filterCounts, LOG_FILTERS, logMatches, showsIn } from "@/features/mocks/logs-view";
 import { logsOf } from "@/features/mocks/mock-log";
@@ -15,6 +11,7 @@ import { exportAsJson } from "@/lib/export";
 import { clearMockLogs } from "@/mocks/clear-mock-logs";
 import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
+import { LogsToolbar } from "./logs-toolbar";
 import { MockLogList } from "./mock-log-list";
 import { MocksSkeleton } from "./mocks-skeleton";
 import { useMockServer } from "./use-mock-server";
@@ -25,27 +22,6 @@ const LABELS: Readonly<Record<LogFilter, string>> = {
   chaos: "Chaos",
   scenario: "Scenario",
 };
-
-function ToolButton({
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}): React.ReactNode {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg"
-    >
-      <Icon aria-hidden="true" className="size-3" />
-      {label}
-    </button>
-  );
-}
 
 /**
  * The mock's log: every request it answered, newest first — all of them,
@@ -94,36 +70,19 @@ export function MockLogsScreen(): React.ReactNode {
   }));
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-2.5 border-b border-line bg-bg px-5 py-2.5">
-        <Segmented
-          label="Show"
-          quiet="subtle"
-          options={options}
-          value={show}
-          onChange={(next) => update({ show: next === "all" ? undefined : next })}
-        />
-        <SearchField
-          label="Search the log"
-          placeholder="Path or endpoint"
-          value={search.q ?? ""}
-          onChange={(q) => update({ q: q || undefined })}
-          className="w-60"
-        />
-        <div className="flex-1" />
-        <ToolButton
-          icon={paused ? Play : Pause}
-          label={paused ? "Resume" : "Pause"}
-          onClick={togglePaused}
-        />
-        <ToolButton
-          icon={Download}
-          label="Export"
-          onClick={() => exportAsJson(shown, `${server.name}-log.json`)}
-        />
-        <ToolButton icon={Trash2} label="Clear" onClick={() => clearMockLogs(server.serverId)} />
-      </div>
+      <LogsToolbar
+        filters={options}
+        show={show}
+        onShow={(next) => void update({ show: next === "all" ? undefined : next })}
+        q={search.q ?? ""}
+        onSearch={(q) => void update({ q: q || undefined })}
+        paused={paused}
+        onPause={togglePaused}
+        onExport={() => exportAsJson(shown, `${server.name}-log.json`)}
+        onClear={() => clearMockLogs(server.serverId)}
+      />
       {paused && (
-        <p className="border-b border-line bg-warn-dim px-5 py-1.5 text-small text-warn">
+        <p className="border-b border-line bg-warn-dim px-5 py-1.5 text-small text-warn max-sm:px-4">
           Paused — new requests are not added until you resume
         </p>
       )}

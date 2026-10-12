@@ -25,13 +25,15 @@ export function LatencyShapeField({
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-control font-strong">Shape</span>
-        <Segmented
-          label="Delay shape"
-          quiet="subtle"
-          options={LATENCY_SHAPES}
-          value={shape}
-          onChange={onChange}
-        />
+        <div className="scroll-row max-w-full min-w-0">
+          <Segmented
+            label="Delay shape"
+            quiet="subtle"
+            options={LATENCY_SHAPES}
+            value={shape}
+            onChange={onChange}
+          />
+        </div>
       </div>
       <p className="m-0 text-small text-fg-subtle">{hint}</p>
     </div>

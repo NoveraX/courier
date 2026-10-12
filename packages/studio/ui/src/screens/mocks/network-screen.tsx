@@ -55,7 +55,7 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
   const mode = chaosModeOf(server.chaosPreset);
   const current = chaosValuesOf(server);
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4 px-6 pt-5 pb-11">
+    <div className="mx-auto flex w-full max-w-320 flex-col gap-4 px-6 pt-5 pb-11 max-sm:px-4 max-sm:pt-4">
       <NetworkHero server={server} figures={networkLive(logs, now, slowMs)} />
       <ChaosCards
         mode={mode}
@@ -64,7 +64,7 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
         onPick={(next) => pickChaos(server, next, current)}
       />
       <RouteRatesNote server={server} />
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] items-start gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(380px,100%),1fr))] items-start gap-4">
         <div className="flex min-w-0 flex-col gap-4">
           <FaultPanel
             values={faultDraft ?? current}

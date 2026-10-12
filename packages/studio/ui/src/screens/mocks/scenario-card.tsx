@@ -71,7 +71,7 @@ export function ScenarioCard({
           type="button"
           aria-pressed={selected}
           onClick={onOpen}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left pointer-coarse:min-h-11"
         >
           <span
             className={cn(
@@ -101,7 +101,7 @@ export function ScenarioCard({
           disabled={scenario.isActive || !running || turning.pending}
           onClick={() => void activate()}
           className={cn(
-            "h-7 shrink-0 cursor-pointer rounded-control border px-2.75 text-small font-semibold disabled:cursor-default",
+            "h-7 shrink-0 cursor-pointer rounded-control border px-2.75 text-small font-semibold disabled:cursor-default pointer-coarse:h-9",
             scenario.isActive
               ? "border-ok/40 bg-ok-dim text-ok"
               : "border-line-strong bg-panel text-fg hover:bg-raised disabled:opacity-50",

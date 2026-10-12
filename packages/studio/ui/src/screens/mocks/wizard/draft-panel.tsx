@@ -55,7 +55,7 @@ export function DraftPanel({
       aria-label={`Mock of ${draft.source}`}
       className="overflow-hidden rounded-[11px] border border-line"
     >
-      <header className="flex h-9 items-center gap-2 border-b border-line bg-panel-subtle px-3.5">
+      <header className="flex min-h-9 flex-wrap items-center gap-x-2 gap-y-1 border-b border-line bg-panel-subtle px-3.5 py-1">
         <span className="truncate font-mono text-control font-medium">{draft.source}</span>
         <span className="truncate font-mono text-small text-fg-subtle">
           → mocks.{draft.key || "…"}
@@ -66,7 +66,7 @@ export function DraftPanel({
             <button
               type="button"
               onClick={onRemove}
-              className="flex h-6.5 cursor-pointer items-center rounded-[6px] px-2 text-small text-fg-muted hover:bg-raised hover:text-fg"
+              className="flex h-6.5 cursor-pointer items-center rounded-[6px] px-2 text-small text-fg-muted hover:bg-raised hover:text-fg pointer-coarse:h-9"
             >
               Remove
             </button>

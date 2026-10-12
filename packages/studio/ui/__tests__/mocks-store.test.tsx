@@ -204,7 +204,8 @@ describe("a collection of tens of thousands of records", () => {
     expect(drawn.length).toBeLessThan(100);
     expect(within(table).getByText("User 0")).toBeTruthy();
     expect(within(table).queryByText("User 9999")).toBeNull();
-    const body = drawn[0]?.parentElement?.parentElement;
+    /* A Delete sits in the cell that keeps it in view, in its row, in the body every row is placed in. */
+    const body = drawn[0]?.parentElement?.parentElement?.parentElement;
     expect(body?.style.height).toBe(`${10_000 * 38}px`);
   });
 });

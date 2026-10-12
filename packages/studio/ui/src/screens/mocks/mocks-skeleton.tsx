@@ -52,7 +52,7 @@ export function MocksSkeleton({
     return (
       <LoadingRegion
         label={view === "list" ? "Loading the mock servers" : "Loading the records"}
-        className="flex flex-col p-5"
+        className="flex flex-col p-5 max-sm:p-4"
       >
         <Panel count={8} />
       </LoadingRegion>
@@ -61,7 +61,7 @@ export function MocksSkeleton({
   return (
     <LoadingRegion
       label="Loading the mock servers"
-      className="mx-auto flex w-full max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10"
+      className="mx-auto flex w-full max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10 max-sm:px-4 max-sm:pt-4"
     >
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-sheet border border-line bg-line min-[701px]:grid-cols-3 min-[1360px]:grid-cols-6">
         {FIGURES.map((figure) => (
@@ -72,7 +72,7 @@ export function MocksSkeleton({
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-3.5">
         <Panel count={8} />
         <div className="flex flex-col gap-3.5">
           <Panel count={4} />

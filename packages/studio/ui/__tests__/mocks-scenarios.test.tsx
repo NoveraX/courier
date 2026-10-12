@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  *
  * The mock's scenarios: what each mostly does, its overrides found among the
- * routes, the one on marked Active, another turned on with a command, and
- * the scenario open kept in the address.
+ * routes, the one on marked Active, another turned on with a command, the
+ * scenario open kept in the address — and on a phone shown under its card.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -101,6 +101,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("a scenario's data", () => {
@@ -158,5 +159,30 @@ describe("the Scenarios tab", () => {
       "Could not turn it on — returns() expects a function of the request context",
     );
     expect(screen.getByRole("button", { name: "Active" })).toBeTruthy();
+  });
+});
+
+describe("the Scenarios tab on a phone", () => {
+  it("shows the scenario open under its card, and another under its own once tapped", async () => {
+    vi.stubGlobal("matchMedia", (media: string) => ({
+      media,
+      matches: media.includes("max-width: 639px"),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
+    await openShell("/mocks/scenarios");
+    const cardOf = (region: HTMLElement) => region.previousElementSibling?.textContent ?? "";
+
+    expect(cardOf(screen.getByRole("region", { name: "Scenario empty-states" }))).toContain(
+      "empty-states",
+    );
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /checkout-failure/ })));
+
+    expect(screen.queryByRole("region", { name: "Scenario empty-states" })).toBeNull();
+    expect(cardOf(screen.getByRole("region", { name: "Scenario checkout-failure" }))).toContain(
+      "checkout-failure",
+    );
   });
 });

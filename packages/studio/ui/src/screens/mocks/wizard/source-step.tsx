@@ -101,7 +101,7 @@ export function SourceStep({
       </div>
       {availability.kind !== "sources" && <Unavailable availability={availability} />}
       {availability.kind === "sources" && (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(200px,100%),1fr))] gap-2">
           {sources.map((source) => {
             const on = drafts.some((draft) => draft.source === source.name);
             const mocks = mocked.get(source.name) ?? [];

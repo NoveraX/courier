@@ -126,7 +126,7 @@ export function RouteOverridesPanel({
           The mock serves no routes
         </p>
       )}
-      <div className="-mb-px flex flex-col">
+      <div className="@container -mb-px flex flex-col">
         {rows.map((row) => (
           <Fragment key={row.routeId}>
             <Row

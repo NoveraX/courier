@@ -16,7 +16,7 @@ function narrowed(group: HeaderGroup, filter: string): HeaderGroup {
 /**
  * The headers of a request a mock answered, by side — what the mock sent
  * back, then what it was sent — narrowed by a filter, with credentials
- * masked until revealed.
+ * masked until revealed. A phone's keyboard leaves the filter as typed.
  *
  * @param props - The two sides
  * @returns The tab
@@ -37,14 +37,19 @@ export function MockHeadersTab({ groups }: { groups: readonly HeaderGroup[] }): 
     });
   return (
     <div className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
-      <label className="flex h-8 items-center gap-2 rounded-card border border-line bg-inset px-2.5">
-        <Search aria-hidden="true" className="size-3 text-fg-subtle" />
+      <label className="flex h-8 items-center gap-2 rounded-card border border-line bg-inset px-2.5 pointer-coarse:h-10">
+        <Search aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter headers by name or value…"
           aria-label="Filter headers"
-          className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+          autoComplete="off"
+          enterKeyHint="search"
+          className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle pointer-coarse:text-base"
         />
       </label>
       {groups.map((group) => (

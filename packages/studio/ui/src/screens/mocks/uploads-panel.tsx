@@ -79,22 +79,26 @@ export function UploadsPanel({
         className="m-0 flex min-w-0 flex-col gap-4 border-0 p-4.5 disabled:opacity-50"
       >
         <Row label="Upload speed" hint="every body, JSON included">
-          <Segmented
-            label="Upload speed"
-            quiet="subtle"
-            options={optionsWith(UPLOAD_SPEEDS, speed, speedLabel)}
-            value={String(speed)}
-            onChange={(kbps) => set({ bandwidth: Number(kbps) })}
-          />
+          <div className="scroll-row max-w-full min-w-0">
+            <Segmented
+              label="Upload speed"
+              quiet="subtle"
+              options={optionsWith(UPLOAD_SPEEDS, speed, speedLabel)}
+              value={String(speed)}
+              onChange={(kbps) => set({ bandwidth: Number(kbps) })}
+            />
+          </div>
         </Row>
         <Row label="Size limit" hint="413 for a larger upload">
-          <Segmented
-            label="Size limit"
-            quiet="subtle"
-            options={optionsWith(SIZE_LIMITS, limit, limitLabel)}
-            value={String(limit)}
-            onChange={(bytes) => set({ maxBytes: Number(bytes) })}
-          />
+          <div className="scroll-row max-w-full min-w-0">
+            <Segmented
+              label="Size limit"
+              quiet="subtle"
+              options={optionsWith(SIZE_LIMITS, limit, limitLabel)}
+              value={String(limit)}
+              onChange={(bytes) => set({ maxBytes: Number(bytes) })}
+            />
+          </div>
         </Row>
         <Row label="File types" hint="415 for a file of another">
           <TypesField

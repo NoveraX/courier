@@ -52,7 +52,7 @@ function NoServers(): React.ReactNode {
         type="button"
         onClick={openMockWizard}
         disabled={blocked !== null}
-        className="mt-2 flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-fg px-3 text-control font-semibold text-bg disabled:cursor-default disabled:opacity-50"
+        className="mt-2 flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-fg px-3 text-control font-semibold text-bg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
       >
         <Sparkles aria-hidden="true" className="size-3.25" />
         Generate mocks
@@ -87,9 +87,9 @@ export function MocksDashboard(): React.ReactNode {
     icon: ICONS[figure.key],
   }));
   return (
-    <div className="mx-auto flex w-full max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10">
+    <div className="mx-auto flex w-full max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10 max-sm:px-4 max-sm:pt-4">
       <FigureGrid label="Mock figures" figures={figures} />
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-3.5">
         <LiveActivity
           logs={logs}
           running={server.processStatus === "running"}

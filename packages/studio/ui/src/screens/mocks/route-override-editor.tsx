@@ -73,7 +73,8 @@ function ownValue(override: RouteOverride, field: OverrideField): number | undef
  * global one, and the last one taken back switches the override off.
  * Faults given to a route that nothing would fail come with a rate of 100%.
  * A rate of its own of 0% keeps the route answering while the mock fails
- * the others — Down included — and the editor says so.
+ * the others — Down included — and the editor says so. In a narrow card each
+ * slider takes a line of its own under its name and value.
  *
  * @param props - The route's override, the global settings, and what follows a settled change
  * @returns The editor
@@ -94,7 +95,7 @@ export function RouteOverrideEditor({
   };
   const owned = setsAnything(override);
   return (
-    <div className="flex flex-col gap-3.5 border-b border-line bg-bg-subtle px-4.5 py-3.5 pl-[74px]">
+    <div className="flex flex-col gap-3.5 border-b border-line bg-bg-subtle px-4.5 py-3.5 pl-[74px] @max-[30rem]:pl-4.5">
       {FIELDS.map((f) => {
         const own = draft?.field === f.field ? draft.value : ownValue(override, f.field);
         const fallback = f.field === "delay" ? global.delay : global.rate;
@@ -103,20 +104,22 @@ export function RouteOverrideEditor({
         const shielded = f.field === "rate" && own === 0 && global.rate > 0;
         return (
           <Fragment key={f.field}>
-            <div className="grid grid-cols-[72px_minmax(0,1fr)_56px_24px] items-center gap-3">
-              <span className="text-small text-fg-subtle">{f.label}</span>
-              <RangeSlider
-                label={f.name}
-                tone={f.tone}
-                value={value}
-                max={f.max}
-                step={f.step}
-                onChange={(next) => setDraft({ field: f.field, value: next })}
-                onCommit={(next) => settle(f.field, next)}
-              />
+            <div className="grid grid-cols-[72px_minmax(0,1fr)_56px_24px] items-center gap-3 @max-[30rem]:grid-cols-[minmax(0,1fr)_auto_auto] @max-[30rem]:gap-y-2">
+              <span className="text-small text-fg-subtle @max-[30rem]:row-start-1">{f.label}</span>
+              <div className="min-w-0 @max-[30rem]:col-span-full @max-[30rem]:row-start-2">
+                <RangeSlider
+                  label={f.name}
+                  tone={f.tone}
+                  value={value}
+                  max={f.max}
+                  step={f.step}
+                  onChange={(next) => setDraft({ field: f.field, value: next })}
+                  onCommit={(next) => settle(f.field, next)}
+                />
+              </div>
               <span
                 className={cn(
-                  "text-right font-mono text-small",
+                  "text-right font-mono text-small @max-[30rem]:row-start-1",
                   own === undefined && "text-fg-subtle",
                 )}
               >
@@ -128,14 +131,14 @@ export function RouteOverrideEditor({
                   aria-label={reset}
                   title={reset}
                   onClick={() => onCommit(withGlobalField(override, f.field))}
-                  className="flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg"
+                  className="hit-area relative flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg @max-[30rem]:row-start-1"
                 >
                   <RotateCcw aria-hidden="true" className="size-3" />
                 </button>
               )}
             </div>
             {shielded && (
-              <p className="-mt-1.5 pl-[84px] text-small text-fg-subtle">
+              <p className="-mt-1.5 pl-[84px] text-small text-fg-subtle @max-[30rem]:pl-0">
                 {exemption(global.rate)}
               </p>
             )}
@@ -151,7 +154,7 @@ export function RouteOverrideEditor({
         <button
           type="button"
           onClick={() => onCommit({ routeId: override.routeId, enabled: false })}
-          className="flex h-6.5 cursor-pointer items-center gap-1.5 self-start rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
+          className="flex h-6.5 cursor-pointer items-center gap-1.5 self-start rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:h-9"
         >
           <RotateCcw aria-hidden="true" className="size-3" />
           Use the global settings

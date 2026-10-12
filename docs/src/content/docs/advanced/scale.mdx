@@ -1,0 +1,116 @@
+export const metadata = { title: "Performance at Scale", description: "How Courier, Studio, its mocks and the VS Code extension behave on a large company's project — five APIs with a thousand endpoints, the hundreds of files that call them — every figure measured every night and held to a budget, and how to run the measurements on your own machine.", mode: "both" }
+
+## The project they are measured on
+
+Every night Courier writes a project the size of a large company's and measures everything it runs on it. The project is the same every time, generated from a fixed seed:
+
+| Part | What it holds |
+| --- | --- |
+| APIs | 5 sources, 1000 endpoints: 970 HTTP endpoints in 169 groups, a group inside every fourth one, 25 streams and 5 channels |
+| Schemas | each group's records, input and patch in zod, with nested objects, arrays, unions and a discriminated union |
+| Code | 1420 files: 600 server modules calling the APIs directly and 100 pages calling them through the app's proxy — 3300 call sites — and 39 internal libraries that import each other |
+| Courier | `courier.config.ts`, the app's server with `createCourierServer`, two boundaries, and `courier.mocks.ts` with a mock for each API, 200 records a collection |
+
+The figures below were measured on an Apple M2 Max laptop with Node 24. The nightly job runs on a CI machine, and its budgets leave room for one about three times slower: they catch a change that makes anything markedly slower or heavier, not a machine that is slower.
+
+## The figures
+
+### Types and the client
+
+| Measured | Figure |
+| --- | --- |
+| `tsc --noEmit` over the whole project | 2.4 s, 476 MB, 135,000 types, no errors |
+| Defining the 1000 endpoints and creating the callers | 132 ms, 16 MB of heap |
+| A call through the client, beyond `fetch` and `JSON.parse` themselves | 24 µs at the median, 72 µs at p99 |
+| Importing the project's OpenAPI document — 970 operations, 941 KB — in Studio | read in 42 ms, 341 files of code written in 186 ms; `tsc` over them 2.5 s, no errors |
+
+### Large answers
+
+An endpoint answering a list read through its zod schema, with Studio attached and without. Studio is sent at most 16 KB of any body — the first items of a list, a part of each large field — whatever its size; it asks the app for the whole one when you open it.
+
+| Answer | Without Studio | With Studio attached | Sent to Studio |
+| --- | --- | --- | --- |
+| 1,000 records, 0.3 MB | 2.6 ms | 4.6 ms | 18 KB |
+| 10,000 records, 3.5 MB | 16 ms | 28 ms | 18 KB |
+| 50,000 records, 17.6 MB | 93 ms | 154 ms | 18 KB |
+
+### Studio and its mocks
+
+| Measured | Figure |
+| --- | --- |
+| Studio answering, from its start | 1.6 s on a project it has never loaded, 0.9 s after |
+| The five mocks listening, from Studio's start | 2.2 s |
+| Memory while they start | 1.4 GB, for about ten seconds |
+| Memory at rest — Studio and five mock processes | 640 MB: Studio about 180 MB, each mock 110–140 MB |
+| Processor at rest | 0.5 % of one core |
+| The mocks under 32 concurrent connections | 8,000 requests a second, 3.3 ms at the median, 16 ms at p99, none failed |
+
+Each mock runs in a process of its own, so one that crashes or hangs leaves the others serving, and the mocks share the machine's cores under load. Each process holds Node itself and everything `courier.mocks.ts` loads — every API's definitions, the seeded records — which is what most of its memory is.
+
+### The app's server with Studio attached
+
+The app's own server — Courier's proxy in front of the five APIs, with its middleware and response schemas — called by its pages, 32 calls at a time:
+
+| | Calls a second | Median | p99 |
+| --- | --- | --- | --- |
+| Straight to the backend, for comparison | 8,000 | 3.2 ms | 12.8 ms |
+| Through the app's server | 5,700 | 5.1 ms | 12.3 ms |
+| Through the app's server, attached to Studio | 3,800 | 8.1 ms | 13.8 ms |
+
+A server attached to Studio reports some seventeen events for each call it serves — the call's start and end, each middleware, each validation, the fetch, the answer's shape — and sends them in batches: every event of one turn of its event loop leaves together, in one message, once the turn is over. Only development servers attach; in production nothing is reported.
+
+### The editor and VS Code
+
+What an editor asks Studio, with 2000 requests in its log:
+
+| Asked | Answered |
+| --- | --- |
+| Every endpoint's figures, which the extension asks for every 5 s | 4 ms |
+| The latest requests | 1 ms |
+| The audit's findings at the calls | 2 ms; 163 ms when the requests changed since |
+| The calls in one file | under 1 ms |
+| Where each endpoint is declared | 3 ms; 166 ms the first time |
+
+Courier for VS Code over the same project, inside VS Code:
+
+| Measured | Figure |
+| --- | --- |
+| Hints over the first file opened, the extension's first questions to Studio included | 288 ms |
+| Hints over each next file | 75 ms at the median |
+| Going from a call to the endpoint's declaration | 6 ms |
+| The extension host's heap, every extension in it | 61 MB |
+
+### Studio's pages
+
+Studio's pages in Chromium, with an attached app's traffic streaming in — about 900 calls a second, some 24 MB of events a second reaching the page:
+
+| Measured | Figure |
+| --- | --- |
+| The page loaded | 200 ms |
+| The Timeline showing the 2000 requests Studio kept | 1.0 s |
+| The Explorer's graph of 1000 endpoints | 190 ms |
+| Tasks holding the page's main thread over 50 ms, Timeline or Explorer open, while traffic streams in | none |
+| The page's JavaScript heap | 170 MB |
+
+## Running them yourself
+
+The measurements are a script of the repository. It writes the project to the system's temp folder, starts Studio, its mocks, the app's server, Chromium and VS Code, measures them, and stops each one. It prints a line a figure with its budget, and exits with 1 when one is over:
+
+```bash
+npm run test:scale
+```
+
+A larger company, some of the steps alone, or the report as JSON:
+
+```bash
+node scripts/scale/run.mjs --endpoints 3000 --only tsc,runtime,studio,proxy --json scale-report.json
+```
+
+The steps are `tsc`, `runtime`, `codegen`, `payloads`, `studio`, and inside it `proxy`, `editor`, `extension`, `mocks` and `ui`. Studio listens on port 7401, its mocks from 7410, the app on 7400; `--ports` moves all of them.
+
+## On a project of your own of this size
+
+- **Offer agents what they need.** The project marks every endpoint for agents, which makes 970 tools and 2 MB of their descriptions — far past the 40 where some clients start leaving tools out. The MCP server lists them in 30 ms; what to offer is [the project's agents policy](/docs/agents/overview#what-agents-may-call).
+- **Studio keeps the latest 2000 requests** and sends a page that opens as many of them as fit 16 MB. Clear the log from the Timeline to start afresh.
+- **Each mock is a process of its own.** One you do not need running still takes its memory; stop it from the Mocks page.
+- **Transforms are kept in `node_modules/.cache/courier`.** Studio, an attached app, the MCP server and `courier-server` reuse each module's transform until its bytes change, so only the first start pays for them; `COURIER_TRANSFORM_CACHE=0` turns that off.

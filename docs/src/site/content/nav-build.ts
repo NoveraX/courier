@@ -54,6 +54,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "OpenAPI Export", href: "/docs/advanced/openapi" },
       { title: "Webhooks", href: "/docs/advanced/webhooks" },
       { title: "Proxies & Certificates", href: "/docs/advanced/proxies-and-certificates" },
+      { title: "Performance at Scale", href: "/docs/advanced/scale" },
       { title: "Options Reference", href: "/docs/advanced/options" },
       { title: "Singleton Pattern", href: "/docs/advanced/singleton" },
     ],

@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs";
-import { relative } from "node:path";
+import { relative, sep } from "node:path";
 
 import type { LoadedCourierConfig } from "../../config-loader";
 import { applyEdits } from "../../mocks-edit/plan/apply-edits";
@@ -88,7 +88,8 @@ export async function planSchemaFix(
   const files: FixedFile[] = [];
   for (const [path, edits] of plan.files) {
     const before = modules.module(path)?.text ?? "";
-    const file = relative(modules.root, path);
+    /* Named as the project names it, with forward slashes on every system. */
+    const file = relative(modules.root, path).split(sep).join("/");
     const changed = applyEdits(before, edits);
     const problem = parseSource(path, changed).problem;
     if (problem !== null)

@@ -23,10 +23,25 @@ export function describeError(error: unknown, root?: string): string {
   return relative.replace(/\s+/g, " ").trim();
 }
 
+/* Windows: either slash separates folders there, as loaders write forward
+   ones too, and the case of a name does not tell two apart. */
+const WINDOWS = sep === "\\";
+const SLASH = WINDOWS ? "[\\\\/]" : "/";
+
 /* Only where a path starts — at the start of the message, or after a space,
    a quote, a bracket, a colon or an equals sign — so a longer path that merely
-   contains the root is left whole. */
+   contains the root is left whole. What follows the root is named with
+   forward slashes, as Studio names every file in a project. */
 function withoutRoot(message: string, root: string): string {
-  const escaped = (root + sep).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return message.replace(new RegExp(`(^|[\\s'"(\\[:=])${escaped}`, "g"), "$1");
+  const folders = root
+    .split(WINDOWS ? /[\\/]/ : "/")
+    .map((folder) => folder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join(SLASH);
+  const pattern = new RegExp(
+    `(^|[\\s'"(\\[:=])${folders}${SLASH}([^\\s'"()[\\]]*)`,
+    WINDOWS ? "gi" : "g",
+  );
+  return message.replace(pattern, (_, before: string, path: string) =>
+    WINDOWS ? `${before}${path.replaceAll("\\", "/")}` : `${before}${path}`,
+  );
 }

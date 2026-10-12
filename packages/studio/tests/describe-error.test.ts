@@ -21,4 +21,20 @@ describe("describeError", () => {
   it("leaves a path outside the root whole", () => {
     expect(describeError(new Error("/other/app/x.ts"), "/app")).toBe("/other/app/x.ts");
   });
+
+  it.runIf(process.platform === "win32")(
+    "takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes",
+    () => {
+      const error = new Error("Cannot find d:/proj/src\\api.ts, nor 'D:\\Proj\\src\\gone.ts'");
+
+      expect(describeError(error, "D:\\proj")).toBe("Cannot find src/api.ts, nor 'src/gone.ts'");
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
+    "keeps a backslash a name holds on macOS and Linux",
+    () => {
+      expect(describeError(new Error("open /app/a\\b.ts"), "/app")).toBe("open a\\b.ts");
+    },
+  );
 });

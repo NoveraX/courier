@@ -1,6 +1,6 @@
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join } from "node:path";
 
-import { CONFIG_FILES, ICONS, MOCKS_FILES, STATE_FOLDER } from "./icon-files";
+import { CONFIG_FILES, ICONS, ICONS_HOME, MOCKS_FILES, STATE_FOLDER } from "./icon-files";
 
 /** Material Icon Theme's settings that take icons by a file's name and by a folder's. */
 export const MATERIAL_FILES = "material-icon-theme.files.associations";
@@ -17,34 +17,24 @@ export interface MaterialPlan {
 
 /**
  * Courier's associations for Material Icon Theme: each config and mocks
- * file, and the `.courier` folder, to Courier's icon — by its path without
- * `.svg`, as the theme takes custom icons: from its own `icons` folder for
- * a file; and for a folder, whose icon the theme names `folder-` and the
- * path, from one folder deeper, as the theme's own docs write it. The theme
- * takes them only from the editor's extensions folder, where an installed
- * Courier is; one run from elsewhere gets the reason instead.
+ * file, and the `.courier` folder, to Courier's icon in its folder beside
+ * the theme's own — by its path without `.svg`, as the theme takes custom
+ * icons: from the theme's `icons` folder for a file; and for a folder,
+ * whose icon the theme names `folder-` and the path, from one folder
+ * deeper, as the theme's own docs write it. The paths name no version of
+ * Courier, so they stay the same across updates and across machines.
  *
- * @param iconsDir - Courier's `media/icons` folder
- * @param materialDir - Where Material Icon Theme is installed
- * @returns The associations, or why the theme cannot take them
+ * @returns The associations
  * @example
  * ```ts
- * materialPlan(join(extensionPath, "media", "icons"), material.extensionPath);
- * // { files: { "courier.config.ts": "../../noverax.courier-vscode-1.0.0/media/icons/courier-config", … },
- * //   folders: { ".courier": "../../../../noverax.courier-vscode-1.0.0/media/icons/folder-courier" } }
+ * materialPlan();
+ * // { files: { "courier.config.ts": "../../.noverax-courier-icons/courier-config", … },
+ * //   folders: { ".courier": "../../../../.noverax-courier-icons/folder-courier" } }
  * ```
  */
-export function materialPlan(
-  iconsDir: string,
-  materialDir: string,
-): MaterialPlan | { readonly why: string } {
-  if (relative(dirname(materialDir), iconsDir).startsWith("..")) {
-    return {
-      why: "Material Icon Theme takes icons only from the editor's extensions folder, and this Courier runs from elsewhere.",
-    };
-  }
-  const from = join(materialDir, "icons");
-  const path = (icon: string) => relative(from, join(iconsDir, icon)).split(sep).join("/");
+export function materialPlan(): MaterialPlan {
+  /* From the theme's icons folder, two folders up is the extensions folder that holds Courier's. */
+  const path = (icon: string) => `../../${ICONS_HOME}/${icon}`;
   return {
     files: Object.fromEntries([
       ...CONFIG_FILES.map((name): [string, string] => [name, path(ICONS.config)]),
@@ -53,6 +43,21 @@ export function materialPlan(
     /* `folder-../` is a folder of its own name, which one more `../` leaves. */
     folders: { [STATE_FOLDER]: `../../${path(ICONS.folder)}` },
   };
+}
+
+/**
+ * The folder that keeps Courier's icons for Material Icon Theme: beside the
+ * theme, in the editor's extensions folder, where the theme reads them.
+ *
+ * @param materialDir - Where Material Icon Theme is installed
+ * @returns The folder
+ * @example
+ * ```ts
+ * iconsHomeOf(material.extensionPath); // "~/.vscode/extensions/.noverax-courier-icons"
+ * ```
+ */
+export function iconsHomeOf(materialDir: string): string {
+  return join(dirname(materialDir), ICONS_HOME);
 }
 
 /**
@@ -96,17 +101,20 @@ export function withoutCourier(current: Associations | undefined): Associations 
 
 /**
  * Whether an association is one Courier set: a path to one of its icons,
- * from any version of it.
+ * in its folder of icons or in the media of any version of it.
  *
  * @param icon - The association's value
  * @returns Whether Courier set it
  * @example
  * ```ts
- * isCourierIcon("../../noverax.courier-vscode-1.0.0/media/icons/courier-config"); // true
+ * isCourierIcon("../../.noverax-courier-icons/courier-config"); // true
  * ```
  */
 export function isCourierIcon(icon: unknown): boolean {
   return typeof icon === "string" && COURIER_ICON.test(icon);
 }
 
-const COURIER_ICON = new RegExp(`/media/icons/(${Object.values(ICONS).join("|")})$`);
+/* A path to one of Courier's icons: in its folder of icons, or in the media of a Courier of any version, as an older one wrote it. */
+const COURIER_ICON = new RegExp(
+  `/(media/icons|${ICONS_HOME.replace(".", "\\.")})/(${Object.values(ICONS).join("|")})$`,
+);

@@ -1,8 +1,8 @@
-import { copyFile, mkdir, readFile, rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import * as vscode from "vscode";
 
+import { copyIcons, removeCopies } from "./icon-copies";
 import { ICON_THEMES } from "./icon-files";
 import { changeThemeSettings, type RebuiltTheme } from "./theme-rewrites";
 import { userSetting } from "./user-settings";
@@ -29,7 +29,7 @@ import {
  * ```
  */
 export async function applyVsicons(iconsDir: string): Promise<void> {
-  await copyIcons(iconsDir);
+  await copyIcons(copiesFor(iconsDir));
   await changeThemeSettings(vsiconsTheme(), [
     [VSICONS_FILES, withCourierEntries(userSetting(VSICONS_FILES), VSICONS_PLAN.files)],
     [VSICONS_FOLDERS, withCourierEntries(userSetting(VSICONS_FOLDERS), VSICONS_PLAN.folders)],
@@ -50,15 +50,16 @@ export async function removeVsicons(): Promise<void> {
     [VSICONS_FILES, withoutCourierEntries(userSetting(VSICONS_FILES))],
     [VSICONS_FOLDERS, withoutCourierEntries(userSetting(VSICONS_FOLDERS))],
   ]);
-  const folder = customFolder();
-  await Promise.all(
-    [...VSICONS_PLAN.copies.values()].map((name) => rm(join(folder, name), { force: true })),
-  );
+  await removeCopies(copyPaths());
 }
 
 /**
- * Copy Courier's icons into vscode-icons again when Courier's own changed
- * — while its associations are still in the user's settings.
+ * Keep Courier's icons in vscode-icons as the user's settings say, on this
+ * machine too: while the settings hold Courier's associations — set here,
+ * or brought by Settings Sync from another machine — its icons are in the
+ * custom icons folder, copied again and applied when they were missing or
+ * Courier's changed; once no settings hold them — the user's, nor a
+ * workspace's that a team shares its icons by — the copies go too.
  *
  * @param iconsDir - Courier's `media/icons` folder
  * @example
@@ -67,12 +68,46 @@ export async function removeVsicons(): Promise<void> {
  * ```
  */
 export async function keepVsiconsCurrent(iconsDir: string): Promise<void> {
-  if (!hasCourierEntries(userSetting(VSICONS_FILES)) || (await copiesCurrent(iconsDir))) return;
-  await copyIcons(iconsDir);
-  await vsiconsTheme().apply?.();
+  if (hasVsiconsIcons()) {
+    if (await copyIcons(copiesFor(iconsDir))) await vsiconsTheme().apply?.();
+    return;
+  }
+  const anywhere = vscode.workspace.getConfiguration();
+  const used = [VSICONS_FILES, VSICONS_FOLDERS].some((key) => hasCourierEntries(anywhere.get(key)));
+  /* vscode-icons rebuilds only when its settings change while it runs: taken out while the editor was closed, it is asked. */
+  if (!used && (await removeCopies(copyPaths()))) await vsiconsTheme().apply?.();
 }
 
-/* vscode-icons' theme as it rewrites it, and its own command that applies its settings while it runs. */
+/**
+ * Whether the user's settings hold Courier's associations for vscode-icons.
+ *
+ * @returns Whether they do
+ * @example
+ * ```ts
+ * if (hasVsiconsIcons()) return;
+ * ```
+ */
+export function hasVsiconsIcons(): boolean {
+  return (
+    hasCourierEntries(userSetting(VSICONS_FILES)) || hasCourierEntries(userSetting(VSICONS_FOLDERS))
+  );
+}
+
+/* The copies in vscode-icons' custom icons folder. */
+function copyPaths(): string[] {
+  const folder = customFolder();
+  return [...VSICONS_PLAN.copies.values()].map((name) => join(folder, name));
+}
+
+/* Each icon Courier ships, by the path of its copy in vscode-icons' custom icons folder, named as vscode-icons reads it. */
+function copiesFor(iconsDir: string): Map<string, string> {
+  const folder = customFolder();
+  return new Map(
+    [...VSICONS_PLAN.copies].map(([ours, theirs]) => [join(folder, theirs), join(iconsDir, ours)]),
+  );
+}
+
+/* vscode-icons' theme as it rewrites it, and its own command that applies its settings. */
 function vsiconsTheme(): RebuiltTheme {
   const vsicons = vscode.extensions.getExtension(ICON_THEMES.vsicons.extension);
   const folder = vsicons && join(vsicons.extensionPath, "dist", "src");
@@ -81,6 +116,9 @@ function vsiconsTheme(): RebuiltTheme {
       ? [join(folder, "vsicons-icon-theme.json"), join(folder, "vsicons-icon-theme-zed.json")]
       : [],
     async apply() {
+      if (!vsicons) return;
+      /* Asked before it started, vscode-icons would hear nothing: it is started first, and asked once its own start is done. */
+      if (!vsicons.isActive) await vsicons.activate();
       if ((await vscode.commands.getCommands(true)).includes(VSICONS_APPLY)) {
         await vscode.commands.executeCommand(VSICONS_APPLY);
       }
@@ -97,24 +135,4 @@ function customFolder(): string {
     env: process.env,
     home: homedir(),
   });
-}
-
-async function copyIcons(iconsDir: string): Promise<void> {
-  const folder = customFolder();
-  await mkdir(folder, { recursive: true });
-  for (const [ours, theirs] of VSICONS_PLAN.copies) {
-    await copyFile(join(iconsDir, ours), join(folder, theirs));
-  }
-}
-
-async function copiesCurrent(iconsDir: string): Promise<boolean> {
-  const folder = customFolder();
-  for (const [ours, theirs] of VSICONS_PLAN.copies) {
-    const [mine, copy] = await Promise.all([
-      readFile(join(iconsDir, ours)),
-      readFile(join(folder, theirs)).catch(() => undefined),
-    ]);
-    if (!copy?.equals(mine)) return false;
-  }
-  return true;
 }

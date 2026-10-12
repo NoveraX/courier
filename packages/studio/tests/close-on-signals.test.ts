@@ -12,6 +12,10 @@ import { closeOnSignals } from "../src/close-on-signals";
 
 class FakeProcess extends EventEmitter {
   readonly exit = vi.fn<(code: number) => void>();
+
+  constructor(readonly platform = "linux") {
+    super();
+  }
 }
 
 afterEach(() => {
@@ -35,6 +39,28 @@ describe("closeOnSignals", () => {
     finish();
 
     await vi.waitFor(() => expect(proc.exit).toHaveBeenCalledWith(status));
+  });
+
+  it("closes Studio on Ctrl+Break on Windows, then exits with 149", async () => {
+    const proc = new FakeProcess("win32");
+    const close = vi.fn(async () => undefined);
+    closeOnSignals(close, proc);
+
+    proc.emit("SIGBREAK");
+
+    expect(close).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(proc.exit).toHaveBeenCalledWith(149));
+  });
+
+  it("listens for Ctrl+Break on Windows alone, which has it", () => {
+    const linux = new FakeProcess("linux");
+    const windows = new FakeProcess("win32");
+
+    closeOnSignals(async () => undefined, linux);
+    closeOnSignals(async () => undefined, windows);
+
+    expect(linux.listenerCount("SIGBREAK")).toBe(0);
+    expect(windows.listenerCount("SIGBREAK")).toBe(1);
   });
 
   it("closes once when npm passes the same Ctrl+C on, without ending Studio midway", () => {

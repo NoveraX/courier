@@ -34,6 +34,11 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() })
 })
 
-app.listen(PORT, () => {
+const listening = (): void => {
   console.log(`Express mock backend running on http://localhost:${PORT}`)
-})
+}
+
+/* The site's image keeps the backend to its container: only the pages call it. */
+const HOST = process.env.EXPRESS_HOST
+if (HOST) app.listen(PORT, HOST, listening)
+else app.listen(PORT, listening)

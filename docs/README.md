@@ -57,6 +57,20 @@ Browser ──► Next.js :3000 ──► Express :4000
                └─ direct mode: createCaller → backend, no proxy hop
 ```
 
+## In production
+
+The site runs as one container: the Next.js server, and beside it the
+Express backend, which only the pages reach. The image is built from the
+repository's root, as the site takes Courier's packages from it:
+
+```bash
+docker build -f docs/Dockerfile -t courier-site .
+```
+
+It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
+it is up, and the container stops, to be started again, when either server
+does.
+
 ## Live examples
 
 | Example | Route |

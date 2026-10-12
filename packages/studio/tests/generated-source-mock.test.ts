@@ -6,13 +6,13 @@
  * runs it, in its worker.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer } from "node:net";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { generateCode } from "../src/apis/generator";
 import { parseSpec } from "../src/apis/parser";
 import {
+  type ChildReadyData,
   createProcessManager,
   type ProcessManagerEvents,
 } from "../src/server/mock-manager/process-manager";
@@ -102,21 +102,12 @@ function project(): string {
   return join(root, "courier.mocks.ts");
 }
 
-async function freePort(): Promise<number> {
-  const probe = createServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const address = probe.address();
-  const port = typeof address === "object" && address !== null ? address.port : 0;
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 async function started(): Promise<string> {
   const events = {
-    onReady: vi.fn(),
-    onError: vi.fn(),
+    onReady: vi.fn<(serverId: string, data: ChildReadyData) => void>(),
+    onError: vi.fn<(serverId: string, message: string, fatal: boolean) => void>(),
     onStopped: vi.fn(),
-    onExited: vi.fn(),
+    onExited: vi.fn<(serverId: string, reason: string) => void>(),
     onEvent: vi.fn(),
   } satisfies ProcessManagerEvents;
   const pm = createProcessManager(events, {
@@ -124,17 +115,26 @@ async function started(): Promise<string> {
     storeFile: () => null,
   });
   cleanups.push(() => pm.dispose());
-  const port = await freePort();
+  /* Port 0: the system picks one as the worker binds, which no other test can take in between. */
   pm.spawn({
     serverId: "petMock",
     mocksFile: project(),
     mockKey: "petMock",
-    port,
+    port: 0,
     strictPort: true,
     avoidPorts: [],
   });
-  await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 20_000 });
-  return `http://127.0.0.1:${port}/api/v3`;
+  /* Ready, or why not: a start that failed says so at once, not when the wait runs out. */
+  const failed = () => [
+    ...events.onError.mock.calls.filter(([, , fatal]) => fatal).map(([, message]) => message),
+    ...events.onExited.mock.calls.map(([, why]) => why),
+  ];
+  await vi.waitFor(
+    () => expect(events.onReady.mock.calls.length + failed().length).toBeGreaterThan(0),
+    { timeout: 20_000 },
+  );
+  expect(failed()).toEqual([]);
+  return `http://127.0.0.1:${events.onReady.mock.calls[0]?.[1].port}/api/v3`;
 }
 
 describe("a mock of a generated Petstore source", () => {

@@ -19,8 +19,9 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { argv, env, exit } from "node:process";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const TARGETS = "e2e/frameworks/targets.json";
 const CONFIG = "e2e/frameworks/playwright.config.ts";
 

@@ -20,9 +20,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { argv, exit } from "node:process";
+import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const ASSETS = join(ROOT, ".github", "assets");
 const TOKEN_FILE = join(ROOT, "examples", "demo-shop", ".courier", "studio-token");
 

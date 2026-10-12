@@ -2,10 +2,11 @@ import { cpSync, existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { env } from "node:process";
+import { fileURLToPath } from "node:url";
 import { dragEdge } from "./editor-scenes.mjs";
 
 /** The local model the chat needs before it hands @courier a request. */
-export const LOCAL_MODEL = new URL("./local-model", import.meta.url).pathname;
+export const LOCAL_MODEL = fileURLToPath(new URL("./local-model", import.meta.url));
 
 /**
  * A copy of the vscode-icons installed in your own VS Code — `VSICONS_PATH`

@@ -19,7 +19,7 @@
  * member once.
  */
 import { execFileSync } from "node:child_process";
-import { join, resolve } from "node:path";
+import { posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { extensionDirs, orderByDependency, readPkg } from "./release-order";
@@ -63,7 +63,7 @@ export function extensionAt(dir: string): Extension {
     id: `${pkg.publisher}.${pkg.name}`,
     publisher: pkg.publisher,
     workspace: pkg.name,
-    vsix: join(dir, out),
+    vsix: posix.join(dir, out),
     installs: [...(pkg.extensionPack ?? []), ...(pkg.extensionDependencies ?? [])],
   };
 }

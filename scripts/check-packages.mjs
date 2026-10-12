@@ -20,8 +20,9 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { argv, exit } from "node:process";
+import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
+const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 /** Files a package needs at run time that no manifest field names. */
 const RUNTIME_FILES = new Map([["@noverax/courier-studio", ["ui/dist/index.html"]]]);
@@ -111,4 +112,4 @@ function main() {
   exit(1);
 }
 
-if (argv[1] && resolve(argv[1]) === resolve(new URL(import.meta.url).pathname)) main();
+if (argv[1] && resolve(argv[1]) === resolve(fileURLToPath(import.meta.url))) main();

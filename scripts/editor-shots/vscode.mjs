@@ -2,9 +2,10 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { env, platform } from "node:process";
+import { fileURLToPath } from "node:url";
 import { _electron } from "@playwright/test";
 
-export const ROOT = resolve(new URL("../..", import.meta.url).pathname);
+export const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 export const OUT = join(ROOT, "docs", "public", "images", "vscode");
 export const WALKTHROUGH = join(ROOT, "packages", "vscode", "media", "walkthrough");
 export const STUDIO = `http://localhost:${env.STUDIO_PORT ?? 6280}`;

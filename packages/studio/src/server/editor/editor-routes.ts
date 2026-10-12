@@ -5,19 +5,20 @@ import type { ProjectReads } from "../project-state/types";
 import type { RequestLog } from "../request-log";
 import type { RouteApp } from "../route-types";
 import { codeCalls } from "./calls-in-text";
-import { editorFindings } from "./editor-findings";
 import { registerEditorLiveRoutes } from "./editor-live-routes";
 import { type CatalogEndpoint, endpointCatalog } from "./endpoint-catalog";
-import { endpointDefinitions } from "./endpoint-definitions";
+import { type EndpointDefinition, endpointDefinitions } from "./endpoint-definitions";
 import { endpointStats } from "./endpoint-stats";
-import { groupPlaces } from "./group-places";
+import { fileBoundCache } from "./file-bound-cache";
+import { findingsCache } from "./findings-cache";
+import { type GroupPlace, groupPlaces } from "./group-places";
 import { matchCalls } from "./match-calls";
 import { createSiteIndex } from "./site-index";
 
 /** What the editor routes read. */
 export interface EditorRouteDeps {
   project: Pick<ProjectReads, "snapshot">;
-  requestLog: Pick<RequestLog, "events">;
+  requestLog: Pick<RequestLog, "events" | "keyEvents" | "version">;
   root: string;
   /** The sources the project declares and the runtimes attached, which Studio's audit reads */
   audit?: Pick<StudioAuditInputs, "declared" | "runtimes"> | undefined;
@@ -58,7 +59,7 @@ export function registerEditorRoutes(app: RouteApp, deps: EditorRouteDeps): void
   const sites = createSiteIndex(deps.root, catalog);
 
   app.post("/api/editor/endpoints", (_req, res) => {
-    res.json({ endpoints: endpointStats(deps.requestLog.events(), catalog()) });
+    res.json({ endpoints: endpointStats(deps.requestLog.keyEvents(), catalog()) });
   });
 
   app.post("/api/editor/calls", (req, res) => {
@@ -72,22 +73,33 @@ export function registerEditorRoutes(app: RouteApp, deps: EditorRouteDeps): void
     res.json({ calls: matchCalls(codeCalls(file, text), catalog(), text) });
   });
 
+  const findings = deps.audit && findingsCache({ requestLog: deps.requestLog, ...deps.audit });
   app.post("/api/editor/findings", (_req, res) => {
-    const { audit } = deps;
-    res.json({ findings: audit ? editorFindings({ requestLog: deps.requestLog, ...audit }) : [] });
+    res.json({ findings: findings ? findings.read() : [] });
   });
 
+  const definitions = fileBoundCache<EndpointDefinition[]>(deps.root);
   app.post("/api/editor/definitions", (_req, res) => {
     const running = deps.project.snapshot().running;
-    const definitions = running
-      ? endpointDefinitions(deps.root, running.configFile, catalog())
-      : [];
-    res.json({ definitions });
+    res.json({
+      definitions: running
+        ? definitions.read(running, (modules) =>
+            endpointDefinitions(deps.root, running.configFile, catalog(), modules),
+          )
+        : [],
+    });
   });
 
+  const groups = fileBoundCache<GroupPlace[]>(deps.root);
   app.post("/api/editor/groups", (_req, res) => {
     const running = deps.project.snapshot().running;
-    res.json({ groups: running ? groupPlaces(deps.root, running.configFile, catalog()) : [] });
+    res.json({
+      groups: running
+        ? groups.read(running, (modules) =>
+            groupPlaces(deps.root, running.configFile, catalog(), modules),
+          )
+        : [],
+    });
   });
 
   app.post("/api/editor/sites", async (req, res) => {

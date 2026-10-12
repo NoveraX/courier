@@ -29,7 +29,7 @@ interface Stream {
  * @returns The tallies, by key
  * @example
  * ```ts
- * streamTallies(requestLog.events(), (source, id) => `${source} ${id}`).get("shop live.orders")?.open;
+ * streamTallies(requestLog.keyEvents(), (source, id) => `${source} ${id}`).get("shop live.orders")?.open;
  * ```
  */
 export function streamTallies(

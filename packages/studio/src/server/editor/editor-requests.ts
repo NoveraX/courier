@@ -33,12 +33,12 @@ const MOST = 100;
  * failed ones alone, or one endpoint's, when asked — each with its source
  * and its call in the client apart, its status, duration and failure.
  *
- * @param events - The request log's events
+ * @param events - The request log's key events: each request's start and end
  * @param wanted - Which requests, and how many: 50 by default, 100 at most
  * @returns The requests
  * @example
  * ```ts
- * editorRequests(requestLog.events(), { failed: true, limit: 20 });
+ * editorRequests(requestLog.keyEvents(), { failed: true, limit: 20 });
  * ```
  */
 export function editorRequests(

@@ -21,6 +21,8 @@ export interface SourceModules {
   module(path: string): ParsedSource | undefined;
   /** The file an import names, from the file that makes it, when it is a local one. */
   imported(from: string, specifier: string): string | undefined;
+  /** Every path it was asked to read so far, read or not. */
+  files(): string[];
 }
 
 /**
@@ -54,6 +56,7 @@ export function sourceModules(projectRoot: string): SourceModules {
       const { file } = resolveConfigImport(dirname(from), specifier, aliases);
       return file === null ? undefined : realpathSync(file);
     },
+    files: () => [...parsed.keys()],
   };
 }
 

@@ -13,7 +13,11 @@
 import type { DatabaseSync } from "node:sqlite";
 
 import { closingEvent, isClosing, isOpening, requestIdOf } from "./request-log-events";
+import type { RequestLog } from "./request-log-types";
+import { createRequestOutline } from "./request-outline";
 import { type RequestBatch, requestRows } from "./storage/request-rows";
+
+export type { RequestLog } from "./request-log-types";
 
 type RuntimeEvent = Record<string, unknown>;
 
@@ -34,19 +38,6 @@ interface LoggedRequest {
   /** The runtime socket its events arrive on; none for a request a previous Studio saw. */
   owner?: string;
   opening?: RuntimeEvent;
-}
-
-export interface RequestLog {
-  /** Keep an event a runtime sent, once it has been passed to the UI. */
-  record: (event: RuntimeEvent, owner: string) => void;
-  /** The kept events a page is sent as it connects: the newest requests', each whole and in the order its events arrived, as many as fit the replay, oldest request first. */
-  events: () => RuntimeEvent[];
-  /** End the requests a runtime socket left open; returns the events that end them, already kept. */
-  endOpen: (owner: string) => RuntimeEvent[];
-  /** Forget every request but the ones named. */
-  forget: (keep: ReadonlySet<string>) => void;
-  /** Write what is kept to the database, and keep nothing more: the database is closing. */
-  close: () => void;
 }
 
 /**
@@ -73,10 +64,12 @@ export function createRequestLog(
   isPinned: (id: string) => boolean = () => false,
 ): RequestLog {
   const rows = requestRows(db, replayBytes);
+  const outline = createRequestOutline(rows.keyEvents());
   const requests = new Map<string, LoggedRequest>();
   let batch: RequestBatch = { events: [], requests: [], dropped: [] };
   const changed = new Set<string>();
   let next = 0;
+  let changes = 0;
   let scheduled = false;
   let closed = false;
 
@@ -102,6 +95,8 @@ export function createRequestLog(
 
   function append(id: string, request: LoggedRequest, event: RuntimeEvent): void {
     batch.events.push({ id, event });
+    outline.see(id, event);
+    changes += 1;
     request.events += 1;
     changed.add(id);
     if (scheduled) return;
@@ -111,8 +106,10 @@ export function createRequestLog(
 
   function drop(id: string): void {
     requests.delete(id);
-    changed.delete(id);
-    batch.events = batch.events.filter((entry) => entry.id !== id);
+    outline.drop(id);
+    changes += 1;
+    /* Only a request with events still waiting to be written has any to take back. */
+    if (changed.delete(id)) batch.events = batch.events.filter((entry) => entry.id !== id);
     batch.dropped.push(id);
   }
 
@@ -179,6 +176,13 @@ export function createRequestLog(
     events() {
       flush();
       return rows.events();
+    },
+    keyEvents: outline.events,
+    version: () => changes,
+    eventsOf(id) {
+      if (!requests.has(id)) return [];
+      flush();
+      return rows.eventsOf(id);
     },
     endOpen(owner) {
       const ended: RuntimeEvent[] = [];

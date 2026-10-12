@@ -109,7 +109,11 @@ const SHOP = `export const shop = defineApi({
 async function studioAt(projectRoot: string): Promise<string> {
   const app = express();
   app.use(express.json());
-  registerEditorRoutes(app, { project, requestLog: { events: () => EVENTS }, root: projectRoot });
+  registerEditorRoutes(app, {
+    project,
+    requestLog: { events: () => EVENTS, keyEvents: () => EVENTS, version: () => 0 },
+    root: projectRoot,
+  });
   server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

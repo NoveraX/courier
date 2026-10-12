@@ -14,7 +14,7 @@ import { editorRequests, type RequestsWanted } from "./editor-requests";
 
 /** What the live routes read and change: the requests, and the mocks. */
 export interface EditorLiveDeps {
-  readonly requestLog: Pick<RequestLog, "events">;
+  readonly requestLog: Pick<RequestLog, "keyEvents">;
   readonly mocks?: StudioMocks | undefined;
 }
 
@@ -37,7 +37,7 @@ export interface EditorLiveDeps {
  */
 export function registerEditorLiveRoutes(app: RouteApp, deps: EditorLiveDeps): void {
   app.post("/api/editor/requests", (req, res) => {
-    res.json({ requests: editorRequests(deps.requestLog.events(), requestsWanted(req.body)) });
+    res.json({ requests: editorRequests(deps.requestLog.keyEvents(), requestsWanted(req.body)) });
   });
 
   app.post("/api/editor/mocks", (_req, res) => {

@@ -10,7 +10,7 @@ import { detailOf, gatherRequests, summaryOf } from "./request-views";
 
 /** What Studio's tools read, run and change. */
 export interface StudioToolDeps {
-  readonly requestLog: Pick<RequestLog, "events">;
+  readonly requestLog: Pick<RequestLog, "events" | "keyEvents" | "eventsOf">;
   readonly mocks: StudioMocks;
   /** Runs a replay in the app's runtime, with the whole variables when its record cut them. */
   readonly replays: Pick<StudioReplays, "run" | "wholeBody">;
@@ -81,7 +81,7 @@ function requestsTool({ requestLog }: StudioToolDeps): ServedTool {
       const limit =
         typeof args.limit === "number" ? Math.min(50, Math.max(1, Math.trunc(args.limit))) : 20;
       const wanted = typeof args.endpoint === "string" ? args.endpoint : undefined;
-      const requests = [...gatherRequests(requestLog.events())]
+      const requests = [...gatherRequests(requestLog.keyEvents())]
         .map(([id, gathered]) => summaryOf(id, gathered))
         .filter(
           (request) =>
@@ -109,7 +109,7 @@ function requestTool({ requestLog }: StudioToolDeps): ServedTool {
     outputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
     run: async (args) => {
       const id = String(args.id);
-      const gathered = gatherRequests(requestLog.events()).get(id);
+      const gathered = gatherRequests(requestLog.eventsOf(id)).get(id);
       if (gathered === undefined)
         return { ok: false, message: `Studio has no request ${id}: list them with requests` };
       return { ok: true, data: detailOf(id, gathered) };

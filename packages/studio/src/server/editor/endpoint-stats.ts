@@ -52,12 +52,12 @@ interface Tally {
  * or a channel's are its connections, open or ended. A webhook delivered
  * to the app is no endpoint's call, and is left out.
  *
- * @param events - The events Studio's request log keeps
+ * @param events - The key events Studio's request log keeps: each request's and stream's start and end
  * @param catalog - The endpoints the running config defines
  * @returns One entry per endpoint, in the catalog's order
  * @example
  * ```ts
- * endpointStats(requestLog.events(), catalog).find((s) => s.endpoint === "orders.place")?.p95;
+ * endpointStats(requestLog.keyEvents(), catalog).find((s) => s.endpoint === "orders.place")?.p95;
  * ```
  */
 export function endpointStats(

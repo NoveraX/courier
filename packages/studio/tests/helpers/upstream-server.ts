@@ -56,6 +56,8 @@ export async function startUpstreamServer(
     });
     const raw = Object.hasOwn(byPath, url.pathname) ? byPath[url.pathname] : undefined;
     res.setHeader("content-type", raw?.contentType ?? "application/json");
+    /* No connection is kept for the next call: a client that reuses one the server has closed as idle — seconds pass between calls while a suite compiles generated code — meets ECONNRESET. */
+    res.setHeader("connection", "close");
     res.end(raw ? raw.body : JSON.stringify(answer));
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

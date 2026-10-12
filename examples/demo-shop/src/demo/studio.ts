@@ -4,16 +4,20 @@ import { PORTS } from "../ports";
 
 const resetsAt = Number(process.env.DEMO_RESETS_AT);
 const origin = process.env.DEMO_ORIGIN;
+const trustedProxies = (process.env.DEMO_TRUSTED_PROXIES ?? "")
+  .split(",")
+  .filter((entry) => entry.trim() !== "");
 
 /* Studio over the shop, as a public demo: a visitor reads everything, sends
    from the Playground and drives the mocks; the link with the token, printed
    here, is the host's. The public origin is the page's when Studio sits
-   behind a proxy on a domain of its own. */
+   behind a proxy on a domain of its own; the trusted proxies are a CDN or a
+   DDoS filter in front of that proxy, read past to each visitor's address. */
 const studio = createStudioServer({
   host: process.env.STUDIO_HOST ?? "0.0.0.0",
   port: PORTS.studio,
   projectRoot: process.cwd(),
-  demo: Number.isFinite(resetsAt) ? { resetsAt } : {},
+  demo: { ...(Number.isFinite(resetsAt) ? { resetsAt } : {}), trustedProxies },
   extraCorsOrigins: origin ? [origin] : [],
   onStarted: ({ url }) => {
     console.log(`Studio's demo at ${url}`);

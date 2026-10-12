@@ -61,6 +61,7 @@ Each part also runs on its own: `npm run upstream`, `npm run app`, `npm run traf
 | `SHOP_MOCK_PORT`, `PAYMENTS_MOCK_PORT` | `7101`, `7102` | The mocks' ports |
 | `DEMO_RESET_MINUTES` | `60` | How often the demo starts again from a clean state |
 | `DEMO_ORIGIN` | — | The address visitors open, when Studio sits behind a proxy on a domain of its own |
+| `DEMO_TRUSTED_PROXIES` | — | A CDN's or DDoS filter's addresses and CIDR ranges in front of that proxy, comma-separated |
 | `SHOPPERS` | `2` | How many shoppers browse at once, up to 4 |
 
 ## What a visitor may do
@@ -79,6 +80,8 @@ Build it from the repository's root. The image builds the packages the demo uses
 `compose.yml` also locks the container down. Its file system is read-only but for two memory-backed folders — the demo's state in `.courier`, which each reset empties, and `/tmp` — so nothing a visitor does writes a file. It runs with no capabilities, within fixed memory, CPU and process limits, keeps its logs to 30 MB, and reports its health from Studio's `/api/health`.
 
 The proxy in front must say who each visitor is in `X-Forwarded-For`, as Traefik, Caddy and nginx's usual configuration do. The demo counts each visitor's share by that address — requests, sockets, Playground calls, mock commands — so without it every visitor would share the proxy's.
+
+Behind a CDN or a DDoS filter as well, set `DEMO_TRUSTED_PROXIES` to its published addresses and ranges, and have the proxy pass on the entries the filter wrote instead of replacing them — Traefik's `forwardedHeaders.trustedIPs` on its entry point, Caddy's `trusted_proxies`. The demo then reads past the filter's entries to the address it saw; without both, every visitor shares the filter's addresses.
 
 <br />
 

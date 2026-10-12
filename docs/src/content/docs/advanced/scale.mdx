@@ -86,11 +86,13 @@ Studio's pages in Chromium, with an attached app's traffic streaming in — abou
 
 | Measured | Figure |
 | --- | --- |
-| The page loaded | 200 ms |
-| The Timeline showing the 2000 requests Studio kept | 1.0 s |
-| The Explorer's graph of 1000 endpoints | 190 ms |
+| The page loaded | 215 ms |
+| The Timeline showing the 2000 requests Studio kept | 0.6 s |
+| The Explorer's graph of 1000 endpoints | 215 ms |
 | Tasks holding the page's main thread over 50 ms, Timeline or Explorer open, while traffic streams in | none |
-| The page's JavaScript heap | 170 MB |
+| The page's JavaScript heap | 140 MB |
+| What the page is sent of the five mocks as it opens: their routes, scenarios and each collection's count | 0.9 MB |
+| The Store tab of a mock, its 3.4 MB of records asked for as the Mocks section opened | 70 ms |
 
 ## Running them yourself
 
@@ -113,4 +115,5 @@ The steps are `tsc`, `runtime`, `codegen`, `payloads`, `studio`, and inside it `
 - **Offer agents what they need.** The project marks every endpoint for agents, which makes 970 tools and 2 MB of their descriptions — far past the 40 where some clients start leaving tools out. The MCP server lists them in 30 ms; what to offer is [the project's agents policy](/docs/agents/overview#what-agents-may-call).
 - **Studio keeps the latest 2000 requests** and sends a page that opens as many of them as fit 16 MB. Clear the log from the Timeline to start afresh.
 - **Each mock is a process of its own.** One you do not need running still takes its memory; stop it from the Mocks page.
+- **A mock's records reach the page that shows them.** A page is told each collection's count as it opens; the Mocks section asks Studio for the records of the mock it shows, from the moment its link is pointed at, and keeps them current from then on. A page that never opens it is never sent them.
 - **Transforms are kept in `node_modules/.cache/courier`.** Studio, an attached app, the MCP server and `courier-server` reuse each module's transform until its bytes change, so only the first start pays for them; `COURIER_TRANSFORM_CACHE=0` turns that off.

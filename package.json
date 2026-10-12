@@ -32,7 +32,7 @@
     "@playwright/test": "^1.63.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^7.0.3",
-    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/git": "^11.0.1",
     "@semantic-release/github": "^12.0.9",
     "@tanstack/react-query": "^5.103.1",
     "@testing-library/dom": "^10.4.2",

@@ -598,7 +598,7 @@
         "courier.fileIcons.offer": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Offer once, in a Courier project, to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and `.courier` when the icon theme in use is Material Icon Theme or vscode-icons. The icons go in through that theme's own settings, in your user settings; **Courier: Remove Courier's Icons from the File Icon Theme** takes them out."
+          "markdownDescription": "Offer once, in a Courier project, to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and `.courier` when the icon theme in use is Material Icon Theme or vscode-icons — as Courier starts, or when you pick such a theme. The icons go in through that theme's own settings, in your user settings, and follow them to your other machines; **Courier: Remove Courier's Icons from the File Icon Theme** takes them out everywhere."
         }
       }
     },
@@ -735,7 +735,7 @@
           {
             "id": "icons",
             "title": "Mark Courier's files",
-            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, through that theme's settings, and come out again just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
+            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, through that theme's settings. Agree once: they follow you to your other machines through Settings Sync, stay through Courier's updates, and come out again everywhere just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
             "media": {
               "image": {
                 "light": "media/walkthrough/icons-light.png",

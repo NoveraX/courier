@@ -67,7 +67,7 @@ beforeEach(async () => {
       onError: reject,
     });
   });
-}, 30_000);
+});
 
 afterEach(async () => {
   for (const answer of lookups.waiting.splice(0)) answer(["127.0.0.1"]);

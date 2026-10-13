@@ -176,7 +176,7 @@ describe("POST /api/apis/write refuses an output directory the contract refuses"
   beforeAll(async () => {
     makeScratch(CONFIG_NO_IMPORTS);
     url = await start();
-  }, 30_000);
+  });
   afterAll(stop);
   beforeEach(() => void vi.spyOn(console, "warn").mockImplementation(() => {}));
   afterEach(() => vi.restoreAllMocks());
@@ -211,7 +211,7 @@ describe("POST /api/apis/layout refuses the same output directories and reads no
   beforeAll(async () => {
     makeScratch(CONFIG_NO_IMPORTS);
     url = await start();
-  }, 30_000);
+  });
   afterAll(stop);
 
   it.each(REFUSED_OUTPUT_DIRS)("%s → 400 with the field", async (_label, outputDir) => {
@@ -263,7 +263,7 @@ describe("POST /api/apis/write with a hostile import name or source name", () =>
     vi.spyOn(console, "warn").mockImplementation(() => {});
     makeScratch(CONFIG_NO_IMPORTS);
     url = await start();
-  }, 30_000);
+  });
   afterEach(async () => {
     vi.restoreAllMocks();
     await stop();
@@ -345,7 +345,7 @@ describe("the import key is written into each file's first line", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     makeScratch(CONFIG_NO_IMPORTS);
     url = await start();
-  }, 30_000);
+  });
   afterEach(async () => {
     vi.restoreAllMocks();
     await stop();
@@ -388,7 +388,7 @@ describe("routes that name an import only look it up", () => {
   beforeAll(async () => {
     makeScratch(CONFIG_PETS);
     url = await start();
-  }, 30_000);
+  });
   afterAll(stop);
 
   const NAMES = [

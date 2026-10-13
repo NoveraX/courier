@@ -210,7 +210,7 @@ describe("POST /api/apis/write with a crafted parsed spec", () => {
     mkdirSync(dirname(join(root, "courier.config.ts")), { recursive: true });
     writeFileSync(join(root, "courier.config.ts"), CONFIG);
     url = await start();
-  }, 30_000);
+  });
   afterAll(async () => {
     await studio?.close();
     studio = undefined;

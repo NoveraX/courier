@@ -61,7 +61,7 @@ beforeEach(async () => {
     options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
   });
   expect(written.status).toBe(200);
-}, 30_000);
+});
 
 afterEach(async () => {
   await studio?.close();

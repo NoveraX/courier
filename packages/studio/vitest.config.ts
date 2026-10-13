@@ -19,8 +19,11 @@ export default defineProject({
     ...sharedTestOptions,
     /* A generator suite compiles the code it generates with TypeScript, and
        a CLI suite starts Studio's command: seconds on a developer's machine,
-       several times that on a CI runner measuring coverage. */
+       several times that on a CI runner measuring coverage. Most suites
+       start Studio in a hook, before each test or once for all of them,
+       which is the same work, so a hook has as long as a test. */
     testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
   resolve: {
     alias: {

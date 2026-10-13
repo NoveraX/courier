@@ -39,7 +39,7 @@ function sources() {
 beforeAll(async () => {
   studio = await startLiveStudio({ "courier.config.ts": CONFIG });
   studio.ui.on("binding:snapshot", (snapshot: BindingSnapshotPayload) => snapshots.push(snapshot));
-}, 30_000);
+});
 
 afterAll(async () => {
   await app?.close();

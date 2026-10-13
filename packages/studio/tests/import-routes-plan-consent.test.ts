@@ -76,7 +76,7 @@ beforeEach(async () => {
   put("courier.config.ts", CONFIG);
   put("package.json", '{ "name": "mine" }\n');
   url = await start();
-}, 30_000);
+});
 
 afterEach(async () => {
   await studio?.close();

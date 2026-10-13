@@ -84,7 +84,7 @@ beforeEach(async () => {
       onError: reject,
     });
   });
-}, 30_000);
+});
 
 afterEach(async () => {
   await studio?.close();

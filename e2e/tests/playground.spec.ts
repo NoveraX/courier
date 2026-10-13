@@ -32,6 +32,9 @@ test("sends a call through the app, and shows the upstream's answer", async ({ p
   await page.getByRole("link", { name: "Playground" }).click();
 
   await page.locator("main button").first().click();
+  /* Typed before the list's search takes the focus, the keys would reach the
+     button that opened it, and Enter would close the list again. */
+  await expect(page.getByPlaceholder(/^Search \d+ endpoints/)).toBeFocused();
   await page.keyboard.type("users.list");
   await page.keyboard.press("Enter");
   await expect(page.locator("main button").first()).toContainText("list");

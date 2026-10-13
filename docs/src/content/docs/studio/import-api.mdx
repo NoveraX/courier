@@ -149,7 +149,7 @@ It takes a URL, a file, or `-` for standard input, and names the import after th
 - `--out`, `--validation`, `--group-by`, `--client`, `--no-types`, `--no-schemas`, `--no-comments` and `--auth-middleware` are the wizard's options, with its defaults.
 - `--no-declare` writes the files only, and prints the lines to add to `courier.config.ts` — each under the file it goes in, when the config takes its `sources` from a module.
 - A URL is fetched by the wizard's rules — see [Specifications on a private network](/docs/studio/import-api#specifications-on-a-private-network).
-- The project needs a `courier.config.ts`: without one, the command prints the config to start from.
+- The project needs a `courier.config.ts`: without one, the command prints the config to start from. Its variables are read first, as Studio reads them — `--dotenv` names the files.
 
 It exits 0 once the import is written and declared, or its plan shown with `--dry-run`, and 1 when it writes nothing or something fails.
 

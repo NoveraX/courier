@@ -6,6 +6,7 @@ import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
 import { listed } from "../../server/config-edit/file-changes";
 import { withImportsLock } from "../../server/imports-lock";
+import { loadProjectEnv } from "../../server/project-env";
 import { closeFormatProcesses } from "../../server/project-format/formatter-host";
 import type { ConfigFailure } from "../../server/project-state/types";
 import { type ImportWritePlan, planImportWrite, writeImport } from "../../server/write-import";
@@ -142,6 +143,7 @@ export async function runImport(given: string, run: ImportRun): Promise<number> 
   const asked = resolve(run.cwd ?? process.cwd());
   if (!existsSync(asked)) throw new Error(`There is no folder at ${asked}`);
   const root = realpathSync(asked);
+  loadProjectEnv(root, run.dotenv);
   /* The command says what it did itself; Studio's own info lines would say it twice. */
   const level = process.env.COURIER_LOG_LEVEL;
   process.env.COURIER_LOG_LEVEL = level ?? "warn";

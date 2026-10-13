@@ -5,6 +5,7 @@ import { formatStudioUrl, STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@nove
 import { type ArgsDef, defineCommand } from "citty";
 
 import { loadCourierConfig } from "../server/config-loader";
+import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 import { bridgeToStudio } from "./mcp-bridge";
 
 const log = createLogger("MCP");
@@ -22,6 +23,7 @@ export const MCP_ARGS = {
     valueHint: "url",
     description: "Studio's address (default: the one courier.config.ts gives Studio)",
   },
+  dotenv: DOTENV_ARG,
 } as const satisfies ArgsDef;
 
 /**
@@ -51,7 +53,7 @@ export const mcpCommand = defineCommand({
           `No Studio token in ${root}: start Studio there first, with npx @noverax/courier-studio`,
         );
       const token = readFileSync(tokenFile, "utf8").trim();
-      const url = `${(args.url ?? (await configuredUrl(root))).replace(/\/$/, "")}/mcp`;
+      const url = `${(args.url ?? (await configuredUrl(root, args.dotenv))).replace(/\/$/, "")}/mcp`;
       await bridgeToStudio({
         input: process.stdin,
         write: (line) => original(`${line}\n`),
@@ -66,7 +68,8 @@ export const mcpCommand = defineCommand({
   },
 });
 
-async function configuredUrl(root: string): Promise<string> {
+async function configuredUrl(root: string, dotenv: string | undefined): Promise<string> {
+  loadProjectEnv(root, dotenv);
   const { config } = await loadCourierConfig(root);
   return formatStudioUrl(
     config.studio?.host ?? STUDIO_DEFAULT_HOST,

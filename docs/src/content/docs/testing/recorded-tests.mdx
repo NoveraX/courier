@@ -70,6 +70,7 @@ It reads every HAR file of recordings in `tests/recorded` — or the files and f
 | `--out <path>` | Write the report to this file too |
 | `--ignore <endpoints>` | Endpoints left unchecked, comma-separated: `orders.get`, `admin.*`, or `payments:charges.create` for one source of several |
 | `--cwd <dir>` | The project's root (default: the working directory) |
+| `--dotenv <files>` | `.env` files to read before `courier.config.ts`, comma-separated, relative to the root (default: `.env.development.local`, `.env.local`, `.env.development` and `.env`, those there are) |
 
 In GitHub Actions, the Markdown report goes to the job's summary:
 

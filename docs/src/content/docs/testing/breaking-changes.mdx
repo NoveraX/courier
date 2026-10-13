@@ -83,3 +83,4 @@ Posting takes a token that may write to pull requests — `permissions: pull-req
 | `--fail-on <breaking\|warning\|never>` | What fails the command (default: `breaking`) |
 | `--comment` | Post the report on the pull request the GitHub Actions job runs for, as one comment later runs keep current |
 | `--cwd <dir>` | The project's root (default: the working directory) |
+| `--dotenv <files>` | `.env` files to read before `courier.config.ts`, comma-separated, relative to the root (default: `.env.development.local`, `.env.local`, `.env.development` and `.env`, those there are) |

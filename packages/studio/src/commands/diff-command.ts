@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type ArgsDef, defineCommand } from "citty";
 import { loadCourierConfig } from "../server/config-loader";
+import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 import { agentChanges, agentSurfaceOf } from "./diff/agent-access";
 import {
   agentAccessMarkdown,
@@ -61,6 +62,7 @@ export const DIFF_ARGS = {
     valueHint: "dir",
     description: "Project root directory (default: current working directory)",
   },
+  dotenv: DOTENV_ARG,
 } as const satisfies ArgsDef;
 
 /**
@@ -100,6 +102,7 @@ async function diff(args: {
   "fail-on"?: string | undefined;
   comment?: boolean | undefined;
   cwd?: string | undefined;
+  dotenv?: string | undefined;
 }): Promise<boolean> {
   const format = args.format ?? "text";
   const failOn = args["fail-on"] ?? "breaking";
@@ -108,6 +111,7 @@ async function diff(args: {
   if (!["breaking", "warning", "never"].includes(failOn))
     throw new Error(`--fail-on takes breaking, warning or never, not ${failOn}`);
   const root = resolve(args.cwd ?? process.cwd());
+  loadProjectEnv(root, args.dotenv);
   const base = args["base-openapi"]
     ? { documents: documentsInFiles(resolve(root, args["base-openapi"])), agents: undefined }
     : await definitionAtRef(root, args.base ?? "origin/main");

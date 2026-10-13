@@ -3,6 +3,7 @@ import type { BaseOptions } from "../http-client/types";
 import { assertSessionApi } from "../session/assert-session-api";
 import { studioHooks } from "../studio";
 import { isDevelopment } from "../utils/development";
+import { assertBoundaryMatches } from "./assert-boundary";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type { ProxyBoundary } from "./boundary-types";
 import type { BoundaryOf, WithBoundary } from "./exposed-api";
@@ -227,6 +228,7 @@ export function defineApi(
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
   assertSessionApi(result, rest, sourceName);
   assertTransportOptions(rest, "source");
+  if (rest.boundary !== undefined) assertBoundaryMatches(result, rest.boundary, sourceName);
 
   // Dev-only: notify studio of source (re)creation for HMR hot reload
   if (isDevelopment()) {

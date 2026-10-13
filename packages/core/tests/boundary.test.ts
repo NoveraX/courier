@@ -141,7 +141,7 @@ describe("defineBoundary — what it describes", () => {
     expect(both.endpoints["admin.purge"]).toEqual({ type: "mutation" });
   });
 
-  it("does not compile on the API when a read is declared a write, a write a read, or a path is misspelt", () => {
+  it("does not compile on the API, nor define it, when a read is declared a write, a write a read, or a path is misspelt", () => {
     const baseURL = "https://internal-api.corp.example";
     const readAsWrite = defineBoundary({ source: "api", expose: { "posts.list": "mutation" } });
     const writeAsRead = defineBoundary({ source: "api", expose: { "admin.purge": "query" } });
@@ -151,11 +151,17 @@ describe("defineBoundary — what it describes", () => {
     });
 
     // @ts-expect-error — a GET endpoint reads
-    defineApi({ baseURL, groups, boundary: readAsWrite });
+    expect(() => defineApi({ baseURL, groups, boundary: readAsWrite })).toThrow(
+      'exposes "posts.list" as a mutation, and the API defines it as a query',
+    );
     // @ts-expect-error — a DELETE endpoint writes
-    defineApi({ baseURL, groups, boundary: writeAsRead });
+    expect(() => defineApi({ baseURL, groups, boundary: writeAsRead })).toThrow(
+      'exposes "admin.purge" as a query, and the API defines it as a mutation',
+    );
     // @ts-expect-error — the API declares no posts.lsit
-    defineApi({ baseURL, groups, boundary: misspelt });
+    expect(() => defineApi({ baseURL, groups, boundary: misspelt })).toThrow(
+      'exposes "posts.lsit", which the API does not define',
+    );
   });
 
   it("does not compile a shape that is none of the five", () => {
@@ -368,8 +374,7 @@ describe("defineBoundary — registered under another source", () => {
   });
 
   it("is refused when the sources are registered", () => {
-    // @ts-expect-error — billing declares none of the paths this boundary names
-    const billing = defineApi({ baseURL: "https://billing.example", boundary, endpoints: {} });
+    const billing = defineApi({ baseURL: "https://billing.example", boundary, groups });
 
     let thrown: unknown;
     try {

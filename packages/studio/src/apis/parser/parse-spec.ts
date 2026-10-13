@@ -2,10 +2,10 @@
  * Main spec parser entry point: detects format and delegates to specific parsers.
  */
 
-import { parse as parseYaml } from "yaml";
 import { parseOpenApi3 } from "./parse-openapi3";
 import { parsePostman } from "./parse-postman";
 import { parseSwagger2 } from "./parse-swagger2";
+import { readYaml } from "./read-yaml";
 import { fieldOf, isNode } from "./spec-node";
 import { splitDirections } from "./split-directions";
 import type { ParsedSpec, SpecFormat } from "./types";
@@ -61,7 +61,7 @@ export function parseSpec(raw: string): ParsedSpec {
     );
   }
 
-  const parsed: unknown = format.endsWith("-yaml") ? parseYaml(text) : json;
+  const parsed: unknown = format.endsWith("-yaml") ? readYaml(text) : json;
   if (!isNode(parsed)) throw new Error("The specification holds no object at its top level.");
 
   if (format === "postman") return parsePostman(parsed);

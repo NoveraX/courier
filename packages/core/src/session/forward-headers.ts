@@ -1,4 +1,5 @@
 import { randomId } from "../utils/random-id";
+import { addressHeaders } from "./forward-address";
 import type { IncomingRequest } from "./incoming-request";
 import { requestIdFor } from "./request-state";
 import type { ForwardOptions } from "./types";
@@ -12,8 +13,6 @@ export const REQUEST_ID_HEADER = "x-request-id";
 const REQUEST_ID = /^[\x21\x23-\x5b\x5d-\x7e]{1,200}$/;
 /* version-traceid-parentid-flags, neither id all zeros, as W3C Trace Context writes it. */
 const TRACEPARENT = /^(?!ff)[\da-f]{2}-(?!0{32})[\da-f]{32}-(?!0{16})[\da-f]{16}-[\da-f]{2}$/;
-/* One address, or a forwarding chain of them, as a header carries it. */
-const ADDRESSES = /^[\u0020-\u007e]{1,512}$/;
 /* OpenTelemetry's API keeps itself here once anything registers it. */
 const OPEN_TELEMETRY = Symbol.for("opentelemetry.js.api.1");
 
@@ -41,12 +40,14 @@ export function forwardedHeaders(
     if (value) headers.push([name, value]);
   };
   if (forward.requestId) {
-    const name = typeof forward.requestId === "string" ? forward.requestId : REQUEST_ID_HEADER;
-    take(name, requestIdOf(incoming, name));
+    const names = headerNames(forward.requestId, REQUEST_ID_HEADER);
+    const id = requestIdOf(incoming, names);
+    for (const name of names) take(name, id);
   }
   if (forward.trace) for (const [name, value] of traceContext(incoming)) take(name, value);
-  const address = incoming.clientAddress?.trim();
-  if (forward.clientAddress && address && ADDRESSES.test(address)) take("x-forwarded-for", address);
+  if (forward.clientAddress) {
+    for (const [name, value] of addressHeaders(incoming, forward.clientAddress)) take(name, value);
+  }
   if (forward.userAgent) take("user-agent", incoming.headers.get("user-agent"));
   if (forward.locale) take("accept-language", incoming.headers.get("accept-language"));
   for (const name of forward.headers ?? []) take(name.toLowerCase(), incoming.headers.get(name));
@@ -70,11 +71,21 @@ export function isRequestId(value: string): boolean {
   return REQUEST_ID.test(value);
 }
 
-function requestIdOf(incoming: IncomingRequest, name: string): string {
+/* The request's id: the first of the named headers that carries one, or one made for it. */
+function requestIdOf(incoming: IncomingRequest, names: readonly string[]): string {
   return requestIdFor(incoming, () => {
-    const given = incoming.headers.get(name)?.trim();
-    return given && isRequestId(given) ? given : randomId();
+    for (const name of names) {
+      const given = incoming.headers.get(name)?.trim();
+      if (given && isRequestId(given)) return given;
+    }
+    return randomId();
   });
+}
+
+/* An option's header names, lower-cased and each once: `true` names the default. */
+function headerNames(option: true | string | readonly string[], fallback: string): string[] {
+  const names = option === true ? [fallback] : typeof option === "string" ? [option] : option;
+  return [...new Set(names.map((name) => name.toLowerCase()))];
 }
 
 /* The request's trace context, when it carries a valid one. */

@@ -85,21 +85,29 @@ export interface CsrfOptions {
 export interface ForwardOptions {
   /**
    * The id the request being served goes by: its own `x-request-id` when it
-   * carries a well-formed one, otherwise one made for it and shared by every
-   * call made while serving it. A string names another header.
+   * carries a well-formed one — the id nginx, a balancer or a platform
+   * wrote — otherwise one made for it and shared by every call made while
+   * serving it, so each API's logs join the application's. A header's name
+   * names another header; several are each sent the id, read from the first
+   * of them the request carries one in.
    */
-  requestId?: boolean | string | undefined;
+  requestId?: boolean | string | readonly string[] | undefined;
   /**
    * W3C trace context — `traceparent` and `tracestate` — when the request
    * carries a valid one and no tracer in the process propagates it already.
    */
   trace?: boolean | undefined;
   /**
-   * The address the user's request came from, as `X-Forwarded-For`: the one
-   * the framework vouches for, or the chain the proxy in front recorded —
-   * never one the request claims for itself past that proxy.
+   * The address the user's request came from, as `X-Forwarded-For`: the
+   * chain the proxies in front recorded, with the address of the one that
+   * connected — never one the request claims for itself past them. A
+   * header's name, or several, are each sent the user's address alone as
+   * well, for an API that reads it from one header — `X-Real-IP`,
+   * `X-Client-IP`, one of its own — read from the right of the chain past
+   * the deployment's proxies; naming `x-forwarded-for` sends it there in
+   * place of the chain, and `forwarded` as RFC 7239's `for=`.
    */
-  clientAddress?: boolean | undefined;
+  clientAddress?: boolean | string | readonly string[] | undefined;
   /** The user's browser, as `User-Agent` */
   userAgent?: boolean | undefined;
   /** The languages the user reads, as `Accept-Language` */

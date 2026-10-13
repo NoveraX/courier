@@ -2,21 +2,27 @@ import { ConfigurationError } from "../errors/configuration-error";
 import { isRecord } from "../utils/is-record";
 import { forwardOptionFor, headerNameProblem } from "./header-names";
 
-const FLAGS = ["trace", "clientAddress", "userAgent", "locale"] as const;
-const FORWARD_KEYS: ReadonlySet<string> = new Set([...FLAGS, "requestId", "headers"]);
+const FLAGS = ["trace", "userAgent", "locale"] as const;
+const FORWARD_KEYS: ReadonlySet<string> = new Set([
+  ...FLAGS,
+  "requestId",
+  "clientAddress",
+  "headers",
+]);
 
 /**
  * Refuse, where the API is defined, a `forward` that could not work as
  * written: a key it has no option for, a header name no request carries,
- * one that carries credentials or a connection's own headers, or one that
- * has an option of its own.
+ * one that carries credentials or a connection's own headers, one that
+ * claims a client's address outside `clientAddress`, or one that has an
+ * option of its own.
  *
  * @param forward - The `forward` the API was defined with
  * @param where - The API, named in the error
  * @throws ConfigurationError `FORWARD_OPTIONS_INVALID`
  * @example
  * ```ts
- * assertForwardOptions({ requestId: "x-correlation-id", headers: ["x-tenant"] }, "api");
+ * assertForwardOptions({ requestId: "x-correlation-id", clientAddress: ["x-real-ip"] }, "api");
  * ```
  */
 export function assertForwardOptions(forward: unknown, where: string): void {
@@ -35,13 +41,27 @@ function forwardProblem(forward: unknown): string | undefined {
   if (unknown !== undefined) return `has no option "${unknown}"`;
   const flag = FLAGS.find((key) => forward[key] !== undefined && typeof forward[key] !== "boolean");
   if (flag !== undefined) return `${flag} is true or false`;
-  return requestIdProblem(forward.requestId) ?? headersProblem(forward.headers);
+  return (
+    namesProblem("requestId", forward.requestId) ??
+    namesProblem("clientAddress", forward.clientAddress, "address") ??
+    headersProblem(forward.headers)
+  );
 }
 
-function requestIdProblem(requestId: unknown): string | undefined {
-  if (requestId === undefined || typeof requestId === "boolean") return undefined;
-  const problem = headerNameProblem(requestId);
-  return problem === undefined ? undefined : `requestId names its header: ${problem}`;
+/* An option that is true, false, a header's name or a list of them. */
+function namesProblem(
+  option: "requestId" | "clientAddress",
+  value: unknown,
+  carries?: "address",
+): string | undefined {
+  if (value === undefined || typeof value === "boolean") return undefined;
+  const names: unknown[] = Array.isArray(value) ? value : [value];
+  if (names.length === 0) return `${option} names at least one header, or is true or false`;
+  for (const name of names) {
+    const problem = headerNameProblem(name, carries);
+    if (problem !== undefined) return `${option} names its headers: ${problem}`;
+  }
+  return undefined;
 }
 
 function headersProblem(headers: unknown): string | undefined {

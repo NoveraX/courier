@@ -129,7 +129,7 @@ beforeAll(async () => {
   const runtime = await attachRuntime("own-copy");
   cleanups.push(() => runtime.detach());
   await until(() => getRuntimeEntry("own-copy") !== undefined, "the runtime to connect");
-}, 30_000);
+});
 
 afterAll(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();

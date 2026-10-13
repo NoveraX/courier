@@ -102,7 +102,7 @@ beforeAll(async () => {
       framesOf("binding:snapshot").some((s) => JSON.stringify(s).includes('"sourceName":"api"')),
     "the hosted source's row in a binding snapshot",
   );
-}, 30_000);
+});
 
 afterAll(async () => {
   ui.disconnect();

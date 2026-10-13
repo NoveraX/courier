@@ -59,7 +59,7 @@ beforeAll(async () => {
   sources = defineSources(upstream.url);
   app = await startLiveApp(studio.url, "app", sources);
   await until(() => getRuntimeEntry("app") !== undefined, "the runtime to connect");
-}, 30_000);
+});
 
 afterAll(async () => {
   await app.close();

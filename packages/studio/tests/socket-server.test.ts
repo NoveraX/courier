@@ -39,7 +39,7 @@ beforeEach(async () => {
     });
   });
   port = Number(new URL(url).port);
-}, 30_000);
+});
 
 afterEach(async () => {
   await studio?.close();

@@ -57,7 +57,7 @@ beforeEach(async () => {
       onError: reject,
     });
   });
-}, 30_000);
+});
 
 afterEach(async () => {
   for (const socket of sockets.splice(0)) socket.disconnect();

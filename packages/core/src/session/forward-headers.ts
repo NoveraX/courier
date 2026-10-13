@@ -51,10 +51,26 @@ export function forwardedHeaders(
   return headers;
 }
 
+/**
+ * Whether a header value is a request id: one word a log can hold, of at
+ * most 128 letters, digits and the punctuation ids are written with.
+ *
+ * @param value - The header's value
+ * @returns `true` for a well-formed id
+ * @example
+ * ```ts
+ * isRequestId("req_01H8Z:7f/+="); // → true
+ * isRequestId("a b"); // → false
+ * ```
+ */
+export function isRequestId(value: string): boolean {
+  return REQUEST_ID.test(value);
+}
+
 function requestIdOf(incoming: IncomingRequest, name: string): string {
   return requestIdFor(incoming, () => {
     const given = incoming.headers.get(name)?.trim();
-    return given && REQUEST_ID.test(given) ? given : randomId();
+    return given && isRequestId(given) ? given : randomId();
   });
 }
 

@@ -192,7 +192,7 @@ Cancel a read still in flight when the same endpoint is read again. Writes are n
 
 ### allowedHeaders
 
-Additional header names the proxy carries for every endpoint of the source, in both directions: forwarded from the browser to the backend, and passed back from the backend's answer to the browser. An endpoint names its own with `.headers([...])`, which adds to this list rather than replacing it. The lists govern only what the proxy passes along: headers the source, a middleware or an endpoint's own closure sets are written by you and are always sent.
+Additional header names the proxy carries for every endpoint of the source, in both directions: forwarded from the browser to the backend, and passed back from the backend's answer to the browser. An endpoint names its own with `.headers([...])`, which adds to this list rather than replacing it. The lists govern only what the proxy passes along: headers the source, a middleware or an endpoint's own closure sets are written by you and are always sent, and a browser's copy of one of them is dropped rather than sent in its place.
 
 ```ts
 const users = defineGroup({

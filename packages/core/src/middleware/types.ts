@@ -66,6 +66,11 @@ export type MiddlewareContext = {
   idempotencyKey?: string | undefined;
   /** Internal: Studio request ID for event correlation */
   _requestId?: string | undefined;
+  /**
+   * Internal: the headers whose value is still the copy the incoming request
+   * forwarded, which the API's session replaces with its own.
+   */
+  _forwarded?: ReadonlySet<string> | undefined;
 };
 
 /** Response returned from the middleware chain / endpoint execution */

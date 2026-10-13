@@ -37,6 +37,7 @@ function answering(values: string[]) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("a public cache", () => {
@@ -111,5 +112,36 @@ describe("a cache partitioned by session", () => {
     const second = await handler(contextFor({}), upstream.next);
 
     expect(second.data).toBe("public");
+  });
+});
+
+describe.each([
+  ["a page over plain HTTP, which has no crypto.subtle", { getRandomValues: (b: Uint8Array) => b }],
+  ["React Native, which has no crypto at all", undefined],
+])("a cache partitioned by session in %s", (_name, crypto) => {
+  it("answers each set of credentials from its own partition", async () => {
+    vi.stubGlobal("crypto", crypto);
+    const handler = cacheMiddleware({ scope: "session" }).handler as WrapHandler;
+    const upstream = answering(["alice's inbox", "bob's inbox", "never"]);
+
+    await handler(contextFor({ cookie: "sid=alice" }, true), upstream.next);
+    await handler(contextFor({ cookie: "sid=bob" }, true), upstream.next);
+    const alice = await handler(contextFor({ cookie: "sid=alice" }, true), upstream.next);
+
+    expect(alice.data).toBe("alice's inbox");
+    expect(upstream.calls).toBe(2);
+  });
+
+  it("names the partition by the digest crypto.subtle gives", async () => {
+    const keysWith = async (): Promise<string[]> => {
+      const storage = new Map();
+      const handler = cacheMiddleware({ scope: "session", storage }).handler as WrapHandler;
+      await handler(contextFor({ cookie: "sid=s3cr3t" }, true), answering(["x"]).next);
+      return [...storage.keys()] as string[];
+    };
+    const platform = await keysWith();
+    vi.stubGlobal("crypto", crypto);
+
+    expect(await keysWith()).toEqual(platform);
   });
 });

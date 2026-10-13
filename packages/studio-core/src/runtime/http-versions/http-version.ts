@@ -1,3 +1,5 @@
+import { parseUrl } from "@noverax/courier/internal";
+
 import type { HttpVersion } from "../../events/http";
 
 /** What a runtime knows of the HTTP versions its requests went over. */
@@ -43,7 +45,7 @@ export function httpVersionFromProtocol(protocol: string): HttpVersion | undefin
  * ```
  */
 export function originOf(url: string): string | undefined {
-  return URL.canParse(url) ? new URL(url).origin : undefined;
+  return parseUrl(url)?.origin;
 }
 
 /**

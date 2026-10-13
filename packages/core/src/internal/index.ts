@@ -127,6 +127,7 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export { parseUrl } from "../utils/parse-url";
 export {
   type RenderMemo,
   type RenderMemoProvider,

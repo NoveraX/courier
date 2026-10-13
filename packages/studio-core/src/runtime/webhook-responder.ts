@@ -1,4 +1,9 @@
-import { type KnownWebhook, knownWebhooks, onKnownWebhooks } from "@noverax/courier/internal";
+import {
+  type KnownWebhook,
+  knownWebhooks,
+  onKnownWebhooks,
+  parseUrl,
+} from "@noverax/courier/internal";
 import type { Socket } from "socket.io-client";
 
 /** What a runtime tells Studio of a webhook it can deliver. */
@@ -89,8 +94,9 @@ async function deliveryOf(asked: unknown, send: typeof fetch): Promise<DeliveryA
 
 /* Why a delivery may not go there, or `undefined` when it may. */
 function refusedAddress(to: string, known: KnownWebhook): string | undefined {
-  if (to.length > LONGEST_ADDRESS || !URL.canParse(to)) return `${to} is not an address.`;
-  const { protocol, hostname, origin, pathname } = new URL(to);
+  const address = to.length > LONGEST_ADDRESS ? undefined : parseUrl(to);
+  if (address === undefined) return `${to} is not an address.`;
+  const { protocol, hostname, origin, pathname } = address;
   if (protocol !== "http:" && protocol !== "https:")
     return `${to} is not an http or https address.`;
   if (isLoopback(hostname) || known.routes.includes(`${origin}${pathname}`)) return undefined;

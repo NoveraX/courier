@@ -4,6 +4,7 @@ import { LIMITS } from "./adapter/limits";
 import { createLogger } from "./logger";
 import { toWebRequest } from "./node-request";
 import type { WebSocketLike } from "./realtime/adapters";
+import { parseUrl } from "./utils/parse-url";
 import { socketError } from "./utils/socket-error";
 
 const log = createLogger("WS");
@@ -191,10 +192,7 @@ function onUpgradeError(error: Error): void {
 }
 
 function pathnameOf(req: IncomingMessage): string | undefined {
-  const target = req.url ?? "/";
-  return URL.canParse(target, "http://localhost")
-    ? new URL(target, "http://localhost").pathname
-    : undefined;
+  return parseUrl(req.url ?? "/", "http://localhost")?.pathname;
 }
 
 function webRequestOf(req: IncomingMessage): Request | undefined {

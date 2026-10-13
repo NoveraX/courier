@@ -1,6 +1,7 @@
 import { peerAddressOf } from "../adapter/peer-address";
 import type { Context } from "../http-client/types";
 import { forwardedChain } from "../utils/forwarded-for";
+import { parseUrl } from "../utils/parse-url";
 import { addressedOrigin } from "./addressed-origin";
 import type { IncomingRequest } from "./incoming-request";
 
@@ -46,5 +47,5 @@ function overlay(base: Headers, over: Headers): Headers {
 
 /* An adapter hands the proxy a request whose URL the client addressed. */
 function requestOrigin(request: Request): string | undefined {
-  return URL.canParse(request.url) ? new URL(request.url).origin : undefined;
+  return parseUrl(request.url)?.origin;
 }

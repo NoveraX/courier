@@ -1,4 +1,5 @@
 import { ConfigurationError } from "../errors";
+import { parseUrl } from "../utils/parse-url";
 
 const WEB_SCHEMES = new Set(["http:", "https:"]);
 
@@ -45,10 +46,10 @@ function entryProblem(entry: string): string | undefined {
   }
   if (entry.startsWith("*.")) return hostPatternProblem(entry.slice(2));
   const origin = entry.replace("://*.", "://");
-  if (!entry.includes("://") || !URL.canParse(origin)) {
+  const url = entry.includes("://") ? parseUrl(origin) : undefined;
+  if (url === undefined) {
     return 'is not an origin; write one as scheme://host[:port], such as "https://app.example.com"';
   }
-  const url = new URL(origin);
   if (!WEB_SCHEMES.has(url.protocol)) {
     return url.pathname === "" && url.search === "" && url.hash === ""
       ? undefined
@@ -67,7 +68,7 @@ function entryProblem(entry: string): string | undefined {
 
 /* A `*.host` pattern names a host, and the port it is served on at most. */
 function hostPatternProblem(host: string): string | undefined {
-  const valid = host !== "" && URL.canParse(`https://${host}`);
-  if (valid && new URL(`https://${host}`).host === host.toLowerCase()) return undefined;
+  const url = host === "" ? undefined : parseUrl(`https://${host}`);
+  if (url?.host === host.toLowerCase()) return undefined;
   return 'is not a sub-domain pattern; write one as "*.example.com" or "https://*.example.com"';
 }

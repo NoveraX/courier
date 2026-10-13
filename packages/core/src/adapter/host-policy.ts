@@ -17,6 +17,8 @@
  * a production host is reached through names its operator set up.
  */
 
+import { parseUrl } from "../utils/parse-url";
+
 /**
  * Decide whether a request was addressed to a host this app serves.
  *
@@ -68,8 +70,7 @@ export function isHostAccepted(
 
 /** The host name alone, as the URL parser normalizes it, or nothing for a malformed host. */
 function hostnameOf(host: string): string | undefined {
-  const url = `http://${host}`;
-  return URL.canParse(url) ? new URL(url).hostname : undefined;
+  return parseUrl(`http://${host}`)?.hostname;
 }
 
 /**

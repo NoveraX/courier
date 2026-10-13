@@ -1,3 +1,5 @@
+import { parseUrl } from "./parse-url";
+
 /** As many redirects as `fetch` follows before it gives up. */
 const MAX_REDIRECTS = 20;
 
@@ -60,9 +62,8 @@ export async function fetchWithinOrigin(
 function sameOriginLocation(response: Response, from: string, origin: string): string | undefined {
   if (!REDIRECT_STATUSES.has(response.status)) return undefined;
   const location = response.headers.get("location");
-  if (!location || !URL.canParse(location, from)) return undefined;
-  const next = new URL(location, from);
-  return next.origin === origin ? next.href : undefined;
+  const next = location ? parseUrl(location, from) : undefined;
+  return next?.origin === origin ? next.href : undefined;
 }
 
 /**

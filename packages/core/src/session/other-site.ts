@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { parseUrl } from "../utils/parse-url";
 import type { SessionTarget } from "./session-target";
 import type { SessionOptions } from "./types";
 
@@ -30,7 +31,7 @@ export function warnIfOtherSite(target: SessionTarget, session: SessionOptions):
   const key = `${page.origin} ${target.url}`;
   if (weighed.has(key)) return;
   weighed.add(key);
-  const api = URL.canParse(target.url, page.href) ? new URL(target.url, page.href) : undefined;
+  const api = parseUrl(target.url, page.href);
   if (api === undefined || sameSite(page.hostname, api.hostname)) return;
   const name = target.name.split(".")[0] || target.name;
   log.warn(

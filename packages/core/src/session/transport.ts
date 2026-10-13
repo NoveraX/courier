@@ -1,5 +1,6 @@
 import { isLocalAddress } from "../adapter/peer-address";
 import { ConfigurationError } from "../errors/configuration-error";
+import { parseUrl } from "../utils/parse-url";
 
 /* Names only a private network resolves: mDNS, the ICANN private-use TLD,
    home routers, Kubernetes and Consul service discovery. */
@@ -45,8 +46,8 @@ export function isPrivateHost(hostname: string): boolean {
  * ```
  */
 export function insecureTransport(url: string | undefined): string | undefined {
-  if (url === undefined || !URL.canParse(url)) return undefined;
-  const target = new URL(url);
+  const target = url === undefined ? undefined : parseUrl(url);
+  if (target === undefined) return undefined;
   if (target.protocol === "https:" || target.protocol === "wss:") return undefined;
   if (isPrivateHost(target.hostname)) return undefined;
   return `${target.origin} is reached over plain HTTP across the public internet, where anyone on the way could read the session`;

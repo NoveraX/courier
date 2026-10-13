@@ -5,6 +5,7 @@ import { appendSetCookie } from "./node-set-cookie";
 import type { IncomingRequest, RequestContextProvider } from "./session/incoming-request";
 import { preferRequestContext } from "./session/request-context";
 import { forwardedChain } from "./utils/forwarded-for";
+import { parseUrl } from "./utils/parse-url";
 
 /* One store and one provider for the process, however many copies of this
    module a bundler loads: a request entered in one is found from another. */
@@ -70,10 +71,7 @@ export function withIncomingRequest<TResult>(
  */
 export function nodeIncomingRequest(req: IncomingMessage, res?: ServerResponse): IncomingRequest {
   const { protocol, host } = addressedTo(req);
-  const origin =
-    host && URL.canParse(`${protocol}://${host}`)
-      ? new URL(`${protocol}://${host}`).origin
-      : undefined;
+  const origin = host ? parseUrl(`${protocol}://${host}`)?.origin : undefined;
   return {
     key: req,
     method: req.method ?? "GET",

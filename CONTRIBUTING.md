@@ -208,6 +208,20 @@ Visual Studio Marketplace and Open VSX, each the environment gives it a way in
 to. The Extensions workflow publishes the extensions by hand at a version
 already released.
 
+The Marketplace publisher's identity is a user-assigned managed identity in
+Microsoft Entra ID; an app registration signs in, but the Marketplace refuses
+it when it publishes. The identity needs no role in its subscription. Its
+federated credential trusts the `release` environment of this repository,
+whose GitHub tokens name the owner and the repository by their ids too:
+issuer `https://token.actions.githubusercontent.com`, subject
+`repo:NoveraX@266351334/courier@1175462942:environment:release` (the prefix
+before `:environment` is `sub_claim_prefix` in
+`gh api repos/NoveraX/courier/actions/oidc/customization/sub`). The
+environment holds the identity's client and tenant IDs as the variables
+`AZURE_CLIENT_ID` and `AZURE_TENANT_ID`. Run the Extensions workflow once with
+`identify`: it prints the id the Marketplace knows the identity by, which is
+added in the publisher's Members with the Contributor role.
+
 The packages are published by `scripts/release.ts` with the npm that comes
 with Node, never by semantic-release's own npm plugin, which `.releaserc.json`
 leaves out of its plugins. semantic-release installs that plugin all the same,

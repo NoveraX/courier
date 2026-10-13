@@ -262,6 +262,26 @@ describe("the graph", () => {
     ]);
   });
 
+  it("leaves a gap between any two cards of a column, sources of one endpoint each included", () => {
+    const oneEach: Catalog = Object.fromEntries(
+      ["mail", "widget", "geo"].map((name) => [
+        name,
+        {
+          baseURL: `https://${name}.example.com/`,
+          groups: { "": { prefix: "", endpoints: { ping: def({ path: "ping" }) } } },
+        },
+      ]),
+    );
+    const layout = graphLayoutOf(explorerModelOf(oneEach, [], NOW, 500), options);
+
+    for (const column of ["source", "group", "endpoint"] as const) {
+      const cards = layout.nodes.filter((node) => node.kind === column).sort((a, b) => a.y - b.y);
+      for (const [above, below] of cards.slice(1).map((card, at) => [cards[at], card] as const)) {
+        expect(below.y - (above ? above.y + above.height : 0)).toBeGreaterThanOrEqual(8);
+      }
+    }
+  });
+
   it("centres a group on its endpoints, and dims what is off the hovered branch or the search", () => {
     const layout = graphLayoutOf(model, { ...options, hover: "g:api.orders", query: "create" });
     const node = (id: string) => layout.nodes.find((n) => n.id === id);

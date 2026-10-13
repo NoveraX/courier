@@ -3,18 +3,25 @@ import type { HealthLevel } from "./endpoint-metrics";
 import type { ColorMetric } from "./metric-value";
 import type { NodeFigure } from "./node-figures";
 
+const HEIGHT = { source: 50, group: 40, endpoint: 40 } as const;
+
+/* The space left between two cards a row apart, the tallest of them included: two sources of one
+   endpoint each sit a row apart, and a row shorter than a source's card laid one over the other. */
+const ROW_GAP = 10;
+
 /**
  * Column positions and sizes, and the rows' spacing: a source wide enough
  * for its host and port. Each level of groups inside groups takes a column
  * of its own, `step` to the right of the one before, and the endpoints the
- * column after the deepest shown.
+ * column after the deepest shown. A row is the tallest card and a gap, so
+ * no two cards a row apart touch.
  */
 export const GRAPH = {
   x: { source: 0, group: 286, endpoint: 536 },
   width: { source: 236, group: 196, endpoint: 300 },
-  height: { source: 50, group: 40, endpoint: 40 },
+  height: HEIGHT,
   step: 250,
-  row: 48,
+  row: Math.max(HEIGHT.source, HEIGHT.group, HEIGHT.endpoint) + ROW_GAP,
   top: 52,
 } as const;
 

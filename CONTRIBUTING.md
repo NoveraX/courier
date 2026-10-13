@@ -218,16 +218,19 @@ written in `.github/release-notes/v<version>.md`; the release takes them in
 place of the list, under the same heading, for the GitHub release, the
 changelog and the release commit.
 
-A push to `master` only checks: every CI job runs once. A release is cut by
-hand once all of them have passed on the last commit of `master`, by running
-the Release workflow (Actions → Release → Run workflow): it does not check
-again, and it refuses a commit whose CI run has a job that failed or has not
-finished. It then waits for approval in the `release` environment, which
+A push to `master` runs every CI job once, and the run's last job is the
+release, cut by hand. Once every other job of the run has passed, the release
+job waits for approval in the `release` environment: on the run's page,
+Review deployments, then Approve and deploy. A run with a job that failed has
+no release to approve; Re-run failed jobs runs those jobs again and, once
+they pass, brings the release job back with them. A newer push to `master`
+cancels the older runs that have not started releasing, and the release
+refuses a commit that is no longer the newest on `master`. The environment
 holds the npm and Open VSX tokens and the Marketplace publisher's identity.
-It publishes every package to npm, and the editor extensions, at the same
-version, to the Visual Studio Marketplace and Open VSX, each the environment
-gives it a way in to. The Extensions workflow publishes the extensions by
-hand at a version already released.
+The release publishes every package to npm, and the editor extensions, at
+the same version, to the Visual Studio Marketplace and Open VSX, each the
+environment gives it a way in to. The Extensions workflow publishes the
+extensions by hand at a version already released.
 
 The Marketplace publisher's identity is a user-assigned managed identity in
 Microsoft Entra ID; an app registration signs in, but the Marketplace refuses

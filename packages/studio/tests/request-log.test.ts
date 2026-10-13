@@ -7,7 +7,6 @@
  * no longer say how it ended — rather than shown pending for good.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -31,14 +30,6 @@ function project(): string {
   return dir;
 }
 
-async function freePort(): Promise<number> {
-  const probe = createNetServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 async function startStudio(projectRoot = project()): Promise<string> {
   return (await runStudio(projectRoot)).url;
 }
@@ -46,10 +37,10 @@ async function startStudio(projectRoot = project()): Promise<string> {
 async function runStudio(
   projectRoot: string,
 ): Promise<{ url: string; token: string; close: () => Promise<void> }> {
-  const port = await freePort();
   return new Promise((resolve) => {
+    /* Port 0: the system picks one as Studio binds it, so no other test can take it in between. */
     const server = createStudioServer({
-      port,
+      port: 0,
       host: "127.0.0.1",
       projectRoot,
       onReady: (url) => resolve({ url, token: server.token, close: () => server.close() }),

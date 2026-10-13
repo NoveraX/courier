@@ -7,7 +7,6 @@
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, type Server } from "node:http";
-import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 import express from "express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -23,28 +22,19 @@ let root: string;
 let ui: Server;
 let uiOrigin: string;
 
-async function freePort(): Promise<number> {
-  const probe = createNetServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 beforeAll(async () => {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
   mkdirSync(cache, { recursive: true });
   root = mkdtempSync(join(cache, "project-"));
-  const port = await freePort();
-  await new Promise<void>((resolve) => {
+  /* Port 0: the system picks one as Studio binds it, so no other test can take it in between. */
+  origin = await new Promise<string>((resolve) => {
     server = createStudioServer({
-      port,
+      port: 0,
       host: "127.0.0.1",
       projectRoot: root,
-      onReady: () => resolve(),
+      onReady: resolve,
     });
   });
-  origin = `http://127.0.0.1:${port}`;
 
   /* The UI is built into the package; from the sources it is served from a build like this one. */
   const dist = join(root, "ui-dist");

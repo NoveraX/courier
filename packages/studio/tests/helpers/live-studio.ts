@@ -1,5 +1,4 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
 
@@ -19,14 +18,6 @@ export interface LiveStudio {
   close(): Promise<void>;
 }
 
-async function freePort(): Promise<number> {
-  const probe = createNetServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 /**
  * Start Studio on a free port for a project whose files are given, under the
  * repository's node_modules so a config resolves the workspace packages, and
@@ -41,10 +32,15 @@ export async function startLiveStudio(files: Record<string, string> = {}): Promi
   const root = mkdtempSync(join(cache, "project-"));
   for (const [path, content] of Object.entries(files)) writeFileSync(join(root, path), content);
 
-  const port = await freePort();
   let studio: ReturnType<typeof createStudioServer> | undefined;
+  /* Port 0: the system picks one as Studio binds it, so no other test can take it in between. */
   const url = await new Promise<string>((resolve) => {
-    studio = createStudioServer({ port, host: "127.0.0.1", projectRoot: root, onReady: resolve });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+    });
   });
   const ui = connect(`${url}/ui`, { transports: ["websocket"] });
   const events: Array<Record<string, unknown>> = [];

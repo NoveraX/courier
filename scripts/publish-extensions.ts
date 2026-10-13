@@ -151,7 +151,10 @@ async function main(argv: readonly string[]): Promise<void> {
   const published: boolean[] = [];
   if (process.env.MARKETPLACE_SIGNED_IN === "true")
     published.push(publishTo("marketplace", ordered));
-  else warn("The Visual Studio Marketplace was passed over: no identity signed in to it.");
+  else
+    warn(
+      "The Visual Studio Marketplace was passed over: no identity signed in to it. Upload the packages from the run's editor-extensions artifact on the publisher's page at marketplace.visualstudio.com/manage, Courier File Icons first.",
+    );
   if (process.env.OVSX_PAT) {
     const publishers = new Set(ordered.map((extension) => extension.publisher));
     for (const publisher of publishers) await ensureNamespace(publisher);

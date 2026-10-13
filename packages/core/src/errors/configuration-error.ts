@@ -214,6 +214,8 @@ export type ConfigurationErrorCode =
   | "SESSION_HEADER_CONFLICT"
   /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
   | "FORWARD_OPTIONS_INVALID"
+  /** The proxy's `rateLimit` cannot work as written: a budget that is not a positive count over a positive window, or a key or a store that is not one. */
+  | "RATE_LIMIT_INVALID"
   /**
    * A framework adapter was asked to serve requests with their session at
    * hand, and the framework serves them some way the adapter cannot wrap.

@@ -5,6 +5,13 @@ export { buildSSECorsHeaders } from "./format-sse";
 export { type ClientConnection, handleWhileConnected } from "./handle-while-connected";
 export { createWSHandler } from "./handle-ws";
 export type { HandlerConfig } from "./handler-config";
+export { type MemoryRateLimitOptions, memoryRateLimitStore } from "./rate-limit/memory-store";
+export type {
+  ProxyRateLimit,
+  RateLimitDecision,
+  RateLimitStore,
+  RateLimitWindow,
+} from "./rate-limit/types";
 export { requireSources } from "./require-sources";
 export type {
   SSEBroadcastEvent,

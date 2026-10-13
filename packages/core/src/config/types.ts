@@ -1,3 +1,4 @@
+import type { ProxyRateLimit } from "../adapter/rate-limit/types";
 import type { AgentPolicy } from "../agent/agent-policy";
 import type { AnySource } from "../define/types";
 
@@ -191,6 +192,17 @@ export interface CourierServerConfig {
    * 10 MB. A larger one is refused with 413 before it is read.
    */
   maxUploadBytes?: number | undefined;
+  /**
+   * How many calls one caller may make through the server: every call takes
+   * from `requests` in each `window`, a write from `writes` as well, and a
+   * call past either is answered 429. Left out, nobody is limited.
+   */
+  rateLimit?: ProxyRateLimit | undefined;
+  /**
+   * Answer only what a browser sent, refusing with 403 a request with
+   * neither `Sec-Fetch-Site` nor `Origin` — a filter for noise, not a lock.
+   */
+  browsersOnly?: boolean | undefined;
 }
 
 /**

@@ -11,6 +11,9 @@ import { createPostHandler } from "./handle-post";
 import { createSSEHandler } from "./handle-sse";
 import type { HandlerConfig } from "./handler-config";
 import { errorResponse } from "./parse";
+import { assertRateLimit } from "./rate-limit/assert-rate-limit";
+import { limitEntry } from "./rate-limit/limit-entry";
+import { createProxyLimiter } from "./rate-limit/proxy-limiter";
 import { servedSources } from "./served-sources";
 import { createSSEConnectionRegistry } from "./sse-registry";
 import type { SSEConnectionRegistry } from "./sse-types";
@@ -52,6 +55,7 @@ export function createHandler<TConnect extends ConnectResult = ConnectResult>(
 ): AdapterHandler;
 export function createHandler(config?: HandlerConfig): AdapterHandler {
   assertAllowedOrigins(config?.allowedOrigins, "createHandler");
+  assertRateLimit(config?.rateLimit, "createHandler");
   if (config?.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
   }
@@ -79,11 +83,16 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     return errorResponse(405, "Method not allowed");
   };
 
+  /* One limiter for every entry point, so a caller has one budget however an adapter mounts them. */
+  const limiter = createProxyLimiter(config);
+  const entry = (serve: (request: Request) => Promise<Response>) =>
+    gateEntry(limitEntry(serve, limiter, dt), config);
+
   return {
-    handle: gateEntry(route, config),
-    handleGet: gateEntry(get, config),
-    handlePost: gateEntry(post, config),
-    handleSSE: gateEntry(sse, config),
+    handle: entry(route),
+    handleGet: entry(get),
+    handlePost: entry(post),
+    handleSSE: entry(sse),
     sseConnections: sseRegistry,
     shutdownSSE: (opts) => sseRegistry.shutdown(opts),
   };

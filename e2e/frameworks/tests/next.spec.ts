@@ -150,6 +150,17 @@ test("a page with no route config that reads the session renders per request", a
   expect((await json("#plain")).sid).toBe("s%3Aada.sig");
 });
 
+test("a render's metadata and body send the same read once", async () => {
+  await clearReceived();
+
+  await page.goto(`${APP}/once`);
+  const once = await json("#once");
+
+  expect(once.again).toEqual(once.first);
+  expect(await received("GET", "/me")).toHaveLength(1);
+  await expect(page).toHaveTitle("Signed in");
+});
+
 test("a Pages Router page served by withRequestContext carries the session", async () => {
   await page.goto(`${APP}/legacy`);
 

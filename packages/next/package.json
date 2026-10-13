@@ -79,7 +79,8 @@
   },
   "peerDependencies": {
     "@noverax/courier": "^0.1.0",
-    "next": ">=14"
+    "next": ">=14",
+    "react": ">=18"
   },
   "devDependencies": {
     "@noverax/courier": "*"

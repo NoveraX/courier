@@ -1,7 +1,10 @@
 import { lstatSync } from "node:fs";
 import { errnoCode } from "../errno-code";
 import { NotRegularFileError } from "../not-regular-file-error";
-import { readRegularFile } from "../read-regular-file";
+import { assertOpenedInside } from "../project-fs/assert-opened-inside";
+import { PathOutsideProjectError } from "../project-fs/path-outside-project-error";
+import type { ProjectRoot } from "../project-fs/project-root";
+import { type RegularFile, readRegularFile } from "../read-regular-file";
 import { bodyHash } from "./body-hash";
 import { exactHash } from "./exact-hash";
 import { type GeneratedHeader, readGeneratedFile } from "./generated-header";
@@ -26,27 +29,29 @@ export type DiskFile =
     };
 
 /**
- * Read a project file for planning, never through a link and never
- * blocking on a FIFO: what is at the path, and for a regular file its body,
- * header and identity.
+ * Read a project file for planning, never through a link at it, never
+ * blocking on a FIFO, and never from outside the project: once the file is
+ * open, its path must still lead to it inside the project, so a folder on
+ * the way swapped for a link to elsewhere meanwhile counts as a link. What
+ * is at the path, and for a regular file its body, header and identity.
  *
- * @param path - The absolute path
+ * @param root - The project
+ * @param path - The absolute path, inside the project
  * @returns What is there
  * @throws The file system's error for anything but a missing path, a link or a non-file
  * @example
  * ```ts
- * const found = readDiskFile(join(root.path, "src/api/pets/index.ts"));
+ * const found = readDiskFile(root, join(root.path, "src/api/pets/index.ts"));
  * if (found.kind === "file") console.log(found.header?.import);
  * ```
  */
-export function readDiskFile(path: string): DiskFile {
+export function readDiskFile(root: ProjectRoot, path: string): DiskFile {
   if (isLink(path)) return { kind: "link" };
-  let file: ReturnType<typeof readRegularFile>;
+  let file: RegularFile | null;
   try {
-    file = readRegularFile(path);
+    file = readRegularFile(path, (fd) => assertOpenedInside(root, path, fd));
   } catch (error) {
-    if (error instanceof NotRegularFileError) return { kind: "not-a-file", found: error.message };
-    throw error;
+    return refusedAs(error);
   }
   if (file === null) return { kind: "absent" };
   const { header, body } = readGeneratedFile(file.bytes.toString("utf8"));
@@ -59,6 +64,16 @@ export function readDiskFile(path: string): DiskFile {
     header,
     identity: { dev: stats.dev, ino: stats.ino },
   };
+}
+
+/* What a refused read finds at the path; any other failure is the file system's to tell. */
+function refusedAs(error: unknown): DiskFile {
+  if (error instanceof NotRegularFileError) return { kind: "not-a-file", found: error.message };
+  /* A folder on the way, or the file itself, became a link or another file while it opened. */
+  if (error instanceof PathOutsideProjectError) return { kind: "link" };
+  /* Removed once it was open: the path holds nothing now. */
+  if (errnoCode(error) === "ENOENT") return { kind: "absent" };
+  throw error;
 }
 
 function isLink(path: string): boolean {

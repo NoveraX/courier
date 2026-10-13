@@ -10,7 +10,7 @@ import { walkTsFiles } from "./walk-ts-files";
  * Find the files in an import's directory whose header says Studio wrote
  * them for that import — its files in a clone where Studio has no record.
  * Links are not followed; a directory that leads outside the project holds
- * none.
+ * none, and nor does a folder that became a link while it was read.
  *
  * @param root - The project
  * @param dir - The import's directory, project-relative
@@ -31,7 +31,7 @@ export function claimedFiles(root: ProjectRoot, dir: string, importName: string)
   }
   const found: string[] = [];
   walkTsFiles(absolute, (file) => {
-    const disk = readDiskFile(file);
+    const disk = readDiskFile(root, file);
     if (disk.kind === "file" && disk.header?.import === importName) {
       found.push(relative(root.path, file).split(sep).join("/"));
     }

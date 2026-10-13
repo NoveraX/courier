@@ -1,9 +1,14 @@
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type PathAliases, readPathAliases } from "@noverax/courier-studio-core/config";
 
 import { type ParsedSource, parseSource } from "../../mocks-edit/plan/parse-source";
+import { NotRegularFileError } from "../../not-regular-file-error";
+import { assertOpenedInside } from "../../project-fs/assert-opened-inside";
+import { PathOutsideProjectError } from "../../project-fs/path-outside-project-error";
+import type { ProjectRoot } from "../../project-fs/project-root";
+import { type RegularFile, readRegularFile } from "../../read-regular-file";
 import { resolveConfigImport } from "../../resolve-config-import";
 
 const log = createLogger("Studio");
@@ -29,8 +34,10 @@ export interface SourceModules {
  * Read the project's modules for a schema edit. A file outside the
  * project, in `node_modules`, too large, not a script, or that does not
  * parse cleanly is no module of its own: Studio edits only what it can
- * read whole. Imports resolve as the config loader resolves them, the
- * tsconfig's path aliases included.
+ * read whole. So is a file whose folder became a link to elsewhere while
+ * it was read: once open, its path must still lead to it in the project.
+ * Imports resolve as the config loader resolves them, the tsconfig's path
+ * aliases included.
  *
  * @param projectRoot - The project's root
  * @returns The modules
@@ -43,12 +50,13 @@ export interface SourceModules {
 export function sourceModules(projectRoot: string): SourceModules {
   /* Every path it is asked about is one with its links resolved, as the loader gives them. */
   const root = realpathSync(projectRoot);
+  const project: ProjectRoot = { path: root, real: realpathSync.native(root) };
   const parsed = new Map<string, ParsedSource | undefined>();
   let aliases: PathAliases | undefined;
   return {
     root,
     module: (path) => {
-      if (!parsed.has(path)) parsed.set(path, read(root, path));
+      if (!parsed.has(path)) parsed.set(path, read(project, path));
       return parsed.get(path);
     },
     imported: (from, specifier) => {
@@ -60,11 +68,34 @@ export function sourceModules(projectRoot: string): SourceModules {
   };
 }
 
-function read(root: string, path: string): ParsedSource | undefined {
-  if (!isProjectSource(root, path) || !existsSync(path)) return undefined;
-  if (statSync(path).size > MAX_BYTES) return undefined;
-  const source = parseSource(path, readFileSync(path, "utf8"));
+function read(root: ProjectRoot, path: string): ParsedSource | undefined {
+  if (!isProjectSource(root.path, path)) return undefined;
+  const size = sizeOf(path);
+  if (size === undefined || size > MAX_BYTES) return undefined;
+  const file = readInside(root, path);
+  if (file === null || file.stats.size > MAX_BYTES) return undefined;
+  const source = parseSource(path, file.bytes.toString("utf8"));
   return source.problem === null ? source : undefined;
+}
+
+/* As `existsSync` tells it: a path that cannot be looked at holds no module. */
+function sizeOf(path: string): number | undefined {
+  try {
+    return statSync(path).size;
+  } catch {
+    return undefined;
+  }
+}
+
+/* A link, a folder or a path that left the project while it opened holds no module. */
+function readInside(root: ProjectRoot, path: string): RegularFile | null {
+  try {
+    return readRegularFile(path, (fd) => assertOpenedInside(root, path, fd));
+  } catch (error) {
+    if (error instanceof NotRegularFileError || error instanceof PathOutsideProjectError)
+      return null;
+    throw error;
+  }
 }
 
 function isProjectSource(root: string, path: string): boolean {

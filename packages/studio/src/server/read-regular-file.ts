@@ -37,9 +37,12 @@ export interface RegularFile {
  * blocking on a FIFO, a device or anything else that is not a regular file.
  *
  * The bytes and the stats describe one file, read through one descriptor,
- * even if its name is swapped meanwhile.
+ * even if its name is swapped meanwhile. A caller that must know more of
+ * the file opened than its name can say — where it really is — checks the
+ * descriptor before a byte is read.
  *
  * @param path - The file
+ * @param verify - Checks the descriptor once the file is open, and throws to refuse it
  * @returns Its bytes and stats, or `null` when there is nothing at the path
  * @throws {NotRegularFileError} When the path is a symbolic link or not a regular file
  * @throws The file system's error for anything else, such as `EACCES`
@@ -49,13 +52,14 @@ export interface RegularFile {
  * if (file !== null) console.log(file.bytes.length, file.stats.mode);
  * ```
  */
-export function readRegularFile(path: string): RegularFile | null {
+export function readRegularFile(path: string, verify?: (fd: number) => void): RegularFile | null {
   const fd = openNoFollow(path);
   if (fd === null) return null;
   try {
     if (OPENS_THROUGH_LINKS) refuseLinkAtName(path, fd);
     const stats = fstatSync(fd);
     if (!stats.isFile()) throw new NotRegularFileError(path, describeKind(stats));
+    verify?.(fd);
     return { bytes: readFileSync(fd), stats };
   } finally {
     closeSync(fd);

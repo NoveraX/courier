@@ -1,4 +1,4 @@
-import { existsSync, lstatSync, readFileSync, renameSync, unlinkSync } from "node:fs";
+import { existsSync, renameSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { assertRealInside } from "../project-fs/assert-real-inside";
@@ -75,7 +75,7 @@ function undoEntry(
   /* Nothing is undone through a link: a folder on the way that leads elsewhere refuses the step. */
   assertRealInside(root, target);
   assertRealInside(root, copy);
-  const found = readDiskFile(target);
+  const found = readDiskFile(root, target);
   const holdsWrite =
     found.kind === "file" &&
     found.exact === entry.sha256 &&
@@ -88,14 +88,18 @@ function undoEntry(
   /* Without a copy the apply either never reached the file, or the copy is lost. */
   if (!existsSync(copy)) return reached ? "lost" : "undone";
   /* Never replaced: the copy only duplicates the file, and would keep a backup of nothing. */
-  if (entry.step === "write" && found.kind === "file" && isCopyOf(copy, target, found.identity)) {
+  if (
+    entry.step === "write" &&
+    found.kind === "file" &&
+    isCopyOf(readDiskFile(root, copy), found)
+  ) {
     retryOnWin32(() => unlinkSync(copy), `Deleting the copy of ${entry.path}`);
     return "undone";
   }
   if (!reached) return "changed";
   if (!restore) return "withheld";
   /* Studio removes only files it signed for the import, so a copy that is not one is not its own. */
-  if (entry.step === "remove" && !signedFor(readDiskFile(copy), journal.importName))
+  if (entry.step === "remove" && !signedFor(readDiskFile(root, copy), journal.importName))
     return "withheld";
   ensureDirectory(root, dirname(target));
   retryOnWin32(() => renameSync(copy, target), `Restoring ${entry.path}`);
@@ -103,12 +107,12 @@ function undoEntry(
 }
 
 /* Whether the path still holds the very file copied: the same file, or the same bytes. A body
-   hash would not do: it ignores Studio's header and line endings, which a replace may change. */
-function isCopyOf(copy: string, target: string, identity: { dev: bigint; ino: bigint }): boolean {
-  const stats = lstatSync(copy, { bigint: true });
-  if (!stats.isFile()) return false;
-  if (stats.dev === identity.dev && stats.ino === identity.ino) return true;
-  return readFileSync(copy).equals(readFileSync(target));
+   hash would not do: it ignores Studio's header and line endings, which a replace may change.
+   Both are read as every file here is, from inside the project only. */
+function isCopyOf(copy: DiskFile, found: Extract<DiskFile, { kind: "file" }>): boolean {
+  if (copy.kind !== "file") return false;
+  const { dev, ino } = copy.identity;
+  return (dev === found.identity.dev && ino === found.identity.ino) || copy.exact === found.exact;
 }
 
 function signedFor(found: DiskFile, importName: string): boolean {

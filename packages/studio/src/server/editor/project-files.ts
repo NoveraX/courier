@@ -32,7 +32,9 @@ const MOST_FILES = 20_000;
  * The project's code files, relative to its root: those Git tracks or would
  * track — so what `.gitignore` leaves out is left out — or, outside a Git
  * repository, those under the root but in dependencies, builds and caches.
- * At most 20 000.
+ * A link to a file is listed as Git lists one, and a link to a folder is
+ * not walked into; whether a link leads inside the project is for the
+ * reader of a file to tell. At most 20 000.
  *
  * @param root - The project's root
  * @returns The files, with `/` between folders
@@ -68,7 +70,7 @@ async function walk(root: string, dir: string, found: string[] = []): Promise<st
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (entry.isDirectory() && !SKIPPED.has(entry.name)) {
       await walk(root, join(dir, entry.name), found);
-    } else if (entry.isFile()) {
+    } else if (entry.isFile() || entry.isSymbolicLink()) {
       found.push(relative(root, join(dir, entry.name)).split(sep).join("/"));
     }
   }

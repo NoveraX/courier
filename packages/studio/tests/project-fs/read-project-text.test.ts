@@ -2,27 +2,59 @@
  * Reading a file a request names in the project says what is wrong with the
  * path as the request named it — a folder given as the spec file is named
  * as the request gave it, not by its absolute path on the machine Studio
- * runs on.
+ * runs on — and reads nothing outside the project, not even through a
+ * folder swapped for a link between the checks and the open.
  */
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import type * as Fs from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { projectRootAt } from "../../src/server/project-fs/project-root";
 import { readProjectText } from "../../src/server/project-fs/read-project-text";
+import { readRegularFile } from "../../src/server/read-regular-file";
 
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof Fs>();
+  return { ...actual, openSync: vi.fn(actual.openSync) };
+});
+
+let base: string;
 let root: string;
 
 beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "courier-read-project-text-")));
-  mkdirSync(join(root, "specs"));
+  base = realpathSync(mkdtempSync(join(tmpdir(), "courier-read-project-text-")));
+  root = join(base, "project");
+  mkdirSync(join(root, "specs"), { recursive: true });
   writeFileSync(join(root, "specs", "pets.json"), "{}");
+  mkdirSync(join(base, "outside"));
+  writeFileSync(join(base, "outside", "pets.json"), "outside");
 });
 
 afterEach(() => {
-  rmSync(root, { recursive: true, force: true });
+  vi.mocked(openSync).mockReset();
+  rmSync(base, { recursive: true, force: true });
 });
+
+/* The next open first finds `specs` a link to the folder outside, as a racing process would leave it. */
+async function swapBeforeTheOpen(): Promise<void> {
+  const actual = await vi.importActual<typeof Fs>("node:fs");
+  vi.mocked(openSync).mockImplementationOnce((...args: Parameters<typeof actual.openSync>) => {
+    renameSync(join(root, "specs"), join(root, "specs-real"));
+    symlinkSync(join(base, "outside"), join(root, "specs"));
+    return actual.openSync(...args);
+  });
+}
 
 describe("readProjectText", () => {
   it("reads a file in the project", () => {
@@ -43,4 +75,26 @@ describe("readProjectText", () => {
     });
     expect(String(refusal)).not.toContain(root);
   });
+
+  it.skipIf(process.platform === "win32")(
+    "refuses a file a folder swapped for a link outside, after the checks and before the open, would have it read",
+    async () => {
+      await swapBeforeTheOpen();
+
+      expect(() => readProjectText(projectRootAt(root), "specs/pets.json")).toThrow(
+        'Studio refused "specs/pets.json": a symbolic link on the way leads outside the project.',
+      );
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "is refused by its check of the open file: the open alone reads the file outside",
+    async () => {
+      await swapBeforeTheOpen();
+
+      expect(readRegularFile(join(root, "specs", "pets.json"))?.bytes.toString("utf8")).toBe(
+        "outside",
+      );
+    },
+  );
 });

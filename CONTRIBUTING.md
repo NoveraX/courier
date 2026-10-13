@@ -222,6 +222,12 @@ environment holds the identity's client and tenant IDs as the variables
 `identify`: it prints the id the Marketplace knows the identity by, which is
 added in the publisher's Members with the Contributor role.
 
+Until the Marketplace has a way in, a release publishes the extensions to
+Open VSX alone and keeps both packages as the run's `editor-extensions`
+artifact. They are uploaded by hand on the publisher's page at
+marketplace.visualstudio.com/manage, Courier File Icons first, since Courier
+installs it.
+
 The packages are published by `scripts/release.ts` with the npm that comes
 with Node, never by semantic-release's own npm plugin, which `.releaserc.json`
 leaves out of its plugins. semantic-release installs that plugin all the same,

@@ -60,3 +60,14 @@ jobs:
           MARKETPLACE_SIGNED_IN: ${{ vars.AZURE_CLIENT_ID != '' }}
           MODE: ${{ inputs.identify && '--identify' || '' }}
         run: npx tsx scripts/publish-extensions.ts $MODE
+
+      # The packages, for a marketplace the run had no way in to: uploaded by
+      # hand on its publisher page, Courier File Icons first.
+      - name: Keep the editor extensions
+        if: always() && !inputs.identify
+        uses: actions/upload-artifact@v7
+        with:
+          name: editor-extensions
+          path: packages/*/dist/*.vsix
+          if-no-files-found: ignore
+          retention-days: 90

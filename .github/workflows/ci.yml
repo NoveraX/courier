@@ -393,3 +393,14 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
           MARKETPLACE_SIGNED_IN: ${{ vars.AZURE_CLIENT_ID != '' }}
         run: npx tsx scripts/publish-extensions.ts
+
+      # The packages as released, for a marketplace the run had no way in to:
+      # uploaded by hand on its publisher page, Courier File Icons first.
+      - name: Keep the editor extensions
+        if: always() && steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-')
+        uses: actions/upload-artifact@v7
+        with:
+          name: editor-extensions
+          path: packages/*/dist/*.vsix
+          if-no-files-found: ignore
+          retention-days: 90

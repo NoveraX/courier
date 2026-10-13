@@ -205,7 +205,7 @@ Each runs from the project's folder, the API's handed the project's `.env` files
 
 Studio writes where it runs to `.courier/studio.json` in your project, and the extension reads it — for a monorepo, each project's own Studio, the one nearest the file you are in. Studio finds the calls in the file as it stands in the editor, saved or not, the same way it finds them for **Called from** in its inspector: a member chain that ends with an endpoint's name, `api.orders.place()`, and a query hook that names one, `q.orders.useQuery("list")`, in TypeScript, JavaScript, and the scripts of Vue, Svelte and Astro components.
 
-The extension sends Studio the text of the files you open, so it talks only to a Studio on this machine: an address naming another host, in a project's file or in the settings, is ignored. It reads Studio's token from the project's `.courier/studio-token` only for what changes something — a mock's scenario or conditions, and Studio's own tab — and a question to `@courier` in words goes to the model you picked in the chat with Studio's figures for this session. It sends nothing anywhere else.
+The extension sends Studio the text of the files you open, so it talks only to a Studio on this machine: an address naming another host, in a project's file or in the settings, is ignored. It reads Studio's token from the project's `.courier/studio-token` for what reads your code or changes something — where an endpoint is called and declared and the groups a new endpoint can go in, which Studio shows only to a caller with the token; a mock's scenario or conditions; and Studio's own tab — and a question to `@courier` in words goes to the model you picked in the chat with Studio's figures for this session. It sends nothing anywhere else.
 
 <br />
 

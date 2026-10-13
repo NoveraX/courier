@@ -36,6 +36,7 @@
   "sideEffects": [
     "./lib/cli.js",
     "./lib/format-worker.js",
+    "./lib/job-memory-watch.js",
     "./lib/mock-worker.js",
     "./lib/spec-worker.js"
   ],

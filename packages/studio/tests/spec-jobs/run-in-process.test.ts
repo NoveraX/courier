@@ -5,13 +5,17 @@
  * speaks another version — fails the job at once, saying how to fix it,
  * rather than leave it unanswered for its whole budget. A process that is
  * stopped however busy it is, or that fails however it fails, leaves Studio
- * running; one whose Studio has gone ends too.
+ * running; one that takes more memory than it may, outside its heap too, is
+ * stopped as over its budget; one whose Studio has gone ends too, however
+ * busy.
  */
+import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-
+import { JOB_MEMORY_CAP } from "../../src/server/job-memory-cap";
 import { TRUSTED_JOB } from "../../src/server/spec-jobs/job-budgets";
 import { runInProcess, WORKER_READY_MS } from "../../src/server/spec-jobs/run-in-process";
 import { SPEC_JOB_PROTOCOL } from "../../src/server/spec-jobs/spec-job-protocol";
@@ -19,15 +23,17 @@ import { SpecWorkLimitError } from "../../src/server/spec-jobs/spec-work-limit-e
 import { StudioWorkerError } from "../../src/server/spec-jobs/studio-worker-error";
 import { startWorkerProcess } from "../../src/server/worker-process";
 
-const script = vi.hoisted(() => ({ path: "", spec: "", format: "" }));
+const script = vi.hoisted(() => ({ path: "", spec: "", format: "", watch: "" }));
 
 vi.mock("../../src/server/worker-scripts", async (importOriginal) => {
   const built = await importOriginal<{
     SPEC_WORKER_SCRIPT: string;
     FORMAT_WORKER_SCRIPT: string;
+    JOB_MEMORY_WATCH_SCRIPT: string;
   }>();
   script.spec = built.SPEC_WORKER_SCRIPT;
   script.format = built.FORMAT_WORKER_SCRIPT;
+  script.watch = built.JOB_MEMORY_WATCH_SCRIPT;
   return {
     ...built,
     get SPEC_WORKER_SCRIPT() {
@@ -257,7 +263,36 @@ describe("runInProcess with this build's worker script", () => {
     expect(failure).toBeInstanceOf(SpecWorkLimitError);
     expect(String((failure as Error).message)).toContain("64 MB");
   });
+  it("stops a process that takes more memory than it may, outside its heap too, however busy", async () => {
+    script.path = workerScript(
+      "hoards.mjs",
+      [
+        GREETING,
+        `const kept = [];`,
+        `process.on("message", () => { for (;;) kept.push(Buffer.alloc(8 * 1024 * 1024, 1)); });`,
+      ].join("\n"),
+    );
+    const started = Date.now();
+
+    const failure = await failureOf(
+      runInProcess(JOB, { ms: 60_000, heapMb: 64, memoryMb: 192 }).reply,
+    );
+
+    expect(failure).toBeInstanceOf(SpecWorkLimitError);
+    expect(String((failure as Error).message)).toContain("192 MB");
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
 });
+
+/* Whether a process is still there. */
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 describe("a worker process whose Studio has gone", () => {
   /* Its channel to Studio closes as Studio ends; Node reports its exit then,
@@ -275,5 +310,41 @@ describe("a worker process whose Studio has gone", () => {
     worker.child.disconnect();
 
     expect(await exited).toBe(0);
+  });
+  it("ends however busy once Studio is gone, its memory watch seeing it go", async () => {
+    const spins = workerScript(
+      "spins.mjs",
+      [GREETING, "setImmediate(() => { for (;;); });"].join("\n"),
+    );
+    const leaves = workerScript(
+      "leaves.mjs",
+      [
+        `import { fork } from "node:child_process";`,
+        `import { writeSync } from "node:fs";`,
+        `const child = fork(${JSON.stringify(spins)}, [], {`,
+        `  execArgv: [${JSON.stringify(`--import=${pathToFileURL(script.watch).href}`)}],`,
+        `  env: { ...process.env, ${JSON.stringify(JOB_MEMORY_CAP.env)}: "1024" },`,
+        `  stdio: ["ignore", "ignore", "ignore", "ipc"],`,
+        `});`,
+        `child.once("message", () => { writeSync(1, String(child.pid)); process.exit(0); });`,
+      ].join("\n"),
+    );
+    const studio = spawn(process.execPath, [leaves], { stdio: ["ignore", "pipe", "inherit"] });
+    let said = "";
+    studio.stdout.setEncoding("utf8");
+    studio.stdout.on("data", (chunk: string) => {
+      said += chunk;
+    });
+    await new Promise((resolve) => studio.once("exit", resolve));
+    const pid = Number(said);
+
+    try {
+      await vi.waitUntil(() => !alive(pid), { timeout: 5_000, interval: 50 });
+    } finally {
+      if (pid > 0 && alive(pid)) process.kill(pid, "SIGKILL");
+    }
+
+    expect(pid).toBeGreaterThan(0);
+    expect(alive(pid)).toBe(false);
   });
 });

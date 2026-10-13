@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 
 import { startWorkerProcess, stopWorkerProcess, type WorkerProcess } from "../worker-process";
-import { SPEC_WORKER_SCRIPT } from "../worker-scripts";
-import { type JobBudget, jobFlags } from "./job-budgets";
+import { JOB_MEMORY_WATCH_SCRIPT, SPEC_WORKER_SCRIPT } from "../worker-scripts";
+import { type JobBudget, jobFlags, jobMemoryMb } from "./job-budgets";
 import { listenToProcess } from "./listen-to-process";
 import type { ReplyTo, SpecJob } from "./spec-job-protocol";
 import { SpecWorkLimitError } from "./spec-work-limit-error";
@@ -67,13 +67,13 @@ export function runInProcess<TJob extends SpecJob>(
 ): JobRun<ReplyTo<TJob["kind"]>> {
   signal?.throwIfAborted();
   const flags = jobFlags(budget);
-  if (!existsSync(SPEC_WORKER_SCRIPT)) {
-    return {
-      reply: Promise.reject(StudioWorkerError.missing(SPEC_WORKER_SCRIPT)),
-      exited: Promise.resolve(),
-    };
+  const missing = [SPEC_WORKER_SCRIPT, JOB_MEMORY_WATCH_SCRIPT].find(
+    (script) => !existsSync(script),
+  );
+  if (missing !== undefined) {
+    return { reply: Promise.reject(StudioWorkerError.missing(missing)), exited: Promise.resolve() };
   }
-  const worker = startWorkerProcess(SPEC_WORKER_SCRIPT, flags);
+  const worker = startWorkerProcess(SPEC_WORKER_SCRIPT, flags, { memoryMb: jobMemoryMb(budget) });
   const exited = new Promise<void>((resolve) => worker.child.once("close", () => resolve()));
   const reply = new Promise<ReplyTo<TJob["kind"]>>((resolve, reject) => {
     watch(worker, job, budget, signal, { resolve, reject });

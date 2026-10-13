@@ -11,6 +11,7 @@ export default defineConfig({
     "mock-worker": "src/server/mock-manager/mock-worker.ts",
     "format-worker": "src/server/project-format/format-worker.ts",
     "spec-worker": "src/server/spec-jobs/spec-worker.ts",
+    "job-memory-watch": "src/server/job-memory-watch.ts",
     vite: "src/plugins/vite.ts",
     next: "src/plugins/next.ts",
     nuxt: "src/plugins/nuxt.ts",

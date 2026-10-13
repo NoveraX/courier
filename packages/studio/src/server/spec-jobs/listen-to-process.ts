@@ -1,5 +1,5 @@
 import type { WorkerProcess } from "../worker-process";
-import type { JobBudget } from "./job-budgets";
+import { type JobBudget, jobMemoryMb } from "./job-budgets";
 import {
   isReplyTo,
   isWorkerReady,
@@ -24,8 +24,9 @@ export interface ProcessOutcomes<TReply> {
  * Listen to a job's worker process: its greeting — of this build's version,
  * or of another build's, which fails the job at once — its reply to the
  * job, once it has greeted, and its end. A process that ends before it
- * answers ran out of its heap, as V8 reports on its stderr, or failed;
- * either way Studio, in a process of its own, goes on.
+ * answers ran out of its heap, as V8 reports on its stderr, or took more
+ * memory than its whole process may, as its memory watch reports there, or
+ * failed; whichever, Studio, in a process of its own, goes on.
  *
  * @param worker - The process, and what its stderr said
  * @param job - The job it is given
@@ -56,8 +57,9 @@ export function listenToProcess<TJob extends SpecJob>(
   );
 }
 
-/* Why a process ended before it answered: out of its heap, or another
-   failure — with the error it reported, for Studio's log, not its answer. */
+/* Why a process ended before it answered: out of its heap or of what the
+   whole process may take, or another failure — with the error it reported,
+   for Studio's log, not its answer. */
 function endedEarly(
   worker: WorkerProcess,
   code: number | null,
@@ -72,6 +74,8 @@ function endedEarly(
     reported === undefined
       ? new Error(message)
       : new Error(message, { cause: new Error(reported) });
-  if (worker.ranOutOfMemory()) return SpecWorkLimitError.memory(kind, budget.heapMb, ended);
+  const memory = worker.outOfMemory();
+  if (memory === "heap") return SpecWorkLimitError.memory(kind, budget.heapMb, ended);
+  if (memory === "process") return SpecWorkLimitError.memory(kind, jobMemoryMb(budget), ended);
   return StudioWorkerError.failed(ended);
 }

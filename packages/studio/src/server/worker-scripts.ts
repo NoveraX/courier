@@ -22,3 +22,10 @@ export const SPEC_WORKER_SCRIPT = join(LIB, "spec-worker.js");
  * file after (see `formatInProcess`).
  */
 export const FORMAT_WORKER_SCRIPT = join(LIB, "format-worker.js");
+
+/**
+ * Loaded ahead of a worker script whose process has a memory cap: a thread
+ * of its own stops the process once it takes more memory than the cap, or
+ * once Studio is gone (see `startWorkerProcess`).
+ */
+export const JOB_MEMORY_WATCH_SCRIPT = join(LIB, "job-memory-watch.js");

@@ -73,39 +73,57 @@ function run(cwd: string, ...args: string[]) {
   });
 }
 
-/** Start the server in the background and resolve once it answers /health. */
+/**
+ * Start the server in the background on a port free a moment before, and
+ * resolve with its address once it says it is ready there. Its own word,
+ * not an answer on the port: another test may take the port between the
+ * probe and the start, and that test's server would answer. A start whose
+ * port was taken meanwhile is tried again on another.
+ */
 async function serve(cwd: string, ...args: string[]): Promise<string> {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const port = String(await freePort());
+    const url = await start(cwd, [...args, "--host", "127.0.0.1", "--port", port]);
+    if (url !== undefined) return url;
+  }
+  throw new Error("courier-server found its port taken five times over");
+}
+
+/* One start: its address once it is ready, or none when its port was taken. */
+function start(cwd: string, args: readonly string[]): Promise<string | undefined> {
   const child: ChildProcess = spawn(process.execPath, ["--import", TSX, CLI, ...args], {
     cwd,
     env: { ...process.env, NO_COLOR: "1" },
+    stdio: ["ignore", "pipe", "pipe"],
   });
   cleanups.push(() => stop(child));
-  const port = args[args.indexOf("--port") + 1];
-  const url = `http://127.0.0.1:${port}`;
-  for (let waited = 0; waited < 15_000; waited += 100) {
-    try {
-      if ((await fetch(`${url}/health`)).ok) return url;
-    } catch {
-      /* not listening yet */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error(`courier-server did not come up on ${url}`);
+  return new Promise((resolve, reject) => {
+    let said = "";
+    const timer = setTimeout(() => {
+      reject(new Error(`courier-server was not ready within 15 s:\n${said}`));
+    }, 15_000);
+    const read = (chunk: Buffer): void => {
+      said += chunk.toString();
+      const ready = /ready at (http:\/\/\S+)/.exec(said);
+      if (ready === null) return;
+      clearTimeout(timer);
+      resolve(ready[1]);
+    };
+    child.stdout?.on("data", read);
+    child.stderr?.on("data", read);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      if (said.includes("is already in use")) resolve(undefined);
+      else reject(new Error(`courier-server ended before it was ready:\n${said}`));
+    });
+  });
 }
 
 describe("courier-server", () => {
   it("serves a TypeScript config named relative to the working directory", async () => {
     const root = project();
 
-    const url = await serve(
-      root,
-      "--config",
-      "./courier.config.ts",
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(await freePort()),
-    );
+    const url = await serve(root, "--config", "./courier.config.ts");
 
     expect((await fetch(`${url}/health`)).status).toBe(200);
   }, 30_000);
@@ -113,7 +131,7 @@ describe("courier-server", () => {
   it("finds courier.config.ts in the working directory when --config is omitted", async () => {
     const root = project();
 
-    const url = await serve(root, "--host", "127.0.0.1", "--port", String(await freePort()));
+    const url = await serve(root);
 
     expect((await fetch(`${url}/health`)).status).toBe(200);
   }, 30_000);
@@ -128,8 +146,8 @@ describe("courier-server", () => {
   it("exits 1 when its port is taken", async () => {
     const root = project();
     const holder = createNetServer();
-    const port = await freePort();
-    await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) => holder.listen(0, "127.0.0.1", resolve));
+    const { port } = holder.address() as { port: number };
     cleanups.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));
 
     const result = run(root, "--host", "127.0.0.1", "--port", String(port));
@@ -140,16 +158,7 @@ describe("courier-server", () => {
 
   it("admits the origins it is told to allow", async () => {
     const root = project();
-    const port = String(await freePort());
-    const url = await serve(
-      root,
-      "--host",
-      "127.0.0.1",
-      "--port",
-      port,
-      "--allowed-origins",
-      "https://app.example",
-    );
+    const url = await serve(root, "--allowed-origins", "https://app.example");
     const call = (origin: string) =>
       fetch(`${url}/api/request?_s=api&_m=ping`, { headers: { Origin: origin } });
 
@@ -171,22 +180,8 @@ describe("courier-server", () => {
           .on("error", reject)
           .end();
       });
-    const flagged = await serve(
-      project(),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(await freePort()),
-      "--allowed-hosts",
-      "app.example, api.example",
-    );
-    const configured = await serve(
-      project('{ allowedHosts: ["cfg.example"] }'),
-      "--host",
-      "127.0.0.1",
-      "--port",
-      String(await freePort()),
-    );
+    const flagged = await serve(project(), "--allowed-hosts", "app.example, api.example");
+    const configured = await serve(project('{ allowedHosts: ["cfg.example"] }'));
 
     expect(await statusFor(flagged, "api.example")).not.toBe(421);
     expect(await statusFor(flagged, "rebound.example")).toBe(421);
@@ -196,7 +191,7 @@ describe("courier-server", () => {
 
   it("applies the body limits the config's server block sets", async () => {
     const root = project("{ maxBodyBytes: 64, maxUploadBytes: 512 }");
-    const url = await serve(root, "--host", "127.0.0.1", "--port", String(await freePort()));
+    const url = await serve(root);
     const form = new FormData();
     form.append("file", new Blob([new Uint8Array(1024)]), "a.bin");
 

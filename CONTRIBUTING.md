@@ -82,6 +82,25 @@ rather than hidden in a helper.
 
 A bug fix should come with the test that would have caught it.
 
+A test holds on a slow machine as it does on a fast one: CI's runners are
+busy, and the Windows runner slower still.
+
+- It waits for what it checks — a promise, an event, `expect.poll` — never
+  for a length of time before checking.
+- A server listens on port 0 and is called at the address it reports: a port
+  found free and let go can be taken before the server listens on it.
+- A bound on how long something took sits far below what the wrong
+  behaviour would take — half of it — not just above what the right one
+  takes.
+- A hook that starts Studio has as long as a test: Studio's project gives
+  both 30 seconds.
+- Temporary files go in `os.tmpdir()`. On the Windows runner CI puts it on
+  the runner's own drive: the system drive is a network disk whose writes
+  stall for seconds once the suite has used up its allowance.
+
+CI runs a test once. One that fails now and then is a bug in the test or in
+the code it tests, and its cause is found rather than retried away.
+
 Studio's flows also run in a real browser: `e2e/` starts Studio from its
 command line over a copy of a fixture project, and drives importing,
 updating and removing an API, the mock wizard and the mocks, and the

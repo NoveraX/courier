@@ -1,3 +1,5 @@
+import { leaveOutPattern } from "./left-out-patterns";
+import { MAX_PATTERN_LENGTH } from "./max-pattern-length";
 import { fieldOf, type SpecNode } from "./spec-node";
 import type { SchemaConstraints } from "./types";
 
@@ -15,7 +17,9 @@ import type { SchemaConstraints } from "./types";
  * floating point, so `0.3` would be refused as a multiple of `0.1`. A
  * pattern is kept as JavaScript compiles it — with the `u` flag when it
  * compiles so, else without — and left out when it does not compile at all,
- * so the value is then not checked against it.
+ * so the value is then not checked against it. One longer than
+ * {@link MAX_PATTERN_LENGTH} is left out without being compiled, and noted
+ * for the parse under way to say where (see `withLeftOutPatterns`).
  *
  * @param node - The schema as written in the specification
  * @param type - The type the schema declares
@@ -94,6 +98,10 @@ function count(value: unknown): number | undefined {
 
 function compiledPattern(source: unknown): SchemaConstraints["pattern"] {
   if (typeof source !== "string" || source === "") return undefined;
+  if (source.length > MAX_PATTERN_LENGTH) {
+    leaveOutPattern(source);
+    return undefined;
+  }
   if (compiles(source, "u")) return { source, unicode: true };
   if (compiles(source, "")) return { source, unicode: false };
   return undefined;

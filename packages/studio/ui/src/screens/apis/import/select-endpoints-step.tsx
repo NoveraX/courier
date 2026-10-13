@@ -26,8 +26,20 @@ interface SelectEndpointsStepProps {
   onToggleAll: () => void;
 }
 
+/* An operation Studio could not import, or a pattern too long to check values against. */
+function leftOut(skipped: readonly { method: string }[]): string {
+  const patterns = skipped.filter((entry) => entry.method === "PATTERN").length;
+  const operations = skipped.length - patterns;
+  return [
+    operations > 0 ? plural(operations, "operation") : "",
+    patterns > 0 ? plural(patterns, "pattern check") : "",
+  ]
+    .filter(Boolean)
+    .join(" and ");
+}
+
 /**
- * The Select step: the spec Studio read, the operations it left out, and
+ * The Select step: the spec Studio read, what it left out of the import, and
  * each group's endpoints to keep or leave out of the import — on a phone
  * each endpoint's path under its name.
  *
@@ -77,7 +89,7 @@ export function SelectEndpointsStep({
       </div>
       {spec.skipped.length > 0 && (
         <div className="flex flex-col gap-1 rounded-panel bg-warn-dim px-3 py-2.5">
-          <p className="m-0 text-control text-warn">{`${plural(spec.skipped.length, "operation")} left out of this import`}</p>
+          <p className="m-0 text-control text-warn">{`${leftOut(spec.skipped)} left out of this import`}</p>
           {spec.skipped.map((op) => (
             <span
               key={`${op.method} ${op.path}`}

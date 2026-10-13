@@ -2,10 +2,11 @@
  * What a schema allows beyond its type, read from its validation keywords:
  * only the keywords of its own type, only values that mean something, both
  * spellings of an exclusive bound, whole divisors only, and a pattern as
- * JavaScript compiles it.
+ * JavaScript compiles it — one no longer than real specifications write.
  */
 import { describe, expect, it } from "vitest";
 
+import { MAX_PATTERN_LENGTH } from "../../src/apis/parser/max-pattern-length";
 import { readConstraints } from "../../src/apis/parser/read-constraints";
 
 describe("readConstraints", () => {
@@ -88,6 +89,35 @@ describe("readConstraints", () => {
   it("leaves out a pattern JavaScript cannot compile at all", () => {
     expect(readConstraints({ pattern: "(?<=a" }, "string")).toBeUndefined();
     expect(readConstraints({ pattern: "[a-", maxLength: 3 }, "string")).toEqual({ maxLength: 3 });
+  });
+
+  it("compiles a pattern as long as a list of every country or time zone", () => {
+    const zones = `^(${Array.from({ length: 600 }, (_, n) => `Zone/Name${n}`).join("|")})$`;
+
+    expect(zones.length).toBeLessThanOrEqual(MAX_PATTERN_LENGTH);
+    expect(readConstraints({ pattern: zones }, "string")).toEqual({
+      pattern: { source: zones, unicode: true },
+    });
+  });
+
+  it("leaves out a pattern longer than any a real specification writes, without compiling it", () => {
+    const pattern = "\\p{L}".repeat(200_000);
+    const started = performance.now();
+
+    const read = readConstraints({ pattern, maxLength: 3 }, "string");
+
+    expect(read).toEqual({ maxLength: 3 });
+    expect(performance.now() - started).toBeLessThan(50);
+  });
+
+  it("compiles a pattern of the longest length allowed in milliseconds", () => {
+    const pattern = "\\p{L}".repeat(Math.floor(MAX_PATTERN_LENGTH / 5));
+    const started = performance.now();
+
+    expect(readConstraints({ pattern }, "string")).toEqual({
+      pattern: { source: pattern, unicode: true },
+    });
+    expect(performance.now() - started).toBeLessThan(500);
   });
 
   it("reads nothing from a schema that constrains nothing", () => {

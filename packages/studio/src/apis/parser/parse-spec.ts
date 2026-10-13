@@ -2,6 +2,7 @@
  * Main spec parser entry point: detects format and delegates to specific parsers.
  */
 
+import { withLeftOutPatterns } from "./left-out-patterns";
 import { parseOpenApi3 } from "./parse-openapi3";
 import { parsePostman } from "./parse-postman";
 import { parseSwagger2 } from "./parse-swagger2";
@@ -37,6 +38,10 @@ export function detectFormat(raw: string): SpecFormat {
 /**
  * Parse an OpenAPI 3, Swagger 2 or Postman specification, as JSON or YAML.
  *
+ * What the parse leaves out is listed in `skipped`: an operation the
+ * builder cannot express, a reference outside the document, and a pattern
+ * too long to compile, by where the document writes it.
+ *
  * @param raw - The text as it was read or pasted
  * @returns The parsed specification
  * @throws Error when the text is no specification Studio reads, does not
@@ -67,8 +72,8 @@ export function parseSpec(raw: string): ParsedSpec {
   if (format === "postman") return parsePostman(parsed);
   /* The request and the answer a schema describes differ where its fields
      are readOnly or writeOnly: they are typed apart. */
-  if (format.startsWith("swagger2")) return splitDirections(parseSwagger2(parsed));
-  return splitDirections(parseOpenApi3(parsed));
+  const parse = format.startsWith("swagger2") ? parseSwagger2 : parseOpenApi3;
+  return withLeftOutPatterns(parsed, () => splitDirections(parse(parsed)));
 }
 
 /* The document the text holds, or `undefined` when it is not JSON — which no

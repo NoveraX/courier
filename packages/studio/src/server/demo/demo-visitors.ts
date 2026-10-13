@@ -3,10 +3,9 @@
  */
 
 import type { VisitorDecision, VisitorPage, VisitorPolicy } from "../ui-token-guard";
-import { WRITING_EVENTS } from "../ui-token-guard";
 import { demoCommandProblem, type RecordsIn } from "./demo-command-bounds";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
-import { DEMO_SHARED_REFUSAL } from "./demo-refusals";
+import { DEMO_SHARED_REFUSAL, DEMO_TOKEN_REFUSAL } from "./demo-refusals";
 import type { TrustedProxies } from "./trusted-proxies";
 
 /** The most a Playground call or a message to a channel may weigh, as JSON. */
@@ -32,6 +31,17 @@ export const DEMO_MAX_MESSAGE_BYTES = 512 * 1024;
 
 const RUN: VisitorDecision = { kind: "run" };
 const DROP: VisitorDecision = { kind: "drop" };
+const SHARED: VisitorDecision = { kind: "refuse", reason: DEMO_SHARED_REFUSAL };
+const REFUSED: VisitorDecision = { kind: "refuse", reason: DEMO_TOKEN_REFUSAL };
+
+/* What every visitor sees alike: the logs, the view, the pins and what the pages keep. */
+const SHARED_EVENTS: ReadonlySet<string> = new Set([
+  "requests:clear",
+  "mock:logs:clear",
+  "view:live",
+  "requests:pin",
+  "page:state:set",
+]);
 
 /** What the demo's rule reads of the running Studio. */
 export interface DemoVisitorsDeps {
@@ -52,7 +62,8 @@ export interface DemoVisitorsDeps {
  * their data — each within the demo's limits and bounds (see
  * {@link createDemoLimits} and {@link demoCommandProblem}). It keeps its
  * Playground history to itself, as its page does; clearing or switching
- * what every page shows is refused.
+ * what every page shows is refused, and so is every event not named here,
+ * as Studio's own rule refuses an event it does not list.
  *
  * @param deps - The Playground calls in flight, and the counts to keep
  * @returns The rule `guardUiWrites` holds the page to
@@ -110,7 +121,7 @@ export function demoVisitors({
       case "mock:store:get":
         return verdict(limits.take(visitor, "store"));
       default:
-        return WRITING_EVENTS.has(event) ? { kind: "refuse", reason: DEMO_SHARED_REFUSAL } : RUN;
+        return SHARED_EVENTS.has(event) ? SHARED : REFUSED;
     }
   };
   return { decide, forget: (pageId) => limits.forget(pageId), trusted };

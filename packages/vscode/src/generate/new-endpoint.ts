@@ -3,6 +3,7 @@ import { loggedAs } from "../log/courier-log";
 import type { StudioTarget } from "../projects/studio-targets";
 import { studioAtHand } from "../studio/studio-at-hand";
 import type { StudioFinder } from "../studio/studio-in-front";
+import { StudioTokenRefusal } from "../studio/studio-token-refusal";
 import type { GroupPlace } from "../studio/studio-types";
 import {
   endpointSnippet,
@@ -68,9 +69,8 @@ export async function newEndpoint(
     if (start) await vscode.commands.executeCommand("courier.startStudio");
     return;
   }
-  const groups = await deps
-    .fetchGroups(studio)
-    .catch(loggedAs<GroupPlace[]>(`Studio at ${studio} did not list the groups`, []));
+  const groups = await groupsOf(deps, studio);
+  if (!groups) return;
   const place = await pickGroup(groups, known);
   if (!place) return;
   const name = known.name ?? (await askName(place));
@@ -88,6 +88,19 @@ export async function newEndpoint(
     }));
   if (path === undefined) return;
   await typeIn(place, { name, method, path });
+}
+
+/* The groups; none, the reason said, when Studio refused for want of the project's token. */
+async function groupsOf(deps: NewEndpointDeps, studio: string): Promise<GroupPlace[] | undefined> {
+  try {
+    return await deps.fetchGroups(studio);
+  } catch (error) {
+    if (!(error instanceof StudioTokenRefusal)) {
+      return loggedAs<GroupPlace[]>(`Studio at ${studio} did not list the groups`, [])(error);
+    }
+    void vscode.window.showErrorMessage(error.message);
+    return undefined;
+  }
 }
 
 function askName(place: GroupPlace): Thenable<string | undefined> {

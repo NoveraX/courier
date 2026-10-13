@@ -26,6 +26,7 @@ import {
 } from "../../src/server/demo/demo-rest-guard";
 import { trustedProxies } from "../../src/server/demo/trusted-proxies";
 import { requestWork } from "../../src/server/request-work";
+import { studioApp } from "../../src/server/studio-app";
 import type { StudioToken } from "../../src/server/studio-token";
 
 const TOKEN: StudioToken = {
@@ -61,7 +62,7 @@ async function demo({ compressed = false } = {}): Promise<{
   let release!: () => void;
   const released = new Promise<void>((resolve) => (release = resolve));
   let aborted = 0;
-  const app = express();
+  const app = studioApp();
   if (compressed) app.use(compression());
   app.use("/api", demoRestGuard(TOKEN, createDemoLimits(), trustedProxies(["127.0.0.1"]), IDLE_MS));
   /* Answered before its body is read, as Studio refuses a request without the token. */

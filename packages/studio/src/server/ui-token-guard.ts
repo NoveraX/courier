@@ -1,6 +1,6 @@
 /**
- * The page events that change something, and the check that the page
- * presented Studio's token for them.
+ * The page events a page may send without Studio's token, and the check
+ * that the page presented the token for every other one.
  */
 
 import type { Socket } from "socket.io";
@@ -13,21 +13,18 @@ import type { StudioToken } from "./studio-token";
 import { TOKEN_REFUSAL } from "./token-guard";
 
 /**
- * The events that change the log, a mock's log, the view every page shows,
- * the mocks or what the Playground sends. Every other event reads.
+ * The events a page without the token may send: each reads what Studio
+ * shows — a request's whole body, which its event carried only a part of,
+ * and a mock's records. Every other event asks for the token: those that
+ * change the log, a mock's log, the view every page shows, the pins, what
+ * the pages keep, the mocks or what the Playground sends. An event added
+ * and not listed here asks for the token too, so forgetting to list one
+ * refuses a reader instead of letting a writer through.
  */
-export const WRITING_EVENTS: ReadonlySet<string> = new Set([
-  "requests:clear",
-  "mock:logs:clear",
-  "view:live",
-  "playground:exec",
-  "playground:exec:cancel",
-  "playground:write",
-  "playground:history:save",
-  "mock:command",
-  "mock:managed",
-  "page:state:set",
-  "requests:pin",
+export const READING_EVENTS: ReadonlySet<string> = new Set([
+  "request:body",
+  "mock:body",
+  "mock:store:get",
 ]);
 
 /** What becomes of an event a page without the token sent: run, let go unanswered, or refused. */
@@ -63,20 +60,21 @@ const RUN: VisitorDecision = { kind: "run" };
 const REFUSED: VisitorDecision = { kind: "refuse", reason: TOKEN_REFUSAL };
 
 /**
- * Studio's own rule for a page without the token: it reads, and every
- * writing event is refused.
+ * Studio's own rule for a page without the token: it reads, and every event
+ * but the {@link READING_EVENTS} is refused.
  */
 export const READ_ONLY_VISITORS: VisitorPolicy = {
-  decide: (_visitor, event) => (WRITING_EVENTS.has(event) ? REFUSED : RUN),
+  decide: (_visitor, event) => (READING_EVENTS.has(event) ? RUN : REFUSED),
   forget: () => {},
 };
 
 /**
  * Hold a page whose handshake did not present the token, as `auth.token`,
- * to the visitors' policy — by default, refuse every writing event. A
- * refused event is answered instead of run: through its acknowledgement
- * when it waits for one, as the end of its call when it sends a Playground
- * call — so the call stops waiting — and as `studio:read-only` otherwise.
+ * to the visitors' policy — by default, refuse every event but those that
+ * read what Studio shows. A refused event is answered instead of run:
+ * through its acknowledgement when it waits for one, as the end of its call
+ * when it sends a Playground call — so the call stops waiting — and as
+ * `studio:read-only` otherwise.
  * The page still receives everything it shows, live traffic without its
  * credentials (see `emitLiveEvents`).
  *

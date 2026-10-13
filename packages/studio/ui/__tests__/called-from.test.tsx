@@ -3,7 +3,8 @@
  *
  * Where the project's code calls an endpoint, from the inspector and the
  * Explorer: each call site opens in the editor Settings names — through the
- * address that editor answers — none opens when Settings names none, a
+ * address that editor answers — none opens when Settings names none, a page
+ * without the project's token is told it needs the link Studio printed, a
  * public demo shows no such section, and a setting kept from before stays
  * only while it names an editor. Shown inside an editor's own tab, Studio
  * asks that editor to open the file.
@@ -23,6 +24,7 @@ vi.mock("@/features/editor/editor-host", async (importOriginal) => ({
 import { editorLink } from "@/features/editor/editor-link";
 import { CalledFrom } from "@/inspector/tabs/called-from";
 import { post } from "@/lib/api-client";
+import { StudioRequestError } from "@/lib/studio-request-error";
 import { useStudioStore } from "@/store";
 import { DEFAULT_SETTINGS } from "@/store/constants";
 import { storedSettings } from "@/store/stored-settings";
@@ -35,11 +37,24 @@ const SITE = {
   code: "await api.orders.place({ sku });",
 };
 
+const INFO = { version: "1.0.0", startedAt: 1, project: { name: "shop", dependencies: [] } };
+
+/* What Studio answers a page without the token, as the page's client throws it. */
+function tokenRefusal(): StudioRequestError {
+  const reason =
+    "Studio makes changes, and reads past what it shows, only for a page opened from the link it printed in its terminal, which carries this project's token.";
+  return new StudioRequestError(
+    reason,
+    { error: reason, code: "STUDIO_TOKEN_REQUIRED" },
+    new HTTPError({ status: 401, headers: new Headers(), data: {} }),
+  );
+}
+
 afterEach(() => {
   vi.mocked(post).mockReset();
   vi.restoreAllMocks();
   host.inside = false;
-  useStudioStore.setState({ settings: DEFAULT_SETTINGS });
+  useStudioStore.setState({ settings: DEFAULT_SETTINGS, studioInfo: null });
 });
 
 describe("a call site's address in an editor", () => {
@@ -100,7 +115,33 @@ describe("Called from", () => {
     ).toBeTruthy();
   });
 
-  it("shows nothing on a public demo, which has no such route", async () => {
+  it("tells a page without the project's token that it needs the link Studio printed", async () => {
+    vi.mocked(post).mockRejectedValue(tokenRefusal());
+    useStudioStore.setState({ studioInfo: INFO });
+
+    render(<CalledFrom source="shop" endpoint="orders.refund" />);
+
+    expect(
+      await screen.findByText(
+        /only on a page opened from the link it printed in its terminal, which carries the project's token/,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Called from")).toBeTruthy();
+    expect(screen.queryByText(/reads past what it shows/)).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("shows nothing to a visitor of a public demo, which shows no project's code", async () => {
+    vi.mocked(post).mockRejectedValue(tokenRefusal());
+    useStudioStore.setState({ studioInfo: { ...INFO, demo: {} } });
+
+    const { container } = render(<CalledFrom source="shop" endpoint="account.list" />);
+
+    await vi.waitFor(() => expect(post).toHaveBeenCalled());
+    await vi.waitFor(() => expect(container.textContent).toBe(""));
+  });
+
+  it("shows nothing where Studio has no such route, as for the host of a public demo", async () => {
     vi.mocked(post).mockRejectedValue(
       new HTTPError({ status: 404, headers: new Headers(), data: {} }),
     );

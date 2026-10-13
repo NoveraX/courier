@@ -4,13 +4,13 @@
 
 import { createServer } from "node:http";
 import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config";
-import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { closeStudio } from "./close-studio";
 import { createAnswerObserver } from "./contract-drift/answer-observer";
 import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { studioAddressFile } from "./editor/studio-address-file";
+import { finalErrors } from "./final-errors";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { createAgentCalls } from "./mcp/agent-calls";
@@ -27,6 +27,7 @@ import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { openStudioStores } from "./storage/studio-stores";
 import { wireStorage } from "./storage-space/storage-wiring";
+import { studioApp } from "./studio-app";
 import { createStudioOriginPolicy } from "./studio-origin";
 import { createStudioStartup } from "./studio-startup";
 import { studioToken } from "./studio-token";
@@ -61,9 +62,7 @@ import { createWebhookDirectory } from "./webhooks/webhook-directory";
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
   const { projectRoot = process.cwd(), extraCorsOrigins = [], demo, ...startupOptions } = options;
 
-  const app = express();
-  /* Nothing a caller needs, and it names what to probe for. */
-  app.disable("x-powered-by");
+  const app = studioApp();
   app.use(securityHeaders);
   /* A public demo counts what its visitors send, on the sockets and the API alike. */
   const serving = demo ? demoServing(demo) : undefined;
@@ -183,6 +182,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     serving,
   };
   mountStudioHttp(app, policy, http);
+  /* Last: an error no route answered gets no page of Express's own, which shows its stack. */
+  app.use(finalErrors);
 
   startup.start();
 

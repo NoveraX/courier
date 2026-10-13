@@ -7,6 +7,8 @@ import {
   isSite,
   isStats,
 } from "./studio-guards";
+import { TOKEN_HEADER } from "./studio-token";
+import { StudioTokenRefusal } from "./studio-token-refusal";
 import type {
   CallSite,
   EndpointCall,
@@ -18,6 +20,12 @@ import type {
 
 /* Studio answers on this machine at once; one that takes longer is not answering. */
 const TIMEOUT_MS = 4_000;
+
+/** How a request goes: the statuses an older Studio without its route answers, and the token. */
+interface Asking {
+  readonly absent?: readonly number[];
+  readonly token?: string | undefined;
+}
 
 /**
  * Ask Studio how each endpoint's calls went.
@@ -57,24 +65,30 @@ export async function fetchCalls(
 }
 
 /**
- * Ask Studio where the project's code calls an endpoint.
+ * Ask Studio where the project's code calls an endpoint, with the
+ * project's token: Studio shows the lines of the code only to a caller
+ * that presents it.
  *
  * @param studio - Studio's address
  * @param source - The endpoint's source
  * @param endpoint - Its call in the client: `orders.place`
+ * @param token - The project's token, when the extension has it
  * @returns The call sites, file by file
+ * @throws {StudioTokenRefusal} When Studio refuses for want of the token
  * @throws {Error} When Studio does not answer, or answers with a failure
  * @example
  * ```ts
- * const sites = await fetchSites(studio, "shop", "orders.place");
+ * const sites = await fetchSites(studio, "shop", "orders.place", token);
  * ```
  */
 export async function fetchSites(
   studio: string,
   source: string,
   endpoint: string,
+  token?: string,
 ): Promise<CallSite[]> {
-  return listOf(await postTo(studio, "/api/editor/sites", { source, endpoint }), "sites", isSite);
+  const answer = await postTo(studio, "/api/editor/sites", { source, endpoint }, { token });
+  return listOf(answer, "sites", isSite);
 }
 
 /**
@@ -90,41 +104,50 @@ export async function fetchSites(
  * ```
  */
 export async function fetchFindings(studio: string): Promise<Finding[]> {
-  const answer = await postTo(studio, "/api/editor/findings", {}, [404]);
+  const answer = await postTo(studio, "/api/editor/findings", {}, { absent: [404] });
   return listOf(answer, "findings", isFinding);
 }
 
 /**
- * Ask Studio where the project's files declare each endpoint. A Studio
- * older than the route answers 404, which reads as none found.
+ * Ask Studio where the project's files declare each endpoint, with the
+ * project's token, which Studio asks for. A Studio older than the route
+ * answers 404, which reads as none found.
  *
  * @param studio - Studio's address
+ * @param token - The project's token, when the extension has it
  * @returns The declarations
+ * @throws {StudioTokenRefusal} When Studio refuses for want of the token
  * @throws {Error} When Studio does not answer
  * @example
  * ```ts
- * const definitions = await fetchDefinitions(studio);
+ * const definitions = await fetchDefinitions(studio, token);
  * ```
  */
-export async function fetchDefinitions(studio: string): Promise<EndpointDefinition[]> {
-  const answer = await postTo(studio, "/api/editor/definitions", {}, [404]);
+export async function fetchDefinitions(
+  studio: string,
+  token?: string,
+): Promise<EndpointDefinition[]> {
+  const answer = await postTo(studio, "/api/editor/definitions", {}, { absent: [404], token });
   return listOf(answer, "definitions", isDefinition);
 }
 
 /**
- * Ask Studio where each group writes its endpoints, as an editor adds one.
- * A Studio older than the route answers 404, which reads as none found.
+ * Ask Studio where each group writes its endpoints, as an editor adds one,
+ * with the project's token, which Studio asks for. A Studio older than the
+ * route answers 404, which reads as none found.
  *
  * @param studio - Studio's address
+ * @param token - The project's token, when the extension has it
  * @returns The places
+ * @throws {StudioTokenRefusal} When Studio refuses for want of the token
  * @throws {Error} When Studio does not answer
  * @example
  * ```ts
- * const groups = await fetchGroups(studio);
+ * const groups = await fetchGroups(studio, token);
  * ```
  */
-export async function fetchGroups(studio: string): Promise<GroupPlace[]> {
-  const answer = await postTo(studio, "/api/editor/groups", {}, [404]);
+export async function fetchGroups(studio: string, token?: string): Promise<GroupPlace[]> {
+  const answer = await postTo(studio, "/api/editor/groups", {}, { absent: [404], token });
   return listOf(answer, "groups", isGroupPlace);
 }
 
@@ -165,15 +188,16 @@ async function postTo(
   studio: string,
   path: string,
   body: unknown,
-  absent: readonly number[] = [],
+  { absent = [], token }: Asking = {},
 ): Promise<unknown> {
   const response = await fetch(new URL(path, studio), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(token && { [TOKEN_HEADER]: token }) },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (absent.includes(response.status)) return {};
+  if (response.status === 401) throw new StudioTokenRefusal();
   if (!response.ok) throw new Error(`Courier Studio answered ${response.status} to ${path}`);
   return response.json();
 }

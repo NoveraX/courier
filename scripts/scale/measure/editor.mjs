@@ -23,6 +23,8 @@ import { measured, percentiles } from "./metrics.mjs";
  */
 export async function editorFigures(url, dir, label) {
   const file = sampleAppFile(dir);
+  /* As the editor asks, with the project's token: Studio shows the project's code only with it. */
+  const token = readFileSync(join(dir, ".courier", "studio-token"), "utf8").trim();
   const ask = async (path, body) => {
     const samples = [];
     let size = 0;
@@ -30,11 +32,13 @@ export async function editorFigures(url, dir, label) {
       const begun = performance.now();
       const response = await fetch(`${url}${path}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-courier-studio-token": token },
         body: JSON.stringify(body),
       });
       size = (await response.arrayBuffer()).byteLength;
       samples.push(performance.now() - begun);
+      /* A refusal is answered at once: timed, it would pass for a fast answer. */
+      if (!response.ok) throw new Error(`Studio answered ${path} with ${response.status}`);
     }
     return { first: samples[0] ?? 0, p50: percentiles(samples.slice(2)).p50, size };
   };

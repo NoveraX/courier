@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { registerEditorLiveRoutes } from "../../src/server/editor/editor-live-routes";
 import type { StudioMocks } from "../../src/server/mcp/mock-tools";
 import type { ServerState } from "../../src/server/mock-manager/types";
-import { WRITING_ROUTES } from "../../src/server/token-guard";
+import { requiresToken } from "../../src/server/token-guard";
 
 const start = (id: string, at: number, method = "place", mode = "direct") => ({
   type: "request:start",
@@ -201,8 +201,8 @@ describe("the mocks an editor lists and switches", () => {
   });
 
   it("needs Studio's token to change a mock", () => {
-    expect(WRITING_ROUTES.has("/api/editor/mocks/scenario")).toBe(true);
-    expect(WRITING_ROUTES.has("/api/editor/mocks/conditions")).toBe(true);
-    expect(WRITING_ROUTES.has("/api/editor/mocks")).toBe(false);
+    expect(requiresToken("/api/editor/mocks/scenario")).toBe(true);
+    expect(requiresToken("/api/editor/mocks/conditions")).toBe(true);
+    expect(requiresToken("/api/editor/mocks")).toBe(false);
   });
 });

@@ -6,12 +6,15 @@ import { isPlainObject } from "./is-plain-object";
 /* One notice however many changes are refused: a page without the token has every one refused. */
 const NOTICE_ID = "studio-read-only";
 
+/* Studio's own reason, for a refusal that came without one. */
 const UNEXPLAINED =
-  "Studio makes changes only for a page opened from the link it printed in its terminal.";
+  "Studio makes changes, and reads past what it shows, only for a page opened from the link it printed in its terminal, which carries this project's token.";
 
 /**
- * Say why Studio did not make a change this page asked for: the page did not
- * present the token, so Studio answers each change with `studio:read-only`.
+ * Say why Studio did not do what this page asked: the page did not present
+ * the token, so Studio answers each event but those that read what it
+ * shows with `studio:read-only` — every change, and every read past what
+ * it shows.
  *
  * @param socket - The page's `/ui` socket
  * @returns A function removing the listener

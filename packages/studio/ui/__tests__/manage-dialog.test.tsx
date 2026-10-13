@@ -3,9 +3,10 @@
  */
 /**
  * The manage dialog as the user sees it: every refusal is said on the step
- * it leaves the user on, a plan Studio cannot apply offers nothing to allow
- * and is previewed again instead, and an apply under way can be neither
- * repeated nor cancelled.
+ * it leaves the user on, a page without the project's token is told so and
+ * offered no step that would be refused again, a plan Studio cannot apply
+ * offers nothing to allow and is previewed again instead, and an apply
+ * under way can be neither repeated nor cancelled.
  */
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -122,6 +123,31 @@ describe("the manage dialog", () => {
 
     expect(manage.step).toBe("reupload");
     expect(screen.getByRole("alert").textContent).toBe("The spec could not be read.");
+  });
+
+  it("tells a page without the project's token why, and offers no spec to give again", async () => {
+    const reason =
+      "Studio makes changes, and reads past what it shows, only for a page opened from the link it printed in its terminal, which carries this project's token.";
+    vi.mocked(post).mockRejectedValueOnce(refusal("STUDIO_TOKEN_REQUIRED", reason));
+    render(<Harness />);
+
+    await act(async () => manage.start(SOURCE, SPEC));
+
+    expect(manage.step).toBe("needs-token");
+    expect(screen.getByRole("alert").textContent).toBe(reason);
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Parse and continue" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Later" })).toBeTruthy();
+  });
+
+  it("tells a page whose token Studio no longer takes why it refused the preview", async () => {
+    await toPreview(() =>
+      Promise.reject(refusal("STUDIO_TOKEN_REQUIRED", "Open the link Studio printed.")),
+    );
+
+    expect(manage.step).toBe("needs-token");
+    expect(screen.getByRole("alert").textContent).toBe("Open the link Studio printed.");
+    expect(screen.queryByRole("button", { name: "Preview changes" })).toBeNull();
   });
 
   it("offers nothing to allow in a plan Studio cannot apply, and previews it again instead", async () => {

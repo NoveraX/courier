@@ -1,6 +1,7 @@
 import { isHTTPError } from "@noverax/courier";
 
 import { post } from "@/lib/api-client";
+import { isTokenRefusal } from "@/lib/token-refusal";
 import { isPlainObject } from "@/socket/is-plain-object";
 
 /** Where the project's code calls an endpoint. */
@@ -21,6 +22,8 @@ export type CallSites =
   | { status: "ready"; sites: CallSite[] }
   /* A public demo reads no project's code for its visitors. */
   | { status: "unavailable" }
+  /* Studio shows the project's code only to a page that has its token. */
+  | { status: "needs-token" }
   | { status: "failed"; message: string };
 
 const FRESH_MS = 10_000;
@@ -44,7 +47,8 @@ export function knownCallSites(source: string, endpoint: string): CallSites | un
 
 /**
  * Ask Studio where the project's code calls an endpoint, and keep what it
- * says for ten seconds.
+ * says for ten seconds. Studio shows the code only to a page that has the
+ * project's token, which one opened from the link Studio printed has.
  *
  * @param source - The endpoint's source
  * @param endpoint - Its call in the client
@@ -62,10 +66,7 @@ export async function findCallSites(source: string, endpoint: string): Promise<C
       sites: sitesOf(await post("/api/editor/sites", { source, endpoint })),
     };
   } catch (error) {
-    found =
-      statusOf(error) === 404
-        ? { status: "unavailable" }
-        : { status: "failed", message: messageOf(error) };
+    found = failureOf(error);
   }
   known.set(`${source}:${endpoint}`, { at: Date.now(), found });
   return found;
@@ -85,6 +86,12 @@ function isCallSite(value: unknown): value is CallSite {
     typeof value.column === "number" &&
     typeof value.code === "string"
   );
+}
+
+function failureOf(error: unknown): CallSites {
+  if (isTokenRefusal(error)) return { status: "needs-token" };
+  if (statusOf(error) === 404) return { status: "unavailable" };
+  return { status: "failed", message: messageOf(error) };
 }
 
 /* Studio's refusal wraps the HTTP error it came with. */

@@ -10,7 +10,7 @@ import { registerConfigDeclareRoutes } from "./config-declare-routes";
 import type { ConfigEditDeps } from "./config-edit/declare-alone";
 import { type ContractRouteDeps, registerContractRoutes } from "./contract-drift/contract-routes";
 import type { DemoLimits } from "./demo/demo-limits";
-import { DEMO_WRITE_REFUSAL } from "./demo/demo-refusals";
+import { DEMO_TOKEN_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_BODY, demoRestGuard } from "./demo/demo-rest-guard";
 import type { TrustedProxies } from "./demo/trusted-proxies";
 import { type EditorRouteDeps, registerEditorRoutes } from "./editor/editor-routes";
@@ -67,14 +67,16 @@ export interface RestApiDeps {
 }
 
 /**
- * Mount Studio's REST API: compression, the origin guard, the token a
- * writing route asks for, JSON bodies, the health check, the API and session
- * routes, and JSON answers for a route Studio does not have and for the
- * errors the routes raise. A caller without the token is told no path of
- * this machine, and has Studio open no file it names, reach no host but a
- * public one, and run none of the project's formatters. A public demo also
- * counts its visitors' requests, reads smaller bodies, and tells a visitor
- * why it writes nothing.
+ * Mount Studio's REST API: compression, the origin guard, the token every
+ * route but those that read what Studio shows asks for, JSON bodies, the
+ * health check, the API and session routes, and JSON answers for a route
+ * Studio does not have and for the errors the routes raise. A caller without
+ * the token is told no path of this machine. It has Studio open no file it
+ * names, read none of the project's files but the package manifests that
+ * give a session's package versions, reach no host but a public one, and run
+ * none of the project's formatters. A public demo also counts its visitors'
+ * requests, reads smaller bodies, and tells a visitor what it does not do
+ * for them.
  *
  * @param app - The Studio server's Express app
  * @param policy - Decides who counts as the Studio UI
@@ -107,7 +109,7 @@ export function registerRestApi(
      page the developer happens to have open. */
   app.use("/api", createOriginGuard(policy));
   if (demo) app.use("/api", demoRestGuard(token, demo.limits, demo.trusted));
-  app.use(tokenGuard(token, demo ? DEMO_WRITE_REFUSAL : undefined));
+  app.use(tokenGuard(token, demo ? DEMO_TOKEN_REFUSAL : undefined));
   app.use("/api", hideMachinePaths(token, machinePathsOf(apis, mocksEdit)));
   app.use("/api", express.json({ limit: demo ? DEMO_MAX_BODY : MAX_MESSAGE_BYTES }));
 

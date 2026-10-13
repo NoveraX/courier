@@ -3,7 +3,6 @@ import * as vscode from "vscode";
 import { openInStudio } from "../commands/open-in-studio";
 import { setUpCourier, startStudio } from "../commands/project-commands";
 import { type NewEndpointArgs, newEndpoint } from "../generate/new-endpoint";
-import { fetchGroups } from "../studio/studio-api";
 import { registerViewCommands } from "../view/view-commands";
 import type { CourierCore } from "./courier-core";
 
@@ -32,7 +31,10 @@ export function registerCommands(core: CourierCore): vscode.Disposable {
     ),
     vscode.commands.registerCommand("courier.setUp", setUpCourier),
     vscode.commands.registerCommand("courier.newEndpoint", (known?: unknown) =>
-      newEndpoint({ studioFor, targets: core.view.targets, fetchGroups }, argsOf(known)),
+      newEndpoint(
+        { studioFor, targets: core.view.targets, fetchGroups: core.reads.fetchGroups },
+        argsOf(known),
+      ),
     ),
     registerViewCommands(projects, core.view.refresh, pages.open),
   );

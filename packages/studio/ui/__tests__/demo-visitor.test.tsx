@@ -74,7 +74,7 @@ describe("the demo banner", () => {
     expect(banner.textContent).toContain("It resets in 38 min.");
     expect(
       screen.getByRole("link", { name: /Run Studio on your project/ }).getAttribute("href"),
-    ).toBe("https://courier.noverax.cloud/studio#setup");
+    ).toBe("https://courier.noverax.cloud/docs/studio/overview#install");
   });
 
   it("is not shown to the demo's host, nor outside a demo", () => {

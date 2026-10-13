@@ -45,7 +45,7 @@ describe("the demo banner's single line", () => {
     const banner = within(screen.getByRole("complementary", { name: "Live demo" }));
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(banner.getByRole("link", { name: "Run your own" }).getAttribute("href")).toBe(
-      "https://courier.noverax.cloud/studio#setup",
+      "https://courier.noverax.cloud/docs/studio/overview#install",
     );
   });
 

@@ -12,7 +12,7 @@ import { DOCS_URL } from "./nav";
 /* The countdown moves in whole minutes. */
 const TICK_MS = 15_000;
 
-const SETUP_URL = `${DOCS_URL}/studio#setup`;
+const SETUP_URL = `${DOCS_URL}/studio/overview#install`;
 
 /* A phone, or a phone held sideways, gives the banner a single line. */
 const ONE_LINE_ONLY = "max-sm:hidden short-screen:hidden";

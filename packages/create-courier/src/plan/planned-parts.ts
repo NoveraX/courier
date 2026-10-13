@@ -103,8 +103,22 @@ export function typescriptOf(
  */
 export function plannedEdit(project: Project, edit: RecipeEdit): PlannedEdit | ManualStep {
   const before = project.read(edit.path);
-  const after = before === undefined ? undefined : edit.change(before);
+  const after = before === undefined ? undefined : changeKeepingLineEnds(before, edit.change);
   if (before === undefined || after === undefined) return edit.manual;
   const { path, purpose } = edit;
   return { path, purpose, state: after === before ? "same" : "edit", before, after };
+}
+
+/*
+ * An edit made to the file as LF text, and written back with the line ends
+ * the file has: a file written on Windows, with CRLF, is then changed only
+ * where the edit changes it, rather than on every line.
+ */
+function changeKeepingLineEnds(
+  before: string,
+  change: (text: string) => string | undefined,
+): string | undefined {
+  if (!before.includes("\r\n")) return change(before);
+  const after = change(before.replace(/\r\n/g, "\n"));
+  return after === undefined ? undefined : after.replace(/\r?\n/g, "\r\n");
 }

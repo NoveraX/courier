@@ -204,6 +204,29 @@ export default async function DashboardPage() {
 `createServerCaller` calls your backend directly from the server. There is no round-trip through the API route, making it ideal for SSR and RSC.
 </Callout>
 
+### One read per render
+
+A page often reads the same thing in several places: `generateMetadata` reads the user for the title, the page reads them for the body, a component reads them again. Within one render, a read that sends the same request again is answered with the first one's answer, however far apart the two are, each caller getting a copy of its own:
+
+```tsx title="app/users/[id]/page.tsx"
+import { caller } from "@/lib/server-caller"
+
+type Props = { params: Promise<{ id: string }> }
+
+export async function generateMetadata({ params }: Props) {
+  const user = await caller.users.getById({ id: Number((await params).id) })
+  return { title: user.name }
+}
+
+export default async function UserPage({ params }: Props) {
+  // Answered from the read generateMetadata made: the API is asked once
+  const user = await caller.users.getById({ id: Number((await params).id) })
+  return <h1>{user.name}</h1>
+}
+```
+
+The render's reads are kept by React's `cache()`, so they last one request and are never shared between users. A read is the same only when everything it sends is — the variables, and every header, the user's session cookies among them — so a read made after the API renewed the session goes out with the new cookies. A write made during the render forgets every read, and what is read after it is read anew; a read that failed is not kept, nor one that asks `coalesce: false`. Route Handlers and Server Actions run outside a render, and each of their reads goes out. Identical reads made at the same moment share one request anywhere — see [Deduplication & Abort](/docs/advanced/abort).
+
 ## The user's session
 
 Describe the session the API keeps where it is defined, and every server-side call made for a user carries that user's session, the cookies the API keeps it in and nothing else of your application's:

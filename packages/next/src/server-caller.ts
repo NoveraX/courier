@@ -14,8 +14,19 @@ import type {
   EndpointRecord,
   GroupRecord,
 } from "@noverax/courier/define";
+import { type RenderMemoProvider, registerRenderMemo } from "@noverax/courier/internal";
+import * as React from "react";
 
 import { nextRequestContext } from "./request-context";
+
+/* One memo per render, as React's `cache()` scopes it: the requests a page's metadata and its body
+   send alike are sent once. Outside a render, and on a React without `cache()`, there is none, and
+   every read goes out. */
+const cache: unknown = Reflect.get(React, "cache");
+const renderMemo: RenderMemoProvider | undefined =
+  typeof cache === "function"
+    ? (cache as (make: RenderMemoProvider) => RenderMemoProvider)(() => new Map())
+    : undefined;
 
 /**
  * A caller for the server code of a Next.js App Router — pages, layouts,
@@ -28,6 +39,13 @@ import { nextRequestContext } from "./request-context";
  * belongs to each user and has to be rendered per request. Registered only
  * in `instrumentation.ts`, which a build does not run, such a page would be
  * built once, without anyone's session, and served to everyone.
+ *
+ * Within one render a read sent again — the same request, the user's
+ * session among its headers — is answered with the first one's answer,
+ * however far apart the two are: a page's `generateMetadata` and its body
+ * read it once, each with a copy of its own. A write made in the render
+ * forgets every read, and a session the render renewed sends other cookies,
+ * so what is read after either is read anew.
  *
  * @param source - The API
  * @param defaults - What every call is made with, as for `createCaller`
@@ -59,5 +77,6 @@ export function createServerCaller(
 ): FlatClient<Record<never, never>>;
 export function createServerCaller(source: AnyDefinedApi, defaults?: CallerDefaults): unknown {
   registerRequestContext(nextRequestContext);
+  if (renderMemo !== undefined) registerRenderMemo(renderMemo);
   return createCaller(source as DefinedApi, defaults);
 }

@@ -31,7 +31,7 @@ What is never shared:
 - **A request whose body is not text** — a file, a form, a stream.
 - **A call that follows its upload or download progress**, since each one reports its own.
 
-A request is joined only until its answer arrives. A read made after that sends a request of its own; to reuse an answer, keep it: [React Query](/docs/react-query/use-query) or SWR in the browser, the [cache middleware](/docs/middleware/built-in) on a server.
+A request is joined only until its answer arrives. A read made after that sends a request of its own; to reuse an answer, keep it: [React Query](/docs/react-query/use-query) or SWR in the browser, the [cache middleware](/docs/middleware/built-in) on a server. In Next.js, [`createServerCaller`](/docs/frameworks/nextjs) already reads once per render: a page's `generateMetadata` and its body share the read even when one runs after the other.
 
 <Callout variant="info" title="Leaving early">
 A call that stops waiting — its signal aborted, its `timeout` reached — rejects alone, and the others still get the answer. The request itself is cancelled only when every call waiting for it has left.

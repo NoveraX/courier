@@ -9,7 +9,7 @@ import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
-import { shareFlight } from "./shared-flight";
+import { answerRead, forgetRenderReads } from "./render-memo";
 import { timeoutSignal } from "./timeout-signal";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
@@ -34,8 +34,9 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   /** Sends the request in place of the platform's `fetch`: the source's own. */
   fetch?: PlatformFetch | undefined;
   /**
-   * Join an identical read already in flight rather than send another — the
-   * default; `false` sends this one alone.
+   * Join an identical read already in flight, or answer it with the one the
+   * render being served made, rather than send another — the default;
+   * `false` sends this one alone.
    */
   coalesce?: boolean | undefined;
   /**
@@ -123,6 +124,8 @@ export async function coreFetch(
       : send(fullUrl, sent);
   };
   const read = isRead(init.method, reads);
+  /* A write the render makes may change what its reads answered. */
+  if (!read) forgetRenderReads();
   const key =
     !read || coalesce === false || onDownloadProgress || onUploadProgress
       ? undefined
@@ -137,7 +140,7 @@ export async function coreFetch(
     response =
       key === undefined
         ? await sendOnce(finalSignal ?? undefined)
-        : await shareFlight(key, finalSignal ?? undefined, sendOnce);
+        : await answerRead(key, finalSignal ?? undefined, sendOnce);
   } catch (error) {
     throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   }

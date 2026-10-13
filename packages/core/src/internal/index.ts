@@ -126,6 +126,11 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export {
+  type RenderMemo,
+  type RenderMemoProvider,
+  registerRenderMemo,
+} from "../utils/render-memo";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 export {
   type KnownWebhook,

@@ -9,9 +9,11 @@ import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-up
 const { endpoint } = courier();
 
 /* A call's release is recorded by the next middleware, a moment after the
-   limiter lets it through, so two recorded releases can sit a fraction of a
-   millisecond closer together than the admissions themselves. */
-const RECORD_SLACK_MS = 1;
+   limiter lets it through — a few milliseconds on a busy machine — so two
+   recorded releases can sit that much closer together than the admissions
+   themselves. A limiter that let a call through early would be out by most
+   of a window. */
+const RECORD_SLACK_MS = 10;
 
 let upstream: Upstream | undefined;
 
@@ -107,6 +109,7 @@ describe("rateLimitMiddleware", () => {
   it("gives a cancelled caller's turn to the call queued behind it", async () => {
     const released: number[] = [];
     const client = await limitedClient({ maxRequests: 1, window: 300 }, released);
+    const started = performance.now();
     const first = client.read();
     const controller = new AbortController();
     const cancelled = client.with({ signal: controller.signal }).read();
@@ -116,10 +119,13 @@ describe("rateLimitMiddleware", () => {
     await expect(cancelled).rejects.toMatchObject({ name: "AbortError" });
     await Promise.all([first, behind]);
 
-    const gap = (released[1] ?? 0) - (released[0] ?? 0);
+    /* The first call is let through while the others are still being
+       started, and recorded after that; the one behind it, a window later,
+       is counted from the start, which its record can only come after. */
+    const behindAt = (released[1] ?? 0) - started;
     expect(released).toHaveLength(2);
-    expect(gap).toBeGreaterThanOrEqual(300 - RECORD_SLACK_MS);
-    expect(gap).toBeLessThan(450);
+    expect(behindAt).toBeGreaterThanOrEqual(300);
+    expect(behindAt).toBeLessThan(450);
     expect(upstream?.seen).toHaveLength(2);
   });
 

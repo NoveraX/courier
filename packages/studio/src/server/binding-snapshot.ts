@@ -29,8 +29,8 @@ export interface BindingSnapshotPayload {
   rows: BindingStatus[];
   runtimeCount: number;
   sourceCount: number;
-  /** Each runtime connected, and whether it runs in a browser or on a server. */
-  runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>;
+  /** Each runtime connected, whether it runs in a browser or on a server, and where it is served when it said so. */
+  runtimes: Array<{ runtimeId: string; kind: "browser" | "server"; origin?: string }>;
   /** When the first of the runtimes attached now arrived; absent while none is. */
   activeSince?: number;
   /** When the last runtime left; absent while one is attached, or before any came. */
@@ -46,7 +46,11 @@ export function buildBindingSnapshot(bindingTable: BindingTable): BindingSnapsho
     rows,
     runtimeCount: runtimeRegistry.size,
     sourceCount: countServedSources(),
-    runtimes: [...runtimeRegistry.values()].map(({ runtimeId, kind }) => ({ runtimeId, kind })),
+    runtimes: [...runtimeRegistry.values()].map(({ runtimeId, kind, listenOrigin }) => ({
+      runtimeId,
+      kind,
+      ...(listenOrigin !== undefined && { origin: listenOrigin }),
+    })),
     ...(activeSince !== undefined && { activeSince }),
     ...(idleSince !== undefined && { idleSince }),
   };

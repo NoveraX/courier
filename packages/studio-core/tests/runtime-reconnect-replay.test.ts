@@ -136,3 +136,30 @@ describe("runtime socket across a Studio restart", () => {
     expect(socket.announcements()).toHaveLength(2);
   });
 });
+
+describe("the origin a runtime says hello with", () => {
+  it("is the one known at each connection, so one learned later is sent on the next", async () => {
+    let origin: string | undefined;
+    await connectRuntimeSocket(
+      {
+        runtimeId: "app",
+        kind: "server",
+        studioUrl: "http://localhost:6280",
+        listenOrigin: () => origin,
+      },
+      [],
+      makeHandle(),
+    );
+
+    socket.fireConnect();
+    origin = "http://localhost:3000";
+    socket.fireDisconnect();
+    socket.fireConnect();
+
+    const hellos = socket.emitted.filter((e) => e.event === "runtime:hello").map((e) => e.payload);
+    expect(hellos).toEqual([
+      { runtimeId: "app", kind: "server" },
+      { runtimeId: "app", kind: "server", listenOrigin: "http://localhost:3000" },
+    ]);
+  });
+});

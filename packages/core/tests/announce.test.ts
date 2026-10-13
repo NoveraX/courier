@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { announceHosting, announceWhenRegistered, consumeAnnouncements } from "../src/announce";
 import { bufferedAnnouncementCount, resetAnnouncements } from "../src/announce/test-support";
+import { setAppOrigin } from "../src/app-origin";
 import { defineApi } from "../src/define";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 
@@ -134,6 +135,38 @@ describe("announceWhenRegistered", () => {
     announceWhenRegistered({ transports: ["sse"] });
 
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ transports: ["sse"] }));
+  });
+
+  it("announces again with the app's origin once a request brings it, and then no more", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    registerSources({ api: fakeApi });
+    const announce = announceWhenRegistered({ transports: ["http"], framework: "next" });
+    const listener = vi.fn();
+    consumeAnnouncements(listener);
+
+    announce("http://localhost:3000");
+    announce("http://localhost:3000");
+
+    expect(listener.mock.calls.map(([entry]) => entry.listenOrigin)).toEqual([
+      undefined,
+      "http://localhost:3000",
+    ]);
+    setAppOrigin(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("announces the origin the config gives at once", () => {
+    setAppOrigin("https://app.example.com");
+    registerSources({ api: fakeApi });
+    const listener = vi.fn();
+    consumeAnnouncements(listener);
+
+    announceWhenRegistered({ transports: ["sse"] })();
+
+    expect(listener.mock.calls.map(([entry]) => entry.listenOrigin)).toEqual([
+      "https://app.example.com",
+    ]);
+    setAppOrigin(undefined);
   });
 
   it("announces once", () => {

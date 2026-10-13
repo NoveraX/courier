@@ -54,11 +54,13 @@ interface ConnectInput {
    */
   bus?: EventBus | undefined;
   /**
-   * Canonical HTTP(S) origin this runtime listens on, when known.
-   * Sent on `runtime:hello` so Studio can stamp it onto bound rows in the
-   * binding-table snapshot for the playground "resolved URL" badge.
+   * Where this runtime is served — the page's origin in a browser, the
+   * app's on a server — read on each connection, so one learned after the
+   * first is sent on the next. Sent on `runtime:hello`: Studio shows it
+   * beside the runtime and stamps it onto bound rows for the Playground's
+   * "resolved URL" badge.
    */
-  listenOrigin?: string | undefined;
+  listenOrigin?: (() => string | undefined) | undefined;
   /**
    * Reads this project's Studio token, which a server runtime presents on
    * each connection so Studio sends it Playground calls. A browser runtime
@@ -169,10 +171,11 @@ export async function connectRuntimeSocket(
   });
 
   socket.on("connect", () => {
+    const listenOrigin = input.listenOrigin?.();
     const hello = {
       runtimeId: input.runtimeId,
       kind: input.kind,
-      ...(input.listenOrigin && { listenOrigin: input.listenOrigin }),
+      ...(listenOrigin && { listenOrigin }),
     };
     socket.emit("runtime:hello", hello, limit.welcome);
     /* Empty on the first connect, so this replays nothing until there is

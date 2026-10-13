@@ -185,6 +185,36 @@ describe("setupRuntimeNamespace", () => {
     expect(getRuntimeEntry("browser-runtime")?.listenOrigin).toBe("http://localhost:5173");
   });
 
+  it("lists each runtime in binding:snapshot with the origin it said, bound to a source or not", () => {
+    const bindingTable = new BindingTable();
+    const ns = makeNamespace();
+    const ui = { emit: vi.fn() } as unknown as Namespace;
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN,
+      bindingTable,
+      uiNamespace: ui,
+    });
+
+    const page = makeSocket();
+    ns.connect(page);
+    page.emit("runtime:hello", {
+      runtimeId: "next-browser",
+      kind: "browser",
+      listenOrigin: "http://localhost:3000",
+    });
+    const server = makeSocket();
+    ns.connect(server);
+    server.emit("runtime:hello", { runtimeId: "next-server", kind: "server" });
+    server.emit("runtime:announce", { transports: ["http"], sources: [] });
+
+    const lastCall = (ui.emit as ReturnType<typeof vi.fn>).mock.calls.at(-1);
+    const payload = lastCall?.[1] as { runtimes: Array<Record<string, unknown>> };
+    expect(payload.runtimes).toEqual([
+      { runtimeId: "next-browser", kind: "browser", origin: "http://localhost:3000" },
+      { runtimeId: "next-server", kind: "server" },
+    ]);
+  });
+
   it("enriches binding:snapshot with appOrigin from the owning runtime listenOrigin", () => {
     const bindingTable = new BindingTable();
     bindingTable.setConfig({

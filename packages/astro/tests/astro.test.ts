@@ -5,7 +5,7 @@
  * to the application and the Playground can run an endpoint in the process
  * that serves it, rather than leaving the binding orphaned.
  */
-import { registerSources } from "@noverax/courier";
+import { registerSources, setAppOrigin } from "@noverax/courier";
 import { type BufferedAnnouncement, consumeAnnouncements } from "@noverax/courier/announce";
 import { courier, defineApi, getSourceName } from "@noverax/courier/define";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,10 +16,11 @@ import { courierHandler } from "../src/index";
 afterEach(() => {
   vi.unstubAllGlobals();
   resetAnnouncements();
+  setAppOrigin(undefined);
 });
 
 describe("the Astro handler", () => {
-  it("tells Studio on its first request which sources it serves", async () => {
+  it("tells Studio which sources it serves, and where once a request says", async () => {
     const { endpoint } = courier();
     registerSources({
       api: defineApi({
@@ -37,8 +38,17 @@ describe("the Astro handler", () => {
     }
     stop();
 
-    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual(
-      [[["http", "sse"], "astro", ["api"]]],
-    );
+    /* Once as the sources are there, and once more as the first request names the app's origin. */
+    expect(
+      announced.map((a) => [
+        a.transports,
+        a.framework,
+        a.sources.map(getSourceName),
+        a.listenOrigin,
+      ]),
+    ).toEqual([
+      [["http", "sse"], "astro", ["api"], undefined],
+      [["http", "sse"], "astro", ["api"], "http://app.test"],
+    ]);
   });
 });

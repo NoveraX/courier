@@ -3,7 +3,7 @@
  * registry, the in-flight attach sharing, and the connection to Studio.
  */
 
-import { createLogger, getSources } from "@noverax/courier";
+import { createLogger, getAppOrigin, getSources } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { createKeptBodies, KEPT_BODY_BYTES, studioHooks } from "@noverax/courier/internal";
 import { EventBus } from "../event-bus";
@@ -153,6 +153,7 @@ async function attachFresh(
       bus,
       readToken: setup?.readToken,
       bodies,
+      listenOrigin: isBrowser ? pageOrigin : getAppOrigin,
     };
     connectRuntimeSocket(input, pending, handle).catch((err: unknown) =>
       log.warn("Studio connection failed to start", err),
@@ -160,6 +161,11 @@ async function attachFresh(
   }
 
   return handle;
+}
+
+/* Where the page runs: what the browser runtime is served at. */
+function pageOrigin(): string | undefined {
+  return typeof location === "undefined" ? undefined : location.origin;
 }
 
 /** Reset all attached handles — for tests only. */

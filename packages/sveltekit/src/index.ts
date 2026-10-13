@@ -64,7 +64,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "sveltekit" });
   return (event: SvelteKitRequestEvent) => {
-    announce();
+    announce(new URL(event.request.url).origin);
     rememberPeerAddress(event.request, svelteKitClientAddress(event));
     return handleWhileConnected(handle, event.request, event.platform?.req?.socket);
   };

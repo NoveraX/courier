@@ -58,7 +58,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "solid" });
   return ({ request, nativeEvent, clientAddress }: SolidAPIEvent) => {
-    announce();
+    announce(new URL(request.url).origin);
     rememberPeerAddress(request, clientAddress);
     return handleWhileConnected(handle, request, nativeEvent?.node?.res);
   };

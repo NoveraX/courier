@@ -63,6 +63,16 @@ async function readFor(url: string, ms: number): Promise<unknown[]> {
 }
 
 describe("data sent by a stream endpoint", () => {
+  it("arrives in a runtime without ByteLengthQueuingStrategy, as the Edge Runtime is", async () => {
+    vi.stubGlobal("ByteLengthQueuingStrategy", undefined);
+    const url = serve(async function* () {
+      yield { data: "first" };
+      yield { data: "second" };
+    });
+
+    expect(await readAll(url)).toEqual(["first", "second"]);
+  });
+
   it("arrives as sent, strings included", async () => {
     const sent = ["hello", "42", "true", "line one\nline two", 7, { a: [1, null] }, null];
     const url = serve(async function* () {

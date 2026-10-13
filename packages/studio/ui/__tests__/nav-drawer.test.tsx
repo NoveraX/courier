@@ -115,6 +115,10 @@ describe("the navigation drawer", () => {
       "Docs",
       "Settings",
     ]);
+    /* The documentation itself, not the site's landing page. */
+    expect(within(drawer()).getByRole("link", { name: /^Docs/ }).getAttribute("href")).toBe(
+      "https://courier.noverax.cloud/docs",
+    );
     expect(
       within(drawer()).getByRole("button", { name: "Theme: Dark. Switch to Light" }),
     ).toBeTruthy();

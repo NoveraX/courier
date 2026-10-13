@@ -249,7 +249,7 @@ describe("the shell", () => {
     fireEvent.click(within(dialog).getByRole("option", { name: /^Docs/ }));
 
     expect(windowOpen).toHaveBeenCalledWith(
-      "https://courier.noverax.cloud",
+      "https://courier.noverax.cloud/docs",
       "_blank",
       "noopener,noreferrer",
     );

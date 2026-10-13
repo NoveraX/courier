@@ -65,5 +65,5 @@ export const SHELL_NAV: readonly ShellNavGroup[] = [
 /** Settings, which the sidebar keeps at its foot rather than among the views. */
 export const SETTINGS_PAGE = { label: "Settings", group: "System", to: "/settings" } as const;
 
-/** Where Courier's documentation lives. */
-export const DOCS_URL = "https://courier.noverax.cloud";
+/** Where Courier's documentation lives: the docs themselves, not the site's landing page. */
+export const DOCS_URL = "https://courier.noverax.cloud/docs";

@@ -71,10 +71,15 @@ export interface SourceDispatcher {
   dispatch(options: object, handler: object): boolean;
 }
 
+/* Each `fetch` a source, a group or a call names, as it is checked: one wrapper for one function. */
+const checkedFetches = new WeakMap<SourceFetch, PlatformFetch>();
+
 /**
  * A source's `fetch` as Courier sends with it: what it answers is checked
  * to be a `Response` — the platform's, or another `fetch`'s, undici's,
- * which is one in all but its type.
+ * which is one in all but its type. One `fetch` is wrapped once, so the
+ * calls of a source that names its own send through one function, and
+ * identical reads in flight together are joined as anyone's are.
  *
  * @param send - The source's `fetch`
  * @returns The same `fetch`, typed as the platform's
@@ -88,7 +93,9 @@ export interface SourceDispatcher {
  */
 export function platformFetchOf(send: SourceFetch): PlatformFetch {
   if (typeof send !== "function") throw notAFunction("fetch", send);
-  return async (input, init) => {
+  const known = checkedFetches.get(send);
+  if (known !== undefined) return known;
+  const checked: PlatformFetch = async (input, init) => {
     const answer = await send(input, init);
     if (isResponse(answer)) return answer;
     throw new ConfigurationError(
@@ -96,6 +103,8 @@ export function platformFetchOf(send: SourceFetch): PlatformFetch {
       `[courier] The source's fetch answered ${input} with something that is not a Response.`,
     );
   };
+  checkedFetches.set(send, checked);
+  return checked;
 }
 
 /**

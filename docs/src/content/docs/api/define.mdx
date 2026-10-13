@@ -32,7 +32,8 @@ type BaseOptions = {
   allowedHeaders?: string[]
   bodySerializer?: (data: Record<string, unknown>) => BodyInit
   searchParamsSerializer?: SearchParamsSerializer
-  deduplicate?: boolean
+  coalesce?: boolean
+  cancelPrevious?: readonly string[]
   middleware?: Middleware[]
   pathOptions?: PathOptions
   timeout?: number
@@ -94,8 +95,8 @@ const api = defineApi({
     authMiddleware({ getToken: () => getAuthToken() }),
   ],
 
-  // Enable request deduplication
-  deduplicate: true,
+  // A newer search cancels the one still in flight
+  cancelPrevious: ["users.search"],
 
   groups: { users, posts },
 })
@@ -186,9 +187,13 @@ const api = defineApi({
 })
 ```
 
-### deduplicate
+### coalesce
 
-Cancel a read still in flight when the same endpoint is read again. Writes are never cancelled. See [Abort & Dedup](/docs/advanced/abort).
+Identical reads in flight together share one request — the same method, address, headers and body, every credential among them — and each call gets a copy of the answer. On by default; `false` sends every call of the API alone, and a call can say so for itself with `.with({ coalesce: false })`. Writes are never shared. See [Deduplication & Abort](/docs/advanced/abort).
+
+### cancelPrevious
+
+The reads a newer call cancels while they are still in flight, by their paths, such as `["users.search"]` — a search as the user types. The older call rejects with an `HTTPError` of status 499, whatever its variables were. It runs in a browser or a React Native app, where one user is; on a server it has no effect. A path the API does not define, or one that writes, throws `ConfigurationError` `CANCEL_PREVIOUS_INVALID` where the API is defined. See [Deduplication & Abort](/docs/advanced/abort#cancelling-the-previous-call).
 
 ### allowedHeaders
 

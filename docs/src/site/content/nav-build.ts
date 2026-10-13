@@ -49,7 +49,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Path Parameters", href: "/docs/advanced/path-params" },
       { title: "Encoding", href: "/docs/advanced/encoding" },
       { title: "File Upload", href: "/docs/advanced/upload" },
-      { title: "Abort & Deduplication", href: "/docs/advanced/abort" },
+      { title: "Deduplication & Abort", href: "/docs/advanced/abort" },
       { title: "Raw Data Mode", href: "/docs/advanced/raw-data" },
       { title: "OpenAPI Export", href: "/docs/advanced/openapi" },
       { title: "Webhooks", href: "/docs/advanced/webhooks" },

@@ -130,10 +130,28 @@ describe("coreFetch", () => {
       expect(getFetchCall().init.signal).toBeUndefined();
     });
 
-    it("passes through existing signal without timeout", async () => {
+    it("passes a write's signal through as it is", async () => {
       const controller = new AbortController();
-      await coreFetch("get", "https://api.com", { signal: controller.signal });
+      await coreFetch("post", "https://api.com", { signal: controller.signal });
       expect(getFetchCall().init.signal).toBe(controller.signal);
+    });
+
+    it("cancels a read's request when its caller's signal fires", async () => {
+      fetchSpy.mockImplementation(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+          }),
+      );
+      const controller = new AbortController();
+      const pending = coreFetch("get", "https://api.com/read-cancelled", {
+        signal: controller.signal,
+      });
+
+      controller.abort(new Error("left"));
+
+      await expect(pending).rejects.toThrow("left");
+      expect(getFetchCall().init.signal?.aborted).toBe(true);
     });
 
     it("combines signal and timeout", async () => {

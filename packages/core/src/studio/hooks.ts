@@ -1,4 +1,4 @@
-import type { CacheHooks, DedupHooks, ProxyHooks, UploadHooks } from "./hooks-proxy-cache";
+import type { CacheHooks, ProxyHooks, SupersedeHooks, UploadHooks } from "./hooks-proxy-cache";
 import type {
   HttpFetchHooks,
   MiddlewareHooks,
@@ -23,7 +23,7 @@ export interface StudioHooks
     HttpFetchHooks,
     ProxyHooks,
     CacheHooks,
-    DedupHooks,
+    SupersedeHooks,
     UploadHooks,
     StreamHooks,
     WSPlaygroundHooks,

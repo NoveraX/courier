@@ -107,7 +107,7 @@ describe("defineApi", () => {
     const api = defineApi({
       baseURL: "https://api.test.com",
       responseType: "text",
-      deduplicate: true,
+      cancelPrevious: ["items.list"],
       allowedHeaders: ["x-custom"],
       middleware: [mw],
       groups: {
@@ -121,7 +121,7 @@ describe("defineApi", () => {
     });
 
     expect(api.options.responseType).toBe("text");
-    expect(api.options.deduplicate).toBe(true);
+    expect(api.options.cancelPrevious).toEqual(["items.list"]);
     expect(api.options.allowedHeaders).toEqual(["x-custom"]);
     expect(api.options.middleware).toEqual([mw]);
   });

@@ -24,7 +24,7 @@ const restores: Array<() => void> = [];
 function api(baseURL = "https://api.example") {
   return defineApi({
     baseURL,
-    deduplicate: true,
+    cancelPrevious: ["slow"],
     endpoints: {
       slow: endpoint.get("slow").response<unknown>(),
       order: endpoint
@@ -144,7 +144,7 @@ describe("a call that times out in React Native", () => {
   });
 });
 
-describe("deduplication in React Native", () => {
+describe("cancelling the previous call in React Native", () => {
   it("cancels a superseded read, as in a browser, where AbortSignal.any is missing", async () => {
     vi.stubGlobal("fetch", nativeFetch());
     without(AbortSignal, "any");

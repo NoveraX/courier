@@ -63,7 +63,11 @@ export const REFERENCE_SECTIONS: NavSection[] = [
         description: "Middleware chain",
       },
       { title: "Errors", href: "/docs/examples/errors", description: "HTTPError handling" },
-      { title: "Abort", href: "/docs/examples/abort", description: "AbortController & dedup" },
+      {
+        title: "Abort",
+        href: "/docs/examples/abort",
+        description: "Shared reads, cancelPrevious & AbortController",
+      },
       {
         title: "Streaming",
         href: "/docs/examples/streaming",

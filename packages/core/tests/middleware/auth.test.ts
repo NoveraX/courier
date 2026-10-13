@@ -125,7 +125,10 @@ describe("authMiddleware against a real upstream", () => {
     );
     const client = clientFor(url, authMiddleware({ getToken: () => "stale", refreshToken }));
 
-    const calls = Promise.all([client.me(), client.me(), client.me()]);
+    /* Three calls the upstream tells apart, so three are refused rather than one shared. */
+    const calls = Promise.all(
+      [1, 2, 3].map((n) => client.with({ headers: { "x-call": String(n) } }).me()),
+    );
     await vi.waitFor(() => expect(refreshToken).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 50));
     release("fresh");

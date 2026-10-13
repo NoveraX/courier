@@ -86,7 +86,7 @@ A `retry` policy on a `courier()` base or an endpoint's `.retry()` follows the s
 
 ### Cancellations
 
-A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a request that `deduplicate` replaced with a newer identical one (status 499). A caller that aborts while the middleware waits between attempts is answered at once with its signal's reason.
+A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a read that a newer call to its endpoint cancelled through `cancelPrevious` (status 499). A caller that aborts while the middleware waits between attempts is answered at once with its signal's reason.
 
 ---
 

@@ -160,8 +160,8 @@ const api = defineApi({
   // Default headers for all requests
   headers: { "X-Client": "courier" },
 
-  // Cancel duplicate in-flight requests (default: false)
-  deduplicate: true,
+  // A newer search cancels the one still in flight
+  cancelPrevious: ["users.search"],
 
   // Middleware chain — retry, auth, logging, etc.
   middleware: [

@@ -3,7 +3,6 @@
  */
 
 import type { CacheHitEvent, CacheInvalidateEvent, CacheMissEvent, CacheStoreEvent } from "./cache";
-import type { DedupAbortEvent, DedupReuseEvent } from "./dedup";
 import type { HttpFetchEndEvent, HttpFetchErrorEvent, HttpFetchStartEvent } from "./http";
 import type { MiddlewareEnterEvent, MiddlewareErrorEvent, MiddlewareExitEvent } from "./middleware";
 import type {
@@ -39,6 +38,7 @@ import type {
   StreamMessageEvent,
   StreamOpenEvent,
 } from "./stream";
+import type { CallSupersededEvent } from "./superseded";
 import type { UploadCompleteEvent, UploadProgressEvent } from "./upload";
 import type { ValidationFailEvent, ValidationPassEvent, ValidationStartEvent } from "./validation";
 
@@ -66,8 +66,7 @@ export type AnyStudioEvent =
   | CacheMissEvent
   | CacheStoreEvent
   | CacheInvalidateEvent
-  | DedupAbortEvent
-  | DedupReuseEvent
+  | CallSupersededEvent
   | UploadProgressEvent
   | UploadCompleteEvent
   | StreamOpenEvent

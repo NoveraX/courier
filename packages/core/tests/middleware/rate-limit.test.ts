@@ -40,6 +40,13 @@ async function limitedClient(limit: { maxRequests: number; window: number }, rel
   );
 }
 
+/* A call the upstream tells apart from the others, so none of them is shared with another in flight. */
+function distinct<
+  TClient extends { with: (options: { headers: Record<string, string> }) => TClient },
+>(client: TClient, n: number): TClient {
+  return client.with({ headers: { "x-call": String(n) } });
+}
+
 /** Run nothing else for `ms` milliseconds, as a CPU-bound handler would. */
 function blockEventLoop(ms: number): void {
   const until = performance.now() + ms;
@@ -54,7 +61,7 @@ describe("rateLimitMiddleware", () => {
     const client = await limitedClient({ maxRequests: 2, window: 300 }, released);
     const started = performance.now();
 
-    await Promise.all(Array.from({ length: 6 }, () => client.read()));
+    await Promise.all(Array.from({ length: 6 }, (_, n) => distinct(client, n).read()));
 
     /* The first window's calls are let through while the burst is still being
        started, and recorded only after it: a busy machine records them late,

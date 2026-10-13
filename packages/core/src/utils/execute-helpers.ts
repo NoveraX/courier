@@ -9,29 +9,40 @@ const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
  *
  * It is built per call, because a call's context decides its headers and
  * path options, while its in-flight table lives as long as the source: a
- * fresh, empty table per call would let `deduplicate` cancel nothing.
+ * fresh, empty table per call would let `cancelPrevious` cancel nothing.
  *
- * Deduplication only runs in a browser or a React Native app, for a call
- * that did not come off the wire. On a server, requests from different
- * users reach the same endpoint under the same key, and one user's request
- * would cancel another's. It only runs for a read: a write that a newer one
- * superseded has usually been applied by the server, and cancelling it
- * would tell its caller it had not.
+ * A newer call cancels an older one to an endpoint the API lists in
+ * `cancelPrevious` only in a browser or a React Native app, for a call that
+ * did not come off the wire. On a server, requests from different users
+ * reach the same endpoint, and one user's request would cancel another's.
+ * It only cancels a read: a write that a newer one superseded has usually
+ * been applied by the server, and cancelling it would tell its caller it
+ * had not.
  *
  * @param dataSource - The source the call belongs to
  * @param context - The call's context, when it has one
  * @param kind - Whether the endpoint reads or writes, from its schema
+ * @param path - The endpoint's path in its API, such as `users.search`
  * @returns A client for this call
  */
 export function clientForCall(
   dataSource: { options?: BaseOptions },
   context?: Context,
   kind?: "query" | "mutation",
+  path?: string,
 ): HttpClient {
-  const dedupes = servesOneUser() && context?.proxyMethod === undefined && kind === "query";
-  const options = dedupes ? dataSource.options : { ...dataSource.options, deduplicate: false };
-  const client = new HttpClient(options, context);
-  if (dedupes) client.pendingRequests = pendingRequestsOf(dataSource);
+  const client = new HttpClient(dataSource.options, context);
+  client.kind = kind;
+  const cancels =
+    servesOneUser() &&
+    context?.proxyMethod === undefined &&
+    kind === "query" &&
+    path !== undefined &&
+    dataSource.options?.cancelPrevious?.includes(path) === true;
+  if (cancels) {
+    client.pendingRequests = pendingRequestsOf(dataSource);
+    client.cancelKey = path;
+  }
   return client;
 }
 

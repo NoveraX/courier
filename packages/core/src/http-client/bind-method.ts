@@ -1,11 +1,7 @@
 import { HTTPError } from "../errors";
 import { abortReason } from "../utils/abort-reason";
 import { anySignal } from "../utils/any-signal";
-import {
-  cleanupDeduplication,
-  deduplicateAndAbortPrevious,
-  getDedupeKey,
-} from "../utils/deduplicate";
+import { forgetCall, type Supersession, supersedeCall } from "../utils/cancel-previous";
 import { compileUrl, resolveBasePath } from "../utils/helpers";
 import { stripUndefined } from "./body-builder";
 import { type RequestOptions, withCallTransport } from "./call-transport";
@@ -29,7 +25,8 @@ export type BindMethodDeps = {
   context: Context | undefined;
   prefixUrl: string;
   pendingRequests: { [key: string]: AbortController };
-  deduplicate: boolean;
+  /** The endpoint a newer call to cancels this one while it is in flight, when its API names it. */
+  cancelKey: string | undefined;
   pathOptions: PathOptions | undefined;
   searchParamsSerializer: SearchParamsSerializer | undefined;
   defaultQueryParams: Record<string, unknown> | undefined;
@@ -85,20 +82,20 @@ export function bindMethod(
     /* A call that names how its answer is read overrides the source's
        reading, its parser included. */
     const { responseType: readAs, ...options } = requested;
-    const dedupeKey = deps.deduplicate ? getDedupeKey(url, method) : undefined;
-    const dedupeController = dedupeKey ? applyDeduplication(deps, dedupeKey, options) : undefined;
+    /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
+    if (stream) options.coalesce = false;
+    const cancelKey = deps.cancelKey;
+    const supersession = cancelKey ? supersede(deps, cancelKey, options) : undefined;
     const forget = (): void => {
-      if (dedupeKey && dedupeController) {
-        cleanupDeduplication(
-          { pendingRequests: deps.pendingRequests },
-          dedupeKey,
-          dedupeController,
-        );
+      if (cancelKey && supersession) {
+        forgetCall({ pendingRequests: deps.pendingRequests }, cancelKey, supersession.controller);
       }
     };
 
     try {
-      const response = await deps.fetchRequest(method, url, options);
+      const sending = deps.fetchRequest(method, url, options);
+      supersession?.cancelSuperseded();
+      const response = await sending;
       forget();
 
       if (!response.ok) {
@@ -132,17 +129,13 @@ export function bindMethod(
   };
 }
 
-function applyDeduplication(
+function supersede(
   deps: BindMethodDeps,
-  dedupeKey: string,
+  key: string,
   options: Partial<FetchOptions>,
-): AbortController {
-  const controller = deduplicateAndAbortPrevious(
-    { pendingRequests: deps.pendingRequests },
-    dedupeKey,
-  );
-  options.signal = options.signal
-    ? anySignal([controller.signal, options.signal])
-    : controller.signal;
-  return controller;
+): Supersession {
+  const supersession = supersedeCall({ pendingRequests: deps.pendingRequests }, key);
+  const { signal } = supersession.controller;
+  options.signal = options.signal ? anySignal([signal, options.signal]) : signal;
+  return supersession;
 }

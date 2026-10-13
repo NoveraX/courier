@@ -1,8 +1,8 @@
 /**
- * Studio hook definitions for proxy, cache, dedup, and upload tracking.
+ * Studio hook definitions for proxy, cache, superseded calls, and upload tracking.
  *
  * Groups together every event tied to the proxy adapter, the response
- * cache, inflight deduplication, and upload progress reporting.
+ * cache, calls a newer one cancelled, and upload progress reporting.
  */
 
 /**
@@ -82,15 +82,9 @@ export interface CacheHooks {
     | undefined;
 }
 
-/** In-flight request deduplication abort/reuse instrumentation */
-export interface DedupHooks {
-  onDedupAbort?:
-    | ((event: { requestId: string; key: string; timestamp: number }) => void)
-    | undefined;
-
-  onDedupReuse?:
-    | ((event: { requestId: string; key: string; timestamp: number }) => void)
-    | undefined;
+/** A call cancelled by a newer one to its endpoint, as `cancelPrevious` asks. */
+export interface SupersedeHooks {
+  onCallSuperseded?: ((event: { key: string; timestamp: number }) => void) | undefined;
 }
 
 /** Multipart upload progress + completion */

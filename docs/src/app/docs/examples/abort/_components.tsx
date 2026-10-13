@@ -3,7 +3,7 @@
 import { isHTTPError } from "@noverax/courier"
 import { useRef, useState } from "react"
 
-import { caller } from "@/lib/caller"
+import { caller, readsCaller, searchCaller } from "@/lib/caller"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -53,56 +53,100 @@ export function ManualAbortDemo() {
   )
 }
 
-export function DedupDemo() {
-  const latest = useRef<AbortController | null>(null)
-  const [clicks, setClicks] = useState(0)
-  const [aborted, setAborted] = useState(0)
+/* The requests that reached the proxy while `run` ran, as the browser's own resource timing counts them. */
+async function requestsWhile(match: string, run: () => Promise<unknown>): Promise<number> {
+  const seen: PerformanceEntry[] = []
+  const observer = new PerformanceObserver((list) => seen.push(...list.getEntries()))
+  observer.observe({ type: "resource" })
+  await run()
+  /* An entry is queued as its response ends, a moment after the call settles. */
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  seen.push(...observer.takeRecords())
+  observer.disconnect()
+  return seen.filter((entry) => entry.name.includes(match)).length
+}
+
+export function SharedReadsDemo() {
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<unknown>(undefined)
-  const fetchUsers = async () => {
-    if (latest.current) {
-      latest.current.abort()
-      setAborted((n) => n + 1)
-    }
-    const controller = new AbortController()
-    latest.current = controller
-    setClicks((n) => n + 1)
+  const [counted, setCounted] = useState<{ calls: number; requests: number } | undefined>()
+  const run = async () => {
     setLoading(true)
-    setData(undefined)
+    setCounted(undefined)
     try {
-      setData(await caller.users.with({ signal: controller.signal }).getAll())
-    } catch (failure: unknown) {
-      /* A click that came after this one aborted it: the later call answers. */
-      if (!isAbort(failure)) throw failure
+      const requests = await requestsWhile("_m=getAll", () =>
+        Promise.all([
+          readsCaller.users.getAll(),
+          readsCaller.users.getAll(),
+          readsCaller.users.getAll(),
+        ])
+      )
+      setCounted({ calls: 3, requests })
     } finally {
-      if (latest.current === controller) {
-        setLoading(false)
-        latest.current = null
+      setLoading(false)
+    }
+  }
+  return (
+    <Sandbox
+      label="Promise.all([users.getAll(), users.getAll(), users.getAll()])"
+      controls={
+        <>
+          <RunButton
+            loading={loading}
+            label="Read the users three times"
+            onClick={() => void run()}
+          />
+          {counted && (
+            <p className="m-0 flex gap-4 font-mono text-meta text-fg-subtle">
+              <span>calls {counted.calls}</span>
+              <span>requests {counted.requests}</span>
+            </p>
+          )}
+        </>
       }
+      result={<ResponseView data={counted} pending={loading} />}
+    />
+  )
+}
+
+export function CancelPreviousDemo() {
+  const [calls, setCalls] = useState(0)
+  const [cancelled, setCancelled] = useState(0)
+  const [pending, setPending] = useState(0)
+  const [data, setData] = useState<unknown>(undefined)
+  const call = async () => {
+    setCalls((n) => n + 1)
+    setPending((n) => n + 1)
+    try {
+      setData(await searchCaller.misc.slow())
+    } catch (failure: unknown) {
+      /* A newer call cancelled this one: it answers instead. */
+      if (isHTTPError(failure) && failure.status === 499) setCancelled((n) => n + 1)
+      else throw failure
+    } finally {
+      setPending((n) => n - 1)
     }
   }
   const reset = () => {
-    latest.current?.abort()
-    latest.current = null
-    setClicks(0)
-    setAborted(0)
-    setLoading(false)
+    setCalls(0)
+    setCancelled(0)
     setData(undefined)
   }
   return (
     <Sandbox
-      label="caller.users.with({ signal }).getAll()"
+      label="searchCaller.misc.slow()"
       controls={
         <>
-          <RunButton loading={loading} label="Fetch users" onClick={() => void fetchUsers()} />
-          <RunButton variant="secondary" label="Reset" onClick={reset} />
+          {/* Stays clickable while a call is in flight: the next click is what cancels it. */}
+          <RunButton label="Call, then call again" onClick={() => void call()} />
+          <RunButton variant="secondary" label="Reset" disabled={pending > 0} onClick={reset} />
           <p className="m-0 flex gap-4 font-mono text-meta text-fg-subtle">
-            <span>clicks {clicks}</span>
-            <span>aborted {aborted}</span>
+            <span>calls {calls}</span>
+            <span>in flight {pending}</span>
+            <span>cancelled {cancelled}</span>
           </p>
         </>
       }
-      result={<ResponseView data={data} pending={loading} />}
+      result={<ResponseView data={data} pending={pending > 0} />}
     />
   )
 }

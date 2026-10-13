@@ -85,7 +85,7 @@ does.
 | Server Actions | `/docs/examples/actions` |
 | Middleware | `/docs/examples/middleware` |
 | Error handling | `/docs/examples/errors` |
-| Abort and deduplication | `/docs/examples/abort` |
+| Deduplication and abort | `/docs/examples/abort` |
 | Streaming | `/docs/examples/streaming` |
 | Raw data | `/docs/examples/raw-data` |
 | Request options | `/docs/examples/options` |

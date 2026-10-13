@@ -4,12 +4,12 @@ import { assertJsonVariables } from "./assert-json-variables";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
 import { inProcessRoute } from "./in-process";
 import { buildPostPayload } from "./post-payload";
-import { createProxyDedupe } from "./proxy-dedupe";
+import { createProxyCancelPrevious } from "./proxy-cancel-previous";
 import { proxyRouting } from "./proxy-routing";
 import { resolveProxyPath } from "./resolve-path";
 import { sendFetch } from "./send-fetch";
 import { splitProxyOptions } from "./split-options";
-import type { ProxyCallerDefaults, UntypedCallerFn } from "./types";
+import type { ProxyCallerDefaults, ProxyEndpointKind, UntypedCallerFn } from "./types";
 
 export type { ProxyCallerDefaults } from "./types";
 
@@ -23,7 +23,8 @@ export type { ProxyCallerDefaults } from "./types";
  * an API's types live, and nothing here casts a typed chain away.
  *
  * @param defaults - The caller's proxy path, headers, credentials, timeout,
- *   callbacks, and whether a read superseded by an identical one is cancelled
+ *   callbacks, the reads a newer call cancels, and whether identical reads
+ *   in flight share one request
  * @returns The call function
  * @example
  * ```ts
@@ -39,10 +40,12 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
     timeout: defaultTimeout,
     onError: globalOnError,
     onSuccess: globalOnSuccess,
+    coalesce,
   } = defaults;
 
   const fetchCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
-  const dedupe = defaults.deduplicate ? createProxyDedupe() : undefined;
+  const cancelling = new Set(defaults.cancelPrevious ?? []);
+  const cancels = cancelling.size > 0 ? createProxyCancelPrevious() : undefined;
 
   return (source, options) => {
     const callSignal = options?.signal instanceof AbortSignal ? options.signal : undefined;
@@ -51,7 +54,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       endpoint: string,
       variables: unknown,
       signal: AbortSignal | undefined,
-      reads: boolean,
+      kind: ProxyEndpointKind | undefined,
     ): Promise<unknown> {
       assertCarriable(variables);
       if (!isFormData(variables)) assertJsonVariables(variables);
@@ -72,6 +75,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         timeout: defaultTimeout,
       });
       const local = {
+        ...(coalesce === false && { coalesce }),
         ...call.init,
         cache: call.cache,
         next: call.next,
@@ -79,7 +83,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         ...(route && { transport: route.transport(served) }),
       };
 
-      if (goesAsGet(call, { url, source, group, method, variables, reads })) {
+      if (goesAsGet(call, { url, source, group, method, variables, reads: kind === "read" })) {
         return handleGetProxy({
           url,
           source,
@@ -105,6 +109,9 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
           /* The call's own query and body, which nothing a caller passes may replace. */
           searchParams: proxyRouting(source, group, method),
           ...buildPostPayload(variables, call.server),
+          /* A read that goes as a POST — its variables too long for an address, or
+             sensitive — is joined as the read it is; one the client knows nothing of is not. */
+          reads: kind === "read" || kind === "sensitive-read",
           credentials: call.credentials,
           onUploadProgress: call.onUploadProgress,
           onDownloadProgress: call.onDownloadProgress,
@@ -114,10 +121,14 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         { ...fetchCtx, stream: call.stream, raw: call.server.rawData === true },
       );
     }
-    return (endpoint, variables, reads = false) => {
-      if (!dedupe) return send(endpoint, variables, callSignal, reads);
-      return dedupe.run(`${source}:${endpoint}`, callSignal, (signal) =>
-        send(endpoint, variables, signal, reads),
+    /* A newer call cancels an older one only for a read, or one the client knows nothing of: a
+       cancelled write has usually been applied by the server while its caller is told it was not. */
+    return (endpoint, variables, kind) => {
+      if (!cancels || kind === "mutation" || !cancelling.has(pathOf(endpoint))) {
+        return send(endpoint, variables, callSignal, kind);
+      }
+      return cancels.run(`${source}:${endpoint}`, callSignal, (signal) =>
+        send(endpoint, variables, signal, kind),
       );
     };
   };
@@ -149,4 +160,10 @@ function goesAsGet(
   if (call.proxyMethod !== undefined) return call.proxyMethod === "GET";
   if (!target.reads) return false;
   return fitsInAddress(target.url, getProxyQuery({ ...target, serverOptions: call.server }));
+}
+
+/* An endpoint as the API names it in `cancelPrevious`: `users.search` for the proxy's `users:search`. */
+function pathOf(endpoint: string): string {
+  const { group, method } = parseEndpointKey(endpoint);
+  return group ? `${group}.${method}` : method;
 }

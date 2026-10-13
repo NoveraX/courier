@@ -90,7 +90,8 @@ export async function prepareAndRun(
      stops — is the call's failure, as it came. */
   const pendingSession = startCallSession(target, context);
   const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
-  const instance = clientForCall(dataSource, context, schema?.type);
+  const path = [group, method].filter((part) => part !== undefined && part !== "").join(".");
+  const instance = clientForCall(dataSource, context, schema?.type, path);
   if (studio.hasStudio) attachFetchHook(instance, studio);
 
   const {

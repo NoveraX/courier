@@ -1,4 +1,4 @@
-import { supportsAbortController } from "../utils/deduplicate";
+import { supportsAbortController } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
@@ -25,7 +25,18 @@ export class HttpClient {
   private pathOptions: PathOptions | undefined;
   private bodySerializer: ((data: Record<string, unknown>) => WebBody) | undefined;
   private searchParamsSerializer: SearchParamsSerializer | undefined;
-  private deduplicate = false;
+  /**
+   * The endpoint whose newer call cancels this client's call while it is in
+   * flight: set for a read its API lists in `cancelPrevious`, made where one
+   * user is.
+   */
+  cancelKey: string | undefined;
+  /**
+   * Whether the endpoint this client calls reads or writes, as its API
+   * declares: an identical declared read in flight is joined whatever verb
+   * carries it — a search sent as a POST — and a declared write never is.
+   */
+  kind: "query" | "mutation" | undefined;
   private prefixUrl = "";
   private baseTimeout: number | undefined;
   private baseHeaders: HeadersInit | undefined;
@@ -55,7 +66,8 @@ export class HttpClient {
       pathOptions,
       bodySerializer,
       searchParamsSerializer,
-      deduplicate,
+      /* Decided per endpoint where the call is made, which sets `cancelKey`. */
+      cancelPrevious: _cancelPrevious,
       middleware: _middleware,
       /* Read by the executor, which builds what they send from the request
          being served; neither is anything `fetch` knows. */
@@ -78,7 +90,6 @@ export class HttpClient {
     this.pathOptions = pathOptions;
     this.bodySerializer = bodySerializer;
     this.searchParamsSerializer = searchParamsSerializer;
-    this.deduplicate = !!(deduplicate && supportsAbortController);
     this.prefixUrl = baseURL || "";
     this.baseTimeout = timeout;
     this.baseHeaders = headers;
@@ -135,6 +146,7 @@ export class HttpClient {
       withinOrigin: withinOrigin === true || this.context?.proxyMethod !== undefined,
       /* A group's or a call's own `fetch` sends in place of the source's. */
       ...((send ?? this.sourceFetch) && { fetch: send ?? this.sourceFetch }),
+      ...(this.kind !== undefined && { reads: this.kind === "query" }),
     } as CoreFetchInit);
   }
 
@@ -143,7 +155,7 @@ export class HttpClient {
       context: this.context,
       prefixUrl: this.prefixUrl,
       pendingRequests: this.pendingRequests,
-      deduplicate: this.deduplicate,
+      cancelKey: supportsAbortController ? this.cancelKey : undefined,
       pathOptions: this.pathOptions,
       searchParamsSerializer: this.searchParamsSerializer,
       defaultQueryParams: this.defaultQueryParams,

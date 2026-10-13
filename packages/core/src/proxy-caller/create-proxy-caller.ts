@@ -85,7 +85,8 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
   const effectiveDefaults: ProxyCallerDefaults = {
     ...defaults,
     proxyPath: mergedProxyPath,
-    deduplicate: defaults.deduplicate ?? readSourceOptions(apiSource)?.deduplicate,
+    cancelPrevious: defaults.cancelPrevious ?? readSourceOptions(apiSource)?.cancelPrevious,
+    coalesce: defaults.coalesce ?? readSourceOptions(apiSource)?.coalesce,
   };
 
   const http = createProxyHTTPExecutor(source, effectiveDefaults);
@@ -125,10 +126,16 @@ function readSourceProxyPath(
   return readSourceOptions(apiSource)?.proxyPath;
 }
 
+/** The options a `defineApi` result carries that a proxy client follows. */
+interface SourceOptions {
+  proxyPath?: ProxyPath;
+  cancelPrevious?: readonly string[];
+  coalesce?: boolean;
+}
+
 /** The options a `defineApi` result carries, read without its generic chain. */
 function readSourceOptions(
   apiSource: Record<string, unknown> | undefined,
-): { proxyPath?: ProxyPath; deduplicate?: boolean } | undefined {
-  return (apiSource as { options?: { proxyPath?: ProxyPath; deduplicate?: boolean } } | undefined)
-    ?.options;
+): SourceOptions | undefined {
+  return (apiSource as { options?: SourceOptions } | undefined)?.options;
 }

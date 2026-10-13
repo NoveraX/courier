@@ -154,14 +154,15 @@ describe("a request id nginx wrote", () => {
     expect(ids()).toEqual([KEPT]);
   });
 
-  it("is the same for every call a page makes while it renders", async () => {
+  it("is the same for every call a page makes while it renders, and two like reads share one", async () => {
     const api = createCaller(siteApi());
     const page = new Request("https://shop.example/", { headers: NGINX });
 
-    await withIncomingRequest(webIncomingRequest(page), async () => {
-      await Promise.all([api.read(), api.write(), api.read()]);
-    });
+    const answers = await withIncomingRequest(webIncomingRequest(page), async () =>
+      Promise.all([api.read(), api.write(), api.read()]),
+    );
 
-    expect(ids()).toEqual([KEPT, KEPT, KEPT]);
+    expect(answers).toHaveLength(3);
+    expect(ids()).toEqual([KEPT, KEPT]);
   });
 });

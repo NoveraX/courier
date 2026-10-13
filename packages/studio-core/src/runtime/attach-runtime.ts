@@ -21,7 +21,7 @@
  *  - **DEV ONLY** (gated by `NODE_ENV !== "production"`): register the
  *    config's sources again whenever the application redefines one (see
  *    `followConfigSources`), wire all the Studio observability hooks (request
- *    lifecycle, middleware, validation, stream, fetch, proxy, cache, dedup,
+ *    lifecycle, middleware, validation, stream, fetch, proxy, cache, superseded calls,
  *    upload), open the `/runtime` Socket.IO connection, install the
  *    playground responder.
  *

@@ -1,174 +1,169 @@
-export const metadata = { title: "Abort & Deduplication", description: "Automatically cancel duplicate in-flight requests and manually abort with AbortController.", mode: "both" }
+export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both" }
 
 ## Overview
 
-When users interact quickly — typing in a search box, clicking pagination rapidly, or switching filters — multiple requests for the same endpoint can be in flight simultaneously. Courier can automatically abort the previous request when a new one starts for the same endpoint.
+Calls that overlap are handled in three ways:
 
-Enable this by setting `deduplicate: true` in your source options. Courier will track active requests and cancel duplicates before they complete.
+- **Identical reads in flight together reach the API once.** Two components that read the same thing at the same moment — a header and a page both asking for the current user — send one request, and each gets the answer. This is on by default, wherever the call runs.
+- **A newer read can cancel the one it replaces.** In a search box each keystroke makes the previous search pointless; an API names such endpoints in `cancelPrevious`.
+- **Any call can be aborted** with an `AbortSignal` of your own.
 
-## Enabling deduplication
+## Identical reads share one request
 
-Set `deduplicate: true` in `defineApi` options. This applies to all endpoints in the source:
+While a read is in flight, an identical read joins it rather than sending a request of its own. Every call that joined gets the answer — the same status, headers and body — as a copy of its own: one call editing what it got changes nothing for another.
+
+```ts title="components/header.tsx"
+// Both calls start before either answer arrives: the API receives one request.
+const [user, sameUser] = await Promise.all([api.users.me(), api.users.me()])
+```
+
+Two requests are identical only when everything they send is: the method, the address with its query, every header, and the body. Whatever tells two callers apart therefore keeps their requests apart:
+
+- different variables — page 1 and page 2 are two requests;
+- different users — their cookies, `Authorization` and address differ;
+- different requests being served — each carries its own forwarded request id.
+
+On a server, one user's read is never answered with another's.
+
+What is never shared:
+
+- **Writes.** Two orders are two orders. A read is an endpoint addressed with `get`, `head` or `query`, or one marked `.reads()` — a search sent as a POST is joined too.
+- **A request whose body is not text** — a file, a form, a stream.
+- **A call that follows its upload or download progress**, since each one reports its own.
+
+A request is joined only until its answer arrives. A read made after that sends a request of its own; to reuse an answer, keep it: [React Query](/docs/react-query/use-query) or SWR in the browser, the [cache middleware](/docs/middleware/built-in) on a server.
+
+<Callout variant="info" title="Leaving early">
+A call that stops waiting — its signal aborted, its `timeout` reached — rejects alone, and the others still get the answer. The request itself is cancelled only when every call waiting for it has left.
+</Callout>
+
+### Sending a call alone
+
+Pass `coalesce: false` to send every call alone, for a whole API or for one call:
 
 ```ts title="api/index.ts"
 import { defineApi } from "@noverax/courier/define"
 
-const api = defineApi({
-  baseURL: process.env.API_URL ?? "http://localhost:4000",
-  deduplicate: true,
-  groups: { users, posts },
+export const api = defineApi({
+  name: "telemetry",
+  baseURL: "https://telemetry.example.com",
+  coalesce: false,
+  endpoints: { /* ... */ },
 })
 ```
 
-<Callout variant="info" title="Where deduplication runs">
-Deduplication cancels a request its own user no longer needs, so it runs where one user is: in the browser, or in a React Native app. A direct call made there uses the source's `deduplicate`, and so does a proxy client created with `source`. A proxy client created with a `boundary` carries no source options — pass `deduplicate: true` to `createProxyCaller` instead.
-
-On a server the option has no effect, for direct calls and for requests arriving at the proxy alike: there, requests from different users reach the same endpoint under the same key, and one user's request would cancel another's.
-</Callout>
-
-<Callout variant="info" title="Only reads are cancelled">
-Deduplication cancels reads only: endpoints declared with `get`, `head`, `options` or `query`, or marked `.reads()`. A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not — two concurrent creates to one path both complete. A proxy client follows the same rule whether it was created with `source` or with a `boundary`: the boundary declares each HTTP endpoint a `"query"` or a `"mutation"`, and only a query is cancelled.
-</Callout>
-
-## Deduplication key
-
-The dedup key is computed as `METHOD:origin/path`. The query string and hash are intentionally ignored — this means requests to the same endpoint with different query parameters are treated as duplicates:
-
 ```ts
-// Dedup key format: METHOD:origin/path
-// Query string and hash are ignored
-
-// These two requests share the same dedup key (GET:https://api.example.com/users):
-caller.users.getAll({ page: 1 })  // ← aborted (status 499)
-caller.users.getAll({ page: 2 })  // ← executes
-
-// These have different keys (different paths):
-caller.users.getById({ id: 1 })   // GET:https://api.example.com/users/1
-caller.users.getById({ id: 2 })   // GET:https://api.example.com/users/2
+// Each poll asks the server anew, even while the last one is in flight
+const status = await caller.jobs.with({ coalesce: false }).status({ id })
 ```
 
-<Callout variant="info" title="Why ignore query params?">
-In search-as-you-type scenarios, each keystroke sends a new query to the same endpoint. You typically only care about the latest results. By ignoring query parameters in the dedup key, the previous search is automatically cancelled.
+## Cancelling the previous call
+
+A search as the user types makes every earlier search pointless the moment a new key is pressed. List such reads by their path in `cancelPrevious`, and a newer call to one of them cancels the call still in flight — whatever its variables were:
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/courier/define"
+
+export const api = defineApi({
+  name: "accounts",
+  baseURL: process.env.API_URL ?? "http://localhost:4000",
+  cancelPrevious: ["users.search", "geo.suggest"],
+  groups: { users, geo },
+})
+```
+
+The cancelled call rejects with an `HTTPError` of status `499`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it.
+
+<Callout variant="info" title="Only reads are cancelled">
+A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not. `cancelPrevious` names reads only: a path the API does not define, or one that writes, throws `ConfigurationError` `CANCEL_PREVIOUS_INVALID` where the API is defined.
 </Callout>
 
-## Abort behavior
+<Callout variant="info" title="Where it runs">
+A newer call cancels an older one where one user is: in the browser, or in a React Native app. A direct call made there uses the API's `cancelPrevious`, and so does a proxy client created with `source`. A proxy client created with a `boundary` carries no API options — pass `cancelPrevious` to [`createProxyCaller`](/docs/api/create-proxy-caller) instead.
 
-When a duplicate request is detected:
+On a server the option has no effect, for direct calls and for requests arriving at the proxy alike: there, calls from different users reach the same endpoint, and one user's search would cancel another's.
+</Callout>
 
-1. The **previous** request is aborted and throws an `HTTPError` with status `499`.
-2. The **new** request proceeds normally.
-3. If middleware is defined, the error propagates through the middleware chain.
+### Handling the cancelled call
 
-## Handling abort errors
+A cancelled call is no failure the user needs to hear about:
 
-Aborted requests throw with status 499. In most cases you want to silently ignore these errors since they represent intentional cancellation:
-
-```ts title="components/search-users.tsx"
+```tsx title="components/search-users.tsx"
 "use client"
+
+import { isHTTPError } from "@noverax/courier"
+import { useEffect, useState } from "react"
 
 import { q } from "@/lib/query"
 
 export function SearchUsers() {
   const [query, setQuery] = useState("")
 
-  // With deduplicate enabled, rapid typing aborts previous searches
+  // Each keystroke cancels the search still in flight
   const { data, error } = q.users.useQuery("search", {
     variables: { q: query },
     enabled: query.length > 0,
   })
 
-  // Filter out abort errors (status 499) in error handling
   useEffect(() => {
-    if (error && "response" in error) {
-      const status = (error as any).response?.status
-      if (status === 499) return // Ignore aborted requests
-      console.error("Search failed:", error)
-    }
+    if (!error) return
+    if (isHTTPError(error) && error.status === 499) return // superseded by a newer search
+    console.error("Search failed:", error)
   }, [error])
 
   return (
     <div>
-      <input value={query} onChange={(e) => setQuery(e.target.value)} />
+      <input value={query} onChange={(event) => setQuery(event.target.value)} />
       {data?.map((user) => <p key={user.id}>{user.name}</p>)}
     </div>
   )
 }
 ```
 
-## Manual abort with AbortController
+## Aborting a call yourself
 
-You can also manually abort requests by passing a `signal` in the call options. This works independently of the deduplication feature — you can use one or both:
+Pass a `signal` with the call. It works on any call, alongside both of the above:
 
-```ts title="components/cancellable-request.tsx"
+```tsx title="components/cancellable-report.tsx"
 "use client"
 
 import { useEffect, useRef } from "react"
 
 import { caller } from "@/lib/caller"
 
-export function CancellableRequest() {
+export function CancellableReport() {
   const controllerRef = useRef<AbortController | null>(null)
 
-  async function fetchData() {
-    // Cancel any previous request
+  async function generate() {
     controllerRef.current?.abort()
     controllerRef.current = new AbortController()
 
     try {
-      const data = await caller.reports
+      const report = await caller.reports
         .with({ signal: controllerRef.current.signal })
         .generate({ type: "monthly" })
-
-      console.log("Report:", data)
+      console.log("Report:", report)
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        console.log("Request was cancelled")
-        return
-      }
+      if (error instanceof DOMException && error.name === "AbortError") return
       throw error
     }
   }
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => controllerRef.current?.abort()
-  }, [])
+  useEffect(() => () => controllerRef.current?.abort(), [])
 
   return (
     <div>
-      <button onClick={fetchData}>Generate Report</button>
+      <button onClick={generate}>Generate report</button>
       <button onClick={() => controllerRef.current?.abort()}>Cancel</button>
     </div>
   )
 }
 ```
 
-<Callout variant="tip" title="Signal merging">
-If you use both `deduplicate: true` and a manual `signal`, Courier combines them using `AbortSignal.any()`. The request aborts if either signal fires.
-</Callout>
-
-## How it works internally
-
-Deduplication is implemented inside the `HttpClient`. Understanding the internals helps when debugging abort-related issues:
-
-```ts
-// How deduplication works internally:
-
-// 1. Before each read:
-//    - Computes dedup key: METHOD:origin/path
-//    - If a request with the same key exists, aborts it (status 499)
-//    - Stores new AbortController in currentExecutingRequests map
-
-// 2. After a request completes:
-//    - Removes the entry from currentExecutingRequests
-
-// 3. Signal merging:
-//    - If you also pass a manual signal, both signals are combined
-//    - Uses AbortSignal.any() — request aborts if either signal fires
-```
+A call aborted through your signal rejects with the reason you gave, as `fetch` does: a `DOMException` named `AbortError` unless you passed another. On an endpoint listed in `cancelPrevious`, the call stops at whichever comes first — your signal, or a newer call.
 
 ## Next steps
 
-- [Middleware](/docs/advanced/middleware) — use error-reporting middleware to filter abort errors from monitoring
-- [Options](/docs/advanced/options) — signal, timeout, and other request-level options
-- [Streaming](/docs/advanced/streaming) — receive responses as ReadableStreams for SSE and large downloads
+- [Middleware](/docs/advanced/middleware) — keep cancelled calls out of error reporting
+- [Options](/docs/advanced/options) — `signal`, `timeout`, `coalesce` and the other per-call options
+- [Built-in middleware](/docs/middleware/built-in) — the cache that keeps an answer after it arrives

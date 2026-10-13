@@ -38,13 +38,20 @@ export type ProxyCallerDefaults = {
    */
   timeout?: number | undefined;
   /**
-   * Cancel a call still in flight when the same endpoint is called again; the
+   * The reads a newer call cancels while they are still in flight — a
+   * search as the user types — by their paths, such as `users.search`; the
    * cancelled call rejects with an `HTTPError` of status 499. Only a read is
    * ever cancelled — an endpoint the source or the boundary declares a write
-   * is left to complete. Defaults to the source's own `deduplicate` when
+   * is left to complete. Defaults to the source's own `cancelPrevious` when
    * `source` is given.
    */
-  deduplicate?: boolean | undefined;
+  cancelPrevious?: readonly string[] | undefined;
+  /**
+   * Whether identical reads in flight together reach the proxy once, each
+   * call with a copy of the answer: the default. `false` sends every call
+   * alone. Defaults to the source's own `coalesce` when `source` is given.
+   */
+  coalesce?: boolean | undefined;
   credentials?: WebCredentials | undefined;
   headers?: Record<string, string> | undefined;
   onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
@@ -59,13 +66,19 @@ export type ProxyCallerDefaults = {
 };
 
 /**
+ * What the source or the boundary says of an endpoint: a read, a read whose
+ * variables must stay out of the address, or a write. Unsaid without either.
+ */
+export type ProxyEndpointKind = "read" | "sensitive-read" | "mutation";
+
+/**
  * The proxy transport's call: a source and a call's options, as the transport
- * hands them on, then an endpoint's key and its variables.
+ * hands them on, then an endpoint's key, its variables and what it is.
  */
 export type UntypedCallerFn = (
   source: string,
   options?: Readonly<Record<string, unknown>>,
-) => (endpoint: string, variables?: unknown, reads?: boolean) => Promise<unknown>;
+) => (endpoint: string, variables?: unknown, kind?: ProxyEndpointKind) => Promise<unknown>;
 
 /** Does the API declare an endpoint reached by opening a stream or a socket? */
 type HasRealtime<TApi> = [

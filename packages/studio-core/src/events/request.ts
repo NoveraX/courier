@@ -119,5 +119,5 @@ export interface ProxyClientTimingEvent extends StudioEvent {
 export interface RequestAbortEvent extends StudioEvent {
   type: "request:abort";
   requestId: string;
-  reason: "deduplication" | "manual" | "timeout";
+  reason: "superseded" | "manual" | "timeout";
 }

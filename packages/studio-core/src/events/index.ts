@@ -11,7 +11,6 @@ export type {
   CacheMissEvent,
   CacheStoreEvent,
 } from "./cache";
-export type { DedupAbortEvent, DedupReuseEvent } from "./dedup";
 export type {
   HttpFetchEndEvent,
   HttpFetchErrorEvent,
@@ -65,6 +64,7 @@ export type {
   StreamMessageEvent,
   StreamOpenEvent,
 } from "./stream";
+export type { CallSupersededEvent } from "./superseded";
 export type { EventType, SourceMap, StudioEvent } from "./types";
 export type { AnyStudioEvent } from "./union";
 export type { UploadCompleteEvent, UploadProgressEvent } from "./upload";

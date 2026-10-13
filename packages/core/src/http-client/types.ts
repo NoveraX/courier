@@ -98,6 +98,12 @@ export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
    * does; a browser follows redirects itself and ignores it.
    */
   withinOrigin?: boolean | undefined;
+  /**
+   * Share the answer of an identical read already in flight — the same
+   * method, address, headers and body, every credential among them — rather
+   * than send another: the default. `false` sends this call alone.
+   */
+  coalesce?: boolean | undefined;
 };
 
 export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
@@ -166,8 +172,13 @@ export type BaseOptions = MergeOptions &
     bodySerializer?: ((data: Record<string, unknown>) => WebBody) | undefined;
     /** Custom search params serializer with stringify/parse methods */
     searchParamsSerializer?: SearchParamsSerializer | undefined;
-    /** Cancel an in-flight read when the same endpoint is read again — defaults to false */
-    deduplicate?: boolean | undefined;
+    /**
+     * The reads a newer call cancels while they are still in flight — a
+     * search as the user types — by their paths, such as `users.search`.
+     * Whatever variables the older call had, it rejects with an `HTTPError`
+     * of status 499. It runs where one user is: in a browser or an app.
+     */
+    cancelPrevious?: readonly string[] | undefined;
     /** Middleware pipeline applied to every request in order */
     middleware?: Middleware[] | undefined;
     /**

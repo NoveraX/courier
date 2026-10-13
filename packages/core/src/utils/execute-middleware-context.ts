@@ -2,9 +2,9 @@ import type { Context } from "../http-client/types";
 import type { CallPurpose, MiddlewareContext } from "../middleware/types";
 import { namedHeadersOf } from "./execute-resolve";
 import { forwardedFor } from "./forwarded-for";
+import { forwardedRequestHeaders } from "./forwarded-request-headers";
 import { headersToObject } from "./helpers";
-import { keepBrowserCredentials } from "./keep-browser-credentials";
-import { filterHeaders, mergeHeaders } from "./merge-headers";
+import { mergeHeaders } from "./merge-headers";
 import { randomId } from "./random-id";
 
 export interface MiddlewareContextInput {
@@ -72,12 +72,20 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
   ]);
   /* The caller's own headers go on top of the ones it forwards. A header it
      set — a service token for a backend the end user may not reach — is its
-     explicit choice, which the incoming request's copy must not replace. */
-  const newHeaders = filterHeaders(mergedNextHeaders, allowedHeaders);
-  keepBrowserCredentials(newHeaders, allowedHeaders, String(source));
+     explicit choice, which the incoming request's copy must not replace;
+     nor may that copy replace one the API sets in its `headers`. */
+  const ownHeaders = (dataSource.options as { headers?: HeadersInit } | undefined)?.headers;
+  const newHeaders = forwardedRequestHeaders(
+    mergedNextHeaders,
+    allowedHeaders,
+    ownHeaders,
+    String(source),
+  );
+  const forwarded = new Set(newHeaders.keys());
   mergeHeaders(baseHeaders as HeadersInit | Record<string, string | undefined> | undefined).forEach(
     (value, name) => {
       newHeaders.set(name, value);
+      forwarded.delete(name);
     },
   );
   /* Set only where nothing already did: a source that names the header takes
@@ -104,5 +112,6 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     ...(context?.agent && { agent: context.agent }),
     ...(idempotencyKey && { idempotencyKey }),
     _requestId: requestId || undefined,
+    _forwarded: forwarded,
   };
 }

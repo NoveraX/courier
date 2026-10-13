@@ -2,9 +2,9 @@
   <br />
   <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/packages/vscode/media/icon.png" width="72" />
 
-  <h1>Courier for VS Code</h1>
+  <h1>Courier Studio</h1>
 
-  <p><strong>Courier Studio in your editor.</strong></p>
+  <p><strong>Studio in your editor.</strong></p>
 
   <p>Above each call to an endpoint, how its calls went in the Studio running for your project — how many, how many failed, how many are still in flight, and how long nineteen in twenty took. Studio in a tab beside your code; from a call to its endpoint and back; the requests Studio records and the mocks it runs, in views of their own; new endpoints written the way your files write them; recorded calls in the Test Explorer; <code>@courier</code> in the chat; the audit's findings where the code calls; and your API offered to VS Code's agent.</p>
 

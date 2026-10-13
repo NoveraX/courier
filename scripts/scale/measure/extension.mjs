@@ -1,9 +1,9 @@
 /**
- * Courier for VS Code on the enterprise project, inside VS Code itself, with
- * Studio running for the project: how soon the editor shows the hints over
- * a file's calls — the first file while the extension starts, then the
- * next ones — going to an endpoint's declaration, and what the extension
- * host holds. The VS Code is the one a Mac has installed, the one
+ * Courier Studio, the VS Code extension, on the enterprise project, inside
+ * VS Code itself, with Studio running for the project: how soon the editor
+ * shows the hints over a file's calls — the first file while the extension
+ * starts, then the next ones — going to an endpoint's declaration, and what
+ * the extension host holds. The VS Code is the one a Mac has installed, the one
  * VSCODE_PATH names, or the latest stable, which is downloaded.
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";

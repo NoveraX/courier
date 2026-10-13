@@ -1,7 +1,7 @@
 {
   "name": "courier-vscode",
-  "displayName": "Courier for VS Code",
-  "description": "Courier Studio in your editor: every endpoint and how its calls went, above each call and in views of their own; Studio in a tab beside your code; from a call to its endpoint and back; requests and mocks live; new endpoints written for you; recorded calls as tests; @courier in the chat; Courier's own file icons, through Courier File Icons, which comes with it; and your API offered to VS Code's agent.",
+  "displayName": "Courier Studio",
+  "description": "Studio in your editor: every endpoint and how its calls went, above each call and in views of their own; Studio in a tab beside your code; from a call to its endpoint and back; requests and mocks live; new endpoints written for you; recorded calls as tests; @courier in the chat; Courier's own file icons, through Courier File Icons, which comes with it; and your API offered to VS Code's agent.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#08090a",

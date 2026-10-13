@@ -16,7 +16,7 @@
   <p>
     <a href="https://courier.noverax.cloud/docs/studio/editor#courier-file-icons"><strong>Documentation</strong></a>
     &nbsp;·&nbsp;
-    <a href="https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode">Courier for VS Code</a>
+    <a href="https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode">Courier Studio</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
@@ -38,7 +38,7 @@
 
 Material Icon Theme and vscode-icons take custom icons through their own settings, and Courier brings its own for `courier.config.*`, `courier.mocks.*` and the `.courier` folder. The folder is drawn in each theme's own style: flat, as Material Icon Theme draws its folders; with Courier's mark on a disc at the corner, as vscode-icons draws its own, and with a look of its own for light colour themes.
 
-[Courier for VS Code](https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode) installs this extension with it. It runs where the editor's window runs, beside the icon themes — on this computer in a remote window too, while Courier itself runs where your code is.
+[Courier Studio](https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode) installs this extension with it. It runs where the editor's window runs, beside the icon themes — on this computer in a remote window too, while Courier itself runs where your code is.
 
 ## Agree once
 
@@ -84,7 +84,7 @@ Its log is under **Courier File Icons** in the Output panel.
 
 ## Part of Courier
 
-Courier is type-safe HTTP for any framework: define your API once in plain TypeScript and call it from server code, the browser and AI agents, every call visible in Studio. [Courier for VS Code](https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode) brings Studio into your editor, and this extension marks Courier's files in it. See [courier.noverax.cloud](https://courier.noverax.cloud).
+Courier is type-safe HTTP for any framework: define your API once in plain TypeScript and call it from server code, the browser and AI agents, every call visible in Studio. [Courier Studio](https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode) puts Studio in your editor, and this extension marks Courier's files in it. See [courier.noverax.cloud](https://courier.noverax.cloud).
 
 <br />
 

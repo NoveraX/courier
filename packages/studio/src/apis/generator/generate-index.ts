@@ -5,6 +5,7 @@
 import type { ParsedSpec } from "../parser/types";
 import { barrelReexports } from "./barrel-reexports";
 import { callerDoc } from "./caller-doc";
+import type { DeclaredKind } from "./declared-in-lines";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 /**
@@ -16,7 +17,7 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
  *
  * @param spec - The parsed specification
  * @param options - The import's resolved options
- * @param schemaModules - The text of each written schemas file, by group; under `""` the import's own
+ * @param schemaModules - What each written schemas file exports, by group; under `""` the import's own
  * @returns The barrel
  * @example
  * ```ts
@@ -26,7 +27,7 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 export function generateIndexFile(
   spec: ParsedSpec,
   options: ResolvedGenerateOptions,
-  schemaModules: ReadonlyMap<string, string>,
+  schemaModules: ReadonlyMap<string, ReadonlyMap<string, DeclaredKind>>,
 ): GeneratedFile {
   const name = options.sourceName;
   const lines: string[] = [];

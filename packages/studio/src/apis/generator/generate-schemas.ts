@@ -6,6 +6,7 @@ import { ownValue } from "../own-value";
 import type { ParsedSchema } from "../parser/types";
 import { ARKTYPE_CYCLE_HELPER, lazyTargets, writeArkTypeCycle } from "./arktype-cycles";
 import { findCyclicSchemas } from "./cyclic-schemas";
+import { type DeclaredKind, declaredInLines } from "./declared-in-lines";
 import { generateCyclicSchema } from "./generate-cyclic-schema";
 import {
   generateArraySchema,
@@ -20,11 +21,18 @@ import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
 import type { GeneratedFile, GeneratorSettings, ResolvedGenerateOptions } from "./types";
 
+/** A schemas or types module the generator wrote, and the names it exports. */
+export interface SchemaModule {
+  file: GeneratedFile;
+  /** Each name the module exports, in the order it declares them: a value, or only a type. */
+  declares: ReadonlyMap<string, DeclaredKind>;
+}
+
 export function generateSchemasFile(
   schemas: Record<string, ParsedSchema>,
   options: ResolvedGenerateOptions,
   groupName?: string,
-): GeneratedFile {
+): SchemaModule {
   const lines: string[] = [];
 
   if (options.validation === "zod") {
@@ -44,10 +52,13 @@ export function generateSchemasFile(
   }
 
   return {
-    path: groupName
-      ? options.layout.groupSchemaFile(groupName, "schemas")
-      : options.layout.schemaFile("schemas"),
-    content: lines.join("\n"),
+    file: {
+      path: groupName
+        ? options.layout.groupSchemaFile(groupName, "schemas")
+        : options.layout.schemaFile("schemas"),
+      content: lines.join("\n"),
+    },
+    declares: declaredInLines(lines),
   };
 }
 
@@ -124,24 +135,27 @@ function writeEntries(
  * @param schemas - The schemas the group names, by name
  * @param options - The import's resolved options
  * @param groupName - The group, or none for an import generated flat
- * @returns The types file, at the path the layout gives it
+ * @returns The types file, at the path the layout gives it, and the names it exports
  * @example
  * ```ts
- * generateTypesFile({ Pet: petUnion }, options, "pets").content; // "export type Pet = Cat | Dog;\n…"
+ * generateTypesFile({ Pet: petUnion }, options, "pets").file.content; // "export type Pet = Cat | Dog;\n…"
  * ```
  */
 export function generateTypesFile(
   schemas: Record<string, ParsedSchema>,
   options: ResolvedGenerateOptions,
   groupName?: string,
-): GeneratedFile {
+): SchemaModule {
   const lines: string[] = [];
   writeEntries(lines, topoSortSchemas(schemas), { ...options, generateSchemas: false }, new Set());
 
   return {
-    path: groupName
-      ? options.layout.groupSchemaFile(groupName, "types")
-      : options.layout.schemaFile("types"),
-    content: lines.join("\n"),
+    file: {
+      path: groupName
+        ? options.layout.groupSchemaFile(groupName, "types")
+        : options.layout.schemaFile("types"),
+      content: lines.join("\n"),
+    },
+    declares: declaredInLines(lines),
   };
 }

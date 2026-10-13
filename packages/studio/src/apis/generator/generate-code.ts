@@ -6,11 +6,12 @@ import { InvalidImportError, resolveImportLayout } from "../layout";
 import { isTopLevel, TOP_LEVEL } from "../parser/top-level";
 import type { ParsedSchema, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
+import type { DeclaredKind } from "./declared-in-lines";
 import { type ExtractedTypeNames, extractedTypeNames } from "./extracted-type-names";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
 import { generateProxyFile } from "./generate-proxy";
-import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
+import { generateSchemasFile, generateTypesFile, type SchemaModule } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
 import { schemaHomes } from "./schema-homes";
 import { withSharedImports } from "./shared-schema-imports";
@@ -65,8 +66,11 @@ function generateFiles(
   const rootSchemas: Record<string, ParsedSchema> = { ...own?.own };
   for (const entry of groups) Object.assign(rootSchemas, entry.shared);
   const root = schemaFileFor(rootSchemas, opts);
-  const files: GeneratedFile[] = root ? [root] : [];
-  const schemaModules = new Map<string, string>(root ? [[TOP_LEVEL, root.content]] : []);
+  const files: GeneratedFile[] = root ? [root.file] : [];
+  /* What each schemas module exports, by group, as its writer declared it: none is parsed again. */
+  const schemaModules = new Map<string, ReadonlyMap<string, DeclaredKind>>(
+    root ? [[TOP_LEVEL, root.declares]] : [],
+  );
 
   for (const entry of groups) files.push(...groupFiles(entry, spec, opts, root, schemaModules));
   /* A group inside another is listed in its parent's file, not the source's. */
@@ -88,14 +92,14 @@ function groupFiles(
   group: WrittenGroup,
   spec: ParsedSpec,
   opts: ResolvedGenerateOptions,
-  root: GeneratedFile | null,
-  schemaModules: Map<string, string>,
+  root: SchemaModule | null,
+  schemaModules: Map<string, ReadonlyMap<string, DeclaredKind>>,
 ): GeneratedFile[] {
   const name = group.group.name;
-  const ownFile = schemaFileFor(group.own, opts, name);
+  const own = schemaFileFor(group.own, opts, name);
   const module =
-    ownFile && root ? withSharedImports(ownFile, root.content, sharedFrom(opts)) : ownFile;
-  if (module) schemaModules.set(name, module.content);
+    own && root ? withSharedImports(own.file, root.declares, sharedFrom(opts)) : own?.file;
+  if (own) schemaModules.set(name, own.declares);
   const shared = root ? group.shared : {};
   const declared = { ...(module ? group.own : {}), ...shared };
   const endpoints = generateGroupFile(
@@ -115,8 +119,8 @@ function sharedFrom(opts: ResolvedGenerateOptions): string {
 }
 
 /**
- * The schemas or types file declaring a group's schemas, when there is
- * anything to declare.
+ * The schemas or types file declaring a group's schemas, and the names it
+ * exports, when there is anything to declare.
  *
  * Only a validator writing schemas, or types, declares anything: with
  * `validation: "none"` and types off, a schemas file held the schemas'
@@ -127,7 +131,7 @@ function schemaFileFor(
   schemas: Record<string, ParsedSchema>,
   opts: ResolvedGenerateOptions,
   groupName?: string,
-): GeneratedFile | null {
+): SchemaModule | null {
   if (Object.keys(schemas).length === 0 || !(emitsSchemas(opts) || opts.generateTypes)) {
     return null;
   }

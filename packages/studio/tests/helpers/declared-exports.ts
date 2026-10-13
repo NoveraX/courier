@@ -1,18 +1,15 @@
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
-
-/** Whether a name a generated module exports is a value, or only a type. */
-export type DeclaredKind = "value" | "type";
+import type { DeclaredKind } from "../../src/apis/generator/declared-in-lines";
+import { parseSource } from "../../src/server/mocks-edit/plan/parse-source";
 
 /**
- * The names a generated schemas or types module exports, in the order it
- * declares them, each a value or only a type: its `export const` and
- * `export type` declarations, read from the module's syntax. A description
- * the specification wrote into a doc comment may hold a line reading
- * `export const X`, which a barrel re-exporting it would name though the
- * module declares no such thing. A name declared as both a value and a type
- * is a value, which a re-export by name carries with its type.
+ * The names a module exports, read from its syntax: its `export const` and
+ * `export type` declarations, in the order it declares them, each a value or
+ * only a type, a name declared as both being a value. What the generator
+ * records of its own declarations as it writes a module is checked against
+ * this: a test parses the module the generator wrote, the generator does
+ * not.
  *
- * @param content - The module the generator wrote
+ * @param content - The module's text
  * @returns Each exported name and its kind
  * @example
  * ```ts

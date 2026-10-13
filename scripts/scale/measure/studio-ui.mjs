@@ -110,6 +110,7 @@ function liveFigures(name, { tasks, seconds, messages, bytes }) {
 
 /* The Mocks section, a moment, as a person takes, then its Store tab: until the mock's records show. */
 async function mockStore(page, frames) {
+  await settled(frames);
   await page.getByRole("link", { name: "Mocks" }).first().click();
   await page.waitForURL(/\/mocks/);
   const before = frames.bytes;
@@ -122,6 +123,17 @@ async function mockStore(page, frames) {
     page.getByRole("region", { name: /^Collection / }).waitFor({ timeout: 60_000 }),
   );
   return { ms, bytes: frames.bytes - before };
+}
+
+/* Until the page has been sent nothing for half a second: on a fast machine
+   Studio is still sending the events of traffic that has ended, and what is
+   timed next would be timed while the page takes them in. */
+async function settled(frames) {
+  let seen = -1;
+  for (let waited = 0; waited < 60_000 && frames.count !== seen; waited += 500) {
+    seen = frames.count;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 }
 
 /* Every WebSocket frame the page receives, counted with its bytes, and those of the mocks' states. */

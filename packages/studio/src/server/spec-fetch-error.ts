@@ -11,7 +11,8 @@ export type SpecFetchErrorCode =
   | "SPEC_HTTP_STATUS"
   | "SPEC_TOO_LARGE"
   | "SPEC_TIMEOUT"
-  | "SPEC_UNREACHABLE";
+  | "SPEC_UNREACHABLE"
+  | "SPEC_ABORTED";
 
 /* Codes for a URL Studio refused to fetch, rather than one it failed to. */
 const REFUSALS: ReadonlySet<SpecFetchErrorCode> = new Set([
@@ -84,17 +85,36 @@ export class SpecFetchError extends CourierError<SpecFetchErrorCode> {
   }
 
   /**
-   * The refusal, for a visitor of a public demo, of any address but a public
-   * one: this machine runs the demo's own services, and its network is the host's.
+   * The refusal of any address but a public one, for a caller Studio reaches
+   * the public internet only for: a page without the project's token, or a
+   * visitor of a public demo — this machine runs the project's own services,
+   * and its network is the developer's. It names the host alone, never the
+   * address a name resolved to, and is the same for a name that does not
+   * resolve: such a caller learns nothing of the network's names.
    *
-   * @param what - The host, and the address it resolved to when there was a lookup
+   * @param what - The host as the URL names it, and the URL that redirected to it when one did
+   * @param why - Why this caller reaches the public internet only
    * @returns The error
    */
-  static publicOnly(what: string): SpecFetchError {
+  static publicOnly(what: string, why: string): SpecFetchError {
     return new SpecFetchError(
       "SPEC_HOST_PRIVATE",
-      `Blocked request to ${what}: in this demo, Studio reads a specification for a visitor from the public internet only. Paste the specification, or give a public URL.`,
+      `Blocked request to ${what}: ${why}. Paste the specification, or give a public URL.`,
     );
+  }
+
+  /**
+   * The request stopped because whoever asked for it went away.
+   *
+   * @param url - The URL it was fetching
+   * @param cause - The reason its signal was aborted with
+   * @returns The error
+   */
+  static aborted(url: URL, cause: unknown): SpecFetchError {
+    return new SpecFetchError("SPEC_ABORTED", `Studio stopped fetching ${url.href}.`, {
+      cause,
+      url: url.href,
+    });
   }
 
   /**

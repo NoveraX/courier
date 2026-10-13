@@ -4,6 +4,7 @@
  * write route writes it as a new import, the remove route answers 404, and
  * a source of that name does not read as imported.
  */
+import { EventEmitter } from "node:events";
 import {
   existsSync,
   mkdtempSync,
@@ -18,16 +19,18 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { IMPORTS_STATE_VERSION, loadImportsState } from "../src/apis/imports-state";
 import { parseSpec } from "../src/apis/parser/parse-spec";
+import type { ApisRouteApp } from "../src/server/apis-routes";
 import { buildSourceScan } from "../src/server/build-source-scan";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { getImportEntry, getImportState, importsSnapshotOf } from "../src/server/imports-bridge";
 import type { ProjectSnapshot, ProjectState } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
-import type { JsonResponse, RouteApp } from "../src/server/route-types";
+import type { WorkedResponse } from "../src/server/request-work";
+import type { JsonResponse } from "../src/server/route-types";
 import { createUpdateChecks } from "../src/server/update-checks";
 import { registerWriteRoutes } from "../src/server/write-routes";
 
-type Handler = Parameters<RouteApp["post"]>[1];
+type Handler = Parameters<ApisRouteApp["post"]>[1];
 
 let root: string;
 
@@ -62,7 +65,7 @@ async function routes(): Promise<Map<string, Handler>> {
     stop: () => undefined,
   };
   const found = new Map<string, Handler>();
-  const app: RouteApp = { post: (path, handler) => void found.set(path, handler) };
+  const app: ApisRouteApp = { post: (path, handler) => void found.set(path, handler) };
   registerWriteRoutes(app, { project, projectRoot: root });
   registerRegistryRoutes(app, { project, projectRoot: root });
   return found;
@@ -71,15 +74,17 @@ async function routes(): Promise<Map<string, Handler>> {
 function call(handler: Handler | undefined, body: Record<string, unknown>) {
   return new Promise<{ status: number; body: unknown }>((resolve) => {
     let status = 200;
-    const res: JsonResponse = {
-      status(code) {
+    const res: JsonResponse & WorkedResponse = Object.assign(new EventEmitter(), {
+      writableFinished: false,
+      end: () => undefined,
+      status(code: number) {
         status = code;
         return res;
       },
-      json(data) {
+      json(data: unknown) {
         resolve({ status, body: data });
       },
-    };
+    });
     void handler?.({ body }, res);
   });
 }

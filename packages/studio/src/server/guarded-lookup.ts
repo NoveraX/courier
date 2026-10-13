@@ -28,11 +28,39 @@ export interface LookupPolicy {
   admitPrivate(what: string): Promise<void>;
 }
 
+/** The lookups of one request for a specification, and what stops them. */
+export interface SpecLookups {
+  /** The lookup the request's connection resolves its host with. */
+  readonly lookup: LookupCallback;
+  /** Stop every lookup under way that can be stopped: each fails at once. */
+  cancel(): void;
+  /** Settles once no lookup the request can stop is under way. */
+  idle(): Promise<void>;
+}
+
+/**
+ * The lookups of one request of a caller with the project's token: each
+ * name resolved as {@link guardedLookup} resolves it, as this machine does.
+ * Such a lookup cannot be stopped, and the request does not wait for it
+ * once stopped: such callers are not held to a count of lookups.
+ *
+ * @param policy - What besides the public internet the request may reach
+ * @returns The request's lookups
+ * @example
+ * ```ts
+ * request(url, { lookup: systemLookups(policy).lookup });
+ * ```
+ */
+export function systemLookups(policy: LookupPolicy): SpecLookups {
+  return { lookup: guardedLookup(policy), cancel: noop, idle: () => Promise.resolve() };
+}
+
 /**
  * A `lookup` for fetching a specification: it resolves the name once, and the
  * connection is made to exactly the address it approved — so a second
  * answer from DNS cannot send the request elsewhere. Every address the name
- * resolves to must be one the policy allows.
+ * resolves to must be one the policy allows. A refusal names the address
+ * the host resolved to, for the developer the policy was written for.
  *
  * @param policy - What besides the public internet the request may reach
  * @returns The lookup to pass to `http.request`
@@ -68,3 +96,5 @@ async function approvedAddresses(hostname: string, policy: LookupPolicy): Promis
   );
   return addresses;
 }
+
+function noop(): void {}

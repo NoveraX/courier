@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import { resolveBaseURL } from "../../src/apis/resolve-base-url";
-import { parseFetchedSpec } from "../../src/server/parse-fetched-spec";
+import { readFetchedSpec } from "../../src/server/read-fetched-spec";
 
 const SPEC: ParsedSpec = {
   title: "Pets",
@@ -42,7 +42,7 @@ describe("the server a specification read from a URL calls", () => {
     expect(resolveBaseURL(absolute, URL_OF_SPEC)).toBe(absolute);
   });
 
-  it("is resolved for a specification Studio fetches again, as the update check does", () => {
+  it("is resolved for a specification Studio fetches again, as the update check does", async () => {
     const raw = JSON.stringify({
       openapi: "3.0.3",
       info: { title: "Pets", version: "1" },
@@ -50,6 +50,8 @@ describe("the server a specification read from a URL calls", () => {
       paths: {},
     });
 
-    expect(parseFetchedSpec(URL_OF_SPEC, raw).baseURL).toBe("https://petstore3.swagger.io/api/v3");
+    expect((await readFetchedSpec(URL_OF_SPEC, raw)).spec().baseURL).toBe(
+      "https://petstore3.swagger.io/api/v3",
+    );
   });
 });

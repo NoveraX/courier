@@ -33,6 +33,19 @@ vi.mock("node:dns", async (importOriginal) => {
   return { ...actual, promises: { ...actual.promises, lookup } };
 });
 
+/* Public DNS, which a caller without the token's names are looked up from, knows none of the test's names. */
+vi.mock("../src/server/public-resolver", () => ({
+  publicResolver: () => ({
+    resolve4: async (hostname: string) => {
+      throw Object.assign(new Error(`queryA ENOTFOUND ${hostname}`), { code: "ENOTFOUND" });
+    },
+    resolve6: async (hostname: string) => {
+      throw Object.assign(new Error(`queryAaaa ENOTFOUND ${hostname}`), { code: "ENOTFOUND" });
+    },
+    cancel: () => {},
+  }),
+}));
+
 const { fetchSpec } = await import("../src/server/fetch-spec");
 const { specProxyFor } = await import("../src/server/spec-proxy");
 
@@ -177,13 +190,13 @@ describe("with Node's proxy on", () => {
     expect(hits).toEqual([]);
   });
 
-  it("sends nothing through it for a public demo's visitor", async () => {
+  it("sends nothing through it for a caller without the token, refusing a name public DNS does not know", async () => {
     const through = await behindProxy();
     RESOLVED.set("hidden.example", unresolvable("hidden.example"));
 
     await expect(
-      fetchSpec("http://hidden.example/openapi.json", NOTHING_LISTED, {}, "public"),
-    ).rejects.toMatchObject({ code: "SPEC_UNREACHABLE" });
+      fetchSpec("http://hidden.example/openapi.json", NOTHING_LISTED, { reach: "public" }),
+    ).rejects.toMatchObject({ code: "SPEC_HOST_PRIVATE" });
     expect(through.seen).toEqual([]);
   });
 

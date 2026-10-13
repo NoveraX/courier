@@ -1,10 +1,10 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
 import { computeSpecHash, type ParsedSpec } from "../apis";
 import { filterSpec } from "../apis/filter-spec";
+import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { ImportTransformError } from "./import-transform-error";
 import { messageOf } from "./message-of";
 import { isParsedSpec } from "./parsed-spec-guard";
-import { SpecPinMismatchError } from "./spec-pin-mismatch-error";
 
 /**
  * Refuse a specification other than the one a URL import's `pinHash` names.
@@ -22,8 +22,7 @@ import { SpecPinMismatchError } from "./spec-pin-mismatch-error";
  */
 export function checkPinnedHash(name: string, entry: CourierImportEntry, spec: ParsedSpec): void {
   if (entry.importType !== "url" || entry.pinHash === undefined) return;
-  const actual = computeSpecHash(spec);
-  if (actual !== entry.pinHash) throw new SpecPinMismatchError(name, entry.pinHash, actual);
+  checkPinnedSpecHash(name, entry, computeSpecHash(spec));
 }
 
 /* What the import's transform makes of a copy of the spec; one that changes the copy in place may return nothing. */

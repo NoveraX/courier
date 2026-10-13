@@ -3,7 +3,7 @@
  * `write-routes.ts`; checking for updates in `registry-update-routes.ts`.
  */
 
-import type { ApisRouteDeps } from "./apis-routes";
+import type { ApisRouteApp, ApisRouteDeps } from "./apis-routes";
 import { applyImportRemoval } from "./import-removal/apply-import-removal";
 import { previewImportRemoval } from "./import-removal/preview-import-removal";
 import { isLocalBrowser } from "./is-local-browser";
@@ -11,7 +11,6 @@ import { isRecord } from "./mocks-edit/is-record";
 import { readPlanConsent } from "./read-plan-consent";
 import { registerUpdateRoutes } from "./registry-update-routes";
 import { sendRouteFailure } from "./route-failure";
-import type { RouteApp } from "./route-types";
 import { validateNameBody } from "./validate-body-registry";
 
 const NOT_LOCAL =
@@ -33,7 +32,7 @@ const NOT_LOCAL =
  * registerRegistryRoutes(app, { project, projectRoot: root });
  * ```
  */
-export function registerRegistryRoutes(app: RouteApp, deps: ApisRouteDeps): void {
+export function registerRegistryRoutes(app: ApisRouteApp, deps: ApisRouteDeps): void {
   app.post("/api/apis/imports/remove/preview", async (req, res) => {
     const body = validateNameBody(req.body, res);
     if (!body) return;

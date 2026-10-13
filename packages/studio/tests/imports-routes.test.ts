@@ -8,6 +8,7 @@
  * hosts the project allows once, only for a private host, and never from the
  * last config that loaded.
  */
+import { EventEmitter } from "node:events";
 import {
   existsSync,
   mkdirSync,
@@ -24,6 +25,7 @@ import { io as connect } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadImportsState, recordImport, saveImportsState } from "../src/apis/imports-state";
 import { parseSpec } from "../src/apis/parser/parse-spec";
+import type { ApisRouteApp } from "../src/server/apis-routes";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { bodyHash } from "../src/server/import-files/body-hash";
 import { signGeneratedFile } from "../src/server/import-files/generated-header";
@@ -31,7 +33,8 @@ import { withImportsLock } from "../src/server/imports-lock";
 import { ACT_BUDGET_MS } from "../src/server/project-state/budgets";
 import type { FreshSnapshot, ProjectState } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
-import type { JsonResponse, RouteApp } from "../src/server/route-types";
+import type { WorkedResponse } from "../src/server/request-work";
+import type { JsonResponse } from "../src/server/route-types";
 import type { StudioServer } from "../src/server/types";
 import { createUpdateChecks } from "../src/server/update-checks";
 import { tokenHeader } from "./helpers/token-header";
@@ -816,7 +819,7 @@ describe("the imports lists every UI is sent", () => {
 
     const response = await fetch(`${url}/api/apis/imports/list`, {
       method: "POST",
-      headers: { origin: url },
+      headers: { origin: url, ...tokenHeader(studio) },
     });
 
     expect(response.status).toBe(404);
@@ -1028,7 +1031,7 @@ describe("the update checks of URL imports", () => {
 });
 
 describe("a check of all imports", () => {
-  type Handler = Parameters<RouteApp["post"]>[1];
+  type Handler = Parameters<ApisRouteApp["post"]>[1];
 
   /* The check-all route over a project that runs these declarations, counting each read of it by budget. */
   function checkAll(declarations: Record<string, unknown>) {
@@ -1051,7 +1054,7 @@ describe("a check of all imports", () => {
       stop: () => undefined,
     };
     let handler: Handler | undefined;
-    const app: RouteApp = {
+    const app: ApisRouteApp = {
       post: (path, next) => {
         if (path === "/api/apis/imports/check-all") handler = next;
       },
@@ -1059,15 +1062,17 @@ describe("a check of all imports", () => {
     registerRegistryRoutes(app, { project, projectRoot: root });
     const reply = new Promise<{ status: number; body: unknown }>((resolve) => {
       let status = 200;
-      const res: JsonResponse = {
-        status(code) {
+      const res: JsonResponse & WorkedResponse = Object.assign(new EventEmitter(), {
+        writableFinished: false,
+        end: () => undefined,
+        status(code: number) {
           status = code;
           return res;
         },
-        json(data) {
+        json(data: unknown) {
           resolve({ status, body: data });
         },
-      };
+      });
       void handler?.({ body: {} }, res);
     });
     return { reply, fresh };

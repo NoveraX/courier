@@ -51,6 +51,13 @@
       "default": "./lib/handle.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "handle": [
+        "./lib/handle.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

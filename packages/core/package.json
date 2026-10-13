@@ -114,6 +114,46 @@
       "default": "./lib/announce/index.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "config": [
+        "./lib/config/index.d.ts"
+      ],
+      "define": [
+        "./lib/define/index.d.ts"
+      ],
+      "middleware": [
+        "./lib/middleware/index.d.ts"
+      ],
+      "node": [
+        "./lib/node.d.ts"
+      ],
+      "fetch": [
+        "./lib/fetch/index.d.ts"
+      ],
+      "testing": [
+        "./lib/testing/index.d.ts"
+      ],
+      "openapi": [
+        "./lib/openapi/index.d.ts"
+      ],
+      "webhooks": [
+        "./lib/webhooks/index.d.ts"
+      ],
+      "realtime": [
+        "./lib/realtime/index.d.ts"
+      ],
+      "internal-streams": [
+        "./lib/internal-streams/index.d.ts"
+      ],
+      "internal": [
+        "./lib/internal/index.d.ts"
+      ],
+      "announce": [
+        "./lib/announce/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

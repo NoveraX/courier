@@ -53,6 +53,13 @@
       "default": "./lib/internal.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "internal": [
+        "./lib/internal.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

@@ -63,6 +63,19 @@
       "default": "./lib/middleware.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "actions": [
+        "./lib/actions.d.ts"
+      ],
+      "pages": [
+        "./lib/pages.d.ts"
+      ],
+      "middleware": [
+        "./lib/middleware.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

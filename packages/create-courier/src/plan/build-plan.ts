@@ -7,6 +7,7 @@ import type {
 } from "../recipes/recipe-types";
 import { scriptsEdit } from "./package-scripts";
 import { keptStep, packageName, plannedEdit, plannedFile, typescriptOf } from "./planned-parts";
+import { typescriptSixStep } from "./typescript-six";
 
 /** A file of the setup, and what the project already has there. */
 export interface PlannedFile extends RecipeFile {
@@ -67,6 +68,9 @@ export interface Plan {
 export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
   const { project } = ctx;
   const typescript = typescriptOf(project, ctx.fresh, (specs) => ctx.manager.add(specs, true));
+  /* Moving to TypeScript 6 asks for changes in a tsconfig written for an older one. */
+  const movesToSix = typescript.install !== undefined || typescript.step !== undefined;
+  const tsconfigStep = movesToSix ? typescriptSixStep(project) : undefined;
   const files = recipe.files.map((file) => plannedFile(project, file));
   const edits = [...recipe.edits, ...scriptsEdit(recipe.scripts, recipe.rewrites ?? [])].map(
     (edit) => plannedEdit(project, edit),
@@ -84,6 +88,7 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
       ...edits.filter((edit): edit is ManualStep => "what" in edit),
       ...recipe.manual,
       ...(typescript.step ? [typescript.step] : []),
+      ...(tsconfigStep ? [tsconfigStep] : []),
     ],
     next: recipe.next,
     prepare: recipe.prepare ?? [],

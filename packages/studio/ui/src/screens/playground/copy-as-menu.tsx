@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown, Code, Copy, Link, Send, Terminal } from "lucide-react";
+import { ChevronDown, Code, Copy, Link, Terminal } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
+import { CourierMark } from "@/design/courier-mark";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { snippetLabels } from "@/features/requests/request-snippets";
@@ -12,7 +13,7 @@ export type CopyChoice = SnippetFlavor | "url";
 const ICONS: Readonly<Record<CopyChoice, LucideIcon>> = {
   shell: Terminal,
   browser: Code,
-  courier: Send,
+  courier: CourierMark,
   url: Link,
 };
 

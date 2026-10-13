@@ -1,3 +1,5 @@
+import { CourierMark } from "./courier-mark";
+
 interface CourierLogoProps {
   /** The product line under the wordmark: `Studio`. */
   product: string;
@@ -18,17 +20,7 @@ interface CourierLogoProps {
 export function CourierLogo({ product }: CourierLogoProps): React.ReactNode {
   return (
     <span className="flex items-center gap-2 text-fg">
-      <svg
-        viewBox="0 0 212 180"
-        aria-hidden="true"
-        focusable="false"
-        className="block w-7 shrink-0"
-      >
-        <path
-          fill="currentColor"
-          d="M212 0H90a90 90 0 0 0 0 180h122l-52-50H90a40 40 0 0 1 0-80h70Z"
-        />
-      </svg>
+      <CourierMark className="block w-7 shrink-0" />
       <span className="flex flex-col gap-0.5">
         <span className="font-wordmark text-wordmark leading-[0.85] tracking-wordmark">
           courier

@@ -1,6 +1,7 @@
-import { Code, Send, Terminal } from "lucide-react";
+import { Code, Terminal } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
+import { CourierMark } from "@/design/courier-mark";
 import type { SegmentedOption } from "@/design/segmented";
 import { requestBodyFile } from "@/features/requests/request-body-file";
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
@@ -10,7 +11,7 @@ import type { RequestEntry } from "@/store/types";
 import { CodeToolbar } from "./code-toolbar";
 import { CutNote } from "./cut-note";
 
-const ICONS = { shell: Terminal, browser: Code, courier: Send } as const;
+const ICONS = { shell: Terminal, browser: Code, courier: CourierMark } as const;
 
 interface SnippetsTabProps {
   request: RequestEntry;

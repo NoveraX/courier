@@ -47,7 +47,7 @@ export const api = defineApi({
 
 | Option | What it carries |
 | --- | --- |
-| `requestId` | The request's own `x-request-id` when it carries a well-formed one, otherwise an id made for it — shared by every call made while serving it. A string names another header. |
+| `requestId` | The request's own `x-request-id` — the id nginx's `$request_id`, a load balancer or a platform wrote, so each API's logs join your application's — when it is one: up to 200 visible characters, none a quote or a backslash. Otherwise an id made for it. Every call made while serving the request carries the same id, on every attempt a retry makes. A string names another header. |
 | `trace` | W3C `traceparent` and `tracestate`, when the request carries a valid one and no OpenTelemetry tracer in the process propagates it already. |
 | `clientAddress` | The user's address as `X-Forwarded-For`: the one the framework vouches for, or the chain the proxy in front recorded. |
 | `userAgent` | The user's browser, as `User-Agent`. |

@@ -53,6 +53,7 @@ function Content({ log, view, tab }: ContentProps): React.ReactNode {
       mode={mode}
       onMode={setMode}
       onWhole={() => void downloadWholeBody(log, part)}
+      searchLabel={part === "request" ? "Find in the request" : "Find in the answer"}
     />
   );
 }

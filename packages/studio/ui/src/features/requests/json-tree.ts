@@ -2,6 +2,8 @@
 export interface JsonTreeRow {
   /** The value's path, keys and indices joined by dots, as validation issues name it; `""` for the root. */
   path: string;
+  /** How code reaches the value from the root: `data.cities[3].name`; `""` for the root. */
+  accessor: string;
   depth: number;
   /** The key the value sits under: a name, an index, or none for the root and a closing. */
   key: { text: string; index: boolean } | null;
@@ -36,6 +38,15 @@ function leaf(value: Json): Pick<JsonTreeRow, "text" | "tone"> {
 
 const join = (path: string, key: string) => (path ? `${path}.${key}` : key);
 
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+
+/* How code reaches a child: an index in brackets, a name after a dot, any other key quoted in brackets. */
+function childAccessor(parent: string, key: string, index: boolean): string {
+  if (index) return `${parent}[${key}]`;
+  if (IDENTIFIER.test(key)) return parent ? `${parent}.${key}` : key;
+  return `${parent}[${JSON.stringify(key)}]`;
+}
+
 /**
  * A JSON value as the lines of a tree, with the containers whose paths are
  * collapsed shown closed, and the issues at their values.
@@ -55,9 +66,15 @@ export function jsonTreeRows(
   issues: ReadonlyMap<string, string>,
 ): JsonTreeRow[] {
   const rows: JsonTreeRow[] = [];
-  const walk = (v: Json, key: JsonTreeRow["key"], path: string, depth: number) => {
+  const walk = (
+    v: Json,
+    key: JsonTreeRow["key"],
+    at: { path: string; accessor: string },
+    depth: number,
+  ) => {
+    const { path, accessor } = at;
     if (!isContainer(v)) {
-      rows.push({ path, depth, key, kind: "value", ...leaf(v), issue: issues.get(path) });
+      rows.push({ path, accessor, depth, key, kind: "value", ...leaf(v), issue: issues.get(path) });
       return;
     }
     const entries = entriesOf(v);
@@ -67,6 +84,7 @@ export function jsonTreeRows(
     const text = closed ? (array ? "[…]" : "{…}") : array ? "[" : "{";
     rows.push({
       path,
+      accessor,
       depth,
       key,
       kind: "open",
@@ -76,10 +94,13 @@ export function jsonTreeRows(
       tone: "punctuation",
     });
     if (closed) return;
-    for (const [k, item, index] of entries)
-      walk(item, { text: k, index }, join(path, k), depth + 1);
+    for (const [k, item, index] of entries) {
+      const child = { path: join(path, k), accessor: childAccessor(accessor, k, index) };
+      walk(item, { text: k, index }, child, depth + 1);
+    }
     rows.push({
       path,
+      accessor,
       depth,
       key: null,
       kind: "close",
@@ -87,7 +108,7 @@ export function jsonTreeRows(
       tone: "punctuation",
     });
   };
-  walk(value, null, "", 0);
+  walk(value, null, { path: "", accessor: "" }, 0);
   return rows;
 }
 

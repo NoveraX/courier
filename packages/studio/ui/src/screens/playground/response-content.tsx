@@ -148,6 +148,7 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
       view={row ? responseView(row) : entryPayloadView(entry)}
       mode={payload.mode}
       onMode={payload.onMode}
+      searchLabel="Find in the answer"
     />
   );
 }

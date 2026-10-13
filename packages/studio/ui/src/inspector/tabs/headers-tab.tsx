@@ -70,7 +70,7 @@ export function HeadersTab({ request, notForwarded }: HeadersTabProps): React.Re
           revealed={revealed}
           onToggle={() => toggle(group.key)}
           onReveal={() => setRevealed((r) => !r)}
-          filtered={filter.trim() !== ""}
+          query={filter}
         />
       ))}
     </div>

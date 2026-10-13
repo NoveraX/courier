@@ -4,6 +4,8 @@ export const metadata = { title: "Studio", description: "A development server wi
 
 Courier Studio is a development server with a web UI: a request inspector, an endpoint explorer, an API playground, mock servers, and more. You run it next to your app, and your app connects to it — the server side through `attachRuntime()`, the browser side through one of the build integrations below.
 
+In the inspector, a call's answer and its variables show as a tree or as text. **Find** searches their keys and values: the tree keeps what matches and what holds it, opened, with the text marked; the raw text marks its lines; Enter and Shift+Enter move from one match to the next. Each row of the tree copies the path code reaches it by, such as `data.cities[41].name`, and the headers' filter marks what it finds.
+
 ## Install
 
 <Callout variant="tip" title="In one command">

@@ -1,5 +1,6 @@
 import type { Sources } from "../define/types";
 import type { ConnectResult } from "./connection-meta";
+import type { ProxyRateLimit } from "./rate-limit/types";
 import type { SSELifecycleConfig } from "./sse-types";
 
 /**
@@ -51,4 +52,22 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * magnitude in every application that has both.
    */
   maxUploadBytes?: number | undefined;
+  /**
+   * How many calls one caller may make through the proxy: every call takes
+   * one from `requests` in each `window`, a write from `writes` as well,
+   * and a call past either is answered 429 with `Retry-After`. A caller is
+   * the user's address by default. Unset, the proxy limits nobody — and
+   * whatever it exposes, a script can call as fast as it likes with your
+   * server's keys.
+   */
+  rateLimit?: ProxyRateLimit | undefined;
+  /**
+   * Answer only requests a browser sent: one that carries neither
+   * `Sec-Fetch-Site` nor `Origin`, as a script, curl or a crawler sends, is
+   * refused with 403. It keeps that noise off your APIs and protects
+   * nothing: any client can send both headers. Server code that calls the
+   * proxy route over HTTP is refused too, and so is a same-origin read from
+   * a browser that sends neither, such as Safari before 16.4.
+   */
+  browsersOnly?: boolean | undefined;
 }

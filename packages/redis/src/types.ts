@@ -78,3 +78,15 @@ export interface RedisStreamConfig {
    */
   maxLen?: number | undefined;
 }
+
+/** Configuration for {@link createRedisRateLimitStore} */
+export interface RedisRateLimitConfig {
+  /** The Redis client the counts are kept with; every replica's points at the same Redis. */
+  redis: Redis;
+  /**
+   * Key prefix for the counts: one key per caller and budget, expiring once
+   * the budget is whole again.
+   * @default "courier:ratelimit:"
+   */
+  prefix?: string | undefined;
+}

@@ -36,7 +36,14 @@ describe("unknownConfigKeys", () => {
         open: false,
         allowedSpecHosts: [],
       },
-      server: { allowedOrigins: [], allowedHosts: [], maxBodyBytes: 1, maxUploadBytes: 1 },
+      server: {
+        allowedOrigins: [],
+        allowedHosts: [],
+        maxBodyBytes: 1,
+        maxUploadBytes: 1,
+        rateLimit: { requests: 60, window: 60_000 },
+        browsersOnly: true,
+      },
       agents: { offer: "reads", allow: [], deny: [], access: "write", confirm: "write" },
     };
 

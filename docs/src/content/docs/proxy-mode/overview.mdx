@@ -118,6 +118,46 @@ An entry is written as a browser sends an origin — no path, no trailing slash,
 
 A page on a listed origin calls the proxy with CORS, and the handler answers for it: a preflight gets `204` with `Access-Control-Allow-Origin` and `Access-Control-Allow-Credentials`, the headers it asked to send and the methods the proxy takes, and every answer carries the same permission along with `Access-Control-Expose-Headers`. The preflight is an `OPTIONS` request, so route `OPTIONS` to the handler too — `app.all(...)` in Express and Hono, `export const { GET, POST, OPTIONS } = apiRoute(...)` in Next.js — and on the SSE route as well, since a stream that resumes sends `Last-Event-ID`. The development allowance for local ports is not a listing: it lets such a page's requests through, but gives it no permission to read the answers.
 
+### Rate limits
+
+The proxy calls your APIs with your server's keys, for anyone who asks: the origin check refuses another site's page, while a script that sends no `Origin` is served, as a server and a CDN are. `rateLimit` holds each caller to what a person would make. Every call takes one from `requests` in each `window`, a write takes one from `writes` first, and a call past either is answered `429` before its body is read — the API never sees it:
+
+```ts
+courierHandler({
+  rateLimit: {
+    requests: 300,                              // calls one caller may make…
+    window: 60_000,                             // …in each minute
+    writes: { requests: 20, window: 60_000 },   // and of those, writes
+  },
+})
+```
+
+A budget lets its calls go at once and then frees one each `window / requests`, so a caller cannot spend two budgets across a window's edge. The answer to a refused call carries `Retry-After`, and every answer tells the caller its budgets in the IETF's `RateLimit-Policy` and `RateLimit` headers — `"calls";q=300;w=60` and `"calls";r=299;t=1`; a page on a listed origin can read them too. A refused call's body is `{ "success": false, "code": "RATE_LIMITED", "message": … }`, and Studio shows it refused.
+
+A caller is the user's address, read from the right of the forwarding chain past your own proxies — see [The user's address](/docs/deployment/overview#the-users-address) — so a user cannot become another caller by writing an address of their own, and an IPv6 address counts by its /64 network, which one subscriber gets whole. Many users behind one office's address share its budget; count signed-in users apart by their session with `key`, which returns `undefined` to leave a request unlimited:
+
+```ts
+courierHandler({
+  rateLimit: {
+    requests: 300,
+    window: 60_000,
+    key: (request) => sessionIdOf(request) ?? addressOf(request),
+  },
+})
+```
+
+The counts are kept in the process. Replicas behind one balancer share them in Redis, where every call is taken in one script on Redis's clock — see [Redis](/docs/deployment/redis#rate-limit-store):
+
+```ts
+import { createRedisRateLimitStore } from "@noverax/courier-redis"
+
+courierHandler({
+  rateLimit: { requests: 300, window: 60_000, store: createRedisRateLimitStore({ redis }) },
+})
+```
+
+`browsersOnly: true` refuses with `403` a request that carries neither `Sec-Fetch-Site` nor `Origin`, as a script, curl or a crawler sends. It keeps that noise off your APIs and protects nothing — any client can send both headers — and it refuses server code that calls the proxy route over HTTP, and a same-origin read from a browser that sends neither, such as Safari before 16.4.
+
 ### Upstream redirects
 
 A proxied call carries the server's credentials — whatever your middleware added — so the proxy follows an upstream redirect only while it stays on the origin the call was sent to. A redirect to another origin is not followed: the caller receives its status as an error, without its `Location`, and the credentials never reach the other host. A source that trusts every redirect its upstream sends can say so:

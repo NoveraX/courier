@@ -28,6 +28,7 @@ export function gateEntry(serve: Serve, config: HandlerConfig | undefined): Serv
   return async (request) => {
     if (!isHostAllowed(request, config?.allowedHosts)) return refuseHost(request);
     if (request.method === "OPTIONS") return answerOptions(request, allowedOrigins);
+    if (config?.browsersOnly && !sentByBrowser(request)) return refuseNonBrowser(request);
     return withCorsHeaders(request, await serve(request), allowedOrigins);
   };
 }
@@ -35,6 +36,16 @@ export function gateEntry(serve: Serve, config: HandlerConfig | undefined): Serv
 /** A preflight is answered; any other OPTIONS request asks for nothing the proxy serves. */
 function answerOptions(request: Request, allowedOrigins: string[] | undefined): Response {
   return answerPreflight(request, allowedOrigins) ?? errorResponse(405, "Method not allowed");
+}
+
+/* A browser says where a request comes from in one of these; a script that does not ask to pass for one says neither. */
+function sentByBrowser(request: Request): boolean {
+  return request.headers.has("sec-fetch-site") || request.headers.has("origin");
+}
+
+function refuseNonBrowser(request: Request): Response {
+  discardBody(request);
+  return errorResponse(403, "This proxy answers browsers only", "BROWSERS_ONLY");
 }
 
 /** Refuse a request addressed to a host the app does not serve, naming the fix. */

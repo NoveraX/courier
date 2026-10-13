@@ -115,6 +115,8 @@ const main = defineCommand({
       maxUploadBytes,
       allowedOrigins,
       allowedHosts,
+      rateLimit: block.rateLimit,
+      browsersOnly: block.browsersOnly,
       onReady: (url) => printReady({ url, configFile, sources: Object.keys(config.sources) }),
       /* The server has logged why; the exit status is what a supervisor or a
          deploy script reads, so it must not say 0. */

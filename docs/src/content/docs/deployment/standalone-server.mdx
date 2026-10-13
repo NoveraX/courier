@@ -98,6 +98,9 @@ const server = await createCourierServer({
   allowedOrigins: ["https://app.example.com"], // CORS + WebSocket origin check; left out = own origin only
   allowedHosts: ["api.example.com"], // names it is reached by; any other host gets 421 (4421 on a socket)
 
+  // Calls one caller may make (429 past them); a store shares them across replicas
+  rateLimit: { requests: 300, window: 60_000, writes: { requests: 20, window: 60_000 } },
+
   // Request bodies (413 when exceeded)
   maxBodyBytes: 1_048_576,           // JSON envelope (default: 1 MB)
   maxUploadBytes: 67_108_864,        // multipart upload (default: 10 MB)

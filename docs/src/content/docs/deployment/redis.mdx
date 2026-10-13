@@ -131,6 +131,24 @@ export async function recordActivity(team: string, user: string, action: string)
 
 Streams are trimmed on every `append()` using Redis approximate `MAXLEN ~`. This keeps memory bounded while allowing minor overallocation for performance.
 
+## Rate Limit Store
+
+Holds each caller of the proxy to one budget across replicas: without it, every replica counts on its own and a caller gets the budget once per replica. Each call is taken in one Lua script, on Redis's own clock, so replicas whose clocks drift still count alike; a caller whose budget is whole again leaves no key behind.
+
+```ts title="server.ts"
+import Redis from "ioredis"
+import { createRedisRateLimitStore } from "@noverax/courier-redis"
+
+const store = createRedisRateLimitStore({
+  redis: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
+  prefix: "courier:ratelimit:",   // key prefix (default: "courier:ratelimit:")
+})
+
+courierHandler({ rateLimit: { requests: 300, window: 60_000, store } })
+```
+
+One connection serves it, and it may be the one the Pub/Sub adapter publishes on. See [Rate limits](/docs/proxy-mode/overview#rate-limits).
+
 ## Presence Adapter
 
 Tracks online users across replicas using Redis ZSET (scores) + HASH (metadata).

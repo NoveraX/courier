@@ -31,6 +31,8 @@ export function httpHandlerOptions(config: CourierServerOptions): HandlerConfig 
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
     maxBodyBytes: config.maxBodyBytes,
     maxUploadBytes: config.maxUploadBytes,
+    rateLimit: config.rateLimit,
+    browsersOnly: config.browsersOnly,
     maxSSEConnections: config.maxSSEConnections,
     onSSEConnect: config.onSSEConnect,
     onSSEDisconnect: config.onSSEDisconnect,

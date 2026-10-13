@@ -31,6 +31,8 @@ const SERVER = {
   allowedHosts: true,
   maxBodyBytes: true,
   maxUploadBytes: true,
+  rateLimit: true,
+  browsersOnly: true,
 } satisfies Record<keyof CourierServerConfig, true>;
 
 const RUNTIME = { appOrigin: true } satisfies Record<keyof CourierRuntimeConfig, true>;

@@ -8,11 +8,13 @@
  * leaving it running. Once Studio closes, nothing starts again.
  */
 
-import { messageOf } from "../message-of";
+import { describeError } from "../describe-error";
 import type { ProcessManager, ServerState, SpawnRequest } from "./types";
 
 export interface ServerOpsContext {
   servers: Map<string, ServerState>;
+  /** The project root, links resolved: what a mock's failure names a path in the project relative to. */
+  projectRoot: string;
   processManager: ProcessManager;
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
   /** Ports the config declares; a port Studio assigns keeps clear of them. */
@@ -72,9 +74,11 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
       const { mocksFile, mockKey } = state;
       state.pid = processManager.spawn({ serverId, mocksFile, mockKey, ...portRequest(state) }).pid;
     } catch (err) {
+      /* Every page is told why, one without the token too: a path in the
+         project named from its root, any other from `~`. */
       updateAndEmit(serverId, {
         status: "crashed",
-        lastError: messageOf(err),
+        lastError: describeError(err, ctx.projectRoot),
       });
     }
   }

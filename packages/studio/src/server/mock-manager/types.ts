@@ -59,6 +59,8 @@ export interface ServerState {
 export interface CoordinatorConfig {
   mockRegistry: MockRegistry;
   uiNamespace: Namespace;
+  /** The project root, links resolved: pages are told the mocks file by its name relative to it, as they are told every file that changes. */
+  projectRoot: string;
   /** Where the ports assigned to mocks that name none begin; read at the first assignment. */
   basePort: () => number;
   watcherStatus?: WatcherStatus;

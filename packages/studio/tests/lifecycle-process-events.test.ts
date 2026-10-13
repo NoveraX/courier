@@ -3,6 +3,8 @@
  * keeps the reason on the mock for the UI — the worker's own reason, not the
  * exit that followed it.
  */
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createProcessEvents } from "../src/server/mock-manager/lifecycle-process-events";
@@ -23,6 +25,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/* A project under the home directory, as most are. */
+const PROJECT = join(homedir(), "work", "shop");
+
 function events() {
   const state = {
     serverId: "apiMock",
@@ -40,6 +45,7 @@ function events() {
     state,
     handlers: createProcessEvents({
       servers,
+      projectRoot: PROJECT,
       emitAll: vi.fn(),
       updateAndEmit,
       resendStore: vi.fn(),
@@ -48,6 +54,38 @@ function events() {
 }
 
 describe("a managed mock that fails", () => {
+  it("tells every page why with no path of this machine, and the terminal the path whole", () => {
+    const { state, handlers } = events();
+    const project = PROJECT;
+    state.mocksFile = join(project, "courier.mocks.ts");
+    const missing = join(project, "src", "handlers.ts");
+    const stack = join(homedir(), ".npm", "_npx", "1", "worker.js");
+
+    handlers.onError(
+      "apiMock",
+      `Cannot find module '${missing}'\nRequire stack:\n- ${stack}`,
+      true,
+    );
+
+    expect(state.lastError).toBe("Cannot find module 'src/handlers.ts'");
+    expect(output.join("\n")).toContain(missing);
+  });
+
+  it("names a path in the project from its root, wherever in it the mocks file is", () => {
+    const { state, handlers } = events();
+    state.mocksFile = join(PROJECT, "mocks", "courier.mocks.ts");
+
+    handlers.onError(
+      "apiMock",
+      `Cannot find module '${join(PROJECT, "src", "handlers.ts")}' imported from '${state.mocksFile}'`,
+      true,
+    );
+
+    expect(state.lastError).toBe(
+      "Cannot find module 'src/handlers.ts' imported from 'mocks/courier.mocks.ts'",
+    );
+  });
+
   it("says why in the terminal and keeps the reason on the mock", () => {
     const { state, handlers } = events();
 
@@ -194,6 +232,7 @@ function workerEvents() {
   const resendStore = vi.fn();
   const handlers = createProcessEvents({
     servers,
+    projectRoot: PROJECT,
     emitAll: emit,
     updateAndEmit: vi.fn(),
     resendStore,
@@ -374,6 +413,7 @@ describe("the requests a managed mock answered", () => {
     };
     const { onEvents } = createProcessEvents({
       servers,
+      projectRoot: PROJECT,
       emitAll: emit,
       updateAndEmit: vi.fn(),
       mockLog,

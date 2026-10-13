@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from "@noverax/courier";
+import { describeError } from "../describe-error";
 import { isPlainObject } from "../is-plain-object";
 import type { MockLog } from "../storage/mock-log";
 import { applyWorkerEvent, NO_NETWORK, networkStateOf } from "./apply-worker-event";
@@ -22,6 +23,8 @@ const GONE: Partial<ServerState> = { pid: undefined, actualPort: undefined, url:
 
 export interface ProcessEventsContext {
   servers: Map<string, ServerState>;
+  /** The project root, links resolved: what a mock's failure names a path in the project relative to. */
+  projectRoot: string;
   /** Tell every page what a worker reported, in one message: each event names its type. */
   emitAll: (events: readonly Record<string, unknown>[]) => void;
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
@@ -75,7 +78,12 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
          lists its require stack — so the terminal gets it whole and the UI
          the line that says why. */
       const [reason = message] = message.split("\n", 1);
-      updateAndEmit(serverId, { status: "crashed", lastError: reason });
+      /* What every page is told, one without the token too: a path in the
+         project named from its root, any other from `~`. */
+      updateAndEmit(serverId, {
+        status: "crashed",
+        lastError: describeError(reason, ctx.projectRoot),
+      });
     },
 
     /* A mock that restarts says so until it starts again: what its worker

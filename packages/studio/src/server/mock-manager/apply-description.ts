@@ -14,6 +14,8 @@ export interface ApplyContext {
   ops: ServerOps;
   /** The mocks file that last loaded, or `null` when none has. */
   getMocksPath: () => string | null;
+  /** The project root, links resolved: a mock's problems name its files relative to it. */
+  projectRoot: string;
   isAlive: (serverId: string) => boolean;
   /** Whether the registry still holds this very entry, after an await. */
   isCurrent: (entry: MockEntry) => boolean;
@@ -41,7 +43,7 @@ export function createDescriptionApplier(ctx: ApplyContext): (entry: MockEntry) 
       log.warn(`Cannot register mock "${entry.key}": courier.mocks.ts has not loaded`);
       return;
     }
-    const described = await describeEntry(entry.key, entry.definition);
+    const described = await describeEntry(entry.key, entry.definition, ctx.projectRoot);
     if (ctx.isClosed() || !ctx.isCurrent(entry)) return;
     const location = { mocksFile, relativePath: `${basename(mocksFile)}:${entry.key}` };
 

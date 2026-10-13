@@ -3,7 +3,11 @@ import type { ServerState } from "./types";
 
 /** What Studio knows of the project's `courier.mocks.*`, as the UI is told it. */
 export interface MocksFileStatus {
-  /** Absolute path of the file; `null` when the project declares no mocks. */
+  /**
+   * The file: its absolute path as Studio loads it, and its name relative to
+   * the project root as pages are told it; `null` when the project declares
+   * no mocks.
+   */
   file: string | null;
   /** Why the file did not load; `null` when it loaded, or there is none. */
   error: string | null;
@@ -14,11 +18,14 @@ interface MocksFileContext {
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
   /** Tells every connected UI the new status. */
   broadcast: (status: MocksFileStatus) => void;
+  /** The file's name as pages are told it: relative to the project root. */
+  named: (file: string) => string;
 }
 
 /** The mocks file's status, the file mocks start from, and how to update both. */
 interface MocksFileState {
   set(next: MocksFileStatus): void;
+  /** The status as pages are told it, the file named relative to the project root. */
   status(): MocksFileStatus;
   /** The file mocks start from: the last one that loaded. */
   path(): string | null;
@@ -33,7 +40,8 @@ interface MocksFileState {
  * @returns The status, the file mocks start from, and how to update both
  */
 export function createMocksFileState(ctx: MocksFileContext): MocksFileState {
-  let status: MocksFileStatus = { file: null, error: null };
+  let last: MocksFileStatus = { file: null, error: null };
+  let shown: MocksFileStatus = last;
   /* The file mocks start from: the last one that loaded. */
   let loaded: string | null = null;
   /* The reason given on each kept mock, so a later load clears only that. */
@@ -55,10 +63,11 @@ export function createMocksFileState(ctx: MocksFileContext): MocksFileState {
         : `${basename(next.file ?? "courier.mocks")} failed to load: ${next.error}. ` +
           "A running mock keeps serving its last working definition.";
     if (reason !== reported) report(reason);
-    if (next.file === status.file && next.error === status.error) return;
-    status = next;
-    ctx.broadcast(status);
+    if (next.file === last.file && next.error === last.error) return;
+    last = next;
+    shown = { file: next.file === null ? null : ctx.named(next.file), error: next.error };
+    ctx.broadcast(shown);
   }
 
-  return { set, status: () => status, path: () => loaded };
+  return { set, status: () => shown, path: () => loaded };
 }

@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 
 import { closeIconsLog } from "./icons-log";
-import { registerFileIcons } from "./register-file-icons";
+import { type FileIconsRegistration, registerFileIcons } from "./register-file-icons";
+
+let registration: FileIconsRegistration | undefined;
 
 /**
  * Start Courier File Icons: Courier's own icons for its config, its mocks
@@ -18,11 +20,23 @@ import { registerFileIcons } from "./register-file-icons";
  * ```
  */
 export function activate(context: vscode.ExtensionContext): void {
-  context.subscriptions.push(registerFileIcons(context), { dispose: closeIconsLog });
+  registration = registerFileIcons(context);
+  context.subscriptions.push(registration, { dispose: closeIconsLog });
   void vscode.commands.executeCommand("setContext", "courier.fileIconsReady", true);
 }
 
 /**
- * Stop the extension: everything it started is disposed with its context.
+ * Stop the extension once the changes to the icons under way are made — a
+ * theme's settings or icon files half written would outlast the window —
+ * before VS Code disposes everything it started with its context.
+ *
+ * @returns Once those changes are made
+ * @example
+ * ```ts
+ * await deactivate();
+ * ```
  */
-export function deactivate(): void {}
+export async function deactivate(): Promise<void> {
+  await registration?.settled();
+  registration = undefined;
+}

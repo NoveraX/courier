@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type * as vscode from "vscode";
 
-import { registerFileIcons } from "../src/register-file-icons";
+import { type FileIconsRegistration, registerFileIcons } from "../src/register-file-icons";
 import {
   asked,
   configurationListeners,
@@ -32,6 +32,14 @@ import {
 let custom: string;
 let state: Map<string, unknown>;
 let context: vscode.ExtensionContext;
+/* The registrations a test made: a pass still running when it ends would write into the next test's folders through the settings they share. */
+const registrations: FileIconsRegistration[] = [];
+
+function register(extension: vscode.ExtensionContext): FileIconsRegistration {
+  const registration = registerFileIcons(extension);
+  registrations.push(registration);
+  return registration;
+}
 
 beforeEach(() => {
   const root = mkdtempSync(join(tmpdir(), "courier-offer-"));
@@ -74,7 +82,12 @@ beforeEach(() => {
   } as unknown as vscode.ExtensionContext;
 });
 
-afterEach(() => {
+afterEach(async () => {
+  for (const registration of registrations.splice(0)) {
+    await registration.ready;
+    await registration.settled();
+    registration.dispose();
+  }
   installed.clear();
   configurationListeners.clear();
   configWatchers.dispose();
@@ -92,7 +105,7 @@ describe("the offer of Courier's file icons", () => {
   it("is made once for the theme in use, in a Courier project, and runs the command on a yes", async () => {
     settings.set("workbench.iconTheme", "vscode-icons");
     asked.buttons.push("Show Icons");
-    registerFileIcons(context);
+    register(context);
 
     await settle();
     configWatchers.fire();
@@ -106,7 +119,7 @@ describe("the offer of Courier's file icons", () => {
 
   it("is made when the user picks a theme that takes Courier's icons later", async () => {
     settings.set("workbench.iconTheme", "vs-seti");
-    registerFileIcons(context);
+    register(context);
     await settle();
 
     settings.set("workbench.iconTheme", "material-icon-theme");
@@ -122,7 +135,7 @@ describe("the offer of Courier's file icons", () => {
   it("is made when a Courier project turns up in the workspace", async () => {
     settings.set("workbench.iconTheme", "vscode-icons");
     workspaceConfigs.length = 0;
-    registerFileIcons(context);
+    register(context);
     await settle();
     const before = [...shown.infos];
 
@@ -137,7 +150,7 @@ describe("the offer of Courier's file icons", () => {
   it("is not made for a theme in use that does not run here, which the log says once", async () => {
     settings.set("workbench.iconTheme", "vscode-icons");
     installed.delete("vscode-icons-team.vscode-icons");
-    registerFileIcons(context);
+    register(context);
     await settle();
     configWatchers.fire();
     await settle();
@@ -148,7 +161,7 @@ describe("the offer of Courier's file icons", () => {
 
   it("is not made for a theme that takes no icons, outside a Courier project, or when the settings say no", async () => {
     settings.set("workbench.iconTheme", "vs-seti");
-    registerFileIcons(context);
+    register(context);
     await settle();
     settings.set("workbench.iconTheme", "material-icon-theme");
     workspaceConfigs.length = 0;
@@ -167,7 +180,7 @@ describe("the file icon commands", () => {
   it("show the icons in the theme in use, and take them out of every theme they are in", async () => {
     settings.set("workbench.iconTheme", "vscode-icons");
     settings.set("courier.fileIcons.offer", false);
-    registerFileIcons(context);
+    register(context);
 
     await registered.get("courier.fileIcons.show")?.();
     const entries = settings.get("vsicons.associations.files");
@@ -180,6 +193,19 @@ describe("the file icon commands", () => {
     ]);
     expect(settings.has("vsicons.associations.files")).toBe(false);
   });
+
+  it("are settled once the change a command asked for is made", async () => {
+    settings.set("workbench.iconTheme", "vscode-icons");
+    settings.set("courier.fileIcons.offer", false);
+    const registration = register(context);
+    await registration.ready;
+
+    void registered.get("courier.fileIcons.show")?.("vsicons");
+    await registration.settled();
+
+    expect(settings.get("vsicons.associations.files")).toHaveLength(2);
+    expect(existsSync(join(custom, "folder_type_courier.svg"))).toBe(true);
+  });
 });
 
 describe("Courier's icons, once agreed to", () => {
@@ -189,7 +215,7 @@ describe("Courier's icons, once agreed to", () => {
       "courier.config.ts": "../../.noverax-courier-icons/courier-config",
     });
 
-    await registerFileIcons(context).ready;
+    await register(context).ready;
 
     expect(shown.infos).toEqual([]);
     expect(settings.get("vsicons.associations.files")).toHaveLength(2);
@@ -203,7 +229,7 @@ describe("Courier's icons, once agreed to", () => {
     });
     const vsicons = installed.get("vscode-icons-team.vscode-icons");
     installed.delete("vscode-icons-team.vscode-icons");
-    await registerFileIcons(context).ready;
+    await register(context).ready;
     const before = settings.has("vsicons.associations.files");
 
     if (vsicons) installed.set("vscode-icons-team.vscode-icons", vsicons);
@@ -221,7 +247,7 @@ describe("Courier's icons, once agreed to", () => {
     settings.set("vsicons.associations.files", [
       { icon: "courier-config", extensions: ["courier.config.ts"] },
     ]);
-    registerFileIcons(context);
+    register(context);
 
     await settle();
 
@@ -231,7 +257,7 @@ describe("Courier's icons, once agreed to", () => {
   it("are copied once the settings Settings Sync brings have settled", async () => {
     /* Activation runs a pass of its own, which reads the settings too: still
        running, it would meet the ones synced below and copy at once. */
-    await registerFileIcons(context).ready;
+    await register(context).ready;
     settings.set("vsicons.associations.files", [
       { icon: "courier-config", extensions: ["courier.config.ts"] },
     ]);

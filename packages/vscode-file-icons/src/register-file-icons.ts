@@ -2,6 +2,7 @@ import { join } from "node:path";
 import * as vscode from "vscode";
 
 import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "./apply-icons";
+import { changesInTurn } from "./changes-in-turn";
 import { type CourierWorkspace, watchCourierWorkspace } from "./courier-workspace";
 import { showHere, tellHiddenHere } from "./hidden-here";
 import { type CourierIcons, ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
@@ -25,6 +26,12 @@ export interface FileIconsRegistration extends vscode.Disposable {
    * icons current, following the icon theme in use — have run. Never rejects.
    */
   readonly ready: Promise<void>;
+  /**
+   * Settles once every change to the icons asked for so far — as the
+   * extension started, by a command, for a theme picked or settings synced —
+   * has been made, the ones asked for meanwhile too. Never rejects.
+   */
+  settled(): Promise<void>;
 }
 
 /**
@@ -51,12 +58,7 @@ export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRe
     profile: profileOf(context.globalState),
   };
   const workspace = watchCourierWorkspace();
-  /* One change to the icons at a time: the themes rebuild on each, and an offer, a command and a sync may come together. */
-  let queue: Promise<unknown> = Promise.resolve();
-  const inTurn = (what: string, change: () => Promise<unknown>) => {
-    queue = queue.then(change).catch((error: unknown) => logFailure(what, error));
-    return queue;
-  };
+  const { inTurn, settled } = changesInTurn();
   const show = async (asked?: unknown) => {
     const theme = isTheme(asked) ? asked : await chooseTheme();
     if (!theme) return;
@@ -124,7 +126,7 @@ export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRe
     }),
     { dispose: () => clearTimeout(settling) },
   );
-  return Object.assign(registered, { ready });
+  return Object.assign(registered, { ready, settled });
 }
 
 /* What following the theme in use needs: the profile's state, the workspace, how to carry the icons over, the themes said not to run here. */

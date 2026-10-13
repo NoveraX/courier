@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
-import { closeFormatterThread } from "./project-format/formatter-host";
+import { closeFormatProcesses } from "./project-format/formatter-host";
 import { clearStudioServerState } from "./runtime-namespace-state";
 
 /** What a running Studio holds open, each closed in its turn. */
@@ -22,7 +22,7 @@ export interface OpenStudio {
 /**
  * Close a running Studio: it stops telling editors where it runs and stops
  * listening first, lets an edit it is writing finish, stops the mocks, the
- * formatter threads and the watchers, closes the sockets and the stores,
+ * formatter processes and the watchers, closes the sockets and the stores,
  * and then the server.
  *
  * @param studio - What it holds open
@@ -40,7 +40,7 @@ export async function closeStudio(studio: OpenStudio): Promise<void> {
   await startup.close();
   await project.finishEdits(EDIT_FINISH_BUDGET_MS);
   await mockManager.stop();
-  await closeFormatterThread(studio.root);
+  await closeFormatProcesses(studio.root);
   project.stop();
   playgroundRouter.dispose();
   clearStudioServerState();

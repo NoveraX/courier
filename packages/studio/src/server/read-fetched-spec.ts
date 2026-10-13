@@ -1,15 +1,15 @@
 import type { ParsedSpec } from "../apis";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { isParsedSpec } from "./parsed-spec-guard";
-import { runInThread } from "./spec-thread/run-in-thread";
-import { SpecTextError } from "./spec-thread/spec-text-error";
-import type { SpecJobResult, SpecReadJob } from "./spec-thread/spec-thread-protocol";
-import { TRUSTED_JOB } from "./spec-thread/thread-budgets";
-import { inThreadPlace } from "./spec-thread/thread-places";
+import { TRUSTED_JOB } from "./spec-jobs/job-budgets";
+import { inJobPlace } from "./spec-jobs/job-places";
+import { runInProcess } from "./spec-jobs/run-in-process";
+import type { SpecJobResult, SpecReadJob } from "./spec-jobs/spec-job-protocol";
+import { SpecTextError } from "./spec-jobs/spec-text-error";
 import { SpecTooLargeError } from "./spec-too-large-error";
 import { SpecUnreadableError } from "./spec-unreadable-error";
 
-/** What a thread read of a specification: its JSON, or its size when too large; its hash either way. */
+/** What a process read of a specification: its JSON, or its size when too large; its hash either way. */
 type SpecRead = Extract<SpecJobResult, { kind: "spec:read" }>;
 
 /** The specification a URL answered with, as an update check reads it. */
@@ -35,13 +35,13 @@ export interface FetchedSpecOptions {
 
 /**
  * Read the specification a URL answered with, its server address made
- * absolute against that URL, in a thread of its own within the budget of
+ * absolute against that URL, in a process of its own within the budget of
  * a caller with the project's token: what a host answers is text from the
  * network, and YAML shaped to take long to read must not hold up Studio's
  * server while it does. An answer that is no specification is the host's
  * failure, not Studio's: it is reported as such, with the reason.
  *
- * The thread hashes the specification, so a check of one that did not
+ * The process hashes the specification, so a check of one that did not
  * change needs none of it sent across, however large: only the
  * specification itself, asked for, is refused when its caller could not be
  * sent it.
@@ -52,7 +52,7 @@ export interface FetchedSpecOptions {
  * @returns Its hash, and the specification
  * @throws {SpecUnreadableError} When the answer is not a specification Studio reads
  * @throws {SpecWorkLimitError} When reading it takes longer or more memory than Studio gives one
- * @throws {StudioThreadError} When Studio's thread script is from another build or missing, or the thread fails
+ * @throws {StudioWorkerError} When Studio's worker script is from another build or missing, or the process fails
  * @throws The signal's reason, once it is aborted
  * @example
  * ```ts
@@ -66,10 +66,10 @@ export async function readFetchedSpec(
   { signal, maxBytes = MAX_MESSAGE_BYTES }: FetchedSpecOptions = {},
 ): Promise<FetchedSpec> {
   const job: SpecReadJob = { kind: "spec:read", text: raw, url, maxBytes, hash: true };
-  const reply = await inThreadPlace(true, signal, () => runInThread(job, TRUSTED_JOB, signal));
+  const reply = await inJobPlace(true, signal, () => runInProcess(job, TRUSTED_JOB, signal));
   if ("refused" in reply) throw new SpecUnreadableError(url, new SpecTextError(reply.refused));
   const { hash } = reply;
-  if (hash === undefined) throw new Error(`Studio's thread read ${url} without its hash.`);
+  if (hash === undefined) throw new Error(`Studio's process read ${url} without its hash.`);
   return { hash, spec: () => specOf(url, reply, maxBytes) };
 }
 

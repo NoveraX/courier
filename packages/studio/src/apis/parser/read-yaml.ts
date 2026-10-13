@@ -23,7 +23,7 @@ import { prettifyYamlError } from "./prettify-yaml-error";
  * which V8 hashes by their length alone. Only that check is linear: an
  * alias resolved many times, an `!!omap` under YAML 1.1, those long keys
  * and the objects built from them still take `yaml` and V8 longer than the
- * text's length, which is why Studio reads a specification in a thread of
+ * text's length, which is why Studio reads a specification in a process of
  * its own, within a budget of time and memory.
  *
  * `yaml` reports a key named twice where it finds it, among its other

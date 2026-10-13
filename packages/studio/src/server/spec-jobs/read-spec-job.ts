@@ -1,7 +1,7 @@
 import { parseSpec } from "../../apis/parser/parse-spec";
 import { computeSpecHash } from "../../apis/registry/spec-hash";
 import { resolveBaseURL } from "../../apis/resolve-base-url";
-import type { ReplyTo, SpecReadJob } from "./spec-thread-protocol";
+import type { ReplyTo, SpecReadJob } from "./spec-job-protocol";
 
 /**
  * Read a specification as the parse route answers it: parsed, its server

@@ -6,7 +6,7 @@ import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
 import { listed } from "../../server/config-edit/file-changes";
 import { withImportsLock } from "../../server/imports-lock";
-import { closeFormatterThread } from "../../server/project-format/formatter-host";
+import { closeFormatProcesses } from "../../server/project-format/formatter-host";
 import type { ConfigFailure } from "../../server/project-state/types";
 import { type ImportWritePlan, planImportWrite, writeImport } from "../../server/write-import";
 import type { ImportDeclaration, WriteBody } from "../../server/write-types";
@@ -149,6 +149,6 @@ export async function runImport(given: string, run: ImportRun): Promise<number> 
     return await importInto(root, given, run, styleFor(process.stdout));
   } finally {
     if (level === undefined) Reflect.deleteProperty(process.env, "COURIER_LOG_LEVEL");
-    await closeFormatterThread(root);
+    await closeFormatProcesses(root);
   }
 }

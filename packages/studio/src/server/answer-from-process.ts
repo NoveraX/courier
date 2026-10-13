@@ -4,7 +4,7 @@ import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";
 
 /**
- * Answer a request with what work in a thread of its own returns: the work
+ * Answer a request with what work in a process of its own returns: the work
  * is told to stop once its caller goes away, and counts as the request's
  * until it settles, so a public demo frees the request's place only then.
  * A failure is answered as the error says — refused, over its budget,
@@ -16,12 +16,12 @@ import type { JsonResponse } from "./route-types";
  * @returns Once the request is answered
  * @example
  * ```ts
- * await answerFromThread(res, "Failed to diff specs", (signal) =>
- *   diffInThread(oldSpec, newSpec, { trusted: false, signal }),
+ * await answerFromProcess(res, "Failed to diff specs", (signal) =>
+ *   diffInProcess(oldSpec, newSpec, { trusted: false, signal }),
  * );
  * ```
  */
-export async function answerFromThread<TResult>(
+export async function answerFromProcess<TResult>(
   res: JsonResponse & WorkedResponse,
   failure: string,
   run: (signal: AbortSignal) => Promise<TResult>,

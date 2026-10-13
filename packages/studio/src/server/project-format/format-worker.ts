@@ -1,20 +1,16 @@
 /**
- * The thread Studio does its long work in, out of its server's own thread
- * so that no single piece of it holds the server up. It formats files with
- * the project's ESLint and Prettier — each loaded once, from the project,
- * and kept for every file after, so a file takes milliseconds rather than a
- * process of its own — and it reads specifications, generates their code
- * and compares them, one job per thread. It greets Studio first with the
- * version of what it understands, so a script left from another build of
- * Studio is told apart at once.
+ * The process Studio formats a project's files in, out of its server's own
+ * so that no tool holds it up. It formats with the project's ESLint and
+ * Prettier — each loaded once, from the project, and kept for every file
+ * after, so a file takes milliseconds rather than a process of its own —
+ * and a tool that fails, or takes too long and is stopped, leaves Studio
+ * running. A process whose Studio has gone ends too.
  */
 
-import { parentPort } from "node:worker_threads";
-import { serveSpecJobs } from "../spec-thread/serve-spec-jobs";
 import type { FileFormatter } from "./tool-api";
 import { eslintFormatter } from "./worker-eslint";
 import { prettierFormatter } from "./worker-prettier";
-import { type FormatRequest, isFormatRequest } from "./worker-protocol";
+import { type FormatReply, type FormatRequest, isFormatRequest } from "./worker-protocol";
 
 const formatters = new Map<string, Promise<FileFormatter>>();
 
@@ -29,17 +25,24 @@ function formatterFor({ tool, module, root }: FormatRequest): Promise<FileFormat
   return formatter;
 }
 
+/* A reply Studio is gone before it takes: this process has nothing left to do. */
+function reply(message: FormatReply): void {
+  process.send?.(message, (error: Error | null) => {
+    if (error) process.exit(0);
+  });
+}
+
 async function answer(request: FormatRequest): Promise<void> {
   try {
     const format = await formatterFor(request);
-    parentPort?.postMessage({ id: request.id, text: await format(request.path, request.text) });
+    reply({ id: request.id, text: await format(request.path, request.text) });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    parentPort?.postMessage({ id: request.id, error: reason.split("\n")[0] ?? reason });
+    reply({ id: request.id, error: reason.split("\n")[0] ?? reason });
   }
 }
 
-parentPort?.on("message", (message: unknown) => {
+process.on("message", (message: unknown) => {
   if (isFormatRequest(message)) void answer(message);
 });
-serveSpecJobs(parentPort);
+process.on("disconnect", () => process.exit(0));

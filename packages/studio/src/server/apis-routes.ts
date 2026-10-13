@@ -5,7 +5,7 @@
  */
 
 import { diffSpecs, generateCode } from "../apis";
-import { answerFromThread } from "./answer-from-thread";
+import { answerFromProcess } from "./answer-from-process";
 import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
@@ -15,8 +15,8 @@ import type { ProjectState } from "./project-state/types";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { WorkedResponse } from "./request-work";
 import type { JsonResponse, RouteApp, RouteRequest } from "./route-types";
-import { diffInThread } from "./spec-thread/diff-in-thread";
-import { generateInThread } from "./spec-thread/generate-in-thread";
+import { diffInProcess } from "./spec-jobs/diff-in-process";
+import { generateInProcess } from "./spec-jobs/generate-in-process";
 import { registerUpdateFlowRoutes } from "./update-routes";
 import { validateDiffBody, validateGenerateBody } from "./validate-body";
 import { registerWriteRoutes } from "./write-routes";
@@ -46,7 +46,7 @@ export interface ApisRouteDeps {
    * the code's imports the extension the project needs — each formatter is
    * a program of the project's, run as a process per file, and a caller
    * without the token writes nothing and has no file of the project read.
-   * It generates or compares code for any other in a thread of its own,
+   * It generates or compares code for any other in a process of its own,
    * within a budget, as it reads a specification for it; for every caller
    * so when this is not given.
    */
@@ -56,7 +56,7 @@ export interface ApisRouteDeps {
 /**
  * Mount the API-import routes: generate, write, diff, and the imports list,
  * checks, management and updates. For a caller without the token, code is
- * generated and specifications compared in a thread of its own, within a
+ * generated and specifications compared in a process of its own, within a
  * budget, and the code comes as the generator writes it, unformatted and
  * with no file of the project read.
  *
@@ -77,8 +77,8 @@ export function registerApisRoutes(app: ApisRouteApp, deps: ApisRouteDeps): void
          even its package.json and tsconfig, which say whether its imports
          need an extension: its code is the generator's, with none. */
       if (deps.holdsToken?.(req) !== true) {
-        await answerFromThread(res, "Code generation failed", (signal) =>
-          generateInThread(body.spec, body.options, { trusted: false, signal }).then((files) => ({
+        await answerFromProcess(res, "Code generation failed", (signal) =>
+          generateInProcess(body.spec, body.options, { trusted: false, signal }).then((files) => ({
             files,
           })),
         );
@@ -105,8 +105,8 @@ export function registerApisRoutes(app: ApisRouteApp, deps: ApisRouteDeps): void
       const body = validateDiffBody(req.body, res);
       if (!body) return;
       if (deps.holdsToken?.(req) !== true) {
-        await answerFromThread(res, "Failed to diff specs", (signal) =>
-          diffInThread(body.oldSpec, body.newSpec, { trusted: false, signal }),
+        await answerFromProcess(res, "Failed to diff specs", (signal) =>
+          diffInProcess(body.oldSpec, body.newSpec, { trusted: false, signal }),
         );
         return;
       }

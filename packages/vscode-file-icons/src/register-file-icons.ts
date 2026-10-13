@@ -18,6 +18,15 @@ const ASSOCIATIONS = [MATERIAL_FILES, MATERIAL_FOLDERS, VSICONS_FILES, VSICONS_F
 /* Settings Sync writes settings one after another; the icons are kept current once they have all arrived. */
 const SETTLE_MS = 1_500;
 
+/** Courier's icons, registered: what removes the commands, and when the passes the start runs are done. */
+export interface FileIconsRegistration extends vscode.Disposable {
+  /**
+   * Settles once the passes the extension runs as it starts — keeping the
+   * icons current, following the icon theme in use — have run. Never rejects.
+   */
+  readonly ready: Promise<void>;
+}
+
 /**
  * Courier's own icons for `courier.config.*`, `courier.mocks.*` and the
  * `.courier` folder in the icon themes that take custom icons — Material
@@ -30,13 +39,13 @@ const SETTLE_MS = 1_500;
  * updates, and out again everywhere when taken out.
  *
  * @param context - The extension's context: where its icons are, and the profile's state
- * @returns What removes the commands
+ * @returns What removes the commands, and when the start's own passes are done
  * @example
  * ```ts
  * context.subscriptions.push(registerFileIcons(context));
  * ```
  */
-export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disposable {
+export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRegistration {
   const icons: CourierIcons = {
     dir: join(context.extensionPath, "media", "icons"),
     profile: profileOf(context.globalState),
@@ -84,36 +93,38 @@ export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disp
         "Courier's icons are in this folder's settings too.",
       );
     });
-  const follow = () => {
-    followThemeInUse(following).catch((error: unknown) =>
-      logFailure("Courier could not follow the icon theme in use", error),
-    );
-    tellHiddenHere(context.workspaceState, addHere).catch((error: unknown) =>
-      logFailure("Courier could not read this folder's settings for its file icons", error),
-    );
+  const follow = async (): Promise<void> => {
+    await Promise.all([
+      followThemeInUse(following).catch((error: unknown) =>
+        logFailure("Courier could not follow the icon theme in use", error),
+      ),
+      tellHiddenHere(context.workspaceState, addHere).catch((error: unknown) =>
+        logFailure("Courier could not read this folder's settings for its file icons", error),
+      ),
+    ]);
   };
   let settling: ReturnType<typeof setTimeout> | undefined;
-  void keep();
-  follow();
-  return vscode.Disposable.from(
+  const ready = Promise.all([keep(), follow()]).then(() => undefined);
+  const registered = vscode.Disposable.from(
     workspace,
     vscode.commands.registerCommand("courier.fileIcons.show", show),
     vscode.commands.registerCommand("courier.fileIcons.remove", remove),
-    workspace.onDidChange(follow),
+    workspace.onDidChange(() => void follow()),
     /* A theme installed or taken out later, and a workspace trusted later, which may name another custom icons folder. */
     vscode.extensions.onDidChange(() => {
       void keep();
-      follow();
+      void follow();
     }),
     vscode.workspace.onDidGrantWorkspaceTrust(() => void keep()),
     vscode.workspace.onDidChangeConfiguration((change) => {
-      if (change.affectsConfiguration("workbench.iconTheme")) follow();
+      if (change.affectsConfiguration("workbench.iconTheme")) void follow();
       if (!ASSOCIATIONS.some((key) => change.affectsConfiguration(key))) return;
       clearTimeout(settling);
       settling = setTimeout(() => void keep(), SETTLE_MS);
     }),
     { dispose: () => clearTimeout(settling) },
   );
+  return Object.assign(registered, { ready });
 }
 
 /* What following the theme in use needs: the profile's state, the workspace, how to carry the icons over, the themes said not to run here. */

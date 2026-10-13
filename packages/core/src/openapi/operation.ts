@@ -3,6 +3,7 @@ import { type ComponentSchemas, jsonSchemaOf } from "./json-schema";
 import { inputOf } from "./parameters";
 import type { SecurityPlan } from "./security";
 import type { JSONSchema, JSONSchemaFallback, OpenAPIOperation } from "./types";
+import { withDefaultsShown } from "./variable-defaults";
 
 /** What an operation is written with besides its endpoint. */
 export interface OperationContext {
@@ -44,10 +45,13 @@ export function operationOf(endpoint: PlacedEndpoint, context: OperationContext)
     return { skipped: "the QUERY method has no place in OpenAPI 3.1 — write 3.2.0" };
   }
   const named = { components: context.components, fallback: context.fallback };
-  const variables = jsonSchemaOf(endpoint.schemas.variables, "input", {
-    ...named,
-    prefix: `${endpoint.id}.variables`,
-  });
+  const variables = withDefaultsShown(
+    jsonSchemaOf(endpoint.schemas.variables, "input", {
+      ...named,
+      prefix: `${endpoint.id}.variables`,
+    }),
+    endpoint.schemas.defaults,
+  );
   const response = jsonSchemaOf(endpoint.schemas.response, "output", {
     ...named,
     prefix: `${endpoint.id}.response`,

@@ -118,6 +118,16 @@ describe("a tool's schemas", () => {
         .post("u")
         .variables(z.union([z.object({ a: z.string() }), z.object({ b: z.number() })]))
         .agent({ description: "U", access: "write" }),
+      byDefaulted: endpoint
+        .get("news")
+        .variables(z.object({ group: z.string(), groupBy: z.enum(["year", "month"]) }))
+        .defaults({ groupBy: "year" })
+        .agent(read("N")),
+      byTypeDefaults: endpoint
+        .get("latest")
+        .variables<{ limit: number }>()
+        .defaults({ limit: 5 })
+        .agent(read("L")),
     },
   });
   const byName = buildCatalog({ api }).byName;
@@ -150,6 +160,18 @@ describe("a tool's schemas", () => {
       anyOf: [{ type: "object" }, { type: "object" }],
     });
     expect(byName.get("byUnion")?.wrapsValue).toBe(false);
+  });
+
+  it("shows what the endpoint defaults with its default, and not required", () => {
+    expect(byName.get("byDefaulted")?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { group: { type: "string" }, groupBy: { default: "year" } },
+      required: ["group"],
+    });
+    expect(byName.get("byTypeDefaults")?.inputSchema).toEqual({
+      type: "object",
+      properties: { limit: { type: "integer", default: 5 } },
+    });
   });
 
   it("names a path's parameters when the variables have no schema to show", () => {

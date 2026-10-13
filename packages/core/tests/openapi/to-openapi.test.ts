@@ -272,6 +272,49 @@ describe("an address written into the endpoint", () => {
   });
 });
 
+describe("variables an endpoint defaults", () => {
+  it("carry their default and are not required, whether a schema or a type declares them", () => {
+    const site = defineApi({
+      name: "site",
+      baseURL: "https://s.example",
+      endpoints: {
+        byGroup: endpoint
+          .get("news")
+          .variables(z.object({ group: z.string(), groupBy: z.enum(["year", "month"]) }))
+          .defaults({ groupBy: "year" }),
+        latest: endpoint.get("latest").variables<{ limit: number }>().defaults({ limit: 5 }),
+        search: endpoint
+          .post("search")
+          .variables(z.object({ q: z.string(), size: z.number() }))
+          .defaults({ size: 20 }),
+      },
+    });
+
+    const document = toOpenAPI(site);
+
+    expect(document.paths["/news"]?.get?.parameters).toEqual([
+      { name: "group", in: "query", required: true, schema: { type: "string" } },
+      {
+        name: "groupBy",
+        in: "query",
+        required: false,
+        schema: { type: "string", enum: ["year", "month"], default: "year" },
+      },
+    ]);
+    expect(document.paths["/latest"]?.get?.parameters).toEqual([
+      { name: "limit", in: "query", required: false, schema: { type: "integer", default: 5 } },
+    ]);
+    expect(document.paths["/search"]?.post?.requestBody).toMatchObject({
+      content: {
+        "application/json": {
+          schema: { properties: { size: { type: "number", default: 20 } }, required: ["q"] },
+        },
+      },
+    });
+    expectValid(document);
+  });
+});
+
 describe("the checks themselves", () => {
   it("refuse a document OpenAPI does not allow, so a pass means something", () => {
     const { document: validate, ajv } = validator("3.1");

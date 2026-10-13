@@ -48,6 +48,7 @@ export {
 export { readLogFormat } from "../logger/log-format";
 export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
 export { standardJsonSchema } from "../openapi/json-schema";
+export { withDefaultsShown } from "../openapi/variable-defaults";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";

@@ -3,6 +3,7 @@ import { CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 import { MEDIA } from "@/design/breakpoints";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
+import { fieldsWithDefaults } from "@/features/playground/defaulted-fields";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import type { FormBodyField } from "@/features/playground/form-body";
 import type { InputCheck } from "@/features/playground/input-check";
@@ -145,7 +146,10 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
         {tab === "variables" && (
           <SchemaTable
             name={[endpoint.group, endpoint.method].filter(Boolean).join(".")}
-            fields={endpoint.def.variablesFields}
+            fields={fieldsWithDefaults(
+              endpoint.def.variablesFields,
+              endpoint.def.variablesDefaults,
+            )}
             declared={endpoint.def.hasVariablesSchema}
           />
         )}

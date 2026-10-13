@@ -86,6 +86,27 @@ describe("extractSourceMap", () => {
     });
   });
 
+  it("carries what an endpoint's .defaults() fills in", () => {
+    const api = defineApi({
+      baseURL: "https://api.test.com",
+      endpoints: {
+        news: endpoint
+          .get("news")
+          .variables(z.object({ group: z.string(), groupBy: z.enum(["year", "month"]) }))
+          .defaults({ groupBy: "year" }),
+        latest: endpoint.get("latest").variables<{ limit: number }>().defaults({ limit: 5 }),
+      },
+    });
+
+    const endpoints = extractSourceMap({ api }).api!.groups[""]!.endpoints;
+
+    expect(endpoints.news?.variablesDefaults).toEqual({ groupBy: "year" });
+    expect(endpoints.latest).toMatchObject({
+      hasVariablesSchema: false,
+      variablesDefaults: { limit: 5 },
+    });
+  });
+
   it("keys a group inside a group by its path, at its groups' prefixes joined", () => {
     const api = defineApi({
       baseURL: "https://api.test.com",

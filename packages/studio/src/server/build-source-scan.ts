@@ -47,6 +47,8 @@ export interface ScannedEndpointAnalysis {
   variablesStub?: Record<string, unknown>;
   /** The fields its variables schema declares, with their types and whether each is required. */
   variablesFields?: SchemaField[];
+  /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
+  variablesDefaults?: Record<string, unknown>;
   /** A channel whose messages from the client have a schema. */
   hasReceiveSchema?: true;
   /** A stream or a channel the app serves itself, rather than an upstream. */
@@ -193,6 +195,7 @@ function describeEndpoint(
       ...(endpoint.middleware?.length && { middleware: [...endpoint.middleware] }),
       ...(endpoint.variablesStub && { variablesStub: endpoint.variablesStub }),
       ...(endpoint.variablesFields && { variablesFields: endpoint.variablesFields }),
+      ...(endpoint.variablesDefaults && { variablesDefaults: endpoint.variablesDefaults }),
       ...(endpoint.hasReceiveSchema && { hasReceiveSchema: true as const }),
       ...(endpoint.served && { served: true as const }),
       ...(agent && { agent }),

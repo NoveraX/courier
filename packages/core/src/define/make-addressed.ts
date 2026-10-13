@@ -8,6 +8,7 @@ import { sealAt } from "./descriptor";
 import type { AnyEndpointOptions } from "./options";
 import type { AnyProbe } from "./probe";
 import { type AnyBuilder, refinements } from "./refinements";
+import { variableDefaults } from "./variable-defaults";
 
 /** Where an endpoint sits, once a verb has said so. */
 export interface Wire {
@@ -74,6 +75,11 @@ export function makeAddressed(
       return next({ ...state, kind: "query" });
     },
     agent: (given: unknown) => next({ ...state, agent: agentOptions(given, addressOf(wire)) }),
+    defaults: (values: unknown) =>
+      next({
+        ...state,
+        defaults: { ...state.defaults, ...variableDefaults(values, addressOf(wire)) },
+      }),
   };
 
   for (const [name, method] of Object.entries(methods)) {

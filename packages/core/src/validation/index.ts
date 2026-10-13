@@ -23,6 +23,12 @@ export interface SchemaMetadata {
   type?: "query" | "mutation";
   /** Cache hints for proxy GET responses */
   cache?: CacheConfig;
+  /**
+   * What the endpoint sends for variables a call leaves out, from
+   * `.defaults()`: filled in where the call is made — on the server, for a
+   * browser's call through the proxy — before the variables are validated.
+   */
+  defaults?: Readonly<Record<string, unknown>>;
   /** Transport mode — "http" (default), "sse" for streaming, "ws" for WebSocket */
   transport?: Transport;
   /** Standard Schema for incoming WS messages (bidirectional channels only) */

@@ -1,12 +1,12 @@
-import type { SchemaField } from "@noverax/courier-studio-core";
+import type { ShownField } from "@/features/playground/defaulted-fields";
 
 import { cn } from "@/lib/utils";
 
 interface SchemaTableProps {
   /** The endpoint's name, `group.method`. */
   name: string;
-  /** The fields its variables schema declares; `undefined` when Studio cannot read them. */
-  fields: readonly SchemaField[] | undefined;
+  /** The fields its variables schema declares, with its defaults; `undefined` when Studio cannot read them. */
+  fields: readonly ShownField[] | undefined;
   /** Whether the endpoint declares a variables schema at all. */
   declared: boolean;
 }
@@ -18,7 +18,8 @@ function splitPath(path: string): { parent: string; key: string } {
 
 /**
  * The input schema under the Variables editor: each field the endpoint's
- * schema declares, where it sits, its type and whether it is required. A
+ * schema declares, where it sits, its type and whether it is required — or
+ * the default the endpoint sends when a call leaves it out. A
  * long type wraps rather than squeezing the field's name, and in a phone's
  * pane it takes a line of its own under the name.
  *
@@ -68,7 +69,11 @@ export function SchemaTable({ name, fields, declared }: SchemaTableProps): React
                   field.required ? "bg-brand-dim text-brand" : "bg-raised text-fg-subtle",
                 )}
               >
-                {field.required ? "required" : "optional"}
+                {field.default !== undefined
+                  ? `default ${JSON.stringify(field.default)}`
+                  : field.required
+                    ? "required"
+                    : "optional"}
               </span>
             </div>
           );

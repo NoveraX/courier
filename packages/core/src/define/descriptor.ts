@@ -36,6 +36,7 @@ export function resolveSchemas(state: BuilderState): SchemaMetadata {
     ...((state.kind === "query" || state.kind === "mutation") && { type: state.kind }),
     ...(transport !== "http" && { transport }),
     ...(state.cache !== undefined && { cache: state.cache }),
+    ...(state.defaults !== undefined && { defaults: state.defaults }),
   };
 }
 

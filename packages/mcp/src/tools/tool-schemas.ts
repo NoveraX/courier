@@ -1,4 +1,8 @@
-import { type PlacedEndpoint, standardJsonSchema } from "@noverax/courier/internal";
+import {
+  type PlacedEndpoint,
+  standardJsonSchema,
+  withDefaultsShown,
+} from "@noverax/courier/internal";
 import type { JSONSchema, JSONSchemaFallback } from "@noverax/courier/openapi";
 
 import { isRecord } from "../is-record";
@@ -20,7 +24,9 @@ const PATH_PARAM = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
  * A tool's arguments are an object. Variables that are one go as they are;
  * variables that are something else — a string, a list — go as `{ value }`.
  * Variables declared by their type alone have no schema to show, so the
- * tool names what its path needs and takes anything beside it.
+ * tool names what its path needs and takes anything beside it. What the
+ * endpoint's `.defaults()` fills in is shown with its default, and not
+ * required.
  *
  * @param endpoint - The endpoint, as the API places it
  * @param fallback - A converter for a library without Standard JSON Schema
@@ -34,12 +40,12 @@ export function toolSchemasOf(
   endpoint: PlacedEndpoint,
   fallback?: JSONSchemaFallback,
 ): ToolSchemas {
-  const variables = endpoint.schemas.variables;
+  const { variables, defaults } = endpoint.schemas;
   const outputSchema = standardJsonSchema(endpoint.schemas.response, "output", fallback);
   const input = standardJsonSchema(variables, "input", fallback);
   if (input === undefined) {
     return {
-      inputSchema: pathParamsSchema(endpoint.path),
+      inputSchema: withDefaultsShown(pathParamsSchema(endpoint.path), defaults),
       wrapsValue: false,
       takesVariables: false,
       outputSchema,
@@ -47,7 +53,7 @@ export function toolSchemasOf(
   }
   if (isObjectSchema(input)) {
     return {
-      inputSchema: { type: "object", ...input },
+      inputSchema: withDefaultsShown({ type: "object", ...input }, defaults),
       wrapsValue: false,
       takesVariables: true,
       outputSchema,

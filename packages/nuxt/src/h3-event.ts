@@ -42,3 +42,19 @@ export type CourierEventHandler = ((event: H3EventLike) => Promise<Response>) & 
 export function isWebEvent(event: H3EventLike): event is H3WebEvent {
   return "req" in event && event.req instanceof Request;
 }
+
+/**
+ * The address an h3 2.x event's request came from, as the srvx request it
+ * hands over reports it — what h3's own `getRequestIP` reads.
+ *
+ * @param event - The event
+ * @returns The address, or `undefined` where the runtime reports none
+ * @example
+ * ```ts
+ * rememberPeerAddress(event.req, webEventAddress(event));
+ * ```
+ */
+export function webEventAddress(event: H3WebEvent): string | undefined {
+  const address: unknown = Reflect.get(event.req, "ip");
+  return typeof address === "string" && address !== "" ? address : undefined;
+}

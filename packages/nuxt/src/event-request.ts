@@ -1,6 +1,7 @@
+import { rememberPeerAddress } from "@noverax/courier/internal";
 import { toWebRequest } from "@noverax/courier/node";
 
-import { type H3EventLike, isWebEvent } from "./h3-event";
+import { type H3EventLike, isWebEvent, webEventAddress } from "./h3-event";
 import { keptBodyOf } from "./kept-body";
 
 /**
@@ -26,10 +27,26 @@ import { keptBodyOf } from "./kept-body";
  * ```
  */
 export async function requestOfEvent(event: H3EventLike): Promise<Request> {
-  if (isWebEvent(event)) return event.req;
-  if (event.web?.request) return event.web.request;
+  if (isWebEvent(event)) return withPeer(event.req, webEventAddress(event));
+  if (event.web?.request) return withPeer(event.web.request, socketAddress(event));
 
   const { req, res } = event.node;
   const kept = await keptBodyOf(req);
   return toWebRequest(req, res, () => kept);
+}
+
+/* The request, with the address it came from recorded for the proxy to read. */
+function withPeer(request: Request, address: string | undefined): Request {
+  rememberPeerAddress(request, address);
+  return request;
+}
+
+/* The socket of the Node request an h3 1.x event wraps; an event h3 served from a Web request has none. */
+function socketAddress(event: H3EventLike): string | undefined {
+  const address = field(field(field(field(event, "node"), "req"), "socket"), "remoteAddress");
+  return typeof address === "string" ? address : undefined;
+}
+
+function field(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 }

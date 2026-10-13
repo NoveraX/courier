@@ -1,7 +1,7 @@
 import type { ConnectResult, HandlerConfig, WSHandlerConfig } from "@noverax/courier";
 import { createHandler, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { discoverAppOrigin } from "@noverax/courier/internal";
+import { discoverAppOrigin, rememberPeerAddress } from "@noverax/courier/internal";
 import type { Context } from "hono";
 import { peerAddressOf } from "./peer-address";
 import type { HonoWSContext } from "./ws-adapter";
@@ -34,6 +34,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   return (c: Context) => {
     announce();
     discoverAppOrigin(new URL(c.req.raw.url).origin);
+    rememberPeerAddress(c.req.raw, peerAddressOf(c));
     return handle(c.req.raw);
   };
 }
@@ -54,6 +55,7 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
   return (c: Context) => {
     announce();
     discoverAppOrigin(new URL(c.req.raw.url).origin);
+    rememberPeerAddress(c.req.raw, peerAddressOf(c));
     return handleSSE(c.req.raw);
   };
 }

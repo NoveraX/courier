@@ -1,5 +1,6 @@
+import { peerAddressOf } from "../adapter/peer-address";
 import type { Context } from "../http-client/types";
-import { forwardedFor } from "../utils/forwarded-for";
+import { forwardedChain } from "../utils/forwarded-for";
 import { addressedOrigin } from "./addressed-origin";
 import type { IncomingRequest } from "./incoming-request";
 
@@ -28,7 +29,10 @@ export function incomingFromContext(context: Context | undefined): IncomingReque
     method: request?.method,
     origin: request ? requestOrigin(request) : addressedOrigin(headers),
     headers,
-    clientAddress: request ? forwardedFor(request) : undefined,
+    clientAddress: forwardedChain(
+      request && peerAddressOf(request),
+      headers.get("x-forwarded-for"),
+    ),
   };
 }
 

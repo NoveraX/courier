@@ -5,9 +5,10 @@ import { forwardedChain } from "./utils/forwarded-for";
 /** What a framework built on Web-standard requests tells of one beyond the `Request`. */
 export interface WebRequestOptions {
   /**
-   * The address of the connection the request came on, where the runtime
-   * reports one. The chain a proxy on a private network recorded in
-   * `X-Forwarded-For` is kept before it, as the proxy route keeps it.
+   * The address of the connection the request came on, or the one the
+   * framework vouches for, where the runtime reports one. The chain a proxy
+   * in front of the application recorded in `X-Forwarded-For` is kept
+   * before it, as the proxy route keeps it.
    */
   readonly peerAddress?: string | undefined;
   /** The origin the user addressed, where the framework knows it better than the request's URL */

@@ -29,9 +29,9 @@ describe("which hop of the forwarding chain is believed", () => {
     expect(extractClientIP(upgrade({ "X-Forwarded-For": "203.0.113.7," }))).toBe("203.0.113.7");
   });
 
-  it("falls back through the other forwarding headers", () => {
-    expect(extractClientIP(upgrade({ "CF-Connecting-IP": "198.51.100.9" }))).toBe("198.51.100.9");
-    expect(extractClientIP(upgrade({ "X-Real-IP": "198.51.100.9" }))).toBe("198.51.100.9");
+  it("does not believe a header of a proxy's own that any caller can write", () => {
+    expect(extractClientIP(upgrade({ "CF-Connecting-IP": "198.51.100.9" }))).toBe("0.0.0.0");
+    expect(extractClientIP(upgrade({ "X-Real-IP": "198.51.100.9" }))).toBe("0.0.0.0");
   });
 
   it("has an answer when the request says nothing", () => {

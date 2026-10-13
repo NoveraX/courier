@@ -81,6 +81,19 @@ When the proxy reaches the app from a public address, or pages on other origins 
 courierHandler({ allowedOrigins: ["https://app.example.com", "https://*.example.com"] })
 ```
 
+### The user's address
+
+An API a call goes to through your server sees your server's address. Courier tells it the user's in `X-Forwarded-For`, as every proxy does: the chain the proxies in front recorded, with the address of the one that connected appended — the same header nginx's `$proxy_add_x_forwarded_for` writes. A caller that connects from a public address is the whole chain, since what it claims about addresses before it is its own word; a connection from this machine or a private network is a proxy, and its chain is kept. Next.js, React Router and edge functions do not report the connection: there the chain goes on as the proxy in front, or Next.js itself where none is, recorded it. Each API reads the user's address from the chain with its own trust, as it reads any proxied request's.
+
+Courier counts a user's connections by one address — the WebSocket limit per address, the limits you set per caller. It reads that address from the right of the chain, past this machine and private networks, since each proxy appends what it saw and an address a user forges stands left of it. A DDoS filter, a CDN or a load balancer on public addresses is one more proxy to read past: name its addresses and ranges, and the header it names the user in, if it has one.
+
+```bash title=".env"
+COURIER_TRUSTED_PROXIES=192.0.2.0/24,2001:db8:aa00::/40
+COURIER_CLIENT_ADDRESS_HEADER=DDG-Connecting-IP
+```
+
+Courier believes that header only on a request one of those proxies passed on — the chain's last address is one of theirs, or they connected themselves. Name only your own proxies and your provider's published ranges: Courier believes whatever address they report. An entry that is neither an address nor a range, or a range of every address, is left out, and the log says so once.
+
 ## Next Steps
 
 - [Standalone Server](/docs/deployment/standalone-server) — full API and CLI reference

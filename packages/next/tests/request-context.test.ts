@@ -46,7 +46,7 @@ describe("nextRequestContext", () => {
     expect(incoming?.headers.get("cookie")).toBe("sid=a1; csrftoken=t-fresh");
   });
 
-  it("reads a page's request: its origin, its cookies, the user's nearest address", async () => {
+  it("reads a page's request: its origin, its cookies, the chain the proxy in front recorded", async () => {
     next.headers.mockResolvedValue(
       new Headers({
         host: "localhost:3000",
@@ -62,7 +62,7 @@ describe("nextRequestContext", () => {
     expect(incoming).toMatchObject({
       method: undefined,
       origin: "https://app.example.com",
-      clientAddress: "203.0.113.9",
+      clientAddress: "198.51.100.4, 203.0.113.9",
       fetchInit: { cache: "no-store" },
     });
     expect(incoming?.headers.get("cookie")).toBe("sid=a1");

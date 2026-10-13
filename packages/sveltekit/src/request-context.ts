@@ -4,6 +4,9 @@ import {
   type RelayedCookie,
   type RequestContextProvider,
 } from "@noverax/courier";
+import { forwardedChain } from "@noverax/courier/internal";
+
+import { svelteKitClientAddress } from "./client-address";
 
 const log = createLogger("SvelteKit");
 
@@ -91,20 +94,13 @@ export function svelteKitIncomingRequest(event: SvelteKitServerEvent): IncomingR
     origin: event.url.origin,
     headers: event.request.headers,
     get clientAddress() {
-      return clientAddressOf(event);
+      return forwardedChain(
+        svelteKitClientAddress(event),
+        event.request.headers.get("x-forwarded-for"),
+      );
     },
     setCookie: (relayed) => setCookieIn(event, relayed),
   };
-}
-
-function clientAddressOf(event: SvelteKitServerEvent): string | undefined {
-  try {
-    return event.getClientAddress();
-  } catch (error) {
-    /* A page being prerendered has no client, and some adapters cannot tell. */
-    log.debug("The adapter gave no client address", error);
-    return undefined;
-  }
 }
 
 function setCookieIn(event: SvelteKitServerEvent, { cookie }: RelayedCookie): true | string {

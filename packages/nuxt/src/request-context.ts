@@ -1,7 +1,8 @@
 import { ConfigurationError, type IncomingRequest } from "@noverax/courier";
+import { forwardedChain } from "@noverax/courier/internal";
 import { nodeIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
 
-import { type H3EventLike, isWebEvent } from "./h3-event";
+import { type H3EventLike, isWebEvent, webEventAddress } from "./h3-event";
 
 /** The part of a Nitro app the plugin wraps: the handler every request goes through. */
 export interface NitroAppLike {
@@ -59,6 +60,7 @@ export function nuxtIncomingRequest(event: H3EventLike): IncomingRequest {
     method: req.method,
     origin: new URL(req.url).origin,
     headers: req.headers,
+    clientAddress: forwardedChain(webEventAddress(event), req.headers.get("x-forwarded-for")),
     ...(headers !== undefined && {
       setCookie: ({ header }) => {
         headers.append("set-cookie", header);

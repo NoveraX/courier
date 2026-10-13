@@ -1,8 +1,7 @@
 import type { IncomingRequest, RelayedCookie } from "@noverax/courier";
-import { createLogger } from "@noverax/courier";
 import { webIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
 
-const log = createLogger("Astro");
+import { astroClientAddress } from "./client-address";
 
 /** A cookie's options, as Astro's `cookies.set()` takes them. */
 interface AstroCookieOptions {
@@ -66,20 +65,10 @@ export function astroIncomingRequest(context: AstroRequestContext): IncomingRequ
   return {
     ...webIncomingRequest(context.request, {
       origin: context.url.origin,
-      peerAddress: clientAddressOf(context),
+      peerAddress: astroClientAddress(context),
     }),
     setCookie: (relayed) => setCookieIn(context, relayed),
   };
-}
-
-function clientAddressOf(context: AstroRequestContext): string | undefined {
-  try {
-    return context.clientAddress;
-  } catch (error) {
-    /* A page built ahead of time has no client, and some adapters cannot tell. */
-    log.debug("The adapter gave no client address", error);
-    return undefined;
-  }
 }
 
 function setCookieIn(context: AstroRequestContext, { cookie }: RelayedCookie): true | string {

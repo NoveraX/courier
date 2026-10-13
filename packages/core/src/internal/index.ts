@@ -13,9 +13,12 @@
  * this entry carries them only when it opens one.
  */
 
+export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/address-trust";
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
+export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
+export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
 export {
   type FrameCredentials,
@@ -115,6 +118,7 @@ export {
 } from "../transport";
 export { executeRequest } from "../utils/execute";
 export { absentAs } from "../utils/execute-validation";
+export { forwardedChain, forwardedFor } from "../utils/forwarded-for";
 export {
   isReadingMethod,
   normalizeHttpMethod,

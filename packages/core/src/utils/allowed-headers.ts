@@ -4,9 +4,9 @@
  * The headers that claim a client address — `X-Forwarded-For`, `X-Real-IP`,
  * `Forwarded` and the like — are not among them: any page can write them, and
  * copying them let it choose the address an upstream believes. The proxy
- * writes `X-Forwarded-For` itself from the connection (see `forwardedFor`); a
- * source that trusts whoever wrote the caller's copy names it in
- * `allowedHeaders`.
+ * writes `X-Forwarded-For` itself from the connection and the chain the
+ * proxies in front recorded (see `forwardedFor`); a source that trusts
+ * whoever wrote the caller's copy names it in `allowedHeaders`.
  *
  * `Cookie` is not among them either. The browser sends every cookie of the
  * application's origin, its own session included, and forwarded by default

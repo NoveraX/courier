@@ -1,4 +1,5 @@
 import type { IncomingRequest, RequestContextProvider } from "@noverax/courier";
+import { forwardedChain } from "@noverax/courier/internal";
 
 /** The parts of SolidStart's request event the session reads. */
 export interface SolidStartServerEvent {
@@ -75,7 +76,10 @@ export function solidStartIncomingRequest(event: SolidStartServerEvent): Incomin
     method: event.request.method,
     origin: URL.canParse(event.request.url) ? new URL(event.request.url).origin : undefined,
     headers: event.request.headers,
-    clientAddress: event.clientAddress,
+    clientAddress: forwardedChain(
+      event.clientAddress,
+      event.request.headers.get("x-forwarded-for"),
+    ),
     setCookie: ({ header }) => setCookieOn(event, header),
   };
 }

@@ -5,7 +5,8 @@
  * `X-Real-IP`, `Forwarded` and `X-Client-IP` from the caller's request, where
  * any page could write the address the upstream's rate limits and allowlists
  * believe; a reverse proxy's chain is kept, with the address it connected
- * from appended.
+ * from appended, and where the runtime does not report the connection, the
+ * chain the framework or the platform in front recorded goes on as it came.
  */
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -56,10 +57,13 @@ function register(allowedHeaders?: string[]): void {
   });
 }
 
-function callFrom(peer: string | undefined): Promise<Response> {
+function callFrom(
+  peer: string | undefined,
+  headers: Record<string, string> = {},
+): Promise<Response> {
   const request = new Request("http://app.localhost/api/request?_s=api&_m=ping", {
     method: "POST",
-    headers: { "content-type": "application/json", ...SPOOFED },
+    headers: { "content-type": "application/json", ...SPOOFED, ...headers },
     body: JSON.stringify({}),
   });
   rememberPeerAddress(request, peer);
@@ -103,11 +107,21 @@ describe("a reverse proxy in front of the application", () => {
   });
 });
 
-describe("a runtime that does not know the caller's address", () => {
-  it("tells the upstream no address rather than the one the caller wrote", async () => {
+describe("a runtime that does not report the connection", () => {
+  it("passes on the chain the platform in front recorded, as it came", async () => {
     register();
 
-    await callFrom(undefined);
+    await callFrom(undefined, { "x-forwarded-for": "198.51.100.23, 203.0.113.50" });
+
+    expect(seen?.["x-forwarded-for"]).toBe("198.51.100.23, 203.0.113.50");
+    expect(seen?.["x-real-ip"]).toBeUndefined();
+    expect(seen?.forwarded).toBeUndefined();
+  });
+
+  it("names nobody when nothing recorded an address", async () => {
+    register();
+
+    await callFrom(undefined, { "x-forwarded-for": "" });
 
     expect(seen?.["x-forwarded-for"]).toBeUndefined();
     expect(seen?.["x-real-ip"]).toBeUndefined();

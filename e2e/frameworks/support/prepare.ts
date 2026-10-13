@@ -38,7 +38,13 @@ export async function prepare(target: Target, apiUrl: string): Promise<string> {
   );
   const tarballs = await pack(target.packages, join(BUILDS, `${target.id}-packages`));
   writeManifest(root, target, tarballs);
-  await run(["npm", "install", "--no-audit", "--no-fund"], { cwd: root });
+  /* A request the registry stops answering is given up after a minute and
+     asked again, rather than held for npm's five that a stalled install
+     spends the job's whole time on. */
+  await run(
+    ["npm", "install", "--no-audit", "--no-fund", "--fetch-timeout=60000", "--fetch-retries=4"],
+    { cwd: root },
+  );
   const build = target.build ?? settings.build;
   if (build) await run(build, { cwd: root, env: TELEMETRY_OFF });
   return root;

@@ -1,9 +1,10 @@
 /**
  * Stopping a mock server — as Studio does on every restart — answers a
- * request in the middle of its latency rather than closing its connection,
- * while an event stream, which never finishes on its own, is ended at once
- * rather than held until the grace runs out.
+ * request it is in the middle of answering rather than closing its
+ * connection, while an event stream, which never finishes on its own, is
+ * ended at once rather than held until the grace runs out.
  */
+import { connect } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createMockServer } from "../src/server/create-mock-server";
@@ -23,13 +24,39 @@ async function serve(configure: (server: ReturnType<typeof createMockServer>) =>
   return { server, url };
 }
 
+/** Whether the server at `url` still takes a new connection. */
+function takesConnections(url: string): Promise<boolean> {
+  const { hostname, port } = new URL(url);
+  return new Promise((resolve) => {
+    const socket = connect({ host: hostname, port: Number(port) });
+    socket.once("connect", () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once("error", () => resolve(false));
+  });
+}
+
 describe("a mock server that stops", () => {
   it("answers the request it is in the middle of", async () => {
+    /* The handler holds the request until the server has stopped taking
+       connections: stopped any earlier, the request might not have reached
+       it yet, and an answer sent any earlier would not show that stopping
+       waits for it. */
+    let reached = (): void => undefined;
+    const handling = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    let release = (): void => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const { server, url } = await serve((mock) => {
-      mock
-        .mock("users", "list")
-        .delay(300)
-        .resolves([{ id: 1 }]);
+      mock.mock("users", "list").returns(async () => {
+        reached();
+        await held;
+        return [{ id: 1 }];
+      });
     });
 
     const call = fetch(`${url}/api/request?_s=api&_g=users&_m=list`, {
@@ -37,9 +64,11 @@ describe("a mock server that stops", () => {
       headers: { "content-type": "application/json" },
       body: "{}",
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await handling;
     const stopped = server.stop();
     stop = undefined;
+    await expect.poll(() => takesConnections(url), { timeout: 4_000 }).toBe(false);
+    release();
     const response = await call;
 
     expect(response.status).toBe(200);

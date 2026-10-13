@@ -18,6 +18,7 @@ export interface ImportRun extends ImportFlags {
   declare?: boolean | undefined;
   confirm?: string | undefined;
   cwd?: string | undefined;
+  dotenv?: string | undefined;
 }
 
 function specOf(input: SpecInput): ParsedSpec {

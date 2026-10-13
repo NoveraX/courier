@@ -7,6 +7,7 @@ import { type ArgsDef, defineCommand } from "citty";
 import { loadCourierConfig } from "../server/config-loader";
 import { messageOf } from "../server/message-of";
 import { devInstallCommand } from "../server/mocks-edit/install-command";
+import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 import { type FoundRecordings, findRecordings } from "./verify/find-recordings";
 import {
   type CheckedFile,
@@ -41,6 +42,7 @@ export const VERIFY_ARGS = {
     valueHint: "dir",
     description: "Project root directory (default: current working directory)",
   },
+  dotenv: DOTENV_ARG,
 } as const satisfies ArgsDef;
 
 /**
@@ -74,12 +76,14 @@ async function verify(args: {
   out?: string | undefined;
   ignore?: string | undefined;
   cwd?: string | undefined;
+  dotenv?: string | undefined;
 }): Promise<boolean> {
   const format = args.format ?? "text";
   if (format !== "text" && format !== "markdown" && format !== "json") {
     throw new Error(`--format takes text, markdown or json, not ${format}`);
   }
   const root = resolve(args.cwd ?? process.cwd());
+  loadProjectEnv(root, args.dotenv);
   const recordings = findRecordings(root, args._);
   const testing = await loadTesting(root);
   const { config } = await loadCourierConfig(root);

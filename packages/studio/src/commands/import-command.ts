@@ -1,6 +1,7 @@
 import { createLogger } from "@noverax/courier";
 import { type ArgsDef, defineCommand } from "citty";
 
+import { DOTENV_ARG } from "../server/project-env";
 import { runImport } from "./import/run-import";
 
 const log = createLogger("Import");
@@ -89,6 +90,7 @@ export const IMPORT_ARGS = {
     valueHint: "dir",
     description: "Project root directory (default: current working directory)",
   },
+  dotenv: DOTENV_ARG,
 } as const satisfies ArgsDef;
 
 /**

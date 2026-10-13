@@ -53,5 +53,6 @@ Some requests are not sent again: a [webhook](/docs/advanced/webhooks) came to t
 | --- | --- |
 | `--cwd <dir>` | The project's root, where Studio keeps its token (default: the working directory) |
 | `--url <url>` | Studio's address (default: the one `courier.config.ts` gives Studio, else `http://localhost:6280`) |
+| `--dotenv <files>` | `.env` files to read before `courier.config.ts`, comma-separated, relative to the root (default: `.env.development.local`, `.env.local`, `.env.development` and `.env`, those there are) |
 
 When Studio is not running, the agent is told so — and to start it — rather than left waiting.

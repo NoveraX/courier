@@ -12,6 +12,7 @@ import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
 import { parsePort } from "./server/parse-port";
+import { DOTENV_ARG, loadProjectEnv } from "./server/project-env";
 import { quietSqliteWarning } from "./server/storage/quiet-sqlite-warning";
 import { studioUrls, tokenLink, withToken } from "./server/studio-urls";
 import { studioVersion } from "./server/studio-version";
@@ -49,6 +50,7 @@ const ARGS = {
     type: "boolean",
     description: "Open a browser on start (falls back to studio.open); --no-open to keep it closed",
   },
+  dotenv: DOTENV_ARG,
 } as const satisfies ArgsDef;
 
 /* citty's own help colours a pipe and a log file; this one follows the
@@ -76,6 +78,13 @@ const main = defineCommand({
     const projectRoot = resolve(args.cwd ?? process.cwd());
     if (!existsSync(projectRoot) || !statSync(projectRoot).isDirectory()) {
       fail(`Project root ${projectRoot} is not a directory. Check --cwd.`);
+    }
+    /* Read before the config is, which names its addresses from them as the application does. */
+    try {
+      const loaded = loadProjectEnv(projectRoot, args.dotenv);
+      if (loaded.length > 0) log.info(`Variables read from ${loaded.join(", ")}`);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : String(error));
     }
 
     /* A flag pins the address; what it leaves out comes from `studio.port`

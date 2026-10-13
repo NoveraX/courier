@@ -20,7 +20,7 @@ Studio's command writes the sources `courier.config.ts` declares, without a scri
 npx @noverax/courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
 ```
 
-With no `--source`, every source is written to the folder `--out` names, one `<source>.openapi.json` each. With one source and no `--out`, the document is printed, ready for a pipe.
+With no `--source`, every source is written to the folder `--out` names, one `<source>.openapi.json` each. With one source and no `--out`, the document is printed, ready for a pipe. The project's `.env` files are read first, as Studio reads them, so a `baseURL` taken from `process.env` becomes the document's server; `--dotenv` names other files.
 
 Studio itself writes the same document from its APIs page: **Export OpenAPI** picks a source, the OpenAPI version, the document's title and the API's version, shows the document and every endpoint it leaves out, and downloads it as `<source>.openapi.json` or copies it. It is written from the definition Studio runs, so it follows the code as you change it.
 

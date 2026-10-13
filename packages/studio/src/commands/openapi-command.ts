@@ -5,6 +5,7 @@ import { type OpenAPIOptions, toOpenAPI } from "@noverax/courier/openapi";
 import { type ArgsDef, defineCommand } from "citty";
 
 import { loadCourierConfig } from "../server/config-loader";
+import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 
 const log = createLogger("Openapi");
 
@@ -40,6 +41,7 @@ export const OPENAPI_ARGS = {
     valueHint: "dir",
     description: "Project root directory (default: current working directory)",
   },
+  dotenv: DOTENV_ARG,
 } as const satisfies ArgsDef;
 
 /**
@@ -75,12 +77,14 @@ async function writeDocuments(args: {
   title?: string | undefined;
   "api-version"?: string | undefined;
   cwd?: string | undefined;
+  dotenv?: string | undefined;
 }): Promise<void> {
   const version = args.openapi ?? "3.1.0";
   if (version !== "3.1.0" && version !== "3.2.0") {
     throw new Error(`--openapi takes 3.1.0 or 3.2.0, not ${version}`);
   }
   const root = resolve(args.cwd ?? process.cwd());
+  loadProjectEnv(root, args.dotenv);
   const { config } = await loadCourierConfig(root);
   const names = args.source === undefined ? Object.keys(config.sources) : [args.source];
   const unknown = names.find((name) => !Object.hasOwn(config.sources, name));

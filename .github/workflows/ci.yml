@@ -384,7 +384,8 @@ jobs:
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          # The identity is a publisher member, not a role in any subscription
+          allow-no-subscriptions: true
 
       - name: Publish the editor extensions
         if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-')

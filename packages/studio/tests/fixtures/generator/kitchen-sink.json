@@ -1,0 +1,410 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Kitchen sink",
+    "version": "1.0.0",
+    "description": "Every shape the generator writes.\n*/ export const Evil = 1;"
+  },
+  "servers": [{ "url": "https://api.example.com/v1" }],
+  "tags": [{ "name": "pets" }, { "name": "store" }, { "name": "users" }, { "name": "admin" }],
+  "paths": {
+    "/pets": {
+      "get": {
+        "operationId": "listPets",
+        "tags": ["pets"],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "style": "deepObject",
+            "explode": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "kind": { "$ref": "#/components/schemas/Kind" },
+                "since": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Pet" } }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPet",
+        "tags": ["pets"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewPet" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "made",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } } }
+          }
+        }
+      }
+    },
+    "/pets/{petId}": {
+      "get": {
+        "operationId": "getPet",
+        "tags": ["pets"],
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^[a-z0-9/_-]+$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PetSchema" } }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePet",
+        "tags": ["pets"],
+        "parameters": [
+          { "name": "petId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } } }
+          }
+        }
+      }
+    },
+    "/pets/{petId}/photo": {
+      "put": {
+        "operationId": "uploadPhoto",
+        "tags": ["pets"],
+        "parameters": [
+          { "name": "petId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "caption": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "204": { "description": "done" } }
+      }
+    },
+    "/store/orders": {
+      "post": {
+        "operationId": "placeOrder",
+        "tags": ["store"],
+        "requestBody": {
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Order" } }
+            }
+          }
+        }
+      }
+    },
+    "/store/payments": {
+      "post": {
+        "operationId": "pay",
+        "tags": ["store"],
+        "requestBody": {
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Payment" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/Receipt" },
+                    { "$ref": "#/components/schemas/Problem" }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/store/inventory": {
+      "get": {
+        "operationId": "getInventory",
+        "tags": ["store"],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "$ref": "#/components/schemas/Pet" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}": {
+      "get": {
+        "operationId": "getUser",
+        "tags": ["users"],
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } }
+          }
+        }
+      }
+    },
+    "/users/{userId}/tree": {
+      "get": {
+        "operationId": "getTree",
+        "tags": ["users"],
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Node" } } }
+          }
+        }
+      }
+    },
+    "/admin/categories": {
+      "get": {
+        "operationId": "listCategories",
+        "tags": ["admin"],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceCategories",
+        "tags": ["admin"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "array", "items": { "$ref": "#/components/schemas/A" } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/B" } } }
+          }
+        }
+      }
+    },
+    "/admin/aliases": {
+      "get": {
+        "operationId": "getAliases",
+        "tags": ["admin", "users"],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Aliases" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Kind": {
+        "type": "string",
+        "enum": ["cat", "dog", "bird/parrot"],
+        "description": "A kind.\nexport const Evil = 2;"
+      },
+      "Pet": {
+        "type": "object",
+        "required": ["id", "name"],
+        "description": "A pet. */ export type Bad = 3;",
+        "properties": {
+          "id": { "type": "string", "readOnly": true },
+          "name": { "type": "string", "maxLength": 64, "pattern": "^\\p{L}[\\p{L} ]*$" },
+          "kind": { "$ref": "#/components/schemas/Kind" },
+          "category": { "$ref": "#/components/schemas/Category" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "secret": { "type": "string", "writeOnly": true },
+          "nickname": { "type": ["string", "null"] },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "born": { "type": "string", "format": "date" },
+              "chip": {
+                "type": "object",
+                "properties": { "code": { "type": "string", "pattern": "^\\d{3}/\\d{2}$" } }
+              }
+            }
+          }
+        }
+      },
+      "PetSchema": {
+        "type": "object",
+        "description": "A schema whose name ends in Schema.",
+        "properties": { "pet": { "$ref": "#/components/schemas/Pet" }, "Pet": { "type": "string" } }
+      },
+      "NewPet": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "$ref": "#/components/schemas/Kind" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "parent": { "$ref": "#/components/schemas/Category" }
+        }
+      },
+      "Node": {
+        "type": "object",
+        "properties": {
+          "value": { "type": "number" },
+          "children": { "type": "array", "items": { "$ref": "#/components/schemas/Node" } }
+        }
+      },
+      "A": {
+        "type": "object",
+        "properties": {
+          "b": { "$ref": "#/components/schemas/B" },
+          "pet": { "$ref": "#/components/schemas/Pet" }
+        }
+      },
+      "B": {
+        "type": "object",
+        "properties": {
+          "a": { "$ref": "#/components/schemas/A" },
+          "list": { "type": "array", "items": { "$ref": "#/components/schemas/A" } }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "pets": { "type": "array", "items": { "$ref": "#/components/schemas/Pet" } },
+          "status": { "type": "string", "enum": ["placed", "approved", "delivered"] },
+          "payment": { "$ref": "#/components/schemas/Payment" }
+        }
+      },
+      "Card": {
+        "type": "object",
+        "required": ["type", "number"],
+        "properties": {
+          "type": { "type": "string", "const": "card" },
+          "number": { "type": "string", "pattern": "^[0-9]{16}$" }
+        }
+      },
+      "Bank": {
+        "type": "object",
+        "required": ["type", "iban"],
+        "properties": {
+          "type": { "type": "string", "const": "bank" },
+          "iban": { "type": "string" }
+        }
+      },
+      "Payment": {
+        "oneOf": [{ "$ref": "#/components/schemas/Card" }, { "$ref": "#/components/schemas/Bank" }],
+        "discriminator": { "propertyName": "type" }
+      },
+      "Receipt": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "number" },
+          "lines": {
+            "type": "array",
+            "items": { "anyOf": [{ "type": "string" }, { "type": "number" }] }
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "properties": { "title": { "type": "string" }, "status": { "type": "integer" } }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "pets": { "type": "array", "items": { "$ref": "#/components/schemas/Pet" } },
+          "favorite": { "$ref": "#/components/schemas/PetSchema" },
+          "tree": { "$ref": "#/components/schemas/Node" },
+          "type": { "$ref": "#/components/schemas/Type" }
+        }
+      },
+      "Type": { "type": "string", "description": "A schema named Type." },
+      "StringAlias": { "type": "string", "format": "uuid" },
+      "PetAlias": { "$ref": "#/components/schemas/Pet" },
+      "Aliases": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/StringAlias" },
+          "pet": { "$ref": "#/components/schemas/PetAlias" },
+          "map": { "type": "object", "additionalProperties": { "type": "integer" } }
+        }
+      }
+    }
+  }
+}

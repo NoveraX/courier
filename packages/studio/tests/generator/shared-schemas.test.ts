@@ -8,8 +8,8 @@
 import { afterAll, describe, expect, it } from "vitest";
 
 import { type GenerateOptions, generateCode } from "../../src/apis/generator";
-import { declaredExports } from "../../src/apis/generator/declared-exports";
 import { parseSpec } from "../../src/apis/parser";
+import { declaredExports } from "../helpers/declared-exports";
 import { compileProject, removeProjects, STRICT, writeProject } from "../helpers/generated-project";
 
 afterAll(() => removeProjects("shared-schemas"));

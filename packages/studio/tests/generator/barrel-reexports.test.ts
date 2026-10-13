@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { generateCode } from "../../src/apis/generator";
-import { declaredExports } from "../../src/apis/generator/declared-exports";
 import { parseSpec } from "../../src/apis/parser";
+import { declaredExports } from "../helpers/declared-exports";
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const ok = (schema: object) => ({
@@ -112,33 +112,5 @@ describe("the barrel of an import", () => {
     expect(barrel).toMatch(/^export type \{[^}]*\bPet\b[^}]*\} from "\.\/schemas";$/m);
     expect(barrel).not.toMatch(/\bPetSchema\b/);
     expect(barrel).not.toMatch(/export \{[^}]*\btype /);
-  });
-});
-
-describe("declaredExports", () => {
-  it("reads each declaration the generator writes, a value over a type of the same name", () => {
-    const names = declaredExports(
-      "export type Pet = { id: string };\nexport const PetSchema = z.object({});\nexport const X: Y = z.lazy(() => s);\nexport type X = { a: 1 };\n",
-    );
-
-    expect([...names]).toEqual([
-      ["Pet", "type"],
-      ["PetSchema", "value"],
-      ["X", "value"],
-    ]);
-  });
-
-  it("reads nothing a doc comment holds, however its lines read", () => {
-    const names = declaredExports(
-      [
-        "/**",
-        "export const Fake = defineGroup({",
-        "export type AlsoFake = 1;",
-        " */",
-        "export type Pet = { id: string };",
-      ].join("\n"),
-    );
-
-    expect([...names]).toEqual([["Pet", "type"]]);
   });
 });

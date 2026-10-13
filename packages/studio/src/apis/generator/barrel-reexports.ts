@@ -3,15 +3,15 @@
  */
 
 import { isTopLevel } from "../parser/top-level";
-import { declaredExports } from "./declared-exports";
+import type { DeclaredKind } from "./declared-in-lines";
 import { compareSpecifiers } from "./import-order";
 import { namedStatement } from "./named-statement";
 import type { ResolvedGenerateOptions } from "./types";
 
 /**
  * Re-export every schema and type the import declares by name, each name
- * once: a module's names no earlier module exports, read from the module as
- * it was written — the import's own module and each group's, in the order
+ * once: a module's names no earlier module exports, as the module's writer
+ * declared them — the import's own module and each group's, in the order
  * linters sort them. A name is a type where the module declares only a type.
  *
  * By name rather than `export *`, which linters reject: it hides from the
@@ -21,7 +21,7 @@ import type { ResolvedGenerateOptions } from "./types";
  * file nobody generated failed.
  *
  * @param options - The import's resolved options
- * @param schemaModules - The text of each written schemas file, by group; under `""` the import's own
+ * @param schemaModules - What each written schemas file exports, by group; under `""` the import's own
  * @returns The re-export statements
  * @example
  * ```ts
@@ -31,19 +31,19 @@ import type { ResolvedGenerateOptions } from "./types";
  */
 export function barrelReexports(
   options: ResolvedGenerateOptions,
-  schemaModules: ReadonlyMap<string, string>,
+  schemaModules: ReadonlyMap<string, ReadonlyMap<string, DeclaredKind>>,
 ): string[] {
   const file = options.generateSchemas ? "schemas" : "types";
   const modules = [...schemaModules]
-    .map(([group, text]) => {
+    .map(([group, declares]) => {
       const at = isTopLevel(group) ? `./${file}` : options.layout.groupSpecifier(group, file);
-      return { from: `${at}${options.importExtension}`, text };
+      return { from: `${at}${options.importExtension}`, declares };
     })
     .sort((a, b) => compareSpecifiers(a.from, b.from));
 
   const exported = new Set<string>();
-  return modules.flatMap(({ from, text }) => {
-    const fresh = [...declaredExports(text)].filter(([name]) => !exported.has(name));
+  return modules.flatMap(({ from, declares }) => {
+    const fresh = [...declares].filter(([name]) => !exported.has(name));
     for (const [name] of fresh) exported.add(name);
     if (fresh.length === 0) return [];
     /* A module of types alone is re-exported with `export type`, as linters ask. */

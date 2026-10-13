@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 import { endpointAt, endpointsNamed } from "../code/endpoint-at";
 import type { CourierCore } from "../core/courier-core";
-import { fetchEndpointStats, fetchFindings, fetchSites } from "../studio/studio-api";
+import { fetchEndpointStats, fetchFindings } from "../studio/studio-api";
 import { studiosAtHand } from "../studio/studio-at-hand";
 import { fetchRequests } from "../studio/studio-live-api";
 import type { EndpointName } from "../studio/studio-types";
@@ -35,7 +35,7 @@ export function registerChat(core: CourierCore): vscode.Disposable {
     fetchRequests,
     fetchFindings,
     definitionsFor: (studio) => core.definitions.definitionsFor(studio),
-    fetchSites,
+    fetchSites: (studio, source, endpoint) => core.reads.fetchSites(studio, source, endpoint),
     model: async () => (await vscode.lm.selectChatModels())[0],
   };
   const participant = vscode.chat.createChatParticipant(

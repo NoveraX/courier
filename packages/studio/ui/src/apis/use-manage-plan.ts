@@ -8,6 +8,7 @@ import { readFilePlan } from "@/features/apis/read-file-plan";
 import type { ManagePreviewResult, ManageStep, ParsedSpec } from "@/features/apis/types";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
 import type { ManageChange } from "@/features/apis/types-manage";
+import { isTokenRefusal } from "@/lib/token-refusal";
 
 /** What the manage dialog applies, and how it reports. */
 export interface ManagePlanInput {
@@ -85,7 +86,7 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
         setConsent(consentFor(plan));
       } catch (err) {
         setError(messageOf(err, "Preview failed"));
-        setStep("inventory");
+        setStep(isTokenRefusal(err) ? "needs-token" : "inventory");
       }
     },
     [spec, sourceName, changeOf, setStep, setError],

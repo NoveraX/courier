@@ -8,7 +8,7 @@ import type { JsonResponse } from "../../src/server/route-types";
 import { openStudioStores } from "../../src/server/storage/studio-stores";
 import { resetMockStores } from "../../src/server/storage-space/reset-mock-stores";
 import { registerStorageRoutes } from "../../src/server/storage-space/storage-routes";
-import { WRITING_ROUTES } from "../../src/server/token-guard";
+import { requiresToken } from "../../src/server/token-guard";
 
 const cleanups: Array<() => void> = [];
 
@@ -88,9 +88,9 @@ describe("the storage routes", () => {
   });
 
   it("need the token to clear or compact", () => {
-    expect(WRITING_ROUTES.has("/api/storage/clear")).toBe(true);
-    expect(WRITING_ROUTES.has("/api/storage/compact")).toBe(true);
-    expect(WRITING_ROUTES.has("/api/storage")).toBe(false);
+    expect(requiresToken("/api/storage/clear")).toBe(true);
+    expect(requiresToken("/api/storage/compact")).toBe(true);
+    expect(requiresToken("/api/storage")).toBe(false);
   });
 });
 

@@ -7,11 +7,11 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import express from "express";
 import type { Request, Response } from "express-serve-static-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { hideMachinePaths } from "../src/server/hide-machine-paths";
+import { studioApp } from "../src/server/studio-app";
 import type { StudioToken } from "../src/server/studio-token";
 import { TOKEN_HEADER } from "../src/server/token-guard";
 
@@ -69,7 +69,7 @@ let server: Server | undefined;
 let base = "";
 
 beforeEach(async () => {
-  const app = express();
+  const app = studioApp();
   app.use("/api", hideMachinePaths(TOKEN, { project: [ROOT], home: "/Users/ana" }));
   /* Mounted as Express mounts any handler, so each answers with all of Express's response. */
   for (const [name, answer] of Object.entries(ANSWERS)) {

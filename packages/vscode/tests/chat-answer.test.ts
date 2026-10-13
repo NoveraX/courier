@@ -13,6 +13,7 @@ import type * as vscode from "vscode";
 import { answer } from "../src/chat/chat-answer";
 import type { ChatDeps } from "../src/chat/chat-types";
 import type { RecordedRequest } from "../src/studio/live-types";
+import { StudioTokenRefusal, TOKEN_NEEDED } from "../src/studio/studio-token-refusal";
 import type { EndpointStats } from "../src/studio/studio-types";
 import { ChatResponseMarkdownPart, MarkdownString } from "./vscode-stand-in";
 
@@ -127,6 +128,23 @@ describe("@courier's commands", () => {
     expect(buttons[0]?.arguments).toEqual([
       `${STUDIO}/explorer/endpoints?endpoint=shop.orders.place`,
     ]);
+  });
+
+  it("answers /endpoint without its callers when Studio refuses them for want of the token, and says why", async () => {
+    const { turn, text, buttons, references } = turnOf("orders.place", "endpoint");
+    const refusing = depsWith({
+      fetchSites: async () => {
+        throw new StudioTokenRefusal();
+      },
+    });
+
+    await answer(refusing, turn);
+
+    expect(text()).toContain("**`shop.orders.place`**");
+    expect(text()).toContain(TOKEN_NEEDED);
+    expect(text()).not.toContain("did not answer");
+    expect(references.map((each) => each.uri.fsPath)).toEqual([DECLARED.path]);
+    expect(buttons.map((each) => each.title)).toEqual(["Open in Studio"]);
   });
 
   it("takes the endpoint under the cursor when /endpoint names none, and says when it knows none", async () => {

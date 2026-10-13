@@ -131,10 +131,10 @@ function start(): Promise<string> {
   });
 }
 
-async function post(url: string, path: string, body: unknown) {
+async function post(url: string, path: string, body: unknown, token = tokenHeader(studio)) {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
+    headers: { "content-type": "application/json", origin: url, ...token },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
@@ -239,5 +239,74 @@ describe("the code Studio writes in a project that checks with Biome", () => {
     expect(applied.status).toBe(200);
     expect(written()["src/api/billing/invoices/index.ts"]).toContain("getInvoice:");
     expect(biomeCheck().status).toBe(0);
+  }, 60_000);
+});
+
+describe("the code Studio generates to show before writing it", () => {
+  const options = {
+    type: "openapi",
+    outputDir: "src/api",
+    sourceName: "billing",
+    generateClient: "both",
+  };
+
+  function sourceOf(body: Record<string, unknown>): string {
+    const files = body.files as Array<{ path: string; content: string }>;
+    return files.map((file) => file.content).join("\n");
+  }
+
+  it("is formatted as the project formats its code, for a caller with the token", async () => {
+    const url = await start();
+
+    const generated = await post(url, "/api/apis/generate", { spec: SPEC, options });
+
+    expect(generated.status).toBe(200);
+    expect(generated.body.formatting).toEqual({
+      formattedWith: [expect.stringMatching(/^Biome /)],
+      problem: null,
+    });
+    expect(sourceOf(generated.body)).toContain("from '@noverax/courier/define';");
+  }, 60_000);
+
+  it("runs none of the project's formatters for a caller without the token", async () => {
+    const url = await start();
+
+    const generated = await post(url, "/api/apis/generate", { spec: SPEC, options }, {});
+
+    expect(generated.status).toBe(200);
+    expect(generated.body).not.toHaveProperty("formatting");
+    expect(sourceOf(generated.body)).toContain('from "@noverax/courier/define";');
+  }, 60_000);
+
+  /* A relative import that names its file's `.js`, as Node's resolution of ES modules needs. */
+  const JS_IMPORT = /from ["']\.{1,2}\/[^"']*\.js["']/;
+
+  function needingJsExtensions(): void {
+    writeFileSync(join(root, "package.json"), '{ "name": "billing-app", "type": "module" }\n');
+    writeFileSync(
+      join(root, "tsconfig.json"),
+      '{ "compilerOptions": { "module": "NodeNext", "strict": true } }\n',
+    );
+  }
+
+  it("gives its imports the extension the project's package.json and tsconfig ask for, for a caller with the token", async () => {
+    needingJsExtensions();
+    const url = await start();
+
+    const generated = await post(url, "/api/apis/generate", { spec: SPEC, options });
+
+    expect(generated.status).toBe(200);
+    expect(sourceOf(generated.body)).toMatch(JS_IMPORT);
+  }, 60_000);
+
+  it("reads neither for a caller without the token, whose code has the generator's imports", async () => {
+    needingJsExtensions();
+    const url = await start();
+
+    const generated = await post(url, "/api/apis/generate", { spec: SPEC, options }, {});
+
+    expect(generated.status).toBe(200);
+    expect(sourceOf(generated.body)).toContain('from "./source";');
+    expect(sourceOf(generated.body)).not.toMatch(JS_IMPORT);
   }, 60_000);
 });

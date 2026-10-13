@@ -1,9 +1,9 @@
 import type { MockConditions, RecordedRequest, RequestQuery, StudioMock } from "./live-types";
 import { isRecord } from "./studio-guards";
+import { TOKEN_HEADER } from "./studio-token";
 
 /* Studio answers on this machine at once; one that takes longer is not answering. */
 const TIMEOUT_MS = 4_000;
-const TOKEN_HEADER = "x-courier-studio-token";
 
 /** Studio refused a change: why, in its own words. */
 export class StudioRefusal extends Error {

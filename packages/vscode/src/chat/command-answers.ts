@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 import { rangeOf, siteLocation } from "../code/ranges";
 import { auditPage, endpointPage, requestPage } from "../studio/studio-pages";
+import { StudioTokenRefusal } from "../studio/studio-token-refusal";
 import type { EndpointName, EndpointStats } from "../studio/studio-types";
 import { auditFacts, endpointFacts, failureFacts, statusFacts } from "./chat-facts";
 import type { ChatAsk } from "./chat-types";
@@ -93,7 +94,11 @@ export async function endpointAnswer(ask: ChatAsk): Promise<void> {
   if (declared) {
     stream.reference(new vscode.Location(vscode.Uri.file(declared.path), rangeOf(declared.span)));
   }
-  const sites = await deps.fetchSites(studio, source, endpoint);
+  const sites = await deps.fetchSites(studio, source, endpoint).catch((error: unknown) => {
+    if (!(error instanceof StudioTokenRefusal)) throw error;
+    stream.markdown(`\n\n${error.message}`);
+    return [];
+  });
   for (const site of sites.slice(0, MOST_SITES)) stream.reference(siteLocation(site));
   const page = endpointPage(studio, source, endpoint);
   stream.button({ command: "courier.openStudioPage", arguments: [page], title: "Open in Studio" });

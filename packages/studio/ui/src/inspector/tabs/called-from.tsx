@@ -1,6 +1,7 @@
 import { ArrowUpRight, FileCode } from "lucide-react";
 
 import { Skeleton } from "@/design/skeleton";
+import { isDemoVisitor } from "@/features/demo/is-demo-visitor";
 import type { CallSite } from "@/features/editor/call-sites";
 import { askEditorHost, insideEditor } from "@/features/editor/editor-host";
 import { editorLink } from "@/features/editor/editor-link";
@@ -12,8 +13,10 @@ const SHOWN = 8;
 /**
  * Where the project's code calls an endpoint, each call site opening in the
  * editor Settings names — or, when Studio shows inside an editor's own tab,
- * in that editor. Nothing shows on a public demo, which reads no project's
- * code for its visitors.
+ * in that editor. A page without the project's token is told it needs the
+ * link Studio printed, as Studio shows the code only to a page that has it;
+ * nothing shows on a public demo, which reads no project's code for its
+ * visitors.
  *
  * @param props - The endpoint's source and its call in the client
  * @returns The section, or nothing
@@ -31,13 +34,21 @@ export function CalledFrom({
 }): React.ReactNode {
   const found = useCallSites(source, endpoint);
   const chosen = useStudioStore((s) => s.settings.codeEditor);
+  const info = useStudioStore((s) => s.studioInfo);
   const hosted = insideEditor();
   const editor = hosted ? "host" : chosen;
   if (found.status === "unavailable") return null;
+  if (found.status === "needs-token" && isDemoVisitor(info)) return null;
   return (
     <section className="flex flex-col">
       <h3 className="m-0 pb-2 text-label font-semibold text-fg-muted">Called from</h3>
       {found.status === "loading" && <Skeleton className="h-11 w-full rounded-panel" />}
+      {found.status === "needs-token" && (
+        <p className="m-0 text-small leading-[1.5] text-fg-subtle">
+          Studio shows where the project's code calls an endpoint only on a page opened from the
+          link it printed in its terminal, which carries the project's token.
+        </p>
+      )}
       {found.status === "failed" && (
         <p className="m-0 text-small text-fg-subtle">{found.message}</p>
       )}

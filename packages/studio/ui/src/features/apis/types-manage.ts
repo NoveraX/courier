@@ -61,7 +61,19 @@ export interface ManagePreviewResult {
   plan: FilePlanSummary;
 }
 
-export type ManageStep = "loading" | "reupload" | "inventory" | "preview" | "applying" | "done";
+/**
+ * Where the manage dialog stands. `needs-token`: Studio refused to read the
+ * import's files for a page without the project's token, and nothing on
+ * the page can change that.
+ */
+export type ManageStep =
+  | "loading"
+  | "reupload"
+  | "needs-token"
+  | "inventory"
+  | "preview"
+  | "applying"
+  | "done";
 
 /** The change to an import a manage request asks for. */
 export interface ManageChange {

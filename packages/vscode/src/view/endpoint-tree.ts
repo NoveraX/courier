@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { logFailure } from "../log/courier-log";
 import type { StudioTarget } from "../projects/studio-targets";
+import { StudioTokenRefusal } from "../studio/studio-token-refusal";
 import type { CallSite, EndpointStats } from "../studio/studio-types";
 import { treeItemOf } from "./tree-items";
 import {
@@ -57,7 +58,7 @@ export function createEndpointTree(sources: EndpointTreeSources): EndpointTree {
         logFailure(`Studio at ${node.studio} did not list the call sites`, error);
         asked.delete(key);
         const id = `silent:${node.studio}:${node.stats.source}.${node.stats.endpoint}`;
-        return [{ kind: "note", id, text: "Courier Studio did not answer" }];
+        return [{ kind: "note", id, text: unlistedNote(error) }];
       });
     asked.set(key, { at: Date.now(), sites });
     return sites;
@@ -82,4 +83,11 @@ export function createEndpointTree(sources: EndpointTreeSources): EndpointTree {
       }
     },
   };
+}
+
+/* Why the call sites are not listed: Studio refused for want of the token, or did not answer. */
+function unlistedNote(error: unknown): string {
+  return error instanceof StudioTokenRefusal
+    ? "Courier Studio lists the call sites only with the project's token"
+    : "Courier Studio did not answer";
 }

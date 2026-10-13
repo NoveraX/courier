@@ -7,6 +7,7 @@
  * Studio printed in its terminal.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
@@ -14,11 +15,42 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
-import { TOKEN_HEADER, TOKEN_REFUSAL, WRITING_ROUTES } from "../src/server/token-guard";
+import { OPEN_ROUTES, TOKEN_HEADER, TOKEN_REFUSAL } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
+import { registeredApiRoutes } from "./helpers/api-routes";
 import { replayed, sendRuntimeEvents } from "./helpers/runtime-events";
 
 const REFUSED = { error: TOKEN_REFUSAL, code: "STUDIO_TOKEN_REQUIRED" };
+const TOKEN_ROUTES = registeredApiRoutes().filter((route) => !OPEN_ROUTES.has(route));
+
+/* Each open route's own answer to a caller without the token, sent `{}` — a GET for the health check. */
+const OPEN_ANSWERS: ReadonlyArray<readonly [route: string, status: number]> = [
+  ["/api/health", 200],
+  ["/api/apis/parse", 400],
+  ["/api/apis/generate", 400],
+  ["/api/apis/diff", 400],
+  ["/api/apis/layout", 400],
+  ["/api/apis/traffic-spec", 400],
+  ["/api/openapi/document", 400],
+  ["/api/sessions/list", 200],
+  ["/api/sessions/export", 400],
+  ["/api/sessions/export-live", 400],
+  ["/api/sessions/file", 400],
+  ["/api/sessions/environment", 200],
+  ["/api/contract/report", 200],
+  ["/api/storage", 200],
+  ["/api/webhooks/list", 200],
+  ["/api/editor/requests", 200],
+  ["/api/editor/mocks", 200],
+  ["/api/editor/endpoints", 200],
+  ["/api/editor/calls", 400],
+  ["/api/editor/findings", 200],
+];
+
+/* What Studio answers a route it does not have, which no route of the lists may get. */
+function noSuchRoute(route: string): { error: string } {
+  return { error: `Studio has no API route POST ${route}` };
+}
 
 let root: string;
 let url: string;
@@ -100,9 +132,115 @@ function replayOf(socket: Socket): Promise<unknown> {
   );
 }
 
-describe("a route that changes something", () => {
-  it.each([...WRITING_ROUTES])("refuses %s to a caller without the token", async (route) => {
+/* Sent as written: fetch would resolve the dots and turn a backslash into a slash first. */
+function raw(path: string, presented?: string): Promise<number> {
+  const { port } = new URL(url);
+  return new Promise((resolve, reject) => {
+    const sent = request(
+      {
+        host: "127.0.0.1",
+        port,
+        path,
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: url,
+          ...(presented !== undefined && { [TOKEN_HEADER]: presented }),
+        },
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () => resolve(res.statusCode ?? 0));
+      },
+    );
+    sent.on("error", reject);
+    sent.end(JSON.stringify({ name: "spelled", requests: [] }));
+  });
+}
+
+/* Every way a router, or a proxy in front of it, could read as the route. */
+function spellings(route: string): string[] {
+  const parent = route.slice(0, route.lastIndexOf("/"));
+  const last = route.slice(route.lastIndexOf("/") + 1);
+  return [
+    `${route}/`,
+    `${route}//`,
+    `${route}/?x=1`,
+    route.toUpperCase(),
+    route.replace("/api/", "/API/"),
+    `${parent}/${last.toUpperCase()}`,
+    route.replace("/api/", "/api//"),
+    `/${route}`,
+    route.replace("/api/", "/api/./"),
+    route.replace("/api/", "/api/x/../"),
+    route.replace("/api/", "/api/%2e/"),
+    route.replace("/api/", "/api/x/%2e%2e/"),
+    route.replace("a", "%61"),
+    route.replace("a", "%2561"),
+    `${parent}%2F${last}`,
+    `${parent}%2f${last}/`,
+    route.replace("/api/", "/api\\"),
+    `${parent}\\${last}`,
+  ];
+}
+
+describe("a route that asks for the token", () => {
+  it.each(TOKEN_ROUTES)("refuses %s to a caller without the token", async (route) => {
     expect(await post(route, {})).toEqual({ status: 401, body: REFUSED });
+  });
+
+  it.each(TOKEN_ROUTES)(
+    "refuses %s to a caller without the token, however the path is spelled",
+    async (route) => {
+      const statuses = await Promise.all(spellings(route).map((path) => raw(path)));
+
+      expect(statuses).toEqual(spellings(route).map(() => 401));
+    },
+  );
+
+  it.each(TOKEN_ROUTES)("serves %s to a caller with the token", async (route) => {
+    const answer = await post(route, {}, token());
+
+    expect(answer.status).not.toBe(401);
+    expect(answer.body).not.toEqual(noSuchRoute(route));
+  });
+
+  it.each([
+    "/api/editor/sites",
+    "/api/editor/definitions",
+    "/api/editor/groups",
+    "/api/apis/manage/inventory",
+    "/api/apis/manage/preview",
+    "/api/apis/update/preview",
+  ])(
+    "refuses %s, which reads the project's code or files, to a caller without the token",
+    async (route) => {
+      expect(TOKEN_ROUTES).toContain(route);
+      expect(await post(route, {})).toEqual({ status: 401, body: REFUSED });
+    },
+  );
+
+  it.each([
+    "/api/sessions/..%2F..%2Fhealth",
+    "/api/sessions/..%5C..%5Chealth",
+    "/api/editor/%2E%2E%2F%2E%2E%2Fexplorer",
+    "/api/storage/../../explorer",
+  ])(
+    "refuses %s, a path that climbs out of the API within it, to a caller without the token",
+    async (path) => {
+      expect(await raw(path)).toBe(401);
+    },
+  );
+
+  it("refuses a path of escapes within escapes at once, to a caller without the token", async () => {
+    expect(await raw(`/%25${"25".repeat(7_000)}61`)).toBe(401);
+    expect(await raw(`/api/%25${"25".repeat(7_000)}61`)).toBe(401);
+  });
+
+  it("saves no session for any spelling a caller without the token tried", async () => {
+    await Promise.all(spellings("/api/sessions/save").map((path) => raw(path)));
+
+    expect(await post("/api/sessions/list", {})).toEqual({ status: 200, body: [] });
   });
 
   it("refuses a caller whose token is not the project's", async () => {
@@ -145,6 +283,40 @@ describe("a route that only reads", () => {
     expect((await post("/api/sessions/list", {})).status).toBe(200);
     expect((await fetch(`${url}/api/health`, { headers: { origin: url } })).status).toBe(200);
   });
+
+  it("are each listed with what they answer a caller without the token", () => {
+    expect(OPEN_ANSWERS.map(([route]) => route).sort()).toEqual([...OPEN_ROUTES].sort());
+  });
+
+  it.each(OPEN_ANSWERS)("is open to a caller without the token: %s", async (route, status) => {
+    const answer =
+      route === "/api/health"
+        ? await fetch(`${url}${route}`, { headers: { origin: url } })
+        : await fetch(`${url}${route}`, {
+            method: "POST",
+            headers: { "content-type": "application/json", origin: url },
+            body: "{}",
+          });
+    const body: unknown = await answer.json();
+
+    expect(answer.status).toBe(status);
+    expect(body).not.toEqual(REFUSED);
+    expect(body).not.toEqual(noSuchRoute(route));
+  });
+
+  it("is reached by the one spelling it names, even with the token", async () => {
+    const statuses = await Promise.all(
+      [
+        "/api/sessions/list/",
+        "/API/sessions/list",
+        "/api/Sessions/list",
+        "/api//sessions/list",
+      ].map((path) => raw(path, token())),
+    );
+
+    expect(statuses).toEqual([404, 404, 404, 404]);
+    expect(await raw("/api/sessions/list", token())).toBe(200);
+  });
 });
 
 describe("a page without the token", () => {
@@ -178,6 +350,34 @@ describe("a page without the token", () => {
     socket.emit("playground:exec", { rid: "call-1", source: "api", method: "list", variables: {} });
 
     expect(await ended).toEqual({ rid: "call-1", error: { message: TOKEN_REFUSAL } });
+  });
+
+  it("has an event Studio does not list refused rather than run", async () => {
+    const socket = await page();
+    const told = new Promise((resolve) => socket.once("studio:read-only", resolve));
+
+    socket.emit("an:event:added:later", { id: "x" });
+    const answered: unknown = await socket
+      .timeout(5_000)
+      .emitWithAck("another:event:added:later", { id: "y" });
+
+    expect(await told).toEqual({ event: "an:event:added:later", error: TOKEN_REFUSAL });
+    expect(answered).toEqual({ ok: false, error: TOKEN_REFUSAL });
+  });
+
+  it("is answered what it asks to read: a mock's records, a request's whole body", async () => {
+    const socket = await page();
+
+    const records: unknown = await socket
+      .timeout(5_000)
+      .emitWithAck("mock:store:get", { serverId: "shop" });
+    const body: unknown = await socket
+      .timeout(5_000)
+      .emitWithAck("request:body", { sessionId: "s", requestId: "r", part: "response" });
+
+    expect(records).toEqual({ ok: false, error: 'Studio runs no mock named "shop".' });
+    expect(body).not.toEqual({ ok: false, error: TOKEN_REFUSAL });
+    expect(body).toEqual(expect.objectContaining({ ok: false, error: expect.any(String) }));
   });
 
   it("is told that Studio did not clear a mock's log", async () => {

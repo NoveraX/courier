@@ -18,7 +18,7 @@ import { createStudioServer } from "../src/server/create-studio-server";
 import {
   DEMO_FILE_REFUSAL,
   DEMO_SHARED_REFUSAL,
-  DEMO_WRITE_REFUSAL,
+  DEMO_TOKEN_REFUSAL,
 } from "../src/server/demo/demo-refusals";
 import { DEMO_LARGE_BODY, DEMO_REST_BUSY } from "../src/server/demo/demo-rest-guard";
 import { DEMO_SERVER_OPTIONS } from "../src/server/demo/demo-serving";
@@ -126,6 +126,28 @@ async function post(
   /* A visitor reaches the demo through a proxy on this machine, which says who it is. */
   if (visitor !== undefined) headers["x-forwarded-for"] = visitor;
   return fetch(`${url}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+}
+
+/* Sent as written, a visitor's: fetch would resolve the dots before sending. */
+function rawPost(path: string, body: unknown): Promise<number> {
+  const { hostname, port } = new URL(url);
+  return new Promise((resolve, reject) => {
+    const sent = request(
+      {
+        host: hostname,
+        port,
+        path,
+        method: "POST",
+        headers: { "content-type": "application/json", origin: url },
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () => resolve(res.statusCode ?? 0));
+      },
+    );
+    sent.on("error", reject);
+    sent.end(JSON.stringify(body));
+  });
 }
 
 /* A specification served on this machine, as the demo's own services are. */
@@ -237,6 +259,25 @@ describe("what every visitor sees", () => {
   });
 });
 
+describe("an event the demo does not name", () => {
+  it("is refused to a visitor, who is told why, and still run for the host", async () => {
+    const visitor = await open("/ui");
+    const host = await open("/ui", token());
+    const told = new Promise((resolve) => visitor.once("studio:read-only", resolve));
+    let hostTold = false;
+    host.on("studio:read-only", () => {
+      hostTold = true;
+    });
+
+    visitor.emit("an:event:added:later", {});
+    host.emit("an:event:added:later", {});
+
+    expect(await told).toEqual({ event: "an:event:added:later", error: DEMO_TOKEN_REFUSAL });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(hostTold).toBe(false);
+  });
+});
+
 describe("the Playground history", () => {
   it("stays in each visitor's page, unseen by the others, and the host's is kept", async () => {
     const host = await open("/ui", token());
@@ -275,9 +316,49 @@ describe("the demo's API", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({
-      error: DEMO_WRITE_REFUSAL,
+      error: DEMO_TOKEN_REFUSAL,
       code: "STUDIO_TOKEN_REQUIRED",
     });
+  });
+
+  it.each([
+    "/api/apis/imports/check-updates",
+    "/api/apis/imports/check-all",
+    "/api/apis/declare/preview",
+    "/api/mocks/declare/preview",
+    "/api/apis/imports/remove/preview",
+    "/api/apis/manage/inventory",
+    "/api/apis/manage/preview",
+    "/api/apis/update/preview",
+    "/api/editor/sites",
+  ])("reads nothing past what it shows for a visitor at %s, and says why", async (path) => {
+    const response = await post(path, undefined, { name: "pets" });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({
+      error: DEMO_TOKEN_REFUSAL,
+      code: "STUDIO_TOKEN_REQUIRED",
+    });
+  });
+
+  it("writes nothing for a visitor however the route is spelled", async () => {
+    const spelled = [
+      "/api/sessions/save/",
+      "/API/SESSIONS/SAVE",
+      "/api/Sessions/save",
+      "/api//sessions/save",
+      "/api/sessions/%73ave",
+      "/api/x/../sessions/save",
+      "/api/x/%2e%2e/sessions/save",
+      "/x/..%2Fapi/sessions/save",
+    ];
+
+    const statuses = await Promise.all(
+      spelled.map((path) => rawPost(path, { name: "spelled", requests: [] })),
+    );
+
+    expect(statuses).toEqual(spelled.map(() => 401));
+    expect(await (await post("/api/sessions/list", token())).json()).toEqual([]);
   });
 
   it("answers an address up to twenty requests every ten seconds, every visitor sixty, and the host always", async () => {

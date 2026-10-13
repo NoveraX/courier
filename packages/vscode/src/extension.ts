@@ -13,7 +13,6 @@ import { registerCliCommands } from "./generate/cli-commands";
 import { registerLiveViews } from "./live/register-live-views";
 import { closeCourierLog, courierLog } from "./log/courier-log";
 import { registerFailureNotices } from "./notify/register-failure-notices";
-import { fetchSites } from "./studio/studio-api";
 
 /**
  * Start the extension: the hints over each endpoint call and the audit's
@@ -42,7 +41,7 @@ export function activate(context: vscode.ExtensionContext): void {
     selector: core.selector,
     store: core.store,
     definitions: core.definitions,
-    fetchSites,
+    fetchSites: core.reads.fetchSites,
     targets: core.view.targets,
     enabled: () => core.settings().get<boolean>("hints.enabled", true),
   });

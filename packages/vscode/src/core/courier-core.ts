@@ -8,8 +8,10 @@ import { registerStudioPages, type StudioPages } from "../panel/register-studio-
 import { type CourierProjects, createCourierProjects } from "../projects/courier-projects";
 import { createConfiguredStudio } from "../studio/configured-studio";
 import { findStudio } from "../studio/find-studio";
-import { fetchCalls, fetchDefinitions, fetchEndpointStats, fetchSites } from "../studio/studio-api";
+import { type ProjectReads, projectReads } from "../studio/project-reads";
+import { fetchCalls, fetchEndpointStats } from "../studio/studio-api";
 import type { StudioFinder } from "../studio/studio-in-front";
+import { studioTokenFor } from "../studio/studio-token";
 import { type CourierView, createCourierView } from "../view/courier-view";
 
 /** What every feature of the extension shares: the Studios, what they told, and when to look again. */
@@ -24,6 +26,8 @@ export interface CourierCore extends vscode.Disposable {
   answers(studio: string): Promise<boolean>;
   readonly projects: CourierProjects;
   readonly view: CourierView;
+  /** The reads of the project's code, each with the token of the project its Studio runs for */
+  readonly reads: ProjectReads;
   readonly definitions: DefinitionStore;
   readonly pages: StudioPages;
   readonly selector: vscode.DocumentSelector;
@@ -38,10 +42,11 @@ export interface CourierCore extends vscode.Disposable {
 /**
  * The extension's core: the Studios the workspace's projects run — found by
  * their address files, or the one the settings name — what they told the
- * hints, where they found the endpoints declared, the Courier view, and
- * Studio's pages. It asks again every few seconds while the window has
- * focus, and from the start when a Studio starts or stops, a project comes
- * or goes, or a setting changes; the features follow its two events.
+ * hints, where they found the endpoints declared, the reads of the
+ * project's code with its token, the Courier view, and Studio's pages. It
+ * asks again every few seconds while the window has focus, and from the
+ * start when a Studio starts or stops, a project comes or goes, or a
+ * setting changes; the features follow its two events.
  *
  * @param context - The extension's context
  * @returns The core
@@ -65,14 +70,16 @@ export function createCourierCore(context: vscode.ExtensionContext): CourierCore
   const answers = async (studio: string) =>
     store.statsFor(studio) !== undefined || store.answers(studio);
   const projects = createCourierProjects();
+  /* A read finds its token among the Studios the view has found by the time one is asked. */
+  const reads = projectReads((studio) => studioTokenFor(studio, () => view.targets()));
   const view = createCourierView({
     projects: projects.list,
     configured,
     statsFor: store.statsFor,
     answers: store.answers,
-    fetchSites,
+    fetchSites: reads.fetchSites,
   });
-  const definitions = createDefinitionStore(fetchDefinitions);
+  const definitions = createDefinitionStore(reads.fetchDefinitions);
   const pages = registerStudioPages({
     extensionUri: context.extensionUri,
     studioFor,
@@ -119,6 +126,7 @@ export function createCourierCore(context: vscode.ExtensionContext): CourierCore
     answers,
     projects,
     view,
+    reads,
     definitions,
     pages,
     selector: CALL_LANGUAGES.map((language) => ({ language, scheme: "file" })),

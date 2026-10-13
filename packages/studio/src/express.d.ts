@@ -17,6 +17,7 @@ declare module "express" {
     get(path: string, handler: RequestHandler): void;
     post(path: string, handler: RequestHandler): void;
     disable(setting: string): void;
+    enable(setting: string): void;
     use(handler: unknown): void;
     use(path: string, handler: unknown): void;
   }

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ServerState } from "../src/server/mock-manager/types";
 import { bindMockStore } from "../src/server/ui-mock-store";
-import { READ_ONLY_VISITORS, WRITING_EVENTS } from "../src/server/ui-token-guard";
+import { READ_ONLY_VISITORS, READING_EVENTS } from "../src/server/ui-token-guard";
 
 /* A page's socket: the handlers Studio binds on it, called as the page would. */
 function pageSocket() {
@@ -83,7 +83,7 @@ describe("a page that asks for a mock's records", () => {
   it("reads, so a page without Studio's token may ask too", () => {
     const visitor = { page: "page-1", address: "127.0.0.1" };
 
-    expect(WRITING_EVENTS.has("mock:store:get")).toBe(false);
+    expect(READING_EVENTS.has("mock:store:get")).toBe(true);
     expect(READ_ONLY_VISITORS.decide(visitor, "mock:store:get", [{ serverId: "shop" }])).toEqual({
       kind: "run",
     });

@@ -3,14 +3,18 @@ import { join } from "node:path";
 
 import type { StudioTarget } from "../projects/studio-targets";
 
+/** The header a request to Studio carries the project's token in. */
+export const TOKEN_HEADER = "x-courier-studio-token";
+
 /* 32 random bytes, base64url, as Studio makes them: anything else in the file is no token. */
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 /**
  * The token of the project a Studio runs for, from its `.courier` folder —
  * which lets Studio's page, shown in the editor's tab, change things as the
- * link Studio prints does. A Studio the settings name, for a project
- * outside the workspace, has none here: its page there only looks.
+ * link Studio prints does, and lets the extension read where the project's
+ * code calls and declares its endpoints. A Studio the settings name, for a
+ * project outside the workspace, has none here: its page there only looks.
  *
  * @param studio - Studio's address
  * @param targets - The Studios that run for the workspace's projects

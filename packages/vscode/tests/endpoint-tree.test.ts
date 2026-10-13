@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { StudioTokenRefusal } from "../src/studio/studio-token-refusal";
 import type { CallSite, EndpointStats } from "../src/studio/studio-types";
 import { createEndpointTree } from "../src/view/endpoint-tree";
 import type { CourierNode } from "../src/view/tree-nodes";
@@ -70,5 +71,16 @@ describe("the Courier view's data", () => {
 
     expect(silent).toMatchObject([{ kind: "note", text: "Courier Studio did not answer" }]);
     expect(await childrenOf(tree, place)).toMatchObject([{ kind: "site", site: SITE }]);
+  });
+
+  it("says the call sites need the project's token when Studio refuses them for want of it", async () => {
+    const tree = treeWith(async () => {
+      throw new StudioTokenRefusal();
+    });
+    const place: CourierNode = { kind: "endpoint", studio: STUDIO, stats: PLACE };
+
+    expect(await childrenOf(tree, place)).toMatchObject([
+      { kind: "note", text: "Courier Studio lists the call sites only with the project's token" },
+    ]);
   });
 });

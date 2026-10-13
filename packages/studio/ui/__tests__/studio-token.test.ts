@@ -169,4 +169,19 @@ describe("the page's socket", () => {
     unbind();
     expect(socket.listeners("studio:read-only")).toHaveLength(0);
   });
+
+  it("says, for a refusal that came without its reason, that Studio both changes and reads past what it shows only with the link", async () => {
+    const { bindReadOnly } = await import("@/socket/read-only-bindings");
+    const socket = io("http://127.0.0.1:9", { autoConnect: false });
+    const unbind = bindReadOnly(socket);
+
+    for (const listener of socket.listeners("studio:read-only")) listener({ event: "x" });
+
+    expect(toast.error).toHaveBeenLastCalledWith("Studio did not make the change", {
+      id: "studio-read-only",
+      description:
+        "Studio makes changes, and reads past what it shows, only for a page opened from the link it printed in its terminal, which carries this project's token.",
+    });
+    unbind();
+  });
 });

@@ -60,6 +60,7 @@ import { IMPORTS_STATE_VERSION } from "../src/apis/imports-state";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { clearStartupIssues, startupIssues } from "../src/server/startup-issues";
+import { TOKEN_HEADER } from "../src/server/token-guard";
 
 const CACHE = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
 const BROKEN = 'import "./src/missing";\nexport default { sources: {} };\n';
@@ -184,6 +185,9 @@ async function freePort(): Promise<number> {
   return address.port;
 }
 
+/* The token of the Studio at each URL: the mock wizard's preview asks for it. */
+const tokens = new Map<string, string>();
+
 async function start(root: string): Promise<string> {
   const mockBasePort = await freePort();
   return new Promise<string>((resolve, reject) => {
@@ -192,7 +196,10 @@ async function start(root: string): Promise<string> {
       host: "127.0.0.1",
       projectRoot: root,
       mockBasePort,
-      onReady: resolve,
+      onReady: (url) => {
+        tokens.set(url, server.token);
+        resolve(url);
+      },
       onError: reject,
     });
     cleanups.push(() => server.close());
@@ -267,7 +274,11 @@ async function loadedStudio(fixture: Project): Promise<{ url: string; first: Ui 
 async function preview(url: string): Promise<Record<string, unknown>> {
   const response = await fetch(`${url}/api/mocks/declare/preview`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: {
+      "content-type": "application/json",
+      origin: url,
+      [TOKEN_HEADER]: tokens.get(url) ?? "",
+    },
     body: JSON.stringify({
       mocks: [{ key: "apiMock", source: "demo", port: null, seedCount: 20, autoStart: false }],
     }),

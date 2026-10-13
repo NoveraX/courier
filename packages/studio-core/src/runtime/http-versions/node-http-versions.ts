@@ -1,4 +1,5 @@
 import diagnostics from "node:diagnostics_channel";
+import { parseUrl } from "@noverax/courier/internal";
 
 import type { HttpVersion } from "../../events/http";
 import { type HttpVersions, httpVersionFromProtocol, originVersions } from "./http-version";
@@ -40,11 +41,12 @@ export function observeNodeHttpVersions(): HttpVersions {
 function sentOver(message: unknown): { origin: string; version: HttpVersion } | undefined {
   const origin = member(member(message, "request"), "origin");
   if (typeof origin !== "string" && !(origin instanceof URL)) return undefined;
-  if (!URL.canParse(String(origin))) return undefined;
+  const address = parseUrl(String(origin));
+  if (address === undefined) return undefined;
   const alpn = member(member(message, "socket"), "alpnProtocol");
   const version =
     typeof alpn === "string" && alpn !== "" ? httpVersionFromProtocol(alpn) : "HTTP/1.1";
-  return version && { origin: new URL(String(origin)).origin, version };
+  return version && { origin: address.origin, version };
 }
 
 function member(value: unknown, key: string): unknown {

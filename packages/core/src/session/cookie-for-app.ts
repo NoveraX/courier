@@ -1,3 +1,4 @@
+import { parseUrl } from "../utils/parse-url";
 import type { SetCookie } from "./set-cookie";
 
 /** A cookie made for the application's origin, or why none could be. */
@@ -32,7 +33,7 @@ export type AppCookie =
  * ```
  */
 export function cookieForApp(cookie: SetCookie, origin: string | undefined): AppCookie {
-  const app = origin !== undefined && URL.canParse(origin) ? new URL(origin) : undefined;
+  const app = origin === undefined ? undefined : parseUrl(origin);
   const prefixed = /^__(Secure|Host)-/.test(cookie.name);
   const secure = secureFor(app, cookie.secure === true || prefixed);
   if (prefixed && !secure) {

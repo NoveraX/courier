@@ -1,3 +1,4 @@
+import { parseUrl } from "../utils/parse-url";
 import type { HeaderReader } from "./incoming-request";
 
 /**
@@ -25,8 +26,7 @@ export function addressedOrigin(
   if (host === undefined) return undefined;
   const proto = firstValue(headers.get("x-forwarded-proto"))?.toLowerCase();
   const scheme = proto === "https" || proto === "http" ? proto : fallbackProtocol;
-  const origin = `${scheme}://${host}`;
-  return URL.canParse(origin) ? new URL(origin).origin : undefined;
+  return parseUrl(`${scheme}://${host}`)?.origin;
 }
 
 /** The client-facing value of a forwarded header: the first of a chain. */

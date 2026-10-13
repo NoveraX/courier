@@ -1,3 +1,5 @@
+import { parseUrl } from "../utils/parse-url";
+
 /** A webhook the application defined, as Studio has a delivery of it sent. */
 export interface KnownWebhook {
   readonly name: string;
@@ -61,9 +63,9 @@ export function rememberWebhook(webhook: Omit<KnownWebhook, "routes">): void {
  */
 export function rememberRoute(name: string, url: string): void {
   const entry = registry.webhooks.get(name);
-  if (!entry || !URL.canParse(url)) return;
-  const { origin, pathname } = new URL(url);
-  const route = `${origin}${pathname}`;
+  const address = parseUrl(url);
+  if (!entry || !address) return;
+  const route = `${address.origin}${address.pathname}`;
   if (entry.routes.at(-1) === route) return;
   entry.routes = [...entry.routes.filter((one) => one !== route), route].slice(-MOST_ROUTES);
   notify();

@@ -30,6 +30,7 @@
  */
 
 import { isDevelopment } from "../utils/development";
+import { parseUrl } from "../utils/parse-url";
 
 /**
  * Decide whether a request may proceed, from where the browser says it comes.
@@ -182,5 +183,5 @@ function sentOrigin(value: string): URL | undefined {
 function parseOrigin(value: string): URL | undefined {
   /* A malformed value names no machine, so it matches nothing and the caller
      falls through to the configured list. */
-  return URL.canParse(value) ? new URL(value) : undefined;
+  return parseUrl(value);
 }

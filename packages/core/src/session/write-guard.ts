@@ -1,4 +1,5 @@
 import { isOriginAccepted, isOriginListed } from "../adapter/origin-policy";
+import { parseUrl } from "../utils/parse-url";
 import type { IncomingRequest } from "./incoming-request";
 
 /* Methods a browser sends for a link, an image or a page another site shows. */
@@ -62,7 +63,7 @@ function refererRefusal(
   self: string | null,
   allowedOrigins: readonly string[] | undefined,
 ): string | undefined {
-  const from = referer !== null && URL.canParse(referer) ? new URL(referer).origin : undefined;
+  const from = referer === null ? undefined : parseUrl(referer)?.origin;
   if (from !== undefined && (from === self || isOriginListed(from, allowedOrigins))) {
     return undefined;
   }

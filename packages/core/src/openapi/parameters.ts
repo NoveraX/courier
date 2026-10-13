@@ -1,5 +1,6 @@
 import { probeOptions } from "../define/probe";
 import { isFormData, sendsVariablesInQuery } from "../utils/helpers";
+import { parseUrl } from "../utils/parse-url";
 import type { PlacedEndpoint } from "./endpoints";
 import type { JSONSchema } from "./types";
 
@@ -70,8 +71,7 @@ function addressOf(written: string): {
   servers?: Array<{ url: string }>;
   fixed: URLSearchParams;
 } {
-  const absolute =
-    /^https?:\/\//i.test(written) && URL.canParse(written) ? new URL(written) : undefined;
+  const absolute = /^https?:\/\//i.test(written) ? parseUrl(written) : undefined;
   const local = absolute ? `${absolute.pathname}${absolute.search}` : written;
   const at = local.indexOf("?");
   const path = (at < 0 ? local : local.slice(0, at)).replace(/^\/+/, "");

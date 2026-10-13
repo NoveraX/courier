@@ -1,6 +1,7 @@
 import { withIncomingRequest } from "./node-request-context";
 import type { IncomingRequest, RelayedCookie } from "./session/incoming-request";
 import { forwardedChain } from "./utils/forwarded-for";
+import { parseUrl } from "./utils/parse-url";
 
 /** What a framework built on Web-standard requests tells of one beyond the `Request`. */
 export interface WebRequestOptions {
@@ -108,5 +109,5 @@ export function withSetCookies(response: Response, cookies: readonly string[]): 
 }
 
 function originOf(url: string): string | undefined {
-  return URL.canParse(url) ? new URL(url).origin : undefined;
+  return parseUrl(url)?.origin;
 }

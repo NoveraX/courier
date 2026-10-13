@@ -311,12 +311,12 @@ describe("a channel another server serves, through the proxy", () => {
     const room = caller.live.room({ room: "r1" });
     const errors: RealtimeError[] = [];
     room.on("error", (error) => errors.push(error));
-    await new Promise((resolve) => setTimeout(resolve, 1_500));
 
-    expect(errors.map((error) => [error.code, error.message])).toEqual([
-      [4401, "Connection rejected"],
-    ]);
-    expect(room.status).toBe("disconnected");
+    /* A channel starts out disconnected: its error is the sign it was refused. */
+    await expect
+      .poll(() => errors.map((error) => [error.code, error.message]), { timeout: 10_000 })
+      .toEqual([[4401, "Connection rejected"]]);
+    await expect.poll(() => room.status).toBe("disconnected");
     vi.restoreAllMocks();
   });
 
@@ -355,13 +355,12 @@ describe("a channel another server serves, through the proxy", () => {
     const room = caller.live.room({ room: "r1" });
     const errors: RealtimeError[] = [];
     room.on("error", (error) => errors.push(error));
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await expect.poll(() => room.status, { timeout: 10_000 }).toBe("connected");
 
     for (let n = 0; n < 105; n++) room.send({ text: `m${n}` });
-    await new Promise((resolve) => setTimeout(resolve, 1_200));
 
-    expect(received).toHaveLength(100);
-    expect(errors).toHaveLength(5);
+    await expect.poll(() => received.length, { timeout: 10_000 }).toBe(100);
+    await expect.poll(() => errors.length, { timeout: 10_000 }).toBe(5);
     expect(errors.map((error) => error.code)).toEqual([4429, 4429, 4429, 4429, 4429]);
     room.close();
     vi.restoreAllMocks();

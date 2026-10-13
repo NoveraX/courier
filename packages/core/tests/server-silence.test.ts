@@ -74,9 +74,10 @@ describe("a connection to a server that stops answering", () => {
     connection.onStatusChange((status) => statuses.push(status));
 
     hub.hang();
-    await new Promise((resolve) => setTimeout(resolve, 600));
 
-    expect(statuses).toEqual(["reconnecting", "connecting", "connected"]);
+    await expect
+      .poll(() => statuses, { timeout: 10_000 })
+      .toEqual(["reconnecting", "connecting", "connected"]);
     expect(hub.sockets()).toBe(2);
   });
 });

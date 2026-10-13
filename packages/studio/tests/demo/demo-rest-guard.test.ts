@@ -255,20 +255,26 @@ describe("a demo's visitor that goes quiet on its turn", () => {
     expect(third.status).toBe(200);
   });
 
-  it("keeps its address's place until the answer it does not read is dropped", async () => {
-    const { port } = await demo();
-    const reader = raw(port, "/api/large", "203.0.113.1", LARGE_BODY);
-    reader.pause();
-    await new Promise((resolve) => setTimeout(resolve, 100));
+  /* Windows takes a whole unread answer into the connection's buffers at
+     once, so Node has written it and the place is free at once; a demo runs
+     on Linux, where an answer its visitor does not read stays Studio's to send. */
+  it.skipIf(process.platform === "win32")(
+    "keeps its address's place until the answer it does not read is dropped",
+    async () => {
+      const { port } = await demo();
+      const reader = raw(port, "/api/large", "203.0.113.1", LARGE_BODY);
+      reader.pause();
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const whileUnread = await post(port, "/api/quick", "203.0.113.1");
-    const afterDropped = await admittedWithin(IDLE_MS * 10, () =>
-      post(port, "/api/quick", "203.0.113.1"),
-    );
+      const whileUnread = await post(port, "/api/quick", "203.0.113.1");
+      const afterDropped = await admittedWithin(IDLE_MS * 10, () =>
+        post(port, "/api/quick", "203.0.113.1"),
+      );
 
-    expect(whileUnread.status).toBe(429);
-    expect(afterDropped).toBe(200);
-  });
+      expect(whileUnread.status).toBe(429);
+      expect(afterDropped).toBe(200);
+    },
+  );
 
   it("is dropped when it stops reading a compressed answer, and keeps no place", async () => {
     const { port } = await demo({ compressed: true });

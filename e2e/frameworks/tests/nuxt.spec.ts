@@ -33,6 +33,9 @@ const ENTITIES: ReadonlyMap<string, string> = new Map([
 const decodeEntities = (html: string): string =>
   html.replace(/&(?:quot|#39|lt|gt|amp);/g, (entity) => ENTITIES.get(entity) ?? entity);
 
+/* A click before Vue hydrates the page may go unheard; the page marks when it has. */
+const hydrated = () => page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext();
   await context.addCookies([{ name: "theme", value: "dark", url: APP }]);
@@ -158,6 +161,7 @@ test("signing out through a link clears the session cookie", async () => {
 
 test("a browser's calls through the proxy route carry the session it set", async () => {
   await page.goto(`${APP}/proxy`);
+  await hydrated();
   await clearReceived();
 
   await page.click("#proxy-run");

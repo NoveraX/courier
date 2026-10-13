@@ -1117,8 +1117,8 @@ mock("users", "getAll").resolves([]).once()          // the next call only
 | [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
 | [`@noverax/courier-mock`](./packages/mock) | Mock servers, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-mock) |
 | [`@noverax/courier-mcp`](./packages/mcp) | MCP server — your API's endpoints as tools for AI agents | [![npm](https://img.shields.io/npm/v/@noverax/courier-mcp?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-mcp) |
-| [Courier for VS Code](./packages/vscode) | Studio's figures above each call in your editor | |
-| [Courier File Icons](./packages/vscode-file-icons) | Courier's own icons in Material Icon Theme and vscode-icons, installed with Courier for VS Code | |
+| [Courier Studio](./packages/vscode) | VS Code extension: Studio's figures above each call, and Studio in a tab beside your code | |
+| [Courier File Icons](./packages/vscode-file-icons) | Courier's own icons in Material Icon Theme and vscode-icons, installed with Courier Studio | |
 
 <br />
 

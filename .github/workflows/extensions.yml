@@ -1,6 +1,6 @@
 name: Extensions
 
-# Courier for VS Code and Courier File Icons, published by hand to the Visual
+# Courier Studio and Courier File Icons, published by hand to the Visual
 # Studio Marketplace and Open VSX at a version already released: again after
 # a marketplace failed it, or for a release cut before the Marketplace
 # identity was set up. A release publishes them itself. With `identify`, the

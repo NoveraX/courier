@@ -211,13 +211,15 @@ describe("a header the server side leaves unset", () => {
     registerSources({ api: api() });
 
     await proxied("request?_s=api&_m=write", { "x-request-id": "a b\tc" });
-    await proxied("request?_s=api&_m=write", { "x-request-id": "x".repeat(129) });
-    await proxied("request?_s=api&_m=write", { "x-request-id": "req_01H8Z:7f/+=" });
+    await proxied("request?_s=api&_m=write", { "x-request-id": "x".repeat(201) });
+    await proxied("request?_s=api&_m=write", {
+      "x-request-id": "7c1e9a04b2d84f6e9a35c0d1e8f2b6a4",
+    });
 
     expect(seen.map((headers) => headers["x-request-id"])).toEqual([
       undefined,
       undefined,
-      "req_01H8Z:7f/+=",
+      "7c1e9a04b2d84f6e9a35c0d1e8f2b6a4",
     ]);
   });
 });

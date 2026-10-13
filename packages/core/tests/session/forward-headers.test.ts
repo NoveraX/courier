@@ -34,6 +34,33 @@ describe("forwardedHeaders", () => {
     expect(second).toEqual(first);
   });
 
+  it.each([
+    ["nginx's $request_id", "7c1e9a04b2d84f6e9a35c0d1e8f2b6a4"],
+    ["a UUID", "3f0c2a4e-8b1d-4c7a-9e2f-6a1b5c3d7e90"],
+    ["Kong's correlation id", "3f0c2a4e-8b1d-4c7a-9e2f-6a1b5c3d7e90#12"],
+    [
+      "an AWS trace id",
+      "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1",
+    ],
+    ["a Google Cloud trace", "105445aa7843bc8bf206b12000100000/1;o=1"],
+    ["a prefixed id", "req_01H8ZK7R2N8YB5W3Q6T9V4XJ2C"],
+    ["one of 200 characters", "r".repeat(200)],
+  ])("carries %s as the request sent it", (_name, id) => {
+    const headers = forwardedHeaders(incoming({ "x-request-id": id }), { requestId: true });
+
+    expect(headers).toEqual([["x-request-id", id]]);
+  });
+
+  it.each([
+    ["one with a quote", 'req"1'],
+    ["one with a backslash", "req\\1"],
+    ["one past 200 characters", "r".repeat(201)],
+  ])("replaces %s", (_name, id) => {
+    const headers = forwardedHeaders(incoming({ "x-request-id": id }), { requestId: true });
+
+    expect(headers[0]?.[1]).toMatch(/^[\da-f-]{36}$/);
+  });
+
   it("replaces an id a log could not hold as one word", () => {
     const headers = forwardedHeaders(incoming({ "x-request-id": "id with spaces\tand tabs" }), {
       requestId: true,

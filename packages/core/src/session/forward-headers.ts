@@ -6,8 +6,10 @@ import type { ForwardOptions } from "./types";
 /** The header a request's id travels in unless `requestId` names another. */
 export const REQUEST_ID_HEADER = "x-request-id";
 
-/* An id a log can hold as one word: what request ids are made of. */
-const REQUEST_ID = /^[\w.:\-+/=]{1,128}$/;
+/* One word of visible characters but quotes and backslashes, which a log line escapes: what the
+   ids proxies and platforms write are made of — nginx's hex, UUIDs, Kong's `uuid#n`, AWS's and
+   Google Cloud's trace ids with their `;` and `=`. */
+const REQUEST_ID = /^[\x21\x23-\x5b\x5d-\x7e]{1,200}$/;
 /* version-traceid-parentid-flags, neither id all zeros, as W3C Trace Context writes it. */
 const TRACEPARENT = /^(?!ff)[\da-f]{2}-(?!0{32})[\da-f]{32}-(?!0{16})[\da-f]{16}-[\da-f]{2}$/;
 /* One address, or a forwarding chain of them, as a header carries it. */
@@ -52,14 +54,15 @@ export function forwardedHeaders(
 }
 
 /**
- * Whether a header value is a request id: one word a log can hold, of at
- * most 128 letters, digits and the punctuation ids are written with.
+ * Whether a header value is a request id: one word of at most 200 visible
+ * characters, none of them a quote or a backslash — every id a proxy or a
+ * platform writes, from nginx's hex to AWS's `Root=1-…;Parent=…;Sampled=1`.
  *
  * @param value - The header's value
  * @returns `true` for a well-formed id
  * @example
  * ```ts
- * isRequestId("req_01H8Z:7f/+="); // → true
+ * isRequestId("3f0c2a4e-8b1d-4c7a-9e2f-6a1b5c3d7e90#12"); // → true
  * isRequestId("a b"); // → false
  * ```
  */

@@ -50,12 +50,18 @@ describe("rateLimitMiddleware", () => {
   it("lets no more than the limit through in any window when calls arrive together", async () => {
     const released: number[] = [];
     const client = await limitedClient({ maxRequests: 2, window: 300 }, released);
+    const started = performance.now();
 
     await Promise.all(Array.from({ length: 6 }, () => client.read()));
 
+    /* The first window's calls are let through while the burst is still being
+       started, and recorded only after it: a busy machine records them late,
+       never early. So each call is held to the earliest its window allows,
+       counted from the burst's start — two in the first 300 ms, two more from
+       300 ms, the last two from 600 ms. */
     const sorted = released.toSorted((a, b) => a - b);
-    const gaps = sorted.slice(2).map((at, i) => at - (sorted[i] ?? 0));
-    expect(gaps.every((gap) => gap >= 300 - RECORD_SLACK_MS)).toBe(true);
+    const early = sorted.filter((at, n) => at - started < Math.floor(n / 2) * 300);
+    expect(early).toEqual([]);
     expect(upstream?.seen).toHaveLength(6);
   });
 

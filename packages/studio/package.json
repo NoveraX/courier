@@ -36,7 +36,8 @@
   "sideEffects": [
     "./lib/cli.js",
     "./lib/format-worker.js",
-    "./lib/mock-worker.js"
+    "./lib/mock-worker.js",
+    "./lib/spec-worker.js"
   ],
   "bin": {
     "courier-studio": "lib/cli.js"

@@ -20,10 +20,10 @@ import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteRequest } from "./route-types";
 import { SpecFetchError } from "./spec-fetch-error";
 import { specHostAllowlist } from "./spec-host-allowlist";
-import { readSpecInThread } from "./spec-thread/read-spec-in-thread";
+import { readSpecInProcess } from "./spec-jobs/read-spec-in-process";
 import { type ParseBody, validateParseBody } from "./validate-body";
 
-/** What the route answers on: JSON it builds, or the specification's JSON as the thread wrote it. */
+/** What the route answers on: JSON it builds, or the specification's JSON as its process wrote it. */
 export interface ParseResponse extends JsonResponse, WorkedResponse {
   setHeader(name: string, value: string): unknown;
   end(body: string): unknown;
@@ -56,7 +56,7 @@ const DEMO_PUBLIC_ONLY =
  * Mount `POST /api/apis/parse`. A caller with the project's token has Studio
  * read a file of the project, or a URL on whatever the project allows; a
  * caller without it — on a public demo or not — has it read the text as
- * pasted, or a URL on the public internet. Every text is read in a thread
+ * pasted, or a URL on the public internet. Every text is read in a process
  * of its own, within a budget, and the work stops once the caller goes away.
  * A demo's visitor is read a specification no larger, as JSON, than it can
  * send back to have its code generated.
@@ -104,7 +104,7 @@ async function readSpec(
   const text = await specText({ source, content }, trusted, signal, deps);
   const url = source === "url" ? content : undefined;
   const maxBytes = deps.demo && !trusted ? DEMO_MAX_SPEC : MAX_MESSAGE_BYTES;
-  return readSpecInThread({ text, url }, { trusted, signal, maxBytes });
+  return readSpecInProcess({ text, url }, { trusted, signal, maxBytes });
 }
 
 async function specText(

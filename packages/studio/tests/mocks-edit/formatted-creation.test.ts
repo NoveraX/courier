@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { formattedCreation } from "../../src/server/mocks-edit/formatted-creation";
 import type { MocksPlan } from "../../src/server/mocks-edit/plan/types";
-import { closeFormatterThread } from "../../src/server/project-format/formatter-host";
+import { closeFormatProcesses } from "../../src/server/project-format/formatter-host";
 
 const INSTALLED = fileURLToPath(new URL("../../../../node_modules/", import.meta.url));
 const made: string[] = [];
@@ -26,7 +26,7 @@ function project(files: Record<string, string>, installed: readonly string[] = [
 
 afterEach(async () => {
   for (const root of made.splice(0)) {
-    await closeFormatterThread(root);
+    await closeFormatProcesses(root);
     rmSync(root, { recursive: true, force: true });
   }
 });

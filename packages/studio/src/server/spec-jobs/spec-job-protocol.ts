@@ -1,16 +1,16 @@
 import type { GeneratedFile, GenerateOptions, ParsedSpec, SpecDiff } from "../../apis";
 
 /**
- * The version of what Studio and its thread script say to each other. A
- * thread script built from other source — a `lib` older than the source
- * Studio runs from — says another, or nothing, and is not asked anything.
- * It changes whenever a job, a reply or the greeting changes shape.
+ * The version of what Studio and its spec worker script say to each other.
+ * A script built from other source — a `lib` older than the source Studio
+ * runs from — says another, or nothing, and is not asked anything. It
+ * changes whenever a job, a reply or the greeting changes shape.
  */
-export const SPEC_THREAD_PROTOCOL = 3;
+export const SPEC_JOB_PROTOCOL = 4;
 
-/** What a thread says once its script has loaded, before it answers any job. */
-export interface ThreadReady {
-  kind: "thread:ready";
+/** What a worker process says once its script has loaded, before it is given its job. */
+export interface WorkerReady {
+  kind: "worker:ready";
   protocol: number;
 }
 
@@ -41,7 +41,7 @@ export interface SpecDiffJob {
   newSpec: ParsedSpec;
 }
 
-/** What a thread is asked to do. */
+/** What a worker process is asked to do. */
 export type SpecJob = SpecReadJob | SpecGenerateJob | SpecDiffJob;
 
 /** A job's input is at fault — no specification, a layout refused — and the message says why. */
@@ -58,7 +58,7 @@ export type SpecJobResult =
   | { kind: "spec:generate"; files: GeneratedFile[] }
   | { kind: "spec:diff"; diff: SpecDiff };
 
-/** What a thread answers a job: its result, or why the job's input has none. */
+/** What a worker process answers a job: its result, or why the job's input has none. */
 export type SpecJobReply = SpecJobResult | SpecJobRefusal;
 
 /** The reply to one kind of job. */
@@ -80,30 +80,30 @@ function fieldOf(value: unknown, key: string): unknown {
 }
 
 /**
- * Tell whether a thread's message is its greeting.
+ * Tell whether a worker process's message is its greeting.
  *
  * @param value - The message
- * @returns Whether it is a {@link ThreadReady}
+ * @returns Whether it is a {@link WorkerReady}
  * @example
  * ```ts
- * worker.on("message", (message) => isThreadReady(message) && check(message.protocol));
+ * child.on("message", (message) => isWorkerReady(message) && check(message.protocol));
  * ```
  */
-export function isThreadReady(value: unknown): value is ThreadReady {
+export function isWorkerReady(value: unknown): value is WorkerReady {
   return (
-    fieldOf(value, "kind") === "thread:ready" && typeof fieldOf(value, "protocol") === "number"
+    fieldOf(value, "kind") === "worker:ready" && typeof fieldOf(value, "protocol") === "number"
   );
 }
 
 /**
- * Tell whether a message to a thread is a job. Studio alone posts to its
- * threads, so the kind is what tells a job from a file to format.
+ * Tell whether a message to a worker process is a job: Studio alone writes
+ * to its worker processes, and a message of another kind is not one.
  *
  * @param value - The message
  * @returns Whether it is a {@link SpecJob}
  * @example
  * ```ts
- * parentPort?.on("message", (message) => isSpecJob(message) && answer(message));
+ * process.on("message", (message) => isSpecJob(message) && answer(message));
  * ```
  */
 export function isSpecJob(value: unknown): value is SpecJob {
@@ -111,14 +111,14 @@ export function isSpecJob(value: unknown): value is SpecJob {
 }
 
 /**
- * Tell whether a thread's message answers a job of the kind given.
+ * Tell whether a worker process's message answers a job of the kind given.
  *
  * @param value - The message
- * @param kind - The kind of job the thread was given
+ * @param kind - The kind of job the process was given
  * @returns Whether it is the reply to such a job
  * @example
  * ```ts
- * worker.on("message", (message) => isReplyTo(message, "spec:read") && settle(message));
+ * child.on("message", (message) => isReplyTo(message, "spec:read") && settle(message));
  * ```
  */
 export function isReplyTo<TKind extends SpecJob["kind"]>(

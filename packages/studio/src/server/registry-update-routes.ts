@@ -35,7 +35,7 @@ interface CheckedImport {
 /**
  * Mount the routes that check an import's upstream spec for changes: one
  * import, or every import the config Studio runs declares. A check stops —
- * its fetches, and its reads in threads, which leave their places — once
+ * its fetches, and its reads in processes, which leave their places — once
  * its caller has gone, and then records nothing: no check failed.
  *
  * @param app - The Studio server's Express app
@@ -102,7 +102,7 @@ async function checkOne(
     /* An empty body is text too: it fails as a specification below, and the route answers. */
     if (raw === null) return;
 
-    /* Read and hashed in a thread: only a specification that changed is
+    /* Read and hashed in a process: only a specification that changed is
        sent on, and refused when too large to send back. */
     const read = await readFetchedSpec(entry.from, raw, { signal });
     checkPinnedSpecHash(name, entry, read.hash);

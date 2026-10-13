@@ -1,6 +1,6 @@
 /**
  * Studio writes files by the rules the project keeps: its ESLint's fixes
- * and its Prettier's layout, each loaded once in a thread kept for the
+ * and its Prettier's layout, each loaded once in a process kept for the
  * project, its Biome run as its own program. A project with no rules gets
  * its files as Studio composed them.
  */
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { findFormatters } from "../../src/server/project-format/find-formatters";
 import { formatProjectFiles } from "../../src/server/project-format/format-project-files";
-import { closeFormatterThread } from "../../src/server/project-format/formatter-host";
+import { closeFormatProcesses } from "../../src/server/project-format/formatter-host";
 
 const INSTALLED = fileURLToPath(new URL("../../../../node_modules/", import.meta.url));
 const made: string[] = [];
@@ -29,7 +29,7 @@ function project(files: Record<string, string>, installed: readonly string[] = [
 
 afterEach(async () => {
   for (const root of made.splice(0)) {
-    await closeFormatterThread(root);
+    await closeFormatProcesses(root);
     rmSync(root, { recursive: true, force: true });
   }
 });

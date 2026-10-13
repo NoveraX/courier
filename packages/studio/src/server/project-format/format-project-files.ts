@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type FormatterTool, findFormatters, type ProjectFormatters } from "./find-formatters";
-import { formatInThread } from "./formatter-host";
+import { formatInProcess } from "./formatter-host";
 import { runBiome } from "./run-biome";
 
 const log = createLogger("Studio");
@@ -72,7 +72,7 @@ export async function formatProjectFiles<TFile extends ComposedFile>(
   return { files: await inParallel(files, formatOne), formattedWith, problem };
 }
 
-/* A text after one tool: Biome as its own program, ESLint and Prettier in the project's threads. */
+/* A text after one tool: Biome as its own program, ESLint and Prettier in the project's formatter processes. */
 function runTool(
   tool: FormatterTool,
   path: string,
@@ -81,7 +81,7 @@ function runTool(
   stamp: string,
 ): Promise<string> {
   if (tool.name === "Biome") return runBiome(tool.command, path, text, root);
-  return formatInThread(root, stamp, { tool: tool.name, module: tool.module, root, path, text });
+  return formatInProcess(root, stamp, { tool: tool.name, module: tool.module, root, path, text });
 }
 
 /* The text as the tools leave it once another pass through them changes nothing. A tool

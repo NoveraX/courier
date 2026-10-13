@@ -1,4 +1,4 @@
-/** A file the formatter thread is asked to run one tool on. */
+/** A file a formatter process is asked to run one tool on. */
 export interface FormatRequest {
   id: number;
   /** The tool: ESLint applies its fixes, Prettier formats. */
@@ -12,11 +12,11 @@ export interface FormatRequest {
   text: string;
 }
 
-/** What the formatter thread answers: the text as the tool leaves it, or why it could not. */
+/** What a formatter process answers: the text as the tool leaves it, or why it could not. */
 export type FormatReply = { id: number; text: string } | { id: number; error: string };
 
 /**
- * Tell whether a message from the formatter thread is a reply.
+ * Tell whether a message from a formatter process is a reply.
  *
  * @param value - The message
  * @returns Whether it answers a request
@@ -30,7 +30,7 @@ export function isFormatReply(value: unknown): value is FormatReply {
 }
 
 /**
- * Tell whether a message to the formatter thread is a request.
+ * Tell whether a message to a formatter process is a request.
  *
  * @param value - The message
  * @returns Whether it asks for a file to be formatted

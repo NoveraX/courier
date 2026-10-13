@@ -1,6 +1,6 @@
 import { diffSpecs, generateCode } from "../../apis";
 import { readSpecJob } from "./read-spec-job";
-import type { SpecJob, SpecJobReply } from "./spec-thread-protocol";
+import type { SpecJob, SpecJobReply } from "./spec-job-protocol";
 
 /* What a job's refusal says when what it threw carries no message. */
 const FAILED: Readonly<Record<SpecJob["kind"], string>> = {
@@ -10,7 +10,7 @@ const FAILED: Readonly<Record<SpecJob["kind"], string>> = {
 };
 
 /**
- * Do a job in the thread it was posted to: read a specification, generate
+ * Do a job in the process it was given to: read a specification, generate
  * an import's code from one, or compare two. Whatever the job throws is
  * its input's fault, as the routes that ran it in Studio's own thread
  * answered it, and the reply says why.

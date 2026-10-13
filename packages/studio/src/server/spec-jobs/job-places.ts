@@ -3,7 +3,7 @@ import { availableParallelism } from "node:os";
 import { createCapacity } from "../capacity";
 import { StudioBusyError } from "../studio-busy-error";
 import { createWaitingPlaces } from "../waiting-places";
-import type { ThreadRun } from "./run-in-thread";
+import type { JobRun } from "./run-in-process";
 
 /** How many jobs Studio runs at once for callers without the token: reads, code and comparisons together. */
 export const VISITOR_JOBS = 2;
@@ -17,8 +17,8 @@ export const TRUSTED_JOBS = Math.max(1, Math.min(4, availableParallelism() - 1))
 
 /*
  * One count for the whole process, whichever Studio in it a caller reached:
- * the threads take this machine's memory and cores, which every Studio in
- * the process shares.
+ * the jobs' processes take this machine's memory and cores, which every
+ * Studio in the process shares.
  */
 const visitorJobs = createCapacity(VISITOR_JOBS);
 const trustedJobs = createWaitingPlaces(TRUSTED_JOBS);
@@ -29,8 +29,8 @@ const BUSY = `Studio works on up to ${VISITOR_JOBS} specifications at once for p
  * Run a job in one of the places Studio keeps for its caller's kind: a
  * caller without the token is refused when every place for such callers is
  * taken, so that none of them waits on another; a caller with it waits its
- * turn. The place is held until the job's thread has exited, its heap
- * freed — not only until the job answered — so no more threads than there
+ * turn. The place is held until the job's process has ended, its memory
+ * freed — not only until the job answered — so no more processes than there
  * are places hold memory at once; the caller has its answer meanwhile.
  *
  * @param trusted - Whether the caller holds the project's token
@@ -42,16 +42,16 @@ const BUSY = `Studio works on up to ${VISITOR_JOBS} specifications at once for p
  * @throws What starting the job throws, its place given back at once
  * @example
  * ```ts
- * const reply = await inThreadPlace(trusted, signal, () => runInThread(job, budget, signal));
+ * const reply = await inJobPlace(trusted, signal, () => runInProcess(job, budget, signal));
  * ```
  */
-export async function inThreadPlace<TReply>(
+export async function inJobPlace<TReply>(
   trusted: boolean,
   signal: AbortSignal | undefined,
-  run: () => ThreadRun<TReply>,
+  run: () => JobRun<TReply>,
 ): Promise<TReply> {
   const leave = await placeFor(trusted, signal);
-  let started: ThreadRun<TReply>;
+  let started: JobRun<TReply>;
   try {
     started = run();
   } catch (error) {

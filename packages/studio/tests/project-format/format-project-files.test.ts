@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { findFormatters } from "../../src/server/project-format/find-formatters";
 import { formatProjectFiles } from "../../src/server/project-format/format-project-files";
+import { closeFormatProcesses } from "../../src/server/project-format/formatter-host";
 
 const INSIDE = fileURLToPath(
   new URL("../../../../node_modules/.cache/courier-format-tests/", import.meta.url),
@@ -24,9 +25,12 @@ function project(files: Record<string, string>, base = INSIDE): string {
   return root;
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks();
-  for (const root of made.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of made.splice(0)) {
+    await closeFormatProcesses(root);
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 const COMPOSED = [

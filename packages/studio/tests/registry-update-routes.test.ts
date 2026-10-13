@@ -6,6 +6,7 @@
  * keep. The update check sent no auth and compared no hash, and the
  * generator read neither the transform nor the selectors.
  */
+import type * as ChildProcesses from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -22,19 +23,28 @@ import {
 } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Worker } from "node:worker_threads";
 import { io as connect } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
+import type { Forked } from "./helpers/forked-processes";
 import { tokenHeader } from "./helpers/token-header";
+
+const forks = vi.hoisted((): Forked[] => []);
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const real = await importOriginal<typeof ChildProcesses>();
+  const { recordingFork } = await import("./helpers/forked-processes");
+  return { ...real, fork: recordingFork(real.fork, forks) };
+});
 
 let root: string;
 let studio: StudioServer | undefined;
 
 beforeEach(() => {
+  forks.splice(0);
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-update-check-")));
@@ -444,25 +454,20 @@ describe("a check whose caller goes away", () => {
     });
     stops.push(() => spec.close());
     const url = await start(urlImports({ pets: `${spec.url}/spec.yaml` }));
-    const posted = vi.spyOn(Worker.prototype, "postMessage");
     const check = abandoned(url, "/api/apis/imports/check-updates", { name: "pets" });
-    await vi.waitUntil(() => readingThread(posted) !== undefined, { timeout: 10_000 });
+    await vi.waitUntil(() => reading() !== undefined, { timeout: 10_000 });
     const left = Date.now();
 
     check.leave();
 
     expect(await check.answered).toBe("left");
-    await vi.waitUntil(() => readingThread(posted)?.threadId === -1, { timeout: 1_500 });
+    await vi.waitUntil(() => reading()?.closed, { timeout: 1_500 });
     expect(Date.now() - left).toBeLessThan(1_500);
     expect(await checksShown(url)).toEqual([undefined]);
   }, 30_000);
 });
 
-/* The thread Studio posted a specification to read, once it has. */
-function readingThread(posted: {
-  mock: { calls: unknown[][]; contexts: unknown[] };
-}): Worker | undefined {
-  const index = posted.mock.calls.findIndex(([job]) => field(job, "kind") === "spec:read");
-  const thread = posted.mock.contexts[index];
-  return thread instanceof Worker ? thread : undefined;
+/* The process Studio gave a specification to read, once it has. */
+function reading(): Forked | undefined {
+  return forks.find((fork) => fork.sent.some((job) => field(job, "kind") === "spec:read"));
 }

@@ -22,13 +22,14 @@ export interface ParsedSpec {
 }
 
 /**
- * An operation dropped during parsing, kept so an import can say what it left
- * behind instead of silently reporting a smaller endpoint count.
+ * Something dropped during parsing — an operation, or a part of one or of a
+ * schema — kept so an import can say what it left behind instead of
+ * silently reporting a smaller endpoint count or checking less.
  */
 export interface SkippedOperation {
-  /** Uppercased HTTP method, e.g. "OPTIONS" */
+  /** Uppercased HTTP method, e.g. "OPTIONS"; `ALL` for a whole path item, `PATTERN` for a schema's pattern */
   method: string;
-  /** Path as written in the spec */
+  /** Path as written in the spec; for a pattern, the JSON pointer of the schema that writes it */
   path: string;
   reason: string;
 }

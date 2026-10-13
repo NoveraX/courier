@@ -86,13 +86,18 @@ http.options(":id", vars)     // OPTIONS /users/5 — what the resource allows
 http.query("search", vars)    // QUERY /users/search with JSON body — a read
 ```
 
-The second argument is what the call sends: the body of a write or a QUERY, or the query string of any other read. Left out, the endpoint's own variables are sent; passed as `undefined`, nothing is, so a write can put a value in the query string alone. The path is filled from the endpoint's variables either way:
+The second argument is what the call sends: the body of a write or a QUERY, or the query string of any other read. Left out, the endpoint's own variables are sent; passed as `undefined`, nothing is, so a write can put a value in the query string alone. The path is filled from the endpoint's variables either way, and a key of the second argument that names one of the path's parameters is taken out of what is sent, as it is from the variables — a value there neither changes the path nor reaches the body. To send a path parameter in the body too, give the whole body in the third argument's `json`, which is sent as it is — the variables then only fill the path, as the DELETE below shows:
 
 ```ts
 endpoint
   .variables<{ id: number; name: string }>()
   .via((http, { name }) => http.post(":id/rename", undefined, { searchParams: { name } }))
 // → POST /pets/5/rename?name=rex  (no body)
+
+endpoint
+  .variables<{ id: number; name: string }>()
+  .via((http, v) => http.put(":id", { id: v.id, name: v.name }))
+// → PUT /pets/5  Body: {"name":"rex"} — :id takes the id, and the body leaves it out
 ```
 
 The third argument takes per-call options. A `body` or `json` named there is sent as the request body, and the variables then only fill the path; its `headers` are sent as written, whatever their name. This is also how a DELETE carries a body, for an API that requires one:

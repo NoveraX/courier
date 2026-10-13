@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Type-safe HTTP for any backend: define your API once in plain TypeScript and call it from server code and the browser — validated, with middleware, SSE, WebSockets and a secure proxy, no codegen",
   "keywords": [
     "courier",

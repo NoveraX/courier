@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-mock",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Mock servers for Courier: typed handlers, a SQLite-backed store, scenarios and network faults, with test utilities, contract tests and fixtures",
   "keywords": [
     "courier",
@@ -84,7 +84,7 @@
   },
   "peerDependencies": {
     "@hono/node-server": "^1.19.0 || ^2.0.0",
-    "@noverax/courier": "*",
+    "@noverax/courier": "^0.1.0",
     "hono": ">=4",
     "ws": ">=8"
   },

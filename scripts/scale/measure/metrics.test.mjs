@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { measured, percentiles, report } from "./metrics.mjs";
+import { measured, percentiles, report, statTicks } from "./metrics.mjs";
 
 describe("a figure", () => {
   it("is within its budget at or under it, or at or over it where more is better", () => {
@@ -53,5 +53,14 @@ describe("the report", () => {
       expect.stringMatching(/^✓ a\s+1 ms\s+budget 2$/),
       expect.stringMatching(/^✗ bb\s+3 ms\s+budget 2 {2}— slow$/),
     ]);
+  });
+});
+
+describe("a process's processor time on Linux", () => {
+  it("is its user and system ticks, read after a name that holds spaces and parentheses", () => {
+    const stat =
+      "4221 (MainThread (worker) 2) S 1 4221 4221 0 -1 4194560 9128 0 3 0 1500 237 4 9 20 0 11 0 8123 1103466496 52011";
+
+    expect(statTicks(stat)).toBe(1737);
   });
 });

@@ -15,6 +15,14 @@ afterAll(removeProjects);
 
 const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
 
+/* The release the command installs Courier's packages at: its own. */
+const VERSION: unknown = JSON.parse(readFileSync(join(PACKAGE, "package.json"), "utf8")).version;
+
+/* One of Courier's packages as the command names it: at its release, bare from a build with none. */
+function released(name: string): string {
+  return VERSION === "0.0.0" ? name : `${name}@^${String(VERSION)}`;
+}
+
 function run(args: readonly string[]) {
   const result = spawnSync(process.execPath, ["--import", "tsx", "src/cli.ts", ...args], {
     cwd: PACKAGE,
@@ -103,7 +111,9 @@ describe("create-courier", () => {
 
     expect(status).toBe(0);
     expect(out).toContain("Install the packages to finish:");
-    expect(out).toContain("npm install @noverax/courier @noverax/courier-next");
+    expect(out).toContain(
+      `npm install ${released("@noverax/courier")} ${released("@noverax/courier-next")}`,
+    );
     expect(out).not.toContain("Courier is set up.");
     expect(out).toContain("npm run studio");
   }, 60_000);

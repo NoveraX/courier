@@ -3,11 +3,10 @@ import { useState } from "react";
 
 import { MEDIA } from "@/design/breakpoints";
 import { endpointKey } from "@/features/explorer/endpoint-key";
+import { editorCheckOf } from "@/features/playground/editor-check";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import type { FormBodyField } from "@/features/playground/form-body";
 import { emptyField } from "@/features/playground/form-body";
-import type { InputCheck } from "@/features/playground/input-check";
-import { headersCheckOf, variablesCheckOf } from "@/features/playground/input-check";
 import { parseJsonc } from "@/features/playground/jsonc-helpers";
 import { proxyRouteOf } from "@/features/playground/proxy-route";
 import { requestUrlParts } from "@/features/playground/request-url";
@@ -81,12 +80,11 @@ export function PlaygroundWorkspace({
   const parts = requestUrlParts(endpoint, parsed.ok ? parsed.value : undefined);
   const name = [endpoint.group, endpoint.method].filter(Boolean).join(".");
   const asForm = bodyKind === "form" && endpoint.transport === "http";
-  const check: InputCheck =
-    tab === "headers"
-      ? headersCheckOf(editors.headers.text)
-      : asForm
-        ? { tone: "ok", label: "Sent as multipart form data in place of the variables" }
-        : variablesCheckOf(editors.variables.text, endpoint.def.variablesFields, name);
+  const check = editorCheckOf(
+    { tab, variables: editors.variables.text, headers: editors.headers.text, asForm },
+    endpoint.def,
+    name,
+  );
   const run = usePlaygroundRun({
     endpoint,
     variables: editors.variables.text,

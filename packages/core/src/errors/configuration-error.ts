@@ -223,6 +223,8 @@ export type ConfigurationErrorCode =
   | "BOUNDARY_MISMATCH"
   /** An API's `cancelPrevious` names a path that is not one of its reads. */
   | "CANCEL_PREVIOUS_INVALID"
+  /** An endpoint's `.defaults()` is no object of data a request can carry. */
+  | "DEFAULTS_INVALID"
   /** The proxy's `rateLimit` cannot work as written: a budget that is not a positive count over a positive window, or a key or a store that is not one. */
   | "RATE_LIMIT_INVALID"
   /**

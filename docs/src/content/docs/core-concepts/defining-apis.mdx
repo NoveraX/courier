@@ -193,6 +193,31 @@ endpoint.get(":id/posts/:postId").variables<{ id: string; postId: string }>().re
 
 A parameter can also come from `pathOptions` on the source or the group, so the variables type does not have to list it. One that neither provides fails the call before any request is made, with an `HTTPError` 400 whose message names it: `Missing required path parameter "postId": pass it in the variables, or return it from pathOptions`. See [Path Parameters](/docs/advanced/path-params).
 
+### Default variables
+
+Some APIs ask for a variable that is nearly always the same — a page size, a grouping. `.defaults()` names what the endpoint sends when a call leaves a variable out, and the caller may then leave it out:
+
+```ts
+const { endpoint } = courier()
+
+const news = defineGroup({
+  prefix: "news",
+  endpoints: {
+    byGroup: endpoint
+      .get("")
+      .variables<{ group: string; groupBy: "year" | "month"; page?: number }>()
+      .defaults({ groupBy: "year" }),
+  },
+})
+
+// caller.news.byGroup({ group: "press" })                   → GET /news?group=press&groupBy=year
+// caller.news.byGroup({ group: "press", groupBy: "month" }) → GET /news?group=press&groupBy=month
+```
+
+The call's own value wins, and a variable sent as `undefined` counts as left out. The defaults are filled in where the call is made — on the server for a browser's call through the proxy, which therefore sends less — and before the variables are validated, so a schema that requires `groupBy` passes. They are copied into each call, the top-level variables only, and variables that are no object, a form say, are left as they are. A default names a variable the endpoint has, as data a request can carry; anything else is refused where the endpoint is defined, with `ConfigurationError("DEFAULTS_INVALID")`. A second `.defaults()` adds to the first.
+
+Studio's Playground starts the endpoint with its defaults set and lists each as the default it is, the OpenAPI document gives each its `default` and no longer requires it, and an agent's tool shows it the same way.
+
 ### One call per slot
 
 `.variables()`, `.response()` and `.send()` each fill a slot, and a slot takes one schema or type: a second call would replace the first. It type-checks, but throws `ConfigurationError("SLOT_ALREADY_SET")` as soon as the module defining the endpoint loads, naming the slot and the endpoint:
@@ -216,6 +241,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.meta(values)` | values for your own tooling; the runtime ignores them |
 | `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
 | `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()`. A write declared one loses what guards a write — see [User Sessions](/docs/server-side/session#writes-another-site-sets-off) |
+| `.defaults(values)` | what an HTTP endpoint sends for variables a call leaves out — see [Default variables](#default-variables) |
 | `.agent({ description, access })` | offers the endpoint to AI agents as a tool of your MCP server — named on an HTTP endpoint after its verb, and not passed on by a base; see [MCP Server](/docs/agents/overview) |
 
 A verb also takes options for that endpoint alone:

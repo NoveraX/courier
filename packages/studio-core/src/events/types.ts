@@ -104,6 +104,8 @@ export interface SourceMap {
             variablesStub?: Record<string, unknown>;
             /** The fields the variables schema declares, with their types and whether each is required */
             variablesFields?: SchemaField[];
+            /** What the endpoint's `.defaults()` fills in for a variable a call leaves out */
+            variablesDefaults?: Record<string, unknown>;
             /** Transport mode — only present for non-HTTP endpoints */
             transport?: "sse" | "ws";
             /** True when WS channel has a receive schema (bidirectional) */

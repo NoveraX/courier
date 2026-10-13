@@ -1,4 +1,5 @@
 import type { AnySource, Sources } from "../define/types";
+import { withVariableDefaults } from "../define/variable-defaults";
 import type { CallOptions, Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import { resolveEndpoint } from "./execute-resolve";
@@ -124,6 +125,7 @@ export function resolveCallTarget(
 
   const target = {
     ...call,
+    variables: withVariableDefaults(schema?.defaults, call.variables),
     dataSource,
     endpoint,
     endpointGroup,

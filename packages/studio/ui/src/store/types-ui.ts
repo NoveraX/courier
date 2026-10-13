@@ -25,6 +25,8 @@ export interface CatalogEndpoint {
   variablesStub?: Record<string, unknown>;
   /** The fields the variables schema declares, with their types and whether each is required */
   variablesFields?: SchemaField[];
+  /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
+  variablesDefaults?: Record<string, unknown>;
   origin: "scan" | "runtime" | "both";
   /** Transport mode — only present for SSE/WS endpoints */
   transport?: "sse" | "ws";

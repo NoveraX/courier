@@ -13,6 +13,7 @@ interface SchemaMetadata {
   type?: "query" | "mutation";
   transport?: "http" | "sse" | "ws";
   receive?: unknown;
+  defaults?: Readonly<Record<string, unknown>>;
 }
 
 /**
@@ -94,6 +95,7 @@ export function extractEndpoints(
       ...(httpMethod && { httpMethod }),
       ...(variablesStub && { variablesStub }),
       ...(variablesFields && { variablesFields }),
+      ...(schema?.defaults && { variablesDefaults: { ...schema.defaults } }),
       ...(transport && transport !== "http" && { transport }),
       ...(transport === "ws" && schema?.receive ? { hasReceiveSchema: true } : {}),
       ...(probed.served && { served: true }),

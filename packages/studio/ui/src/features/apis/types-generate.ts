@@ -94,6 +94,8 @@ export interface EndpointAnalysis {
   variablesStub?: Record<string, unknown>;
   /** The fields its variables schema declares, with their types and whether each is required. */
   variablesFields?: SchemaField[];
+  /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
+  variablesDefaults?: Record<string, unknown>;
   /** A channel whose messages from the client have a schema. */
   hasReceiveSchema?: true;
   /** A stream or a channel the app serves itself, rather than an upstream. */

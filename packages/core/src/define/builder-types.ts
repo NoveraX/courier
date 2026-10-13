@@ -198,6 +198,25 @@ export interface HttpAddressed<
     ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
   ): HttpAddressed<TResponse, TIn, TOut, TKind, TParams>;
   /**
+   * What the endpoint sends for variables a call leaves out — a page size, a
+   * grouping the API asks for — so a call may leave them out. The call's own
+   * value wins. They are filled in where the call is made, on the server for
+   * a browser's call through the proxy, before the variables are validated,
+   * and Studio, the OpenAPI document and an agent's tool show them.
+   *
+   * @example
+   * ```ts
+   * endpoint
+   *   .get("news")
+   *   .variables<{ group: string; groupBy: "year" | "month" }>()
+   *   .defaults({ groupBy: "year" });
+   * // news({ group: "press" }) sends groupBy=year
+   * ```
+   */
+  defaults<const TDefaults extends DefaultsOf<TVariables>>(
+    values: TDefaults & Record<Exclude<keyof TDefaults, keyof TVariables>, never>,
+  ): HttpAddressed<TResponse, WithDefaults<TVariables, TDefaults>, TVariablesOut, TKind, TParams>;
+  /**
    * How long the answer keeps.
    *
    * Offered on a read alone: its argument is `never` once the verb writes, so
@@ -243,6 +262,22 @@ export interface HttpAddressed<
       | false,
   ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
 }
+
+/** The variables `.defaults()` may fill in: any of those a call passes. */
+type DefaultsOf<TVariables> = TVariables extends object
+  ? { [K in keyof TVariables]?: TVariables[K] }
+  : never;
+
+/**
+ * The variables a call passes once `.defaults()` fills some in: those it
+ * fills in become optional, the rest stay as they were — written as one
+ * object, as an editor shows it.
+ */
+type WithDefaults<TVariables, TDefaults> = {
+  [K in keyof TVariables as K extends keyof TDefaults ? never : K]: TVariables[K];
+} & { [K in keyof TVariables & keyof TDefaults]?: TVariables[K] } extends infer TMerged
+  ? { [K in keyof TMerged]: TMerged[K] }
+  : never;
 
 /** What naming a verb and a path gives: the endpoint, with its path's parameters. */
 export type HttpAddressedAt<

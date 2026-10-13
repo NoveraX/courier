@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 
+import { changedLines } from "../../src/edit/line-diff";
 import { buildPlan, changesAnything } from "../../src/plan/build-plan";
 import type { Recipe } from "../../src/recipes/recipe-types";
 import { contextOf, manifest, projectWith, removeProjects } from "../recipes/project-fixture";
@@ -133,6 +134,26 @@ describe("buildPlan", () => {
       const plan = buildPlan(contextOf(root, "typescript"), RECIPE);
       expect(plan.manual.map((each) => each.file)).not.toContain("tsconfig.json");
     }
+  });
+
+  it("edits a package.json written with CRLF where it changes, and keeps its line ends", () => {
+    const written = manifest(
+      { zod: "^4.0.0", typescript: "^6.0.0" },
+      { scripts: { dev: "next dev" } },
+    );
+    const crlf = written.replace(/\n/g, "\r\n");
+    const root = projectWith({ "package.json": crlf, "tsconfig.json": "{}" });
+
+    const edit = buildPlan(contextOf(root, "zod"), RECIPE).edits.find(
+      (each) => each.path === "package.json",
+    );
+
+    expect(edit?.after.split("\r\n").length).toBe(edit?.after.split("\n").length);
+    expect(changedLines(edit?.before ?? "", edit?.after ?? "")).toEqual([
+      { sign: "-", line: expect.any(Number), text: '    "dev": "next dev"' },
+      { sign: "+", line: expect.any(Number), text: '    "dev": "next dev",' },
+      { sign: "+", line: expect.any(Number), text: '    "studio": "courier-studio"' },
+    ]);
   });
 
   it("changes nothing in a project set up already", () => {

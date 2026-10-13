@@ -36,8 +36,9 @@ function suffixTable(before: readonly string[], after: readonly string[]): Int32
  * ```
  */
 export function changedLines(before: string, after: string): ChangedLine[] {
-  const from = before.split("\n");
-  const to = after.split("\n");
+  /* A line's CRLF end is no part of what it says. */
+  const from = before.split(/\r?\n/);
+  const to = after.split(/\r?\n/);
   const table = suffixTable(from, to);
   const width = to.length + 1;
   const changed: ChangedLine[] = [];

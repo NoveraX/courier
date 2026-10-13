@@ -44,13 +44,16 @@ describe("the HAR a recorder exports", () => {
     const recorder = createRecorder({ source: api, targetUrl: url });
     const callStartedAt = Date.now();
     await recorder.client.users.getAll();
+    const answeredAt = Date.now();
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const [entry] = recorder.toHar().log.entries;
     const [fixture] = recorder.getFixtures();
+    const startedAt = Date.parse(entry?.startedDateTime ?? "");
 
     expect(entry?.startedDateTime).toBe(fixture?.recordedAt);
-    expect(Date.parse(entry?.startedDateTime ?? "") - callStartedAt).toBeLessThan(50);
+    expect(startedAt).toBeGreaterThanOrEqual(callStartedAt);
+    expect(startedAt).toBeLessThanOrEqual(answeredAt);
   });
 
   it("matches the HAR its fixtures convert to", async () => {

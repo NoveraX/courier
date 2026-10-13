@@ -61,6 +61,7 @@ describe("the slow-network preset", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name: "Dana" }),
     };
-    expect(await elapsed("/users", init)).toBeLessThan(100);
+    /* Under the 300 ms the preset's latency starts at. */
+    expect(await elapsed("/users", init)).toBeLessThan(250);
   });
 });

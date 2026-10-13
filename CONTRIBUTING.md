@@ -207,7 +207,8 @@ the version bump: `fix` and `perf` release a patch, `feat` a minor version.
 While the packages are below 1.0, a breaking change — a `!` or a
 `BREAKING CHANGE:` footer — releases a minor version too; the release rule
 that says so in `.releaserc.json` is removed to cut 1.0. Before anything is
-tagged, the release checks that its npm token is accepted.
+tagged, the release checks that npm will take every package from it
+(`scripts/check-npm-publishing.ts`).
 
 Work that changes no package — the scopes `docs`, `site`, `landing`,
 `examples`, `scripts` and `release` — releases nothing whatever its type, and
@@ -226,7 +227,7 @@ no release to approve; Re-run failed jobs runs those jobs again and, once
 they pass, brings the release job back with them. A newer push to `master`
 cancels the older runs that have not started releasing, and the release
 refuses a commit that is no longer the newest on `master`. The environment
-holds the npm and Open VSX tokens and the Marketplace publisher's identity.
+holds the Open VSX token and the Marketplace publisher's identity.
 The release publishes every package to npm, and the editor extensions, at
 the same version, to the Visual Studio Marketplace and Open VSX, each the
 environment gives it a way in to. The Extensions workflow publishes the
@@ -251,6 +252,24 @@ Open VSX alone and keeps both packages as the run's `editor-extensions`
 artifact. They are uploaded by hand on the publisher's page at
 marketplace.visualstudio.com/manage, Courier File Icons first, since Courier
 installs it.
+
+npm takes the packages through trusted publishing, with no token: each
+package names this repository's `ci.yml` and its `release` environment as
+its trusted publisher, and npm exchanges the release job's own short-lived
+identity for the right to publish it, with provenance. A package is set up
+once by a maintainer signed in to npm:
+
+```bash
+npm trust github @noverax/courier --file ci.yml --repo NoveraX/courier --env release --allow-publish
+```
+
+`npm trust list @noverax/courier` shows what a package trusts. Before it tags
+anything, the release asks npm, for every package, to make that exchange; a
+package with no trusted publisher yet is published with the `NPM_TOKEN` the
+environment holds, and the run names it with the command above. Once every
+package is set up, the token is deleted from the environment, and each
+package refuses tokens altogether with
+`npm access set mfa=publish @noverax/courier`.
 
 The packages are published by `scripts/release.ts` with the npm that comes
 with Node, never by semantic-release's own npm plugin, which `.releaserc.json`

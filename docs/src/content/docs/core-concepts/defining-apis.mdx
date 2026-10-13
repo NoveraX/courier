@@ -292,7 +292,7 @@ defineApi({
   timeout: 10000,
   headers: { "X-API-Version": "2" },
   responseType: "json",         // "json" | "text" | "blob" | "arrayBuffer" | "formData"
-  deduplicate: true,            // automatic request deduplication
+  cancelPrevious: ["users.search"], // a newer search cancels the one in flight
   defaultBody: { lang: "en" },
   defaultQueryParams: { format: "json" },
 })

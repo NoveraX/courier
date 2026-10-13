@@ -21,7 +21,8 @@ type BaseOptions = {
   allowedHeaders?: string[]                      // Additional header names to forward
 
   // Behavior
-  deduplicate?: boolean                          // Enable request deduplication
+  coalesce?: boolean                             // Identical reads in flight share one request (default: true)
+  cancelPrevious?: readonly string[]             // Reads a newer call cancels, such as ["users.search"]
   timeout?: number                               // Request timeout in ms
   headers?: HeadersInit                          // Static headers for all requests
   credentials?: RequestCredentials               // Cookie handling mode
@@ -79,6 +80,7 @@ type CallOptions = {
   forwardVariables?: boolean     // Pass variables to method body (default: true)
   method?: "GET" | "POST"       // Verb sent to the proxy (default: GET for a read, POST for a write)
   signal?: AbortSignal           // Manual abort signal
+  coalesce?: boolean             // false: never join an identical read in flight
   timeout?: number               // Per-request timeout override
   headers?: HeadersInit          // Per-request header overrides
   cache?: RequestCache           // Fetch cache mode
@@ -244,5 +246,5 @@ The `credentials` option controls cookie handling:
 - [Middleware](/docs/advanced/middleware) — composable middleware for auth, logging, retry, and more
 - [Raw Data Mode](/docs/advanced/raw-data) — using `.raw` to access status codes and headers
 - [Streaming](/docs/advanced/streaming) — enabling stream mode for ReadableStream responses
-- [Abort & Deduplication](/docs/advanced/abort) — automatic request deduplication with abort signals
+- [Deduplication & Abort](/docs/advanced/abort) — identical reads sharing one request, cancelling a superseded search, aborting a call
 - [Proxies & Certificates](/docs/advanced/proxies-and-certificates) — a corporate proxy, an internal certificate authority, a client certificate

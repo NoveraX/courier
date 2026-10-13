@@ -36,8 +36,7 @@ export const RUNTIME_EVENT_TYPES: readonly string[] = [
   "cache:miss",
   "cache:store",
   "cache:invalidate",
-  "dedup:reuse",
-  "dedup:abort",
+  "call:superseded",
   "upload:progress",
   "upload:complete",
 ];

@@ -126,7 +126,7 @@ export interface RequestLifecycleHooks {
   onRequestAbort?:
     | ((event: {
         id: string;
-        reason: "deduplication" | "manual" | "timeout";
+        reason: "superseded" | "manual" | "timeout";
         timestamp: number;
       }) => void)
     | undefined;

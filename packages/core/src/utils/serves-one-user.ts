@@ -9,7 +9,7 @@ import { isReactNative } from "./is-react-native";
  * @returns `true` in a browser or a React Native app
  * @example
  * ```ts
- * const dedupes = servesOneUser() && kind === "query";
+ * const cancels = servesOneUser() && kind === "query";
  * ```
  */
 export function servesOneUser(): boolean {

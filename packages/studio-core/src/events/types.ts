@@ -37,9 +37,8 @@ export type EventType =
   | "cache:miss"
   | "cache:store"
   | "cache:invalidate"
-  // Deduplication
-  | "dedup:abort"
-  | "dedup:reuse"
+  // A call a newer one cancelled
+  | "call:superseded"
   // Upload
   | "upload:progress"
   | "upload:complete"

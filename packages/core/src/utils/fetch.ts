@@ -6,8 +6,10 @@ import { assertAbsoluteUrl } from "./absolute-url";
 import { anySignal } from "./any-signal";
 import { holdsDeviceFiles } from "./device-files";
 import { fetchWithinOrigin } from "./fetch-within-origin";
+import { flightKey, isRead } from "./flight-key";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
+import { shareFlight } from "./shared-flight";
 import { timeoutSignal } from "./timeout-signal";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
@@ -31,6 +33,17 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   transport?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
   /** Sends the request in place of the platform's `fetch`: the source's own. */
   fetch?: PlatformFetch | undefined;
+  /**
+   * Join an identical read already in flight rather than send another — the
+   * default; `false` sends this one alone.
+   */
+  coalesce?: boolean | undefined;
+  /**
+   * The endpoint is declared a read, whatever verb carries it, or a write:
+   * which of them an identical request in flight may join. Unsaid, a request
+   * sent as `GET`, `HEAD` or `QUERY` reads.
+   */
+  reads?: boolean | undefined;
 };
 
 export async function coreFetch(
@@ -50,6 +63,8 @@ export async function coreFetch(
     withinOrigin,
     transport,
     fetch: send = fetch,
+    coalesce,
+    reads,
     ...rest
   } = options;
 
@@ -86,27 +101,43 @@ export async function coreFetch(
     method: normalizeHttpMethod(method),
     headers: requestHeaders,
     body: requestBody ?? null,
-    ...(finalSignal != null && { signal: finalSignal }),
     /* Fetch refuses a streamed body unless the request says so. React Native has no streams. */
     ...(typeof ReadableStream !== "undefined" &&
       requestBody instanceof ReadableStream && { duplex: "half" }),
   };
+  /* XMLHttpRequest reports an upload's progress, which fetch cannot, and
+     reads a file a React Native form names by where it is, which expo/fetch refuses. */
+  const sendOnce = (sendSignal: AbortSignal | undefined): Promise<Response> => {
+    const sent = sendSignal === undefined ? init : { ...init, signal: sendSignal };
+    if (transport) return transport(fullUrl, sent);
+    if (requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))) {
+      return sendWithUploadProgress(
+        fullUrl,
+        { ...sent, body: requestBody },
+        onUploadProgress ?? ignoreProgress,
+        { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
+      );
+    }
+    return withinOrigin && rest.redirect === undefined
+      ? fetchWithinOrigin(fullUrl, sent, send)
+      : send(fullUrl, sent);
+  };
+  const read = isRead(init.method, reads);
+  const key =
+    !read || coalesce === false || onDownloadProgress || onUploadProgress
+      ? undefined
+      : flightKey(init.method, fullUrl, requestHeaders, requestBody, {
+          ...rest,
+          withinOrigin,
+          fetch: send,
+          transport,
+        });
   let response: Response;
   try {
-    /* XMLHttpRequest reports an upload's progress, which fetch cannot, and
-       reads a file a React Native form names by where it is, which expo/fetch refuses. */
-    response = transport
-      ? await transport(fullUrl, init)
-      : requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))
-        ? await sendWithUploadProgress(
-            fullUrl,
-            { ...init, body: requestBody },
-            onUploadProgress ?? ignoreProgress,
-            { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
-          )
-        : withinOrigin && rest.redirect === undefined
-          ? await fetchWithinOrigin(fullUrl, init, send)
-          : await send(fullUrl, init);
+    response =
+      key === undefined
+        ? await sendOnce(finalSignal ?? undefined)
+        : await shareFlight(key, finalSignal ?? undefined, sendOnce);
   } catch (error) {
     throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   }

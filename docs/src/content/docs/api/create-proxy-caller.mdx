@@ -37,7 +37,8 @@ type ProxyCallerDefaults = {
   source?: Record<string, unknown>
   boundary?: ProxyBoundary
   timeout?: number
-  deduplicate?: boolean
+  cancelPrevious?: readonly string[]
+  coalesce?: boolean
   credentials?: RequestCredentials
   headers?: Record<string, string>
   onError?: (error: HTTPError) => void | Promise<void>
@@ -59,7 +60,8 @@ type WSAuthParams = Record<string, unknown>
 
 - `proxyPath` — per-transport proxy endpoint configuration. Each field accepts either a relative path (resolved against `location.origin`) or an absolute URL. Caller-level fields are merged per-transport over `source.options.proxyPath` from `defineApi`.
 - `source` — the result of `defineApi()`, or `boundary` — the result of `defineBoundary()`, which keeps the definition out of the browser bundle. One of them is required when the API has streams or channels: the type argument names each endpoint's transport, but only a runtime value tells the client which endpoints to open as a stream or a socket, so omitting both does not compile. The caller reads `proxyPath` from whichever is given as the source-level defaults.
-- `deduplicate` — cancel a call still in flight when the same endpoint is called again. Defaults to the source's own setting when `source` is given.
+- `cancelPrevious` — the reads a newer call cancels while they are still in flight, by their paths, such as `["users.search"]`; the cancelled call rejects with an `HTTPError` of status 499. Defaults to the source's own when `source` is given — see [Deduplication & Abort](/docs/advanced/abort#cancelling-the-previous-call).
+- `coalesce` — whether identical reads in flight together reach the proxy once, each call with a copy of the answer. On by default; `false` sends every call alone. Defaults to the source's own when `source` is given.
 - `timeout` — how long the browser waits for the proxy, in milliseconds. It is not sent to the server, so the endpoint's own `.timeout()` still bounds the upstream call; a timeout given with `.with()` for one call is sent.
 - `credentials` — whether the browser sends its cookies to the proxy route, with every call and stream. Defaults to `"include"`. The proxy forwards them to the backend only where the source or the endpoint names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 - `headers` — default headers merged into every request and stream, and sent in the first frame of every socket its channels open, which the proxy reads as the socket's own — a browser cannot put them on a WebSocket's handshake.

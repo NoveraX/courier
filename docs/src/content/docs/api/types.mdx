@@ -212,7 +212,7 @@ type BaseOptions = MergeOptions & FetchOptions & {
   allowedHeaders?: string[]
   bodySerializer?: (data: Record<string, unknown>) => BodyInit
   searchParamsSerializer?: SearchParamsSerializer
-  deduplicate?: boolean
+  cancelPrevious?: readonly string[]
   middleware?: Middleware[]
   expose?: boolean
   boundary?: ProxyBoundary

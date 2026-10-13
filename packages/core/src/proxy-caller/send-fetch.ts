@@ -23,7 +23,9 @@ export async function sendFetch(
     onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
   },
 ): Promise<unknown> {
-  const fetchOptions = withUploadInstrumentation(options);
+  const instrumented = withUploadInstrumentation(options);
+  /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
+  const fetchOptions = ctx.stream ? { ...instrumented, coalesce: false } : instrumented;
   const hasTimingHook = studioHooks.onProxyClientTiming !== undefined;
   const t0 = hasTimingHook ? performance.now() : 0;
 

@@ -221,6 +221,8 @@ export type ConfigurationErrorCode =
    * that keeps them out, which the browser would then send as GET.
    */
   | "BOUNDARY_MISMATCH"
+  /** An API's `cancelPrevious` names a path that is not one of its reads. */
+  | "CANCEL_PREVIOUS_INVALID"
   /** The proxy's `rateLimit` cannot work as written: a budget that is not a positive count over a positive window, or a key or a store that is not one. */
   | "RATE_LIMIT_INVALID"
   /**

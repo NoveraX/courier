@@ -2,8 +2,7 @@ import { studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
-  DedupAbortEvent,
-  DedupReuseEvent,
+  CallSupersededEvent,
   UploadCompleteEvent,
   UploadProgressEvent,
 } from "../../events";
@@ -14,27 +13,14 @@ const createEvent = <TEvent extends AnyStudioEvent>(
   partial: Omit<TEvent, "sessionId">,
 ): TEvent => ({ ...partial, sessionId }) as TEvent;
 
-/** Wire dedup and upload hooks to the bus */
-export function wireDedupUploadHooks(bus: EventBus, sessionId: string): void {
-  studioHooks.onDedupAbort = (e) => {
+/** Wire superseded-call and upload hooks to the bus */
+export function wireSupersedeUploadHooks(bus: EventBus, sessionId: string): void {
+  studioHooks.onCallSuperseded = (e) => {
     bus.emit(
-      createEvent<DedupAbortEvent>(sessionId, {
-        id: e.requestId,
-        type: "dedup:abort",
+      createEvent<CallSupersededEvent>(sessionId, {
+        id: e.key,
+        type: "call:superseded",
         timestamp: e.timestamp,
-        requestId: e.requestId,
-        key: e.key,
-      }),
-    );
-  };
-
-  studioHooks.onDedupReuse = (e) => {
-    bus.emit(
-      createEvent<DedupReuseEvent>(sessionId, {
-        id: e.requestId,
-        type: "dedup:reuse",
-        timestamp: e.timestamp,
-        requestId: e.requestId,
         key: e.key,
       }),
     );

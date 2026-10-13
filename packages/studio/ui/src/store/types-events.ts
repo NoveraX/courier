@@ -22,8 +22,7 @@ export type EventType =
   | "cache:miss"
   | "cache:store"
   | "cache:invalidate"
-  | "dedup:abort"
-  | "dedup:reuse"
+  | "call:superseded"
   | "upload:progress"
   | "upload:complete"
   // Stream (SSE/WS)

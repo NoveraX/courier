@@ -1,10 +1,13 @@
 /**
- * `deduplicate: true`, as a caller meets it.
+ * `cancelPrevious`, as a caller meets it: a newer call to an endpoint it
+ * names cancels the one still in flight, whatever its variables — a search
+ * as the user types — while every other endpoint's calls all complete, page
+ * one and page two of a list together among them.
  *
  * The calls of a client share one in-flight table; a fresh one per call
  * would cancel nothing. Where the option runs: a browser, for a direct call
  * and for a proxy client. Where it must not: a server, where requests from
- * different users share a key and would cancel each other.
+ * different users reach one endpoint and would cancel each other.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,12 +23,16 @@ const UPSTREAM = "https://upstream.example";
 
 const api = defineApi({
   baseURL: UPSTREAM,
-  deduplicate: true,
-  endpoints: { search: endpoint.get("search").variables<{ q: string }>().response<unknown>() },
+  cancelPrevious: ["search"],
+  endpoints: {
+    search: endpoint.get("search").variables<{ q: string }>().response<unknown>(),
+    page: endpoint.get("items").variables<{ page: number }>().response<unknown>(),
+  },
 });
 
 interface Client {
   search: (variables: { q: string }) => Promise<unknown>;
+  page: (variables: { page: number }) => Promise<unknown>;
 }
 
 /** An upstream that answers after a pause, or rejects when its request is cancelled. */
@@ -69,6 +76,29 @@ describe("a direct call in a browser", () => {
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
   });
 
+  it("answers an identical newer call from the request the cancelled one made", async () => {
+    const sent = vi.fn(slowUpstream);
+    vi.stubGlobal("fetch", sent);
+    const client = createCaller(api) as unknown as Client;
+    const first = client.search({ q: "ab" }).catch(status);
+    const second = client.search({ q: "ab" });
+
+    expect(await first).toBe(499);
+    await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets every call to an endpoint it does not name complete, page one and page two together", async () => {
+    const client = createCaller(api) as unknown as Client;
+
+    const pages = await Promise.all([client.page({ page: 1 }), client.page({ page: 2 })]);
+
+    expect(pages).toEqual([
+      { url: `${UPSTREAM}/items?page=1` },
+      { url: `${UPSTREAM}/items?page=2` },
+    ]);
+  });
+
   it("keeps cancelling after a cancelled call settles", async () => {
     const client = createCaller(api) as unknown as Client;
     const first = client.search({ q: "a" }).catch(status);
@@ -97,17 +127,20 @@ describe("the proxy", () => {
     /* The proxy client as a browser runs it; a server's own reaches its proxy in process. */
     vi.stubGlobal("document", {});
     const handler = createHandler();
-    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (url.startsWith(UPSTREAM)) return slowUpstream(input, init);
-      /* As real fetch does, a cancelled request rejects with its reason. */
-      const signal = init?.signal;
-      const answer = handler.handle(new Request(new URL(url, "http://app.localhost"), init));
-      return new Promise((resolve, reject) => {
-        signal?.addEventListener("abort", () => reject(signal.reason));
-        answer.then(resolve, reject);
-      });
-    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : String(input);
+        if (url.startsWith(UPSTREAM)) return slowUpstream(input, init);
+        /* As real fetch does, a cancelled request rejects with its reason. */
+        const signal = init?.signal;
+        const answer = handler.handle(new Request(new URL(url, "http://app.localhost"), init));
+        return new Promise((resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(signal.reason));
+          answer.then(resolve, reject);
+        });
+      }),
+    );
   });
 
   it("does not let one browser's request cancel another's on the server", async () => {
@@ -124,7 +157,20 @@ describe("the proxy", () => {
     expect([a.status, b.status]).toEqual([200, 200]);
   });
 
-  it("deduplicates in the browser client, which takes the source's setting", async () => {
+  it("answers the browser client's identical newer call from the request already made", async () => {
+    const proxied = vi.mocked(fetch);
+    const client = createProxyCaller("api", { source: api }) as unknown as Client;
+    const first = client.search({ q: "ab" }).catch(status);
+    const second = client.search({ q: "ab" });
+
+    expect(await first).toBe(499);
+    await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
+    expect(
+      proxied.mock.calls.filter(([input]) => !String(input).startsWith(UPSTREAM)),
+    ).toHaveLength(1);
+  });
+
+  it("cancels in the browser client, which takes the source's list", async () => {
     const client = createProxyCaller("api", { source: api }) as unknown as Client;
     const first = client.search({ q: "a" }).catch(status);
     const second = client.search({ q: "ab" });

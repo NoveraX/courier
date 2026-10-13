@@ -232,8 +232,8 @@ describe("retryMiddleware and cancellation", () => {
     expect(upstream.seen).toHaveLength(1);
   });
 
-  it("does not re-issue a request that a newer identical one superseded", async () => {
-    /* Identical requests supersede each other only in a browser. */
+  it("does not re-issue a read that a newer call to its endpoint superseded", async () => {
+    /* A newer call supersedes an older one only in a browser. */
     vi.stubGlobal("document", {});
     let firstArrived: () => void = () => {};
     const arrived = new Promise<void>((resolve) => {
@@ -247,15 +247,16 @@ describe("retryMiddleware and cancellation", () => {
       defineApi({
         name: "api",
         baseURL: upstream.url,
-        deduplicate: true,
+        cancelPrevious: ["read"],
         middleware: [retryMiddleware({ limit: 3, delay: 1, retryOn: anyFailure })],
-        endpoints: { read: endpoint.get("slow") },
+        endpoints: { read: endpoint.get("slow").variables<{ q: string }>() },
       }),
     );
 
-    const first = client.read();
+    /* Two searches, so the newer one cannot be answered from the older one's request. */
+    const first = client.read({ q: "a" });
     await arrived;
-    const second = client.read();
+    const second = client.read({ q: "ab" });
 
     await expect(first).rejects.toMatchObject({ status: 499 });
     await expect(second).resolves.toEqual({ ok: true });

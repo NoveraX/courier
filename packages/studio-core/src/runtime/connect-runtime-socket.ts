@@ -6,7 +6,7 @@
  *  - `runtime:hello` once on connect, identifies the runtime
  *  - `runtime:announce` for every queued + future `announceHosting` entry
  *  - `events` forwarding from the local `EventBus` (request/middleware/
- *    validation/stream/proxy/cache/dedup/upload telemetry) so the Studio
+ *    validation/stream/proxy/cache/superseded/upload telemetry) so the Studio
  *    UI can render the timeline + waterfall views, including what was
  *    reported before the socket connected — in batches, one message for
  *    every event a turn of the event loop reports

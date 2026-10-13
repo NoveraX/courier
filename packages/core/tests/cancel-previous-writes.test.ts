@@ -1,17 +1,19 @@
 /**
- * Which calls `deduplicate` may cancel.
+ * Which calls `cancelPrevious` may cancel.
  *
  * It exists for reads: a search box sends a request per keystroke and only
  * the last answer matters. It leaves writes alone: applied to them, two
  * different creates to one path would lose the first with a 499, although
- * the server has usually received and applied it.
+ * the server has usually received and applied it — so an API that names a
+ * write in it is refused where it is defined, and a proxy client told to
+ * cancel one cancels nothing the boundary says writes.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineBoundary } from "../src/define/index";
-import { HTTPError } from "../src/errors";
+import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { startUpstream, type Upstream } from "./helpers/upstream";
@@ -40,7 +42,7 @@ function api() {
   return defineApi({
     name: "orders",
     baseURL: upstream.url,
-    deduplicate: true,
+    cancelPrevious: ["search", "find"],
     endpoints: {
       search: endpoint.get("orders").variables<{ q: string }>(),
       find: endpoint.post("orders/find").reads().variables<{ q: string }>(),
@@ -55,7 +57,22 @@ function status(error: unknown): number | undefined {
   return error instanceof HTTPError ? error.status : undefined;
 }
 
-describe("deduplicate on a direct call", () => {
+describe("an API that names a write in cancelPrevious", () => {
+  it.each([["create"], ["nowhere"]])("is refused where it is defined: %s", (path) => {
+    const define = () =>
+      defineApi({
+        name: "orders",
+        baseURL: upstream.url,
+        cancelPrevious: [path],
+        endpoints: { create: endpoint.post("orders").variables<{ item: string }>() },
+      });
+
+    expect(define).toThrow(ConfigurationError);
+    expect(define).toThrow(expect.objectContaining({ code: "CANCEL_PREVIOUS_INVALID" }));
+  });
+});
+
+describe("cancelPrevious on a direct call", () => {
   it("still cancels a read superseded by the next one", async () => {
     const client = createCaller(api());
 
@@ -100,7 +117,7 @@ describe("deduplicate on a direct call", () => {
   });
 });
 
-describe("deduplicate on a proxy client given the source", () => {
+describe("cancelPrevious on a proxy client given the source", () => {
   beforeEach(() => {
     const source = api();
     registerSources({ orders: source });
@@ -144,7 +161,7 @@ describe("deduplicate on a proxy client given the source", () => {
           source: "orders",
           expose: { search: "query", find: "query", create: "mutation", replace: "mutation" },
         }),
-        deduplicate: true,
+        cancelPrevious: ["search", "find", "create", "replace"],
       });
 
     it("lets two concurrent creates both complete", async () => {

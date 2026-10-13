@@ -3,7 +3,7 @@
  *
  * `attachRuntime()` calls `wireHooks` (request lifecycle + middleware +
  * validation + stream) and `wireHttpHooks` (HTTP fetch + proxy + cache +
- * dedup/upload) ONCE per process when running in dev mode. The wirers
+ * superseded calls/upload) ONCE per process when running in dev mode. The wirers
  * assign to `studioHooks.on*` slots; subsequent calls overwrite the
  * previous slots — `attachRuntime`'s idempotent handle map prevents that
  * scenario, so we don't need any guard inside the wirers.
@@ -19,7 +19,7 @@ import type { EventBus } from "../../event-bus";
 import type { HttpVersions } from "../http-versions/http-version";
 import { wireCacheHooks } from "./http-cache";
 import { wireFetchHooks } from "./http-fetch";
-import { wireDedupUploadHooks } from "./http-misc";
+import { wireSupersedeUploadHooks } from "./http-misc";
 import { wireProxyHooks } from "./http-proxy";
 import { wireMiddlewareHooks } from "./middleware";
 import { wireRequestHooks } from "./request";
@@ -39,7 +39,7 @@ export function wireHooks(
   wireStreamHooks(bus, sessionId, resolveSourceName);
 }
 
-/** Wire HTTP, proxy, cache, dedup, and upload hooks to the bus, each answer told with the HTTP version it came over when known. */
+/** Wire HTTP, proxy, cache, superseded-call, and upload hooks to the bus, each answer told with the HTTP version it came over when known. */
 export function wireHttpHooks(
   bus: EventBus,
   sessionId: string,
@@ -49,5 +49,5 @@ export function wireHttpHooks(
   wireFetchHooks(bus, sessionId, versions);
   wireProxyHooks(bus, sessionId, resolveSourceName);
   wireCacheHooks(bus, sessionId);
-  wireDedupUploadHooks(bus, sessionId);
+  wireSupersedeUploadHooks(bus, sessionId);
 }

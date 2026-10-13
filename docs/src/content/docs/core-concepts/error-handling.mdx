@@ -217,7 +217,8 @@ if (isHTTPError(error)) {
 // A call cancelled through your own signal rejects with the reason you
 // gave, as fetch does: a DOMException named "AbortError" by default.
 // This holds while the answer's body is still being read, too.
-// A call that deduplicate cancelled rejects with HTTPError status 499.
+// A read that a newer call cancelled — its endpoint listed in the API's
+// cancelPrevious — rejects with HTTPError status 499.
 if (isHTTPError(error) && error.status === 499) {
   // Superseded by a newer read of the same endpoint
 }

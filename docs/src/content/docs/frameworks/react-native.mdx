@@ -47,7 +47,7 @@ const { endpoint, stream, channel } = courier()
 
 export const shop = defineApi({
   baseURL: API_URL,
-  deduplicate: true,
+  cancelPrevious: ["users.search"],
   groups: {
     users: defineGroup({
       prefix: "users",
@@ -182,7 +182,7 @@ await pending // rejects with an AbortError
 
 React Native's `AbortController` keeps no reason, and `expo/fetch` reports a cancelled request as a fetch that failed; either way the call rejects with an `AbortError`, never with `undefined` or a network failure. A call whose `timeout` runs out rejects with an `HTTPError` of status 0 and the code `TIMEOUT`, though React Native's `fetch` reports it as an abort.
 
-`deduplicate: true` works as it does in a browser, since an app serves one user: a newer read of an endpoint cancels the one before it. See [Abort & Deduplication](/docs/advanced/abort).
+Identical reads in flight together share one request in an app as everywhere, and `cancelPrevious` works as it does in a browser, since an app serves one user: a newer search cancels the one before it. See [Deduplication & Abort](/docs/advanced/abort).
 
 ## Without Expo
 

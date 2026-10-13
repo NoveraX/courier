@@ -2,7 +2,7 @@ import { docsMetadata } from "@/lib/metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
-import { DedupDemo, ManualAbortDemo } from "./_components"
+import { CancelPreviousDemo, ManualAbortDemo, SharedReadsDemo } from "./_components"
 
 const manualAbortCode = `const controller = new AbortController()
 
@@ -12,70 +12,67 @@ const promise = caller.misc.with({ signal: controller.signal }).slow()
 // Cancel the request
 controller.abort()`
 
-const dedupCode = `const abortRef = useRef<AbortController | null>(null)
+const sharedReadsCode = `// Three components read the same list at the same moment
+const [header, sidebar, page] = await Promise.all([
+  caller.users.getAll(),
+  caller.users.getAll(),
+  caller.users.getAll(),
+])
 
-function handleClick() {
-  // Abort the previous in-flight request
-  abortRef.current?.abort()
+// One request reached the proxy; each call got a copy of its own`
 
-  const controller = new AbortController()
-  abortRef.current = controller
+const cancelPreviousCode = `import { createProxyCaller } from "@noverax/courier"
+import type { api } from "@/api"
 
-  caller.users.with({ signal: controller.signal }).getAll()
-}`
+const searchCaller = createProxyCaller<typeof api>("api", {
+  boundary,
+  cancelPrevious: ["misc.slow"],
+})
 
-const deduplicateCode = `import { defineApi } from "@noverax/courier/define"
-
-// deduplicate: true enables automatic deduplication
-// at the HttpClient level — if the same path+method is called
-// again while a request is in-flight, the old one is aborted
-// with a 499 status code.
-
-const api = defineApi({
-  baseURL: "http://localhost:4000",
-  groups,
-  deduplicate: true,
-})`
+// A newer call cancels the one still in flight: it rejects with status 499
+await searchCaller.misc.slow()`
 
 export const metadata = docsMetadata(
-  "Abort & Deduplication",
-  "Cancel in-flight requests with AbortController and deduplicate rapid calls."
+  "Deduplication & Abort",
+  "Identical reads in flight share one request, a newer call cancels the one it replaces, and any call can be aborted."
 )
 
 export default function AbortExamplesPage() {
   return (
     <ExamplePage
       href="/docs/examples/abort"
-      title="Abort & Deduplication"
-      description="Cancel in-flight requests with AbortController and deduplicate rapid calls."
+      title="Deduplication & Abort"
+      description="Identical reads in flight share one request, a newer call cancels the one it replaces, and any call can be aborted."
       mode="both"
     >
       <ExampleSection
-        title="Manual Abort"
+        title="Identical reads share one request"
+        description="Three identical reads start together. The browser counts the requests that reached the proxy."
+        code={sharedReadsCode}
+        learnMore={{ href: "/docs/advanced/abort", label: "Deduplication docs" }}
+      >
+        <SharedReadsDemo />
+      </ExampleSection>
+
+      <ExampleSection
+        title="Cancel the previous call"
+        description="The endpoint answers after 3 s. Call again before it does: the older call is cancelled with status 499, and the newer one is answered by the request already in flight."
+        code={cancelPreviousCode}
+        learnMore={{
+          href: "/docs/advanced/abort#cancelling-the-previous-call",
+          label: "cancelPrevious docs",
+        }}
+      >
+        <CancelPreviousDemo />
+      </ExampleSection>
+
+      <ExampleSection
+        title="Manual abort"
         description="Start a slow request (3s delay) and cancel it before it completes."
         code={manualAbortCode}
-        learnMore={{ href: "/docs/advanced/abort", label: "Abort docs" }}
+        learnMore={{ href: "/docs/advanced/abort#aborting-a-call-yourself", label: "Abort docs" }}
       >
         <ManualAbortDemo />
-      </ExampleSection>
-
-      <ExampleSection
-        title="Request Deduplication"
-        description="Click the button rapidly — each click aborts the previous in-flight request. Only the last request completes."
-        code={dedupCode}
-      >
-        <DedupDemo />
-      </ExampleSection>
-
-      <ExampleSection
-        title="deduplicate — HttpClient-Level Dedup"
-        description="Source-level config that auto-aborts duplicate requests by path+method. Used in direct mode or persistent HttpClient scenarios."
-        code={deduplicateCode}
-      >
-        <p className="m-0 text-body text-fg-muted">
-          When <code>deduplicate: true</code> is set, the HttpClient tracks in-flight requests by
-          path and method. If a duplicate is fired, the previous one is aborted with status 499.
-        </p>
       </ExampleSection>
     </ExamplePage>
   )

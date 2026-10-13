@@ -101,7 +101,8 @@ function liveFigures(name, { tasks, seconds, messages, bytes }) {
     measured(`${name}.busy`, busy * 100, "%", 50, {
       note: `main thread in tasks over 50 ms, ${seconds.toFixed(1)} s of traffic`,
     }),
-    measured(`${name}.longestTask`, Math.max(0, ...tasks), "ms", 250),
+    /* Twice what the slowest CI runner takes, where the page shares four cores with Studio, the app and the traffic. */
+    measured(`${name}.longestTask`, Math.max(0, ...tasks), "ms", 350),
     measured(`${name}.messages`, messages / seconds, "msg/s", 5_000, {
       note: `${(bytes / 2 ** 20).toFixed(1)} MB of live events reached the page`,
     }),

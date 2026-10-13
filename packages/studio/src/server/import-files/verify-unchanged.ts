@@ -21,7 +21,7 @@ export function verifyUnchanged(root: ProjectRoot, plan: FilePlan): void {
   ];
   const changed = expected
     .filter(([path, sha256]) => {
-      const found = readDiskFile(resolveProjectPath(root.path, path));
+      const found = readDiskFile(root, resolveProjectPath(root.path, path));
       return sha256 === undefined
         ? found.kind !== "absent"
         : found.kind !== "file" || found.sha256 !== sha256;

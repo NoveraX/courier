@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  fstatSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -111,5 +112,50 @@ describe("readRegularFile", () => {
     chmodSync(path, 0o200);
 
     expect(thrownBy(() => readRegularFile(path))).toMatchObject({ code: "EACCES" });
+  });
+});
+
+describe("readRegularFile with a check of the file it opened", () => {
+  it("hands the check the descriptor of the very file it then reads", () => {
+    writeFileSync(path, "export default {};\n");
+    let checked: bigint | undefined;
+
+    const file = readRegularFile(path, (fd) => {
+      checked = fstatSync(fd, { bigint: true }).ino;
+    });
+
+    expect(checked).toBe(statSync(path, { bigint: true }).ino);
+    expect(file?.bytes.toString("utf8")).toBe("export default {};\n");
+  });
+
+  it("returns nothing once the check refuses the file, and closes its descriptor", () => {
+    writeFileSync(path, "export default {};\n");
+    const refusal = new Error("not this file");
+    let checked = -1;
+
+    const error = thrownBy(() =>
+      readRegularFile(path, (fd) => {
+        checked = fd;
+        throw refusal;
+      }),
+    );
+
+    expect(error).toBe(refusal);
+    expect(checked).toBeGreaterThanOrEqual(0);
+    expect(thrownBy(() => fstatSync(checked))).toMatchObject({ code: "EBADF" });
+  });
+
+  it("asks no check of a path that holds nothing, or of a directory, which it refuses first", () => {
+    let checks = 0;
+    const check = (): void => {
+      checks += 1;
+    };
+    mkdirSync(join(dir, "folder"));
+
+    expect(readRegularFile(path, check)).toBeNull();
+    expect(thrownBy(() => readRegularFile(join(dir, "folder"), check))).toBeInstanceOf(
+      NotRegularFileError,
+    );
+    expect(checks).toBe(0);
   });
 });

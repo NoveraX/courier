@@ -90,7 +90,7 @@ function diskAt(root: ProjectRoot, dir: string, path: string): DiskFile {
   if (obstacle === "link") return { kind: "link" };
   if (obstacle === "not-a-file")
     return { kind: "not-a-file", found: "a file where a folder should be" };
-  return readDiskFile(absolute);
+  return readDiskFile(root, absolute);
 }
 
 function identityOf(disk: Extract<DiskFile, { kind: "file" }>): string {

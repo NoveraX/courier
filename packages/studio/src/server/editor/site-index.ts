@@ -1,6 +1,8 @@
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { join } from "node:path";
 
+import { type ProjectRoot, projectRootAt } from "../project-fs/project-root";
+import { readFileInside } from "../project-fs/read-file-inside";
 import { type CodeCall, codeCalls } from "./calls-in-text";
 import type { CatalogEndpoint } from "./endpoint-catalog";
 import { matchCalls } from "./match-calls";
@@ -42,7 +44,8 @@ const FILES_FRESH_MS = 5_000;
  * An index of where the project's code calls its endpoints. A file is read
  * and parsed when first asked for and again only once it changes, and the
  * list of files is looked up at most every five seconds, so asking again
- * costs the files that changed.
+ * costs the files that changed. Only files inside the project are read: a
+ * link that stays in it is followed, one that leads out is not.
  *
  * @param root - The project's root
  * @param catalog - The endpoints the running config defines, read on each question
@@ -69,8 +72,9 @@ export function createSiteIndex(
       const wanted = catalog().filter((e) => e.source === source && e.endpoint === endpoint);
       if (wanted.length === 0) return [];
       const sites: CallSite[] = [];
+      const project = projectRootAt(root);
       for (const file of await listed()) {
-        const current = await fresh(read, root, file);
+        const current = await fresh(read, project, file);
         if (!current) continue;
         sites.push(...sitesIn(file, join(root, file), current, catalog(), { source, endpoint }));
         if (sites.length >= limit) break;
@@ -82,23 +86,31 @@ export function createSiteIndex(
 
 async function fresh(
   read: Map<string, ReadFile>,
-  root: string,
+  root: ProjectRoot,
   file: string,
 ): Promise<ReadFile | undefined> {
+  const path = join(root.path, file);
   try {
-    const info = await stat(join(root, file));
+    const info = await stat(path);
     if (!info.isFile() || info.size > LARGEST_FILE) return undefined;
     const known = read.get(file);
     if (known && known.mtimeMs === info.mtimeMs && known.size === info.size) return known;
-    const text = await readFile(join(root, file), "utf8");
-    const next = { mtimeMs: info.mtimeMs, size: info.size, text, calls: codeCalls(file, text) };
+    const inside = await readFileInside(root, path);
+    if (inside === null || inside.stats.size > LARGEST_FILE) return forget(read, file);
+    const text = inside.bytes.toString("utf8");
+    const { mtimeMs, size } = inside.stats;
+    const next = { mtimeMs, size, text, calls: codeCalls(file, text) };
     read.set(file, next);
     return next;
   } catch {
-    /* Gone, or unreadable, since the list was made: it holds no call now. */
-    read.delete(file);
-    return undefined;
+    /* Gone, unreadable, or leading outside the project: it holds no call Studio reads. */
+    return forget(read, file);
   }
+}
+
+function forget(read: Map<string, ReadFile>, file: string): undefined {
+  read.delete(file);
+  return undefined;
 }
 
 function sitesIn(

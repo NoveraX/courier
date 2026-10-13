@@ -1,5 +1,6 @@
 import { NotRegularFileError } from "../not-regular-file-error";
 import { readRegularFile } from "../read-regular-file";
+import { assertOpenedInside } from "./assert-opened-inside";
 import { assertRealInside } from "./assert-real-inside";
 import { ProjectFileMissingError } from "./project-file-missing-error";
 import type { ProjectRoot } from "./project-root";
@@ -8,7 +9,8 @@ import { resolveProjectPath } from "./resolve-project-path";
 /**
  * Read a text file a request names in the project: only a regular file,
  * reached through no link that leads out of the project, and never through
- * a link at the file itself.
+ * a link at the file itself — checked before the file is opened, and again
+ * once it is, so a directory swapped for a link meanwhile reads nothing.
  *
  * @param root - The project
  * @param path - The file, relative to the project root
@@ -24,15 +26,19 @@ import { resolveProjectPath } from "./resolve-project-path";
 export function readProjectText(root: ProjectRoot, path: string): string {
   const absolute = resolveProjectPath(root.path, path);
   assertRealInside(root, absolute);
-  const file = readRegularFileAt(absolute, path);
+  const file = readRegularFileAt(root, absolute, path);
   if (file === null) throw new ProjectFileMissingError(path);
   return file.bytes.toString("utf8");
 }
 
 /* Refused by the path the request named: the absolute one is the machine's, not the request's. */
-function readRegularFileAt(absolute: string, path: string): ReturnType<typeof readRegularFile> {
+function readRegularFileAt(
+  root: ProjectRoot,
+  absolute: string,
+  path: string,
+): ReturnType<typeof readRegularFile> {
   try {
-    return readRegularFile(absolute);
+    return readRegularFile(absolute, (fd) => assertOpenedInside(root, absolute, fd));
   } catch (error) {
     if (error instanceof NotRegularFileError) {
       throw new NotRegularFileError(path, error.found, { cause: error });

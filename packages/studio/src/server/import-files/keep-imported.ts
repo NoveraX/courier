@@ -55,7 +55,7 @@ function textReader(root: ProjectRoot, plan: FilePlan): (path: string) => string
   return (path) => {
     const body = written.get(path);
     if (body !== undefined) return body;
-    const disk = readDiskFile(resolveProjectPath(root.path, path));
+    const disk = readDiskFile(root, resolveProjectPath(root.path, path));
     return disk.kind === "file" ? disk.body : null;
   };
 }

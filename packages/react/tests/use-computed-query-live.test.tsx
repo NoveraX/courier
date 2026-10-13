@@ -18,6 +18,9 @@ type User = { id: string; name: string };
 let server: TestServer;
 let queryClient: QueryClient;
 let listDelay: number;
+/* When set, the stream sends its events only once the list has been answered. */
+let listAnswered: Promise<void> | undefined;
+let answerList: () => void = () => {};
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client: queryClient }, children);
@@ -26,13 +29,14 @@ function wrapper({ children }: { children: ReactNode }) {
 function sendChanges(res: ServerResponse) {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   res.write(": open\n\n");
-  const timers = [1, 2].map((n) =>
-    setTimeout(
-      () =>
-        res.write(`id: ${n}\ndata: ${JSON.stringify({ id: `c${n}`, name: `Changed ${n}` })}\n\n`),
-      n * 50,
-    ),
-  );
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  const gap = listAnswered ? 100 : 50;
+  void (listAnswered ?? Promise.resolve()).then(() => {
+    for (const n of [1, 2]) {
+      const event = JSON.stringify({ id: `c${n}`, name: `Changed ${n}` });
+      timers.push(setTimeout(() => res.write(`id: ${n}\ndata: ${event}\n\n`), n * gap));
+    }
+  });
   res.on("close", () => {
     for (const timer of timers) clearTimeout(timer);
   });
@@ -51,9 +55,13 @@ function makeCaller() {
 
 beforeEach(async () => {
   listDelay = 300;
+  listAnswered = undefined;
   server = await startTestServer((_req, res, url) => {
     if (url.pathname === "/users/changes") return sendChanges(res);
-    setTimeout(() => sendJson(res, [{ id: "1", name: "Alice" }]), listDelay);
+    setTimeout(() => {
+      sendJson(res, [{ id: "1", name: "Alice" }]);
+      answerList();
+    }, listDelay);
   });
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
@@ -89,19 +97,28 @@ describe("useComputedQuery against a real list and stream", () => {
 
   it("merges events that arrive after the first fetch straight away", async () => {
     listDelay = 0;
+    listAnswered = new Promise((resolve) => {
+      answerList = resolve;
+    });
     const q = makeCaller();
+    const seen: string[] = [];
     const { result } = renderHook(
-      () =>
-        q.users.useComputedQuery("list", {
+      () => {
+        const query = q.users.useComputedQuery("list", {
           subscriptionMethod: "changes",
           mapper: (current, event) => [...(current ?? []), event.data],
-        }),
+        });
+        seen.push(`${query.status}:${(query.data ?? []).map((u) => u.name).join(",")}`);
+        return query;
+      },
       { wrapper },
     );
 
-    await waitFor(() => expect(result.current.data?.map((u) => u.name)).toEqual(["Alice"]));
+    /* The list first, alone, then the events on top of it. Each render is
+       logged, not caught by polling, which a busy machine can miss. */
     await waitFor(() =>
       expect(result.current.data?.map((u) => u.name)).toEqual(["Alice", "Changed 1", "Changed 2"]),
     );
+    expect(seen.filter((entry) => entry.startsWith("success")).at(0)).toBe("success:Alice");
   });
 });

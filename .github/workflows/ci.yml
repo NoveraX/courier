@@ -142,6 +142,17 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
     steps:
+      # The Windows runner keeps its temporary directory on the system drive,
+      # a network disk whose writes stall for seconds once the suite has used
+      # up its allowance, and every test that writes a file stalls with them.
+      # The runner's own drive is a local one that keeps up.
+      - name: Keep temporary files on the runner's drive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+          "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7

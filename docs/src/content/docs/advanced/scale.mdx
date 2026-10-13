@@ -11,7 +11,7 @@ Every night Courier writes a project the size of a large company's and measures 
 | Code | 1420 files: 600 server modules calling the APIs directly and 100 pages calling them through the app's proxy — 3300 call sites — and 39 internal libraries that import each other |
 | Courier | `courier.config.ts`, the app's server with `createCourierServer`, two boundaries, and `courier.mocks.ts` with a mock for each API, 200 records a collection |
 
-The figures below were measured on an Apple M2 Max laptop with Node 24. The nightly job runs on a CI machine, and its budgets leave room for one about three times slower: they catch a change that makes anything markedly slower or heavier, not a machine that is slower.
+The figures below were measured on an Apple M2 Max laptop with Node 24. The nightly job runs on a CI runner two to four times slower, so a figure that follows the machine's speed is held to the same work done without Courier, measured in the same run: the mocks to bare Node servers answering the same requests, the app's server to the same calls made straight to the backend, a large answer to the same answer fetched and checked by the same schema. Every other time has a budget twice what the CI runner takes. Either way a budget catches a change that makes Courier markedly slower or heavier, not a slower machine.
 
 ## The figures
 
@@ -28,11 +28,11 @@ The figures below were measured on an Apple M2 Max laptop with Node 24. The nigh
 
 An endpoint answering a list read through its zod schema, with Studio attached and without. Studio is sent at most 16 KB of any body — the first items of a list, a part of each large field — whatever its size; it asks the app for the whole one when you open it.
 
-| Answer | Without Studio | With Studio attached | Sent to Studio |
-| --- | --- | --- | --- |
-| 1,000 records, 0.3 MB | 2.6 ms | 4.6 ms | 18 KB |
-| 10,000 records, 3.5 MB | 16 ms | 28 ms | 18 KB |
-| 50,000 records, 17.6 MB | 93 ms | 154 ms | 18 KB |
+| Answer | Fetched and checked by the schema, without Courier | Through Courier, without Studio | With Studio attached | Sent to Studio |
+| --- | --- | --- | --- | --- |
+| 1,000 records, 0.3 MB | 1.8 ms | 1.8 ms | 3.2 ms | 18 KB |
+| 10,000 records, 3.5 MB | 16 ms | 15 ms | 27 ms | 18 KB |
+| 50,000 records, 17.6 MB | 87 ms | 92 ms | 155 ms | 18 KB |
 
 ### Studio and its mocks
 
@@ -43,7 +43,9 @@ An endpoint answering a list read through its zod schema, with Studio attached a
 | Memory while they start | 1.4 GB, for about ten seconds |
 | Memory at rest — Studio and five mock processes | 640 MB: Studio about 180 MB, each mock 110–140 MB |
 | Processor at rest | 0.5 % of one core |
-| The mocks under 32 concurrent connections | 8,000 requests a second, 3.3 ms at the median, 16 ms at p99, none failed |
+| The mocks under 32 concurrent connections | 8,500 requests a second, 3.3 ms at the median, 15 ms at p99, none failed |
+| The same requests answered by bare Node servers, for comparison | 29,500 requests a second, 0.9 ms at the median, 4.2 ms at p99 |
+| Processor time a request, Studio's recording of it included | 0.29 ms, against 0.05 ms for a bare Node server |
 
 Each mock runs in a process of its own, so one that crashes or hangs leaves the others serving, and the mocks share the machine's cores under load. Each process holds Node itself and everything `courier.mocks.ts` loads — every API's definitions, the seeded records — which is what most of its memory is.
 
@@ -53,9 +55,9 @@ The app's own server — Courier's proxy in front of the five APIs, with its mid
 
 | | Calls a second | Median | p99 |
 | --- | --- | --- | --- |
-| Straight to the backend, for comparison | 8,000 | 3.2 ms | 12.8 ms |
-| Through the app's server | 5,700 | 5.1 ms | 12.3 ms |
-| Through the app's server, attached to Studio | 3,800 | 8.1 ms | 13.8 ms |
+| Straight to the backend, for comparison | 9,600 | 2.8 ms | 9.8 ms |
+| Through the app's server | 6,100 | 4.9 ms | 9.7 ms |
+| Through the app's server, attached to Studio | 3,700 | 8.2 ms | 14.6 ms |
 
 A server attached to Studio reports some seventeen events for each call it serves — the call's start and end, each middleware, each validation, the fetch, the answer's shape — and sends them in batches: every event of one turn of its event loop leaves together, in one message, once the turn is over. Only development servers attach; in production nothing is reported.
 
@@ -108,7 +110,7 @@ A larger company, some of the steps alone, or the report as JSON:
 node scripts/scale/run.mjs --endpoints 3000 --only tsc,runtime,studio,proxy --json scale-report.json
 ```
 
-The steps are `tsc`, `runtime`, `codegen`, `payloads`, `studio`, and inside it `proxy`, `editor`, `extension`, `mocks` and `ui`. Studio listens on port 7401, its mocks from 7410, the app on 7400; `--ports` moves all of them.
+The steps are `tsc`, `runtime`, `codegen`, `payloads`, `studio`, and inside it `proxy`, `editor`, `extension`, `mocks` and `ui`. Studio listens on port 7401, its mocks from 7410, the bare servers they are held to from 7420, the app on 7400; `--ports` moves all of them.
 
 ## On a project of your own of this size
 

@@ -4,6 +4,8 @@
  * and processor time of a process with every process it started.
  */
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { platform } from "node:os";
 
 /** @typedef {{ name: string, value: number, unit: string, budget: number, ok: boolean, note?: string }} Measured */
 
@@ -105,6 +107,7 @@ export function residentMb(pids) {
  * ```
  */
 export function cpuSeconds(pids) {
+  if (platform() === "linux") return pids.reduce((sum, pid) => sum + linuxCpuSeconds(pid), 0);
   const out = execFileSync("ps", ["-o", "time=", "-p", pids.join(",")], { encoding: "utf8" });
   return out
     .trim()
@@ -115,6 +118,40 @@ export function cpuSeconds(pids) {
         sum + minutes * 60 + seconds + hundredths / 100,
       0,
     );
+}
+
+let clockTicks = 0;
+
+/* Linux's ps prints whole seconds as hours, minutes and seconds, too coarse
+   for a process at rest and not the minutes and hundredths macOS prints: the
+   kernel's own count, in clock ticks, is read instead. */
+function linuxCpuSeconds(pid) {
+  clockTicks ||= Number(execFileSync("getconf", ["CLK_TCK"], { encoding: "utf8" }));
+  let stat;
+  try {
+    stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+  } catch {
+    /* A process of the tree that ended since it was read has no time left to add. */
+    return 0;
+  }
+  return statTicks(stat) / clockTicks;
+}
+
+/**
+ * The processor time a line of Linux's `/proc/<pid>/stat` holds: user and
+ * system, in clock ticks.
+ *
+ * @param {string} stat - The line
+ * @returns {number} Clock ticks
+ * @example
+ * ```js
+ * statTicks("4221 (node) S 1 4221 4221 0 -1 4194560 9 0 0 0 150 37 0 0 20 0 11 0"); // 187
+ * ```
+ */
+export function statTicks(stat) {
+  /* The fields after the name, which may hold spaces and parentheses, from the state on: user and system time are the 12th and 13th. */
+  const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+  return Number(fields[11]) + Number(fields[12]);
 }
 
 /**

@@ -1,3 +1,5 @@
+import { peerAddressOf, rememberPeerAddress } from "./peer-address";
+
 /**
  * What reports the client's connection closing: a Node socket, or a Node
  * response. Typed by shape so the adapters that pass one need not depend on
@@ -21,7 +23,9 @@ function withSignal(request: Request, signal: AbortSignal): Request {
     signal,
   };
   if (request.body) init.duplex = "half";
-  return new Request(request.url, init);
+  const again = new Request(request.url, init);
+  rememberPeerAddress(again, peerAddressOf(request));
+  return again;
 }
 
 /**

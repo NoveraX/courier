@@ -1,4 +1,4 @@
-import { isLocalAddress, peerAddressOf } from "./peer-address";
+import { requestClientAddress } from "./client-address";
 
 /** Per-IP connection counter for DDoS/abuse protection */
 export interface IPTracker {
@@ -12,21 +12,13 @@ export interface IPTracker {
 export type ClientIPResolver = (request: Request) => string | undefined;
 
 /**
- * Work out which address a connection should be counted against.
- *
- * Where the runtime recorded the socket's own address, that address is the
- * answer — unless it is loopback or a private network, which is what a
- * reverse proxy in front of the application looks like, and only then are
- * forwarding headers believed. Reading them from any caller let a single
- * forged `X-Forwarded-For` switch the cap off, and without the socket's
- * address every direct caller shared one bucket: one client holding its
- * quota locked every other user out.
- *
- * A header chain is read from the right. A proxy *appends*, so in
- * `1.2.3.4, 203.0.113.7` the left entry is whatever the caller sent and the
- * right one is what the nearest proxy observed. That holds one proxy deep; an
- * application that knows its own topology should say so with `resolve`,
- * which is then the whole answer.
+ * Work out which address a connection should be counted against: the
+ * user's, as `clientAddress` reads it — the socket's own address unless a
+ * proxy in front of the application passed the connection on, and then the
+ * one the proxies report. Reading a forwarding header from any caller let a
+ * single forged `X-Forwarded-For` switch the cap off, and without the
+ * socket's address every direct caller shared one bucket: one client
+ * holding its quota locked every other user out.
  *
  * @param request - The upgrade request
  * @param resolve - Supplied by the application when it knows the real address
@@ -34,33 +26,12 @@ export type ClientIPResolver = (request: Request) => string | undefined;
  *
  * @example
  * ```ts
- * // Behind two proxies that each append one hop:
- * createWSHandler({ clientIp: (req) => req.headers.get("x-forwarded-for")?.split(",").at(-2)?.trim() });
+ * // An address the platform reports in a header of its own:
+ * createWSHandler({ clientIp: (req) => req.headers.get("fly-client-ip") ?? undefined });
  * ```
  */
 export function extractClientIP(request: Request, resolve?: ClientIPResolver): string {
-  const named = resolve?.(request);
-  if (named) return named;
-
-  const peer = peerAddressOf(request);
-  if (peer && !isLocalAddress(peer)) return peer;
-  return forwardedAddress(request) ?? peer ?? "0.0.0.0";
-}
-
-/** The caller's address as the nearest proxy reported it. */
-function forwardedAddress(request: Request): string | undefined {
-  const forwarded = request.headers.get("X-Forwarded-For");
-  if (forwarded) {
-    /* Walking past empty entries keeps a chain with a trailing separator from
-       collapsing into the unknown bucket, where it would share a quota with
-       every caller that sends no address at all. */
-    const hops = forwarded.split(",");
-    for (let i = hops.length - 1; i >= 0; i -= 1) {
-      const hop = hops[i]?.trim();
-      if (hop) return hop;
-    }
-  }
-  return request.headers.get("CF-Connecting-IP") ?? request.headers.get("X-Real-IP") ?? undefined;
+  return resolve?.(request) || requestClientAddress(request) || "0.0.0.0";
 }
 
 /**

@@ -37,7 +37,7 @@ describe("a reverse proxy on a local address", () => {
   });
 
   it("is itself the caller when it forwards nothing", () => {
-    expect(extractClientIP(requestFrom("::ffff:10.0.0.5"))).toBe("::ffff:10.0.0.5");
+    expect(extractClientIP(requestFrom("::ffff:10.0.0.5"))).toBe("10.0.0.5");
   });
 });
 

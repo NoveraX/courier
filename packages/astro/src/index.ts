@@ -1,5 +1,15 @@
 import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
+import { rememberPeerAddress } from "@noverax/courier/internal";
+
+import { astroClientAddress } from "./client-address";
+
+/** The parts of Astro's endpoint context the handler reads. */
+export interface AstroEndpointContext {
+  readonly request: Request;
+  /** The address the adapter reports the request came from; Astro throws where it has none. */
+  readonly clientAddress?: string;
+}
 
 /**
  * Create an Astro API endpoint handler for the courier proxy.
@@ -34,11 +44,12 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
  */
 export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: HandlerConfig<TConnect>,
-): (context: { request: Request }) => Promise<Response> {
+): (context: AstroEndpointContext) => Promise<Response> {
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "astro" });
-  return ({ request }: { request: Request }) => {
+  return (context: AstroEndpointContext) => {
     announce();
-    return handle(request);
+    rememberPeerAddress(context.request, astroClientAddress(context));
+    return handle(context.request);
   };
 }

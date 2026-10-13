@@ -4,7 +4,7 @@ import {
   type RelayedCookie,
   type RequestContextProvider,
 } from "@noverax/courier";
-import { addressedOrigin } from "@noverax/courier/internal";
+import { addressedOrigin, forwardedChain } from "@noverax/courier/internal";
 
 import { type NextCookie, nextCookieOf } from "./next-cookie";
 
@@ -81,7 +81,7 @@ export async function nextIncomingRequest(): Promise<IncomingRequest | undefined
     method: headers.has("next-action") ? "POST" : undefined,
     origin: addressedOrigin(headers),
     headers: withMiddlewareCookies(headers, store),
-    clientAddress: nearestHop(headers.get("x-forwarded-for")),
+    clientAddress: forwardedChain(undefined, headers.get("x-forwarded-for")),
     setCookie: (cookie) => setCookieIn(store, cookie),
     /* Next.js 14 keeps what a server's fetch answers in its data cache
        unless told not to; an answer for one user belongs there for nobody. */
@@ -128,11 +128,6 @@ function withMiddlewareCookies(headers: Headers, store: NextCookieStore): Header
   const merged = new Headers(headers);
   merged.set("cookie", [sent, ...added].filter(Boolean).join("; "));
   return merged;
-}
-
-/* The address the proxy nearest the application recorded, or Next.js itself where none is in front. */
-function nearestHop(chain: string | null): string | undefined {
-  return chain?.split(",").at(-1)?.trim() || undefined;
 }
 
 function setCookieIn(store: NextCookieStore, relayed: RelayedCookie): true | string {

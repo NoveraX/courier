@@ -1,4 +1,5 @@
 import { majorOf } from "../project/read-project";
+import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import { nextStudioEnvEdit } from "./next-config-edit";
 import type { ManualStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
@@ -72,15 +73,34 @@ function ownOrManual(ctx: RecipeContext, file: RecipeFile, what: string): Recipe
     : { file: taken, what, lines: file.content.trimEnd().split("\n") };
 }
 
-/* Next.js 14 and 15 develop under webpack, which bundles the server's Studio connection unless the config's wrapper keeps it out. */
-const WRAPPER: ManualStep = {
-  file: "next.config",
-  what: "Connect the browser to Studio, and keep its server connection out of webpack's bundle",
-  lines: [
-    'import { withCourierStudio } from "@noverax/courier-studio/next";',
-    "export default withCourierStudio()(nextConfig);",
-  ],
-};
+/*
+ * Next.js 14 and 15 develop under webpack, which bundles the server's Studio
+ * connection unless the config's wrapper keeps it out. `next start` loads the
+ * config too, where Studio, a dev dependency, may not be installed: the
+ * wrapper is imported by `next dev` alone.
+ */
+function wrapperStep(ctx: RecipeContext): ManualStep {
+  const file = firstExisting(ctx.project, ["next.config.ts", "next.config.mjs", "next.config.js"]);
+  const commonJs = ctx.project.read(file)?.includes("module.exports") === true;
+  const head = file.endsWith(".ts")
+    ? "export default async function config(phase: string): Promise<NextConfig> {"
+    : commonJs
+      ? "module.exports = async function config(phase) {"
+      : "export default async function config(phase) {";
+  return {
+    file,
+    what: "Connect the browser to Studio while you develop, and keep its server connection out of webpack's bundle; `next dev` alone imports Studio, so `next start` runs without the dev dependency",
+    lines: [
+      head,
+      /* Written out: an ES module config of Next.js 14 cannot import `next/constants`. */
+      "  // PHASE_DEVELOPMENT_SERVER: next dev alone loads Studio, a dev dependency",
+      '  if (phase !== "phase-development-server") return nextConfig;',
+      '  const { withCourierStudio } = await import("@noverax/courier-studio/next");',
+      "  return withCourierStudio()(nextConfig);",
+      commonJs ? "};" : "}",
+    ],
+  };
+}
 
 /* The server's start, and Studio's connections where it is set up. */
 function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep | RecipeEdit> {
@@ -89,7 +109,7 @@ function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep
     : "Register Courier's APIs as the server starts";
   const server = ownOrManual(ctx, instrumentation(ctx, base), what);
   if (!ctx.choices.studio) return [server];
-  if ((majorOf(ctx.version) ?? 16) < 16) return [server, WRAPPER];
+  if ((majorOf(ctx.version) ?? 16) < 16) return [server, wrapperStep(ctx)];
   const browser = ownOrManual(
     ctx,
     {

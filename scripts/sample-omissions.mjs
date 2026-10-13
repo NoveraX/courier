@@ -47,7 +47,9 @@ export function isOmission(code, text, sample) {
   /* A listing shows the packages' own types: one no entry exports is not the reader's to leave out. */
   if (sample.listing && (code === 2304 || code === 2552) && /name '[A-Z]/.test(text)) return false;
   if (OMITTED.has(code)) return true;
-  if (code === 2339 && /type 'ImportMeta'/.test(text)) return true;
+  /* A Vite variable the reader declares in vite-env.d.ts; Next.js's types, when a sample loads
+     them, declare an ImportMetaEnv without it. */
+  if (code === 2339 && /type 'ImportMeta(?:Env)?'/.test(text)) return true;
   if (PLATFORM.some((entry) => sample.page.endsWith(entry.page) && entry.text.test(text)))
     return true;
   /* An API from the reader's app, or one built on a name the sample does

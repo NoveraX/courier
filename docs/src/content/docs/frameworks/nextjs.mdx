@@ -53,6 +53,23 @@ if (process.env.NODE_ENV === "development") {
 
 A browser bundle cannot read `courier.config.ts`: if Studio is not at its default address, add `env: { COURIER_STUDIO_URL: "http://localhost:6290" }` to `next.config.ts`. Under webpack, `withCourierStudio()` from `@noverax/courier-studio/next` connects the browser without the file, and keeps `ws`, which the server's Studio connection runs on, out of the server bundle; bundled, `ws` fails on every frame of 48 bytes or more and the server never reaches Studio. Under webpack without the wrapper, add `serverExternalPackages: ["ws"]` to `next.config.ts`.
 
+`next start` loads `next.config` too, and Studio is a dev dependency, which an install for production leaves out. Import the wrapper in `next dev` alone:
+
+```ts title="next.config.ts"
+import type { NextConfig } from "next"
+
+const nextConfig: NextConfig = {}
+
+export default async function config(phase: string): Promise<NextConfig> {
+  // PHASE_DEVELOPMENT_SERVER: next dev alone loads Studio, a dev dependency
+  if (phase !== "phase-development-server") return nextConfig
+  const { withCourierStudio } = await import("@noverax/courier-studio/next")
+  return withCourierStudio()(nextConfig)
+}
+```
+
+In a `next.config.mjs`, leave out the types; the phase is written out because an ES module config of Next.js 14 cannot import `next/constants`.
+
 ## Installation
 
 ```bash

@@ -5,6 +5,10 @@ import type { accountsApi } from "~/lib/api";
 
 /* While the server renders the page, the proxy caller reaches the proxy in the same process; in the browser, its route. */
 const proxy = createProxyCaller<typeof accountsApi>("accounts");
+/* Marks the page once Vue has hydrated it: a click before then may go unheard. */
+onMounted(() => {
+  document.documentElement.dataset.hydrated = "true";
+});
 const { data } = await useAsyncData("proxy-me", () => proxy.me());
 const fromBrowser = ref("");
 

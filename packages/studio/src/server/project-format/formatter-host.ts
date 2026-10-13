@@ -154,7 +154,7 @@ function answer(root: string, host: Host, formatter: Formatter, message: unknown
 
 /* How a process ended on its own: out of memory, or with the error it reported, if it did. */
 function ended(worker: WorkerProcess, code: number | null, signal: NodeJS.Signals | null): Error {
-  if (worker.ranOutOfMemory()) return new Error("its process ran out of memory");
+  if (worker.outOfMemory() !== undefined) return new Error("its process ran out of memory");
   const how = signal === null ? `code ${code}` : `signal ${signal}`;
   const reported = worker.lastError();
   return new Error(`its process ended with ${how}${reported ? `: ${reported}` : ""}`);

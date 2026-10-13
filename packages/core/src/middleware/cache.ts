@@ -1,7 +1,8 @@
 import { createLogger } from "../logger";
 import { studioHooks } from "../studio";
 import { cloneData } from "../utils/clone-data";
-import { sha256Hex } from "../utils/sha256-hex";
+import { fetchingMiss, type MissesInFlight, waitForMiss } from "./cache-in-flight";
+import { cacheKey } from "./cache-key";
 import { defineMiddleware } from "./define";
 import type { Middleware, MiddlewareContext, MiddlewareResponse } from "./types";
 
@@ -88,6 +89,7 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
     maxEntries = DEFAULT_MAX_ENTRIES,
     storage = new Map<string, CacheEntry>(),
   } = options;
+  const inFlight: MissesInFlight = new Map();
 
   // Wraps because it may short-circuit (cache hit) or store (post-fetch)
   return defineMiddleware("cache", "wrap", async (ctx, next) => {
@@ -101,7 +103,7 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
       return next();
     }
 
-    const key = await buildKey(ctx, scope);
+    const key = await cacheKey(ctx, scope);
     const cached = storage.get(key);
     const hit = cached && cached.expiry > Date.now() ? copyOf(cached.data) : undefined;
     if (cached && hit) {
@@ -115,10 +117,27 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
     }
     if (cached) storage.delete(key);
 
+    /* A miss another call is fetching already is that call's answer, as a hit would be. Looking
+       for one and recording this call's own happen with nothing awaited between them. */
+    const pending = inFlight.get(key);
+    const shared = pending && (await waitForMiss(pending, ctx.signal));
+    const sharedCopy = shared && copyOf(shared);
+    if (sharedCopy) {
+      dt.onCacheHit?.({ requestId, key, age: 0, timestamp: Date.now() });
+      return sharedCopy;
+    }
+
     dt.onCacheMiss?.({ requestId, key, timestamp: Date.now() });
 
-    const response = await next();
-    const kept = isStorable(response) ? copyOf(response) : undefined;
+    const answered = next();
+    const stored = answered.then((response) =>
+      isStorable(response) ? copyOf(response) : undefined,
+    );
+    /* A failed call is answered by its rejection below; what it would have stored is nothing. */
+    void stored.catch(() => undefined);
+    if (pending === undefined) fetchingMiss(inFlight, key, stored);
+    const response = await answered;
+    const kept = await stored;
 
     if (kept) {
       evictIfFull(storage, maxEntries);
@@ -178,35 +197,6 @@ function isStream(data: unknown): boolean {
     (data instanceof ReadableStream ||
       (typeof data === "object" && data !== null && Symbol.asyncIterator in data))
   );
-}
-
-async function buildKey(ctx: MiddlewareContext, scope: CacheScope): Promise<string> {
-  const partition =
-    scope === "public" ? "public" : scope === "session" ? await credentialsOf(ctx) : scope(ctx);
-  return [
-    partition,
-    ctx.source,
-    ctx.group ?? "",
-    ctx.method,
-    ctx.transport ?? "http",
-    JSON.stringify(ctx.variables ?? {}),
-  ].join("\u0000");
-}
-
-/* The credentials themselves would sit in the store's keys — a Redis keyspace,
-   a log line — so a partition is named by their digest instead. In a browser
-   or an app the session names the partition, the cookies being the
-   platform's to send. */
-async function credentialsOf(ctx: MiddlewareContext): Promise<string> {
-  const material = ctx.sessionPartition ?? credentialHeaders(ctx);
-  if (material === "") return "anonymous";
-  return `session:${await sha256Hex(material)}`;
-}
-
-function credentialHeaders(ctx: MiddlewareContext): string {
-  const cookie = ctx.headers.get("cookie") ?? "";
-  const authorization = ctx.headers.get("authorization") ?? "";
-  return cookie === "" && authorization === "" ? "" : `${cookie}\u0000${authorization}`;
 }
 
 const warnedPublic = new Set<string>();

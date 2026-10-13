@@ -4,10 +4,10 @@
  * failed to publish; and the lockfile was left at the old versions, so the
  * release commit's lockfile did not describe its packages.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import commitRules from "./commit-rules.cjs";
 import { LOCKFILE_SYNC, publishCommand, versionedDirs } from "./release.ts";
@@ -112,7 +112,12 @@ describe("the notes a release writes", () => {
   const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
   const options = (name) => config.plugins.find((plugin) => plugin[0] === name)?.[1] ?? {};
   const quiet = { log() {}, error() {}, success() {}, warn() {} };
-  const release = (commits, version = "0.2.0", cwd = process.cwd()) => ({
+  /* A folder with no notes written by hand: the repository's own holds
+     some for a version a test names, and those would stand in for the
+     generated notes the test reads. */
+  const bare = mkdtempSync(join(tmpdir(), "courier-release-bare-"));
+  afterAll(() => rmSync(bare, { recursive: true, force: true }));
+  const release = (commits, version = "0.2.0", cwd = bare) => ({
     cwd,
     env: {},
     logger: quiet,
@@ -191,5 +196,16 @@ describe("the notes a release writes", () => {
 
     expect(written).toContain("Courier's first public release.");
     expect(bodyNoLabelLines({ body: written, footer: null })).toEqual([true, ""]);
+  });
+
+  it("written by hand for any release read as a commit's body the checks accept", () => {
+    const folder = join(".github", "release-notes");
+    const written = readdirSync(folder).filter((name) => name.endsWith(".md"));
+
+    expect(written).toContain("v0.2.0.md");
+    for (const name of written) {
+      const body = readFileSync(join(folder, name), "utf8");
+      expect(bodyNoLabelLines({ body, footer: null }), name).toEqual([true, ""]);
+    }
   });
 });

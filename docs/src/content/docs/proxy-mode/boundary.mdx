@@ -28,7 +28,7 @@ Anything absent is refused. `admin.exportPayouts` above is not named, so the ser
 
 Everything `expose` names is a public API. Any browser, script or server can call it through your proxy, and it runs with what your server has: the key in the source's `headers`, the network the server sits in. The origin check stops another site's page from driving it with your users' cookies; a script sends no `Origin` and is served. Expose a read as you would publish it, and a write as you would put a form on the open web: let it act for a user only with the user's [session](/docs/server-side/session) and its double-submit token, put a captcha before one anyone may make, and limit how often one caller calls — see [Rate limits](/docs/proxy-mode/overview#rate-limits). An endpoint of a group inside another is named by the whole path, `"billing.invoices.list"`, and the browser's client reaches only the groups that path passes through.
 
-A read goes to the proxy as GET, its variables in the address. A read whose definition declares `sensitiveVariables` goes as POST, and the proxy refuses it over GET; the browser cannot see the definition, so the boundary lists it:
+A read goes to the proxy as GET, its variables in the address. A read whose definition declares `sensitiveVariables` goes as POST, and the proxy refuses it over GET; the browser cannot see the definition, so the boundary lists it. The API that holds the boundary checks the list where it is defined: a read left off it that keeps its variables out, or one listed that sends them in the address, stops the API with `BOUNDARY_MISMATCH`, naming each — as does a path the API does not define, or a shape it defines otherwise, which TypeScript refuses already:
 
 ```ts
 defineBoundary({

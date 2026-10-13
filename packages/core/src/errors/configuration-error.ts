@@ -214,6 +214,13 @@ export type ConfigurationErrorCode =
   | "SESSION_HEADER_CONFLICT"
   /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
   | "FORWARD_OPTIONS_INVALID"
+  /**
+   * An API's boundary says otherwise than the API: it exposes a path the API
+   * does not define or in another shape, or lists in `sensitive` a read
+   * whose definition sends its variables in the address — or leaves out one
+   * that keeps them out, which the browser would then send as GET.
+   */
+  | "BOUNDARY_MISMATCH"
   /** The proxy's `rateLimit` cannot work as written: a budget that is not a positive count over a positive window, or a key or a store that is not one. */
   | "RATE_LIMIT_INVALID"
   /**

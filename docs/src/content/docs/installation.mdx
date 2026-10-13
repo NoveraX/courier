@@ -166,6 +166,10 @@ Courier ships type declarations. Enable strict mode for the best type inference:
 
 A project Node.js runs without a bundler resolves modules as Node does instead: `"module": "nodenext"`, which also sets `moduleResolution`.
 
+### An existing project
+
+A project whose tsconfig still says `"moduleResolution": "node"` — `node10`, which reads no `exports` map — finds every entry Courier publishes too, `@noverax/courier/define` and the rest, through each package's `typesVersions`; it needs no change to start. TypeScript 6 deprecates that resolution, though, and with it `baseUrl`, `downlevelIteration`, an ES5 `target` and a few more; it refuses them unless `"ignoreDeprecations": "6.0"` says to wait, and TypeScript 7 drops them. Moving to it, a project that a bundler builds — Next.js, Vite, Nuxt — sets `"moduleResolution": "bundler"`, and one Node.js runs `"module": "node16"`; `paths` are written relative to the tsconfig once `baseUrl` goes. TypeScript 6 also checks side-effect imports, so `import "swiper/css"` needs a declaration — `declare module "swiper/css";` — or `"noUncheckedSideEffectImports": false`. [`create-courier`](/docs/create-courier) lists what your tsconfig sets of these in its plan.
+
 ## Environment variables
 
 Add your backend API URL as a server-side environment variable:

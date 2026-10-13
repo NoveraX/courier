@@ -65,6 +65,22 @@
       "default": "./lib/managed/index.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "./lib/testing.d.ts"
+      ],
+      "server": [
+        "./lib/server.d.ts"
+      ],
+      "contract": [
+        "./lib/contract/index.d.ts"
+      ],
+      "managed": [
+        "./lib/managed/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

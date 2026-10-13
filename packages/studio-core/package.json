@@ -52,6 +52,16 @@
       "default": "./lib/runtime/load-config.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "runtime": [
+        "./lib/runtime/index.d.ts"
+      ],
+      "config": [
+        "./lib/runtime/load-config.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

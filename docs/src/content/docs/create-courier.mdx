@@ -59,7 +59,7 @@ npx @noverax/create-courier shop --framework next
 
 It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages with your package manager, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, and whether to offer the API to [AI agents](#ai-agents), all before it makes anything.
 
-A project it creates is moved to TypeScript 6 where its template came with an older one. A project you already have keeps the TypeScript it has, and the plan says how to move when you are ready.
+A project it creates is moved to TypeScript 6 where its template came with an older one. A project you already have keeps the TypeScript it has, and the plan says how to move when you are ready: the command to run, and what TypeScript 6 deprecates that your `tsconfig.json` sets — `moduleResolution: "node"`, `baseUrl`, `downlevelIteration` — with what to write instead. Courier's entries resolve under `"moduleResolution": "node"` meanwhile; see [an existing project](/docs/installation#an-existing-project).
 
 ## What it sets up
 

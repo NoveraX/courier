@@ -19,7 +19,10 @@
  * conditions and for subpaths into dependencies, so a declaration can resolve
  * under one and silently widen to `any` under the other. It runs once more
  * without the DOM library, as a project typed for Node alone loads none: a
- * declaration naming `BodyInit` compiled here and failed there.
+ * declaration naming `BodyInit` compiled here and failed there. And it runs
+ * under `node10`, the `"moduleResolution": "node"` of many existing
+ * projects, which reads no `exports` map: there a subpath resolves only
+ * through the package's `typesVersions`, which one missing left unresolved.
  *
  * The declarations are checked, not skipped: skipped, a name they could not
  * resolve became `any` without a word. Errors in other packages'
@@ -51,6 +54,23 @@ export function ourErrors(output) {
     .split("\n")
     .filter((line) => /error TS\d+/.test(line))
     .filter((line) => /(?:^|\/)packages\/[^/]+\/lib\/|courier-check-exports\/probe\./.test(line));
+}
+
+/**
+ * The errors of a `node10` run that are ours to fix: one of our entry points
+ * or modules not found. A dependency that ships no types `node10` can read —
+ * Vite 8 has none outside its `exports`, jiti's CommonJS types export no
+ * names — fails there for the project's own imports of it as well.
+ *
+ * @param {string[]} errors - The errors in our declarations and the probe
+ * @returns {string[]} Those naming one of our packages, or in the probe
+ * @example
+ * node10Errors(["packages/studio/lib/vite.d.ts(2,24): error TS2307: Cannot find module 'vite'"]); // → []
+ */
+export function node10Errors(errors) {
+  return errors.filter(
+    (line) => /courier-check-exports\/probe\./.test(line) || line.includes("'@noverax/"),
+  );
 }
 
 /** Every public entry point, as the specifier a consumer would import. */
@@ -104,6 +124,15 @@ function main() {
       ext: "mts",
       lib: ["--lib", "esnext"],
     },
+    {
+      name: "node10",
+      module: "commonjs",
+      moduleResolution: "node10",
+      ext: "ts",
+      /* TypeScript 6 still resolves this way when told the project knows it is deprecated. */
+      lib: ["--ignoreDeprecations", "6.0"],
+      only: node10Errors,
+    },
   ];
 
   let failed = false;
@@ -137,7 +166,8 @@ function main() {
         `check-exports: ${entries.length} entry points typecheck under ${resolution.name}`,
       );
     } catch (error) {
-      const ours = ourErrors(String(error.stdout ?? ""));
+      const found = ourErrors(String(error.stdout ?? ""));
+      const ours = resolution.only ? resolution.only(found) : found;
       if (ours.length === 0 && error.stdout) {
         console.log(
           `check-exports: ${entries.length} entry points typecheck under ${resolution.name}`,

@@ -48,6 +48,13 @@
       "default": "./lib/request-context.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "request-context": [
+        "./lib/request-context.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

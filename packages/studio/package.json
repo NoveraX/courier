@@ -124,6 +124,52 @@
       "default": "./lib/angular.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "server": [
+        "./lib/server.d.ts"
+      ],
+      "vite": [
+        "./lib/vite.d.ts"
+      ],
+      "next": [
+        "./lib/next.d.ts"
+      ],
+      "nuxt": [
+        "./lib/nuxt.d.ts"
+      ],
+      "webpack": [
+        "./lib/webpack.d.ts"
+      ],
+      "esbuild": [
+        "./lib/esbuild.d.ts"
+      ],
+      "rollup": [
+        "./lib/rollup.d.ts"
+      ],
+      "astro": [
+        "./lib/astro.d.ts"
+      ],
+      "react": [
+        "./lib/react.d.ts"
+      ],
+      "vue": [
+        "./lib/vue.d.ts"
+      ],
+      "sveltekit": [
+        "./lib/sveltekit.d.ts"
+      ],
+      "remix": [
+        "./lib/remix.d.ts"
+      ],
+      "solid": [
+        "./lib/solid.d.ts"
+      ],
+      "angular": [
+        "./lib/angular.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "ui/dist",

@@ -75,6 +75,66 @@ describe("buildPlan", () => {
     expect(fresh.typescript).toEqual({ from: "^5.9.3", to: "typescript@^6" });
   });
 
+  it("says what moving to TypeScript 6 asks of a tsconfig written for an older one", () => {
+    const root = projectWith({
+      "package.json": manifest({ next: "^15.5.0", typescript: "^5.9.3" }),
+      "tsconfig.json": `{
+        // as an older Next.js project has it
+        "compilerOptions": {
+          "target": "es5",
+          "moduleResolution": "node",
+          "baseUrl": ".",
+          "paths": { "@/*": ["src/*"] },
+          "downlevelIteration": true,
+        },
+      }`,
+    });
+    const plan = buildPlan(contextOf(root, "typescript"), RECIPE);
+    const step = plan.manual.find((each) => each.file === "tsconfig.json");
+
+    expect(step?.what).toContain(
+      'deprecates what tsconfig.json sets: target "es5", moduleResolution "node", baseUrl, downlevelIteration',
+    );
+    expect(step?.what).toContain('import "swiper/css"');
+    expect(step?.lines).toEqual([
+      '"moduleResolution": "bundler",',
+      '"paths": { "@/*": ["./src/*"] },',
+    ]);
+  });
+
+  it("asks a server for the resolution Node uses, and reads a base the tsconfig extends", () => {
+    const root = projectWith({
+      "package.json": manifest({ express: "^5.1.0", typescript: "^5.9.3" }),
+      "tsconfig.base.json":
+        '{ "compilerOptions": { "moduleResolution": "node10", "baseUrl": "src", "paths": { "~/*": ["*"] } } }',
+      "tsconfig.json":
+        '{ "extends": "./tsconfig.base.json", "compilerOptions": { "strict": true } }',
+    });
+    const plan = buildPlan(contextOf(root, "typescript"), RECIPE);
+
+    expect(plan.manual.find((each) => each.file === "tsconfig.json")?.lines).toEqual([
+      '"module": "node16",',
+      '"paths": { "~/*": ["./src/*"] },',
+    ]);
+  });
+
+  it("asks nothing of a tsconfig TypeScript 6 takes as it is, nor of a project on it already", () => {
+    const clean = projectWith({
+      "package.json": manifest({ next: "^15.5.0", typescript: "^5.9.3" }),
+      "tsconfig.json": '{ "compilerOptions": { "moduleResolution": "bundler" } }',
+    });
+    const onSix = projectWith({
+      "package.json": manifest({ next: "^15.5.0", typescript: "^6.0.0" }),
+      "tsconfig.json":
+        '{ "compilerOptions": { "moduleResolution": "node", "ignoreDeprecations": "6.0" } }',
+    });
+
+    for (const root of [clean, onSix]) {
+      const plan = buildPlan(contextOf(root, "typescript"), RECIPE);
+      expect(plan.manual.map((each) => each.file)).not.toContain("tsconfig.json");
+    }
+  });
+
   it("changes nothing in a project set up already", () => {
     const root = projectWith({
       "package.json": manifest(

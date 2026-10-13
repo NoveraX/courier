@@ -20,7 +20,7 @@ import {
   DEMO_SHARED_REFUSAL,
   DEMO_WRITE_REFUSAL,
 } from "../src/server/demo/demo-refusals";
-import { DEMO_REST_BUSY } from "../src/server/demo/demo-rest-guard";
+import { DEMO_LARGE_BODY, DEMO_REST_BUSY } from "../src/server/demo/demo-rest-guard";
 import { DEMO_SERVER_OPTIONS } from "../src/server/demo/demo-serving";
 import { DEMO_MAX_MESSAGE_BYTES } from "../src/server/demo/demo-visitors";
 import { TOKEN_HEADER } from "../src/server/token-guard";
@@ -306,7 +306,7 @@ describe("the demo's API at work", () => {
       path: "/api/apis/parse",
       headers: {
         "content-type": "application/json",
-        "content-length": "1000",
+        "content-length": String(DEMO_LARGE_BODY + 1000),
         origin: url,
         "x-forwarded-for": visitor,
       },
@@ -320,10 +320,11 @@ describe("the demo's API at work", () => {
     const ends = [hanging("203.0.113.21"), hanging("203.0.113.22")];
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const third = await post("/api/sessions/list", undefined, {}, "203.0.113.23");
+    const large = { pad: "x".repeat(DEMO_LARGE_BODY) };
+    const third = await post("/api/sessions/list", undefined, large, "203.0.113.23");
     for (const end of ends) end();
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const later = await post("/api/sessions/list", undefined, {}, "203.0.113.23");
+    const later = await post("/api/sessions/list", undefined, large, "203.0.113.23");
 
     expect(third.status).toBe(429);
     expect(((await third.json()) as { error: string }).error).toBe(DEMO_REST_BUSY);

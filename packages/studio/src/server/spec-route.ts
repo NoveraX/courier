@@ -5,7 +5,7 @@ import { isIP } from "node:net";
 import { createLogger } from "@noverax/courier";
 import { addressKindHere } from "./address-kind-here";
 import { approveSpecAddresses } from "./approve-spec-addresses";
-import { guardedLookup, type LookupCallback, type LookupPolicy } from "./guarded-lookup";
+import type { LookupCallback, LookupPolicy } from "./guarded-lookup";
 import { readInterfaces } from "./own-addresses";
 import { type SpecProxy, specProxyFor } from "./spec-proxy";
 
@@ -36,12 +36,13 @@ export interface SpecRoute {
  * @param url - Where the request goes; an address written out in it has been approved already
  * @param policy - What besides the public internet the request may reach
  * @param mayProxy - Whether the request may go through a proxy at all
+ * @param lookup - What resolves the host as this machine connects to it, checking each address against the policy
  * @returns The route
  * @throws {SpecFetchError} For an address the policy refuses, or a proxy variable that names no URL
  * @throws {SpecHostsUnavailableError} For a private address, while Studio cannot tell whether the project allows it
  * @example
  * ```ts
- * const route = await specRoute(new URL(url), policy, true);
+ * const route = await specRoute(new URL(url), policy, true, guardedLookup(policy));
  * request(url, { agent: route.agent, lookup: route.lookup });
  * ```
  */
@@ -49,6 +50,7 @@ export async function specRoute(
   url: URL,
   policy: LookupPolicy,
   mayProxy: boolean,
+  lookup: LookupCallback,
 ): Promise<SpecRoute> {
   const https = url.protocol === "https:";
   const proxy = mayProxy ? specProxyFor(url) : undefined;
@@ -56,7 +58,7 @@ export async function specRoute(
     const agent = https
       ? new HttpsAgent({ keepAlive: false })
       : new HttpAgent({ keepAlive: false });
-    return { agent, lookup: guardedLookup(policy), proxy: undefined };
+    return { agent, lookup, proxy: undefined };
   }
   /* The proxy alone, without NO_PROXY: whether this host goes through it was decided above. */
   const proxyEnv: ProxyEnv = {

@@ -1,11 +1,16 @@
 /**
- * The thread Studio formats files in with the project's ESLint and
- * Prettier: each loaded once, from the project, and kept for every file
- * after, so a file takes milliseconds rather than a process of its own.
- * Out of Studio's own thread, a large file never holds up its server.
+ * The thread Studio does its long work in, out of its server's own thread
+ * so that no single piece of it holds the server up. It formats files with
+ * the project's ESLint and Prettier — each loaded once, from the project,
+ * and kept for every file after, so a file takes milliseconds rather than a
+ * process of its own — and it reads specifications, generates their code
+ * and compares them, one job per thread. It greets Studio first with the
+ * version of what it understands, so a script left from another build of
+ * Studio is told apart at once.
  */
 
 import { parentPort } from "node:worker_threads";
+import { serveSpecJobs } from "../spec-thread/serve-spec-jobs";
 import type { FileFormatter } from "./tool-api";
 import { eslintFormatter } from "./worker-eslint";
 import { prettierFormatter } from "./worker-prettier";
@@ -37,3 +42,4 @@ async function answer(request: FormatRequest): Promise<void> {
 parentPort?.on("message", (message: unknown) => {
   if (isFormatRequest(message)) void answer(message);
 });
+serveSpecJobs(parentPort);

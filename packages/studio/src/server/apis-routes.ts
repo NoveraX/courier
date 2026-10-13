@@ -1,30 +1,33 @@
 /**
- * Express routes for apis: parse, generate, write, diff.
+ * Express routes for apis: generate, write, diff, and the imports list,
+ * checks, management and updates. Reading a specification is
+ * `parse-route.ts`.
  */
 
-import { diffSpecs, generateCode, parseSpec } from "../apis";
-import { resolveBaseURL } from "../apis/resolve-base-url";
-import { DEMO_FILE_REFUSAL } from "./demo/demo-refusals";
-import { fetchSpec, type SpecReach } from "./fetch-spec";
+import { diffSpecs, generateCode } from "../apis";
+import { answerFromThread } from "./answer-from-thread";
 import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
 import { formatProjectFiles } from "./project-format/format-project-files";
-import { type ProjectRoot, projectRootAt } from "./project-fs/project-root";
-import { readProjectText } from "./project-fs/read-project-text";
 import type { ProjectState } from "./project-state/types";
-import { refuseUnsendable } from "./refuse-unsendable";
 import { registerRegistryRoutes } from "./registry-routes";
-import { sendRouteFailure } from "./route-failure";
-import type { RouteApp, RouteRequest } from "./route-types";
-import { SpecFetchError } from "./spec-fetch-error";
-import { type SpecHostAllowlist, specHostAllowlist } from "./spec-host-allowlist";
-import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
-import { SpecTooLargeError } from "./spec-too-large-error";
+import type { WorkedResponse } from "./request-work";
+import type { JsonResponse, RouteApp, RouteRequest } from "./route-types";
+import { diffInThread } from "./spec-thread/diff-in-thread";
+import { generateInThread } from "./spec-thread/generate-in-thread";
 import { registerUpdateFlowRoutes } from "./update-routes";
-import { validateDiffBody, validateGenerateBody, validateParseBody } from "./validate-body";
+import { validateDiffBody, validateGenerateBody } from "./validate-body";
 import { registerWriteRoutes } from "./write-routes";
+
+/** The app the routes mount on, whose answers tell when they have been sent. */
+export interface ApisRouteApp extends RouteApp {
+  post(
+    path: string,
+    handler: (req: RouteRequest, res: JsonResponse & WorkedResponse) => void | Promise<void>,
+  ): void;
+}
 
 /** What the imports routes read the project from. */
 export interface ApisRouteDeps {
@@ -37,65 +40,51 @@ export interface ApisRouteDeps {
   /** The project root, symlinks resolved: where the imports state lives. */
   projectRoot: string;
   /**
-   * Whether a request comes from a visitor of a public demo, who may have
-   * Studio read a specification from the public internet or as pasted,
-   * never from this machine, its network, or a file of the project.
+   * Whether a request carries the project's token: only for a caller that
+   * does, Studio formats the code it generates with the project's own
+   * formatters, and reads the project's package.json and tsconfig to give
+   * the code's imports the extension the project needs — each formatter is
+   * a program of the project's, run as a process per file, and a caller
+   * without the token writes nothing and has no file of the project read.
+   * It generates or compares code for any other in a thread of its own,
+   * within a budget, as it reads a specification for it; for every caller
+   * so when this is not given.
    */
-  isDemoVisitor?: ((req: RouteRequest) => boolean) | undefined;
+  holdsToken?: ((req: RouteRequest) => boolean) | undefined;
 }
 
 /**
- * Mount the API-import routes: parse, generate, write, diff, and the
- * imports list, checks, management and updates.
+ * Mount the API-import routes: generate, write, diff, and the imports list,
+ * checks, management and updates. For a caller without the token, code is
+ * generated and specifications compared in a thread of its own, within a
+ * budget, and the code comes as the generator writes it, unformatted and
+ * with no file of the project read.
  *
  * @param app - The Studio server's Express app
  * @param deps - The project the imports routes answer from
  *
  * @example
  * ```ts
- * registerApisRoutes(app, { project, projectRoot: root });
+ * registerApisRoutes(app, { project, projectRoot: root, holdsToken });
  * ```
  */
-export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
-  app.post("/api/apis/parse", async (req, res) => {
-    try {
-      const body = validateParseBody(req.body, res);
-      if (!body) return;
-      const visitor = deps.isDemoVisitor?.(req) === true;
-      if (visitor && body.source === "file") {
-        res.status(403).json({ error: DEMO_FILE_REFUSAL, code: "STUDIO_DEMO_REFUSED" });
-        return;
-      }
-      const raw = await resolveSpecContent(body, {
-        allowlist: specHostAllowlist(deps.project, deps.projectRoot),
-        root: projectRootAt(deps.projectRoot),
-        reach: visitor ? "public" : "project",
-      });
-      const parsed = parseSpec(raw);
-      const spec = body.source === "url" ? resolveBaseURL(parsed, body.content) : parsed;
-      refuseUnsendable(spec);
-      res.json(spec);
-    } catch (err) {
-      if (err instanceof SpecHostsUnavailableError || err instanceof SpecTooLargeError) {
-        sendRouteFailure(res, err, "Failed to parse spec");
-        return;
-      }
-      /* A spec host that could not be read is the server's failure, not the request's. */
-      const status = err instanceof SpecFetchError && !err.refused ? 502 : 400;
-      res.status(status).json({ error: errMsg(err, "Failed to parse spec") });
-    }
-  });
-
+export function registerApisRoutes(app: ApisRouteApp, deps: ApisRouteDeps): void {
   app.post("/api/apis/generate", async (req, res) => {
     try {
       const body = validateGenerateBody(req.body, res);
       if (!body) return;
-      const files = generateCode(body.spec, withImportExtension(body.options, deps.projectRoot));
-      /* A demo's visitor writes nothing, and a formatter is a process per file. */
-      if (deps.isDemoVisitor?.(req) === true) {
-        res.json({ files });
+      /* No file of the project is read for a caller without the token — not
+         even its package.json and tsconfig, which say whether its imports
+         need an extension: its code is the generator's, with none. */
+      if (deps.holdsToken?.(req) !== true) {
+        await answerFromThread(res, "Code generation failed", (signal) =>
+          generateInThread(body.spec, body.options, { trusted: false, signal }).then((files) => ({
+            files,
+          })),
+        );
         return;
       }
+      const files = generateCode(body.spec, withImportExtension(body.options, deps.projectRoot));
       /* Shown as they will be written: formatted as the project formats its code. */
       const {
         files: formatted,
@@ -111,10 +100,16 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
   registerWriteRoutes(app, deps);
   registerLayoutRoute(app);
 
-  app.post("/api/apis/diff", (req, res) => {
+  app.post("/api/apis/diff", async (req, res) => {
     try {
       const body = validateDiffBody(req.body, res);
       if (!body) return;
+      if (deps.holdsToken?.(req) !== true) {
+        await answerFromThread(res, "Failed to diff specs", (signal) =>
+          diffInThread(body.oldSpec, body.newSpec, { trusted: false, signal }),
+        );
+        return;
+      }
       res.json(diffSpecs(body.oldSpec, body.newSpec));
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Failed to diff specs") });
@@ -124,15 +119,4 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
   registerRegistryRoutes(app, deps);
   registerManageRoutes(app, deps);
   registerUpdateFlowRoutes(app, deps);
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-async function resolveSpecContent(
-  { source, content }: { source: "url" | "raw" | "file"; content: string },
-  where: { allowlist: SpecHostAllowlist; root: ProjectRoot; reach: SpecReach },
-): Promise<string> {
-  if (source === "url") return fetchSpec(content, where.allowlist, {}, where.reach);
-  if (source === "file") return readProjectText(where.root, content);
-  return content;
 }

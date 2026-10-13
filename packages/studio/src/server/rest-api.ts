@@ -21,6 +21,7 @@ import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { registerOpenApiExportRoutes } from "./openapi-export/openapi-export-routes";
 import { createOriginGuard } from "./origin-guard";
+import { registerParseRoute } from "./parse-route";
 import {
   type RecordedTestRouteDeps,
   registerRecordedTestRoutes,
@@ -70,8 +71,10 @@ export interface RestApiDeps {
  * writing route asks for, JSON bodies, the health check, the API and session
  * routes, and JSON answers for a route Studio does not have and for the
  * errors the routes raise. A caller without the token is told no path of
- * this machine. A public demo also counts its visitors' requests, reads
- * smaller bodies, and tells a visitor why it writes nothing.
+ * this machine, and has Studio open no file it names, reach no host but a
+ * public one, and run none of the project's formatters. A public demo also
+ * counts its visitors' requests, reads smaller bodies, and tells a visitor
+ * why it writes nothing.
  *
  * @param app - The Studio server's Express app
  * @param policy - Decides who counts as the Studio UI
@@ -112,9 +115,9 @@ export function registerRestApi(
     res.json({ status: "ok" });
   });
 
-  /* A demo's visitor has Studio read no file of its own and no private host. */
-  const isDemoVisitor = (req: RouteRequest) => !token.matches(req.get?.(TOKEN_HEADER));
-  registerApisRoutes(app, demo ? { ...apis, isDemoVisitor } : apis);
+  const holdsToken = (req: RouteRequest) => token.matches(req.get?.(TOKEN_HEADER));
+  registerParseRoute(app, { ...apis, holdsToken, demo: demo !== undefined });
+  registerApisRoutes(app, { ...apis, holdsToken });
   registerSessionRoutes(app, sessions);
   registerSessionFileRoutes(app, sessions);
   registerRecordedTestRoutes(app, tests);

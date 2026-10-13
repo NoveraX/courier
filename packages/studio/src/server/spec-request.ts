@@ -1,20 +1,17 @@
-import { type ClientRequest, request as httpRequest, type IncomingMessage } from "node:http";
+import { type ClientRequest, request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import { approveSpecAddresses } from "./approve-spec-addresses";
-import { errnoCode } from "./errno-code";
-import type { LookupPolicy } from "./guarded-lookup";
-import { readSpecBody, SPEC_MAX_BYTES } from "./read-spec-body";
+import type { Capacity } from "./capacity";
+import { type LookupPolicy, type SpecLookups, systemLookups } from "./guarded-lookup";
+import { publicLookups } from "./public-lookups";
+import { SPEC_MAX_BYTES } from "./read-spec-body";
 import { type RequestClock, requestClock } from "./request-clock";
+import { exchange, type SpecAnswer } from "./spec-exchange";
 import { SpecFetchError } from "./spec-fetch-error";
-import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { type SpecRoute, specRoute } from "./spec-route";
-import { proxyRefused, specUnreachable } from "./spec-unreachable";
 
-/** What one request for a specification got. */
-export type SpecAnswer =
-  | { kind: "body"; text: string; remoteAddress: string | null }
-  | { kind: "redirect"; location: string; remoteAddress: string | null };
+export type { SpecAnswer } from "./spec-exchange";
 
 /** What a request for a specification is sent with besides its URL. */
 export interface SpecRequestOptions {
@@ -24,9 +21,18 @@ export interface SpecRequestOptions {
   readonly proxy?: boolean | undefined;
   /** The most the body may be, decompressed (default {@link SPEC_MAX_BYTES}) */
   readonly maxBytes?: number | undefined;
+  /** The bytes the body is buffered in, shared with other requests, when it is */
+  readonly budget?: Capacity | undefined;
+  /** Stops the request, wherever it is, once aborted: whoever asked for it has gone */
+  readonly signal?: AbortSignal | undefined;
+  /**
+   * How its host's name is looked up: as this machine resolves it
+   * (`"system"`, the default), or from public DNS by a resolver of the
+   * request's own (`"public"`), for a caller that reaches the public
+   * internet only — a lookup that stops with the request, and is waited for
+   */
+  readonly names?: "system" | "public" | undefined;
 }
-
-const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
 
 /**
  * Send one GET for a specification, connecting only where the policy allows.
@@ -52,43 +58,82 @@ const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
  * arrive, fail it at once as a response Studio cannot parse: the host was
  * reached, and may still be holding the connection open.
  *
+ * A host's name is looked up as this machine resolves it, or — with
+ * `names: "public"`, for a caller that reaches the public internet only —
+ * from public DNS by a lookup of the request's own (see `publicLookups`).
+ *
+ * Aborted or out of time, the request stops where it is — its connection
+ * closed, the body read so far let go, a lookup it can stop stopped — and
+ * connects nowhere after. It settles only once no such lookup is still
+ * under way, so a caller that counts its requests counts their lookups too.
+ *
  * @param url - The URL, already checked for scheme and form
  * @param policy - What besides the public internet the request may reach
  * @param timeoutMs - How long it may take, all of it
- * @param options - Its headers, and whether it may go through a proxy
+ * @param options - Its headers, whether it may go through a proxy, its limits, its signal, and how its host's name is looked up
  * @returns The body, or where the server redirects
- * @throws {SpecFetchError} For a refused address, an error answer, a response that is not HTTP, a body cut off, too large or not readable, or a failure to connect or finish in time
+ * @throws {SpecFetchError} For a refused address, an error answer, a response that is not HTTP, a body cut off, too large or not readable, a failure to connect or finish in time, or a request aborted
  * @throws {SpecHostsUnavailableError} For a private address, while Studio cannot tell whether the project allows it
+ * @throws {StudioBusyError} When the requests sharing its budget hold all of it
  *
  * @example
  * ```ts
  * const answer = await requestSpec(new URL(url), { loopback: true, admitPrivate: refuseEvery }, 30_000);
  * ```
  */
-export function requestSpec(
+export async function requestSpec(
   url: URL,
   policy: LookupPolicy,
   timeoutMs: number,
-  { headers = {}, proxy = true, maxBytes = SPEC_MAX_BYTES }: SpecRequestOptions = {},
+  options: SpecRequestOptions = {},
 ): Promise<SpecAnswer> {
   const clock = requestClock(url, policy, timeoutMs);
+  const lookups =
+    options.names === "public" ? publicLookups(clock.policy) : systemLookups(clock.policy);
+  try {
+    return await sent(url, clock, lookups, timeoutMs, options);
+  } finally {
+    lookups.cancel();
+    await lookups.idle();
+  }
+}
+
+/* The request, until it is answered, stopped, or out of time; a lookup it
+   could not stop in time is the caller's to wait for. */
+function sent(
+  url: URL,
+  clock: RequestClock,
+  lookups: SpecLookups,
+  timeoutMs: number,
+  { headers = {}, proxy = true, maxBytes = SPEC_MAX_BYTES, budget, signal }: SpecRequestOptions,
+): Promise<SpecAnswer> {
   return new Promise<SpecAnswer>((resolve, reject) => {
     let request: ClientRequest | undefined;
-    const deadline = setTimeout(() => {
-      const error = clock.expire();
+    let stopped: Error | undefined;
+    const stop = (error: Error): void => {
+      stopped = error;
+      clearTimeout(deadline);
+      lookups.cancel();
       request?.destroy(error);
       reject(error);
-    }, timeoutMs);
+    };
+    const deadline = setTimeout(() => stop(clock.expire()), timeoutMs);
+    const gone = (): void => stop(SpecFetchError.aborted(url, signal?.reason));
+    if (signal?.aborted) gone();
+    else signal?.addEventListener("abort", gone, { once: true });
     admitWrittenOut(url, clock.policy)
-      .then(() => specRoute(url, clock.policy, proxy))
+      .then(() => specRoute(url, clock.policy, proxy, lookups.lookup))
       .then((route) => {
-        /* Time that ran out while the route was found leaves nothing to send. */
-        if (clock.expired) throw clock.expired;
+        /* Time that ran out, or a caller gone, while the route was found leaves nothing to send. */
+        if (stopped) throw stopped;
         request = open(url, route, headers);
-        return exchange(request, url, clock, route, maxBytes);
+        return exchange(request, url, clock, route, { maxBytes, budget });
       })
       .then(resolve, reject)
-      .finally(() => clearTimeout(deadline));
+      .finally(() => {
+        clearTimeout(deadline);
+        signal?.removeEventListener("abort", gone);
+      });
   });
 }
 
@@ -112,65 +157,4 @@ function open(
       ...headers,
     },
   });
-}
-
-function exchange(
-  request: ClientRequest,
-  url: URL,
-  clock: RequestClock,
-  route: SpecRoute,
-  maxBytes: number,
-): Promise<SpecAnswer> {
-  return new Promise<SpecAnswer>((resolve, reject) => {
-    request.on("response", (response) => {
-      clock.answered = true;
-      answer(response, url, route, maxBytes).then(resolve, reject);
-    });
-    request.on("error", (error) => reject(failure(error, url, clock.answered, route)));
-    request.end();
-  });
-}
-
-/* A refusal the lookup raised reaches the caller as it is, not as a failure
-   to connect. Node's HTTP parser names what it rejects with an `HPE_` code:
-   the host answered, so it was reached. A connection lost once the server
-   answered cut its body off. */
-function failure(error: Error, url: URL, answered: boolean, route: SpecRoute): Error {
-  if (error instanceof SpecFetchError || error instanceof SpecHostsUnavailableError) return error;
-  const code = errnoCode(error);
-  if (code?.startsWith("HPE_")) return unparsable(url, code, error);
-  return answered ? SpecFetchError.cutOff(url, error) : specUnreachable(url, error, route.proxy);
-}
-
-function unparsable(url: URL, code: string, cause: Error): SpecFetchError {
-  return new SpecFetchError(
-    "SPEC_UNREACHABLE",
-    `${url.href} sent a response Studio cannot parse (${code}).`,
-    { cause, url: url.href },
-  );
-}
-
-async function answer(
-  response: IncomingMessage,
-  url: URL,
-  route: SpecRoute,
-  maxBytes: number,
-): Promise<SpecAnswer> {
-  const status = response.statusCode ?? 0;
-  /* Through a proxy the socket's address is the proxy's, which may well be this machine. */
-  const remoteAddress = route.proxy === undefined ? (response.socket.remoteAddress ?? null) : null;
-  const location = response.headers.location;
-  if (route.proxy !== undefined && status === 407) {
-    response.destroy();
-    throw proxyRefused(url, route.proxy, response.statusMessage);
-  }
-  if (REDIRECTS.has(status) && location) {
-    response.destroy();
-    return { kind: "redirect", location, remoteAddress };
-  }
-  if (status < 200 || status >= 300) {
-    response.destroy();
-    throw new SpecFetchError("SPEC_HTTP_STATUS", `${url.href} answered ${status}.`);
-  }
-  return { kind: "body", text: await readSpecBody(response, url, maxBytes), remoteAddress };
 }

@@ -42,7 +42,8 @@ const PARSE_SOURCES = ["url", "raw", "file"] as const;
 
 type ParseSource = (typeof PARSE_SOURCES)[number];
 
-interface ParseBody {
+/** What `POST /api/apis/parse` reads: a URL, the text itself, or a file of the project. */
+export interface ParseBody {
   source: ParseSource;
   content: string;
 }

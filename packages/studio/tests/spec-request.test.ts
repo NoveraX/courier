@@ -240,4 +240,48 @@ describe("requestSpec", () => {
       expect(ms).toBeLessThan(1_000);
     },
   );
+
+  it("stops once aborted while the body arrives, closing the connection at once", async () => {
+    let closed = false;
+    const raw = createRawServer((socket) => {
+      socket.once("data", () => socket.write("HTTP/1.1 200 OK\r\ncontent-length: 4096\r\n\r\n{"));
+      socket.on("close", () => {
+        closed = true;
+      });
+    });
+    await new Promise<void>((resolve) => raw.listen(0, "127.0.0.1", resolve));
+    servers.push(raw);
+    const { port } = raw.address() as { port: number };
+    const caller = new AbortController();
+    const asking = elapsed(() =>
+      requestSpec(new URL(`http://127.0.0.1:${port}/spec.json`), ON_THIS_MACHINE, 30_000, {
+        signal: caller.signal,
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    caller.abort();
+    const { result, ms } = await asking;
+    await vi.waitUntil(() => closed, { timeout: 1_000 });
+
+    expect(result).toMatchObject({ status: "rejected", reason: { code: "SPEC_ABORTED" } });
+    expect(ms).toBeLessThan(1_000);
+    expect(closed).toBe(true);
+  });
+
+  it("connects nowhere once aborted before it was sent", async () => {
+    const server = await serveCounting();
+    const caller = new AbortController();
+    caller.abort();
+
+    const { result } = await elapsed(() =>
+      requestSpec(new URL(`http://127.0.0.1:${server.port}/spec.json`), ON_THIS_MACHINE, 3_000, {
+        signal: caller.signal,
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(result).toMatchObject({ status: "rejected", reason: { code: "SPEC_ABORTED" } });
+    expect(server.connections()).toBe(0);
+  });
 });

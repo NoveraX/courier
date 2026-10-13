@@ -22,6 +22,8 @@ import {
 } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Worker } from "node:worker_threads";
+import { io as connect } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
@@ -352,3 +354,115 @@ describe("updating a declared import as its entry says", () => {
     expect(field(preview.body, "error")).toContain("no such tag");
   });
 });
+
+describe("a check whose caller goes away", () => {
+  const stops: Array<() => Promise<void>> = [];
+  afterEach(async () => {
+    for (const stop of stops.splice(0)) await stop();
+  });
+
+  /* A spec server that holds every request open, never answering, and says when each was closed. */
+  async function hangingServer(): Promise<{ url: string; asked: number; closed: number }> {
+    const seen = { url: "", asked: 0, closed: 0 };
+    const server = createHttpServer((req) => {
+      seen.asked += 1;
+      req.socket.once("close", () => {
+        seen.closed += 1;
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") throw new Error("not listening on TCP");
+    seen.url = `http://127.0.0.1:${address.port}`;
+    stops.push(async () => {
+      server.closeAllConnections();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    });
+    return seen;
+  }
+
+  function urlImports(urls: Record<string, string>): string {
+    const imports = Object.entries(urls)
+      .map(
+        ([name, from]) =>
+          `${name}: { importType: "url", type: "openapi", from: "${from}", outputDir: "src/${name}" }`,
+      )
+      .join(", ");
+    return `export default { sources: { api: { baseURL: "https://api.example" } }, imports: { ${imports} } };\n`;
+  }
+
+  /* A check its caller abandons once Studio has started on it. */
+  function abandoned(url: string, path: string, body: unknown) {
+    const caller = new AbortController();
+    const answered = fetch(`${url}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
+      body: JSON.stringify(body),
+      signal: caller.signal,
+    }).then(
+      () => "answered",
+      () => "left",
+    );
+    return { leave: () => caller.abort(), answered };
+  }
+
+  /* The check of each import a page opened now is shown. */
+  async function checksShown(url: string): Promise<unknown[]> {
+    const page = connect(`${url}/ui`, { transports: ["websocket"], autoConnect: false });
+    const first = new Promise<Array<{ check?: unknown }>>((resolve) => {
+      page.once("registry:updated", (list: { sources: Array<{ check?: unknown }> }) =>
+        resolve(list.sources),
+      );
+    });
+    page.connect();
+    try {
+      return (await first).map((source) => source.check);
+    } finally {
+      page.disconnect();
+    }
+  }
+
+  it("stops fetching every import a check of all of them fetches, and records no outcome", async () => {
+    const hanging = await hangingServer();
+    const url = await start(urlImports({ a: `${hanging.url}/a.json`, b: `${hanging.url}/b.json` }));
+    const check = abandoned(url, "/api/apis/imports/check-all", {});
+    await vi.waitUntil(() => hanging.asked === 2, { timeout: 10_000 });
+
+    check.leave();
+
+    expect(await check.answered).toBe("left");
+    await vi.waitUntil(() => hanging.closed === 2, { timeout: 2_000 });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(await checksShown(url)).toEqual([undefined, undefined]);
+  }, 30_000);
+
+  it("stops reading the specification once its caller goes away", async () => {
+    const lines = Array.from({ length: 600_000 }, (_, n) => `  k${n}: 1`).join("\n");
+    const slowYaml = `openapi: 3.0.0\ninfo: {title: Slow, version: '1'}\npaths: {}\nx:\n${lines}`;
+    const spec = await specServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/yaml" }).end(slowYaml);
+    });
+    stops.push(() => spec.close());
+    const url = await start(urlImports({ pets: `${spec.url}/spec.yaml` }));
+    const posted = vi.spyOn(Worker.prototype, "postMessage");
+    const check = abandoned(url, "/api/apis/imports/check-updates", { name: "pets" });
+    await vi.waitUntil(() => readingThread(posted) !== undefined, { timeout: 10_000 });
+    const left = Date.now();
+
+    check.leave();
+
+    expect(await check.answered).toBe("left");
+    await vi.waitUntil(() => readingThread(posted)?.threadId === -1, { timeout: 1_500 });
+    expect(Date.now() - left).toBeLessThan(1_500);
+    expect(await checksShown(url)).toEqual([undefined]);
+  }, 30_000);
+});
+
+/* The thread Studio posted a specification to read, once it has. */
+function readingThread(posted: {
+  mock: { calls: unknown[][]; contexts: unknown[] };
+}): Worker | undefined {
+  const index = posted.mock.calls.findIndex(([job]) => field(job, "kind") === "spec:read");
+  const thread = posted.mock.contexts[index];
+  return thread instanceof Worker ? thread : undefined;
+}

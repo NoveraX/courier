@@ -1,18 +1,11 @@
-import { createRequire } from "node:module";
 import { availableParallelism } from "node:os";
-import { dirname, join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { createLogger } from "@noverax/courier";
+import { STUDIO_THREAD_SCRIPT } from "../studio-thread-script";
 import { type FormatRequest, isFormatReply } from "./worker-protocol";
 
 const log = createLogger("Studio");
 
-/* The thread's script, beside Studio's other entries: from source and from the published lib alike. */
-const WORKER = join(
-  dirname(createRequire(import.meta.url).resolve("@noverax/courier-studio/package.json")),
-  "lib",
-  "format-worker.js",
-);
 /* A tool loaded with a typed-lint configuration takes seconds; one stuck takes forever. */
 const TIMEOUT_MS = 60_000;
 /* Kept warm between changes a user makes in a row; let go once they stop. */
@@ -108,7 +101,7 @@ function leastBusy(root: string, host: Host): Thread {
 }
 
 function started(root: string, host: Host): Thread {
-  const thread: Thread = { worker: new Worker(WORKER), waiting: new Map() };
+  const thread: Thread = { worker: new Worker(STUDIO_THREAD_SCRIPT), waiting: new Map() };
   thread.worker.on("message", (message: unknown) => answer(root, host, thread, message));
   thread.worker.on("error", (error: unknown) => {
     void end(root, host, thread, error instanceof Error ? error : new Error(String(error)));

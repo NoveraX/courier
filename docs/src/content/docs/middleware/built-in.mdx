@@ -256,6 +256,8 @@ const api = defineApi({
 
 Every caller receives a copy of its own, made with `structuredClone`, so editing a result never changes what the next caller gets. An answer holding a value that cannot be copied, such as a function, is not cached; class instances come back as plain objects.
 
+Calls that miss together — a burst on an entry that is empty or has just expired — reach the API once: the first fetches, and the others wait for its answer and take a copy, as a hit would. One that stops waiting leaves at once while the others go on. When the first one's answer is not kept — an error, a `Set-Cookie` — each of the others makes its own call.
+
 A call that carries the user's [session](/docs/server-side/session) is never answered from a `"public"` cache, nor stored in it: its answer belongs to that user, and the endpoint is named once in the log. Give such an API's per-user reads a cache of their own with `scope: "session"` — one partition per set of credentials the call sends, its `Cookie` and its `Authorization`, named by their SHA-256 digest so the credentials never sit in a store's keys:
 
 ```ts

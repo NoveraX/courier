@@ -148,9 +148,8 @@ export function createSSEStream(
       },
     },
     /* Sized in bytes: a one-chunk queue would count a healthy client that
-       is a burst behind as one that stopped reading. */
-    new ByteLengthQueuingStrategy({
-      highWaterMark: LIMITS.SSE_MAX_BUFFERED_BYTES,
-    }) as QueuingStrategy<Uint8Array>,
+       is a burst behind as one that stopped reading. Written out rather than
+       as a ByteLengthQueuingStrategy, which the Edge Runtime does not have. */
+    { highWaterMark: LIMITS.SSE_MAX_BUFFERED_BYTES, size: (chunk) => chunk.byteLength },
   );
 }

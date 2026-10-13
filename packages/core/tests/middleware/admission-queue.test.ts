@@ -16,7 +16,8 @@ describe("createAdmissionQueue", () => {
     const started = performance.now();
     await queue.enter(undefined);
 
-    expect(performance.now() - started).toBeLessThan(100);
+    /* A turn the aborted caller spent would hold this one for the whole 5 s window. */
+    expect(performance.now() - started).toBeLessThan(2_500);
   });
 
   it("rejects a waiting caller with its signal's reason when it cancels", async () => {

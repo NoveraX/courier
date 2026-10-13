@@ -106,8 +106,9 @@ describe("readConstraints", () => {
 
     const read = readConstraints({ pattern, maxLength: 3 }, "string");
 
+    /* Compiling it takes seconds before the engine refuses it as too large. */
     expect(read).toEqual({ maxLength: 3 });
-    expect(performance.now() - started).toBeLessThan(50);
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   it("compiles a pattern of the longest length allowed in milliseconds", () => {

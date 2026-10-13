@@ -62,15 +62,16 @@ describe("a sequence in the mock client", () => {
 
   it("waits the delay an entry declares", async () => {
     const { client, mock } = createMockClient<typeof api>();
-    mock("users", "getAll").sequence([{ data: [alice], delay: 80 }, [bob]]);
+    mock("users", "getAll").sequence([{ data: [alice], delay: 1_000 }, [bob]]);
 
     const started = performance.now();
     await client.users.getAll();
-    expect(performance.now() - started).toBeGreaterThanOrEqual(75);
+    expect(performance.now() - started).toBeGreaterThanOrEqual(995);
 
+    /* Held to half the delay, which a busy machine's pause never comes near. */
     const again = performance.now();
     await client.users.getAll();
-    expect(performance.now() - again).toBeLessThan(75);
+    expect(performance.now() - again).toBeLessThan(500);
   });
 });
 

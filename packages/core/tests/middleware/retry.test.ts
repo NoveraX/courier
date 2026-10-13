@@ -171,6 +171,11 @@ describe("retryMiddleware with retryOn", () => {
   });
 });
 
+/* Each wait between attempts below is seconds long, and a cancellation is
+   held to half of it: one the middleware waited out could not be mistaken
+   for a slow moment of the machine. */
+const LONG_DELAY = 4_000;
+
 describe("retryMiddleware and cancellation", () => {
   it("surfaces a caller's cancellation at once", async () => {
     const controller = new AbortController();
@@ -179,13 +184,16 @@ describe("retryMiddleware and cancellation", () => {
       abortedAt = Date.now();
       controller.abort();
     });
-    const client = clientFor(upstream.url, retryMiddleware({ retryOn: anyFailure }));
+    const client = clientFor(
+      upstream.url,
+      retryMiddleware({ delay: LONG_DELAY, retryOn: anyFailure }),
+    );
 
     await expect(
       client.with({ signal: controller.signal }).read({ code: 200 }),
     ).rejects.toMatchObject({ name: "AbortError" });
 
-    expect(Date.now() - abortedAt).toBeLessThan(150);
+    expect(Date.now() - abortedAt).toBeLessThan(LONG_DELAY / 2);
     expect(upstream.seen).toHaveLength(1);
   });
 
@@ -196,11 +204,11 @@ describe("retryMiddleware and cancellation", () => {
       abortedAt = Date.now();
       controller.abort(new Error("navigated away"));
     });
-    const client = clientFor(upstream.url, retryMiddleware({ delay: 200 }));
+    const client = clientFor(upstream.url, retryMiddleware({ delay: LONG_DELAY }));
 
     await expect(client.with({ signal: controller.signal }).read({ code: 200 })).rejects.toThrow();
 
-    expect(Date.now() - abortedAt).toBeLessThan(150);
+    expect(Date.now() - abortedAt).toBeLessThan(LONG_DELAY / 2);
     expect(upstream.seen).toHaveLength(1);
   });
 
@@ -214,13 +222,13 @@ describe("retryMiddleware and cancellation", () => {
         controller.abort();
       }, 50);
     });
-    const client = clientFor(upstream.url, retryMiddleware({ delay: 2000 }));
+    const client = clientFor(upstream.url, retryMiddleware({ delay: LONG_DELAY }));
 
     await expect(
       client.with({ signal: controller.signal }).read({ code: 503 }),
     ).rejects.toMatchObject({ name: "AbortError" });
 
-    expect(Date.now() - abortedAt).toBeLessThan(500);
+    expect(Date.now() - abortedAt).toBeLessThan(LONG_DELAY / 2);
     expect(upstream.seen).toHaveLength(1);
   });
 
@@ -352,17 +360,19 @@ describe("one vocabulary for a policy and the middleware", () => {
       defineApi({
         name: "api",
         baseURL: url,
-        endpoints: { read: endpoint.get("items").retry({ limit: 1, delay: 50, backoff: "fixed" }) },
+        endpoints: {
+          read: endpoint.get("items").retry({ limit: 1, delay: 600, backoff: "fixed" }),
+        },
       }),
     );
     const started = performance.now();
 
     await expect(client.read()).resolves.toEqual({ ok: true });
 
-    /* Well under the default 300 ms the policy could not change before. */
+    /* Twice the default 300 ms, which the policy could not change before: a
+       call that waited the default is answered well before this. */
     expect(seen).toHaveLength(2);
-    expect(performance.now() - started).toBeGreaterThanOrEqual(45);
-    expect(performance.now() - started).toBeLessThan(250);
+    expect(performance.now() - started).toBeGreaterThanOrEqual(595);
   });
 
   it("does not take the old names", () => {

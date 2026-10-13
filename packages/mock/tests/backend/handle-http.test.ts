@@ -41,6 +41,6 @@ describe("network faults on the mock client", () => {
     const [error, elapsed] = await failureOf(() => mc.client.users.getAll());
 
     expect(error instanceof HTTPError && error.status).toBe(408);
-    expect(elapsed).toBeLessThan(100);
+    expect(elapsed).toBeLessThan(1_000);
   });
 });

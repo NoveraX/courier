@@ -53,12 +53,12 @@ describe("a later plain mock in the mock client", () => {
 
   it("answers at once after a delay() mock", async () => {
     const { client, mock } = createMockClient<typeof api>();
-    mock("users", "getAll").delay(400).resolves("a");
+    mock("users", "getAll").delay(2_000).resolves("a");
     mock("users", "getAll").resolves("b");
 
     const started = performance.now();
     expect(await answers(client, 1)).toEqual(["b"]);
-    expect(performance.now() - started).toBeLessThan(200);
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   it("answers over HTTP after an emits() mock", async () => {

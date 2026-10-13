@@ -37,6 +37,21 @@ export function measured(name, value, unit, budget, { more = false, note } = {})
 }
 
 /**
+ * One figure as a multiple of another, for a report's note.
+ *
+ * @param {number} figure - The figure
+ * @param {number} of - What it is set against
+ * @returns {string} The multiple, two decimals: `0.67×`
+ * @example
+ * ```js
+ * times(1284, 1929); // "0.67×"
+ * ```
+ */
+export function times(figure, of) {
+  return `${(figure / of).toFixed(2)}×`;
+}
+
+/**
  * Percentiles of timed samples.
  *
  * @param {readonly number[]} samples - The samples

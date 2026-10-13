@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { measured, percentiles, report, statTicks } from "./metrics.mjs";
+import { measured, percentiles, report, statTicks, times } from "./metrics.mjs";
 
 describe("a figure", () => {
   it("is within its budget at or under it, or at or over it where more is better", () => {
@@ -62,5 +62,12 @@ describe("a process's processor time on Linux", () => {
       "4221 (MainThread (worker) 2) S 1 4221 4221 0 -1 4194560 9128 0 3 0 1500 237 4 9 20 0 11 0 8123 1103466496 52011";
 
     expect(statTicks(stat)).toBe(1737);
+  });
+});
+
+describe("a multiple", () => {
+  it("is one figure over another, to two decimals", () => {
+    expect(times(1284.44, 1929)).toBe("0.67×");
+    expect(times(30.63, 15.4)).toBe("1.99×");
   });
 });

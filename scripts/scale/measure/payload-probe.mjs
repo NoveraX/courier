@@ -17,7 +17,9 @@ import { percentiles } from "./metrics.mjs";
 import { sampleRecord } from "./sample-record.mjs";
 
 const SIZES = [1_000, 10_000, 50_000];
-const CALLS = 8;
+/* Calls per size, the first two left out of the median: more of the small
+   ones, whose few milliseconds a busy moment of the machine would sway. */
+const CALLS = { 1000: 40, 10000: 16, 50000: 8 };
 const FIELDS = ["owner", "tags", "amount", "address", "priority", "description"];
 
 const bodies = new Map(
@@ -63,8 +65,9 @@ const Record = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
 });
+const baseURL = `http://127.0.0.1:${upstream.address().port}`;
 const api = defineApi({
-  baseURL: `http://127.0.0.1:${upstream.address().port}`,
+  baseURL,
   groups: {
     bulk: defineGroup({
       prefix: "bulk",
@@ -78,10 +81,24 @@ const api = defineApi({
   },
 });
 const caller = createCaller(api);
+/* The same answer fetched, parsed and checked by the same schema with nothing
+   of Courier in between: the floor a call is held to on this machine. */
+const Records = z.array(Record);
+
+async function bare(count) {
+  const samples = [];
+  for (let call = 0; call < CALLS[count]; call++) {
+    const begun = performance.now();
+    const response = await fetch(`${baseURL}/bulk?count=${count}`);
+    Records.parse(await response.json());
+    samples.push(performance.now() - begun);
+  }
+  return percentiles(samples.slice(2)).p50;
+}
 
 async function timed(count) {
   const samples = [];
-  for (let call = 0; call < CALLS; call++) {
+  for (let call = 0; call < CALLS[count]; call++) {
     const begun = performance.now();
     await caller.bulk.list({ count });
     samples.push(performance.now() - begun);
@@ -89,8 +106,12 @@ async function timed(count) {
   return percentiles(samples.slice(2)).p50;
 }
 
+const floor = {};
 const plain = {};
-for (const count of SIZES) plain[count] = await timed(count);
+for (const count of SIZES) {
+  floor[count] = await bare(count);
+  plain[count] = await timed(count);
+}
 process.env.COURIER_STUDIO_URL = `http://127.0.0.1:${studio.address().port}`;
 const runtime = await attachRuntime("payloads");
 await new Promise((resolve) => setTimeout(resolve, 500));
@@ -99,7 +120,7 @@ for (const count of SIZES) {
   const before = { ...received };
   attached[count] = await timed(count);
   await new Promise((resolve) => setTimeout(resolve, 200));
-  attached[`${count}:eventBytes`] = (received.bytes - before.bytes) / CALLS;
+  attached[`${count}:eventBytes`] = (received.bytes - before.bytes) / CALLS[count];
 }
 runtime.detach();
 io.close();
@@ -107,6 +128,7 @@ upstream.close();
 console.log(
   JSON.stringify({
     sizes: Object.fromEntries(SIZES.map((count) => [count, (bodies.get(count) ?? "").length])),
+    floor,
     plain,
     attached,
   }),

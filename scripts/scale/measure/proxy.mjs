@@ -9,9 +9,17 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
 
 import { bundleEntry } from "./bundle.mjs";
-import { measured } from "./metrics.mjs";
+import { measured, times } from "./metrics.mjs";
 
 const run = promisify(execFile);
+
+/* What the proxy may cost, against the same calls made straight to the
+   backend on the same machine in the same run, so the budget holds on a
+   laptop and on CI runners alike, the fastest twice as fast as the slowest:
+   at least two fifths of their throughput, three tenths with Studio
+   recording every call, and a median and a tail a few times theirs. */
+const ALONE = { rps: 0.4, p50: 3, p99: 3 };
+const ATTACHED = { rps: 0.3, p50: 4, p99: 3 };
 
 /**
  * Start the app's server, call through it, and stop it.
@@ -46,21 +54,20 @@ export async function measureProxy({ dir, endpoints, ports, label, attach }) {
       ],
       { cwd: dir, encoding: "utf8" },
     );
-    const seen = JSON.parse(out.trim().split("\n").at(-1) ?? "{}");
-    const overhead = seen.proxied.p50 - seen.direct.p50;
-    /* Sized for a CI runner, a third of what a laptop does: a guard against a regression, not a target. */
+    const { proxied, direct } = JSON.parse(out.trim().split("\n").at(-1) ?? "{}");
+    const most = attach ? ATTACHED : ALONE;
     return [
-      measured(`${label}.rps`, seen.proxied.rps, "call/s", attach ? 1_000 : 1_500, {
+      measured(`${label}.rps`, proxied.rps, "call/s", direct.rps * most.rps, {
         more: true,
-        note: `through the app's server, 32 at a time; direct ${Math.round(seen.direct.rps)}`,
+        note: `through the app's server, 32 at a time; ${times(proxied.rps, direct.rps)} the ${Math.round(direct.rps)} direct`,
       }),
-      measured(`${label}.p50`, seen.proxied.p50, "ms", attach ? 20 : 15, {
-        note: `direct ${seen.direct.p50.toFixed(2)} ms, proxy adds ${overhead.toFixed(2)} ms`,
+      measured(`${label}.p50`, proxied.p50, "ms", direct.p50 * most.p50, {
+        note: `${times(proxied.p50, direct.p50)} the direct ${direct.p50.toFixed(2)} ms`,
       }),
-      measured(`${label}.p99`, seen.proxied.p99, "ms", 60, {
-        note: `direct ${seen.direct.p99.toFixed(2)} ms`,
+      measured(`${label}.p99`, proxied.p99, "ms", direct.p99 * most.p99, {
+        note: `${times(proxied.p99, direct.p99)} the direct ${direct.p99.toFixed(2)} ms`,
       }),
-      measured(`${label}.failed`, seen.proxied.failed + seen.direct.failed, "call", 0),
+      measured(`${label}.failed`, proxied.failed + direct.failed, "call", 0),
     ];
   } finally {
     app.kill("SIGINT");
@@ -102,6 +109,7 @@ export async function attachedApp({ dir, endpoints, ports }) {
           String(endpoints),
           String(calls),
           "8",
+          "traffic",
         ],
         { cwd: dir },
       );

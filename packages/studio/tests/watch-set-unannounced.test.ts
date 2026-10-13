@@ -93,12 +93,18 @@ describe("a watch set where no save is announced", () => {
     });
     expect(set.status()).toMatchObject({ comparedCount: 2, comparedEveryPass: 0 });
 
+    /* Each save is dated a while back, as one the safety net comes to late
+       is: with no grace, a timestamp the filesystem stamped a moment ahead of
+       Node's clock would be reported but not counted as a miss. */
     writeFileSync(file, "22");
+    utimesSync(file, LONG_AGO, LONG_AGO);
     expect(await c.waitFor(file)).toBe(true);
     expect(set.status().comparedEveryPass).toBe(0);
 
     c.seen.length = 0;
     writeFileSync(file, "333");
+    const later = new Date(LONG_AGO.getTime() + 1_000);
+    utimesSync(file, later, later);
     expect(await c.waitFor(file)).toBe(true);
     expect(set.status().comparedEveryPass).toBe(2);
   });

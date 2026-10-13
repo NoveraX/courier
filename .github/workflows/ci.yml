@@ -5,18 +5,17 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  # A release: every check, then the release job, which waits for the
-  # approval the `release` environment asks for
+  # Every check again, by hand
   workflow_dispatch:
 
-# A newer push supersedes a pull request's run; on master it waits, so a
-# release job already publishing is never cancelled half-way.
+# A newer push supersedes the run before it: the Release workflow releases
+# the newest commit of master once CI has passed on it, so an older run would
+# only hold the newer one up.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
-# Every job reads the repository and nothing more; the release job asks for
-# what publishing needs on its own.
+# Every job reads the repository and nothing more.
 permissions:
   contents: read
 
@@ -272,10 +271,8 @@ jobs:
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves
-  # nothing unchecked. The tags come with the full-depth checkout. The release
-  # does not wait for this job: a commit already on master cannot be reworded
-  # without rewriting master, so a failure reports it rather than holding
-  # every later release back.
+  # nothing unchecked. The tags come with the full-depth checkout. A release,
+  # as for every job, waits for this one to pass.
   commits:
     runs-on: ubuntu-latest
     steps:
@@ -324,83 +321,3 @@ jobs:
       - name: Build site
         run: npm run build
         working-directory: docs
-
-  # Cut by hand from master: a push only checks. The `release` environment
-  # holds the npm and Open VSX tokens and the Marketplace identity, and asks
-  # for its reviewers' approval before the job starts.
-  release:
-    needs: [ci, platforms, react-native, browser, editor, frameworks, quickstart]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    environment: release
-    concurrency:
-      group: release
-      cancel-in-progress: false
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      # npm mints the provenance attestation from this token, and the
-      # Marketplace identity signs in to Microsoft Entra ID with it
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      # npm 11, which Node 24 bundles, can publish with trusted publishing
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-          registry-url: 'https://registry.npmjs.org'
-
-      - run: npm ci
-
-      # The version released is the tag the run adds; none when the commits
-      # since the last release call for none.
-      - name: Release
-        id: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          HUSKY: "0"
-        run: |
-          before=$(git tag --list 'v*' | sort)
-          npx semantic-release
-          after=$(git tag --list 'v*' | sort)
-          released=$(comm -13 <(echo "$before") <(echo "$after") | head -n 1)
-          echo "version=${released#v}" >> "$GITHUB_OUTPUT"
-
-      # The editor extensions, at the version the release gave them, on the
-      # Visual Studio Marketplace and Open VSX — each the release has a way
-      # in to; the Extensions workflow publishes a released version by hand
-      # once the other is set up. A prerelease has no version they take.
-      - name: Sign in to Microsoft Entra ID as the Marketplace publisher
-        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-') && vars.AZURE_CLIENT_ID != ''
-        uses: azure/login@v3
-        with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          # The identity is a publisher member, not a role in any subscription
-          allow-no-subscriptions: true
-
-      - name: Publish the editor extensions
-        if: steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-')
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
-          MARKETPLACE_SIGNED_IN: ${{ vars.AZURE_CLIENT_ID != '' }}
-        run: npx tsx scripts/publish-extensions.ts
-
-      # The packages as released, for a marketplace the run had no way in to:
-      # uploaded by hand on its publisher page, Courier File Icons first.
-      - name: Keep the editor extensions
-        if: always() && steps.release.outputs.version != '' && !contains(steps.release.outputs.version, '-')
-        uses: actions/upload-artifact@v7
-        with:
-          name: editor-extensions
-          path: packages/*/dist/*.vsix
-          if-no-files-found: ignore
-          retention-days: 90

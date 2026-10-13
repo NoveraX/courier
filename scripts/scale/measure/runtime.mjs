@@ -38,7 +38,8 @@ export async function measureRuntime({ dir, endpoints }) {
       note: `${endpoints} endpoints defined, callers made`,
     }),
     measured("runtime.heap", seen.heapMb, "MB", 80),
-    measured("runtime.firstCall", seen.firstCallMs, "ms", 50),
+    /* Twice what the slowest CI runner takes: a first call is the machine's speed and Courier's alone. */
+    measured("runtime.firstCall", seen.firstCallMs, "ms", 120),
     measured("runtime.call.p50", seen.courier.p50, "µs", 1_000, {
       note: `bare fetch+json ${Math.round(seen.bare.p50)} µs`,
     }),

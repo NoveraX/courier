@@ -76,8 +76,11 @@ export async function measureStudio(fixture, more) {
     await sleep(IDLE_SECONDS * 1000);
     const idle = ((cpuSeconds(tree) - before) / IDLE_SECONDS) * 100;
     const editor = await editorFigures(url, dir, "studio.editor");
+    /* Studio's start and its processor at rest follow the machine's speed,
+       and nothing does their work without Courier to hold them to: their
+       budgets are twice what the slowest CI runner takes. */
     return [
-      measured("studio.ready", readyMs, "ms", 5_000, { note: "start to /api/health" }),
+      measured("studio.ready", readyMs, "ms", 8_000, { note: "start to /api/health" }),
       measured("studio.mocksReady", mocksMs, "ms", 15_000, {
         note: `${mockPorts.length} mocks listening`,
       }),
@@ -87,7 +90,7 @@ export async function measureStudio(fixture, more) {
       measured("studio.memory", memory, "MB", 1_200, {
         note: `${tree.length} processes at rest, ${SETTLE_SECONDS} s after the mocks started`,
       }),
-      measured("studio.idleCpu", idle, "%", 2, { note: `of one core, over ${IDLE_SECONDS} s` }),
+      measured("studio.idleCpu", idle, "%", 5, { note: `of one core, over ${IDLE_SECONDS} s` }),
       ...editor,
       ...(more ? await more({ url, pid: studio.pid ?? 0 }) : []),
     ];

@@ -14,7 +14,6 @@
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, type Server } from "node:http";
-import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
@@ -79,14 +78,6 @@ async function startUpstream(): Promise<string> {
   return `http://localhost:${(server.address() as { port: number }).port}`;
 }
 
-async function freePort(): Promise<number> {
-  const probe = createNetServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 function writeProject(): string {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
   mkdirSync(cache, { recursive: true });
@@ -112,10 +103,10 @@ beforeAll(async () => {
   upstream = await startUpstream();
   process.env.COURIER_TEST_UPSTREAM = upstream;
   root = writeProject();
-  const port = await freePort();
+  /* Port 0: the system picks one as Studio binds it, so no other test can take it in between. */
   const url = await new Promise<string>((resolve) => {
     const studio = createStudioServer({
-      port,
+      port: 0,
       host: "127.0.0.1",
       projectRoot: root,
       onReady: resolve,

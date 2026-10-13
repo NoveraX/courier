@@ -9,7 +9,6 @@
  * connection" never completed.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { createServer as createNetServer } from "node:net";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -33,13 +32,10 @@ async function startStudio(): Promise<string> {
   mkdirSync(cache, { recursive: true });
   const root = mkdtempSync(join(cache, "project-"));
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
-  const probe = createNetServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
   return new Promise<string>((resolve) => {
+    /* Port 0: the system picks one as Studio binds it, so no other test can take it in between. */
     const server = createStudioServer({
-      port,
+      port: 0,
       host: "127.0.0.1",
       projectRoot: root,
       onReady: resolve,

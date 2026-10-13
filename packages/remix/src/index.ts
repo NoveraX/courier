@@ -31,7 +31,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "remix" });
   return ({ request }: { request: Request }) => {
-    announce();
+    announce(new URL(request.url).origin);
     return handle(request);
   };
 }

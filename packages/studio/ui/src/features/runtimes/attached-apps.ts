@@ -13,8 +13,8 @@ function hostOf(origin: string): string {
 }
 
 /**
- * The apps attached to Studio, each with the origin it serves at when one of
- * its bound sources says so.
+ * The apps attached to Studio, each with the origin it is served at: the one
+ * the runtime said, else the one a source bound to it carries.
  *
  * @param snapshot - Studio's last account of the runtimes and their bindings
  * @returns The apps, in the order Studio lists the runtimes
@@ -25,10 +25,9 @@ function hostOf(origin: string): string {
  * ```
  */
 export function attachedApps(snapshot: BindingSnapshot): AttachedApp[] {
-  return snapshot.runtimes.map(({ runtimeId, kind }) => {
-    const origin = snapshot.rows.find(
-      (row) => row.runtimeId === runtimeId && row.appOrigin,
-    )?.appOrigin;
+  return snapshot.runtimes.map(({ runtimeId, kind, origin: said }) => {
+    const origin =
+      said ?? snapshot.rows.find((row) => row.runtimeId === runtimeId && row.appOrigin)?.appOrigin;
     return { id: runtimeId, kind, origin: origin === undefined ? undefined : hostOf(origin) };
   });
 }

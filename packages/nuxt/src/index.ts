@@ -48,8 +48,9 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "nuxt" });
   const handler = async (event: H3EventLike): Promise<Response> => {
-    announce();
-    return handleWhileConnected(handle, await requestOfEvent(event), connectionOf(event));
+    const request = await requestOfEvent(event);
+    announce(new URL(request.url).origin);
+    return handleWhileConnected(handle, request, connectionOf(event));
   };
   return Object.assign(handler, { __is_handler__: true } as const);
 }

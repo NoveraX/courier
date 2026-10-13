@@ -5,7 +5,7 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
   attachWebSocketUpgrade,
   DEFAULT_WS_PATH,
-  discoverNodeAppOrigin,
+  extractOriginFromNodeRequest,
   wsFrameLimit,
 } from "@noverax/courier/node";
 
@@ -55,8 +55,7 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
     maxPayload: wsFrameLimit(handlerOptions.maxMessageSize),
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
     onRequest: (request) => {
-      announce();
-      discoverNodeAppOrigin(request);
+      announce(extractOriginFromNodeRequest(request));
     },
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });

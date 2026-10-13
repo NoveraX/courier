@@ -1,7 +1,6 @@
 import type { ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { discoverAppOrigin } from "@noverax/courier/internal";
 /* Next.js has no exports map, so under Node resolution a module reaches this
    file only by its full name; bundlers accept either. */
 import type { NextRequest } from "next/server.js";
@@ -52,13 +51,11 @@ export function apiRoute<TConnect extends ConnectResult = ConnectResult>(
 
   return {
     GET: (request: NextRequest) => {
-      announce();
-      discoverAppOrigin(new URL(request.url).origin);
+      announce(new URL(request.url).origin);
       return handleGet(publicRequest(request));
     },
     POST: (request: NextRequest) => {
-      announce();
-      discoverAppOrigin(new URL(request.url).origin);
+      announce(new URL(request.url).origin);
       return handlePost(publicRequest(request));
     },
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */

@@ -188,9 +188,8 @@ describe("Courier's icons, once agreed to", () => {
     settings.set("material-icon-theme.files.associations", {
       "courier.config.ts": "../../.noverax-courier-icons/courier-config",
     });
-    registerFileIcons(context);
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await registerFileIcons(context).ready;
 
     expect(shown.infos).toEqual([]);
     expect(settings.get("vsicons.associations.files")).toHaveLength(2);
@@ -204,16 +203,16 @@ describe("Courier's icons, once agreed to", () => {
     });
     const vsicons = installed.get("vscode-icons-team.vscode-icons");
     installed.delete("vscode-icons-team.vscode-icons");
-    registerFileIcons(context);
-    await settle();
+    await registerFileIcons(context).ready;
     const before = settings.has("vsicons.associations.files");
 
     if (vsicons) installed.set("vscode-icons-team.vscode-icons", vsicons);
     extensionListeners.fire();
-    await new Promise((resolve) => setTimeout(resolve, 300));
 
     expect(before).toBe(false);
-    expect(settings.get("vsicons.associations.files")).toHaveLength(2);
+    await expect
+      .poll(() => settings.get("vsicons.associations.files"), { timeout: 5_000 })
+      .toHaveLength(2);
     expect(shown.infos).toEqual([]);
   });
 

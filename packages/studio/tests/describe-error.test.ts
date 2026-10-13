@@ -1,3 +1,5 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { describeError } from "../src/server/describe-error";
@@ -9,13 +11,27 @@ describe("describeError", () => {
     expect(describeError(error, "/app")).toBe("ParseError: Unexpected token courier.mocks.ts:3:2");
   });
 
-  it("keeps paths as they are without a root, and describes what is not an Error", () => {
+  it("keeps a path outside the home and temporary directories as it is without a root, and describes what is not an Error", () => {
     expect(describeError(new Error("open /app/x.ts"))).toBe("open /app/x.ts");
     expect(describeError("gone\nfor good")).toBe("gone for good");
   });
 
   it("describes a thrown value that has no string form by its contents", () => {
     expect(describeError(Object.create(null))).toBe("[Object: null prototype] {}");
+  });
+
+  it("names a path under the home directory from ~: every page shows it, one without the token too", () => {
+    const error = new Error(`Cannot find module '${join(homedir(), ".npm", "x.js")}'`);
+
+    expect(describeError(error, "/app")).toBe("Cannot find module '~/.npm/x.js'");
+  });
+
+  it("names the project root itself in words a sentence reads", () => {
+    const error = new Error("No courier.config.ts in /app. Create one there.");
+
+    expect(describeError(error, "/app")).toBe(
+      "No courier.config.ts in the project root. Create one there.",
+    );
   });
 
   it("leaves a path outside the root whole", () => {

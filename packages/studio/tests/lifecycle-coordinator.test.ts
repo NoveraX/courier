@@ -10,6 +10,7 @@
  * has stopped, and comes back when it is declared again. After close, no mock
  * starts.
  */
+import { join } from "node:path";
 import { courier, defineApi } from "@noverax/courier/define";
 import { defineMockServer } from "@noverax/courier-mock/managed";
 import type { Namespace, Socket } from "socket.io";
@@ -100,6 +101,7 @@ function studio() {
   const registry = createMockRegistry();
   const coordinator = createLifecycleCoordinator({
     mockRegistry: registry,
+    projectRoot: "/p",
     basePort: () => 7001,
     /* The pages with the token, which see each event whole. */
     uiNamespace: {
@@ -509,10 +511,19 @@ describe("the mocks file's status", () => {
     coordinator.setMocksFile({ file: null, error: null });
 
     expect(statuses()).toEqual([
-      { file: MOCKS_FILE, error: null },
-      { file: MOCKS_FILE, error: "Unexpected token" },
+      { file: "courier.mocks.ts", error: null },
+      { file: "courier.mocks.ts", error: "Unexpected token" },
       { file: null, error: null },
     ]);
+  });
+
+  it("names the file to pages relative to the project root, as a file that changes is named", () => {
+    const { coordinator, statuses } = studio();
+
+    coordinator.setMocksFile({ file: "/p/mocks/courier.mocks.ts", error: null });
+
+    expect(statuses().at(-1)).toEqual({ file: join("mocks", "courier.mocks.ts"), error: null });
+    expect(JSON.stringify(statuses())).not.toContain("/p/");
   });
 
   it("is sent to the UI that connects, and to no other", () => {
@@ -523,7 +534,7 @@ describe("the mocks file's status", () => {
     coordinator.sendSnapshot(page as unknown as Socket);
 
     expect(page.emit).toHaveBeenCalledWith("mocks:status", {
-      file: MOCKS_FILE,
+      file: "courier.mocks.ts",
       error: "Unexpected token",
     });
     expect(statuses()).toHaveLength(2);

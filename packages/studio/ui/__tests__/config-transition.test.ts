@@ -38,7 +38,7 @@ function missing(
 }
 
 const QUIET: ConfigReloadContext = { lastChange: null, announceReloads: true, mocks: null };
-const MOCKS_FILE = "/project/courier.mocks.ts";
+const MOCKS_FILE = "courier.mocks.ts";
 
 function changed(
   files: string[],
@@ -97,12 +97,12 @@ describe("configTransitionNotice", () => {
   });
 
   it("announces a reload only after it loaded, with the file that changed", () => {
-    const reload = changed(["/project/src/api.ts"], 1_500);
+    const reload = changed(["src/api.ts"], 1_500);
 
     expect(configTransitionNotice(loaded(2, 1_000), failed(3, 1_000), reload)?.tone).toBe("error");
     expect(configTransitionNotice(loaded(2, 1_000), loaded(3, 2_000), reload)).toEqual({
       tone: "info",
-      text: "API sources reloaded — /project/src/api.ts",
+      text: "API sources reloaded — src/api.ts",
     });
   });
 
@@ -110,7 +110,7 @@ describe("configTransitionNotice", () => {
     const notice = configTransitionNotice(
       loaded(2, 1_000),
       loaded(3, 2_000),
-      changed(["/project/src/a.ts", "/project/src/b.ts"], 1_500),
+      changed(["src/a.ts", "src/b.ts"], 1_500),
     );
 
     expect(notice).toEqual({ tone: "info", text: "API sources reloaded — 2 files" });
@@ -118,7 +118,7 @@ describe("configTransitionNotice", () => {
 
   it("says nothing about a reload when file-change toasts are off", () => {
     const reload: ConfigReloadContext = {
-      lastChange: { files: ["/project/src/api.ts"], timestamp: 1_500 },
+      lastChange: { files: ["src/api.ts"], timestamp: 1_500 },
       announceReloads: false,
       mocks: null,
     };
@@ -165,15 +165,15 @@ describe("configTransitionNotice", () => {
       configTransitionNotice(
         loaded(2, 1_000),
         loaded(3, 2_000),
-        changed([MOCKS_FILE, "/project/src/api.ts"], 1_500, mocks),
+        changed([MOCKS_FILE, "src/api.ts"], 1_500, mocks),
       ),
-    ).toEqual({ tone: "info", text: "API sources reloaded — /project/src/api.ts" });
+    ).toEqual({ tone: "info", text: "API sources reloaded — src/api.ts" });
   });
 
   it("announces no reload while the mocks file does not load", () => {
     const mocks = { file: MOCKS_FILE, error: "ParseError: Unexpected token courier.mocks.ts:2:0" };
 
-    for (const files of [[MOCKS_FILE], ["/project/src/api.ts"]]) {
+    for (const files of [[MOCKS_FILE], ["src/api.ts"]]) {
       expect(
         configTransitionNotice(loaded(2, 1_000), loaded(3, 2_000), changed(files, 1_500, mocks)),
       ).toBeNull();

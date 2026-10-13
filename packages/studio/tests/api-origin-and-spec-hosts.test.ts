@@ -16,6 +16,7 @@ import { createStudioServer } from "../src/server/create-studio-server";
 import { createOriginGuard } from "../src/server/origin-guard";
 import { createStudioOriginPolicy } from "../src/server/studio-origin";
 import type { StudioServer } from "../src/server/types";
+import { tokenHeader } from "./helpers/token-header";
 
 /* Names this test resolves itself; every other name resolves as usual. */
 const RESOLVED = vi.hoisted(() => new Map<string, Array<{ address: string; family: number }>>());
@@ -169,10 +170,11 @@ function start(): Promise<string> {
   });
 }
 
+/* As the developer's own page sends it: these are the hosts the project allows it. */
 async function post(url: string, path: string, body: Record<string, unknown> = {}) {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: url },
+    headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };

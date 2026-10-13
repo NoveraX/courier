@@ -8,6 +8,7 @@
  * collections and scenarios before it runs.
  */
 
+import { relative } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { Socket } from "socket.io";
 import type { MockEntry } from "../mock-registry";
@@ -65,9 +66,11 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
     emitServerState(state);
   };
 
+  /* The mocks, and the root a failure of one names the project's paths from. */
+  const mocks = { servers, projectRoot: config.projectRoot };
   const processManager = createProcessManager(
     createProcessEvents({
-      servers,
+      ...mocks,
       emitAll,
       updateAndEmit,
       mockLog: config.mockLog,
@@ -90,6 +93,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
     servers,
     updateAndEmit,
     broadcast: (status) => config.uiNamespace.emit("mocks:status", status),
+    named: (file) => relative(config.projectRoot, file) || ".",
   });
 
   const registration = createMockRegistration({
@@ -100,12 +104,13 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
     updateAndEmit,
     emitServerState,
   });
-  const ops = createServerOps({ servers, processManager, updateAndEmit, reservedPorts, isClosed });
+  const ops = createServerOps({ ...mocks, processManager, updateAndEmit, reservedPorts, isClosed });
   const apply = createDescriptionApplier({
     servers,
     registration,
     ops,
     getMocksPath: mocksFile.path,
+    projectRoot: config.projectRoot,
     isAlive: processManager.has,
     isCurrent: (entry: MockEntry) =>
       config.mockRegistry

@@ -4,6 +4,9 @@
  * problem reported on the mock, and a scenario that cannot be read to the end
  * is reported without failing the mock.
  */
+
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { defineMockServer, defineScenario } from "@noverax/courier-mock";
 import { describe, expect, it } from "vitest";
@@ -71,5 +74,40 @@ describe("describeEntry", () => {
         ? described.description.scenarios.find((s) => s.name === "boom")
         : undefined;
     expect(boom?.introspectionError).toBe("scenario exploded");
+  });
+
+  it("names no path of this machine in a problem every page is shown", async () => {
+    const root = join(homedir(), "work", "shop");
+    const definition = defineMockServer({ source: api });
+    Object.defineProperty(definition, "source", {
+      get() {
+        throw new Error(
+          `Cannot read ${join(root, "src", "api.ts")} beside ${join(homedir(), ".npmrc")}`,
+        );
+      },
+    });
+
+    await expect(describeEntry("apiMock", definition, root)).resolves.toEqual({
+      problem: 'Mock "apiMock" could not be described: Cannot read src/api.ts beside ~/.npmrc',
+    });
+  });
+
+  it("names no path of this machine in why a scenario was read only in part", async () => {
+    const root = join(homedir(), "work", "shop");
+    const scenario = defineScenario("boom", () => {
+      throw new Error(`exploded in ${join(root, "src", "boom.ts")}`);
+    });
+
+    const described = await describeEntry(
+      "apiMock",
+      defineMockServer({ source: api, scenarios: { boom: scenario } }),
+      root,
+    );
+
+    const boom =
+      "description" in described
+        ? described.description.scenarios.find((s) => s.name === "boom")
+        : undefined;
+    expect(boom?.introspectionError).toBe("exploded in src/boom.ts");
   });
 });

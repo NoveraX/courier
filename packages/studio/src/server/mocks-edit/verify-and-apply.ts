@@ -50,7 +50,7 @@ export async function verifyAndApply(
   }
   const keys = input.requests.map((request) => request.key);
   log.info(`Studio added ${keys.join(", ")} to ${target.relative}`);
-  const warnings = [...restartWarning(restarting), ...(await describeProblems(loaded, keys))];
+  const warnings = [...restartWarning(restarting), ...(await describeProblems(loaded, keys, root))];
   if (written.leftover) warnings.push(leftoverWarning(written.leftover, target.relative));
   return { status: "applied", target: target.relative, keys, warnings };
 }
@@ -60,10 +60,11 @@ export async function verifyAndApply(
 async function describeProblems(
   loaded: LoadedCourierConfig,
   keys: readonly string[],
+  root: string,
 ): Promise<string[]> {
   const problems: string[] = [];
   for (const key of keys) {
-    const described = await describeEntry(key, loaded.mocks.entries[key]);
+    const described = await describeEntry(key, loaded.mocks.entries[key], root);
     if ("problem" in described) problems.push(described.problem);
   }
   return problems;

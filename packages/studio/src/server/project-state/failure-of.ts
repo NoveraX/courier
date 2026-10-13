@@ -4,6 +4,9 @@ import type { ConfigFailure } from "./types";
 
 /**
  * Describe a failed load of the config for the UI, the mock wizard and the log.
+ * Every page is told it in `config:status`, one without the project's token
+ * too, so the message names no path as it is on this machine: a path in the
+ * project is named relative to it, any other from `~` or `<temp>`.
  *
  * @param error - What the load threw
  * @param root - The project root, symlinks resolved, that paths are shown relative to

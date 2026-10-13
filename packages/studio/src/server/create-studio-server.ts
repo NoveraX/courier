@@ -119,6 +119,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const mockManager = createLifecycleCoordinator({
     mockRegistry,
     uiNamespace,
+    projectRoot: root,
     basePort: startup.mockBasePort,
     watcherStatus,
     /* The directory Studio's own loads use, looked up as they look it up. */

@@ -3,6 +3,8 @@
  * mocks, each with the config's source it serves, one that did not leaves
  * them as they were and says why, and a project without one declares none.
  */
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyLoadedMocks } from "../src/server/apply-loaded-mocks";
@@ -80,6 +82,18 @@ describe("applyLoadedMocks", () => {
     expect(target.mockManager.setMocksFile).toHaveBeenCalledWith({
       file: FILE,
       error: "ParseError: Unexpected token courier.mocks.ts:3:0",
+    });
+  });
+
+  it("passes on why with no path of this machine in it: every page is told it in mocks:status", () => {
+    const target = consumers();
+    const cache = join(homedir(), ".cache", "jiti", "x.mjs");
+
+    applyLoadedMocks(mocks({ error: new Error(`Transform failed in ${cache}`) }), target, ROOT);
+
+    expect(target.mockManager.setMocksFile).toHaveBeenCalledWith({
+      file: FILE,
+      error: "Transform failed in ~/.cache/jiti/x.mjs",
     });
   });
 

@@ -69,6 +69,53 @@ describe("forwardedHeaders", () => {
     expect(headers[0]?.[1]).toMatch(/^[\da-f-]{36}$/);
   });
 
+  it("reads the id from the first header that carries one, and sends it under each", () => {
+    const headers = forwardedHeaders(incoming({ "x-correlation-id": "c-7" }), {
+      requestId: ["x-request-id", "X-Correlation-Id"],
+    });
+
+    expect(headers).toEqual([
+      ["x-request-id", "c-7"],
+      ["x-correlation-id", "c-7"],
+    ]);
+  });
+
+  it("sends the chain in X-Forwarded-For, and the user's address alone in each header named", () => {
+    const request = incoming({}, { clientAddress: "6.6.6.6, 198.51.100.23, 10.0.0.2" });
+
+    expect(forwardedHeaders(request, { clientAddress: true })).toEqual([
+      ["x-forwarded-for", "6.6.6.6, 198.51.100.23, 10.0.0.2"],
+    ]);
+    expect(forwardedHeaders(request, { clientAddress: ["X-Real-IP", "x-client-ip"] })).toEqual([
+      ["x-forwarded-for", "6.6.6.6, 198.51.100.23, 10.0.0.2"],
+      ["x-real-ip", "198.51.100.23"],
+      ["x-client-ip", "198.51.100.23"],
+    ]);
+  });
+
+  it("sends the address alone in X-Forwarded-For when it is named, and Forwarded as RFC 7239 writes it", () => {
+    expect(
+      forwardedHeaders(incoming({}, { clientAddress: "198.51.100.23, 10.0.0.2" }), {
+        clientAddress: ["x-forwarded-for", "forwarded"],
+      }),
+    ).toEqual([
+      ["x-forwarded-for", "198.51.100.23"],
+      ["forwarded", "for=198.51.100.23"],
+    ]);
+    expect(
+      forwardedHeaders(incoming({}, { clientAddress: "2001:db8::7" }), {
+        clientAddress: "forwarded",
+      }),
+    ).toEqual([
+      ["x-forwarded-for", "2001:db8::7"],
+      ["forwarded", 'for="[2001:db8::7]"'],
+    ]);
+  });
+
+  it("names no user where nothing recorded an address", () => {
+    expect(forwardedHeaders(incoming({}), { clientAddress: ["x-real-ip"] })).toEqual([]);
+  });
+
   it("reads and sends the id under a header the API names", () => {
     const headers = forwardedHeaders(incoming({ "x-correlation-id": "c-1" }), {
       requestId: "x-correlation-id",

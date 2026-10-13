@@ -92,7 +92,22 @@ COURIER_TRUSTED_PROXIES=192.0.2.0/24,2001:db8:aa00::/40
 COURIER_CLIENT_ADDRESS_HEADER=DDG-Connecting-IP
 ```
 
-Courier believes that header only on a request one of those proxies passed on — the chain's last address is one of theirs, or they connected themselves. Name only your own proxies and your provider's published ranges: Courier believes whatever address they report. An entry that is neither an address nor a range, or a range of every address, is left out, and the log says so once.
+Courier believes that header only on a request one of those proxies passed on — the nearest address on the chain past your own network is one of theirs, or they connected themselves. Name only your own proxies and your provider's published ranges: Courier believes whatever address they report. An entry that is neither an address nor a range, or a range of every address, is left out, and the log says so once.
+
+An API that reads the user's address from one header — `X-Real-IP`, `X-Client-IP`, one of its own — or believes the first address of the chain, as the `request-ip` library and many others do, can be sent the address Courier reads, alone. Name its headers in `forward.clientAddress`, and the request's id under every header the API logs it by in `forward.requestId`:
+
+```ts
+defineApi({
+  baseURL: process.env.API_URL,
+  forward: {
+    clientAddress: ["x-client-ip", "x-real-ip"],
+    requestId: ["x-request-id", "x-correlation-id"],
+  },
+  endpoints,
+})
+```
+
+`X-Forwarded-For` still carries the chain; name `x-forwarded-for` too to send the address alone there. A user can write a chain of their own, and a proxy that appends keeps it in front of the address it saw: an API that believes the chain's first address then names whoever the user said, and one sent the address alone does not.
 
 ## Next Steps
 

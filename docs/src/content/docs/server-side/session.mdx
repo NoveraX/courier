@@ -47,12 +47,12 @@ export const api = defineApi({
 
 | Option | What it carries |
 | --- | --- |
-| `requestId` | The request's own `x-request-id` — the id nginx's `$request_id`, a load balancer or a platform wrote, so each API's logs join your application's — when it is one: up to 200 visible characters, none a quote or a backslash. Otherwise an id made for it. Every call made while serving the request carries the same id, on every attempt a retry makes. A string names another header. |
+| `requestId` | The request's own `x-request-id` — the id nginx's `$request_id`, a load balancer or a platform wrote, so each API's logs join your application's — when it is one: up to 200 visible characters, none a quote or a backslash. Otherwise an id made for it. Every call made while serving the request carries the same id, on every attempt a retry makes. A header's name names another header; several — `["x-request-id", "x-correlation-id"]` — are each sent the id, read from the first the request carries one in. |
 | `trace` | W3C `traceparent` and `tracestate`, when the request carries a valid one and no OpenTelemetry tracer in the process propagates it already. |
-| `clientAddress` | The user's address as `X-Forwarded-For`: the one the framework vouches for, or the chain the proxy in front recorded. |
+| `clientAddress` | The user's address as `X-Forwarded-For`: the chain the proxies in front recorded, with the address of the one that connected. A header's name, or several — `["x-real-ip", "x-client-ip"]` — are each sent the user's address alone as well, for an API that reads it from one header; naming `x-forwarded-for` sends it there in place of the chain, and `forwarded` as RFC 7239's `for=`. See [The user's address](/docs/deployment/overview#the-users-address). |
 | `userAgent` | The user's browser, as `User-Agent`. |
 | `locale` | The user's languages, as `Accept-Language`. |
-| `headers` | Further headers of the request, by name — a tenant, a region your edge added. Credentials and connection headers cannot be listed. |
+| `headers` | Further headers of the request, by name — a tenant, a region your edge added. Credentials, connection headers and the headers that claim a client's address cannot be listed: a request could have written them itself; `clientAddress` sends the user's address in those. |
 
 ## Where a call takes it from
 

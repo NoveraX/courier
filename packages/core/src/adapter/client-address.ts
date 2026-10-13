@@ -43,7 +43,7 @@ export function clientAddress(
     .map((hop) => hop.trim())
     .filter((hop) => hop !== "")
     .map(canonical);
-  const named = namedByProxy(own, hops, header, trust);
+  const named = namedByProxy(own === undefined ? hops : [...hops, own], header, trust);
   if (named !== undefined) return named;
   for (let index = hops.length - 1; index >= 0; index -= 1) {
     const hop = hops[index] ?? "";
@@ -78,16 +78,16 @@ function passesOn(address: string, trust: AddressTrust): boolean {
   return isLocalAddress(address) || trust.has(address);
 }
 
-/* The address a named proxy reports, believed only from a request that came through one. */
+/* The address a named proxy reports, believed only from a request that came through one: the
+   nearest hop past this machine and private networks — the path's last otherwise — is one of them. */
 function namedByProxy(
-  own: string | undefined,
-  hops: readonly string[],
+  path: readonly string[],
   header: HeaderOf,
   trust: AddressTrust,
 ): string | undefined {
   if (trust.header === undefined) return undefined;
-  const from = own !== undefined && trust.has(own) ? own : hops.at(-1);
-  if (from === undefined || !trust.has(from)) return undefined;
+  const nearest = path.findLast((hop) => !isLocalAddress(hop));
+  if (nearest === undefined || !trust.has(nearest)) return undefined;
   const named = canonical(header(trust.header)?.split(",").at(-1) ?? "");
   return parseAddress(named) === undefined ? undefined : named;
 }

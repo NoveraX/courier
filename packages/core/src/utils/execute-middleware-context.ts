@@ -91,7 +91,11 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
   /* Set only where nothing already did: a source that names the header takes
      the caller's copy, and server code that sets one keeps its own. */
   const chain = nextRequest && !newHeaders.has("x-forwarded-for") && forwardedFor(nextRequest);
-  if (chain) newHeaders.set("x-forwarded-for", chain);
+  if (chain) {
+    newHeaders.set("x-forwarded-for", chain);
+    /* The chain is the proxy's own default, which the API's `forward` may write otherwise. */
+    forwarded.add("x-forwarded-for");
+  }
   /* One key per call, set before any middleware: every attempt a retry makes
      carries it, so the upstream applies the write once. A caller's own key —
      server code's, or the browser's through the proxy — is kept. */

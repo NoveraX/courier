@@ -181,8 +181,33 @@ describe("forward", () => {
     expect(failureOf(defineWith({ forward: { headers: ["authorization"] } })).code).toBe(
       "FORWARD_OPTIONS_INVALID",
     );
-    expect(failureOf(defineWith({ forward: { headers: ["X-Forwarded-For"] } })).message).toContain(
+    expect(failureOf(defineWith({ forward: { headers: ["connection"] } })).message).toContain(
       "is never carried",
+    );
+    for (const name of ["X-Forwarded-For", "x-client-ip", "True-Client-IP", "cf-connecting-ip"]) {
+      expect(failureOf(defineWith({ forward: { headers: [name] } })).message).toContain(
+        "name it in clientAddress",
+      );
+    }
+  });
+
+  it("sends the user's address in the headers clientAddress names", () => {
+    expect(defineWith({ forward: { clientAddress: ["x-real-ip", "X-Client-IP"] } })).not.toThrow();
+    expect(defineWith({ forward: { clientAddress: "x-user-ip" } })).not.toThrow();
+    expect(failureOf(defineWith({ forward: { clientAddress: ["cookie"] } })).message).toContain(
+      "clientAddress names its headers",
+    );
+    expect(failureOf(defineWith({ forward: { clientAddress: [] } })).message).toContain(
+      "names at least one header",
+    );
+  });
+
+  it("sends the request's id under every header requestId names", () => {
+    expect(
+      defineWith({ forward: { requestId: ["x-request-id", "x-correlation-id"] } }),
+    ).not.toThrow();
+    expect(failureOf(defineWith({ forward: { requestId: ["x-real-ip"] } })).message).toContain(
+      "requestId names its headers",
     );
   });
 

@@ -71,13 +71,35 @@ describe("nextRecipe", () => {
     );
   });
 
-  it("connects the browser through the config's wrapper before Next.js 16", () => {
+  it("connects the browser through the config's wrapper before Next.js 16, imported by next dev alone", () => {
     const recipe = nextRecipe(contextOf(app({}, "15.5.0"), "next"));
+    const step = recipe.manual.find((each) => each.file === "next.config.ts");
 
     expect(recipe.files.map((file) => file.path)).not.toContain("src/instrumentation-client.ts");
-    expect(recipe.manual.map((step) => step.lines.join("\n")).join("\n")).toContain(
-      "withCourierStudio()(nextConfig)",
+    expect(step?.lines).toEqual([
+      "export default async function config(phase: string): Promise<NextConfig> {",
+      "  // PHASE_DEVELOPMENT_SERVER: next dev alone loads Studio, a dev dependency",
+      '  if (phase !== "phase-development-server") return nextConfig;',
+      '  const { withCourierStudio } = await import("@noverax/courier-studio/next");',
+      "  return withCourierStudio()(nextConfig);",
+      "}",
+    ]);
+  });
+
+  it("writes the wrapper for a CommonJS next.config.js as CommonJS", () => {
+    const root = projectWith({
+      "package.json": manifest({ next: "14.2.0", react: "18.3.1" }),
+      "tsconfig.json": "{}",
+      "next.config.js":
+        "/** @type {import('next').NextConfig} */\nconst nextConfig = {};\nmodule.exports = nextConfig;\n",
+      "src/app/page.tsx": "export default function Home() { return null; }\n",
+    });
+    const step = nextRecipe(contextOf(root, "next")).manual.find(
+      (each) => each.file === "next.config.js",
     );
+
+    expect(step?.lines[0]).toBe("module.exports = async function config(phase) {");
+    expect(step?.lines.at(-1)).toBe("};");
   });
 
   it("adds neither Studio's files nor its script without Studio", () => {

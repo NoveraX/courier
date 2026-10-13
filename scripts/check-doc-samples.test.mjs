@@ -180,8 +180,24 @@ describe("checkSamples", () => {
         jsx: false,
         code: 'import { q } from "@/lib/q"\n\nq.users.useQuery("anything")\n',
       },
+      {
+        page: "next-config.mdx",
+        line: 110,
+        jsx: false,
+        code: 'import type { NextConfig } from "next"\n\nexport const config: NextConfig = {}\n',
+      },
+      {
+        page: "vite-env.mdx",
+        line: 115,
+        jsx: false,
+        code: "export const proxy = import.meta.env.VITE_PROXY_URL\n",
+      },
     ]);
   }, 60_000);
+
+  it("leaves out a Vite variable the reader declares, though a sample loaded Next.js's types", () => {
+    expect(problems.filter((problem) => problem.startsWith("vite-env.mdx"))).toEqual([]);
+  });
 
   it("reports a call form the package no longer has, at its line", () => {
     expect(problems).toContainEqual(expect.stringMatching(/^removed-form\.mdx:12 TS2554 /));

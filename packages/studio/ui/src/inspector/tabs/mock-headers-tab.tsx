@@ -60,7 +60,7 @@ export function MockHeadersTab({ groups }: { groups: readonly HeaderGroup[] }): 
           revealed={revealed}
           onToggle={() => toggle(group.key)}
           onReveal={() => setRevealed((r) => !r)}
-          filtered={filter.trim() !== ""}
+          query={filter}
         />
       ))}
     </div>

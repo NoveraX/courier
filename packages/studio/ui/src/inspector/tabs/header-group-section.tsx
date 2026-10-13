@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Copy, Eye, EyeOff } from "lucide-react";
-
+import { HighlightMatch } from "@/design/highlight-match";
 import type { HeaderGroup } from "@/features/requests/header-groups";
 import { headersAsText } from "@/features/requests/header-groups";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -11,7 +11,8 @@ interface HeaderGroupSectionProps {
   group: HeaderGroup;
   open: boolean;
   revealed: boolean;
-  filtered: boolean;
+  /** The filter over names and values, marked where it is found; blank when none is on. */
+  query: string;
   onToggle: () => void;
   onReveal: () => void;
 }
@@ -22,18 +23,18 @@ interface HeaderGroupSectionProps {
  * header with credentials masked until revealed. Where the section is
  * narrow, as on a phone, each value sits under its name, at full width.
  *
- * @param props - The side, whether it is open, whether credentials show, whether a filter is on, and what folds it and reveals credentials
+ * @param props - The side, whether it is open, whether credentials show, the filter marked in it, and what folds it and reveals credentials
  * @returns The section
  * @example
  * ```tsx
- * <HeaderGroupSection group={group} open revealed={false} filtered={false} onToggle={fold} onReveal={reveal} />
+ * <HeaderGroupSection group={group} open revealed={false} query="" onToggle={fold} onReveal={reveal} />
  * ```
  */
 export function HeaderGroupSection({
   group,
   open,
   revealed,
-  filtered,
+  query,
   onToggle,
   onReveal,
 }: HeaderGroupSectionProps): React.ReactNode {
@@ -81,14 +82,16 @@ export function HeaderGroupSection({
               key={row.name}
               className="grid min-h-8 grid-cols-[minmax(110px,38%)_minmax(0,1fr)_20px] items-center gap-3 border-b border-line px-3 py-1.5 last:border-b-0 hover:bg-raised @max-[420px]:grid-cols-[minmax(0,1fr)_20px] @max-[420px]:gap-y-0.5 @max-[420px]:py-2"
             >
-              <span className="text-syntax-function [overflow-wrap:anywhere]">{row.name}</span>
+              <span className="text-syntax-function [overflow-wrap:anywhere]">
+                <HighlightMatch text={row.name} query={query} />
+              </span>
               <span
                 className={cn(
                   "leading-normal [overflow-wrap:anywhere] @max-[420px]:col-start-1 @max-[420px]:row-start-2",
                   row.secret && !revealed ? "text-fg-subtle" : "text-syntax-plain",
                 )}
               >
-                {row.secret && !revealed ? MASK : row.value}
+                {row.secret && !revealed ? MASK : <HighlightMatch text={row.value} query={query} />}
               </span>
               {row.secret && (
                 <button
@@ -109,7 +112,7 @@ export function HeaderGroupSection({
           ))}
           {group.rows.length === 0 && (
             <p className="m-0 px-3 py-3.5 font-sans text-small text-fg-subtle">
-              {filtered ? "No headers match" : "None captured"}
+              {query.trim() !== "" ? "No headers match" : "None captured"}
             </p>
           )}
         </div>

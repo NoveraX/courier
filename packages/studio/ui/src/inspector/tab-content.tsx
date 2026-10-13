@@ -62,6 +62,7 @@ export function TabContent({
           mode={payload.mode}
           onMode={payload.onMode}
           onWhole={() => void downloadRequestBody(request, "response")}
+          searchLabel="Find in the answer"
         />
       );
     case "request":
@@ -71,6 +72,7 @@ export function TabContent({
           mode={payload.mode}
           onMode={payload.onMode}
           onWhole={() => void downloadRequestBody(request, "request")}
+          searchLabel="Find in the request"
         />
       );
     case "headers":

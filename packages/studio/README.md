@@ -81,6 +81,8 @@ Studio is a development server with a web UI. You run it next to your app, and y
 
 Open a call and Studio shows it whole: its status, duration and size against the endpoint's p95, its URL and transport, the variables and the response checked against their schemas, the middleware it passed through, its headers, its timing, and snippets that send it again.
 
+A call's answer and its variables show as a tree or as text. **Find** searches their keys and values: the tree keeps what matches and what holds it, opened, with the text marked; the raw text marks its lines; Enter and Shift+Enter move from one match to the next. Each row of the tree copies the path code reaches it by, such as `data.cities[41].name`, and the headers' filter marks what it finds.
+
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/studio-inspector-dark.png" />
   <img alt="Studio's inspector open on a payments.charges.create call beside the Timeline: status 201, its duration against the endpoint's p95, the variables and the response validated, and the requestId, auth and retry middleware it passed through" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/studio-inspector-light.png" width="880" />

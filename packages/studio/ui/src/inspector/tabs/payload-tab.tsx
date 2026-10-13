@@ -10,6 +10,8 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { JsonTreeView } from "../json-tree-view";
 import { CodeEmpty, CodeToolbar } from "./code-toolbar";
 import { CutNote } from "./cut-note";
+import { DetailSearch } from "./detail-search";
+import { usePayloadSearch } from "./use-payload-search";
 
 /** How a payload shows: as a tree, or as the JSON text. */
 export type PayloadMode = "tree" | "raw";
@@ -23,6 +25,8 @@ interface PayloadTabProps {
   view: PayloadView;
   mode: PayloadMode;
   onMode: (mode: PayloadMode) => void;
+  /** What its search field asks for: `Find in the answer`. */
+  searchLabel?: string | undefined;
   /** Downloads the whole payload, when the view shows a part of it and the whole can be had. */
   onWhole?: (() => void) | undefined;
 }
@@ -30,7 +34,9 @@ interface PayloadTabProps {
 /**
  * A request's answer or its variables: as a tree whose branches open and
  * close, or as the JSON text, marked where a validation issue points; or
- * what the tab says when there is none.
+ * what the tab says when there is none. A search finds a text in its keys
+ * and values: the tree keeps what matches and what holds it, the raw text
+ * marks its lines, and Enter moves from one match to the next.
  *
  * @param props - The payload's view, how it shows, and what changes that
  * @returns The tab
@@ -39,7 +45,13 @@ interface PayloadTabProps {
  * <PayloadTab view={responseView(request)} mode={mode} onMode={setMode} />
  * ```
  */
-export function PayloadTab({ view, mode, onMode, onWhole }: PayloadTabProps): React.ReactNode {
+export function PayloadTab({
+  view,
+  mode,
+  onMode,
+  onWhole,
+  searchLabel = "Find",
+}: PayloadTabProps): React.ReactNode {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const hasValue = view.value !== undefined;
   const text = hasValue ? JSON.stringify(view.value, null, 2) : view.text;
@@ -60,8 +72,10 @@ export function PayloadTab({ view, mode, onMode, onWhole }: PayloadTabProps): Re
           }
       : undefined;
   const lines = hasValue ? jsonLines(view.value, view.issues) : [];
+  const search = usePayloadSearch(view.value, lines, mode);
+  const searching = search.counted !== undefined;
   return (
-    <div className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
+    <div ref={search.container} className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
       <CodeToolbar
         label="View"
         modes={MODES}
@@ -73,6 +87,15 @@ export function PayloadTab({ view, mode, onMode, onWhole }: PayloadTabProps): Re
           text === undefined ? undefined : () => void copyToClipboard(text, "to the clipboard")
         }
       />
+      {hasValue && (
+        <DetailSearch
+          label={searchLabel}
+          query={search.query}
+          onQuery={search.setQuery}
+          found={search.counted}
+          onStep={search.step}
+        />
+      )}
       {view.cutFrom !== undefined && <CutNote bytes={view.cutFrom} onWhole={onWhole} />}
       {view.empty && <CodeEmpty icon={Inbox} title={view.empty.title} detail={view.empty.detail} />}
       {hasValue && mode === "tree" && (
@@ -81,6 +104,13 @@ export function PayloadTab({ view, mode, onMode, onWhole }: PayloadTabProps): Re
           collapsed={collapsed}
           issues={view.issues}
           onToggle={toggle}
+          search={
+            search.found && {
+              query: search.query,
+              found: search.found,
+              current: search.currentPath,
+            }
+          }
         />
       )}
       {hasValue && mode === "raw" && (
@@ -89,8 +119,11 @@ export function PayloadTab({ view, mode, onMode, onWhole }: PayloadTabProps): Re
             variant="panel"
             code={lines.map((line) => line.text).join("\n")}
             tokenize={tokenizeJsonLine}
-            highlight="warn"
-            isHighlighted={(_, n) => lines[n - 1]?.issue !== undefined}
+            highlight={searching ? "brand" : "warn"}
+            isHighlighted={(_, n) =>
+              searching ? search.lines.has(n) : lines[n - 1]?.issue !== undefined
+            }
+            current={search.currentLine}
           />
         </div>
       )}

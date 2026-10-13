@@ -32,6 +32,8 @@ interface CodeLinesProps {
   variant?: keyof typeof VARIANTS | undefined;
   /** The ground of a highlighted line: a hint, a warning, or a fix. */
   highlight?: keyof typeof HIGHLIGHTS | undefined;
+  /** The line, numbered from 1, a search shows as its current match. */
+  current?: number | undefined;
 }
 
 /**
@@ -50,6 +52,7 @@ export function CodeLines({
   tokenize = tokenizeLine,
   variant = "snippet",
   highlight = "brand",
+  current,
 }: CodeLinesProps): React.ReactNode {
   const v = VARIANTS[variant];
   return (
@@ -58,7 +61,14 @@ export function CodeLines({
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: a snippet's lines are fixed; the number is the line's identity
           key={index}
-          className={cn("flex", v.line, isHighlighted?.(line, index + 1) && HIGHLIGHTS[highlight])}
+          data-line={index + 1}
+          aria-current={current === index + 1 ? "true" : undefined}
+          className={cn(
+            "flex",
+            v.line,
+            isHighlighted?.(line, index + 1) && HIGHLIGHTS[highlight],
+            current === index + 1 && "outline-1 -outline-offset-1 outline-brand",
+          )}
         >
           <span
             className={cn("w-10 shrink-0 pr-3.5 text-right text-fg-subtle select-none", v.number)}

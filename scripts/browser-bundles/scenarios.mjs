@@ -18,26 +18,26 @@ export const boundary = defineBoundary({ source: "api", expose: { "users.getAll"
 
 /** Each scenario a page builds, and its budget at start: minified and gzipped, in KiB. */
 export const SCENARIOS = [
-  { name: "definitions", code: `${DEFINE}\nconsole.log(api, boundary);`, budget: [25.5, 9.5] },
+  { name: "definitions", code: `${DEFINE}\nconsole.log(api, boundary);`, budget: [24.2, 9.1] },
   {
     name: "direct caller",
     code: `${DEFINE}\nimport { createCaller } from "@noverax/courier";\ncreateCaller(api).users.getAll().then(console.log);`,
-    budget: [116, 41],
+    budget: [102, 35.6],
   },
   {
     name: "proxy caller",
     code: `import { createProxyCaller } from "@noverax/courier";\ncreateProxyCaller("api").users.getAll().then(console.log);`,
-    budget: [51, 18.6],
+    budget: [45.2, 16.3],
   },
   {
     name: "proxy caller with its boundary",
     code: `import { createProxyCaller } from "@noverax/courier";\nimport { defineBoundary } from "@noverax/courier/define";\nconst boundary = defineBoundary({ source: "api", expose: { "users.getAll": "query" } });\ncreateProxyCaller("api", { boundary }).users.getAll().then(console.log);`,
-    budget: [52.6, 19.1],
+    budget: [46.9, 16.8],
   },
   {
     name: "React Query hooks",
     code: `import { createProxyQueryCaller } from "@noverax/courier-react";\nexport const q = createProxyQueryCaller("api");`,
-    budget: [64.8, 23.8],
+    budget: [58.9, 21.4],
   },
 ];
 

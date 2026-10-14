@@ -1,6 +1,7 @@
 import { defineConfig } from "tsdown";
 
 import { sharedBuild } from "../../tsdown.shared.ts";
+import { serverOnlyEntries, serverOnlyImports } from "./tsdown.server-only.ts";
 
 const entry = {
   index: "src/index.ts",
@@ -21,12 +22,15 @@ const entry = {
 export default defineConfig([
   {
     ...sharedBuild,
-    entry,
+    entry: { ...entry, ...serverOnlyEntries() },
     /* One JavaScript file per module, as the sources are: an app's bundler
        then splits and drops the core module by module, where shared chunks
        made a browser load at start what it needs only later or never, and a
        stack trace names the module each frame is in. */
     unbundle: true,
+    /* A module only a server runs is imported through `#courier-server/…`, so a
+       page's bundle takes its browser stand-in instead. */
+    plugins: [serverOnlyImports()],
     dts: false,
   },
   {

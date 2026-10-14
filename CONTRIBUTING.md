@@ -61,7 +61,9 @@ Five of them are easy to skip by accident and worth understanding:
   (Safari 15.4, Chrome 97, Firefox 104), or one a page served over plain
   HTTP lacks, without checking for it first. A change that earns more bytes
   raises the budget in `scripts/browser-bundles/scenarios.mjs`, saying why
-  in its commit.
+  in its commit. It fails too when a page takes a core module only a
+  server runs, or Node, an edge runtime or React Native takes its browser
+  stand-in (below).
 
 ## Working in the code
 
@@ -82,6 +84,15 @@ Five of them are easy to skip by accident and worth understanding:
 - **Errors**: validate at system boundaries, not between trusted internals.
   Never swallow an error silently — log it or rethrow it.
 - **Comments**: explain why, not what. Delete commented-out code; git has it.
+- **Code only a server runs**: a core module a page never needs but would
+  still bundle — the terminal logger, the addresses a request came through —
+  is listed in `packages/core/tsdown.server-only.ts`, and a stand-in of the
+  same path and exports sits under `packages/core/src/browser/`. The build
+  imports the module through `#courier-server/…`, which the package's
+  `imports` field resolves to the stand-in for a bundler building a page,
+  and to the module itself for Node, an edge runtime and React Native. The
+  prefix is the package's own: Nuxt sends a bare `#server/…` to the
+  application's `server/` directory, a package's imports included.
 
 ## Tests
 

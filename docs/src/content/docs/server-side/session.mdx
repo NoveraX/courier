@@ -302,7 +302,7 @@ In a browser or a React Native app, where the platform sends the session's cooki
 | `SESSION_OPTIONS_INVALID` | An option a session does not have, a cookie name no browser keeps, a header no request carries, or no credential named at all |
 | `SESSION_INSECURE_TRANSPORT` | The API is reached over plain HTTP across the public internet, and `allowHttp` is not set |
 | `SESSION_HEADER_CONFLICT` | The API's `allowedHeaders`, or an endpoint's `.headers()`, names `cookie` or `set-cookie`, which would carry every cookie past the session |
-| `FORWARD_OPTIONS_INVALID` | An option `forward` does not have, or a header it may not carry |
+| `FORWARD_OPTIONS_INVALID` | An option `forward` does not have, or a header it may not carry. A page does not check `forward`, which passes nothing on there: the server that shares the definition refuses it |
 | `INVALID_ALLOWED_ORIGIN` | An `allowedOrigins` entry no page's `Origin` can equal |
 
 ## Next Steps

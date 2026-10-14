@@ -1,4 +1,4 @@
-import { isRequestId, REQUEST_ID_HEADER } from "../session/forward-headers";
+import { isRequestId, REQUEST_ID_HEADER } from "../session/request-id";
 import { keepBrowserCredentials } from "./keep-browser-credentials";
 import { filterHeaders } from "./merge-headers";
 

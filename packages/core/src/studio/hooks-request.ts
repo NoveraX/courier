@@ -73,18 +73,12 @@ export interface RequestLifecycleHooks {
     | undefined;
 
   /**
-   * The shape of a 2xx answer as it came back, before the endpoint's response
-   * schema read it — for Studio to set beside the schema. Sent only for an
-   * endpoint with a response schema, and never for a stream.
+   * A 2xx answer as it came back, before the endpoint's response schema read
+   * it — for Studio to read its shape and set it beside the schema, while the
+   * hook runs: the schema reads it next. Sent only for an endpoint with a
+   * response schema, and never for a stream.
    */
-  onAnswerShape?:
-    | ((event: {
-        requestId: string;
-        shape: Readonly<Record<string, string>>;
-        cut: boolean;
-        timestamp: number;
-      }) => void)
-    | undefined;
+  onAnswer?: ((event: { requestId: string; data: unknown; timestamp: number }) => void) | undefined;
 
   onRequestError?:
     | ((event: {

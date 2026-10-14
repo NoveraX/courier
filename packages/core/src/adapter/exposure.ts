@@ -83,7 +83,7 @@ function boundaryEndpointsOf(
 /* The group the path names, then each group above it: the first that sets the flag decides. */
 function groupExposeOf(dataSource: unknown, group: string): boolean | undefined {
   const chain = groupChain(dataSource, group) ?? [];
-  for (const entry of chain.toReversed()) {
+  for (const entry of [...chain].reverse()) {
     const flag = exposeFlag(entry.options?.expose);
     if (flag !== undefined) return flag;
   }

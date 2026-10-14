@@ -2,6 +2,7 @@ import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import { studioHooks } from "../studio";
 import { filterResponseHeaders } from "./merge-headers";
+import { setCookiesOf } from "./set-cookies";
 import { toWireAnswer } from "./wire-answer";
 
 export type InternalResponse = {
@@ -153,7 +154,7 @@ function withUpstreamCookies(
   named: readonly string[] | undefined,
 ): Response {
   if (!named?.some((name) => name.toLowerCase() === "set-cookie")) return target;
-  for (const cookie of upstream?.getSetCookie() ?? []) target.headers.append("set-cookie", cookie);
+  for (const cookie of setCookiesOf(upstream)) target.headers.append("set-cookie", cookie);
   return target;
 }
 

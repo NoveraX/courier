@@ -199,7 +199,7 @@ const user = await caller.users.getById({ id: "1" })
 
 **3 — Call it from the browser,** through one route on your server.
 
-Server code imports `api` and calls every endpoint. Browser code never imports it: from the endpoints you mark `.expose()`, Courier Studio writes `courier.routes.ts` — what a page may call, and how it reaches each — and the browser's caller takes those routes instead. Your backend's address, its paths and your middleware never ship with the page, and the proxy refuses every endpoint no mark opens. `npx @noverax/courier-studio routes` writes the module without starting Studio, and with `--check` fails a CI step when it is out of date. The [framework guides](#frameworks) below show the route and the caller for each framework.
+Server code imports `api` and calls every endpoint. Browser code never imports it: from the endpoints you mark `.expose()`, Courier writes `courier.routes.ts` — what a page may call, and how it reaches each — and the browser's caller takes those routes instead. Your backend's address, its paths and your middleware never ship with the page, and the proxy refuses every endpoint no mark opens. Studio writes the module as you work; `npx @noverax/courier-cli routes` writes it without Studio, and with `--check` fails a CI step when it is out of date. The [framework guides](#frameworks) below show the route and the caller for each framework.
 
 A runnable version — a backend, the proxy in front of it, a page's caller and server code — is in [`examples/basic`](examples/basic): `npm run demo --workspace examples/basic` from the repository root.
 
@@ -481,7 +481,7 @@ export const GET = handler
 export const POST = handler
 ```
 
-**2. A component** — the core caller, typed from the routes Studio writes:
+**2. A component** — the core caller, typed from the routes Courier writes:
 
 ```ts
 // lib/caller.ts
@@ -1107,6 +1107,7 @@ mock("users", "getAll").resolves([]).once()          // the next call only
 | --- | --- | --- |
 | [`@noverax/create-courier`](./packages/create-courier) | Courier in your project, or a new one, in one command | [![npm](https://img.shields.io/npm/v/@noverax/create-courier?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/create-courier) |
 | [`@noverax/courier-studio`](./packages/studio) | Studio — request inspector, playground, OpenAPI import, audit, mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio) |
+| [`@noverax/courier-cli`](./packages/cli) | `courier-cli routes` — writes `courier.routes.ts` from the `.expose()` marks, and checks it in CI | [![npm](https://img.shields.io/npm/v/@noverax/courier-cli?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-cli) |
 | [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
 | [`@noverax/courier-mock`](./packages/mock) | Mock servers, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-mock) |
 | [`@noverax/courier-mcp`](./packages/mcp) | MCP server — your API's endpoints as tools for AI agents | [![npm](https://img.shields.io/npm/v/@noverax/courier-mcp?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-mcp) |

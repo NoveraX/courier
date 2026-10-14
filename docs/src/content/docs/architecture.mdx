@@ -185,7 +185,7 @@ The universal adapter interface. All server framework adapters use it internally
 | `createQueryCaller(api)` | Direct + hooks | Browser (React) | `QueryCallerClient<typeof api>` |
 | `createProxyQueryCaller(apiRoutes)` | Proxy + hooks | Browser (React) | `QueryCallerClient` of the endpoints the routes name |
 
-The callers return a `TypedClient<typeof api>`, and the query callers the same groups with React Query hooks on each — `q.users.useQuery("getAll")` — so type inference is identical whichever factory you use. A proxy factory takes the routes Studio writes from the endpoints marked `.expose()`, and its client has those endpoints alone — see [Exposing Endpoints](/docs/proxy-mode/expose). Build each once in a module of its own: see [Singleton Pattern](/docs/advanced/singleton).
+The callers return a `TypedClient<typeof api>`, and the query callers the same groups with React Query hooks on each — `q.users.useQuery("getAll")` — so type inference is identical whichever factory you use. A proxy factory takes the routes Courier writes from the endpoints marked `.expose()`, and its client has those endpoints alone — see [Exposing Endpoints](/docs/proxy-mode/expose). Build each once in a module of its own: see [Singleton Pattern](/docs/advanced/singleton).
 
 ## Next Steps
 

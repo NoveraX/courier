@@ -82,7 +82,7 @@ import { api } from "./api/sources"
 export default defineConfig({ sources: { api } })
 ```
 
-From the marks, Courier Studio writes the routes a page's caller takes — each endpoint a page may call, and how it reaches it — into `courier.routes.ts` beside the config. It writes them while it runs; `npx @noverax/courier-studio routes` writes them now. The browser's caller takes them in place of the API:
+From the marks, Courier writes the routes a page's caller takes — each endpoint a page may call, and how it reaches it — into `courier.routes.ts` beside the config. Studio writes them while it runs; `npx @noverax/courier-cli routes` writes them now, and with `--check` fails a CI job when they are out of date. The browser's caller takes them in place of the API:
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"

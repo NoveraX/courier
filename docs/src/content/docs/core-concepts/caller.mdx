@@ -35,7 +35,7 @@ Use direct mode for server-side code where you have access to the `api` object: 
 
 ## createProxyCaller (Proxy Mode) <ModeBadge mode="proxy" />
 
-Sends requests through your server's proxy route. The browser never sees your backend URL. The caller takes the routes Studio writes into `courier.routes.ts` from the endpoints you marked `.expose()`: what a page may call, and how it reaches each — see [Exposing Endpoints](/docs/proxy-mode/expose).
+Sends requests through your server's proxy route. The browser never sees your backend URL. The caller takes the routes Courier writes into `courier.routes.ts` from the endpoints you marked `.expose()`: what a page may call, and how it reaches each — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
@@ -133,7 +133,7 @@ export const serverCaller = createCaller(api)
 import { createProxyCaller } from "@noverax/courier"
 import { apiRoutes } from "@/courier.routes"
 
-// Client-side (React components): the routes Studio writes, never the API itself
+// Client-side (React components): the routes Courier writes, never the API itself
 export const clientCaller = createProxyCaller(apiRoutes)
 ```
 

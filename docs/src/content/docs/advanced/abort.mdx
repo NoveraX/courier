@@ -79,7 +79,7 @@ A write that a newer one superseded has usually reached the server and been appl
 </Callout>
 
 <Callout variant="info" title="Where it runs">
-A newer call cancels an older one where one user is: in the browser, or in a React Native app. A direct call made there uses the API's `cancelPrevious`, and so does a proxy client, from the routes Studio writes from the API; pass `cancelPrevious` to [`createProxyCaller`](/docs/api/create-proxy-caller) to name others.
+A newer call cancels an older one where one user is: in the browser, or in a React Native app. A direct call made there uses the API's `cancelPrevious`, and so does a proxy client, from the routes Courier writes from the API; pass `cancelPrevious` to [`createProxyCaller`](/docs/api/create-proxy-caller) to name others.
 
 On a server the option has no effect, for direct calls and for requests arriving at the proxy alike: there, calls from different users reach the same endpoint, and one user's search would cancel another's.
 </Callout>

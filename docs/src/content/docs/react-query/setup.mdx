@@ -61,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ### Step 3: Create the Courier query caller
 
-Call `createProxyQueryCaller` with your API's routes: the endpoints a page may call and how it reaches each, which Courier Studio writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose). Export the query client from a single file so every component imports from the same place:
+Call `createProxyQueryCaller` with your API's routes: the endpoints a page may call and how it reaches each, which Courier writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose). Export the query client from a single file so every component imports from the same place:
 
 ```ts title="lib/query.ts"
 // lib/query.ts

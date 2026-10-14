@@ -60,7 +60,7 @@ export const caller = createProxyCaller(apiRoutes)
 const users = await caller.users.getAll()
 ```
 
-The caller takes the routes Studio writes from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
+The caller takes the routes Courier writes from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 <Callout variant="tip" title="Type-only import">
 Proxy mode imports `type { api }` — only the type information crosses to the client. The actual `api` object (with your backend URL and secrets) stays on the server.

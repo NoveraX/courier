@@ -8,7 +8,7 @@ import { createProxyCaller } from "@noverax/courier"
 
 ## Signature
 
-`createProxyCaller` takes the routes of an API — the endpoints a page may call and how it reaches each, as Studio writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and options, and returns a typed client. The routes carry the type of the API they were written from, so the client has its groups, methods, variables and response types, for the endpoints the routes name alone.
+`createProxyCaller` takes the routes of an API — the endpoints a page may call and how it reaches each, as Courier writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and options, and returns a typed client. The routes carry the type of the API they were written from, so the client has its groups, methods, variables and response types, for the endpoints the routes name alone.
 
 ```ts
 import type { InferClient, ProxyCallerOptions } from "@noverax/courier"
@@ -24,7 +24,7 @@ declare function createProxyCaller<TApi, TEndpoints extends Readonly<Record<stri
 
 ### routes
 
-The routes of one API, as the routes module exports them — `apiRoutes` for the source registered as `api`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Studio writes them, and how to write them by hand in a project without a `courier.config.ts`.
+The routes of one API, as the routes module exports them — `apiRoutes` for the source registered as `api`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Courier writes them, and how to write them by hand in a project without a `courier.config.ts`.
 
 ```ts
 interface CourierRoutes<TApi, TEndpoints> {
@@ -216,7 +216,7 @@ A call can still ask for either verb with `.with({ method: "GET" })` or `.with({
 
 ## Related
 
-- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Studio writes from them
+- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Courier writes from them
 - [Proxy Mode](/docs/proxy-mode/overview) — architecture and security model
 - [Server Handler](/docs/proxy-mode/api-route) — the server-side handler that processes proxy requests
 - [createProxyQueryCaller](/docs/api/create-proxy-query-caller) — React Query wrapper built on top of createProxyCaller

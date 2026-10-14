@@ -4,8 +4,8 @@ import { sources } from "./src/api"
 
 /**
  * The APIs the site's examples call through its /api/request route, as
- * Studio reads them: it writes the routes their pages take into
- * src/lib/routes.ts.
+ * Courier reads them: Studio and `courier-cli routes` write the routes
+ * their pages take into src/lib/routes.ts.
  */
 export default defineConfig({
   sources,

@@ -115,7 +115,7 @@ export const partner = defineApi({
 `requestTls` is the TLS to the API through the proxy's tunnel; `proxyTls`, the TLS to a proxy reached over `https://`. `EnvHttpProxyAgent` follows `HTTPS_PROXY` and `NO_PROXY` for one API, without turning Node's proxy on for the whole process.
 
 <Callout variant="warning" title="Keep the key on the server">
-A definition that reads a key from disk runs wherever it is imported. In proxy mode the browser imports the [routes](/docs/proxy-mode/expose) Studio writes from the API instead, which hold its endpoints' names and nothing else, so `node:fs`, undici and the key never reach its bundle.
+A definition that reads a key from disk runs wherever it is imported. In proxy mode the browser imports the [routes](/docs/proxy-mode/expose) Courier writes from the API instead, which hold its endpoints' names and nothing else, so `node:fs`, undici and the key never reach its bundle.
 </Callout>
 
 ### Another fetch

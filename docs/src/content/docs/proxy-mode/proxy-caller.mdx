@@ -4,7 +4,7 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 
 `createProxyCaller` creates a typed client with dot-notation access that calls your server's proxy routes. It is the way a client component calls an API in proxy mode.
 
-It takes the routes of an API: the endpoints a page may call and how the page reaches each, which Studio writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
+It takes the routes of an API: the endpoints a page may call and how the page reaches each, which Courier writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
@@ -258,7 +258,7 @@ export const api = defineApi({
 
 ## Next Steps
 
-- [Exposing Endpoints](/docs/proxy-mode/expose) — mark what a page may call, and the routes Studio writes from the marks
+- [Exposing Endpoints](/docs/proxy-mode/expose) — mark what a page may call, and the routes Courier writes from the marks
 - [Server Handler](/docs/proxy-mode/api-route) — set up the server-side endpoint
 - [File Upload](/docs/advanced/upload) — upload files with progress tracking
 - [Proxy Mode Overview](/docs/proxy-mode/overview) — architecture and security model

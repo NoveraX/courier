@@ -185,7 +185,7 @@ Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. The plugi
 import { createProxyCaller } from "@noverax/courier"
 import { apiRoutes } from "./courier.routes"
 
-// The routes Courier Studio writes from the endpoints you mark .expose():
+// The routes Courier writes from the endpoints you mark .expose():
 // what a page may call, and how. The API definition — upstream URL, endpoint
 // paths, middleware — stays on the server.
 const caller = createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })

@@ -80,7 +80,7 @@ npm install @noverax/courier @noverax/courier-next @noverax/courier-react @tanst
 
 ## Define your API sources
 
-Create the API definition the server's callers, the proxy route and Studio share. A page never imports it: it takes the routes Studio writes from it, so the definition stays out of the browser bundle.
+Create the API definition the server's callers, the proxy route and Studio share. A page never imports it: it takes the routes Courier writes from it, so the definition stays out of the browser bundle.
 
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
@@ -134,7 +134,7 @@ Next.js runs `instrumentation.ts` once at server start, populating the core glob
 
 ## Step 2: Client-side caller (React Query)
 
-List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier Studio writes the routes a page's caller takes into `courier.routes.ts` beside it — whenever it loads the config, or now with `npx @noverax/courier-studio routes`; see [Exposing Endpoints](/docs/proxy-mode/expose):
+List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier writes the routes a page's caller takes into `courier.routes.ts` beside it — Studio whenever it loads the config, or `npx @noverax/courier-cli routes` now; see [Exposing Endpoints](/docs/proxy-mode/expose):
 
 ```ts title="courier.config.ts"
 import { defineConfig } from "@noverax/courier/config"

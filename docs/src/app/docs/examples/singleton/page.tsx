@@ -23,7 +23,7 @@ export default function SingletonExamplesPage() {
         learnMore={{ href: "/docs/advanced/singleton", label: "Singleton docs" }}
       >
         <p className="m-0 text-body text-fg-muted">
-          The routes Studio writes from the endpoints you mark <code>.expose()</code> carry the
+          The routes Courier writes from the endpoints you mark <code>.expose()</code> carry the
           API's group, endpoint, response and variable types. Every call site gets full
           autocompletion and type checking via dot-notation.
         </p>

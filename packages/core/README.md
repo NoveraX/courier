@@ -139,7 +139,7 @@ const user = await caller.users.getById({ id: "1" })
 import { createProxyCaller } from "@noverax/courier"
 import { apiRoutes } from "./courier.routes"
 
-// The routes Courier Studio writes from the endpoints you mark .expose():
+// The routes Courier writes from the endpoints you mark .expose():
 // what a page may call, and how. The API definition — upstream URL, endpoint
 // paths, middleware — stays on the server.
 const caller = createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
@@ -219,7 +219,7 @@ createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example
 
 The handler speaks CORS for those origins: it answers their preflight and gives every answer the permission a browser needs to read it. Route `OPTIONS` to the handler as well as `GET` and `POST`.
 
-The proxy serves only the endpoints you mark — `.expose()` on an endpoint, or `expose` on its group or its API, the nearest deciding — and answers any other as a name the source does not define. From the marks, Courier Studio writes `courier.routes.ts`: the routes a page's proxy client takes, typed from the API, with the endpoints a page may call alone:
+The proxy serves only the endpoints you mark — `.expose()` on an endpoint, or `expose` on its group or its API, the nearest deciding — and answers any other as a name the source does not define. From the marks, Courier writes `courier.routes.ts` — Studio as you work, `courier-cli routes` from [`@noverax/courier-cli`](https://github.com/NoveraX/courier/tree/master/packages/cli) without it: the routes a page's proxy client takes, typed from the API, with the endpoints a page may call alone:
 
 ```ts
 // api.ts

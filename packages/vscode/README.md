@@ -243,7 +243,7 @@ From Studio the other way round: each call site in **Called from** opens in your
 
 ## Snippets
 
-`courier-endpoint`, `courier-group` and `courier-api` define an API, and `courier-routes` writes by hand the routes a page takes where Studio writes none; `courier-query`, `courier-mutation`, `courier-subscription`, `courier-channel` and `courier-call` call it.
+`courier-endpoint`, `courier-group` and `courier-api` define an API, and `courier-routes` writes by hand the routes a page takes where Courier writes none; `courier-query`, `courier-mutation`, `courier-subscription`, `courier-channel` and `courier-call` call it.
 
 <br />
 

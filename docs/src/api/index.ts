@@ -8,8 +8,10 @@ import { users } from "./users"
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000"
 
+/* Each source's every endpoint is one an example calls from its page. */
 export const api = defineApi({
   baseURL: API_URL,
+  expose: true,
   groups: { users, posts, files, misc, echo },
 })
 
@@ -17,6 +19,7 @@ export const api = defineApi({
 
 export const encodedApi = defineApi({
   baseURL: API_URL,
+  expose: true,
   groups: { echo },
   bodySerializer: (data: Record<string, unknown>) =>
     new URLSearchParams(Object.entries(data).map(([k, v]) => [k, String(v)])),
@@ -42,6 +45,7 @@ export const encodedApi = defineApi({
 
 export const middlewareApi = defineApi({
   baseURL: API_URL,
+  expose: true,
   middleware: [logMiddleware()],
   groups: { users, misc },
 })

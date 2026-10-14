@@ -17,6 +17,9 @@
     "@noverax/courier-studio-ui#typecheck": {
       "dependsOn": ["^build", "build"]
     },
+    "@noverax/courier#typecheck": {
+      "dependsOn": ["^build", "build"]
+    },
     "test": {
       "dependsOn": ["^build"]
     },

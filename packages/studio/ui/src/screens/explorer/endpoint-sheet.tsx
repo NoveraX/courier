@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Activity, Play, X } from "lucide-react";
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ import type { EndpointNode } from "@/features/explorer/explorer-model";
 import { methodLabelOf } from "@/features/explorer/method-label";
 import { CalledFrom } from "@/inspector/tabs/called-from";
 import { cn } from "@/lib/utils";
+import { usePlaygroundDrafts } from "@/playground/draft-store";
 import { EndpointCalls } from "./endpoint-calls";
 import { EndpointContract } from "./endpoint-contract";
 import { EndpointDefinition } from "./endpoint-definition";
@@ -49,6 +50,12 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
   const method = methodLabelOf(e);
   const level = LEVEL_META[e.level];
   const [opening, setOpening] = useState(true);
+  const navigate = useNavigate();
+  /* Nothing is sent from here: the call goes once its variables are looked over and sent. */
+  const tryAsServer = (): void => {
+    usePlaygroundDrafts.getState().setMode("direct");
+    void navigate({ to: "/playground", search: { endpoint: e.key } });
+  };
   return (
     <SheetFrame
       label="Endpoint"
@@ -120,7 +127,7 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
       >
         <EndpointLatency endpoint={e} slowMs={slowMs} />
         <EndpointTrafficOnly endpoint={e} />
-        <EndpointDefinition endpoint={e} now={now} />
+        <EndpointDefinition endpoint={e} now={now} onTryAsServer={tryAsServer} />
         <EndpointContract endpoint={e} now={now} />
         {!e.trafficOnly && (
           <CalledFrom source={e.source} endpoint={e.group ? `${e.group}.${e.method}` : e.method} />

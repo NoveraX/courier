@@ -90,6 +90,7 @@ export function PlaygroundWorkspace({
     variables: editors.variables.text,
     headers: editors.headers.text,
     mode: editors.mode,
+    onMode: editors.setMode,
     body: { kind: bodyKind, fields },
     shown,
     onSent: (stream) => showResponse(stream ? "messages" : "body"),
@@ -131,6 +132,7 @@ export function PlaygroundWorkspace({
                 editors.mode === "proxy"
                   ? (proxyRouteOf(endpoint.transport, endpoint.entry) ?? null)
                   : undefined,
+              onRunAsServer: run.runAsServer,
             }}
             tab={tab}
             onTab={setTab}

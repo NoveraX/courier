@@ -43,7 +43,12 @@ export interface EditorText {
 
 interface RequestPaneProps {
   endpoint: PlaygroundEndpoint;
-  url: { parts: readonly UrlPart[]; proxy: ProxyRoute | null | undefined };
+  url: {
+    parts: readonly UrlPart[];
+    proxy: ProxyRoute | null | undefined;
+    /** Runs the call as server code, where the proxy refuses it to a page. */
+    onRunAsServer?: (() => void) | undefined;
+  };
   tab: EditorTab;
   onTab: (tab: EditorTab) => void;
   variables: EditorText;
@@ -108,6 +113,7 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
           proxy={url.proxy}
           page={url.proxy === undefined ? undefined : endpoint.def.page}
           served={endpoint.def.served === true}
+          onRunAsServer={url.onRunAsServer}
         />
         <div className="flex flex-wrap items-center gap-2">
           <Segmented label="Editor" options={tabs} value={tab} onChange={onTab} quiet="subtle" />

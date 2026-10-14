@@ -29,10 +29,12 @@ function catalogWith(page: CatalogEndpoint["page"]): Catalog {
   };
 }
 
-function definitionOf(page: CatalogEndpoint["page"]): string {
+function definitionOf(page: CatalogEndpoint["page"], onTryAsServer?: () => void): string {
   const [endpoint] = explorerModelOf(catalogWith(page), [], NOW, 500).endpoints;
   if (!endpoint) throw new Error("The catalog has no endpoint");
-  return renderToStaticMarkup(<EndpointDefinition endpoint={endpoint} now={NOW} />);
+  return renderToStaticMarkup(
+    <EndpointDefinition endpoint={endpoint} now={NOW} onTryAsServer={onTryAsServer} />,
+  );
 }
 
 describe("an endpoint's definition", () => {
@@ -49,6 +51,17 @@ describe("an endpoint's definition", () => {
 
     expect(html).toContain("kept to the server");
     expect(html).toContain("nothing marks it .expose()");
+  });
+
+  it("offers to try one kept to the server as server code, and only that one", () => {
+    const tryIt = () => undefined;
+
+    expect(definitionOf({ exposed: false, reason: "nothing marks it .expose()" }, tryIt)).toContain(
+      "Try as server code",
+    );
+    expect(definitionOf({ exposed: true, reason: "marked .expose()" }, tryIt)).not.toContain(
+      "Try as server code",
+    );
   });
 
   it("has no Pages row for an endpoint the config does not declare", () => {

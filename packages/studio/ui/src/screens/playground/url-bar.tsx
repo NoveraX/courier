@@ -1,11 +1,11 @@
-import { AppWindow, Lock, Shuffle } from "lucide-react";
+import { AppWindow, Shuffle } from "lucide-react";
 
 import type { PageMark } from "@/features/apis/types";
-import { pageMarkTitle } from "@/features/explorer/page-mark-title";
 import type { ProxyRoute } from "@/features/playground/proxy-route";
 import type { UrlPart } from "@/features/playground/request-url";
 import { cn } from "@/lib/utils";
 import { methodClassOf } from "@/screens/explorer/method-class";
+import { NotExposedChip } from "./not-exposed-chip";
 
 const PART_CLASS: Readonly<Record<UrlPart["kind"], string>> = {
   origin: "text-fg-subtle",
@@ -24,6 +24,8 @@ interface UrlBarProps {
   page?: PageMark | undefined;
   /** A stream or a channel the app serves itself: in direct mode it opens inside the app. */
   served?: boolean;
+  /** Runs the call as server code, for an endpoint no mark opens; `undefined` while a call is under way. */
+  onRunAsServer?: (() => void) | undefined;
 }
 
 /**
@@ -31,10 +33,11 @@ interface UrlBarProps {
  * each parameter filled from the variables — amber while one is missing —
  * the query, and in proxy mode the route on the app it goes through, and
  * a warning where no mark opens the endpoint to a page, which the proxy
- * refuses. A stream or a channel the app serves itself, opened in direct
- * mode, reaches no host: it says so in place of the origin.
+ * refuses — and which offers to run the call as server code instead. A
+ * stream or a channel the app serves itself, opened in direct mode,
+ * reaches no host: it says so in place of the origin.
  *
- * @param props - The method label, the URL's pieces, the proxy route, the page mark, and whether the app serves it
+ * @param props - The method label, the URL's pieces, the proxy route, the page mark, whether the app serves it, and what runs the call as server code
  * @returns The bar
  * @example
  * ```tsx
@@ -47,6 +50,7 @@ export function UrlBar({
   proxy,
   page,
   served = false,
+  onRunAsServer,
 }: UrlBarProps): React.ReactNode {
   /* Opened inside the app, it reaches no host: its source's base URL is an upstream it never calls. */
   const inApp = served && proxy === undefined;
@@ -94,15 +98,7 @@ export function UrlBar({
           <span className="truncate">{proxy ? `via ${proxy.display}` : "no proxy route"}</span>
         </span>
       )}
-      {page && !page.exposed && (
-        <span
-          title={`${pageMarkTitle(page)}. Mark it .expose() where it is defined to call it from a page.`}
-          className="flex h-5.5 shrink-0 items-center gap-1.25 rounded-[5px] bg-warn-dim px-1.5 font-sans text-meta text-warn"
-        >
-          <Lock aria-hidden="true" className="size-2.75 shrink-0" />
-          not exposed
-        </span>
-      )}
+      {page && !page.exposed && <NotExposedChip mark={page} onRunAsServer={onRunAsServer} />}
     </div>
   );
 }

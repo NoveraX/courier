@@ -34,9 +34,10 @@ npm run check:exports
 npm run check:docs
 npm run check:packages
 npm run check:publish
+npm run check:browser
 ```
 
-Four of them are easy to skip by accident and worth understanding:
+Five of them are easy to skip by accident and worth understanding:
 
 - `npx tsc --noEmit` typechecks the **whole workspace as one program**, tests
   included. A per-package `typecheck` can pass while this fails, because the
@@ -52,6 +53,15 @@ Four of them are easy to skip by accident and worth understanding:
   publint reads the manifest against the packed files, and attw resolves
   every export's JavaScript and types as Node and bundlers do. Any message
   fails it, a suggestion included.
+- `npm run check:browser` builds what a page takes from Courier — the
+  definitions, a direct caller, a proxy caller, React Query hooks — as an
+  app's bundler builds it for production. It fails when a page reaches a
+  built-in module of Node, when what loads at start grows past its budget,
+  and when a module calls a browser API newer than the requirements name
+  (Safari 15.4, Chrome 97, Firefox 104), or one a page served over plain
+  HTTP lacks, without checking for it first. A change that earns more bytes
+  raises the budget in `scripts/browser-bundles/scenarios.mjs`, saying why
+  in its commit.
 
 ## Working in the code
 

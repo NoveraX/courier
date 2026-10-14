@@ -35,7 +35,7 @@ export async function HeroSection() {
             <CourierMark width={13} />
           </span>
           <span aria-hidden="true" className="h-3 w-px bg-line-strong" />
-          No codegen · no schema files · any backend
+          Inferred types · no schema files · any backend
         </div>
         <h1 className="mx-auto mt-6 mb-0 max-w-[17ch] animate-rise text-[clamp(38px,5.8vw,72px)] leading-[1.02] font-semibold tracking-[-0.042em]">
           Type-safe HTTP for <span className="text-brand">any</span> framework

@@ -48,7 +48,7 @@ export default async function OGImage() {
         <svg aria-hidden="true" viewBox="0 0 212 180" width={20} height={17}>
           <path fill="#7db9ff" d={MARK} />
         </svg>
-        No codegen · no schema files · any backend
+        Inferred types · no schema files · any backend
       </div>
       <div
         style={{

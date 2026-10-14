@@ -2,7 +2,7 @@ export const metadata = { title: "What is Courier?", description: "A type-safe, 
 
 **@noverax/courier** is a type-safe HTTP client that works with any JavaScript framework and any REST backend. Define your API once as plain TypeScript functions — get autocomplete, type inference, runtime validation, and middleware out of the box.
 
-No codegen. No schema files. No changes to your backend.
+Types inferred, never generated. No schema files. No changes to your backend.
 
 ## How It Works
 
@@ -77,7 +77,7 @@ On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller
 
 ## Core Philosophy
 
-- **Type safety without codegen** — TypeScript functions are the source of truth. No generated files, no build steps.
+- **Types inferred, never generated** — your TypeScript definitions are the source of truth: rename a method and every call to it fails to compile, with no step to run first. Proxy mode keeps one file written for you, `courier.routes.ts` — the list of what a page may call, which a review reads and CI checks.
 - **Zero boilerplate** — define a method signature and Courier handles serialization, path parameters, headers, and error wrapping.
 - **Any backend** — works with Express, FastAPI, Rails, Go, Laravel, Django — anything that speaks HTTP.
 - **Composable middleware** — retry, auth, logging, rate-limiting, caching — or write your own.

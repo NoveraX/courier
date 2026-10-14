@@ -47,7 +47,7 @@ Most HTTP clients stop at “send a request, get a response”, and leave the ty
   <tr>
     <td width="33%" valign="top">
       <h4>One definition</h4>
-      Endpoints, groups and APIs in plain TypeScript. No codegen, no schema files — the types are inferred.
+      Endpoints, groups and APIs in plain TypeScript, their types inferred, never generated. No schema files.
     </td>
     <td width="33%" valign="top">
       <h4>Every runtime</h4>

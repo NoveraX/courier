@@ -1,7 +1,6 @@
 import { defineApi } from "@noverax/courier/define";
 
 import { PORTS } from "../ports";
-import { boundary } from "./boundary";
 import { requestId } from "./middleware";
 import { PROXY_PATH } from "./proxy-path";
 import { products } from "./shop-catalog";
@@ -12,7 +11,8 @@ import { live } from "./shop-live";
 export const shop = defineApi({
   baseURL: `http://127.0.0.1:${PORTS.shop}`,
   proxyPath: PROXY_PATH,
-  boundary,
+  /* A page may call every endpoint of the shop through the shop's server; the payments provider it calls none. */
+  expose: true,
   middleware: [requestId],
   groups: { products, cart, orders, account, live },
 });

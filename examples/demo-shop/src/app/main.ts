@@ -6,8 +6,8 @@ import { shop } from "../api/shop";
 import { PORTS } from "../ports";
 
 /* The shop's own server: Courier's proxy in front of the shop's backend,
-   which a page reaches only through it and only at the endpoints the
-   boundary names; it keeps the deals stream and the support chat itself.
+   which a page reaches only through it and only at the endpoints marked
+   `.expose()`; it keeps the deals stream and the support chat itself.
    It serves the payments provider too, which no page may call. Attached to
    Studio, its requests show in the Timeline, and the Playground sends
    through it. */

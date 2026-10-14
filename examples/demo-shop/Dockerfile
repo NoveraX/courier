@@ -30,7 +30,7 @@ ENV COURIER_TRANSFORM_CACHE=off \
 WORKDIR /demo
 COPY --from=build /packs /packs
 COPY --from=build /repo/examples/demo-shop/package.json /repo/examples/demo-shop/tsconfig.json ./
-COPY --from=build /repo/examples/demo-shop/courier.config.ts /repo/examples/demo-shop/courier.mocks.ts ./
+COPY --from=build /repo/examples/demo-shop/courier.config.ts /repo/examples/demo-shop/courier.mocks.ts /repo/examples/demo-shop/courier.routes.ts ./
 COPY --from=build /repo/examples/demo-shop/src ./src
 # Each Courier package from its tarball, the ones they need among them; the
 # rest resolve as a project's install would.

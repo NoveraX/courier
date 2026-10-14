@@ -8,7 +8,8 @@
     "demo": "tsx src/demo.ts",
     "upstream": "tsx src/upstream.ts",
     "server": "tsx src/dev.ts",
-    "studio": "courier-studio"
+    "studio": "courier-studio",
+    "routes": "courier-studio routes"
   },
   "dependencies": {
     "@noverax/courier": "*",

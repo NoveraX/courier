@@ -36,7 +36,7 @@ It runs on its own, and in a container on a public address. The Studio screensho
 
 - **Two backends** in `src/upstream` that know nothing of Courier: the shop — a catalog, carts, orders behind a service key that lasts 45 seconds, and a stream of orders as they move — and a payments provider whose charges take their time and now and then fail.
 - **One definition of each** in `src/api`, with middleware Studio shows in its chains: a request id on every call, the shop's key issued again when it expires, the catalog cached, failed charges retried.
-- **The shop's own server** in `src/app`: Courier's proxy in front of the shop, at the endpoints its boundary names, keeping a stream of deals and a support chat itself. It serves the payments provider too, which no page may call through it.
+- **The shop's own server** in `src/app`: Courier's proxy in front of the shop, at the endpoints marked `.expose()`, keeping a stream of deals and a support chat itself. It serves the payments provider too, which no page may call through it.
 - **Traffic** in `src/traffic`: shoppers browsing, filling carts and checking out — as their pages and the shop's server code call it — following the streams, asking the support chat, and a front end developed against the mocks. Some of it is what Studio's audit points out: a product grid that asks for each card on its own, a charge retried although it writes, a cart changed without credentials.
 - **Two mocks** in `courier.mocks.ts`, which Studio starts: the whole shop with data and scenarios, and the payments provider answering charges only.
 

@@ -12,12 +12,12 @@ import { groupFile, recordType, schemaFile, sourceFile } from "./api-code.mjs";
 import { libFunction, libraryModule, pageFile, serverFile } from "./app-code.mjs";
 import { enterpriseModel, httpEndpoints } from "./model.mjs";
 import {
-  boundaryFile,
   callerFiles,
   courierFiles,
   middlewareFile,
   portsOf,
   projectFiles,
+  routesFile,
 } from "./project-code.mjs";
 import { seeded, some } from "./random.mjs";
 import { groupSchemas, pascal, sharedSchemas } from "./schemas-code.mjs";
@@ -27,6 +27,8 @@ import { AREAS, LIBRARIES } from "./words.mjs";
 const MARK = ".courier-scale-fixture";
 /** The sources whose endpoints pages call through the proxy. */
 const EXPOSED = ["core", "catalog"];
+/** The shapes of call a page makes of those sources, each endpoint of them marked `.expose()`. */
+const FOR_PAGES = new Set(["list", "byId", "search", "create", "update"]);
 const MODULES_PER_LIBRARY = 8;
 
 /**
@@ -70,7 +72,8 @@ export function writeFixture({
       ),
     );
     for (const group of source.groups) {
-      add(`src/api/${source.name}/${group.name}.ts`, groupFile(group, source.name));
+      const forPages = EXPOSED.includes(source.name) ? FOR_PAGES : new Set();
+      add(`src/api/${source.name}/${group.name}.ts`, groupFile(group, source.name, forPages));
       for (const each of [group, ...group.groups]) {
         add(
           `src/schemas/${source.name}/${schemaFile(each)}.ts`,
@@ -81,20 +84,16 @@ export function writeFixture({
   });
   const http = httpEndpoints(model);
   const exposed = http.filter(
-    (at) =>
-      EXPOSED.includes(at.source) &&
-      ["list", "byId", "search", "create", "update"].includes(at.endpoint.shape),
+    (at) => EXPOSED.includes(at.source) && FOR_PAGES.has(at.endpoint.shape),
   );
-  for (const source of EXPOSED) {
-    add(
-      `src/api/${source}/boundary.ts`,
-      boundaryFile(
-        source,
-        exposed.filter((at) => at.source === source),
-        ports.app,
+  add(
+    "courier.routes.ts",
+    routesFile(
+      Object.fromEntries(
+        EXPOSED.map((source) => [source, exposed.filter((at) => at.source === source)]),
       ),
-    );
-  }
+    ),
+  );
   let calls = 0;
   for (let index = 0; index < Math.round(endpoints * 0.6); index++) {
     const area = AREAS[index % AREAS.length] ?? "admin";
@@ -130,7 +129,7 @@ export function writeFixture({
   const sources = model.sources.map((source) => source.name);
   for (const [path, text] of Object.entries({
     ...projectFiles(),
-    ...callerFiles(sources, EXPOSED),
+    ...callerFiles(sources, EXPOSED, ports.app),
     ...courierFiles(sources, ports, records),
   }))
     add(path, text);

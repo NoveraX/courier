@@ -1,7 +1,7 @@
 /**
  * The project files of the enterprise fixture, as source code: its
  * manifest and TypeScript settings, Courier's config and mocks, the callers
- * its code uses, the boundaries its pages call through, and its server.
+ * its code uses, the routes its pages call through, and its server.
  */
 
 /** Where the fixture's processes listen, from a base port: the server, Studio, and each mock. */
@@ -46,7 +46,7 @@ export function projectFiles() {
       types: ["node"],
       paths: { "@enterprise/*": ["./libs/*/src/index.ts"] },
     },
-    include: ["src", "libs", "courier.config.ts", "courier.mocks.ts"],
+    include: ["src", "libs", "courier.config.ts", "courier.mocks.ts", "courier.routes.ts"],
   };
   return {
     "package.json": `${JSON.stringify(manifest, null, 2)}\n`,
@@ -74,13 +74,14 @@ export const tenant = defineMiddleware("tenant", "before", (ctx) => {
  *
  * @param {readonly string[]} sources - The sources' names
  * @param {readonly string[]} exposed - The sources pages may call through the proxy
+ * @param {number} app - The app's port, where its server answers the pages
  * @returns {Record<string, string>} The files, by their path
  * @example
  * ```js
- * callerFiles(["core", "billing"], ["core"]);
+ * callerFiles(["core", "billing"], ["core"], 7400);
  * ```
  */
-export function callerFiles(sources, exposed) {
+export function callerFiles(sources, exposed, app) {
   const imports = sources.map((name) => `import { ${name} } from "../api/${name}";`).join("\n");
   const backend = `import { createCaller } from "@noverax/courier";
 
@@ -91,54 +92,69 @@ export const backend = {
 ${sources.map((name) => `  ${name}: createCaller(${name}),`).join("\n")}
 };
 `;
-  const types = exposed.map((name) => `import type { ${name} } from "../api/${name}";`).join("\n");
-  const boundaries = exposed
-    .map((name) => `import { ${name}Boundary } from "../api/${name}/boundary";`)
-    .join("\n");
+  const routes = exposed.map((name) => `${name}Routes`).join(", ");
   const storefront = `import { createProxyCaller } from "@noverax/courier";
 
-${types}
-${boundaries}
+import { ${routes} } from "../../courier.routes";
 
-/** What the pages call: the APIs through the app's own server, at what the boundaries expose. */
+/* Where the app's server answers the pages. */
+const proxyPath = {
+  http: "http://127.0.0.1:${app}/api/request",
+  sse: "http://127.0.0.1:${app}/api/sse",
+  ws: "ws://127.0.0.1:${app}/ws",
+};
+
+/** What the pages call: the APIs through the app's own server, at the endpoints marked for them. */
 export const storefront = {
-${exposed.map((name) => `  ${name}: createProxyCaller<typeof ${name}>("${name}", { boundary: ${name}Boundary }),`).join("\n")}
+${exposed.map((name) => `  ${name}: createProxyCaller(${name}Routes, { proxyPath }),`).join("\n")}
 };
 `;
   return { "src/courier/callers.ts": backend, "src/courier/storefront.ts": storefront };
 }
 
 /**
- * A source's boundary: the endpoints its pages may call through the proxy.
+ * The routes module the pages take: each endpoint of each source a page may
+ * call, by its path, in the order Studio writes them from the sources' marks,
+ * so the project compiles before Studio first runs.
  *
- * @param {string} source - The source's name
- * @param {readonly { path: string, endpoint: { name: string, verb: string } }[]} exposed - The endpoints
- * @param {number} app - The app's port
+ * @param {Record<string, readonly { path: string, endpoint: { name: string, verb: string } }[]>} exposed - Each source's endpoints a page may call
  * @returns {string} The module's source
  * @example
  * ```js
- * boundaryFile("core", exposed, 7400);
+ * routesFile({ core: exposed });
  * ```
  */
-export function boundaryFile(source, exposed, app) {
-  const lines = exposed.map(
-    (at) =>
-      `    "${at.path}.${at.endpoint.name}": "${at.endpoint.verb === "get" ? "query" : "mutation"}",`,
-  );
-  return `import { defineBoundary } from "@noverax/courier/define";
-
-/** The ${source} endpoints a page may call through the app's server. */
-export const ${source}Boundary = defineBoundary({
-  source: "${source}",
-  proxyPath: {
-    http: "http://127.0.0.1:${app}/api/request",
-    sse: "http://127.0.0.1:${app}/api/sse",
-    ws: "ws://127.0.0.1:${app}/ws",
-  },
-  expose: {
+export function routesFile(exposed) {
+  const blocks = Object.keys(exposed)
+    .sort()
+    .map((source) => {
+      const lines = (exposed[source] ?? [])
+        .map((at) => [
+          `${at.path}.${at.endpoint.name}`,
+          at.endpoint.verb === "get" ? "query" : "mutation",
+        ])
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([path, type]) => `  "${path}": { type: "${type}" },`);
+      return `
+const ${source}Endpoints = {
 ${lines.join("\n")}
-  },
-});
+} as const satisfies RouteMap<Sources["${source}"]>;
+
+/** What a page's proxy client may call of \`${source}\`, and how it reaches each endpoint. */
+export const ${source}Routes: CourierRoutes<Sources["${source}"], typeof ${source}Endpoints> = {
+  source: "${source}",
+  endpoints: ${source}Endpoints,
+};`;
+    });
+  return `// Written by Courier Studio from courier.config.ts. Do not edit it:
+// \`courier-studio routes\` writes it again from the endpoints marked .expose().
+
+import type { CourierRoutes, RouteMap } from "@noverax/courier/define";
+
+import type config from "./courier.config";
+
+type Sources = (typeof config)["sources"];
+${blocks.join("\n")}
 `;
 }
 

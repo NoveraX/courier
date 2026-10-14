@@ -6,7 +6,7 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryCaller } from "../src/create-query-caller";
 import { sendJson, startTestServer, type TestServer } from "./helpers/test-server";
 
@@ -102,6 +102,50 @@ describe("a query's request", () => {
 
     await queryClient.cancelQueries({ queryKey: ["api", "users", "slow"] });
     await prefetch;
+
+    await waitFor(() => expect(server.aborted).toEqual(["/users/slow"]));
+  });
+});
+
+/** The platform's AbortSignal without `any`, as Safari before 17.4, Chrome before 116 and Firefox before 124 have it. */
+function withoutAny(): void {
+  const { any: _dropped, ...rest } = Object.getOwnPropertyDescriptors(AbortSignal);
+  vi.stubGlobal(
+    "AbortSignal",
+    Object.defineProperties(function OlderAbortSignal() {}, rest),
+  );
+}
+
+describe("a query's request on a browser without AbortSignal.any", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("is aborted by the signal passed in requestOptions", async () => {
+    withoutAny();
+    const q = makeCaller();
+    const controller = new AbortController();
+    renderHook(() => q.users.useQuery("slow", { requestOptions: { signal: controller.signal } }), {
+      wrapper,
+    });
+    await waitFor(() => expect(server.requests).toHaveLength(1));
+
+    controller.abort();
+
+    await waitFor(() => expect(server.aborted).toEqual(["/users/slow"]));
+  });
+
+  it("is aborted when its component unmounts, a signal of its own passed too", async () => {
+    withoutAny();
+    const q = makeCaller();
+    const controller = new AbortController();
+    const { unmount } = renderHook(
+      () => q.users.useQuery("slow", { requestOptions: { signal: controller.signal } }),
+      { wrapper },
+    );
+    await waitFor(() => expect(server.requests).toHaveLength(1));
+
+    unmount();
 
     await waitFor(() => expect(server.aborted).toEqual(["/users/slow"]));
   });

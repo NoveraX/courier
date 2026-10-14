@@ -117,6 +117,7 @@ export {
   type StreamingFactories,
   type WSChannelFactory,
 } from "../transport";
+export { anySignal } from "../utils/any-signal";
 export { executeRequest } from "../utils/execute";
 export { absentAs } from "../utils/execute-validation";
 export { forwardedChain, forwardedFor } from "../utils/forwarded-for";

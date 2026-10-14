@@ -12,7 +12,7 @@ import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
 import { parsePort } from "./server/parse-port";
-import { DOTENV_ARG, loadProjectEnv } from "./server/project-env";
+import { createProjectEnv, DOTENV_ARG, type ProjectEnv } from "./server/project-env";
 import { quietSqliteWarning } from "./server/storage/quiet-sqlite-warning";
 import { studioUrls, tokenLink, withToken } from "./server/studio-urls";
 import { studioVersion } from "./server/studio-version";
@@ -79,10 +79,14 @@ const main = defineCommand({
     if (!existsSync(projectRoot) || !statSync(projectRoot).isDirectory()) {
       fail(`Project root ${projectRoot} is not a directory. Check --cwd.`);
     }
-    /* Read before the config is, which names its addresses from them as the application does. */
+    /* Read before the config is, which names its addresses from them as the application
+       does, and read again, the config with them, when their files change. */
+    let projectEnv: ProjectEnv | undefined;
     try {
-      const loaded = loadProjectEnv(projectRoot, args.dotenv);
-      if (loaded.length > 0) log.info(`Variables read from ${loaded.join(", ")}`);
+      projectEnv = createProjectEnv(projectRoot, args.dotenv);
+      if (projectEnv.loaded.length > 0) {
+        log.info(`Variables read from ${projectEnv.loaded.join(", ")}`);
+      }
     } catch (error) {
       fail(error instanceof Error ? error.message : String(error));
     }
@@ -94,6 +98,7 @@ const main = defineCommand({
     if (port instanceof Error) fail(port.message);
 
     const server = createStudioServer({
+      projectEnv,
       ...(port === undefined ? {} : { port }),
       ...(args.host === undefined ? {} : { host: args.host }),
       projectRoot,

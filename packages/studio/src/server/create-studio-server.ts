@@ -139,6 +139,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     watcherStatus,
     mocks: { mockRegistry, mockManager },
     onStartup: startup.configRead,
+    env: options.projectEnv,
   });
 
   setupUiNamespace({

@@ -32,8 +32,10 @@ interface CodeLinesProps {
   variant?: keyof typeof VARIANTS | undefined;
   /** The ground of a highlighted line: a hint, a warning, or a fix. */
   highlight?: keyof typeof HIGHLIGHTS | undefined;
-  /** The line, numbered from 1, a search shows as its current match. */
+  /** The line, by its number, a search shows as its current match. */
   current?: number | undefined;
+  /** Each line's number, where the lines are some of a longer text's; 1, 2, 3… by default. */
+  numbers?: readonly number[] | undefined;
 }
 
 /**
@@ -53,27 +55,33 @@ export function CodeLines({
   variant = "snippet",
   highlight = "brand",
   current,
+  numbers,
 }: CodeLinesProps): React.ReactNode {
   const v = VARIANTS[variant];
+  const numberOf = (index: number): number => numbers?.[index] ?? index + 1;
+  /* A longer text's numbers run past four digits: the column widens to the longest. */
+  const digits = numbers === undefined ? 0 : String(Math.max(0, ...numbers)).length;
+  const column = digits > 4 ? { width: `calc(${digits}ch + 0.875rem)` } : undefined;
   return (
     <pre className={cn("overflow-auto leading-[1.7]", v.pre)}>
       {code.split("\n").map((line, index) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: a snippet's lines are fixed; the number is the line's identity
           key={index}
-          data-line={index + 1}
-          aria-current={current === index + 1 ? "true" : undefined}
+          data-line={numberOf(index)}
+          aria-current={current === numberOf(index) ? "true" : undefined}
           className={cn(
             "flex",
             v.line,
-            isHighlighted?.(line, index + 1) && HIGHLIGHTS[highlight],
-            current === index + 1 && "outline-1 -outline-offset-1 outline-brand",
+            isHighlighted?.(line, numberOf(index)) && HIGHLIGHTS[highlight],
+            current === numberOf(index) && "outline-1 -outline-offset-1 outline-brand",
           )}
         >
           <span
             className={cn("w-10 shrink-0 pr-3.5 text-right text-fg-subtle select-none", v.number)}
+            style={column}
           >
-            {index + 1}
+            {numberOf(index)}
           </span>
           <span className="pr-4 whitespace-pre">
             {tokenize(line).map((token, at) => (

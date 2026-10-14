@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+
 import { type JsonSearch, searchJson } from "@/features/requests/json-search";
 import type { JsonLine } from "@/features/requests/json-tree";
+import type { WholeSearchResult } from "@/features/requests/whole-search";
+import {
+  shownResult,
+  useWholeSearch,
+  type WholeSearchState,
+  type WholeSource,
+} from "./use-whole-search";
 
 /** A search over a payload, as its tab drives it. */
 export interface PayloadSearch {
@@ -8,6 +16,10 @@ export interface PayloadSearch {
   setQuery: (query: string) => void;
   /** What the tree found, while a search runs over a value. */
   found: JsonSearch | undefined;
+  /** Where a search over the whole body stands, when the view shows a part of it. */
+  whole: WholeSearchState;
+  /** What the views show of the whole body's search, in place of the part's. */
+  wholeShown: WholeSearchResult | undefined;
   /** The raw view's lines that hold the text, numbered from 1. */
   lines: ReadonlySet<number>;
   /** How many matches the view shown has, and which is current. */
@@ -22,21 +34,25 @@ export interface PayloadSearch {
 
 /**
  * Search a payload's tree or its raw text, and keep the current match in
- * sight as it moves.
+ * sight as it moves. Where the view shows a part of the payload and the
+ * whole can be had, the search runs over the whole: until it answers, the
+ * part shown is searched.
  *
  * @param value - The payload, as parsed from JSON
  * @param lines - Its raw view's lines
  * @param mode - Which view shows
+ * @param whole - Where the whole comes from, when the view shows a part of it
  * @returns The search
  * @example
  * ```ts
- * const search = usePayloadSearch(view.value, lines, mode);
+ * const search = usePayloadSearch(view.value, lines, mode, { key, load });
  * ```
  */
 export function usePayloadSearch(
   value: unknown,
   lines: readonly JsonLine[],
   mode: "tree" | "raw",
+  whole?: WholeSource,
 ): PayloadSearch {
   const [query, setQueryState] = useState("");
   const [index, setIndex] = useState(0);
@@ -51,10 +67,14 @@ export function usePayloadSearch(
     });
     return numbers;
   }, [lines, query]);
-  const count = mode === "tree" ? (found?.matches.length ?? 0) : matchedLines.size;
+  const wholeState = useWholeSearch(whole, query, mode);
+  const wholeShown = query.trim() === "" ? undefined : shownResult(wholeState);
+  const paths = wholeShown ? wholeShown.matches : (found?.matches ?? []);
+  const numbers = wholeShown ? wholeShown.lines.map((line) => line.number) : [...matchedLines];
+  const count = mode === "tree" ? paths.length : numbers.length;
   const current = count === 0 ? 0 : ((index % count) + count) % count;
-  const currentPath = mode === "tree" ? found?.matches[current] : undefined;
-  const currentLine = mode === "raw" ? [...matchedLines][current] : undefined;
+  const currentPath = mode === "tree" ? paths[current] : undefined;
+  const currentLine = mode === "raw" ? numbers[current] : undefined;
   useEffect(() => {
     const at =
       currentPath !== undefined
@@ -71,6 +91,8 @@ export function usePayloadSearch(
       setIndex(0);
     },
     found,
+    whole: wholeState,
+    wholeShown,
     lines: matchedLines,
     counted: query.trim() === "" ? undefined : { count, current },
     currentPath,

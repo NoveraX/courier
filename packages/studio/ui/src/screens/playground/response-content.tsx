@@ -7,6 +7,7 @@ import { notForwardedOf } from "@/features/playground/not-forwarded";
 import { responseView } from "@/features/requests/payload-view";
 import { requestStateOf } from "@/features/requests/request-state";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { requestWhole } from "@/inspector/request-whole";
 import { HeadersTab } from "@/inspector/tabs/headers-tab";
 import { MessagesTab } from "@/inspector/tabs/messages-tab";
 import type { PayloadMode } from "@/inspector/tabs/payload-tab";
@@ -148,6 +149,7 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
       view={row ? responseView(row) : entryPayloadView(entry)}
       mode={payload.mode}
       onMode={payload.onMode}
+      whole={row ? requestWhole(row, "response") : undefined}
       searchLabel="Find in the answer"
     />
   );

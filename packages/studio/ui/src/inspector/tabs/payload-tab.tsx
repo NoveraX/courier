@@ -12,6 +12,9 @@ import { CodeEmpty, CodeToolbar } from "./code-toolbar";
 import { CutNote } from "./cut-note";
 import { DetailSearch } from "./detail-search";
 import { usePayloadSearch } from "./use-payload-search";
+import type { WholeSource } from "./use-whole-search";
+import { WholeSearchNote } from "./whole-search-note";
+import { WholeView } from "./whole-view";
 
 /** How a payload shows: as a tree, or as the JSON text. */
 export type PayloadMode = "tree" | "raw";
@@ -29,6 +32,8 @@ interface PayloadTabProps {
   searchLabel?: string | undefined;
   /** Downloads the whole payload, when the view shows a part of it and the whole can be had. */
   onWhole?: (() => void) | undefined;
+  /** Where the whole payload comes from, when the view shows a part of it: a search runs over the whole. */
+  whole?: WholeSource | undefined;
 }
 
 /**
@@ -36,7 +41,9 @@ interface PayloadTabProps {
  * close, or as the JSON text, marked where a validation issue points; or
  * what the tab says when there is none. A search finds a text in its keys
  * and values: the tree keeps what matches and what holds it, the raw text
- * marks its lines, and Enter moves from one match to the next.
+ * marks its lines, and Enter moves from one match to the next. Where the
+ * view shows a part of the payload and the whole can be had, the search
+ * runs over the whole of it.
  *
  * @param props - The payload's view, how it shows, and what changes that
  * @returns The tab
@@ -50,6 +57,7 @@ export function PayloadTab({
   mode,
   onMode,
   onWhole,
+  whole,
   searchLabel = "Find",
 }: PayloadTabProps): React.ReactNode {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -72,8 +80,15 @@ export function PayloadTab({
           }
       : undefined;
   const lines = hasValue ? jsonLines(view.value, view.issues) : [];
-  const search = usePayloadSearch(view.value, lines, mode);
+  const cutFrom = view.cutFrom;
+  const search = usePayloadSearch(
+    view.value,
+    lines,
+    mode,
+    cutFrom === undefined ? undefined : whole,
+  );
   const searching = search.counted !== undefined;
+  const shown = search.wholeShown;
   return (
     <div ref={search.container} className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
       <CodeToolbar
@@ -96,9 +111,23 @@ export function PayloadTab({
           onStep={search.step}
         />
       )}
-      {view.cutFrom !== undefined && <CutNote bytes={view.cutFrom} onWhole={onWhole} />}
+      {hasValue && whole && cutFrom !== undefined && (
+        <WholeSearchNote state={search.whole} bytes={cutFrom} mode={mode} />
+      )}
+      {cutFrom !== undefined && <CutNote bytes={cutFrom} onWhole={onWhole} />}
       {view.empty && <CodeEmpty icon={Inbox} title={view.empty.title} detail={view.empty.detail} />}
-      {hasValue && mode === "tree" && (
+      {hasValue && shown && (
+        <WholeView
+          result={shown}
+          mode={mode}
+          query={search.query}
+          currentPath={search.currentPath}
+          currentLine={search.currentLine}
+          collapsed={collapsed}
+          onToggle={toggle}
+        />
+      )}
+      {hasValue && !shown && mode === "tree" && (
         <JsonTreeView
           value={view.value}
           collapsed={collapsed}
@@ -113,7 +142,7 @@ export function PayloadTab({
           }
         />
       )}
-      {hasValue && mode === "raw" && (
+      {hasValue && !shown && mode === "raw" && (
         <div className="overflow-hidden rounded-panel border border-line bg-inset">
           <CodeLines
             variant="panel"

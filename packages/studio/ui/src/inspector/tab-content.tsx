@@ -4,6 +4,7 @@ import { failureOf } from "@/features/requests/request-failure";
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import type { RequestEntry } from "@/store/types";
 import { downloadRequestBody } from "./download-request-body";
+import { requestWhole } from "./request-whole";
 import { FailureTab } from "./tabs/failure-tab";
 import { HeadersTab } from "./tabs/headers-tab";
 import { MessagesTab } from "./tabs/messages-tab";
@@ -62,6 +63,7 @@ export function TabContent({
           mode={payload.mode}
           onMode={payload.onMode}
           onWhole={() => void downloadRequestBody(request, "response")}
+          whole={requestWhole(request, "response")}
           searchLabel="Find in the answer"
         />
       );
@@ -72,6 +74,7 @@ export function TabContent({
           mode={payload.mode}
           onMode={payload.onMode}
           onWhole={() => void downloadRequestBody(request, "request")}
+          whole={requestWhole(request, "request")}
           searchLabel="Find in the request"
         />
       );

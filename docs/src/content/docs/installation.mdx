@@ -143,6 +143,22 @@ never declared there: `courier.config.ts` has no `mocks` key.
 All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.
 </Callout>
 
+## Routes CLI
+
+A page that calls your API through your server's proxy takes its routes from
+`courier.routes.ts`, which Courier writes from the endpoints you mark
+`.expose()` — Studio as it runs, and `courier-cli routes` without it. Add the
+CLI for development, so your CI checks the module with the version your
+lockfile pins:
+
+```bash
+npm install --save-dev @noverax/courier-cli
+```
+
+`npx @noverax/courier-cli routes` writes the module; with `--check`, it writes
+nothing and fails when the module is out of date. See
+[Exposing Endpoints](/docs/proxy-mode/expose).
+
 ## Requirements
 
 - **Node.js 22** or later for every package; Studio needs 22.13, for the SQLite built into Node.

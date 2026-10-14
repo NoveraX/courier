@@ -30,7 +30,7 @@
   },
   "Courier routes": {
     "prefix": "courier-routes",
-    "description": "Routes a page's proxy client takes, written by hand where Studio writes none",
+    "description": "Routes a page's proxy client takes, written by hand where Courier writes none",
     "body": [
       "const ${1:endpoints} = {",
       "\t\"${2:users.getAll}\": { type: \"${3|query,mutation|}\" },",

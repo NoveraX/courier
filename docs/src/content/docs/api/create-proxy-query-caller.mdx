@@ -12,7 +12,7 @@ import { createProxyQueryCaller } from "@noverax/courier-react"
 
 ## Signature
 
-Accepts the routes of an API — the endpoints a page may call and how it reaches each, as Studio writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and `ProxyCallerOptions`, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group, typed from the API the routes were written from, for the endpoints they name alone.
+Accepts the routes of an API — the endpoints a page may call and how it reaches each, as Courier writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and `ProxyCallerOptions`, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group, typed from the API the routes were written from, for the endpoints they name alone.
 
 ```ts
 import type { ProxyCallerOptions } from "@noverax/courier"
@@ -224,4 +224,4 @@ export default async function UsersPage() {
 - [useQuery Guide](/docs/react-query/use-query) — in-depth usage patterns
 - [useMutation Guide](/docs/react-query/use-mutation) — mutations with optimistic updates
 - [createProxyCaller](/docs/api/create-proxy-caller) — the underlying proxy caller
-- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Studio writes from them
+- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Courier writes from them

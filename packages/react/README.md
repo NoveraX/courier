@@ -98,7 +98,7 @@ Two query callers are available — pick the one that matches your transport mod
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import { apiRoutes } from "@/courier.routes"
 
-// The routes Courier Studio writes from the endpoints you mark .expose():
+// The routes Courier writes from the endpoints you mark .expose():
 // what a page may call, and how — streams and channels included. The API
 // definition stays on the server.
 export const q = createProxyQueryCaller(apiRoutes, {

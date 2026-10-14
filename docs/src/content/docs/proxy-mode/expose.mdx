@@ -6,7 +6,7 @@ The proxy addresses endpoints by name. A page's call carries `?_s=api&_g=users&_
 
 So the proxy serves only what you mark. An endpoint, a group or a whole API says `expose` where it is defined, and a call to an endpoint no mark opens is refused as if the endpoint did not exist. A new endpoint is the server's until someone marks it, so one written for a cron job or an admin tool never becomes a page's to call by accident — and with it the server's credentials, which the proxy lends every call it serves.
 
-The page learns the same answer from a module Studio writes from your marks: the routes. They name each endpoint a page may call and how the page reaches it, and nothing else — not the upstream host, not your middleware, not an endpoint you kept back.
+The page learns the same answer from a module Courier writes from your marks: the routes. They name each endpoint a page may call and how the page reaches it, and nothing else — not the upstream host, not your middleware, not an endpoint you kept back.
 
 ## Marking endpoints
 
@@ -79,7 +79,9 @@ The marks gate the calls that arrive over the proxy. Code running in your own pr
 
 ## The routes module
 
-Studio writes the routes into `courier.routes.ts`, beside your `courier.config.ts`, from the endpoints marked in every source the config declares. For the API above:
+A page needs to know, as it runs, which endpoints it may call and how to reach each — a read it may cache, a stream, a socket. Types are gone once the page is built, and importing the API would ship its definition with them, so the routes travel as a module of their own: data alone, written for you, and short enough to read in a review.
+
+Courier writes them into `courier.routes.ts`, beside your `courier.config.ts`, from the endpoints marked in every source the config declares. For the API above:
 
 ```ts title="courier.config.ts"
 import { defineConfig } from "@noverax/courier/config"
@@ -89,8 +91,8 @@ export default defineConfig({ sources: { api } })
 ```
 
 ```ts title="courier.routes.ts"
-// Written by Courier Studio from courier.config.ts. Do not edit it:
-// `courier-studio routes` writes it again from the endpoints marked .expose().
+// Written by Courier from courier.config.ts. Do not edit it:
+// `courier-cli routes` writes it again from the endpoints marked .expose().
 
 import type { CourierRoutes, RouteMap } from "@noverax/courier/define";
 
@@ -112,17 +114,30 @@ export const apiRoutes: CourierRoutes<Sources["api"], typeof apiEndpoints> = {
 };
 ```
 
-Studio writes the module each time it loads the config — when it starts, and when you save a file the config reads — and only when the module would change; `courier-studio routes` writes it without starting Studio. The module holds data and types alone: it imports the config as a type, so a page that imports it bundles the endpoints' names and shapes and nothing of their definitions. It is formatted as the rest of your project is, by the formatter the project uses.
+Two tools write it, with the same code and to the same bytes, and each only when the module would change:
+
+- **Studio**, each time it loads the config — when it starts, and when you save a file the config reads.
+- **`courier-cli routes`**, from [`@noverax/courier-cli`](https://github.com/NoveraX/courier/tree/master/packages/cli#readme), without Studio — in a project that does not run it, in a script, in CI.
+
+The module holds data and types alone: it imports the config as a type, so a page that imports it bundles the endpoints' names and shapes and nothing of their definitions. It is formatted as the rest of your project is, by the formatter the project uses.
+
+### Review it as a permission
 
 Commit it with the marks. It answers "what can a page call in this release" in one file that a review reads and a diff shows. A CI step keeps the two together:
 
 ```bash
-npx @noverax/courier-studio routes --check
+npx @noverax/courier-cli routes --check
 ```
 
-It writes nothing, and fails when the module on disk is not what the marks give: a mark changed without the module written again fails the build rather than a page.
+It writes nothing, and fails when the module on disk is not what the marks give: a mark changed without the module written again fails the build rather than a page. Install the CLI in the project — `npm install --save-dev @noverax/courier-cli` — so the job runs the version your lockfile pins.
 
-`studio.routes` in `courier.config.ts` puts the module somewhere else, by its path from the project root, or `false` keeps the project without one — see [defineConfig](/docs/api/config). Studio never writes over a file it did not write: the module's first line says it is Studio's. With no endpoint marked, the module exports nothing.
+A line in `CODEOWNERS` gives the module to the people who own the API, so no endpoint becomes a page's to call without their review:
+
+```text title=".github/CODEOWNERS"
+/courier.routes.ts @your-org/api-owners
+```
+
+`studio.routes` in `courier.config.ts` puts the module somewhere else, by its path from the project root, or `false` keeps the project without one — see [defineConfig](/docs/api/config). Neither tool writes over a file Courier did not write: the module's first line says it is Courier's. With no endpoint marked, the module exports nothing.
 
 ## Wiring the client
 
@@ -170,7 +185,7 @@ Each entry says how the client reaches its endpoint:
 
 A read that may be cached goes to the proxy as GET, its variables in the address, so a browser and a CDN may keep its answer. Every other call goes as POST: GET gains a read nothing when nothing on the way may keep the answer, and POST keeps the variables of a read nobody marked out of every log between the page and your server. A read whose definition declares `sensitiveVariables` goes as POST even with `.cache()`, and the proxy refuses it over GET.
 
-## Routes without Studio
+## Routes without a config
 
 A project with no `courier.config.ts` writes its routes by hand. Held to the API by `RouteMap`, they cannot drift from it:
 
@@ -203,9 +218,9 @@ const notARead = { "notifications.feed": { type: "query" } } as const satisfies 
 const aWrite = { "users.create": { type: "query" } } as const satisfies RouteMap<typeof api>
 ```
 
-The API is imported **as a type**. That is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint, the ones you held back included. The module Studio writes imports the config the same way.
+The API is imported **as a type**. That is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint, the ones you held back included. The module Courier writes imports the config the same way.
 
-The marks still decide what the proxy serves. Routes that name an endpoint no mark opens give the page a client that offers it and a proxy that refuses it. `courier-studio routes --check` keeps the module Studio writes in step with the marks; one written by hand is yours to keep in step.
+The marks still decide what the proxy serves. Routes that name an endpoint no mark opens give the page a client that offers it and a proxy that refuses it. `courier-cli routes --check` keeps the module Courier writes in step with the marks; one written by hand is yours to keep in step.
 
 ## What the browser learns
 

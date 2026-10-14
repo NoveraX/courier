@@ -19,7 +19,7 @@ This page follows the user's credentials through each layer. [User Sessions](/do
 
 ### The proxy serves only what you mark
 
-A page reaches an endpoint through the proxy only where a mark opens it: `.expose()` on the endpoint, or `expose` on its group or its API, the nearest deciding. Any other is answered as a name the source does not define, so an endpoint written for a cron job or an admin tool never runs for a page with your server's credentials, and a caller guessing names learns nothing of what exists. A page's client takes the routes Studio writes from the marks — the names of the endpoints a page may call and how it reaches them, nothing of the API's definition. See [Exposing Endpoints](/docs/proxy-mode/expose).
+A page reaches an endpoint through the proxy only where a mark opens it: `.expose()` on the endpoint, or `expose` on its group or its API, the nearest deciding. Any other is answered as a name the source does not define, so an endpoint written for a cron job or an admin tool never runs for a page with your server's credentials, and a caller guessing names learns nothing of what exists. A page's client takes the routes Courier writes from the marks — the names of the endpoints a page may call and how it reaches them, nothing of the API's definition. See [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ### The proxy passes on only what it names
 

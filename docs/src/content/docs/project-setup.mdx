@@ -6,7 +6,7 @@ Keep your API definitions separate from your UI code. The structure is the same 
 
 ```text title="Project structure"
 courier.config.ts         # your APIs, for your server, Studio and the MCP server
-courier.routes.ts         # what a page may call: Studio writes it from the .expose() marks
+courier.routes.ts         # what a page may call: Courier writes it from the .expose() marks
 src/
 ├── api/
 │   ├── index.ts          # defineApi + sources export
@@ -90,7 +90,7 @@ import { apiRoutes } from "@/courier.routes"
 export const caller = createProxyCaller(apiRoutes)
 ```
 
-The browser's callers take the routes Studio writes from your marks, never the API itself — see [Exposing Endpoints](/docs/proxy-mode/expose).
+The browser's callers take the routes Courier writes from your marks, never the API itself — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/server-caller.ts (Server-side)"
 import { createCaller } from "@noverax/courier"

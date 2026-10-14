@@ -79,7 +79,7 @@ type ProxyCallerOptions = {
 
 ### CourierRoutes
 
-The routes of one API that a page's proxy client takes: the source the server registered it as, and each endpoint a page may call, by its path, with how the page reaches it. Studio writes them into `courier.routes.ts` from the endpoints marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
+The routes of one API that a page's proxy client takes: the source the server registered it as, and each endpoint a page may call, by its path, with how the page reaches it. Courier writes them into `courier.routes.ts` from the endpoints marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts
 import type { CourierRoutes, RouteMap, RouteShape } from "@noverax/courier/define"

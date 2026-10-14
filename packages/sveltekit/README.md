@@ -133,7 +133,7 @@ Pair with `createProxyCaller` on the client:
 import { createProxyCaller } from "@noverax/courier"
 import { apiRoutes } from "./courier.routes"
 
-// The routes Courier Studio writes from the endpoints you mark .expose():
+// The routes Courier writes from the endpoints you mark .expose():
 // what a page may call, under the key the source has in your `sources` map.
 const caller = createProxyCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },

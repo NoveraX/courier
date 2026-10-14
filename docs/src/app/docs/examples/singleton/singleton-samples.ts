@@ -11,7 +11,7 @@ import { apiRoutes } from "@/courier.routes"
 
 export const q = createProxyQueryCaller(apiRoutes)
 
-// The routes Studio writes from your .expose() marks carry the API's types:
+// The routes Courier writes from your .expose() marks carry the API's types:
 // - The group and endpoint names a page may call
 // - Response types and variable types per endpoint
 // q.group.useQuery("endpoint") — full autocompletion`,

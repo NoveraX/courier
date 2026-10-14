@@ -45,7 +45,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 
 ## Why use proxy mode?
 
-- **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`. The page's client takes the [routes](/docs/proxy-mode/expose) Studio writes in place of the API object, so the bundle carries the names of the endpoints you opened and nothing else.
+- **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`. The page's client takes the [routes](/docs/proxy-mode/expose) Courier writes in place of the API object, so the bundle carries the names of the endpoints you opened and nothing else.
 - **Refuse what you did not open** — the proxy serves only the endpoints you mark `.expose()`, on the endpoint, its group or its API, and answers any other as a name that does not exist. An endpoint written for server code alone stays the server's until someone marks it.
 - **Bypass CORS** — the proxy handler runs on the same origin as your frontend, so there are no cross-origin restrictions.
 - **Carry your session** — the browser sends its cookies to the proxy route (`credentials: "include"` by default), and they cross to the backend, with the backend's `set-cookie` coming back, for the sources and endpoints that name them. See [Cookies](/docs/proxy-mode/api-route#cookies).

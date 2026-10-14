@@ -119,8 +119,9 @@ jobs:
       - name: Check what a page takes
         run: npm run check:browser
 
-      # Each routes module the repository keeps, as Studio writes it from its
-      # project's .expose() marks: a mark changed without the module fails.
+      # Each routes module the repository keeps, as `courier-cli routes` writes
+      # it from its project's .expose() marks: a mark changed without the
+      # module fails.
       - name: Check routes modules
         run: npm run check:routes
 

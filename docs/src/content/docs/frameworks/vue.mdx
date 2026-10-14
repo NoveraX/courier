@@ -79,7 +79,7 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 
 ## Step 2: Create a composable
 
-List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier Studio writes the routes the app's caller takes into `courier.routes.ts` beside it — whenever it loads the config, or now with `npx @noverax/courier-studio routes`; see [Exposing Endpoints](/docs/proxy-mode/expose). The app imports the routes, never the definition, which stays out of its bundle:
+List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier writes the routes the app's caller takes into `courier.routes.ts` beside it — Studio whenever it loads the config, or `npx @noverax/courier-cli routes` now; see [Exposing Endpoints](/docs/proxy-mode/expose). The app imports the routes, never the definition, which stays out of its bundle:
 
 ```ts title="courier.config.ts"
 import { defineConfig } from "@noverax/courier/config"

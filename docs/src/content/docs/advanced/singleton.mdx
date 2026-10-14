@@ -60,7 +60,7 @@ export const api = defineApi({
 
 ### Step 2: Build each client once
 
-Give each client a module that builds it and exports it. In the browser, pass the routes Studio writes into `courier.routes.ts` from your marks — see [Exposing Endpoints](/docs/proxy-mode/expose). They carry every group, endpoint, variable and response type a page may use, and how each endpoint is reached, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
+Give each client a module that builds it and exports it. In the browser, pass the routes Courier writes into `courier.routes.ts` from your marks — see [Exposing Endpoints](/docs/proxy-mode/expose). They carry every group, endpoint, variable and response type a page may use, and how each endpoint is reached, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"

@@ -38,7 +38,7 @@ Go — is defined once in [`src/api.ts`](src/api.ts) and called three ways:
 - **Server code** calls the backend directly ([`src/direct.ts`](src/direct.ts)).
 - **A page** calls it through your server ([`src/client.ts`](src/client.ts)).
   Its one value from the API is the routes module,
-  [`courier.routes.ts`](courier.routes.ts), which Studio writes from the
+  [`courier.routes.ts`](courier.routes.ts), which Courier writes from the
   endpoints marked `.expose()`, so the backend's address and paths never ship
   with the page.
 - **Your server** runs Courier's proxy ([`src/server.ts`](src/server.ts)) and
@@ -73,7 +73,9 @@ npm run server --workspace examples/basic     # the proxy, on :3001
 ```
 
 Studio writes `courier.routes.ts` again whenever a `.expose()` mark changes;
-`npm run routes --workspace examples/basic` writes it without Studio.
+`npm run routes --workspace examples/basic` writes it without Studio, with
+`courier-cli routes`, and `npm run check:routes` from the repository root
+fails when it is out of date, as CI runs it.
 
 The server connects to Studio through `attachRuntime()` in
 [`src/dev.ts`](src/dev.ts): Studio's Timeline shows each request the proxy

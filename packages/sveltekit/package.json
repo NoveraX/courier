@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-sveltekit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SvelteKit adapter for Courier: an endpoint that proxies typed calls to any backend, with the user's session in load functions and form actions",
   "keywords": [
     "courier",
@@ -72,7 +72,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.1.0"
+    "@noverax/courier": "^0.2.0"
   },
   "devDependencies": {
     "@noverax/courier": "*"

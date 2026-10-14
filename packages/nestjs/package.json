@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-nestjs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "NestJS integration for Courier: a module and middleware that proxy typed calls to any backend, with the user's session, CSRF protection, SSE and WebSockets",
   "keywords": [
     "courier",
@@ -63,7 +63,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.1.0",
+    "@noverax/courier": "^0.2.0",
     "ws": ">=8"
   },
   "peerDependenciesMeta": {

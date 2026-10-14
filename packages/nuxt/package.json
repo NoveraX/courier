@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-nuxt",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Nuxt adapter for Courier: a Nitro event handler that proxies typed calls to any backend, with the user's session in server routes and the pages Nuxt renders",
   "keywords": [
     "courier",
@@ -61,7 +61,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.1.0"
+    "@noverax/courier": "^0.2.0"
   },
   "devDependencies": {
     "@noverax/courier": "*"

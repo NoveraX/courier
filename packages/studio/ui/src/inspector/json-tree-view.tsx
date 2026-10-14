@@ -1,6 +1,6 @@
 import type { JsonSearch } from "@/features/requests/json-search";
 import { jsonTreeRows } from "@/features/requests/json-tree";
-import { TreeRow } from "./json-tree-row";
+import { TreeRows } from "./tree-rows";
 
 interface JsonTreeViewProps {
   value: unknown;
@@ -34,23 +34,14 @@ export function JsonTreeView({
   const closed = search
     ? new Set([...collapsed].filter((path) => !search.found.opened.has(path)))
     : collapsed;
-  const rows = jsonTreeRows(value, closed, issues).filter(
-    (row) => !search || search.found.keeps(row.path),
-  );
+  const kept = search && { keeps: search.found.keeps, limit: Number.POSITIVE_INFINITY };
   return (
-    <div className="overflow-auto rounded-panel border border-line bg-inset py-1.5">
-      {rows.map((row) => (
-        <TreeRow
-          key={`${row.kind}:${row.path}`}
-          row={row}
-          query={search?.query ?? ""}
-          current={row.kind !== "close" && search?.current === row.path}
-          onToggle={onToggle}
-        />
-      ))}
-      {search && search.found.matches.length === 0 && (
-        <p className="m-0 px-3 py-2 text-small text-fg-subtle">Nothing here matches.</p>
-      )}
-    </div>
+    <TreeRows
+      rows={jsonTreeRows(value, closed, issues, kept)}
+      query={search?.query ?? ""}
+      current={search?.current}
+      onToggle={onToggle}
+      none={search !== undefined && search.found.matches.length === 0}
+    />
   );
 }

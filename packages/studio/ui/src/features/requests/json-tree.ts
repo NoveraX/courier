@@ -47,31 +47,47 @@ function childAccessor(parent: string, key: string, index: boolean): string {
   return `${parent}[${JSON.stringify(key)}]`;
 }
 
+/** Which rows a tree keeps, and the most it keeps. */
+export interface KeptRows {
+  /** Whether the row of a path is kept; a container that is not is passed by whole. */
+  keeps: (path: string) => boolean;
+  /** The most rows: past it, the walk stops, one row over, so a caller can tell. */
+  limit: number;
+}
+
 /**
  * A JSON value as the lines of a tree, with the containers whose paths are
- * collapsed shown closed, and the issues at their values.
+ * collapsed shown closed, and the issues at their values. Given what to
+ * keep, it walks only into what it keeps, so a search over a large value
+ * costs what it shows rather than the whole value, and stops one row past
+ * the limit.
  *
  * @param value - The value
  * @param collapsed - The paths of the containers shown closed
  * @param issues - Validation issues by path
+ * @param kept - The rows kept, and the most of them
  * @returns The rows
  * @example
  * ```ts
  * jsonTreeRows({ a: [1] }, new Set(), new Map()).map((r) => r.text); // ["{", "[", "1", "]", "}"]
+ * jsonTreeRows(body, new Set(), new Map(), { keeps: found.keeps, limit: 3_000 });
  * ```
  */
 export function jsonTreeRows(
   value: Json,
   collapsed: ReadonlySet<string>,
   issues: ReadonlyMap<string, string>,
+  kept?: KeptRows,
 ): JsonTreeRow[] {
   const rows: JsonTreeRow[] = [];
+  const full = (): boolean => kept !== undefined && rows.length > kept.limit;
   const walk = (
     v: Json,
     key: JsonTreeRow["key"],
     at: { path: string; accessor: string },
     depth: number,
   ) => {
+    if (full()) return;
     const { path, accessor } = at;
     if (!isContainer(v)) {
       rows.push({ path, accessor, depth, key, kind: "value", ...leaf(v), issue: issues.get(path) });
@@ -96,7 +112,9 @@ export function jsonTreeRows(
     if (closed) return;
     for (const [k, item, index] of entries) {
       const child = { path: join(path, k), accessor: childAccessor(accessor, k, index) };
+      if (kept && !kept.keeps(child.path)) continue;
       walk(item, { text: k, index }, child, depth + 1);
+      if (full()) return;
     }
     rows.push({
       path,
@@ -108,7 +126,7 @@ export function jsonTreeRows(
       tone: "punctuation",
     });
   };
-  walk(value, null, { path: "", accessor: "" }, 0);
+  if (!kept || kept.keeps("")) walk(value, null, { path: "", accessor: "" }, 0);
   return rows;
 }
 

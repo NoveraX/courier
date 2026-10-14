@@ -8,6 +8,7 @@ import { mockRequestCells } from "@/features/mocks/mock-request-cells";
 import type { MockRequestView } from "@/features/mocks/mock-request-view";
 import type { InspectorTab } from "@/features/requests/inspector-tabs";
 import { downloadWholeBody } from "@/mocks/download-whole-body";
+import { mockWhole } from "@/mocks/mock-whole";
 import type { MockRequestLog } from "@/store/mock-slice";
 import { MockRequestHeader } from "./mock-request-header";
 import { StatCellGrid } from "./stat-cell-grid";
@@ -53,6 +54,7 @@ function Content({ log, view, tab }: ContentProps): React.ReactNode {
       mode={mode}
       onMode={setMode}
       onWhole={() => void downloadWholeBody(log, part)}
+      whole={mockWhole(log, part)}
       searchLabel={part === "request" ? "Find in the request" : "Find in the answer"}
     />
   );

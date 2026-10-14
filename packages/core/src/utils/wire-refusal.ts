@@ -47,7 +47,7 @@ export function refuseWireCall(call: WireCall): WireRefusal | undefined {
   const group = typeof call.group === "string" ? call.group : undefined;
   /* Answered as an unknown name is: telling a caller that guessing names is
      forbidden confirms that the name it guessed exists. */
-  if (!isExposedToWire(call.dataSource, group, String(call.method))) {
+  if (!isExposedToWire(call.dataSource, group, String(call.method), call.schema)) {
     return { status: 400, message: call.notFound };
   }
   if (call.proxyMethod === "GET" && call.schema?.type !== "query") {

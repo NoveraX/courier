@@ -1,5 +1,6 @@
 import { describeValue } from "./describe-value";
 import { isPlainObject } from "./is-plain-object";
+import { routesSettingProblem } from "./routes-module/routes-setting-problem";
 import { specHostEntryProblem } from "./spec-host-entry-problem";
 
 /* The fields that name a TCP port, checked alike. */
@@ -9,9 +10,10 @@ const PORT_FIELDS = ["port", "mockBasePort"] as const;
  * What is wrong with the `studio` block of a config, if anything.
  *
  * Studio binds `host` and `port`, assigns mock ports from `mockBasePort`,
- * and fetches from the private hosts `allowedSpecHosts` lists, so a value
- * none of that can use is a config error that names the field, not a
- * failure to listen or a setting left at its default in silence.
+ * fetches from the private hosts `allowedSpecHosts` lists and writes the
+ * routes module where `routes` says, so a value none of that can use is a
+ * config error that names the field, not a failure to listen or a setting
+ * left at its default in silence.
  *
  * @param studio - The config's `studio` export, as evaluated
  * @returns Why the block is refused, or `null` when it is absent or usable
@@ -26,7 +28,11 @@ export function studioBlockProblem(studio: unknown): string | null {
   if (!isPlainObject(studio)) {
     return `courier.config.studio is ${describeValue(studio)}, not an object`;
   }
-  return addressProblem(studio) ?? specHostsProblem(studio.allowedSpecHosts);
+  return (
+    addressProblem(studio) ??
+    specHostsProblem(studio.allowedSpecHosts) ??
+    routesSettingProblem(studio.routes)
+  );
 }
 
 function addressProblem(studio: Record<string, unknown>): string | null {

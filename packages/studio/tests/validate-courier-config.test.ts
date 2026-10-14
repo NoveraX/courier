@@ -221,12 +221,22 @@ describe("validateCourierConfig on imports", () => {
     [{ host: "" }, 'courier.config.studio.host is "", not a host name or address'],
     [{ host: 127001 }, "courier.config.studio.host is 127001, not a host name or address"],
     [{ open: "yes" }, 'courier.config.studio.open is "yes", not true or false'],
+    [
+      { routes: "../web/routes.ts" },
+      'courier.config.studio.routes is "../web/routes.ts", not a path in the project: it leaves the project',
+    ],
   ])("refuses a studio block with %j", (studio, message) => {
     expect(rejectionOf({ sources: {}, studio })).toMatchObject({ message });
   });
 
   it("accepts the address fields Studio reads when they hold what it can use", () => {
-    const studio = { host: "0.0.0.0", port: 6290, mockBasePort: 7101, open: true };
+    const studio = {
+      host: "0.0.0.0",
+      port: 6290,
+      mockBasePort: 7101,
+      open: true,
+      routes: "src/courier.routes.ts",
+    };
 
     expect(rejectionOf({ sources: {}, studio })).toBeNull();
     expect(rejectionOf({ sources: {}, studio: { port: 1, mockBasePort: 65535 } })).toBeNull();

@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { extname, join } from "node:path";
+import { dirname, extname, join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { packageTypeOf } from "../package-type-of";
 import { importsCarryExtensions } from "./plan/imports-carry-extensions";
@@ -16,13 +16,14 @@ const BY_PACKAGE_TYPE: ReadonlySet<string> = new Set([".ts", ".tsx", ".js", ".js
 /**
  * Whether the project names the file of a relative import with the
  * extension it runs as, so a new import of the config is written that way:
- * the mocks file is an ES module whose imports TypeScript may resolve as
- * Node does — a tsconfig, or a project it references, of `node16` or
- * `nodenext` resolution, and a `.mts` file or a `.ts` one in a package of
+ * the file the import goes into — the mocks file, or the routes module — is
+ * an ES module whose imports TypeScript may resolve as Node does — a
+ * tsconfig at or above its folder, or a project it references, of `node16`
+ * or `nodenext` resolution, and a `.mts` file or a `.ts` one in a package of
  * type module — or the config's own relative imports end in `.js` or `.mjs`.
  *
  * @param root - The project root, symlinks resolved
- * @param mocksName - The mocks file's name in the root, whether it exists or is to be created
+ * @param fileName - The file's path from the root, whether it exists or is to be created
  * @param configName - The config's name in the root
  * @returns `true` when a relative import the edit adds should carry its extension
  * @example
@@ -33,10 +34,11 @@ const BY_PACKAGE_TYPE: ReadonlySet<string> = new Set([".ts", ".tsx", ".js", ".js
  */
 export function writesExplicitExtensions(
   root: string,
-  mocksName: string,
+  fileName: string,
   configName: string,
 ): boolean {
-  if (isEsModule(join(root, mocksName)) && usesNodeResolution(root)) return true;
+  const file = join(root, fileName);
+  if (isEsModule(file) && usesNodeResolution(dirname(file))) return true;
   return configCarriesExtensions(join(root, configName));
 }
 

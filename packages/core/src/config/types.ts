@@ -160,6 +160,19 @@ export interface CourierStudioConfig {
    * in an ES module package) as of the last time Node evaluated it.
    */
   allowedSpecHosts?: readonly string[] | undefined;
+  /**
+   * Where the routes module goes: the module a page's proxy client imports,
+   * which names every endpoint marked `.expose()` and how the page reaches
+   * it, and nothing else of the API. A path in the project, from its root,
+   * to a `.ts`, `.mts`, `.js` or `.mjs` file: `"src/courier.routes.ts"`.
+   * Left out, it is `courier.routes.ts` beside courier.config, or
+   * `courier.routes.js` beside a JavaScript one; `false` keeps the project
+   * without one. Studio writes it each time courier.config loads with an
+   * endpoint a page may call, and `courier-studio routes` writes it on
+   * demand — or, with `--check`, fails when it is out of date. Neither
+   * writes over a file Studio did not write.
+   */
+  routes?: string | false | undefined;
 }
 
 /** What the `courier-server` command reads when its flags say nothing. */

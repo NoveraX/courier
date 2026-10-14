@@ -5,6 +5,8 @@ import type { MocksConsumers } from "../apply-loaded-mocks";
 import type { BindingTable } from "../catalog/binding-table";
 import { startConfigWatcher } from "../config-watcher";
 import type { ProjectEnv } from "../project-env";
+import { projectRootAt } from "../project-fs/project-root";
+import { createRoutesModuleWriter } from "../routes-module/routes-module-writer";
 import { createUpdateChecks } from "../update-checks";
 import type { WatcherStatus } from "../watcher-status";
 import { withinBudget } from "../within-budget";
@@ -86,6 +88,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     { root: projectRoot, bindingTable, uiNamespace, mocks, updateChecks },
     store,
   );
+  const routes = createRoutesModuleWriter(projectRootAt(projectRoot));
 
   let startup = deps.onStartup;
   function started(config: CourierConfig | null): void {
@@ -101,6 +104,8 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     onApplied: (loaded) => {
       started(loaded.config);
       outcomes.applied(loaded);
+      /* A config the binding table refused is not what Studio runs, nor what it writes. */
+      if (current.running === loaded) routes.loaded(loaded);
     },
     onFailed: (error) => {
       started(null);
@@ -138,7 +143,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     runExclusive: engine.runExclusive,
     finishEdits: async (budgetMs) => {
       engine.refuseEdits();
-      await withinBudget(engine.editsSettled(), budgetMs);
+      await withinBudget(Promise.all([engine.editsSettled(), routes.close()]), budgetMs);
     },
     stop: engine.stop,
   };

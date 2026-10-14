@@ -94,9 +94,10 @@ export interface ProjectState extends ProjectImports {
     dropped?: AbortSignal,
   ): Promise<TResult>;
   /**
-   * Let an edit under way finish, for at most `budgetMs`. Every edit that
-   * has not started, and every later one, is refused with
-   * `CONFIG_WATCHER_STOPPED` and never runs, so none is waited for.
+   * Let an edit under way finish, and the routes module being written, for
+   * at most `budgetMs`. Every edit that has not started, and every later
+   * one, is refused with `CONFIG_WATCHER_STOPPED` and never runs, so none is
+   * waited for; no later load writes the routes module.
    */
   finishEdits(budgetMs: number): Promise<void>;
   /** Stop watching; outcomes of loads still running are dropped. */

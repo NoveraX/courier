@@ -50,7 +50,7 @@ See [Import an API](/docs/studio/import-api).
 
 ## studio
 
-What Studio reads: `port`, `host`, `mockBasePort` and `open` when it starts, and `allowedSpecHosts` whenever a fetch would reach a private host. A value Studio cannot use — a port that is not a whole number from 1 to 65535, an empty host, an `open` that is not `true` or `false` — fails the config, and its error names the field.
+What Studio reads: `port`, `host`, `mockBasePort` and `open` when it starts, `allowedSpecHosts` whenever a fetch would reach a private host, and `routes` each time the config loads. A value Studio cannot use — a port that is not a whole number from 1 to 65535, an empty host, an `open` that is not `true` or `false`, a `routes` path outside the project — fails the config, and its error names the field.
 
 | Field | Default | |
 | --- | --- | --- |
@@ -59,6 +59,7 @@ What Studio reads: `port`, `host`, `mockBasePort` and `open` when it starts, and
 | `mockBasePort` | `7001` | Where the ports Studio assigns to mocks that name none begin |
 | `open` | `false` | Open Studio in the browser when it starts; `--open` and `--no-open` override it |
 | `allowedSpecHosts` | — | Hosts on a private network Studio may fetch a specification from, such as `["gitlab.internal", "10.0.0.7:8080"]`. This machine needs no entry |
+| `routes` | `"courier.routes.ts"` | Where the [routes module](/docs/proxy-mode/boundary) goes, from the project root: a `.ts`, `.mts`, `.js` or `.mjs` file in the project, such as `"src/courier.routes.ts"`. Beside a JavaScript config it is `courier.routes.js`; `false` keeps the project without one. Studio writes it whenever the config loads with an endpoint marked `.expose()`, and never over a file it did not write |
 
 ## server
 

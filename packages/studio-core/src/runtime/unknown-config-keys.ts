@@ -22,6 +22,7 @@ const STUDIO = {
   mockBasePort: true,
   open: true,
   allowedSpecHosts: true,
+  routes: true,
 } satisfies Record<keyof CourierStudioConfig, true>;
 
 const SERVER = {

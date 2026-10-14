@@ -37,6 +37,27 @@ export function resolveProjectPath(root: string, path: string, api: PathApi = no
   return resolved;
 }
 
+/**
+ * Why a project-relative path is refused, by its name alone, as
+ * {@link resolveProjectPath} refuses it, with no project at hand: what a
+ * config names is checked before the project it is in is known.
+ *
+ * @param path - The path, relative to the project, with `/` or `\` separators
+ * @returns Why it is refused, completing "the path is refused: ", or `null`
+ * @example
+ * ```ts
+ * projectPathProblem("src/courier.routes.ts"); // → null
+ * projectPathProblem("../web/courier.routes.ts"); // → "it leaves the project"
+ * ```
+ */
+export function projectPathProblem(path: string): string | null {
+  const problem = lexicalProblem(path);
+  if (problem !== null) return problem;
+  const root = "/project";
+  const resolved = nodePath.posix.resolve(root, path.replaceAll("\\", "/"));
+  return isWithin(root, resolved, nodePath.posix) ? null : "it leaves the project";
+}
+
 function lexicalProblem(path: string): string | null {
   if (path === "") return "it is empty";
   if (path.includes("\0")) return "it contains a NUL byte";

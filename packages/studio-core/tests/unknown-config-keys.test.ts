@@ -35,6 +35,7 @@ describe("unknownConfigKeys", () => {
         mockBasePort: 7001,
         open: false,
         allowedSpecHosts: [],
+        routes: "src/courier.routes.ts",
       },
       server: {
         allowedOrigins: [],

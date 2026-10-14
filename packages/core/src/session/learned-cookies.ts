@@ -1,3 +1,4 @@
+import { setCookiesOf } from "../utils/set-cookies";
 import { sessionCookies } from "./session-credentials";
 import { isDeletion, parseSetCookie, type SetCookie } from "./set-cookie";
 import type { SessionOptions } from "./types";
@@ -112,7 +113,7 @@ function learnedOf(cookie: SetCookie, domain: string, path: string, now: number)
 /* Each Set-Cookie header of an answer. React Native joins them into one, as it joins any
    repeated header; where the platform lists them apart, a listed one is split all the same. */
 function setCookieHeaders(headers: Headers): string[] {
-  const listed = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [];
+  const listed = setCookiesOf(headers);
   const values = listed.length > 0 ? listed : [headers.get("set-cookie") ?? ""];
   return values
     .flatMap((value) => value.split(NEXT_COOKIE))

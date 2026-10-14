@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { setCookiesOf } from "../utils/set-cookies";
 import type { CallSession } from "./call-session";
 import { cookieForApp } from "./cookie-for-app";
 import type { IncomingRequest, RelayedCookie } from "./incoming-request";
@@ -36,7 +37,7 @@ export function relayCookies(
   if (upstream === undefined || incoming === undefined || options === undefined) return [];
   const { kept } = sessionCookies(options);
   const forResponse: string[] = [];
-  for (const header of upstream.getSetCookie()) {
+  for (const header of setCookiesOf(upstream)) {
     const cookie = parseSetCookie(header);
     if (cookie === undefined || !kept(cookie.name)) continue;
     keepCookie(incoming, cookie);

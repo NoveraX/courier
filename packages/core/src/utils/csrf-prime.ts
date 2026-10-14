@@ -5,6 +5,7 @@ import { csrfSource } from "../session/csrf-source";
 import { abortReason } from "./abort-reason";
 import { callSessionTarget } from "./execute-session";
 import type { CallTarget } from "./execute-target";
+import { setCookiesOf } from "./set-cookies";
 
 const log = createLogger("Session");
 
@@ -138,7 +139,7 @@ export async function askForToken(
     if (!(answered instanceof Response)) return [];
     if (!answered.ok)
       log.warn(`Asking ${path} for the double-submit token was answered ${answered.status}`);
-    return answered.headers.getSetCookie();
+    return setCookiesOf(answered.headers);
   } catch (error) {
     log.warn(
       `Asking ${path} for the double-submit token failed; ${waiting} goes without it`,

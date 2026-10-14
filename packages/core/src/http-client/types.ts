@@ -46,9 +46,10 @@ export type CallOptions<TRaw extends boolean = false> = Omit<
     forwardVariables?: boolean | undefined;
     stream?: boolean | undefined;
     /**
-     * The verb the call goes to the proxy with. A read goes as GET, so its
-     * answer can be cached, and a write as POST; "POST" keeps a read's
-     * variables out of the address.
+     * The verb the call goes to the proxy with. A read that declares
+     * `.cache()` goes as GET, so its answer can be kept on the way, and
+     * every other call as POST; "POST" keeps a read's variables out of the
+     * address.
      */
     method?: "GET" | "POST" | undefined;
     onUploadProgress?: ((progress: UploadProgress) => void) | undefined;

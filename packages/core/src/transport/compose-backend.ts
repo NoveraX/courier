@@ -32,8 +32,8 @@ export interface StreamingFactories {
  */
 /** How exhaustively the descriptor describes what may be called. */
 export interface ComposeOptions {
-  /** True when the descriptor lists every callable endpoint — a boundary does. */
-  exhaustive?: boolean;
+  /** What lists every endpoint the client may call, when something does: its routes, or a boundary. */
+  exhaustive?: "routes" | "boundary" | undefined;
 }
 
 export function composeBackend(
@@ -48,17 +48,13 @@ export function composeBackend(
     if (apiSource) {
       const { endpoint, schema } = resolveEndpoint(apiSource, group, method);
 
-      /* A boundary lists every endpoint this client may call, so one it does
+      /* Routes or a boundary list every endpoint this client may call, so one they do
          not name is a mistake rather than an HTTP call waiting to happen.
          Left to fall through, a stream would reach the HTTP executor and fail
          later as "sub is not async iterable", which names neither the
          endpoint nor the reason. */
       if (options?.exhaustive && typeof endpoint !== "function") {
-        throw new ConfigurationError(
-          "ENDPOINT_NOT_IN_BOUNDARY",
-          `[courier] "${formatEndpoint(group, method)}" is not in this client's boundary. ` +
-            "Add it to `expose` to call it from the browser.",
-        );
+        throw notListed(options.exhaustive, formatEndpoint(group, method));
       }
 
       if (schema?.transport === "sse") {
@@ -96,4 +92,20 @@ export function composeBackend(
 
 function formatEndpoint(group: string, method: string): string {
   return group ? `${group}.${method}` : method;
+}
+
+/* Why a client that lists its endpoints refuses one it does not: the proxy would refuse it too. */
+function notListed(listedIn: "routes" | "boundary", endpoint: string): ConfigurationError {
+  if (listedIn === "boundary") {
+    return new ConfigurationError(
+      "ENDPOINT_NOT_IN_BOUNDARY",
+      `[courier] "${endpoint}" is not in this client's boundary. ` +
+        "Add it to `expose` to call it from the browser.",
+    );
+  }
+  return new ConfigurationError(
+    "ENDPOINT_NOT_IN_ROUTES",
+    `[courier] "${endpoint}" is not among this client's routes, so the proxy refuses it. ` +
+      "Mark it with .expose() where it is defined, and write the routes again.",
+  );
 }

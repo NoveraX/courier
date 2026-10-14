@@ -69,6 +69,7 @@ export type {
   StreamWire,
   WireCall,
 } from "./probe";
+export type { CourierRoutes, RouteMap, RouteShape, RouteShapeAt } from "./routes";
 export { stampSourceKeys } from "./stamp-source-keys";
 export type {
   AnyDefinedApi,

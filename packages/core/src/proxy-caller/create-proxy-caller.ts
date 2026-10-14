@@ -1,13 +1,38 @@
 import type { InferClient } from "../client";
 import { buildClientProxy } from "../client";
 import { shapeOfSource } from "../client/shape";
-import type { BrowserApi } from "../define/exposed-api";
+import type { BrowserApi, ExposedApi } from "../define/exposed-api";
+import type { CourierRoutes, RouteShape } from "../define/routes";
 import { composeBackend, type StreamingFactories } from "../transport/compose-backend";
 import { createProxyHTTPExecutor } from "../transport/proxy/http";
 import { proxyStreamingFactories } from "../transport/proxy-streaming";
 import { sourceFromBoundary } from "./from-boundary";
+import { sourceFromRoutes } from "./from-routes";
 import { mergeProxyPath, type ProxyPath } from "./proxy-path";
-import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
+import type { ProxyCallerArguments, ProxyCallerDefaults, ProxyCallerOptions } from "./types";
+
+/**
+ * Create a proxy client from the routes of an API, for a page: the module
+ * Courier writes them to names which endpoints a browser may call and how
+ * each is reached, and is typed from the API it was written from, so the
+ * client reaches those endpoints alone and the API's definition never
+ * enters the bundle.
+ *
+ * @param routes - The routes of the API, as the module written for them exports them
+ * @param options - Where the proxy is, how long to wait, the credentials and headers to send
+ * @returns A client whose groups and endpoints are those the routes name
+ * @example
+ * ```ts
+ * import { apiRoutes } from "./courier.routes";
+ *
+ * const client = createProxyCaller(apiRoutes);
+ * await client.users.getAll();
+ * ```
+ */
+export function createProxyCaller<TApi, TEndpoints extends Readonly<Record<string, RouteShape>>>(
+  routes: CourierRoutes<TApi, TEndpoints>,
+  options?: ProxyCallerOptions,
+): InferClient<ExposedApi<TApi, keyof TEndpoints & string>>;
 
 /**
  * Create a proxy client typed from the API it is given as `source`, for code
@@ -72,21 +97,34 @@ export function createProxyCaller<TApi>(
   ...defaults: ProxyCallerArguments<TApi>
 ): InferClient<BrowserApi<TApi>>;
 
-export function createProxyCaller(source: string, defaults: ProxyCallerDefaults = {}): unknown {
-  /* A boundary is the narrow form of the same thing, and the one that keeps
-     the definition out of the browser, so it wins where both are given. */
-  const apiSource = defaults.boundary ? sourceFromBoundary(defaults.boundary) : defaults.source;
+export function createProxyCaller(
+  first: string | CourierRoutes,
+  defaults: ProxyCallerDefaults = {},
+): unknown {
+  const routes = typeof first === "string" ? undefined : first;
+  const source = routes ? routes.source : (first as string);
+  /* Routes or a boundary are the narrow form of the same thing, and the ones that keep
+     the definition out of the browser, so they win where a source is given too. */
+  const apiSource = routes
+    ? sourceFromRoutes(routes)
+    : defaults.boundary
+      ? sourceFromBoundary(defaults.boundary)
+      : defaults.source;
   // Per-transport merge: caller-level `proxyPath` wins over the source's
   // own `options.proxyPath` on a field-by-field basis. Either side may
   // be partial or undefined; missing transports fall back to built-in
   // defaults inside `resolveProxyPath` at request time.
-  const sourceProxyPath = defaults.boundary?.proxyPath ?? readSourceProxyPath(apiSource);
+  const sourceProxyPath = routes
+    ? undefined
+    : (defaults.boundary?.proxyPath ?? readSourceProxyPath(apiSource));
   const mergedProxyPath = mergeProxyPath(defaults.proxyPath, sourceProxyPath);
-  const effectiveDefaults: ProxyCallerDefaults = {
+  const followed = routes ?? readSourceOptions(apiSource);
+  const effectiveDefaults = {
     ...defaults,
     proxyPath: mergedProxyPath,
-    cancelPrevious: defaults.cancelPrevious ?? readSourceOptions(apiSource)?.cancelPrevious,
-    coalesce: defaults.coalesce ?? readSourceOptions(apiSource)?.coalesce,
+    cancelPrevious: defaults.cancelPrevious ?? followed?.cancelPrevious,
+    coalesce: defaults.coalesce ?? followed?.coalesce,
+    routes,
   };
 
   const http = createProxyHTTPExecutor(source, effectiveDefaults);
@@ -110,7 +148,7 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
     : {};
 
   const backend = composeBackend(apiSource, http, streaming, {
-    exhaustive: defaults.boundary !== undefined,
+    exhaustive: routes ? "routes" : defaults.boundary ? "boundary" : undefined,
   });
   return buildClientProxy(backend, {}, false, shapeOfSource(apiSource));
 }

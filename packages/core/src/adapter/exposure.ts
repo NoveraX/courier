@@ -11,8 +11,8 @@
  * The definition answers it, where each endpoint is written: `.expose()` on
  * the endpoint, `expose` on a group or on the API, the nearest one that says
  * deciding — so a group may be open with one endpoint in it shut, and an
- * API shut with one group in it open. A source that declares a boundary is
- * answered by it alone.
+ * API shut with one group in it open. What no mark opens is kept from every
+ * page: a new endpoint is the server's until someone marks it.
  *
  * A refused call is answered exactly as an unknown name is. Saying "forbidden"
  * would confirm that the endpoint exists, which is the one thing a caller
@@ -28,9 +28,8 @@ import type { SchemaMetadata } from "../validation";
  *
  * @param dataSource - The source as it sits in the registry
  * @param group - The group's path from the request, when it named one
- * @param method - The endpoint's name in its group
  * @param schema - The endpoint's metadata, carrying its own `.expose()`
- * @returns Whether the proxy may serve it
+ * @returns Whether the proxy may serve it: only where a mark opens it
  *
  * @example
  * ```ts
@@ -40,20 +39,11 @@ import type { SchemaMetadata } from "../validation";
 export function isExposedToWire(
   dataSource: unknown,
   group: string | undefined,
-  method?: string,
   schema?: SchemaMetadata,
 ): boolean {
   const options =
     isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
   if (!options) return false;
-
-  /* A declared boundary is the whole answer: it lists what may be called, so
-     anything it does not name is refused however the marks read. */
-  const listed = boundaryEndpointsOf(options);
-  if (listed && method !== undefined) {
-    const path = group === undefined ? method : `${group}.${method}`;
-    return Object.hasOwn(listed, path);
-  }
 
   const own = exposeFlag(schema?.expose);
   if (own !== undefined) return own;
@@ -71,15 +61,6 @@ export function isExposedToWire(
    closed rather than open. */
 function exposeFlag(value: unknown): boolean | undefined {
   return value === undefined ? undefined : value === true;
-}
-
-/* Every level of what this reads is optional, and only its own keys count:
-   the group comes from the request, so `constructor` names no group. */
-function boundaryEndpointsOf(
-  options: Record<string, unknown>,
-): Record<string, unknown> | undefined {
-  const { boundary } = options;
-  return isRecord(boundary) && isRecord(boundary.endpoints) ? boundary.endpoints : undefined;
 }
 
 /* The group the path names, then each group above it: the first that sets the flag decides. */

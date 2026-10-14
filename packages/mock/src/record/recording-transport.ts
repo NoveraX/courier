@@ -1,5 +1,5 @@
 import type { HttpResponse } from "@noverax/courier";
-import type { AnyDefinedApi } from "@noverax/courier/define";
+import type { AnyDefinedApi, CourierRoutes } from "@noverax/courier/define";
 import {
   createDirectHTTPExecutor,
   createProxyHTTPExecutor,
@@ -47,11 +47,12 @@ export function createRecordingTransport(
 ): RecordingTransport {
   const { proxy } = config;
   if (proxy) {
+    const routes = routesOf(config.source, proxy.source);
     const execute = createProxyHTTPExecutor(proxy.source, {
       proxyPath: { http: proxy.url },
-      source: config.source,
+      routes,
     });
-    const asGet = cachedReads(config.source, proxy.source);
+    const asGet = cachedReads(routes);
     return {
       call: async (group, method, variables, options) =>
         asResponse(await execute(group, method, variables, options, true)),
@@ -81,8 +82,7 @@ export function createRecordingTransport(
 
 /* The proxy route names the call in its query, as the proxy caller sends it. */
 /* The reads a proxy client sends as GET, its variables in the address: those that may be cached. */
-function cachedReads(source: AnyDefinedApi, name: string): ReadonlySet<string> {
-  const { endpoints } = routesOf(source, name);
+function cachedReads({ endpoints }: CourierRoutes): ReadonlySet<string> {
   const shapes: ReadonlyArray<[string, unknown]> = Object.entries(endpoints);
   return new Set(shapes.filter(([, shape]) => prop(shape, "get") === true).map(([path]) => path));
 }

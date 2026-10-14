@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { createCaller } from "../../src/caller";
 import { courier, defineApi } from "../../src/define/index";
+import { routesOf } from "../../src/define/routes-of";
 import { headerVariablesMiddleware } from "../../src/middleware";
 import { createProxyCaller } from "../../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../../src/sources";
@@ -93,9 +94,7 @@ describe("variables sent as headers through the proxy", () => {
   });
 
   it("reach the upstream as headers from the application's server", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("things", {
-      proxyPath: { http: proxy.url },
-    });
+    const client = createProxyCaller(routesOf(api(), "things"), { proxyPath: { http: proxy.url } });
 
     await client.create({ name: "chair", "Idempotency-Key": "key-12345" });
 

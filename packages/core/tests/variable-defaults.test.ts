@@ -13,6 +13,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import type { InferVariables } from "../src/define/index";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
@@ -117,7 +118,7 @@ describe("a defaulted variable", () => {
       return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
     });
     vi.stubGlobal("fetch", proxied);
-    const site = createProxyCaller<ReturnType<typeof news>>("site");
+    const site = createProxyCaller(routesOf(news(), "site"));
 
     await site.byGroup({ group: "press" });
 

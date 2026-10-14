@@ -1,6 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CourierRoutes } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
+
+/* The endpoints these tests call, each a write, as a page's routes name them: sent as POST, alone. */
+const ROUTES: CourierRoutes = {
+  source: "api",
+  endpoints: {
+    "auth.login": { type: "mutation" },
+    "events.subscribe": { type: "mutation" },
+    "files.upload": { type: "mutation" },
+    "group.method": { type: "mutation" },
+    healthCheck: { type: "mutation" },
+    method: { type: "mutation" },
+    search: { type: "mutation" },
+    users: { type: "mutation" },
+    "users.fail": { type: "mutation" },
+    "users.getAll": { type: "mutation" },
+    "users.getById": { type: "mutation" },
+    "users.getUser": { type: "mutation" },
+    "users.list": { type: "mutation" },
+    "users.missing": { type: "mutation" },
+  },
+};
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -34,7 +56,7 @@ afterEach(() => {
 
 describe("createProxyCaller", () => {
   it("returns a proxy object (not a function)", () => {
-    const client = createProxyCaller("api") as any;
+    const client = createProxyCaller(ROUTES) as any;
     expect(typeof client).toBe("object");
   });
 
@@ -42,7 +64,7 @@ describe("createProxyCaller", () => {
     it("sends correct JSON payload via fetch POST", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.getUser({ id: 1 });
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -59,7 +81,7 @@ describe("createProxyCaller", () => {
     it("sends group and method from dot notation", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ token: "abc" }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.auth.login({ email: "test@test.com" });
 
       expect(sent()).toEqual({
@@ -73,7 +95,7 @@ describe("createProxyCaller", () => {
     it("sends endpoint without variables", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ users: [] }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.list();
 
       expect(sent()).toMatchObject({ source: "api", group: "users", method: "list" });
@@ -88,7 +110,7 @@ describe("createProxyCaller", () => {
       const fd = new FormData();
       fd.append("file", new File(["content"], "test.txt"));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.files.upload(fd);
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -107,7 +129,7 @@ describe("createProxyCaller", () => {
     it("uses custom proxyPath.http", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api", {
+      const client = createProxyCaller(ROUTES, {
         proxyPath: { http: "/api/custom-route" },
       }) as any;
       await client.users.list();
@@ -120,7 +142,7 @@ describe("createProxyCaller", () => {
     it("applies default timeout via AbortSignal", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api", { timeout: 10000 }) as any;
+      const client = createProxyCaller(ROUTES, { timeout: 10000 }) as any;
       await client.users.list();
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -131,7 +153,7 @@ describe("createProxyCaller", () => {
     it("sends default headers", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api", { headers: { "x-api-key": "abc" } }) as any;
+      const client = createProxyCaller(ROUTES, { headers: { "x-api-key": "abc" } }) as any;
       await client.users.list();
 
       const headers = fetchSpy.mock.calls[0]![1].headers as Headers;
@@ -141,7 +163,7 @@ describe("createProxyCaller", () => {
     it("sends credentials: include by default", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.list();
 
       expect(fetchSpy.mock.calls[0]![1].credentials).toBe("include");
@@ -152,7 +174,7 @@ describe("createProxyCaller", () => {
     it("passes timeout from .with() on client level", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.with({ timeout: 5000 }).users.list();
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -163,7 +185,7 @@ describe("createProxyCaller", () => {
     it("passes timeout from .with() on group level", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.with({ timeout: 3000 }).list();
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -176,7 +198,7 @@ describe("createProxyCaller", () => {
     it("includes rawData in options via client.group.raw.method()", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.raw.getById({ id: 1 });
 
       const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
@@ -186,7 +208,7 @@ describe("createProxyCaller", () => {
     it("includes rawData in options via client.raw.group.method()", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.raw.users.getById({ id: 1 });
 
       const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
@@ -196,7 +218,7 @@ describe("createProxyCaller", () => {
     it("preserves raw through .with()", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.raw.with({ timeout: 1000 }).getById({ id: 1 });
 
       const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
@@ -209,7 +231,7 @@ describe("createProxyCaller", () => {
       const body = new ReadableStream();
       fetchSpy.mockResolvedValue(new Response(body, { status: 200 }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       const result = await client.events.with({ stream: true }).subscribe();
 
       expect(result).toBe(body);
@@ -223,7 +245,7 @@ describe("createProxyCaller", () => {
         }),
       );
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       const result = await client.events.raw.with({ stream: true }).subscribe();
 
       expect(result.status).toBe(206);
@@ -234,7 +256,7 @@ describe("createProxyCaller", () => {
     it("includes stream option in JSON payload", async () => {
       fetchSpy.mockResolvedValue(new Response(null, { status: 200, headers: new Headers() }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.events.with({ stream: true }).subscribe();
 
       const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
@@ -248,7 +270,7 @@ describe("createProxyCaller", () => {
       fetchSpy.mockResolvedValue(mockFetchResponse(data));
       const onSuccess = vi.fn();
 
-      const client = createProxyCaller("api", { onSuccess }) as any;
+      const client = createProxyCaller(ROUTES, { onSuccess }) as any;
       await client.users.list();
 
       expect(onSuccess).toHaveBeenCalledWith(data);
@@ -258,7 +280,7 @@ describe("createProxyCaller", () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ error: "not found" }, 404));
       const onError = vi.fn();
 
-      const client = createProxyCaller("api", { onError }) as any;
+      const client = createProxyCaller(ROUTES, { onError }) as any;
 
       await expect(client.users.missing()).rejects.toBeInstanceOf(HTTPError);
       expect(onError).toHaveBeenCalledWith(expect.any(HTTPError));
@@ -269,7 +291,7 @@ describe("createProxyCaller", () => {
     it("converts non-ok response to custom HTTPError", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ message: "Server Error" }, 500));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
 
       try {
         await client.users.fail();
@@ -284,7 +306,7 @@ describe("createProxyCaller", () => {
       const cause = new TypeError("network error");
       fetchSpy.mockRejectedValue(cause);
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       const error = await client.users.fail().catch((e: unknown) => e);
 
       expect(error).toBeInstanceOf(HTTPError);
@@ -297,7 +319,7 @@ describe("createProxyCaller", () => {
     it("uses GET method when method: GET is set via .with()", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ users: [] }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.with({ method: "GET" }).getAll();
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -312,7 +334,7 @@ describe("createProxyCaller", () => {
     it("sends the variables as one JSON parameter in GET mode, keeping their types", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.users.with({ method: "GET" }).list({ page: 2, tags: ["a", "b"] });
 
       const url = new URL(fetchSpy.mock.calls[0]![0], "http://localhost");
@@ -325,7 +347,7 @@ describe("createProxyCaller", () => {
     it("sends method without group for flat calls", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.healthCheck();
 
       expect(sent()).toMatchObject({ source: "api", group: undefined, method: "healthCheck" });
@@ -334,7 +356,7 @@ describe("createProxyCaller", () => {
     it("sends variables in flat call", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.search({ query: "test" });
 
       expect(sent()).toMatchObject({
@@ -347,7 +369,7 @@ describe("createProxyCaller", () => {
     it(".raw works on flat calls", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.raw.healthCheck();
 
       expect(sent().method).toBe("healthCheck");
@@ -357,7 +379,7 @@ describe("createProxyCaller", () => {
     it(".with() works on flat calls", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.with({ timeout: 3000 }).healthCheck();
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -372,7 +394,7 @@ describe("createProxyCaller", () => {
         .mockResolvedValueOnce(mockFetchResponse("flat"))
         .mockResolvedValueOnce(mockFetchResponse("nested"));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
 
       // Flat: client.users() → endpointKey = "users"
       await client.users();
@@ -386,7 +408,7 @@ describe("createProxyCaller", () => {
     it("method-level .raw() on flat call", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.healthCheck.raw();
 
       expect(sent().method).toBe("healthCheck");
@@ -396,7 +418,7 @@ describe("createProxyCaller", () => {
     it("method-level .with()() on flat call", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.healthCheck.with({ timeout: 2000 })();
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -407,7 +429,7 @@ describe("createProxyCaller", () => {
     it("method-level .raw.with()() chained on flat call", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.healthCheck.raw.with({ timeout: 1500 })();
 
       expect(sent().method).toBe("healthCheck");
@@ -417,7 +439,7 @@ describe("createProxyCaller", () => {
     it("client.raw.with().method() — combined at client level", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.raw.with({ timeout: 3000 }).healthCheck();
 
       expect(sent().method).toBe("healthCheck");
@@ -427,7 +449,7 @@ describe("createProxyCaller", () => {
     it("client.with().raw.group.method() — combined at client level for groups", async () => {
       fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.with({ timeout: 3000 }).raw.users.getAll();
 
       expect(sent()).toMatchObject({ method: "getAll", group: "users" });
@@ -441,7 +463,7 @@ describe("createProxyCaller", () => {
         .mockResolvedValueOnce(mockFetchResponse({ ok: true }))
         .mockResolvedValueOnce(mockFetchResponse({ ok: true }));
 
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       await client.raw.healthCheck();
       await client.healthCheck();
 
@@ -455,7 +477,7 @@ describe("createProxyCaller", () => {
 
   describe("proxy safety", () => {
     it("does not trigger thenable detection", async () => {
-      const client = createProxyCaller("api") as any;
+      const client = createProxyCaller(ROUTES) as any;
       const result = await Promise.resolve(client);
       expect(result).toBe(client);
     });

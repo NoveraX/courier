@@ -20,7 +20,7 @@ export type RequestPayload = {
  * Read the call a payload describes.
  *
  * A group named as the empty string is no group, so a caller that writes
- * one for an ungrouped endpoint reaches it, boundary or not.
+ * one for an ungrouped endpoint reaches it, as one that names no group does.
  *
  * @param requestPayload - The call: its endpoint, variables and options
  * @returns The same call, its group normalized

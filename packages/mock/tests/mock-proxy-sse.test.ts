@@ -7,13 +7,14 @@
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
-
 import { createMockServer } from "../src/server/create-mock-server";
 
 const { endpoint, stream } = courier();
 const api = defineApi({
+  expose: true,
   baseURL: "http://placeholder.invalid",
   groups: {
     live: defineGroup({
@@ -47,8 +48,7 @@ afterAll(async () => {
 });
 
 function proxyClient() {
-  return createProxyCaller<typeof api>("api", {
-    source: api,
+  return createProxyCaller(routesOf(api, "api"), {
     proxyPath: { http: `${base}/api/request`, sse: `${base}/api/sse` },
   });
 }

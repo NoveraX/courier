@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -160,7 +161,7 @@ describe("the proxy", () => {
 
   it("answers the browser client's identical newer call from the request already made", async () => {
     const proxied = vi.mocked(fetch);
-    const client = createProxyCaller("api", { source: api }) as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     const first = client.search({ q: "ab" }).catch(status);
     const second = client.search({ q: "ab" });
 
@@ -172,7 +173,7 @@ describe("the proxy", () => {
   });
 
   it("cancels in the browser client, which takes the source's list", async () => {
-    const client = createProxyCaller("api", { source: api }) as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     const first = client.search({ q: "a" }).catch(status);
     const second = client.search({ q: "ab" });
 

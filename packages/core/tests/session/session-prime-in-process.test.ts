@@ -12,6 +12,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { courier, defineApi } from "../../src/define";
+import { routesOf } from "../../src/define/routes-of";
 import { createProxyCaller } from "../../src/proxy-caller";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { registerRequestContext } from "../../src/session/request-context";
@@ -39,7 +40,8 @@ function defineAccounts(baseURL: string) {
   });
 }
 
-type Accounts = ReturnType<typeof defineAccounts>;
+/* The routes a page of the app takes: the API marks every endpoint for one. */
+const accountsRoutes = routesOf(defineAccounts("http://127.0.0.1:9"), "accounts");
 
 /* The request the application is serving, with the browser's cookies on it. */
 function userRequest(method: string, headers: Record<string, string>) {
@@ -93,7 +95,7 @@ describe("a proxy caller's write on the server that finds no double-submit token
     serving = incoming;
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    await createProxyCaller<Accounts>("accounts").login({ user: "ada" });
+    await createProxyCaller(accountsRoutes).login({ user: "ada" });
 
     expect(upstream.seen.map((seen) => `${seen.method} ${seen.url}`)).toEqual([
       "GET /csrf",
@@ -115,7 +117,7 @@ describe("a proxy caller's write on the server that finds no double-submit token
 
   it("asks once for the writes made together, and the next write repeats the token it got", async () => {
     serving = userRequest("POST", { cookie: "sid=s3", "sec-fetch-site": "same-origin" }).incoming;
-    const accounts = createProxyCaller<Accounts>("accounts");
+    const accounts = createProxyCaller(accountsRoutes);
 
     await Promise.all([accounts.rename({ name: "Ada" }), accounts.rename({ name: "Grace" })]);
     await accounts.rename({ name: "Hedy" });
@@ -133,7 +135,7 @@ describe("a proxy caller's write on the server that finds no double-submit token
     serving = userRequest("GET", { "sec-fetch-site": "cross-site" }).incoming;
 
     await expect(
-      createProxyCaller<Accounts>("accounts").login({ user: "mallory" }),
+      createProxyCaller(accountsRoutes).login({ user: "mallory" }),
     ).rejects.toMatchObject({
       status: 403,
     });

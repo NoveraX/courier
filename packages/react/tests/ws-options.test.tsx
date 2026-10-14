@@ -10,6 +10,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createWSHandler, registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { clearWSConnectionPool } from "@noverax/courier/internal-streams";
 import { attachWebSocketUpgrade, type UpgradeServer } from "@noverax/courier/node";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -65,8 +66,7 @@ afterEach(async () => {
 
 describe("the ws option of a React caller", () => {
   it("sends the proxy caller's auth when useChannel connects", async () => {
-    const q = createProxyQueryCaller<typeof liveApi>("api", {
-      source: liveApi,
+    const q = createProxyQueryCaller(routesOf(liveApi, "api"), {
       proxyPath: { ws: `ws://${host}/api/ws` },
       ws: { auth: () => ({ token: "proxy-token" }) },
     });

@@ -9,6 +9,7 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { createTestClient } from "../src/testing";
 
@@ -48,7 +49,7 @@ describe("a direct caller", () => {
 
 describe("a proxy caller", () => {
   it("keeps the API's methods and types", () => {
-    const caller = createProxyCaller<typeof api>("api", { source: api });
+    const caller = createProxyCaller(routesOf(api, "api"));
     type Answer = Awaited<ReturnType<typeof caller.users.list>>;
 
     expectTypeOf<IsAny<Answer>>().toEqualTypeOf<false>();

@@ -16,6 +16,7 @@ const { endpoint, stream } = courier();
 
 const sources = {
   shop: defineApi({
+    expose: true,
     baseURL: "https://api.example",
     proxyPath: { http: "/api/request", sse: "/api/sse" },
     groups: {
@@ -27,6 +28,7 @@ const sources = {
             endpoints: {
               list: endpoint.get("").response<unknown>(),
               watch: stream.response<{ n: number }>().get("watch"),
+              void: endpoint.post("void").expose(false),
             },
           }),
         },
@@ -79,5 +81,12 @@ describe("a Playground call through the proxy", () => {
 
     const url = new URL(String(fetchSpy.mock.calls[0]?.[0]));
     expect(`${url.origin}${url.pathname}`).toBe("https://app.example/api/sse");
+  });
+
+  it("refuses an endpoint no mark opens, saying how to open it, and sends nothing", () => {
+    expect(() => callThroughProxy(sources, call("void"), false)).toThrow(
+      "shop.billing.invoices.void is not marked .expose(), so a page may not call it through the proxy",
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

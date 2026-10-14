@@ -57,17 +57,10 @@ export type ConfigurationErrorCode =
   | "SOURCES_NOT_A_RECORD"
   /**
    * A source was registered under a key other than the name its author gave
-   * `defineApi`. A browser client addresses the source by the name on its own
-   * copy of the definition, while the server resolves the key, so every call
-   * by that name would be refused.
+   * `defineApi`. The server resolves a call by the key, and a page's routes
+   * name the source by it, so every call by the other name would be refused.
    */
   | "SOURCE_KEY_MISMATCH"
-  /**
-   * A source carries a boundary declared for another source. The server
-   * would gate this source on a list of the other's endpoints, while the
-   * browser addresses the other by name.
-   */
-  | "BOUNDARY_SOURCE_MISMATCH"
   /**
    * Something read the request body before the proxy route did — almost
    * always a body-parsing middleware mounted across the whole application.
@@ -141,8 +134,6 @@ export type ConfigurationErrorCode =
    * FormData.
    */
   | "PROXY_VARIABLE_NOT_SERIALIZABLE"
-  /** A client built with a boundary was asked for an endpoint the boundary does not expose. */
-  | "ENDPOINT_NOT_IN_BOUNDARY"
   /** A client built from routes was asked for an endpoint they do not name, which the proxy refuses. */
   | "ENDPOINT_NOT_IN_ROUTES"
   /** An endpoint declared as a stream or a channel was called by a client with no transport for it. */
@@ -216,13 +207,6 @@ export type ConfigurationErrorCode =
   | "SESSION_HEADER_CONFLICT"
   /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
   | "FORWARD_OPTIONS_INVALID"
-  /**
-   * An API's boundary says otherwise than the API: it exposes a path the API
-   * does not define or in another shape, or lists in `sensitive` a read
-   * whose definition sends its variables in the address — or leaves out one
-   * that keeps them out, which the browser would then send as GET.
-   */
-  | "BOUNDARY_MISMATCH"
   /** An API's `cancelPrevious` names a path that is not one of its reads. */
   | "CANCEL_PREVIOUS_INVALID"
   /** An endpoint's `.defaults()` is no object of data a request can carry. */

@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -80,9 +81,7 @@ afterEach(async () => {
 
 describe("an upload through the proxy", () => {
   it("is reported under the id the proxy shows the call by", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("api", {
-      proxyPath: { http: proxyUrl },
-    });
+    const client = createProxyCaller(routesOf(api(), "api"), { proxyPath: { http: proxyUrl } });
 
     await client.with({ onUploadProgress: () => {} }).upload(form());
 
@@ -94,7 +93,7 @@ describe("an upload through the proxy", () => {
   });
 
   it("keeps the id the caller named, as Studio's Playground names its runs", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("api", {
+    const client = createProxyCaller(routesOf(api(), "api"), {
       proxyPath: { http: proxyUrl },
       headers: { "x-courier-rid": "pg_run-1234" },
     });
@@ -106,9 +105,7 @@ describe("an upload through the proxy", () => {
   });
 
   it("leaves the proxy to name the call when the caller does not watch its upload", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("api", {
-      proxyPath: { http: proxyUrl },
-    });
+    const client = createProxyCaller(routesOf(api(), "api"), { proxyPath: { http: proxyUrl } });
 
     await client.upload(form());
 

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import type { HttpEndpoint } from "@noverax/courier/define";
+import type { CourierRoutes, HttpEndpoint, RouteMap } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode, Suspense } from "react";
@@ -40,6 +40,16 @@ type TestApi = {
     };
   };
 };
+
+/* The routes these tests' clients take: every endpoint of TestApi, each a read, as its type says. */
+const endpoints = {
+  "cache.clear": { type: "query" },
+  "users.create": { type: "query" },
+  "users.getAll": { type: "query" },
+  "users.getById": { type: "query" },
+  "users.list": { type: "query" },
+} as const satisfies RouteMap<TestApi>;
+const routes: CourierRoutes<TestApi, typeof endpoints> = { source: "api", endpoints };
 
 let queryClient: QueryClient;
 
@@ -82,13 +92,13 @@ function getFetchBody(index = 0) {
 
 describe("createProxyQueryCaller", () => {
   it("returns a proxy with group access", () => {
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     expect(typeof q).toBe("object");
     expect(typeof (q as any).users).toBe("object");
   });
 
   it("group exposes all hooks", () => {
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const users = (q as any).users;
     expect(typeof users.useQuery).toBe("function");
     expect(typeof users.useSuspenseQuery).toBe("function");
@@ -98,14 +108,14 @@ describe("createProxyQueryCaller", () => {
   });
 
   it("supports destructuring from group", () => {
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { useQuery: uq, useMutation: um } = (q as any).users;
     expect(typeof uq).toBe("function");
     expect(typeof um).toBe("function");
   });
 
   it("does not trigger thenable detection", async () => {
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const result = await Promise.resolve(q);
     expect(result).toBe(q);
   });
@@ -120,7 +130,7 @@ describe("useQuery", () => {
     const users = [{ id: 1, name: "Alice" }];
     fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -131,7 +141,7 @@ describe("useQuery", () => {
     const user = { id: 1, name: "Alice" };
     fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(
       () => (q as any).users.useQuery("getById", { variables: { id: 1 } }),
       { wrapper },
@@ -146,7 +156,7 @@ describe("useQuery", () => {
   it("builds query key without variables when undefined", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
@@ -159,7 +169,7 @@ describe("useQuery", () => {
   it("builds query key with variables when provided", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({}));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     renderHook(() => (q as any).users.useQuery("getById", { variables: { id: 5 } }), { wrapper });
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
@@ -170,7 +180,7 @@ describe("useQuery", () => {
   });
 
   it("forwards extra query options (enabled: false)", () => {
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useQuery("getAll", { enabled: false }), {
       wrapper,
     });
@@ -182,7 +192,7 @@ describe("useQuery", () => {
   it("handles fetch errors", async () => {
     fetchSpy.mockRejectedValue(new Error("Network error"));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -194,7 +204,7 @@ describe("useQuery", () => {
   it("works with destructured useQuery", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1 }]));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { useQuery } = (q as any).users;
     const { result } = renderHook(() => useQuery("getAll"), { wrapper });
 
@@ -212,7 +222,7 @@ describe("useSuspenseQuery", () => {
     const users = [{ id: 1, name: "Alice" }];
     fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useSuspenseQuery("getAll"), {
       wrapper: suspenseWrapper,
     });
@@ -224,7 +234,7 @@ describe("useSuspenseQuery", () => {
     const user = { id: 1, name: "Alice" };
     fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(
       () => (q as any).users.useSuspenseQuery("getById", { variables: { id: 1 } }),
       { wrapper: suspenseWrapper },
@@ -239,7 +249,7 @@ describe("useSuspenseQuery", () => {
   it("builds correct query key", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     renderHook(() => (q as any).users.useSuspenseQuery("getAll"), { wrapper: suspenseWrapper });
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
@@ -259,7 +269,7 @@ describe("useInfiniteQuery", () => {
     const page1 = { items: [{ id: 1 }], nextCursor: 2 };
     fetchSpy.mockResolvedValue(mockFetchResponse(page1));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(
       () =>
         (q as any).users.useInfiniteQuery("list", {
@@ -279,7 +289,7 @@ describe("useInfiniteQuery", () => {
     const page1 = { items: [{ id: 1 }], nextCursor: 2 };
     fetchSpy.mockResolvedValue(mockFetchResponse(page1));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     renderHook(
       () =>
         (q as any).users.useInfiniteQuery("list", {
@@ -303,7 +313,7 @@ describe("useInfiniteQuery", () => {
       .mockResolvedValueOnce(mockFetchResponse(page1))
       .mockResolvedValueOnce(mockFetchResponse(page2));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(
       () =>
         (q as any).users.useInfiniteQuery("list", {
@@ -327,7 +337,7 @@ describe("useInfiniteQuery", () => {
   it("keys the list by its first page's variables", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ items: [], nextCursor: null }));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     renderHook(
       () =>
         (q as any).users.useInfiniteQuery("list", {
@@ -355,7 +365,7 @@ describe("useMutation", () => {
     const created = { id: 1, name: "Alice" };
     fetchSpy.mockResolvedValue(mockFetchResponse(created));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useMutation("create"), { wrapper });
 
     result.current.mutate({ name: "Alice" });
@@ -367,7 +377,7 @@ describe("useMutation", () => {
   it("passes variables to mutationFn", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useMutation("create"), { wrapper });
 
     result.current.mutate({ name: "Bob" });
@@ -382,7 +392,7 @@ describe("useMutation", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
     const onSuccess = vi.fn();
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useMutation("create", { onSuccess }), {
       wrapper,
     });
@@ -397,7 +407,7 @@ describe("useMutation", () => {
   it("handles mutation errors", async () => {
     fetchSpy.mockRejectedValue(new Error("Server error"));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).users.useMutation("create"), { wrapper });
 
     result.current.mutate({ name: "Alice" });
@@ -410,7 +420,7 @@ describe("useMutation", () => {
   it("mutates without variables for void endpoints", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ ok: true }));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(() => (q as any).cache.useMutation("clear"), { wrapper });
 
     result.current.mutate();
@@ -422,7 +432,7 @@ describe("useMutation", () => {
     const spy = vi.spyOn(queryClient, "invalidateQueries");
     fetchSpy.mockResolvedValue(mockFetchResponse({ id: 2, name: "New" }));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(
       () =>
         (q as any).users.useMutation("create", {
@@ -441,7 +451,7 @@ describe("useMutation", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1 }));
 
     const onSettled = vi.fn();
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     const { result } = renderHook(
       () =>
         (q as any).users.useMutation("create", {
@@ -469,7 +479,7 @@ describe("prefetchQuery", () => {
     const users = [{ id: 1, name: "Alice" }];
     fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     await (q as any).users.prefetchQuery(queryClient, "getAll");
 
     const cached = queryClient.getQueryData(["api", "users", "getAll"]);
@@ -480,7 +490,7 @@ describe("prefetchQuery", () => {
     const user = { id: 1, name: "Alice" };
     fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     await (q as any).users.prefetchQuery(queryClient, "getById", { variables: { id: 1 } });
 
     const cached = queryClient.getQueryData(["api", "users", "getById", { id: 1 }]);
@@ -490,7 +500,7 @@ describe("prefetchQuery", () => {
   it("respects staleTime option", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     await (q as any).users.prefetchQuery(queryClient, "getAll", { staleTime: 60_000 });
 
     const state = queryClient.getQueryState(["api", "users", "getAll"]);
@@ -562,25 +572,25 @@ describe("optimisticOptions", () => {
 
 describe("createProxyQueryKeys", () => {
   it("creates group-level key", () => {
-    const key = createProxyQueryKeys<TestApi>("api");
+    const key = createProxyQueryKeys(routes);
     expect(key("users")).toEqual(["api", "users"]);
   });
 
   it("creates method-level key", () => {
-    const key = createProxyQueryKeys<TestApi>("api");
+    const key = createProxyQueryKeys(routes);
     expect(key("users", "getAll")).toEqual(["api", "users", "getAll"]);
   });
 
   it("creates key with variables", () => {
-    const key = createProxyQueryKeys<TestApi>("api");
+    const key = createProxyQueryKeys(routes);
     expect(key("users", "getById", { id: 1 })).toEqual(["api", "users", "getById", { id: 1 }]);
   });
 
   it("keys match query cache keys", async () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([]));
-    const key = createProxyQueryKeys<TestApi>("api");
+    const key = createProxyQueryKeys(routes);
 
-    const q = createProxyQueryCaller<TestApi>("api");
+    const q = createProxyQueryCaller(routes);
     renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());

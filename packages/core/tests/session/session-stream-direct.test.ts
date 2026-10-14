@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../../src/caller";
 import { courier, defineApi } from "../../src/define";
+import { routesOf } from "../../src/define/routes-of";
 import { createProxyCaller } from "../../src/proxy-caller";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { registerRequestContext } from "../../src/session/request-context";
@@ -44,6 +45,7 @@ async function upstream(): Promise<string> {
 
 function feedApi(baseURL: string, options: { credentials?: RequestCredentials } = {}) {
   return defineApi({
+    expose: true,
     name: "feed",
     baseURL,
     ...options,
@@ -155,12 +157,10 @@ describe("a stream a proxy caller opens", () => {
     const base = await upstream();
     const fetchSpy = spyOnFetch();
     const api = feedApi(base);
-    const included = createProxyCaller<typeof api>("feed", {
-      source: api,
+    const included = createProxyCaller(routesOf(api, "feed"), {
       proxyPath: { sse: `${base}/sse` },
     });
-    const omitted = createProxyCaller<typeof api>("feed", {
-      source: api,
+    const omitted = createProxyCaller(routesOf(api, "feed"), {
       proxyPath: { sse: `${base}/sse` },
       credentials: "omit",
     });

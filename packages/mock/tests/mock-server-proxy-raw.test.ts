@@ -8,13 +8,14 @@
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
 import { createMockServer } from "../src/server/create-mock-server";
 
 const { endpoint } = courier();
 type User = { id: number; name: string };
 const api = defineApi({
+  expose: true,
   baseURL: "http://placeholder.invalid",
   groups: {
     users: defineGroup({
@@ -41,7 +42,7 @@ afterAll(async () => {
 
 describe("a raw proxy call", () => {
   it("resolves to the status, headers and data", async () => {
-    const client = createProxyCaller<typeof api>("api", { proxyPath: { http: proxyUrl } });
+    const client = createProxyCaller(routesOf(api, "api"), { proxyPath: { http: proxyUrl } });
 
     const response = await client.raw.users.getAll();
 
@@ -51,7 +52,7 @@ describe("a raw proxy call", () => {
   });
 
   it("leaves a call that did not ask for it answering the data", async () => {
-    const client = createProxyCaller<typeof api>("api", { proxyPath: { http: proxyUrl } });
+    const client = createProxyCaller(routesOf(api, "api"), { proxyPath: { http: proxyUrl } });
     expect(await client.users.getAll()).toEqual([{ id: 1, name: "Ada" }]);
   });
 });

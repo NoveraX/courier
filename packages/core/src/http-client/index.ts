@@ -73,9 +73,8 @@ export class HttpClient {
          being served; neither is anything `fetch` knows. */
       session: _session,
       forward: _forward,
-      /* What the proxy, the boundary and Studio read; never anything `fetch` is given. */
+      /* What the proxy and Studio read; never anything `fetch` is given. */
       expose: _expose,
-      boundary: _boundary,
       proxyPath: _proxyPath,
       webSocket: _webSocket,
       fetch: sourceFetch,

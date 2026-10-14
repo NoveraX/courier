@@ -6,8 +6,8 @@ import type { ParsedSpec } from "../parser/types";
 /**
  * The import's proxy caller as the generator writes it now, for a change to
  * the import's endpoints. It takes its routes from the routes module, so it
- * reads the same whichever endpoints the import holds; a caller written
- * before, given a boundary of its own, is written again in this form.
+ * reads the same whichever endpoints the import holds; a caller an earlier
+ * release wrote in another form is written again in this one.
  *
  * @param spec - The specification the import is generated from
  * @param options - The import's generation options

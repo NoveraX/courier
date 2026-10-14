@@ -41,7 +41,7 @@ export function resolveSSEEndpoint(
   }
 
   /* Same answer as an unknown name, for the same reason. */
-  if (!isExposedToWire(dataSource, group, method, schema)) {
+  if (!isExposedToWire(dataSource, group, schema)) {
     warnNotExposed(`[${source}][${group ?? ""}][${method}]`);
     return errorResponse(400, notFound);
   }

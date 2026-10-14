@@ -13,6 +13,7 @@ import { createHandler } from "../src/adapter";
 import { rememberPeerAddress } from "../src/adapter/peer-address";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { webIncomingRequest, withIncomingRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -253,7 +254,7 @@ describe("through the proxy", () => {
       return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
     });
     vi.stubGlobal("fetch", proxied);
-    const shop = createProxyCaller<ReturnType<typeof api>>("shop", { source: api() });
+    const shop = createProxyCaller(routesOf(api(), "shop"));
 
     await Promise.all([shop.seo({ page: "/" }), shop.seo({ page: "/" })]);
 
@@ -273,7 +274,7 @@ describe("through the proxy", () => {
       return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
     });
     vi.stubGlobal("fetch", proxied);
-    const shop = createProxyCaller<ReturnType<typeof api>>("shop", { source: api() });
+    const shop = createProxyCaller(routesOf(api(), "shop"));
     const email = "ada@example.com";
 
     await Promise.all([shop.byEmail({ email }), shop.byEmail({ email })]);
@@ -292,10 +293,8 @@ describe("through the proxy", () => {
       return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
     });
     vi.stubGlobal("fetch", proxied);
-    const fromSource = createProxyCaller<ReturnType<typeof api>>("shop", {
-      source: api({ coalesce: false }),
-    });
-    const saysSo = createProxyCaller<ReturnType<typeof api>>("shop", { coalesce: false });
+    const fromSource = createProxyCaller(routesOf(api({ coalesce: false }), "shop"));
+    const saysSo = createProxyCaller(routesOf(api(), "shop"), { coalesce: false });
 
     await Promise.all([fromSource.seo({ page: "/" }), fromSource.seo({ page: "/" })]);
     await Promise.all([saysSo.seo({ page: "/b" }), saysSo.seo({ page: "/b" })]);

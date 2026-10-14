@@ -9,17 +9,6 @@ export type { TransportOptions } from "../http-client/transport-options";
 /* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
 export type { WebBody, WebCredentials } from "../http-client/web-types";
 export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";
-export { type BoundaryConfig, defineBoundary } from "./boundary";
-export type {
-  ExposablePath,
-  ExposedEndpoint,
-  Exposure,
-  ExposureMap,
-  KindAt,
-  ProxyBoundary,
-  WireShape,
-  WireShapeAt,
-} from "./boundary-types";
 export type {
   ChannelAddressed,
   ChannelBuilder,
@@ -38,7 +27,8 @@ export type {
 } from "./builder-types";
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";
-export type { BrowserApi, ExposedApi, RoutedApi } from "./exposed-api";
+export type { ExposablePath, KindAt, WireShapeAt } from "./endpoint-path-types";
+export type { ExposedApi, RoutedApi } from "./exposed-api";
 export { type FormFieldEncoding, formBody } from "./form-body";
 export { formQuery } from "./form-query";
 export { defineGroup } from "./group";

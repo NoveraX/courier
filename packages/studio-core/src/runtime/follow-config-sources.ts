@@ -9,14 +9,13 @@ import { studioHooks } from "@noverax/courier/internal";
  * file changes, and the registry the proxy reads would otherwise go on
  * serving the definition loaded at startup. Each `defineApi()` the
  * application runs therefore reloads the config and registers what it
- * declares — the config's keys, and whatever it composed around a source,
- * such as a boundary.
+ * declares — the config's keys, and whatever it composed around a source.
  *
  * The source that was just defined is never registered by itself. Guessing
  * which config key it replaced let an unrelated source that shared a host and
- * a group name take over another's key, stripped a boundary the config had
- * added, made a source the config never declared reachable through the proxy,
- * and threw from inside the application's own `defineApi()`.
+ * a group name take over another's key, dropped what the config had composed
+ * around a source, made a source the config never declared reachable through
+ * the proxy, and threw from inside the application's own `defineApi()`.
  *
  * The sources a reload evaluates define themselves too; those are its own and
  * are not taken for a change. Definitions made one after another while a

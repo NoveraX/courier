@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -38,7 +39,7 @@ afterEach(async () => {
 
 function browserClient() {
   const api = defineApi({ expose: true, name: "api", baseURL: upstream.origin, groups: { items } });
-  return createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } });
+  return createProxyCaller(routesOf(api, "api"), { proxyPath: { http: proxy.url } });
 }
 
 describe("variables sent through the proxy", () => {

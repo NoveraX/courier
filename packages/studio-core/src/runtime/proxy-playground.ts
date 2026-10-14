@@ -1,10 +1,11 @@
 import { createProxyCaller, type ProxyPath, type UploadProgress } from "@noverax/courier";
-import type { Sources } from "@noverax/courier/define";
+import type { CourierRoutes, Sources } from "@noverax/courier/define";
 import {
   getAppOriginParsed,
   groupChain,
   groupNames,
   resolveProxyPath,
+  routesOf,
 } from "@noverax/courier/internal";
 import { member } from "../member";
 
@@ -23,9 +24,11 @@ export interface PlaygroundCall {
 /**
  * Call an endpoint through the app's proxy route, as the app's browser would.
  *
- * The client is built from the source's own definition, so streams and
- * channels are told apart as they are in the app, and it reaches the proxy
- * at the source's `proxyPath` for the transport the endpoint uses. A path
+ * The client takes the routes the source's own definition gives — the
+ * endpoints a page may call, and how it reaches each — as the app's page
+ * takes them, so an endpoint no mark opens is refused before it is sent,
+ * and it reaches the proxy at the source's `proxyPath` for the transport
+ * the endpoint uses. A path
  * relative to the app is resolved against the app's origin; without one —
  * `runtime.appOrigin` in courier.config or `COURIER_APP_URL` — this throws
  * `APP_ORIGIN_NOT_CONFIGURED`, which names both. An absolute path needs none.
@@ -48,8 +51,11 @@ export function callThroughProxy(
   onUploadProgress?: (progress: UploadProgress) => void,
 ): unknown {
   const definition = Reflect.get(sources, call.source);
-  const client: unknown = createProxyCaller<unknown>(call.source, {
-    source: isRecord(definition) ? definition : undefined,
+  const routes: CourierRoutes = isRecord(definition)
+    ? routesOf(definition, call.source)
+    : { source: call.source, endpoints: {} };
+  assertMarked(definition, routes, call);
+  const client: unknown = createProxyCaller(routes, {
     proxyPath: proxyPathFor(definition, transportOf(definition, call)),
     ...(Object.keys(call.headers).length > 0 && { headers: call.headers }),
   });
@@ -63,6 +69,18 @@ export function callThroughProxy(
     );
   }
   return Reflect.apply(endpoint, owner, [call.variables]);
+}
+
+/* An endpoint the definition holds and no mark opens is refused here, with why, before
+   the proxy refuses it as a name it does not know. */
+function assertMarked(definition: unknown, routes: CourierRoutes, call: PlaygroundCall): void {
+  const path = call.group ? `${call.group}.${call.method}` : call.method;
+  if (Object.hasOwn(routes.endpoints, path)) return;
+  const owner = groupChain(definition, call.group)?.at(-1) ?? definition;
+  if (member(owner, call.method) === undefined) return;
+  throw new Error(
+    `${call.source}.${path} is not marked .expose(), so a page may not call it through the proxy: mark it where it is defined, or send it directly`,
+  );
 }
 
 /** A transport a proxy path names a route for. */

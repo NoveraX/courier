@@ -1,3 +1,4 @@
+import { routesExportName } from "../../apis/generator/routes-export-name";
 import type { CodeCall } from "./calls-in-text";
 import type { CatalogEndpoint } from "./endpoint-catalog";
 import { positionsIn } from "./text-positions";
@@ -64,7 +65,10 @@ export function matchCalls(
 function endpointsOf(call: CodeCall, catalog: readonly CatalogEndpoint[]): CatalogEndpoint[] {
   const named = catalog.filter((e) => endsWith(call.names, e.parts));
   if (named.length === 0) return [];
-  const bySource = named.filter((e) => e.source === call.callerSource);
+  /* A caller made from a source's routes names it by the routes' export: `shopRoutes`. */
+  const bySource = named.filter(
+    (e) => e.source === call.callerSource || routesExportName(e.source) === call.callerSource,
+  );
   if (bySource.length > 0) return bySource;
   const written = named.filter(
     (e) => call.names[call.names.length - e.parts.length - 1] === e.source,

@@ -2,10 +2,8 @@
  * The groups and endpoints a client can reach, read from its source.
  */
 
-import type { ProxyBoundary } from "../define/boundary-types";
 import { subGroupsOf } from "../define/group-tree";
 import type { CourierRoutes } from "../define/routes";
-import { sourceFromBoundary } from "../proxy-caller/from-boundary";
 import { sourceFromRoutes } from "../proxy-caller/from-routes";
 
 /** What a source, or one of its groups, says a client may call there. */
@@ -17,7 +15,7 @@ export interface ClientShape {
 }
 
 /**
- * Read the shape of a `defineApi` result, or of the source a boundary stands for.
+ * Read the shape of a `defineApi` result, or of the stand-in a page's routes make.
  *
  * @param source - The source, when the client was given one
  * @returns The shape, or `undefined` when the client knows only a name
@@ -42,25 +40,19 @@ function shapeAt(holder: Record<string, unknown>): ClientShape {
 }
 
 /**
- * Read the shape of a client from what it was given: its routes, a
- * boundary, or the source itself — in that order where it was given more
- * than one, as for the client's transports.
+ * Read the shape of a page's client from its routes: the groups and the
+ * endpoints they name, and nothing else of the API.
  *
- * @param given - The client's `routes`, `boundary` and `source`, any of them optional
- * @returns The shape, or `undefined` when the client was given neither
+ * @param routes - The routes of the API
+ * @returns The shape
  *
  * @example
  * ```ts
- * shapeOfClient({ boundary })?.groups.get("users")?.endpoints; // → the methods it exposes
+ * shapeOfRoutes(apiRoutes).groups.get("users")?.endpoints; // → the endpoints the routes name in users
  * ```
  */
-export function shapeOfClient(given: {
-  source?: Record<string, unknown> | undefined;
-  boundary?: ProxyBoundary | undefined;
-  routes?: CourierRoutes | undefined;
-}): ClientShape | undefined {
-  if (given.routes) return shapeOfSource(sourceFromRoutes(given.routes));
-  return shapeOfSource(given.boundary ? sourceFromBoundary(given.boundary) : given.source);
+export function shapeOfRoutes(routes: CourierRoutes): ClientShape {
+  return shapeAt(sourceFromRoutes(routes));
 }
 
 function endpointNames(record: Record<string, unknown>): string[] {

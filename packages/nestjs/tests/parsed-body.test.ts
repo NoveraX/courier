@@ -65,7 +65,8 @@ async function nestLikeApp(options: { rawBody?: boolean } = {}): Promise<string>
 }
 
 function callerAt(origin: string): EchoClient {
-  return createProxyCaller("api", {
+  const routes = { source: "api", endpoints: { "echo.create": { type: "mutation" } } } as const;
+  return createProxyCaller(routes, {
     proxyPath: { http: `${origin}/api/request` },
   }) as unknown as EchoClient;
 }

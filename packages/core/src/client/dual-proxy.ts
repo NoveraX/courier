@@ -28,7 +28,7 @@ interface Place {
  * also a runtime hook. `bind`, `call`, `apply` and `toString` otherwise
  * belong to the function; read as methods, they started a request. Without
  * a source, a method with one of those names is reached through a client
- * given the source or the boundary. `raw` and `with` are always the
+ * given the source or its routes. `raw` and `with` are always the
  * accessors: a source cannot declare a method or a group of either name.
  *
  * Without a shape every member is read as both, so a chain of any length

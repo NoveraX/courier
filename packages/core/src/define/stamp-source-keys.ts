@@ -6,18 +6,17 @@ import { deriveSourceName, getSourceName, setSourceName } from "./api";
  * Make each source's key its name, refusing a key that contradicts a name the
  * author chose.
  *
- * `name` in `defineApi` is not a label: a browser client reads it off its own
- * copy of the definition, and the server resolves it against the key it was
- * registered under. A key that contradicts the name would leave the server
- * answering only the key and refusing every call by the name.
+ * `name` in `defineApi` is not a label: the server resolves a page's call by
+ * the key the source was registered under, and the routes module names the
+ * source by that key. A key that contradicts the name would leave a client
+ * that addresses the source by its name refused on every call.
  *
  * A name `defineApi` derived by itself is not a choice, and the key replaces
  * it. That is decided by asking the function `defineApi` used, never a copy of
- * its rule. A boundary names its source too, and is held to the same key.
+ * its rule.
  *
  * @param sources - The sources by key.
  * @throws ConfigurationError `SOURCE_KEY_MISMATCH` when a key contradicts a chosen name.
- * @throws ConfigurationError `BOUNDARY_SOURCE_MISMATCH` when a source carries another's boundary.
  *
  * @example
  * ```ts
@@ -34,14 +33,12 @@ export function stampSourceKeys(sources: Readonly<Record<string, unknown>>): voi
           `Source key "${key}" conflicts with the name given to defineApi, "${existing}".`,
           "",
           "`name` is the identifier the proxy addresses this source by, not a display",
-          "string: a browser client reads it off its own copy of the definition while",
-          "the server resolves it against this key, so the two must be the same.",
+          "string: the server resolves a call by this key, so the two must be the same.",
           "",
           `Use "${key}" in both places, or drop \`name\` and let the key decide.`,
         ].join("\n"),
       );
     }
-    assertBoundaryFor(key, source);
     setSourceName(source, key);
   }
 }
@@ -54,38 +51,4 @@ function baseURLOf(source: unknown): string | undefined {
   if (!isRecord(source) || !isRecord(source.options)) return undefined;
   const { baseURL } = source.options;
   return typeof baseURL === "string" ? baseURL : undefined;
-}
-
-/**
- * Refuse a boundary declared for another source. Its list names that source's
- * endpoints, so it would gate this one on the wrong names while the browser
- * addressed the other.
- */
-function assertBoundaryFor(key: string, source: unknown): void {
-  const named = boundarySourceOf(source);
-  if (named === undefined || named === key) return;
-  throw new ConfigurationError(
-    "BOUNDARY_SOURCE_MISMATCH",
-    [
-      `Source "${key}" carries a boundary declared for "${String(named)}".`,
-      "",
-      "A boundary lists one source's endpoints, and the browser addresses that",
-      "source by the name the boundary gives. Give the source its own boundary,",
-      `declared with \`source: "${key}"\`.`,
-    ].join("\n"),
-  );
-}
-
-/** The source a registered source's boundary names, when it carries one. */
-function boundarySourceOf(source: unknown): unknown {
-  if (typeof source !== "object" || source === null || !("options" in source)) return undefined;
-  const { options } = source;
-  if (typeof options !== "object" || options === null || !("boundary" in options)) {
-    return undefined;
-  }
-  const { boundary } = options;
-  if (typeof boundary !== "object" || boundary === null || !("source" in boundary)) {
-    return undefined;
-  }
-  return boundary.source;
 }

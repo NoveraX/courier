@@ -18,6 +18,7 @@ import { createHandler } from "../src/adapter";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier, defineApi, defineGroup } from "../src/define";
+import { routesOf } from "../src/define/routes-of";
 import {
   attachWebSocketUpgrade,
   sendWebResponse,
@@ -108,8 +109,7 @@ describe("a stream another server serves, through the proxy", () => {
     const upstream = await thirdParty();
     const api = wikiApi(upstream.origin);
     const proxy = await proxyOf({ wiki: api });
-    const caller = createProxyCaller<typeof api>("wiki", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "wiki"), {
       proxyPath: { sse: `${proxy}/api/sse` },
     });
 
@@ -134,8 +134,7 @@ describe("a stream another server serves, through the proxy", () => {
     const upstream = await thirdParty();
     const api = wikiApi(upstream.origin);
     const proxy = await proxyOf({ wiki: api }, { deaf: true });
-    const caller = createProxyCaller<typeof api>("wiki", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "wiki"), {
       proxyPath: { sse: `${proxy}/api/sse` },
     });
 
@@ -166,8 +165,7 @@ describe("a stream another server serves, through the proxy", () => {
     const upstream = await thirdParty();
     const api = wikiApi(upstream.origin);
     const proxy = await proxyOf({ wiki: api });
-    const caller = createProxyCaller<typeof api>("wiki", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "wiki"), {
       proxyPath: { sse: `${proxy}/api/sse` },
     });
 
@@ -264,8 +262,7 @@ describe("a channel another server serves, through the proxy", () => {
   it("is relayed both ways", async () => {
     const api = relayedChat(await channelServer());
     const proxy = await serveChannels({ chat: api }, "/api/ws");
-    const caller = createProxyCaller<typeof api>("chat", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "chat"), {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
     });
     const room = caller.live.room({ room: "r1" });
@@ -283,8 +280,7 @@ describe("a channel another server serves, through the proxy", () => {
   it("ends the client's subscription as the upstream ends it", async () => {
     const api = relayedChat(await channelServer());
     const proxy = await serveChannels({ chat: api }, "/api/ws");
-    const caller = createProxyCaller<typeof api>("chat", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "chat"), {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
     });
     const room = caller.live.room({ room: "r1" });
@@ -307,8 +303,7 @@ describe("a channel another server serves, through the proxy", () => {
     });
     const api = relayedChat(upstream);
     const proxy = await serveChannels({ chat: api }, "/api/ws");
-    const caller = createProxyCaller<typeof api>("chat", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "chat"), {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
     });
     const room = caller.live.room({ room: "r1" });
@@ -352,8 +347,7 @@ describe("a channel another server serves, through the proxy", () => {
     const api = relayedChat(await serveChannels({ chat: slowRoom }, "/live/ws"));
     /* The proxy's own rate limit would refuse the extra messages first. */
     const proxy = await serveChannels({ chat: api }, "/api/ws", { maxMessagesPerSecond: 1_000 });
-    const caller = createProxyCaller<typeof api>("chat", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "chat"), {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
     });
     const room = caller.live.room({ room: "r1" });
@@ -374,8 +368,7 @@ describe("a channel another server serves, through the proxy", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const api = relayedChat(await channelServer());
     const proxy = await serveChannels({ chat: api }, "/api/ws", { maxMessageSize: 200_000 });
-    const caller = createProxyCaller<typeof api>("chat", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "chat"), {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
       ws: { maxMessageSize: 200_000 },
     });

@@ -11,12 +11,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError, isHTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 
 const { endpoint } = courier();
 const api = defineApi({
   baseURL: "https://upstream.example",
+  expose: true,
   endpoints: { list: endpoint.get("list").response<unknown>() },
 });
 
@@ -42,7 +44,7 @@ afterEach(() => {
 
 describe.each([
   ["direct", () => createCaller(api) as unknown as Client],
-  ["proxy", () => createProxyCaller("api") as unknown as Client],
+  ["proxy", () => createProxyCaller(routesOf(api, "api")) as unknown as Client],
 ])("%s mode", (_mode, makeClient) => {
   it("reports a network failure as an HTTPError with status 0 and its cause", async () => {
     const cause = new TypeError("fetch failed");
@@ -79,7 +81,7 @@ describe("the proxy client's onError", () => {
     });
     const onError = vi.fn();
 
-    await (createProxyCaller("api", { onError }) as unknown as Client)
+    await (createProxyCaller(routesOf(api, "api"), { onError }) as unknown as Client)
       .list()
       .catch(() => undefined);
 

@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware";
 import { sendWebResponse, toWebRequest } from "../src/node";
@@ -195,8 +196,7 @@ describe("a proxy call the caller cancels", () => {
     });
     await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
     const { port } = proxy.address() as AddressInfo;
-    const client = createProxyCaller<typeof source>("calls", {
-      source,
+    const client = createProxyCaller(routesOf(source, "calls"), {
       proxyPath: { http: `http://127.0.0.1:${port}/api/request` },
     });
     const reason = new Error("user navigated away");
@@ -225,7 +225,7 @@ describe("a timeout through the proxy", () => {
       return handler.handle(new Request(new URL(url, "http://app.local"), init));
     });
 
-    const error = await rejection(createProxyCaller<typeof source>("calls", { source }).brief());
+    const error = await rejection(createProxyCaller(routesOf(source, "calls")).brief());
 
     expect(error).toMatchObject({ status: 504 });
     expect((error as HTTPError).data).toMatchObject({ code: "UPSTREAM_TIMEOUT" });

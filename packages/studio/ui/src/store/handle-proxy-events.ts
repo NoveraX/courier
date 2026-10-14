@@ -45,8 +45,9 @@ export function withRepeatedStart(r: RequestEntry, event: EventPayload): Request
 /**
  * The row with the variables the proxy read, when nothing else named them.
  *
- * A call the proxy refuses after reading it — by its boundary, say — never
- * reaches the executor, so this is the only place its variables are told.
+ * A call the proxy refuses after reading it — to an endpoint no mark opens,
+ * say — never reaches the executor, so this is the only place its variables
+ * are told.
  *
  * @param r - The request
  * @param event - A `proxy:parse` event

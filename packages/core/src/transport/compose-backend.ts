@@ -11,6 +11,12 @@ export interface StreamingFactories {
   wsPush?: WSPushFactory;
 }
 
+/** How exhaustively the descriptor describes what may be called. */
+export interface ComposeOptions {
+  /** Whether it lists every endpoint the client may call, as a page's routes do. */
+  exhaustive?: boolean | undefined;
+}
+
 /**
  * Compose an `ExecuteBackend` from an HTTP executor and optional streaming
  * factories, plus an optional API source for transport detection.
@@ -26,15 +32,12 @@ export interface StreamingFactories {
  *   for generic admin endpoints and dynamic dispatch use cases.
  *
  * @param apiSource - API definition object for schema resolution (direct mode
- *   always passes this; proxy mode passes the optional `source` from defaults)
+ *   passes the API; proxy mode the stand-in its routes make)
  * @param http - HTTP executor primitive
  * @param streaming - SSE / WS channel / WS push factories (optional)
+ * @param options - Whether `apiSource` lists every endpoint the client may call
+ * @returns The backend a client calls through
  */
-/** How exhaustively the descriptor describes what may be called. */
-export interface ComposeOptions {
-  /** What lists every endpoint the client may call, when something does: its routes, or a boundary. */
-  exhaustive?: "routes" | "boundary" | undefined;
-}
 
 export function composeBackend(
   apiSource: Record<string, unknown> | undefined,
@@ -48,13 +51,13 @@ export function composeBackend(
     if (apiSource) {
       const { endpoint, schema } = resolveEndpoint(apiSource, group, method);
 
-      /* Routes or a boundary list every endpoint this client may call, so one they do
+      /* A page's routes list every endpoint its client may call, so one they do
          not name is a mistake rather than an HTTP call waiting to happen.
          Left to fall through, a stream would reach the HTTP executor and fail
          later as "sub is not async iterable", which names neither the
          endpoint nor the reason. */
-      if (options?.exhaustive && typeof endpoint !== "function") {
-        throw notListed(options.exhaustive, formatEndpoint(group, method));
+      if (options?.exhaustive === true && typeof endpoint !== "function") {
+        throw notInRoutes(formatEndpoint(group, method));
       }
 
       if (schema?.transport === "sse") {
@@ -95,14 +98,7 @@ function formatEndpoint(group: string, method: string): string {
 }
 
 /* Why a client that lists its endpoints refuses one it does not: the proxy would refuse it too. */
-function notListed(listedIn: "routes" | "boundary", endpoint: string): ConfigurationError {
-  if (listedIn === "boundary") {
-    return new ConfigurationError(
-      "ENDPOINT_NOT_IN_BOUNDARY",
-      `[courier] "${endpoint}" is not in this client's boundary. ` +
-        "Add it to `expose` to call it from the browser.",
-    );
-  }
+function notInRoutes(endpoint: string): ConfigurationError {
   return new ConfigurationError(
     "ENDPOINT_NOT_IN_ROUTES",
     `[courier] "${endpoint}" is not among this client's routes, so the proxy refuses it. ` +

@@ -21,7 +21,7 @@ const API = `
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 const { endpoint } = courier();
 const base = process.env.UPSTREAM ?? "http://127.0.0.1:9";
-const users = defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } });
+const users = defineGroup({ prefix: "users", expose: true, endpoints: { list: endpoint.get("") } });
 const faults = defineGroup({ prefix: "faults", endpoints: { ping: endpoint.get("ping") } });
 export const api = defineApi({ expose: true, baseURL: base, groups: { users, faults } });
 export const dead = defineApi({
@@ -42,9 +42,9 @@ export const txt = defineApi({ expose: true, name: "txt", baseURL: base, endpoin
 const CONFIG = `
 import { defineConfig } from "@noverax/courier/config";
 import { api, dead } from "./api";
-const boundary = { source: "api", endpoints: { "users.list": {} } };
+/* The config keeps from a page what the API's module opens, but for the group that marks itself. */
 export default defineConfig({
-  sources: { api: { ...api, options: { ...api.options, boundary } }, dead },
+  sources: { api: { ...api, options: { ...api.options, expose: false } }, dead },
 });
 `;
 
@@ -210,7 +210,7 @@ describe("sources an attached server defines after attaching", () => {
     expect(result).toEqual({ registered: false, after: [200, 200] });
   }, 40_000);
 
-  it("keeps the boundary a config source carries when the application loads the module again", () => {
+  it("keeps the marks a config source carries when the application loads the module again", () => {
     const result = runScenario(`
       out.before = await call("api", "faults", "ping");
       const settled = registered();

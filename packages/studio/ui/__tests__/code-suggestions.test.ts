@@ -6,8 +6,8 @@
  * builder has. "No caching detected" names the reads called often that the
  * cache never saw, not every endpoint called three times. "All requests use
  * direct mode" is not raised for a server, which has no secrets to keep
- * from a browser, and suggests a proxy caller that imports the API as a
- * type rather than handing the whole definition to the browser.
+ * from a browser, and suggests a proxy caller that takes the routes Studio
+ * writes rather than handing the whole definition to the browser.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,7 +30,17 @@ beforeAll(() => {
     [
       `import { courier, defineApi } from "@noverax/courier/define";`,
       `const { endpoint } = courier();`,
-      `export const api = defineApi({ name: "api", baseURL: "https://api.example.com", endpoints: { health: endpoint.get("health").response<unknown>() } });`,
+      `export const api = defineApi({ name: "api", baseURL: "https://api.example.com", endpoints: { health: endpoint.get("health").response<unknown>().expose() } });`,
+    ].join("\n"),
+  );
+  /* The routes module Studio writes beside the code, as a suggestion imports it. */
+  writeFileSync(
+    join(dir, "courier.routes.ts"),
+    [
+      `import type { CourierRoutes, RouteMap } from "@noverax/courier/define";`,
+      `import type { api } from "./api/sources";`,
+      `const endpoints = { health: { type: "query" } } as const satisfies RouteMap<typeof api>;`,
+      `export const apiRoutes: CourierRoutes<typeof api, typeof endpoints> = { source: "api", endpoints };`,
     ].join("\n"),
   );
 });
@@ -180,11 +190,11 @@ describe("the direct-mode warning", () => {
     expect(items.find((item) => item.id === "warn-unused-proxy")).toBeUndefined();
   });
 
-  it("suggests a proxy caller that imports the API as a type", () => {
+  it("suggests a proxy caller that takes the routes Studio writes", () => {
     const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
 
     expect(items.find((item) => item.id === "warn-unused-proxy")?.codeSuggestion).toContain(
-      `import type { api }`,
+      "createProxyCaller(apiRoutes",
     );
   });
 });

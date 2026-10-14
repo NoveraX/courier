@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -81,7 +82,7 @@ describe("a proxy caller's default timeout", () => {
   });
 
   it("does not replace the endpoint's own on the server", async () => {
-    const client = createProxyCaller<ReturnType<typeof slowApi>>("slow", { timeout: 1000 });
+    const client = createProxyCaller(routesOf(slowApi(), "slow"), { timeout: 1000 });
 
     const error = await client.brief().catch((e: unknown) => e);
 

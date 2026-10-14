@@ -12,7 +12,7 @@ export interface CodeCall {
   readonly end: number;
   /** The call is made on a caller this file creates */
   readonly onCaller: boolean;
-  /** That caller's source, when its creation names one: `createProxyCaller("shop")` */
+  /** What that caller's creation names its source by: `createCaller(shop)`, or `createProxyCaller(shopRoutes)` */
   readonly callerSource?: string | undefined;
 }
 
@@ -85,13 +85,13 @@ function callsIn(fileName: string, code: string): CodeCall[] {
   );
 }
 
-/* `const api = createProxyCaller<typeof shop>("shop", …)`: the variable, and the source it names. */
+/* `const api = createProxyCaller(shopRoutes, …)`: the variable, and what it names its source by. */
 function callerCreated(node: VariableDeclarator): { name: string; source?: string } | undefined {
   const init = node.init;
   if (node.id.type !== "Identifier" || init?.type !== "CallExpression") return undefined;
   if (init.callee.type !== "Identifier" || !CALLER_FACTORY.test(init.callee.name)) return undefined;
   const [first] = init.arguments;
-  const source = literalString(first) ?? (first?.type === "Identifier" ? first.name : undefined);
+  const source = first?.type === "Identifier" ? first.name : undefined;
   return source === undefined ? { name: node.id.name } : { name: node.id.name, source };
 }
 

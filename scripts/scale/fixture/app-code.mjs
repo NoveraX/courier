@@ -72,8 +72,8 @@ ${lines}
 }
 
 /**
- * A page: what it shows, read through the proxy at the endpoints the
- * boundary exposes.
+ * A page: what it shows, read through the proxy at the endpoints its
+ * routes name.
  *
  * @param {string} name - The page's name
  * @param {readonly Parameters<typeof callOf>[1][]} calls - The endpoints it calls

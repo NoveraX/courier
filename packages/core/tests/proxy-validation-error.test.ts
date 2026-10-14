@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -57,9 +58,7 @@ async function failureOf(call: Promise<unknown>): Promise<unknown> {
 
 describe("variables the schema refuses", () => {
   it("reject a proxy call with the ValidationError a direct call rejects with", async () => {
-    const proxied = createProxyCaller<ReturnType<typeof api>>("shop", {
-      proxyPath: { http: proxy.url },
-    });
+    const proxied = createProxyCaller(routesOf(api(), "shop"), { proxyPath: { http: proxy.url } });
     const direct = createCaller(api());
 
     const throughProxy = await failureOf(proxied.order({ qty: 0 }));
@@ -79,9 +78,7 @@ describe("variables the schema refuses", () => {
 
 describe("an upstream that answers 422 itself", () => {
   it("rejects with the HTTPError that carries its own body", async () => {
-    const proxied = createProxyCaller<ReturnType<typeof api>>("shop", {
-      proxyPath: { http: proxy.url },
-    });
+    const proxied = createProxyCaller(routesOf(api(), "shop"), { proxyPath: { http: proxy.url } });
 
     const failure = await failureOf(proxied.order({ qty: 2 }));
 

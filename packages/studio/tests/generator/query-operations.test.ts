@@ -6,9 +6,10 @@
  * and through the proxy. A verb the builder has no counterpart for is listed
  * as left out, never lost.
  */
-import { createProxyCaller } from "@noverax/courier";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { createProxyCaller } from "@noverax/courier";
+import { routesOf } from "@noverax/courier/internal";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
@@ -169,9 +170,12 @@ describe("an OpenAPI 3.2 specification with QUERY operations", () => {
 
 describe("a generated QUERY through the proxy", () => {
   let proxy: ProxyServer;
+  let routes: ReturnType<typeof routesOf<Record<string, unknown>>>;
 
   beforeAll(async () => {
-    proxy = await startProxyServer(loadGenerated(generate("both"), "src/api/shop/source.ts"));
+    const loaded = loadGenerated(generate("both"), "src/api/shop/source.ts");
+    routes = routesOf(loaded.shop as Record<string, unknown>, "shop");
+    proxy = await startProxyServer(loaded);
   });
 
   afterAll(async () => {
@@ -179,7 +183,7 @@ describe("a generated QUERY through the proxy", () => {
   });
 
   it.each(CALLS)("reaches the upstream as a QUERY: %s", async (name, variables, request) => {
-    const caller = createProxyCaller("shop", { proxyPath: { http: proxy.url } });
+    const caller = createProxyCaller(routes, { proxyPath: { http: proxy.url } });
     upstream.requests.length = 0;
 
     await endpointAt(caller, "items", name)(variables);

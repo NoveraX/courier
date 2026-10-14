@@ -11,7 +11,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
-import { type CourierRoutes, courier, defineApi, defineBoundary } from "../src/define/index";
+import { type CourierRoutes, courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -71,7 +72,7 @@ afterEach(async () => {
 });
 
 function client() {
-  return createProxyCaller<ReturnType<typeof api>>("shop", { source: api() });
+  return createProxyCaller(routesOf(api(), "shop"));
 }
 
 describe("a proxy client", () => {
@@ -148,22 +149,6 @@ describe("a proxy client built from routes", () => {
     await fromRoutes.order({ item: "lamp" });
 
     expect(proxied.map((call) => call.method)).toEqual(["GET", "POST", "POST"]);
-  });
-});
-
-describe("a proxy client built from a boundary", () => {
-  it("sends every read as POST, as a boundary does not say which may be cached", async () => {
-    const boundary = defineBoundary({
-      source: "shop",
-      expose: { search: "query", byEmail: "query" },
-      sensitive: ["byEmail"],
-    });
-    const fromBoundary = createProxyCaller<ReturnType<typeof api>>("shop", { boundary });
-
-    await fromBoundary.search({ q: "lamp" });
-    await fromBoundary.byEmail({ email: "ada@example.com" });
-
-    expect(proxied.map((call) => call.method)).toEqual(["POST", "POST"]);
   });
 });
 

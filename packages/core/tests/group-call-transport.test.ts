@@ -16,6 +16,7 @@ import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
+import { routesOf } from "../src/define/routes-of";
 import type {
   PlatformFetch,
   SourceDispatcher,
@@ -176,8 +177,7 @@ describe("a call's transport", () => {
   });
 
   it("is refused, through the proxy, before anything is sent", async () => {
-    const client = createProxyCaller<ReturnType<typeof payments>>("payments", {
-      source: payments(recording().send),
+    const client = createProxyCaller(routesOf(payments(recording().send), "payments"), {
       proxyPath: { http: "http://127.0.0.1:1/api/request" },
     });
 
@@ -200,8 +200,7 @@ describe("a call's transport through the proxy", () => {
         room: channel.send<string>().response<string>().connect("room"),
       },
     });
-    const client = createProxyCaller<typeof live>("live", {
-      source: live,
+    const client = createProxyCaller(routesOf(live, "live"), {
       proxyPath: { sse: "http://127.0.0.1:1/api/sse", ws: "ws://127.0.0.1:1/api/ws" },
     });
     const refused = expect.objectContaining({ code: "PROXY_OPTION_NOT_ALLOWED" });
@@ -377,8 +376,7 @@ describe("a group's sockets", () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     });
     const port = (server.address() as AddressInfo).port;
-    const caller = createProxyCaller<typeof api>("api", {
-      source: api,
+    const caller = createProxyCaller(routesOf(api, "api"), {
       proxyPath: { ws: `ws://127.0.0.1:${port}/api/ws` },
     });
 

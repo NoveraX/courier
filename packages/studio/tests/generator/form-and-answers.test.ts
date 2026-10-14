@@ -4,9 +4,10 @@
  * JSON — a CSV, a PDF — as what it is: text or a blob. Directly and through
  * the proxy, whichever validator the client was generated with.
  */
-import { createProxyCaller } from "@noverax/courier";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { createProxyCaller } from "@noverax/courier";
+import { routesOf } from "@noverax/courier/internal";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
@@ -178,11 +179,12 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
 
 describe("through the proxy", () => {
   let proxy: ProxyServer;
+  let routes: ReturnType<typeof routesOf<Record<string, unknown>>>;
 
   beforeAll(async () => {
-    proxy = await startProxyServer(
-      loadGenerated(generate({ generateClient: "both" }), "src/api/billing/source.ts"),
-    );
+    const loaded = loadGenerated(generate({ generateClient: "both" }), "src/api/billing/source.ts");
+    routes = routesOf(loaded.billing as Record<string, unknown>, "billing");
+    proxy = await startProxyServer(loaded);
   });
 
   afterAll(async () => {
@@ -190,6 +192,6 @@ describe("through the proxy", () => {
   });
 
   it("sends the form and reads the answers the same way", async () => {
-    await exercise(createProxyCaller("billing", { proxyPath: { http: proxy.url } }));
+    await exercise(createProxyCaller(routes, { proxyPath: { http: proxy.url } }));
   });
 });

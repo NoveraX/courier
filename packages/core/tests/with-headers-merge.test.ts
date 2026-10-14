@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import type { SSESubscription } from "../src/realtime/types";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
@@ -37,6 +38,7 @@ afterEach(async () => {
 
 function api() {
   return defineApi({
+    expose: true,
     name: "orders",
     baseURL: upstream.url,
     allowedHeaders: ["x-request-id", "x-trace"],
@@ -53,8 +55,7 @@ function client() {
 
 function proxyClient() {
   const source = api();
-  return createProxyCaller<typeof source>("orders", {
-    source,
+  return createProxyCaller(routesOf(source, "orders"), {
     proxyPath: { sse: `${upstream.url}/sse` },
   });
 }

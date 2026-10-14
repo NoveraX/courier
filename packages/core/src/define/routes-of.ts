@@ -1,5 +1,6 @@
 import { isExposedToWire } from "../adapter/exposure";
 import { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
+import type { ExposablePath } from "./endpoint-path-types";
 import type { CourierRoutes, RouteMap, RouteShape } from "./routes";
 
 /* How the browser reaches an endpoint, read off its definition. A read goes as GET only
@@ -19,6 +20,14 @@ function routeShapeOf(endpoint: PlacedEndpoint): RouteShape {
 }
 
 /**
+ * The routes of an API, typed as it is: held to its paths and shapes when
+ * its type names them, and routes of no API in particular when its type is
+ * a record of anything.
+ */
+export type RoutesOf<TApi> =
+  string extends ExposablePath<TApi> ? CourierRoutes : CourierRoutes<TApi, RouteMap<TApi>>;
+
+/**
  * The routes of an API: every endpoint the proxy serves to a browser, by
  * its path, in the order the paths sort, and how the browser reaches it —
  * read off the definition by the same rules the proxy applies, so routes
@@ -32,22 +41,20 @@ function routeShapeOf(endpoint: PlacedEndpoint): RouteShape {
  * routesOf(api, "api").endpoints; // → { "users.get": { type: "query", get: true }, "users.update": { type: "mutation" } }
  * ```
  */
-export function routesOf<TApi extends object>(
-  api: TApi,
-  source: string,
-): CourierRoutes<TApi, RouteMap<TApi>> {
+export function routesOf<TApi extends object>(api: TApi, source: string): RoutesOf<TApi>;
+
+export function routesOf(api: object, source: string): CourierRoutes {
   const exposed: Array<[string, RouteShape]> = [];
   for (const endpoint of eachEndpoint(api)) {
     const group = endpoint.group === "" ? undefined : endpoint.group;
-    const name = endpoint.id.slice(endpoint.group === "" ? 0 : endpoint.group.length + 1);
-    if (!isExposedToWire(api, group, name, endpoint.schemas)) continue;
+    if (!isExposedToWire(api, group, endpoint.schemas)) continue;
     exposed.push([endpoint.id, routeShapeOf(endpoint)]);
   }
   exposed.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
   const { cancelPrevious, coalesce } = clientOptionsOf(api);
   return {
     source,
-    endpoints: Object.fromEntries(exposed) as RouteMap<TApi>,
+    endpoints: Object.fromEntries(exposed),
     ...(cancelPrevious !== undefined && { cancelPrevious }),
     ...(coalesce !== undefined && { coalesce }),
   };

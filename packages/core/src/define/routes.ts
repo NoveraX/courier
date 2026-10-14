@@ -7,7 +7,7 @@
  * side: no address, no middleware, no endpoint the browser may not call.
  */
 
-import type { ExposablePath, WireShapeAt } from "./boundary-types";
+import type { ExposablePath, WireShapeAt } from "./endpoint-path-types";
 
 /**
  * How the browser reaches one endpoint: a read, sent as GET when it may be

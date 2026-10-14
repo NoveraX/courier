@@ -9,6 +9,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 
 const { endpoint } = courier();
@@ -29,7 +30,7 @@ const mixed = defineApi({
 describe("a proxy client for a flat source", () => {
   it("has no members when the source has no endpoints", () => {
     const typeOnly = () => {
-      const client = createProxyCaller<typeof empty>("empty");
+      const client = createProxyCaller(routesOf(empty, "empty"));
       // @ts-expect-error the source declares no endpoint of that name
       client.anything;
       client.raw;
@@ -41,7 +42,7 @@ describe("a proxy client for a flat source", () => {
 
   it("has exactly the endpoints the source declares", () => {
     const typeOnly = () => {
-      const client = createProxyCaller<typeof flat>("flat");
+      const client = createProxyCaller(routesOf(flat, "flat"));
       expectTypeOf(client.ping).returns.toEqualTypeOf<Promise<{ ok: boolean }>>();
       // @ts-expect-error the source declares no endpoint of that name
       client.pong;
@@ -54,7 +55,7 @@ describe("a proxy client for a flat source", () => {
 describe("a proxy client for a mixed source", () => {
   it("has exactly the groups and endpoints the source declares", () => {
     const typeOnly = () => {
-      const client = createProxyCaller<typeof mixed>("mixed");
+      const client = createProxyCaller(routesOf(mixed, "mixed"));
       expectTypeOf(client.users.list).returns.toEqualTypeOf<Promise<string[]>>();
       expectTypeOf(client.ping).returns.toEqualTypeOf<Promise<{ ok: boolean }>>();
       // @ts-expect-error the source declares no endpoint of that name

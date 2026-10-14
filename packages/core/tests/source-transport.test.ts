@@ -76,7 +76,7 @@ describe("a source's fetch", () => {
     expect(product).toEqual({ id: "p_1" });
     expect(sent.map(({ url }) => url)).toEqual(["https://shop.example/products/p_1"]);
     expect(sent[0]?.init).toMatchObject({ dispatcher, credentials: "include", method: "GET" });
-    for (const own of ["fetch", "webSocket", "expose", "boundary", "proxyPath"]) {
+    for (const own of ["fetch", "webSocket", "expose", "proxyPath"]) {
       expect(sent[0]?.init).not.toHaveProperty(own);
     }
   });

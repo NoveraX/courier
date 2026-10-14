@@ -64,7 +64,8 @@ afterEach(async () => {
 });
 
 function upload(field: string, value: string): Promise<{ parts: string[] }> {
-  const client = createProxyCaller("api", { proxyPath: { http: proxyURL } }) as unknown as {
+  const routes = { source: "api", endpoints: { "files.upload": { type: "mutation" } } } as const;
+  const client = createProxyCaller(routes, { proxyPath: { http: proxyURL } }) as unknown as {
     files: { upload: (form: FormData) => Promise<{ parts: string[] }> };
   };
   const form = new FormData();

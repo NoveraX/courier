@@ -7,6 +7,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { courier, defineApi } from "../../src/define";
+import { routesOf } from "../../src/define/routes-of";
 import { createProxyCaller } from "../../src/proxy-caller";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { registerRequestContext } from "../../src/session/request-context";
@@ -76,7 +77,7 @@ describe("a proxy caller on the server", () => {
     serving = () => user.incoming;
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
-    const me = await createProxyCaller<ReturnType<typeof api>>("accounts").me();
+    const me = await createProxyCaller(routesOf(api(), "accounts")).me();
 
     expect(me).toEqual({ cookie: "sid=a1" });
     expect(user.handed.map((cookie) => cookie.header)).toEqual([
@@ -89,14 +90,14 @@ describe("a proxy caller on the server", () => {
     serving = () =>
       userRequest("GET", { cookie: "sid=a1", "sec-fetch-site": "cross-site" }).incoming;
 
-    const sent = createProxyCaller<ReturnType<typeof api>>("accounts").rename({ name: "Mallory" });
+    const sent = createProxyCaller(routesOf(api(), "accounts")).rename({ name: "Mallory" });
 
     await expect(sent).rejects.toMatchObject({ status: 403 });
     expect(upstream.seen).toHaveLength(0);
   });
 
   it("works outside any request, without the server knowing its own address", async () => {
-    const me = await createProxyCaller<ReturnType<typeof api>>("accounts").me();
+    const me = await createProxyCaller(routesOf(api(), "accounts")).me();
 
     expect(me).toEqual({ cookie: null });
   });
@@ -107,7 +108,7 @@ describe("a proxy caller on the server", () => {
     });
     serving = () => Promise.reject(stop);
 
-    await expect(createProxyCaller<ReturnType<typeof api>>("accounts").me()).rejects.toBe(stop);
+    await expect(createProxyCaller(routesOf(api(), "accounts")).me()).rejects.toBe(stop);
   });
 
   it("goes over HTTP to a proxy at another address", async () => {
@@ -115,7 +116,7 @@ describe("a proxy caller on the server", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(Response.json({ cookie: "elsewhere" }));
 
-    await createProxyCaller<ReturnType<typeof api>>("accounts", {
+    await createProxyCaller(routesOf(api(), "accounts"), {
       proxyPath: { http: "https://edge.example.com/api/request" },
     }).me();
 

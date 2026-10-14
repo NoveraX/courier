@@ -28,14 +28,15 @@
       "})"
     ]
   },
-  "Courier boundary": {
-    "prefix": "courier-boundary",
-    "description": "The endpoints the browser may call through your server, and how",
+  "Courier routes": {
+    "prefix": "courier-routes",
+    "description": "Routes a page's proxy client takes, written by hand where Studio writes none",
     "body": [
-      "export const ${1:boundary} = defineBoundary({",
-      "\tsource: \"${2:api}\",",
-      "\texpose: { \"${3:users.getAll}\": \"${4|query,mutation|}\" },",
-      "})"
+      "const ${1:endpoints} = {",
+      "\t\"${2:users.getAll}\": { type: \"${3|query,mutation|}\" },",
+      "} as const satisfies RouteMap<typeof ${4:api}>;",
+      "",
+      "export const ${5:apiRoutes}: CourierRoutes<typeof $4, typeof $1> = { source: \"${6:api}\", endpoints: $1 };"
     ]
   }
 }

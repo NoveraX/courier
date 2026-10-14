@@ -3,11 +3,8 @@ import type { BaseOptions } from "../http-client/types";
 import { assertSessionApi } from "../session/assert-session-api";
 import { studioHooks } from "../studio";
 import { isDevelopment } from "../utils/development";
-import { assertBoundaryMatches } from "./assert-boundary";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
-import type { ProxyBoundary } from "./boundary-types";
-import type { BoundaryOf, WithBoundary } from "./exposed-api";
 import type {
   AnyDefinedApi,
   DefinedApi,
@@ -113,8 +110,8 @@ export function setSourceName(source: unknown, name: string): void {
  *   },
  * })
  *
- * // With proxyPath (per-transport proxy endpoints, used by createProxyCaller
- * // and read by Studio Playground via the source map):
+ * // With proxyPath (where the app serves its proxy routes, which Studio's
+ * // Playground sends a call through; a page's client is given its own):
  * const source = defineApi({
  *   baseURL: "https://api.example.com",
  *   proxyPath: {
@@ -127,88 +124,58 @@ export function setSourceName(source: unknown, name: string): void {
  *   groups: { chat: chatGroup },
  * })
  */
-export function defineApi<
-  TGroups extends OwnGroups,
-  TEndpoints extends OwnEndpoints,
-  TBoundary extends ProxyBoundary<unknown> | undefined = undefined,
->(
-  config: Omit<BaseOptions, "boundary"> & {
+export function defineApi<TGroups extends OwnGroups, TEndpoints extends OwnEndpoints>(
+  config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
      *
-     * It must equal the key this source has in the `sources` map, because a
-     * browser client reads it off its own copy of the definition while the
-     * server resolves it against the registry, and the two have to agree.
-     * Omitted, it is derived from the `baseURL` hostname. It is not a display
-     * string: a label with spaces in it produces a source nothing can reach.
+     * It must equal the key this source has in the `sources` map, which is
+     * the name the registry resolves a page's call by and the routes module
+     * names the source by. Omitted, it is derived from the `baseURL`
+     * hostname. It is not a display string: a label with spaces in it
+     * produces a source nothing can reach.
      */
     name?: string | undefined;
-    /**
-     * The endpoints a browser may call, from `defineBoundary`, checked against
-     * this API: a path it does not declare, or a shape it declares otherwise,
-     * does not compile. A proxy client typed from this API reaches those alone.
-     */
-    boundary?:
-      | (TBoundary & NoInfer<BoundaryOf<DefinedMixedApi<TGroups, TEndpoints>, TBoundary>>)
-      | undefined;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
   },
-): WithBoundary<DefinedMixedApi<TGroups, TEndpoints>, TBoundary>;
+): DefinedMixedApi<TGroups, TEndpoints>;
 
-export function defineApi<
-  TGroups extends OwnGroups,
-  TBoundary extends ProxyBoundary<unknown> | undefined = undefined,
->(
-  config: Omit<BaseOptions, "boundary"> & {
+export function defineApi<TGroups extends OwnGroups>(
+  config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
      *
-     * It must equal the key this source has in the `sources` map, because a
-     * browser client reads it off its own copy of the definition while the
-     * server resolves it against the registry, and the two have to agree.
-     * Omitted, it is derived from the `baseURL` hostname. It is not a display
-     * string: a label with spaces in it produces a source nothing can reach.
+     * It must equal the key this source has in the `sources` map, which is
+     * the name the registry resolves a page's call by and the routes module
+     * names the source by. Omitted, it is derived from the `baseURL`
+     * hostname. It is not a display string: a label with spaces in it
+     * produces a source nothing can reach.
      */
     name?: string | undefined;
-    /**
-     * The endpoints a browser may call, from `defineBoundary`, checked against
-     * this API: a path it does not declare, or a shape it declares otherwise,
-     * does not compile. A proxy client typed from this API reaches those alone.
-     */
-    boundary?: (TBoundary & NoInfer<BoundaryOf<DefinedApi<TGroups>, TBoundary>>) | undefined;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
   },
-): WithBoundary<DefinedApi<TGroups>, TBoundary>;
+): DefinedApi<TGroups>;
 
-export function defineApi<
-  TEndpoints extends OwnEndpoints,
-  TBoundary extends ProxyBoundary<unknown> | undefined = undefined,
->(
-  config: Omit<BaseOptions, "boundary"> & {
+export function defineApi<TEndpoints extends OwnEndpoints>(
+  config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
      *
-     * It must equal the key this source has in the `sources` map, because a
-     * browser client reads it off its own copy of the definition while the
-     * server resolves it against the registry, and the two have to agree.
-     * Omitted, it is derived from the `baseURL` hostname. It is not a display
-     * string: a label with spaces in it produces a source nothing can reach.
+     * It must equal the key this source has in the `sources` map, which is
+     * the name the registry resolves a page's call by and the routes module
+     * names the source by. Omitted, it is derived from the `baseURL`
+     * hostname. It is not a display string: a label with spaces in it
+     * produces a source nothing can reach.
      */
     name?: string | undefined;
-    /**
-     * The endpoints a browser may call, from `defineBoundary`, checked against
-     * this API: a path it does not declare, or a shape it declares otherwise,
-     * does not compile. A proxy client typed from this API reaches those alone.
-     */
-    boundary?: (TBoundary & NoInfer<BoundaryOf<DefinedFlatApi<TEndpoints>, TBoundary>>) | undefined;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
   },
-): WithBoundary<DefinedFlatApi<TEndpoints>, TBoundary>;
+): DefinedFlatApi<TEndpoints>;
 
 export function defineApi(
   config: BaseOptions & {
@@ -229,7 +196,6 @@ export function defineApi(
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
   assertSessionApi(result, rest, sourceName);
   assertTransportOptions(rest, "source");
-  if (rest.boundary !== undefined) assertBoundaryMatches(result, rest.boundary, sourceName);
   assertCancelPrevious(result, rest.cancelPrevious, sourceName);
 
   // Dev-only: notify studio of source (re)creation for HMR hot reload

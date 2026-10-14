@@ -3,6 +3,7 @@
  */
 
 import { isConfigurationError } from "@noverax/courier";
+import { routesOf } from "@noverax/courier/internal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode, useEffect } from "react";
@@ -20,10 +21,7 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 function makeCaller() {
-  return createProxyQueryCaller<typeof liveApi>("api", {
-    source: liveApi,
-    proxyPath: server.proxyPath,
-  });
+  return createProxyQueryCaller(routesOf(liveApi, "api"), { proxyPath: server.proxyPath });
 }
 
 beforeEach(async () => {
@@ -85,8 +83,7 @@ describe("useChannel over a real WebSocket", () => {
   });
 
   it("reports a missing WebSocket proxy path through error and onError", async () => {
-    const q = createProxyQueryCaller<typeof liveApi>("api", {
-      source: liveApi,
+    const q = createProxyQueryCaller(routesOf(liveApi, "api"), {
       proxyPath: { http: server.proxyPath.http, sse: server.proxyPath.sse },
     });
     const onError = vi.fn();

@@ -8,11 +8,10 @@ import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from "vites
 
 import { isExposedToWire } from "../src/adapter/exposure";
 import { createCaller } from "../src/caller";
-import { shapeOfSource } from "../src/client/shape";
-import { defineBoundary } from "../src/define/boundary";
+import { shapeOfRoutes } from "../src/client/shape";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
-import { sourceFromBoundary } from "../src/proxy-caller/from-boundary";
 import { parseWSTopic } from "../src/realtime/ws-address";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { createTestClient } from "../src/testing/create-test-client";
@@ -130,18 +129,19 @@ describe("a group inside a group, through the proxy", () => {
   });
 
   it("is reached by a client that has the source", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("shop", {
-      source: api(),
-      proxyPath: { http: proxy.url },
-    });
+    const client = createProxyCaller(routesOf(api(), "shop"), { proxyPath: { http: proxy.url } });
 
     await client.billing.invoices.lines.list({ invoice: "i9" });
 
     expect(upstream.last().url).toBe("/billing/invoices/i9/lines");
   });
 
-  it("is reached by a client that knows only the source's name, by the chain of names", async () => {
-    const client = createProxyCaller("shop", { proxyPath: { http: proxy.url } }) as unknown as {
+  it("is reached by a client whose routes name it by its whole path", async () => {
+    const routes = {
+      source: "shop",
+      endpoints: { "billing.invoices.byId": { type: "query" } },
+    } as const;
+    const client = createProxyCaller(routes, { proxyPath: { http: proxy.url } }) as unknown as {
       billing: { invoices: { byId: (variables: { id: string }) => Promise<unknown> } };
     };
 
@@ -168,23 +168,18 @@ describe("what decides whether the browser reaches a group inside a group", () =
   });
 
   it("is the nearest group that says", () => {
-    expect(isExposedToWire(source, "admin.reports", "daily")).toBe(true);
-    expect(isExposedToWire(source, "admin.audit", "log")).toBe(false);
-    expect(isExposedToWire(source, "admin", "purge")).toBe(false);
+    expect(isExposedToWire(source, "admin.reports")).toBe(true);
+    expect(isExposedToWire(source, "admin.audit")).toBe(false);
+    expect(isExposedToWire(source, "admin")).toBe(false);
   });
 
-  it("is a boundary that names the endpoint by its whole path", () => {
-    const boundary = defineBoundary({
-      source: "api",
-      expose: { "admin.reports.daily": "query" },
-    });
+  it("is named in a page's routes by its whole path", () => {
+    const shape = shapeOfRoutes(routesOf(source, "api"));
 
-    const shape = shapeOfSource(sourceFromBoundary(boundary));
-
-    expect([...(shape?.groups.get("admin")?.groups.get("reports")?.endpoints ?? [])]).toEqual([
+    expect([...(shape.groups.get("admin")?.groups.get("reports")?.endpoints ?? [])]).toEqual([
       "daily",
     ]);
-    expect(shape?.groups.get("admin")?.endpoints.size).toBe(0);
+    expect(shape.groups.get("admin")?.endpoints.size).toBe(0);
   });
 });
 

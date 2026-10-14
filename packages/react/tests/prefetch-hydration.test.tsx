@@ -3,6 +3,7 @@
  */
 
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { hydrate } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
@@ -40,7 +41,7 @@ describe("prefetching for a proxy caller", () => {
     await createQueryCaller(api).users.prefetchQuery(serverClient, "list");
     const browserClient = new QueryClient();
     hydrate(browserClient, dehydrate(serverClient));
-    const q = createProxyQueryCaller<typeof api>("api");
+    const q = createProxyQueryCaller(routesOf(api, "api"));
 
     const { result } = renderHook(
       () => q.users.useQuery("list", { staleTime: Number.POSITIVE_INFINITY }),

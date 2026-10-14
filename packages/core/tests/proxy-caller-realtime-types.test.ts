@@ -1,17 +1,21 @@
 /**
  * `createProxyCaller` for an API with streams or channels.
  *
- * The type argument names each endpoint's transport, but only a runtime value
- * tells the client which endpoints to open as a stream, so the options
- * argument is required for an API with one: without `source` or `boundary`,
- * a call typed as a subscription would go out as a plain HTTP request, every
- * member of the declared type undefined, with no error at compile time or at
- * startup.
+ * The type names each endpoint's transport, and the routes say it at run
+ * time too: a stream opens as a subscription, never as a plain HTTP request
+ * whose result has none of the subscription's members. The client takes
+ * both from its routes alone, whatever options its page gives it.
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { defineBoundary } from "../src/define/boundary";
-import { courier, defineApi, defineGroup } from "../src/define/index";
+import {
+  type CourierRoutes,
+  courier,
+  defineApi,
+  defineGroup,
+  type RouteMap,
+} from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import type { SSESubscription } from "../src/realtime/types";
 
@@ -19,6 +23,7 @@ const { endpoint, stream } = courier();
 
 const live = defineApi({
   baseURL: "https://upstream.example",
+  expose: true,
   groups: {
     ticks: defineGroup({ endpoints: { feed: stream.get("feed").response<number>() } }),
   },
@@ -26,49 +31,44 @@ const live = defineApi({
 
 const plain = defineApi({
   baseURL: "https://upstream.example",
+  expose: true,
   endpoints: { list: endpoint.get("list").response<string[]>() },
 });
 
-describe("the options argument", () => {
-  it("is required when the API has a stream", () => {
+describe("a proxy client of an API with a stream", () => {
+  it("opens the stream as a subscription, with options or without", () => {
     const typeOnly = () => {
-      // @ts-expect-error — no way to tell which endpoints are streams
-      createProxyCaller<typeof live>("live");
-      // @ts-expect-error — the same, with options that name neither
-      createProxyCaller<typeof live>("live", { timeout: 1000 });
+      const bare = createProxyCaller(routesOf(live, "live"));
+      const tuned = createProxyCaller(routesOf(live, "live"), { timeout: 1000 });
 
-      const withSource = createProxyCaller<typeof live>("live", { source: live });
-      expectTypeOf(withSource.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
-
-      const boundary = defineBoundary({
-        source: "live",
-        expose: { "ticks.feed": "stream" },
-      });
-      createProxyCaller<typeof live>("live", { boundary });
+      expectTypeOf(bare.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
+      expectTypeOf(tuned.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
     };
     expect(typeOnly).toBeTypeOf("function");
   });
 
-  it("stays optional for an API of plain requests", () => {
+  it("opens it from routes written by hand, held to the API's shapes", () => {
     const typeOnly = () => {
-      createProxyCaller<typeof plain>("plain");
-      createProxyCaller<typeof plain>("plain", { timeout: 1000 });
+      const endpoints = { "ticks.feed": { transport: "sse" } } as const satisfies RouteMap<
+        typeof live
+      >;
+      const routes: CourierRoutes<typeof live, typeof endpoints> = { source: "live", endpoints };
+      // @ts-expect-error — a stream is not a read
+      const asRead = { "ticks.feed": { type: "query" } } as const satisfies RouteMap<typeof live>;
+
+      expectTypeOf(createProxyCaller(routes).ticks.feed).returns.toEqualTypeOf<
+        SSESubscription<number>
+      >();
+      expect(asRead).toBeDefined();
     };
     expect(typeOnly).toBeTypeOf("function");
   });
 });
 
-/**
- * Handed the API itself as `source`, the client takes its type from it,
- * without the type also being named.
- */
-describe("a client given the API as its source", () => {
-  it("is typed from it without a type argument", () => {
+describe("a proxy client of an API of plain requests", () => {
+  it("is typed from the API, the endpoints its routes name alone", () => {
     const typeOnly = () => {
-      const client = createProxyCaller("live", { source: live });
-      expectTypeOf(client.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
-
-      const flat = createProxyCaller("plain", { source: plain });
+      const flat = createProxyCaller(routesOf(plain, "plain"));
       expectTypeOf(flat.list).returns.resolves.toEqualTypeOf<string[]>();
       // @ts-expect-error — the API has no such endpoint
       flat.missing();

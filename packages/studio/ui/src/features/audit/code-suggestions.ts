@@ -105,9 +105,10 @@ export const api = defineApi({
 `;
 
 export const PROXY_SUGGESTION = `import { createProxyCaller } from "@noverax/courier";
-import type { api } from "./api/sources";
+import { apiRoutes } from "./courier.routes";
 
-// Imported as a type: the API definition — upstream URL, endpoint paths,
-// middleware, secrets — stays on the server.
-export const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } });
+// The routes Studio writes from the endpoints marked .expose(): the API's
+// definition — upstream URL, endpoint paths, middleware, secrets — stays on
+// the server, and the page reaches the marked endpoints alone.
+export const caller = createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } });
 `;

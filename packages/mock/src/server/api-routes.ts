@@ -15,6 +15,7 @@ import type { Hono, Context as HonoContext } from "hono";
 
 import type { PrefixMapping } from "./prefix-route-types";
 import { registerPrefixRoutes } from "./prefix-routes";
+import { proxyFailure } from "./proxy-failure";
 import { readProxyCall } from "./read-proxy-call";
 import { bodyValue } from "./read-request-body";
 import { refusalOf } from "./refusal-of";
@@ -71,12 +72,13 @@ export function registerProxyRoute(app: Hono, config: RouteConfig): void {
     const call = await readProxyCall(c, (group, method) => readRouteBody(c, config, group, method));
     if ("error" in call) {
       return call.method === undefined
-        ? c.json({ error: call.error }, call.status)
-        : refuseRequest(c, call.group ?? "", call.method, call, config);
+        ? c.json(proxyFailure(call.error), call.status)
+        : refuseRequest(c, call.group ?? "", call.method, call, config, "proxy");
     }
     const via = c.req.method === "GET" ? "GET" : "POST";
     const refused = config.source && proxyRefusal(config.source, { ...call, via });
-    if (refused) return refuseRequest(c, call.group, call.method, refusalOf(refused), config);
+    if (refused)
+      return refuseRequest(c, call.group, call.method, refusalOf(refused), config, "proxy");
     // A `.raw` call is answered with the response around the data, as a Courier proxy does
     return handleMockRequest(c, call.group, call.method, call.variables, config, {
       raw: call.raw,
@@ -104,14 +106,14 @@ export function registerProxySSERoute(app: Hono, config: RouteConfig): void {
   app.get("/api/sse", (c: HonoContext) => {
     const params = new URL(c.req.url).searchParams;
     const method = params.get("_m");
-    if (!method) return c.json({ error: "The stream to open is not named (_m)" }, 400);
+    if (!method) return c.json(proxyFailure("The stream to open is not named (_m)"), 400);
     const variables = wireVariables(params.get("_v"));
     if (variables === INVALID)
-      return c.json({ error: "Variables (_v) must be a JSON object" }, 400);
+      return c.json(proxyFailure("Variables (_v) must be a JSON object"), 400);
     const group = params.get("_g") ?? "";
     const call = { source: params.get("_s") ?? "", group, method, via: "sse" } as const;
     const refused = config.source && proxyRefusal(config.source, call);
-    if (refused) return refuseRequest(c, group, method, refusalOf(refused), config);
+    if (refused) return refuseRequest(c, group, method, refusalOf(refused), config, "proxy");
     return handleMockRequest(c, group, method, variables, config, { stream: true });
   });
 }

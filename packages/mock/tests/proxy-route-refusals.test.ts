@@ -2,9 +2,10 @@
  * The mock's proxy routes refuse what the proxy of the API it stands in for
  * refuses — an endpoint the API keeps from a page, a GET to anything but a
  * read, a GET to a read whose variables stay out of the address, a stream
- * the API keeps from a page — with the proxy's status, so a page that works
- * against the mock is not refused once it calls the real proxy. A mock that
- * knows no API answers every name, as it did.
+ * the API keeps from a page — with the proxy's status and body, so a page
+ * that works against the mock is not refused once it calls the real proxy,
+ * and reads a refusal's message as the proxy writes it. A mock that knows
+ * no API answers every name, as it did.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -57,7 +58,10 @@ describe("the mock's proxy routes, for the API they stand in for", () => {
     const response = await call("audit", "POST");
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "[api][shop][audit]: method not found" });
+    expect(await response.json()).toEqual({
+      success: false,
+      message: "[api][shop][audit]: method not found",
+    });
   });
 
   it("refuse a GET to a write, and to a read whose variables stay out of the address", async () => {
@@ -75,7 +79,10 @@ describe("the mock's proxy routes, for the API they stand in for", () => {
     const response = await fetch(`${url}/api/sse?_s=api&_g=shop&_m=hidden`);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "[api][shop][hidden]: method not found" });
+    expect(await response.json()).toEqual({
+      success: false,
+      message: "[api][shop][hidden]: method not found",
+    });
   });
 });
 

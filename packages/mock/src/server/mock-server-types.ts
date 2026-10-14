@@ -86,6 +86,13 @@ export interface MockServerOptions {
   /** The calls the mock leaves to its source's own server, or answers with recordings of it */
   elsewhere?: Elsewhere | undefined;
   /**
+   * The API the mock stands in for, as `defineApi` returns it: its proxy
+   * routes refuse what the API's own proxy would — an endpoint it keeps from
+   * a browser, a GET to anything but a read — with the proxy's status.
+   * `createAutoMockServer` gives it.
+   */
+  source?: Record<string, unknown> | undefined;
+  /**
    * The largest JSON body the mock reads, in bytes (default: 1 MB, as a
    * Courier server). A larger one is answered with 413.
    */

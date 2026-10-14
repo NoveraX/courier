@@ -26,11 +26,10 @@ import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
 import { registerRequestRoutes } from "./api-routes";
 import { applyMiddleware } from "./app-middleware";
-import { bodyLimitsOf } from "./body-limits";
 import { generatedRoutes, routeKey } from "./generated-routes";
-import { idempotentCalls } from "./idempotent-calls";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { persistedStore } from "./persisted-store";
+import { routeOptionsOf } from "./route-options";
 import type { RequestHooks } from "./route-types";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
@@ -80,14 +79,11 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     setScenarioState,
     markScenario: scenario.mark,
     transitionScenario: scenario.transition,
-    network: config?.network,
     networkState,
     hooks: requestHooks,
     streamsStopping: streams.signal,
-    elsewhere: config?.elsewhere,
     answersOwn: (group: string, method: string) => ownSource(group, method) !== "auto",
-    bodyLimits: bodyLimitsOf(config),
-    idempotency: config?.idempotency === false ? undefined : idempotentCalls(config?.idempotency),
+    ...routeOptionsOf(config),
   };
 
   registerRequestRoutes(app, routeConfig, config?.mappings);

@@ -25,7 +25,7 @@ export interface BodyRules {
 /** Why a body was not taken: its status and the reason. A `dropped` one had its connection cut, so nothing answers it. */
 export interface BodyRefusal {
   error: string;
-  status: 400 | 413 | 415 | 502;
+  status: 400 | 405 | 413 | 415 | 502;
   dropped?: true | undefined;
 }
 

@@ -129,6 +129,7 @@ export {
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
 export { parseUrl } from "../utils/parse-url";
+export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
 export {
   type RenderMemo,
   type RenderMemoProvider,

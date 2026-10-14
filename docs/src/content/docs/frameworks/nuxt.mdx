@@ -18,7 +18,7 @@ npm install @noverax/courier @noverax/courier-nuxt
 
 ## Define your API sources
 
-Create a shared API definition:
+Create the API definition the server route and Studio share. A page never imports it: it takes the routes Studio writes from it, so the definition stays out of the browser bundle.
 
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
@@ -30,6 +30,8 @@ type PostList = { data: Post[]; total: number }
 
 const posts = defineGroup({
   prefix: "posts",
+  // A page may call these through the proxy; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").variables<{ page?: number }>().response<PostList>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
@@ -65,18 +67,27 @@ import { courierHandler } from "@noverax/courier-nuxt"
 export default courierHandler()
 ```
 
-The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route answers every method at `/api/request`, the proxy target Courier clients use: a read arrives as `GET`, a write as `POST`, and an SSE stream as `GET`.
+The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route answers every method at `/api/request`, the proxy target Courier clients use: a read that may be cached arrives as `GET`, any other call as `POST`, and an SSE stream as `GET`.
 
 ## Step 2: Client-side composable
 
-Create a composable using `createProxyCaller` for client-side requests:
+List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier Studio writes the routes a page's caller takes into `courier.routes.ts` beside it — whenever it loads the config, or now with `npx @noverax/courier-studio routes`; see [Exposing Endpoints](/docs/proxy-mode/expose):
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { sources } from "./lib/sources"
+
+export default defineConfig({ sources })
+```
+
+Create a composable using `createProxyCaller` for client-side requests, from the routes of `myApi`:
 
 ```ts title="composables/useCaller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "~/lib/sources"
+import { myApiRoutes } from "~/courier.routes"
 
 export function useCaller() {
-  return createProxyCaller<typeof api>("api", {
+  return createProxyCaller(myApiRoutes, {
     proxyPath: { http: "/api/request" },
   })
 }
@@ -226,11 +237,11 @@ WebSocket channels are not served by the Nuxt adapter: Nitro's WebSocket layer (
 
 ```ts title="composables/useCaller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "~/lib/sources"
+import { myApiRoutes } from "~/courier.routes"
 
 export function useCaller() {
   const { origin } = useRequestURL()
-  return createProxyCaller<typeof api>("api", {
+  return createProxyCaller(myApiRoutes, {
     proxyPath: {
       http: "/api/request",                       // handled by Nuxt — in process while rendering
       sse: `${origin}/api/request`,               // handled by Nuxt — a stream always opens over HTTP
@@ -268,8 +279,10 @@ There is no `localhost:3000` auto-fallback. If `appOrigin` is missing, clicking 
 ## Project structure
 
 ```
+courier.config.ts           # defineConfig({ sources })
+courier.routes.ts           # written by Studio from the .expose() marks
 composables/
-  useCaller.ts              # useCaller() → createProxyCaller<typeof api>("api")
+  useCaller.ts              # useCaller() → createProxyCaller(myApiRoutes)
 lib/
   sources.ts                # defineApi + defineGroup + endpoint
   server-caller.ts          # createCaller(api)

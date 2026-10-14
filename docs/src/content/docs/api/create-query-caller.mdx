@@ -151,10 +151,10 @@ See [`createQueryKeys`](/docs/api/create-query-keys) for details.
 
 ## Comparison
 
-| Feature | `createQueryCaller(api)` | `createProxyQueryCaller<T>("name")` |
+| Feature | `createQueryCaller(api)` | `createProxyQueryCaller(apiRoutes)` |
 | --- | --- | --- |
 | Mode | Direct | Proxy |
-| Argument | API object | Source name string + generic |
+| Argument | API object | The API's routes, written by Studio |
 | Server adapter required | No | Yes (`apiRoute`, `sseRoute`, WS handler) |
 | Ships API definition to client | Yes | No |
 | Hides secrets in API definition | No | Yes |

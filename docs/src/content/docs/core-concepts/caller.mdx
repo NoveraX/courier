@@ -7,7 +7,7 @@ Courier provides two ways to call your API endpoints. Both share the same `Typed
 | Factory | Mode | Use Case |
 |---------|------|----------|
 | `createCaller(api)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
-| `createProxyCaller<typeof api>("api")` | Proxy | Browser → your server → backend |
+| `createProxyCaller(apiRoutes)` | Proxy | Browser → your server → backend |
 
 ## createCaller (Direct Mode) <ModeBadge mode="direct" />
 
@@ -35,15 +35,13 @@ Use direct mode for server-side code where you have access to the `api` object: 
 
 ## createProxyCaller (Proxy Mode) <ModeBadge mode="proxy" />
 
-Sends requests through your server's proxy route. The browser never sees your backend URL.
+Sends requests through your server's proxy route. The browser never sees your backend URL. The caller takes the routes Studio writes into `courier.routes.ts` from the endpoints you marked `.expose()`: what a page may call, and how it reaches each — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+export const caller = createProxyCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
   credentials: "include",               // send the browser's cookies to the proxy route
@@ -54,21 +52,23 @@ export const caller = createProxyCaller<typeof api>("api", {
 ```
 
 ```ts
-// Browser sends GET /api/request → your server → backend
+// Browser sends POST /api/request → your server → backend
+// (a read that declares .cache() goes as GET)
 const users = await caller.users.getAll()
 ```
 
-<Callout variant="tip" title="Source object passed in">
-Pass the actual `api` object to `createProxyCaller` (not just `typeof api`). The caller reads `api.options.proxyPath` as source-level defaults and uses the embedded endpoint metadata for SSE/WS transport detection.
+<Callout variant="tip" title="The routes, not the API">
+Pass the routes, never the `api` object: a page that imports the definition as a value ships it — the upstream host, the middleware, every endpoint path. The routes carry the API's type and each endpoint's transport, which is all the caller needs.
 </Callout>
 
-### ProxyCallerDefaults
+### ProxyCallerOptions
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `proxyPath` | `ProxyPath` | per-transport defaults | Per-transport proxy endpoint paths (`http` / `sse` / `ws`) |
-| `source` | `object` | — | The `defineApi()` result. Required for SSE/WS detection |
 | `timeout` | `number` | — | Request timeout in ms |
+| `cancelPrevious` | `readonly string[]` | the API's own | The reads a newer call cancels while in flight |
+| `coalesce` | `boolean` | the API's own, or `true` | Whether identical reads in flight share one request |
 | `credentials` | `RequestCredentials` | `"include"` | Whether the browser sends its cookies to the proxy route; the proxy forwards them where the source or endpoint names `cookie` |
 | `headers` | `Record<string, string>` | — | Default headers |
 | `onError` | `(error: HTTPError) => void` | — | Global error callback |
@@ -102,7 +102,7 @@ Per-call options are named with `.with()`, which returns a caller carrying them:
 // Stream mode — the body arrives as a ReadableStream instead of parsed
 const response = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
-// A read goes to the proxy as GET; POST keeps this call's variables out of the address
+// A read that may be cached goes to the proxy as GET; POST keeps this call's variables out of the address
 const users = await caller.users.with({ method: "POST" }).getAll({ page: 1 })
 
 // Upload progress tracking
@@ -131,14 +131,13 @@ export const serverCaller = createCaller(api)
 
 ```ts title="lib/client-caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-// Client-side (React components): the API as a type, the boundary as the value
-export const clientCaller = createProxyCaller<typeof api>("api", { boundary })
+// Client-side (React components): the routes Studio writes, never the API itself
+export const clientCaller = createProxyCaller(apiRoutes)
 ```
 
-See [defineBoundary](/docs/proxy-mode/boundary) for what the boundary names and why the API is imported as a type.
+See [Exposing Endpoints](/docs/proxy-mode/expose) for what the routes name and why they keep the definition out of the bundle.
 
 ## Next Steps
 

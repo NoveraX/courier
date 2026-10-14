@@ -8,20 +8,40 @@ import { createProxyCaller } from "@noverax/courier"
 
 ## Signature
 
-`createProxyCaller` takes the name the proxy addresses the source by, and defaults — optional for an API of plain requests, required with a `boundary` (or the `source`) for one with streams or channels — and returns a typed client. The type argument is your `typeof api`: it gives the client its groups, methods, variables, and response types.
+`createProxyCaller` takes the routes of an API — the endpoints a page may call and how it reaches each, as Studio writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and options, and returns a typed client. The routes carry the type of the API they were written from, so the client has its groups, methods, variables and response types, for the endpoints the routes name alone.
 
 ```ts
-import type { InferClient, ProxyCallerArguments } from "@noverax/courier"
+import type { InferClient, ProxyCallerOptions } from "@noverax/courier"
+import type { CourierRoutes, RoutedApi, RouteShape } from "@noverax/courier/define"
 
-declare function createProxyCaller<TApi>(
-  source: string,
-  ...defaults: ProxyCallerArguments<TApi>
-): InferClient<TApi>
+declare function createProxyCaller<TApi, TEndpoints extends Readonly<Record<string, RouteShape>>>(
+  routes: CourierRoutes<TApi, TEndpoints>,
+  options?: ProxyCallerOptions,
+): InferClient<RoutedApi<TApi, TEndpoints>>
 ```
 
 ## Parameters
 
-### ProxyCallerDefaults
+### routes
+
+The routes of one API, as the routes module exports them — `apiRoutes` for the source registered as `api`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Studio writes them, and how to write them by hand in a project without a `courier.config.ts`.
+
+```ts
+interface CourierRoutes<TApi, TEndpoints> {
+  source: string                    // the name the server registered the API under
+  endpoints: TEndpoints             // each endpoint a page may call, by its path, and how it is reached
+  cancelPrevious?: readonly string[] // the API's own cancelPrevious
+  coalesce?: boolean                // the API's own coalesce
+}
+
+type RouteShape =
+  | { type: "query"; get?: true }  // a read; GET when it may be cached
+  | { type: "mutation" }            // a write
+  | { transport: "sse" }            // a server-sent event stream
+  | { transport: "ws"; bidirectional?: true } // a socket; one the caller also sends on
+```
+
+### ProxyCallerOptions
 
 All fields are optional.
 
@@ -32,10 +52,8 @@ type ProxyPath = {
   ws?: string    // no default — required for WS endpoints
 }
 
-type ProxyCallerDefaults = {
+type ProxyCallerOptions = {
   proxyPath?: ProxyPath
-  source?: Record<string, unknown>
-  boundary?: ProxyBoundary
   timeout?: number
   cancelPrevious?: readonly string[]
   coalesce?: boolean
@@ -58,10 +76,9 @@ type CallerWSOptions = {
 type WSAuthParams = Record<string, unknown>
 ```
 
-- `proxyPath` — per-transport proxy endpoint configuration. Each field accepts either a relative path (resolved against `location.origin`) or an absolute URL. Caller-level fields are merged per-transport over `source.options.proxyPath` from `defineApi`.
-- `source` — the result of `defineApi()`, or `boundary` — the result of `defineBoundary()`, which keeps the definition out of the browser bundle. One of them is required when the API has streams or channels: the type argument names each endpoint's transport, but only a runtime value tells the client which endpoints to open as a stream or a socket, so omitting both does not compile. The caller reads `proxyPath` from whichever is given as the source-level defaults.
-- `cancelPrevious` — the reads a newer call cancels while they are still in flight, by their paths, such as `["users.search"]`; the cancelled call rejects with an `HTTPError` of status 499. Defaults to the source's own when `source` is given — see [Deduplication & Abort](/docs/advanced/abort#cancelling-the-previous-call).
-- `coalesce` — whether identical reads in flight together reach the proxy once, each call with a copy of the answer. On by default; `false` sends every call alone. Defaults to the source's own when `source` is given.
+- `proxyPath` — where the app serves its proxy routes, per transport. Each field accepts either a relative path, resolved against the page's origin, or an absolute URL; a missing one falls back to the built-in default. The routes do not say it: it depends on where the page is served.
+- `cancelPrevious` — the reads a newer call cancels while they are still in flight, by their paths, such as `["users.search"]`; the cancelled call rejects with an `HTTPError` of status 499. Only a read is ever cancelled: an endpoint the routes name a write is left to complete. Defaults to the API's own, which the routes carry — see [Deduplication & Abort](/docs/advanced/abort#cancelling-the-previous-call).
+- `coalesce` — whether identical reads in flight together reach the proxy once, each call with a copy of the answer. On by default; `false` sends every call alone. Defaults to the API's own, which the routes carry.
 - `timeout` — how long the browser waits for the proxy, in milliseconds. It is not sent to the server, so the endpoint's own `.timeout()` still bounds the upstream call; a timeout given with `.with()` for one call is sent.
 - `credentials` — whether the browser sends its cookies to the proxy route, with every call and stream. Defaults to `"include"`. The proxy forwards them to the backend only where the source or the endpoint names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 - `headers` — default headers merged into every request and stream, and sent in the first frame of every socket its channels open, which the proxy reads as the socket's own — a browser cannot put them on a WebSocket's handshake.
@@ -75,28 +92,21 @@ type WSAuthParams = Record<string, unknown>
 
 ## Return Type
 
-Returns `InferClient<typeof api>` — a typed object with dot-notation access to your API groups and endpoints:
+Returns `InferClient<RoutedApi<TApi, TEndpoints>>` — the client of the API with the endpoints the routes name alone, a group they name nothing in left out:
 
 1. **Group access** — `caller.users` — accesses the endpoint group.
 2. **Endpoint execution** — `caller.users.getById({ id: "123" })` — executes an endpoint with its variables, its only argument; an endpoint without variables takes none.
 3. **Per-call options** — `caller.users.with({ timeout: 5_000 }).getAll()` — headers, a timeout or a signal for the calls made through it; `.raw` resolves to the whole response instead of its body.
 
-```ts
-import type { InferClient } from "@noverax/courier"
-import type { api } from "@/api"
-
-type Client = InferClient<typeof api>
-```
+An endpoint the routes do not name is not on the type. Called anyway — from JavaScript, or past a cast — the client throws `ConfigurationError("ENDPOINT_NOT_IN_ROUTES", ...)` before anything is sent, since the proxy would refuse it.
 
 ## Basic Usage
 
-```ts title="lib/query.ts"
+```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+const caller = createProxyCaller(apiRoutes, {
   timeout: 10000,
   credentials: "include",
 })
@@ -106,17 +116,17 @@ const users = await caller.users.getAll()
 const user = await caller.users.getById({ id: "123" })
 ```
 
-## Configuring Defaults
+## Configuring Options
 
-```ts title="lib/query.ts"
-const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
 
+const caller = createProxyCaller(apiRoutes, {
   // Per-transport proxy endpoint paths.
-  // Either side may be partial — missing transports fall back to
-  // source.options.proxyPath, then to built-in defaults.
+  // A missing transport falls back to its built-in default.
   proxyPath: {
-    http: "/api/courier",                           // override default /api/request
+    http: "/api/courier",                         // override default /api/request
     sse: "/api/sse",                              // default
     ws: "wss://realtime.example.com",             // required for WS endpoints
   },
@@ -185,9 +195,10 @@ The progress covers the browser's upload to the proxy route. The proxy then forw
 
 ## GET or POST
 
-A read — an endpoint built from a reading verb, or declared `.reads()` — goes to the proxy as GET, its variables as JSON in the `_v` parameter of the address, so a browser or a CDN can reuse the answer its `.cache()` allows. A write goes as POST, its variables in the body. A client that knows neither — built without `source` or `boundary` — sends every call as POST.
+A read that may be cached — one that declares `.cache()` and whose variables are not sensitive, which the routes mark `get: true` — goes to the proxy as GET, its variables as JSON in the `_v` parameter of the address, so a browser or a CDN can reuse the answer its `.cache()` allows. Every other call goes as POST, its variables in the body: GET would gain a read nothing that nothing on the way may keep, and POST keeps the variables of every other read out of the address.
 
 ```ts
+// search declares .cache({ revalidate: 60 }):
 // GET /api/request?_s=api&_g=users&_m=search&_v={"q":"ada"}
 const found = await caller.users.search({ q: "ada" })
 
@@ -195,16 +206,17 @@ const found = await caller.users.search({ q: "ada" })
 const user = await caller.users.create({ name: "Jane" })
 ```
 
-A read goes as POST instead when its variables carry a body — form data, an upload whose progress is watched — or would make the address longer than 2 KB, which some servers and CDNs refuse. An address is written down by every access log it passes, so a read whose variables must not be — an email address, a search someone typed — declares `sensitiveVariables` and always goes as POST; the proxy refuses it over GET:
+A read that may be cached goes as POST all the same when its variables carry a body — form data, an upload whose progress is watched — or would make the address longer than 2 KB, which some servers and CDNs refuse. An address is written down by every access log it passes, so a read whose variables must not be — an email address, a search someone typed — declares `sensitiveVariables`, and always goes as POST, whatever its `.cache()`; the proxy refuses it over GET:
 
 ```ts
 byEmail: endpoint.get("customers", { sensitiveVariables: true }).variables<{ email: string }>()
 ```
 
-A client built from a boundary cannot see the definition, so the boundary lists those reads under `sensitive`. A call can still ask for either verb with `.with({ method: "GET" })` or `.with({ method: "POST" })`; a write asked for over GET is refused 405.
+A call can still ask for either verb with `.with({ method: "GET" })` or `.with({ method: "POST" })`; a write asked for over GET is refused 405, and so is a read whose variables are sensitive.
 
 ## Related
 
+- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Studio writes from them
 - [Proxy Mode](/docs/proxy-mode/overview) — architecture and security model
 - [Server Handler](/docs/proxy-mode/api-route) — the server-side handler that processes proxy requests
 - [createProxyQueryCaller](/docs/api/create-proxy-query-caller) — React Query wrapper built on top of createProxyCaller

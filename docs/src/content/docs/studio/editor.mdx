@@ -229,7 +229,7 @@ The API's server is handed the project's `.env.development.local`, `.env.local`,
 | `courier-endpoint` | An endpoint of a group: its method, path, variables and response |
 | `courier-group` | A group of endpoints under one path |
 | `courier-api` | An API: its base address and its groups |
-| `courier-boundary` | The endpoints the browser may call through your server |
+| `courier-routes` | Routes a page's proxy client takes, written by hand where Studio writes none |
 | `courier-query`, `courier-mutation` | A read and a write with React Query |
 | `courier-subscription`, `courier-channel` | A stream followed and a channel joined while a component is mounted |
 | `courier-call` | A call made directly, on the server or in a script |
@@ -274,7 +274,7 @@ Studio writes where it runs to `.courier/studio.json` in your project while it r
 | --- | --- |
 | `api.orders.place({ sku })` | `orders.place`: a call that ends with an endpoint's names, after whatever it is made on |
 | `backend.payments.account.me()` | `payments`' `account.me`: the source's name written before the endpoint's settles which source |
-| `const shop = createProxyCaller<typeof api>("shop")` then `shop.account.me()` | `shop`'s `account.me`: a caller the file creates names its source |
+| `const shop = createProxyCaller(shopRoutes)` then `shop.account.me()` | `shop`'s `account.me`: a caller the file creates names its source, by its routes or its API |
 | `q.orders.useQuery("list")` | `orders.list`: a query hook names its endpoint as its first argument |
 
 When two sources define an endpoint of the same name and nothing settles which one a call reaches, the extension shows both. A top-level endpoint is matched only through a caller the file creates or its source's name — its one name, `get` or `list`, is too common to tell a call by. TypeScript and JavaScript files are read, and the scripts of Vue, Svelte and Astro components.

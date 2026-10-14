@@ -9,14 +9,14 @@ Every API call in Courier follows a well-defined lifecycle. There are two transp
 | Factory | Mode | Runtime | Use Case |
 |---------|------|---------|----------|
 | `createCaller(api)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
-| `createProxyCaller<typeof api>("api")` | Proxy | Browser | Client Components — hides backend URL, handles CORS, carries the cookies you name |
+| `createProxyCaller(apiRoutes)` | Proxy | Browser | Client Components — hides backend URL, handles CORS, carries the cookies you name |
 
 ## Request Flow
 
 ```
 Direct:  createCaller(api) → caller.users.getAll() → executeRequest → middleware → HttpClient → fetch → backend
 
-Proxy:   createProxyCaller("api") → caller.users.getAll() → GET /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
+Proxy:   createProxyCaller(apiRoutes) → caller.users.getAll() → GET or POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
 ```
 
 In direct mode, the caller invokes `executeRequest` directly with the `api` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.
@@ -49,15 +49,18 @@ Use direct mode whenever you have access to the `api` object: Server Components,
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api/sources"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api")
+export const caller = createProxyCaller(apiRoutes)
 ```
 
 ```ts
-// Browser sends GET /api/request → your server → backend
+// Browser sends POST /api/request → your server → backend
+// (a read that declares .cache() goes as GET)
 const users = await caller.users.getAll()
 ```
+
+The caller takes the routes Studio writes from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 <Callout variant="tip" title="Type-only import">
 Proxy mode imports `type { api }` — only the type information crosses to the client. The actual `api` object (with your backend URL and secrets) stays on the server.
@@ -93,7 +96,7 @@ const response = await caller.users.raw.getAll()
 // Stream mode — the body arrives as a ReadableStream instead of parsed
 const body = await caller.events.with({ stream: true }).subscribe({ channel: "builds" })
 
-// A read goes to the proxy as GET; POST keeps this call's variables out of the address
+// A read that may be cached goes to the proxy as GET; POST keeps this call's variables out of the address
 const users = await caller.users.with({ method: "POST" }).getAll()
 
 // Upload with progress tracking

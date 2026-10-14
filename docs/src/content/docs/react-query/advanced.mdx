@@ -4,7 +4,7 @@ export const metadata = { title: "Advanced React Query Patterns", description: "
 
 For the best user experience, prefetch data in Server Components and pass it to the client via `HydrationBoundary`. The client component receives cached data instantly with no loading state.
 
-The proxy caller in `lib/query.ts` cannot run on the server: there is no page there to resolve its relative `proxyPath` against. The server has the API definition, so it prefetches with a direct caller built from it. Name the definition after the proxy's source — `defineApi({ name: "api", ... })` for `createProxyQueryCaller<typeof api>("api")` — so that both callers build the same keys:
+The proxy caller in `lib/query.ts` cannot run on the server: there is no page there to resolve its relative `proxyPath` against. The server has the API definition, so it prefetches with a direct caller built from it. Name the definition after the proxy's source — `defineApi({ name: "api", ... })` for the routes of the source registered as `api` — so that both callers build the same keys:
 
 ```ts title="lib/query.server.ts"
 import { createQueryCaller } from "@noverax/courier-react"

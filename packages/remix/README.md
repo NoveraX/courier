@@ -41,7 +41,7 @@ Remix continues as React Router 7's framework mode, and the adapter serves both:
   <tr>
     <td width="33%" valign="top">
       <h4>One route</h4>
-      <code>courierHandler()</code> as the route's <code>loader</code> and <code>action</code> answers every endpoint the boundary exposes.
+      <code>courierHandler()</code> as the route's <code>loader</code> and <code>action</code> answers every endpoint marked <code>.expose()</code>.
     </td>
     <td width="33%" valign="top">
       <h4>The user's session</h4>
@@ -148,11 +148,11 @@ Pair with `createProxyCaller` on the client:
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "./api"
+import { apiRoutes } from "./courier.routes"
 
-// The first argument is the key this source has in your `sources` map —
-// it is what the proxy addresses, and it travels as `?_s=<name>`.
-const caller = createProxyCaller<typeof api>("api", {
+// The routes Courier Studio writes from the endpoints you mark .expose():
+// what a page may call, under the key the source has in your `sources` map.
+const caller = createProxyCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },
 })
 const users = await caller.users.getAll()

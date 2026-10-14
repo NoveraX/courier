@@ -369,7 +369,7 @@ caller.posts.create(vars)     // group: "posts", method: "create"
 caller.billing.invoices.list() // group: "billing.invoices", method: "list"
 ```
 
-A group inside another is named by its path, its names joined with dots, wherever a group is named by a string: the proxy's `_g`, Studio, mocks, query keys and boundaries.
+A group inside another is named by its path, its names joined with dots, wherever a group is named by a string: the proxy's `_g`, Studio, mocks, query keys and a page's routes.
 
 ### Reserved names
 
@@ -387,7 +387,7 @@ No group or endpoint name may hold a dot, which separates the names of a group's
 
 ### Names the runtime reads
 
-The runtime reads `then`, `toJSON` and `valueOf` from any object. A group or endpoint you declare under one of these names is still reached by it, as long as the client knows the source — `createCaller` and `createQueryCaller`, and `createProxyCaller` or `createProxyQueryCaller` given `source` or `boundary`:
+The runtime reads `then`, `toJSON` and `valueOf` from any object. A group or endpoint you declare under one of these names is still reached by it, as long as the client knows the source — `createCaller` and `createQueryCaller`, and `createProxyCaller` and `createProxyQueryCaller`, which their routes tell what the source holds:
 
 ```ts
 caller.files.toJSON()         // the endpoint named toJSON
@@ -395,7 +395,7 @@ caller.then.list()            // a group named then; the client is still not a p
 q.then.useQuery("list")       // the same group through the React hooks
 ```
 
-One name stays out of reach: a flat endpoint named `then` at the root. It would make every awaited client call it, so rename it. A proxy client given only a source name cannot tell a declared member from a runtime hook, and answers these names as absent.
+One name stays out of reach: a flat endpoint named `then` at the root. It would make every awaited client call it, so rename it. A proxy client whose routes name no member by one of these names answers it as absent.
 
 ## Next Steps
 

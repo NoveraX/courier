@@ -53,9 +53,10 @@ import { revalidateTag } from "next/cache"
 revalidateTag("users")`
 
 const globalDefaultsCode = `import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
 
 // Set defaults for all requests
-const caller = createProxyCaller<typeof api>("api", {
+const caller = createProxyCaller(apiRoutes, {
   timeout: 10000,           // 10s default timeout
   credentials: "include",  // send cookies
   headers: {

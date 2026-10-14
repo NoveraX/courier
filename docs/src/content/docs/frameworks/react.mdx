@@ -18,7 +18,7 @@ npm install @noverax/courier @noverax/courier-react @tanstack/react-query
 
 ## Define your API sources
 
-Create a shared API definition. This file is used by both the React app and the backend proxy:
+Create the API definition the backend proxy and Studio share. The React app never imports it: it takes the routes Studio writes from it, so the definition stays out of the browser bundle.
 
 ```ts title="shared/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
@@ -30,6 +30,8 @@ type ProductList = { data: Product[]; total: number }
 
 const products = defineGroup({
   prefix: "products",
+  // A page may call these through the proxy; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").variables<{ page?: number; category?: string }>().response<ProductList>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<Product>(),
@@ -78,11 +80,20 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 
 ## Step 2: Create the query caller
 
+List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier Studio writes the routes the app's caller takes into `courier.routes.ts` beside it — whenever it loads the config, or now with `npx @noverax/courier-studio routes`; see [Exposing Endpoints](/docs/proxy-mode/expose):
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { sources } from "./shared/sources"
+
+export default defineConfig({ sources })
+```
+
 ```ts title="src/lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "../../shared/sources"
+import { myApiRoutes } from "../../courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("myApi", {
+export const q = createProxyQueryCaller(myApiRoutes, {
   proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```
@@ -189,12 +200,14 @@ Make sure your proxy backend has CORS configured to allow requests from your Rea
 ## Project structure
 
 ```text title="Project structure"
+courier.config.ts           # defineConfig({ sources })
+courier.routes.ts           # written by Studio from the .expose() marks
 shared/
-  sources.ts                # courier + defineGroup + defineApi (shared)
+  sources.ts                # courier + defineGroup + defineApi
 server/
   index.ts                  # Express/Hono/Fastify with courierHandler
 src/
-  lib/query.ts              # createProxyQueryCaller<typeof api>("myApi")
+  lib/query.ts              # createProxyQueryCaller(myApiRoutes)
   components/
     ProductList.tsx         # q.products.useQuery usage
     CreateProduct.tsx       # q.products.useMutation usage
@@ -211,9 +224,9 @@ VITE_PROXY_URL=http://localhost:3001/api/request
 
 ```ts title="src/lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "../../shared/sources"
+import { myApiRoutes } from "../../courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("myApi", {
+export const q = createProxyQueryCaller(myApiRoutes, {
   proxyPath: { http: import.meta.env.VITE_PROXY_URL },
 })
 ```

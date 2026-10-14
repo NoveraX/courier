@@ -182,11 +182,10 @@ A mock built from a source refuses at these routes what that API's own proxy ref
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { api as source } from "./src/api"
+import { apiRoutes } from "./courier.routes"
 
 const mock = "http://localhost:7001"
-const api = createProxyCaller("api", {
-  source,
+const api = createProxyCaller(apiRoutes, {
   proxyPath: { http: `${mock}/api/request`, sse: `${mock}/api/sse`, ws: "ws://localhost:7001/api/ws" },
 })
 ```

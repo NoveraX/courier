@@ -163,6 +163,10 @@ export default courierHandler()
 
 ## Security
 
+### Marked Endpoints
+
+The handler serves an endpoint only when a mark opens it — `.expose()` on the endpoint, or `expose` on its group or its API, the nearest deciding — and answers any other exactly as a name the source does not define, `400`, so a caller guessing names learns nothing of what exists. See [Exposing Endpoints](/docs/proxy-mode/expose).
+
 ### Origin Validation
 
 The handler refuses a request another site's page made with `403 { success: false, message: "Origin not allowed" }`. The browser's `Sec-Fetch-Site` decides where it is sent; otherwise the `Origin` must be the origin the request was addressed to. Pages on other origins are served when `allowedOrigins` lists them — see [Proxy Mode](/docs/proxy-mode/overview#origin-validation) for the whole rule.

@@ -2,28 +2,28 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 
 ## Overview
 
-`createProxyCaller` creates a typed client with dot-notation access that calls your server's proxy endpoint: a read as GET, a write as POST. It is the primary way to make requests from client components in proxy mode.
+`createProxyCaller` creates a typed client with dot-notation access that calls your server's proxy routes. It is the way a client component calls an API in proxy mode.
+
+It takes the routes of an API: the endpoints a page may call and how the page reaches each, which Studio writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
+import { apiRoutes } from "@/courier.routes"
 
-// createProxyCaller<T>(source, defaults?) returns TypedClient<T>.
-// `source` is the key this API has in your `sources` map — the proxy
-// addresses it by that name. Importing `api` as a *type* keeps the
-// definition out of the browser bundle.
-const caller = createProxyCaller<typeof api>("api")
+// createProxyCaller(routes, options?) returns a client typed from the API
+// the routes were written from, with the endpoints they name alone.
+export const caller = createProxyCaller(apiRoutes)
 
 // Dot-notation usage:
-const result = await caller.users.getById({ id: 5 })
+const result = await caller.users.getById({ id: "5" })
 //                         ^? group ^? endpoint  ^? variables
 ```
 
-The first argument names the source; the generic parameter `typeof api` provides full type inference for group names, endpoint names, variables, and response types.
+The routes name the source as your server registered it, and how each endpoint is reached: a read that may be cached as GET, every other call as POST, a stream over server-sent events and a channel over a socket. Nothing of the API's definition comes with them, so none of it reaches the page's bundle.
 
-## Defaults
+## Options
 
-Pass a `ProxyCallerDefaults` object to configure global behavior for all requests created by this factory:
+Pass a `ProxyCallerOptions` object to configure every request the client makes:
 
 ```typescript
 type ProxyPath = {
@@ -36,15 +36,11 @@ type ProxyPath = {
   ws?: string
 }
 
-type ProxyCallerDefaults = {
-  // Per-transport proxy endpoint paths. Caller-level fields are merged
-  // per-transport over `source.options.proxyPath` (caller wins).
+type ProxyCallerOptions = {
+  // Where the app serves its proxy routes, per transport
   proxyPath?: ProxyPath
 
-  // The defineApi() result. Required for SSE/WS transport detection.
-  source?: object
-
-  // Request timeout in milliseconds
+  // How long the browser waits for the proxy, in milliseconds
   timeout?: number
 
   // Cookie behavior — default: "include"
@@ -53,11 +49,20 @@ type ProxyCallerDefaults = {
   // Extra headers sent with every proxy request
   headers?: Record<string, string>
 
+  // The reads a newer call cancels while they are in flight — default: the API's own
+  cancelPrevious?: readonly string[]
+
+  // Whether identical reads in flight share one request — default: the API's own, or true
+  coalesce?: boolean
+
   // Called on every failed request
   onError?: (error: HTTPError) => void | Promise<void>
 
   // Called on every successful request
   onSuccess?: (data: unknown) => void | Promise<void>
+
+  // How the sockets of channels and push subscriptions behave
+  ws?: CallerWSOptions
 }
 ```
 
@@ -67,11 +72,9 @@ A typical setup creates a single caller instance and exports it for use across a
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+export const caller = createProxyCaller(apiRoutes, {
   timeout: 30_000,
   credentials: "include",
   headers: {
@@ -100,6 +103,8 @@ await caller.users.getById({ id: 5 })
 await caller.posts.create({ title: "Hello", body: "World" })
 ```
 
+An endpoint the routes do not name is not on the client's type. Called anyway — from JavaScript, or past a cast — the client throws a `ConfigurationError` with the code `ENDPOINT_NOT_IN_ROUTES` before anything is sent, since the proxy would refuse it.
+
 ## Raw data access
 
 To access response status and headers, use the `.raw` namespace:
@@ -111,7 +116,7 @@ const response = await caller.users.raw.getById({ id: "5" })
 
 ## Body composition
 
-The endpoint is always named in the URL — `_s` for the source, `_g` for the group, `_m` for the method — so the server knows which call a request is before its body arrives. A group inside another is named by its path: `client.billing.invoices.list()` sends `_g=billing.invoices`. How the body is built depends on the type of variables you pass:
+The endpoint is always named in the URL — `_s` for the source, `_g` for the group, `_m` for the method — so the server knows which call a request is before its body arrives. A group inside another is named by its path: `client.billing.invoices.list()` sends `_g=billing.invoices`. A read the routes say may be cached goes as GET, its variables as JSON in `_v`; every other call goes as POST, and how its body is built depends on the type of variables you pass:
 
 ```ts title="JSON vs FormData"
 // JSON body (default for objects)
@@ -159,7 +164,10 @@ const user = await caller.users
 The `onError` and `onSuccess` callbacks run for every request made by this factory. Use them for cross-cutting concerns like authentication redirects or logging:
 
 ```ts title="Global error handling"
-const caller = createProxyCaller<typeof api>("api", {
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+const caller = createProxyCaller(apiRoutes, {
   onSuccess: (data) => {
     // Called after every successful response
     console.log("Response:", data)
@@ -186,8 +194,10 @@ const caller = createProxyCaller<typeof api>("api", {
 By default, HTTP requests are sent to `/api/request`. Override it via `proxyPath.http`:
 
 ```ts title="lib/caller.ts"
-export const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+export const caller = createProxyCaller(apiRoutes, {
   proxyPath: { http: "/api/my-proxy" },
 })
 ```
@@ -201,8 +211,10 @@ If you change the proxy URL, make sure your server handler is mounted at the sam
 `proxyPath` carries per-transport configuration. SSE has a sensible default; WS does not — you must point it at a WebSocket-capable server explicitly.
 
 ```ts title="lib/caller.ts"
-export const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+export const caller = createProxyCaller(apiRoutes, {
   proxyPath: {
     http: "/api/request",
     sse: "/api/sse",
@@ -217,9 +229,20 @@ export const caller = createProxyCaller<typeof api>("api", {
 Calling a WS endpoint without `proxyPath.ws` throws `ConfigurationError("WS_PATH_NOT_CONFIGURED")`. See [standalone server deployment](/docs/deployment/standalone-server) for the runtime matrix.
 </Callout>
 
-## Per-transport merge precedence
+## Per-environment proxy paths
 
-You can declare `proxyPath` once on `defineApi`, then override individual transports per-environment:
+The routes say nothing of where the proxy is: that depends on where the page runs, so the page says it. Read it from what your bundler gives each build — the WS server of local development, a staging host — and leave out what stays the default:
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+export const caller = createProxyCaller(apiRoutes, {
+  proxyPath: { ws: process.env.NEXT_PUBLIC_REALTIME_URL },
+})
+```
+
+A `proxyPath` on `defineApi` is for Studio: its Playground sends a call through the proxy as a page would, at the routes it names there.
 
 ```ts title="api/sources.ts (server)"
 export const api = defineApi({
@@ -227,23 +250,15 @@ export const api = defineApi({
   proxyPath: {
     http: "/api/request",
     sse: "/api/sse",
-    ws: "wss://realtime.example.com",  // prod
+    ws: "ws://localhost:3001",
   },
   groups: { /* ... */ },
 })
 ```
 
-```ts title="lib/caller.dev.ts (browser)"
-// Override only the WS endpoint for local dev — http and sse stay as
-// defined on the source.
-export const caller = createProxyCaller<typeof api>("api", {
-  boundary,
-  proxyPath: { ws: "ws://localhost:3001" },
-})
-```
-
 ## Next Steps
 
+- [Exposing Endpoints](/docs/proxy-mode/expose) — mark what a page may call, and the routes Studio writes from the marks
 - [Server Handler](/docs/proxy-mode/api-route) — set up the server-side endpoint
 - [File Upload](/docs/advanced/upload) — upload files with progress tracking
 - [Proxy Mode Overview](/docs/proxy-mode/overview) — architecture and security model

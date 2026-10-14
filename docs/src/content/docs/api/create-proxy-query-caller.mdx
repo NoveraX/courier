@@ -12,17 +12,20 @@ import { createProxyQueryCaller } from "@noverax/courier-react"
 
 ## Signature
 
-Accepts a source name and `ProxyCallerDefaults` (same as `createProxyCaller`). The defaults are optional for an API of plain requests; an API with streams or channels requires a `boundary` (or the `source`) among them, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group.
+Accepts the routes of an API — the endpoints a page may call and how it reaches each, as Studio writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and `ProxyCallerOptions`, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group, typed from the API the routes were written from, for the endpoints they name alone.
 
 ```ts
-import type { ProxyCallerArguments } from "@noverax/courier"
-import type { DefinedApi } from "@noverax/courier/define"
+import type { ProxyCallerOptions } from "@noverax/courier"
+import type { CourierRoutes, DefinedApi, RoutedApi, RouteShape } from "@noverax/courier/define"
 import type { QueryCallerClient } from "@noverax/courier-react"
 
-declare function createProxyQueryCaller<TApi extends DefinedApi>(
-  source: string,
-  ...defaults: ProxyCallerArguments<TApi>
-): QueryCallerClient<TApi>
+declare function createProxyQueryCaller<
+  TApi extends DefinedApi,
+  TEndpoints extends Readonly<Record<string, RouteShape>>,
+>(
+  routes: CourierRoutes<TApi, TEndpoints>,
+  options?: ProxyCallerOptions,
+): QueryCallerClient<RoutedApi<TApi, TEndpoints>>
 ```
 
 ## Return Type
@@ -45,22 +48,21 @@ A hook's error is typed `Error`, as TanStack Query types it, because not every f
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api", {
-  boundary,
+export const q = createProxyQueryCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
   credentials: "include",
 })
 ```
 
-The `defaults` argument is a `ProxyCallerDefaults` (same shape as [`createProxyCaller`](/docs/api/create-proxy-caller)). Notable fields:
+The `options` argument is a `ProxyCallerOptions` (same shape as [`createProxyCaller`](/docs/api/create-proxy-caller)). Notable fields:
 
-- `proxyPath` — per-transport endpoint paths. `http` and `sse` have built-in defaults; `ws` is mandatory for `useChannel` and has no default. Caller-level fields are merged per-transport over `source.options.proxyPath`.
+- `proxyPath` — per-transport endpoint paths. `http` and `sse` have built-in defaults; `ws` is mandatory for `useChannel` and has no default. The routes do not say it: it depends on where the page is served.
 - `ws` — options of the socket `useChannel` opens: the token, the reconnect backoff, the heartbeat and the queue limits — see [Connection options](/docs/advanced/realtime#connection-options).
-- `boundary` — the result of [`defineBoundary`](/docs/proxy-mode/boundary): the endpoints the browser may reach and the app's proxy paths. Pass it rather than the API object — the hooks name their own transport, so nothing is read off the API, and a value import of it would put its definition in the bundle.
+
+The routes are what the hooks are typed from, and all they know of the API: see [Exposing Endpoints](/docs/proxy-mode/expose). A hook asked for an endpoint they do not name — from JavaScript, or past a cast — fails with `ConfigurationError("ENDPOINT_NOT_IN_ROUTES")` before anything is sent, since the proxy would refuse it.
 
 <Callout variant="warning" title="useChannel requires proxyPath.ws">
 On runtimes that cannot host WebSockets in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda) you must point `proxyPath.ws` at a [standalone `@noverax/courier-server`](/docs/deployment/standalone-server). A `useChannel` without `proxyPath.ws` configured reports `ConfigurationError("WS_PATH_NOT_CONFIGURED")` through its `error` and `onError` when it first opens.
@@ -222,3 +224,4 @@ export default async function UsersPage() {
 - [useQuery Guide](/docs/react-query/use-query) — in-depth usage patterns
 - [useMutation Guide](/docs/react-query/use-mutation) — mutations with optimistic updates
 - [createProxyCaller](/docs/api/create-proxy-caller) — the underlying proxy caller
+- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Studio writes from them

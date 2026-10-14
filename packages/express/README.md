@@ -41,7 +41,7 @@ The Express adapter runs Courier's proxy as Express middleware: it turns the Nod
   <tr>
     <td width="33%" valign="top">
       <h4>One route</h4>
-      <code>courierHandler()</code> answers every endpoint the boundary exposes: <code>GET</code> for reads, <code>POST</code> for writes.
+      <code>courierHandler()</code> answers every endpoint marked <code>.expose()</code>: <code>GET</code> for a read that may be cached, <code>POST</code> for every other call.
     </td>
     <td width="33%" valign="top">
       <h4>The user's session</h4>
@@ -184,11 +184,11 @@ Pair with `createProxyCaller` on the client:
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "./api"
+import { apiRoutes } from "./courier.routes"
 
-// The first argument is the key this source has in your `sources` map —
-// it is what the proxy addresses, and it travels as `?_s=<name>`.
-const caller = createProxyCaller<typeof api>("api", {
+// The routes Courier Studio writes from the endpoints you mark .expose():
+// what a page may call, under the key the source has in your `sources` map.
+const caller = createProxyCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },
 })
 const users = await caller.users.getAll()
@@ -198,8 +198,9 @@ Or with React Query:
 
 ```ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
+import { apiRoutes } from "./courier.routes"
 
-const q = createProxyQueryCaller("api", { proxyPath: { http: "/api/request" } })
+const q = createProxyQueryCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
 ```
 
 <br />

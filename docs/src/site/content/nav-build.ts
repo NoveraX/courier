@@ -10,7 +10,7 @@ export const BUILD_SECTIONS: NavSection[] = [
     items: [
       { title: "Overview", href: "/docs/proxy-mode/overview" },
       { title: "createProxyCaller", href: "/docs/proxy-mode/proxy-caller" },
-      { title: "defineBoundary", href: "/docs/proxy-mode/boundary" },
+      { title: "Exposing Endpoints", href: "/docs/proxy-mode/expose" },
       { title: "Server Handler", href: "/docs/proxy-mode/api-route" },
     ],
   },

@@ -33,8 +33,9 @@ try {
 }`
 
 const globalCode = `import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
 
-const caller = createProxyCaller<typeof api>("api", {
+const caller = createProxyCaller(apiRoutes, {
   // Called for every failed request
   onError: (error) => {
     toast.error(\`Request failed: \${error.status}\`)

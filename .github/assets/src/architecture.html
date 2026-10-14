@@ -66,7 +66,7 @@
   </div>
   <div class="card" style="left: 48px; top: 228px; width: 350px; height: 124px">
     <h3>Browser</h3>
-    <div class="code"><span class="fn">createProxyCaller</span>(<span class="str">"api"</span>, { boundary })</div>
+    <div class="code"><span class="fn">createProxyCaller</span>(apiRoutes)</div>
     <div class="note">Ships endpoint names only: no address, paths or keys.</div>
   </div>
   <div class="card" style="left: 48px; top: 370px; width: 350px; height: 124px">
@@ -85,7 +85,7 @@
       <div class="row"><span class="tick"></span><span>Types inferred end to end, no codegen</span></div>
       <div class="row"><span class="tick"></span><span>Validation with any Standard Schema</span></div>
       <div class="row"><span class="tick"></span><span>Middleware — retry, auth, cache, logging</span></div>
-      <div class="row"><span class="tick"></span><span>A proxy route that refuses every endpoint the boundary does not name</span></div>
+      <div class="row"><span class="tick"></span><span>A proxy route that serves only the endpoints you mark .expose()</span></div>
       <div class="row"><span class="tick"></span><span>Streams that complete, fail or reconnect as the server says</span></div>
       <div class="row"><span class="tick"></span><span>Adapters for Next.js, Nuxt, Hono, Express, Fastify, NestJS and more</span></div>
     </div>

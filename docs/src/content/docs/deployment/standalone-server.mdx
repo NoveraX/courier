@@ -43,11 +43,9 @@ For runtimes in the bottom half of the table, run `@noverax/courier-server` alon
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", {
-  boundary,
+export const caller = createProxyCaller(apiRoutes, {
   proxyPath: {
     http: "/api/request",                // hosted by your Next.js / Cloudflare app
     sse: "/api/sse",                     // hosted by your app

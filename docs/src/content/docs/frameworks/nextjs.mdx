@@ -80,7 +80,7 @@ npm install @noverax/courier @noverax/courier-next @noverax/courier-react @tanst
 
 ## Define your API sources
 
-Create a shared API definition used by all callers. This file can be imported on both server and client:
+Create the API definition the server's callers, the proxy route and Studio share. A page never imports it: it takes the routes Studio writes from it, so the definition stays out of the browser bundle.
 
 ```ts title="lib/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
@@ -92,6 +92,8 @@ type UserList = { data: User[]; total: number }
 
 const users = defineGroup({
   prefix: "users",
+  // A page may call these through the proxy; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").variables<{ page?: number; limit?: number }>().response<UserList>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
@@ -132,13 +134,22 @@ Next.js runs `instrumentation.ts` once at server start, populating the core glob
 
 ## Step 2: Client-side caller (React Query)
 
-Create a query caller for use in client components:
+List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier Studio writes the routes a page's caller takes into `courier.routes.ts` beside it — whenever it loads the config, or now with `npx @noverax/courier-studio routes`; see [Exposing Endpoints](/docs/proxy-mode/expose):
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { sources } from "./lib/sources"
+
+export default defineConfig({ sources })
+```
+
+Create a query caller for use in client components, from the routes of `myApi`:
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/lib/sources"
+import { myApiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("myApi")
+export const q = createProxyQueryCaller(myApiRoutes)
 ```
 
 Use it in client components:
@@ -369,6 +380,8 @@ export function CreateUserForm() {
 ## Full project structure
 
 ```text title="Project structure"
+courier.config.ts         # defineConfig({ sources })
+courier.routes.ts         # written by Studio from the .expose() marks
 app/
   api/request/route.ts    # apiRoute()
   actions/users.ts        # server actions with createAction
@@ -376,7 +389,7 @@ app/
   dashboard/page.tsx      # server component with createServerCaller
 lib/
   sources.ts              # defineApi + defineGroup + endpoint
-  endpoint.ts             # createProxyQueryCaller<typeof api>("myApi")
+  query.ts                # createProxyQueryCaller(myApiRoutes)
   server-caller.ts        # createServerCaller(api)
   actions.ts              # createAction(sources, "myApi")
 ```

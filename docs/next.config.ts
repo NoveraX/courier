@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
   /* Next.js otherwise writes its own guidance files into the project on
      every dev start; the site's tree holds only its own sources. */
   agentRules: false,
+  /* A page that moved keeps its old address, so a link published to it still arrives. */
+  async redirects() {
+    return [
+      {
+        source: "/docs/proxy-mode/boundary",
+        destination: "/docs/proxy-mode/expose",
+        permanent: true,
+      },
+    ]
+  },
 }
 
 const withMDX = createMDX({

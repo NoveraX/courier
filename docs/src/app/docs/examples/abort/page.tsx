@@ -22,10 +22,9 @@ const [header, sidebar, page] = await Promise.all([
 // One request reached the proxy; each call got a copy of its own`
 
 const cancelPreviousCode = `import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
+import { apiRoutes } from "@/courier.routes"
 
-const searchCaller = createProxyCaller<typeof api>("api", {
-  boundary,
+const searchCaller = createProxyCaller(apiRoutes, {
   cancelPrevious: ["misc.slow"],
 })
 

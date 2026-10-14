@@ -52,7 +52,7 @@ const user = await caller.users.getById({ id: "1" })
 Both modes share the same API definition and the same type inference:
 
 - **Direct** — `createCaller(api)` — call backends directly from any runtime (Node.js, Bun, Deno, Cloudflare Workers, server components).
-- **Proxy** — `createProxyCaller<typeof api>("api")` — browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies you name.
+- **Proxy** — `createProxyCaller(apiRoutes)` — browser sends requests through your server, which serves the endpoints you mark `.expose()`, hides API keys, bypasses CORS, and carries the session cookies you name.
 
 <Callout variant="tip" title="Same definitions, two modes">
 You define your API once. Both `createCaller` (direct) and `createProxyCaller` (proxy) consume the same sources with identical type inference.

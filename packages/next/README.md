@@ -48,7 +48,7 @@ The Next.js App Router integration. `apiRoute` serves every endpoint the browser
   <tr>
     <td width="33%" valign="top">
       <h4>One route</h4>
-      <code>apiRoute()</code> answers every endpoint the boundary exposes, in the Node.js and the Edge runtime alike.
+      <code>apiRoute()</code> answers every endpoint marked <code>.expose()</code>, in the Node.js and the Edge runtime alike.
     </td>
     <td width="33%" valign="top">
       <h4>Server Actions</h4>

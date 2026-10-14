@@ -6,13 +6,14 @@ export const metadata = {
 
 ## The pattern
 
-Every Courier factory learns your API's type in one place: from the API object you pass to `createCaller` or `createQueryCaller`, or from the type argument of `createProxyCaller` and `createProxyQueryCaller`. Build each client once, in a module of its own, and export it. Components, loaders and server code import that client, so none of them names a type argument or repeats a default, and a change to the API reaches every call site through that one module.
+Every Courier factory learns your API's type in one place: from the API object you pass to `createCaller` or `createQueryCaller`, or from the routes you pass to `createProxyCaller` and `createProxyQueryCaller`. Build each client once, in a module of its own, and export it. Components, loaders and server code import that client, so none of them repeats an import or a default, and a change to the API reaches every call site through that one module.
 
 ```ts
-// Without it, every file builds its own client and names the type again:
+// Without it, every file builds its own client and repeats its options:
 import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
 
-const users = await createProxyCaller<typeof api>("api", { boundary }).users.getAll()
+const users = await createProxyCaller(apiRoutes, { timeout: 10_000 }).users.getAll()
 ```
 
 ```ts
@@ -26,7 +27,7 @@ const users = await caller.users.getAll()
 
 ### Step 1: Define your API
 
-Create your groups and API definition with `courier`, `defineGroup` and `defineApi`:
+Create your groups and API definition with `courier`, `defineGroup` and `defineApi`, and mark what a page may call through the proxy with `expose`:
 
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -37,6 +38,7 @@ export type User = { id: number; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
@@ -58,34 +60,23 @@ export const api = defineApi({
 
 ### Step 2: Build each client once
 
-Give each client a module that builds it and exports it. In the browser, import the API as a **type** and pass a [boundary](/docs/proxy-mode/boundary): the type argument carries every group, endpoint, variable and response type, and the boundary carries the transports, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
-
-```ts title="api/boundary.ts"
-import { defineBoundary } from "@noverax/courier/define"
-
-export const boundary = defineBoundary({
-  source: "api",
-  expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
-})
-```
+Give each client a module that builds it and exports it. In the browser, pass the routes Studio writes into `courier.routes.ts` from your marks — see [Exposing Endpoints](/docs/proxy-mode/expose). They carry every group, endpoint, variable and response type a page may use, and how each endpoint is reached, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", { boundary })
+export const caller = createProxyCaller(apiRoutes)
 ```
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api", { boundary })
+export const q = createProxyQueryCaller(apiRoutes)
 ```
 
-The boundary also belongs on the API itself, so the server refuses what it does not name: see [Wiring the server](/docs/proxy-mode/boundary#wiring-the-server).
+The proxy serves only what the marks open, whichever client calls it.
 
 On the server, where the definition is already present, pass the API object and the type comes with it:
 
@@ -148,24 +139,21 @@ If your app connects to several backends, build one client per source, each name
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { mainApi, paymentApi } from "@/api"
-import { mainBoundary, paymentBoundary } from "@/api/boundary"
+import { mainApiRoutes, paymentApiRoutes } from "@/courier.routes"
 
-export const mainQ = createProxyQueryCaller<typeof mainApi>("mainApi", { boundary: mainBoundary })
-export const paymentQ = createProxyQueryCaller<typeof paymentApi>("paymentApi", {
-  boundary: paymentBoundary,
-})
+export const mainQ = createProxyQueryCaller(mainApiRoutes)
+export const paymentQ = createProxyQueryCaller(paymentApiRoutes)
 
 // mainQ.users.useQuery("getAll")      ← knows mainApi's groups
 // paymentQ.products.useQuery("list")  ← knows paymentApi's groups
 ```
 
 <Callout variant="info" title="One module, not a global declaration">
-Courier keeps no global registry of API types, and a factory never looks one up: the type comes from the API object or the type argument. The module that builds a client is therefore the single place its type is named. When you add a group or a method, every `q.{group}.useQuery()` and `caller.{group}.{method}()` that imports the client sees it at once.
+Courier keeps no global registry of API types, and a factory never looks one up: the type comes from the API object or the routes. The module that builds a client is therefore the single place its type is named. When you add a group or a method, every `q.{group}.useQuery()` and `caller.{group}.{method}()` that imports the client sees it at once.
 </Callout>
 
 ## Next steps
 
 - [Project Setup](/docs/project-setup) — recommended file structure, with the client modules in `lib/`
-- [defineBoundary](/docs/proxy-mode/boundary) — what the browser may call, and why it keeps the definition out of the bundle
+- [Exposing Endpoints](/docs/proxy-mode/expose) — what a page may call, and the routes that keep the definition out of the bundle
 - [Options](/docs/advanced/options) — source-level and per-request configuration

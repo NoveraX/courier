@@ -135,7 +135,7 @@ bun create @noverax/courier
 | Fastify | a plugin on `/api/request` and `/courier` | `.courier/` kept out of `fastify start -w` |
 | NestJS | a module on `/api/request` and `/courier` | the module imported into your root module |
 
-Every setup adds `courier.config.ts` — the list of your APIs, which your server, Studio and the MCP server read — `courier.mocks.ts`, your API's definition with its Zod schemas, and the boundary that holds the browser to the endpoints it may call.
+Every setup adds `courier.config.ts` — the list of your APIs, which your server, Studio and the MCP server read — `courier.mocks.ts`, your API's definition with its Zod schemas and the `.expose()` marks that open its endpoints to a page, and, where a page calls it through your server, `courier.routes.ts`: the routes the page's client takes, as Studio writes them from the marks.
 
 <br />
 

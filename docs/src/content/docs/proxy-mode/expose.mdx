@@ -1,0 +1,232 @@
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy" }
+
+## Overview
+
+The proxy addresses endpoints by name. A page's call carries `?_s=api&_g=users&_m=getAll`, and the server resolves those names against the sources your application registered — all of them, including the ones only server code was ever meant to call.
+
+So the proxy serves only what you mark. An endpoint, a group or a whole API says `expose` where it is defined, and a call to an endpoint no mark opens is refused as if the endpoint did not exist. A new endpoint is the server's until someone marks it, so one written for a cron job or an admin tool never becomes a page's to call by accident — and with it the server's credentials, which the proxy lends every call it serves.
+
+The page learns the same answer from a module Studio writes from your marks: the routes. They name each endpoint a page may call and how the page reaches it, and nothing else — not the upstream host, not your middleware, not an endpoint you kept back.
+
+## Marking endpoints
+
+```ts title="api/index.ts"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { endpoint, stream } = courier()
+
+type User = { id: string; name: string }
+
+const users = defineGroup({
+  prefix: "users",
+  expose: true,
+  endpoints: {
+    getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
+    getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string }>().response<User>(),
+    purge: endpoint.del(":id").variables<{ id: string }>().expose(false),
+  },
+})
+
+const notifications = defineGroup({
+  prefix: "notifications",
+  endpoints: {
+    feed: stream.get("feed").response<{ text: string }>().expose(),
+  },
+})
+
+const admin = defineGroup({
+  prefix: "admin",
+  endpoints: {
+    exportPayouts: endpoint.post("payouts/export"),
+  },
+})
+
+export const api = defineApi({
+  baseURL: process.env.API_URL!,
+  groups: { users, notifications, admin },
+})
+```
+
+The nearest mark decides:
+
+| mark | what it opens or shuts |
+| --- | --- |
+| `.expose()` on an endpoint | the endpoint itself; `.expose(false)` shuts it |
+| `expose` on a group | each endpoint of the group, and of the groups inside it, that nothing nearer marks |
+| `expose` on the API | every endpoint that nothing nearer marks |
+| none at all | nothing: the endpoint is the server's alone |
+
+Above, every endpoint of `users` is open but `purge`, `notifications.feed` is open by its own mark, and nothing marks `admin.exportPayouts`, so no page reaches it. An API shut with `expose: false` may still open one group, and an open group may shut one endpoint. A mark set to anything but `true` shuts what it is set on, so `expose: "false"` in a JavaScript config fails closed rather than open.
+
+Everything a mark opens is a public API. Any browser, script or server can call it through your proxy, and it runs with what your server has: the key in the source's `headers`, the network the server sits in. The origin check stops another site's page from driving it with your users' cookies; a script sends no `Origin` and is served. Expose a read as you would publish it, and a write as you would put a form on the open web: let it act for a user only with the user's [session](/docs/server-side/session) and its double-submit token, put a captcha before one anyone may make, and limit how often one caller calls — see [Rate limits](/docs/proxy-mode/overview#rate-limits). An endpoint of a group inside another is named by the whole path, `billing.invoices.list`.
+
+## What the proxy answers
+
+A call to an endpoint no mark opens is answered exactly as a call to a name the source does not define: `400`, with `[api][admin][exportPayouts]: method not found`. Saying "forbidden" would confirm that the endpoint exists, which is the one thing a caller guessing names is trying to learn.
+
+While you develop, the server's log says why, once for each endpoint:
+
+```text
+[api][admin][exportPayouts]: a page called it, and nothing marks it .expose(), so the proxy answered as for an unknown name. Mark it where it is defined if a page may call it, and write the routes again.
+```
+
+In production it says nothing. The marks gate every route of the proxy — HTTP calls, streams and sockets alike — since the proxy resolves each call against the source it was registered as.
+
+<Callout variant="tip" title="Server-side callers are unaffected">
+The marks gate the calls that arrive over the proxy. Code running in your own process holds the API object and never addresses anything by name, so `createCaller(api)` reaches every endpoint, marked or not.
+</Callout>
+
+## The routes module
+
+Studio writes the routes into `courier.routes.ts`, beside your `courier.config.ts`, from the endpoints marked in every source the config declares. For the API above:
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./api"
+
+export default defineConfig({ sources: { api } })
+```
+
+```ts title="courier.routes.ts"
+// Written by Courier Studio from courier.config.ts. Do not edit it:
+// `courier-studio routes` writes it again from the endpoints marked .expose().
+
+import type { CourierRoutes, RouteMap } from "@noverax/courier/define";
+
+import type config from "./courier.config";
+
+type Sources = (typeof config)["sources"];
+
+const apiEndpoints = {
+  "notifications.feed": { transport: "sse" },
+  "users.create": { type: "mutation" },
+  "users.getAll": { type: "query", get: true },
+  "users.getById": { type: "query" },
+} as const satisfies RouteMap<Sources["api"]>;
+
+/** What a page's proxy client may call of `api`, and how it reaches each endpoint. */
+export const apiRoutes: CourierRoutes<Sources["api"], typeof apiEndpoints> = {
+  source: "api",
+  endpoints: apiEndpoints,
+};
+```
+
+Studio writes the module each time it loads the config — when it starts, and when you save a file the config reads — and only when the module would change; `courier-studio routes` writes it without starting Studio. The module holds data and types alone: it imports the config as a type, so a page that imports it bundles the endpoints' names and shapes and nothing of their definitions. It is formatted as the rest of your project is, by the formatter the project uses.
+
+Commit it with the marks. It answers "what can a page call in this release" in one file that a review reads and a diff shows. A CI step keeps the two together:
+
+```bash
+npx @noverax/courier-studio routes --check
+```
+
+It writes nothing, and fails when the module on disk is not what the marks give: a mark changed without the module written again fails the build rather than a page.
+
+`studio.routes` in `courier.config.ts` puts the module somewhere else, by its path from the project root, or `false` keeps the project without one — see [defineConfig](/docs/api/config). Studio never writes over a file it did not write: the module's first line says it is Studio's. With no endpoint marked, the module exports nothing.
+
+## Wiring the client
+
+Give the client the routes:
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+export const client = createProxyCaller(apiRoutes)
+```
+
+```ts title="lib/query.ts"
+import { createProxyQueryCaller } from "@noverax/courier-react"
+import { apiRoutes } from "@/courier.routes"
+
+export const q = createProxyQueryCaller(apiRoutes)
+```
+
+The client is typed from the API the routes were written from, with the endpoints they name alone: `client.admin.exportPayouts()` does not compile, and the hooks of `q` offer no endpoint the proxy would refuse. Called anyway — from JavaScript, or past a cast — the client throws a `ConfigurationError` with the code `ENDPOINT_NOT_IN_ROUTES` before anything is sent.
+
+The routes do not say where the proxy is, since that depends on where the page is served. The client sends to `/api/request` and `/api/sse` on the page's own origin, and opens a socket only where its `proxyPath` names one — see [createProxyCaller](/docs/proxy-mode/proxy-caller#realtime-sse-and-ws-proxy-paths):
+
+```ts
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+export const client = createProxyCaller(apiRoutes, {
+  proxyPath: { ws: "wss://realtime.example.com" },
+})
+```
+
+## The shapes
+
+Each entry says how the client reaches its endpoint:
+
+| shape | the endpoint it describes |
+| --- | --- |
+| `{ type: "query", get: true }` | a read that may be cached: it declares `.cache()`, and its variables are not sensitive |
+| `{ type: "query" }` | any other read — declared with `get`, `head`, `options` or `query`, or marked `.reads()` |
+| `{ type: "mutation" }` | a write: every other verb |
+| `{ transport: "sse" }` | a server-sent event stream |
+| `{ transport: "ws" }` | a socket the server pushes on |
+| `{ transport: "ws", bidirectional: true }` | a socket the caller may also send on — a channel with `.send()` |
+
+A read that may be cached goes to the proxy as GET, its variables in the address, so a browser and a CDN may keep its answer. Every other call goes as POST: GET gains a read nothing when nothing on the way may keep the answer, and POST keeps the variables of a read nobody marked out of every log between the page and your server. A read whose definition declares `sensitiveVariables` goes as POST even with `.cache()`, and the proxy refuses it over GET.
+
+## Routes without Studio
+
+A project with no `courier.config.ts` writes its routes by hand. Held to the API by `RouteMap`, they cannot drift from it:
+
+```ts title="lib/routes.ts"
+import type { CourierRoutes, RouteMap } from "@noverax/courier/define"
+import type { api } from "@/api"
+
+const endpoints = {
+  "users.getAll": { type: "query", get: true },
+  "users.create": { type: "mutation" },
+  "notifications.feed": { transport: "sse" },
+} as const satisfies RouteMap<typeof api>
+
+export const apiRoutes: CourierRoutes<typeof api, typeof endpoints> = { source: "api", endpoints }
+```
+
+A path the API does not define, or a shape it declares otherwise, does not compile:
+
+```ts
+import type { RouteMap } from "@noverax/courier/define"
+import type { api } from "@/api"
+
+// @ts-expect-error — no such endpoint
+const misspelt = { "users.getAl": { type: "query" } } as const satisfies RouteMap<typeof api>
+
+// @ts-expect-error — it is a stream
+const notARead = { "notifications.feed": { type: "query" } } as const satisfies RouteMap<typeof api>
+
+// @ts-expect-error — a POST writes
+const aWrite = { "users.create": { type: "query" } } as const satisfies RouteMap<typeof api>
+```
+
+The API is imported **as a type**. That is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint, the ones you held back included. The module Studio writes imports the config the same way.
+
+The marks still decide what the proxy serves. Routes that name an endpoint no mark opens give the page a client that offers it and a proxy that refuses it. `courier-studio routes --check` keeps the module Studio writes in step with the marks; one written by hand is yours to keep in step.
+
+## What the browser learns
+
+The routes are plain data, and they are all the client gets:
+
+```json
+{
+  "source": "api",
+  "endpoints": {
+    "notifications.feed": { "transport": "sse" },
+    "users.create": { "type": "mutation" },
+    "users.getAll": { "type": "query", "get": true },
+    "users.getById": { "type": "query" }
+  }
+}
+```
+
+No upstream host. No middleware. No endpoint you did not mark. An API's `cancelPrevious` and `coalesce` come with them where the API sets either, since the client honours both.
+
+Studio's Playground calls through the proxy as a page would, and refuses an endpoint no mark opens, saying where to open it — so what you try there is what a page may do.
+
+<Callout variant="warning" title="Direct mode is a different trade">
+In direct mode the browser calls your backend itself, so it must hold the API definition — the URL and the endpoint paths are in the bundle by construction. The marks cannot change that, and are not meant to. Proxy mode is the one that keeps them on the server.
+</Callout>

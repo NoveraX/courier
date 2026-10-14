@@ -13,7 +13,7 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { loadCourierConfig } from "../src/server/config-loader";
-import { loadProjectEnv } from "../src/server/project-env";
+import { createProjectEnv, loadProjectEnv } from "../src/server/project-env";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 const NAMES = [
@@ -108,5 +108,60 @@ describe("a config whose address comes from the project's variables", () => {
     const { config } = await loadCourierConfig(root);
 
     expect(config.sources.shop?.options?.baseURL).toBe("https://api.example.com/v2/shop");
+  });
+});
+
+describe("the variables read again when their files change", () => {
+  it("take the value their file gives now, and only those that changed are named", () => {
+    write(".env.local", ["COURIER_TEST_API_URL=https://a.example.com", "COURIER_TEST_REGION=eu"]);
+    const env = createProjectEnv(root);
+    write(".env.local", [
+      "# moved to the new host",
+      "COURIER_TEST_API_URL=https://b.example.com",
+      "COURIER_TEST_REGION=eu",
+    ]);
+
+    expect(env.reread()).toEqual(["COURIER_TEST_API_URL"]);
+    expect(process.env.COURIER_TEST_API_URL).toBe("https://b.example.com");
+  });
+
+  it("are gone once their files no longer give them", () => {
+    write(".env", ["COURIER_TEST_TOKEN=t1"]);
+    const env = createProjectEnv(root);
+    write(".env", ["# no token here"]);
+
+    expect(env.reread()).toEqual(["COURIER_TEST_TOKEN"]);
+    expect(process.env.COURIER_TEST_TOKEN).toBeUndefined();
+  });
+
+  it("come from a file made after Studio started, ahead of the files read first", () => {
+    write(".env", ["COURIER_TEST_API_URL=https://from-env.example.com"]);
+    const env = createProjectEnv(root);
+    write(".env.local", ["COURIER_TEST_API_URL=https://from-local.example.com"]);
+
+    expect(env.reread()).toEqual(["COURIER_TEST_API_URL"]);
+    expect(env.loaded).toEqual([".env.local", ".env"]);
+    expect(process.env.COURIER_TEST_API_URL).toBe("https://from-local.example.com");
+  });
+
+  it("never change one the process was started with", () => {
+    process.env.COURIER_TEST_TIER = "from-the-shell";
+    write(".env", ["COURIER_TEST_TIER=from-the-file"]);
+    const env = createProjectEnv(root);
+    write(".env", ["COURIER_TEST_TIER=changed"]);
+
+    expect(env.reread()).toEqual([]);
+    expect(process.env.COURIER_TEST_TIER).toBe("from-the-shell");
+  });
+
+  it("leave one something else has given another value since", () => {
+    write(".env", ["COURIER_TEST_REGION=eu"]);
+    const env = createProjectEnv(root);
+    process.env.COURIER_TEST_REGION = "set-by-the-app";
+    write(".env", ["# no region here"]);
+
+    env.reread();
+
+    expect(process.env.COURIER_TEST_REGION).toBe("set-by-the-app");
   });
 });

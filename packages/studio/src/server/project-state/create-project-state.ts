@@ -4,6 +4,7 @@ import type { Namespace } from "socket.io";
 import type { MocksConsumers } from "../apply-loaded-mocks";
 import type { BindingTable } from "../catalog/binding-table";
 import { startConfigWatcher } from "../config-watcher";
+import type { ProjectEnv } from "../project-env";
 import { createUpdateChecks } from "../update-checks";
 import type { WatcherStatus } from "../watcher-status";
 import { withinBudget } from "../within-budget";
@@ -26,6 +27,8 @@ export interface ProjectStateDeps {
   mocks: MocksConsumers;
   /** How long the first load and each reload may take (default: `CONFIG_LOAD_TIMEOUT_MS`). */
   loadTimeoutMs?: number;
+  /** The project's variables, read again — and the config with them — when their files change. */
+  env?: ProjectEnv | undefined;
   /**
    * Handed the config the first load read — `null` when that load failed —
    * once, before its outcome is applied: what Studio reads from the project
@@ -104,6 +107,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
       outcomes.failed(error);
     },
     loadTimeoutMs: deps.loadTimeoutMs ?? CONFIG_LOAD_TIMEOUT_MS,
+    env: deps.env,
   });
 
   async function fresh(budgetMs: number): Promise<FreshSnapshot> {

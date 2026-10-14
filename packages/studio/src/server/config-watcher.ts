@@ -50,8 +50,10 @@ import { armWatchSet } from "./arm-watch-set";
 import { createChainLoad } from "./chain-load";
 import type { LoadedCourierConfig } from "./config-loader";
 import { createEditRunner } from "./edit-runner";
+import { watchProjectEnv } from "./env-watch";
 import type { ExclusiveTransaction } from "./exclusive-context";
 import { inputsOnDisk } from "./inputs-on-disk";
+import type { ProjectEnv } from "./project-env";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./project-state/budgets";
 import type { ProjectInputs } from "./read-project-inputs";
 import { createReloadQueue } from "./reload-queue";
@@ -74,6 +76,8 @@ export interface ConfigWatcherDeps {
   onFailed(error: unknown): void;
   /** How long the first load and each reload may take (default: `CONFIG_LOAD_TIMEOUT_MS`). */
   loadTimeoutMs?: number;
+  /** The project's variables, read again — and the config with them — when their files change. */
+  env?: ProjectEnv | undefined;
 }
 
 export interface ConfigWatcher {
@@ -172,6 +176,7 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
     onDegraded: reportDegradation,
   });
   const arming = armWatchSet(watchSet, deps);
+  const envWatch = watchProjectEnv(deps, queue.request, reportDegradation);
 
   function apply(loaded: LoadedCourierConfig): void {
     latest = loaded;
@@ -213,6 +218,7 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
     await started;
     try {
       if (!(await watchSet.sweep(until))) return false;
+      if (envWatch && !(await envWatch.sweep(until))) return false;
     } catch (error) {
       log.warn("Studio could not compare the files it watches with the disk", error);
       return false;
@@ -223,6 +229,8 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
 
   async function reload(changed: string[]): Promise<void> {
     if (stopped) return;
+    /* On the chain, so a load reads the variables whole: those of before, or those of after. */
+    if (envWatch?.settles(changed)) return;
     if (latest === deps.current() && runsWhatChangedHolds(deps.current(), changed)) return;
     /* The page shows these; the project root says where they are. */
     deps.watcherStatus?.emitChange(
@@ -245,6 +253,7 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
     stop(): void {
       stopped = true;
       watchSet.stop();
+      envWatch?.stop();
     },
     settled: queue.settled,
     catchUp,

@@ -4,6 +4,8 @@
 
 import type { CourierStudioConfig } from "@noverax/courier/config";
 
+import type { ProjectEnv } from "./project-env";
+
 export interface StudioServerOptions {
   /**
    * First port handed to a managed mock that names none. Left out, it is
@@ -16,6 +18,13 @@ export interface StudioServerOptions {
   host?: string | undefined;
   /** Project root directory — all file paths resolve relative to this (default: process.cwd()) */
   projectRoot?: string | undefined;
+  /**
+   * The project's variables, as `courier-studio` reads them from its env
+   * files: read again, and the config with them, when the files change.
+   * Studio started inside an application's development server leaves it
+   * out, as that server keeps the variables.
+   */
+  projectEnv?: ProjectEnv | undefined;
   /**
    * Called once Studio listens, with the URL a browser opens. Given both
    * `port` and `host`, Studio listens at once and serves the project as

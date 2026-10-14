@@ -17,7 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { answerShapeOf } from "@noverax/courier/internal";
+import { answerShapeOf } from "@noverax/courier-studio-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/config-loader";

@@ -8,6 +8,7 @@ import type {
   RequestShapeEvent,
   RequestStartEvent,
 } from "../../events";
+import { answerShapeOf } from "../answer-shape";
 
 /** Create an event with session envelope */
 const createEvent = <TEvent extends AnyStudioEvent>(
@@ -110,15 +111,17 @@ export function wireRequestHooks(
     );
   };
 
-  studioHooks.onAnswerShape = (e) => {
+  studioHooks.onAnswer = (e) => {
+    /* Read now, before the response schema reads the answer and strips what it does not declare. */
+    const { shape, cut } = answerShapeOf(e.data);
     bus.emit(
       createEvent<RequestShapeEvent>(sessionId, {
         id: e.requestId,
         type: "request:shape",
         timestamp: e.timestamp,
         requestId: e.requestId,
-        shape: e.shape,
-        cut: e.cut,
+        shape,
+        cut,
       }),
     );
   };

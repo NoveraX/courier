@@ -71,7 +71,6 @@ export {
   type StudioHooks,
   studioHooks,
 } from "../studio";
-export { type AnswerShape, answerShapeOf, type ShapeType } from "../studio/answer-shape";
 export { CARRIED_BODY_BYTES, type CarriedBody, carriedBody } from "../studio/carried-body";
 export {
   type BodyPart,

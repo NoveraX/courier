@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src", "courier.config.ts", "courier.mocks.ts"]
+  "include": ["src", "courier.config.ts", "courier.mocks.ts", "courier.routes.ts"]
 }

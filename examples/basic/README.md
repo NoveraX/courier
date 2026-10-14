@@ -36,12 +36,14 @@ A REST backend that knows nothing of Courier — it could be FastAPI, Rails or
 Go — is defined once in [`src/api.ts`](src/api.ts) and called three ways:
 
 - **Server code** calls the backend directly ([`src/direct.ts`](src/direct.ts)).
-- **A page** calls it through your server ([`src/client.ts`](src/client.ts)). It
-  imports the API as a type and the boundary as its only value, so the
-  backend's address and paths never ship with the page.
+- **A page** calls it through your server ([`src/client.ts`](src/client.ts)).
+  Its one value from the API is the routes module,
+  [`courier.routes.ts`](courier.routes.ts), which Studio writes from the
+  endpoints marked `.expose()`, so the backend's address and paths never ship
+  with the page.
 - **Your server** runs Courier's proxy ([`src/server.ts`](src/server.ts)) and
-  answers only the endpoints the boundary in
-  [`src/boundary.ts`](src/boundary.ts) names.
+  answers only the endpoints marked `.expose()` in [`src/api.ts`](src/api.ts);
+  any other name is answered as one it does not know.
 
 The API also has a `live` group: `live.ticks` streams the backend's own
 server-sent events, a tick a second, and `live.chat` is a chat your server
@@ -69,6 +71,9 @@ npm run studio --workspace examples/basic     # Courier Studio, on :6280
 npm run upstream --workspace examples/basic   # the backend, on :4401
 npm run server --workspace examples/basic     # the proxy, on :3001
 ```
+
+Studio writes `courier.routes.ts` again whenever a `.expose()` mark changes;
+`npm run routes --workspace examples/basic` writes it without Studio.
 
 The server connects to Studio through `attachRuntime()` in
 [`src/dev.ts`](src/dev.ts): Studio's Timeline shows each request the proxy

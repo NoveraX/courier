@@ -1,11 +1,11 @@
 import { createProxyCaller } from "@noverax/courier";
 
-import type { api } from "./api";
-import { boundary } from "./boundary";
+import { apiRoutes } from "../courier.routes";
+import { PROXY_PATH } from "./proxy-path";
 
 /**
- * What a page calls. It imports the API as a type and the boundary as its
- * only value, so the upstream's address and paths never ship with it; the
- * boundary also says where the server's proxy routes are.
+ * What a page calls. Its one value from the API is the routes module, which
+ * Studio writes from the endpoints marked `.expose()`, so the upstream's
+ * address and paths never ship with it.
  */
-export const caller = createProxyCaller<typeof api>("api", { boundary });
+export const caller = createProxyCaller(apiRoutes, { proxyPath: PROXY_PATH });

@@ -5,7 +5,7 @@ import { sources } from "./api";
 /**
  * The application's own server: Courier's proxy in front of the upstream.
  * A browser reaches the upstream only through it, and only at the endpoints
- * the boundary names.
+ * marked `.expose()`.
  *
  * @param port - Where it listens, on 127.0.0.1
  * @returns The listening server

@@ -1,6 +1,5 @@
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 
-import { boundary } from "./boundary";
 import { PROXY_PATH } from "./proxy-path";
 
 const { endpoint, stream, channel } = courier();
@@ -23,8 +22,10 @@ export interface ChatMessage {
   text: string;
 }
 
+/* A page may call every endpoint of both groups: each is marked `expose: true`. */
 const users = defineGroup({
   prefix: "users",
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
@@ -34,6 +35,7 @@ const users = defineGroup({
 
 const live = defineGroup({
   prefix: "live",
+  expose: true,
   endpoints: {
     /* The upstream's own server-sent events: a tick a second, for as long as the caller listens. */
     ticks: stream.response<Tick>().get("ticks"),
@@ -57,7 +59,6 @@ const live = defineGroup({
 export const api = defineApi({
   baseURL: process.env.API_URL ?? "http://127.0.0.1:4401",
   proxyPath: PROXY_PATH,
-  boundary,
   groups: { users, live },
 });
 

@@ -8,7 +8,8 @@
     "demo": "tsx src/demo/run.ts",
     "upstream": "tsx src/upstream/main.ts",
     "app": "tsx src/app/main.ts",
-    "traffic": "tsx src/traffic/main.ts"
+    "traffic": "tsx src/traffic/main.ts",
+    "routes": "courier-studio routes"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

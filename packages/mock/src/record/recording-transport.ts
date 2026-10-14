@@ -3,6 +3,7 @@ import type { AnyDefinedApi } from "@noverax/courier/define";
 import {
   createDirectHTTPExecutor,
   createProxyHTTPExecutor,
+  routesOf,
   withoutTrailingSlashes,
 } from "@noverax/courier/internal";
 
@@ -50,10 +51,14 @@ export function createRecordingTransport(
       proxyPath: { http: proxy.url },
       source: config.source,
     });
+    const asGet = cachedReads(config.source, proxy.source);
     return {
       call: async (group, method, variables, options) =>
         asResponse(await execute(group, method, variables, options, true)),
-      describe: (group, method) => ({ method: "POST", url: proxyUrl(proxy, group, method) }),
+      describe: (group, method) => ({
+        method: asGet.has(group ? `${group}.${method}` : method) ? "GET" : "POST",
+        url: proxyUrl(proxy, group, method),
+      }),
     };
   }
 
@@ -75,6 +80,13 @@ export function createRecordingTransport(
 }
 
 /* The proxy route names the call in its query, as the proxy caller sends it. */
+/* The reads a proxy client sends as GET, its variables in the address: those that may be cached. */
+function cachedReads(source: AnyDefinedApi, name: string): ReadonlySet<string> {
+  const { endpoints } = routesOf(source, name);
+  const shapes: ReadonlyArray<[string, unknown]> = Object.entries(endpoints);
+  return new Set(shapes.filter(([, shape]) => prop(shape, "get") === true).map(([path]) => path));
+}
+
 function proxyUrl(proxy: { url: string; source: string }, group: string, method: string): string {
   const routing = new URLSearchParams(
     group ? { _s: proxy.source, _g: group, _m: method } : { _s: proxy.source, _m: method },

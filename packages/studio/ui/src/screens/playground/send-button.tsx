@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { CornerDownLeft, Loader, Radio, Send, Square, Wifi } from "lucide-react";
 
+import { isApplePlatform } from "@/lib/apple-platform";
+
 import { cn } from "@/lib/utils";
 
 /** What the primary button does now. */
@@ -23,9 +25,9 @@ interface SendButtonProps {
 
 /**
  * The Playground's primary button: Send, then Sending while a call is in
- * flight; Subscribe for a stream, Unsubscribe while it is open. ⌘↵ does
- * what it says, which the button shows where there is a keyboard to press
- * it on.
+ * flight; Subscribe for a stream, Unsubscribe while it is open. ⌘↵ —
+ * Ctrl+Enter off a Mac — does what it says, which the button shows where
+ * there is a keyboard to press it on.
  *
  * @param props - What it does now, the endpoint's transport, and what a click does
  * @returns The button
@@ -67,7 +69,7 @@ export function SendButton({
       {action !== "sending" && (
         <span aria-hidden="true" className="ml-1 flex items-center gap-0.5 pointer-coarse:hidden">
           <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-chip bg-current/16 px-1 text-badge leading-none font-semibold">
-            ⌘
+            {isApplePlatform() ? "⌘" : "Ctrl"}
           </span>
           <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-chip bg-current/16 px-1">
             <CornerDownLeft className="size-2.75" />

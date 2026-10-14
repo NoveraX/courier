@@ -31,8 +31,8 @@ export interface PaletteEntry {
   label: string;
   meta: string;
   icon: LucideIcon;
-  /** The shortcut that runs it outside the palette. */
-  hint?: string;
+  /** The keys that run it outside the palette, as the handlers name them: `["mod", "E"]`. */
+  keys?: readonly string[];
   /** Set in the mono face: a request's endpoint. */
   mono?: boolean;
   action: PaletteAction;

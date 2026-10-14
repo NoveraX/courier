@@ -26,7 +26,7 @@ export interface RunInput {
 /**
  * The Playground's primary action and what runs it: Send for a call — a
  * form's files read first — Subscribe for a stream, Unsubscribe while one
- * is open, nothing while a call is in flight; ⌘↵ runs it too. A call in
+ * is open, nothing while a call is in flight; ⌘↵ or Ctrl+Enter runs it too. A call in
  * flight can be cancelled.
  *
  * @param input - The endpoint, the editors, the mode, the body, the run shown and what follows a send

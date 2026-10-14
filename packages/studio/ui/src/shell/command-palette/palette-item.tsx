@@ -1,5 +1,6 @@
 import { Command } from "cmdk";
 
+import { Shortcut } from "@/design/shortcut";
 import { cn } from "@/lib/utils";
 import type { PaletteEntry } from "./palette-entries";
 
@@ -36,11 +37,7 @@ export function PaletteItem({ entry, onRun }: PaletteItemProps): React.ReactNode
       <span className={cn("text-item", entry.mono && "font-mono")}>{entry.label}</span>
       <span className="truncate text-small text-fg-subtle">{entry.meta}</span>
       <span className="flex-1" />
-      {entry.hint && (
-        <span className="font-mono text-meta text-fg-subtle pointer-coarse:hidden">
-          {entry.hint}
-        </span>
-      )}
+      {entry.keys && <Shortcut keys={entry.keys} className="pointer-coarse:hidden" />}
     </Command.Item>
   );
 }

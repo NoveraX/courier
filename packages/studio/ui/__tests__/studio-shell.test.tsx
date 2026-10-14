@@ -99,6 +99,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/* The keycaps an option shows, each key's label in order. */
+function keysOf(option: HTMLElement): string[] {
+  return [...option.querySelectorAll('kbd kbd[aria-hidden="true"]')].map(
+    (key) => key.textContent ?? "",
+  );
+}
+
 describe("the shell", () => {
   it("names the project and Studio's version as Studio gives them, and the app attached", async () => {
     attach();
@@ -197,10 +204,19 @@ describe("the shell", () => {
       .map((option) => option.textContent ?? "");
     expect(options).toContain("TimelineInspect");
     expect(options).toContain("Get startedSetup");
-    expect(options).toContain("Pause recording⌘ .");
     expect(options).toContain("Show streamsSSE · WebSocket");
-    expect(options).toContain("Export the requestsas HAR⌘ E");
-    expect(options).toContain("Clear captured requests⌘ ⌫");
+    /* The test's page is no Mac's: its keys read Ctrl, as Windows and Linux label them. */
+    expect(keysOf(within(dialog).getByRole("option", { name: /^Pause recording/ }))).toEqual([
+      "Ctrl",
+      ".",
+    ]);
+    expect(keysOf(within(dialog).getByRole("option", { name: /^Export the requests/ }))).toEqual([
+      "Ctrl",
+      "E",
+    ]);
+    expect(
+      keysOf(within(dialog).getByRole("option", { name: /^Clear captured requests/ })),
+    ).toEqual(["Ctrl", "Backspace"]);
     expect(within(dialog).queryByText("Recent requests")).toBeNull();
     expect(within(dialog).getByText(/results$/).textContent).toMatch(/^\d+ results$/);
   });

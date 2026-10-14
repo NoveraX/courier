@@ -13,7 +13,7 @@ interface CodeEditorProps {
 
 const INDENT = "  ";
 
-/* Tab indents, Shift+Tab outdents the line, ⌘/ comments the lines out or back in. */
+/* Tab indents, Shift+Tab outdents the line, ⌘/ or Ctrl+/ comments the lines out or back in. */
 function edit(
   event: React.KeyboardEvent<HTMLTextAreaElement>,
   value: string,
@@ -39,7 +39,7 @@ function edit(
 /**
  * The Playground's JSON editor: numbered lines, the text coloured as JSON
  * with comments, the caret in the brand colour. Tab indents, Shift+Tab
- * outdents, ⌘/ comments lines out — a commented line is not sent. On a
+ * outdents, ⌘/ or Ctrl+/ comments lines out — a commented line is not sent. On a
  * touch screen its text is large enough that a phone does not zoom in on
  * it, and the keyboard leaves it as typed: no capitals, corrections or
  * curly quotes.

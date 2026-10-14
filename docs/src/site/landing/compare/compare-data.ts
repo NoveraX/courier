@@ -68,7 +68,7 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     ],
   },
   {
-    need: "No code generation",
+    need: "No generated types",
     icon: FileCode,
     cells: [cell("yes", "None"), cell("yes", "None"), cell("yes", "None"), cell("yes", "None")],
   },

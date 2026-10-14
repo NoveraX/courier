@@ -118,7 +118,7 @@ function HeroStatus({ refused }: { refused: boolean }) {
           : "✓ 0 errors · every call typed from api/sources.ts"}
       </span>
       <span className="ml-auto hidden whitespace-nowrap min-[640px]:inline">
-        0 generated files · inferred from 1 definition
+        0 generated types · inferred from 1 definition
       </span>
     </div>
   )

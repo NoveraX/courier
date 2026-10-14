@@ -41,7 +41,7 @@ export const SOURCES_FILE: readonly string[] = [
  * ```
  */
 export const CALLS_FILE: readonly string[] = [
-  "// anywhere in the app — nothing regenerated",
+  "// anywhere in the app — inferred, not generated",
   'const user = await caller.users.getById({ id: "5" })',
   "//    ^? User",
   "",

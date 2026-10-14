@@ -2,7 +2,7 @@ export const metadata = { title: "Why Courier?", description: "The problems Cour
 
 Building a web app that talks to a REST API sounds simple — until you need type safety, a proxy layer, cookie forwarding, error handling, upload progress, middleware, validation, and framework integration. Each of these adds boilerplate, and without a unified approach, your API logic scatters across dozens of files.
 
-Courier solves this by giving you a single, typed API definition that works across any framework — with zero code generation.
+Courier solves this by giving you a single, typed API definition that works across any framework — its types inferred, never generated.
 
 ## The Problem
 
@@ -71,8 +71,8 @@ const inBrowser = await proxyCaller.users.getById({ id: "5" })
 const { data } = q.users.useQuery("getById", { variables: { id: "5" } })
 ```
 
-<Callout variant="tip" title="No code generation">
-Unlike tRPC or GraphQL codegen, Courier uses plain TypeScript functions as the source of truth. No generated files, no build steps. Rename a method and TypeScript catches every broken call site instantly.
+<Callout variant="tip" title="Types inferred, never generated">
+Unlike GraphQL codegen or a client generated from an OpenAPI document, Courier takes its types from plain TypeScript definitions: no type files to regenerate, no step to run before you compile. Rename a method and TypeScript catches every broken call site instantly. Proxy mode keeps one file written for you — `courier.routes.ts`, the list of what a page may call — which a review reads and CI checks; see [Exposing Endpoints](/docs/proxy-mode/expose).
 </Callout>
 
 ## One Proxy Route for Everything

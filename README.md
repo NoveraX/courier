@@ -16,7 +16,7 @@
     Every call, live, in Studio.
   </p>
 
-  <p><sub>No codegen&nbsp;&nbsp;·&nbsp;&nbsp;No schema files&nbsp;&nbsp;·&nbsp;&nbsp;Any backend that speaks HTTP</sub></p>
+  <p><sub>Types inferred, never generated&nbsp;&nbsp;·&nbsp;&nbsp;No schema files&nbsp;&nbsp;·&nbsp;&nbsp;Any backend that speaks HTTP</sub></p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>

@@ -4,9 +4,9 @@ import { scanSource } from "../edit/source-scan";
 import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
-import { devStep, studioStep } from "./shared/next-steps";
+import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { studioScripts } from "./shared/recipe-parts";
+import { proxyScripts } from "./shared/recipe-parts";
 import { serverDir, serverFiles, studioAttachLater } from "./shared/server-files";
 
 function routes(ctx: RecipeContext, dir: string, withPage: boolean): RecipeFile {
@@ -118,9 +118,9 @@ export function expressRecipe(ctx: RecipeContext): Recipe {
   return {
     files: [...serverFiles(ctx, dir), routes(ctx, dir, example)],
     edits: [mountEdit(ctx, dir)],
-    ...courierPackages(ctx, { adapter: "@noverax/courier-express" }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-express", proxy: true }),
+    scripts: proxyScripts(ctx),
     manual: [],
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

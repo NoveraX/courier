@@ -4,9 +4,9 @@ import { decoratorLiteral, propertyLiteral } from "../edit/literal";
 import { scanSource } from "../edit/source-scan";
 import { importSpecifier } from "./import-specifier";
 import type { NextStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
-import { studioStep } from "./shared/next-steps";
+import { routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { studioScripts } from "./shared/recipe-parts";
+import { proxyScripts } from "./shared/recipe-parts";
 import { SERVER_DIR, serverFiles } from "./shared/server-files";
 
 const APP_MODULE = "src/app.module.ts";
@@ -135,9 +135,9 @@ export function nestRecipe(ctx: RecipeContext): Recipe {
   return {
     files: [...serverFiles(ctx, SERVER_DIR), ...courierModule(ctx, example)],
     edits: [importEdit(ctx)],
-    ...courierPackages(ctx, { adapter: "@noverax/courier-nestjs" }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-nestjs", proxy: true }),
+    scripts: proxyScripts(ctx),
     manual: [],
-    next: [...studioStep(ctx), startStep(ctx, example)],
+    next: [...studioStep(ctx), ...routesStep(ctx), startStep(ctx, example)],
   };
 }

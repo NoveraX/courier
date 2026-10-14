@@ -21,6 +21,8 @@ describe("reactViteRecipe", () => {
       '<script type="module" src="/src/courier/main.tsx"></script>',
     );
     expect(recipe.dependencies).not.toContain("@noverax/courier-studio-core");
+    expect(recipe.devDependencies.filter((name) => name.includes("courier-cli"))).toEqual([]);
+    expect(recipe.scripts).toEqual({ studio: "courier-studio" });
     expect(recipe.next.at(-1)?.what).toContain("/courier.html");
   });
 });

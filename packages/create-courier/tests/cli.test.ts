@@ -54,6 +54,7 @@ const NEXT_WITH_PACKAGES = {
         "zod",
         "@noverax/courier-studio-core",
         "@noverax/courier-studio",
+        "@noverax/courier-cli",
         "@noverax/courier-mock",
         "hono",
         "@hono/node-server",
@@ -99,6 +100,7 @@ describe("create-courier", () => {
     );
     expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts).toEqual({
       studio: "courier-studio",
+      routes: "courier-cli routes",
     });
     expect(again.status).toBe(0);
     expect(again.out).toContain("Courier is set up here already.");

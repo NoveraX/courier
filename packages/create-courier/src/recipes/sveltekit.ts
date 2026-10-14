@@ -4,14 +4,14 @@ import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
-import { devStep, studioStep, viteReach } from "./shared/next-steps";
+import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import {
   ownOrManual,
+  proxyScripts,
   type RecipePart,
   sortParts,
   studioAttach,
-  studioScripts,
 } from "./shared/recipe-parts";
 import { svelteDemo } from "./shared/svelte-demo";
 
@@ -81,10 +81,10 @@ export function svelteKitRecipe(ctx: RecipeContext): Recipe {
       ...files,
     ],
     edits,
-    ...courierPackages(ctx, { adapter: "@noverax/courier-sveltekit" }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-sveltekit", proxy: true }),
+    scripts: proxyScripts(ctx),
     manual,
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
     /* An install removes the types svelte-kit sync wrote to node_modules/$app, which the tsconfig extends. */
     prepare: [{ bin: "svelte-kit", args: ["sync"] }],
   };

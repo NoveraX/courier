@@ -114,7 +114,35 @@ describe("nextRecipe", () => {
     expect(
       recipe.files.find((file) => file.path === "src/instrumentation.ts")?.content,
     ).not.toContain("attachRuntime");
-    expect(recipe.scripts).toEqual({});
-    expect(recipe.devDependencies).not.toContain("@noverax/courier-studio");
+    expect(recipe.scripts).toEqual({ routes: "courier-cli routes" });
+    expect(recipe.devDependencies.filter((name) => name.includes("courier-studio"))).toEqual([]);
+  });
+
+  it("adds the CLI that writes courier.routes.ts and its script, and the step that runs it where no Studio does", () => {
+    const withStudio = nextRecipe(contextOf(app(), "next"));
+    const without = nextRecipe(contextOf(app(), "next", { studio: false }));
+
+    for (const recipe of [withStudio, without])
+      expect(
+        recipe.devDependencies.filter((name) => name.startsWith("@noverax/courier-cli")),
+      ).toHaveLength(1);
+    expect(withStudio.scripts).toEqual({ studio: "courier-studio", routes: "courier-cli routes" });
+    expect(withStudio.next.map((step) => step.command)).toEqual(["npm run studio", "npm run dev"]);
+    expect(without.next.map((step) => step.command)).toEqual(["npm run routes", "npm run dev"]);
+  });
+
+  it("runs the CLI itself where a script of the project's own is named routes", () => {
+    const root = projectWith({
+      "package.json": manifest(
+        { next: "16.4.0", react: "19.2.0" },
+        { scripts: { routes: "tsr generate" } },
+      ),
+      "tsconfig.json": "{}",
+      "next.config.ts": NEXT_CONFIG,
+    });
+
+    const recipe = nextRecipe(contextOf(root, "next", { studio: false }));
+
+    expect(recipe.next.map((step) => step.command)).toContain("npm exec -- courier-cli routes");
   });
 });

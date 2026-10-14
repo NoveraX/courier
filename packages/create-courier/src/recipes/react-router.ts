@@ -8,10 +8,10 @@ import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { exampleApi } from "./shared/example-api";
-import { devStep, studioStep, viteReach } from "./shared/next-steps";
+import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { reactDemo, reactQuery } from "./shared/react-demo";
-import { studioAttach, studioScripts } from "./shared/recipe-parts";
+import { proxyScripts, studioAttach } from "./shared/recipe-parts";
 
 const DIR = "app/courier";
 const ROUTES = "app/routes.ts";
@@ -106,9 +106,9 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
       ...(ctx.project.exists(ROUTES) ? [routesEdit(example)] : []),
       ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "remix")] : []),
     ],
-    ...courierPackages(ctx, { adapter: "@noverax/courier-remix", react: true }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-remix", react: true, proxy: true }),
+    scripts: proxyScripts(ctx),
     manual: [],
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

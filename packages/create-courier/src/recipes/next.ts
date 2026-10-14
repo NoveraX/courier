@@ -5,9 +5,10 @@ import { nextStudioEnvEdit } from "./next-config-edit";
 import type { ManualStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { exampleApi } from "./shared/example-api";
-import { devStep, serverReach, studioStep } from "./shared/next-steps";
+import { devStep, routesStep, serverReach, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { reactDemo, reactQuery } from "./shared/react-demo";
+import { proxyScripts } from "./shared/recipe-parts";
 
 /* `src/` when the app router lives there, as create-next-app sets it up by default. */
 function baseOf(ctx: RecipeContext): string {
@@ -157,9 +158,9 @@ export function nextRecipe(ctx: RecipeContext): Recipe {
       ...parts.filter((part): part is RecipeFile => "content" in part),
     ],
     edits: parts.filter((part): part is RecipeEdit => "change" in part),
-    ...courierPackages(ctx, { adapter: "@noverax/courier-next", react: true }),
-    scripts: ctx.choices.studio ? { studio: "courier-studio" } : {},
+    ...courierPackages(ctx, { adapter: "@noverax/courier-next", react: true, proxy: true }),
+    scripts: proxyScripts(ctx),
     manual: parts.filter((part): part is ManualStep => "what" in part),
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

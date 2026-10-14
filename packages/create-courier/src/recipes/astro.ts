@@ -5,14 +5,14 @@ import { astroDemo } from "./shared/astro-demo";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
-import { devStep, studioStep, viteReach } from "./shared/next-steps";
+import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import {
   ownOrManual,
+  proxyScripts,
   type RecipePart,
   sortParts,
   studioAttach,
-  studioScripts,
 } from "./shared/recipe-parts";
 
 const DIR = "src/courier";
@@ -102,10 +102,10 @@ export function astroRecipe(ctx: RecipeContext): Recipe {
       ...files,
     ],
     edits,
-    ...courierPackages(ctx, { adapter: "@noverax/courier-astro" }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-astro", proxy: true }),
+    scripts: proxyScripts(ctx),
     manual,
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
     prepare: [{ bin: "astro", args: ["sync"] }],
   };
 }

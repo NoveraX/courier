@@ -66,6 +66,26 @@ export function studioScripts(ctx: RecipeContext): Record<string, string> {
   return ctx.choices.studio ? { studio: "courier-studio" } : {};
 }
 
+/** The command of the `routes` script a setup whose pages call through the proxy adds. */
+export const ROUTES_COMMAND = "courier-cli routes";
+
+/**
+ * The scripts of a setup whose pages call the API through the proxy:
+ * Studio's, where it is set up, and `routes`, which writes
+ * `courier.routes.ts` again from the `.expose()` marks — and, given
+ * `--check`, fails a CI job where the file is not what they give.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns The scripts, by name
+ * @example
+ * ```ts
+ * proxyScripts(ctx); // { studio: "courier-studio", routes: "courier-cli routes" }
+ * ```
+ */
+export function proxyScripts(ctx: RecipeContext): Record<string, string> {
+  return { ...studioScripts(ctx), routes: ROUTES_COMMAND };
+}
+
 /**
  * The code that connects a server to Studio while you develop: the
  * runtime is imported only then, so a production build leaves it out.

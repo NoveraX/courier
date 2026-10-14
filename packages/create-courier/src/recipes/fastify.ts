@@ -1,9 +1,9 @@
 import { majorOf } from "../project/read-project";
 import { importSpecifier } from "./import-specifier";
 import type { ManualStep, Recipe, RecipeContext, RecipeFile } from "./recipe-types";
-import { devStep, studioStep } from "./shared/next-steps";
+import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { studioScripts } from "./shared/recipe-parts";
+import { proxyScripts } from "./shared/recipe-parts";
 import { serverDir, serverFiles } from "./shared/server-files";
 
 /* `fastify start -w` restarts the server on any change in the project, Studio's own data in .courier/ among them. */
@@ -114,13 +114,13 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
         },
       ]
     : [];
-  const packages = courierPackages(ctx, { adapter: "@noverax/courier-fastify" });
+  const packages = courierPackages(ctx, { adapter: "@noverax/courier-fastify", proxy: true });
   return {
     files: [...serverFiles(ctx, dir), plugin(ctx, path, dir, example)],
     edits: [],
     ...packages,
     dependencies: [...packages.dependencies, "fastify-plugin"],
-    scripts: studioScripts(ctx),
+    scripts: proxyScripts(ctx),
     rewrites: ctx.choices.studio
       ? Object.entries(ctx.project.manifest.scripts)
           .filter(([, command]) => watchesAll(command))
@@ -131,6 +131,6 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
           }))
       : [],
     manual: register,
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-fastify",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Fastify plugin for Courier: one route that proxies typed calls to any backend, with the user's session, CSRF protection, SSE, WebSockets and graceful shutdown",
   "keywords": [
     "courier",
@@ -62,7 +62,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0",
+    "@noverax/courier": "^0.3.0",
     "fastify": ">=4"
   },
   "devDependencies": {

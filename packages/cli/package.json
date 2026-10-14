@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Courier's command line for a project and its CI: writes and checks the routes a page's proxy client takes, from the endpoints marked .expose(), without Courier Studio",
   "keywords": [
     "courier",
@@ -63,12 +63,12 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier-studio-core": "0.2.0",
+    "@noverax/courier-studio-core": "0.3.0",
     "citty": "^0.2.2",
     "oxc-parser": "0.153.0"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0"
+    "@noverax/courier": "^0.3.0"
   },
   "devDependencies": {
     "@noverax/courier": "*"

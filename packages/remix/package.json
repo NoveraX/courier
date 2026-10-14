@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-remix",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React Router and Remix adapter for Courier: a resource route that proxies typed calls to any backend, with the user's session in loaders and actions",
   "keywords": [
     "courier",
@@ -72,7 +72,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0"
+    "@noverax/courier": "^0.3.0"
   },
   "devDependencies": {
     "@noverax/courier": "*"

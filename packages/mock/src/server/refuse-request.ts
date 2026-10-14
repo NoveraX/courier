@@ -1,6 +1,7 @@
 import type { Context as HonoContext } from "hono";
 
 import { dropConnection } from "./fault-response";
+import { proxyFailure } from "./proxy-failure";
 import type { BodyRefusal } from "./read-request-body";
 import { callOf } from "./request-call";
 import { requestTarget } from "./request-target";
@@ -21,7 +22,8 @@ import type { RouteConfig } from "./route-types";
  * @param method - The endpoint's name
  * @param refusal - The status and the reason, and whether the connection was cut
  * @param config - The route config, for its history, hooks and network state
- * @returns The answer: `{ error }` with the status, or none for a dropped connection
+ * @param answeredAs - Whose answer the refusal is: the mock's own, or the proxy's it stands in for
+ * @returns The answer — `{ error }`, or the proxy's `{ success: false, message }` — with the status, or none for a dropped connection
  * @example
  * ```ts
  * if ("error" in body) return refuseRequest(c, group, method, body, config);
@@ -33,6 +35,7 @@ export function refuseRequest(
   method: string,
   { error, status, dropped }: BodyRefusal,
   config: Pick<RouteConfig, "history" | "hooks" | "networkState">,
+  answeredAs: "mock" | "proxy" = "mock",
 ): Response {
   const { id, start } = callOf(c.req.raw);
   const path = requestTarget(c.req.url);
@@ -41,7 +44,7 @@ export function refuseRequest(
   pushHistory(config, { group, method, variables: undefined, start, status, error });
   const duration = performance.now() - start;
   config.hooks?.onError?.(id, status, error, duration);
-  if (!dropped) return c.json({ error }, status);
+  if (!dropped) return c.json(answeredAs === "proxy" ? proxyFailure(error) : { error }, status);
   config.networkState?.trackRequest(duration, true);
   return dropConnection(c, error);
 }

@@ -103,7 +103,8 @@ describe("a file sent as the whole body", () => {
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
-      error: "The proxy takes JSON or a form; send a file in a form",
+      success: false,
+      message: "The proxy takes JSON or a form; send a file in a form",
     });
   });
 

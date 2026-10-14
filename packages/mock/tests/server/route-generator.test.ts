@@ -34,7 +34,10 @@ describe("request bodies the mock server cannot read", () => {
     const response = await post("/api/request?_s=api&_g=users&_m=getAll", "{not json");
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "The request body is not valid JSON" });
+    expect(await response.json()).toEqual({
+      success: false,
+      message: "The request body is not valid JSON",
+    });
     expect(consoleError).not.toHaveBeenCalled();
   });
 
@@ -43,7 +46,8 @@ describe("request bodies the mock server cannot read", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
-      error: "The body must be an object: { variables, options }",
+      success: false,
+      message: "The body must be an object: { variables, options }",
     });
   });
 

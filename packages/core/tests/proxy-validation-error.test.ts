@@ -24,6 +24,7 @@ let proxy: ProxyServer;
 
 function api() {
   return defineApi({
+    expose: true,
     name: "shop",
     baseURL: upstream.url,
     endpoints: {

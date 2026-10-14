@@ -52,7 +52,9 @@ function serve(maxSubscriptionsPerConnection: number): { socket: Socket; live: (
     yield "hello";
     await new Promise(() => {});
   } as never);
-  registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as Sources);
+  registerSources({
+    api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
+  } as Sources);
   const socket = createSocket();
   createWSHandler({ maxSubscriptionsPerConnection }).handleSocket(
     socket,

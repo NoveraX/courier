@@ -104,6 +104,7 @@ describe("a client's auth frame", () => {
     registerSources({
       api: {
         options: {
+          expose: true,
           middleware: [
             defineMiddleware("who", "before", (ctx) => {
               seen.push(ctx.request?.headers.get("x-api-key"));

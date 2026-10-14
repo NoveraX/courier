@@ -55,6 +55,7 @@ afterEach(async () => {
 
 function api(baseURL = upstream.url) {
   return defineApi({
+    expose: true,
     name: "calls",
     baseURL,
     endpoints: {
@@ -161,6 +162,7 @@ describe("a failure in the caller's own code", () => {
     const thrown = new Error("middleware failed");
     const client = createCaller(
       defineApi({
+        expose: true,
         name: "mw",
         baseURL: upstream.url,
         middleware: [

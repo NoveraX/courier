@@ -38,7 +38,9 @@ afterEach(async () => {
 
 /** Serve `feed` as `api.live.feed` and answer with the client's URL. */
 async function serve(feed: unknown): Promise<string> {
-  registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+  registerSources({
+    api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
+  } as never);
   const handler = createWSHandler();
   server = createServer();
   attachWebSocketUpgrade(server, {

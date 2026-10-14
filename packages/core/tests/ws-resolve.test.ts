@@ -37,6 +37,7 @@ function createEndpoint(transport: string, receive?: unknown): unknown {
 function createSource(group: string, method: string, endpoint: unknown): unknown {
   return {
     options: {
+      expose: true,
       groups: {
         [group]: {
           endpoints: { [method]: endpoint },

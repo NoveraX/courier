@@ -25,7 +25,9 @@ let proxy: ProxyServer;
 beforeEach(async () => {
   upstream = await startEchoServer();
   proxy = await startProxyServer();
-  registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
+  registerSources({
+    api: defineApi({ expose: true, name: "api", baseURL: upstream.origin, groups: { items } }),
+  });
 });
 
 afterEach(async () => {
@@ -35,7 +37,7 @@ afterEach(async () => {
 });
 
 function browserClient() {
-  const api = defineApi({ name: "api", baseURL: upstream.origin, groups: { items } });
+  const api = defineApi({ expose: true, name: "api", baseURL: upstream.origin, groups: { items } });
   return createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } });
 }
 

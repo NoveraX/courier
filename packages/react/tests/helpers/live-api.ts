@@ -9,6 +9,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * that never ends, and a chat channel that echoes each message with its room.
  */
 export const liveApi = defineApi({
+  expose: true,
   name: "api",
   baseURL: "http://upstream.invalid",
   groups: {

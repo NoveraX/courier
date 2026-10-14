@@ -18,6 +18,7 @@ let upstream: EchoServer;
 
 function api() {
   return defineApi({
+    expose: true,
     name: "tags",
     baseURL: upstream.origin,
     endpoints: {

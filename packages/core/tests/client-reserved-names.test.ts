@@ -34,6 +34,7 @@ afterEach(async () => {
 
 function namesApi() {
   return defineApi({
+    expose: true,
     name: "names",
     baseURL: upstream.url,
     groups: {
@@ -161,6 +162,7 @@ describe("a client without those names in its source", () => {
   it("is not taken for a promise", async () => {
     const client = createCaller(
       defineApi({
+        expose: true,
         name: "plain",
         baseURL: upstream.url,
         endpoints: { ping: endpoint.get("ping") },

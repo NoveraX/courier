@@ -44,6 +44,7 @@ afterEach(async () => {
 
 function binaryApi(responseType: "arrayBuffer" | "blob") {
   return defineApi({
+    expose: true,
     name: "files",
     baseURL: upstream.url,
     responseType,

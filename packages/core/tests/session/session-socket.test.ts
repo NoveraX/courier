@@ -58,6 +58,7 @@ afterEach(async () => {
 async function serve(): Promise<string> {
   registerSources({
     api: defineApi({
+      expose: true,
       name: "api",
       baseURL: "http://127.0.0.1:1",
       groups: { live: defineGroup({ prefix: "live", endpoints: { room: room() } }) },
@@ -87,6 +88,7 @@ async function serve(): Promise<string> {
 
 function sessionApi(host: string) {
   return defineApi({
+    expose: true,
     name: "api",
     baseURL: `http://${host}`,
     headers: { "x-api-key": "k1" },

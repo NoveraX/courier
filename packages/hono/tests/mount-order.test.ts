@@ -34,7 +34,9 @@ describe("the Hono handler factories", () => {
     const app = new Hono();
     app.all("/api/request", courierHandler());
     const users = defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } });
-    registerSources({ api: defineApi({ baseURL: "https://upstream.example", groups: { users } }) });
+    registerSources({
+      api: defineApi({ expose: true, baseURL: "https://upstream.example", groups: { users } }),
+    });
     vi.stubGlobal("fetch", async () => Response.json([{ id: 1 }]));
 
     const response = await app.request("http://app.localhost/api/request?_s=api&_g=users&_m=list", {

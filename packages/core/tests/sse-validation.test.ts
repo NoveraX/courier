@@ -50,7 +50,7 @@ describe("SSE variable validation", () => {
         yield { data: ctx.variables };
       });
 
-    const sources = { api: { options: {}, feed } };
+    const sources = { api: { options: { expose: true }, feed } };
     const handler = setupHandler(sources);
 
     const valid = await handler.handleSSE(feedRequest({ userId: "abc" }));
@@ -72,7 +72,7 @@ describe("SSE variable validation", () => {
         yield { data: ctx.variables };
       });
 
-    const sources = { api: { options: {}, feed } };
+    const sources = { api: { options: { expose: true }, feed } };
     const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(feedRequest({ limit: 42 }));
@@ -91,7 +91,7 @@ describe("SSE variable validation", () => {
         yield { data: ctx.variables };
       });
 
-    const sources = { api: { options: {}, feed } };
+    const sources = { api: { options: { expose: true }, feed } };
     const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(feedRequest({ active: true }));
@@ -105,7 +105,7 @@ describe("SSE variable validation", () => {
     const feed = stream.response<unknown>().implement(async function* (ctx: SSEContext) {
       yield { data: ctx.variables } as SSEEvent;
     });
-    const sources = { api: { options: {}, feed } };
+    const sources = { api: { options: { expose: true }, feed } };
     const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(feedRequest({ foo: "bar" }));
@@ -124,7 +124,7 @@ describe("SSE variable validation", () => {
         yield { data: ctx.variables };
       });
 
-    const sources = { api: { options: {}, feed } };
+    const sources = { api: { options: { expose: true }, feed } };
     const handler = setupHandler(sources);
 
     const response = await handler.handleSSE(feedRequest({ count: "abc" }));

@@ -26,7 +26,11 @@ async function call(
   forwardedFor?: string,
 ): Promise<string | string[] | undefined> {
   upstream = await startUpstream(echo);
-  const api = defineApi({ baseURL: upstream.url, endpoints: { ping: endpoint.post("ping") } });
+  const api = defineApi({
+    expose: true,
+    baseURL: upstream.url,
+    endpoints: { ping: endpoint.post("ping") },
+  });
   const handler = courierHandler({ sources: { api } });
   const request = new Request("http://localhost:5173/api/request?_s=api&_m=ping", {
     method: "POST",

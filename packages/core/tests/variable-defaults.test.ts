@@ -34,6 +34,7 @@ afterEach(async () => {
 
 function news() {
   return defineApi({
+    expose: true,
     name: "site",
     baseURL: upstream.url,
     endpoints: {
@@ -140,6 +141,7 @@ describe(".defaults()", () => {
   it("adds to the defaults named before", async () => {
     const caller = createCaller(
       defineApi({
+        expose: true,
         name: "site",
         baseURL: upstream.url,
         endpoints: {

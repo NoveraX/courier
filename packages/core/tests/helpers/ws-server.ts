@@ -29,7 +29,7 @@ export async function serveWS(
   config?: WSHandlerConfig,
 ): Promise<ServedWS> {
   registerSources({
-    api: { options: { groups: { live: { options: {}, ...endpoints } } } },
+    api: { options: { expose: true, groups: { live: { options: {}, ...endpoints } } } },
   } as never);
   const handler = createWSHandler(config);
   const server = createServer();

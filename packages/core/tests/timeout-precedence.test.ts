@@ -34,6 +34,7 @@ afterEach(async () => {
 
 function slowApi() {
   return defineApi({
+    expose: true,
     name: "slow",
     baseURL: upstream.url,
     endpoints: {

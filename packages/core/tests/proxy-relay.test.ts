@@ -75,6 +75,7 @@ async function thirdParty(): Promise<{ origin: string; seen: Seen[] }> {
 
 function wikiApi(origin: string) {
   return defineApi({
+    expose: true,
     name: "wiki",
     baseURL: `${origin}/v1`,
     headers: { Authorization: "Bearer k1" },
@@ -197,6 +198,7 @@ const Line = z.object({ text: z.string() });
 /** A Courier server that serves the channel itself, at `/live/ws`. */
 async function channelServer(config?: WSHandlerConfig): Promise<string> {
   const served = defineApi({
+    expose: true,
     name: "chat",
     groups: {
       live: defineGroup({
@@ -240,6 +242,7 @@ async function serveChannels(
 
 function relayedChat(upstreamOrigin: string) {
   return defineApi({
+    expose: true,
     name: "chat",
     baseURL: upstreamOrigin,
     groups: {
@@ -324,6 +327,7 @@ describe("a channel another server serves, through the proxy", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const received: string[] = [];
     const slowRoom = defineApi({
+      expose: true,
       name: "chat",
       groups: {
         live: defineGroup({

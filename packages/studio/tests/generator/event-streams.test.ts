@@ -208,7 +208,7 @@ describe("through the proxy", () => {
   let source: Record<string, unknown> | undefined;
 
   beforeAll(async () => {
-    const loaded = loadGenerated(generate({}), "src/api/shop/source.ts");
+    const loaded = loadGenerated(generate({ generateClient: "both" }), "src/api/shop/source.ts");
     const shop = loaded.shop;
     if (isRecord(shop)) source = shop;
     proxy = await startProxyServer(loaded);

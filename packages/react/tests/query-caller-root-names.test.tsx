@@ -33,6 +33,7 @@ function wrapper({ children }: { children: ReactNode }) {
 function namesApi() {
   const list = () => endpoint.get("").response<{ path: string }>();
   return defineApi({
+    expose: true,
     name: "names",
     baseURL: upstream.origin,
     groups: {
@@ -124,6 +125,7 @@ describe("a query client without those names in its source", () => {
   it("is not taken for a promise", async () => {
     const q = createQueryCaller(
       defineApi({
+        expose: true,
         name: "plain",
         baseURL: "https://api.example.com",
         groups: { users: defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } }) },

@@ -37,6 +37,7 @@ const completed: string[] = [];
 
 function api() {
   return defineApi({
+    expose: true,
     name: "api",
     baseURL: upstream.url,
     endpoints: { upload: endpoint.post("upload").variables<FormData>() },

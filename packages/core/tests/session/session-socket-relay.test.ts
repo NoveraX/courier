@@ -61,6 +61,7 @@ async function listen(handler: WSHandler): Promise<string> {
 async function serveUpstream(): Promise<string> {
   registerSources({
     api: defineApi({
+      expose: true,
       name: "api",
       baseURL: "http://127.0.0.1:1",
       groups: {
@@ -95,6 +96,7 @@ async function serveUpstream(): Promise<string> {
 /* The proxy: the same channel, relayed to the upstream, of an API that keeps a session. */
 async function serveProxy(upstreamHost: string): Promise<string> {
   const api = defineApi({
+    expose: true,
     name: "api",
     baseURL: `http://${upstreamHost}`,
     headers: { "x-api-key": "k1" },

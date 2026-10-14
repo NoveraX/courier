@@ -1,4 +1,5 @@
 import { isExposedToWire } from "../adapter/exposure";
+import { warnNotExposed } from "../adapter/not-exposed";
 import type { SchemaMetadata } from "../validation";
 
 /** A call that arrived over the proxy, as far as deciding whether it may run. */
@@ -15,8 +16,8 @@ export interface WireCall {
   proxyMethod: "GET" | "POST";
   /** Whether the endpoint keeps its variables out of the address */
   sensitiveVariables: boolean;
-  /** How an unknown name is answered, so a hidden one is answered alike */
-  notFound: string;
+  /** The endpoint as a refusal names it, `[api][admin][purge]`: an unknown one is answered with it, and so is a hidden one */
+  endpoint: string;
 }
 
 /** Why a call may not run: the status and message it is answered with. */
@@ -39,7 +40,7 @@ export interface WireRefusal {
  *
  * @example
  * ```ts
- * const refused = refuseWireCall({ dataSource, group, method, schema, stream, proxyMethod, sensitiveVariables, notFound });
+ * const refused = refuseWireCall({ dataSource, group, method, schema, stream, proxyMethod, sensitiveVariables, endpoint });
  * if (refused) return buildErrorResponse(context, refused.status, refused.message);
  * ```
  */
@@ -48,7 +49,8 @@ export function refuseWireCall(call: WireCall): WireRefusal | undefined {
   /* Answered as an unknown name is: telling a caller that guessing names is
      forbidden confirms that the name it guessed exists. */
   if (!isExposedToWire(call.dataSource, group, String(call.method), call.schema)) {
-    return { status: 400, message: call.notFound };
+    warnNotExposed(call.endpoint);
+    return { status: 400, message: `${call.endpoint}: method not found` };
   }
   if (call.proxyMethod === "GET" && call.schema?.type !== "query") {
     return { status: 405, message: "This endpoint does not support GET requests" };

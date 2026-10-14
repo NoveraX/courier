@@ -30,6 +30,7 @@ afterEach(async () => {
 
 function api() {
   return defineApi({
+    expose: true,
     name: "paths",
     baseURL: `${upstream.url}/echo`,
     endpoints: { tail: endpoint.get("p/:id/tail").variables<{ id: string }>() },

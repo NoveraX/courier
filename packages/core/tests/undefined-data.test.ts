@@ -32,6 +32,7 @@ afterEach(async () => {
 
 function parsedToNothing() {
   return defineApi({
+    expose: true,
     name: "nothing",
     baseURL: upstream.url,
     responseParser: async () => undefined,
@@ -54,6 +55,7 @@ describe("a success whose data is undefined", () => {
   it("resolves when an after-middleware leaves no data", async () => {
     const client = createCaller(
       defineApi({
+        expose: true,
         name: "cleared",
         baseURL: upstream.url,
         middleware: [

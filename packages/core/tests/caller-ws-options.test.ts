@@ -28,6 +28,7 @@ import { settle } from "./helpers/ws-server";
 const { channel } = courier();
 
 const served = defineApi({
+  expose: true,
   name: "api",
   baseURL: "http://127.0.0.1:1",
   groups: {
@@ -135,6 +136,7 @@ describe("a direct caller's ws options", () => {
   it("send auth in the socket's first frame, and again when the server asks", async () => {
     const host = await serve();
     const remote = defineApi({
+      expose: true,
       name: "api",
       baseURL: `http://${host}`,
       groups: {

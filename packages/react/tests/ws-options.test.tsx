@@ -82,6 +82,7 @@ describe("the ws option of a React caller", () => {
 
   it("sends the direct caller's auth when useChannel connects", async () => {
     const remote = defineApi({
+      expose: true,
       name: "api",
       baseURL: `http://${host}`,
       groups: {

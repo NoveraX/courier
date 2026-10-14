@@ -44,6 +44,7 @@ async function siteApi() {
     res.end("{}");
   });
   return defineApi({
+    expose: true,
     name: "site",
     baseURL: upstream.url,
     forward: { requestId: true },

@@ -60,7 +60,7 @@ const ticker = channel.response<number>().implement(async function* (ctx) {
 /** Serve `api.live.room` and `api.live.ticker`, reading frames up to `maxPayload`. */
 async function serve(maxPayload?: number): Promise<string> {
   registerSources({
-    api: { options: { groups: { live: { options: {}, room, ticker } } } },
+    api: { options: { expose: true, groups: { live: { options: {}, room, ticker } } } },
   } as never);
   const handler = createWSHandler();
   server = createServer();

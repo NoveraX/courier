@@ -30,7 +30,13 @@ afterEach(async () => {
 });
 
 function sourceWithHeaders(headers: HeadersInit) {
-  return defineApi({ name: "api", baseURL: upstream.origin, headers, groups: { items } });
+  return defineApi({
+    expose: true,
+    name: "api",
+    baseURL: upstream.origin,
+    headers,
+    groups: { items },
+  });
 }
 
 describe("headers declared on the source", () => {

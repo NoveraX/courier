@@ -12,6 +12,7 @@ const { endpoint } = courier();
  * records live in. Both addresses have to reach the same handler.
  */
 const flatApi = defineApi({
+  expose: true,
   baseURL: "https://test.api",
   endpoints: {
     listUsers: endpoint.get("users").response(z.array(z.object({ id: z.string() }))),
@@ -20,6 +21,7 @@ const flatApi = defineApi({
 });
 
 const groupedApi = defineApi({
+  expose: true,
   baseURL: "https://test.api",
   groups: {
     users: defineGroup({

@@ -32,7 +32,7 @@ describe("a generator parked on an event that never comes", () => {
       yield { data: "hello" };
       await new Promise(() => {});
     });
-    registerSources({ api: { options: {}, feed } } as never);
+    registerSources({ api: { options: { expose: true }, feed } } as never);
     const handler = createHandler();
     const response = await handler.handleSSE(sseRequest());
     await response.body?.getReader().read();
@@ -58,7 +58,7 @@ describe("a generator parked on an event that never comes", () => {
         released = true;
       }
     });
-    registerSources({ api: { options: {}, feed } } as never);
+    registerSources({ api: { options: { expose: true }, feed } } as never);
     const handler = createHandler();
     await (await handler.handleSSE(sseRequest())).body?.getReader().read();
 
@@ -78,7 +78,7 @@ describe("a client that stops reading", () => {
       yield { data: "hello" };
       await new Promise((resolve) => ctx.signal.addEventListener("abort", resolve));
     });
-    registerSources({ api: { options: {}, feed } } as never);
+    registerSources({ api: { options: { expose: true }, feed } } as never);
     const handler = createHandler({
       onSSEDisconnect: ({ reason }) => {
         reasons.push(reason);

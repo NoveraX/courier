@@ -44,7 +44,7 @@ const documents = defineGroup({
 });
 
 function source() {
-  return defineApi({ name: "api", baseURL: upstream.origin, groups: { documents } });
+  return defineApi({ expose: true, name: "api", baseURL: upstream.origin, groups: { documents } });
 }
 
 describe("headers an endpoint's closure sets", () => {
@@ -103,7 +103,7 @@ const uploads = defineGroup({
 });
 
 function uploadSource() {
-  return defineApi({ name: "api", baseURL: upstream.origin, groups: { uploads } });
+  return defineApi({ expose: true, name: "api", baseURL: upstream.origin, groups: { uploads } });
 }
 
 describe("a body an endpoint's closure names", () => {
@@ -152,7 +152,7 @@ describe("a HEAD endpoint's variables", () => {
   });
 
   function client() {
-    return createCaller(defineApi({ baseURL: upstream.origin, groups: { items } }));
+    return createCaller(defineApi({ expose: true, baseURL: upstream.origin, groups: { items } }));
   }
 
   it("fill the path and put the rest in the query string", async () => {
@@ -183,7 +183,7 @@ describe("a DELETE whose closure names a JSON body", () => {
   });
 
   it("sends the body and leaves the query string alone", async () => {
-    const api = defineApi({ baseURL: upstream.origin, groups: { items } });
+    const api = defineApi({ expose: true, baseURL: upstream.origin, groups: { items } });
 
     await createCaller(api).items.remove({ id: 7, message: "bye", sha: "abc" });
 
@@ -204,7 +204,7 @@ describe("a write whose closure passes no body", () => {
   });
 
   function source() {
-    return defineApi({ name: "api", baseURL: upstream.origin, groups: { pets } });
+    return defineApi({ expose: true, name: "api", baseURL: upstream.origin, groups: { pets } });
   }
 
   it("sends none, its variables only in the path and the query string", async () => {

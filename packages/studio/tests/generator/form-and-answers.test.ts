@@ -180,7 +180,9 @@ describe("through the proxy", () => {
   let proxy: ProxyServer;
 
   beforeAll(async () => {
-    proxy = await startProxyServer(loadGenerated(generate({}), "src/api/billing/source.ts"));
+    proxy = await startProxyServer(
+      loadGenerated(generate({ generateClient: "both" }), "src/api/billing/source.ts"),
+    );
   });
 
   afterAll(async () => {

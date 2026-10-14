@@ -102,7 +102,7 @@ describe("an onSSEConnect that throws", () => {
     const feed = stream.response<number>().implement(async function* () {
       yield { data: 1 };
     });
-    registerSources({ api: { options: { groups: {} }, feed } } as never);
+    registerSources({ api: { options: { expose: true, groups: {} }, feed } } as never);
     const handler = createHandler({
       onSSEConnect: () => {
         throw new Error(`could not reach ${SECRET}`);

@@ -381,7 +381,9 @@ describe("a proxy GET started by another site's page", () => {
       prefix: "echo",
       endpoints: { search: endpoint.post("search").reads() },
     });
-    registerSources({ api: defineApi({ baseURL: await listen(upstream), groups: { echo } }) });
+    registerSources({
+      api: defineApi({ expose: true, baseURL: await listen(upstream), groups: { echo } }),
+    });
 
     const handler = createHandler();
     app = createServer(async (req, res) => {

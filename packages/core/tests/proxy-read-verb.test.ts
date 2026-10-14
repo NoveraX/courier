@@ -24,6 +24,7 @@ let proxied: { method: string; url: URL; cacheControl: string | null }[];
 
 function api() {
   return defineApi({
+    expose: true,
     name: "shop",
     baseURL: upstream.url,
     groups: {},

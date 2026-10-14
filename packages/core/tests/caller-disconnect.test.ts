@@ -16,6 +16,7 @@ let upstreamCalled = false;
 beforeEach(() => {
   registerSources({
     api: defineApi({
+      expose: true,
       baseURL: "https://upstream.example",
       endpoints: { slow: endpoint.get("slow").response<unknown>() },
     }),

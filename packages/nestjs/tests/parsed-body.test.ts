@@ -76,7 +76,7 @@ beforeEach(async () => {
     prefix: "echo",
     endpoints: { create: endpoint.post("").variables<{ name: string }>() },
   });
-  registerSources({ api: defineApi({ baseURL, groups: { echo } }) });
+  registerSources({ api: defineApi({ expose: true, baseURL, groups: { echo } }) });
 });
 
 afterEach(async () => {

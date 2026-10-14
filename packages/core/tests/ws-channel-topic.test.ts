@@ -132,7 +132,7 @@ describe("a channel without a key", () => {
 describe("a keyed channel served in-process", () => {
   it("broadcasts between members whose nicks differ", async () => {
     const room = chatRoom(true);
-    const sources = { api: { options: { groups: { chat: { options: {}, room } } } } };
+    const sources = { api: { options: { expose: true, groups: { chat: { options: {}, room } } } } };
     const registry = createPlaygroundWSRegistry();
     const open = (nick: string) =>
       executeDirectWSChannel(

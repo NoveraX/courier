@@ -24,6 +24,7 @@ function createSSESource(handler: (ctx: SSEContext) => AsyncGenerator<SSEEvent, 
   return {
     testSource: {
       options: {
+        expose: true,
         groups: {
           notifications: {
             options: {},
@@ -100,7 +101,7 @@ describe("handleSSE", () => {
   it("returns 400 for non-SSE endpoint", async () => {
     const httpEndpoint = endpoint.get("/test").response<string>();
     const sources = {
-      api: { options: { groups: {} }, health: httpEndpoint },
+      api: { options: { expose: true, groups: {} }, health: httpEndpoint },
     };
     const { handleSSE } = setupHandler(sources);
     const res = await handleSSE(sseRequest("_s=api&_m=health"));
@@ -253,7 +254,7 @@ describe("handleSSE — studio hooks", () => {
       yield { data: "x" };
     });
     const { handleSSE } = setupHandler({
-      api: { options: { middleware: [stamp], groups: {} }, feed },
+      api: { options: { expose: true, middleware: [stamp], groups: {} }, feed },
     });
 
     const res = await handleSSE(

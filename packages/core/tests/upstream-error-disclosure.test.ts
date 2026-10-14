@@ -18,6 +18,7 @@ const { endpoint } = courier();
 const UPSTREAM_HOST = "internal-api.corp.example";
 
 const api = defineApi({
+  expose: true,
   baseURL: `https://${UPSTREAM_HOST}`,
   endpoints: { items: endpoint.get("items").response<unknown>() },
 });

@@ -15,6 +15,7 @@ const UPSTREAM = "https://upstream.example";
 let upstreamAnswer: () => Response;
 
 const api = defineApi({
+  expose: true,
   baseURL: UPSTREAM,
   groups: {
     items: defineGroup({

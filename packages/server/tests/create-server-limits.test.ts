@@ -44,6 +44,7 @@ afterEach(async () => {
 
 async function serve(limits: Partial<CourierServerOptions>): Promise<string> {
   const api = defineApi({
+    expose: true,
     baseURL: upstreamURL,
     endpoints: { upload: endpoint.post("upload"), save: endpoint.post("save") },
   });

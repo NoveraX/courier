@@ -39,7 +39,7 @@ function defineSources(baseURL: string) {
       slow: endpoint.get("slow").timeout(100).response<unknown>(),
     },
   });
-  return { api: defineApi({ baseURL, groups: { users, faults } }) };
+  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }) };
 }
 
 type Api = ReturnType<typeof defineSources>["api"];

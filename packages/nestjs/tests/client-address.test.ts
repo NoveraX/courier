@@ -29,7 +29,11 @@ afterEach(async () => {
 describe("the NestJS proxy route", () => {
   it("keeps the chain the proxy on this machine recorded, and appends the proxy", async () => {
     upstream = await startUpstream(echo);
-    const api = defineApi({ baseURL: upstream.url, endpoints: { ping: endpoint.post("ping") } });
+    const api = defineApi({
+      expose: true,
+      baseURL: upstream.url,
+      endpoints: { ping: endpoint.post("ping") },
+    });
     const proxy = courierMiddleware({ sources: { api } });
     app = createServer((req, res) => void proxy(req, res, () => undefined));
     await new Promise<void>((resolve) => app?.listen(0, "127.0.0.1", resolve));

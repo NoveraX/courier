@@ -49,7 +49,12 @@ const api = (() => {
     },
   });
 
-  return defineApi({ name: "api", baseURL: "https://api.example.com", groups: { users } });
+  return defineApi({
+    expose: true,
+    name: "api",
+    baseURL: "https://api.example.com",
+    groups: { users },
+  });
 })();
 
 const client = createCaller(api);
@@ -193,6 +198,7 @@ describe("an endpoint that does not inherit its base's middleware", () => {
     const base = courier({ middleware: [recording(ran, "base")] });
     const client = createCaller(
       defineApi({
+        expose: true,
         name: "api",
         baseURL: upstream.url,
         middleware: [recording(ran, "source")],
@@ -214,6 +220,7 @@ describe("an endpoint that does not inherit its base's middleware", () => {
     const admin = vendor.extend({ middleware: [recording(ran, "extended")] });
     const client = createCaller(
       defineApi({
+        expose: true,
         name: "api",
         baseURL: upstream.url,
         endpoints: {

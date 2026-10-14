@@ -92,7 +92,7 @@ beforeEach(async () => {
     prefix: "echo",
     endpoints: { create: endpoint.post("").variables<{ name: string }>() },
   });
-  registerSources({ api: defineApi({ baseURL, groups: { echo } }) });
+  registerSources({ api: defineApi({ expose: true, baseURL, groups: { echo } }) });
 });
 
 afterEach(async () => {
@@ -142,7 +142,7 @@ describe("the proxy route on h3 1.x, as Nuxt 3 and 4 run it", () => {
       }
     });
     registerSources({
-      live: defineApi({ baseURL: "https://upstream.test", endpoints: { ticks } }),
+      live: defineApi({ expose: true, baseURL: "https://upstream.test", endpoints: { ticks } }),
     });
     const origin = await listen(nodeEventHost(courierHandler()));
 
@@ -185,7 +185,9 @@ async function heldUpstream(): Promise<{ arrived: () => boolean; cancelled: () =
       });
     }),
   );
-  registerSources({ held: defineApi({ baseURL, endpoints: { wait: endpoint.post("wait") } }) });
+  registerSources({
+    held: defineApi({ expose: true, baseURL, endpoints: { wait: endpoint.post("wait") } }),
+  });
   return { arrived: () => arrived, cancelled: () => cancelled };
 }
 

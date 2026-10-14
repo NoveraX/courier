@@ -27,6 +27,7 @@ let upstream: EchoServer;
 
 function api(baseURL = upstream.origin) {
   return defineApi({
+    expose: true,
     name: "shop",
     baseURL,
     groups: {
@@ -194,6 +195,7 @@ describe("a name that holds a dot", () => {
     );
     expect(() =>
       defineApi({
+        expose: true,
         baseURL: "https://api.example",
         groups: { "billing.v2": defineGroup({ endpoints: {} }) },
       }),

@@ -5,6 +5,7 @@ import { parseWSTopic } from "../realtime/ws-address";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { SchemaMetadata } from "../validation";
 import { isExposedToWire } from "./exposure";
+import { warnNotExposed } from "./not-exposed";
 import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
@@ -66,11 +67,13 @@ export function resolveSubscribeTopic(
     method,
   );
   /* A channel another server serves is relayed rather than run here. */
-  if (
-    typeof endpoint !== "function" ||
-    schema?.transport !== "ws" ||
-    !isExposedToWire(dataSource, group, method, schema)
-  ) {
+  if (typeof endpoint !== "function" || schema?.transport !== "ws") {
+    sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
+    return undefined;
+  }
+  /* Ended as a channel that is not there is, for the same reason as a call's refusal. */
+  if (!isExposedToWire(dataSource, group, method, schema)) {
+    warnNotExposed(`[${source}][${group ?? ""}][${method}]`);
     sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;
   }

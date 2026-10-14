@@ -20,6 +20,7 @@ const parsed = vi.fn();
 beforeEach(() => {
   registerSources({
     api: defineApi({
+      expose: true,
       baseURL: "https://upstream.example",
       endpoints: { upload: endpoint.post("upload") },
     }),

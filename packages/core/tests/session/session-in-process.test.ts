@@ -20,6 +20,7 @@ let removeProvider: () => void;
 
 function api() {
   return defineApi({
+    expose: true,
     name: "accounts",
     baseURL: upstream.url,
     session: { cookies: ["sid"] },

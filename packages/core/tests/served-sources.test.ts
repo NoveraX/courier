@@ -34,7 +34,11 @@ afterEach(() => {
 });
 
 function source(prefix: string) {
-  return defineApi({ baseURL: `${upstreamURL}/${prefix}`, endpoints: { ping: endpoint.get("") } });
+  return defineApi({
+    expose: true,
+    baseURL: `${upstreamURL}/${prefix}`,
+    endpoints: { ping: endpoint.get("") },
+  });
 }
 
 function get(name: string): Request {

@@ -38,7 +38,12 @@ function defineSources(baseURL: string) {
   });
   /* A binding row exists for a source that declares where its proxy is. */
   return {
-    api: defineApi({ baseURL, proxyPath: { http: "/api/request" }, groups: { users, faults } }),
+    api: defineApi({
+      expose: true,
+      baseURL,
+      proxyPath: { http: "/api/request" },
+      groups: { users, faults },
+    }),
   };
 }
 
@@ -49,7 +54,7 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 const { endpoint } = courier();
 const users = defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } });
 export default {
-  sources: { api: defineApi({ baseURL: "http://127.0.0.1:9", proxyPath: { http: "/api/request" }, groups: { users } }) },
+  sources: { api: defineApi({ expose: true, baseURL: "http://127.0.0.1:9", proxyPath: { http: "/api/request" }, groups: { users } }) },
 };
 `;
 

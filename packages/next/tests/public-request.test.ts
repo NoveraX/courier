@@ -28,7 +28,7 @@ beforeEach(async () => {
   const { endpoint } = courier();
   const users = defineGroup({ prefix: "users", endpoints: { create: endpoint.post("") } });
   const baseURL = `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`;
-  registerSources({ api: defineApi({ baseURL, groups: { users } }) });
+  registerSources({ api: defineApi({ expose: true, baseURL, groups: { users } }) });
 });
 
 afterEach(async () => {

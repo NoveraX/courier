@@ -176,7 +176,9 @@ describe("through the proxy", () => {
   let proxy: ProxyServer;
 
   beforeAll(async () => {
-    proxy = await startProxyServer(loadGenerated(generate({}), "src/api/shop/source.ts"));
+    proxy = await startProxyServer(
+      loadGenerated(generate({ generateClient: "both" }), "src/api/shop/source.ts"),
+    );
   });
 
   afterAll(async () => {

@@ -95,7 +95,7 @@ beforeEach(async () => {
       send: endpoint.post("redir").use(withKey),
     },
   });
-  registerSources({ api: defineApi({ baseURL: upstreamURL, groups: { misc } }) });
+  registerSources({ api: defineApi({ expose: true, baseURL: upstreamURL, groups: { misc } }) });
 });
 
 afterEach(async () => {
@@ -156,6 +156,7 @@ describe("a source that asks for every redirect to be followed", () => {
     const { endpoint } = courier();
     registerSources({
       api: defineApi({
+        expose: true,
         baseURL: upstreamURL,
         redirect: "follow",
         endpoints: { redir: endpoint.get("redir") },
@@ -177,6 +178,7 @@ describe("a server-side call", () => {
   it("keeps fetch's own redirect handling", async () => {
     const { endpoint } = courier();
     const api = defineApi({
+      expose: true,
       baseURL: upstreamURL,
       endpoints: { redir: endpoint.get("redir").variables<{ to: string }>() },
     });

@@ -24,7 +24,11 @@ let saved: StudioHooks;
 const onRequestError = vi.fn();
 
 function api(baseURL: string) {
-  return defineApi({ baseURL, endpoints: { broken: endpoint.get("broken").response<unknown>() } });
+  return defineApi({
+    expose: true,
+    baseURL,
+    endpoints: { broken: endpoint.get("broken").response<unknown>() },
+  });
 }
 
 function reported(): Record<string, unknown> | undefined {

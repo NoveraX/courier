@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-studio",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Courier Studio: see every request your app makes — a live timeline, inspector, playground, OpenAPI import, audit and mock servers, running locally and off in production builds",
   "keywords": [
     "courier",
@@ -186,8 +186,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier-mcp": "0.1.0",
-    "@noverax/courier-studio-core": "0.1.0",
+    "@noverax/courier-mcp": "0.2.0",
+    "@noverax/courier-studio-core": "0.2.0",
     "citty": "^0.2.2",
     "compression": "^1.8.2",
     "express": "^5.1.0",
@@ -197,8 +197,8 @@
     "yaml": "^2.9.1"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.1.0",
-    "@noverax/courier-mock": "^0.1.0",
+    "@noverax/courier": "^0.2.0",
+    "@noverax/courier-mock": "^0.2.0",
     "next": ">=14.0.0",
     "vite": ">=5.0.0"
   },

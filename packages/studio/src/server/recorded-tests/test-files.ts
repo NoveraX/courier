@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { posix, relative, resolve, sep } from "node:path";
+import { resolveProjectPath } from "@noverax/courier-cli/devkit";
 import type * as Testing from "@noverax/courier-mock/testing";
-
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import type { RecordedCalls } from "./recorded-calls";
 import type { RecordedTestDeps, RecordedTestInput } from "./recorded-test-plan";
 import { RecordedTestRefusal } from "./recorded-test-refusal";

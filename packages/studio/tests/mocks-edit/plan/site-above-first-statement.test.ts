@@ -1,6 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { siteAboveFirstStatement } from "../../../src/server/mocks-edit/plan/site-above-first-statement";
 
 function siteIn(text: string): number | null {

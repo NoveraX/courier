@@ -1,5 +1,5 @@
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { resolveProjectPath } from "@noverax/courier-cli/devkit";
 import { readDiskFile } from "./disk-file";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";

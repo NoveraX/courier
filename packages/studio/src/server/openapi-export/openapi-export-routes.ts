@@ -1,7 +1,6 @@
 import { type SkippedEndpoint, toOpenAPI } from "@noverax/courier/openapi";
-
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { ownValue } from "../../apis/own-value";
-import { messageOf } from "../message-of";
 import type { ProjectState } from "../project-state/types";
 import type { RouteApp } from "../route-types";
 import { isObject } from "../validate-body";

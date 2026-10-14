@@ -1,5 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { referencedNames } from "../manage/referenced-names";
 import type { DeclaredKind } from "./declared-in-lines";
 import { namedStatement } from "./named-statement";

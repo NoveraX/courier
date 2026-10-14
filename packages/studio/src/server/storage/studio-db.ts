@@ -9,10 +9,8 @@ import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 import { createLogger } from "@noverax/courier";
-
+import { errnoCode, messageOf } from "@noverax/courier-cli/devkit";
 import { ensureCourierDir } from "../courier-dir";
-import { errnoCode } from "../errno-code";
-import { messageOf } from "../message-of";
 import { giveBackFreedRoom } from "../storage-space/compact-db";
 import { migrate } from "./migrate";
 

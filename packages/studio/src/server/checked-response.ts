@@ -1,4 +1,4 @@
-import { isRecord } from "./mocks-edit/is-record";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { JsonResponse } from "./route-types";
 
 /**

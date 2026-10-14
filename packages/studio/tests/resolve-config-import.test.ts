@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { createConfigJiti, readPathAliases } from "@noverax/courier-studio-core/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { errnoCode } from "../src/server/errno-code";
 import { resolveConfigImport } from "../src/server/resolve-config-import";
 
 let dir: string;

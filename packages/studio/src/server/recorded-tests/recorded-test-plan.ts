@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { formatProjectFiles } from "../project-format/format-project-files";
+import { formatProjectFiles } from "@noverax/courier-cli/devkit";
 import type { SavedRequest } from "../session-types";
 import { type CheckSummary, checkSummary } from "./check-summary";
 import { type LeftOut, recordedCalls } from "./recorded-calls";

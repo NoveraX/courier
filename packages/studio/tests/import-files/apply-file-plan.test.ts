@@ -19,8 +19,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { type ProjectRoot, projectRootAt } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import type { ImportStateEntry } from "../../src/apis/imports-state";
 import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
 import {
@@ -43,7 +43,6 @@ import { recoverInterruptedApplies } from "../../src/server/import-files/recover
 import { saveImportEntry } from "../../src/server/import-files/save-import-entry";
 import { undoUnfinishedImportWrites } from "../../src/server/import-files/undo-unfinished-import-writes";
 import { withConfirmations } from "../../src/server/import-files/with-confirmations";
-import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
 /* A path as these checks spell it, with forward slashes, which Windows does not write. */
 function slashed(path: Fs.PathLike): string {

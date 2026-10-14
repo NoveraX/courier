@@ -1,7 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { describeProblem } from "../../../src/server/mocks-edit/plan/describe-problem";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 describe("describeProblem", () => {
   it("reports the first error with the line it points at", () => {

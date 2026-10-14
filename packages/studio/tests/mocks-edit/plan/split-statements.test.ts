@@ -1,6 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { splitStatements } from "../../../src/server/mocks-edit/plan/split-statements";
 import type { PlannedInsertion } from "../../../src/server/mocks-edit/plan/types";
 

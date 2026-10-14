@@ -1,7 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { collectModuleBindings } from "../../../src/server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 function namesIn(text: string): string[] {
   return [...collectModuleBindings(parseSource("x.ts", text).program).keys()];

@@ -186,6 +186,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@noverax/courier-cli": "0.2.0",
     "@noverax/courier-mcp": "0.2.0",
     "@noverax/courier-studio-core": "0.2.0",
     "citty": "^0.2.2",

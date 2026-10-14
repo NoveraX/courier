@@ -1,4 +1,4 @@
-import type { WorkerProcess } from "../worker-process";
+import type { WorkerProcess } from "@noverax/courier-cli/devkit";
 import { type JobBudget, jobMemoryMb } from "./job-budgets";
 import {
   isReplyTo,

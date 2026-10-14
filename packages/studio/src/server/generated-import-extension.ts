@@ -1,8 +1,7 @@
 import { join } from "node:path";
+import { packageTypeOf, usesNodeResolution } from "@noverax/courier-cli/devkit";
 import type { GenerateOptions } from "../apis";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
-import { usesNodeResolution } from "./mocks-edit/uses-node-resolution";
-import { packageTypeOf } from "./package-type-of";
 
 /**
  * The extension an import's generated files give their relative imports:

@@ -1,5 +1,5 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { StudioMocks } from "../mcp/mock-tools";
-import { isRecord } from "../mocks-edit/is-record";
 import type { RequestLog } from "../request-log";
 import type { RouteApp } from "../route-types";
 import { sanitizeMockCommand } from "../sanitize-mock-events";

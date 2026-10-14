@@ -1,6 +1,5 @@
 import { CourierError } from "@noverax/courier";
-import { errnoCode } from "./errno-code";
-import { messageOf } from "./message-of";
+import { errnoCode, messageOf } from "@noverax/courier-cli/devkit";
 
 /** Why Studio did not fetch a specification from a URL. */
 export type SpecFetchErrorCode =

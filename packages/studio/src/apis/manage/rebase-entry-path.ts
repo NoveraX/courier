@@ -1,5 +1,4 @@
-import { isRecord } from "../../server/mocks-edit/is-record";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { isRecord, parseSource } from "@noverax/courier-cli/devkit";
 
 /* What the entry is wrapped in to be parsed, before its first character. */
 const OPENING = "({ ";

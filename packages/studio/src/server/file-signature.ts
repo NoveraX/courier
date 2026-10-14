@@ -1,6 +1,6 @@
 import { type Stats, statSync } from "node:fs";
 import { createLogger } from "@noverax/courier";
-import { errnoCode } from "./errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { contentHashOf, UNREADABLE } from "./file-content-hash";
 
 const log = createLogger("Studio");

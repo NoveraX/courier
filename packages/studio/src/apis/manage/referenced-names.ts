@@ -1,4 +1,4 @@
-import { isRecord } from "../../server/mocks-edit/is-record";
+import { isRecord } from "@noverax/courier-cli/devkit";
 
 /* Where an identifier names a property, not a binding: a key or a member read through a dot. */
 const NAME_SLOTS: ReadonlyMap<string, readonly string[]> = new Map([

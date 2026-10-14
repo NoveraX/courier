@@ -1,4 +1,4 @@
-import { isRecord } from "../mocks-edit/is-record";
+import { isRecord } from "@noverax/courier-cli/devkit";
 
 const HEX_64 = /^[0-9a-f]{64}$/;
 const SAFE_PATH = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\0\\:]+$/;

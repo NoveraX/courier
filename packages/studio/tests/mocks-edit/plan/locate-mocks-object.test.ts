@@ -1,8 +1,8 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
 import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import type { LocatedMocks } from "../../../src/server/mocks-edit/plan/locate-mocks-object";
 import { locateMocksObject } from "../../../src/server/mocks-edit/plan/locate-mocks-object";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { readMockImports } from "../../../src/server/mocks-edit/plan/read-mock-imports";
 
 const HEADER = `import { defineMocks } from "@noverax/courier-mock";\n`;

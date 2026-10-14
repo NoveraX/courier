@@ -2,10 +2,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type OpenAPIOptions, toOpenAPI } from "@noverax/courier/openapi";
+import { DOTENV_ARG, loadProjectEnv } from "@noverax/courier-cli/devkit";
 import { type ArgsDef, defineCommand } from "citty";
-
 import { loadCourierConfig } from "../server/config-loader";
-import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 
 const log = createLogger("Openapi");
 

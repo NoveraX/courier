@@ -1,7 +1,6 @@
 import { lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { errnoCode } from "../errno-code";
-import { discardTemp } from "../project-fs/discard-temp";
+import { discardTemp, errnoCode } from "@noverax/courier-cli/devkit";
 import { isImportTempName } from "./stage-writes";
 
 /**

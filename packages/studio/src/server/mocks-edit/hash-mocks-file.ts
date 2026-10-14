@@ -1,5 +1,5 @@
+import { NotRegularFileError } from "@noverax/courier-cli/devkit";
 import { hashFile } from "../hash-file";
-import { NotRegularFileError } from "../not-regular-file-error";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
 
 /**

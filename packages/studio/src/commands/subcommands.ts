@@ -6,7 +6,6 @@ import { DIFF_ARGS, diffCommand } from "./diff-command";
 import { IMPORT_ARGS, importCommand } from "./import-command";
 import { MCP_ARGS, mcpCommand } from "./mcp-command";
 import { OPENAPI_ARGS, openapiCommand } from "./openapi-command";
-import { ROUTES_ARGS, routesCommand } from "./routes-command";
 import { VERIFY_ARGS, verifyCommand } from "./verify-command";
 
 /** A command of its own beside the server: its name, what it does, and how it runs. */
@@ -41,14 +40,6 @@ export const SUBCOMMANDS: readonly Subcommand[] = [
       "Write the project's sources, as courier.config.ts declares them, as OpenAPI documents",
     args: OPENAPI_ARGS,
     run: (rawArgs, showUsage) => void runMain(openapiCommand, { rawArgs, showUsage }),
-  },
-  {
-    name: "routes",
-    description: "Write the routes a page's proxy client takes",
-    summary:
-      "Write the project's routes module, as Studio writes it while it runs: every endpoint marked .expose(), which a page's proxy client may call, and how the page reaches it — or, with --check, write nothing and fail when it is out of date",
-    args: ROUTES_ARGS,
-    run: (rawArgs, showUsage) => void runMain(routesCommand, { rawArgs, showUsage }),
   },
   {
     name: "mcp",

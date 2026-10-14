@@ -1,7 +1,7 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression, Span } from "oxc-parser";
 import { Visitor } from "oxc-parser";
 import { closingRun } from "./closing-run";
-import type { ParsedSource } from "./parse-source";
 import { trailingCommaAfter } from "./trailing-comma-after";
 
 /**

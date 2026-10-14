@@ -1,7 +1,7 @@
 import { join } from "node:path";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { createConfigJiti } from "@noverax/courier-studio-core/config";
 import { describeError } from "../describe-error";
-import { messageOf } from "../message-of";
 import { installCommand } from "./install-command";
 import { MOCK_PACKAGE } from "./mock-package";
 import { MocksEditRefusal } from "./mocks-edit-refusal";

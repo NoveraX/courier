@@ -1,5 +1,5 @@
 import { createLogger } from "@noverax/courier";
-import { isRecord } from "../mocks-edit/is-record";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import { bodyHash } from "./body-hash";
 
 const log = createLogger("Studio");

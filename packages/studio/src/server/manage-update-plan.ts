@@ -1,4 +1,5 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { ImportLayout } from "../apis/layout";
 import { listedSelection } from "../apis/manage/listed-selection";
@@ -7,7 +8,6 @@ import { ownValue } from "../apis/own-value";
 import type { ImportsSnapshot } from "./imports-bridge";
 import { handleInventory } from "./manage-helpers";
 import type { ManagePlan, ManageRequest } from "./manage-plan";
-import type { ProjectRoot } from "./project-fs/project-root";
 import { planRegeneration } from "./regenerate-import";
 
 /** The import a change to endpoints acts on, as the manage plan resolved it. */

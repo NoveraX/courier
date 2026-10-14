@@ -1,6 +1,9 @@
 import type { Stats } from "node:fs";
-import { NotRegularFileError } from "../not-regular-file-error";
-import { type RegularFile, readRegularFile } from "../read-regular-file";
+import {
+  NotRegularFileError,
+  type RegularFile,
+  readRegularFile,
+} from "@noverax/courier-cli/devkit";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
 
 const GENERATED_MARKER = /@generated|DO NOT EDIT/;

@@ -1,6 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { Declaration, Statement } from "oxc-parser";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { referencedNames } from "./referenced-names";
 
 /** One top-level statement of a schemas or types file. */

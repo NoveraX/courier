@@ -1,7 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { detectTrailingCommas } from "../../../src/server/mocks-edit/plan/detect-trailing-commas";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 function detect(text: string): boolean {
   return detectTrailingCommas(parseSource("x.ts", text));

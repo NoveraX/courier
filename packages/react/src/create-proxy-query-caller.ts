@@ -16,7 +16,7 @@ import type { QueryCallerClient } from "./types";
 
 /**
  * Create a page's React Query client of an API, which calls it through the
- * app's proxy routes: the routes module Studio writes from the endpoints
+ * app's proxy routes: the routes module Courier writes from the endpoints
  * marked `.expose()` names which endpoints the page may call and how it
  * reaches each, and is typed from the API it was written from, so the hooks
  * offer those endpoints alone and the API's definition never enters the

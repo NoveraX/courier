@@ -17,11 +17,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { type ProjectRoot, projectRootAt } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { readDiskFile } from "../../src/server/import-files/disk-file";
 import { importBodies } from "../../src/server/import-files/import-bodies";
-import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();

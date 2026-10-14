@@ -1,12 +1,10 @@
 import { realpathSync } from "node:fs";
 import { relative, sep } from "node:path";
-
+import { formatProjectFiles, parseSource } from "@noverax/courier-cli/devkit";
 import type { LoadedCourierConfig } from "../../config-loader";
 import { applyEdits } from "../../mocks-edit/plan/apply-edits";
-import { parseSource } from "../../mocks-edit/plan/parse-source";
 import { textDiffHunks } from "../../mocks-edit/text-diff-hunks";
 import type { DiffHunk } from "../../mocks-edit/types";
-import { formatProjectFiles } from "../../project-format/format-project-files";
 import { sha256Hex } from "../../sha256-hex";
 import type { AnswerObservations } from "../../storage/answer-observations";
 import { contractReport, type EndpointContract } from "../contract-report";

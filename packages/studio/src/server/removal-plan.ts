@@ -1,10 +1,10 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { InvalidImportError, resolveImportLayout } from "../apis/layout";
 import { claimedFiles } from "./import-files/claimed-files";
 import type { FilePlan } from "./import-files/file-plan-types";
 import { planFiles } from "./import-files/plan-files";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
-import type { ProjectRoot } from "./project-fs/project-root";
 
 /**
  * Plan removing an import: every file Studio recorded writing for it, and

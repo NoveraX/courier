@@ -1,14 +1,14 @@
 /**
- * The routes module a new project starts with is the one Studio writes from
- * the example API's marks, byte for byte, so Studio's first run finds
- * nothing to write again — and its import of the config carries the
- * extension the project's imports carry.
+ * The routes module a new project starts with is the one Courier writes
+ * from the example API's marks, byte for byte, so neither Studio's first run
+ * nor `courier-cli routes --check` finds anything to write again — and its
+ * import of the config carries the extension the project's imports carry.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { routesOf } from "@noverax/courier/internal";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { routesModuleText } from "../../../studio/src/server/routes-module/routes-module-text";
+import { routesModuleText } from "../../../cli/src/routes-module/routes-module-text";
 import { exampleRoutes } from "../../src/recipes/shared/example-routes";
 import { contextOf, manifest, projectWith, removeProjects } from "./project-fixture";
 

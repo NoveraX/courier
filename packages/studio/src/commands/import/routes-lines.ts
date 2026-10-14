@@ -1,9 +1,11 @@
-import { projectRootAt } from "../../server/project-fs/project-root";
+import {
+  composeRoutesModule,
+  projectRootAt,
+  routesModulePath,
+  routesSaid,
+  writeRoutesModule,
+} from "@noverax/courier-cli/devkit";
 import type { ProjectReads } from "../../server/project-state/types";
-import { composeRoutesModule } from "../../server/routes-module/compose-routes-module";
-import { routesModulePath } from "../../server/routes-module/routes-module-path";
-import { routesSaid } from "../../server/routes-module/routes-said";
-import { writeRoutesModule } from "../../server/routes-module/write-routes-module";
 
 /**
  * Write the routes module as the config now declares the project, once an

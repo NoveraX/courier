@@ -1,9 +1,9 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { MocksEditRefusal } from "../mocks-edit-refusal";
 import { describeProblem } from "./describe-problem";
 import type { LocatedMocks } from "./locate-mocks-object";
 import { locateMocksObject } from "./locate-mocks-object";
-import type { ParsedSource } from "./parse-source";
-import { parseSource } from "./parse-source";
 import type { MockImports } from "./read-mock-imports";
 import { readMockImports } from "./read-mock-imports";
 import type { PlannedInsertion } from "./types";

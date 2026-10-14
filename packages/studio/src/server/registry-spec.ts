@@ -4,14 +4,13 @@
 
 import { createLogger } from "@noverax/courier";
 import type { CourierImportEntry } from "@noverax/courier/config";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { messageOf, readProjectText } from "@noverax/courier-cli/devkit";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { authHeaders } from "./auth-headers";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
-import { messageOf } from "./message-of";
-import type { ProjectRoot } from "./project-fs/project-root";
-import { readProjectText } from "./project-fs/read-project-text";
 import { readFetchedSpec } from "./read-fetched-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";

@@ -1,5 +1,5 @@
+import { type ParsedSource, parseSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression } from "oxc-parser";
-import { type ParsedSource, parseSource } from "../mocks-edit/plan/parse-source";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import { locateConfigObject } from "./locate-config-object";
 

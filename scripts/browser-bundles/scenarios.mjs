@@ -15,7 +15,7 @@ const users = defineGroup({ prefix: "users", endpoints: {
   create: endpoint.post("").variables().response() } });
 export const api = defineApi({ baseURL: "https://api.example.com", expose: true, groups: { users } });`;
 
-/* The routes module Studio writes for that API: data alone, which a page imports. */
+/* The routes module Courier writes for that API: data alone, which a page imports. */
 const ROUTES = `const apiRoutes = { source: "api", endpoints: {
   "users.create": { type: "mutation" }, "users.getAll": { type: "query" }, "users.getById": { type: "query" } } };`;
 

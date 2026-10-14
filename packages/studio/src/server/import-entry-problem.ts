@@ -1,4 +1,4 @@
-import { isRecord } from "./mocks-edit/is-record";
+import { isRecord } from "@noverax/courier-cli/devkit";
 
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
 const SPEC_TYPES: ReadonlySet<unknown> = new Set([

@@ -1,4 +1,6 @@
 import { CourierError } from "@noverax/courier";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { findFormatters, formatProjectFiles } from "@noverax/courier-cli/devkit";
 import type { GenerateOptions, ParsedSpec } from "../apis";
 import { createSpecDigest, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
@@ -11,10 +13,7 @@ import { recordAfterApply } from "./import-files/record-after-apply";
 import { regenerationRequest } from "./import-files/regeneration-request";
 import { type PlanConsent, type PlanQuoting, runPlan } from "./import-files/run-plan";
 import { saveImportEntry } from "./import-files/save-import-entry";
-import { findFormatters } from "./project-format/find-formatters";
 import { formatPlannedWrites } from "./project-format/format-planned-writes";
-import { formatProjectFiles } from "./project-format/format-project-files";
-import type { ProjectRoot } from "./project-fs/project-root";
 import { SpecGenerationError } from "./spec-generation-error";
 
 /** An import to generate afresh from a spec. */

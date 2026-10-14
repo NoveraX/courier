@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { messageOf } from "../../server/message-of";
+import { messageOf } from "@noverax/courier-cli/devkit";
 
 /** What webpack hands a function in `externals`. */
 export interface ExternalRequest {

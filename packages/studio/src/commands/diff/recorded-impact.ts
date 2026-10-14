@@ -1,8 +1,7 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import type * as Testing from "@noverax/courier-mock/testing";
-
-import { messageOf } from "../../server/message-of";
 import { DEFAULT_RECORDINGS, findRecordings } from "../verify/find-recordings";
 import type { RecordedImpact } from "./diff-report";
 

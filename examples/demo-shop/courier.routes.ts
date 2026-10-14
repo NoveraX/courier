@@ -1,5 +1,5 @@
-// Written by Courier Studio from courier.config.ts. Do not edit it:
-// `courier-studio routes` writes it again from the endpoints marked .expose().
+// Written by Courier from courier.config.ts. Do not edit it:
+// `courier-cli routes` writes it again from the endpoints marked .expose().
 
 import type { CourierRoutes, RouteMap } from "@noverax/courier/define";
 

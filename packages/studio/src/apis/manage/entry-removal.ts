@@ -1,6 +1,6 @@
+import type { CommentEnds } from "@noverax/courier-cli/devkit";
 import type { Comment, Span } from "oxc-parser";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
-import type { CommentEnds } from "../../server/mocks-edit/plan/skip-trivia";
 import { trailingCommaAfter } from "../../server/mocks-edit/plan/trailing-comma-after";
 import type { TextEdit } from "../../server/mocks-edit/types";
 

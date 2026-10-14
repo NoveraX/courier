@@ -1,10 +1,10 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression, Program } from "oxc-parser";
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
 import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
 import { insertion } from "../../server/mocks-edit/plan/insertion";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
 import { planListInsertion } from "../../server/mocks-edit/plan/list-insertion";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../../server/mocks-edit/plan/unwrap-expression";
 import { docCommentBefore } from "./doc-comment-before";

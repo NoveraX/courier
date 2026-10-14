@@ -168,9 +168,9 @@ export interface CourierStudioConfig {
    * Left out, it is `courier.routes.ts` beside courier.config, or
    * `courier.routes.js` beside a JavaScript one; `false` keeps the project
    * without one. Studio writes it each time courier.config loads with an
-   * endpoint a page may call, and `courier-studio routes` writes it on
-   * demand — or, with `--check`, fails when it is out of date. Neither
-   * writes over a file Studio did not write.
+   * endpoint a page may call, and `courier-cli routes` writes it without
+   * Studio — or, with `--check`, fails when it is out of date. Neither
+   * writes over a file Courier did not write.
    */
   routes?: string | false | undefined;
 }

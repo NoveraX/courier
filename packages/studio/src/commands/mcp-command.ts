@@ -2,10 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { formatStudioUrl, STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
+import { DOTENV_ARG, loadProjectEnv } from "@noverax/courier-cli/devkit";
 import { type ArgsDef, defineCommand } from "citty";
-
 import { loadCourierConfig } from "../server/config-loader";
-import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 import { bridgeToStudio } from "./mcp-bridge";
 
 const log = createLogger("MCP");

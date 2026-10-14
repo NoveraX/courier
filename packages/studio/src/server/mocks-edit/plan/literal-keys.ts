@@ -1,8 +1,8 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression, ObjectPropertyKind } from "oxc-parser";
 import { MocksEditRefusal } from "../mocks-edit-refusal";
 import type { RefusalCode } from "../types";
 import { lineNumberAt } from "./line-number-at";
-import type { ParsedSource } from "./parse-source";
 import { propertyKeyName } from "./property-key-name";
 
 /** Why one property keeps Studio from adding to the object. */

@@ -1,0 +1,76 @@
+{
+  "name": "@noverax/courier-cli",
+  "version": "0.2.0",
+  "description": "Courier's command line for a project and its CI: writes and checks the routes a page's proxy client takes, from the endpoints marked .expose(), without Courier Studio",
+  "keywords": [
+    "courier",
+    "cli",
+    "proxy",
+    "routes",
+    "typescript",
+    "type-safe",
+    "api"
+  ],
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/proxy-mode/expose",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "bin": {
+    "courier-cli": "lib/cli.js"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./devkit": {
+      "types": "./lib/devkit.d.ts",
+      "import": "./lib/devkit.js",
+      "default": "./lib/devkit.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "devkit": [
+        "./lib/devkit.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noverax/courier-studio-core": "0.2.0",
+    "citty": "^0.2.2",
+    "oxc-parser": "0.153.0"
+  },
+  "peerDependencies": {
+    "@noverax/courier": "^0.2.0"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
+  }
+}

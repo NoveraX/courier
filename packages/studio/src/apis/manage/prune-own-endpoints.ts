@@ -1,7 +1,7 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression, Program, Statement, VariableDeclaration } from "oxc-parser";
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../../server/mocks-edit/plan/unwrap-expression";
 import { codeMentions } from "./code-mentions";

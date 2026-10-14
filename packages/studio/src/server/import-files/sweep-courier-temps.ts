@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { discardTemp } from "@noverax/courier-cli/devkit";
 import { COURIER_DIR, hasCourierSubdir } from "../courier-dir";
-import { discardTemp } from "../project-fs/discard-temp";
 import { runsElsewhere } from "./runs-elsewhere";
 
 /* The temporary files Studio saves its imports state and its journals through, named for the process writing them. */

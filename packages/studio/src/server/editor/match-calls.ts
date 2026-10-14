@@ -1,4 +1,4 @@
-import { routesExportName } from "../../apis/generator/routes-export-name";
+import { routesExportName } from "@noverax/courier-cli/devkit";
 import type { CodeCall } from "./calls-in-text";
 import type { CatalogEndpoint } from "./endpoint-catalog";
 import { positionsIn } from "./text-positions";

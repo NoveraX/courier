@@ -1,7 +1,7 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
 import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
 import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { parseImports } from "../merge/parse-imports";
 import type { ParsedImport } from "../merge/types";

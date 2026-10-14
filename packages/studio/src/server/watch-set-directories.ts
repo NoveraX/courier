@@ -10,8 +10,7 @@
 
 import { existsSync, type FSWatcher, watch } from "node:fs";
 import { basename, dirname } from "node:path";
-import { errnoCode } from "./errno-code";
-import { messageOf } from "./message-of";
+import { errnoCode, messageOf } from "@noverax/courier-cli/devkit";
 
 /** Why the platform refused a native watch. */
 export interface WatchDegradation {

@@ -1,4 +1,4 @@
-import { parseSource } from "../mocks-edit/plan/parse-source";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import type { ConfigUndeclarationInput } from "./config-undeclaration-types";
 import { findConfigList } from "./find-config-list";

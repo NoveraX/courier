@@ -1,7 +1,7 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import { firstFreeName } from "../../server/mocks-edit/plan/first-free-name";
 import { insertion } from "../../server/mocks-edit/plan/insertion";
 import type { ModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
-import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { courierPattern, fileBase } from "./file-base";
 

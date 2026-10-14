@@ -1,11 +1,9 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { NotRegularFileError } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { hashFile } from "../src/server/hash-file";
-import { NotRegularFileError } from "../src/server/not-regular-file-error";
 import { makeFedFifo, stopFifoWriters } from "./helpers/make-fed-fifo";
 
 const IS_WINDOWS = process.platform === "win32";

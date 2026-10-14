@@ -1,10 +1,11 @@
 import { dirname } from "node:path";
-
-import { assertRealInside } from "../project-fs/assert-real-inside";
-import { ensureDirectory } from "../project-fs/ensure-directory";
-import { projectRootAt } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
-import { writeFileAtomically } from "../project-fs/write-file-atomically";
+import {
+  assertRealInside,
+  ensureDirectory,
+  projectRootAt,
+  resolveProjectPath,
+  writeFileAtomically,
+} from "@noverax/courier-cli/devkit";
 import type { RecordedTestPlan } from "./recorded-test-plan";
 import { RecordedTestRefusal } from "./recorded-test-refusal";
 

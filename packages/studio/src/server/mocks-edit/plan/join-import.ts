@@ -1,7 +1,7 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration } from "oxc-parser";
 import type { TextEdit } from "../types";
 import { planListInsertion } from "./list-insertion";
-import type { ParsedSource } from "./parse-source";
 import { skipTrivia } from "./skip-trivia";
 import type { FileStyle } from "./types";
 

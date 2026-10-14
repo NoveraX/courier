@@ -1,10 +1,13 @@
 import { lstatSync } from "node:fs";
-import { errnoCode } from "../errno-code";
-import { NotRegularFileError } from "../not-regular-file-error";
-import { assertOpenedInside } from "../project-fs/assert-opened-inside";
-import { PathOutsideProjectError } from "../project-fs/path-outside-project-error";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { type RegularFile, readRegularFile } from "../read-regular-file";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import {
+  assertOpenedInside,
+  errnoCode,
+  NotRegularFileError,
+  PathOutsideProjectError,
+  type RegularFile,
+  readRegularFile,
+} from "@noverax/courier-cli/devkit";
 import { bodyHash } from "./body-hash";
 import { exactHash } from "./exact-hash";
 import { type GeneratedHeader, readGeneratedFile } from "./generated-header";

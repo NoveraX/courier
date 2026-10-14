@@ -1,7 +1,7 @@
 import { relative, sep } from "node:path";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { LoadedCourierConfig } from "../config-loader";
 import { describeError } from "../describe-error";
-import { isRecord } from "./is-record";
 import type { MockDeclaration } from "./types";
 
 /**

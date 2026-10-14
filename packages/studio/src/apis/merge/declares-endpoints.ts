@@ -1,4 +1,4 @@
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { findGroupDeclaration } from "../manage/group-declaration";
 
 /** The line opening a declaration, a group's or a flat API's. */

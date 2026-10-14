@@ -1,5 +1,5 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import { runConfigEdit } from "../../config-edit/run-config-edit";
-import { isRecord } from "../../mocks-edit/is-record";
 import type { ProjectState } from "../../project-state/types";
 import type { RouteApp } from "../../route-types";
 import type { AnswerObservations } from "../../storage/answer-observations";

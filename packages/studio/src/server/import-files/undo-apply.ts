@@ -1,5 +1,5 @@
 import { createLogger } from "@noverax/courier";
-import type { ProjectRoot } from "../project-fs/project-root";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { type ApplyJournal, dropJournal, JOURNAL_DIR, saveJournal } from "./apply-journal";
 import { rollbackApply } from "./rollback-apply";
 

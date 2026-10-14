@@ -1,7 +1,7 @@
 import { lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { errnoCode } from "../errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 
 /** What a folder holds: its files' bytes, and how many entries it has at its top. */
 export interface FolderSize {

@@ -2,6 +2,7 @@
  * Express routes for endpoint management (inventory, preview, apply).
  */
 
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import type { ApisRouteDeps } from "./apis-routes";
 import { summarizePlan } from "./import-files/plan-summary";
 import { getImportEntry, importsSnapshotOf } from "./imports-bridge";
@@ -10,7 +11,6 @@ import { handleManageApply } from "./manage-apply";
 import { validateInventoryBody, validateManageBody } from "./manage-body";
 import { handleInventory } from "./manage-helpers";
 import { planManage } from "./manage-plan";
-import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { readPlanConsent } from "./read-plan-consent";
 import { sendRouteFailure } from "./route-failure";

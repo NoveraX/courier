@@ -9,7 +9,7 @@
     "upstream": "tsx src/upstream/main.ts",
     "app": "tsx src/app/main.ts",
     "traffic": "tsx src/traffic/main.ts",
-    "routes": "courier-studio routes"
+    "routes": "courier-cli routes"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
@@ -22,5 +22,8 @@
     "tsx": "^4.23.15",
     "ws": "^8.21.3",
     "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@noverax/courier-cli": "*"
   }
 }

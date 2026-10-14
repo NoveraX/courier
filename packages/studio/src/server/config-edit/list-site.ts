@@ -1,3 +1,4 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression } from "oxc-parser";
 import { countLineTerminators } from "../mocks-edit/plan/count-line-terminators";
 import { detectStyle } from "../mocks-edit/plan/detect-style";
@@ -5,7 +6,6 @@ import { planImportLines } from "../mocks-edit/plan/import-lines";
 import { insertion } from "../mocks-edit/plan/insertion";
 import type { BracedList, ListSite } from "../mocks-edit/plan/list-insertion";
 import { collectModuleBindings } from "../mocks-edit/plan/module-bindings";
-import type { ParsedSource } from "../mocks-edit/plan/parse-source";
 import { quoteString } from "../mocks-edit/plan/quote-string";
 import type { FileStyle } from "../mocks-edit/plan/types";
 import type { TextEdit } from "../mocks-edit/types";

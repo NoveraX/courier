@@ -1,9 +1,8 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression } from "oxc-parser";
-
 import { countLineTerminators } from "../../mocks-edit/plan/count-line-terminators";
 import { detectStyle } from "../../mocks-edit/plan/detect-style";
 import { planListInsertion } from "../../mocks-edit/plan/list-insertion";
-import type { ParsedSource } from "../../mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../mocks-edit/types";
 
 const BARE_KEY = /^[A-Za-z_$][\w$]*$/;

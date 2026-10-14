@@ -1,6 +1,5 @@
-import { describeValue } from "./describe-value";
+import { describeValue, routesSettingProblem } from "@noverax/courier-cli/devkit";
 import { isPlainObject } from "./is-plain-object";
-import { routesSettingProblem } from "./routes-module/routes-setting-problem";
 import { specHostEntryProblem } from "./spec-host-entry-problem";
 
 /* The fields that name a TCP port, checked alike. */

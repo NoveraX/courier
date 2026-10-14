@@ -1,6 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { planEntryRemoval } from "../../apis/manage/entry-removal";
 import { applyEdits } from "../mocks-edit/plan/apply-edits";
-import { parseSource } from "../mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../mocks-edit/plan/unwrap-expression";
 import { ConfigEditRefusal } from "./config-edit-refusal";

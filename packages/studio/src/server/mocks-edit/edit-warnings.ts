@@ -1,8 +1,8 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { LoadedCourierConfig } from "../config-loader";
 import type { PlanFormatting } from "../import-files/file-plan-types";
 import { portProblem } from "../mock-manager/port-problem";
 import type { MockSummary } from "../mock-manager/types";
-import { isRecord } from "./is-record";
 import { restartWarning } from "./restart-warning";
 import type { MockDeclaration } from "./types";
 

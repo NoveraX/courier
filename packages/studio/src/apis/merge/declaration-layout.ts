@@ -1,6 +1,5 @@
+import { type ParsedSource, parseSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration, Program } from "oxc-parser";
-
-import { type ParsedSource, parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { findGroupDeclaration, type GroupDeclaration } from "../manage/group-declaration";
 import { entryLines } from "./endpoint-lines";
 import { lineFinder } from "./line-index";

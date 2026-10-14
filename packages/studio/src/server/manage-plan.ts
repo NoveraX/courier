@@ -1,3 +1,5 @@
+import type { LoadedForRoutes, ProjectRoot } from "@noverax/courier-cli/devkit";
+import { findFormatters, formatProjectFiles } from "@noverax/courier-cli/devkit";
 import { computeSpecHash, type ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
@@ -18,11 +20,7 @@ import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-
 import { manageFingerprints } from "./manage-fingerprints";
 import { managePlanRequest } from "./manage-plan-request";
 import { planManageUpdate } from "./manage-update-plan";
-import { findFormatters } from "./project-format/find-formatters";
 import { formatPlannedWrites } from "./project-format/format-planned-writes";
-import { formatProjectFiles } from "./project-format/format-project-files";
-import type { ProjectRoot } from "./project-fs/project-root";
-import type { LoadedForRoutes } from "./routes-module/routes-module-writer";
 import { withRoutesModule } from "./routes-module/with-routes-module";
 import { unknownRemovals } from "./unknown-removals";
 

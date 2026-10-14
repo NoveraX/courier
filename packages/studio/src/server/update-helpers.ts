@@ -2,6 +2,7 @@
  * Helpers for update flow routes — preview and apply logic.
  */
 
+import type { LoadedForRoutes, ProjectRoot } from "@noverax/courier-cli/devkit";
 import type { ParsedSpec } from "../apis";
 import { createSpecDigest, diffSpecs } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
@@ -12,9 +13,7 @@ import type { ApplyReport } from "./import-files/apply-file-plan";
 import { type PlanSummary, summarizePlan } from "./import-files/plan-summary";
 import type { PlanConsent } from "./import-files/run-plan";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
-import type { ProjectRoot } from "./project-fs/project-root";
 import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";
-import type { LoadedForRoutes } from "./routes-module/routes-module-writer";
 import { withRoutesModule } from "./routes-module/with-routes-module";
 import { declaredSpec } from "./spec-as-declared";
 

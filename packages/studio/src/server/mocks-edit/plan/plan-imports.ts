@@ -1,3 +1,4 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration } from "oxc-parser";
 import { MOCK_PACKAGE } from "../mock-package";
 import { MocksEditRefusal } from "../mocks-edit-refusal";
@@ -9,7 +10,6 @@ import { planImportJoin } from "./join-import";
 import { lineNumberAt } from "./line-number-at";
 import type { ModuleBindings } from "./module-bindings";
 import { collectModuleBindings } from "./module-bindings";
-import type { ParsedSource } from "./parse-source";
 import type { MockImports } from "./read-mock-imports";
 import type { CalleeResolution } from "./resolve-callee";
 import { resolveCallee } from "./resolve-callee";

@@ -4,13 +4,13 @@
  * `parse-route.ts`.
  */
 
+import { formatProjectFiles } from "@noverax/courier-cli/devkit";
 import { diffSpecs, generateCode } from "../apis";
 import { answerFromProcess } from "./answer-from-process";
 import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
-import { formatProjectFiles } from "./project-format/format-project-files";
 import type { ProjectState } from "./project-state/types";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { WorkedResponse } from "./request-work";

@@ -1,9 +1,8 @@
 import type { CourierConfig } from "@noverax/courier/config";
+import { describeValue, isRecord } from "@noverax/courier-cli/devkit";
 import { ConfigLoaderError } from "./config-loader-errors";
-import { describeValue } from "./describe-value";
 import { importEntryProblem } from "./import-entry-problem";
 import { isPlainObject } from "./is-plain-object";
-import { isRecord } from "./mocks-edit/is-record";
 import type { ProjectInputs } from "./read-project-inputs";
 import { studioBlockProblem } from "./studio-block-problem";
 

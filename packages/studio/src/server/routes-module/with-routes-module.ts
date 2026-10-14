@@ -1,7 +1,7 @@
+import type { LoadedForRoutes } from "@noverax/courier-cli/devkit";
+import { routesModulePath } from "@noverax/courier-cli/devkit";
 import type { GenerateOptions } from "../../apis/generator";
 import { InvalidImportError } from "../../apis/layout/invalid-import-error";
-import { routesModulePath } from "./routes-module-path";
-import type { LoadedForRoutes } from "./routes-module-writer";
 
 /**
  * Generation options that put the proxy caller's import of its routes where

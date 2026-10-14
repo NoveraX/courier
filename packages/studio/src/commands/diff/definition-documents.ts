@@ -4,10 +4,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { isDefinedApi } from "@noverax/courier/internal";
 import { toOpenAPI } from "@noverax/courier/openapi";
-
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { loadCourierConfig } from "../../server/config-loader";
 import { ensureCourierDir } from "../../server/courier-dir";
-import { messageOf } from "../../server/message-of";
 import { type AgentSurface, agentSurfaceOf } from "./agent-access";
 import type { Schema } from "./schema-relation";
 

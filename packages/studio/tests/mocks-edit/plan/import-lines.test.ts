@@ -1,10 +1,9 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { applyEdits } from "../../../src/server/mocks-edit/plan/apply-edits";
 import { DEFAULT_STYLE } from "../../../src/server/mocks-edit/plan/detect-style";
 import type { ImportLines } from "../../../src/server/mocks-edit/plan/import-lines";
 import { planImportLines } from "../../../src/server/mocks-edit/plan/import-lines";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import type { FileStyle } from "../../../src/server/mocks-edit/plan/types";
 
 const STATEMENTS = [`import a from "a";`, `import b from "b";`];

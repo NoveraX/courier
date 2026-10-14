@@ -1,7 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { findCommonJsExport } from "../../../src/server/mocks-edit/plan/commonjs-export";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 function formOf(text: string): string | null {
   return findCommonJsExport(parseSource("x.ts", text).program)?.form ?? null;

@@ -1,8 +1,7 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { Comment } from "oxc-parser";
 import { describe, expect, it } from "vitest";
-
 import { isFilePragma } from "../../../src/server/mocks-edit/plan/is-file-pragma";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 function commentOf(text: string): Comment {
   const [comment] = parseSource("x.ts", `${text}\nfoo();\n`).comments;

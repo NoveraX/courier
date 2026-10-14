@@ -1,7 +1,7 @@
 import { lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { CourierDirUnsafeError } from "./courier-dir-unsafe-error";
-import { errnoCode } from "./errno-code";
 
 /** Studio's working directory in a project: imports state and saved sessions. */
 export const COURIER_DIR = ".courier";

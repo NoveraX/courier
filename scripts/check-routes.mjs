@@ -1,7 +1,7 @@
 /// <reference types="node" />
 /**
- * Check that every routes module the repository keeps is the one Studio
- * writes from its project's `.expose()` marks, with `courier-studio routes
+ * Check that every routes module the repository keeps is the one Courier
+ * writes from its project's `.expose()` marks, with `courier-cli routes
  * --check`, so a mark changed without the module written again fails here
  * rather than in a page. The projects are the examples and the docs site.
  *
@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const CLI = join(ROOT, "packages/studio/lib/cli.js");
+const CLI = join(ROOT, "packages/cli/lib/cli.js");
 
 /** The projects whose routes module the repository keeps. */
 const PROJECTS = ["examples/basic", "examples/demo-shop", "docs"];

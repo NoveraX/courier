@@ -1,5 +1,5 @@
+import { readRegularFile } from "@noverax/courier-cli/devkit";
 import { describeError } from "../describe-error";
-import { readRegularFile } from "../read-regular-file";
 import { sha256Hex } from "../sha256-hex";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 

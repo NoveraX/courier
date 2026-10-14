@@ -10,6 +10,7 @@
 
 import type { IncomingMessage } from "node:http";
 import { createLogger } from "@noverax/courier";
+import { resolvedRoot } from "@noverax/courier-cli/devkit";
 import { ConfigLoaderError } from "./config-loader-errors";
 import { describeError } from "./describe-error";
 import { applyMocksEdit } from "./mocks-edit/apply-mocks-edit";
@@ -22,7 +23,6 @@ import { snippetInputUnread } from "./mocks-edit/snippet-input-unread";
 import type { ManualOutcome, MockDeclaration } from "./mocks-edit/types";
 import { validateDeclarations } from "./mocks-edit/validate-declarations";
 import { type DeclareBody, validateDeclareBody } from "./mocks-edit/validate-declare-body";
-import { resolvedRoot } from "./resolved-root";
 
 const log = createLogger("Studio");
 

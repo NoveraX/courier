@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { findMocksFile } from "@noverax/courier-studio-core/config";
-import { errnoCode } from "./errno-code";
 
 /** Where the mocks file is, found before anything is read. */
 export interface FoundCourierMocks {

@@ -8,11 +8,10 @@
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
-import { parseSource } from "../src/server/mocks-edit/plan/parse-source";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 

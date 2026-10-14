@@ -1,8 +1,10 @@
 import { relative, sep } from "node:path";
-import { assertResolvesInside } from "../project-fs/assert-resolves-inside";
-import { PathOutsideProjectError } from "../project-fs/path-outside-project-error";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import {
+  assertResolvesInside,
+  PathOutsideProjectError,
+  resolveProjectPath,
+} from "@noverax/courier-cli/devkit";
 import { readDiskFile } from "./disk-file";
 import { walkTsFiles } from "./walk-ts-files";
 

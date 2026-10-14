@@ -1,3 +1,4 @@
+import { importsCarryExtensions, parseSource } from "@noverax/courier-cli/devkit";
 import type { TextEdit } from "../types";
 import { applyEdits } from "./apply-edits";
 import { configImportForm } from "./config-import-form";
@@ -6,9 +7,7 @@ import { configSpecifiers } from "./config-specifiers";
 import { DEFAULT_STYLE, detectStyle } from "./detect-style";
 import type { EntryEdits } from "./entry-edits";
 import { planEntryEdits } from "./entry-edits";
-import { importsCarryExtensions } from "./imports-carry-extensions";
 import { insertion } from "./insertion";
-import { parseSource } from "./parse-source";
 import type { ImportPlan } from "./plan-imports";
 import { planImports } from "./plan-imports";
 import type { EditableFile } from "./read-editable";

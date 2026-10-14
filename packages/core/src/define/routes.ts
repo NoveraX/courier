@@ -1,7 +1,7 @@
 /**
  * The routes a browser's proxy client takes: which endpoints of an API it
  * may call, and how it reaches each. They are written from the API's own
- * definition — by Studio as it is saved, and by `courier-studio routes` —
+ * definition — by Studio as it is saved, and by `courier-cli routes` —
  * into a module the client imports, so the definition never becomes a
  * value in a page's bundle and the page learns nothing about the server's
  * side: no address, no middleware, no endpoint the browser may not call.

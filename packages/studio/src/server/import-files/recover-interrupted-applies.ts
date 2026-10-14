@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import type { ImportsState } from "../../apis/imports-state";
 import { ownValue } from "../../apis/own-value";
-import type { ProjectRoot } from "../project-fs/project-root";
 import { isApplying } from "./apply-in-flight";
 import { type ApplyJournal, dropJournal, JOURNAL_DIR, readJournals } from "./apply-journal";
 import { journalProblem } from "./journal-trust";

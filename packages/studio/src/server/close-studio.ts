@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
+import { closeFormatProcesses } from "@noverax/courier-cli/devkit";
 import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
-import { closeFormatProcesses } from "./project-format/formatter-host";
 import { clearStudioServerState } from "./runtime-namespace-state";
 
 /** What a running Studio holds open, each closed in its turn. */

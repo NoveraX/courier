@@ -1,7 +1,7 @@
 import { posix, relative, sep } from "node:path";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { resolveProjectPath } from "@noverax/courier-cli/devkit";
 import { moduleSpecifiers } from "../module-specifiers";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { readDiskFile } from "./disk-file";
 import type { FilePlan } from "./file-plan-types";
 import { walkTsFiles } from "./walk-ts-files";

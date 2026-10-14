@@ -1,9 +1,9 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { computeSpecHash, type ParsedSpec } from "../apis";
 import { filterSpec } from "../apis/filter-spec";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { ImportTransformError } from "./import-transform-error";
-import { messageOf } from "./message-of";
 import { isParsedSpec } from "./parsed-spec-guard";
 
 /**

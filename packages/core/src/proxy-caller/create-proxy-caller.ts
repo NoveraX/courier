@@ -12,7 +12,7 @@ import type { ProxyCallerOptions } from "./types";
 
 /**
  * Create a page's client of an API, which calls it through the app's proxy
- * routes: the routes module Studio writes from the endpoints marked
+ * routes: the routes module Courier writes from the endpoints marked
  * `.expose()` names which endpoints the page may call and how it reaches
  * each, and is typed from the API it was written from. The client reaches
  * those endpoints alone, and the API's definition — its upstream address,

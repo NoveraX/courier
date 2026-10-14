@@ -1,6 +1,5 @@
 import { realpathSync } from "node:fs";
-import { errnoCode } from "./errno-code";
-import { readRegularFile } from "./read-regular-file";
+import { errnoCode, readRegularFile } from "@noverax/courier-cli/devkit";
 
 /**
  * The bytes of a module Studio watches, read the way the loader reads it:

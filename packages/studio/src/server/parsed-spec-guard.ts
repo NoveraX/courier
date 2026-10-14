@@ -1,6 +1,6 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { ParsedSpec } from "../apis";
 import { SUPPORTED_METHODS } from "../apis/parser/http-methods";
-import { isRecord } from "./mocks-edit/is-record";
 
 const FORMATS: ReadonlySet<unknown> = new Set(["openapi3", "swagger2", "postman"]);
 /* Every verb the parser gives an endpoint; a list of its own left HEAD out,

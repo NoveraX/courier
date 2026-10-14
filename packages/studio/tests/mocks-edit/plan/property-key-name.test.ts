@@ -1,6 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../../src/server/mocks-edit/plan/property-key-name";
 
 function keysOf(objectText: string): Array<string | null> {

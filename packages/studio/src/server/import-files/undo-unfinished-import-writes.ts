@@ -1,6 +1,6 @@
 import { createLogger } from "@noverax/courier";
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { IMPORTS_STATE_FILENAME, readImportsState } from "../../apis/imports-state";
-import { projectRootAt } from "../project-fs/project-root";
 import { recoverInterruptedApplies } from "./recover-interrupted-applies";
 import { sweepCourierTemps } from "./sweep-courier-temps";
 

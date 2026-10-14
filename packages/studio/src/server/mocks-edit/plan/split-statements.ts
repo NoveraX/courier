@@ -1,5 +1,5 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { Directive, Statement } from "oxc-parser";
-import type { ParsedSource } from "./parse-source";
 import { previewText } from "./preview-text";
 import { textOf } from "./text-of";
 import type { PlannedInsertion } from "./types";

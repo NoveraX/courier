@@ -1,7 +1,6 @@
 import { createLogger } from "@noverax/courier";
+import { DOTENV_ARG } from "@noverax/courier-cli/devkit";
 import { type ArgsDef, defineCommand } from "citty";
-
-import { DOTENV_ARG } from "../server/project-env";
 import { runImport } from "./import/run-import";
 
 const log = createLogger("Import");

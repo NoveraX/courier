@@ -14,26 +14,24 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  FORMAT_WORKER_SCRIPT,
+  JOB_MEMORY_CAP,
+  JOB_MEMORY_WATCH_SCRIPT,
+  startWorkerProcess,
+} from "@noverax/courier-cli/devkit";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { JOB_MEMORY_CAP } from "../../src/server/job-memory-cap";
 import { TRUSTED_JOB } from "../../src/server/spec-jobs/job-budgets";
 import { runInProcess, WORKER_READY_MS } from "../../src/server/spec-jobs/run-in-process";
 import { SPEC_JOB_PROTOCOL } from "../../src/server/spec-jobs/spec-job-protocol";
 import { SpecWorkLimitError } from "../../src/server/spec-jobs/spec-work-limit-error";
 import { StudioWorkerError } from "../../src/server/spec-jobs/studio-worker-error";
-import { startWorkerProcess } from "../../src/server/worker-process";
 
-const script = vi.hoisted(() => ({ path: "", spec: "", format: "", watch: "" }));
+const script = vi.hoisted(() => ({ path: "", spec: "" }));
 
 vi.mock("../../src/server/worker-scripts", async (importOriginal) => {
-  const built = await importOriginal<{
-    SPEC_WORKER_SCRIPT: string;
-    FORMAT_WORKER_SCRIPT: string;
-    JOB_MEMORY_WATCH_SCRIPT: string;
-  }>();
+  const built = await importOriginal<{ SPEC_WORKER_SCRIPT: string }>();
   script.spec = built.SPEC_WORKER_SCRIPT;
-  script.format = built.FORMAT_WORKER_SCRIPT;
-  script.watch = built.JOB_MEMORY_WATCH_SCRIPT;
   return {
     ...built,
     get SPEC_WORKER_SCRIPT() {
@@ -299,7 +297,7 @@ describe("a worker process whose Studio has gone", () => {
      though not its close, which a channel closed from this side never gives. */
   it.each([
     ["reads, generates and compares specifications", () => script.spec],
-    ["formats files", () => script.format],
+    ["formats files", () => FORMAT_WORKER_SCRIPT],
   ])("ends, as one that %s", async (_does, built) => {
     const worker = startWorkerProcess(built(), []);
     await new Promise((resolve) => worker.child.once("spawn", resolve));
@@ -322,7 +320,7 @@ describe("a worker process whose Studio has gone", () => {
         `import { fork } from "node:child_process";`,
         `import { writeSync } from "node:fs";`,
         `const child = fork(${JSON.stringify(spins)}, [], {`,
-        `  execArgv: [${JSON.stringify(`--import=${pathToFileURL(script.watch).href}`)}],`,
+        `  execArgv: [${JSON.stringify(`--import=${pathToFileURL(JOB_MEMORY_WATCH_SCRIPT).href}`)}],`,
         `  env: { ...process.env, ${JSON.stringify(JOB_MEMORY_CAP.env)}: "1024" },`,
         `  stdio: ["ignore", "ignore", "ignore", "ipc"],`,
         `});`,

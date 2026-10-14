@@ -1,8 +1,7 @@
 import { statSync } from "node:fs";
 import { join } from "node:path";
-
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { COURIER_DIR } from "../courier-dir";
-import { errnoCode } from "../errno-code";
 import { DATABASE_FILE } from "../storage/studio-db";
 
 const sizeOf = (path: string): number => {

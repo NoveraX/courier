@@ -7,8 +7,9 @@ import type * as Fs from "node:fs";
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type * as Devkit from "@noverax/courier-cli/devkit";
+import { type ProjectRoot, projectRootAt, writeTempBeside } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
 import {
   type ApplyJournal,
@@ -19,8 +20,6 @@ import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
 import { planFiles } from "../../src/server/import-files/plan-files";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
 import { stageWrites } from "../../src/server/import-files/stage-writes";
-import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
-import { writeTempBeside } from "../../src/server/project-fs/write-temp-beside";
 
 /* A path as these checks spell it, with forward slashes, which Windows does not write. */
 function slashed(path: Fs.PathLike): string {
@@ -31,10 +30,9 @@ vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
   return { ...actual, renameSync: vi.fn(actual.renameSync) };
 });
-vi.mock("../../src/server/project-fs/write-temp-beside", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../src/server/project-fs/write-temp-beside")>();
-  return { writeTempBeside: vi.fn(actual.writeTempBeside) };
+vi.mock("@noverax/courier-cli/devkit", async (importOriginal) => {
+  const actual = await importOriginal<typeof Devkit>();
+  return { ...actual, writeTempBeside: vi.fn(actual.writeTempBeside) };
 });
 
 const DIR = "src/api/pets";

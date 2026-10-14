@@ -1,10 +1,10 @@
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import type { ApisRouteDeps } from "../apis-routes";
 import type { ApplyReport } from "../import-files/apply-file-plan";
 import { type PlanConsent, runPlan } from "../import-files/run-plan";
 import { saveImportEntry } from "../import-files/save-import-entry";
 import { importsSnapshotOf } from "../imports-bridge";
 import { withImportsLock } from "../imports-lock";
-import { projectRootAt } from "../project-fs/project-root";
 import { readForRemoval } from "../project-state/read-for-removal";
 import { type RemovalConfigNotes, removalConfigNotes } from "../removal-config-notes";
 import { planImportRemoval } from "../removal-plan";

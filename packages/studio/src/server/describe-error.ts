@@ -1,6 +1,6 @@
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { pathScrubber } from "./machine-paths";
 import { machineSpellings } from "./machine-spellings";
-import { messageOf } from "./message-of";
 
 /**
  * An error as one line a page shows: its message with line breaks folded,

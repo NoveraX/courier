@@ -1,5 +1,5 @@
 import { accessSync, constants } from "node:fs";
-import { errnoCode } from "../errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
 
 /**

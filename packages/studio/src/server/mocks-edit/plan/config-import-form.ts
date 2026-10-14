@@ -1,6 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { Program } from "oxc-parser";
 import { exportName } from "./export-name";
-import { parseSource } from "./parse-source";
 
 /** How the mocks file imports the config: its default export, or its module whole. */
 export type ConfigImportForm = "default" | "namespace";

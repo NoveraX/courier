@@ -1,14 +1,13 @@
 import { dirname, join, relative, sep } from "node:path";
 
 import type { CourierImportEntry } from "@noverax/courier/config";
-
+import { writesExplicitExtensions } from "@noverax/courier-cli/devkit";
 import type { GenerateOptions, ParsedSpec } from "../apis";
 import { resolveImportLayout } from "../apis/layout";
 import { configObjectFile } from "./config-edit/config-object-file";
 import { type SourcesModule, sourcesModuleFor } from "./config-edit/sources-module";
 import type { LoadedCourierConfig } from "./config-loader";
 import { importEntryOf } from "./import-entry-of";
-import { writesExplicitExtensions } from "./mocks-edit/writes-explicit-extensions";
 import { NameTakenError } from "./name-taken-error";
 import type { WriteBody } from "./write-types";
 

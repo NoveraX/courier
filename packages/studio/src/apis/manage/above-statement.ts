@@ -1,6 +1,6 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import { BYTE_ORDER_MARK } from "../../server/mocks-edit/plan/byte-order-mark";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
-import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 
 /**
  * Where code inserted above a top-level statement goes: at the start of the

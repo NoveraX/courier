@@ -1,8 +1,8 @@
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import type { ImportStateEntry } from "../../apis/imports-state";
 import type { ImportLayout } from "../../apis/layout";
 import { declaresEndpoints } from "../../apis/merge/declares-endpoints";
 import { generateFingerprints } from "../../apis/merge/fingerprint";
-import type { ProjectRoot } from "../project-fs/project-root";
 import { claimedFiles } from "./claimed-files";
 import type { PlanRequest } from "./file-plan-types";
 

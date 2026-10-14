@@ -21,6 +21,7 @@ describe("a command run by its bare name", () => {
           "npm exec courier-studio verify",
           "pnpm dlx courier-mcp",
           "yarn dlx courier",
+          "npx courier-cli routes --check",
         ].join("\n"),
       ),
     ).toEqual([
@@ -31,6 +32,7 @@ describe("a command run by its bare name", () => {
       "courier-studio",
       "courier-mcp",
       "courier",
+      "courier-cli",
     ]);
   });
 
@@ -70,9 +72,11 @@ describe("a command that names its package, or runs only the project's copy", ()
           '"args": ["@noverax/courier-mcp", "--dotenv", ".env.local"]',
           "npx --package=@noverax/courier-mcp courier-mcp",
           "npx -p @noverax/courier-studio courier-studio verify",
+          "npx @noverax/courier-cli routes --check",
           "pnpm exec courier-studio",
           "yarn courier-studio",
           '"studio": "courier-studio"',
+          '"routes": "courier-cli routes"',
         ].join("\n"),
       ),
     ).toEqual([]);

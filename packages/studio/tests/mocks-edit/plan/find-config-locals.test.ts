@@ -1,7 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { findConfigLocals } from "../../../src/server/mocks-edit/plan/find-config-locals";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 const ACCEPTED = ["./courier.config", "./courier.config.ts", "./courier.config.js"];
 

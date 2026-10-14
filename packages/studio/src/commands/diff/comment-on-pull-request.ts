@@ -1,7 +1,7 @@
 import { relative } from "node:path";
 import { createLogger } from "@noverax/courier";
 
-import { messageOf } from "../../server/message-of";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { type CommentOutcome, postReportComment } from "./pull-request-comment";
 import { type JobEnvironment, pullRequestOf } from "./pull-request-target";
 

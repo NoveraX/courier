@@ -14,8 +14,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { type ProjectRoot, projectRootAt } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { generateFingerprints } from "../../src/apis/merge/fingerprint";
 import { bodyHash } from "../../src/server/import-files/body-hash";
 import { FilePlanError } from "../../src/server/import-files/file-plan-error";
@@ -24,7 +24,6 @@ import { signGeneratedFile } from "../../src/server/import-files/generated-heade
 import { planFiles } from "../../src/server/import-files/plan-files";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
 import { withConfirmations } from "../../src/server/import-files/with-confirmations";
-import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
 const IS_WINDOWS = process.platform === "win32";
 const DIR = "src/api/pets";

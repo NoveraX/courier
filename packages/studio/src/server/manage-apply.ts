@@ -1,3 +1,4 @@
+import type { LoadedForRoutes, ProjectRoot } from "@noverax/courier-cli/devkit";
 import { computeSpecHash, createSpecDigest } from "../apis";
 import type { ApplyReport } from "./import-files/apply-file-plan";
 import { recordAfterApply } from "./import-files/record-after-apply";
@@ -5,8 +6,6 @@ import { type PlanConsent, runPlan } from "./import-files/run-plan";
 import { saveImportEntry } from "./import-files/save-import-entry";
 import type { ImportsSnapshot } from "./imports-bridge";
 import { type ManageRequest, planManage } from "./manage-plan";
-import type { ProjectRoot } from "./project-fs/project-root";
-import type { LoadedForRoutes } from "./routes-module/routes-module-writer";
 
 /**
  * Add and remove endpoints of an import as previewed: the plan is made

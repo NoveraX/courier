@@ -1,6 +1,6 @@
 import { type Dirent, lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { errnoCode } from "../errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 
 /**
  * Visit every `.ts` file under a directory, never following a link: a link

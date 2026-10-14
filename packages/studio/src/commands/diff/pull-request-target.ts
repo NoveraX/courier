@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { withoutTrailingSlashes } from "@noverax/courier/internal";
-
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { ownValue } from "../../apis/own-value";
-import { messageOf } from "../../server/message-of";
 import { isObject } from "../../server/validate-body";
 
 /** The pull request a GitHub Actions job runs for, and what posting on it takes. */

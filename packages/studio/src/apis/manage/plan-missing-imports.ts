@@ -1,8 +1,8 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration, Program } from "oxc-parser";
 import { planImportLines } from "../../server/mocks-edit/plan/import-lines";
 import { planImportJoin } from "../../server/mocks-edit/plan/join-import";
 import type { ModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
-import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 import { quoteString } from "../../server/mocks-edit/plan/quote-string";
 import type { FileStyle } from "../../server/mocks-edit/plan/types";
 import type { TextEdit } from "../../server/mocks-edit/types";

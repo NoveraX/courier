@@ -1,15 +1,15 @@
 import { importSpecifier } from "../import-specifier";
 import type { RecipeContext, RecipeFile } from "../recipe-types";
 
-/** Where the routes module goes: beside courier.config.ts, where Studio writes it. */
+/** Where the routes module goes: beside courier.config.ts, where Courier writes it. */
 export const ROUTES_MODULE = "courier.routes.ts";
 
 /**
  * `courier.routes.ts`: the routes the browser's client of the example API
  * takes — each endpoint the API marks for a page, and how the page reaches
- * it — as Courier Studio writes the module from the marks. Written with the
- * project, it compiles before Studio first runs, and Studio finds it as it
- * would write it.
+ * it — as Courier writes the module from the marks: Studio as it runs,
+ * `courier-cli routes` without it. Written with the project, it compiles
+ * before either first runs, and each finds it as it would write it.
  *
  * @param ctx - The project, and what is set up in it
  * @returns The file
@@ -20,8 +20,8 @@ export const ROUTES_MODULE = "courier.routes.ts";
  */
 export function exampleRoutes(ctx: RecipeContext): RecipeFile {
   const config = importSpecifier(ROUTES_MODULE, "courier.config.ts", ctx.extension);
-  const content = `// Written by Courier Studio from courier.config.ts. Do not edit it:
-// \`courier-studio routes\` writes it again from the endpoints marked .expose().
+  const content = `// Written by Courier from courier.config.ts. Do not edit it:
+// \`courier-cli routes\` writes it again from the endpoints marked .expose().
 
 import type { CourierRoutes, RouteMap } from "@noverax/courier/define";
 

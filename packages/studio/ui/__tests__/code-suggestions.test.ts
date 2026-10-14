@@ -33,7 +33,7 @@ beforeAll(() => {
       `export const api = defineApi({ name: "api", baseURL: "https://api.example.com", endpoints: { health: endpoint.get("health").response<unknown>().expose() } });`,
     ].join("\n"),
   );
-  /* The routes module Studio writes beside the code, as a suggestion imports it. */
+  /* The routes module Courier writes beside the code, as a suggestion imports it. */
   writeFileSync(
     join(dir, "courier.routes.ts"),
     [
@@ -190,7 +190,7 @@ describe("the direct-mode warning", () => {
     expect(items.find((item) => item.id === "warn-unused-proxy")).toBeUndefined();
   });
 
-  it("suggests a proxy caller that takes the routes Studio writes", () => {
+  it("suggests a proxy caller that takes the routes Courier writes", () => {
     const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
 
     expect(items.find((item) => item.id === "warn-unused-proxy")?.codeSuggestion).toContain(

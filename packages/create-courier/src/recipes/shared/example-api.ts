@@ -32,7 +32,7 @@ export interface ExampleReach {
  * environment the framework gives code, and falls back to the mock Studio
  * runs. Where the browser calls it through the app's route, it marks every
  * endpoint for a page to call, and the routes module the browser's client
- * takes is written beside the config, as Studio writes it from the marks.
+ * takes is written beside the config, as Courier writes it from the marks.
  *
  * @param ctx - The project, and what is set up in it
  * @param dir - The folder Courier's own modules go in

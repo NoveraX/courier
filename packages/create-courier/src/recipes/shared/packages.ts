@@ -32,25 +32,31 @@ export interface PackageNeeds {
   readonly react?: boolean;
   /** Whether a server of the app's connects to Studio, which needs Studio's runtime at run time. */
   readonly runtime?: boolean;
+  /**
+   * Whether pages call the API through the app's proxy route, so the
+   * project keeps `courier.routes.ts`, which Courier's CLI writes and checks.
+   */
+  readonly proxy?: boolean;
 }
 
 /**
  * The packages Courier's setup installs: the core and Zod for the API, the
  * framework's adapter, the React bindings for a React app, Studio and the
- * runtime a server connects to it with, the mock and what it runs on, and
- * the MCP server.
+ * runtime a server connects to it with, the CLI that writes the routes
+ * module where pages call through the proxy, the mock and what it runs on,
+ * and the MCP server.
  *
  * @param ctx - The project, and what is set up in it
  * @param needs - What the framework's setup needs
  * @returns The dependencies and the dev dependencies
  * @example
  * ```ts
- * courierPackages(ctx, { adapter: "@noverax/courier-next", react: true });
+ * courierPackages(ctx, { adapter: "@noverax/courier-next", react: true, proxy: true });
  * ```
  */
 export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): RecipePackages {
   const { studio, mocks, mcp, openapi } = ctx.choices;
-  const { adapter, react = false, runtime = true } = needs;
+  const { adapter, react = false, runtime = true, proxy = false } = needs;
   const example = openapi === undefined;
   return {
     dependencies: [
@@ -62,6 +68,7 @@ export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): Recipe
     ],
     devDependencies: [
       ...(studio ? [courierPackage("@noverax/courier-studio")] : []),
+      ...(proxy ? [courierPackage("@noverax/courier-cli")] : []),
       ...(mocks && example
         ? [courierPackage("@noverax/courier-mock"), "hono", "@hono/node-server"]
         : []),

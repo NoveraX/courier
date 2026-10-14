@@ -4,9 +4,9 @@ import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
-import { devStep, studioStep, viteReach } from "./shared/next-steps";
+import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { studioAttach, studioScripts } from "./shared/recipe-parts";
+import { proxyScripts, studioAttach } from "./shared/recipe-parts";
 import { solidDemo } from "./shared/solid-demo";
 
 const DIR = "src/courier";
@@ -59,8 +59,8 @@ export function solidStartRecipe(ctx: RecipeContext): Recipe {
     ],
     /* SolidStart 1 keeps Vite's plugins in app.config.ts, under `vite`; the step names it there. */
     edits: ctx.choices.studio && config === undefined ? [studioEdit] : [],
-    ...courierPackages(ctx, { adapter: "@noverax/courier-solid" }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-solid", proxy: true }),
+    scripts: proxyScripts(ctx),
     manual:
       ctx.choices.studio && config !== undefined
         ? [
@@ -71,6 +71,6 @@ export function solidStartRecipe(ctx: RecipeContext): Recipe {
             },
           ]
         : [],
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

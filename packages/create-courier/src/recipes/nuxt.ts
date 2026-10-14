@@ -4,9 +4,9 @@ import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-typ
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
-import { devStep, portableServerReach, studioStep } from "./shared/next-steps";
+import { devStep, portableServerReach, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { studioScripts } from "./shared/recipe-parts";
+import { proxyScripts } from "./shared/recipe-parts";
 import { vueDemo } from "./shared/vue-demo";
 
 /*
@@ -116,9 +116,9 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
       ...routing.files,
     ],
     edits: [...routing.edits, ...(ctx.choices.studio ? [nuxtStudioEdit(ctx.project)] : [])],
-    ...courierPackages(ctx, { adapter: "@noverax/courier-nuxt" }),
-    scripts: studioScripts(ctx),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-nuxt", proxy: true }),
+    scripts: proxyScripts(ctx),
     manual: [],
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

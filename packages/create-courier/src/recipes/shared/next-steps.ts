@@ -1,6 +1,8 @@
 import type { NextStep, RecipeContext } from "../recipe-types";
 import type { ExampleReach } from "./example-api";
 
+import { ROUTES_COMMAND } from "./recipe-parts";
+
 /**
  * The step that starts Studio — and with it the example's mock — where
  * Studio is set up.
@@ -17,6 +19,34 @@ export function studioStep(ctx: RecipeContext): NextStep[] {
   const mock = ctx.choices.mocks && ctx.choices.openapi === undefined;
   const what = `starts Courier Studio on port ${ctx.ports.studio}${mock ? `, and the mock API on port ${ctx.ports.mock}` : ""}`;
   return [{ command: ctx.manager.run("studio"), what }];
+}
+
+/**
+ * The step that writes `courier.routes.ts` again, where pages call through
+ * the proxy and no Studio writes it as you work: the `routes` script the
+ * setup adds, or the CLI itself where a script of the project's own has
+ * that name.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns The step, or none where Studio is set up
+ * @example
+ * ```ts
+ * routesStep(ctx); // [{ command: "npm run routes", what: "writes courier.routes.ts again from the .expose() marks: run it after you change one" }]
+ * ```
+ */
+export function routesStep(ctx: RecipeContext): NextStep[] {
+  if (ctx.choices.studio) return [];
+  const own = ctx.project.manifest.scripts.routes;
+  const command =
+    own === undefined || own === ROUTES_COMMAND
+      ? ctx.manager.run("routes")
+      : ctx.manager.exec("courier-cli", ["routes"]).join(" ");
+  return [
+    {
+      command,
+      what: "writes courier.routes.ts again from the .expose() marks: run it after you change one",
+    },
+  ];
 }
 
 /**

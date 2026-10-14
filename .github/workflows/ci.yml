@@ -113,6 +113,12 @@ jobs:
       - name: Check published entry points
         run: npm run check:exports
 
+      # What a page takes from Courier, built as an app's bundler builds it:
+      # no built-in module of Node, what loads at start within its budget, and
+      # no browser API newer than the requirements name unless checked for.
+      - name: Check what a page takes
+        run: npm run check:browser
+
       # Every TypeScript sample of the docs and the READMEs, compiled against
       # the built packages, so a sample cannot drift from the API it shows.
       - name: Check documentation samples

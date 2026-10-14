@@ -240,7 +240,9 @@ The routes are plain data, and they are all the client gets:
 
 No upstream host. No middleware. No endpoint you did not mark. An API's `cancelPrevious` and `coalesce` come with them where the API sets either, since the client honours both.
 
-Studio shows the marks where you look at your endpoints. The Explorer tags each endpoint a page may call `exposed`, and its definition names the mark that decided: `expose: true on users`, `marked .expose(false)`, `nothing marks it .expose()`. The Playground calls through the proxy as a page would: in proxy mode it flags an endpoint no mark opens `not exposed`, and refuses to send it, saying where to open it — so what you try there is what a page may do.
+Studio shows the marks where you look at your endpoints. The Explorer tags each endpoint a page may call `exposed`, and its definition names the mark that decided: `expose: true on users`, `marked .expose(false)`, `nothing marks it .expose()`. In Proxy mode the Playground calls as a page would: it flags an endpoint no mark opens `not exposed`, and refuses to send it, saying where to open it — so what you try there is what a page may do.
+
+To try an endpoint that stays the server's, run it as server code. **Run as server code**, under the `not exposed` chip, switches the Playground to Direct mode and sends the call there; **Try as server code**, on the Explorer's Pages row, opens the Playground in Direct mode on the endpoint and sends nothing until you do. Direct mode runs the call as your server code does, on the app's runtime, which reaches every endpoint, marked or not. Nothing changes at the proxy: a page's call is still refused, so no endpoint has to be opened to be tested.
 
 <Callout variant="warning" title="Direct mode is a different trade">
 In direct mode the browser calls your backend itself, so it must hold the API definition — the URL and the endpoint paths are in the bundle by construction. The marks cannot change that, and are not meant to. Proxy mode is the one that keeps them on the server.

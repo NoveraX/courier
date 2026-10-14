@@ -1,3 +1,5 @@
+import { Server } from "lucide-react";
+
 import type { AgentMark, PageMark } from "@/features/apis/types";
 import { agentMarkTitle } from "@/features/explorer/agent-mark-title";
 import { lastCallLabel } from "@/features/explorer/endpoint-key";
@@ -51,8 +53,14 @@ function AgentMarks({ mark }: { mark: AgentMark }): React.ReactNode {
   );
 }
 
-/* Whether a page may call the endpoint through the proxy, and the mark that decided. */
-function PageMarks({ mark }: { mark: PageMark }): React.ReactNode {
+/* Whether a page may call the endpoint through the proxy, the mark that decided, and — kept to the server — the Playground as server code. */
+function PageMarks({
+  mark,
+  onTryAsServer,
+}: {
+  mark: PageMark;
+  onTryAsServer?: (() => void) | undefined;
+}): React.ReactNode {
   return (
     <>
       {mark.exposed ? (
@@ -63,6 +71,17 @@ function PageMarks({ mark }: { mark: PageMark }): React.ReactNode {
       <span title={pageMarkTitle(mark)} className="text-small text-fg-subtle">
         {mark.reason}
       </span>
+      {!mark.exposed && onTryAsServer && (
+        <button
+          type="button"
+          onClick={onTryAsServer}
+          title="Open it in the Playground in Direct mode, which runs a call as your server code does: every endpoint, marked or not"
+          className="flex h-6 cursor-pointer items-center gap-1.25 rounded-[5px] px-1.5 text-small text-brand transition-colors hover:bg-brand-dim focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
+        >
+          <Server aria-hidden="true" className="size-3" />
+          Try as server code
+        </button>
+      )}
     </>
   );
 }
@@ -79,10 +98,11 @@ function Row({ label, children }: { label: string; children: React.ReactNode }):
 /**
  * What an endpoint is, as its definition says: its path, its kind and
  * whether it is proxied, which schemas it declares, its middleware,
- * whether a page may call it through the proxy, what the project offers
- * agents of it, and when it was last called.
+ * whether a page may call it through the proxy — with the way to try one
+ * kept to the server as server code — what the project offers agents of
+ * it, and when it was last called.
  *
- * @param props - The endpoint and the time now
+ * @param props - The endpoint, the time now, and what opens it in the Playground as server code
  * @returns The definition
  * @example
  * ```tsx
@@ -92,9 +112,11 @@ function Row({ label, children }: { label: string; children: React.ReactNode }):
 export function EndpointDefinition({
   endpoint: e,
   now,
+  onTryAsServer,
 }: {
   endpoint: EndpointNode;
   now: number;
+  onTryAsServer?: (() => void) | undefined;
 }): React.ReactNode {
   return (
     <div className="flex flex-col">
@@ -121,7 +143,7 @@ export function EndpointDefinition({
         </Row>
         {e.page && (
           <Row label="Pages">
-            <PageMarks mark={e.page} />
+            <PageMarks mark={e.page} onTryAsServer={onTryAsServer} />
           </Row>
         )}
         {e.agent && (

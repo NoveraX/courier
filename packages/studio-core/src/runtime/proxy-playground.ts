@@ -79,7 +79,7 @@ function assertMarked(definition: unknown, routes: CourierRoutes, call: Playgrou
   const owner = groupChain(definition, call.group)?.at(-1) ?? definition;
   if (member(owner, call.method) === undefined) return;
   throw new Error(
-    `${call.source}.${path} is not marked .expose(), so a page may not call it through the proxy: mark it where it is defined, or send it directly`,
+    `${call.source}.${path} is not marked .expose(), so a page may not call it through the proxy: mark it where it is defined, or run it as server code, in Direct mode`,
   );
 }
 

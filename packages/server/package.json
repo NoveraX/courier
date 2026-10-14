@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Standalone server for Courier: your typed API's proxy over HTTP, SSE and WebSocket on its own port — for static and serverless front ends, Docker and Kubernetes",
   "keywords": [
     "courier",
@@ -64,11 +64,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier-studio-core": "0.2.0",
+    "@noverax/courier-studio-core": "0.3.0",
     "citty": "^0.2.2"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0",
+    "@noverax/courier": "^0.3.0",
     "ws": ">=8"
   },
   "peerDependenciesMeta": {

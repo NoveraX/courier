@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-redis",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Redis for Courier realtime: Pub/Sub that carries WebSocket channels across replicas, presence shared between them, and Streams that keep the events a reconnecting client resumes from",
   "keywords": [
     "courier",
@@ -58,7 +58,7 @@
     "dev": "tsdown --watch"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0",
+    "@noverax/courier": "^0.3.0",
     "ioredis": "^5.3.0 || ^6.0.0"
   },
   "publishConfig": {

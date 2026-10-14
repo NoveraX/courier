@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-astro",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Astro adapter for Courier: an API endpoint that proxies typed calls to any backend, with the user's session in pages, endpoints and actions",
   "keywords": [
     "courier",
@@ -69,7 +69,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0"
+    "@noverax/courier": "^0.3.0"
   },
   "devDependencies": {
     "@noverax/courier": "*"

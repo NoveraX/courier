@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-hono",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hono adapter for Courier on Web Standards: proxy typed calls to any backend from Node.js, Bun, Deno or Cloudflare Workers, with the user's session, SSE and WebSockets",
   "keywords": [
     "courier",
@@ -76,7 +76,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.2.0",
+    "@noverax/courier": "^0.3.0",
     "hono": ">=4",
     "ws": ">=8"
   },

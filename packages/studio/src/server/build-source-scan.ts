@@ -11,56 +11,16 @@
 
 import { join, relative } from "node:path";
 import type { ProxyPath } from "@noverax/courier";
-import type { SchemaField } from "@noverax/courier-studio-core";
+import type { Sources } from "@noverax/courier/define";
 import { extractSourceMap } from "@noverax/courier-studio-core";
 import { isTopLevel } from "../apis/parser/top-level";
-import { type AgentMark, agentMarks } from "./agent-marks";
+import { agentMarks } from "./agent-marks";
 import type { LoadedCourierConfig } from "./config-loader";
+import { describeEndpoint, type ScannedEndpoint } from "./describe-endpoint";
 import { findSourceDeclaration } from "./find-source-declaration";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
+import { pageMarks } from "./page-marks";
 import { scannedFilePaths } from "./scanned-file-paths";
-
-/** Every verb an endpoint can be addressed with, as the scan reports it. */
-export type ScannedHttpMethod =
-  | "get"
-  | "head"
-  | "options"
-  | "query"
-  | "post"
-  | "put"
-  | "patch"
-  | "delete";
-
-/** How an endpoint is shaped, as the APIs page and mock wizard read it. */
-export interface ScannedEndpointAnalysis {
-  hasResponseType: boolean;
-  hasVariablesType: boolean;
-  hasValidation: boolean;
-  httpMethod: ScannedHttpMethod;
-  path: string;
-  type: "query" | "mutation" | null;
-  /** How a stream or a channel is carried; absent for plain HTTP. */
-  transport?: "sse" | "ws";
-  /** The source's middleware, in the order it runs. */
-  middleware?: string[];
-  /** The variables its schema describes, with a placeholder for each field. */
-  variablesStub?: Record<string, unknown>;
-  /** The fields its variables schema declares, with their types and whether each is required. */
-  variablesFields?: SchemaField[];
-  /** What the endpoint's `.defaults()` fills in for a variable a call leaves out. */
-  variablesDefaults?: Record<string, unknown>;
-  /** A channel whose messages from the client have a schema. */
-  hasReceiveSchema?: true;
-  /** A stream or a channel the app serves itself, rather than an upstream. */
-  served?: true;
-  /** What the project's `agents` policy decided for it; absent for a stream or a channel. */
-  agent?: AgentMark;
-}
-
-export interface ScannedEndpoint {
-  name: string;
-  analysis: ScannedEndpointAnalysis;
-}
 
 export interface ScannedGroup {
   name: string;
@@ -85,17 +45,6 @@ export interface ScanResult {
   sources: ScannedSource[];
   scannedFiles: number;
 }
-
-const HTTP_METHODS: ReadonlyArray<ScannedHttpMethod> = [
-  "get",
-  "head",
-  "options",
-  "query",
-  "post",
-  "put",
-  "patch",
-  "delete",
-];
 
 /**
  * Build the source catalogue from the config Studio runs and the imports
@@ -122,6 +71,7 @@ export function buildSourceScan(
   const { config, configFile, deps, depHashes } = loaded;
   const sourceMap = extractSourceMap(config.sources ?? {});
   const marks = agentMarks(config);
+  const pages = pageMarks(config.sources as Sources | undefined);
 
   const sources: ScannedSource[] = [];
   for (const [name, source] of Object.entries(sourceMap)) {
@@ -138,8 +88,11 @@ export function buildSourceScan(
 
     for (const [groupName, group] of Object.entries(source.groups)) {
       const endpoints = Object.entries(group.endpoints).map(([endpointName, endpoint]) => {
-        const call = isTopLevel(groupName) ? endpointName : `${groupName}.${endpointName}`;
-        return describeEndpoint(endpointName, endpoint, marks.get(`${name}.${call}`));
+        const call = `${name}.${isTopLevel(groupName) ? endpointName : `${groupName}.${endpointName}`}`;
+        return describeEndpoint(endpointName, endpoint, {
+          agent: marks.get(call),
+          page: pages.get(call),
+        });
       });
       if (isTopLevel(groupName)) {
         inlineEndpoints = endpoints;
@@ -170,35 +123,4 @@ export function buildSourceScan(
   }
 
   return { sources, scannedFiles: sources.length };
-}
-
-type MapEndpoint = ReturnType<
-  typeof extractSourceMap
->[string]["groups"][string]["endpoints"][string];
-
-function describeEndpoint(
-  name: string,
-  endpoint: MapEndpoint,
-  agent: AgentMark | undefined,
-): ScannedEndpoint {
-  const method = endpoint.httpMethod?.toLowerCase();
-  return {
-    name,
-    analysis: {
-      hasResponseType: endpoint.hasResponseSchema,
-      hasVariablesType: endpoint.hasVariablesSchema,
-      hasValidation: endpoint.hasResponseSchema || endpoint.hasVariablesSchema,
-      httpMethod: HTTP_METHODS.find((known) => known === method) ?? "get",
-      path: endpoint.path ?? "",
-      type: endpoint.type ?? null,
-      ...(endpoint.transport && { transport: endpoint.transport }),
-      ...(endpoint.middleware?.length && { middleware: [...endpoint.middleware] }),
-      ...(endpoint.variablesStub && { variablesStub: endpoint.variablesStub }),
-      ...(endpoint.variablesFields && { variablesFields: endpoint.variablesFields }),
-      ...(endpoint.variablesDefaults && { variablesDefaults: endpoint.variablesDefaults }),
-      ...(endpoint.hasReceiveSchema && { hasReceiveSchema: true as const }),
-      ...(endpoint.served && { served: true as const }),
-      ...(agent && { agent }),
-    },
-  };
 }

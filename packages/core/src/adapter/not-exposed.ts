@@ -17,7 +17,7 @@ const named = new Set<string>();
  * @param endpoint - The endpoint as the refusal names it: `[api][admin][purge]`
  * @example
  * ```ts
- * if (!isExposedToWire(dataSource, group, method, schema)) warnNotExposed(`[${source}][${group}][${method}]`);
+ * if (!isExposedToWire(dataSource, group, schema)) warnNotExposed(`[${source}][${group}][${method}]`);
  * ```
  */
 export function warnNotExposed(endpoint: string): void {

@@ -1,7 +1,8 @@
-import type { AgentMark } from "@/features/apis/types";
+import type { AgentMark, PageMark } from "@/features/apis/types";
 import { agentMarkTitle } from "@/features/explorer/agent-mark-title";
 import { lastCallLabel } from "@/features/explorer/endpoint-key";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
+import { pageMarkTitle } from "@/features/explorer/page-mark-title";
 import { cn } from "@/lib/utils";
 
 const CHIP = "rounded-[5px] px-1.5 py-0.5 font-mono text-small whitespace-nowrap";
@@ -50,6 +51,22 @@ function AgentMarks({ mark }: { mark: AgentMark }): React.ReactNode {
   );
 }
 
+/* Whether a page may call the endpoint through the proxy, and the mark that decided. */
+function PageMarks({ mark }: { mark: PageMark }): React.ReactNode {
+  return (
+    <>
+      {mark.exposed ? (
+        <Chip className="bg-syntax-type/12 text-syntax-type">exposed</Chip>
+      ) : (
+        <span className="text-small text-fg-muted">kept to the server</span>
+      )}
+      <span title={pageMarkTitle(mark)} className="text-small text-fg-subtle">
+        {mark.reason}
+      </span>
+    </>
+  );
+}
+
 function Row({ label, children }: { label: string; children: React.ReactNode }): React.ReactNode {
   return (
     <div className="grid min-h-8 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 border-b border-line">
@@ -61,8 +78,9 @@ function Row({ label, children }: { label: string; children: React.ReactNode }):
 
 /**
  * What an endpoint is, as its definition says: its path, its kind and
- * whether it is proxied, which schemas it declares, its middleware, what
- * the project offers agents of it, and when it was last called.
+ * whether it is proxied, which schemas it declares, its middleware,
+ * whether a page may call it through the proxy, what the project offers
+ * agents of it, and when it was last called.
  *
  * @param props - The endpoint and the time now
  * @returns The definition
@@ -101,6 +119,11 @@ export function EndpointDefinition({
             </Chip>
           ))}
         </Row>
+        {e.page && (
+          <Row label="Pages">
+            <PageMarks mark={e.page} />
+          </Row>
+        )}
         {e.agent && (
           <Row label="Agents">
             <AgentMarks mark={e.agent} />

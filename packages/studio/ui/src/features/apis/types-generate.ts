@@ -79,6 +79,14 @@ export interface AgentMark {
   reason: string;
 }
 
+/** Whether a page may call an endpoint through the proxy, as Studio's server reports it. */
+export interface PageMark {
+  /** Whether the proxy serves the endpoint to a page. */
+  exposed: boolean;
+  /** The mark that decided, as the definition writes it: `marked .expose()`, `expose: false on billing`. */
+  reason: string;
+}
+
 export interface EndpointAnalysis {
   hasResponseType: boolean;
   hasVariablesType: boolean;
@@ -102,6 +110,8 @@ export interface EndpointAnalysis {
   served?: true;
   /** What the project's `agents` policy decided for it; absent for a stream or a channel. */
   agent?: AgentMark;
+  /** Whether a page may call it through the proxy, and the mark that says so. */
+  page?: PageMark;
 }
 
 export interface ScannedEndpoint {

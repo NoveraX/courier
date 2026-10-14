@@ -33,6 +33,27 @@ describe("the Playground's URL bar", () => {
     expect(html).toContain("via /ws");
   });
 
+  it("warns in proxy mode that the proxy refuses an endpoint no mark opens, saying why", () => {
+    const page = { exposed: false, reason: "expose: false on admin" };
+    const html = renderToStaticMarkup(
+      <UrlBar label="SSE" parts={PARTS} proxy={ROUTE} page={page} />,
+    );
+
+    expect(html).toContain("not exposed");
+    expect(html).toContain(
+      "Kept to the server: the proxy refuses a page&#x27;s call to it — expose: false on admin",
+    );
+  });
+
+  it("says nothing of an endpoint a page may call", () => {
+    const page = { exposed: true, reason: "marked .expose()" };
+    const html = renderToStaticMarkup(
+      <UrlBar label="SSE" parts={PARTS} proxy={ROUTE} page={page} />,
+    );
+
+    expect(html).not.toContain("not exposed");
+  });
+
   it("shows the upstream for a stream the app calls", () => {
     const html = renderToStaticMarkup(<UrlBar label="SSE" parts={PARTS} proxy={undefined} />);
 

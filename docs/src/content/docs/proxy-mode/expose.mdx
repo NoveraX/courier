@@ -225,7 +225,7 @@ The routes are plain data, and they are all the client gets:
 
 No upstream host. No middleware. No endpoint you did not mark. An API's `cancelPrevious` and `coalesce` come with them where the API sets either, since the client honours both.
 
-Studio's Playground calls through the proxy as a page would, and refuses an endpoint no mark opens, saying where to open it — so what you try there is what a page may do.
+Studio shows the marks where you look at your endpoints. The Explorer tags each endpoint a page may call `exposed`, and its definition names the mark that decided: `expose: true on users`, `marked .expose(false)`, `nothing marks it .expose()`. The Playground calls through the proxy as a page would: in proxy mode it flags an endpoint no mark opens `not exposed`, and refuses to send it, saying where to open it — so what you try there is what a page may do.
 
 <Callout variant="warning" title="Direct mode is a different trade">
 In direct mode the browser calls your backend itself, so it must hold the API definition — the URL and the endpoint paths are in the bundle by construction. The marks cannot change that, and are not meant to. Proxy mode is the one that keeps them on the server.

@@ -106,6 +106,7 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
           label={endpoint.label}
           parts={url.parts}
           proxy={url.proxy}
+          page={url.proxy === undefined ? undefined : endpoint.def.page}
           served={endpoint.def.served === true}
         />
         <div className="flex flex-wrap items-center gap-2">

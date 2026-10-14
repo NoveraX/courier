@@ -335,3 +335,61 @@ describe("what the source catalogue says of agents", () => {
     });
   }, 30_000);
 });
+
+describe("what the source catalogue says of pages", () => {
+  it("marks each endpoint with whether a page may call it through the proxy, and the mark that says so", async () => {
+    const config = [
+      `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
+      `const { endpoint, stream } = courier();`,
+      `const invoices = defineGroup({ prefix: "invoices", expose: true, endpoints: { list: endpoint.get("") } });`,
+      `const billing = defineGroup({ prefix: "billing", expose: false, groups: { invoices }, endpoints: {`,
+      `  refund: endpoint.post("refund"),`,
+      `  receipt: endpoint.get("receipt").expose(),`,
+      `} });`,
+      `const health = endpoint.get("health");`,
+      `const ticks = stream.response<{ n: number }>().get("sse").expose(false);`,
+      `export default {`,
+      `  sources: { api: defineApi({ baseURL: "https://api.example", expose: true, endpoints: { health, ticks }, groups: { billing } }) },`,
+      `};`,
+    ].join("\n");
+    writeFileSync(join(root, "courier.config.ts"), config);
+    const loaded = await loadCourierConfig(root);
+
+    const [source] = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root).sources;
+    const pages = Object.fromEntries(
+      [
+        ...(source?.groups ?? []).flatMap((g) => g.endpoints.map((e) => [g.name, e] as const)),
+        ...(source?.inlineEndpoints ?? []).map((e) => ["", e] as const),
+      ].map(([group, e]) => [group ? `${group}.${e.name}` : e.name, e.analysis.page ?? null]),
+    );
+
+    expect(pages).toEqual({
+      "billing.refund": { exposed: false, reason: "expose: false on billing" },
+      "billing.receipt": { exposed: true, reason: "marked .expose()" },
+      "billing.invoices.list": { exposed: true, reason: "expose: true on billing.invoices" },
+      health: { exposed: true, reason: "expose: true on the API" },
+      ticks: { exposed: false, reason: "marked .expose(false)" },
+    });
+  }, 30_000);
+
+  it("keeps every endpoint of an API that marks nothing to the server, saying so", async () => {
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      [
+        `import { courier, defineApi } from "@noverax/courier/define";`,
+        `const { endpoint } = courier();`,
+        `export default {`,
+        `  sources: { api: defineApi({ baseURL: "https://api.example", endpoints: { list: endpoint.get("") } }) },`,
+        `};`,
+      ].join("\n"),
+    );
+    const loaded = await loadCourierConfig(root);
+
+    const [source] = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root).sources;
+
+    expect(source?.inlineEndpoints?.[0]?.analysis.page).toEqual({
+      exposed: false,
+      reason: "nothing marks it .expose()",
+    });
+  }, 30_000);
+});

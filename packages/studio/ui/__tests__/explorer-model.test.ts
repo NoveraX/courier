@@ -424,6 +424,23 @@ describe("an endpoint's panel", () => {
     expect(agentMarkTitle(kept.agent)).toBe("Not offered to agents — denied by api.orders.*");
   });
 
+  it("tags an endpoint a page may call through the proxy, saying which mark opens it on hover", () => {
+    const create = endpointNamed("api.orders.create");
+    const exposed = { ...create, page: { exposed: true, reason: "expose: true on orders" } };
+    const kept = { ...create, page: { exposed: false, reason: "nothing marks it .expose()" } };
+
+    expect(endpointTags(exposed)).toEqual([
+      { label: "mutation", tone: "mutation" },
+      {
+        label: "exposed",
+        tone: "proxy",
+        title: "A page may call it through the proxy — expose: true on orders",
+      },
+      { label: "proxy", tone: "proxy" },
+    ]);
+    expect(endpointTags(kept).map((t) => t.label)).toEqual(["mutation", "proxy"]);
+  });
+
   it("names it and its method, and says when it was last called", () => {
     expect(keyParts({ source: "api", group: "orders", method: "create" })).toEqual({
       source: "api",

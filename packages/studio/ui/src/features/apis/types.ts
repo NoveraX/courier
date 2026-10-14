@@ -21,6 +21,7 @@ export type {
   ImportSource,
   ImportState,
   ImportStep,
+  PageMark,
   PersistedGenerateOptions,
   ScannedEndpoint,
   ScannedGroup,

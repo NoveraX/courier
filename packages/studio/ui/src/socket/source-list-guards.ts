@@ -6,6 +6,7 @@ import type {
   SourceSummary,
 } from "@/features/apis/types";
 
+import { areMarksWellFormed } from "./endpoint-mark-guards";
 import { isPlainObject } from "./is-plain-object";
 
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
@@ -126,7 +127,8 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     (analysis.variablesFields === undefined || isListOf(analysis.variablesFields, isSchemaField)) &&
     (analysis.variablesDefaults === undefined || isPlainObject(analysis.variablesDefaults)) &&
     (analysis.hasReceiveSchema === undefined || analysis.hasReceiveSchema === true) &&
-    (analysis.served === undefined || analysis.served === true)
+    (analysis.served === undefined || analysis.served === true) &&
+    areMarksWellFormed(analysis)
   );
 }
 

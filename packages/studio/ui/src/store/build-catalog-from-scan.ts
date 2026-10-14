@@ -54,6 +54,7 @@ function endpointsOf(endpoints: readonly ScannedEndpoint[]): Record<string, Cata
       ...(analysis.hasReceiveSchema && { hasReceiveSchema: true }),
       ...(analysis.served && { served: true }),
       ...(analysis.agent && { agent: analysis.agent }),
+      ...(analysis.page && { page: analysis.page }),
     };
   }
   return byName;

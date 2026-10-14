@@ -36,7 +36,7 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
   }
 
   const { source, group, method } = parseTopic(topic);
-  const dataSource = source ? ctx.sources[source] : undefined;
+  const dataSource = source && Object.hasOwn(ctx.sources, source) ? ctx.sources[source] : undefined;
   if (!dataSource) return;
 
   const { schema } = resolveEndpoint(dataSource as Record<string, unknown>, group, method);

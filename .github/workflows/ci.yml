@@ -119,6 +119,11 @@ jobs:
       - name: Check what a page takes
         run: npm run check:browser
 
+      # Each routes module the repository keeps, as Studio writes it from its
+      # project's .expose() marks: a mark changed without the module fails.
+      - name: Check routes modules
+        run: npm run check:routes
+
       # Every TypeScript sample of the docs and the READMEs, compiled against
       # the built packages, so a sample cannot drift from the API it shows.
       - name: Check documentation samples

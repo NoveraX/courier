@@ -55,7 +55,7 @@ To stop sending the same read twice, you no longer need this option: identical r
 - **SSE streams run in the Next.js Edge Runtime.**
 - `create-courier` loads Studio's `next.config` wrapper in `next dev` only, so `next start` runs without dev dependencies. It also keeps a CRLF file's line ends.
 
-All nineteen packages move to 0.2.0. They are published through npm trusted publishing, with provenance.
+All nineteen packages move to 0.2.0.
 
 [Documentation](https://courier.noverax.cloud) · [Security policy](https://github.com/NoveraX/courier/security/policy) · [Contributing](https://github.com/NoveraX/courier/blob/master/CONTRIBUTING.md)
 
@@ -109,6 +109,6 @@ Courier for VS Code shows every endpoint and how its calls went above each call,
 
 Node.js 22 or newer. Every change is tested on Linux, macOS and Windows; on Node.js 22, 24 and 26; in Chromium, Firefox and WebKit; against 25 framework versions; and in React Native through Expo.
 
-All nineteen packages are published under `@noverax` at 0.1.0, with npm provenance. Until 1.0, a breaking change raises the minor version.
+All nineteen packages are published under `@noverax` at 0.1.0. Until 1.0, a breaking change raises the minor version.
 
 [Documentation](https://courier.noverax.cloud) · [Security policy](https://github.com/NoveraX/courier/security/policy) · [Contributing](https://github.com/NoveraX/courier/blob/master/CONTRIBUTING.md)

@@ -3,9 +3,9 @@
 import { createProxyCaller } from "@noverax/courier";
 import { useState } from "react";
 
-import type { api } from "../../lib/api";
+import { accountsRoutes } from "../../lib/routes";
 
-const proxy = createProxyCaller<typeof api>("accounts");
+const proxy = createProxyCaller(accountsRoutes);
 
 /* A client component, calling through the proxy route. */
 export default function ProxyPage() {

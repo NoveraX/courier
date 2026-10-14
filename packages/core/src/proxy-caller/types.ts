@@ -66,10 +66,15 @@ export type ProxyCallerDefaults = {
 };
 
 /**
- * What the source or the boundary says of an endpoint: a read, a read whose
- * variables must stay out of the address, or a write. Unsaid without either.
+ * What the routes, the source or the boundary say of an endpoint: a read
+ * that may be cached, which goes as GET; any other read, which goes as
+ * POST, its variables kept out of the address; or a write. Unsaid without
+ * any of them.
  */
-export type ProxyEndpointKind = "read" | "sensitive-read" | "mutation";
+export type ProxyEndpointKind = "cached-read" | "read" | "mutation";
+
+/** The options of a proxy client given its routes: everything but what the routes say. */
+export type ProxyCallerOptions = Omit<ProxyCallerDefaults, "source" | "boundary">;
 
 /**
  * The proxy transport's call: a source and a call's options, as the transport

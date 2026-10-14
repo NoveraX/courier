@@ -1,15 +1,17 @@
 /**
  * The verb a proxy client sends a call with.
  *
- * A read goes as GET, its variables in the address, unless its variables are
- * sensitive, it carries a body, or the address would be too long — whether or
- * not the caller asked, as React's hooks never do — so a read's `.cache()`
- * reaches a browser and a CDN, neither of which keeps the answer to a POST.
+ * A read that may be cached goes as GET, its variables in the address, so its
+ * `.cache()` reaches a browser and a CDN, neither of which keeps the answer to
+ * a POST — unless its variables are sensitive, it carries a body, or the
+ * address would be too long. Any other read goes as POST, as a write does:
+ * GET would gain it nothing, and a read nobody marked keeps its variables out
+ * of every log on the way. A caller may still ask for either verb.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
-import { courier, defineApi, defineBoundary } from "../src/define/index";
+import { type CourierRoutes, courier, defineApi, defineBoundary } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -27,6 +29,7 @@ function api() {
     groups: {},
     endpoints: {
       search: endpoint.get("products").variables<{ q: string }>().cache({ revalidate: 60 }),
+      recent: endpoint.get("products/recent").variables<{ page: number }>(),
       byEmail: endpoint
         .get("customers", { sensitiveVariables: true })
         .variables<{ email: string }>(),
@@ -83,6 +86,14 @@ describe("a proxy client", () => {
     expect(proxied[0]?.url.searchParams.get("_v")).toBe('{"q":"lamp"}');
   });
 
+  it("sends a read that declares no cache as POST, its variables out of the address", async () => {
+    await client().recent({ page: 2 });
+
+    expect(proxied.map((call) => [call.method, call.url.search])).toEqual([
+      ["POST", "?_s=shop&_m=recent"],
+    ]);
+  });
+
   it("sends a write as POST", async () => {
     await client().order({ item: "lamp" });
 
@@ -118,8 +129,29 @@ describe("a proxy client", () => {
   });
 });
 
+describe("a proxy client built from routes", () => {
+  it("sends a read they mark as cacheable as GET, and every other call as POST", async () => {
+    const endpoints = {
+      search: { type: "query", get: true },
+      recent: { type: "query" },
+      order: { type: "mutation" },
+    } as const;
+    const routes: CourierRoutes<ReturnType<typeof api>, typeof endpoints> = {
+      source: "shop",
+      endpoints,
+    };
+    const fromRoutes = createProxyCaller(routes);
+
+    await fromRoutes.search({ q: "lamp" });
+    await fromRoutes.recent({ page: 1 });
+    await fromRoutes.order({ item: "lamp" });
+
+    expect(proxied.map((call) => call.method)).toEqual(["GET", "POST", "POST"]);
+  });
+});
+
 describe("a proxy client built from a boundary", () => {
-  it("sends the reads it lists as sensitive as POST, and the others as GET", async () => {
+  it("sends every read as POST, as a boundary does not say which may be cached", async () => {
     const boundary = defineBoundary({
       source: "shop",
       expose: { search: "query", byEmail: "query" },
@@ -130,7 +162,7 @@ describe("a proxy client built from a boundary", () => {
     await fromBoundary.search({ q: "lamp" });
     await fromBoundary.byEmail({ email: "ada@example.com" });
 
-    expect(proxied.map((call) => call.method)).toEqual(["GET", "POST"]);
+    expect(proxied.map((call) => call.method)).toEqual(["POST", "POST"]);
   });
 });
 

@@ -45,6 +45,7 @@ export {
   type PlacedGroup,
   subGroupsOf,
 } from "../define/group-tree";
+export { routesOf } from "../define/routes-of";
 export { readLogFormat } from "../logger/log-format";
 export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
 export { standardJsonSchema } from "../openapi/json-schema";

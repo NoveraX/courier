@@ -143,6 +143,8 @@ export type ConfigurationErrorCode =
   | "PROXY_VARIABLE_NOT_SERIALIZABLE"
   /** A client built with a boundary was asked for an endpoint the boundary does not expose. */
   | "ENDPOINT_NOT_IN_BOUNDARY"
+  /** A client built from routes was asked for an endpoint they do not name, which the proxy refuses. */
+  | "ENDPOINT_NOT_IN_ROUTES"
   /** An endpoint declared as a stream or a channel was called by a client with no transport for it. */
   | "STREAM_TRANSPORT_NOT_CONFIGURED"
   /**

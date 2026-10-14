@@ -83,7 +83,9 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         ...(route && { transport: route.transport(served) }),
       };
 
-      if (goesAsGet(call, { url, source, group, method, variables, reads: kind === "read" })) {
+      if (
+        goesAsGet(call, { url, source, group, method, variables, reads: kind === "cached-read" })
+      ) {
         return handleGetProxy({
           url,
           source,
@@ -111,7 +113,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
           ...buildPostPayload(variables, call.server),
           /* A read that goes as a POST — its variables too long for an address, or
              sensitive — is joined as the read it is; one the client knows nothing of is not. */
-          reads: kind === "read" || kind === "sensitive-read",
+          reads: kind === "cached-read" || kind === "read",
           credentials: call.credentials,
           onUploadProgress: call.onUploadProgress,
           onDownloadProgress: call.onDownloadProgress,

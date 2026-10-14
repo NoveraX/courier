@@ -109,6 +109,7 @@ export {
   createProxyCaller,
   type ProxyCallerArguments,
   type ProxyCallerDefaults,
+  type ProxyCallerOptions,
   type ProxyPath,
 } from "./proxy-caller";
 export {

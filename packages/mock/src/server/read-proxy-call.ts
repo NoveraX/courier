@@ -5,7 +5,7 @@ import type { BodyRefusal, RequestBody } from "./read-request-body";
 
 /** The endpoint call a proxy request names, or why the request cannot be read */
 export type ProxyCall =
-  | { group: string; method: string; variables: unknown; raw: boolean }
+  | { source: string; group: string; method: string; variables: unknown; raw: boolean }
   | (BodyRefusal & { group?: string; method?: string });
 
 /** Reads the body of a call to `group.method`, under the conditions its route is answered with */
@@ -28,7 +28,7 @@ const OPTIONS_FIELD = "_options";
  *
  * @param c - The request's Hono context
  * @param readBody - Reads a POST's body, once the URL has named the endpoint
- * @returns The group, method, variables and raw flag, or why the request was not taken
+ * @returns The source, group, method, variables and raw flag, or why the request was not taken
  * @example
  * ```ts
  * const call = await readProxyCall(c, (group, method) => readRouteBody(c, config, group, method));
@@ -37,14 +37,15 @@ const OPTIONS_FIELD = "_options";
  */
 export async function readProxyCall(c: HonoContext, readBody: ReadCallBody): Promise<ProxyCall> {
   const params = new URL(c.req.url).searchParams;
+  const source = params.get("_s");
   const method = params.get("_m");
-  if (!params.get("_s") || !method) {
+  if (!source || !method) {
     return { error: "The endpoint is not named in the URL: _s and _m are required", status: 400 };
   }
   const group = params.get("_g") ?? "";
   const body = c.req.method === "GET" ? fromQuery(params) : await fromBody(readBody(group, method));
   if ("error" in body) return { ...body, group, method };
-  return { group, method, variables: body.variables, raw: isRaw(body.options) };
+  return { source, group, method, variables: body.variables, raw: isRaw(body.options) };
 }
 
 type Envelope = { variables: unknown; options: unknown } | BodyRefusal;

@@ -166,6 +166,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     scenario: allScenarios["happy-path"],
     reseed,
     elsewhere: elsewhereOf(config, routes, groupNames),
+    source: config.source,
     ...(config.persist && {
       persist: { file: config.persist.file, collections: [...new Set(routes.map((r) => r.group))] },
     }),

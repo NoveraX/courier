@@ -78,4 +78,6 @@ export interface RouteConfig {
   bodyLimits?: BodyLimits | undefined;
   /** The writes it carried out under an idempotency key, answered again rather than run twice */
   idempotency?: IdempotentCalls | undefined;
+  /** The API the mock stands in for, whose proxy's refusals its proxy routes follow */
+  source?: Record<string, unknown> | undefined;
 }

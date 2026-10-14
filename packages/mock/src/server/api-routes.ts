@@ -10,12 +10,14 @@
  * `channel-sockets`, as each channel's own path is.
  */
 
+import { proxyRefusal } from "@noverax/courier/internal";
 import type { Hono, Context as HonoContext } from "hono";
 
 import type { PrefixMapping } from "./prefix-route-types";
 import { registerPrefixRoutes } from "./prefix-routes";
 import { readProxyCall } from "./read-proxy-call";
 import { bodyValue } from "./read-request-body";
+import { refusalOf } from "./refusal-of";
 import { refuseRequest } from "./refuse-request";
 import { readRouteBody } from "./route-body";
 import { handleMockRequest } from "./route-generator";
@@ -60,6 +62,9 @@ export function registerRequestRoutes(
 /**
  * Register the proxy's HTTP route, `/api/request`: a POST for a call that
  * writes, and the cacheable GET a proxy client sends for one that reads.
+ * A mock that knows the API it stands in for refuses what that API's own
+ * proxy would, with the proxy's status, so a page that works against the
+ * mock is not refused by the proxy.
  */
 export function registerProxyRoute(app: Hono, config: RouteConfig): void {
   app.on(["GET", "POST"], "/api/request", async (c: HonoContext) => {
@@ -69,6 +74,9 @@ export function registerProxyRoute(app: Hono, config: RouteConfig): void {
         ? c.json({ error: call.error }, call.status)
         : refuseRequest(c, call.group ?? "", call.method, call, config);
     }
+    const via = c.req.method === "GET" ? "GET" : "POST";
+    const refused = config.source && proxyRefusal(config.source, { ...call, via });
+    if (refused) return refuseRequest(c, call.group, call.method, refusalOf(refused), config);
     // A `.raw` call is answered with the response around the data, as a Courier proxy does
     return handleMockRequest(c, call.group, call.method, call.variables, config, {
       raw: call.raw,
@@ -80,7 +88,8 @@ export function registerProxyRoute(app: Hono, config: RouteConfig): void {
  * Register the proxy's stream route, `GET /api/sse?_s=…&_g=…&_m=…&_v=…`,
  * where a proxy client opens every subscription. The variables arrive as
  * one JSON object in `_v`, as a Courier proxy reads them; anything else is
- * refused with 400. Only an endpoint mocked as a stream is served here.
+ * refused with 400, as is a stream the API keeps from a browser. Only an
+ * endpoint mocked as a stream is served here.
  *
  * @param app    The mock server's Hono app
  * @param config The route config every request is handled with
@@ -99,9 +108,11 @@ export function registerProxySSERoute(app: Hono, config: RouteConfig): void {
     const variables = wireVariables(params.get("_v"));
     if (variables === INVALID)
       return c.json({ error: "Variables (_v) must be a JSON object" }, 400);
-    return handleMockRequest(c, params.get("_g") ?? "", method, variables, config, {
-      stream: true,
-    });
+    const group = params.get("_g") ?? "";
+    const call = { source: params.get("_s") ?? "", group, method, via: "sse" } as const;
+    const refused = config.source && proxyRefusal(config.source, call);
+    if (refused) return refuseRequest(c, group, method, refusalOf(refused), config);
+    return handleMockRequest(c, group, method, variables, config, { stream: true });
   });
 }
 

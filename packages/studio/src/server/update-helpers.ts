@@ -14,6 +14,8 @@ import type { PlanConsent } from "./import-files/run-plan";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";
+import type { LoadedForRoutes } from "./routes-module/routes-module-writer";
+import { withRoutesModule } from "./routes-module/with-routes-module";
 import { declaredSpec } from "./spec-as-declared";
 
 interface UpdateRequest {
@@ -45,6 +47,7 @@ type Refusal = { error: string; status: number };
  * @param body - The import's name, and the new spec
  * @param imports - The declarations of the config Studio runs, with the imports state
  * @param root - The project
+ * @param running - The config Studio runs, which says where the routes module is
  * @returns The plan and the spec's changes, or the error to answer with and its status
  * @throws {SpecPinMismatchError} When the import pins another spec
  * @throws {ImportTransformError} When the import's transform fails
@@ -53,8 +56,9 @@ export async function handlePreviewUpdate(
   body: UpdateRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
+  running: LoadedForRoutes | null = null,
 ): Promise<UpdatePreview | Refusal> {
-  const regeneration = await regenerationOf(body, imports, root);
+  const regeneration = await regenerationOf(body, imports, root, running);
   if ("error" in regeneration) return regeneration;
   const { plan, leftBehind } = await planRegeneration(regeneration);
   const specDiff = computeSpecDiff(regeneration.entry, regeneration.spec);
@@ -73,6 +77,7 @@ export async function handlePreviewUpdate(
  * @param body - The import's name, the new spec, and the plan the user saw and allowed
  * @param imports - The declarations of the config Studio runs, with the imports state
  * @param root - The project
+ * @param running - The config Studio runs, which says where the routes module is
  * @returns What was written, removed and kept, or the error to answer with and its status
  * @throws {FilePlanError} When the plan is refused as it stands
  * @throws {SpecPinMismatchError} When the import pins another spec
@@ -82,8 +87,9 @@ export async function handleApplyUpdate(
   body: UpdateRequest & PlanConsent,
   imports: ImportsSnapshot,
   root: ProjectRoot,
+  running: LoadedForRoutes | null = null,
 ): Promise<UpdateApplied | Refusal> {
-  const regeneration = await regenerationOf(body, imports, root);
+  const regeneration = await regenerationOf(body, imports, root, running);
   if ("error" in regeneration) return regeneration;
   const { report, leftBehind } = await applyRegeneration(regeneration, body, "required");
   const { written, removed, kept, backupDir, pruneFailures } = report;
@@ -95,6 +101,7 @@ async function regenerationOf(
   body: UpdateRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
+  running: LoadedForRoutes | null,
 ): Promise<Regeneration | Refusal> {
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
@@ -105,7 +112,7 @@ async function regenerationOf(
     name: body.name,
     layout,
     ...(await declaredSpec(entry, body.name, body.newSpec)),
-    options: { ...entry, selectedEndpoints: null },
+    options: { ...withRoutesModule(entry, running), selectedEndpoints: null },
     entry: getImportState(imports, body.name),
   };
 }

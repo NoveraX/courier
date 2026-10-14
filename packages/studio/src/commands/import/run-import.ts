@@ -19,6 +19,7 @@ import { type ImportRun, importRequest } from "./import-request";
 import { loadProjectOnce } from "./load-project-once";
 import { planLines, specLines } from "./plan-lines";
 import { readSpecInput } from "./read-spec-input";
+import { routesLines } from "./routes-lines";
 import { usageLines, writtenLines } from "./written-lines";
 
 const NOT_ASKED =
@@ -109,7 +110,7 @@ async function importInto(
   print(["", ...lines]);
   if (planned.declaration === undefined) return finish(found, run, body);
   const declared = await declareImport(body, deps, style);
-  print([...declared.lines, ...usageLines(body)]);
+  print([...declared.lines, ...(await routesLines(root, project)), ...usageLines(body)]);
   return declared.status;
 }
 

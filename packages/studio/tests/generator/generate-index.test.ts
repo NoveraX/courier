@@ -13,7 +13,13 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
-import { compileProject, removeProjects, STRICT, writeProject } from "../helpers/generated-project";
+import {
+  compileProject,
+  removeProjects,
+  routesFiles,
+  STRICT,
+  writeProject,
+} from "../helpers/generated-project";
 
 const SPEC_DOCUMENT = {
   openapi: "3.0.3",
@@ -101,7 +107,9 @@ describe("an import with both callers", () => {
     { type: "openapi", outputDir: "src/api", generateClient: "both", addAuthMiddleware: true },
     "shop",
   );
-  const dir = writeProject("generate-index/both", files, { "entry.ts": ENTRY });
+  const dir = writeProject("generate-index/both", [...files, ...routesFiles(files, "shop")], {
+    "entry.ts": ENTRY,
+  });
 
   it("keeps the source and the schemas out of a browser bundle of the proxy caller", async () => {
     const bundle = await browserBundle(dir);
@@ -119,8 +127,9 @@ describe("an import with both callers", () => {
     expect(index).toContain("export const shopApi = createCaller(shop);");
     expect(index).toContain("PetSchema");
     expect(index).not.toContain("ProxyApi");
-    expect(proxy).toContain('import type { shop } from "./source";');
-    expect(proxy).toContain('export const shopProxyApi = createProxyCaller<typeof shop>("shop");');
+    expect(proxy).toContain('import { shopRoutes } from "../../../courier.routes";');
+    expect(proxy).toContain("export const shopProxyApi = createProxyCaller(shopRoutes);");
+    expect(proxy).not.toContain("./source");
   });
 });
 
@@ -130,7 +139,9 @@ describe("a barrel for proxy mode only", () => {
     { type: "openapi", outputDir: "src/api", generateClient: "proxy", addAuthMiddleware: true },
     "shop",
   );
-  const dir = writeProject("generate-index/proxy", files, { "entry.ts": ENTRY });
+  const dir = writeProject("generate-index/proxy", [...files, ...routesFiles(files, "shop")], {
+    "entry.ts": ENTRY,
+  });
 
   it("compiles where every import is kept as written", () => {
     expect(compileProject(dir, ["entry.ts"], { ...STRICT, verbatimModuleSyntax: true })).toEqual(

@@ -38,6 +38,7 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
         body,
         importsSnapshotOf(declarations, projectRoot),
         projectRootAt(projectRoot),
+        project.snapshot().running,
       );
       sendResult(res, result);
     } catch (err) {
@@ -57,6 +58,7 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
         body,
         importsSnapshotOf(declarations, projectRoot),
         projectRootAt(projectRoot),
+        project.snapshot().running,
       );
       if (!("error" in result)) project.importsChanged();
       return result;

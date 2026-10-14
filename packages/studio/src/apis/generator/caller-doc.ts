@@ -6,7 +6,7 @@ import { jsdocText } from "./jsdoc-text";
 const MODES = {
   DIRECT: "Calls the API directly from the runtime environment (browser, Node.js, Deno, Bun).",
   PROXY:
-    "Routes requests through a server-side proxy endpoint. Hides secrets, bypasses CORS, and forwards only the headers a source names. This module names the source only as a type, so a browser bundle holds no part of it: import the proxy caller from here in browser code.",
+    "Routes requests through a server-side proxy endpoint. Hides secrets, bypasses CORS, and forwards only the headers a source names. This module takes the source's routes from the routes module, so a browser bundle holds no part of the source: import the proxy caller from here in browser code.",
 } as const;
 
 /**

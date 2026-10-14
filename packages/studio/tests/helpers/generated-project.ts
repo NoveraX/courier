@@ -11,6 +11,7 @@ import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as courier from "@noverax/courier";
 import * as courierDefine from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import * as courierMiddleware from "@noverax/courier/middleware";
 import * as arktype from "arktype";
 import ts from "typescript";
@@ -18,6 +19,8 @@ import * as valibot from "valibot";
 import * as zod from "zod";
 
 import type { GeneratedFile } from "../../src/apis/generator";
+import { routesExportName } from "../../src/apis/generator/routes-export-name";
+import { routesModuleText } from "../../src/server/routes-module/routes-module-text";
 
 const ROOT = fileURLToPath(
   new URL("../../../../node_modules/.cache/courier-generated-projects/", import.meta.url),
@@ -163,6 +166,40 @@ export function endpointAt(
   const call = value;
   if (typeof call !== "function") throw new Error(`${keys.join(".")} is not an endpoint`);
   return async (variables) => Reflect.apply(call, undefined, [variables]);
+}
+
+/**
+ * What a project with a generated proxy caller holds beside the generated
+ * files: a config that declares the generated source, and the routes module
+ * Studio writes from it, beside the config, which the proxy caller imports.
+ *
+ * @param files - The generated files, the source among them
+ * @param sourceName - The source's name, as the config declares it
+ * @returns The config and the routes module, as files of the project
+ */
+export function routesFiles(files: readonly GeneratedFile[], sourceName: string): GeneratedFile[] {
+  const source = files.find((file) => file.path.endsWith("/source.ts"));
+  const api = source && loadGenerated(files, source.path)[sourceName];
+  const exportName = routesExportName(sourceName);
+  if (typeof api !== "object" || api === null || exportName === null) {
+    throw new Error(`no source ${sourceName} was generated`);
+  }
+  const config = [
+    'import { defineConfig } from "@noverax/courier/config";',
+    `import { ${sourceName} } from "./${withoutExtension(source?.path ?? "")}";`,
+    "",
+    `export default defineConfig({ sources: { ${sourceName} } });`,
+    "",
+  ];
+  const routes = routesModuleText({
+    configName: "courier.config.ts",
+    configSpecifier: "./courier.config",
+    sources: [{ exportName, routes: routesOf(api, sourceName) }],
+  });
+  return [
+    { path: "courier.config.ts", content: config.join("\n") },
+    { path: "courier.routes.ts", content: routes },
+  ];
 }
 
 function withoutExtension(path: string): string {

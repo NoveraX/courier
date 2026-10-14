@@ -14,6 +14,7 @@ import {
   generatedCall,
   loadGenerated,
   removeProjects,
+  routesFiles,
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
@@ -119,7 +120,9 @@ describe("the code an import with endpoints in no group gets", () => {
     ["types alone", { validation: "none", generateTypes: true }],
     ["auth and both clients", { addAuthMiddleware: true, generateClient: "both" }],
   ] as const)("compiles as strictly as a project can (%s)", (label, options) => {
-    const files = generate(options);
+    const generated = generate(options);
+    const files =
+      "generateClient" in options ? [...generated, ...routesFiles(generated, "shop")] : generated;
     const dir = writeProject(`top-level-endpoints/${label.replace(/\W+/g, "-")}`, files);
 
     expect(

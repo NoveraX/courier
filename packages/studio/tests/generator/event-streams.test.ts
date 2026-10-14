@@ -7,7 +7,7 @@
  * stream is relayed from the API.
  */
 import { createProxyCaller } from "@noverax/courier";
-import type { ProxyBoundary } from "@noverax/courier/define";
+import type { CourierRoutes } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../src/apis/generator";
@@ -19,6 +19,7 @@ import {
   endpointAt,
   loadGenerated,
   removeProjects,
+  routesFiles,
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
@@ -247,14 +248,16 @@ describe("through the proxy", () => {
     expect(upstream.requests[0]?.query).toEqual([["fields", "a,b"]]);
   });
 
-  /* The generated proxy caller names its source only as a type, so the boundary it is
-     given is what tells it which endpoints are streams. */
-  it("reaches the API's stream through the boundary the generated proxy caller is given", async () => {
+  /* The generated proxy caller takes the source's routes from the routes module, which
+     is what tells it which endpoints are streams. */
+  it("reaches the API's stream through the routes the generated proxy caller takes", async () => {
     const files = generate({ generateClient: "both" });
-    const { shopBoundary } = loadGenerated(files, "src/api/shop/proxy.ts");
-    if (!isRecord(shopBoundary)) throw new Error("proxy.ts exports no boundary");
-    const caller = createProxyCaller("shop", {
-      boundary: shopBoundary as unknown as ProxyBoundary,
+    const { shopRoutes } = loadGenerated(
+      [...files, ...routesFiles(files, "shop")],
+      "courier.routes.ts",
+    );
+    if (!isRecord(shopRoutes)) throw new Error("courier.routes.ts exports no routes");
+    const caller = createProxyCaller(shopRoutes as unknown as CourierRoutes, {
       proxyPath: { http: proxy.url, sse: proxy.url },
     });
     upstream.requests.length = 0;
@@ -262,23 +265,22 @@ describe("through the proxy", () => {
     const got = await received(endpointAt(caller, "orders", "watchOrder")({ id: "o1" }));
 
     expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
-    expect(shopBoundary.endpoints).toEqual({
+    expect(shopRoutes.endpoints).toEqual({
       "orders.listOrders": { type: "query" },
-      "orders.watchOrder": { transport: "sse" },
-      "orders.watchFields": { transport: "sse" },
       "orders.replayOrder": { type: "mutation" },
+      "orders.watchFields": { transport: "sse" },
+      "orders.watchOrder": { transport: "sse" },
     });
   });
 
-  it("gives the generated proxy caller that boundary, and compiles with every check on", () => {
+  it("gives the generated proxy caller those routes, and compiles with every check on", () => {
     const files = generate({ generateClient: "proxy" });
     const proxyFile = files.find((file) => file.path === "src/api/shop/proxy.ts")?.content ?? "";
-    const dir = writeProject("event-streams/proxy", files);
+    const dir = writeProject("event-streams/proxy", [...files, ...routesFiles(files, "shop")]);
     const strictest = { ...STRICT, noUnusedLocals: true, verbatimModuleSyntax: true };
 
-    expect(proxyFile).toContain(
-      'export const shopProxyApi = createProxyCaller<typeof shop>("shop", { boundary: shopBoundary });',
-    );
+    expect(proxyFile).toContain('import { shopRoutes } from "../../../courier.routes";');
+    expect(proxyFile).toContain("export const shopProxyApi = createProxyCaller(shopRoutes);");
     expect(compileProject(dir, ["src/api/shop/proxy.ts"], strictest)).toEqual([]);
   }, 60_000);
 

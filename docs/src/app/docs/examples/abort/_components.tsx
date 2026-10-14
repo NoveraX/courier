@@ -3,7 +3,7 @@
 import { isHTTPError } from "@noverax/courier"
 import { useRef, useState } from "react"
 
-import { caller, readsCaller, searchCaller } from "@/lib/caller"
+import { caller, searchCaller } from "@/lib/caller"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -74,11 +74,7 @@ export function SharedReadsDemo() {
     setCounted(undefined)
     try {
       const requests = await requestsWhile("_m=getAll", () =>
-        Promise.all([
-          readsCaller.users.getAll(),
-          readsCaller.users.getAll(),
-          readsCaller.users.getAll(),
-        ])
+        Promise.all([caller.users.getAll(), caller.users.getAll(), caller.users.getAll()])
       )
       setCounted({ calls: 3, requests })
     } finally {

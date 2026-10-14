@@ -1,6 +1,7 @@
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api, encodedApi, middlewareApi } from "@/api"
 
-export const q = createProxyQueryCaller<typeof api>("api")
-export const encodedQ = createProxyQueryCaller<typeof encodedApi>("encodedApi")
-export const middlewareQ = createProxyQueryCaller<typeof middlewareApi>("middlewareApi")
+import { apiRoutes, encodedApiRoutes, middlewareApiRoutes } from "@/lib/routes"
+
+export const q = createProxyQueryCaller(apiRoutes)
+export const encodedQ = createProxyQueryCaller(encodedApiRoutes)
+export const middlewareQ = createProxyQueryCaller(middlewareApiRoutes)

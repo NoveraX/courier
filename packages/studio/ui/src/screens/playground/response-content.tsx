@@ -1,7 +1,7 @@
 import { LoaderCircle, Send } from "lucide-react";
 
 import { MEDIA } from "@/design/breakpoints";
-import { Kbd } from "@/design/kbd";
+import { Shortcut } from "@/design/shortcut";
 import { entryPayloadView } from "@/features/playground/entry-view";
 import { notForwardedOf } from "@/features/playground/not-forwarded";
 import { responseView } from "@/features/requests/payload-view";
@@ -36,7 +36,7 @@ function Waiting({ text }: { text: string }): React.ReactNode {
   );
 }
 
-/* A touch screen has no ⌘↵ to press: it is told of the button alone. */
+/* A touch screen has no keyboard to press ⌘↵ on: it is told of the button alone. */
 function Invitation(): React.ReactNode {
   const touch = useMediaQuery(MEDIA.coarse);
   return (
@@ -50,7 +50,7 @@ function Invitation(): React.ReactNode {
           "Use the Send button"
         ) : (
           <>
-            Press <Kbd>⌘ ↵</Kbd> or use the Send button
+            Press <Shortcut keys={["mod", "enter"]} /> or use the Send button
           </>
         )}
       </span>

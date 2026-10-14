@@ -27,7 +27,7 @@ import { StorageBanner } from "./storage-banner";
  * before it is shared, the test planned before it is written, and the
  * command palette — ⌘K
  * opens it, ⌘. pauses or resumes recording, ⇧⌘L changes the theme, ⌘E
- * exports the requests and ⌘⌫ clears them. It fills the screen as it is
+ * exports the requests and ⌘⌫ clears them, Ctrl in place of ⌘ off a Mac. It fills the screen as it is
  * now — a phone's bars shown or hidden — and keeps the view clear of a
  * phone's notch, rounded corners and home indicator.
  *

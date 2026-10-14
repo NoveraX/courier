@@ -1,9 +1,8 @@
 import { Command, useCommandState } from "cmdk";
 import { Search, X } from "lucide-react";
 import { Dialog } from "radix-ui";
-
-import { Kbd } from "@/design/kbd";
 import { DIALOG_MOTION, SCRIM_MOTION } from "@/design/overlay-motion";
+import { Shortcut } from "@/design/shortcut";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { paletteEntries } from "./palette-entries";
@@ -89,7 +88,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
                 spellCheck={false}
                 className="h-full min-w-0 flex-1 bg-transparent text-prompt tracking-[-0.01em] text-fg outline-none placeholder:text-fg-subtle"
               />
-              <Kbd className="pointer-coarse:hidden max-sm:hidden">esc</Kbd>
+              <Shortcut keys={["escape"]} className="pointer-coarse:hidden max-sm:hidden" />
               <Dialog.Close
                 aria-label="Close the search"
                 className="-mr-2 hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:flex max-sm:flex"
@@ -99,7 +98,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
             </div>
             <Command.List
               className={cn(
-                "overflow-auto overscroll-contain p-1.5 max-sm:min-h-0 max-sm:flex-1",
+                "relative overflow-auto overscroll-contain p-1.5 max-sm:min-h-0 max-sm:flex-1",
                 LIST_HEIGHT,
               )}
             >
@@ -128,8 +127,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
                 ))}
             </Command.List>
             <div className="flex h-9 items-center gap-4 border-t border-line bg-panel-subtle px-4 font-mono text-meta text-fg-subtle max-sm:h-[calc(36px+env(safe-area-inset-bottom))] max-sm:shrink-0 max-sm:pb-[env(safe-area-inset-bottom)]">
-              <span className="pointer-coarse:hidden">↑↓ navigate</span>
-              <span className="pointer-coarse:hidden">↵ open</span>
+              <span className="flex items-center gap-1.5 pointer-coarse:hidden">
+                <Shortcut keys={["up"]} />
+                <Shortcut keys={["down"]} />
+                navigate
+              </span>
+              <span className="flex items-center gap-1.5 pointer-coarse:hidden">
+                <Shortcut keys={["enter"]} />
+                open
+              </span>
               <span className="flex-1" />
               <ResultCount />
             </div>

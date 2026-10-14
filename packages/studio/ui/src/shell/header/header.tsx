@@ -1,7 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 
-import { Kbd } from "@/design/kbd";
+import { Shortcut } from "@/design/shortcut";
 import { Breadcrumbs } from "./breadcrumbs";
 import { NavButton } from "./nav-button";
 import { RecordingButton } from "./recording-button";
@@ -43,7 +43,7 @@ export function Header({ onOpenPalette, nav }: HeaderProps): React.ReactNode {
       >
         <Search aria-hidden="true" className="size-3.25 shrink-0 max-sm:size-4" />
         <span className="flex-1 truncate max-sm:hidden">Search or jump to…</span>
-        <Kbd className="pointer-coarse:hidden max-sm:hidden">⌘K</Kbd>
+        <Shortcut keys={["mod", "K"]} className="pointer-coarse:hidden max-sm:hidden" />
       </button>
       <RecordingButton hideIdle={onSetup} />
       <ThemeButton />

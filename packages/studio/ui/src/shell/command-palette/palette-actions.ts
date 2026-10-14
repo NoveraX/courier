@@ -46,7 +46,7 @@ export function actionEntries(
       label: RECORDING_LABEL[recording],
       meta: "",
       icon: recording === "recording" ? Pause : Play,
-      hint: "⌘ .",
+      keys: ["mod", "."],
       action: { kind: "toggle-recording" },
     },
     {
@@ -71,7 +71,7 @@ export function actionEntries(
       label: "Toggle theme",
       meta: "Dark · Light · Auto",
       icon: SunMoon,
-      hint: "⇧ ⌘ L",
+      keys: ["mod", "shift", "L"],
       action: { kind: "toggle-theme" },
     },
     {
@@ -80,7 +80,7 @@ export function actionEntries(
       label: "Export the requests",
       meta: `as ${exportFormat.toUpperCase()}`,
       icon: Download,
-      hint: "⌘ E",
+      keys: ["mod", "E"],
       action: { kind: "export" },
     },
     {
@@ -121,7 +121,7 @@ export function actionEntries(
       label: "Clear captured requests",
       meta: "",
       icon: Trash2,
-      hint: "⌘ ⌫",
+      keys: ["mod", "backspace"],
       action: { kind: "clear-requests" },
     },
   ];

@@ -238,6 +238,28 @@ test("a client component's calls through the proxy route carry the session it se
   expect(await cookie("vendor_tracking")).toBeUndefined();
 });
 
+test("the proxy route answers an endpoint no mark opens as one the API does not define", async () => {
+  await clearReceived();
+
+  /* From the page, as its own calls go: the write is the server's alone, and the other name is invented. */
+  const [closed, invented] = await page.evaluate(async () => {
+    const call = async (method: string) => {
+      const answer = await fetch(`/api/request?_s=accounts&_m=${method}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ variables: { name: "Mallory" } }),
+      });
+      return { status: answer.status, body: await answer.text() };
+    };
+    return [await call("rename"), await call("invented")];
+  });
+
+  expect(closed?.status).toBe(400);
+  expect(closed?.body).toContain("[accounts][rename]: method not found");
+  expect(invented?.body.replace("invented", "rename")).toBe(closed?.body);
+  expect(await received("POST", "/me/name")).toEqual([]);
+});
+
 test("a Route Handler's write for another site's request is refused", async () => {
   const response = await fetch(`${APP}/rename-route`, {
     method: "POST",

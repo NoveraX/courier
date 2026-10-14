@@ -37,6 +37,7 @@ export function resolveSchemas(state: BuilderState): SchemaMetadata {
     ...(transport !== "http" && { transport }),
     ...(state.cache !== undefined && { cache: state.cache }),
     ...(state.defaults !== undefined && { defaults: state.defaults }),
+    ...(state.expose !== undefined && { expose: state.expose }),
   };
 }
 

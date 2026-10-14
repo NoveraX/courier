@@ -12,8 +12,9 @@ import { isExposedToWire } from "../src/adapter/exposure";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
+import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../src/validation";
 
-const { endpoint } = courier();
+const { endpoint, stream, channel } = courier();
 
 const fetchSpy = vi.fn();
 
@@ -156,6 +157,69 @@ describe("the proxy refuses what was not exposed", () => {
     const { status } = await fromBrowser(apiWith({}), "admin", "exportPayouts");
 
     expect(status).toBe(200);
+  });
+});
+
+/* The metadata the proxy reads off an endpoint: its `.expose()` among the rest. */
+function schemaOf(declared: unknown): SchemaMetadata | undefined {
+  return (declared as { [ENDPOINT_SCHEMA]?: SchemaMetadata })[ENDPOINT_SCHEMA];
+}
+
+describe("an endpoint's own mark", () => {
+  it("is carried where the proxy reads it, on HTTP endpoints, streams and channels", () => {
+    expect(schemaOf(endpoint.get("search").expose())?.expose).toBe(true);
+    expect(schemaOf(endpoint.post("payouts").expose(false))?.expose).toBe(false);
+    expect(schemaOf(stream.get("feed").response<string>().expose())?.expose).toBe(true);
+    expect(schemaOf(channel.connect("room").response<string>().expose())?.expose).toBe(true);
+    expect(schemaOf(endpoint.get("plain"))?.expose).toBeUndefined();
+  });
+
+  it("is carried by a stream served in this process, named before it is implemented", () => {
+    const served = stream
+      .response<number>()
+      .expose()
+      .implement(async function* () {
+        yield { data: 1 };
+      });
+
+    expect(schemaOf(served)?.expose).toBe(true);
+  });
+
+  it("keeps a mark passed anything but true shut, as the flags do", () => {
+    expect(schemaOf(endpoint.get("search").expose("yes" as never))?.expose).toBe(false);
+  });
+
+  it("decides before its group and its API, in both directions", () => {
+    const closed = {
+      options: { expose: false, groups: { posts: { options: { expose: false } } } },
+    };
+    const open = { options: { expose: true, groups: { posts: { options: { expose: true } } } } };
+
+    expect(isExposedToWire(closed, "posts", "list", { expose: true })).toBe(true);
+    expect(isExposedToWire(open, "posts", "list", { expose: false })).toBe(false);
+    expect(isExposedToWire(closed, "posts", "list", {})).toBe(false);
+    expect(isExposedToWire(open, "posts", "list", {})).toBe(true);
+  });
+
+  it("opens one endpoint of an API the browser may not otherwise call", async () => {
+    const api = defineApi({
+      baseURL: "https://internal-api.corp.example",
+      expose: false,
+      groups: {
+        posts: defineGroup({
+          prefix: "posts",
+          endpoints: {
+            list: endpoint.get("").response<unknown>().expose(),
+            drafts: endpoint.get("drafts").response<unknown>(),
+          },
+        }),
+      },
+    });
+
+    expect((await fromBrowser(api, "posts", "list")).status).toBe(200);
+    fetchSpy.mockClear();
+    expect((await fromBrowser(api, "posts", "drafts")).body).toContain("method not found");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

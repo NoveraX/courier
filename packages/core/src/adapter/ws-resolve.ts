@@ -69,7 +69,7 @@ export function resolveSubscribeTopic(
   if (
     typeof endpoint !== "function" ||
     schema?.transport !== "ws" ||
-    !isExposedToWire(dataSource, group, method)
+    !isExposedToWire(dataSource, group, method, schema)
   ) {
     sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;

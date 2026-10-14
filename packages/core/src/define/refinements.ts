@@ -37,5 +37,8 @@ export function refinements(
     timeout: (ms: number) => next(withValue(state, "timeout", ms)),
     retry: (options: RetryOptions) => next(withValue(state, "retry", options)),
     meta: (values: Record<string, unknown>) => next(withMeta(state, values)),
+    /* Only `true` opens it, as with the group's and the API's flags: anything else a
+       plain-JavaScript caller passes keeps it closed. */
+    expose: (open: unknown = true) => next({ ...state, expose: open === true }),
   };
 }

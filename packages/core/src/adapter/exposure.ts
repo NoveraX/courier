@@ -8,16 +8,11 @@
  * endpoint written for a cron job is reachable from a page, and reachable
  * *with the server's credentials*, which is the whole point of the proxy.
  *
- * A source may answer this in two ways. `defineBoundary` names the endpoints
- * that are open, which is the precise form and the one a reviewer can read;
- * where it is declared, it is the whole answer. `expose` is the coarse form
- * for shutting a source or a group off wholesale.
- *
- * `expose` lives on the source and on the group
- * rather than on each endpoint, so shutting a whole API off from the browser
- * is one line in the config and no change to any declaration. An endpoint that
- * needs its own answer gets it by living in its own group. Among groups
- * inside groups, the nearest one that sets it decides.
+ * The definition answers it, where each endpoint is written: `.expose()` on
+ * the endpoint, `expose` on a group or on the API, the nearest one that says
+ * deciding — so a group may be open with one endpoint in it shut, and an
+ * API shut with one group in it open. A source that declares a boundary is
+ * answered by it alone.
  *
  * A refused call is answered exactly as an unknown name is. Saying "forbidden"
  * would confirm that the endpoint exists, which is the one thing a caller
@@ -26,12 +21,15 @@
 
 import { groupChain } from "../define/group-tree";
 import { isRecord } from "../utils/is-record";
+import type { SchemaMetadata } from "../validation";
 
 /**
  * Decide whether a named endpoint may be served to a caller off the wire.
  *
  * @param dataSource - The source as it sits in the registry
  * @param group - The group's path from the request, when it named one
+ * @param method - The endpoint's name in its group
+ * @param schema - The endpoint's metadata, carrying its own `.expose()`
  * @returns Whether the proxy may serve it
  *
  * @example
@@ -43,18 +41,22 @@ export function isExposedToWire(
   dataSource: unknown,
   group: string | undefined,
   method?: string,
+  schema?: SchemaMetadata,
 ): boolean {
   const options =
     isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
   if (!options) return true;
 
   /* A declared boundary is the whole answer: it lists what may be called, so
-     anything it does not name is refused however the coarser flags read. */
+     anything it does not name is refused however the marks read. */
   const listed = boundaryEndpointsOf(options);
   if (listed && method !== undefined) {
     const path = group === undefined ? method : `${group}.${method}`;
     return Object.hasOwn(listed, path);
   }
+
+  const own = exposeFlag(schema?.expose);
+  if (own !== undefined) return own;
 
   if (group !== undefined) {
     const groupExpose = groupExposeOf(dataSource, group);

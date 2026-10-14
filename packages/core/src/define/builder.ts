@@ -33,6 +33,8 @@ export interface BuilderState {
   readonly topicKey?: TopicKeyReader | undefined;
   /** How the endpoint is offered to AI agents, from `.agent()`; `false` keeps it from every one. */
   readonly agent?: AgentOptions | false | undefined;
+  /** Whether a browser may call it through the proxy, from `.expose()`; unset, its group or API says. */
+  readonly expose?: boolean | undefined;
   /** What the endpoint sends for variables a call leaves out, from `.defaults()`. */
   readonly defaults?: Readonly<Record<string, unknown>> | undefined;
 }

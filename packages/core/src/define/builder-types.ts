@@ -79,6 +79,19 @@ export interface NeutralMethods<TSelf> {
   retry(options: RetryOptions): TSelf;
   /** Arbitrary values for tooling; ignored by the runtime. */
   meta(values: Record<string, unknown>): TSelf;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   *
+   * @example
+   * ```ts
+   * search: endpoint.get("search").expose(),
+   * payouts: endpoint.post("payouts").expose(false),
+   * ```
+   */
+  expose(open?: boolean): TSelf;
 }
 
 /**

@@ -31,6 +31,11 @@ export interface SchemaMetadata {
   defaults?: Readonly<Record<string, unknown>>;
   /** Transport mode — "http" (default), "sse" for streaming, "ws" for WebSocket */
   transport?: Transport;
+  /**
+   * Whether a browser may call it through the application's proxy, from
+   * `.expose()`. Unset, the nearest group that says, then the API, decides.
+   */
+  expose?: boolean;
   /** Standard Schema for incoming WS messages (bidirectional channels only) */
   receive?: StandardSchemaV1;
   /**

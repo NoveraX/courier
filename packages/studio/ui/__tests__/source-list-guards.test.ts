@@ -32,6 +32,28 @@ describe("a declared source from Studio", () => {
     expect(isScannedSource(withTicks({ served: true }))).toBe(true);
   });
 
+  it("keeps what the config decides for an endpoint: its agent and its page marks", () => {
+    const agent = {
+      offered: true,
+      tool: "live_ticks",
+      access: "read",
+      confirm: false,
+      reason: "marked .agent()",
+    };
+    const page = { exposed: false, reason: "nothing marks it .expose()" };
+
+    expect(isScannedSource(withTicks({ agent, page }))).toBe(true);
+  });
+
+  it("is left out when a mark has the wrong shape", () => {
+    expect(isScannedSource(withTicks({ page: { exposed: "yes", reason: "" } }))).toBe(false);
+    expect(isScannedSource(withTicks({ page: { exposed: true } }))).toBe(false);
+    expect(
+      isScannedSource(withTicks({ agent: { offered: true, reason: "", access: "all" } })),
+    ).toBe(false);
+    expect(isScannedSource(withTicks({ agent: "offered" }))).toBe(false);
+  });
+
   it("is left out when a field it carries has the wrong shape", () => {
     expect(isScannedSource(withTicks({ transport: "grpc" }))).toBe(false);
     expect(isScannedSource(withTicks({ served: "yes" }))).toBe(false);

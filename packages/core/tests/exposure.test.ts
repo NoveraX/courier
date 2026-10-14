@@ -8,7 +8,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isExposedToWire } from "../src/adapter/exposure";
+import { exposureOf, isExposedToWire } from "../src/adapter/exposure";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
@@ -84,6 +84,37 @@ describe("isExposedToWire", () => {
     expect(isExposedToWire(closed, "other")).toBe(false);
     expect(isExposedToWire(open, "shut")).toBe(false);
     expect(isExposedToWire(open, "other")).toBe(true);
+  });
+});
+
+describe("exposureOf", () => {
+  it("names the mark that decided: the endpoint's, the nearest group's, the API's, or none", () => {
+    const billing = { options: { expose: false, groups: { invoices: { options: {} } } } };
+    const source = { options: { expose: true, groups: { billing } } };
+
+    expect(exposureOf(source, "billing.invoices", { expose: true })).toEqual({
+      exposed: true,
+      by: "endpoint",
+    });
+    expect(exposureOf(source, "billing.invoices", {})).toEqual({
+      exposed: false,
+      by: "group",
+      group: "billing",
+    });
+    expect(exposureOf(source, undefined, {})).toEqual({ exposed: true, by: "api" });
+    expect(exposureOf({ options: {} }, "billing")).toEqual({ exposed: false, by: "none" });
+    expect(exposureOf(undefined, undefined)).toEqual({ exposed: false, by: "none" });
+  });
+
+  it("names the group inside another by its whole path when its own mark decides", () => {
+    const invoices = { options: { expose: true } };
+    const billing = { options: { expose: false, groups: { invoices } } };
+
+    expect(exposureOf({ options: { groups: { billing } } }, "billing.invoices", {})).toEqual({
+      exposed: true,
+      by: "group",
+      group: "billing.invoices",
+    });
   });
 });
 

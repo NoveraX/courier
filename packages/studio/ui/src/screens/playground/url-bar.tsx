@@ -1,5 +1,7 @@
-import { AppWindow, Shuffle } from "lucide-react";
+import { AppWindow, Lock, Shuffle } from "lucide-react";
 
+import type { PageMark } from "@/features/apis/types";
+import { pageMarkTitle } from "@/features/explorer/page-mark-title";
 import type { ProxyRoute } from "@/features/playground/proxy-route";
 import type { UrlPart } from "@/features/playground/request-url";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,8 @@ interface UrlBarProps {
   parts: readonly UrlPart[];
   /** In proxy mode, the route the call goes through — `null` when the source has none for it. */
   proxy: ProxyRoute | null | undefined;
+  /** In proxy mode, whether a page may call the endpoint through the proxy, and the mark that says so. */
+  page?: PageMark | undefined;
   /** A stream or a channel the app serves itself: in direct mode it opens inside the app. */
   served?: boolean;
 }
@@ -25,18 +29,25 @@ interface UrlBarProps {
 /**
  * The URL the call goes to: its method, the source's origin, the path with
  * each parameter filled from the variables — amber while one is missing —
- * the query, and in proxy mode the route on the app it goes through. A
- * stream or a channel the app serves itself, opened in direct mode, reaches
- * no host: it says so in place of the origin.
+ * the query, and in proxy mode the route on the app it goes through, and
+ * a warning where no mark opens the endpoint to a page, which the proxy
+ * refuses. A stream or a channel the app serves itself, opened in direct
+ * mode, reaches no host: it says so in place of the origin.
  *
- * @param props - The method label, the URL's pieces, the proxy route, and whether the app serves it
+ * @param props - The method label, the URL's pieces, the proxy route, the page mark, and whether the app serves it
  * @returns The bar
  * @example
  * ```tsx
  * <UrlBar label="GET" parts={requestUrlParts(endpoint, variables)} proxy={undefined} />
  * ```
  */
-export function UrlBar({ label, parts, proxy, served = false }: UrlBarProps): React.ReactNode {
+export function UrlBar({
+  label,
+  parts,
+  proxy,
+  page,
+  served = false,
+}: UrlBarProps): React.ReactNode {
   /* Opened inside the app, it reaches no host: its source's base URL is an upstream it never calls. */
   const inApp = served && proxy === undefined;
   return (
@@ -81,6 +92,15 @@ export function UrlBar({ label, parts, proxy, served = false }: UrlBarProps): Re
         >
           <Shuffle aria-hidden="true" className="size-2.75 shrink-0" />
           <span className="truncate">{proxy ? `via ${proxy.display}` : "no proxy route"}</span>
+        </span>
+      )}
+      {page && !page.exposed && (
+        <span
+          title={`${pageMarkTitle(page)}. Mark it .expose() where it is defined to call it from a page.`}
+          className="flex h-5.5 shrink-0 items-center gap-1.25 rounded-[5px] bg-warn-dim px-1.5 font-sans text-meta text-warn"
+        >
+          <Lock aria-hidden="true" className="size-2.75 shrink-0" />
+          not exposed
         </span>
       )}
     </div>

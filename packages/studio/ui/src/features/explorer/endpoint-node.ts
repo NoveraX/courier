@@ -78,6 +78,7 @@ export function endpointOf(
     trafficOnly: def.origin === "runtime",
     proxied: requests.some((r) => r.mode === "proxy"),
     ...(def.agent && { agent: def.agent }),
+    ...(def.page && { page: def.page }),
     requests,
     metrics,
     level: levelOf(metrics, ctx.slowMs),

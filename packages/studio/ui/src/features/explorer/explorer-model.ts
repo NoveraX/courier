@@ -1,4 +1,4 @@
-import type { AgentMark } from "@/features/apis/types";
+import type { AgentMark, PageMark } from "@/features/apis/types";
 import type { Catalog, RequestEntry } from "@/store/types";
 import type { EndpointRef } from "./endpoint-key";
 import { endpointKeyOf } from "./endpoint-key";
@@ -28,6 +28,8 @@ export interface EndpointNode extends EndpointRef {
   proxied: boolean;
   /** What the project's `agents` policy decided for it; absent where the config does not declare it. */
   agent?: AgentMark;
+  /** Whether a page may call it through the proxy; absent where the config does not declare it. */
+  page?: PageMark;
   /** Its calls, newest first. */
   requests: RequestEntry[];
   metrics: EndpointMetrics;

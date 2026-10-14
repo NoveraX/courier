@@ -1,6 +1,6 @@
 import type { ProxyPath } from "@noverax/courier";
 import type { SchemaField } from "@noverax/courier-studio-core";
-import type { AgentMark } from "@/features/apis/types";
+import type { AgentMark, PageMark } from "@/features/apis/types";
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types";
 
 // ── Theme ───────────────────────────────────────────────────────────────────
@@ -36,6 +36,8 @@ export interface CatalogEndpoint {
   served?: boolean;
   /** What the project's `agents` policy decided for it, as the config declares it. */
   agent?: AgentMark;
+  /** Whether a page may call it through the proxy, and the mark that says so. */
+  page?: PageMark;
 }
 
 export interface CatalogGroup {

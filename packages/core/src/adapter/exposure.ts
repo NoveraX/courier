@@ -19,9 +19,55 @@
  * guessing names is trying to learn.
  */
 
-import { groupChain } from "../define/group-tree";
+import { GROUP_PATH_SEPARATOR, groupChain, groupNames } from "../define/group-tree";
 import { isRecord } from "../utils/is-record";
 import type { SchemaMetadata } from "../validation";
+
+/** Whether a page may reach an endpoint, and the mark that decided it. */
+export interface ExposureDecision {
+  /** Whether the proxy serves the endpoint to a page. */
+  readonly exposed: boolean;
+  /** The mark that decided: the endpoint's `.expose()`, a group's `expose`, the API's, or none. */
+  readonly by: "endpoint" | "group" | "api" | "none";
+  /** The path of the group whose mark decided: `billing.invoices`. */
+  readonly group?: string;
+}
+
+const UNMARKED: ExposureDecision = { exposed: false, by: "none" };
+
+/**
+ * Decide whether a named endpoint may be served to a caller off the wire,
+ * and by which mark: its own, the nearest group's that sets one, the API's,
+ * or none, which keeps it the server's.
+ *
+ * @param dataSource - The source as it sits in the registry
+ * @param group - The group's path from the request, when it named one
+ * @param schema - The endpoint's metadata, carrying its own `.expose()`
+ * @returns Whether the proxy may serve it, and the mark that says so
+ *
+ * @example
+ * ```ts
+ * exposureOf(api, "billing.invoices", schema); // { exposed: false, by: "group", group: "billing" }
+ * ```
+ */
+export function exposureOf(
+  dataSource: unknown,
+  group: string | undefined,
+  schema?: SchemaMetadata,
+): ExposureDecision {
+  const options =
+    isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
+  if (!options) return UNMARKED;
+
+  const own = exposeFlag(schema?.expose);
+  if (own !== undefined) return { exposed: own, by: "endpoint" };
+
+  const byGroup = group === undefined ? undefined : groupExposureOf(dataSource, group);
+  if (byGroup) return byGroup;
+
+  const api = exposeFlag(options.expose);
+  return api === undefined ? UNMARKED : { exposed: api, by: "api" };
+}
 
 /**
  * Decide whether a named endpoint may be served to a caller off the wire.
@@ -41,19 +87,7 @@ export function isExposedToWire(
   group: string | undefined,
   schema?: SchemaMetadata,
 ): boolean {
-  const options =
-    isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
-  if (!options) return false;
-
-  const own = exposeFlag(schema?.expose);
-  if (own !== undefined) return own;
-
-  if (group !== undefined) {
-    const groupExpose = groupExposeOf(dataSource, group);
-    if (groupExpose !== undefined) return groupExpose;
-  }
-
-  return exposeFlag(options.expose) ?? false;
+  return exposureOf(dataSource, group, schema).exposed;
 }
 
 /* A flag set to anything but `true` shuts off what it is set on, so one
@@ -64,11 +98,13 @@ function exposeFlag(value: unknown): boolean | undefined {
 }
 
 /* The group the path names, then each group above it: the first that sets the flag decides. */
-function groupExposeOf(dataSource: unknown, group: string): boolean | undefined {
+function groupExposureOf(dataSource: unknown, group: string): ExposureDecision | undefined {
   const chain = groupChain(dataSource, group) ?? [];
-  for (const entry of [...chain].reverse()) {
-    const flag = exposeFlag(entry.options?.expose);
-    if (flag !== undefined) return flag;
+  const names = groupNames(group);
+  for (let depth = chain.length; depth > 0; depth--) {
+    const flag = exposeFlag(chain[depth - 1]?.options?.expose);
+    if (flag === undefined) continue;
+    return { exposed: flag, by: "group", group: names.slice(0, depth).join(GROUP_PATH_SEPARATOR) };
   }
   return undefined;
 }

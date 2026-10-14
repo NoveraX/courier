@@ -4,16 +4,17 @@
  */
 
 import { CourierError } from "@noverax/courier";
-
+import {
+  errnoCode,
+  NotRegularFileError,
+  projectRootAt,
+  readProjectText,
+} from "@noverax/courier-cli/devkit";
 import { DEMO_FILE_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_SPEC } from "./demo/demo-rest-guard";
-import { errnoCode } from "./errno-code";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
-import { NotRegularFileError } from "./not-regular-file-error";
-import { projectRootAt } from "./project-fs/project-root";
-import { readProjectText } from "./project-fs/read-project-text";
 import type { ProjectReads } from "./project-state/types";
 import { type RequestWork, requestWork, type WorkedResponse } from "./request-work";
 import { sendRouteFailure } from "./route-failure";

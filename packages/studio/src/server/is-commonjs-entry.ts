@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import { packageTypeOf } from "./package-type-of";
+import { packageTypeOf } from "@noverax/courier-cli/devkit";
 
 /* The test the loader applies to a `.js` file outside a `"type": "module"`
    package: source it matches is transpiled as an ES module, and source it

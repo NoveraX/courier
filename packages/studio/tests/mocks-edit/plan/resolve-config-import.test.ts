@@ -1,8 +1,7 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { configSpecifiers } from "../../../src/server/mocks-edit/plan/config-specifiers";
 import { collectModuleBindings } from "../../../src/server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import type { ConfigImport } from "../../../src/server/mocks-edit/plan/resolve-config-import";
 import { resolveConfigImport } from "../../../src/server/mocks-edit/plan/resolve-config-import";
 

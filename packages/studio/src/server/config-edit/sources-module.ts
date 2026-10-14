@@ -1,10 +1,9 @@
 import { readFileSync, realpathSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { type PathAliases, readPathAliases } from "@noverax/courier-studio-core/config";
 import type { ObjectExpression, Program } from "oxc-parser";
-
 import { exportName } from "../mocks-edit/plan/export-name";
-import { parseSource } from "../mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../mocks-edit/plan/unwrap-expression";
 import { resolveConfigImport } from "../resolve-config-import";

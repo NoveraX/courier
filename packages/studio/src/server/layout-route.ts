@@ -1,5 +1,5 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import { InvalidImportError, resolveImportLayout } from "../apis/layout";
-import { isRecord } from "./mocks-edit/is-record";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
 

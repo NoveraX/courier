@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { createLogger } from "@noverax/courier";
-import { errnoCode } from "./errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 
 const log = createLogger("Studio");
 

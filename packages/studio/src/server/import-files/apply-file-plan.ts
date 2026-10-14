@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { resolveProjectPath } from "@noverax/courier-cli/devkit";
 import { IMPORTS_STATE_FILENAME, readImportsState } from "../../apis/imports-state";
 import { ownValue } from "../../apis/own-value";
 import { COURIER_DIR, ensureCourierSubdir } from "../courier-dir";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
 import { newApplyId } from "./apply-id";
 import { whileApplying } from "./apply-in-flight";
 import { type ApplyJournal, saveJournal } from "./apply-journal";

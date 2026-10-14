@@ -1,4 +1,4 @@
-import { errnoCode } from "../errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 
 /**
  * Tell whether another process with this id is running: a Studio that is

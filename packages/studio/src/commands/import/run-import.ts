@@ -1,13 +1,11 @@
 import { existsSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { styleFor, type TerminalStyle } from "@noverax/courier/internal";
-
+import { closeFormatProcesses, loadProjectEnv } from "@noverax/courier-cli/devkit";
 import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
 import { listed } from "../../server/config-edit/file-changes";
 import { withImportsLock } from "../../server/imports-lock";
-import { loadProjectEnv } from "../../server/project-env";
-import { closeFormatProcesses } from "../../server/project-format/formatter-host";
 import type { ConfigFailure } from "../../server/project-state/types";
 import { type ImportWritePlan, planImportWrite, writeImport } from "../../server/write-import";
 import type { ImportDeclaration, WriteBody } from "../../server/write-types";

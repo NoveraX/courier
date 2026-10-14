@@ -1,3 +1,5 @@
+import type { ProjectFormatters } from "@noverax/courier-cli/devkit";
+import { formatProjectFiles } from "@noverax/courier-cli/devkit";
 import { bodyHash } from "../import-files/body-hash";
 import type {
   FilePlan,
@@ -6,8 +8,6 @@ import type {
   PlannedWrite,
 } from "../import-files/file-plan-types";
 import { planDigest } from "../import-files/plan-digest";
-import type { ProjectFormatters } from "./find-formatters";
-import { formatProjectFiles } from "./format-project-files";
 
 /**
  * Format the files a plan merges as the project formats its code: a merged

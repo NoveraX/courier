@@ -1,6 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { skipTrivia } from "../../../src/server/mocks-edit/plan/skip-trivia";
 
 describe("skipTrivia", () => {

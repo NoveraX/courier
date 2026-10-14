@@ -1,9 +1,9 @@
 import { createLogger } from "@noverax/courier";
+import { resolvedRoot } from "@noverax/courier-cli/devkit";
 import type { LoadedCourierConfig } from "../config-loader";
 import { describeError } from "../describe-error";
 import type { ExclusiveContext } from "../exclusive-context";
 import type { ProjectState } from "../project-state/types";
-import { resolvedRoot } from "../resolved-root";
 import type { WriteBody } from "../write-types";
 import type { DeclareApplyResult } from "./config-declare-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";

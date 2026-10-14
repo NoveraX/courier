@@ -3,9 +3,9 @@
  */
 
 import { posix } from "node:path";
+import { routesExportName } from "@noverax/courier-cli/devkit";
 import type { ParsedSpec } from "../parser/types";
 import { callerDoc } from "./caller-doc";
-import { routesExportName } from "./routes-export-name";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 /* The extension a module runs as, which an import that names it carries under Node's resolution. */

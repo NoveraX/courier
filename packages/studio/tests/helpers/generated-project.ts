@@ -13,14 +13,12 @@ import * as courier from "@noverax/courier";
 import * as courierDefine from "@noverax/courier/define";
 import { routesOf } from "@noverax/courier/internal";
 import * as courierMiddleware from "@noverax/courier/middleware";
+import { routesExportName, routesModuleText } from "@noverax/courier-cli/devkit";
 import * as arktype from "arktype";
 import ts from "typescript";
 import * as valibot from "valibot";
 import * as zod from "zod";
-
 import type { GeneratedFile } from "../../src/apis/generator";
-import { routesExportName } from "../../src/apis/generator/routes-export-name";
-import { routesModuleText } from "../../src/server/routes-module/routes-module-text";
 
 const ROOT = fileURLToPath(
   new URL("../../../../node_modules/.cache/courier-generated-projects/", import.meta.url),

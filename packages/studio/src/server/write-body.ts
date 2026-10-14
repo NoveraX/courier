@@ -1,5 +1,5 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import { readGenerateOptions } from "./generate-options-guard";
-import { isRecord } from "./mocks-edit/is-record";
 import { isParsedSpec } from "./parsed-spec-guard";
 import type { WriteBody } from "./write-types";
 

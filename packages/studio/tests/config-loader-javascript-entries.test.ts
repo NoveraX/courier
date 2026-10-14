@@ -14,10 +14,10 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import { loadCourierConfigFile, loadCourierMocksFile } from "@noverax/courier-studio-core/config";
 import { afterEach, assert, beforeEach, describe, expect, it } from "vitest";
 import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
-import { isRecord } from "../src/server/mocks-edit/is-record";
 
 interface EntryCase {
   /** What the case is, for the test's name. */

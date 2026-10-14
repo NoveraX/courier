@@ -1,5 +1,4 @@
-import { importsCarryExtensions } from "../../server/mocks-edit/plan/imports-carry-extensions";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { importsCarryExtensions, parseSource } from "@noverax/courier-cli/devkit";
 import { groupLocalName } from "../generator";
 import type { GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";

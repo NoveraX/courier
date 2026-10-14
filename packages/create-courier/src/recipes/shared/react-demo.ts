@@ -7,7 +7,7 @@ import { ROUTES_MODULE } from "./example-routes";
 
 /**
  * `query.ts`: React Query hooks for the example API, typed from it. Through
- * the app's `/api/request` route with the routes Studio writes from the
+ * the app's `/api/request` route with the routes Courier writes from the
  * API's marks, so the API's definition stays out of the browser's bundle —
  * or, in an app without a server, straight to the API.
  *

@@ -1,5 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { Directive, Program, Statement } from "oxc-parser";
-import { parseSource } from "../mocks-edit/plan/parse-source";
 import type { ConfigDeclarationInput } from "./config-declaration-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import { findConfigList } from "./find-config-list";

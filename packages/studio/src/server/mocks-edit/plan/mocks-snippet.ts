@@ -1,3 +1,5 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
+import { importsCarryExtensions, parseSource } from "@noverax/courier-cli/devkit";
 import { MOCK_PACKAGE } from "../mock-package";
 import { findCommonJsExport } from "./commonjs-export";
 import { configImportForm } from "./config-import-form";
@@ -8,12 +10,9 @@ import { draftMocksEdit } from "./draft-mocks-edit";
 import { firstFreeName } from "./first-free-name";
 import type { ImportedName } from "./import-declaration";
 import { importDeclaration } from "./import-declaration";
-import { importsCarryExtensions } from "./imports-carry-extensions";
 import { mocksExport } from "./mocks-export";
 import type { ModuleBindings } from "./module-bindings";
 import { collectModuleBindings } from "./module-bindings";
-import type { ParsedSource } from "./parse-source";
-import { parseSource } from "./parse-source";
 import { readEditable } from "./read-editable";
 import type { MockImports } from "./read-mock-imports";
 import { readMockImports } from "./read-mock-imports";

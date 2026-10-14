@@ -1,5 +1,5 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { GenerateOptions } from "../apis";
-import { isRecord } from "./mocks-edit/is-record";
 
 const TYPES = ["openapi", "swagger", "postman"] as const;
 const VALIDATIONS = ["zod", "valibot", "arktype", "none"] as const;

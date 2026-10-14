@@ -1,8 +1,7 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
 import type { ConfigSpecifiers } from "../../../src/server/mocks-edit/plan/config-specifiers";
-
 import { DEFAULT_STYLE } from "../../../src/server/mocks-edit/plan/detect-style";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import type { ImportPlan } from "../../../src/server/mocks-edit/plan/plan-imports";
 import { planImports } from "../../../src/server/mocks-edit/plan/plan-imports";
 import { readMockImports } from "../../../src/server/mocks-edit/plan/read-mock-imports";

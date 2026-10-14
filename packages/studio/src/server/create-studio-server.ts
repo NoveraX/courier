@@ -3,6 +3,7 @@
  */
 
 import { createServer } from "node:http";
+import { resolvedRoot } from "@noverax/courier-cli/devkit";
 import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
@@ -19,7 +20,6 @@ import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { mockStoreFile } from "./mock-store-file";
 import { mountStudioHttp } from "./mount-studio-http";
 import { createProjectState } from "./project-state/create-project-state";
-import { resolvedRoot } from "./resolved-root";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { securityHeaders } from "./security-headers";

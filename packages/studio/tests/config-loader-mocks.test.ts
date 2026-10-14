@@ -23,10 +23,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import { loadCourierMocksFile } from "@noverax/courier-studio-core/config";
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigLoaderError, loadCourierConfig } from "../src/server/config-loader";
-import { isRecord } from "../src/server/mocks-edit/is-record";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 

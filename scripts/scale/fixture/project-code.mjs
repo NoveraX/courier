@@ -114,7 +114,7 @@ ${exposed.map((name) => `  ${name}: createProxyCaller(${name}Routes, { proxyPath
 
 /**
  * The routes module the pages take: each endpoint of each source a page may
- * call, by its path, in the order Studio writes them from the sources' marks,
+ * call, by its path, in the order Courier writes them from the sources' marks,
  * so the project compiles before Studio first runs.
  *
  * @param {Record<string, readonly { path: string, endpoint: { name: string, verb: string } }[]>} exposed - Each source's endpoints a page may call
@@ -146,8 +146,8 @@ export const ${source}Routes: CourierRoutes<Sources["${source}"], typeof ${sourc
   endpoints: ${source}Endpoints,
 };`;
     });
-  return `// Written by Courier Studio from courier.config.ts. Do not edit it:
-// \`courier-studio routes\` writes it again from the endpoints marked .expose().
+  return `// Written by Courier from courier.config.ts. Do not edit it:
+// \`courier-cli routes\` writes it again from the endpoints marked .expose().
 
 import type { CourierRoutes, RouteMap } from "@noverax/courier/define";
 

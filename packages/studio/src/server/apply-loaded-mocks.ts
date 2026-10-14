@@ -1,9 +1,9 @@
 import { createLogger } from "@noverax/courier";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { LoadedCourierConfig } from "./config-loader";
 import { describeError } from "./describe-error";
 import type { LifecycleCoordinator } from "./mock-manager";
 import type { MockRegistry } from "./mock-registry";
-import { isRecord } from "./mocks-edit/is-record";
 
 const log = createLogger("Studio");
 

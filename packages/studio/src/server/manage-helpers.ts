@@ -3,6 +3,7 @@
  * its files hold.
  */
 
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
 import { transformSpec } from "../apis/generator/transform-spec";
@@ -13,7 +14,6 @@ import type { EndpointInventory } from "../apis/manage/types";
 import { importBodies } from "./import-files/import-bodies";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { manageFingerprints } from "./manage-fingerprints";
-import type { ProjectRoot } from "./project-fs/project-root";
 
 // ── Inventory ────────────────────────────────────────────────────────────────
 

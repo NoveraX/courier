@@ -1,8 +1,7 @@
 import { readdirSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
-
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { COURIER_DIR } from "../courier-dir";
-import { errnoCode } from "../errno-code";
 import type { LifecycleCoordinator } from "../mock-manager";
 import { mockStoreFile } from "../mock-store-file";
 

@@ -1,7 +1,7 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression } from "oxc-parser";
 import { planEntryRemoval } from "../../apis/manage/entry-removal";
 import { applyEdits } from "../mocks-edit/plan/apply-edits";
-import type { ParsedSource } from "../mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../mocks-edit/plan/unwrap-expression";
 import type { TextEdit } from "../mocks-edit/types";

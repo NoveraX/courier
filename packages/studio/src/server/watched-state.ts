@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import { errnoCode } from "./errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 
 /**
  * What a lookup found at a watched path, for telling one look from the next.

@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 
-import { startWorkerProcess, stopWorkerProcess, type WorkerProcess } from "../worker-process";
-import { JOB_MEMORY_WATCH_SCRIPT, SPEC_WORKER_SCRIPT } from "../worker-scripts";
+import {
+  JOB_MEMORY_WATCH_SCRIPT,
+  startWorkerProcess,
+  stopWorkerProcess,
+  type WorkerProcess,
+} from "@noverax/courier-cli/devkit";
+import { SPEC_WORKER_SCRIPT } from "../worker-scripts";
 import { type JobBudget, jobFlags, jobMemoryMb } from "./job-budgets";
 import { listenToProcess } from "./listen-to-process";
 import type { ReplyTo, SpecJob } from "./spec-job-protocol";

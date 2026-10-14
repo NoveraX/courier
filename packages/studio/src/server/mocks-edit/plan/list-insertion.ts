@@ -1,3 +1,4 @@
+import type { CommentEnds } from "@noverax/courier-cli/devkit";
 import type { Comment, Span } from "oxc-parser";
 import type { TextEdit } from "../types";
 import { blockLines } from "./block-lines";
@@ -6,7 +7,6 @@ import type { ClosingRun } from "./closing-run";
 import { closingRun } from "./closing-run";
 import { insertion } from "./insertion";
 import { lineStart } from "./line-start";
-import type { CommentEnds } from "./skip-trivia";
 import { trailingCommaAfter } from "./trailing-comma-after";
 import type { FileStyle } from "./types";
 

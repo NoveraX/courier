@@ -46,6 +46,7 @@
 import { relative } from "node:path";
 
 import { createLogger } from "@noverax/courier";
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
 import { armWatchSet } from "./arm-watch-set";
 import { createChainLoad } from "./chain-load";
 import type { LoadedCourierConfig } from "./config-loader";
@@ -53,7 +54,6 @@ import { createEditRunner } from "./edit-runner";
 import { watchProjectEnv } from "./env-watch";
 import type { ExclusiveTransaction } from "./exclusive-context";
 import { inputsOnDisk } from "./inputs-on-disk";
-import type { ProjectEnv } from "./project-env";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./project-state/budgets";
 import type { ProjectInputs } from "./read-project-inputs";
 import { createReloadQueue } from "./reload-queue";

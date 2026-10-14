@@ -7,9 +7,9 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { parseSync } from "oxc-parser";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { generateCode } from "../src/apis/generator";
 import { InvalidImportError, resolveImportLayout } from "../src/apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../src/apis/manage";
@@ -20,7 +20,6 @@ import {
 import { parseSpec } from "../src/apis/parser";
 import { importsSnapshotOf } from "../src/server/imports-bridge";
 import { handleInventory } from "../src/server/manage-helpers";
-import { projectRootAt } from "../src/server/project-fs/project-root";
 
 const SPEC = parseSpec(
   JSON.stringify({

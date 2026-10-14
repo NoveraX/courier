@@ -21,6 +21,7 @@
  */
 
 import { createLogger } from "@noverax/courier";
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { Namespace, Socket } from "socket.io";
 import { attributeEvent } from "./attribute-event";
 import { broadcastRuntimeEvents } from "./broadcast-runtime-event";
@@ -29,7 +30,6 @@ import type { ConfigSourceNamer } from "./catalog/config-source-names";
 import type { AnswerObserver } from "./contract-drift/answer-observer";
 import { emitLiveEvents } from "./live-events";
 import type { AgentCalls } from "./mcp/agent-calls";
-import { isRecord } from "./mocks-edit/is-record";
 import type { RequestLog } from "./request-log";
 import { runtimeEventsOf } from "./runtime-events-of";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";

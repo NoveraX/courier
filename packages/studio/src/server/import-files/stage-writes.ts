@@ -1,11 +1,14 @@
 import { statSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
-import { errnoCode } from "../errno-code";
-import { ensureDirectory, missingDirectories } from "../project-fs/ensure-directory";
-import { flushFiles } from "../project-fs/flush-files";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
-import { writeTempBeside } from "../project-fs/write-temp-beside";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import {
+  ensureDirectory,
+  errnoCode,
+  flushFiles,
+  missingDirectories,
+  resolveProjectPath,
+  writeTempBeside,
+} from "@noverax/courier-cli/devkit";
 import { type ApplyJournal, saveJournal } from "./apply-journal";
 import { exactHash } from "./exact-hash";
 import { FilePlanError } from "./file-plan-error";

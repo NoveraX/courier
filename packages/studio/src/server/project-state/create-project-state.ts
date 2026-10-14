@@ -1,12 +1,11 @@
 import { createLogger } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
+import { createRoutesModuleWriter, projectRootAt } from "@noverax/courier-cli/devkit";
 import type { Namespace } from "socket.io";
 import type { MocksConsumers } from "../apply-loaded-mocks";
 import type { BindingTable } from "../catalog/binding-table";
 import { startConfigWatcher } from "../config-watcher";
-import type { ProjectEnv } from "../project-env";
-import { projectRootAt } from "../project-fs/project-root";
-import { createRoutesModuleWriter } from "../routes-module/routes-module-writer";
 import { createUpdateChecks } from "../update-checks";
 import type { WatcherStatus } from "../watcher-status";
 import { withinBudget } from "../within-budget";

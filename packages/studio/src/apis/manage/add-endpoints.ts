@@ -3,7 +3,7 @@
  * then merges into existing files or creates new group files.
  */
 
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { GeneratedFile, GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
 import { generateFingerprints } from "../merge/fingerprint";

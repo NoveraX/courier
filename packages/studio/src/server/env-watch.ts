@@ -1,7 +1,7 @@
 import { relative } from "node:path";
 import { createLogger } from "@noverax/courier";
 
-import type { ProjectEnv } from "./project-env";
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
 import { createWatchSet, type WatchDegradation } from "./watch-set";
 
 const log = createLogger("Studio");

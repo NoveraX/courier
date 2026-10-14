@@ -1,7 +1,7 @@
+import { type ParsedSource, parseSource } from "@noverax/courier-cli/devkit";
 import { codeMentions } from "../../apis/manage/code-mentions";
 import { planImportRemovals } from "../../apis/manage/import-removals";
 import { applyEdits } from "../mocks-edit/plan/apply-edits";
-import { type ParsedSource, parseSource } from "../mocks-edit/plan/parse-source";
 import type { TextEdit } from "../mocks-edit/types";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import type {

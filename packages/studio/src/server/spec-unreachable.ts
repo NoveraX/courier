@@ -1,6 +1,6 @@
 /* The module itself: http.setGlobalProxyFromEnv() replaces its global agent. */
 import https from "node:https";
-import { errnoCode } from "./errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { SpecFetchError } from "./spec-fetch-error";
 import type { SpecProxy } from "./spec-proxy";
 

@@ -25,6 +25,7 @@
       "@noverax/courier/webhooks": ["./packages/core/src/webhooks/index.ts"],
       "@noverax/courier/realtime": ["./packages/core/src/realtime/index.ts"],
       "@noverax/courier/testing": ["./packages/core/src/testing/index.ts"],
+      "@noverax/courier-cli/devkit": ["./packages/cli/src/devkit.ts"],
       "@noverax/courier-mcp/internal": ["./packages/mcp/src/internal.ts"],
       "@/*": ["./packages/studio/ui/src/*"]
     }

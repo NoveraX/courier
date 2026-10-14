@@ -1,9 +1,9 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { Comment, Directive, Statement } from "oxc-parser";
 import { BYTE_ORDER_MARK } from "./byte-order-mark";
 import { countLineTerminators } from "./count-line-terminators";
 import { isFilePragma } from "./is-file-pragma";
 import { lineTerminatorLength } from "./line-terminator-length";
-import type { ParsedSource } from "./parse-source";
 
 /**
  * Where lines added above a file's first statement go: above the run of

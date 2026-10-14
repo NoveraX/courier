@@ -2,9 +2,8 @@ import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 import { createLogger } from "@noverax/courier";
-
+import { writeFileAtomically } from "@noverax/courier-cli/devkit";
 import { ensureCourierDir } from "../courier-dir";
-import { writeFileAtomically } from "../project-fs/write-file-atomically";
 import { studioVersion } from "../studio-version";
 
 const log = createLogger("Studio");

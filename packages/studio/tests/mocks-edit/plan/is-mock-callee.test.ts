@@ -1,8 +1,7 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { Expression } from "oxc-parser";
 import { describe, expect, it } from "vitest";
-
 import { isMockCallee } from "../../../src/server/mocks-edit/plan/is-mock-callee";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { readMockImports } from "../../../src/server/mocks-edit/plan/read-mock-imports";
 
 function importsOf(text: string) {

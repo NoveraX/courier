@@ -1,10 +1,10 @@
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { resolveImportLayout } from "../apis/layout";
 import { checkDeclaredDirectory } from "./check-declared-directory";
 import { checkDirOverlap } from "./check-dir-overlap";
 import { describeImportDeclaration } from "./describe-import-declaration";
 import { type PlanSummary, summarizePlan } from "./import-files/plan-summary";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
-import { projectRootAt } from "./project-fs/project-root";
 import { readConfigToAct } from "./project-state/read-config-to-act";
 import type { ProjectImports } from "./project-state/types";
 import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";

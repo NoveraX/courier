@@ -1,6 +1,6 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration } from "oxc-parser";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
-import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { planEntryRemoval } from "./entry-removal";
 

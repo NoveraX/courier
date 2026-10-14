@@ -2,9 +2,8 @@ import type { AgentAccess } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import type { Sources } from "@noverax/courier/define";
 import { eachEndpoint } from "@noverax/courier/internal";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { buildCatalog, checkedPolicy, decisionReason } from "@noverax/courier-mcp/internal";
-
-import { messageOf } from "./message-of";
 
 /** What the project's `agents` policy decided for one endpoint, as Studio shows it. */
 export interface AgentMark {

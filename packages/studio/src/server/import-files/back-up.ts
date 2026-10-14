@@ -1,10 +1,12 @@
 import { copyFileSync, linkSync } from "node:fs";
 import { dirname } from "node:path";
-import { errnoCode } from "../errno-code";
-import { ensureDirectory } from "../project-fs/ensure-directory";
-import { flushDirectories } from "../project-fs/flush-directories";
-import { flushFiles } from "../project-fs/flush-files";
-import type { ProjectRoot } from "../project-fs/project-root";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import {
+  ensureDirectory,
+  errnoCode,
+  flushDirectories,
+  flushFiles,
+} from "@noverax/courier-cli/devkit";
 import { backupPath } from "./backup-path";
 
 /**

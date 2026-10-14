@@ -1,11 +1,13 @@
 import { existsSync, lstatSync, readdirSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { errnoCode } from "../errno-code";
-import { assertRealInside } from "../project-fs/assert-real-inside";
-import { discardTemp } from "../project-fs/discard-temp";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import {
+  assertRealInside,
+  discardTemp,
+  errnoCode,
+  resolveProjectPath,
+} from "@noverax/courier-cli/devkit";
 import type { ApplyJournal } from "./apply-journal";
 import { sweepImportTemps } from "./sweep-import-temps";
 

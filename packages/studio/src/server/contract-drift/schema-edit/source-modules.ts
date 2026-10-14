@@ -1,14 +1,17 @@
 import { realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import {
+  assertOpenedInside,
+  NotRegularFileError,
+  type ParsedSource,
+  PathOutsideProjectError,
+  parseSource,
+  type RegularFile,
+  readRegularFile,
+} from "@noverax/courier-cli/devkit";
 import { type PathAliases, readPathAliases } from "@noverax/courier-studio-core/config";
-
-import { type ParsedSource, parseSource } from "../../mocks-edit/plan/parse-source";
-import { NotRegularFileError } from "../../not-regular-file-error";
-import { assertOpenedInside } from "../../project-fs/assert-opened-inside";
-import { PathOutsideProjectError } from "../../project-fs/path-outside-project-error";
-import type { ProjectRoot } from "../../project-fs/project-root";
-import { type RegularFile, readRegularFile } from "../../read-regular-file";
 import { resolveConfigImport } from "../../resolve-config-import";
 
 const log = createLogger("Studio");

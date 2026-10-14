@@ -1,9 +1,9 @@
 import { createLogger } from "@noverax/courier";
+import { resolvedRoot } from "@noverax/courier-cli/devkit";
 import type { LoadedCourierConfig } from "../config-loader";
 import { configReads } from "../config-reads";
 import { describeError } from "../describe-error";
 import type { ExclusiveContext } from "../exclusive-context";
-import { resolvedRoot } from "../resolved-root";
 import { ConfigEditRefusal, type ConfigEditRefusalCode } from "./config-edit-refusal";
 import type {
   ManualUndeclaration,

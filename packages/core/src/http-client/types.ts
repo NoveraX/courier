@@ -159,7 +159,7 @@ export type BaseOptions = MergeOptions &
      * none, unless something marks them. `true` opens every endpoint the
      * source holds; a group's own `expose`, or an endpoint's `.expose()`,
      * says otherwise for what it holds, the nearest mark deciding. The
-     * routes module Studio writes names every endpoint a mark opens.
+     * routes module Courier writes names every endpoint a mark opens.
      */
     expose?: boolean | undefined;
     /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */

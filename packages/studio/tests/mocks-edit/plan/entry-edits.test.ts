@@ -1,10 +1,9 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
-
 import { DEFAULT_STYLE } from "../../../src/server/mocks-edit/plan/detect-style";
 import type { EntryEdits } from "../../../src/server/mocks-edit/plan/entry-edits";
 import { planEntryEdits } from "../../../src/server/mocks-edit/plan/entry-edits";
 import { locateMocksObject } from "../../../src/server/mocks-edit/plan/locate-mocks-object";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import type { ImportPlan } from "../../../src/server/mocks-edit/plan/plan-imports";
 import { readMockImports } from "../../../src/server/mocks-edit/plan/read-mock-imports";
 import type { MockDeclaration } from "../../../src/server/mocks-edit/types";

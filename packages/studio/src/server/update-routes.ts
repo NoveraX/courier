@@ -2,10 +2,10 @@
  * Express routes for update flow: preview and apply spec updates.
  */
 
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import type { ApisRouteDeps } from "./apis-routes";
 import { importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
-import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";

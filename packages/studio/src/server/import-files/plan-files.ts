@@ -1,6 +1,5 @@
-import { PathOutsideProjectError } from "../project-fs/path-outside-project-error";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { PathOutsideProjectError, resolveProjectPath } from "@noverax/courier-cli/devkit";
 import { type DiskFile, readDiskFile } from "./disk-file";
 import { DuplicateTargetError } from "./duplicate-target-error";
 import type { FilePlan, PlanRequest } from "./file-plan-types";

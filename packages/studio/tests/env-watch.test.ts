@@ -8,11 +8,10 @@
 import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { createProjectEnv } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-watcher";
-import { createProjectEnv } from "../src/server/project-env";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

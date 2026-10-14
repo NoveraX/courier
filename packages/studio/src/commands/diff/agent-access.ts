@@ -1,9 +1,8 @@
 import type { AgentAccess } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import type { Sources } from "@noverax/courier/define";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { buildCatalog, checkedPolicy, decisionReason } from "@noverax/courier-mcp/internal";
-
-import { messageOf } from "../../server/message-of";
 
 /** A tool the project offers to agents, as the diff compares them. */
 export interface OfferedTool {

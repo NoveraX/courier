@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { writesExplicitExtensions } from "@noverax/courier-cli/devkit";
 import type { MocksTarget } from "./inspect-mocks-target";
 import type { PlanInput } from "./plan/types";
 import type { MockDeclaration } from "./types";
-import { writesExplicitExtensions } from "./writes-explicit-extensions";
 
 const log = createLogger("Studio");
 

@@ -8,7 +8,7 @@
  * bindings, no watcher, and no visible reason.
  */
 
-import { messageOf } from "./message-of";
+import { messageOf } from "@noverax/courier-cli/devkit";
 
 const issues: string[] = [];
 

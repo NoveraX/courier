@@ -1,6 +1,6 @@
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { StudioAuditInputs } from "../mcp/audit-tool";
 import type { StudioMocks } from "../mcp/mock-tools";
-import { isRecord } from "../mocks-edit/is-record";
 import type { ProjectReads } from "../project-state/types";
 import type { RequestLog } from "../request-log";
 import type { RouteApp } from "../route-types";

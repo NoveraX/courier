@@ -1,6 +1,6 @@
 import type { ClientRequest, IncomingMessage } from "node:http";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import type { Capacity } from "./capacity";
-import { errnoCode } from "./errno-code";
 import { readSpecBody } from "./read-spec-body";
 import type { RequestClock } from "./request-clock";
 import { SpecFetchError } from "./spec-fetch-error";

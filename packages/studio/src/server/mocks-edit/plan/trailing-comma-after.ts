@@ -1,4 +1,6 @@
-import { type CommentEnds, skipTrivia } from "./skip-trivia";
+import type { CommentEnds } from "@noverax/courier-cli/devkit";
+
+import { skipTrivia } from "./skip-trivia";
 
 /**
  * Find the comma after a list's last item, looking past whitespace and

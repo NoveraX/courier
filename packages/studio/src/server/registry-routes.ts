@@ -3,11 +3,11 @@
  * `write-routes.ts`; checking for updates in `registry-update-routes.ts`.
  */
 
+import { isRecord } from "@noverax/courier-cli/devkit";
 import type { ApisRouteApp, ApisRouteDeps } from "./apis-routes";
 import { applyImportRemoval } from "./import-removal/apply-import-removal";
 import { previewImportRemoval } from "./import-removal/preview-import-removal";
 import { isLocalBrowser } from "./is-local-browser";
-import { isRecord } from "./mocks-edit/is-record";
 import { readPlanConsent } from "./read-plan-consent";
 import { registerUpdateRoutes } from "./registry-update-routes";
 import { sendRouteFailure } from "./route-failure";

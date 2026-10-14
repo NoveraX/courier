@@ -1,5 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { codeMentions } from "./code-mentions";
 import { planImportRemovals } from "./import-removals";
 

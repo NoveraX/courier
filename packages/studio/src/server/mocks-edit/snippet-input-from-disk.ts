@@ -1,12 +1,12 @@
 import { lstatSync } from "node:fs";
 import { basename } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { writesExplicitExtensions } from "@noverax/courier-cli/devkit";
 import { findConfigFileAt, findMocksFile } from "@noverax/courier-studio-core/config";
 import { mocksFileNameFor } from "./mocks-file-name";
 import type { PlanInput } from "./plan/types";
 import { readMocksText } from "./read-mocks-text";
 import type { MockDeclaration } from "./types";
-import { writesExplicitExtensions } from "./writes-explicit-extensions";
 
 const log = createLogger("Studio");
 

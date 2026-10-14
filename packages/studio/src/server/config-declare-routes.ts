@@ -10,15 +10,14 @@
  */
 
 import type { IncomingMessage } from "node:http";
+import { isRecord, resolvedRoot } from "@noverax/courier-cli/devkit";
 import { applyConfigDeclaration } from "./config-edit/apply-config-declaration";
 import type { DeclareApplyResult, DeclarePreview } from "./config-edit/config-declare-types";
 import type { ConfigEditDeps } from "./config-edit/declare-alone";
 import { prepareConfigDeclaration } from "./config-edit/prepare-config-declaration";
 import { previewOf } from "./config-edit/preview-of";
 import { isLocalPeer } from "./mocks-edit/is-local-peer";
-import { isRecord } from "./mocks-edit/is-record";
 import { readConfigToAct } from "./project-state/read-config-to-act";
-import { resolvedRoot } from "./resolved-root";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";
 import { readWriteBody } from "./write-body";

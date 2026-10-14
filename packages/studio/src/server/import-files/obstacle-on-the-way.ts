@@ -1,7 +1,7 @@
 import { lstatSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { errnoCode } from "../errno-code";
-import type { ProjectRoot } from "../project-fs/project-root";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 
 /** What stands on the way to a path: a symbolic link, or something other than a folder. */
 export type Obstacle = "link" | "not-a-file";

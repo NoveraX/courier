@@ -7,9 +7,9 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { parseSync } from "oxc-parser";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { generateCode } from "../src/apis/generator";
 import { resolveImportLayout } from "../src/apis/layout";
 import { previewAddEndpoints } from "../src/apis/manage";
@@ -19,7 +19,6 @@ import { listedSelection } from "../src/apis/manage/listed-selection";
 import { parseSpec } from "../src/apis/parser";
 import { importsSnapshotOf } from "../src/server/imports-bridge";
 import { handleInventory } from "../src/server/manage-helpers";
-import { projectRootAt } from "../src/server/project-fs/project-root";
 
 const OK = { "200": { description: "ok" } };
 /* Both tags have a `getById`: one group holding both renames them after their paths. The tags

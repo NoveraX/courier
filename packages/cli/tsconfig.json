@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@noverax/courier": ["../core/src/index.ts"],
+      "@noverax/courier/config": ["../core/src/config/index.ts"],
+      "@noverax/courier/define": ["../core/src/define/index.ts"],
+      "@noverax/courier/internal": ["../core/src/internal/index.ts"],
+      "@noverax/courier/node": ["../core/src/node.ts"],
+      "@noverax/courier/openapi": ["../core/src/openapi/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "tsdown.config.ts"]
+}

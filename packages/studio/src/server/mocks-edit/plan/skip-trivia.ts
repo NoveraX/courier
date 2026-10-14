@@ -1,7 +1,6 @@
-import { WHITESPACE } from "./whitespace";
+import type { CommentEnds } from "@noverax/courier-cli/devkit";
 
-/** Where each comment ends, by where it starts, so a scan can jump over one it lands on. */
-export type CommentEnds = ReadonlyMap<number, number>;
+import { WHITESPACE } from "./whitespace";
 
 /**
  * Step over whitespace, line breaks and comments.

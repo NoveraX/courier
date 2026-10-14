@@ -1,5 +1,5 @@
+import type { ParsedSource, ParseProblem } from "@noverax/courier-cli/devkit";
 import { lineNumberAt } from "./line-number-at";
-import type { ParsedSource, ParseProblem } from "./parse-source";
 
 /**
  * Describe a parse problem with the line it is on.

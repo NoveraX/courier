@@ -1,4 +1,4 @@
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { docCommentBefore } from "./doc-comment-before";
 import { endpointNames, findGroupDeclaration } from "./group-declaration";

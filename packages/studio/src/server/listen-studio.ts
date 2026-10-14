@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import { createLogger } from "@noverax/courier";
 import { formatStudioUrl } from "@noverax/courier/config";
-import { errnoCode } from "./errno-code";
+import { errnoCode } from "@noverax/courier-cli/devkit";
 import { listenLoopbackCompanion } from "./listen-loopback-companion";
 import { StudioPortInUseError } from "./studio-port-in-use-error";
 

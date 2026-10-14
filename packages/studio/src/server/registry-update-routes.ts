@@ -6,13 +6,13 @@
  */
 
 import type { CourierUrlImport } from "@noverax/courier/config";
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { hasSpecChanged, type ImportsState } from "../apis";
 import type { ApisRouteApp, ApisRouteDeps } from "./apis-routes";
 import { authHeaders } from "./auth-headers";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { checkedResponse } from "./checked-response";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
-import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { readFetchedSpec } from "./read-fetched-spec";
 import { checkSingleSource, fetchSpecRaw, type UpdateCheck } from "./registry-spec";

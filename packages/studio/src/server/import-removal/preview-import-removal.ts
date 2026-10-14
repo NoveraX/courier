@@ -1,3 +1,4 @@
+import { projectRootAt } from "@noverax/courier-cli/devkit";
 import type { ApisRouteDeps } from "../apis-routes";
 import type { UndeclarePreview } from "../config-edit/config-undeclaration-types";
 import {
@@ -7,7 +8,6 @@ import {
 import { undeclarePreviewOf } from "../config-edit/undeclare-preview-of";
 import { type PlanSummary, summarizePlan } from "../import-files/plan-summary";
 import { importsSnapshotOf } from "../imports-bridge";
-import { projectRootAt } from "../project-fs/project-root";
 import { readForRemoval } from "../project-state/read-for-removal";
 import { type RemovalConfigNotes, removalConfigNotes } from "../removal-config-notes";
 import { planImportRemoval } from "../removal-plan";

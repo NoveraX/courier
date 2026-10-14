@@ -7,10 +7,10 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { closeFormatProcesses } from "@noverax/courier-cli/devkit";
 import { afterEach, describe, expect, it } from "vitest";
 import { formattedCreation } from "../../src/server/mocks-edit/formatted-creation";
 import type { MocksPlan } from "../../src/server/mocks-edit/plan/types";
-import { closeFormatProcesses } from "../../src/server/project-format/formatter-host";
 
 const INSTALLED = fileURLToPath(new URL("../../../../node_modules/", import.meta.url));
 const made: string[] = [];

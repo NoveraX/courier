@@ -1,8 +1,7 @@
 import { lstatSync, rmdirSync } from "node:fs";
 import { dirname, relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { errnoCode } from "../errno-code";
-import { isWithin } from "../project-fs/is-within";
+import { errnoCode, isWithin } from "@noverax/courier-cli/devkit";
 
 const log = createLogger("Studio");
 

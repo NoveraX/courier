@@ -1,8 +1,8 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { Directive, ObjectExpression, Statement } from "oxc-parser";
 import { DEFAULT_INDENT, detectIndent } from "./detect-indent";
 import { detectTrailingCommas } from "./detect-trailing-commas";
 import { LINE_TERMINATOR } from "./line-terminator";
-import type { ParsedSource } from "./parse-source";
 import type { FileStyle } from "./types";
 
 /** Biome's defaults, for a file that shows no style of its own. */

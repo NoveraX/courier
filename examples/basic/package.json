@@ -9,7 +9,7 @@
     "upstream": "tsx src/upstream.ts",
     "server": "tsx src/dev.ts",
     "studio": "courier-studio",
-    "routes": "courier-studio routes"
+    "routes": "courier-cli routes"
   },
   "dependencies": {
     "@noverax/courier": "*",
@@ -17,6 +17,7 @@
     "@noverax/courier-studio-core": "*"
   },
   "devDependencies": {
+    "@noverax/courier-cli": "*",
     "@noverax/courier-studio": "*",
     "tsx": "^4.23.15"
   }

@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import type { ProjectRoot } from "../project-fs/project-root";
-import { resolveProjectPath } from "../project-fs/resolve-project-path";
+import type { ProjectRoot } from "@noverax/courier-cli/devkit";
+import { resolveProjectPath } from "@noverax/courier-cli/devkit";
 
 /**
  * Where an apply keeps its copy of a project file: the same relative path

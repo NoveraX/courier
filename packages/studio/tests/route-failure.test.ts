@@ -1,8 +1,8 @@
 import { CourierError } from "@noverax/courier";
+import { PathOutsideProjectError } from "@noverax/courier-cli/devkit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvalidImportError } from "../src/apis/layout";
 import { ConfigLoaderError } from "../src/server/config-loader-errors";
-import { PathOutsideProjectError } from "../src/server/project-fs/path-outside-project-error";
 import { ProjectUnavailableError } from "../src/server/project-state/project-unavailable-error";
 import { sendRouteFailure } from "../src/server/route-failure";
 import type { JsonResponse } from "../src/server/route-types";

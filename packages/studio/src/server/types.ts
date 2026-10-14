@@ -4,7 +4,7 @@
 
 import type { CourierStudioConfig } from "@noverax/courier/config";
 
-import type { ProjectEnv } from "./project-env";
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
 
 export interface StudioServerOptions {
   /**

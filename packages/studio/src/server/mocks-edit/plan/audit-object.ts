@@ -1,7 +1,7 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { Expression, ObjectExpression, ObjectPropertyKind } from "oxc-parser";
 import type { AuditScope } from "./audit-scope";
 import { isMockCallee } from "./is-mock-callee";
-import type { ParsedSource } from "./parse-source";
 import { propertyKeyName } from "./property-key-name";
 import type { SplitStatements } from "./split-statements";
 import { textOf } from "./text-of";

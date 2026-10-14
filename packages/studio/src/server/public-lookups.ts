@@ -1,11 +1,9 @@
 import type { LookupAddress } from "node:dns";
 import { createLogger } from "@noverax/courier";
-
+import { errnoCode, messageOf } from "@noverax/courier-cli/devkit";
 import { addressKindHere } from "./address-kind-here";
 import { approveSpecAddresses } from "./approve-spec-addresses";
-import { errnoCode } from "./errno-code";
 import type { LookupPolicy, SpecLookups } from "./guarded-lookup";
-import { messageOf } from "./message-of";
 import { readInterfaces } from "./own-addresses";
 import { type NameResolver, publicResolver } from "./public-resolver";
 

@@ -1,8 +1,6 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
-
-import { type ProjectRoot, projectRootAt } from "../project-fs/project-root";
-import { readFileInside } from "../project-fs/read-file-inside";
+import { type ProjectRoot, projectRootAt, readFileInside } from "@noverax/courier-cli/devkit";
 import { type CodeCall, codeCalls } from "./calls-in-text";
 import type { CatalogEndpoint } from "./endpoint-catalog";
 import { matchCalls } from "./match-calls";

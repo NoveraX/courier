@@ -1,4 +1,4 @@
-import type { ParsedSource } from "./parse-source";
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 
 /**
  * The source text a node spans.

@@ -1,4 +1,4 @@
-import { readRegularFile } from "./read-regular-file";
+import { readRegularFile } from "@noverax/courier-cli/devkit";
 import { sha256Hex } from "./sha256-hex";
 
 /**

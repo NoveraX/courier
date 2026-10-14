@@ -1,6 +1,6 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration } from "oxc-parser";
 import type { AuditScope } from "./audit-scope";
-import type { ParsedSource } from "./parse-source";
 import { previewText } from "./preview-text";
 import type { SplitStatements, TopLevel } from "./split-statements";
 import { textOf } from "./text-of";

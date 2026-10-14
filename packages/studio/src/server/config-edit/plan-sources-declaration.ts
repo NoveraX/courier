@@ -1,8 +1,8 @@
+import { type ParsedSource, parseSource } from "@noverax/courier-cli/devkit";
 import type { Directive, ObjectExpression, Program, Statement } from "oxc-parser";
 import { applyEdits } from "../mocks-edit/plan/apply-edits";
 import { isPureInsertion } from "../mocks-edit/plan/is-pure-insertion";
 import { planListInsertion } from "../mocks-edit/plan/list-insertion";
-import { type ParsedSource, parseSource } from "../mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../mocks-edit/plan/property-key-name";
 import type { ConfigDeclarationPlan } from "./config-declaration-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";

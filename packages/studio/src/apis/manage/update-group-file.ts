@@ -3,14 +3,13 @@
  * code: only the group's `groups` entries and their imports change.
  */
 
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { ObjectExpression } from "oxc-parser";
-
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
 import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
 import { planImportLines } from "../../server/mocks-edit/plan/import-lines";
 import { planListInsertion } from "../../server/mocks-edit/plan/list-insertion";
 import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { quoteString } from "../../server/mocks-edit/plan/quote-string";
 import { unwrapExpression } from "../../server/mocks-edit/plan/unwrap-expression";

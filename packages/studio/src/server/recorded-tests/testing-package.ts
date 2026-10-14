@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import type * as Testing from "@noverax/courier-mock/testing";
-
-import { messageOf } from "../message-of";
 import { devInstallCommand } from "../mocks-edit/install-command";
 import { RecordedTestRefusal } from "./recorded-test-refusal";
 

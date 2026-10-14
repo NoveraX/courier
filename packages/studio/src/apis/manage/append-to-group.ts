@@ -3,12 +3,12 @@
  * source, keeping every line the file already has.
  */
 
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
 import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
 import { insertion } from "../../server/mocks-edit/plan/insertion";
 import { planListInsertion } from "../../server/mocks-edit/plan/list-insertion";
 import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { parseExistingGroup } from "../merge/parse-existing";
 import { renameBase, usesBase } from "../merge/rename-base";

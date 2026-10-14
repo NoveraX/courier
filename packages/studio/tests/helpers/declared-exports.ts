@@ -1,5 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { DeclaredKind } from "../../src/apis/generator/declared-in-lines";
-import { parseSource } from "../../src/server/mocks-edit/plan/parse-source";
 
 /**
  * The names a module exports, read from its syntax: its `export const` and

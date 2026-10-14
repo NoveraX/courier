@@ -1,5 +1,5 @@
+import { formatProjectFiles } from "@noverax/courier-cli/devkit";
 import type { PlanFormatting } from "../import-files/file-plan-types";
-import { formatProjectFiles } from "../project-format/format-project-files";
 import type { MocksPlan } from "./plan/types";
 
 /** A plan, and how the file it creates was formatted. */

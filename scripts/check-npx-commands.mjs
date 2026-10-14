@@ -10,7 +10,7 @@
  * package's name and runs that package from npm, answering its own question
  * with yes wherever no terminal is open. Under the bare names of Courier's
  * commands npm holds other people's packages, or nothing anyone could not
- * claim: `courier` and `courier-mcp` are not Courier's. `npx
+ * claim: `courier`, `courier-cli` and `courier-mcp` are not Courier's. `npx
  * @noverax/courier-mcp` runs the project's copy, or Courier's own, never
  * another; so does `bunx` with the full name. `pnpm exec`, `yarn` and a
  * package.json script run only what the project installed, and pass.
@@ -38,7 +38,7 @@ const TEXT = /(\.(md|mdx|ts|tsx|mts|cts|js|jsx|mjs|cjs|json|ya?ml|toml)|Dockerfi
 const LOCKFILE = /(^|\/)package-lock\.json$/;
 
 /* A bare command: the name alone, not the start of a longer one or a path. */
-const BARE = String.raw`(courier-studio|courier-mcp|courier-server|courier)(?![\w@/.-])`;
+const BARE = String.raw`(courier-studio|courier-mcp|courier-server|courier-cli|courier)(?![\w@/.-])`;
 /* What may stand between a runner and the command: spaces, a tag of highlighted code, flags. */
 const GAP = String.raw`(?:\s|<\/?[a-zA-Z][^>]*>)+`;
 const FLAGS = String.raw`(?:(?:(?!--package\b|-p\b)--?[\w-]+(?:=\S+)?|--)${GAP})*`;

@@ -1,8 +1,8 @@
 import type { LookupAddress } from "node:dns";
 import { promises as dns } from "node:dns";
 import { createLogger } from "@noverax/courier";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { approveSpecAddresses } from "./approve-spec-addresses";
-import { messageOf } from "./message-of";
 
 const log = createLogger("Studio");
 

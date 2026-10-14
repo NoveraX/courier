@@ -1,6 +1,5 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import type { Comment, ObjectExpression } from "oxc-parser";
-
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { docCommentBefore } from "../manage/doc-comment-before";
 import { findGroupDeclaration } from "../manage/group-declaration";

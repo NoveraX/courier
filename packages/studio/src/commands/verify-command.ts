@@ -1,13 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { DOTENV_ARG, loadProjectEnv, messageOf } from "@noverax/courier-cli/devkit";
 import type * as Testing from "@noverax/courier-mock/testing";
 import { type ArgsDef, defineCommand } from "citty";
-
 import { loadCourierConfig } from "../server/config-loader";
-import { messageOf } from "../server/message-of";
 import { devInstallCommand } from "../server/mocks-edit/install-command";
-import { DOTENV_ARG, loadProjectEnv } from "../server/project-env";
 import { type FoundRecordings, findRecordings } from "./verify/find-recordings";
 import {
   type CheckedFile,

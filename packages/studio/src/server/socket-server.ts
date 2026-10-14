@@ -1,9 +1,9 @@
 import type { Server as HttpServer, IncomingMessage, ServerResponse } from "node:http";
 import { createLogger } from "@noverax/courier";
+import { messageOf } from "@noverax/courier-cli/devkit";
 import { type Namespace, type Socket, Server as SocketIOServer } from "socket.io";
 import type { CountedSocket, DemoConnections } from "./demo/demo-connections";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
-import { messageOf } from "./message-of";
 import type { StudioOriginPolicy } from "./studio-origin";
 
 const log = createLogger("Studio");

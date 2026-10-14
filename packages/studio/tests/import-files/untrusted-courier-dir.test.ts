@@ -18,13 +18,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { type ProjectRoot, projectRootAt } from "@noverax/courier-cli/devkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
 import { bodyHash } from "../../src/server/import-files/body-hash";
 import { planFiles } from "../../src/server/import-files/plan-files";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
-import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 
 const IS_WINDOWS = process.platform === "win32";
 const DIR = "src/api/pets";

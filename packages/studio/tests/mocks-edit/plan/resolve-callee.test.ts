@@ -1,6 +1,6 @@
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { describe, expect, it } from "vitest";
 import { collectModuleBindings } from "../../../src/server/mocks-edit/plan/module-bindings";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 import { readMockImports } from "../../../src/server/mocks-edit/plan/read-mock-imports";
 import type { CalleeResolution } from "../../../src/server/mocks-edit/plan/resolve-callee";
 import { resolveCallee } from "../../../src/server/mocks-edit/plan/resolve-callee";

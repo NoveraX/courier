@@ -8,7 +8,7 @@
  * exports it.
  */
 
-import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { parseSource } from "@noverax/courier-cli/devkit";
 import { escapeForRegex } from "../escape-for-regex";
 import { namedStatement } from "../generator/named-statement";
 import { referencedNames } from "../manage/referenced-names";

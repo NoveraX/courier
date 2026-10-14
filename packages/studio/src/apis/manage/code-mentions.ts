@@ -1,5 +1,5 @@
+import type { ParsedSource } from "@noverax/courier-cli/devkit";
 import type { ImportDeclaration } from "oxc-parser";
-import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 import { escapeForRegex } from "../escape-for-regex";
 
 /* The code with its imports and comments blanked out, offsets kept. */

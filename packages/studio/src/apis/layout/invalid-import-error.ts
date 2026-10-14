@@ -1,13 +1,18 @@
 import { CourierError } from "@noverax/courier";
 
 /** The part of an import's declaration that Studio refused. */
-export type InvalidImportField = "outputDir" | "sourceName" | "importName" | "group";
+export type InvalidImportField =
+  | "outputDir"
+  | "sourceName"
+  | "importName"
+  | "group"
+  | "generateClient";
 
 /**
  * An import declaration Studio will not generate into: an output directory
  * outside the project or inside `.git`, `node_modules` or `.courier`, a
- * name that gives no usable identifier, or a group name that is not one.
- * Answered 400.
+ * name that gives no usable identifier, a group name that is not one, or a
+ * proxy caller in a project that keeps no routes module. Answered 400.
  *
  * @example
  * ```ts

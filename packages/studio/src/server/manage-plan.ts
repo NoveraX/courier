@@ -5,7 +5,7 @@ import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
 import { addedEndpointsCode } from "../apis/manage/added-endpoints-code";
 import { isFlatImport } from "../apis/manage/flat-import";
 import { listedSelection } from "../apis/manage/listed-selection";
-import { filesAfter, proxyAfterChange } from "../apis/manage/proxy-after-change";
+import { proxyAfterChange } from "../apis/manage/proxy-after-change";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { isTopLevel } from "../apis/parser/top-level";
@@ -22,6 +22,8 @@ import { findFormatters } from "./project-format/find-formatters";
 import { formatPlannedWrites } from "./project-format/format-planned-writes";
 import { formatProjectFiles } from "./project-format/format-project-files";
 import type { ProjectRoot } from "./project-fs/project-root";
+import type { LoadedForRoutes } from "./routes-module/routes-module-writer";
+import { withRoutesModule } from "./routes-module/with-routes-module";
 import { unknownRemovals } from "./unknown-removals";
 
 /** The endpoints to add and remove of an import, by group. */
@@ -58,6 +60,7 @@ export interface ManagePlan {
  * @param body - The import, its spec, and the endpoints to add and remove by group
  * @param imports - The declarations of the config Studio runs, with the imports state
  * @param root - The project
+ * @param running - The config Studio runs, which says where the routes module is
  * @returns The changes and their plan, or the error to answer with and its status
  * @throws {DirOverlapError} When another import owns a directory overlapping the import's
  */
@@ -65,9 +68,11 @@ export async function planManage(
   body: ManageRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
+  running: LoadedForRoutes | null = null,
 ): Promise<ManagePlan | { error: string; status: number }> {
-  const declared = getImportEntry(imports, body.name);
-  if (!declared) return { error: `Source "${body.name}" not found`, status: 404 };
+  const entryDeclared = getImportEntry(imports, body.name);
+  if (!entryDeclared) return { error: `Source "${body.name}" not found`, status: 404 };
+  const declared = withRoutesModule(entryDeclared, running);
   const entry = getImportState(imports, body.name);
   const layout = resolveImportLayout(declared, body.name);
   checkDirOverlap(body.name, layout.dir, imports);
@@ -123,7 +128,7 @@ export async function planManage(
   }
   const fileOf = (group: string): string =>
     flat || isTopLevel(group) ? layout.sourceFile : layout.groupFile(group);
-  const proxy = proxyAfterChange(body.spec, options, layout, filesAfter(afterAdd, removeResult));
+  const proxy = proxyAfterChange(body.spec, options, layout);
   const whole = proxy ? (await formatProjectFiles(root.path, [proxy], formatters)).files : [];
   const changes = { toRemove: body.toRemove, added: addResult, removed: removeResult, whole };
   const request = managePlanRequest(layout, changes, entry, fileOf);

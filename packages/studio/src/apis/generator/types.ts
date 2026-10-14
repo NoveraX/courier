@@ -24,6 +24,13 @@ export type GenerateOptions = CourierImportBase & {
    * never persisted to config.
    */
   importExtension?: ".js";
+  /**
+   * The project's routes module, by its path from the project root, which
+   * the proxy caller takes its routes from: where courier.config's
+   * `studio.routes` puts it, `courier.routes.ts` by default. Decided by the
+   * config, never persisted to the import's declaration.
+   */
+  routesModule?: string;
 };
 
 /**
@@ -62,6 +69,8 @@ export interface ResolvedGenerateOptions {
   selectedEndpoints: Record<string, string[]> | null;
   /** The extension relative imports carry; empty for none. */
   importExtension: "" | ".js";
+  /** The routes module, by its path from the project root. */
+  routesModule: string;
   include?: CourierImportBase["include"];
   exclude?: CourierImportBase["exclude"];
   transform?: CourierImportBase["transform"];
@@ -74,6 +83,7 @@ export type GenerationDefaults = Omit<
   | "layout"
   | "selectedEndpoints"
   | "importExtension"
+  | "routesModule"
   | "include"
   | "exclude"
   | "transform"
@@ -117,6 +127,7 @@ export function applyImportDefaults(
     generateClient: options.generateClient ?? DEFAULT_OPTIONS.generateClient,
     selectedEndpoints: options.selectedEndpoints ?? null,
     importExtension: options.importExtension ?? "",
+    routesModule: options.routesModule ?? "courier.routes.ts",
     include: options.include,
     exclude: options.exclude,
     transform: options.transform,

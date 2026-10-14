@@ -15,6 +15,7 @@ import type { ProjectState } from "./project-state/types";
 import { registerRegistryRoutes } from "./registry-routes";
 import type { WorkedResponse } from "./request-work";
 import type { JsonResponse, RouteApp, RouteRequest } from "./route-types";
+import { withRoutesModule } from "./routes-module/with-routes-module";
 import { diffInProcess } from "./spec-jobs/diff-in-process";
 import { generateInProcess } from "./spec-jobs/generate-in-process";
 import { registerUpdateFlowRoutes } from "./update-routes";
@@ -84,7 +85,11 @@ export function registerApisRoutes(app: ApisRouteApp, deps: ApisRouteDeps): void
         );
         return;
       }
-      const files = generateCode(body.spec, withImportExtension(body.options, deps.projectRoot));
+      const options = withImportExtension(body.options, deps.projectRoot);
+      const files = generateCode(
+        body.spec,
+        withRoutesModule(options, deps.project.snapshot().running),
+      );
       /* Shown as they will be written: formatted as the project formats its code. */
       const {
         files: formatted,

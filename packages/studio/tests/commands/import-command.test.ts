@@ -174,6 +174,20 @@ describe("courier-studio import", { timeout: 60_000 }, () => {
     expect(again.stdout).not.toContain("Then courier.config.ts declares it");
   });
 
+  it("writes the routes module a proxy caller takes its routes from, once the import is declared", async () => {
+    const run = await studioImport([spec, "--yes", "--client", "proxy"]);
+
+    expect(run.status, run.output).toBe(0);
+    expect(run.stdout).toContain(
+      "Wrote courier.routes.ts: 4 endpoints a page may call, of petStore",
+    );
+    expect(read("courier.routes.ts")).toContain("export const petStoreRoutes");
+    expect(read("src/api/pet-store/source.ts")).toContain("  expose: true,");
+    expect(read("src/api/pet-store/proxy.ts")).toContain(
+      'import { petStoreRoutes } from "../../../courier.routes";',
+    );
+  });
+
   it("imports only the endpoints --include and --exclude pick, records them, and refuses others later", async () => {
     const run = await studioImport([
       spec,

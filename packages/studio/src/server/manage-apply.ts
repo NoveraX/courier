@@ -6,6 +6,7 @@ import { saveImportEntry } from "./import-files/save-import-entry";
 import type { ImportsSnapshot } from "./imports-bridge";
 import { type ManageRequest, planManage } from "./manage-plan";
 import type { ProjectRoot } from "./project-fs/project-root";
+import type { LoadedForRoutes } from "./routes-module/routes-module-writer";
 
 /**
  * Add and remove endpoints of an import as previewed: the plan is made
@@ -15,6 +16,7 @@ import type { ProjectRoot } from "./project-fs/project-root";
  * @param body - The import, its spec, the endpoints to add and remove, and the plan the user saw and allowed
  * @param imports - The declarations of the config Studio runs, with the imports state
  * @param root - The project
+ * @param running - The config Studio runs, which says where the routes module is
  * @returns What was written, removed and kept, or the error to answer with and its status
  * @throws {FilePlanError} When the plan is refused as it stands
  * @example
@@ -26,11 +28,12 @@ export async function handleManageApply(
   body: ManageRequest & PlanConsent,
   imports: ImportsSnapshot,
   root: ProjectRoot,
+  running: LoadedForRoutes | null = null,
 ): Promise<
   | Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir" | "pruneFailures">
   | { error: string; status: number }
 > {
-  const planned = await planManage(body, imports, root);
+  const planned = await planManage(body, imports, root, running);
   if ("error" in planned) return planned;
   const specHash = body.specHash ?? computeSpecHash(body.spec);
   const spec = { specHash, digest: createSpecDigest(body.spec) };

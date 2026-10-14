@@ -8,6 +8,7 @@ import { projectRootAt } from "./project-fs/project-root";
 import { readConfigToAct } from "./project-state/read-config-to-act";
 import type { ProjectImports } from "./project-state/types";
 import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";
+import { withRoutesModule } from "./routes-module/with-routes-module";
 import { declaredSpec } from "./spec-as-declared";
 import type { ImportDeclaration, WriteBody, WriteResult } from "./write-types";
 
@@ -47,7 +48,7 @@ async function prepare(
     name,
     layout,
     ...(await declaredSpec(entry, name, body.spec)),
-    options: body.options,
+    options: withRoutesModule(body.options, loaded),
     entry: getImportState(imports, name),
     origin: body.origin ?? "given",
   };

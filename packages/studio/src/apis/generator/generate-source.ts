@@ -68,6 +68,7 @@ export function generateSourceFile(
     ...(holds ? [basesDeclaration(context), ""] : []),
     `export const ${options.sourceName} = defineApi({`,
     `  baseURL: ${jsLiteral(spec.baseURL)},`,
+    ...exposure(options),
     ...(auth ? [`  middleware: [${auth.middleware}],`] : []),
     ...(holds || !lists ? [`  endpoints: {`, ...entries, `  },`] : []),
     ...(lists ? groupEntries(groups, options) : []),
@@ -76,6 +77,14 @@ export function generateSourceFile(
     ...(auth ? auth.helper : []),
   ];
   return { path: options.layout.sourceFile, content: lines.join("\n") };
+}
+
+/* A proxy caller is generated to call the API from a page, which may call only what is marked. */
+function exposure(options: ResolvedGenerateOptions): string[] {
+  if (options.generateClient !== "proxy" && options.generateClient !== "both") return [];
+  const comment =
+    "  /** A page may call every endpoint through the proxy; `.expose(false)` keeps one to the server. */";
+  return [...(options.includeComments ? [comment] : []), "  expose: true,"];
 }
 
 function groupImport(group: ParsedGroup, options: ResolvedGenerateOptions): string {

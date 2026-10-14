@@ -34,9 +34,12 @@ function files(options: Partial<GenerateOptions>): { path: string; content: stri
   });
 }
 
-/** Every relative import must name a file the same run produced. */
+/**
+ * Every relative import must name a file the same run produced, or the
+ * routes module, which Studio writes beside the config for the proxy caller.
+ */
 function danglingImports(generated: { path: string; content: string }[]): string[] {
-  const written = new Set(generated.map((f) => f.path.replace(/\.ts$/, "")));
+  const written = new Set([...generated.map((f) => f.path.replace(/\.ts$/, "")), "courier.routes"]);
   const dangling: string[] = [];
 
   for (const file of generated) {

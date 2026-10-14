@@ -75,7 +75,12 @@ async function handlePreviewRoute(
     const imports = importsSnapshotOf(declarations, projectRoot);
     const entry = getImportEntry(imports, body.name);
     const request = { ...body, ...(await declaredSpec(entry, body.name, body.spec)) };
-    const planned = await planManage(request, imports, projectRootAt(projectRoot));
+    const planned = await planManage(
+      request,
+      imports,
+      projectRootAt(projectRoot),
+      project.snapshot().running,
+    );
     if ("error" in planned) {
       sendResult(res, planned);
       return;
@@ -107,7 +112,12 @@ function handleApplyRoute(
     const imports = importsSnapshotOf(declarations, projectRoot);
     const declared = await declaredSpec(getImportEntry(imports, body.name), body.name, body.spec);
     const request = { ...body, ...declared, ...consent };
-    const result = await handleManageApply(request, imports, projectRootAt(projectRoot));
+    const result = await handleManageApply(
+      request,
+      imports,
+      projectRootAt(projectRoot),
+      project.snapshot().running,
+    );
     if (!("error" in result)) project.importsChanged();
     return result;
   }).then(

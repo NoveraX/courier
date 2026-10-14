@@ -2,20 +2,28 @@
  * Generates the module browser code imports the proxy caller from.
  */
 
+import { posix } from "node:path";
 import type { ParsedSpec } from "../parser/types";
 import { callerDoc } from "./caller-doc";
-import { boundaryExposure, boundaryLines } from "./proxy-boundary";
+import { routesExportName } from "./routes-export-name";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
+/* The extension a module runs as, which an import that names it carries under Node's resolution. */
+const RUNS_AS: Readonly<Record<string, string>> = {
+  ".ts": ".js",
+  ".mts": ".mjs",
+  ".js": ".js",
+  ".mjs": ".mjs",
+};
+
 /**
- * Write the import's proxy caller in a module of its own: it names the
- * source only as a type and imports nothing else of the import, so a
- * browser bundle that imports it holds the proxy caller alone — not the
- * source's upstream address, its middleware, nor a schema. In the barrel,
- * beside the direct caller and the schemas, a browser importing it got all
- * of them, since a bundler keeps a module whose top level makes calls. An
- * API with streams gives its caller a boundary naming every endpoint and
- * how it reaches the wire, which the caller needs to open a stream.
+ * Write the import's proxy caller in a module of its own: it takes the
+ * source's routes from the project's routes module, which Studio writes
+ * from the endpoints marked `.expose()`, and imports nothing of the import,
+ * so a browser bundle that imports it holds the proxy caller alone — not
+ * the source's upstream address, its middleware, nor a schema. In the
+ * barrel, beside the direct caller and the schemas, a browser importing it
+ * got all of them, since a bundler keeps a module whose top level makes calls.
  *
  * @param spec - The parsed specification
  * @param options - The import's resolved options
@@ -31,19 +39,29 @@ export function generateProxyFile(
 ): GeneratedFile | null {
   if (options.generateClient !== "proxy" && options.generateClient !== "both") return null;
   const name = options.sourceName;
-  const exposure = boundaryExposure(spec);
-  /* A caller of an API with streams needs to know which they are: from a boundary. */
-  const streams = exposure.some(([, shape]) => shape === "stream");
-  const given = streams ? `, { boundary: ${name}Boundary }` : "";
+  /* Exported under the name courier.config keys the source by, which is the import's. */
+  const routes = routesExportName(options.layout.importName) ?? `${name}Routes`;
   const content = [
     'import { createProxyCaller } from "@noverax/courier";',
-    ...(streams ? ['import { defineBoundary } from "@noverax/courier/define";'] : []),
-    `import type { ${name} } from "./source${options.importExtension}";`,
     "",
-    ...(streams ? boundaryLines(name, exposure) : []),
+    `import { ${routes} } from "${routesSpecifier(options)}";`,
+    "",
     ...callerDoc(spec, "PROXY"),
-    `export const ${name}ProxyApi = createProxyCaller<typeof ${name}>("${name}"${given});`,
+    `export const ${name}ProxyApi = createProxyCaller(${routes});`,
     "",
   ].join("\n");
   return { path: options.layout.proxyFile, content };
+}
+
+/* From the proxy module's folder to the routes module, with the extension it runs as where imports carry one. */
+function routesSpecifier({
+  layout,
+  routesModule,
+  importExtension,
+}: ResolvedGenerateOptions): string {
+  const extension = posix.extname(routesModule);
+  const relative = posix.relative(posix.dirname(layout.proxyFile), routesModule);
+  const bare = relative.slice(0, relative.length - extension.length);
+  const specifier = bare.startsWith("../") ? bare : `./${bare}`;
+  return importExtension === "" ? specifier : `${specifier}${RUNS_AS[extension] ?? ".js"}`;
 }

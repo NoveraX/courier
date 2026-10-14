@@ -1,10 +1,7 @@
 import type { CourierRoutes } from "@noverax/courier/define";
 
+import { routesExportName } from "../../apis/generator/routes-export-name";
 import type { NamedRoutes } from "./routes-module-text";
-
-/* What separates the words of a source's name that an identifier cannot hold. */
-const NOT_IN_A_NAME = /[^A-Za-z0-9_$]+/;
-const LEADING_DIGIT = /^[0-9]/;
 
 /** Each source's routes under the name the module exports them by, or why one cannot be. */
 export type RoutesNaming =
@@ -30,7 +27,7 @@ export function nameRoutes(routes: readonly CourierRoutes[]): RoutesNaming {
   const named: NamedRoutes[] = [];
   const takenBy = new Map<string, string>();
   for (const each of routes) {
-    const exportName = exportNameOf(each.source);
+    const exportName = routesExportName(each.source);
     if (exportName === null) {
       return {
         named: null,
@@ -48,15 +45,4 @@ export function nameRoutes(routes: readonly CourierRoutes[]): RoutesNaming {
     named.push({ exportName, routes: each });
   }
   return { named, problem: null };
-}
-
-function exportNameOf(source: string): string | null {
-  const words = source.split(NOT_IN_A_NAME).filter((word) => word !== "");
-  if (words.length === 0) return null;
-  const joined = words.map((word, index) => (index === 0 ? word : capitalized(word))).join("");
-  return `${LEADING_DIGIT.test(joined) ? "_" : ""}${joined}Routes`;
-}
-
-function capitalized(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
 }

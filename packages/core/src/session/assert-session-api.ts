@@ -2,7 +2,8 @@ import { eachGroup } from "../define/group-tree";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { BaseOptions } from "../http-client/types";
 import { isEndpointEntry } from "../utils/execute-helpers";
-import { assertForwardOptions, assertNoCookieHeaders } from "./validate-forward";
+import { assertNoCookieHeaders } from "./assert-no-cookie-headers";
+import { assertForwardOptions } from "./validate-forward";
 import { assertSessionOptions } from "./validate-session";
 
 /**

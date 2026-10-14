@@ -114,6 +114,16 @@
       "default": "./lib/announce/index.js"
     }
   },
+  "imports": {
+    "#courier-server/*": {
+      "edge-light": "./lib/*",
+      "workerd": "./lib/*",
+      "worker": "./lib/*",
+      "react-native": "./lib/*",
+      "browser": "./lib/browser/*",
+      "default": "./lib/*"
+    }
+  },
   "typesVersions": {
     "*": {
       "config": [

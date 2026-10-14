@@ -7,10 +7,20 @@
  * parsed every success as JSON, so the empty body of a 204 surfaced as a raw
  * SyntaxError, where direct mode resolves the same answer to `null`.
  */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CourierRoutes } from "../src/define/index";
 
 import { createProxyCaller } from "../src/proxy-caller";
 import { buildResponse } from "../src/utils/execute-response";
+
+/* The endpoints these tests call, as a page's routes name them. */
+const ROUTES: CourierRoutes = {
+  source: "api",
+  endpoints: {
+    "items.remove": { type: "mutation" },
+  },
+};
 
 const PROXY = { res: new Response() };
 
@@ -67,21 +77,21 @@ describe("the browser reading a bodiless proxy answer", () => {
 
   it("resolves a 204 to null, as direct mode does", async () => {
     fetchSpy.mockResolvedValue(new Response(null, { status: 204 }));
-    const client = createProxyCaller("api") as unknown as ItemsClient;
+    const client = createProxyCaller(ROUTES) as unknown as ItemsClient;
 
     await expect(client.items.remove({ id: 1 })).resolves.toBeNull();
   });
 
   it("resolves a 205 to null", async () => {
     fetchSpy.mockResolvedValue(new Response(null, { status: 205 }));
-    const client = createProxyCaller("api") as unknown as ItemsClient;
+    const client = createProxyCaller(ROUTES) as unknown as ItemsClient;
 
     await expect(client.items.remove({ id: 1 })).resolves.toBeNull();
   });
 
   it("still decodes a JSON success", async () => {
     fetchSpy.mockResolvedValue(Response.json({ removed: 1 }));
-    const client = createProxyCaller("api") as unknown as ItemsClient;
+    const client = createProxyCaller(ROUTES) as unknown as ItemsClient;
 
     await expect(client.items.remove({ id: 1 })).resolves.toEqual({ removed: 1 });
   });

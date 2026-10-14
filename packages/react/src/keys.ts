@@ -1,4 +1,12 @@
-import type { DefinedApi, EndpointNamesAt, GroupAtPath, GroupPaths } from "@noverax/courier/define";
+import type {
+  CourierRoutes,
+  DefinedApi,
+  EndpointNamesAt,
+  GroupAtPath,
+  GroupPaths,
+  RoutedApi,
+  RouteShape,
+} from "@noverax/courier/define";
 import { getSourceName } from "@noverax/courier/define";
 
 import { buildQueryKey, groupKeyParts } from "./query-key";
@@ -73,27 +81,28 @@ export function createQueryKeys<TApi extends DefinedApi>(api: TApi): QueryKeyFac
 }
 
 /**
- * Create a type-safe query key factory for **proxy mode**.
+ * Create a type-safe query key factory for a page's proxy client: from the
+ * same routes `createProxyQueryCaller` takes, typed by the endpoints they
+ * name, and keyed by the source they name, as that client's hooks are.
  *
- * Mirrors `createProxyQueryCaller<T>("name")` — accepts a string source name
- * matching the key in server-side `apiRoute({ [source]: ... })`. Use when the
- * API definition lives on the server only and the client never imports it.
- *
+ * @param routes - The routes of the API, as the routes module exports them
+ * @returns The key factory
  * @example
  * ```ts
  * import { createProxyQueryCaller, createProxyQueryKeys } from "@noverax/courier-react";
- * import type { Api } from "@/shared/api";
+ * import { apiRoutes } from "./courier.routes";
  *
- * export const q = createProxyQueryCaller<Api>("api");
- * export const queryKeys = createProxyQueryKeys<Api>("api");
+ * export const q = createProxyQueryCaller(apiRoutes);
+ * export const queryKeys = createProxyQueryKeys(apiRoutes);
  *
  * queryKeys("users")                          // → ["api", "users"]
  * queryKeys("users", "getAll")                // → ["api", "users", "getAll"]
  * queryKeys("users", "getById", { id: 1 })    // → ["api", "users", "getById", { id: 1 }]
  * ```
  */
-export function createProxyQueryKeys<TApi extends DefinedApi>(
-  source: string,
-): QueryKeyFactory<TApi> {
-  return buildKeyFactory<TApi>(source);
+export function createProxyQueryKeys<
+  TApi extends DefinedApi,
+  TEndpoints extends Readonly<Record<string, RouteShape>>,
+>(routes: CourierRoutes<TApi, TEndpoints>): QueryKeyFactory<RoutedApi<TApi, TEndpoints>> {
+  return buildKeyFactory<RoutedApi<TApi, TEndpoints>>(routes.source);
 }

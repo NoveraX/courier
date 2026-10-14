@@ -10,6 +10,7 @@ import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import type { SSESubscription, WSChannel } from "../src/realtime/types";
 
@@ -38,8 +39,8 @@ describe("a channel's call", () => {
 
   it("returns a subscription for a push, from a direct caller and a proxy caller alike", () => {
     expectTypeOf(createCaller(live).rooms.ticks).returns.toEqualTypeOf<SSESubscription<number>>();
-    expectTypeOf(
-      createProxyCaller<typeof live>("live", { source: live }).rooms.ticks,
-    ).returns.toEqualTypeOf<SSESubscription<number>>();
+    expectTypeOf(createProxyCaller(routesOf(live, "live")).rooms.ticks).returns.toEqualTypeOf<
+      SSESubscription<number>
+    >();
   });
 });

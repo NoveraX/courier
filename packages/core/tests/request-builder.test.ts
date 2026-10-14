@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
@@ -73,9 +74,11 @@ describe("headers an endpoint's closure sets", () => {
     registerSources({ api: source() });
     const api = source();
 
-    await createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } }).documents.xml({
-      text: "<a/>",
-    });
+    await createProxyCaller(routesOf(api, "api"), { proxyPath: { http: proxy.url } }).documents.xml(
+      {
+        text: "<a/>",
+      },
+    );
 
     expect(upstream.last().headers["content-type"]).toBe("application/xml");
   });
@@ -132,9 +135,9 @@ describe("a body an endpoint's closure names", () => {
     const form = new FormData();
     form.append("file", new File(["png bytes"], "a.png", { type: "image/png" }));
 
-    await createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } }).uploads.fromForm(
-      form,
-    );
+    await createProxyCaller(routesOf(api, "api"), {
+      proxyPath: { http: proxy.url },
+    }).uploads.fromForm(form);
 
     expect(upstream.last().url).toBe("/uploads/objects/raw");
     expect(upstream.last().body.toString()).toBe("png bytes");
@@ -219,7 +222,7 @@ describe("a write whose closure passes no body", () => {
     registerSources({ api: source() });
     const api = source();
 
-    await createProxyCaller<typeof api>("api", { proxyPath: { http: proxy.url } }).pets.rename({
+    await createProxyCaller(routesOf(api, "api"), { proxyPath: { http: proxy.url } }).pets.rename({
       id: 5,
       name: "rex",
     });

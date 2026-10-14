@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -105,7 +106,7 @@ describe("an error answer whose body is not JSON", () => {
       return handler.handle(new Request(new URL(url, "http://app.local"), init));
     });
 
-    const error = await failure(createProxyCaller<typeof source>("bodies", { source }).missing());
+    const error = await failure(createProxyCaller(routesOf(source, "bodies")).missing());
 
     expect(error.status).toBe(404);
     expect(error.data).toBe("no such invoice");
@@ -140,7 +141,7 @@ describe("an endpoint that reads its answer as text or a blob", () => {
       if (url.startsWith(upstream.url)) return realFetch(input, init);
       return handler.handle(new Request(new URL(url, "http://app.local"), init));
     });
-    const client = createProxyCaller<typeof source>("bodies", { source });
+    const client = createProxyCaller(routesOf(source, "bodies"));
 
     const text = await client.textAnswer();
     const blob = await client.blobAnswer();

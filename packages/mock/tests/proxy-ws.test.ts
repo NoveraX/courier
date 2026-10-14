@@ -7,12 +7,11 @@
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
+import { decodeMessage, encodeMessage, routesOf, type WSMessage } from "@noverax/courier/internal";
 import type { RealtimeError } from "@noverax/courier/realtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { z } from "zod";
-
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 import { createMockServer } from "../src/server/create-mock-server";
 
@@ -27,6 +26,7 @@ interface Line {
 
 function chatApi() {
   return defineApi({
+    expose: true,
     name: "shop",
     baseURL: "http://placeholder.invalid",
     groups: {
@@ -44,8 +44,6 @@ function chatApi() {
     },
   });
 }
-
-type ChatApi = ReturnType<typeof chatApi>;
 
 const running: Array<{ stop(): Promise<void> }> = [];
 const sockets: WebSocket[] = [];
@@ -90,8 +88,7 @@ const settle = (ms = 80) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Join over a socket of its own, as another browser would. */
 function join(wsUrl: string, room: string, nick: string) {
-  const caller = createProxyCaller<ChatApi>("shop", {
-    source: chatApi(),
+  const caller = createProxyCaller(routesOf(chatApi(), "shop"), {
     proxyPath: { ws: `${wsUrl}?as=${nick}` },
   });
   const ch = caller.chat.room({ room, nick });
@@ -134,7 +131,7 @@ describe("a proxy caller pointed at the mock", () => {
     const opened: string[] = [];
     server.requestHooks.onStart = (id, _verb, path, group, method) =>
       opened.push(`${id} ${path} ${group}.${method}`);
-    const caller = createProxyCaller<ChatApi>("shop", { source: chatApi(), proxyPath: { ws } });
+    const caller = createProxyCaller(routesOf(chatApi(), "shop"), { proxyPath: { ws } });
     const r1 = caller.chat.room({ room: "r1", nick: "alice" });
     const r2 = caller.chat.room({ room: "r2", nick: "alice" });
     const r1Errors: RealtimeError[] = [];

@@ -19,6 +19,7 @@ import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
+import { routesOf } from "../src/define/routes-of";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
@@ -96,8 +97,7 @@ describe("a proxy caller's ws options", () => {
   it("send auth in the socket's first frame, and again, asked for anew, when the server asks", async () => {
     const host = await serve();
     let issued = 0;
-    const client = createProxyCaller<typeof served>("api", {
-      source: served,
+    const client = createProxyCaller(routesOf(served, "api"), {
       proxyPath: { ws: `ws://${host}/api/ws` },
       ws: { auth: () => ({ token: `token-${++issued}` }) },
     });
@@ -115,9 +115,8 @@ describe("a proxy caller's ws options", () => {
   it("open a socket of their own beside a caller with other options", async () => {
     const host = await serve();
     const proxyPath = { ws: `ws://${host}/api/ws` };
-    const plain = createProxyCaller<typeof served>("api", { source: served, proxyPath });
-    const tuned = createProxyCaller<typeof served>("api", {
-      source: served,
+    const plain = createProxyCaller(routesOf(served, "api"), { proxyPath });
+    const tuned = createProxyCaller(routesOf(served, "api"), {
       proxyPath,
       ws: { backoff: { initialMs: 50 } },
     });

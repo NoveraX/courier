@@ -2,7 +2,13 @@
  * @vitest-environment jsdom
  */
 
-import { courier, defineApi, defineBoundary, defineGroup } from "@noverax/courier/define";
+import {
+  type CourierRoutes,
+  courier,
+  defineApi,
+  defineGroup,
+  type RouteMap,
+} from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 /**
@@ -83,7 +89,7 @@ describe("a direct query client", () => {
   });
 });
 
-describe("a proxy query client given a boundary", () => {
+describe("a proxy query client given routes that name those groups", () => {
   let server: CourierServer;
 
   beforeEach(async () => {
@@ -96,11 +102,13 @@ describe("a proxy query client given a boundary", () => {
 
   function proxyCaller() {
     const api = namesApi();
-    const boundary = defineBoundary({
-      source: "names",
-      expose: { "then.list": "query", "toJSON.list": "query", "valueOf.list": "query" },
-    });
-    return createProxyQueryCaller<typeof api>("names", { boundary, proxyPath: server.proxyPath });
+    const endpoints = {
+      "then.list": { type: "query" },
+      "toJSON.list": { type: "query" },
+      "valueOf.list": { type: "query" },
+    } as const satisfies RouteMap<typeof api>;
+    const routes: CourierRoutes<typeof api, typeof endpoints> = { source: "names", endpoints };
+    return createProxyQueryCaller(routes, { proxyPath: server.proxyPath });
   }
 
   it("reaches a group named then, and is still not a promise", async () => {
@@ -135,10 +143,13 @@ describe("a query client without those names in its source", () => {
     expect(await Promise.resolve(q)).toBe(q);
   });
 
-  it("answers those names as absent when it knows only a source name", async () => {
-    const q = createProxyQueryCaller<ReturnType<typeof namesApi>>("names");
+  it("answers those names as absent when its routes name no such group", async () => {
+    const q = createProxyQueryCaller({
+      source: "names",
+      endpoints: { "users.list": { type: "query" } },
+    });
 
     expect(await Promise.resolve(q)).toBe(q);
-    expect(JSON.stringify({ q })).toBe('{"q":{}}');
+    expect(JSON.stringify({ q })).toBe('{"q":{"users":{}}}');
   });
 });

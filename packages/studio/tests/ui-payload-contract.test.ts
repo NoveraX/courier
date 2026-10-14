@@ -7,6 +7,7 @@
  */
 import { createCaller, createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { announceHosting } from "@noverax/courier-studio-core/runtime";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -47,8 +48,6 @@ function defineSources(baseURL: string) {
   };
 }
 
-type Api = ReturnType<typeof defineSources>["api"];
-
 const CONFIG = `
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 const { endpoint } = courier();
@@ -88,7 +87,9 @@ beforeAll(async () => {
   await until(() => getRuntimeEntry("app") !== undefined, "the runtime to connect");
   announceHosting({ transports: ["http"], sources: Object.values(sources) });
 
-  const proxy = createProxyCaller<Api>("api", { proxyPath: { http: app.proxyUrl } });
+  const proxy = createProxyCaller(routesOf(sources.api, "api"), {
+    proxyPath: { http: app.proxyUrl },
+  });
   const direct = createCaller(sources.api);
   await proxy.users.list();
   await proxy.users.create({ name: "Ada" });

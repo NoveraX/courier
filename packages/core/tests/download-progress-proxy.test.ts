@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import type { DownloadProgress } from "../src/http-client/types";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
@@ -59,10 +60,7 @@ function api() {
 }
 
 function client() {
-  return createProxyCaller<ReturnType<typeof api>>("big", {
-    source: api(),
-    proxyPath: { http: proxyUrl },
-  });
+  return createProxyCaller(routesOf(api(), "big"), { proxyPath: { http: proxyUrl } });
 }
 
 describe("download progress through the proxy", () => {

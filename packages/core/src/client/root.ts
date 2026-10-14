@@ -25,7 +25,7 @@ export type RootAccessors = Readonly<Record<string, () => unknown>>;
  * @example
  * ```ts
  * const hooks = new Map<string, object>();
- * const root = createClientRoot(shapeOfClient({ source: api }), (name) =>
+ * const root = createClientRoot(shapeOfSource(api), (name) =>
  *   hooks.get(name) ?? hooks.set(name, groupHooks(name)).get(name),
  * );
  * await root; // the root itself: `then` is never a function

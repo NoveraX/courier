@@ -8,8 +8,8 @@
  */
 import { createProxyCaller } from "@noverax/courier";
 import type { CourierRoutes } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
@@ -205,12 +205,13 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
 
 describe("through the proxy", () => {
   let proxy: ProxyServer;
-  let source: Record<string, unknown> | undefined;
+  let routes: ReturnType<typeof routesOf<Record<string, unknown>>>;
 
   beforeAll(async () => {
     const loaded = loadGenerated(generate({ generateClient: "both" }), "src/api/shop/source.ts");
     const shop = loaded.shop;
-    if (isRecord(shop)) source = shop;
+    if (!isRecord(shop)) throw new Error("source.ts exports no shop");
+    routes = routesOf(shop, "shop");
     proxy = await startProxyServer(loaded);
   });
 
@@ -221,8 +222,7 @@ describe("through the proxy", () => {
   /* The proxy opens a stream the API serves and relays it, as it forwards
      the API's other endpoints. */
   it("reaches the API's stream, relayed event by event", async () => {
-    const caller = createProxyCaller("shop", {
-      source,
+    const caller = createProxyCaller(routes, {
       proxyPath: { http: proxy.url, sse: proxy.url },
     });
     upstream.requests.length = 0;
@@ -237,8 +237,7 @@ describe("through the proxy", () => {
   });
 
   it("writes the query in the style its parameters declare, relayed", async () => {
-    const caller = createProxyCaller("shop", {
-      source,
+    const caller = createProxyCaller(routes, {
       proxyPath: { http: proxy.url, sse: proxy.url },
     });
     upstream.requests.length = 0;

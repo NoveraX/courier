@@ -8,11 +8,11 @@
  */
 
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
-
 import { createProxyQueryCaller } from "../src/create-proxy-query-caller";
 import { createQueryCaller } from "../src/create-query-caller";
 import { createQueryKeys } from "../src/keys";
@@ -22,6 +22,7 @@ const { endpoint } = courier();
 const api = defineApi({
   baseURL: "https://api.example.com",
   name: "shop",
+  expose: true,
   groups: {
     billing: defineGroup({
       prefix: "billing",
@@ -74,14 +75,10 @@ describe("a query caller of groups inside groups", () => {
     expect(q.billing.invoices).toBe(q.billing.invoices);
   });
 
-  it.each([
-    ["with the source", { source: api }],
-    ["by its name alone", {}],
-  ])("reaches a group inside a group through the proxy %s", async (_, given) => {
-    const q = createProxyQueryCaller("shop", {
-      ...given,
+  it("reaches a group inside a group through the proxy, by the routes' whole path", async () => {
+    const q = createProxyQueryCaller(routesOf(api, "shop"), {
       proxyPath: { http: "https://app.example.com/api/request" },
-    }) as ReturnType<typeof createQueryCaller<typeof api>>;
+    });
 
     const { result } = renderHook(() => q.billing.invoices.useQuery("list"), { wrapper });
 

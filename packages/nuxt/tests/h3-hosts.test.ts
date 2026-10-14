@@ -81,7 +81,8 @@ function nodeEventHost(handler: (event: NodeEvent) => Promise<Response>): Server
 }
 
 function callerAt(origin: string) {
-  return createProxyCaller("api", { proxyPath: { http: `${origin}/api/request` } }) as unknown as {
+  const routes = { source: "api", endpoints: { "echo.create": { type: "mutation" } } } as const;
+  return createProxyCaller(routes, { proxyPath: { http: `${origin}/api/request` } }) as unknown as {
     echo: { create(variables: { name: string }): Promise<{ method: string; body: string }> };
   };
 }
@@ -192,7 +193,8 @@ async function heldUpstream(): Promise<{ arrived: () => boolean; cancelled: () =
 }
 
 async function cancelWhileHeld(origin: string, upstream: { arrived: () => boolean }) {
-  const caller = createProxyCaller("held", {
+  const routes = { source: "held", endpoints: { wait: { type: "mutation" } } } as const;
+  const caller = createProxyCaller(routes, {
     proxyPath: { http: `${origin}/api/request` },
   }) as unknown as { with(options: { signal: AbortSignal }): { wait(): Promise<unknown> } };
   const client = new AbortController();

@@ -1,5 +1,4 @@
 import type { AgentCall } from "../agent/types";
-import type { ProxyBoundary } from "../define/boundary-types";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { IncomingRequest } from "../session/incoming-request";
@@ -155,19 +154,13 @@ export type BaseOptions = MergeOptions &
      */
     allowedHeaders?: string[] | undefined;
     /**
-     * Whether the browser may call this source through the proxy — defaults
-     * to true. Set false for a source only server code should reach, and
-     * re-open individual groups with their own `expose`.
+     * Whether a page may call this source's endpoints through the proxy —
+     * none, unless something marks them. `true` opens every endpoint the
+     * source holds; a group's own `expose`, or an endpoint's `.expose()`,
+     * says otherwise for what it holds, the nearest mark deciding. The
+     * routes module Studio writes names every endpoint a mark opens.
      */
     expose?: boolean | undefined;
-    /**
-     * The endpoints a browser may call, named one by one, from
-     * `defineBoundary`. The proxy refuses every other endpoint of this source
-     * over HTTP, streams and sockets alike; it takes precedence over `expose`.
-     * `defineApi` checks it against the API, and a proxy client typed from
-     * the API reaches only the endpoints it names.
-     */
-    boundary?: ProxyBoundary | undefined;
     /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */
     bodySerializer?: ((data: Record<string, unknown>) => WebBody) | undefined;
     /** Custom search params serializer with stringify/parse methods */
@@ -195,12 +188,12 @@ export type BaseOptions = MergeOptions &
      */
     forward?: ForwardOptions | undefined;
     /**
-     * Proxy endpoint paths for HTTP / SSE / WS transports. Carried as
-     * deployment metadata on the source so Studio and `createProxyCaller`
-     * can resolve concrete URLs without hard-coded conventions. Each
-     * field accepts either a relative path (resolved against the runtime
-     * origin) or an absolute URL. See `ProxyPath` for the per-transport
-     * defaults and the rationale for the WS field having no default.
+     * Where the app serves its proxy routes for HTTP / SSE / WS, for Studio:
+     * its Playground sends a call through them as a page would. A page's
+     * proxy client is given its own, in its options. Each field accepts
+     * either a relative path (resolved against the runtime origin) or an
+     * absolute URL. See `ProxyPath` for the per-transport defaults and the
+     * rationale for the WS field having no default.
      */
     proxyPath?: ProxyPath | undefined;
   };

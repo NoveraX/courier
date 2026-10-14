@@ -1,6 +1,12 @@
 import { createCaller, createProxyCaller } from "@noverax/courier";
 import { defineConfig } from "@noverax/courier/config";
-import { courier, defineApi, defineBoundary, defineGroup } from "@noverax/courier/define";
+import {
+  type CourierRoutes,
+  courier,
+  defineApi,
+  defineGroup,
+  type RouteMap,
+} from "@noverax/courier/define";
 import { z } from "zod";
 
 const { endpoint, stream, channel } = courier();
@@ -13,7 +19,8 @@ const users = defineGroup({
     list: endpoint
       .get("")
       .agent({ description: "List every user.", access: "read" })
-      .response(z.array(User)),
+      .response(z.array(User))
+      .expose(),
     get: endpoint
       .get(":id")
       .variables(z.object({ id: z.string() }))
@@ -21,7 +28,8 @@ const users = defineGroup({
     create: endpoint
       .post("")
       .variables(z.object({ name: z.string() }))
-      .response(User),
+      .response(User)
+      .expose(),
     upload: endpoint.post("avatar").variables<FormData>().response<{ size: number }>(),
   },
 });
@@ -29,25 +37,28 @@ const users = defineGroup({
 const live = defineGroup({
   prefix: "live",
   endpoints: {
-    ticks: stream.response<{ n: number }>().get("ticks"),
+    ticks: stream.response<{ n: number }>().get("ticks").expose(),
     chat: channel.send<{ text: string }>().response<{ text: string }>().connect("chat"),
   },
 });
 
-export const boundary = defineBoundary({
-  source: "api",
-  expose: { "users.list": "query", "users.create": "mutation", "live.ticks": "stream" },
-});
-
 export const api = defineApi({
   baseURL: "http://localhost:7001",
-  boundary,
   groups: { users, live },
 });
 
 export const caller = createCaller(api);
 
-export const browser = createProxyCaller<typeof api>("api", { boundary });
+/* The routes a routes module would hold for the endpoints marked above. */
+const endpoints = {
+  "live.ticks": { transport: "sse" },
+  "users.create": { type: "mutation" },
+  "users.list": { type: "query" },
+} as const satisfies RouteMap<typeof api>;
+
+export const apiRoutes: CourierRoutes<typeof api, typeof endpoints> = { source: "api", endpoints };
+
+export const browser = createProxyCaller(apiRoutes);
 
 export const sources = { api };
 

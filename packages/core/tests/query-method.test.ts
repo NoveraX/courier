@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createFetch } from "../src/fetch";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -92,9 +93,9 @@ describe("an endpoint addressed with .query()", () => {
     registerSources({ people: api() });
     const proxy: ProxyServer = await startProxyServer();
     try {
-      await createProxyCaller<ReturnType<typeof api>>("people", {
-        proxyPath: { http: proxy.url },
-      }).search(FILTER);
+      await createProxyCaller(routesOf(api(), "people"), { proxyPath: { http: proxy.url } }).search(
+        FILTER,
+      );
     } finally {
       await proxy.close();
     }

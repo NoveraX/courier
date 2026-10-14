@@ -105,13 +105,7 @@ export type {
   WrapHandler,
   WrapMiddleware,
 } from "./middleware/types";
-export {
-  createProxyCaller,
-  type ProxyCallerArguments,
-  type ProxyCallerDefaults,
-  type ProxyCallerOptions,
-  type ProxyPath,
-} from "./proxy-caller";
+export { createProxyCaller, type ProxyCallerOptions, type ProxyPath } from "./proxy-caller";
 export {
   AuthError,
   ConnectionError,

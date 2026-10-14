@@ -4,9 +4,10 @@
  * validator the client was generated with, with its parameters beside it,
  * directly and through the proxy.
  */
-import { createProxyCaller } from "@noverax/courier";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { createProxyCaller } from "@noverax/courier";
+import { routesOf } from "@noverax/courier/internal";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
@@ -261,11 +262,12 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
 
 describe("through the proxy", () => {
   let proxy: ProxyServer;
+  let routes: ReturnType<typeof routesOf<Record<string, unknown>>>;
 
   beforeAll(async () => {
-    proxy = await startProxyServer(
-      loadGenerated(generate({ generateClient: "both" }), "src/api/shop/source.ts"),
-    );
+    const loaded = loadGenerated(generate({ generateClient: "both" }), "src/api/shop/source.ts");
+    routes = routesOf(loaded.shop as Record<string, unknown>, "shop");
+    proxy = await startProxyServer(loaded);
   });
 
   afterAll(async () => {
@@ -273,7 +275,7 @@ describe("through the proxy", () => {
   });
 
   it.each(calls())("sends %s's body as its media type asks", async (name, variables, check) => {
-    const caller = createProxyCaller("shop", { proxyPath: { http: proxy.url } });
+    const caller = createProxyCaller(routes, { proxyPath: { http: proxy.url } });
     upstream.requests.length = 0;
 
     await endpointAt(caller, "files", name)(variables());

@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 
@@ -63,7 +64,7 @@ afterEach(() => {
 
 describe.each(["GET", "POST"] as const)("a proxied call over %s", (method) => {
   it("passes the endpoint's schema with a number and a list", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     await expect(
       client.items.with({ method }).search({ page: 2, tags: ["a", "b"] }),
@@ -71,7 +72,7 @@ describe.each(["GET", "POST"] as const)("a proxied call over %s", (method) => {
   });
 
   it("writes the list upstream as one key per item", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     await client.items.with({ method }).search({ page: 2, tags: ["a", "b"] });
 
     const query = new URL(upstreamUrls[0] ?? "").searchParams;

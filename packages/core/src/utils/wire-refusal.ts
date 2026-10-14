@@ -48,7 +48,7 @@ export function refuseWireCall(call: WireCall): WireRefusal | undefined {
   const group = typeof call.group === "string" ? call.group : undefined;
   /* Answered as an unknown name is: telling a caller that guessing names is
      forbidden confirms that the name it guessed exists. */
-  if (!isExposedToWire(call.dataSource, group, String(call.method), call.schema)) {
+  if (!isExposedToWire(call.dataSource, group, call.schema)) {
     warnNotExposed(call.endpoint);
     return { status: 400, message: `${call.endpoint}: method not found` };
   }
@@ -60,7 +60,7 @@ export function refuseWireCall(call: WireCall): WireRefusal | undefined {
   if (call.proxyMethod === "GET" && call.sensitiveVariables) {
     return {
       status: 405,
-      message: `[${String(call.method)}]: its variables are sensitive and go as POST. A client built from a boundary lists it under \`sensitive\`.`,
+      message: `[${String(call.method)}]: its variables are sensitive and go as POST, as a page's routes send it.`,
     };
   }
   if (call.stream && call.schema?.response) {

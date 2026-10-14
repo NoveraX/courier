@@ -11,8 +11,6 @@ import { sendFetch } from "./send-fetch";
 import { splitProxyOptions } from "./split-options";
 import type { ProxyCallerDefaults, ProxyEndpointKind, UntypedCallerFn } from "./types";
 
-export type { ProxyCallerDefaults } from "./types";
-
 /**
  * The function the proxy transport sends calls through: given a source and a
  * call's options, it sends one endpoint's variables to the server's proxy

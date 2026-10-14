@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -58,7 +59,7 @@ afterEach(() => {
 
 describe("a proxy call's options", () => {
   it("carry a per-call header to the proxy, which forwards what it allows", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     await expect(client.list.with({ headers: { "x-trace": "abc" } })()).resolves.toEqual({
       ok: true,
@@ -67,7 +68,7 @@ describe("a proxy call's options", () => {
   });
 
   it("apply Next.js cache options to the browser's own request", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     const options = { method: "GET", next: { revalidate: 60 }, cache: "force-cache" };
 
     await expect(client.list.with(options)()).resolves.toEqual({ ok: true });
@@ -75,7 +76,7 @@ describe("a proxy call's options", () => {
   });
 
   it("apply credentials and redirect to the browser's own request", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     await client.list.with({ credentials: "omit", redirect: "error" })();
 
@@ -83,7 +84,7 @@ describe("a proxy call's options", () => {
   });
 
   it("refuse prefixUrl before sending anything", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     const error = await client.list
       .with({ prefixUrl: "https://elsewhere.example" })()

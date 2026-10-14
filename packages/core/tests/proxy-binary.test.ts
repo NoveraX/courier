@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -68,7 +69,7 @@ function proxyClient(responseType: "arrayBuffer" | "blob") {
     if (url.startsWith(upstream.url)) return realFetch(input, init);
     return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
   });
-  return createProxyCaller<typeof source>("files", { source });
+  return createProxyCaller(routesOf(source, "files"));
 }
 
 describe("a binary download through the proxy", () => {

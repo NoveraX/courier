@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
@@ -55,7 +56,7 @@ describe("a body the operation does not require", () => {
     registerSources({ tags: api() });
     const proxy: ProxyServer = await startProxyServer();
     try {
-      await createProxyCaller<ReturnType<typeof api>>("tags", {
+      await createProxyCaller(routesOf(api(), "tags"), {
         proxyPath: { http: proxy.url },
       }).setTags();
 

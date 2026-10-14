@@ -6,13 +6,14 @@
  * different creates to one path would lose the first with a 499, although
  * the server has usually received and applied it — so an API that names a
  * write in it is refused where it is defined, and a proxy client told to
- * cancel one cancels nothing the boundary says writes.
+ * cancel one cancels nothing its routes say writes.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
-import { courier, defineApi, defineBoundary } from "../src/define/index";
+import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -119,7 +120,7 @@ describe("cancelPrevious on a direct call", () => {
   });
 });
 
-describe("cancelPrevious on a proxy client given the source", () => {
+describe("cancelPrevious on a proxy client given its routes", () => {
   beforeEach(() => {
     const source = api();
     registerSources({ orders: source });
@@ -132,7 +133,7 @@ describe("cancelPrevious on a proxy client given the source", () => {
   });
 
   it("lets two concurrent creates both complete", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("orders", { source: api() });
+    const client = createProxyCaller(routesOf(api(), "orders"));
 
     const results = await Promise.all([client.create({ item: "A" }), client.create({ item: "B" })]);
 
@@ -143,7 +144,7 @@ describe("cancelPrevious on a proxy client given the source", () => {
   });
 
   it("still cancels a superseded read", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("orders", { source: api() });
+    const client = createProxyCaller(routesOf(api(), "orders"));
 
     const first = client.search({ q: "a" }).catch(status);
     const second = client.search({ q: "ab" });
@@ -153,21 +154,17 @@ describe("cancelPrevious on a proxy client given the source", () => {
   });
 
   /**
-   * A boundary carries whether each endpoint reads or writes, so a client
-   * built from one tells a read from a write and cancels only reads.
+   * The routes carry whether each endpoint reads or writes, so a client told
+   * to cancel writes too tells a read from a write and cancels only reads.
    */
-  describe("given a boundary instead", () => {
-    const boundaryClient = () =>
-      createProxyCaller<ReturnType<typeof api>>("orders", {
-        boundary: defineBoundary({
-          source: "orders",
-          expose: { search: "query", find: "query", create: "mutation", replace: "mutation" },
-        }),
+  describe("told by its page to cancel writes too", () => {
+    const toldClient = () =>
+      createProxyCaller(routesOf(api(), "orders"), {
         cancelPrevious: ["search", "find", "create", "replace"],
       });
 
     it("lets two concurrent creates both complete", async () => {
-      const client = boundaryClient();
+      const client = toldClient();
 
       const results = await Promise.all([
         client.create({ item: "A" }),
@@ -181,7 +178,7 @@ describe("cancelPrevious on a proxy client given the source", () => {
     });
 
     it("does not cancel a concurrent replace", async () => {
-      const client = boundaryClient();
+      const client = toldClient();
 
       const settled = await Promise.allSettled([
         client.replace({ item: "A" }),
@@ -192,7 +189,7 @@ describe("cancelPrevious on a proxy client given the source", () => {
     });
 
     it("still cancels a superseded read, whatever verb carries it", async () => {
-      const client = boundaryClient();
+      const client = toldClient();
 
       const first = client.search({ q: "a" }).catch(status);
       const second = client.search({ q: "ab" });

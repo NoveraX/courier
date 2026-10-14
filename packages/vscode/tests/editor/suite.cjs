@@ -205,13 +205,13 @@ exports.run = async function run() {
   );
   assert.deepEqual(report.snippets, [
     "courier-api",
-    "courier-boundary",
     "courier-call",
     "courier-channel",
     "courier-endpoint",
     "courier-group",
     "courier-mutation",
     "courier-query",
+    "courier-routes",
     "courier-subscription",
   ]);
 };

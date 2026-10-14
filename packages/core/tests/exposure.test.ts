@@ -68,7 +68,7 @@ afterEach(() => {
 describe("isExposedToWire", () => {
   it("keeps from a page what nothing marks for it, and anything that is not a source", () => {
     expect(isExposedToWire({ options: {} }, undefined)).toBe(false);
-    expect(isExposedToWire({ options: {} }, "admin", "purge")).toBe(false);
+    expect(isExposedToWire({ options: {} }, "admin")).toBe(false);
     expect(isExposedToWire(undefined, undefined)).toBe(false);
   });
 
@@ -198,10 +198,10 @@ describe("an endpoint's own mark", () => {
     };
     const open = { options: { expose: true, groups: { posts: { options: { expose: true } } } } };
 
-    expect(isExposedToWire(closed, "posts", "list", { expose: true })).toBe(true);
-    expect(isExposedToWire(open, "posts", "list", { expose: false })).toBe(false);
-    expect(isExposedToWire(closed, "posts", "list", {})).toBe(false);
-    expect(isExposedToWire(open, "posts", "list", {})).toBe(true);
+    expect(isExposedToWire(closed, "posts", { expose: true })).toBe(true);
+    expect(isExposedToWire(open, "posts", { expose: false })).toBe(false);
+    expect(isExposedToWire(closed, "posts", {})).toBe(false);
+    expect(isExposedToWire(open, "posts", {})).toBe(true);
   });
 
   it("opens one endpoint of an API the browser may not otherwise call", async () => {

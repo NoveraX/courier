@@ -3,6 +3,7 @@
  */
 
 import { isConfigurationError } from "@noverax/courier";
+import { routesOf } from "@noverax/courier/internal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
@@ -19,10 +20,7 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 function makeCaller() {
-  return createProxyQueryCaller<typeof liveApi>("api", {
-    source: liveApi,
-    proxyPath: server.proxyPath,
-  });
+  return createProxyQueryCaller(routesOf(liveApi, "api"), { proxyPath: server.proxyPath });
 }
 
 beforeEach(async () => {
@@ -87,8 +85,7 @@ describe("useSubscription over a real SSE stream", () => {
   });
 
   it("reports a transport configuration error through error and onError", async () => {
-    const q = createProxyQueryCaller<typeof liveApi>("api", {
-      source: liveApi,
+    const q = createProxyQueryCaller(routesOf(liveApi, "api"), {
       proxyPath: { ...server.proxyPath, sse: "api/sse" },
     });
     const onError = vi.fn();

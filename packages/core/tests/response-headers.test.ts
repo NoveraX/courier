@@ -251,7 +251,8 @@ describe("headers an endpoint names", () => {
     app = createServer(async (req, res) => {
       await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
     });
-    const client = createProxyCaller("api", {
+    const routes = { source: "api", endpoints: { "users.create": { type: "mutation" } } } as const;
+    const client = createProxyCaller(routes, {
       proxyPath: { http: `${await listen(app)}/api/request` },
     }) as unknown as {
       raw: {

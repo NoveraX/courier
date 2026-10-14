@@ -3,7 +3,7 @@
  */
 
 import { createProxyCaller } from "@noverax/courier";
-
+import { routesOf } from "@noverax/courier/internal";
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
@@ -14,10 +14,7 @@ import { liveApi } from "./helpers/live-api";
 let server: CourierServer;
 
 function makeCaller() {
-  return createProxyCaller<typeof liveApi>("api", {
-    source: liveApi,
-    proxyPath: server.proxyPath,
-  });
+  return createProxyCaller(routesOf(liveApi, "api"), { proxyPath: server.proxyPath });
 }
 
 beforeEach(async () => {

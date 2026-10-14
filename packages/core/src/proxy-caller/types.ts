@@ -1,37 +1,26 @@
-import type { ExposablePath, KindAt, ProxyBoundary } from "../define/boundary-types";
+import type { CourierRoutes } from "../define/routes";
 import type { HTTPError } from "../errors";
 import type { WebCredentials } from "../http-client/web-types";
 import type { CallerWSOptions } from "../realtime/ws/ws-types";
 import type { ProxyPath } from "./proxy-path";
 
-export type ProxyCallerDefaults = {
+/** The options of a page's proxy client: where the proxy is, and how its calls go. */
+export type ProxyCallerOptions = {
   /**
-   * Per-transport proxy endpoint configuration. Each field is optional and
-   * accepts either a relative path or an absolute URL. When the caller
-   * provides `source`, missing fields fall back to `source.options.proxyPath`
-   * (per-transport merge), then to built-in defaults at resolution time.
+   * Where the app serves its proxy routes, per transport. Each field is
+   * optional and accepts either a relative path, resolved against the
+   * page's origin, or an absolute URL; a missing one falls back to the
+   * built-in default at resolution time — `/api/request` and `/api/sse`,
+   * and none for a socket.
    *
    * @example
    * ```ts
-   * createProxyCaller<typeof api>("api", {
-   *   boundary,
+   * createProxyCaller(apiRoutes, {
    *   proxyPath: { ws: "ws://localhost:3001" }, // dev-only WS override
    * });
    * ```
    */
   proxyPath?: ProxyPath | undefined;
-  /**
-   * The API's definition, the `defineApi()` result, for code on the server.
-   * In a browser bundle pass `boundary` instead: the definition would ship
-   * with the page.
-   */
-  source?: Record<string, unknown> | undefined;
-  /**
-   * The endpoints this client may call, from `defineBoundary`. Pass this
-   * instead of `source` to keep the API's definition out of the bundle —
-   * a boundary carries the transports and nothing about the server.
-   */
-  boundary?: ProxyBoundary | undefined;
   /**
    * How long the browser waits for the proxy, in ms. Not sent to the server,
    * where the endpoint's own `.timeout()` bounds the upstream call.
@@ -41,15 +30,15 @@ export type ProxyCallerDefaults = {
    * The reads a newer call cancels while they are still in flight — a
    * search as the user types — by their paths, such as `users.search`; the
    * cancelled call rejects with an `HTTPError` of status 499. Only a read is
-   * ever cancelled — an endpoint the source or the boundary declares a write
-   * is left to complete. Defaults to the source's own `cancelPrevious` when
-   * `source` is given.
+   * ever cancelled — an endpoint the routes name a write is left to
+   * complete. Defaults to the API's own `cancelPrevious`, which the routes
+   * carry.
    */
   cancelPrevious?: readonly string[] | undefined;
   /**
    * Whether identical reads in flight together reach the proxy once, each
    * call with a copy of the answer: the default. `false` sends every call
-   * alone. Defaults to the source's own `coalesce` when `source` is given.
+   * alone. Defaults to the API's own `coalesce`, which the routes carry.
    */
   coalesce?: boolean | undefined;
   credentials?: WebCredentials | undefined;
@@ -66,15 +55,17 @@ export type ProxyCallerDefaults = {
 };
 
 /**
- * What the routes, the source or the boundary say of an endpoint: a read
- * that may be cached, which goes as GET; any other read, which goes as
- * POST, its variables kept out of the address; or a write. Unsaid without
- * any of them.
+ * What a proxy client's transports are created with: the options its page
+ * gives it, and the routes of its API, where it has them.
+ */
+export type ProxyCallerDefaults = ProxyCallerOptions & { routes?: CourierRoutes | undefined };
+
+/**
+ * What the routes say of an endpoint: a read that may be cached, which goes
+ * as GET; any other read, which goes as POST, its variables kept out of the
+ * address; or a write. Unsaid for a path they do not name.
  */
 export type ProxyEndpointKind = "cached-read" | "read" | "mutation";
-
-/** The options of a proxy client given its routes: everything but what the routes say. */
-export type ProxyCallerOptions = Omit<ProxyCallerDefaults, "source" | "boundary">;
 
 /**
  * The proxy transport's call: a source and a call's options, as the transport
@@ -84,27 +75,3 @@ export type UntypedCallerFn = (
   source: string,
   options?: Readonly<Record<string, unknown>>,
 ) => (endpoint: string, variables?: unknown, kind?: ProxyEndpointKind) => Promise<unknown>;
-
-/** Does the API declare an endpoint reached by opening a stream or a socket? */
-type HasRealtime<TApi> = [
-  Extract<KindAt<TApi, ExposablePath<TApi>>, "stream" | "channel">,
-] extends [never]
-  ? false
-  : true;
-
-/**
- * The options argument of `createProxyCaller`, required for an API with
- * streams or channels.
- *
- * The type argument names each endpoint's transport, but only a runtime
- * value — `source` or `boundary` — tells the client which endpoints to open
- * as a stream or a socket. Without one, a stream typed as a subscription went
- * out as a plain HTTP request whose result had none of its members.
- */
-export type ProxyCallerArguments<TApi> =
-  HasRealtime<TApi> extends true
-    ? [
-        defaults: ProxyCallerDefaults &
-          ({ source: Record<string, unknown> } | { boundary: ProxyBoundary }),
-      ]
-    : [defaults?: ProxyCallerDefaults];

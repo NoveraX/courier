@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { defineMiddleware } from "../src/middleware";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -81,8 +82,6 @@ describe("a success whose data is undefined", () => {
       return handler.handle(new Request(new URL(url, "http://app.local"), init));
     });
 
-    await expect(
-      createProxyCaller<typeof source>("nothing", { source }).ping(),
-    ).resolves.toBeNull();
+    await expect(createProxyCaller(routesOf(source, "nothing")).ping()).resolves.toBeNull();
   });
 });

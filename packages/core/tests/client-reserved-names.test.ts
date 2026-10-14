@@ -14,8 +14,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
-import { defineBoundary } from "../src/define/boundary";
-import { courier, defineApi, defineGroup } from "../src/define/index";
+import {
+  type CourierRoutes,
+  courier,
+  defineApi,
+  defineGroup,
+  type RouteMap,
+} from "../src/define/index";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -109,7 +114,7 @@ describe("a group named like a runtime hook", () => {
   });
 });
 
-describe("a proxy client given a boundary", () => {
+describe("a proxy client given routes that name those groups", () => {
   let close: () => Promise<void>;
 
   afterEach(async () => {
@@ -130,12 +135,12 @@ describe("a proxy client given a boundary", () => {
       return new Promise<void>((resolve) => proxy.close(() => resolve()));
     };
     const { port } = proxy.address() as AddressInfo;
-    const boundary = defineBoundary({
-      source: "names",
-      expose: { "valueOf.list": "query", "then.list": "query" },
-    });
-    return createProxyCaller<typeof api>("names", {
-      boundary,
+    const endpoints = {
+      "valueOf.list": { type: "query" },
+      "then.list": { type: "query" },
+    } as const satisfies RouteMap<typeof api>;
+    const routes: CourierRoutes<typeof api, typeof endpoints> = { source: "names", endpoints };
+    return createProxyCaller(routes, {
       proxyPath: { http: `http://127.0.0.1:${port}/api/request` },
     });
   }

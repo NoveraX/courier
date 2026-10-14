@@ -9,9 +9,9 @@
  */
 import { createCaller, createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { routesOf } from "@noverax/courier/internal";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
-
 import { getRuntimeEntry } from "../src/server/runtime-namespace-state";
 import { type LiveApp, startLiveApp, startUpstream } from "./helpers/live-app";
 import { type LiveStudio, startLiveStudio, until } from "./helpers/live-studio";
@@ -42,8 +42,6 @@ function defineSources(baseURL: string) {
   return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }) };
 }
 
-type Api = ReturnType<typeof defineSources>["api"];
-
 beforeAll(async () => {
   upstream = await startUpstream({
     "GET /users": { status: 200, body: [{ id: 1 }] },
@@ -73,7 +71,9 @@ function eventsOf(type: string): Array<Record<string, unknown>> {
 
 describe("a proxy call", () => {
   it("reaches the UI with the timing its caller measured", async () => {
-    const client = createProxyCaller<Api>("api", { proxyPath: { http: app.proxyUrl } });
+    const client = createProxyCaller(routesOf(sources.api, "api"), {
+      proxyPath: { http: app.proxyUrl },
+    });
     await client.users.list();
     await until(() => eventsOf("proxy:client-timing").length > 0, "the client timing");
 
@@ -128,7 +128,9 @@ describe("a call that fails", () => {
   });
 
   it("reaches the UI, over the proxy, with the status its caller received", async () => {
-    const client = createProxyCaller<Api>("api", { proxyPath: { http: app.proxyUrl } });
+    const client = createProxyCaller(routesOf(sources.api, "api"), {
+      proxyPath: { http: app.proxyUrl },
+    });
 
     const refused = await failureOf("badShape", () => client.faults.badShape());
     const timedOut = await failureOf("slow", () => client.faults.slow());

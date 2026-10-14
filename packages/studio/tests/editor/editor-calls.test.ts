@@ -60,7 +60,7 @@ describe("the endpoint calls in a file", () => {
   it("finds a call through a caller the file creates, placed where the endpoint's name is written", () => {
     const text = [
       'const note = "naïve — ünïcode first";',
-      'const storefront = createProxyCaller<typeof shop>("shop", { boundary });',
+      "const storefront = createProxyCaller(shopRoutes);",
       "await storefront.orders.place({ sku: 'A' });",
     ].join("\n");
 

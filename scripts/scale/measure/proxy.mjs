@@ -1,6 +1,6 @@
 /**
  * The app's own server in front of the enterprise project's APIs — Courier's
- * proxy, the boundaries checked — under the calls its pages make, against
+ * proxy, the marks checked — under the calls its pages make, against
  * the same calls made straight to the backend; with Studio recording or not.
  */
 import { execFile, execFileSync, spawn } from "node:child_process";

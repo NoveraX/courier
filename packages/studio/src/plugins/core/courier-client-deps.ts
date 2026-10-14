@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
-/** Courier's modules a page imports: the proxy caller, the boundary's definition, the React hooks. */
+/** Courier's modules a page imports: the callers, an API defined for a direct caller, the React hooks. */
 const CLIENT_MODULES = [
   "@noverax/courier",
   "@noverax/courier/define",

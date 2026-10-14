@@ -39,7 +39,7 @@ export function proxyRefusal(
   const resolved = resolveEndpoint(source, group, call.method);
   if (typeof resolved.endpoint !== "function") return undefined;
   if (call.via === "sse") {
-    if (isExposedToWire(source, group, call.method, resolved.schema)) return undefined;
+    if (isExposedToWire(source, group, resolved.schema)) return undefined;
     return {
       status: 400,
       message: `[${call.source}][${call.group}][${call.method}]: method not found`,

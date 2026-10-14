@@ -72,7 +72,7 @@ export function resolveSubscribeTopic(
     return undefined;
   }
   /* Ended as a channel that is not there is, for the same reason as a call's refusal. */
-  if (!isExposedToWire(dataSource, group, method, schema)) {
+  if (!isExposedToWire(dataSource, group, schema)) {
     warnNotExposed(`[${source}][${group ?? ""}][${method}]`);
     sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;

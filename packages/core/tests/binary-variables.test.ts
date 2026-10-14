@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors/configuration-error";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -73,7 +74,7 @@ describe("a proxy call carrying binary variables", () => {
     ["a typed array", bytes],
     ["a stream", new Blob([bytes]).stream()],
   ])("is refused before anything is sent when it holds %s", async (_, body) => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     const failure = await client.files.upload({ body }).catch((error: unknown) => error);
 
@@ -84,7 +85,7 @@ describe("a proxy call carrying binary variables", () => {
   });
 
   it("names where the binary value sits in a nested structure", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     const failure = await client.files
       .nested({ meta: { parts: ["a", new Blob([bytes])] } })
@@ -94,14 +95,14 @@ describe("a proxy call carrying binary variables", () => {
   });
 
   it("still sends variables that are plain JSON", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     await expect(client.files.upload({ body: "text", name: "a" })).resolves.toEqual({ ok: true });
     expect(new TextDecoder().decode(upstreamBodies[0])).toBe("text");
   });
 
   it("still sends a file inside FormData", async () => {
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     const form = new FormData();
     form.set("file", new Blob([bytes]), "f.bin");
 

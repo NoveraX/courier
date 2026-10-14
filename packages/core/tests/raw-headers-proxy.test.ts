@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 
@@ -52,7 +53,7 @@ describe(".raw over the proxy", () => {
   it("hands back real Headers carrying what the upstream sent", async () => {
     upstreamAnswer = () =>
       Response.json([1], { headers: { etag: '"abc"', "x-ratelimit-remaining": "42" } });
-    const client = createProxyCaller("api") as unknown as Client;
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
     const result = await client.raw.items.list();
 

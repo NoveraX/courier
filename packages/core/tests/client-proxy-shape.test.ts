@@ -10,12 +10,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
 
 const api = defineApi({
+  expose: true,
   baseURL: UPSTREAM,
   groups: {
     users: defineGroup({
@@ -52,7 +54,7 @@ describe.each([
   ["createCaller", () => createCaller(api) as unknown as Anything],
   [
     "createProxyCaller with its source",
-    () => createProxyCaller("api", { source: api }) as unknown as Anything,
+    () => createProxyCaller(routesOf(api, "api")) as unknown as Anything,
   ],
 ])("%s", (_name, make) => {
   it("lists its groups and endpoints", () => {

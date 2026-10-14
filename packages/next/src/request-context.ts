@@ -55,9 +55,10 @@ let nextHeaders: Promise<NextHeaders | undefined> | undefined;
  * // lib/api.server.ts — the module the pages call through
  * import { createProxyCaller, registerRequestContext } from "@noverax/courier";
  * import { nextRequestContext } from "@noverax/courier-next";
+ * import { apiRoutes } from "../courier.routes";
  *
  * registerRequestContext(nextRequestContext);
- * export const api = createProxyCaller<typeof definition>("api");
+ * export const api = createProxyCaller(apiRoutes);
  * ```
  */
 export const nextRequestContext: RequestContextProvider = () => nextIncomingRequest();

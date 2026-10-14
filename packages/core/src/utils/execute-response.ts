@@ -95,7 +95,7 @@ export const buildResponse = (
 
 /**
  * Answer a call refused before it runs — a name that resolves to nothing,
- * options a proxy client may not set, an endpoint the boundary withholds.
+ * options a proxy client may not set, an endpoint no mark opens to a page.
  *
  * A call Studio was told of — by the proxy on arrival, or by the call
  * itself as it started — is ended here with `request:error`, or it would

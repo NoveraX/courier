@@ -5,7 +5,7 @@ import {
   createClientRoot,
   createDirectHTTPExecutor,
   directStreamingFactories,
-  shapeOfClient,
+  shapeOfSource,
 } from "@noverax/courier/internal";
 
 import { createGroupHooks } from "./group-hooks";
@@ -30,7 +30,7 @@ export type QueryCallerDefaults = CallerDefaults;
  * — no server-side proxy adapter required. Use for SPAs, React Native, internal
  * tools, or any context where you ship the API definition to the client.
  *
- * For proxy mode (browser → server adapter → backend), use `createProxyQueryCaller<T>("name")` instead.
+ * For proxy mode (browser → server adapter → backend), use `createProxyQueryCaller(apiRoutes)` instead.
  *
  * @param api - The API definition created with `defineApi()`
  * @param defaults - Caller configuration (timeout, headers, context, error handlers)
@@ -77,7 +77,7 @@ export function createQueryCaller<TApi extends DefinedApi>(
   const channelFn: ChannelFn = (group, method, variables) =>
     streaming.wsChannel(group, method, variables, {});
 
-  const shape = shapeOfClient({ source: api });
+  const shape = shapeOfSource(api);
   return createClientRoot(
     shape,
     groupNodes(

@@ -55,7 +55,7 @@ export function resolveSubscribeTopic(
     return undefined;
   }
 
-  const dataSource = ctx.sources[source];
+  const dataSource = Object.hasOwn(ctx.sources, source) ? ctx.sources[source] : undefined;
   if (!dataSource) {
     sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;

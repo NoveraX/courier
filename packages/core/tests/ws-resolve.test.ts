@@ -120,6 +120,19 @@ describe("resolveSubscribeTopic", () => {
     expect(sent[0]!.error?.message).toBe("Subscription rejected");
   });
 
+  it.each(["constructor.keys", "__proto__.toString", "hasOwnProperty.call"])(
+    "refuses %s, named like a member every object has, as a source it does not know",
+    (topic) => {
+      const { ctx, sent } = createMockCtx({ api: {} });
+      const msg: WSMessage = { type: "subscribe", id: "5", topic };
+
+      const result = resolveSubscribeTopic(ctx, msg, topic);
+
+      expect(result).toBeUndefined();
+      expect(sent.map((m) => m.error?.code)).toEqual([4403]);
+    },
+  );
+
   it("returns error when endpoint is not a WS transport", () => {
     const endpoint = createEndpoint("http");
     const source = createSource("chat", "feed", endpoint);

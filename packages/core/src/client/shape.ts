@@ -4,7 +4,9 @@
 
 import type { ProxyBoundary } from "../define/boundary-types";
 import { subGroupsOf } from "../define/group-tree";
+import type { CourierRoutes } from "../define/routes";
 import { sourceFromBoundary } from "../proxy-caller/from-boundary";
+import { sourceFromRoutes } from "../proxy-caller/from-routes";
 
 /** What a source, or one of its groups, says a client may call there. */
 export interface ClientShape {
@@ -40,11 +42,11 @@ function shapeAt(holder: Record<string, unknown>): ClientShape {
 }
 
 /**
- * Read the shape of a client from what it was given: a boundary, or the
- * source itself. A boundary wins where both are, as it does for the
- * client's transports.
+ * Read the shape of a client from what it was given: its routes, a
+ * boundary, or the source itself — in that order where it was given more
+ * than one, as for the client's transports.
  *
- * @param given - The client's `boundary` and `source`, either of them optional
+ * @param given - The client's `routes`, `boundary` and `source`, any of them optional
  * @returns The shape, or `undefined` when the client was given neither
  *
  * @example
@@ -55,7 +57,9 @@ function shapeAt(holder: Record<string, unknown>): ClientShape {
 export function shapeOfClient(given: {
   source?: Record<string, unknown> | undefined;
   boundary?: ProxyBoundary | undefined;
+  routes?: CourierRoutes | undefined;
 }): ClientShape | undefined {
+  if (given.routes) return shapeOfSource(sourceFromRoutes(given.routes));
   return shapeOfSource(given.boundary ? sourceFromBoundary(given.boundary) : given.source);
 }
 

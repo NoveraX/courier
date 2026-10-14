@@ -38,7 +38,7 @@ export type {
 } from "./builder-types";
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";
-export type { BrowserApi, ExposedApi } from "./exposed-api";
+export type { BrowserApi, ExposedApi, RoutedApi } from "./exposed-api";
 export { type FormFieldEncoding, formBody } from "./form-body";
 export { formQuery } from "./form-query";
 export { defineGroup } from "./group";

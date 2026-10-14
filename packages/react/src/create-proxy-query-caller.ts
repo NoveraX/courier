@@ -1,9 +1,18 @@
-import type { ProxyCallerArguments, ProxyCallerDefaults, ProxyPath } from "@noverax/courier";
-import type { BrowserApi, DefinedApi } from "@noverax/courier/define";
+import type {
+  ProxyCallerArguments,
+  ProxyCallerDefaults,
+  ProxyCallerOptions,
+} from "@noverax/courier";
+import type {
+  BrowserApi,
+  CourierRoutes,
+  DefinedApi,
+  RoutedApi,
+  RouteShape,
+} from "@noverax/courier/define";
 import {
   createClientRoot,
   createProxyHTTPExecutor,
-  mergeProxyPath,
   proxyStreamingFactories,
   shapeOfClient,
 } from "@noverax/courier/internal";
@@ -12,7 +21,34 @@ import { createGroupHooks } from "./group-hooks";
 import { groupNodes } from "./group-nodes";
 import type { ChannelFn } from "./hooks/use-channel";
 import type { SubscribeFn } from "./hooks/use-subscription";
+import { proxyQueryConfig } from "./proxy-query-config";
 import type { QueryCallerClient } from "./types";
+
+/**
+ * Create a proxy-mode query client from the routes of an API, for a page:
+ * the module Courier writes them to names which endpoints a browser may
+ * call and how each is reached, and is typed from the API it was written
+ * from, so the hooks offer those endpoints alone and the API's definition
+ * never enters the bundle.
+ *
+ * @param routes - The routes of the API, as the module written for them exports them
+ * @param options - Where the proxy is, how long to wait, the credentials and headers to send
+ * @returns A client with each group's hooks under its name
+ * @example
+ * ```ts
+ * import { apiRoutes } from "./courier.routes";
+ *
+ * const q = createProxyQueryCaller(apiRoutes);
+ * const { data } = q.users.useQuery("getAll");
+ * ```
+ */
+export function createProxyQueryCaller<
+  TApi extends DefinedApi,
+  TEndpoints extends Readonly<Record<string, RouteShape>>,
+>(
+  routes: CourierRoutes<TApi, TEndpoints>,
+  options?: ProxyCallerOptions,
+): QueryCallerClient<RoutedApi<TApi, TEndpoints>>;
 
 /**
  * Create a proxy-mode query client typed from the API it is given as
@@ -77,19 +113,12 @@ export function createProxyQueryCaller<TApi extends DefinedApi>(
   ...defaults: ProxyCallerArguments<TApi>
 ): QueryCallerClient<BrowserApi<TApi>>;
 
-export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDefaults): unknown {
-  // Per-transport merge: caller-level `proxyPath` wins over the source's
-  // own `options.proxyPath` on a field-by-field basis. Forwarding the merged
-  // value into every factory keeps `useQuery` / `useSubscription` /
-  // `useChannel` consistent with `createProxyCaller`.
-  const sourceProxyPath = readDefaultsSourceProxyPath(defaults);
-  const mergedProxyPath = mergeProxyPath(defaults?.proxyPath, sourceProxyPath);
-  const effectiveDefaults: ProxyCallerDefaults = {
-    ...defaults,
-    proxyPath: mergedProxyPath,
-  };
-
-  const httpExecutor = createProxyHTTPExecutor(source, effectiveDefaults);
+export function createProxyQueryCaller(
+  first: string | CourierRoutes,
+  given?: ProxyCallerDefaults,
+): unknown {
+  const { source, routes, defaults } = proxyQueryConfig(first, given);
+  const httpExecutor = createProxyHTTPExecutor(source, defaults);
   /* Their client code is loaded on the first subscription or channel, so an
      application that opens none does not carry it. A missing `proxyPath.ws`
      is reported on the first `useChannel`. A socket carries defaults.headers
@@ -97,11 +126,11 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
      WebSocket cannot send headers on its upgrade. */
   const streaming = proxyStreamingFactories(source, {
     sse: {
-      proxyPath: mergedProxyPath,
-      headers: defaults?.headers,
-      credentials: defaults?.credentials,
+      proxyPath: defaults.proxyPath,
+      headers: defaults.headers,
+      credentials: defaults.credentials,
     },
-    ws: { proxyPath: mergedProxyPath, ws: defaults?.ws, headers: defaults?.headers },
+    ws: { proxyPath: defaults.proxyPath, ws: defaults.ws, headers: defaults.headers },
   });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>
@@ -111,8 +140,8 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
     streaming.wsChannel(group, method, variables, {});
 
   /* A group named like a hook the runtime reads, such as `then`, is reached
-     only when the caller was given what the source declares. */
-  const shape = shapeOfClient({ source: defaults?.source, boundary: defaults?.boundary });
+     only when the caller was given what the API declares. */
+  const shape = shapeOfClient({ source: defaults.source, boundary: defaults.boundary, routes });
   return createClientRoot(
     shape,
     groupNodes(
@@ -120,37 +149,4 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
       shape,
     ),
   );
-}
-
-/**
- * Pull `options.proxyPath` from `defaults.source` if the caller passed a
- * `defineApi` result. Lets the merged proxyPath inherit source-level
- * defaults without forcing the caller to restate them.
- */
-function readDefaultsSourceProxyPath(
-  defaults: ProxyCallerDefaults | undefined,
-): ProxyPath | undefined {
-  /* A boundary carries the app's own proxy paths and nothing about the
-     server, so it is the one to prefer where both were given. These hooks
-     never needed the source itself: `useQuery`, `useSubscription` and
-     `useChannel` each name their transport, so nothing is detected here. */
-  if (defaults?.boundary?.proxyPath) return defaults.boundary.proxyPath;
-
-  return proxyPathOf(defaults?.source);
-}
-
-/* The paths the source declares; any other shape declares none. */
-function proxyPathOf(source: unknown): ProxyPath | undefined {
-  if (typeof source !== "object" || source === null || !("options" in source)) return undefined;
-  const { options } = source;
-  if (typeof options !== "object" || options === null || !("proxyPath" in options))
-    return undefined;
-  const { proxyPath } = options;
-  if (typeof proxyPath !== "object" || proxyPath === null) return undefined;
-  const declared: ProxyPath = {};
-  for (const key of ["http", "sse", "ws"] as const) {
-    const value: unknown = Reflect.get(proxyPath, key);
-    if (typeof value === "string") declared[key] = value;
-  }
-  return declared;
 }

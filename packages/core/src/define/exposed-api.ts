@@ -76,6 +76,21 @@ export type BrowserApi<TApi> = TApi extends {
   : TApi;
 
 /**
+ * The API a proxy client given routes reaches: the endpoints the routes
+ * name, or all of it where their type names no endpoint in particular.
+ * @example
+ * ```ts
+ * type Reached = RoutedApi<typeof api, { "posts.list": { type: "query" } }>; // posts.list alone
+ * ```
+ */
+export type RoutedApi<TApi, TEndpoints> =
+  TEndpoints extends Readonly<Record<infer TPath, unknown>>
+    ? string extends TPath
+      ? TApi
+      : ExposedApi<TApi, TPath & string>
+    : TApi;
+
+/**
  * The boundary an API may hold: one whose every path names an endpoint of the
  * API, in the shape the API declares it. A misspelt path, or a stream exposed
  * as a query, fails where the API takes the boundary.

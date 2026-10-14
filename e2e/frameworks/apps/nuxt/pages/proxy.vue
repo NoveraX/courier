@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { createProxyCaller } from "@noverax/courier";
 
-import type { accountsApi } from "~/lib/api";
+import { accountsRoutes } from "~/lib/routes";
 
 /* While the server renders the page, the proxy caller reaches the proxy in the same process; in the browser, its route. */
-const proxy = createProxyCaller<typeof accountsApi>("accounts");
+const proxy = createProxyCaller(accountsRoutes);
 /* Marks the page once Vue has hydrated it: a click before then may go unheard. */
 onMounted(() => {
   document.documentElement.dataset.hydrated = "true";

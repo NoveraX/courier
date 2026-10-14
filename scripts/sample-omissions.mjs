@@ -52,12 +52,12 @@ export function isOmission(code, text, sample) {
   if (code === 2339 && /type 'ImportMeta(?:Env)?'/.test(text)) return true;
   if (PLATFORM.some((entry) => sample.page.endsWith(entry.page) && entry.text.test(text)))
     return true;
-  /* An API from the reader's app, or one built on a name the sample does
-     not declare, is anything here, and the callers read anything as an API
-     with streams — which a proxy caller must be given a boundary for — and
-     nothing to call. */
+  /* An API or routes from the reader's app, or ones built on a name the
+     sample does not declare, are anything here, and the callers read
+     anything as an API with nothing to call: a proxy client given such
+     routes is a client of no API. */
   if (!sample.standIn) return false;
-  if (/'never'|boundary|ProxyCallerDef|<any\b|Omit<any|unknown\[\]/.test(text)) return true;
+  if (/'never'|<any\b|Omit<any|Omit<unknown|unknown\[\]/.test(text)) return true;
   if (code === 2554 && /createProxy/.test(sample.code)) return true;
   return code === 2698 || code === 2709;
 }

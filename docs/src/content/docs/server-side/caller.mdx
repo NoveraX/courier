@@ -187,7 +187,7 @@ The difference is where the call is made. A proxy caller sends the call to your 
 
 ```ts
 // Proxy mode (client components): the proxy route makes the call
-const browserCaller = createProxyCaller<typeof api>("api")
+const browserCaller = createProxyCaller(apiRoutes)
 await browserCaller.users.getAll({ page: 1 })
 
 // Direct mode (server components): the server makes it, with the user's session

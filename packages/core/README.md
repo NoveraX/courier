@@ -55,7 +55,7 @@ Most HTTP clients stop at “send a request, get a response”, and leave the ty
     </td>
     <td width="33%" valign="top">
       <h4>A proxy built in</h4>
-      One route on your server runs the calls a browser may make — those your boundary names — with the user's session and CSRF token.
+      One route on your server runs the calls a browser may make — the endpoints you mark <code>.expose()</code> — with the user's session and CSRF token.
     </td>
   </tr>
   <tr>
@@ -137,12 +137,12 @@ const user = await caller.users.getById({ id: "1" })
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "./api/sources"
+import { apiRoutes } from "./courier.routes"
 
-// Imported as a type: the API definition — upstream URL, endpoint paths,
-// middleware — stays on the server. An API with streams or channels passes a
-// `boundary` from `defineBoundary` instead (see the proxy-mode docs).
-const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
+// The routes Courier Studio writes from the endpoints you mark .expose():
+// what a page may call, and how. The API definition — upstream URL, endpoint
+// paths, middleware — stays on the server.
+const caller = createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
 
 const users = await caller.users.getAll()
 ```
@@ -219,17 +219,18 @@ createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example
 
 The handler speaks CORS for those origins: it answers their preflight and gives every answer the permission a browser needs to read it. Route `OPTIONS` to the handler as well as `GET` and `POST`.
 
-Every endpoint of a source is reachable through the proxy unless the source says otherwise. Name the ones a browser may call with `defineBoundary`, and give the boundary to the API as well as to the client, so the server refuses the rest. The API checks the boundary — a path it does not declare, or a wrong shape, does not compile — and a proxy client typed from the API reaches only the endpoints it names:
+The proxy serves only the endpoints you mark — `.expose()` on an endpoint, or `expose` on its group or its API, the nearest deciding — and answers any other as a name the source does not define. From the marks, Courier Studio writes `courier.routes.ts`: the routes a page's proxy client takes, typed from the API, with the endpoints a page may call alone:
 
 ```ts
-// boundary.ts
-export const boundary = defineBoundary({
-  source: "api",
-  expose: { "users.getAll": "query" },
-})
-
 // api.ts
-export const api = defineApi({ baseURL: "https://api.example.com", boundary, groups: { users } })
+export const api = defineApi({
+  baseURL: "https://api.example.com",
+  groups: {
+    users: defineGroup({ prefix: "users", expose: true, endpoints: { getAll: endpoint.get("") } }),
+    // Nothing marks it: the server's alone
+    admin: defineGroup({ prefix: "admin", endpoints: { purge: endpoint.post("purge") } }),
+  },
+})
 ```
 
 An API that keeps the user's session describes it, and the proxy — like a server rendering a page for the user — sends it the cookies the session is kept in and nothing else of the browser's, repeats its double-submit token on writes, refuses a write another site set off, and hands the browser the session cookies the API sets, made for your application's origin:

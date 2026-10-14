@@ -27,6 +27,8 @@ type Task = { id: number; title: string; completed: boolean }
 
 const tasks = defineGroup({
   prefix: "tasks",
+  // A page may call these through the proxy; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").variables<{ status?: "all" | "active" | "completed" }>().response<Task[]>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<Task>(),
@@ -77,11 +79,20 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 
 ## Step 2: Create a composable
 
+List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier Studio writes the routes the app's caller takes into `courier.routes.ts` beside it — whenever it loads the config, or now with `npx @noverax/courier-studio routes`; see [Exposing Endpoints](/docs/proxy-mode/expose). The app imports the routes, never the definition, which stays out of its bundle:
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { sources } from "./shared/sources"
+
+export default defineConfig({ sources })
+```
+
 ```ts title="src/composables/useCaller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "../../shared/sources"
+import { myApiRoutes } from "../../courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", {
+export const caller = createProxyCaller(myApiRoutes, {
   proxyPath: { http: import.meta.env.VITE_PROXY_URL ?? "http://localhost:3001/api/request" },
 })
 ```
@@ -228,13 +239,15 @@ const { data, isLoading } = useQuery({
 ## Project structure
 
 ```text title="Project structure"
+courier.config.ts             # defineConfig({ sources })
+courier.routes.ts             # written by Studio from the .expose() marks
 shared/
   sources.ts                  # defineApi + defineGroup + endpoint
 server/
   index.ts                    # Express/Hono/Fastify proxy backend
 src/
   composables/
-    useCaller.ts              # createProxyCaller<typeof api>("api")
+    useCaller.ts              # createProxyCaller(myApiRoutes)
     useCourierQuery.ts        # optional generic fetch composable
   components/
     TaskList.vue              # data fetching with ref

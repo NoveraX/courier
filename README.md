@@ -147,19 +147,8 @@ npm install @noverax/courier
 **1 — Define the API.** Shared by every framework: define once, use everywhere.
 
 ```ts
-// api/boundary.ts — the endpoints the browser may call through your server
-import { defineBoundary } from "@noverax/courier/define"
-
-export const boundary = defineBoundary({
-  source: "api",
-  expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
-})
-```
-
-```ts
 // api/sources.ts
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
-import { boundary } from "./boundary"
 
 const { endpoint } = courier()
 
@@ -167,6 +156,8 @@ export type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
+  // A page may call these through your server; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
@@ -178,12 +169,19 @@ const users = defineGroup({
 
 export const api = defineApi({
   baseURL: process.env.API_URL!,
-  boundary,
   groups: { users },
 })
 
 // The sources your server's proxy runs, under the names browser callers use
 export const sources = { api }
+```
+
+```ts
+// courier.config.ts — your APIs, for your server, Studio and your editor's agent
+import { defineConfig } from "@noverax/courier/config"
+import { sources } from "./api/sources"
+
+export default defineConfig({ sources })
 ```
 
 **2 — Call it from the server.** Any runtime with `fetch`: Node.js, Bun, Deno, Cloudflare Workers.
@@ -201,7 +199,7 @@ const user = await caller.users.getById({ id: "1" })
 
 **3 — Call it from the browser,** through one route on your server.
 
-Server code imports `api` and calls every endpoint. Browser code imports the API only as a type and passes `boundary` instead, so your backend's address, its paths and your middleware never ship with the page — and the proxy refuses every endpoint the boundary does not name. The [framework guides](#frameworks) below show the route and the caller for each framework.
+Server code imports `api` and calls every endpoint. Browser code never imports it: from the endpoints you mark `.expose()`, Courier Studio writes `courier.routes.ts` — what a page may call, and how it reaches each — and the browser's caller takes those routes instead. Your backend's address, its paths and your middleware never ship with the page, and the proxy refuses every endpoint no mark opens. `npx @noverax/courier-studio routes` writes the module without starting Studio, and with `--check` fails a CI step when it is out of date. The [framework guides](#frameworks) below show the route and the caller for each framework.
 
 A runnable version — a backend, the proxy in front of it, a page's caller and server code — is in [`examples/basic`](examples/basic): `npm run demo --workspace examples/basic` from the repository root.
 
@@ -288,10 +286,9 @@ With [Courier Studio](https://courier.noverax.cloud/docs/frameworks/nextjs#studi
 ```ts
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api", { boundary })
+export const q = createProxyQueryCaller(apiRoutes)
 ```
 
 **3. Client Components:**
@@ -411,13 +408,12 @@ export default courierHandler({ sources })
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "~/api/sources"
-import { boundary } from "~/api/boundary"
+import { apiRoutes } from "~/courier.routes"
 
 export function useCaller() {
   // useAsyncData runs on the server first, where a relative path has no page to resolve against
   const { origin } = useRequestURL()
-  return createProxyCaller<typeof api>("api", { boundary, proxyPath: { http: `${origin}/api/request` } })
+  return createProxyCaller(apiRoutes, { proxyPath: { http: `${origin}/api/request` } })
 }
 ```
 
@@ -485,15 +481,14 @@ export const GET = handler
 export const POST = handler
 ```
 
-**2. A component** — the core caller, typed from the definition:
+**2. A component** — the core caller, typed from the routes Studio writes:
 
 ```ts
 // lib/caller.ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "./api/sources"
-import { boundary } from "./api/boundary"
+import { apiRoutes } from "../courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", { boundary })
+export const caller = createProxyCaller(apiRoutes)
 ```
 
 ```svelte
@@ -617,10 +612,9 @@ Works with any React setup. Pair with Express, Hono, or Fastify on the server si
 ```ts
 // lib/query.ts — calls /api/request on your server (see Server Adapters)
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "../api/sources"
-import { boundary } from "../api/boundary"
+import { apiRoutes } from "../courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api", { boundary })
+export const q = createProxyQueryCaller(apiRoutes)
 ```
 
 **2. Components:**
@@ -665,10 +659,9 @@ The core caller is framework-agnostic — use it with `ref`, `reactive`, or any 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "../courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", { boundary })
+export const caller = createProxyCaller(apiRoutes)
 ```
 
 ```vue
@@ -903,7 +896,7 @@ See [`@noverax/courier-mcp`](./packages/mcp) and [AI agents](https://courier.nov
   <tr>
     <td width="50%" valign="top">
       <h4>Only what you expose</h4>
-      <code>defineBoundary</code> names the endpoints a browser may call; the proxy refuses the rest, and the API's address, paths and middleware never ship with the page. <a href="https://courier.noverax.cloud/docs/proxy-mode/boundary">Boundary</a>
+      <code>.expose()</code> marks the endpoints a page may call; the proxy refuses the rest, and the API's address, paths and middleware never ship with the page. <a href="https://courier.noverax.cloud/docs/proxy-mode/expose">Exposing endpoints</a>
     </td>
     <td width="50%" valign="top">
       <h4>Sessions and CSRF</h4>

@@ -44,8 +44,8 @@ export const { GET, POST } = apiRoute() // or courierHandler()
 You define your API structure **once** using `courier`, `defineGroup`, and `defineApi`. Each endpoint declares its response and variables types. From that single definition, Courier gives you:
 
 - **Direct mode** — server calls via `createCaller(api)`
-- **Proxy mode** — browser calls via `createProxyCaller("api")`
-- **React Query** — hooks via `createProxyQueryCaller("api")`
+- **Proxy mode** — browser calls via `createProxyCaller(apiRoutes)`, the endpoints you marked `.expose()`
+- **React Query** — hooks via `createProxyQueryCaller(apiRoutes)`
 - **Server Actions** — server-action calls via `createAction(sources, "api")`
 
 All share the same types and autocomplete:

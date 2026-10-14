@@ -207,12 +207,12 @@ export class AppModule implements NestModule, BeforeApplicationShutdown {
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "./api/sources"
+import { apiRoutes } from "./courier.routes"
 
-// Imported as a type: the API definition — upstream URL, endpoint paths,
-// middleware — stays on the server. An API with streams or channels passes a
-// `boundary` from `defineBoundary` instead (see the proxy-mode docs).
-const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
+// The routes Courier Studio writes from the endpoints you mark .expose():
+// what a page may call, and how. The API definition — upstream URL, endpoint
+// paths, middleware — stays on the server.
+const caller = createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
 ```
 

@@ -39,6 +39,8 @@ type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
+  // A page may call these through your server's proxy
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
@@ -71,36 +73,33 @@ import { api } from "@/api/sources"
 export const caller = createCaller(api)
 ```
 
-**Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS). A boundary names the endpoints the browser may call:
+**Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS). The proxy serves only the endpoints marked `expose`, as the `users` group is above, and answers any other as a name that does not exist. List your APIs in `courier.config.ts`:
 
-```ts title="api/boundary.ts"
-import { defineBoundary } from "@noverax/courier/define"
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./api/sources"
 
-export const boundary = defineBoundary({
-  source: "api",
-  expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
-})
+export default defineConfig({ sources: { api } })
 ```
 
-The API holds it, so the server refuses every other endpoint — add `boundary` to the `defineApi` call in `api/sources.ts`, imported from `./boundary`. Then the browser's caller takes it in place of the API:
+From the marks, Courier Studio writes the routes a page's caller takes — each endpoint a page may call, and how it reaches it — into `courier.routes.ts` beside the config. It writes them while it runs; `npx @noverax/courier-studio routes` writes them now. The browser's caller takes them in place of the API:
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", { boundary })
+export const caller = createProxyCaller(apiRoutes)
 ```
 
-The caller sends each call to `/api/request` on your server, which runs it with the sources registered there — your [framework guide](/docs/frameworks/nextjs) sets up that route and the registration. See [defineBoundary](/docs/proxy-mode/boundary) for what the browser learns and what it never does.
+The caller sends each call to `/api/request` on your server, which runs it with the sources registered there — your [framework guide](/docs/frameworks/nextjs) sets up that route and the registration. See [Exposing Endpoints](/docs/proxy-mode/expose) for what the browser learns and what it never does.
 
 **React Query** — hooks with full type inference:
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api/sources"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller(apiRoutes)
 ```
 
 <Callout variant="tip" title="Use both modes together">

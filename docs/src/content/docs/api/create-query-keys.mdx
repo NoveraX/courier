@@ -8,15 +8,18 @@ import { createProxyQueryKeys, createQueryKeys } from "@noverax/courier-react"
 
 ## Signature
 
-`createQueryKeys` takes the API definition, as `createQueryCaller` does; `createProxyQueryKeys` takes the source name and the API as a type argument, as `createProxyQueryCaller` does. Both return a key factory that builds the keys the hooks of the matching caller use:
+`createQueryKeys` takes the API definition, as `createQueryCaller` does; `createProxyQueryKeys` takes the API's routes, as `createProxyQueryCaller` does. Both return a key factory that builds the keys the hooks of the matching caller use:
 
 ```ts
-import type { DefinedApi } from "@noverax/courier/define"
+import type { CourierRoutes, DefinedApi, RoutedApi, RouteShape } from "@noverax/courier/define"
 import type { QueryKeyFactory } from "@noverax/courier-react"
 
 declare function createQueryKeys<TApi extends DefinedApi>(api: TApi): QueryKeyFactory<TApi>
 
-declare function createProxyQueryKeys<TApi extends DefinedApi>(source: string): QueryKeyFactory<TApi>
+declare function createProxyQueryKeys<
+  TApi extends DefinedApi,
+  TEndpoints extends Readonly<Record<string, RouteShape>>,
+>(routes: CourierRoutes<TApi, TEndpoints>): QueryKeyFactory<RoutedApi<TApi, TEndpoints>>
 ```
 
 ## Keys
@@ -36,7 +39,15 @@ queryKeys("users", "getById", { id: 1 })  // ["api", "users", "getById", { id: 1
 queryKeys("billing.invoices", "list")     // ["api", "billing", "invoices", "list"]
 ```
 
-`source` is the name the caller was made for: for `createQueryKeys(api)`, the API's own name — its `defineApi({ name })`, or else the first label of its `baseURL` host — and for `createProxyQueryKeys`, the name you pass. Build the keys for the same source as the caller, and a key names what the caller's hooks cached.
+`source` is the name the caller was made for: for `createQueryKeys(api)`, the API's own name — its `defineApi({ name })`, or else the first label of its `baseURL` host — and for `createProxyQueryKeys(apiRoutes)`, the source the routes name. Build the keys for the same source as the caller, and a key names what the caller's hooks cached. A proxy caller's keys name the endpoints its routes name alone:
+
+```ts title="lib/proxy-query.ts"
+import { createProxyQueryCaller, createProxyQueryKeys } from "@noverax/courier-react"
+import { apiRoutes } from "@/courier.routes"
+
+export const q = createProxyQueryCaller(apiRoutes)
+export const queryKeys = createProxyQueryKeys(apiRoutes)
+```
 
 ## Invalidating
 

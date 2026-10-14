@@ -53,9 +53,9 @@ type CallerDefaults = {
 }
 ```
 
-### ProxyCallerDefaults
+### ProxyCallerOptions
 
-Options for `createProxyCaller` and `createProxyQueryCaller`.
+Options for `createProxyCaller` and `createProxyQueryCaller`, which take them after the routes of an API.
 
 ```ts
 type ProxyPath = {
@@ -64,15 +64,30 @@ type ProxyPath = {
   ws?: string    // no default — throws if WS endpoint invoked without it
 }
 
-type ProxyCallerDefaults = {
+type ProxyCallerOptions = {
   proxyPath?: ProxyPath
-  source?: object
   timeout?: number
+  cancelPrevious?: readonly string[]
+  coalesce?: boolean
   credentials?: RequestCredentials
   headers?: Record<string, string>
   onError?: (error: HTTPError) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
+  ws?: CallerWSOptions
 }
+```
+
+### CourierRoutes
+
+The routes of one API that a page's proxy client takes: the source the server registered it as, and each endpoint a page may call, by its path, with how the page reaches it. Studio writes them into `courier.routes.ts` from the endpoints marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
+
+```ts
+import type { CourierRoutes, RouteMap, RouteShape } from "@noverax/courier/define"
+
+// RouteShape: { type: "query"; get?: true } | { type: "mutation" }
+//           | { transport: "sse" } | { transport: "ws"; bidirectional?: true }
+// RouteMap<TApi>: the paths of TApi, each in the shape the API declares it
+// CourierRoutes<TApi, TEndpoints>: { source, endpoints, cancelPrevious?, coalesce? }
 ```
 
 ## Endpoint Definition Types
@@ -215,7 +230,6 @@ type BaseOptions = MergeOptions & FetchOptions & {
   cancelPrevious?: readonly string[]
   middleware?: Middleware[]
   expose?: boolean
-  boundary?: ProxyBoundary
   proxyPath?: ProxyPath
 }
 ```
@@ -343,6 +357,6 @@ type WithVariables<V> = [V] extends [undefined]
 ## Related
 
 - [Type Safety Guide](/docs/core-concepts/type-safety) — how type inference works
-- [createProxyCaller](/docs/api/create-proxy-caller) — uses TypedClient and ProxyCallerDefaults
+- [createProxyCaller](/docs/api/create-proxy-caller) — uses TypedClient, CourierRoutes and ProxyCallerOptions
 - [defineApi](/docs/api/define) — uses BaseOptions
 - [HttpClient](/docs/api/instance) — the runtime that carries out a wire call

@@ -20,7 +20,7 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   },
   {
     module: "@noverax/courier/define",
-    note: "courier, defineApi, defineGroup, defineBoundary, formBody, formQuery",
+    note: "courier, defineApi, defineGroup, formBody, formQuery, CourierRoutes, RouteMap",
   },
   { module: "@noverax/courier/config", note: "defineConfig — the shape of courier.config.ts" },
   { module: "@noverax/courier/middleware", note: "defineMiddleware, composeMiddleware" },

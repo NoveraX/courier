@@ -69,15 +69,15 @@ The proxy reads an upload up to its `maxUploadBytes` — 10 MB unless you pass a
 
 ## The client
 
-Pair with `createProxyCaller` on the client:
+Pair with `createProxyCaller` on the client, given the routes Courier Studio writes into `courier.routes.ts` from the endpoints you mark `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose):
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "./api"
+import { apiRoutes } from "./courier.routes"
 
-// The first argument is the key this source has in your `sources` map —
+// The routes name the key this source has in your `sources` map —
 // it is what the proxy addresses, and it travels as `?_s=<name>`.
-const caller = createProxyCaller<typeof api>("api", {
+const caller = createProxyCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },
 })
 const users = await caller.users.getAll()

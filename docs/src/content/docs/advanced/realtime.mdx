@@ -72,7 +72,7 @@ A stream or channel served with `.implement()` is reached through the server tha
 
 A direct caller, `createCaller` or `createQueryCaller`, sends everything to the API's `baseURL`, which is the upstream's address. Nothing serves this process's streams and channels there, so calling one through a direct caller throws `ConfigurationError("DIRECT_CALL_TO_SERVED_ENDPOINT")`, naming it, when it is called — the React hooks report it through `error` — and the rest of the API stays callable. A stream or channel addressed with `.get()`, `.connect()` or `.via()` is another process's, and a direct caller opens it at `baseURL`.
 
-A proxy caller reaches another process's stream or channel too: the proxy relays it, opening it where its definition says. A stream is opened with the source's `headers`, the request headers the proxy lets through, the user's [session](/docs/server-side/session#streams-and-channels), and whatever the source's middleware sets. A browser reaches a third party's stream through its own server, with no CORS to configure and no key of its own to hold. A channel's upstream socket is opened with the same headers, as a direct caller in the server's process would open it; the subscriptions relayed with the same headers share it, so one user's channels share a socket and no two users' do. The proxy relays the streams and channels it would forward as endpoints: one a `defineBoundary` leaves out stays unreachable.
+A proxy caller reaches another process's stream or channel too: the proxy relays it, opening it where its definition says. A stream is opened with the source's `headers`, the request headers the proxy lets through, the user's [session](/docs/server-side/session#streams-and-channels), and whatever the source's middleware sets. A browser reaches a third party's stream through its own server, with no CORS to configure and no key of its own to hold. A channel's upstream socket is opened with the same headers, as a direct caller in the server's process would open it; the subscriptions relayed with the same headers share it, so one user's channels share a socket and no two users' do. The proxy relays the streams and channels it would forward as endpoints: one no `.expose()` mark opens stays unreachable.
 
 - A stream's events pass on as they came: ids, event names, and data that is not JSON as its text. A dropped upstream connection is reopened from the last event id, while the client's stays open. The client's `Last-Event-ID` is sent upstream when it resumes.
 - The stream ends as the upstream's ends. It fails as the upstream's fails: a refusal carries the upstream's status as code `4000 + status`, so a `401` arrives as `4401`. A client that leaves closes the upstream stream.
@@ -140,11 +140,9 @@ Every channel and push subscription of one caller on one URL shares a socket. Th
 
 ```ts title="lib/client.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
-import { boundary } from "./boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const client = createProxyCaller<typeof api>("api", {
-  boundary,
+export const client = createProxyCaller(apiRoutes, {
   ws: {
     auth: async () => ({ token: await session.accessToken() }),
     backoff: { initialMs: 500, maxMs: 10_000 },

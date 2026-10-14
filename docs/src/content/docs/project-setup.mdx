@@ -5,6 +5,8 @@ export const metadata = { title: "Project Setup", description: "Recommended file
 Keep your API definitions separate from your UI code. The structure is the same regardless of framework:
 
 ```text title="Project structure"
+courier.config.ts         # your APIs, for your server, Studio and the MCP server
+courier.routes.ts         # what a page may call: Studio writes it from the .expose() marks
 src/
 ├── api/
 │   ├── index.ts          # defineApi + sources export
@@ -37,6 +39,8 @@ type User = { id: string; name: string; email: string }
 
 export const users = defineGroup({
   prefix: "users",
+  // A page may call these through the proxy; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
@@ -73,20 +77,20 @@ Create the appropriate caller for your use case, once, in a module of its own, a
 
 ```ts title="lib/query.ts (React Query)"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api", { boundary })
+export const q = createProxyQueryCaller(apiRoutes)
 // In components: q.users.useQuery("getAll"), q.users.useMutation("create")
 ```
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "@/api"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", { boundary })
+export const caller = createProxyCaller(apiRoutes)
 ```
+
+The browser's callers take the routes Studio writes from your marks, never the API itself — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/server-caller.ts (Server-side)"
 import { createCaller } from "@noverax/courier"

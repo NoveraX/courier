@@ -22,7 +22,7 @@ The file may also be named `courier.config.mts`, `.cts`, `.js`, `.mjs` or `.cjs`
 
 ## sources
 
-**Required.** The sources the project serves and calls, by the name its callers use: `sources: { api }` is reached as `createProxyCaller<typeof api>("api")`. A project without an API yet starts with `sources: {}`.
+**Required.** The sources the project serves and calls, by the name its callers use: `sources: { api }` is reached through the proxy as `createProxyCaller(apiRoutes)`, from the routes Studio writes for it. A project without an API yet starts with `sources: {}`.
 
 ## imports
 
@@ -59,7 +59,7 @@ What Studio reads: `port`, `host`, `mockBasePort` and `open` when it starts, `al
 | `mockBasePort` | `7001` | Where the ports Studio assigns to mocks that name none begin |
 | `open` | `false` | Open Studio in the browser when it starts; `--open` and `--no-open` override it |
 | `allowedSpecHosts` | — | Hosts on a private network Studio may fetch a specification from, such as `["gitlab.internal", "10.0.0.7:8080"]`. This machine needs no entry |
-| `routes` | `"courier.routes.ts"` | Where the [routes module](/docs/proxy-mode/boundary) goes, from the project root: a `.ts`, `.mts`, `.js` or `.mjs` file in the project, such as `"src/courier.routes.ts"`. Beside a JavaScript config it is `courier.routes.js`; `false` keeps the project without one. Studio writes it whenever the config loads with an endpoint marked `.expose()`, and never over a file it did not write |
+| `routes` | `"courier.routes.ts"` | Where the [routes module](/docs/proxy-mode/expose) goes, from the project root: a `.ts`, `.mts`, `.js` or `.mjs` file in the project, such as `"src/courier.routes.ts"`. Beside a JavaScript config it is `courier.routes.js`; `false` keeps the project without one. Studio writes it whenever the config loads with an endpoint marked `.expose()`, and never over a file it did not write |
 
 ## server
 

@@ -140,7 +140,7 @@ await client.billing.summary() // GET https://api.example.com/billing/summary
 await client.billing.invoices.list() // GET https://api.example.com/billing/invoices
 ```
 
-- A group inside another is named by its **path**, its names joined with dots: `billing.invoices`. The path is what the proxy carries in `_g`, what Studio, mocks and query keys name the group by — `mock("billing.invoices", "list")` — and what a [boundary](/docs/proxy-mode/boundary) lists an endpoint under: `"billing.invoices.list"`. A name with a dot in it would read as two, so a group or an endpoint named with one throws `ConfigurationError("DOTTED_NAME")`.
+- A group inside another is named by its **path**, its names joined with dots: `billing.invoices`. The path is what the proxy carries in `_g`, what Studio, mocks and query keys name the group by — `mock("billing.invoices", "list")` — and what a page's [routes](/docs/proxy-mode/expose) name an endpoint by: `"billing.invoices.list"`. A name with a dot in it would read as two, so a group or an endpoint named with one throws `ConfigurationError("DOTTED_NAME")`.
 - Each group's `pathOptions` is resolved in turn, from the source's down, a lower group's values replacing a higher one's. `expose` is decided by the nearest group that sets it.
 - A group may hold an endpoint and a group of the same name: the client's member is both callable, as the endpoint, and readable, as the group.
 

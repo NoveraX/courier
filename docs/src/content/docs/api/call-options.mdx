@@ -33,7 +33,7 @@ type WithOptions = Omit<CallOptions, "rawData">
 - `headers` — added to the call's headers, name by name, whatever their case; `.with()` at the client, a group and an endpoint merges them all
 - `stream` — answers with the response's body as a stream, unread, instead of the parsed data
 - `forwardVariables` — whether the HTTP methods an endpoint calls send the call's variables by themselves, as the body of a write or the query of a read; `false` leaves them to the endpoint's own `.via()` code. Defaults to `true`
-- `method` — the verb the call goes to the proxy with: GET for a read and POST for a write by default; `"POST"` keeps a read's variables out of the address
+- `method` — the verb the call goes to the proxy with: GET for a read that may be cached — one that declares `.cache()` and whose variables are not sensitive — and POST for every other call by default; `"POST"` keeps a read's variables out of the address
 - `responseType` — how a successful answer is read, when not as the source reads every answer
 - `onUploadProgress` — called as the body is sent, with `percent` from 0 to 1, `transferredBytes` and `totalBytes`
 - `onDownloadProgress` — called as the answer is read, in the same terms

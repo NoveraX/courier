@@ -61,14 +61,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ### Step 3: Create the Courier query caller
 
-Call `createProxyQueryCaller` with your API type and a source name. Export the query client from a single file so every component imports from the same place:
+Call `createProxyQueryCaller` with your API's routes: the endpoints a page may call and how it reaches each, which Courier Studio writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose). Export the query client from a single file so every component imports from the same place:
 
 ```ts title="lib/query.ts"
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller(apiRoutes)
 ```
 
 Then use it in your components with dot-notation:
@@ -90,14 +90,14 @@ Keep the query caller in one file. This ensures all components share the same cl
 
 ## Configuring defaults
 
-`createProxyQueryCaller` accepts an optional defaults object to configure the underlying proxy caller. These defaults apply to every request:
+`createProxyQueryCaller` accepts optional options to configure the underlying proxy caller. They apply to every request:
 
 ```ts title="lib/query.ts"
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api"
+import { apiRoutes } from "@/courier.routes"
 
-export const q = createProxyQueryCaller<typeof api>("api", {
+export const q = createProxyQueryCaller(apiRoutes, {
   // Custom proxy route URL (default: "/api/request")
   proxyPath: { http: "/api/my-proxy" },
 

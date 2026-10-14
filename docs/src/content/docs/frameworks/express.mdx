@@ -28,6 +28,8 @@ type User = { id: number; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
+  // A page may call these through the proxy; an endpoint no mark opens stays the server's
+  expose: true,
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
@@ -197,11 +199,13 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 - [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
 - [Nuxt](/docs/frameworks/nuxt) — full-stack with `courierHandler` and `createProxyCaller`
 
+The caller takes the routes Courier Studio writes into `courier.routes.ts` from the endpoints your sources mark `.expose()`, never the definition itself — see [Exposing Endpoints](/docs/proxy-mode/expose):
+
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "../shared/sources"
+import { myApiRoutes } from "../courier.routes"
 
-export const caller = createProxyCaller<typeof api>("api", {
+export const caller = createProxyCaller(myApiRoutes, {
   proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```

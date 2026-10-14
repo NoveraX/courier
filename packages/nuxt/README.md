@@ -41,7 +41,7 @@ The Nuxt adapter is an h3 event handler: it serves Courier's proxy from a Nitro 
   <tr>
     <td width="33%" valign="top">
       <h4>One route</h4>
-      <code>courierHandler()</code> in <code>server/api/request.ts</code> answers every endpoint the boundary exposes.
+      <code>courierHandler()</code> in <code>server/api/request.ts</code> answers every endpoint marked <code>.expose()</code>.
     </td>
     <td width="33%" valign="top">
       <h4>Rendered with the session</h4>
@@ -130,15 +130,15 @@ Use `createProxyCaller` in a composable:
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import type { api } from "~/api/sources"
+import { apiRoutes } from "~/courier.routes"
 
-// Imported as a type: the API definition — upstream URL, endpoint paths,
-// middleware — stays on the server. An API with streams or channels passes a
-// `boundary` from `defineBoundary` instead (see the proxy-mode docs).
+// The routes Courier Studio writes from the endpoints you mark .expose():
+// what a page may call, and how. The API definition — upstream URL, endpoint
+// paths, middleware — stays on the server.
 export function useCaller() {
   // `useAsyncData` runs on the server first, where the call reaches the proxy
   // in the same process; in the browser the path goes to the route over HTTP.
-  return createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
+  return createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
 }
 ```
 

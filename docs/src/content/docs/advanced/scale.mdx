@@ -9,7 +9,7 @@ Every night Courier writes a project the size of a large company's and measures 
 | APIs | 5 sources, 1000 endpoints: 970 HTTP endpoints in 169 groups, a group inside every fourth one, 25 streams and 5 channels |
 | Schemas | each group's records, input and patch in zod, with nested objects, arrays, unions and a discriminated union |
 | Code | 1420 files: 600 server modules calling the APIs directly and 100 pages calling them through the app's proxy — 3300 call sites — and 39 internal libraries that import each other |
-| Courier | `courier.config.ts`, the app's server with `createCourierServer`, two boundaries, and `courier.mocks.ts` with a mock for each API, 200 records a collection |
+| Courier | `courier.config.ts`, the app's server with `createCourierServer`, the endpoints its pages call marked `.expose()` and `courier.routes.ts` written from the marks, and `courier.mocks.ts` with a mock for each API, 200 records a collection |
 
 The figures below were measured on an Apple M2 Max laptop with Node 24. The nightly job runs on a CI runner two to four times slower, so a figure that follows the machine's speed is held to the same work done without Courier, measured in the same run: the mocks to bare Node servers answering the same requests, the app's server to the same calls made straight to the backend, a large answer to the same answer fetched and checked by the same schema. Every other time has a budget twice what the CI runner takes. Either way a budget catches a change that makes Courier markedly slower or heavier, not a slower machine.
 

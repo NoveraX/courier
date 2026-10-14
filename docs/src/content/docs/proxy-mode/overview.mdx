@@ -13,11 +13,11 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
 │                                                              │
-│  createProxyCaller<typeof api>("api")                        │
+│  createProxyCaller(apiRoutes)                                │
 │       │                                                      │
 │       ▼                                                      │
-│  fetch GET  "/api/request?_s=…&_g=…&_m=…&_v=…"  (a read)     │
-│  fetch POST — body { variables, options }       (a write)    │
+│  fetch GET  "/api/request?_s=…&_g=…&_m=…&_v=…" (cached read) │
+│  fetch POST — body { variables, options }      (any other)   │
 └──────────────────┬───────────────────────────────────────────┘
                    │  GET or POST /api/request
                    ▼
@@ -25,6 +25,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 │  Server Handler (any framework)                              │
 │                                                              │
 │  createHandler({ sources }) → handle, handleGet, handlePost  │
+│       │  → only endpoints marked .expose()                   │
 │       │  → origin validation                                 │
 │       │  → cookies only where named                          │
 │       │  → header whitelisting                               │
@@ -44,8 +45,8 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 
 ## Why use proxy mode?
 
-- **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`. Declare a [boundary](/docs/proxy-mode/boundary) to keep the API definition itself off the wire: pass it in place of the API object, and the bundle carries the endpoint names you opened and nothing else.
-- **Refuse what you did not open** — the proxy addresses endpoints by name, so without a boundary every endpoint your app registered is callable from a page, including the ones only server code was meant to reach.
+- **Hide API secrets** — your backend URL, API keys, and tokens stay on the server. The browser only sees `/api/request`. The page's client takes the [routes](/docs/proxy-mode/expose) Studio writes in place of the API object, so the bundle carries the names of the endpoints you opened and nothing else.
+- **Refuse what you did not open** — the proxy serves only the endpoints you mark `.expose()`, on the endpoint, its group or its API, and answers any other as a name that does not exist. An endpoint written for server code alone stays the server's until someone marks it.
 - **Bypass CORS** — the proxy handler runs on the same origin as your frontend, so there are no cross-origin restrictions.
 - **Carry your session** — the browser sends its cookies to the proxy route (`credentials: "include"` by default), and they cross to the backend, with the backend's `set-cookie` coming back, for the sources and endpoints that name them. See [Cookies](/docs/proxy-mode/api-route#cookies).
 - **Centralized error handling** — the handler catches errors and returns consistent JSON responses with proper HTTP status codes.
@@ -57,12 +58,13 @@ Here is the complete flow from a browser call to the backend response:
 
 ```ts title="Request lifecycle"
 // 1. Browser — call a typed endpoint
-const caller = createProxyCaller<typeof api>("api")
+const caller = createProxyCaller(apiRoutes)
 const user = await caller.users.getById({ id: 5 })
 
-// 2. Under the hood, Courier sends a read as GET, its variables as JSON in _v:
+// 2. Under the hood, Courier sends a read that declares .cache() as GET,
+//    its variables as JSON in _v:
 //    GET /api/request?_s=api&_g=users&_m=getById&_v={"id":5}
-//    (a write goes as POST, with { "variables", "options" } in the body)
+//    (any other call goes as POST, with { "variables", "options" } in the body)
 
 // 3. Server handler reads the endpoint and its variables from the URL,
 //    creates an HttpClient, and calls: GET {baseURL}/users/5
@@ -72,7 +74,11 @@ const user = await caller.users.getById({ id: 5 })
 
 ## Security
 
-Proxy mode includes three built-in security layers: host validation, origin validation and header whitelisting. [Security Model](/docs/security/overview) follows the user's credentials through every layer — the proxy, your server, streams and channels — and what Courier writes down.
+Proxy mode includes four built-in security layers: the endpoints you marked, host validation, origin validation and header whitelisting. [Security Model](/docs/security/overview) follows the user's credentials through every layer — the proxy, your server, streams and channels — and what Courier writes down.
+
+### Only what you mark
+
+The proxy addresses endpoints by name, and resolves the name against every source your application registered. It serves an endpoint only when a mark opens it — `.expose()` on the endpoint, or `expose` on its group or its API, the nearest one deciding — and answers any other as a name the source does not define, so a caller guessing names learns nothing of what exists. Every proxy route — GET, POST, SSE and WebSocket — applies the marks. See [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ### Host validation
 
@@ -205,7 +211,7 @@ Use **proxy mode** for client components where the browser initiates the request
 ```ts title="Comparison"
 // Proxy mode — browser cannot see API_URL or secrets
 // Browser → GET /api/request → Server → GET https://internal-api.company.com/users
-const caller = createProxyCaller<typeof api>("api")
+const caller = createProxyCaller(apiRoutes)
 const users = await caller.users.getAll()
 
 // Direct mode — server calls backend directly, no proxy hop
@@ -219,6 +225,7 @@ Both modes share the same `defineApi` and `defineGroup` definitions. You define 
 
 ## Next Steps
 
+- [Exposing Endpoints](/docs/proxy-mode/expose) — mark what a page may call, and give its client the routes
 - [createProxyCaller](/docs/proxy-mode/proxy-caller) — set up the browser-side proxy client
 - [Server Handler](/docs/proxy-mode/api-route) — configure the server-side proxy endpoint
 - [Security Model](/docs/security/overview) — where credentials travel, and what each layer refuses

@@ -139,6 +139,7 @@ const { endpoint } = courier()
 
 const auth = defineGroup({
   prefix: "auth",
+  expose: true,
   endpoints: {
     // The backend answers a sign-in with its session cookie
     login: endpoint.post("login").variables<{ email: string; password: string }>().headers(["set-cookie"]),
@@ -153,7 +154,7 @@ export const api = defineApi({ baseURL: process.env.AUTH_API_URL!, groups: { aut
 ```
 
 ```ts title="Browser"
-const caller = createProxyCaller<typeof api>("api")
+const caller = createProxyCaller(apiRoutes)
 
 await caller.auth.login({ email, password }) // the session cookie reaches the browser
 const me = await caller.auth.me()            // and goes back to the backend with this call

@@ -96,14 +96,12 @@ Two query callers are available — pick the one that matches your transport mod
 ```ts
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "@/api/sources"
-import { boundary } from "@/api/boundary"
+import { apiRoutes } from "@/courier.routes"
 
-// Imported as a type: the API definition stays on the server. `boundary`,
-// from `defineBoundary`, names the streams and channels the browser may
-// reach and carries their proxy paths; an API that has any requires it.
-export const q = createProxyQueryCaller<typeof api>("api", {
-  boundary,
+// The routes Courier Studio writes from the endpoints you mark .expose():
+// what a page may call, and how — streams and channels included. The API
+// definition stays on the server.
+export const q = createProxyQueryCaller(apiRoutes, {
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,                       // optional default timeout
 })
@@ -264,7 +262,7 @@ export default async function UsersPage() {
 }
 ```
 
-The client's `q.users.useQuery("getAll")` then starts from the prefetched data, provided both callers build the same keys: give the definition the proxy's source name, `defineApi({ name: "api", … })` for `createProxyQueryCaller<typeof api>("api")` (see [Query Keys](#query-keys)). A proxy-mode `useSuspenseQuery` rendered on the server would fetch there as well, and fail for the same reason; prefetch its data like this and it hydrates instead. A proxy caller can run on the server only with an absolute `proxyPath.http`.
+The client's `q.users.useQuery("getAll")` then starts from the prefetched data, provided both callers build the same keys: give the definition the proxy's source name, `defineApi({ name: "api", … })` for the routes of the source registered as `api` (see [Query Keys](#query-keys)). A proxy-mode `useSuspenseQuery` rendered on the server would fetch there as well, and fail for the same reason; prefetch its data like this and it hydrates instead. A proxy caller can run on the server only with an absolute `proxyPath.http`.
 
 No module of the package is marked `"use client"`, so a React Server Component can create a caller, prefetch, build keys and use `QueryClient`, `dehydrate` and `HydrationBoundary` from it. The hooks themselves run in Client Components.
 

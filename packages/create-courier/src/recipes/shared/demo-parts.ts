@@ -1,6 +1,7 @@
 import { importSpecifier } from "../import-specifier";
 import type { RecipeContext, RecipeFile } from "../recipe-types";
 import { DEMO_CSS } from "./demo-style";
+import { ROUTES_MODULE } from "./example-routes";
 
 /** The demo page's words, the same in every framework. */
 export const DEMO_TEXT = {
@@ -35,8 +36,9 @@ export function globalDemoCss(): string {
 
 /**
  * `caller.ts`: the example API's client for the browser, typed from it,
- * which calls it through the app's `/api/request` route with the
- * boundary's list — the API's definition stays out of the bundle.
+ * which calls it through the app's `/api/request` route with the routes
+ * Studio writes from the API's marks — the API's definition stays out of
+ * the bundle.
  *
  * @param ctx - The project, and what is set up in it
  * @param dir - The folder Courier's own modules go in
@@ -50,11 +52,10 @@ export function proxyCaller(ctx: RecipeContext, dir: string): RecipeFile {
   const path = `${dir}/caller.ts`;
   const content = `import { createProxyCaller } from "@noverax/courier";
 
-import type { api } from "${importSpecifier(path, `${dir}/api.ts`, ctx.extension)}";
-import { boundary } from "${importSpecifier(path, `${dir}/boundary.ts`, ctx.extension)}";
+import { apiRoutes } from "${importSpecifier(path, ROUTES_MODULE, ctx.extension)}";
 
 /** Your API's client for the browser, which calls it through the app's /api/request route. */
-export const courier = createProxyCaller<typeof api>("api", { boundary });
+export const courier = createProxyCaller(apiRoutes);
 `;
   return { path, content, purpose: "your API's client for the browser" };
 }

@@ -3,12 +3,13 @@ import { importSpecifier } from "../import-specifier";
 import type { RecipeContext, RecipeFile } from "../recipe-types";
 import { DEMO_TEXT } from "./demo-parts";
 import { DEMO_CSS, unreachableHint } from "./demo-style";
+import { ROUTES_MODULE } from "./example-routes";
 
 /**
  * `query.ts`: React Query hooks for the example API, typed from it. Through
- * the app's `/api/request` route with the boundary's list, so the API's
- * definition stays out of the browser's bundle — or, in an app without a
- * server, straight to the API.
+ * the app's `/api/request` route with the routes Studio writes from the
+ * API's marks, so the API's definition stays out of the browser's bundle —
+ * or, in an app without a server, straight to the API.
  *
  * @param ctx - The project, and what is set up in it
  * @param dir - The folder Courier's own modules go in
@@ -30,11 +31,10 @@ export function reactQuery(
     through === "proxy"
       ? `import { createProxyQueryCaller } from "@noverax/courier-react";
 
-import type { api } from "${api}";
-import { boundary } from "${importSpecifier(path, `${dir}/boundary.ts`, ctx.extension)}";
+import { apiRoutes } from "${importSpecifier(path, ROUTES_MODULE, ctx.extension)}";
 
 /** React Query hooks for your API, called through the app's /api/request route. */
-export const q = createProxyQueryCaller<typeof api>("api", { boundary });
+export const q = createProxyQueryCaller(apiRoutes);
 `
       : `import { createQueryCaller } from "@noverax/courier-react";
 

@@ -33,7 +33,7 @@ describe("nextRecipe", () => {
 
     expect([...byPath.keys()]).toEqual([
       "src/courier/api.ts",
-      "src/courier/boundary.ts",
+      "courier.routes.ts",
       "courier.config.ts",
       "courier.mocks.ts",
       "src/app/api/request/route.ts",
@@ -47,6 +47,11 @@ describe("nextRecipe", () => {
     expect(byPath.get("src/instrumentation.ts")).toContain("await attachRuntime();");
     expect(byPath.get("src/app/api/request/route.ts")).not.toContain("registerSources");
     expect(byPath.get("src/app/courier/page.tsx")?.startsWith('"use client";')).toBe(true);
+    expect(byPath.get("src/courier/api.ts")).toContain("  expose: true,");
+    expect(byPath.get("src/courier/query.ts")).toContain(
+      'import { apiRoutes } from "../../courier.routes";',
+    );
+    expect(byPath.get("src/courier/query.ts")).toContain("createProxyQueryCaller(apiRoutes)");
     expect(recipe.edits).toEqual([]);
   });
 

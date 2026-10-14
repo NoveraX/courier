@@ -1,7 +1,7 @@
 import type { InferClient } from "../client";
 import { buildClientProxy } from "../client";
 import { shapeOfSource } from "../client/shape";
-import type { BrowserApi, ExposedApi } from "../define/exposed-api";
+import type { BrowserApi, RoutedApi } from "../define/exposed-api";
 import type { CourierRoutes, RouteShape } from "../define/routes";
 import { composeBackend, type StreamingFactories } from "../transport/compose-backend";
 import { createProxyHTTPExecutor } from "../transport/proxy/http";
@@ -32,7 +32,7 @@ import type { ProxyCallerArguments, ProxyCallerDefaults, ProxyCallerOptions } fr
 export function createProxyCaller<TApi, TEndpoints extends Readonly<Record<string, RouteShape>>>(
   routes: CourierRoutes<TApi, TEndpoints>,
   options?: ProxyCallerOptions,
-): InferClient<ExposedApi<TApi, keyof TEndpoints & string>>;
+): InferClient<RoutedApi<TApi, TEndpoints>>;
 
 /**
  * Create a proxy client typed from the API it is given as `source`, for code

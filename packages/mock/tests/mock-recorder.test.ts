@@ -158,6 +158,25 @@ describe("recording through a Courier proxy", () => {
       url: `${proxyUrl}/api/request?_s=api&_g=users&_m=getAll`,
     });
   });
+
+  it("names a read that may be cached by the GET the proxy caller sends it as", async () => {
+    const cached = defineApi({
+      baseURL: "http://placeholder.invalid",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: { getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }) },
+        }),
+      },
+    });
+    const recorder = createRecorder({
+      source: cached,
+      proxy: { url: `${proxyUrl}/api/request`, source: "api" },
+    });
+
+    expect(await recorder.client.users.getAll()).toEqual(USERS);
+    expect(recorder.getFixtures()[0]?.request?.method).toBe("GET");
+  });
 });
 
 describe("recording modes", () => {

@@ -38,7 +38,7 @@ describe("an SSE stream behind express", () => {
       }
     });
     registerSources({
-      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ticks } }),
+      api: defineApi({ expose: true, baseURL: "https://upstream.example", endpoints: { ticks } }),
     });
 
     const app = express();

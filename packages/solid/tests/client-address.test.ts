@@ -23,7 +23,11 @@ afterEach(async () => {
 
 async function call(clientAddress: string | undefined, forwardedFor: string) {
   upstream = await startUpstream(echo);
-  const api = defineApi({ baseURL: upstream.url, endpoints: { ping: endpoint.post("ping") } });
+  const api = defineApi({
+    expose: true,
+    baseURL: upstream.url,
+    endpoints: { ping: endpoint.post("ping") },
+  });
   const request = new Request("http://localhost:3000/api/request?_s=api&_m=ping", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": forwardedFor },

@@ -46,6 +46,7 @@ afterEach(async () => {
 
 function api(options: { coalesce?: boolean; forward?: { requestId: true } } = {}) {
   return defineApi({
+    expose: true,
     name: "shop",
     baseURL: upstream.url,
     ...options,
@@ -149,6 +150,7 @@ describe("identical reads in flight together", () => {
     const sent = vi.fn((input: string, init: object) => realFetch(input, init as RequestInit));
     const shop = createCaller(
       defineApi({
+        expose: true,
         name: "shop",
         baseURL: upstream.url,
         fetch: sent,

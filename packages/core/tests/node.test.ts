@@ -165,7 +165,9 @@ describe("sendWebResponse", () => {
           yield { data: { pad } };
         }
       });
-    registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+    registerSources({
+      api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
+    } as never);
     const { handleSSE } = createHandler();
     const path = new URL(buildProxySSEUrl("http://localhost/", "api", "live", "feed")).search;
     await stalledClient(async (res, req) => {

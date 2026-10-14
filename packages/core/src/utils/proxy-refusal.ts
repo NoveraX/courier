@@ -54,6 +54,6 @@ export function proxyRefusal(
     stream: undefined,
     proxyMethod: call.via,
     sensitiveVariables: resolved.options?.sensitiveVariables === true,
-    notFound: `[${call.source}]${methodPath}: method not found`,
+    endpoint: `[${call.source}]${methodPath}`,
   });
 }

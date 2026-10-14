@@ -51,6 +51,7 @@ afterEach(async () => {
 
 function api() {
   return defineApi({
+    expose: true,
     name: "big",
     baseURL: upstream.url,
     endpoints: { rows: endpoint.get("rows"), bytes: endpoint.get("bytes") },

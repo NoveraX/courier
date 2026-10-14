@@ -15,6 +15,7 @@ describe("routesOf", () => {
   it("names each endpoint by its path, in path order, with how the browser reaches it", () => {
     const api = defineApi({
       baseURL: "https://api.example.com",
+      expose: true,
       groups: {
         users: defineGroup({
           prefix: "users",
@@ -62,6 +63,15 @@ describe("routesOf", () => {
     ]);
   });
 
+  it("names none of an API that marks none", () => {
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      endpoints: { health: endpoint.get("health"), purge: endpoint.post("purge") },
+    });
+
+    expect(routesOf(api, "api").endpoints).toEqual({});
+  });
+
   it("leaves out every endpoint the proxy refuses, the nearest mark deciding", () => {
     const api = defineApi({
       baseURL: "https://api.example.com",
@@ -91,6 +101,7 @@ describe("routesOf", () => {
   it("names an endpoint of a group inside a group by its whole path", () => {
     const api = defineApi({
       baseURL: "https://api.example.com",
+      expose: true,
       groups: {
         billing: defineGroup({
           prefix: "billing",

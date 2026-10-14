@@ -65,7 +65,11 @@ describe("a call the browser cancels", () => {
     const upstream = await slowUpstream();
     const { endpoint } = courier();
     registerSources({
-      api: defineApi({ baseURL: upstream.url, endpoints: { slow: endpoint.post("slow") } }),
+      api: defineApi({
+        expose: true,
+        baseURL: upstream.url,
+        endpoints: { slow: endpoint.post("slow") },
+      }),
     });
     const handler = courierHandler();
     const proxy = await listen(
@@ -94,7 +98,11 @@ describe("a call the browser waits for", () => {
     const upstream = await listen(createServer((_req, res) => res.end('{"ok":true}')));
     const { endpoint } = courier();
     registerSources({
-      api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }),
+      api: defineApi({
+        expose: true,
+        baseURL: upstream,
+        endpoints: { fast: endpoint.post("fast") },
+      }),
     });
     const handler = courierHandler();
     const proxy = await listen(
@@ -119,6 +127,7 @@ describe("what the handler tells an attached Studio", () => {
     const { endpoint: ping } = courier();
     registerSources({
       api: defineApi({
+        expose: true,
         baseURL: "https://upstream.example",
         endpoints: { ping: ping.get("ping") },
       }),

@@ -29,6 +29,7 @@ afterEach(async () => {
 
 function tenantApi() {
   return defineApi({
+    expose: true,
     name: "tenant",
     baseURL: upstream.url,
     pathOptions: (req) => ({ orgId: req?.headers.get("cookie")?.match(/orgId=([^;]+)/)?.[1] }),

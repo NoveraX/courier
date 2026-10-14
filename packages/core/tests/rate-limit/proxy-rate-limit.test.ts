@@ -44,6 +44,7 @@ afterEach(async () => {
 
 function handler(rateLimit: ProxyRateLimit) {
   const api = defineApi({
+    expose: true,
     baseURL: upstreamURL,
     endpoints: {
       read: endpoint.get("read"),
@@ -252,7 +253,11 @@ describe("a rateLimit that cannot work", () => {
 
 describe("browsersOnly", () => {
   it("refuses what no browser sent, and serves what one did", async () => {
-    const api = defineApi({ baseURL: upstreamURL, endpoints: { read: endpoint.get("read") } });
+    const api = defineApi({
+      expose: true,
+      baseURL: upstreamURL,
+      endpoints: { read: endpoint.get("read") },
+    });
     const proxy = createHandler({ sources: { api }, browsersOnly: true });
     const read = (headers: Record<string, string>) =>
       proxy.handle(new Request("http://app.localhost/api/request?_s=api&_m=read", { headers }));

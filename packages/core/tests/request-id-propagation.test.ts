@@ -66,6 +66,7 @@ afterEach(async () => {
 /* An API forwarding the request id and the deployment's own headers, as a site behind nginx does. */
 function siteApi() {
   return defineApi({
+    expose: true,
     name: "site",
     baseURL: upstreamURL,
     forward: { requestId: true, headers: ["x-edge-request-id", "x-edge-env"] },

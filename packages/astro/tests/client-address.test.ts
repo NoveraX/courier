@@ -33,7 +33,11 @@ function contextFor(request: Request, address: string | undefined) {
 
 async function call(address: string | undefined, forwardedFor: string) {
   upstream = await startUpstream(echo);
-  const api = defineApi({ baseURL: upstream.url, endpoints: { ping: endpoint.post("ping") } });
+  const api = defineApi({
+    expose: true,
+    baseURL: upstream.url,
+    endpoints: { ping: endpoint.post("ping") },
+  });
   const request = new Request("http://localhost:4321/api/request?_s=api&_m=ping", {
     method: "POST",
     headers: { "content-type": "application/json", "x-forwarded-for": forwardedFor },

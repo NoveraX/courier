@@ -22,6 +22,7 @@ const ATTACKER = "https://attacker.example";
 const fetchSpy = vi.fn();
 
 const api = defineApi({
+  expose: true,
   baseURL: UPSTREAM,
   endpoints: {
     getById: endpoint.get("users/:id").variables<{ id: string }>().response<unknown>(),

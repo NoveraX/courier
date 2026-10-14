@@ -116,7 +116,7 @@ function registerTestSources(): void {
     endpoints: { upload: endpoint.post("").variables<FormData>().response<unknown>() },
   });
   registerSources({
-    api: defineApi({ baseURL: upstreamUrl, groups: { live, users, files, feeds } }),
+    api: defineApi({ expose: true, baseURL: upstreamUrl, groups: { live, users, files, feeds } }),
   });
 }
 
@@ -360,6 +360,7 @@ describe("an HTTP call run from the Playground in proxy mode", () => {
     const api = Reflect.get(registered, "api");
     const { endpoint } = courier();
     const pinned = defineApi({
+      expose: true,
       baseURL: upstreamUrl,
       proxyPath: { http: `${url}/api/request` },
       groups: {

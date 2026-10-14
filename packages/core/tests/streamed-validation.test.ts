@@ -23,6 +23,7 @@ let upstream: Server | undefined;
 
 function defineItems(baseURL: string) {
   return defineApi({
+    expose: true,
     baseURL,
     groups: {
       items: defineGroup({

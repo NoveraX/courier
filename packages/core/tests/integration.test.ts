@@ -50,6 +50,7 @@ const postsGroup = defineGroup({
 });
 
 const api = defineApi({
+  expose: true,
   baseURL: "https://api.example.com",
   groups: {
     users: usersGroup,
@@ -190,6 +191,7 @@ describe("integration: middleware with functional API", () => {
     });
 
     const api = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       middleware: [mw],
       groups: {
@@ -231,6 +233,7 @@ describe("integration: middleware with functional API", () => {
     });
 
     const api = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       middleware: [mw],
       groups: {
@@ -270,6 +273,7 @@ describe("integration: middleware with functional API", () => {
     });
 
     const api = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       middleware: [mw],
       groups: {
@@ -311,6 +315,7 @@ describe("integration: multiple sources", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ token: "abc" }));
 
     const authApi = defineApi({
+      expose: true,
       baseURL: "https://auth.example.com",
       groups: {
         session: defineGroup({
@@ -386,6 +391,7 @@ describe("integration: HTTP-semantic proxy", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
 
     const queryApi = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({
@@ -414,6 +420,7 @@ describe("integration: HTTP-semantic proxy", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
     const queryApi = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({
@@ -444,6 +451,7 @@ describe("integration: HTTP-semantic proxy", () => {
     const { NextResponse } = await import("next/server");
 
     const cachedApi = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({
@@ -478,6 +486,7 @@ describe("integration: HTTP-semantic proxy", () => {
     const { NextResponse } = await import("next/server");
 
     const taggedApi = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({
@@ -516,6 +525,7 @@ describe("integration: HTTP-semantic proxy", () => {
     const { NextResponse } = await import("next/server");
 
     const cachedApi = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({
@@ -544,6 +554,7 @@ describe("integration: HTTP-semantic proxy", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1, name: "Alice", email: "a@b.com" }, 201));
 
     const mutationApi = defineApi({
+      expose: true,
       baseURL: "https://api.example.com",
       groups: {
         users: defineGroup({

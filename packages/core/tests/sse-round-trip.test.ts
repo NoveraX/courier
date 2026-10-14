@@ -35,7 +35,9 @@ function serve(handler: Handler, variables?: Record<string, unknown>): string {
     .variables(z.object({ room: z.string().optional() }))
     .response<unknown>()
     .implement(handler as never);
-  registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+  registerSources({
+    api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
+  } as never);
   const { handleSSE } = createHandler();
   requests = 0;
   vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
@@ -179,7 +181,9 @@ describe("a stream with a response schema", () => {
     const feed = stream
       .response(z.object({ n: z.number(), unit: z.string().default("ms") }))
       .implement(handler as never);
-    registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+    registerSources({
+      api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
+    } as never);
     const { handleSSE } = createHandler();
     vi.stubGlobal("fetch", (url: string, init?: RequestInit) => handleSSE(new Request(url, init)));
     return buildProxySSEUrl("http://localhost/api/sse", "api", "live", "feed");

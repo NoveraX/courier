@@ -25,6 +25,7 @@ let removeProvider: () => void;
 
 function defineAccounts(baseURL: string) {
   return defineApi({
+    expose: true,
     name: "accounts",
     baseURL,
     session: {

@@ -34,6 +34,7 @@ beforeAll(async () => {
   const { endpoint } = courier();
   registerSources({
     accounts: defineApi({
+      expose: true,
       name: "accounts",
       baseURL: upstream.url,
       session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },

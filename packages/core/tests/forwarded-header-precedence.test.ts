@@ -61,6 +61,7 @@ afterEach(async () => {
 
 function api(options: { headers?: HeadersInit; middleware?: Middleware[] } = {}) {
   return defineApi({
+    expose: true,
     name: "api",
     baseURL: upstreamURL,
     ...options,
@@ -135,6 +136,7 @@ describe("a header the API sets in its headers", () => {
     registerSources({
       api: api({ headers: new Headers({ Authorization: OWN.authorization }) }),
       pairs: defineApi({
+        expose: true,
         name: "pairs",
         baseURL: upstreamURL,
         headers: [["Referer", OWN.referer]],
@@ -179,6 +181,7 @@ describe("a header the server side sets on the call", () => {
   it("is the one sent when the session sends the user's token from its cookie", async () => {
     registerSources({
       session: defineApi({
+        expose: true,
         name: "session",
         baseURL: upstreamURL,
         session: { bearer: "access_token" },

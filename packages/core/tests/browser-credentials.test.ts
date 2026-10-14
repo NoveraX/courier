@@ -46,6 +46,7 @@ afterEach(async () => {
 
 function api(allowedHeaders?: string[], name = "api") {
   return defineApi({
+    expose: true,
     name,
     baseURL: upstreamURL,
     allowedHeaders,

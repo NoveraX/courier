@@ -15,6 +15,7 @@ const { endpoint } = courier();
 beforeEach(() => {
   registerSources({
     api: defineApi({
+      expose: true,
       baseURL: "https://upstream.example",
       endpoints: { save: endpoint.post("save").response<unknown>() },
     }),

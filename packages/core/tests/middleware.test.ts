@@ -41,6 +41,7 @@ afterEach(() => {
 
 function createApi(middleware?: Middleware[]) {
   return defineApi({
+    expose: true,
     baseURL: "https://api.test.com",
     middleware,
     groups: {

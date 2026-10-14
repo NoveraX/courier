@@ -34,7 +34,11 @@ beforeEach(async () => {
   });
   const { endpoint } = courier();
   registerSources({
-    api: defineApi({ baseURL: await listen(upstream), endpoints: { list: endpoint.get("list") } }),
+    api: defineApi({
+      expose: true,
+      baseURL: await listen(upstream),
+      endpoints: { list: endpoint.get("list") },
+    }),
   });
 
   const handler = createHandler({ allowedOrigins: [PAGE] });

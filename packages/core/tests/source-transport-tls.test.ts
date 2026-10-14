@@ -82,6 +82,7 @@ async function stop(served: Served): Promise<void> {
 beforeAll(async () => {
   registerSources({
     api: defineApi({
+      expose: true,
       name: "api",
       baseURL: "http://127.0.0.1:1",
       groups: {
@@ -111,6 +112,7 @@ function remote(
   transport: Pick<BaseOptions, "fetch" | "webSocket" | "dispatcher">,
 ) {
   return defineApi({
+    expose: true,
     name: "api",
     baseURL,
     ...transport,
@@ -229,6 +231,7 @@ import { defineGroup } from ${source("define/group.ts")};
 
 const { endpoint, stream, channel } = courier();
 const api = defineApi({
+  expose: true,
   name: "api",
   baseURL: ${JSON.stringify(baseURL)},
   groups: {

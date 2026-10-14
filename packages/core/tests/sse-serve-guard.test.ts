@@ -9,6 +9,7 @@ const EventSchema = z.object({ n: z.number() });
 const { stream } = courier();
 
 const api = defineApi({
+  expose: true,
   name: "api",
   baseURL: "https://example.com",
   groups: {

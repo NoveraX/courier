@@ -303,6 +303,7 @@ describe("the origin gate on a running server", () => {
     await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
     const { endpoint } = courier();
     const api = defineApi({
+      expose: true,
       baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
       endpoints: { save: endpoint.post("save") },
     });
@@ -343,6 +344,7 @@ describe("a running server's answer to a page on another origin", () => {
     await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
     const { endpoint } = courier();
     const api = defineApi({
+      expose: true,
       baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
       endpoints: { me: endpoint.get("me") },
     });
@@ -413,6 +415,7 @@ describe("a cross-origin answer", () => {
     await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
     const { endpoint } = courier();
     const api = defineApi({
+      expose: true,
       baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
       endpoints: { busy: endpoint.get("busy") },
     });

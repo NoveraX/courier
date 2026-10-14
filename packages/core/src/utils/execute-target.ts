@@ -80,7 +80,8 @@ export function resolveCallTarget(
   const dataSource = Object.hasOwn(sources, source) ? sources[source] : undefined;
 
   const methodPath = group ? `[${String(group)}][${method}]` : `[${method}]`;
-  const notFound = `[${source}]${methodPath}: method not found`;
+  const named = `[${source}]${methodPath}`;
+  const notFound = `${named}: method not found`;
 
   if (!dataSource) {
     const fromWire = context?.proxyMethod !== undefined;
@@ -108,7 +109,7 @@ export function resolveCallTarget(
       stream: options?.stream,
       proxyMethod: context.proxyMethod,
       sensitiveVariables: endpointOptions?.sensitiveVariables === true,
-      notFound,
+      endpoint: named,
     });
     if (refused) return refuse(refused.status, refused.message);
   }

@@ -43,6 +43,7 @@ afterEach(async () => {
 
 function api() {
   return defineApi({
+    expose: true,
     name: "bodies",
     baseURL: upstream.url,
     endpoints: {

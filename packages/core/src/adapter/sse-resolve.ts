@@ -4,6 +4,7 @@ import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables"
 import type { SchemaMetadata } from "../validation";
 import { ValidationError, validateSchema } from "../validation";
 import { isExposedToWire } from "./exposure";
+import { warnNotExposed } from "./not-exposed";
 import { errorResponse } from "./parse";
 
 /**
@@ -41,6 +42,7 @@ export function resolveSSEEndpoint(
 
   /* Same answer as an unknown name, for the same reason. */
   if (!isExposedToWire(dataSource, group, method, schema)) {
+    warnNotExposed(`[${source}][${group ?? ""}][${method}]`);
     return errorResponse(400, notFound);
   }
   if (schema?.transport !== "sse") {

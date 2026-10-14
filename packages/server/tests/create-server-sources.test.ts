@@ -36,7 +36,11 @@ afterEach(async () => {
 });
 
 function source(prefix: string) {
-  return defineApi({ baseURL: `${upstreamURL}/${prefix}`, endpoints: { ping: endpoint.get("") } });
+  return defineApi({
+    expose: true,
+    baseURL: `${upstreamURL}/${prefix}`,
+    endpoints: { ping: endpoint.get("") },
+  });
 }
 
 async function serve(sources: Sources): Promise<string> {
@@ -87,7 +91,9 @@ describe("a server's sources", () => {
       yield "hello";
       await new Promise(() => {});
     });
-    const url = await serve({ live: defineApi({ baseURL: upstreamURL, endpoints: { feed } }) });
+    const url = await serve({
+      live: defineApi({ expose: true, baseURL: upstreamURL, endpoints: { feed } }),
+    });
 
     registerSources({ host: source("host") });
 

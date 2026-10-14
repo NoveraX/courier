@@ -5,6 +5,7 @@ const { endpoint } = courier();
 
 /** The API the boundary gates, handed its boundary as the docs wire it. */
 export const shop = defineApi({
+  expose: true,
   name: "shop",
   baseURL: process.env.SHOP_API_URL,
   boundary: shopBoundary,

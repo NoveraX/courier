@@ -44,7 +44,9 @@ beforeEach(async () => {
   });
   const { endpoint } = courier();
   const files = defineGroup({ prefix: "files", endpoints: { upload: endpoint.post("") } });
-  registerSources({ api: defineApi({ baseURL: await listen(upstream), groups: { files } }) });
+  registerSources({
+    api: defineApi({ expose: true, baseURL: await listen(upstream), groups: { files } }),
+  });
 
   const handler = createHandler();
   app = createServer(async (req, res) => {

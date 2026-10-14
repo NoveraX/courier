@@ -146,7 +146,7 @@ describe("a channel's ctx.broadcast", () => {
 
 describe("a channel served in-process", () => {
   const sourcesOf = (room: unknown) => ({
-    api: { options: { groups: { chat: { options: {}, room } } } },
+    api: { options: { expose: true, groups: { chat: { options: {}, room } } } },
   });
 
   it("delivers what it sends and broadcasts as the response schema produces it", async () => {

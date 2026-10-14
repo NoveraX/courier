@@ -50,6 +50,7 @@ function register(allowedHeaders?: string[]): void {
   const { endpoint } = courier();
   registerSources({
     api: defineApi({
+      expose: true,
       baseURL: upstreamURL,
       allowedHeaders,
       endpoints: { ping: endpoint.post("ping") },

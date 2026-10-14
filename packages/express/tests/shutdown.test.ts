@@ -30,7 +30,7 @@ const forever = stream.response<number>().implement(async function* (ctx) {
 
 beforeEach(() => {
   registerSources({
-    api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }),
+    api: defineApi({ expose: true, baseURL: "https://upstream.example", endpoints: { forever } }),
   });
 });
 

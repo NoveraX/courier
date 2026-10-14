@@ -40,6 +40,7 @@ afterEach(async () => {
 
 function api() {
   return defineApi({
+    expose: true,
     name: "orders",
     baseURL: upstream.url,
     cancelPrevious: ["search", "find"],
@@ -61,6 +62,7 @@ describe("an API that names a write in cancelPrevious", () => {
   it.each([["create"], ["nowhere"]])("is refused where it is defined: %s", (path) => {
     const define = () =>
       defineApi({
+        expose: true,
         name: "orders",
         baseURL: upstream.url,
         cancelPrevious: [path],

@@ -26,6 +26,7 @@ let upstream: EchoServer;
 
 function api() {
   return defineApi({
+    expose: true,
     name: "people",
     baseURL: upstream.origin,
     endpoints: {
@@ -119,6 +120,7 @@ describe("a QUERY that fails on the server", () => {
 
   function flakyApi() {
     return defineApi({
+      expose: true,
       name: "flaky",
       baseURL: flaky.url,
       endpoints: {

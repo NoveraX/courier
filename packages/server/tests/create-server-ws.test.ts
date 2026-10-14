@@ -28,7 +28,7 @@ const feed = channel.response<string>().implement(async function* () {
 });
 
 async function serve(options: Partial<CourierServerOptions>): Promise<string> {
-  const live = defineApi({ baseURL: "http://127.0.0.1:1", endpoints: { feed } });
+  const live = defineApi({ expose: true, baseURL: "http://127.0.0.1:1", endpoints: { feed } });
   server = createCourierServer({
     sources: { live },
     port: 0,

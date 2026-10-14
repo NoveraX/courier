@@ -34,7 +34,13 @@ function srvxRequest(ip: string, forwardedFor: string): Request {
 
 async function sources() {
   upstream = await startUpstream(echo);
-  return { api: defineApi({ baseURL: upstream.url, endpoints: { ping: endpoint.post("ping") } }) };
+  return {
+    api: defineApi({
+      expose: true,
+      baseURL: upstream.url,
+      endpoints: { ping: endpoint.post("ping") },
+    }),
+  };
 }
 
 describe("the Nuxt proxy route on h3 2.x", () => {

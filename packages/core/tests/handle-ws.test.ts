@@ -92,6 +92,7 @@ function createWSSource(handler: unknown, transport: "ws" = "ws", receive?: unkn
   return {
     testSource: {
       options: {
+        expose: true,
         groups: {
           chat: {
             endpoints: { feed: fn },

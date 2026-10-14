@@ -172,7 +172,9 @@ describe("a streamed proxy answer opened as a page", () => {
     await new Promise<void>((resolve) => upstream?.listen(0, "127.0.0.1", resolve));
     const { endpoint } = courier();
     const baseURL = `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`;
-    registerSources({ api: defineApi({ baseURL, endpoints: { page: endpoint.get("page") } }) });
+    registerSources({
+      api: defineApi({ expose: true, baseURL, endpoints: { page: endpoint.get("page") } }),
+    });
 
     const options = encodeURIComponent(JSON.stringify({ stream: true }));
     return createHandler().handleGet(
@@ -242,7 +244,9 @@ describe("headers an endpoint names", () => {
           .headers(["x-total-count", "location", "link", "x-tenant", "content-type"]),
       },
     });
-    registerSources({ api: defineApi({ baseURL: await listen(upstream), groups: { users } }) });
+    registerSources({
+      api: defineApi({ expose: true, baseURL: await listen(upstream), groups: { users } }),
+    });
     const handler = createHandler();
     app = createServer(async (req, res) => {
       await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);

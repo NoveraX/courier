@@ -22,6 +22,7 @@ const Order = z.object({ id: z.number().int(), total: z.number() });
 
 function usersApi(baseURL: string) {
   return defineApi({
+    expose: true,
     baseURL,
     groups: {
       users: defineGroup({

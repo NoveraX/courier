@@ -28,6 +28,7 @@ const USERS: User[] = [
 
 function usersApi(baseURL: string) {
   return defineApi({
+    expose: true,
     baseURL,
     groups: {
       users: defineGroup({
@@ -161,6 +162,7 @@ describe("recording through a Courier proxy", () => {
 
   it("names a read that may be cached by the GET the proxy caller sends it as", async () => {
     const cached = defineApi({
+      expose: true,
       baseURL: "http://placeholder.invalid",
       groups: {
         users: defineGroup({

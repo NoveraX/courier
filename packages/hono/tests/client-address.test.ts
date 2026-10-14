@@ -24,7 +24,11 @@ afterEach(async () => {
 /* A call as `@hono/node-server` hands it over: the Node request, its socket's address with it. */
 async function call(remoteAddress: string, forwardedFor: string) {
   upstream = await startUpstream(echo);
-  const api = defineApi({ baseURL: upstream.url, endpoints: { ping: endpoint.post("ping") } });
+  const api = defineApi({
+    expose: true,
+    baseURL: upstream.url,
+    endpoints: { ping: endpoint.post("ping") },
+  });
   const app = new Hono();
   app.post("/api/request", courierHandler({ sources: { api } }));
 

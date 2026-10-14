@@ -109,7 +109,11 @@ describe("every HTTP entry point", () => {
     upstream = await startUpstream(echo);
     const { endpoint } = courier();
     registerSources({
-      api: defineApi({ baseURL: upstream.url, endpoints: { me: endpoint.get("me") } }),
+      api: defineApi({
+        expose: true,
+        baseURL: upstream.url,
+        endpoints: { me: endpoint.get("me") },
+      }),
     });
   });
 

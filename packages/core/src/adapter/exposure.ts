@@ -45,7 +45,7 @@ export function isExposedToWire(
 ): boolean {
   const options =
     isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
-  if (!options) return true;
+  if (!options) return false;
 
   /* A declared boundary is the whole answer: it lists what may be called, so
      anything it does not name is refused however the marks read. */
@@ -63,7 +63,7 @@ export function isExposedToWire(
     if (groupExpose !== undefined) return groupExpose;
   }
 
-  return exposeFlag(options.expose) ?? true;
+  return exposeFlag(options.expose) ?? false;
 }
 
 /* A flag set to anything but `true` shuts off what it is set on, so one

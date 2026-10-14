@@ -33,6 +33,7 @@ beforeEach(() => {
   const users = defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } });
   registerSources({
     api: defineApi({
+      expose: true,
       baseURL: "https://upstream.example",
       groups: { users },
       endpoints: { ticks },

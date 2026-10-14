@@ -19,6 +19,7 @@ const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
 
 const api = defineApi({
+  expose: true,
   baseURL: UPSTREAM,
   allowedHeaders: ["x-trace"],
   endpoints: { list: endpoint.get("list").response<unknown>() },

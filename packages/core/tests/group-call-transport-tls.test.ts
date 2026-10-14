@@ -44,6 +44,7 @@ const agents: Agent[] = [];
 beforeAll(async () => {
   registerSources({
     api: defineApi({
+      expose: true,
       name: "api",
       baseURL: "http://127.0.0.1:1",
       groups: {
@@ -115,6 +116,7 @@ function encrypted(issued: IssuedCertificate): { cert: string; key: string; pass
 /* The bank's API: trusted by every group, a client certificate presented by `settlement` alone. */
 function bank(settlement: SourceDispatcher) {
   return defineApi({
+    expose: true,
     name: "api",
     baseURL,
     dispatcher: agentWith(),

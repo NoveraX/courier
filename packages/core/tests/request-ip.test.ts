@@ -58,6 +58,7 @@ afterEach(async () => {
 
 function api(forward: ForwardOptions = {}) {
   return defineApi({
+    expose: true,
     name: "api",
     baseURL: upstreamURL,
     forward,

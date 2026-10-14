@@ -44,7 +44,7 @@ function createSocket(): Socket {
 
 function serve(feed: unknown): Socket {
   registerSources({
-    api: { options: { groups: { live: { options: {}, feed } } } },
+    api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
   } as unknown as Sources);
   const socket = createSocket();
   createWSHandler().handleSocket(socket, new Request("http://localhost/api/ws"));

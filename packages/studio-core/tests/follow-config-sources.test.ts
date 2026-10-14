@@ -23,8 +23,9 @@ const { endpoint } = courier();
 const base = process.env.UPSTREAM ?? "http://127.0.0.1:9";
 const users = defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } });
 const faults = defineGroup({ prefix: "faults", endpoints: { ping: endpoint.get("ping") } });
-export const api = defineApi({ baseURL: base, groups: { users, faults } });
+export const api = defineApi({ expose: true, baseURL: base, groups: { users, faults } });
 export const dead = defineApi({
+  expose: true,
   baseURL: base,
   groups: { down: defineGroup({ prefix: "down", endpoints: { ping: endpoint.get("x") } }) },
 });
@@ -34,8 +35,8 @@ const NAMED = `
 import { courier, defineApi } from "@noverax/courier/define";
 const { endpoint } = courier();
 const base = process.env.UPSTREAM ?? "http://127.0.0.1:9";
-export const bin = defineApi({ name: "bin", baseURL: base, endpoints: { a: endpoint.get("a") } });
-export const txt = defineApi({ name: "txt", baseURL: base, endpoints: { b: endpoint.get("b") } });
+export const bin = defineApi({ expose: true, name: "bin", baseURL: base, endpoints: { a: endpoint.get("a") } });
+export const txt = defineApi({ expose: true, name: "txt", baseURL: base, endpoints: { b: endpoint.get("b") } });
 `;
 
 const CONFIG = `
@@ -133,6 +134,7 @@ describe("sources an attached server defines after attaching", () => {
       out.before = await call("api", "users", "list");
       const settled = registered();
       defineApi({
+        expose: true,
         baseURL: process.env.UPSTREAM,
         groups: { faults: defineGroup({ prefix: "faults", endpoints: { other: endpoint.get("o") } }) },
       });
@@ -147,6 +149,7 @@ describe("sources an attached server defines after attaching", () => {
     const result = runScenario(`
       const settled = registered();
       defineApi({
+        expose: true,
         name: "dd",
         baseURL: process.env.UPSTREAM,
         groups: { faults: defineGroup({ prefix: "faults", endpoints: { slow: endpoint.get("s") } }) },
@@ -163,6 +166,7 @@ describe("sources an attached server defines after attaching", () => {
     const result = runScenario(`
       const settled = registered();
       defineApi({
+        expose: true,
         baseURL: "http://127.0.0.1:" + new URL(process.env.UPSTREAM).port,
         groups: { internal: defineGroup({ prefix: "users", endpoints: { all: endpoint.get("") } }) },
       });

@@ -32,6 +32,7 @@ interface Client {
 
 function api() {
   return defineApi({
+    expose: true,
     baseURL,
     endpoints: {
       slow: endpoint.get("slow").response<unknown>(),

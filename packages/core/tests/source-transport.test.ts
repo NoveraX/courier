@@ -61,6 +61,7 @@ describe("a source's fetch", () => {
   it("sends its calls, with the request options it gives and none of Courier's own", async () => {
     const { sent, send } = recording(() => Response.json({ id: "p_1" }));
     const shop = defineApi({
+      expose: true,
       name: "shop",
       baseURL: "https://shop.example",
       fetch: send,
@@ -123,6 +124,7 @@ describe("a source's fetch", () => {
         }),
     );
     const feed = defineApi({
+      expose: true,
       name: "feed",
       baseURL: "https://feed.example",
       fetch: send,
@@ -147,6 +149,7 @@ describe("a source's transport that cannot be used", () => {
     (option) => {
       const define = () =>
         defineApi({
+          expose: true,
           name: "shop",
           baseURL: "https://shop.example",
           [option]: "undici",
@@ -164,6 +167,7 @@ describe("a source's transport that cannot be used", () => {
 
   it("fails a call whose fetch answers with something other than a Response, saying so", async () => {
     const shop = defineApi({
+      expose: true,
       name: "shop",
       baseURL: "https://shop.example",
       fetch: async () => ({ id: "p_1" }),
@@ -184,6 +188,7 @@ describe("a source's WebSocket", () => {
   async function serveRoom(): Promise<string> {
     registerSources({
       api: defineApi({
+        expose: true,
         name: "api",
         baseURL: "http://127.0.0.1:1",
         groups: {
@@ -221,6 +226,7 @@ describe("a source's WebSocket", () => {
       }
     }
     const remote = defineApi({
+      expose: true,
       name: "api",
       baseURL: `http://${host}`,
       webSocket: RecordingWebSocket,

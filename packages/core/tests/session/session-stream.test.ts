@@ -37,6 +37,7 @@ describe("a relayed stream of an API that keeps a session", () => {
       }),
     );
     const api = defineApi({
+      expose: true,
       name: "feed",
       baseURL: upstream,
       session: { cookies: ["sid"] },

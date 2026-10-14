@@ -32,7 +32,11 @@ const events: Array<{
 beforeEach(async () => {
   upstream = await startUpstream(echo);
   registerSources({
-    api: defineApi({ baseURL: upstream.url, endpoints: { upload: endpoint.post("upload") } }),
+    api: defineApi({
+      expose: true,
+      baseURL: upstream.url,
+      endpoints: { upload: endpoint.post("upload") },
+    }),
   });
   const handler = createHandler({ maxUploadBytes: 1024 });
   server = createServer(async (req, res) => {

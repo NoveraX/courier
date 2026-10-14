@@ -66,9 +66,10 @@ afterEach(() => {
 });
 
 describe("isExposedToWire", () => {
-  it("treats a source that says nothing as exposed, so nothing existing breaks", () => {
-    expect(isExposedToWire({ options: {} }, undefined)).toBe(true);
-    expect(isExposedToWire(undefined, undefined)).toBe(true);
+  it("keeps from a page what nothing marks for it, and anything that is not a source", () => {
+    expect(isExposedToWire({ options: {} }, undefined)).toBe(false);
+    expect(isExposedToWire({ options: {} }, "admin", "purge")).toBe(false);
+    expect(isExposedToWire(undefined, undefined)).toBe(false);
   });
 
   it("honours the source's own answer", () => {
@@ -145,7 +146,7 @@ describe("the proxy refuses what was not exposed", () => {
   });
 
   it("closes a single group while the rest of the source stays open", async () => {
-    const api = apiWith({ adminGroup: false });
+    const api = apiWith({ source: true, adminGroup: false });
 
     expect((await fromBrowser(api, "posts", "list")).status).toBe(200);
     fetchSpy.mockClear();
@@ -153,10 +154,12 @@ describe("the proxy refuses what was not exposed", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("leaves a source that configured nothing reachable", async () => {
-    const { status } = await fromBrowser(apiWith({}), "admin", "exportPayouts");
+  it("refuses every endpoint of a source that marks nothing, as an unknown name", async () => {
+    const { status, body } = await fromBrowser(apiWith({}), "posts", "list");
 
-    expect(status).toBe(200);
+    expect(status).toBe(400);
+    expect(body).toContain("method not found");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

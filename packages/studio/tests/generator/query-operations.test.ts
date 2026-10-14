@@ -9,6 +9,7 @@
 import { createProxyCaller } from "@noverax/courier";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
@@ -99,8 +100,12 @@ afterAll(async () => {
   removeProjects("query-operations");
 });
 
-function generate() {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api" }, "shop");
+function generate(generateClient: GenerateOptions["generateClient"] = "direct") {
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", generateClient },
+    "shop",
+  );
 }
 
 function sent(): string[] {
@@ -166,7 +171,7 @@ describe("a generated QUERY through the proxy", () => {
   let proxy: ProxyServer;
 
   beforeAll(async () => {
-    proxy = await startProxyServer(loadGenerated(generate(), "src/api/shop/source.ts"));
+    proxy = await startProxyServer(loadGenerated(generate("both"), "src/api/shop/source.ts"));
   });
 
   afterAll(async () => {

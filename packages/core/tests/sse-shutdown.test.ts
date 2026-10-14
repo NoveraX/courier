@@ -29,7 +29,9 @@ function serveTrackedFeed(resumedFrom: (string | undefined)[]): void {
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
     });
-  registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as never);
+  registerSources({
+    api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
+  } as never);
 }
 
 describe("a stream open while its server shuts down", () => {

@@ -44,7 +44,7 @@ async function sourcesFor(): Promise<Sources> {
       }),
     },
   });
-  return { api: defineApi({ baseURL: upstream.url, groups: { users, live } }) };
+  return { api: defineApi({ expose: true, baseURL: upstream.url, groups: { users, live } }) };
 }
 
 /* Each event of a server-sent event stream, as its name and its data. */

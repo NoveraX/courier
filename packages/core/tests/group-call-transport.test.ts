@@ -56,6 +56,7 @@ function recording() {
 /* An API that sends with `send` through `apiAgent`, and its groups. */
 function payments(send: PlatformFetch, groupFetch?: PlatformFetch) {
   return defineApi({
+    expose: true,
     name: "payments",
     baseURL: "https://bank.example/v1",
     fetch: send,
@@ -191,6 +192,7 @@ describe("a call's transport", () => {
 describe("a call's transport through the proxy", () => {
   it("is refused on a stream and on a channel before either opens", () => {
     const live = defineApi({
+      expose: true,
       name: "live",
       baseURL: "https://bank.example",
       endpoints: {
@@ -226,6 +228,7 @@ describe("a transport that cannot send", () => {
   it("is refused where a source is defined, a dispatcher with no dispatch method", () => {
     const define = () =>
       defineApi({
+        expose: true,
         name: "bank",
         baseURL: "https://bank.example",
         dispatcher: "agent",
@@ -268,6 +271,7 @@ describe("a group's sockets", () => {
         .response<string>()
         .implement(() => ({ onMessage: () => undefined }));
     const served = defineApi({
+      expose: true,
       name: "api",
       groups: {
         desk: defineGroup({ prefix: "desk", endpoints: { room: room() } }),
@@ -302,6 +306,7 @@ describe("a group's sockets", () => {
       };
     const room = () => channel.send<string>().response<string>().connect("room");
     const api = defineApi({
+      expose: true,
       name: "api",
       baseURL,
       webSocket: socketClass("api"),
@@ -345,6 +350,7 @@ describe("a group's sockets", () => {
     }
     const room = () => channel.send<string>().response<string>().connect("room");
     const api = defineApi({
+      expose: true,
       name: "api",
       baseURL: upstream,
       groups: {

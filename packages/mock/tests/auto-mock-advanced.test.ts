@@ -9,6 +9,7 @@ const { endpoint } = courier();
 const ItemSchema = z.object({ id: z.string(), name: z.string(), price: z.number() });
 
 const api = defineApi({
+  expose: true,
   baseURL: "https://test.api",
   groups: {
     items: defineGroup({

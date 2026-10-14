@@ -49,7 +49,11 @@ async function call(method: string, options?: Record<string, unknown>) {
 describe("a source that names neither", () => {
   beforeEach(() => {
     registerSources({
-      api: defineApi({ baseURL: upstream.url, endpoints: { me: endpoint.get("me") } }),
+      api: defineApi({
+        expose: true,
+        baseURL: upstream.url,
+        endpoints: { me: endpoint.get("me") },
+      }),
     });
   });
 
@@ -76,6 +80,7 @@ describe("a source that names both", () => {
   beforeEach(() => {
     registerSources({
       api: defineApi({
+        expose: true,
         baseURL: upstream.url,
         allowedHeaders: ["cookie", "set-cookie"],
         endpoints: { me: endpoint.get("me") },
@@ -101,6 +106,7 @@ describe("endpoints that name one direction each", () => {
   beforeEach(() => {
     registerSources({
       api: defineApi({
+        expose: true,
         baseURL: upstream.url,
         endpoints: {
           login: endpoint.get("login").headers(["set-cookie"]),
@@ -129,7 +135,11 @@ describe("a base the endpoints extend", () => {
   it("names them for every endpoint built from it", async () => {
     const session = courier().extend({ allowedHeaders: ["cookie", "set-cookie"] });
     registerSources({
-      api: defineApi({ baseURL: upstream.url, endpoints: { me: session.endpoint.get("me") } }),
+      api: defineApi({
+        expose: true,
+        baseURL: upstream.url,
+        endpoints: { me: session.endpoint.get("me") },
+      }),
     });
 
     const { received, setCookie } = await call("me");
@@ -151,6 +161,7 @@ describe("an error answer", () => {
     });
     registerSources({
       api: defineApi({
+        expose: true,
         baseURL: upstream.url,
         endpoints: {
           named: endpoint.get("named").headers(["set-cookie"]),

@@ -22,6 +22,7 @@ const Tag = z.object({ slug: z.string(), label: z.string() });
 
 function shopApi(baseURL: string) {
   return defineApi({
+    expose: true,
     baseURL,
     groups: {
       pets: defineGroup({

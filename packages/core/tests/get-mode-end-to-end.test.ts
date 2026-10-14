@@ -18,6 +18,7 @@ const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
 
 const api = defineApi({
+  expose: true,
   baseURL: UPSTREAM,
   groups: {
     items: defineGroup({

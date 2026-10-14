@@ -21,6 +21,7 @@ let upstream: EchoServer;
 
 function api() {
   return defineApi({
+    expose: true,
     name: "things",
     baseURL: upstream.origin,
     endpoints: {

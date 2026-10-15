@@ -52,6 +52,7 @@ export type {
   RequestShapeEvent,
   RequestStartEvent,
   RequestTiming,
+  SharedAnswer,
   SourceMap,
   StudioEvent,
   UploadCompleteEvent,

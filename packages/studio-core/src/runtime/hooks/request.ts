@@ -7,8 +7,14 @@ import type {
   RequestErrorEvent,
   RequestShapeEvent,
   RequestStartEvent,
+  SharedAnswer,
 } from "../../events";
 import { answerShapeOf } from "../answer-shape";
+
+/* How a call's read was shared, as the event carries it: the call that answered named only when known. */
+function sharedOf(shared: { by: SharedAnswer["by"]; with?: string | undefined }): SharedAnswer {
+  return { by: shared.by, ...(shared.with !== undefined && { with: shared.with }) };
+}
 
 /** Create an event with session envelope */
 const createEvent = <TEvent extends AnyStudioEvent>(
@@ -69,6 +75,7 @@ export function wireRequestHooks(
         requestHeaders: e.requestHeaders,
         timing: e.timing,
         ...(e.proxyTiming && { proxyTiming: e.proxyTiming }),
+        ...(e.shared && { shared: sharedOf(e.shared) }),
       }),
     );
   };
@@ -95,6 +102,7 @@ export function wireRequestHooks(
         ...(e.size !== undefined && { size: e.size }),
         ...(e.timing && { timing: e.timing }),
         ...(e.proxyTiming && { proxyTiming: e.proxyTiming }),
+        ...(e.shared && { shared: sharedOf(e.shared) }),
       }),
     );
   };

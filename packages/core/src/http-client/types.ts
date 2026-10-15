@@ -3,6 +3,7 @@ import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { IncomingRequest } from "../session/incoming-request";
 import type { ForwardOptions, SessionOptions } from "../session/types";
+import type { SharingCall } from "../utils/shared-answer";
 import type { TransportOptions } from "./transport-options";
 import type { WebBody } from "./web-types";
 
@@ -17,6 +18,8 @@ export type HttpMethods = {
 export type BoundMethodOptions = SimpleOptions & {
   variables?: unknown;
   stream?: boolean;
+  /** The call the requests are made for, as Studio measures it: told when a read is shared */
+  call?: SharingCall | undefined;
 };
 
 export type UploadProgress = {

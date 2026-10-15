@@ -7,6 +7,7 @@ import type { SchemaMetadata } from "../validation";
 import type { TimingState } from "./execute-studio";
 import { validateResponse } from "./execute-validation";
 import { isHeaders } from "./helpers";
+import type { SharingCall } from "./shared-answer";
 
 export type InnerExecuteDeps = {
   endpoint: (...args: unknown[]) => Promise<{ status?: number; data: unknown; headers?: unknown }>;
@@ -46,6 +47,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
           ...deps.baseOptions,
           headers: deps.middlewareHeaders,
           stream: deps.stream,
+          ...(deps.hasStudio && { call: sharingCall(deps) }),
         },
         deps.endpointGroupOptions,
       ),
@@ -94,6 +96,16 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
   return {
     response: { status, data, headers },
     tRespValidation,
+  };
+}
+
+/* The call as the requests it shares know it: its Studio id, and where it notes whose request answered it. */
+function sharingCall(deps: InnerExecuteDeps): SharingCall {
+  return {
+    id: deps.requestId,
+    onShared: (answer) => {
+      deps.timing.shared = answer;
+    },
   };
 }
 

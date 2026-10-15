@@ -8,6 +8,8 @@ export interface KeptAnswer {
   readonly body: ArrayBuffer;
   readonly url: string;
   readonly redirected: boolean;
+  /** The call whose request it answered, as Studio knows it */
+  readonly by?: string | undefined;
 }
 
 const log = createLogger("Caller");
@@ -19,13 +21,17 @@ const NULL_BODY: ReadonlySet<number> = new Set([101, 103, 204, 205, 304]);
  * Read a copy of an answer whole, to keep it.
  *
  * @param copy - A copy of the answer, which nothing else reads
+ * @param by - The call whose request it answered, as Studio knows it
  * @returns The answer kept, or `undefined` when its body did not arrive whole
  * @example
  * ```ts
- * const kept = await keepAnswer(response.clone());
+ * const kept = await keepAnswer(response.clone(), "req_1");
  * ```
  */
-export async function keepAnswer(copy: Response): Promise<KeptAnswer | undefined> {
+export async function keepAnswer(
+  copy: Response,
+  by?: string | undefined,
+): Promise<KeptAnswer | undefined> {
   try {
     return {
       body: await copy.arrayBuffer(),
@@ -34,6 +40,7 @@ export async function keepAnswer(copy: Response): Promise<KeptAnswer | undefined
       headers: [...copy.headers],
       url: copy.url,
       redirected: copy.redirected,
+      by,
     };
   } catch (error) {
     log.debug("A read's answer is not kept for the render: its body did not arrive whole", error);

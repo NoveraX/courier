@@ -49,6 +49,7 @@ export type {
   RequestAgent,
   RequestEndEvent,
   RequestErrorEvent,
+  RequestFailureCause,
   RequestShapeEvent,
   RequestStartEvent,
   RequestTiming,

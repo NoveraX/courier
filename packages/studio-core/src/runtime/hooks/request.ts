@@ -1,4 +1,4 @@
-import { carriedBody, type KeptBodies, studioHooks } from "@noverax/courier/internal";
+import { carriedBody, type KeptBodies, shownCause, studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -82,6 +82,7 @@ export function wireRequestHooks(
 
   studioHooks.onRequestError = (e) => {
     const answered = e.data === undefined ? undefined : carriedBody(e.data);
+    const cause = shownCause(e.error.cause);
     if (answered) bodies.keep(e.id, "response", answered);
     bus.emit(
       createEvent<RequestErrorEvent>(sessionId, {
@@ -93,6 +94,7 @@ export function wireRequestHooks(
           type: e.error.type,
           message: e.error.message,
           ...(e.error.status !== undefined && { status: e.error.status }),
+          ...(cause && { cause }),
         },
         ...(e.status !== undefined && { status: e.status }),
         ...(e.headers && { headers: e.headers }),

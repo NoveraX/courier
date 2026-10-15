@@ -94,6 +94,16 @@ export interface RequestTiming {
   validation: number;
 }
 
+/**
+ * Why a request got no answer: the system's error code, when it gave one,
+ * and its text, with every URL in it cut to its origin and path.
+ */
+export interface RequestFailureCause {
+  /** `ENOTFOUND`, `ECONNREFUSED`, `DEPTH_ZERO_SELF_SIGNED_CERT` — absent where the platform gives none, as a browser's fetch. */
+  code?: string;
+  message: string;
+}
+
 export interface RequestErrorEvent extends StudioEvent {
   type: "request:error";
   requestId: string;
@@ -102,6 +112,8 @@ export interface RequestErrorEvent extends StudioEvent {
     /** The upstream's status, when it answered. */
     status?: number;
     message: string;
+    /** Why no answer came, as the system said it — a DNS, connection or certificate failure. */
+    cause?: RequestFailureCause;
   };
   /** The status the caller received, when it received one — a proxy's own 422 or 502. */
   status?: number;

@@ -1,6 +1,7 @@
 import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
 import { httpVersionOf } from "@/store/http-version";
 import { readAgent } from "@/store/read-agent";
+import { readShared } from "@/store/read-shared";
 import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
 const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
@@ -87,6 +88,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     status: isStatus(raw.status) ? raw.status : "success",
     statusCode: optNum(raw.statusCode),
     timing: timingOf(raw.timing),
+    shared: readShared(raw.shared),
     size: optNum(raw.size),
     data: raw.data,
     dataCutFrom: optNum(raw.dataCutFrom),

@@ -1,4 +1,5 @@
 import { isPlainObject } from "../is-plain-object";
+import { sharedOf } from "../saved-shared";
 import { withoutCredentials } from "../storage/without-credentials";
 import { withoutSecrets } from "./without-secrets";
 
@@ -17,6 +18,8 @@ export interface RequestSummary {
   readonly durationMs?: number | undefined;
   readonly startedAt: number;
   readonly error?: string | undefined;
+  /** How its read was answered by another call's request, when it sent none of its own. */
+  readonly shared?: { by: "flight" | "render"; with?: string } | undefined;
 }
 
 /** The events Studio kept of one request, sorted by what they are. */
@@ -85,6 +88,7 @@ export function summaryOf(id: string, gathered: Gathered): RequestSummary {
     durationMs: numberOf(timing?.total),
     startedAt: numberOf(start.timestamp) ?? 0,
     error: typeof failure?.message === "string" ? failure.message : undefined,
+    shared: sharedOf(end?.shared ?? error?.shared),
   };
 }
 

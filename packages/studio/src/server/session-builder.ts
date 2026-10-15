@@ -3,6 +3,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { sharedOf } from "./saved-shared";
 import type { SavedRequest, SavedSession, SavedSessionApp, SessionStats } from "./session-types";
 import { headersWithoutCredentials } from "./storage/without-credentials";
 import { isObject } from "./validate-body";
@@ -70,6 +71,7 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     callerRuntimeId: optionalString(raw.callerRuntimeId),
     agent: agentOf(raw.agent),
     idempotencyKey: optionalString(raw.idempotencyKey),
+    shared: sharedOf(raw.shared),
   };
 }
 

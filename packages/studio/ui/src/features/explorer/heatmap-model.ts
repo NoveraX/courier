@@ -34,8 +34,9 @@ function cellValue(calls: readonly RequestEntry[], metric: ColorMetric): number 
     return (done.filter((r) => isFailedState(requestStateOf(r))).length / done.length) * 100;
   if (metric === "traffic") return done.length;
   const http = done.filter((r) => !isStreamRequest(r) && requestStateOf(r) !== "aborted");
+  /* The API's time is the requests': a read another call's request answered only waited for it. */
   const values = http
-    .map((r) => (metric === "size" ? r.size : r.timing?.total))
+    .map((r) => (metric === "size" ? r.size : r.shared === undefined ? r.timing?.total : undefined))
     .filter((v): v is number => v !== undefined);
   if (!values.length) return null;
   return metric === "size"

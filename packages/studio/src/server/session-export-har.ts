@@ -113,7 +113,8 @@ export function exportAsHar(session: SavedSession): { log: HarLog } {
     log: {
       version: "1.2",
       creator: { name: "Courier Studio", version: "1.0.0" },
-      entries: session.requests.map(requestToHarEntry),
+      /* A HAR is a log of what went over the network: a read answered by another call's request sent nothing. */
+      entries: session.requests.filter((req) => req.shared === undefined).map(requestToHarEntry),
     },
   };
 }

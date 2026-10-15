@@ -1,4 +1,5 @@
 import type { RequestEntry } from "@/store/types-request";
+import { sharedReads } from "./shared-reads";
 import type { AuditCategory, AuditItem } from "./types";
 
 /** A check the audit runs, as it reads once it found nothing. */
@@ -11,6 +12,8 @@ interface Check {
   description: string;
   /** Whether the requests give it anything to check; any request does when absent. */
   applies?: (requests: readonly RequestEntry[]) => boolean;
+  /** What the session adds to the description, when it adds anything. */
+  more?: (requests: readonly RequestEntry[]) => string | undefined;
 }
 
 const mutations = (requests: readonly RequestEntry[]) =>
@@ -39,6 +42,7 @@ const CHECKS: readonly Check[] = [
     finds: ["warn-duplicate-"],
     title: "No duplicate requests",
     description: "No call was sent again with the same input right after the first.",
+    more: sharedReads,
   },
   {
     id: "pass-latency",
@@ -150,12 +154,15 @@ export function passedChecks(
   const failed = (check: Check) =>
     found.some((item) => check.finds.some((prefix) => item.id.startsWith(prefix)));
   return CHECKS.filter((check) => (check.applies?.(requests) ?? true) && !failed(check)).map(
-    ({ id, category, title, description }) => ({
-      id,
-      severity: "pass",
-      category,
-      title,
-      description,
-    }),
+    ({ id, category, title, description, more }) => {
+      const added = more?.(requests);
+      return {
+        id,
+        severity: "pass",
+        category,
+        title,
+        description: added === undefined ? description : `${description} ${added}`,
+      };
+    },
   );
 }

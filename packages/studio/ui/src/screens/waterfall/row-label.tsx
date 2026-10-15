@@ -2,6 +2,7 @@ import { methodText } from "@/design/method-color";
 import { TONE_TEXT } from "@/design/tone";
 import { endpointParts } from "@/features/requests/request-parts";
 import { cn } from "@/lib/utils";
+import { SharedChip } from "@/screens/timeline/shared-chip";
 import type { RequestEntry } from "@/store/types";
 
 export interface RowLabelProps {
@@ -71,6 +72,7 @@ export function RowLabel(props: RowLabelProps): React.ReactNode {
         <span className="text-fg-subtle">{prefix}</span>
         <span className="text-fg">{name}</span>
       </span>
+      {request.shared && <SharedChip shared={request.shared} />}
       <span className={cn("shrink-0 tabular-nums", durationClass)}>{duration}</span>
     </span>
   );

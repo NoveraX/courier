@@ -28,7 +28,7 @@ const RATE_WINDOW_MS = 10_000;
  */
 export function captureMetrics(requests: readonly RequestEntry[], now: number): CaptureMetrics {
   const durations = requests
-    .flatMap((r) => (r.timing ? [r.timing.total] : []))
+    .flatMap((r) => (r.timing && r.shared === undefined ? [r.timing.total] : []))
     .sort((a, b) => a - b);
   const recent = requests.filter((r) => now - r.startedAt < RATE_WINDOW_MS).length;
   const errors = requests.filter((r) => r.status === "error").length;

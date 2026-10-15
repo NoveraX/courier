@@ -8,6 +8,9 @@ export const ACTIVE_MS = 6_000;
 /** What an endpoint's calls add up to. */
 export interface EndpointMetrics {
   calls: number;
+  /** The finished calls whose read another call's request answered, with no request of their own. */
+  shared: number;
+  /** Of the calls that sent a request of their own: the API's time, not a shared read's wait. */
   p50: number | null;
   p95: number | null;
   /** The share of calls that failed, 0–100. */
@@ -35,9 +38,10 @@ export const LEVEL_META: Readonly<Record<HealthLevel, { label: string; tone: Lev
 
 /**
  * What a set of calls adds up to: how many finished — a stream counts once
- * it opens — their median and p95 durations, the share that failed, how
- * many a minute since the session began, their average size, the last
- * call, and whether it is active now.
+ * it opens — and how many of them another call's request answered, the
+ * median and p95 durations of the ones that sent a request of their own,
+ * the share that failed, how many a minute since the session began, their
+ * average size, the last call, and whether it is active now.
  *
  * @param requests - The calls
  * @param now - The time now
@@ -55,7 +59,8 @@ export function metricsOf(
 ): EndpointMetrics {
   const done = requests.filter((r) => isStreamRequest(r) || requestStateOf(r) !== "pending");
   const http = done.filter((r) => !isStreamRequest(r) && requestStateOf(r) !== "aborted");
-  const durations = http.flatMap((r) => (r.timing ? [r.timing.total] : []));
+  const own = http.filter((r) => r.shared === undefined);
+  const durations = own.flatMap((r) => (r.timing ? [r.timing.total] : []));
   const errors = done.filter((r) => isFailedState(requestStateOf(r))).length;
   const sized = http.filter((r) => r.size !== undefined);
   const last = requests.reduce<number | undefined>(
@@ -64,6 +69,7 @@ export function metricsOf(
   );
   return {
     calls: done.length,
+    shared: done.length - done.filter((r) => r.shared === undefined).length,
     p50: percentile(durations, 0.5),
     p95: percentile(durations, 0.95),
     errorRate: done.length ? (errors / done.length) * 100 : 0,

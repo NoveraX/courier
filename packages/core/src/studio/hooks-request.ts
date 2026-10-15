@@ -1,3 +1,5 @@
+import type { SharedAnswer } from "../utils/shared-answer";
+
 /**
  * How a request failed: an upstream's error answer, a refused schema, a
  * request that got no answer, one that ran out of time, one its caller
@@ -68,6 +70,8 @@ export interface RequestLifecycleHooks {
               proxyToClient: number;
             }
           | undefined;
+        /** How the call's read was answered by another call's request, when it was */
+        shared?: SharedAnswer | undefined;
         timestamp: number;
       }) => void)
     | undefined;
@@ -113,6 +117,8 @@ export interface RequestLifecycleHooks {
           backendToProxy: number;
           proxyToClient: number;
         };
+        /** How the call's read was answered by another call's request, when it was */
+        shared?: SharedAnswer | undefined;
         timestamp: number;
       }) => void)
     | undefined;

@@ -1,9 +1,12 @@
 import { abortReason } from "./abort-reason";
+import type { SharingCall } from "./shared-answer";
 
 /** One request in flight, and the calls waiting for its answer. */
 interface Flight {
   readonly waiters: Set<Waiter>;
   readonly controller: AbortController;
+  /** The call that sent the request, as Studio knows it */
+  readonly leader: string | undefined;
 }
 
 interface Waiter {
@@ -22,11 +25,13 @@ const flights = new Map<string, Flight>();
  * reads alone — while one request reaches the server. A call that stops
  * waiting leaves without the others noticing; the request is cancelled when
  * the last one leaves. A request is joined until its answer arrives, never
- * after: a later call sends its own.
+ * after: a later call sends its own. A call that joins is told whose
+ * request answers it.
  *
  * @param key - What the request sends, written out; requests with one key are identical
  * @param signal - Fires when this call stops waiting
  * @param send - Sends the request, cancelled through the signal it is given, if any
+ * @param call - The call, as Studio knows it, and what it is told when it joins
  * @returns This call's answer
  * @example
  * ```ts
@@ -37,9 +42,12 @@ export function shareFlight(
   key: string,
   signal: AbortSignal | undefined,
   send: (signal: AbortSignal | undefined) => Promise<Response>,
+  call?: SharingCall,
 ): Promise<Response> {
   if (signal?.aborted) return Promise.reject(abortReason(signal));
-  const flight = flights.get(key) ?? takeOff(key, send, signal !== undefined);
+  const joined = flights.get(key);
+  if (joined !== undefined) call?.onShared?.({ by: "flight", with: joined.leader });
+  const flight = joined ?? takeOff(key, send, signal !== undefined, call?.id);
   return new Promise<Response>((resolve, reject) => {
     const waiter: Waiter = { resolve, reject, signal, settled: false };
     flight.waiters.add(waiter);
@@ -52,8 +60,9 @@ function takeOff(
   key: string,
   send: (signal: AbortSignal | undefined) => Promise<Response>,
   cancellable: boolean,
+  leader: string | undefined,
 ): Flight {
-  const flight: Flight = { waiters: new Set(), controller: new AbortController() };
+  const flight: Flight = { waiters: new Set(), controller: new AbortController(), leader };
   flights.set(key, flight);
   send(cancellable ? flight.controller.signal : undefined).then(
     (response) => land(key, flight, response),

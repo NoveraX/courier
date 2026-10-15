@@ -5,12 +5,15 @@ import { generateRequestId, type StudioHooks, studioHooks } from "../studio";
 import { describeFormData } from "../studio/describe-form-data";
 import type { SchemaMetadata } from "../validation";
 import { estimateResponseSize, headersToObject, isFormData, normalizeHttpMethod } from "./helpers";
+import type { SharedAnswer } from "./shared-answer";
 
 export type TimingState = {
   t0: number;
   tVarValidation: number;
   tRespValidation: number;
   tFetch: number;
+  /** How the call's read was answered by another call's request, when it was */
+  shared?: SharedAnswer | undefined;
 };
 
 export type StudioContext = {
@@ -178,6 +181,7 @@ export function emitRequestEnd(
       validation: tValidation,
     },
     proxyTiming,
+    ...(timing.shared && { shared: timing.shared }),
     timestamp: Date.now(),
   });
 }

@@ -93,6 +93,7 @@ export function reportRequestError(
     ...(timing &&
       total !== undefined && { timing: timingOf(timing, total, report.middlewareCount ?? 0) }),
     ...(proxyTiming && { proxyTiming }),
+    ...(timing?.shared && { shared: timing.shared }),
     timestamp: Date.now(),
   });
 }

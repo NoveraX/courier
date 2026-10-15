@@ -1,12 +1,11 @@
-import { Braces, Check, CircleAlert, Lightbulb, Minus, TriangleAlert, X } from "lucide-react";
+import { Check, CircleAlert, Lightbulb, Minus, TriangleAlert, X } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
-import { valueAtPath } from "@/features/requests/json-tree";
 import type { FailureStage, FailureView } from "@/features/requests/request-failure";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
-import type { ValidationIssue } from "@/store/types-events";
+import { FailureIssue } from "./failure-issue";
 
 const SEVERITY = {
   warn: {
@@ -32,8 +31,8 @@ const STAGE = {
 } as const;
 
 /**
- * Why a request failed: the error, where in Courier's pipeline it
- * happened, the schema issues with what arrived at each, what usually
+ * Why a request failed: the error and, for one that got no answer, what
+ * the system said of it, where in Courier's pipeline it happened, the schema issues with what arrived at each, what usually
  * fixes it, and the error as reported.
  *
  * @param props - The request, and what its failure comes to
@@ -81,6 +80,11 @@ export function FailureTab({
           <span className="text-prompt leading-[1.35] font-semibold text-pretty">
             {failure.message}
           </span>
+          {failure.cause && (
+            <span className="font-mono text-small [overflow-wrap:anywhere] text-fg">
+              {failure.cause}
+            </span>
+          )}
           <span className="text-small text-fg-muted">{failure.where}</span>
         </div>
       </div>
@@ -97,7 +101,7 @@ export function FailureTab({
           <h3 className="m-0 text-label font-semibold text-fg-muted">Schema issues</h3>
           {failure.issues.map((issue, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: a failure's issues in the order the schema reported them; two may share a path
-            <Issue key={i} issue={issue} payload={payload} />
+            <FailureIssue key={i} issue={issue} payload={payload} />
           ))}
         </section>
       )}
@@ -131,37 +135,6 @@ function Stage({ stage }: { stage: FailureStage }): React.ReactNode {
         {stage.label}
       </span>
       <span className="font-mono text-badge text-fg-subtle">{stage.meta}</span>
-    </div>
-  );
-}
-
-function Issue({ issue, payload }: { issue: ValidationIssue; payload: unknown }): React.ReactNode {
-  const at = valueAtPath(payload, issue.path);
-  const received = issue.received ?? (at.found ? JSON.stringify(at.value) : undefined);
-  return (
-    <div className="overflow-hidden rounded-panel border border-line">
-      <div className="flex h-9 items-center gap-2 border-b border-line bg-panel-subtle px-3">
-        <Braces aria-hidden="true" className="size-3 text-fg-subtle" />
-        <span className="font-mono text-small text-syntax-function">{issue.path || "root"}</span>
-        <span className="flex-1" />
-        <span className="truncate text-label text-fg-subtle">{issue.message}</span>
-      </div>
-      <div className="font-mono text-small">
-        {received !== undefined && (
-          <div className="grid grid-cols-[14px_70px_minmax(0,1fr)] gap-2 bg-err-dim px-3 py-1.75">
-            <span className="text-err">−</span>
-            <span className="text-fg-subtle">received</span>
-            <span className="text-err [overflow-wrap:anywhere]">{received}</span>
-          </div>
-        )}
-        {issue.expected && (
-          <div className="grid grid-cols-[14px_70px_minmax(0,1fr)] gap-2 bg-ok-dim px-3 py-1.75">
-            <span className="text-ok">+</span>
-            <span className="text-fg-subtle">expected</span>
-            <span className="text-ok [overflow-wrap:anywhere]">{issue.expected}</span>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

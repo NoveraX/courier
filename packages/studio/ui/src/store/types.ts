@@ -12,6 +12,7 @@ export type {
   HttpVersion,
   RequestAgent,
   RequestEntry,
+  RequestFailureCause,
   RequestStatus,
   SharedAnswer,
   StreamEventRecord,

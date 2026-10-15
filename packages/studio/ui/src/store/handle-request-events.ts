@@ -10,6 +10,7 @@ import {
   readStringRecord,
 } from "./payload";
 import { readAgent } from "./read-agent";
+import { readCause } from "./read-cause";
 import { readShared } from "./read-shared";
 import type { ProxyTiming, RequestEntry, RequestStatus, ValidationIssue } from "./types";
 
@@ -67,7 +68,7 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
 /**
  * A request that failed keeps what its caller received — the proxy's own
  * status where the upstream gave none — the upstream's headers, error body
- * and its size, the headers it came with when the runtime has them, how
+ * and its size or, when no answer came, why, the headers it came with when the runtime has them, how
  * long it ran and, for a proxied call, how that time split. Issues a
  * `validation:fail` recorded stay with it.
  */
@@ -78,6 +79,7 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
         type: str(rawError.type, "Error"),
         status: optNum(rawError.status),
         message: str(rawError.message, "Unknown error"),
+        cause: readCause(rawError.cause),
         validationIssues: readList(rawError.validationIssues, isValidationIssue),
       }
     : undefined;

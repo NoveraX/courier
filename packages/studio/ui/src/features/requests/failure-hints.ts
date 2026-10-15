@@ -1,15 +1,17 @@
 import type { RequestEntry } from "@/store/types";
+import { networkHint } from "./network-hint";
 
 /**
  * What usually fixes a request that failed this way, told from its kind
- * and status alone — or nothing when they say too little to advise on.
+ * and status — for one that got no answer, from the system's code — or
+ * nothing when they say too little to advise on.
  *
  * @param r - The request that failed
  * @returns The advice, or `undefined`
  * @example
  * ```ts
- * failureHint({ error: { type: "network", message: "fetch failed" }, statusCode: undefined, validated: undefined });
- * // "No answer came back: Courier could not reach the API. …"
+ * failureHint({ error: { type: "network", message: "Network request failed", cause: { code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND api.test" } }, statusCode: undefined, validated: undefined });
+ * // "The API's host name did not resolve (ENOTFOUND). …"
  * ```
  */
 export function failureHint(
@@ -25,9 +27,7 @@ export function failureHint(
       ? "The variables did not match the endpoint's input schema, so the request was never sent. Fix the call's arguments, or the schema if it is the one that is wrong."
       : "The API's answer does not match the response schema the endpoint declares. Change the schema to what the API returns, or the API to what the schema promises.";
   }
-  if (kind === "network") {
-    return "No answer came back: Courier could not reach the API. Check that it runs, and that the source's baseURL points at it.";
-  }
+  if (kind === "network") return networkHint(r.error?.cause?.code);
   if (kind === "timeout" || status === 408 || status === 504) {
     return "The request ran out of time. Raise its timeout, or find out what makes the API slow to answer.";
   }

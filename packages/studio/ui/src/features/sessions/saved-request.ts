@@ -1,6 +1,7 @@
 import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
 import { httpVersionOf } from "@/store/http-version";
 import { readAgent } from "@/store/read-agent";
+import { readCause } from "@/store/read-cause";
 import { readShared } from "@/store/read-shared";
 import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
@@ -131,5 +132,10 @@ function headersOf(raw: unknown): Record<string, string> | undefined {
 
 function errorOf(raw: unknown): RequestEntry["error"] {
   if (!isRecord(raw) || typeof raw.message !== "string") return undefined;
-  return { type: str(raw.type, "Error"), message: raw.message, status: optNum(raw.status) };
+  return {
+    type: str(raw.type, "Error"),
+    message: raw.message,
+    status: optNum(raw.status),
+    cause: readCause(raw.cause),
+  };
 }

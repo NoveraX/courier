@@ -21,6 +21,8 @@ export interface FailureView {
   type: string;
   code: string;
   message: string;
+  /** What the system said of a request that got no answer, when the runtime could tell. */
+  cause: string | undefined;
   where: string;
   stages: FailureStage[];
   issues: ValidationIssue[];
@@ -34,7 +36,8 @@ const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}
 function httpStages(r: RequestEntry, refused: boolean, broken: boolean): FailureStage[] {
   const failedStep = r.middlewareEntries.find((e) => e.status === "error");
   const steps = r.middlewareEntries.length;
-  const answered = r.statusCode !== undefined && r.statusCode > 0;
+  /* A proxy that got no answer from the upstream answers its caller 502 itself: the fetch still got none. */
+  const answered = r.statusCode !== undefined && r.statusCode > 0 && !r.error?.cause;
   return [
     failedStep
       ? { label: "Middleware", state: "err", meta: `${failedStep.name} failed` }
@@ -90,8 +93,9 @@ function streamStages(r: RequestEntry): FailureStage[] {
 }
 
 /**
- * What the Error tab tells of a request that failed: the error, where in
- * Courier's pipeline it happened, the schema issues, advice when its kind
+ * What the Error tab tells of a request that failed: the error — for one
+ * that got no answer, the system's code and text — where in Courier's
+ * pipeline it happened, the schema issues, advice when its kind or code
  * says enough, and the error as reported.
  *
  * @param r - The request
@@ -108,12 +112,14 @@ export function failureOf(r: RequestEntry): FailureView | null {
   const stream = isStreamRequest(r);
   const broken = state === "validation_error" && r.validated?.variables !== "failed";
   const refused = r.validated?.variables === "failed";
-  const code = broken || refused ? "schema" : r.statusCode ? String(r.statusCode) : error.type;
+  const status = r.statusCode ? String(r.statusCode) : undefined;
+  const code = broken || refused ? "schema" : (error.cause?.code ?? status ?? error.type);
   const raw = JSON.stringify(
     {
       type: error.type,
       status: r.statusCode,
       message: error.message,
+      cause: error.cause,
       requestId: r.id,
       issues: error.validationIssues,
     },
@@ -133,6 +139,7 @@ export function failureOf(r: RequestEntry): FailureView | null {
     type: error.type.toUpperCase(),
     code,
     message: error.message,
+    cause: error.cause?.message,
     ...parts,
     issues: error.validationIssues ?? [],
     raw,

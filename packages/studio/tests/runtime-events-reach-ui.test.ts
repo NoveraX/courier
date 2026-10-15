@@ -7,6 +7,8 @@
  * with its runtime attached to Studio. Every assertion reads the events the UI
  * socket received.
  */
+
+import { createServer as createTcpServer } from "node:net";
 import { createCaller, createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { routesOf } from "@noverax/courier/internal";
@@ -22,7 +24,16 @@ let app: LiveApp;
 let upstream: Awaited<ReturnType<typeof startUpstream>>;
 let sources: ReturnType<typeof defineSources>;
 
-function defineSources(baseURL: string) {
+/* A port nothing listens on: taken, then let go. A low one such as 9 is refused by fetch itself. */
+async function closedPort(): Promise<number> {
+  const server = createTcpServer();
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  return typeof address === "object" && address ? address.port : 0;
+}
+
+function defineSources(baseURL: string, unreachableURL: string) {
   const users = defineGroup({
     prefix: "users",
     endpoints: {
@@ -39,7 +50,12 @@ function defineSources(baseURL: string) {
       slow: endpoint.get("slow").timeout(100).response<unknown>(),
     },
   });
-  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }) };
+  const gone = defineApi({
+    expose: true,
+    baseURL: unreachableURL,
+    endpoints: { ping: endpoint.get("ping").response<unknown>() },
+  });
+  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }), gone };
 }
 
 beforeAll(async () => {
@@ -54,7 +70,7 @@ beforeAll(async () => {
     "GET /faults/slow": { status: 200, body: {}, delayMs: 1_000 },
   });
   studio = await startLiveStudio();
-  sources = defineSources(upstream.url);
+  sources = defineSources(upstream.url, `http://127.0.0.1:${await closedPort()}/v1?token=s3cret`);
   app = await startLiveApp(studio.url, "app", sources);
   await until(() => getRuntimeEntry("app") !== undefined, "the runtime to connect");
 });
@@ -138,6 +154,26 @@ describe("a call that fails", () => {
     expect(refused.status).toBe(422);
     expect(timedOut.status).toBe(504);
     expect((timedOut.error as { type: string }).type).toBe("timeout");
+  });
+
+  it("reaches the UI with why no answer came, and no token from its URL", async () => {
+    const failure = await failureOf("ping", () => createCaller(sources.gone).ping());
+
+    expect(failure.error).toMatchObject({
+      type: "network",
+      cause: { code: "ECONNREFUSED", message: expect.stringContaining("ECONNREFUSED") },
+    });
+    expect(JSON.stringify(failure)).not.toContain("s3cret");
+  });
+
+  it("reaches the UI, over the proxy, with why the upstream gave no answer", async () => {
+    const client = createProxyCaller(routesOf(sources.gone, "gone"), {
+      proxyPath: { http: app.proxyUrl },
+    });
+
+    const failure = await failureOf("ping", () => client.ping());
+
+    expect(failure.error).toMatchObject({ cause: { code: "ECONNREFUSED" } });
   });
 
   it("says a direct call timed out", async () => {

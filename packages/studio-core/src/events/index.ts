@@ -57,6 +57,7 @@ export type {
   RequestShapeEvent,
   RequestStartEvent,
   RequestTiming,
+  SharedAnswer,
 } from "./request";
 export type {
   StreamCloseEvent,

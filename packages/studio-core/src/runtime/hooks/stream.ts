@@ -1,4 +1,4 @@
-import { studioHooks } from "@noverax/courier/internal";
+import { shownText, studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -78,7 +78,7 @@ export function wireStreamHooks(
         type: "stream:error",
         timestamp: e.timestamp,
         requestId: e.requestId,
-        error: e.error,
+        error: shownText(e.error),
       }),
     );
   };

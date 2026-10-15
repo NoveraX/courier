@@ -7,6 +7,8 @@
  * with its runtime attached to Studio. Every assertion reads the events the UI
  * socket received.
  */
+
+import { createServer as createTcpServer } from "node:net";
 import { createCaller, createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { routesOf } from "@noverax/courier/internal";
@@ -22,7 +24,16 @@ let app: LiveApp;
 let upstream: Awaited<ReturnType<typeof startUpstream>>;
 let sources: ReturnType<typeof defineSources>;
 
-function defineSources(baseURL: string) {
+/* A port nothing listens on: taken, then let go. A low one such as 9 is refused by fetch itself. */
+async function closedPort(): Promise<number> {
+  const server = createTcpServer();
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  return typeof address === "object" && address ? address.port : 0;
+}
+
+function defineSources(baseURL: string, closed: number) {
   const users = defineGroup({
     prefix: "users",
     endpoints: {
@@ -39,7 +50,18 @@ function defineSources(baseURL: string) {
       slow: endpoint.get("slow").timeout(100).response<unknown>(),
     },
   });
-  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }) };
+  const gone = defineApi({
+    expose: true,
+    baseURL: `http://127.0.0.1:${closed}`,
+    endpoints: { ping: endpoint.get("ping").response<unknown>() },
+  });
+  /* fetch refuses a URL with a user and password, and says so naming the URL. */
+  const signed = defineApi({
+    expose: true,
+    baseURL: `http://user:pa55@127.0.0.1:${closed}/v1?token=s3cret`,
+    endpoints: { whoami: endpoint.get("whoami").response<unknown>() },
+  });
+  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }), gone, signed };
 }
 
 beforeAll(async () => {
@@ -54,7 +76,7 @@ beforeAll(async () => {
     "GET /faults/slow": { status: 200, body: {}, delayMs: 1_000 },
   });
   studio = await startLiveStudio();
-  sources = defineSources(upstream.url);
+  sources = defineSources(upstream.url, await closedPort());
   app = await startLiveApp(studio.url, "app", sources);
   await until(() => getRuntimeEntry("app") !== undefined, "the runtime to connect");
 });
@@ -138,6 +160,33 @@ describe("a call that fails", () => {
     expect(refused.status).toBe(422);
     expect(timedOut.status).toBe(504);
     expect((timedOut.error as { type: string }).type).toBe("timeout");
+  });
+
+  it("reaches the UI with why no answer came", async () => {
+    const failure = await failureOf("ping", () => createCaller(sources.gone).ping());
+
+    expect(failure.error).toMatchObject({
+      type: "network",
+      cause: { code: "ECONNREFUSED", message: expect.stringContaining("ECONNREFUSED") },
+    });
+  });
+
+  it("reaches the UI naming no user, password or token of the URL fetch refused", async () => {
+    const failure = await failureOf("whoami", () => createCaller(sources.signed).whoami());
+
+    const cause = (failure.error as { cause?: { message: string } }).cause;
+    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+\/v1/);
+    expect(JSON.stringify(failure)).not.toMatch(/s3cret|pa55/);
+  });
+
+  it("reaches the UI, over the proxy, with why the upstream gave no answer", async () => {
+    const client = createProxyCaller(routesOf(sources.gone, "gone"), {
+      proxyPath: { http: app.proxyUrl },
+    });
+
+    const failure = await failureOf("ping", () => client.ping());
+
+    expect(failure.error).toMatchObject({ cause: { code: "ECONNREFUSED" } });
   });
 
   it("says a direct call timed out", async () => {

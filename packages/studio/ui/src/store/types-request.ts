@@ -28,6 +28,12 @@ export interface SharedAnswer {
   with?: string | undefined;
 }
 
+/** Why a request got no answer, as the system said it: its code, where it gave one, and its text. */
+export interface RequestFailureCause {
+  code?: string | undefined;
+  message: string;
+}
+
 export interface RequestEntry {
   id: string;
   source: string;
@@ -70,6 +76,8 @@ export interface RequestEntry {
         type: string;
         status?: number | undefined;
         message: string;
+        /** Why no answer came, when the runtime could tell. */
+        cause?: RequestFailureCause | undefined;
         validationIssues?: ValidationIssue[] | undefined;
       }
     | undefined;

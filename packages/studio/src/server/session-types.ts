@@ -52,7 +52,15 @@ export interface SavedRequest {
   dataCutFrom?: number | undefined;
   requestHeaders?: Record<string, string> | undefined;
   responseHeaders?: Record<string, string> | undefined;
-  error?: { type: string; status?: number; message: string } | undefined;
+  error?:
+    | {
+        type: string;
+        status?: number;
+        message: string;
+        /** Why no answer came: the system's code, where it gave one, and its text. */
+        cause?: { code?: string; message: string };
+      }
+    | undefined;
   startedAt: number;
   url?: string | undefined;
   /** The HTTP version the request went over, when its runtime could tell. */

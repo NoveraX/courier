@@ -2,6 +2,7 @@ import { HTTPError } from "../errors";
 import { isTimeoutFailure } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
 import type { RequestFailureKind, StudioHooks } from "../studio";
+import { failureCause } from "../studio/failure-cause";
 import { ValidationError } from "../validation";
 import { isAbortError } from "./abort";
 import { callerLeft } from "./caller-left";
@@ -56,7 +57,9 @@ export function failureKind(
  * Tell Studio a request failed, with what its caller received: its kind and
  * message, the status, the upstream's headers, error body and its size, how
  * long it ran and — for a proxied call — how that time split, so its row and
- * every average read it as they read a success.
+ * every average read it as they read a success. A request that got no
+ * answer carries why instead of a body: the system's code and text, with
+ * anything in it that could be a credential cut out.
  *
  * @param error - What the request threw
  * @param report - The request, and the hooks and timings Studio reads
@@ -77,12 +80,14 @@ export function reportRequestError(
   const total = timing && timing.t0 > 0 ? performance.now() - timing.t0 : undefined;
   const proxyTiming =
     timing && total !== undefined ? proxyTimingOf(report.context, timing, total) : undefined;
+  const cause = failureCause(error);
   dt.onRequestError({
     id: report.requestId,
     error: {
       type: failureKind(error, report.signal, report.context),
       status: answered?.status,
       message: error instanceof Error ? error.message : String(error),
+      ...(cause && { cause }),
     },
     ...(status !== undefined && { status }),
     ...(answered && {

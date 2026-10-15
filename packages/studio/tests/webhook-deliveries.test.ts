@@ -188,6 +188,33 @@ describe("a webhook delivered from a page", () => {
     });
   });
 
+  it("says why an application could not deliver it with no token its failure quoted", async () => {
+    const { url, post } = await studio();
+    await runtime(url, {
+      id: "older-app",
+      token: FIXED_TOKEN_VALUE,
+      webhooks: [STRIPE],
+      answer: () => ({
+        ok: false,
+        error:
+          'The delivery failed: Headers.append: "Bearer B34rer\nx" is an invalid header value.',
+      }),
+    });
+
+    expect(
+      await post("/api/webhooks/deliver", {
+        webhook: "stripe",
+        to: "https://hooks.example",
+        body: {},
+      }),
+    ).toEqual({
+      status: 422,
+      body: {
+        error: 'The delivery failed: Headers.append: "[redacted]" is an invalid header value.',
+      },
+    });
+  });
+
   it("is forgotten with the runtime that told of it", async () => {
     const { url, post } = await studio();
     const app = await runtime(url, {

@@ -1,8 +1,8 @@
 import type { UploadProgress } from "@noverax/courier";
-import { HTTPError, ValidationError } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { type executeRequest, STUDIO_REQUEST_HEADER } from "@noverax/courier/internal";
 import { playgroundRequestId } from "../lib/playground-request-id";
+import { playgroundFailure } from "./playground-failure";
 import { formDataOf } from "./playground-form";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
@@ -17,9 +17,6 @@ export interface HttpResultChunk {
   /** What went wrong, when the call failed; the answer's body stays in `data`. */
   error?: string;
 }
-
-/** The status Courier's proxy answers a refused schema with. */
-const VALIDATION_FAILED = 422;
 
 /**
  * Run an HTTP endpoint for the Playground and send back what it answered.
@@ -98,34 +95,8 @@ async function run(
     const { status, headers, data } = answer;
     return { kind: "http-result", status, data, headers: Object.fromEntries(headers) };
   } catch (err) {
-    return failure(err);
+    return playgroundFailure(err);
   }
-}
-
-function failure(err: unknown): HttpResultChunk {
-  if (err instanceof ValidationError) {
-    const { message, target, issues } = err;
-    return {
-      kind: "http-result",
-      status: VALIDATION_FAILED,
-      error: message,
-      data: { success: false, message, target, issues },
-    };
-  }
-  if (err instanceof HTTPError) {
-    return {
-      kind: "http-result",
-      status: err.status,
-      error: err.message,
-      data: err.data,
-      headers: Object.fromEntries(err.headers),
-    };
-  }
-  return {
-    kind: "http-result",
-    status: 500,
-    error: err instanceof Error ? err.message : "HTTP request failed",
-  };
 }
 
 /* What `rawData` resolves to: the answer with its status and headers. */

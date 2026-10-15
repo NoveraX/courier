@@ -1,5 +1,8 @@
 import { CourierMark } from "./courier-mark";
 
+/* The mark's own box, none of the room the icon keeps around it: the two lines of type beside it set its height. */
+const MARK_BOX = "0 0 212 180";
+
 interface CourierLogoProps {
   /** The product line under the wordmark: `Studio`. */
   product: string;
@@ -7,8 +10,6 @@ interface CourierLogoProps {
 
 /**
  * The Courier mark and wordmark, with the product named beneath.
- *
- * The mark is one path filled with the text colour, so it follows the theme.
  *
  * @param props - The product's name
  * @returns The logo
@@ -20,7 +21,7 @@ interface CourierLogoProps {
 export function CourierLogo({ product }: CourierLogoProps): React.ReactNode {
   return (
     <span className="flex items-center gap-2 text-fg">
-      <CourierMark className="block w-7 shrink-0" />
+      <CourierMark viewBox={MARK_BOX} className="block w-7 shrink-0" />
       <span className="flex flex-col gap-0.5">
         <span className="font-wordmark text-wordmark leading-[0.85] tracking-wordmark">
           courier

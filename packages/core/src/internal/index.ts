@@ -77,6 +77,7 @@ export {
   studioHooks,
 } from "../studio";
 export { CARRIED_BODY_BYTES, type CarriedBody, carriedBody } from "../studio/carried-body";
+export { type FailureCause, failureCause, shownCause } from "../studio/failure-cause";
 export {
   type BodyPart,
   createKeptBodies,

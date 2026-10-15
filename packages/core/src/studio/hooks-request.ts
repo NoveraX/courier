@@ -1,4 +1,5 @@
 import type { SharedAnswer } from "../utils/shared-answer";
+import type { FailureCause } from "./failure-cause";
 
 /**
  * How a request failed: an upstream's error answer, a refused schema, a
@@ -92,6 +93,8 @@ export interface RequestLifecycleHooks {
           /** The upstream's status, when it answered. */
           status?: number | undefined;
           message: string;
+          /** Why no answer came, as the system said it: a DNS, connection or certificate failure. */
+          cause?: FailureCause | undefined;
         };
         /** The status the caller received, when it received one — a proxy's own 422 or 502. */
         status?: number | undefined;

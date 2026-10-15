@@ -14,7 +14,7 @@ export interface ThroughputBar {
 export interface LiveKpis {
   /** Requests that began in the last minute. */
   perMinute: number;
-  /** The p95 of the ones of them that finished; `null` while none did. */
+  /** The p95 of the ones of them that finished with a request of their own; `null` while none did. */
   p95: number | null;
   /** The share of the finished ones that failed, 0–1. */
   errorRate: number;
@@ -72,6 +72,7 @@ export function throughputBars(
  */
 export function liveKpis(requests: readonly RequestEntry[], now: number): LiveKpis {
   let perMinute = 0;
+  let finished = 0;
   let failed = 0;
   let liveStreams = 0;
   const durations: number[] = [];
@@ -84,16 +85,19 @@ export function liveKpis(requests: readonly RequestEntry[], now: number): LiveKp
     if (now - r.startedAt >= MINUTE) continue;
     perMinute++;
     if (state === "pending" || state === "aborted" || r.timing === undefined) continue;
-    durations.push(r.timing.total);
+    finished++;
+    /* The API's time is the requests': a read answered by another call's request only waited for it. */
+    if (r.shared === undefined) durations.push(r.timing.total);
     if (isFailedState(state)) failed++;
   }
-  const errorRate = durations.length > 0 ? failed / durations.length : 0;
+  const errorRate = finished > 0 ? failed / finished : 0;
   return { perMinute, p95: percentile(durations, 0.95), errorRate, liveStreams };
 }
 
 /**
  * How long calls to the same endpoint took: the p95 of the ones that
- * finished, and how many there were.
+ * finished with a request of their own, and how many there were — a read
+ * another call's request answered only waited for it.
  *
  * @param requests - The requests the Timeline holds
  * @param r - The request whose endpoint it is
@@ -111,7 +115,7 @@ export function endpointLatency(
   for (const other of requests) {
     if (other.source !== r.source || other.group !== r.group || other.method !== r.method) continue;
     if (isStreamRequest(other) || other.timing === undefined) continue;
-    if (requestStateOf(other) === "aborted") continue;
+    if (requestStateOf(other) === "aborted" || other.shared !== undefined) continue;
     durations.push(other.timing.total);
   }
   const p95 = percentile(durations, 0.95);

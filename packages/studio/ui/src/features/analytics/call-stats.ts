@@ -17,7 +17,8 @@ export function isFailure(r: Pick<RequestEntry, "status">): boolean {
 
 /**
  * How long the calls took — those cut short left out, since an aborted
- * call's time is the caller's, not the server's.
+ * call's time is the caller's, not the server's, and those another call's
+ * request answered, which only waited for it.
  *
  * @param calls - The calls
  * @returns Their durations, ms, in their order
@@ -28,7 +29,9 @@ export function isFailure(r: Pick<RequestEntry, "status">): boolean {
  */
 export function durationsOf(calls: readonly RequestEntry[]): number[] {
   return calls.flatMap((r) =>
-    r.status === "aborted" || r.timing === undefined ? [] : [r.timing.total],
+    r.status === "aborted" || r.timing === undefined || r.shared !== undefined
+      ? []
+      : [r.timing.total],
   );
 }
 

@@ -10,6 +10,7 @@ import {
   readStringRecord,
 } from "./payload";
 import { readAgent } from "./read-agent";
+import { readShared } from "./read-shared";
 import type { ProxyTiming, RequestEntry, RequestStatus, ValidationIssue } from "./types";
 
 type EventPayload = Record<string, unknown>;
@@ -53,6 +54,7 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
     statusCode: optNum(event.status),
     timing: readRequestTiming(event.timing),
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
+    shared: readShared(event.shared),
     size: optNum(event.size),
     data: event.data,
     dataCutFrom: optNum(event.dataCutFrom),
@@ -89,6 +91,7 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
     statusCode: optNum(event.status) ?? errorData?.status ?? r.statusCode,
     timing: readRequestTiming(event.timing) ?? r.timing,
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
+    shared: readShared(event.shared) ?? r.shared,
     size: optNum(event.size) ?? r.size,
     headers: readStringRecord(event.headers) ?? r.headers,
     requestHeaders: readStringRecord(event.requestHeaders) ?? r.requestHeaders,

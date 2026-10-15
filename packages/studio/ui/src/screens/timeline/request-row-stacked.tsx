@@ -6,6 +6,7 @@ import { STATE_META } from "@/features/requests/request-state";
 import { cn } from "@/lib/utils";
 import type { RequestRowProps } from "./request-row";
 import { codeTone } from "./row-values";
+import { SharedChip } from "./shared-chip";
 import { useRowFigures } from "./use-row-figures";
 
 /**
@@ -52,7 +53,14 @@ export function StackedRequestRow({
         {r.pinned && <Pin aria-hidden="true" className="size-3 self-center text-syntax-keyword" />}
         <span className={cn("tabular-nums", codeTone(r, state))}>{codeLabel(r, state)}</span>
       </span>
-      <span className="col-start-2 truncate text-label text-fg-subtle">{pathOf(r.url)}</span>
+      <span className="col-start-2 truncate text-label text-fg-subtle">
+        {r.shared && (
+          <>
+            <SharedChip shared={r.shared} />{" "}
+          </>
+        )}
+        {pathOf(r.url)}
+      </span>
       <span className="flex justify-end gap-2.5 text-label whitespace-nowrap tabular-nums">
         <span className={duration.tone}>{duration.text}</span>
         <span className="text-fg-subtle">{time}</span>

@@ -64,6 +64,8 @@ export interface SavedRequest {
   agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string } | undefined;
   /** The key the call sent in its endpoint's idempotency header. */
   idempotencyKey?: string | undefined;
+  /** How its read was answered by another call's request, when it sent none of its own. */
+  shared?: { by: "flight" | "render"; with?: string } | undefined;
 }
 
 export interface SessionStats {

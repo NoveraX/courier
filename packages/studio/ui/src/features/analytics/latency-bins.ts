@@ -70,7 +70,8 @@ export function latencyBins(done: readonly RequestEntry[], slowMs: number): Late
   }));
   const durations: number[] = [];
   for (const r of done) {
-    if (r.status === "aborted" || r.timing === undefined) continue;
+    /* The API's time is the requests': a read another call's request answered only waited for it. */
+    if (r.status === "aborted" || r.timing === undefined || r.shared !== undefined) continue;
     durations.push(r.timing.total);
     const bin = bins[binOf(r.timing.total)];
     if (!bin) continue;

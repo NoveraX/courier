@@ -77,3 +77,35 @@ describe("an audit with no reliability finding", () => {
     expect(result.breakdown.pass).toBeGreaterThan(0);
   });
 });
+
+describe("the duplicate check, passed", () => {
+  it("says how many identical reads another call's request answered, when any did", () => {
+    const shared = runAudit(
+      [
+        request("getAll", { id: "a", startedAt: 1_000, timing: timing(300) }),
+        request("getAll", {
+          id: "b",
+          startedAt: 1_100,
+          timing: timing(200),
+          shared: { by: "flight", with: "a" },
+        }),
+      ],
+      {},
+      { browserSessions: new Set() },
+    ).items.find((item) => item.id === "pass-duplicates");
+    const alone = passedChecks([request("getAll")], []).find(
+      (item) => item.id === "pass-duplicates",
+    );
+
+    expect(shared?.description).toBe(
+      "No call was sent again with the same input right after the first. 1 identical read got its answer from a request another call made — in flight, or earlier in the render — and sent none of its own.",
+    );
+    expect(alone?.description).toBe(
+      "No call was sent again with the same input right after the first.",
+    );
+  });
+});
+
+function timing(total: number): RequestEntry["timing"] {
+  return { total, middleware: 0, fetch: total, validation: 0 };
+}

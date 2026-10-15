@@ -5,7 +5,8 @@ import { formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
- * An endpoint's four figures: its calls, p95, error rate and average size.
+ * An endpoint's four figures: its calls — and how many of them another
+ * call's request answered — p95, error rate and average size.
  *
  * @param props - The endpoint and the slow threshold
  * @returns The figures
@@ -21,9 +22,14 @@ export function EndpointFigures({
   endpoint: EndpointNode;
   slowMs: number;
 }): React.ReactNode {
-  const { calls, p95, errorRate, avgSize } = endpoint.metrics;
-  const cells: { label: string; value: string; tone: Tone }[] = [
-    { label: "Calls", value: String(calls), tone: "normal" },
+  const { calls, shared, p95, errorRate, avgSize } = endpoint.metrics;
+  const cells: { label: string; value: string; tone: Tone; note?: string }[] = [
+    {
+      label: "Calls",
+      value: String(calls),
+      tone: "normal",
+      ...(shared > 0 && { note: `${shared} shared` }),
+    },
     {
       label: "P95",
       value: p95 === null ? "—" : formatDuration(p95),
@@ -43,7 +49,17 @@ export function EndpointFigures({
           key={cell.label}
           className="flex min-w-0 flex-col gap-1 bg-inset px-2.75 pt-2.25 pb-2.5"
         >
-          <span className="text-meta text-fg-subtle">{cell.label}</span>
+          <span className="flex min-w-0 gap-1 text-meta text-fg-subtle">
+            {cell.label}
+            {cell.note && (
+              <span
+                title="Calls whose read another call's request answered, with no request of their own"
+                className="truncate text-fg-muted"
+              >
+                · {cell.note}
+              </span>
+            )}
+          </span>
           <span
             className={cn(
               "font-mono text-title font-medium whitespace-nowrap tabular-nums",

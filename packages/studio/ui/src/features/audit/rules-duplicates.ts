@@ -7,7 +7,9 @@ const DUPLICATE_WINDOW_MS = 2000;
 
 /**
  * Detect duplicate requests: the same endpoint called again with the same
- * variables within a short window.
+ * variables within a short window, each call sending a request of its own.
+ * A read another call's request answered — joined in flight, or read once
+ * by the render — sent none, and is no duplicate.
  *
  * @param requests - The completed requests
  * @returns A warning for each endpoint and variables called more than once in a burst
@@ -20,6 +22,7 @@ export function detectDuplicates(requests: RequestEntry[]): AuditItem[] {
   const groups = new Map<string, RequestEntry[]>();
 
   for (const r of requests) {
+    if (r.shared !== undefined) continue;
     const sig = `${buildKey(r)}:${stableStringify(r.variables)}`;
     const list = groups.get(sig) ?? [];
     list.push(r);

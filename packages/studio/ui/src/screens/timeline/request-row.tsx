@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { RequestAgent, RequestEntry } from "@/store/types";
 import type { RowContext } from "./row-values";
 import { codeTone, sizeOf } from "./row-values";
+import { SharedChip } from "./shared-chip";
 import { columnsOf } from "./table-columns";
 import { useRowFigures } from "./use-row-figures";
 
@@ -19,9 +20,10 @@ export interface RequestRowProps {
 }
 
 /**
- * A request in the Timeline: its state, method and name, its path, mode and
- * status, how long it took against a second, its size, when it began, and
- * a pin when it is pinned.
+ * A request in the Timeline: its state, method and name — marked shared
+ * when another call's request answered it — its path, mode and status, how
+ * long it took against a second, its size, when it began, and a pin when
+ * it is pinned.
  *
  * @param props - The request, whether it is open, what the row needs, and what opens it
  * @returns The row
@@ -59,6 +61,7 @@ export function RequestRow({
           <span className="text-fg-subtle">{prefix}</span>
           <span className="text-fg">{name}</span>
         </span>
+        {r.shared && <SharedChip shared={r.shared} />}
         <span className="truncate text-label text-fg-subtle">{pathOf(r.url)}</span>
       </span>
       {context.wide && (

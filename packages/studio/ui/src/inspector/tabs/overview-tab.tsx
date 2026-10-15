@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
 import { CalledFrom } from "./called-from";
+import { SharedNote } from "./shared-note";
 import { UrlBox } from "./url-box";
 
 const CHECK_ICON = { ok: Check, warn: TriangleAlert, err: X, idle: Minus } as const;
@@ -38,6 +39,7 @@ export function OverviewTab({ request }: { request: RequestEntry }): React.React
   return (
     <div className="flex flex-col gap-5 px-4.5 pt-4.5 pb-7">
       <UrlBox request={request} />
+      <SharedNote request={request} />
       <section className="flex flex-col">
         <h3 className="m-0 pb-1.5 text-label font-semibold text-fg-muted">Properties</h3>
         {properties.map((property) => (

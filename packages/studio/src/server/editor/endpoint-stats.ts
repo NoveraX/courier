@@ -19,9 +19,9 @@ export interface EndpointStats {
   readonly pending: number;
   /** How many calls ended with each status, `"failed"` for one that got none */
   readonly statuses: Readonly<Record<string, number>>;
-  /** Half the finished calls took no longer, in milliseconds */
+  /** Half the finished calls that sent a request of their own took no longer, in milliseconds */
   readonly p50?: number | undefined;
-  /** Nineteen in twenty took no longer */
+  /** Nineteen in twenty of them took no longer */
   readonly p95?: number | undefined;
   /** When the latest call started */
   readonly lastAt?: number | undefined;
@@ -132,8 +132,9 @@ function count(
     (isPlainObject(error?.error) ? numberOf(error.error.status) : undefined);
   const label = status === undefined ? "failed" : String(status);
   tally.statuses[label] = (tally.statuses[label] ?? 0) + 1;
+  /* The API's time is the requests': a read answered by another call's request only waited for it. */
   const total = isPlainObject(settled.timing) ? numberOf(settled.timing.total) : undefined;
-  if (total !== undefined) tally.durations.push(total);
+  if (total !== undefined && settled.shared === undefined) tally.durations.push(total);
   if (!error) return;
   tally.failed += 1;
   const message =

@@ -1,7 +1,9 @@
 /**
  * The audit's duplicate-request rule: calls to one endpoint with the same
  * variables close together, counted burst by burst — its message says how
- * many calls in how many bursts, not that they all came within one window.
+ * many calls in how many bursts, not that they all came within one window
+ * — and a read another call's request answered, which sent no request of
+ * its own, is no duplicate.
  */
 import { describe, expect, it } from "vitest";
 
@@ -35,5 +37,30 @@ describe("the duplicate-request rule", () => {
 
     expect(detectDuplicates(differing)).toEqual([]);
     expect(detectDuplicates(reordered).map((item) => item.requestIds)).toEqual([["c", "d"]]);
+  });
+
+  it("counts no call whose read another call's request answered: it sent no request", () => {
+    const first = requestEntry({ id: "s0", startedAt: 1_000, variables: { page: 1 } });
+    const joined = requestEntry({
+      id: "s1",
+      startedAt: 1_300,
+      variables: { page: 1 },
+      shared: { by: "flight", with: "s0" },
+    });
+    const replayed = requestEntry({
+      id: "s2",
+      startedAt: 1_800,
+      variables: { page: 1 },
+      shared: { by: "render", with: "s0" },
+    });
+
+    expect(detectDuplicates([first, joined, replayed])).toEqual([]);
+    expect(
+      detectDuplicates([
+        first,
+        joined,
+        requestEntry({ id: "s3", startedAt: 1_900, variables: { page: 1 } }),
+      ]).map((item) => item.requestIds),
+    ).toEqual([["s0", "s3"]]);
   });
 });

@@ -13,6 +13,7 @@ export type {
   RequestAgent,
   RequestEntry,
   RequestStatus,
+  SharedAnswer,
   StreamEventRecord,
   UploadState,
 } from "./types-request";

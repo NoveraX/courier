@@ -46,6 +46,20 @@ describe("StackedRequestRow", () => {
     expect(figures?.textContent).toBe("120ms30s ago");
   });
 
+  it("marks a call another call's request answered as shared, before its path", () => {
+    const row = show({
+      url: "http://localhost:5173/api/users",
+      shared: { by: "flight", with: "r0" },
+    });
+    const path = [...row.children][4];
+    const chip = path?.querySelector("[title]");
+
+    expect(path?.textContent).toBe("shared /api/users");
+    expect(chip?.getAttribute("title")).toBe(
+      "Joined the identical read already in flight: that call's request answered it, and it sent none of its own",
+    );
+  });
+
   it("marks a pinned request beside its status, and says its state to a screen reader", () => {
     const row = show({ pinned: true, status: "error", statusCode: 404 });
 

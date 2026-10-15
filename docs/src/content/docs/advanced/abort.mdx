@@ -31,6 +31,8 @@ What is never shared:
 - **A request whose body is not text** — a file, a form, a stream.
 - **A call that follows its upload or download progress**, since each one reports its own.
 
+Studio shows each call, and marks one whose answer came from another call's request `shared`: its inspector says how — joined in flight, or read earlier in the render — and opens the call whose request answered it. Two components reading the user at once are two calls and one request, and the Audit counts the request alone.
+
 A request is joined only until its answer arrives. A read made after that sends a request of its own; to reuse an answer, keep it: [React Query](/docs/react-query/use-query) or SWR in the browser, the [cache middleware](/docs/middleware/built-in) on a server. In Next.js, [`createServerCaller`](/docs/frameworks/nextjs) already reads once per render: a page's `generateMetadata` and its body share the read even when one runs after the other.
 
 <Callout variant="info" title="Leaving early">

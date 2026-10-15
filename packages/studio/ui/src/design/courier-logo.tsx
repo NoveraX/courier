@@ -1,4 +1,4 @@
-import { CourierMark } from "./courier-mark";
+import { COURIER_MARK_BOUNDS, COURIER_MARK_PATH } from "./courier-mark";
 
 interface CourierLogoProps {
   /** The product line under the wordmark: `Studio`. */
@@ -9,6 +9,8 @@ interface CourierLogoProps {
  * The Courier mark and wordmark, with the product named beneath.
  *
  * The mark is one path filled with the text colour, so it follows the theme.
+ * It is drawn edge to edge here, without the room the icon keeps around it,
+ * so it stands as tall as the two lines of type beside it.
  *
  * @param props - The product's name
  * @returns The logo
@@ -20,7 +22,14 @@ interface CourierLogoProps {
 export function CourierLogo({ product }: CourierLogoProps): React.ReactNode {
   return (
     <span className="flex items-center gap-2 text-fg">
-      <CourierMark className="block w-7 shrink-0" />
+      <svg
+        viewBox={COURIER_MARK_BOUNDS}
+        aria-hidden="true"
+        focusable="false"
+        className="block w-7 shrink-0"
+      >
+        <path fill="currentColor" d={COURIER_MARK_PATH} />
+      </svg>
       <span className="flex flex-col gap-0.5">
         <span className="font-wordmark text-wordmark leading-[0.85] tracking-wordmark">
           courier

@@ -5,9 +5,10 @@ import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
+import { proxyStart } from "./shared/proxy-start";
 import { proxyScripts, registerModule, sortParts, studioAttach } from "./shared/recipe-parts";
 import { solidDemo } from "./shared/solid-demo";
-import { addsExample, proxyStart, type ServerNeeds } from "./shared/wired";
+import { addsExample, type ServerNeeds } from "./shared/wired";
 
 const DIR = "src/courier";
 

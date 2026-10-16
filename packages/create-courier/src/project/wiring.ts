@@ -2,6 +2,7 @@ import { posix } from "node:path";
 import { destructured, type ModuleImport, usesExport, usesOf } from "../edit/imports";
 import { codeMatches, nextCode } from "../edit/source-scan";
 import { configObjectPath } from "./config-file";
+import { isLoaded } from "./loaded-files";
 import { type CodeFile, projectCode } from "./project-code";
 import type { Project } from "./read-project";
 
@@ -96,51 +97,67 @@ function registersList(
 
 /**
  * The file that registers the APIs the config lists — `registerSources`
- * called with the config's `sources` — as the server starts.
+ * called with the config's `sources` — as the server starts: one that
+ * something loads, else it never runs.
  *
  * @param project - The project
+ * @param loading - A file to count as loaded: one the setup is about to have loaded
  * @returns Its path, or `undefined` where no file does
  * @example
  * ```ts
  * registeringFile(project); // "instrumentation.ts"
  * ```
  */
-export function registeringFile(project: Project): string | undefined {
+export function registeringFile(project: Project, loading?: string): string | undefined {
   const modules = configModules(project);
-  return projectCode(project).find((file) => registersList(file, modules, file.imports))?.path;
+  return projectCode(project).find(
+    (file) =>
+      registersList(file, modules, file.imports) &&
+      (file.path === loading || isLoaded(project, file.path)),
+  )?.path;
 }
 
 /**
  * The file of the server's that connects it to Studio: `attachRuntime`
- * from Studio's runtime, called outside a file only the browser runs.
+ * from Studio's runtime, called outside a file only the browser runs, in
+ * a file something loads.
  *
  * @param project - The project
+ * @param loading - A file to count as loaded: one the setup is about to have loaded
  * @returns Its path, or `undefined` where no file does
  * @example
  * ```ts
  * studioServerFile(project); // "src/hooks.server.ts"
  * ```
  */
-export function studioServerFile(project: Project): string | undefined {
+export function studioServerFile(project: Project, loading?: string): string | undefined {
   return projectCode(project).find(
     (file) =>
       !CLIENT.test(file.path) &&
-      usesExport(file.scan, file.imports, RUNTIME, "attachRuntime", true),
+      usesExport(file.scan, file.imports, RUNTIME, "attachRuntime", true) &&
+      (file.path === loading || isLoaded(project, file.path)),
   )?.path;
 }
 
+/** A file of the project's that does a part of Courier's, and whether anything loads it. */
+export interface FoundFile {
+  readonly path: string;
+  readonly loaded: boolean;
+}
+
 /**
- * The file that uses an export of a framework's Courier package: the
- * proxy route's handler, its plugin or its middleware.
+ * The file that uses an export of a framework's Courier package — the
+ * proxy route's handler, its plugin or its middleware — one that something
+ * loads where there is one.
  *
  * @param project - The project
  * @param module - The package: `@noverax/courier-next`
  * @param exported - The export: `apiRoute`
  * @param call - Whether only a call counts; Fastify's plugin is passed, not called
- * @returns Its path, or `undefined` where no file does
+ * @returns The file, or `undefined` where no file uses it
  * @example
  * ```ts
- * fileUsing(project, "@noverax/courier-next", "apiRoute", true); // "app/api/request/route.ts"
+ * fileUsing(project, "@noverax/courier-next", "apiRoute", true); // { path: "app/api/request/route.ts", loaded: true }
  * ```
  */
 export function fileUsing(
@@ -148,10 +165,13 @@ export function fileUsing(
   module: string,
   exported: string,
   call = true,
-): string | undefined {
-  return projectCode(project).find((file) =>
-    usesExport(file.scan, file.imports, (specifier) => specifier === module, exported, call),
-  )?.path;
+): FoundFile | undefined {
+  const found = projectCode(project)
+    .filter((file) =>
+      usesExport(file.scan, file.imports, (specifier) => specifier === module, exported, call),
+    )
+    .map((file) => ({ path: file.path, loaded: isLoaded(project, file.path) }));
+  return found.find((file) => file.loaded) ?? found[0];
 }
 
 /**

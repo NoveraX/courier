@@ -9,9 +9,10 @@ import { courierConfig, courierMocks } from "./shared/courier-config";
 import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
+import { proxyStart } from "./shared/proxy-start";
 import { reactDemo, reactQuery } from "./shared/react-demo";
 import { proxyScripts, registerModule, sortParts, studioAttach } from "./shared/recipe-parts";
-import { addsExample, proxyStart, type ServerNeeds } from "./shared/wired";
+import { addsExample, type ServerNeeds } from "./shared/wired";
 
 const DIR = "app/courier";
 const ROUTES = "app/routes.ts";
@@ -33,8 +34,8 @@ export const action = handler;
   return { path, content, purpose: "the route the browser calls your API through" };
 }
 
-/* The routes list with Courier's two in it, written in the file's style. */
-function withRoutes(text: string, example: boolean, proxy: boolean): string | undefined {
+/* The routes list with Courier's two in it, written in the file's style: the page, and the module that serves the proxy. */
+function withRoutes(text: string, example: boolean, proxy: string | undefined): string | undefined {
   const first = scanSource(text);
   if (first === undefined) return undefined;
   const lists = (path: string) =>
@@ -47,8 +48,8 @@ function withRoutes(text: string, example: boolean, proxy: boolean): string | un
     ...(example && !lists("routes/courier.tsx")
       ? [`route(${quoted(style, "courier")}, ${quoted(style, "routes/courier.tsx")})`]
       : []),
-    ...(proxy && !lists("routes/api.request.ts")
-      ? [`route(${quoted(style, "api/request")}, ${quoted(style, "routes/api.request.ts")})`]
+    ...(proxy !== undefined && !lists(proxy)
+      ? [`route(${quoted(style, "api/request")}, ${quoted(style, proxy)})`]
       : []),
   ];
   if (entries.length === 0) return text;
@@ -63,7 +64,7 @@ function withRoutes(text: string, example: boolean, proxy: boolean): string | un
   return scan === undefined ? undefined : addNamedImport(scan, "@react-router/dev/routes", "route");
 }
 
-function routesEdit(example: boolean, proxy: boolean): RecipeEdit {
+function routesEdit(example: boolean, proxy: string | undefined): RecipeEdit {
   return {
     path: ROUTES,
     purpose: "serves Courier's routes: React Router serves only the routes this file lists",
@@ -73,7 +74,7 @@ function routesEdit(example: boolean, proxy: boolean): RecipeEdit {
       what: "List Courier's routes, which React Router serves only once they are listed",
       lines: [
         ...(example ? ['route("courier", "routes/courier.tsx"),'] : []),
-        ...(proxy ? ['route("api/request", "routes/api.request.ts"),'] : []),
+        ...(proxy !== undefined ? [`route("api/request", "${proxy}"),`] : []),
       ],
     },
   };
@@ -94,14 +95,21 @@ function routesEdit(example: boolean, proxy: boolean): RecipeEdit {
  */
 export function reactRouterRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
-  const { parts, served } = proxyStart(
+  const { parts, mount } = proxyStart(
     ctx,
     (needs) => route(ctx, needs),
-    { module: "@noverax/courier-remix", exported: "courierHandler" },
+    {
+      module: "@noverax/courier-remix",
+      exported: "courierHandler",
+      ...(ctx.project.exists(ROUTES)
+        ? { connect: (path: string) => routesEdit(example, path.replace(/^app\//, "")) }
+        : {}),
+    },
     studioAttach("import.meta.env.DEV", ""),
   );
-  const { files, manual } = sortParts(parts);
-  const listed = ctx.project.exists(ROUTES) && (example || !served);
+  const { files, edits, manual } = sortParts(parts);
+  /* The routes file gets one edit: the one that lists a file of the project's that serves, or Courier's own. */
+  const listed = edits.length === 0 && ctx.project.exists(ROUTES) && (example || mount);
   const page = {
     path: "app/routes/courier.tsx",
     query: `${DIR}/query.ts`,
@@ -117,7 +125,8 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
       ...(example ? [reactQuery(ctx, DIR, "proxy"), reactDemo(ctx, page)] : []),
     ],
     edits: [
-      ...(listed ? [routesEdit(example, !served)] : []),
+      ...edits,
+      ...(listed ? [routesEdit(example, mount ? "routes/api.request.ts" : undefined)] : []),
       ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "remix")] : []),
     ],
     ...courierPackages(ctx, { adapter: "@noverax/courier-remix", react: true, proxy: true }),

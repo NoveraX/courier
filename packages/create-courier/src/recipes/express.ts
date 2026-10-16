@@ -7,6 +7,7 @@ import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
+import { loadStep, proxyStart } from "./shared/proxy-start";
 import { proxyScripts, sortParts } from "./shared/recipe-parts";
 import {
   serverDir,
@@ -15,7 +16,7 @@ import {
   serverStart,
   studioAttachLater,
 } from "./shared/server-files";
-import { addsExample, listModule, proxyStart, type ServerNeeds } from "./shared/wired";
+import { addsExample, listModule, type ServerNeeds } from "./shared/wired";
 
 function routes(
   ctx: RecipeContext,
@@ -124,16 +125,21 @@ function mountEdit(ctx: RecipeContext, dir: string): RecipeEdit {
 export function expressRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
   const dir = serverDir(ctx);
-  const { parts, served } = proxyStart(
+  const { parts, mount } = proxyStart(
     ctx,
     (needs) => routes(ctx, dir, example, needs),
-    { module: "@noverax/courier-express", exported: "courierHandler" },
+    {
+      module: "@noverax/courier-express",
+      exported: "courierHandler",
+      connect: (path) =>
+        loadStep(path, "mount its routes on your Express app, before any body parser"),
+    },
     studioAttachLater(),
   );
   const { files, manual } = sortParts(parts);
   return {
     files: [...serverFiles(ctx, dir), ...files],
-    edits: served ? [] : [mountEdit(ctx, dir)],
+    edits: mount ? [mountEdit(ctx, dir)] : [],
     ...courierPackages(ctx, { adapter: "@noverax/courier-express", proxy: true }),
     scripts: proxyScripts(ctx),
     manual,

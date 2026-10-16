@@ -3,6 +3,7 @@ import { importSpecifier } from "./import-specifier";
 import type { ManualStep, Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
+import { loadStep, proxyStart } from "./shared/proxy-start";
 import { proxyScripts, sortParts } from "./shared/recipe-parts";
 import {
   serverDir,
@@ -11,7 +12,7 @@ import {
   serverStart,
   studioAttachLater,
 } from "./shared/server-files";
-import { addsExample, listModule, proxyStart, type ServerNeeds } from "./shared/wired";
+import { addsExample, listModule, type ServerNeeds } from "./shared/wired";
 
 /* `fastify start -w` restarts the server on any change in the project, Studio's own data in .courier/ among them. */
 function watchesAll(command: string): boolean {
@@ -111,15 +112,20 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
   const dir = serverDir(ctx);
   const path = autoloads(ctx) ? "src/plugins/courier.ts" : `${dir}/plugin.ts`;
-  const { parts, served } = proxyStart(
+  const { parts, mount } = proxyStart(
     ctx,
     (needs) => plugin(ctx, path, dir, example, needs),
-    { module: "@noverax/courier-fastify", exported: "courierPlugin", call: false },
+    {
+      module: "@noverax/courier-fastify",
+      exported: "courierPlugin",
+      call: false,
+      connect: (path) => loadStep(path, "register its plugin on your Fastify app"),
+    },
     studioAttachLater(),
   );
   const { files, manual } = sortParts(parts);
   const register: ManualStep[] =
-    !autoloads(ctx) && !served
+    !autoloads(ctx) && mount
       ? [
           {
             file: "your server",

@@ -74,11 +74,11 @@ export function astroRecipe(ctx: RecipeContext): Recipe {
   const what = (needs: ServerNeeds) =>
     needsWhat(needs, "Register Courier's APIs before the route serves them");
   const studioEdit = astroStudioEdit(ctx.project);
-  const start = startFile(ctx, (needs) => middleware(ctx, needs), what, [
-    "src/middleware.js",
-    "src/middleware/index.ts",
-    "src/middleware/index.js",
-  ]);
+  const start = startFile(ctx, {
+    file: (needs) => middleware(ctx, needs),
+    what,
+    others: ["src/middleware.js", "src/middleware/index.ts", "src/middleware/index.js"],
+  });
   const route = servingFile(
     ctx,
     {
@@ -100,7 +100,7 @@ export function astroRecipe(ctx: RecipeContext): Recipe {
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
-      ...(route ? [route] : []),
+      route,
       ...(example
         ? [proxyCaller(ctx, DIR), astroDemo(ctx, "src/pages/courier.astro", `${DIR}/caller.ts`)]
         : []),

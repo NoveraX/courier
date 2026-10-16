@@ -1,5 +1,6 @@
 import { majorOf } from "../project/read-project";
 import { attachesStudio } from "../project/wiring";
+import { registerInside } from "./edits/next-register";
 import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import { NEXT_CONFIGS, nextStudioEnvEdit, phaseHint, studioWrapper } from "./next-config-edit";
@@ -123,12 +124,12 @@ function fullWrapper(ctx: RecipeContext, file: string): ManualStep {
 /* The server's start, and Studio's connections where it is set up — each where the app lacks it. */
 function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep | RecipeEdit> {
   const path = `${base}instrumentation.ts`;
-  const server = startFile(
-    ctx,
-    (needs) => instrumentation(ctx, base, needs),
-    needsWhat,
-    namesOf(path).slice(1),
-  );
+  const server = startFile(ctx, {
+    file: (needs) => instrumentation(ctx, base, needs),
+    what: needsWhat,
+    others: namesOf(path).slice(1),
+    inside: (needs, text) => registerInside(ctx, path, needs, text),
+  });
   const parts = server === undefined ? [] : [server];
   if (!ctx.choices.studio) return parts;
   if ((majorOf(ctx.version) ?? 16) < 16) return [...parts, ...wrapperStep(ctx)];
@@ -171,7 +172,7 @@ export function nextRecipe(ctx: RecipeContext): Recipe {
       ...(example ? exampleApi(ctx, dir, serverReach(ctx)) : []),
       courierConfig(ctx, `${dir}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
-      ...(proxy ? [proxy] : []),
+      proxy,
       ...(example ? [reactQuery(ctx, dir, "proxy"), reactDemo(ctx, page)] : []),
       ...parts.filter((part): part is RecipeFile => "content" in part),
     ],

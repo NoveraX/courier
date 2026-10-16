@@ -22,6 +22,10 @@ const STATIC = new RegExp(
   `\\bimport\\s+(?!type\\s)([^;"'\`]*?)\\s*\\bfrom\\s*${SPECIFIER}\\2`,
   "g",
 );
+const EXPORTED = new RegExp(
+  `\\bexport\\s+(?!type\\s)(?:\\*(?:\\s+as\\s+${NAME})?|\\{[^}]*\\})\\s*from\\s*${SPECIFIER}\\1`,
+  "g",
+);
 const BARE = new RegExp(`\\bimport\\s*${SPECIFIER}\\1`, "g");
 const LOADED = `(?:await\\s+import|require)\\s*\\(\\s*${SPECIFIER}\\2\\s*\\)`;
 const DESTRUCTURED = new RegExp(`\\b(?:const|let|var)\\s*\\{([^}]*)\\}\\s*=\\s*${LOADED}`, "g");
@@ -80,7 +84,7 @@ function clauseBindings(clause: string): ImportBinding[] {
 
 /**
  * Every module a file loads in its code — `import … from`, `import "…"`,
- * `import()` and `require()` — with the names each binds: an `import()`
+ * `export … from`, `import()` and `require()` — with the names each binds: an `import()`
  * or `require()` destructured, given a name, or followed by `.then` with a
  * destructured parameter. A load written in a comment or a string is not one.
  *
@@ -107,6 +111,7 @@ export function importsOf(scan: SourceScan): ModuleImport[] {
   for (const match of codeMatches(scan, STATIC))
     add(match, match[3] ?? "", clauseBindings(match[1] ?? ""), true);
   for (const match of codeMatches(scan, BARE)) add(match, match[2] ?? "", [], true);
+  for (const match of codeMatches(scan, EXPORTED)) add(match, match[2] ?? "", [], true);
   for (const match of codeMatches(scan, DESTRUCTURED))
     add(match, match[3] ?? "", destructured(match[1] ?? ""), false);
   for (const match of codeMatches(scan, WHOLE))

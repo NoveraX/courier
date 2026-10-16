@@ -41,7 +41,11 @@ export const POST = handler;
  */
 export function svelteKitRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
-  const start = startFile(ctx, (needs) => hooks(ctx, needs), needsWhat, ["src/hooks.server.js"]);
+  const start = startFile(ctx, {
+    file: (needs) => hooks(ctx, needs),
+    what: needsWhat,
+    others: ["src/hooks.server.js"],
+  });
   const route = servingFile(
     ctx,
     {
@@ -62,7 +66,7 @@ export function svelteKitRecipe(ctx: RecipeContext): Recipe {
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
-      ...(route ? [route] : []),
+      route,
       ...(example
         ? [
             proxyCaller(ctx, DIR),

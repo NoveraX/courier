@@ -1,6 +1,5 @@
 import { configObjectPath } from "../../project/config-file";
 import { fileUsing, registeringFile, studioServerFile } from "../../project/wiring";
-import { importSpecifier } from "../import-specifier";
 import type { ManualStep, RecipeContext, RecipeFile } from "../recipe-types";
 
 /**
@@ -32,16 +31,17 @@ export interface ServerNeeds {
  * the config's APIs, or — where Studio is set up — connects the server to it.
  *
  * @param ctx - The project, and what is set up in it
+ * @param loading - A file of the project's to count as loaded: one the plan has the person load
  * @returns The needs; both in a project without Courier
  * @example
  * ```ts
  * serverNeeds(ctx); // { register: false, studio: true } where only Studio's connection is missing
  * ```
  */
-export function serverNeeds(ctx: RecipeContext): ServerNeeds {
+export function serverNeeds(ctx: RecipeContext, loading?: string): ServerNeeds {
   return {
-    register: registeringFile(ctx.project) === undefined,
-    studio: ctx.choices.studio && studioServerFile(ctx.project) === undefined,
+    register: registeringFile(ctx.project, loading) === undefined,
+    studio: ctx.choices.studio && studioServerFile(ctx.project, loading) === undefined,
   };
 }
 
@@ -65,50 +65,69 @@ export function needsWhat(
   return needs.studio ? `${register}, and connect it to Studio while you develop` : register;
 }
 
+/** How a file that starts Courier on the server is written, and what is said of it. */
+export interface StartFile {
+  /** The file as the setup writes it, for the needs given. */
+  readonly file: (needs: ServerNeeds) => RecipeFile;
+  /** What its lines do, for the needs given. */
+  readonly what: (needs: ServerNeeds) => string;
+  /** Other names the project may have it under. */
+  readonly others?: readonly string[];
+  /**
+   * The step for a file of the project's of that name that has the
+   * function the lines go in — Next.js's `register()` — rather than the
+   * file whole.
+   */
+  readonly inside?: (
+    needs: ServerNeeds,
+    text: string,
+  ) => Pick<ManualStep, "what" | "lines"> | undefined;
+}
+
 /**
  * The file that starts Courier on the server — hooks, middleware, a
- * plugin — written for what is still missing: none where nothing is, the
- * project's own file kept where it does it all, and where the project has
- * a file of that name that lacks a part, the lines of that part, for the
- * person to add.
+ * plugin — written for what is still missing. Where nothing is, the file
+ * of the project's that does it is kept and named; where the project has a
+ * file of that name that lacks a part, the lines of that part are left to
+ * the person — inside the function they go in, where it has one.
  *
  * @param ctx - The project, and what is set up in it
- * @param file - The file as the setup writes it, for the needs given
- * @param what - What its lines do, for the needs given
- * @param others - Other names the project may have it under
+ * @param start - How the file is written
  * @returns The file, the step, or nothing
  * @example
  * ```ts
- * startFile(ctx, (needs) => hooks(ctx, needs), needsWhat, ["src/hooks.server.js"]);
+ * startFile(ctx, { file: (needs) => hooks(ctx, needs), what: needsWhat, others: ["src/hooks.server.js"] });
  * ```
  */
 export function startFile(
   ctx: RecipeContext,
-  file: (needs: ServerNeeds) => RecipeFile,
-  what: (needs: ServerNeeds) => string,
-  others: readonly string[] = [],
+  start: StartFile,
 ): RecipeFile | ManualStep | undefined {
   const needs = serverNeeds(ctx);
-  const written = file(needs);
-  const taken = [written.path, ...others].find((path) => ctx.project.exists(path));
+  const written = start.file(needs);
+  const taken = [written.path, ...(start.others ?? [])].find((path) => ctx.project.exists(path));
   if (!needs.register && !needs.studio) {
-    return taken === undefined ? undefined : { ...written, path: taken, recognized: true };
+    const doing = taken ?? registeringFile(ctx.project) ?? studioServerFile(ctx.project);
+    return doing === undefined ? undefined : { ...written, path: doing, recognized: true };
   }
   if (taken === undefined) return written;
-  return { file: taken, what: what(needs), lines: written.content.trimEnd().split("\n") };
+  const inside = start.inside?.(needs, ctx.project.read(taken) ?? "");
+  if (inside !== undefined) return { file: taken, ...inside };
+  return { file: taken, what: start.what(needs), lines: written.content.trimEnd().split("\n") };
 }
 
 /**
  * A file the framework's Courier package serves from — the proxy route —
- * where no file of the project's serves it yet: kept as the project's own
- * where the file at its path does, and left out where another file does.
+ * where no file of the project's that the framework loads serves it yet:
+ * kept as the project's own where the file at its path does, and in its
+ * place, named, where another file does.
  *
  * @param ctx - The project, and what is set up in it
  * @param file - The file
  * @param module - The framework's Courier package
  * @param exported - What of it serves: `apiRoute`, `courierHandler`
  * @param call - Whether it is called; Fastify's plugin is passed
- * @returns The file, or nothing where another file serves
+ * @returns The file, or the project's that serves
  * @example
  * ```ts
  * servingFile(ctx, route, "@noverax/courier-next", "apiRoute");
@@ -120,10 +139,10 @@ export function servingFile(
   module: string,
   exported: string,
   call = true,
-): RecipeFile | undefined {
+): RecipeFile {
   const served = fileUsing(ctx.project, module, exported, call);
-  if (served === undefined) return { ...file, recognized: false };
-  return served === file.path ? { ...file, recognized: true } : undefined;
+  if (served === undefined || !served.loaded) return { ...file, recognized: false };
+  return { ...file, path: served.path, recognized: true };
 }
 
 /**
@@ -141,68 +160,4 @@ export function servingFile(
  */
 export function listModule(ctx: RecipeContext, list: string): string {
   return ctx.configured === undefined ? list : configObjectPath(ctx.project);
-}
-
-/**
- * Where a file of the project's serves the proxy already but the server's
- * start lacks a part, the lines of that part, for the person to add there.
- *
- * @param ctx - The project, and what is set up in it
- * @param served - The file that serves the proxy
- * @param attach - The framework's code that connects the server to Studio
- * @returns The step, or none where nothing is missing
- * @example
- * ```ts
- * missingPartsStep(ctx, "src/index.ts", studioAttachLater());
- * ```
- */
-export function missingPartsStep(ctx: RecipeContext, served: string, attach: string): ManualStep[] {
-  const needs = serverNeeds(ctx);
-  if (!needs.register && !needs.studio) return [];
-  const config = importSpecifier(served, configObjectPath(ctx.project), ctx.extension);
-  const register = [
-    'import { registerSources } from "@noverax/courier";',
-    `import config from "${config}";`,
-    "",
-    "registerSources(config.sources);",
-  ];
-  const studio = needs.studio ? [...(needs.register ? [""] : []), ...attach.split("\n")] : [];
-  return [
-    {
-      file: served,
-      what: needsWhat(needs),
-      lines: [...(needs.register ? register : []), ...studio],
-    },
-  ];
-}
-
-/**
- * The file that both starts Courier on the server and serves the proxy —
- * a route that registers the APIs, a server's router, plugin or module —
- * written for what is missing where no file of the project's serves the
- * proxy yet; where one does, it is kept, and only the parts the server's
- * start lacks are left to the person, in that file.
- *
- * @param ctx - The project, and what is set up in it
- * @param file - The file as the setup writes it, for the needs given
- * @param serves - The framework's Courier package, and what of it serves
- * @param attach - The framework's code that connects the server to Studio
- * @returns The parts, and whether a file of the project's serves the proxy already
- * @example
- * ```ts
- * proxyStart(ctx, (needs) => routes(ctx, needs), { module: "@noverax/courier-express", exported: "courierHandler" }, studioAttachLater());
- * ```
- */
-export function proxyStart(
-  ctx: RecipeContext,
-  file: (needs: ServerNeeds) => RecipeFile,
-  serves: { readonly module: string; readonly exported: string; readonly call?: boolean },
-  attach: string,
-): { parts: Array<RecipeFile | ManualStep>; served: boolean } {
-  const needs = serverNeeds(ctx);
-  const written = file(needs);
-  const served = fileUsing(ctx.project, serves.module, serves.exported, serves.call ?? true);
-  if (served === undefined) return { parts: [{ ...written, recognized: false }], served: false };
-  const own = served === written.path ? [{ ...written, recognized: true }] : [];
-  return { parts: [...own, ...missingPartsStep(ctx, served, attach)], served: true };
 }

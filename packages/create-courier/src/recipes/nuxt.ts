@@ -103,7 +103,7 @@ function pages(ctx: RecipeContext, app: string): { files: RecipeFile[]; edits: R
 export function nuxtRecipe(ctx: RecipeContext): Recipe {
   const { app, dir, caller } = layoutOf(ctx);
   const example = addsExample(ctx);
-  const plugin = startFile(ctx, (needs) => serverPlugin(ctx, needs), needsWhat);
+  const plugin = startFile(ctx, { file: (needs) => serverPlugin(ctx, needs), what: needsWhat });
   const route = servingFile(
     ctx,
     {
@@ -121,7 +121,7 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
       courierConfig(ctx, `${dir}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
       ...(plugin && "content" in plugin ? [plugin] : []),
-      ...(route ? [route] : []),
+      route,
       ...(example ? [proxyCaller(ctx, dir), vueDemo(ctx, `${app}pages/courier.vue`, caller)] : []),
       ...routing.files,
     ],

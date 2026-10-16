@@ -7,6 +7,7 @@ import { importSpecifier } from "./import-specifier";
 import type { NextStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
+import { loadStep, proxyStart } from "./shared/proxy-start";
 import { proxyScripts, sortParts } from "./shared/recipe-parts";
 import {
   SERVER_DIR,
@@ -15,7 +16,7 @@ import {
   serverStart,
   studioAttachLater,
 } from "./shared/server-files";
-import { addsExample, listModule, proxyStart, type ServerNeeds } from "./shared/wired";
+import { addsExample, listModule, type ServerNeeds } from "./shared/wired";
 
 const APP_MODULE = "src/app.module.ts";
 
@@ -144,16 +145,20 @@ function startStep(ctx: RecipeContext, example: boolean): NextStep {
  */
 export function nestRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
-  const { parts, served } = proxyStart(
+  const { parts, mount } = proxyStart(
     ctx,
     (needs) => courierModule(ctx, example, needs),
-    { module: "@noverax/courier-nestjs", exported: "courierMiddleware" },
+    {
+      module: "@noverax/courier-nestjs",
+      exported: "courierMiddleware",
+      connect: (path) => loadStep(path, "import its module into your root module"),
+    },
     studioAttachLater(),
   );
   const { files, manual } = sortParts(parts);
   return {
     files: [...serverFiles(ctx, SERVER_DIR), ...files, ...(example ? [controller(ctx)] : [])],
-    edits: served ? [] : [importEdit(ctx)],
+    edits: mount ? [importEdit(ctx)] : [],
     ...courierPackages(ctx, { adapter: "@noverax/courier-nestjs", proxy: true }),
     scripts: proxyScripts(ctx),
     manual,

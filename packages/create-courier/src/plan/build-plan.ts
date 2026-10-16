@@ -74,7 +74,10 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
   /* Moving to TypeScript 6 asks for changes in a tsconfig written for an older one. */
   const movesToSix = typescript.install !== undefined || typescript.step !== undefined;
   const tsconfigStep = movesToSix ? typescriptSixStep(project) : undefined;
-  const files = recipe.files.map((file) => plannedFile(project, file));
+  /* A file of the project's that does more than one part is listed once. */
+  const files = recipe.files
+    .filter((file, at) => recipe.files.findIndex((each) => each.path === file.path) === at)
+    .map((file) => plannedFile(project, file));
   const edits = [...recipe.edits, ...scriptsEdit(recipe.scripts, recipe.rewrites ?? [])].map(
     (edit) => plannedEdit(project, edit),
   );

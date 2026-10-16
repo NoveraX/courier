@@ -6,6 +6,7 @@ import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
+import { loadStep, proxyStart } from "./shared/proxy-start";
 import { proxyScripts, sortParts } from "./shared/recipe-parts";
 import {
   SERVER_DIR,
@@ -15,7 +16,7 @@ import {
   studioAttachLater,
 } from "./shared/server-files";
 import { rootDirIncludeEdit } from "./shared/tsconfig-include";
-import { addsExample, listModule, proxyStart, type ServerNeeds } from "./shared/wired";
+import { addsExample, listModule, type ServerNeeds } from "./shared/wired";
 
 function routes(ctx: RecipeContext, withPage: boolean, needs: ServerNeeds): RecipeFile {
   const path = `${SERVER_DIR}/routes.ts`;
@@ -103,10 +104,14 @@ function mountEdit(ctx: RecipeContext): RecipeEdit {
  */
 export function honoRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
-  const { parts, served } = proxyStart(
+  const { parts, mount } = proxyStart(
     ctx,
     (needs) => routes(ctx, example, needs),
-    { module: "@noverax/courier-hono", exported: "courierHandler" },
+    {
+      module: "@noverax/courier-hono",
+      exported: "courierHandler",
+      connect: (path) => loadStep(path, "mount its routes on your Hono app"),
+    },
     studioAttachLater(),
   );
   const { files, manual } = sortParts(parts);
@@ -114,7 +119,7 @@ export function honoRecipe(ctx: RecipeContext): Recipe {
     files: [...serverFiles(ctx, SERVER_DIR), ...files],
     /* A project set up already compiles its config as it is. */
     edits: [
-      ...(served ? [] : [mountEdit(ctx)]),
+      ...(mount ? [mountEdit(ctx)] : []),
       ...(ctx.configured === undefined ? rootDirIncludeEdit(ctx) : []),
     ],
     ...courierPackages(ctx, { adapter: "@noverax/courier-hono", proxy: true }),

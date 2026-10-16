@@ -63,6 +63,8 @@ describe("nextRecipe", () => {
     expect(recipe.files.map((file) => file.path)).not.toContain("src/instrumentation.ts");
     expect(recipe.manual[0]?.file).toBe("src/instrumentation.ts");
     expect(recipe.manual[0]?.lines.join("\n")).toContain("registerSources(config.sources);");
+    expect(recipe.manual[0]?.lines).not.toContain("export async function register() {");
+    expect(recipe.manual[0]?.what).toContain("inside the register() it exports, made async");
   });
 
   it("names Studio's port in next.config's env where Studio could not take the default", () => {

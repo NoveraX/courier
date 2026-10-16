@@ -214,6 +214,7 @@ export interface CourierServerConfig {
   /**
    * Answer only what a browser sent, refusing with 403 a request with
    * neither `Sec-Fetch-Site` nor `Origin` — a filter for noise, not a lock.
+   * Studio's Playground gets through in development alone, on a one-time pass.
    */
   browsersOnly?: boolean | undefined;
 }

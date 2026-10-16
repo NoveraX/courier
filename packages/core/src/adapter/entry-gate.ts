@@ -3,16 +3,23 @@ import { discardBody } from "./discard-body";
 import type { HandlerConfig } from "./handler-config";
 import { isHostAllowed } from "./host-policy";
 import { errorResponse } from "./parse";
+import { redeemStudioPass, takeStudioPass } from "./studio-pass-gate";
 
 type Serve = (request: Request) => Promise<Response>;
+
+/** What `browsersOnly` answers a request no browser sent with, under the code `BROWSERS_ONLY`. */
+export const BROWSERS_ONLY_REFUSAL = "This proxy answers browsers only";
 
 /**
  * Put in front of an entry point what every one of them does first.
  *
  * A request addressed to a host the app does not serve is answered 421
  * before anything else looks at it, a preflight is answered, and a listed
- * origin is given its permission to read the answer. Every entry point is
- * wrapped, because an adapter may mount any one of them on its own.
+ * origin is given its permission to read the answer. Studio's pass is taken
+ * off every request, and with `browsersOnly` a request no browser sent is
+ * refused unless it carries a pass Studio's runtime in this process redeems
+ * — a Playground call, which still meets every other check. Every entry
+ * point is wrapped, because an adapter may mount any one of them on its own.
  *
  * @param serve - The entry point
  * @param config - The handler's hosts and origins
@@ -28,7 +35,10 @@ export function gateEntry(serve: Serve, config: HandlerConfig | undefined): Serv
   return async (request) => {
     if (!isHostAllowed(request, config?.allowedHosts)) return refuseHost(request);
     if (request.method === "OPTIONS") return answerOptions(request, allowedOrigins);
-    if (config?.browsersOnly && !sentByBrowser(request)) return refuseNonBrowser(request);
+    const pass = takeStudioPass(request);
+    if (config?.browsersOnly && !sentByBrowser(request) && !redeemStudioPass(pass)) {
+      return refuseNonBrowser(request);
+    }
     return withCorsHeaders(request, await serve(request), allowedOrigins);
   };
 }
@@ -45,7 +55,7 @@ function sentByBrowser(request: Request): boolean {
 
 function refuseNonBrowser(request: Request): Response {
   discardBody(request);
-  return errorResponse(403, "This proxy answers browsers only", "BROWSERS_ONLY");
+  return errorResponse(403, BROWSERS_ONLY_REFUSAL, "BROWSERS_ONLY");
 }
 
 /** Refuse a request addressed to a host the app does not serve, naming the fix. */

@@ -24,6 +24,12 @@ describe("a header that carries a credential", () => {
     ).toEqual(["x-auth-token", "x_session_id", "x-csrf-token"]);
   });
 
+  it("includes Studio's one-time pass, in any case", () => {
+    expect(isCredentialHeader("X-Courier-Studio-Pass")).toBe(true);
+    expect(isCredentialHeader("x-courier-studio-pass")).toBe(true);
+    expect(isCredentialHeader("x-passenger")).toBe(false);
+  });
+
   it("includes the double-submit token a session repeats, written as one word", () => {
     const tokens = ["X-CSRFToken", "x-xsrf-token", "X-XSRFToken", "csrf"];
 

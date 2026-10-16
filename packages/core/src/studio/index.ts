@@ -6,6 +6,7 @@ export {
   registerPlaygroundAbort,
 } from "./playground-abort-registry";
 export { generateRequestId, studioHooks } from "./singleton";
+export { STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "./studio-pass";
 export {
   PLAYGROUND_RID_HEADER,
   PLAYGROUND_RID_PARAM,

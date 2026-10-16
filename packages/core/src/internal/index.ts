@@ -17,6 +17,7 @@ export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/add
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
+export { BROWSERS_ONLY_REFUSAL } from "../adapter/entry-gate";
 export { type ExposureDecision, exposureOf } from "../adapter/exposure";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
@@ -72,6 +73,8 @@ export {
   abortPlayground,
   generateRequestId,
   PLAYGROUND_RID_HEADER,
+  STUDIO_PASS_HEADER,
+  STUDIO_PASS_REDEEMER,
   STUDIO_REQUEST_HEADER,
   type StudioHooks,
   studioHooks,

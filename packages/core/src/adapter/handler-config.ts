@@ -67,7 +67,10 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * refused with 403. It keeps that noise off your APIs and protects
    * nothing: any client can send both headers. Server code that calls the
    * proxy route over HTTP is refused too, and so is a same-origin read from
-   * a browser that sends neither, such as Safari before 16.4.
+   * a browser that sends neither, such as Safari before 16.4. In
+   * development, Studio's Playground is let through on a one-time pass
+   * that only Studio's runtime in this process redeems; in production no
+   * pass is honoured.
    */
   browsersOnly?: boolean | undefined;
 }

@@ -83,7 +83,7 @@ One command for thirteen frameworks: Next.js, Nuxt, SvelteKit, Astro, React Rout
 npx @noverax/create-courier
 ```
 
-Run it in your project. It finds the framework in your `package.json`, shows the plan, and once you agree writes it, installs the packages with your package manager, and type-checks what it added against your own `tsconfig`. Then:
+Run it in your project. It finds the framework in your `package.json`, shows the plan, and once you agree writes it, installs the packages with your package manager, and type-checks what it added against your own `tsconfig`. In a project whose `courier.config.ts` declares APIs already, it adds no example, and offers only the parts your code does not wire up yet. Then:
 
 ```bash
 npm run studio   # Courier Studio, and the mock API it runs

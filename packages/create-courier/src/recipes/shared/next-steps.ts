@@ -1,7 +1,9 @@
 import type { NextStep, RecipeContext } from "../recipe-types";
 import type { ExampleReach } from "./example-api";
 
-import { ROUTES_COMMAND } from "./recipe-parts";
+import { ROUTES_COMMAND, STUDIO_COMMAND } from "./recipe-parts";
+import { wantsRoutes } from "./wants-routes";
+import { addsExample } from "./wired";
 
 /**
  * The step that starts Studio — and with it the example's mock — where
@@ -16,9 +18,12 @@ import { ROUTES_COMMAND } from "./recipe-parts";
  */
 export function studioStep(ctx: RecipeContext): NextStep[] {
   if (!ctx.choices.studio) return [];
-  const mock = ctx.choices.mocks && ctx.choices.openapi === undefined;
-  const what = `starts Courier Studio on port ${ctx.ports.studio}${mock ? `, and the mock API on port ${ctx.ports.mock}` : ""}`;
-  return [{ command: ctx.manager.run("studio"), what }];
+  const mock = ctx.choices.mocks && addsExample(ctx);
+  const own = ctx.project.manifest.scripts.studio;
+  const kept = own !== undefined && own !== STUDIO_COMMAND;
+  const what = `starts Courier Studio on port ${ctx.ports.studio}${mock ? `, and the mock API on port ${ctx.ports.mock}` : ""}${kept ? `; your own studio script is kept as it is` : ""}`;
+  const command = kept ? ctx.manager.exec(STUDIO_COMMAND, []).join(" ") : ctx.manager.run("studio");
+  return [{ command, what }];
 }
 
 /**
@@ -35,16 +40,16 @@ export function studioStep(ctx: RecipeContext): NextStep[] {
  * ```
  */
 export function routesStep(ctx: RecipeContext): NextStep[] {
-  if (ctx.choices.studio) return [];
+  if (ctx.choices.studio || !wantsRoutes(ctx)) return [];
   const own = ctx.project.manifest.scripts.routes;
-  const command =
-    own === undefined || own === ROUTES_COMMAND
-      ? ctx.manager.run("routes")
-      : ctx.manager.exec("courier-cli", ["routes"]).join(" ");
+  const kept = own !== undefined && own !== ROUTES_COMMAND;
+  const command = kept
+    ? ctx.manager.exec("courier-cli", ["routes"]).join(" ")
+    : ctx.manager.run("routes");
   return [
     {
       command,
-      what: "writes courier.routes.ts again from the .expose() marks: run it after you change one",
+      what: `writes courier.routes.ts again from the .expose() marks: run it after you change one${kept ? "; your own routes script is kept as it is" : ""}`,
     },
   ];
 }

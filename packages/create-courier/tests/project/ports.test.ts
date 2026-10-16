@@ -1,3 +1,5 @@
+import { createServer } from "node:net";
+
 import { afterAll, describe, expect, it } from "vitest";
 
 import { portsOf } from "../../src/project/ports";
@@ -40,5 +42,22 @@ describe("portsOf", () => {
     });
 
     expect(await portsOf(readProject(root), CHOICES)).toEqual({ studio: 6280, mock: 7001 });
+  });
+});
+
+describe("portsOf, without the example", () => {
+  it("names the mock's default port without looking for a free one: no mock is added", async () => {
+    const held = createServer();
+    await new Promise<void>((resolve) => {
+      held.once("error", () => resolve());
+      held.listen({ port: 7001, host: "127.0.0.1" }, () => resolve());
+    });
+    const root = projectWith({ "package.json": "{}", "courier.config.ts": "export default {};\n" });
+
+    try {
+      expect((await portsOf(readProject(root), CHOICES, false)).mock).toBe(7001);
+    } finally {
+      await new Promise<void>((resolve) => held.close(() => resolve()));
+    }
   });
 });

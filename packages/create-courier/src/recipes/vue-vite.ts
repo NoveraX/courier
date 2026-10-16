@@ -8,6 +8,7 @@ import { devStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { vueDemo } from "./shared/vue-demo";
+import { addsExample } from "./shared/wired";
 
 const DIR = "src/courier";
 
@@ -70,7 +71,7 @@ createApp(CourierPage).mount("#app");
  * ```
  */
 export function vueViteRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   return {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, false)) : []),

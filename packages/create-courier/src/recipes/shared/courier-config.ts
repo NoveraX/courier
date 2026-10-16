@@ -1,4 +1,5 @@
 import { READS_POLICY } from "../../agents-policy-edit";
+import { configFile } from "../../project/config-file";
 import { STUDIO_DEFAULT_PORT } from "../../project/ports";
 import { importSpecifier } from "../import-specifier";
 
@@ -28,6 +29,22 @@ export const PLAIN_SOURCE: ExampleSource = { name: "api", expression: "api" };
  */
 export function builtSource(ctx: RecipeContext): ExampleSource {
   return { name: "createApi", expression: `createApi("http://localhost:${ctx.ports.mock}")` };
+}
+
+/**
+ * Where the project's config is, or goes: under another of its names —
+ * `courier.config.mjs` — Studio reads that one, so no courier.config.ts
+ * is added beside it, and the setup's files import it.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns The config's path, relative to the root
+ * @example
+ * ```ts
+ * configPathOf(ctx); // "courier.config.ts" in a project without one
+ * ```
+ */
+export function configPathOf(ctx: RecipeContext): string {
+  return configFile(ctx.project) ?? "courier.config.ts";
 }
 
 /* Studio's port, where the default was taken when the project was set up. */
@@ -101,7 +118,13 @@ export default defineConfig({
   sources: ${sources},${studioBlock(ctx)}${agentsBlock(ctx)}
 });
 `;
-  return { path, content, purpose };
+  /* A config that declares the project's APIs is the project's, however it is written. */
+  return {
+    path: path === "courier.config.ts" ? configPathOf(ctx) : path,
+    content,
+    purpose,
+    ...(ctx.configured ? { recognized: true } : {}),
+  };
 }
 
 /**
@@ -128,9 +151,10 @@ export function passOnConfig(ctx: RecipeContext, list: string): RecipeFile {
 export { default } from "${importSpecifier("courier.config.ts", list, ctx.extension)}";
 `;
   return {
-    path: "courier.config.ts",
+    path: configPathOf(ctx),
     content,
     purpose: `passes ${list}'s list on to Studio and agents`,
+    ...(ctx.configured ? { recognized: true } : {}),
   };
 }
 

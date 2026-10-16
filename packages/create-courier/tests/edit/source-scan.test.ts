@@ -32,10 +32,39 @@ describe("scanSource", () => {
     expect(scan?.code[text.indexOf("`[") + 1]).toBe(0);
   });
 
+  it("marks the text of strings and templates as literal, and a comment as neither", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the scanned file's own template literal
+    const text = '// "a comment"\nconst s = "a string" + `a ${b} template`;';
+    const scan = scanSource(text);
+
+    expect(scan?.literal[text.indexOf('"a comment"')]).toBe(0);
+    expect(scan?.literal[text.indexOf('"a string"')]).toBe(1);
+    expect(scan?.literal[text.indexOf("template`")]).toBe(1);
+    expect(scan?.literal[text.indexOf("b}")]).toBe(0);
+  });
+
   it("divides after a value and starts a regular expression after an operator", () => {
     const text = "const x = (a) / 2 / (b); const r = x || /a\\/b/;";
 
     expect(scanSource(text)?.closer.size).toBe(2);
+  });
+
+  it("reads a JSX closing tag as code, not the start of a regular expression", () => {
+    const text = '<a href="/">Home</a>{user && (\n  <b>{user.name}</b>\n)}';
+    const scan = scanSource(text);
+
+    expect(scan?.closer.get(text.indexOf("("))).toBe(text.lastIndexOf(")"));
+  });
+
+  it("reads a file whose brackets do not pair as far as they go, when asked to", () => {
+    /* The apostrophe reads as a string to the end of its line, so the brackets after it are lost. */
+    const text =
+      'import { courier } from "./courier";\nconst page = <p>Don\'t go</p>{user && (\n  <b>hi</b>\n)};\n';
+
+    expect(scanSource(text)).toBeUndefined();
+    const lenient = scanSource(text, true);
+    expect(lenient?.code[text.indexOf("courier")]).toBe(1);
+    expect(lenient?.literal[text.indexOf('"./courier"')]).toBe(1);
   });
 
   it("refuses a file whose brackets do not pair up", () => {

@@ -4,8 +4,9 @@ import { withAgents } from "./agents";
 import { applyPlan } from "./apply/apply-plan";
 import type { CreateRun } from "./create-run";
 import { frameworkOf } from "./framework-of";
-import { buildPlan, changesAnything } from "./plan/build-plan";
+import { buildPlan, changesAnything, type Plan } from "./plan/build-plan";
 import { nextLines, planLines } from "./plan/plan-lines";
+import { type ConfiguredSources, configuredSources } from "./project/configured-sources";
 import { importExtension } from "./project/module-style";
 import {
   invokingManager,
@@ -32,6 +33,22 @@ function managerOf(root: string, asked: string | undefined): PackageManager {
   if (asked === "npm" || asked === "pnpm" || asked === "yarn" || asked === "bun")
     return packageManager(asked);
   throw new Error(`--package-manager takes npm, pnpm, yarn or bun, not "${asked}"`);
+}
+
+/* What the config declares, and what the plan does about it. */
+function configuredLine(configured: ConfiguredSources, changes: boolean): string {
+  const { names, more, path } = configured;
+  const count = more ? "its APIs" : `${names.length} ${names.length === 1 ? "API" : "APIs"}`;
+  const named = names.length > 0 ? ` (${names.join(", ")}${more ? ", and more" : ""})` : "";
+  const then = changes ? " The plan adds no example, only what the project lacks." : "";
+  return `Courier is set up here already: ${path} declares ${count}${named}.${then}`;
+}
+
+/* What a plan that changes nothing says: what is left to the person is listed above it. */
+function doneLine(plan: Plan, configured: boolean): string {
+  if (plan.manual.length > 0)
+    return "Nothing here is for the command to change: the steps left to you are above.";
+  return configured ? "Nothing is missing." : "Courier is set up here already.";
 }
 
 async function choicesOf(run: CreateRun, terminal: Terminal): Promise<SetupChoices> {
@@ -75,7 +92,8 @@ export async function addCourier(
   const manager = managerOf(root, run["package-manager"]);
   const version = project.version(framework.marker);
   const choices = await choicesOf(run, terminal);
-  const ports = await portsOf(project, choices);
+  const configured = configuredSources(project);
+  const ports = await portsOf(project, choices, choices.openapi === undefined && !configured);
   const ctx: RecipeContext = {
     project,
     manager,
@@ -84,6 +102,7 @@ export async function addCourier(
     version,
     ports,
     fresh: run.fresh === true,
+    configured,
   };
   const plan = buildPlan(ctx, withAgents(ctx, framework.recipe(ctx)));
   const name = project.manifest.name ?? basename(root);
@@ -92,11 +111,12 @@ export async function addCourier(
       `Set Courier up in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`,
       plan,
       terminal.style,
+      configured ? [configuredLine(configured, changesAnything(plan))] : [],
     ),
   );
   if (!changesAnything(plan) && run.openapi === undefined) {
     terminal.print([
-      "Courier is set up here already.",
+      doneLine(plan, configured !== undefined),
       "",
       "Next",
       ...nextLines(plan.next, terminal.style),

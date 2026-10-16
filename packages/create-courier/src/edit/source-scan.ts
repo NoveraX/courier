@@ -3,6 +3,8 @@ export interface SourceScan {
   readonly text: string;
   /** 1 for each character of code; 0 inside a string, a template's text, a comment or a regular expression. */
   readonly code: Uint8Array;
+  /** 1 for each character of a string or of a template's text, its quotes among them; 0 elsewhere, comments included. */
+  readonly literal: Uint8Array;
   /** The bracket that closes each opening `(`, `[` and `{`, by index. */
   readonly closer: ReadonlyMap<number, number>;
 }
@@ -39,6 +41,8 @@ function regexEnd(text: string, start: number): number {
 }
 
 function startsRegex(text: string, code: Uint8Array, at: number): boolean {
+  /* `</` closes a JSX element: no expression puts a regular expression right after a `<`. */
+  if (text[at - 1] === "<" && code[at - 1] === 1) return false;
   let before = at - 1;
   while (before >= 0 && /\s/.test(text[before] ?? "")) before--;
   if (before < 0) return true;
@@ -53,17 +57,21 @@ function startsRegex(text: string, code: Uint8Array, at: number): boolean {
  * Read a JavaScript or TypeScript file far enough to change it safely: which
  * characters are code, and which bracket closes which. Strings, template
  * text, comments and regular expressions are told apart from code, so a
- * bracket or a word inside one is never taken for code.
+ * bracket or a word inside one is never taken for code. Read to be changed,
+ * a file whose brackets do not pair is no scan; read for what it loads and
+ * calls, its brackets are paired as far as they go.
  *
  * @param text - The file
- * @returns The scan, or `undefined` when its brackets do not pair up
+ * @param lenient - Whether to read a file whose brackets do not pair
+ * @returns The scan, or `undefined` when its brackets do not pair up and it is not read leniently
  * @example
  * ```ts
  * scanSource("export default defineConfig({ plugins: [react()] });")?.closer.get(27); // 52
  * ```
  */
-export function scanSource(text: string): SourceScan | undefined {
+export function scanSource(text: string, lenient = false): SourceScan | undefined {
   const code = new Uint8Array(text.length);
+  const literal = new Uint8Array(text.length);
   const closer = new Map<number, number>();
   /* Open brackets, and -1 for a template whose `${` is open. */
   const stack: number[] = [];
@@ -72,6 +80,7 @@ export function scanSource(text: string): SourceScan | undefined {
   while (at < text.length) {
     const char = text[at] ?? "";
     if (inTemplate) {
+      literal.fill(1, at, at + (char === "\\" ? 2 : 1));
       if (char === "\\") at += 2;
       else if (char === "`") {
         inTemplate = false;
@@ -88,10 +97,14 @@ export function scanSource(text: string): SourceScan | undefined {
       if (at === -1) at = text.length;
     } else if (char === "/" && text[at + 1] === "*") {
       const end = text.indexOf("*/", at + 2);
-      if (end === -1) return undefined;
-      at = end + 2;
-    } else if (char === '"' || char === "'") at = stringEnd(text, at);
-    else if (char === "`") {
+      if (end === -1 && !lenient) return undefined;
+      at = end === -1 ? text.length : end + 2;
+    } else if (char === '"' || char === "'") {
+      const end = stringEnd(text, at);
+      literal.fill(1, at, end);
+      at = end;
+    } else if (char === "`") {
+      literal[at] = 1;
       inTemplate = true;
       at++;
     } else if (char === "/" && startsRegex(text, code, at)) at = regexEnd(text, at);
@@ -100,23 +113,30 @@ export function scanSource(text: string): SourceScan | undefined {
       if (OPENERS.has(char)) stack.push(at);
       else if (char in PAIRS) {
         const open = stack.pop();
-        if (open === undefined) return undefined;
-        if (open === -1) {
-          if (char !== "}") return undefined;
-          code[at] = 0;
-          inTemplate = true;
-        } else if (text[open] !== PAIRS[char]) return undefined;
-        else closer.set(open, at);
+        if (open === undefined) {
+          if (!lenient) return undefined;
+        } else if (open === -1) {
+          /* Read leniently, a stray closer inside `${…}` leaves the template's brace open. */
+          if (char === "}") {
+            code[at] = 0;
+            inTemplate = true;
+          } else if (lenient) stack.push(-1);
+          else return undefined;
+        } else if (text[open] === PAIRS[char]) closer.set(open, at);
+        else if (!lenient) return undefined;
       }
       at++;
     }
   }
-  return stack.length === 0 && !inTemplate ? { text, code, closer } : undefined;
+  const paired = stack.length === 0 && !inTemplate;
+  return paired || lenient ? { text, code, literal, closer } : undefined;
 }
 
 /**
  * Every place a pattern matches in code: its match starts on a character of
- * code, so a match inside a string or a comment does not count.
+ * code, so a match inside a string or a comment does not count — nor does
+ * it hide one in the code it runs on into, which is looked for from just
+ * past where it began.
  *
  * @param scan - The scanned file
  * @param pattern - A global regular expression
@@ -127,7 +147,14 @@ export function scanSource(text: string): SourceScan | undefined {
  * ```
  */
 export function codeMatches(scan: SourceScan, pattern: RegExp): RegExpExecArray[] {
-  return [...scan.text.matchAll(pattern)].filter((match) => scan.code[match.index] === 1);
+  const search = new RegExp(pattern.source, pattern.flags);
+  const found: RegExpExecArray[] = [];
+  for (let match = search.exec(scan.text); match !== null; match = search.exec(scan.text)) {
+    if (scan.code[match.index] === 1) found.push(match);
+    else search.lastIndex = match.index + 1;
+    if (match[0] === "") search.lastIndex++;
+  }
+  return found;
 }
 
 /**

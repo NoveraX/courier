@@ -1,7 +1,9 @@
+import { createTerminalStyle } from "@noverax/courier/internal";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { changedLines } from "../../src/edit/line-diff";
 import { buildPlan, changesAnything } from "../../src/plan/build-plan";
+import { planLines } from "../../src/plan/plan-lines";
 import type { Recipe } from "../../src/recipes/recipe-types";
 import { contextOf, manifest, projectWith, removeProjects } from "../recipes/project-fixture";
 
@@ -22,6 +24,25 @@ const RECIPE: Recipe = {
 };
 
 describe("buildPlan", () => {
+  it("adds a package the project lists as a peer but has not installed, and says why", () => {
+    const root = projectWith({
+      "package.json": JSON.stringify({
+        name: "app",
+        dependencies: { typescript: "^6.0.0" },
+        peerDependencies: { zod: "^4.0.0" },
+      }),
+      "tsconfig.json": "{}",
+    });
+    const plan = buildPlan(contextOf(root, "typescript"), RECIPE);
+    const text = planLines("Set Courier up", plan, createTerminalStyle(0, false)).join("\n");
+
+    expect(plan.dependencies).toEqual(["@noverax/courier", "zod"]);
+    expect(plan.notInstalled).toEqual(["zod"]);
+    expect(text).toContain(
+      "! zod  listed as a peer or optional dependency, but not installed: added",
+    );
+  });
+
   it("creates what is missing, skips what is there already and keeps a file of the project's", () => {
     const root = projectWith({
       "package.json": manifest({ zod: "^4.0.0", typescript: "^6.0.0" }),
@@ -174,5 +195,32 @@ describe("buildPlan", () => {
     });
 
     expect(changesAnything(buildPlan(contextOf(root, "zod"), RECIPE))).toBe(false);
+  });
+});
+
+describe("a plan", () => {
+  it("lists a file the recipe gives twice once", () => {
+    const root = projectWith({
+      "package.json": manifest({ typescript: "^6.0.0" }),
+      "tsconfig.json": "{}",
+    });
+    const twice: Recipe = {
+      ...RECIPE,
+      files: [RECIPE.files[1], RECIPE.files[1]].filter((file) => file !== undefined),
+    };
+
+    expect(buildPlan(contextOf(root, "typescript"), twice).files.map((file) => file.path)).toEqual([
+      "src/api.ts",
+    ]);
+  });
+
+  it("says nothing of files where it adds none", () => {
+    const root = projectWith({
+      "package.json": manifest({ typescript: "^6.0.0" }),
+      "tsconfig.json": "{}",
+    });
+    const plan = buildPlan(contextOf(root, "typescript"), { ...RECIPE, files: [] });
+
+    expect(planLines("Set Courier up", plan, createTerminalStyle(0, false))).not.toContain("Files");
   });
 });

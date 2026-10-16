@@ -12,10 +12,20 @@ function fileLine(file: PlannedFile, width: number, style: TerminalStyle): strin
   return `  ${style.yellow("!")} ${path}  ${style.dim("a file of yours is here: kept, see below")}`;
 }
 
+/* A package the project has on another release line, which the setup leaves as it is. */
+function otherReleaseLine(other: Plan["otherReleases"][number], style: TerminalStyle): string {
+  return `  ${style.yellow("!")} ${other.name} ${other.has}  ${style.dim(`kept: the files Courier adds are written for ${other.wants}`)}`;
+}
+
+/* A package the project names as a peer or an optional one, which nothing installed. */
+function notInstalledLine(name: string, style: TerminalStyle): string {
+  return `  ${style.yellow("!")} ${name}  ${style.dim("listed as a peer or optional dependency, but not installed: added")}`;
+}
+
 function packageLines(plan: Plan, style: TerminalStyle): string[] {
-  const { dependencies, devDependencies, typescript } = plan;
-  if (dependencies.length === 0 && devDependencies.length === 0 && typescript === undefined)
-    return [];
+  const { dependencies, devDependencies, typescript, otherReleases, notInstalled } = plan;
+  const lists = dependencies.length + devDependencies.length + otherReleases.length;
+  if (lists === 0 && typescript === undefined) return [];
   return [
     "Packages",
     ...(dependencies.length > 0 ? [`  ${style.green("+")} ${dependencies.join(" ")}`] : []),
@@ -23,6 +33,8 @@ function packageLines(plan: Plan, style: TerminalStyle): string[] {
       ? [`  ${style.green("+")} ${devDependencies.join(" ")}  ${style.dim("(dev)")}`]
       : []),
     ...(typescript ? [typescriptLine(typescript, style)] : []),
+    ...otherReleases.map((other) => otherReleaseLine(other, style)),
+    ...notInstalled.map((name) => notInstalledLine(name, style)),
     "",
   ];
 }
@@ -96,20 +108,27 @@ export function nextLines(steps: readonly NextStep[], style: TerminalStyle): str
  * @param title - The plan's first line: the project, its framework and package manager
  * @param plan - The plan
  * @param style - How the terminal is painted
+ * @param lead - Lines to show under the title, before the files
  * @returns The lines
  * @example
  * ```ts
  * console.log(planLines("Set Courier up in shop (Next.js 16.4.0, npm)", plan, style).join("\n"));
  * ```
  */
-export function planLines(title: string, plan: Plan, style: TerminalStyle): string[] {
+export function planLines(
+  title: string,
+  plan: Plan,
+  style: TerminalStyle,
+  lead: readonly string[] = [],
+): string[] {
   const width = Math.max(...[...plan.files, ...plan.edits].map((file) => file.path.length));
   return [
     style.bold(title),
+    ...lead,
     "",
-    "Files",
+    ...(plan.files.length > 0 ? ["Files"] : []),
     ...plan.files.map((file) => fileLine(file, width, style)),
-    "",
+    ...(plan.files.length > 0 ? [""] : []),
     ...(plan.edits.length > 0
       ? [
           "Changes to your files",

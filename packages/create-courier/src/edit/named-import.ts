@@ -1,4 +1,5 @@
 import { appendItem } from "./insert";
+import { regexText } from "./regex-text";
 import { codeMatches, type SourceScan } from "./source-scan";
 
 /**
@@ -16,7 +17,7 @@ import { codeMatches, type SourceScan } from "./source-scan";
  * ```
  */
 export function addNamedImport(scan: SourceScan, from: string, name: string): string | undefined {
-  const escaped = from.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  const escaped = regexText(from);
   const imports = codeMatches(
     scan,
     new RegExp(`^import\\s*(?:type\\s+)?\\{[^}]*\\}\\s*from\\s*["']${escaped}["']`, "gm"),

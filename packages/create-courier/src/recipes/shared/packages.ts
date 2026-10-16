@@ -1,5 +1,7 @@
 import { createCourierVersion } from "../../create-courier-version";
 import type { RecipeContext } from "../recipe-types";
+import { wantsRoutes } from "./wants-routes";
+import { addsExample } from "./wired";
 
 /**
  * One of Courier's packages as the command installs it: at the release it
@@ -57,18 +59,22 @@ export interface PackageNeeds {
 export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): RecipePackages {
   const { studio, mocks, mcp, openapi } = ctx.choices;
   const { adapter, react = false, runtime = true, proxy = false } = needs;
-  const example = openapi === undefined;
+  const example = addsExample(ctx);
+  /* A project set up already has the API it calls, and its own way of calling it from React. */
+  const fresh = ctx.configured === undefined;
   return {
     dependencies: [
       courierPackage("@noverax/courier"),
       ...(adapter ? [courierPackage(adapter)] : []),
-      ...(react ? [courierPackage("@noverax/courier-react"), "@tanstack/react-query"] : []),
-      "zod",
+      ...(react && fresh
+        ? [courierPackage("@noverax/courier-react"), "@tanstack/react-query"]
+        : []),
+      ...(fresh || openapi !== undefined ? ["zod"] : []),
       ...(studio && runtime ? [courierPackage("@noverax/courier-studio-core")] : []),
     ],
     devDependencies: [
       ...(studio ? [courierPackage("@noverax/courier-studio")] : []),
-      ...(proxy ? [courierPackage("@noverax/courier-cli")] : []),
+      ...(proxy && wantsRoutes(ctx) ? [courierPackage("@noverax/courier-cli")] : []),
       ...(mocks && example
         ? [courierPackage("@noverax/courier-mock"), "hono", "@hono/node-server"]
         : []),

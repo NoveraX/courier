@@ -1,5 +1,4 @@
-import { posix } from "node:path";
-
+import { configObjectPath } from "./project/config-file";
 import type { Project } from "./project/read-project";
 import type { RecipeEdit } from "./recipes/recipe-types";
 
@@ -10,26 +9,6 @@ export const READS_POLICY = 'agents: { offer: "reads" }';
 const OBJECT_OPENING = /defineConfig\(\s*\{|export\s+default\s*\{/;
 /* A config that says already what agents may call, whatever it says. */
 const HAS_POLICY = /(^|[\s,{])agents\s*:/m;
-
-/**
- * The file that holds the config's object: `courier.config.ts`, or the
- * module it passes its default export on from, as a server whose
- * TypeScript compiles `src/` alone has it.
- *
- * @param project - The project
- * @returns The file, relative to the root
- * @example
- * ```ts
- * configObjectPath(project); // "src/courier/config.ts" where courier.config.ts passes it on
- * ```
- */
-export function configObjectPath(project: Project): string {
-  const config = project.read("courier.config.ts") ?? "";
-  const from = /export\s*\{\s*default\s*\}\s*from\s*["'](\.{1,2}\/[^"']+)["']/.exec(config)?.[1];
-  if (!from) return "courier.config.ts";
-  const module = posix.normalize(from).replace(/\.js$/, "");
-  return project.read(`${module}.ts`) === undefined ? module : `${module}.ts`;
-}
 
 /**
  * The change `--mcp` makes to a config the project has already: its

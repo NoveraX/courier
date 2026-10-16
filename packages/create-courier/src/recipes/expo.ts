@@ -8,6 +8,7 @@ import { expoScreen } from "./shared/expo-screen";
 import { studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
+import { addsExample } from "./shared/wired";
 
 /* The app's own folder, `src/` in Expo's template, and the router's pages in it. */
 function layoutOf(ctx: RecipeContext): { dir: string; pages: string } {
@@ -73,7 +74,7 @@ function schemeOf(ctx: RecipeContext): string | undefined {
  */
 export function expoRecipe(ctx: RecipeContext): Recipe {
   const { dir, pages } = layoutOf(ctx);
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   const api = `${dir}/api.ts`;
   const scheme = schemeOf(ctx);
   /* Expo's template lays its root out as tabs, listed by name: a screen out of the list is never shown. */
@@ -103,7 +104,9 @@ export function expoRecipe(ctx: RecipeContext): Recipe {
         command: ctx.manager.run("web"),
         what: tabbed
           ? "starts the app in the browser: open its Courier tab"
-          : "starts the app in the browser: open /courier",
+          : example
+            ? "starts the app in the browser: open /courier"
+            : "starts the app in the browser",
       },
       ...(tabbed
         ? [
@@ -112,7 +115,7 @@ export function expoRecipe(ctx: RecipeContext): Recipe {
               what: "starts it in the iOS simulator, with the same tab",
             },
           ]
-        : scheme
+        : scheme && example
           ? [{ command: "", what: `In the simulator or on a phone, open ${scheme}://courier` }]
           : []),
     ],

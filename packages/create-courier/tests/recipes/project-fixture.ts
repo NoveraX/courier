@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { configuredSources } from "../../src/project/configured-sources";
 import { importExtension } from "../../src/project/module-style";
 import { packageManager } from "../../src/project/package-manager";
 import { readProject } from "../../src/project/read-project";
@@ -41,6 +42,7 @@ export function contextOf(
     version: project.version(marker),
     ports,
     fresh: false,
+    configured: configuredSources(project),
   };
 }
 

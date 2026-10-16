@@ -39,6 +39,14 @@ export interface Framework {
   readonly marker: string;
   /** Another package the project must list too. */
   readonly also?: string;
+  /**
+   * Whether the marker tells the framework first as a dependency the app
+   * runs with: Courier's setup installs Hono for Studio's mock as a dev
+   * dependency, in an app built with another framework. Listed only among
+   * the dev dependencies, it still tells the framework where no other is
+   * listed, as for a worker a bundler builds.
+   */
+  readonly runsWith?: boolean;
   readonly recipe?: (ctx: RecipeContext) => Recipe;
 }
 
@@ -59,14 +67,16 @@ export const FRAMEWORKS: readonly Framework[] = [
   { id: "expo", label: "Expo", marker: "expo", recipe: expoRecipe },
   { id: "nestjs", label: "NestJS", marker: "@nestjs/core", recipe: nestRecipe },
   { id: "fastify", label: "Fastify", marker: "fastify", recipe: fastifyRecipe },
-  { id: "hono", label: "Hono", marker: "hono", recipe: honoRecipe },
+  { id: "hono", label: "Hono", marker: "hono", runsWith: true, recipe: honoRecipe },
   { id: "express", label: "Express", marker: "express", recipe: expressRecipe },
   { id: "react", label: "React with Vite", marker: "vite", also: "react", recipe: reactViteRecipe },
   { id: "vue", label: "Vue with Vite", marker: "vite", also: "vue", recipe: vueViteRecipe },
 ];
 
 /**
- * The framework a project is built with, told by the packages it lists.
+ * The framework a project is built with, told by the packages it lists: a
+ * framework told first by what the app runs with counts among the dev
+ * dependencies only where no other framework is listed.
  *
  * @param project - The project
  * @returns The framework, or `undefined` when it lists none the command knows
@@ -76,10 +86,20 @@ export const FRAMEWORKS: readonly Framework[] = [
  * ```
  */
 export function detectFramework(project: Project): Framework | undefined {
-  return FRAMEWORKS.find(
-    (framework) =>
-      project.lists(framework.marker) &&
-      (framework.also === undefined || project.lists(framework.also)),
+  const listed = (framework: Framework, marked: boolean) =>
+    marked && (framework.also === undefined || project.lists(framework.also));
+  return (
+    FRAMEWORKS.find((framework) =>
+      listed(
+        framework,
+        framework.runsWith === true
+          ? project.manifest.dependencies[framework.marker] !== undefined
+          : project.lists(framework.marker),
+      ),
+    ) ??
+    FRAMEWORKS.find((framework) =>
+      listed(framework, framework.runsWith === true && project.lists(framework.marker)),
+    )
   );
 }
 

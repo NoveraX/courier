@@ -9,6 +9,9 @@ export interface PackageManifest {
   type?: string | undefined;
   dependencies: Readonly<Record<string, string>>;
   devDependencies: Readonly<Record<string, string>>;
+  /** Packages a library asks its host for, and those it can do without: either is there already. */
+  peerDependencies: Readonly<Record<string, string>>;
+  optionalDependencies: Readonly<Record<string, string>>;
   scripts: Readonly<Record<string, string>>;
 }
 
@@ -17,7 +20,7 @@ export interface Project {
   /** Its folder. */
   readonly root: string;
   readonly manifest: PackageManifest;
-  /** Whether the project lists a package, as a dependency or a dev dependency. */
+  /** Whether the project lists a package: as a dependency, a dev, peer or optional one. */
   lists(name: string): boolean;
   /** A package's version as installed, else the lowest its range in the manifest allows. */
   version(name: string): string | undefined;
@@ -66,6 +69,8 @@ export function manifestOf(text: string, path: string): PackageManifest {
     type: typeof parsed.type === "string" ? parsed.type : undefined,
     dependencies: strings(parsed.dependencies),
     devDependencies: strings(parsed.devDependencies),
+    peerDependencies: strings(parsed.peerDependencies),
+    optionalDependencies: strings(parsed.optionalDependencies),
     scripts: strings(parsed.scripts),
   };
 }
@@ -90,7 +95,11 @@ export function readProject(root: string): Project {
   const manifestPath = join(root, "package.json");
   if (!existsSync(manifestPath)) throw new Error(`There is no package.json in ${root}`);
   const manifest = manifestOf(readFileSync(manifestPath, "utf8"), manifestPath);
-  const listed = (name: string) => manifest.dependencies[name] ?? manifest.devDependencies[name];
+  const listed = (name: string) =>
+    manifest.dependencies[name] ??
+    manifest.devDependencies[name] ??
+    manifest.peerDependencies[name] ??
+    manifest.optionalDependencies[name];
   const exists = (path: string) => existsSync(join(root, path));
   const installed = (name: string) => {
     const path = join(root, "node_modules", name, "package.json");

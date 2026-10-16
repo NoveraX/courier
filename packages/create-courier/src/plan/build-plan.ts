@@ -6,7 +6,8 @@ import type {
   RecipeFile,
 } from "../recipes/recipe-types";
 import { scriptsEdit } from "./package-scripts";
-import { keptStep, packageName, plannedEdit, plannedFile, typescriptOf } from "./planned-parts";
+import { missingPackages, type OtherRelease, otherReleases } from "./planned-packages";
+import { keptStep, plannedEdit, plannedFile, typescriptOf } from "./planned-parts";
 import { typescriptSixStep } from "./typescript-six";
 
 /** A file of the setup, and what the project already has there. */
@@ -38,6 +39,8 @@ export interface Plan {
   /** Packages the project does not list yet. */
   readonly dependencies: readonly string[];
   readonly devDependencies: readonly string[];
+  /** Packages the project has on another release line than the setup's: left as they are, and named. */
+  readonly otherReleases: readonly OtherRelease[];
   /**
    * The TypeScript to install: where the project has none — `from` left
    * out — or, in a project this run created, one older than 6.0.
@@ -75,13 +78,12 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
   const edits = [...recipe.edits, ...scriptsEdit(recipe.scripts, recipe.rewrites ?? [])].map(
     (edit) => plannedEdit(project, edit),
   );
-  const missing = (specs: readonly string[]) =>
-    specs.filter((spec) => !project.lists(packageName(spec)));
   return {
     files,
     edits: edits.filter((edit): edit is PlannedEdit => "after" in edit),
-    dependencies: missing(recipe.dependencies),
-    devDependencies: missing(recipe.devDependencies),
+    dependencies: missingPackages(project, recipe.dependencies),
+    devDependencies: missingPackages(project, recipe.devDependencies),
+    otherReleases: otherReleases(project, [...recipe.dependencies, ...recipe.devDependencies]),
     typescript: typescript.install,
     manual: [
       ...files.filter((file) => file.state === "kept").map(keptStep),

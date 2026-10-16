@@ -1,4 +1,4 @@
-import { configObjectPath } from "../../agents-policy-edit";
+import { configObjectPath } from "../../project/config-file";
 import { fileUsing, registeringFile, studioServerFile } from "../../project/wiring";
 import { importSpecifier } from "../import-specifier";
 import type { ManualStep, RecipeContext, RecipeFile } from "../recipe-types";

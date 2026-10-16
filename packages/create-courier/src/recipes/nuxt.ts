@@ -1,7 +1,7 @@
 import { nuxtStudioEdit } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
-import { courierConfig, courierMocks } from "./shared/courier-config";
+import { configPathOf, courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
 import { devStep, portableServerReach, routesStep, studioStep } from "./shared/next-steps";
@@ -33,7 +33,7 @@ function serverPlugin(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   const head = needs.register
     ? `import { registerSources } from "@noverax/courier";
 
-import config from "${importSpecifier(path, "courier.config.ts", ctx.extension)}";
+import config from "${importSpecifier(path, configPathOf(ctx), ctx.extension)}";
 
 /**
  * Registers the APIs courier.config.ts lists as the server starts, which

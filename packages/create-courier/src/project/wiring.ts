@@ -1,8 +1,7 @@
 import { posix } from "node:path";
-
-import { configObjectPath } from "../agents-policy-edit";
 import { destructured, type ModuleImport, usesExport, usesOf } from "../edit/imports";
 import { codeMatches, nextCode } from "../edit/source-scan";
+import { configObjectPath } from "./config-file";
 import { type CodeFile, projectCode } from "./project-code";
 import type { Project } from "./read-project";
 

@@ -1,6 +1,6 @@
-import { configObjectPath } from "../agents-policy-edit";
 import { defaultExportLiteral, type Literal, properties, propertyLiteral } from "../edit/literal";
 import { codeMatches, nextCode, type SourceScan, scanSource } from "../edit/source-scan";
+import { configObjectPath } from "./config-file";
 import type { Project } from "./read-project";
 
 /** The APIs a project's config declares already. */
@@ -41,6 +41,17 @@ function namesOf(scan: SourceScan, sources: Literal): { names: string[]; more: b
   return { names, more };
 }
 
+/* Whether the config's object lists `sources` by its name alone: `defineConfig({ sources })`. */
+function shorthandSources(scan: SourceScan, config: Literal): boolean {
+  return properties(scan, config).some(
+    (property) =>
+      property.key === "" &&
+      /^sources\s*$/.test(
+        scan.text.slice(property.value, nextUntil(scan, property.value, config.close)),
+      ),
+  );
+}
+
 /* Where a property that starts at `from` ends: its comma, or the object's close. */
 function nextUntil(scan: SourceScan, from: number, close: number): number {
   for (let at = from; at < close; at++) {
@@ -54,7 +65,8 @@ function nextUntil(scan: SourceScan, from: number, close: number): number {
  * `sources` of the object `courier.config.ts` exports — or of the module
  * it passes its default export on from. A config without them, or with an
  * empty `sources`, declares none; `sources` set to something other than an
- * object written there declares some, which are not named.
+ * object written there — or given by its name alone, `{ sources }` —
+ * declares some, which are not named.
  *
  * @param project - The project
  * @returns What the config declares, or `undefined` where it declares no API
@@ -70,7 +82,8 @@ export function configuredSources(project: Project): ConfiguredSources | undefin
   const config = scan === undefined ? undefined : configObject(scan);
   if (scan === undefined || config === undefined) return undefined;
   const sources = propertyLiteral(scan, config, "sources");
-  if (sources === null) return undefined;
+  if (sources === null)
+    return shorthandSources(scan, config) ? { path, names: [], more: true } : undefined;
   if (sources === undefined || scan.text[sources.open] !== "{")
     return { path, names: [], more: true };
   const { names, more } = namesOf(scan, sources);

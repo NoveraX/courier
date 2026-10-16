@@ -1,5 +1,6 @@
 import { importSpecifier } from "../import-specifier";
 import type { ManualStep, RecipeContext, RecipeEdit, RecipeFile } from "../recipe-types";
+import { configPathOf } from "./courier-config";
 
 /** What a recipe's wiring adds: a file of its own, a change to one of the project's, or a step left to the person. */
 export type RecipePart = RecipeFile | RecipeEdit | ManualStep;
@@ -109,7 +110,7 @@ export function registerModule(
     return `/* While you develop, the server's calls show in Courier Studio. */\n${studio}\n`;
   return `import { registerSources } from "@noverax/courier";
 
-import config from "${importSpecifier(path, "courier.config.ts", ctx.extension)}";
+import config from "${importSpecifier(path, configPathOf(ctx), ctx.extension)}";
 
 /* The APIs courier.config.ts lists, which ${serves}${needs.studio ? ";\n   while you develop, the server's calls show in Courier Studio" : ""}. */
 registerSources(config.sources);${needs.studio ? `\n\n${studio}` : ""}

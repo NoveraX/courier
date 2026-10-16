@@ -43,6 +43,32 @@ export default defineConfig({ sources: { site, shop: catalog } });
     ).toEqual({ path: "courier.config.ts", names: ["api"], more: true });
   });
 
+  it("counts sources given by their name alone as APIs it cannot name", () => {
+    expect(
+      sourcesOf({
+        "courier.config.ts":
+          'import { sources } from "./sources";\n\nexport default defineConfig({ sources });\n',
+      }),
+    ).toEqual({ path: "courier.config.ts", names: [], more: true });
+    expect(
+      sourcesOf({
+        "courier.config.ts": "export default defineConfig({ studio: { port: 6290 } });\n",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("reads a config under another of its names, and a pass-on in code only", () => {
+    expect(
+      sourcesOf({ "courier.config.mjs": "export default defineConfig({ sources: { shop } });\n" }),
+    ).toEqual({ path: "courier.config.mjs", names: ["shop"], more: false });
+    expect(
+      sourcesOf({
+        "courier.config.ts":
+          '// export { default } from "./src/old/config";\nexport default defineConfig({ sources: { shop } });\n',
+      }),
+    ).toEqual({ path: "courier.config.ts", names: ["shop"], more: false });
+  });
+
   it("counts a list built elsewhere as APIs it cannot name", () => {
     expect(
       sourcesOf({ "courier.config.ts": "export default defineConfig({ sources: allSources });\n" }),

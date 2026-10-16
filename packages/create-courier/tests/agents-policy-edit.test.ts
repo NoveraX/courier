@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 
-import { agentsPolicyEdit, configObjectPath } from "../src/agents-policy-edit";
+import { agentsPolicyEdit } from "../src/agents-policy-edit";
+import { configObjectPath } from "../src/project/config-file";
 import { readProject } from "../src/project/read-project";
 import { manifest, projectWith, removeProjects } from "./recipes/project-fixture";
 

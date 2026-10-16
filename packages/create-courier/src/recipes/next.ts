@@ -4,7 +4,7 @@ import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import { NEXT_CONFIGS, nextStudioEnvEdit, phaseHint, studioWrapper } from "./next-config-edit";
 import type { ManualStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
-import { courierConfig, courierMocks } from "./shared/courier-config";
+import { configPathOf, courierConfig, courierMocks } from "./shared/courier-config";
 import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, serverReach, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
@@ -22,7 +22,7 @@ function baseOf(ctx: RecipeContext): string {
 /* `instrumentation.ts`: the APIs registered as the server starts, and the server connected to Studio while you develop — the parts still missing. */
 function instrumentation(ctx: RecipeContext, base: string, needs: ServerNeeds): RecipeFile {
   const path = `${base}instrumentation.ts`;
-  const config = importSpecifier(path, "courier.config.ts", ctx.extension);
+  const config = importSpecifier(path, configPathOf(ctx), ctx.extension);
   const studio = needs.studio
     ? `
   if (process.env.NEXT_RUNTIME !== "nodejs" || process.env.NODE_ENV !== "development") return;

@@ -3,6 +3,8 @@ export interface SourceScan {
   readonly text: string;
   /** 1 for each character of code; 0 inside a string, a template's text, a comment or a regular expression. */
   readonly code: Uint8Array;
+  /** 1 for each character of a string or of a template's text, its quotes among them; 0 elsewhere, comments included. */
+  readonly literal: Uint8Array;
   /** The bracket that closes each opening `(`, `[` and `{`, by index. */
   readonly closer: ReadonlyMap<number, number>;
 }
@@ -64,6 +66,7 @@ function startsRegex(text: string, code: Uint8Array, at: number): boolean {
  */
 export function scanSource(text: string): SourceScan | undefined {
   const code = new Uint8Array(text.length);
+  const literal = new Uint8Array(text.length);
   const closer = new Map<number, number>();
   /* Open brackets, and -1 for a template whose `${` is open. */
   const stack: number[] = [];
@@ -72,6 +75,7 @@ export function scanSource(text: string): SourceScan | undefined {
   while (at < text.length) {
     const char = text[at] ?? "";
     if (inTemplate) {
+      literal.fill(1, at, at + (char === "\\" ? 2 : 1));
       if (char === "\\") at += 2;
       else if (char === "`") {
         inTemplate = false;
@@ -90,8 +94,12 @@ export function scanSource(text: string): SourceScan | undefined {
       const end = text.indexOf("*/", at + 2);
       if (end === -1) return undefined;
       at = end + 2;
-    } else if (char === '"' || char === "'") at = stringEnd(text, at);
-    else if (char === "`") {
+    } else if (char === '"' || char === "'") {
+      const end = stringEnd(text, at);
+      literal.fill(1, at, end);
+      at = end;
+    } else if (char === "`") {
+      literal[at] = 1;
       inTemplate = true;
       at++;
     } else if (char === "/" && startsRegex(text, code, at)) at = regexEnd(text, at);
@@ -111,7 +119,7 @@ export function scanSource(text: string): SourceScan | undefined {
       at++;
     }
   }
-  return stack.length === 0 && !inTemplate ? { text, code, closer } : undefined;
+  return stack.length === 0 && !inTemplate ? { text, code, literal, closer } : undefined;
 }
 
 /**

@@ -56,6 +56,8 @@ export interface RequestEntry {
   agent?: RequestAgent | undefined;
   /** The key the call sent in its endpoint's idempotency header, the same on every attempt. */
   idempotencyKey?: string | undefined;
+  /** Set when `browsersOnly` let the Playground's call through on the one-time pass Studio's runtime gave it. */
+  studioPass?: true | undefined;
   type?: "query" | "mutation" | undefined;
   status: RequestStatus;
   statusCode?: number | undefined;

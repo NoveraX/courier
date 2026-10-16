@@ -22,6 +22,8 @@ interface ResponsePaneProps {
   /** Open the request the run made in the inspector. */
   onInspect: (requestId: string) => void;
   onCancel: () => void;
+  /** Runs the call as server code, in Direct mode; `undefined` while a call is under way. */
+  onRunAsServer?: (() => void) | undefined;
 }
 
 function tabsOf(
@@ -48,7 +50,7 @@ function tabsOf(
  * The response half of the Playground: the way to the inspector, four
  * figures, the tabs, and what the chosen tab shows.
  *
- * @param props - The run, the request it made, the tab, the body's view mode, the time, the slow threshold, the in-flight label, and what inspects and cancels
+ * @param props - The run, the request it made, the tab, the body's view mode, the time, the slow threshold, the in-flight label, and what inspects, cancels and runs the call as server code
  * @returns The pane
  * @example
  * ```tsx
@@ -57,6 +59,7 @@ function tabsOf(
  */
 export function ResponsePane(props: ResponsePaneProps): React.ReactNode {
   const { entry, row, tab, onTab, payload, now, slowMs, sendingLabel, onInspect, onCancel } = props;
+  const { onRunAsServer } = props;
   const tabs = tabsOf(entry, row);
   const shown = tabs.some((t) => t.value === tab) ? tab : (tabs[0]?.value ?? "body");
   return (
@@ -88,6 +91,7 @@ export function ResponsePane(props: ResponsePaneProps): React.ReactNode {
           now={now}
           sendingLabel={sendingLabel}
           onCancel={onCancel}
+          onRunAsServer={onRunAsServer}
         />
       </div>
     </section>

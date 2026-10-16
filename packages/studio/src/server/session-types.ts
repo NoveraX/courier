@@ -74,6 +74,8 @@ export interface SavedRequest {
   idempotencyKey?: string | undefined;
   /** How its read was answered by another call's request, when it sent none of its own. */
   shared?: { by: "flight" | "render"; with?: string } | undefined;
+  /** Set when `browsersOnly` let the Playground's call through on Studio's one-time pass. */
+  studioPass?: true | undefined;
 }
 
 export interface SessionStats {

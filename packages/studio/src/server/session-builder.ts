@@ -76,6 +76,7 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     callerRuntimeId: optionalString(raw.callerRuntimeId),
     agent: agentOf(raw.agent),
     idempotencyKey: optionalString(raw.idempotencyKey),
+    ...(raw.studioPass === true && { studioPass: true }),
     shared: sharedOf(raw.shared),
   };
 }

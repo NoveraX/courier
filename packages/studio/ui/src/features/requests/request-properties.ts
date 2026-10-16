@@ -63,6 +63,10 @@ export function requestProperties(r: RequestEntry, context: PropertyContext): Re
     const count = attempt && attempt.of > 1 ? ` · call ${attempt.at} of ${attempt.of}` : "";
     properties.push({ label: "Idempotency key", value: `${r.idempotencyKey}${count}`, mono: true });
   }
+  if (r.studioPass) {
+    const value = "let through on Studio's one-time pass";
+    properties.push({ label: "browsersOnly", value, mono: false });
+  }
   if (context.sessionName)
     properties.push({ label: "Session", value: context.sessionName, mono: false });
   const cause = r.error?.cause;

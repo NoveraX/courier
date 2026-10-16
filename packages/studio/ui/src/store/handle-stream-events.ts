@@ -47,6 +47,7 @@ export function streamFromOpen(event: EventPayload): RequestEntry {
     streamEventCount: 0,
     streamTotalBytes: 0,
     ...openingHeaders(event),
+    ...(event.studioPass === true && { studioPass: true }),
   };
 }
 
@@ -56,7 +57,7 @@ export function streamFromOpen(event: EventPayload): RequestEntry {
  * resolves): merge it into the existing entry instead of creating a duplicate.
  */
 export function withStreamOpen(r: RequestEntry, event: EventPayload): RequestEntry {
-  return { ...r, ...openingHeaders(event) };
+  return { ...r, ...openingHeaders(event), ...(event.studioPass === true && { studioPass: true }) };
 }
 
 /** Increment event count and total bytes, store event record */

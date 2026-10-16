@@ -85,6 +85,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     mode: raw.mode === "proxy" || raw.mode === "webhook" ? raw.mode : "direct",
     agent: readAgent(raw.agent),
     idempotencyKey: optStr(raw.idempotencyKey),
+    ...(raw.studioPass === true && { studioPass: true }),
     type: raw.type === "query" || raw.type === "mutation" ? raw.type : undefined,
     status: isStatus(raw.status) ? raw.status : "success",
     statusCode: optNum(raw.statusCode),

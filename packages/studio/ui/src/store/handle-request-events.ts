@@ -34,6 +34,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     mode: event.mode === "proxy" || event.mode === "webhook" ? event.mode : "direct",
     agent: readAgent(event.agent),
     idempotencyKey: optStr(event.idempotencyKey),
+    ...(event.studioPass === true && { studioPass: true }),
     type:
       event.endpointType === "query" || event.endpointType === "mutation"
         ? event.endpointType

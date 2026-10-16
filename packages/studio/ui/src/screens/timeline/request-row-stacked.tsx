@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { RequestRowProps } from "./request-row";
 import { codeTone } from "./row-values";
 import { SharedChip } from "./shared-chip";
+import { StudioPassChip } from "./studio-pass-chip";
 import { useRowFigures } from "./use-row-figures";
 
 /**
@@ -57,6 +58,11 @@ export function StackedRequestRow({
         {r.shared && (
           <>
             <SharedChip shared={r.shared} />{" "}
+          </>
+        )}
+        {r.studioPass && (
+          <>
+            <StudioPassChip />{" "}
           </>
         )}
         {pathOf(r.url)}

@@ -33,6 +33,7 @@ import { abortPlayground, executeRequest, shownText } from "@noverax/courier/int
 import { wsEndpointKind } from "@noverax/courier/internal-streams";
 
 import { playgroundRequestId } from "../lib/playground-request-id";
+import { BROWSERS_ONLY_ADVICE, isBrowsersOnlyStreamRefusal } from "./browsers-only-refusal";
 import { dispatchHttp } from "./dispatch-http";
 import {
   type PlaygroundExecutePayload,
@@ -47,6 +48,7 @@ import {
   type PlaygroundChannel,
 } from "./responder-dispatch";
 import { streamOpenersFor } from "./stream-openers";
+import { revokeStudioPasses } from "./studio-passes";
 
 /** Minimal Socket.IO socket surface the responder needs. */
 export interface ResponderSocket {
@@ -150,10 +152,17 @@ async function runExecute(
       });
     }
   } catch (err) {
-    emitError(socket, payload.rid, err instanceof Error ? err.message : String(err));
+    emitError(socket, payload.rid, failureOf(payload, err));
   } finally {
     inFlight.delete(payload.rid);
+    revokeStudioPasses(playgroundRequestId(payload.rid));
   }
+}
+
+/* A stream `browsersOnly` refused through the proxy is told why its pass did not carry it. */
+function failureOf(payload: PlaygroundExecutePayload, err: unknown): string {
+  if (payload.mode === "proxy" && isBrowsersOnlyStreamRefusal(err)) return BROWSERS_ONLY_ADVICE;
+  return err instanceof Error ? err.message : String(err);
 }
 
 /* Cut as every error text Studio is told is: a header value read with its line break fails quoting it. */

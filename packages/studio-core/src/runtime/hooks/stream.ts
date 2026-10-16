@@ -7,6 +7,7 @@ import type {
   StreamMessageEvent,
   StreamOpenEvent,
 } from "../../events";
+import { admittedOnStudioPass } from "../studio-passes";
 import { trackWSStream, untrackWSStream } from "../ws-tracking";
 
 /** Create an event with session envelope */
@@ -37,6 +38,7 @@ export function wireStreamHooks(
         mode: e.mode,
         ...(e.requestHeaders && { requestHeaders: e.requestHeaders }),
         ...(e.responseHeaders && { responseHeaders: e.responseHeaders }),
+        ...(admittedOnStudioPass(e.requestId) && { studioPass: true }),
       }),
     );
   };

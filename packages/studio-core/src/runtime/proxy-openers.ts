@@ -1,6 +1,7 @@
 import type { Sources } from "@noverax/courier/define";
 import { PLAYGROUND_RID_HEADER, proxyStreamingFactories } from "@noverax/courier/internal";
 
+import { passHeaders, withoutPassHeader } from "./pass-headers";
 import { proxyPathFor } from "./proxy-playground";
 import type { ChannelOpener, StreamCall, StreamOpener } from "./responder-dispatch";
 
@@ -8,18 +9,22 @@ import type { ChannelOpener, StreamCall, StreamOpener } from "./responder-dispat
    naming the row Studio follows it under: SSE in a header, a WebSocket —
    whose upgrade carries none a browser could set — in its address. A
    socket carries the call's headers in its first frame, as a browser's
-   proxy caller sends its own. */
+   proxy caller sends its own. Each SSE connection carries a pass of its
+   own, a reconnection's too, for `browsersOnly`, which a WebSocket meets
+   with no pass: its handler does not ask what sent it. */
 function streamsThroughProxy(sources: Sources, call: StreamCall, requestId: string) {
   const definition: unknown = Reflect.get(sources, call.source);
+  const headers = withoutPassHeader(call.headers);
   return proxyStreamingFactories(call.source, {
     sse: {
       proxyPath: proxyPathFor(definition, "sse"),
-      headers: { ...call.headers, [PLAYGROUND_RID_HEADER]: requestId },
+      headers: { ...headers, [PLAYGROUND_RID_HEADER]: requestId },
+      connectHeaders: () => passHeaders(requestId),
     },
     ws: {
       proxyPath: proxyPathFor(definition, "ws"),
       playgroundRequestId: requestId,
-      headers: call.headers,
+      headers,
     },
   });
 }

@@ -16,6 +16,7 @@ import type {
   SharedAnswer,
 } from "../../events";
 import { answerShapeOf } from "../answer-shape";
+import { admittedOnStudioPass } from "../studio-passes";
 
 /* How a call's read was shared, as the event carries it: the call that answered named only when known. */
 function sharedOf(shared: { by: SharedAnswer["by"]; with?: string | undefined }): SharedAnswer {
@@ -62,6 +63,7 @@ export function wireRequestHooks(
         ...(e.purpose && { purpose: e.purpose }),
         ...(e.agent && { agent: e.agent }),
         ...(e.idempotencyKey && { idempotencyKey: e.idempotencyKey }),
+        ...(admittedOnStudioPass(e.id) && { studioPass: true }),
       }),
     );
   };

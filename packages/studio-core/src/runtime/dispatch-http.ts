@@ -2,6 +2,7 @@ import type { UploadProgress } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { type executeRequest, STUDIO_REQUEST_HEADER } from "@noverax/courier/internal";
 import { playgroundRequestId } from "../lib/playground-request-id";
+import { passHeaders, withoutPassHeader } from "./pass-headers";
 import { playgroundFailure } from "./playground-failure";
 import { formDataOf } from "./playground-form";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
@@ -95,7 +96,7 @@ async function run(
     const { status, headers, data } = answer;
     return { kind: "http-result", status, data, headers: Object.fromEntries(headers) };
   } catch (err) {
-    return playgroundFailure(err);
+    return playgroundFailure(err, payload.mode === "proxy");
   }
 }
 
@@ -106,14 +107,19 @@ function isRawAnswer(value: unknown): value is { status: number; headers: Header
   return typeof value.status === "number" && value.headers instanceof Headers;
 }
 
-/* The proxy shows the call under the id its header names. */
+/* The proxy shows the call under the id its header names, and lets it past
+   `browsersOnly` on the pass it carries. */
 function callOf(payload: PlaygroundExecutePayload, requestId: string): PlaygroundCall {
   return {
     source: payload.source,
     group: payload.group,
     method: payload.method,
     variables: variablesOf(payload),
-    headers: { ...payload.headers, [STUDIO_REQUEST_HEADER]: requestId },
+    headers: {
+      ...withoutPassHeader(payload.headers ?? {}),
+      [STUDIO_REQUEST_HEADER]: requestId,
+      ...passHeaders(requestId),
+    },
   };
 }
 

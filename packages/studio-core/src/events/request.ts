@@ -29,6 +29,12 @@ export interface RequestStartEvent extends StudioEvent {
   agent?: RequestAgent;
   /** The key the call sends in its endpoint's idempotency header, the same on every attempt. */
   idempotencyKey?: string;
+  /**
+   * Set when `browsersOnly` let the call through only on the one-time pass
+   * Studio's runtime gave the Playground's call: a page's call that says
+   * nothing of where it comes from is still refused.
+   */
+  studioPass?: true;
 }
 
 /** An agent's call, as Studio shows it: the tool, what it declared it does, and the client. */

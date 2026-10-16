@@ -12,6 +12,12 @@ export interface StreamOpenEvent extends StudioEvent {
   mode: "direct" | "proxy";
   requestHeaders?: Record<string, string>;
   responseHeaders?: Record<string, string>;
+  /**
+   * Set when `browsersOnly` let the call through only on the one-time pass
+   * Studio's runtime gave the Playground's call: a page's call that says
+   * nothing of where it comes from is still refused.
+   */
+  studioPass?: true;
 }
 
 export interface StreamMessageEvent extends StudioEvent {

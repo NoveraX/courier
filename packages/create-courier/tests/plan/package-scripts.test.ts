@@ -13,6 +13,21 @@ describe("scriptsEdit", () => {
     );
   });
 
+  it("adds scripts where the file writes them, and leaves every other line as the project wrote it", () => {
+    const written = `{ "name": "shop", "private": true, "scripts": { "dev": "next dev" },
+  "dependencies": { "next": "15.5.9", "react": "19.1.0" },
+  "devDependencies": { "typescript": "5.9.3" } }
+`;
+    const [edit] = scriptsEdit({ studio: "courier-studio", routes: "courier-cli routes" }, []);
+
+    expect(edit?.change(written)).toBe(
+      written.replace(
+        '"dev": "next dev" }',
+        '"dev": "next dev", "studio": "courier-studio", "routes": "courier-cli routes" }',
+      ),
+    );
+  });
+
   it("keeps a script the project has under that name, and reports no change", () => {
     const [edit] = scriptsEdit({ dev: "courier-studio" }, []);
 

@@ -1,3 +1,4 @@
+import { withJsonStrings } from "../edit/json-strings";
 import { isRecord } from "../is-record";
 import type { RecipeEdit, ScriptRewrite } from "../recipes/recipe-types";
 
@@ -6,7 +7,12 @@ function indentOf(text: string): string {
   return /^[ \t]+(?=")/m.exec(text)?.[0] ?? "  ";
 }
 
-/* package.json with the scripts added — each under a name it does not use yet — and its own rewritten. */
+/*
+ * package.json with the scripts added — each under a name it does not use
+ * yet — and its own rewritten, edited in place so every other line stays as
+ * the project wrote it; written out whole only where the file is laid out
+ * in a way the edit does not read.
+ */
 function withScripts(
   text: string,
   add: Readonly<Record<string, string>>,
@@ -19,15 +25,25 @@ function withScripts(
     return undefined;
   }
   if (!isRecord(parsed)) return undefined;
-  const scripts: Record<string, unknown> = isRecord(parsed.scripts) ? { ...parsed.scripts } : {};
+  const before: Record<string, unknown> = isRecord(parsed.scripts) ? parsed.scripts : {};
+  const scripts: Record<string, unknown> = { ...before };
   for (const [name, command] of Object.entries(add)) scripts[name] ??= command;
   for (const { script, change } of rewrites) {
     const command = scripts[script];
     if (typeof command === "string") scripts[script] = change(command);
   }
   const manifest = { ...parsed, scripts };
-  const after = `${JSON.stringify(manifest, null, indentOf(text))}${text.endsWith("\n") ? "\n" : ""}`;
-  return JSON.stringify(parsed) === JSON.stringify(manifest) ? text : after;
+  if (JSON.stringify(parsed) === JSON.stringify(manifest)) return text;
+  const changed = Object.fromEntries(
+    Object.entries(scripts).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" && entry[1] !== before[entry[0]],
+    ),
+  );
+  const edited = withJsonStrings(text, "scripts", changed);
+  if (edited !== undefined && JSON.stringify(JSON.parse(edited)) === JSON.stringify(manifest))
+    return edited;
+  return `${JSON.stringify(manifest, null, indentOf(text))}${text.endsWith("\n") ? "\n" : ""}`;
 }
 
 /**

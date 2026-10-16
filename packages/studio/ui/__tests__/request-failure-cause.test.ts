@@ -32,14 +32,14 @@ function failedWith(cause: unknown) {
   return useStudioStore.getState().requests[0];
 }
 
-function unanswered(code: string | undefined) {
+function unanswered(code: string | undefined, said = "failed") {
   return requestEntry({
     status: "error",
     statusCode: undefined,
     error: {
       type: "network",
       message: "Network request failed",
-      cause: { code, message: "failed" },
+      cause: { code, message: said },
     },
   });
 }
@@ -169,8 +169,39 @@ describe("the fix suggested for a request that got no answer", () => {
     expect(hint).toMatch(/reported EPROTO/);
   });
 
-  it("is the general advice, and what a browser hides, with no code", () => {
-    expect(failureHint(unanswered(undefined))).toMatch(/could not reach the API.*CORS/);
+  it("is the general advice, and what a browser hides, for a browser's fetch", () => {
+    for (const said of [
+      "Failed to fetch",
+      "Load failed",
+      "NetworkError when attempting to fetch resource.",
+    ]) {
+      expect(failureHint(unanswered(undefined, said))).toMatch(/could not reach the API.*CORS/);
+    }
+  });
+
+  it("names no CORS for a server's fetch that gave no code", () => {
+    for (const said of [
+      "Request cannot be constructed from a URL that includes credentials: http://127.0.0.1:1/x",
+      "Request was cancelled.",
+      "fetch failed",
+    ]) {
+      const hint = failureHint(unanswered(undefined, said));
+      expect(hint).toMatch(/gave no error code/);
+      expect(hint).not.toMatch(/CORS/);
+    }
+  });
+
+  it("is the general advice when the runtime told no cause", () => {
+    const hint = failureHint(
+      requestEntry({
+        status: "error",
+        statusCode: undefined,
+        error: { type: "network", message: "Network request failed" },
+      }),
+    );
+
+    expect(hint).toMatch(/could not reach the API/);
+    expect(hint).not.toMatch(/CORS/);
   });
 });
 

@@ -68,9 +68,9 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
 /**
  * A request that failed keeps what its caller received — the proxy's own
  * status where the upstream gave none — the upstream's headers, error body
- * and its size or, when no answer came, why, the headers it came with when the runtime has them, how
- * long it ran and, for a proxied call, how that time split. Issues a
- * `validation:fail` recorded stay with it.
+ * and its size or, when no answer came, why, the headers it came with when
+ * the runtime has them, how long it ran and, for a proxied call, how that
+ * time split. Issues a `validation:fail` recorded stay with it.
  */
 export function withRequestError(r: RequestEntry, event: EventPayload): RequestEntry {
   const rawError = isPlainObject(event.error) ? event.error : undefined;

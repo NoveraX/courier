@@ -1,3 +1,5 @@
+import type { RequestFailureCause } from "@/store/types";
+
 const DNS_CODES: ReadonlySet<string> = new Set(["ENOTFOUND", "EAI_AGAIN"]);
 
 const CONNECTION_CODES: ReadonlySet<string> = new Set([
@@ -19,26 +21,42 @@ const CERTIFICATE_CODES: ReadonlySet<string> = new Set([
   "ERR_TLS_CERT_ALTNAME_INVALID",
 ]);
 
+/* What a browser's fetch says, and nothing else does, when it fails without an answer. */
+const BROWSER_TEXTS: ReadonlySet<string> = new Set([
+  "Failed to fetch",
+  "Load failed",
+  "NetworkError when attempting to fetch resource.",
+]);
+
 const GENERAL =
   "No answer came back: Courier could not reach the API. Check that it runs, and that the source's baseURL points at it.";
+
+const UNCODED =
+  "No answer came back, and the platform gave no error code. Its text above says why when it is the platform's own: fetch refuses a URL that carries a user and password, and some ports, before it sends; a proxy the request goes through may refuse it. When the app's own fetch or transport failed, its text is not shown here: the error the call rejected with has it.";
 
 /**
  * What usually fixes a request that got no answer, told from the code the
  * system gave: a host name that did not resolve, a connection that failed,
  * a certificate that was not trusted. A code outside these gets the general
- * advice and is named; a failure with no code — a browser's fetch gives
- * none — gets the general advice and what a browser hides behind it.
+ * advice and is named. With no code, a browser's fetch — which says only
+ * that it failed — gets the general advice and what a browser hides behind
+ * it; any other runtime, what fails a request before it is answered.
  *
- * @param code - The system's error code, when it gave one
+ * @param cause - Why the request got no answer, when the runtime said
  * @returns The advice
  * @example
  * ```ts
- * networkHint("ENOTFOUND"); // "The API's host name did not resolve (ENOTFOUND). …"
+ * networkHint({ code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND api.test" });
+ * // "The API's host name did not resolve (ENOTFOUND). …"
  * ```
  */
-export function networkHint(code: string | undefined): string {
+export function networkHint(cause: RequestFailureCause | undefined): string {
+  if (cause === undefined) return GENERAL;
+  const { code } = cause;
   if (code === undefined) {
-    return `${GENERAL} In a browser, a request refused by CORS or blocked as mixed content fails the same way; the browser's console says which.`;
+    return BROWSER_TEXTS.has(cause.message)
+      ? `${GENERAL} In a browser, a request refused by CORS or blocked as mixed content fails the same way; the browser's console says which.`
+      : UNCODED;
   }
   if (DNS_CODES.has(code)) {
     return `The API's host name did not resolve (${code}). Check the host in the source's baseURL for a typo, and that this machine's network can resolve it: a host only a VPN or an internal DNS knows needs that network.`;

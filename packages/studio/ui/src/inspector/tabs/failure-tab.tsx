@@ -32,8 +32,9 @@ const STAGE = {
 
 /**
  * Why a request failed: the error and, for one that got no answer, what
- * the system said of it, where in Courier's pipeline it happened, the schema issues with what arrived at each, what usually
- * fixes it, and the error as reported.
+ * the system said of it, where in Courier's pipeline it happened, the
+ * schema issues with what arrived at each, what usually fixes it, and the
+ * error as reported.
  *
  * @param props - The request, and what its failure comes to
  * @returns The tab

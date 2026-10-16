@@ -27,7 +27,7 @@ export function failureHint(
       ? "The variables did not match the endpoint's input schema, so the request was never sent. Fix the call's arguments, or the schema if it is the one that is wrong."
       : "The API's answer does not match the response schema the endpoint declares. Change the schema to what the API returns, or the API to what the schema promises.";
   }
-  if (kind === "network") return networkHint(r.error?.cause?.code);
+  if (kind === "network") return networkHint(r.error?.cause);
   if (kind === "timeout" || status === 408 || status === 504) {
     return "The request ran out of time. Raise its timeout, or find out what makes the API slow to answer.";
   }

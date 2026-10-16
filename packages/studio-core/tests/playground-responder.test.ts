@@ -184,6 +184,68 @@ async function startProxy(): Promise<{ url: string; proxied: string[] }> {
   return { url: `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`, proxied };
 }
 
+describe("a call from the Playground whose header the platform refuses", () => {
+  /* A header value read from a file or the environment with its line break: the error quotes it. */
+  async function registerLeaky(): Promise<void> {
+    const { getSources } = await import("@noverax/courier");
+    const api = Reflect.get(getSources() ?? {}, "api");
+    const { endpoint, stream } = courier();
+    const leaky = defineApi({
+      expose: true,
+      baseURL: upstreamUrl,
+      headers: { authorization: "Bearer B34rer\nx" },
+      groups: {
+        account: defineGroup({
+          prefix: "account",
+          endpoints: {
+            me: endpoint.get("me").response<unknown>(),
+            ticks: stream.response<unknown>().get("ticks"),
+          },
+        }),
+      },
+    });
+    registerSources({ api, leaky });
+    onTestFinished(() => registerSources({ api }));
+  }
+
+  it("answers an HTTP call with the error, its token cut", async () => {
+    await registerLeaky();
+
+    runtime?.emit("playground:execute", {
+      rid: "leaky-http",
+      source: "leaky",
+      group: "account",
+      method: "me",
+      transport: "http",
+      variables: {},
+    });
+    await until(() => framesOf("leaky-http").length > 0, "the failure");
+
+    const sent = JSON.stringify(framesOf("leaky-http"));
+    expect(sent).toContain("[redacted]");
+    expect(sent).not.toContain("B34rer");
+  });
+
+  it("ends a stream with the error, its token cut", async () => {
+    await registerLeaky();
+
+    runtime?.emit("playground:execute", {
+      rid: "leaky-sse",
+      source: "leaky",
+      group: "account",
+      method: "ticks",
+      transport: "sse",
+      variables: {},
+    });
+    await until(
+      () => framesOf("leaky-sse").some((frame) => frame.event === "playground:error"),
+      "the failure",
+    );
+
+    expect(JSON.stringify(framesOf("leaky-sse"))).not.toContain("B34rer");
+  });
+});
+
 /* Studio's request hooks, as an attached runtime has them, for one test. */
 async function watchRequests(): Promise<string[]> {
   const { studioHooks } = await import("@noverax/courier/internal");

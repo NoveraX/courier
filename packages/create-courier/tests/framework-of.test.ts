@@ -51,6 +51,32 @@ describe("frameworkOf", () => {
     expect(frameworkOf(set({ vite: "^7.1.0", vue: "^3.5.0" }), undefined).id).toBe("vue");
   });
 
+  it("takes --framework hono where Hono is a dev dependency and no other framework is listed, and finds it by no other means", () => {
+    const hono = readProject(
+      projectWith({
+        "package.json": manifest({}, { devDependencies: { hono: "^4.9.0" } }),
+        "tsconfig.json": "{}",
+      }),
+    );
+
+    expect(frameworkOf(hono, "hono").id).toBe("hono");
+    expect(() => frameworkOf(hono, undefined)).toThrow("No framework Courier sets up was found");
+    expect(() =>
+      frameworkOf(
+        readProject(
+          projectWith({
+            "package.json": manifest(
+              { express: "^5.1.0" },
+              { devDependencies: { hono: "^4.9.0" } },
+            ),
+            "tsconfig.json": "{}",
+          }),
+        ),
+        "hono",
+      ),
+    ).toThrow("but this project is built with Express");
+  });
+
   it("tells a Hono app by Hono among the packages it runs with", () => {
     expect(frameworkOf(projectListing({ hono: "^4.9.0" }), undefined).id).toBe("hono");
   });

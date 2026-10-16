@@ -27,7 +27,6 @@ import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vites
 import { playgroundRequestId } from "../src/lib/playground-request-id";
 import { BROWSERS_ONLY_ADVICE } from "../src/runtime/browsers-only-refusal";
 import { connectRuntimeSocket } from "../src/runtime/connect-runtime-socket";
-import { admittedOnStudioPass } from "../src/runtime/studio-passes";
 
 interface Frame {
   event: string;
@@ -184,7 +183,7 @@ describe("an HTTP run through a proxy that answers browsers only", () => {
     const started: Array<{ id: string; admitted: boolean }> = [];
     const sentOn: Array<Record<string, string>> = [];
     hook("onRequestStart", (event) => {
-      started.push({ id: event.id, admitted: admittedOnStudioPass(event.id) });
+      started.push({ id: event.id, admitted: event.studioPass === true });
     });
     hook("onRequestEnd", (event) => {
       sentOn.push(event.requestHeaders);
@@ -206,7 +205,6 @@ describe("an HTTP run through a proxy that answers browsers only", () => {
     expect(Object.keys(sentOn[0] ?? {})).not.toContain(STUDIO_PASS_HEADER);
     expect(upstreamHeaders).toHaveLength(1);
     expect(upstreamHeaders[0]).not.toContain(STUDIO_PASS_HEADER);
-    expect(admittedOnStudioPass(playgroundRequestId("bo-create"))).toBe(false);
   });
 
   it("lets every one of several runs made together through on a pass of its own", async () => {
@@ -279,7 +277,7 @@ describe("an SSE run through a proxy that answers browsers only", () => {
     hook("onStreamOpen", (event) => {
       opened.push({
         id: event.requestId,
-        admitted: admittedOnStudioPass(event.requestId),
+        admitted: event.studioPass === true,
         headers: Object.keys(event.requestHeaders ?? {}),
       });
     });

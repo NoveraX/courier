@@ -6,15 +6,21 @@ const STREAM_FORBIDDEN = 4403;
 
 /**
  * Why `browsersOnly` refused a Playground call it should have let through,
- * and what to do. The runtime sent a one-time pass with the call, and only
- * the runtime of the process serving the route can redeem it: a refusal
- * means the route runs elsewhere — an Edge route, workerd, behind a remote
- * `appOrigin` — or with a Courier core that redeems no pass.
+ * and what to do. The runtime sent a one-time pass with the call, and the
+ * route did not redeem it: the route runs where the runtime is not — an
+ * Edge route, workerd, behind a remote `appOrigin` — or with a Courier core
+ * that redeems none; or the pass did not arrive whole and in time — a proxy
+ * in front of the route took the header off, the route was reached more
+ * than 30 seconds later, as while it compiles on first request, more than
+ * 256 calls were waiting for theirs, or the call reached the route twice.
  */
 export const BROWSERS_ONLY_ADVICE =
-  "browsersOnly refused this call: the app's proxy route did not redeem Studio's one-time pass, " +
-  "which only Studio's runtime in the process serving the route can do — not an Edge route, " +
-  "workerd, a remote appOrigin or an older Courier core. Run the call in Direct mode, set " +
+  "browsersOnly refused this call: the app's proxy route did not redeem Studio's one-time pass. " +
+  "Only Studio's runtime in the process serving the route can, in development — not an Edge " +
+  "route, workerd, a remote appOrigin or an older Courier core — and only a pass that arrives " +
+  "whole and in time: not one a proxy in front of the route took off, one that reached the route " +
+  "after 30 seconds (as while it compiles on first request), one pushed out by more than 256 calls " +
+  "in flight, or one already spent. Send the call again, run it in Direct mode, set " +
   'browsersOnly: process.env.NODE_ENV === "production", or serve the route on the Node runtime.';
 
 /**

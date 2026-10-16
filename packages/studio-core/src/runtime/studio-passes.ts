@@ -18,8 +18,6 @@ interface Issued {
 interface PassBook {
   /* Keyed by the pass itself: 256 random bits, so a lookup is no oracle for a guess. */
   issued: Map<string, Issued>;
-  /* The calls a redeemed pass let past `browsersOnly`, until each run ends. */
-  admitted: Set<string>;
 }
 
 /**
@@ -51,8 +49,8 @@ export function issueStudioPass(requestId: string): string | undefined {
 }
 
 /**
- * Forget every pass issued for a call, used or not, and that one let it
- * through: called once the Playground's run of it has ended.
+ * Forget every pass issued for a call, used or not: called once the
+ * Playground's run of it has ended.
  *
  * @param requestId - The request Studio shows the call under
  * @example
@@ -63,25 +61,9 @@ export function issueStudioPass(requestId: string): string | undefined {
 export function revokeStudioPasses(requestId: string): void {
   const book = keptBook();
   if (book === undefined) return;
-  book.admitted.delete(requestId);
   for (const [pass, issued] of book.issued) {
     if (issued.requestId === requestId) book.issued.delete(pass);
   }
-}
-
-/**
- * Whether a redeemed pass let a call past `browsersOnly`, while its run
- * lasts: what Studio marks the call with.
- *
- * @param requestId - The request Studio shows the call under
- * @returns `true` when the proxy redeemed one of its passes
- * @example
- * ```ts
- * if (admittedOnStudioPass(event.id)) mark(event);
- * ```
- */
-export function admittedOnStudioPass(requestId: string): boolean {
-  return keptBook()?.admitted.has(requestId) ?? false;
 }
 
 /* The book, if a pass was ever issued in this process: nothing redeems one before. */
@@ -93,7 +75,7 @@ function keptBook(): PassBook | undefined {
 function passBook(): PassBook {
   const kept = keptBook();
   if (kept !== undefined) return kept;
-  const book: PassBook = { issued: new Map(), admitted: new Set() };
+  const book: PassBook = { issued: new Map() };
   Reflect.set(globalThis, BOOK, book);
   Reflect.set(globalThis, STUDIO_PASS_REDEEMER, (pass: unknown) => redeem(book, pass));
   return book;
@@ -105,11 +87,7 @@ function redeem(book: PassBook, pass: unknown): boolean {
   const issued = book.issued.get(pass);
   if (issued === undefined) return false;
   book.issued.delete(pass);
-  if (issued.expiresAt <= performance.now()) return false;
-  const oldest = book.admitted.size >= MAX_PASSES ? book.admitted.values().next() : undefined;
-  if (oldest && !oldest.done) book.admitted.delete(oldest.value);
-  book.admitted.add(issued.requestId);
-  return true;
+  return issued.expiresAt > performance.now();
 }
 
 /* Passes are issued with one lifetime, so the map holds them oldest first. */
@@ -129,7 +107,5 @@ function randomPass(): string {
 
 function isPassBook(value: unknown): value is PassBook {
   if (typeof value !== "object" || value === null) return false;
-  return (
-    Reflect.get(value, "issued") instanceof Map && Reflect.get(value, "admitted") instanceof Set
-  );
+  return Reflect.get(value, "issued") instanceof Map;
 }

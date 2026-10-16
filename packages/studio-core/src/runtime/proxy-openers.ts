@@ -15,11 +15,12 @@ import type { ChannelOpener, StreamCall, StreamOpener } from "./responder-dispat
 function streamsThroughProxy(sources: Sources, call: StreamCall, requestId: string) {
   const definition: unknown = Reflect.get(sources, call.source);
   const headers = withoutPassHeader(call.headers);
+  const sse = proxyPathFor(definition, "sse");
   return proxyStreamingFactories(call.source, {
     sse: {
-      proxyPath: proxyPathFor(definition, "sse"),
+      proxyPath: sse,
       headers: { ...headers, [PLAYGROUND_RID_HEADER]: requestId },
-      connectHeaders: () => passHeaders(requestId),
+      connectHeaders: () => passHeaders(requestId, sse.sse),
     },
     ws: {
       proxyPath: proxyPathFor(definition, "ws"),

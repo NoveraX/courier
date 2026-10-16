@@ -4,7 +4,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import { shownCause } from "@noverax/courier/internal";
+import { shownCause, shownText } from "@noverax/courier/internal";
 import { sharedOf } from "./saved-shared";
 import type { SavedRequest, SavedSession, SavedSessionApp, SessionStats } from "./session-types";
 import { headersWithoutCredentials } from "./storage/without-credentials";
@@ -43,7 +43,7 @@ function errorOf(value: unknown): SavedRequest["error"] {
   return {
     type: String(value.type ?? "unknown"),
     ...(status !== undefined && { status }),
-    message: value.message,
+    message: shownText(value.message),
     ...(cause && { cause }),
   };
 }

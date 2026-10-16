@@ -1,4 +1,4 @@
-import { createKeptBodies, studioHooks } from "@noverax/courier/internal";
+import { createKeptBodies, studioHooks, UNSHOWN_CAUSE } from "@noverax/courier/internal";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { EventBus } from "../src/event-bus";
@@ -65,9 +65,12 @@ describe("why a request got no answer, as its event carries it", () => {
     });
   });
 
-  it("drops a code that is not a system error code", () => {
+  it("passes on no text whose code is not a system error code, nor one without a code", () => {
     expect(failedWith({ code: "Bearer abc", message: "failed" })?.cause).toEqual({
-      message: "failed",
+      message: UNSHOWN_CAUSE,
+    });
+    expect(failedWith({ message: "request with Bearer B34rer failed" })?.cause).toEqual({
+      message: UNSHOWN_CAUSE,
     });
   });
 

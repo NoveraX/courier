@@ -1,4 +1,4 @@
-import { studioHooks } from "@noverax/courier/internal";
+import { shownText, studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -65,7 +65,7 @@ export function wireFetchHooks(
         type: "http:fetch:error",
         timestamp: e.timestamp,
         requestId: e.requestId,
-        message: e.message,
+        message: shownText(e.message),
         ...(e.status !== undefined && { status: e.status }),
         ...(httpVersion && { httpVersion }),
       }),

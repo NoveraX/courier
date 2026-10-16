@@ -1,4 +1,10 @@
-import { carriedBody, type KeptBodies, shownCause, studioHooks } from "@noverax/courier/internal";
+import {
+  carriedBody,
+  type KeptBodies,
+  shownCause,
+  shownText,
+  studioHooks,
+} from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -25,7 +31,9 @@ const createEvent = <TEvent extends AnyStudioEvent>(
 /**
  * Wire request lifecycle hooks to the bus. A body too large for an event —
  * the variables, the answer, an error's body — travels as a part of it, and
- * `bodies` keeps the whole for Studio to ask for.
+ * `bodies` keeps the whole for Studio to ask for. An error's text has what
+ * could be a credential cut out: a header value read with its line break
+ * fails with an error that quotes it.
  */
 export function wireRequestHooks(
   bus: EventBus,
@@ -92,7 +100,7 @@ export function wireRequestHooks(
         requestId: e.id,
         error: {
           type: e.error.type,
-          message: e.error.message,
+          message: shownText(e.error.message),
           ...(e.error.status !== undefined && { status: e.error.status }),
           ...(cause && { cause }),
         },

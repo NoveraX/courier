@@ -13,6 +13,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { studioHooks } from "../src/studio";
+import { UNSHOWN_CAUSE } from "../src/studio/failure-cause";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const { endpoint } = courier();
@@ -77,14 +78,37 @@ describe("a request that got no answer", () => {
     expect(reportedError()?.cause).toMatchObject({ code: "ECONNREFUSED" });
   });
 
-  it("names no query string the URL carried", async () => {
+  it("names no user, password or token the URL carried", async () => {
     const port = await closedPort();
 
-    await createCaller(api(`http://127.0.0.1:${port}/v1?token=s3cret`))
+    await createCaller(api(`http://user:pa55@127.0.0.1:${port}/v1?token=s3cret`))
       .ping()
       .catch(() => undefined);
 
-    expect(JSON.stringify(reportedError()?.cause)).not.toContain("s3cret");
+    const cause = reportedError()?.cause as { message: string } | undefined;
+    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+\/v1/);
+    expect(cause?.message).not.toMatch(/s3cret|pa55/);
+  });
+
+  it("passes on none of what the app's own fetch threw", async () => {
+    const thrown = 'Headers.append: "Bearer B34rer\nx" is an invalid header value.';
+    const ownFetch = async (): Promise<Response> => {
+      throw new TypeError(thrown);
+    };
+    const withOwnFetch = defineApi({
+      expose: true,
+      baseURL: "http://127.0.0.1:1",
+      fetch: ownFetch,
+      endpoints: { ping: endpoint.get("ping").response<unknown>() },
+    });
+
+    const caught = await createCaller(withOwnFetch)
+      .ping()
+      .catch((error: unknown) => error);
+
+    expect(reportedError()?.cause).toEqual({ message: UNSHOWN_CAUSE });
+    expect(JSON.stringify(reportedError())).not.toContain("B34rer");
+    expect((caught as { data: { message: string } }).data.message).toBe(thrown);
   });
 });
 

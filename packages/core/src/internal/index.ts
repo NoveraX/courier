@@ -84,6 +84,7 @@ export {
   KEPT_BODY_BYTES,
   type KeptBodies,
 } from "../studio/kept-bodies";
+export { shownText } from "../studio/shown-text";
 export {
   type Banner,
   type BannerRow,

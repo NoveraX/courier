@@ -1,11 +1,12 @@
 /**
  * Why a request that got no answer failed, as Studio is told it: the
- * system's code and text, with nothing in them that could be a credential.
+ * platform's code and text, with nothing in them that could be a
+ * credential, and no text at all that did not come from the platform.
  */
 import { describe, expect, it } from "vitest";
 
 import { HTTPError } from "../src/errors";
-import { failureCause, shownCause } from "../src/studio/failure-cause";
+import { failureCause, shownCause, UNSHOWN_CAUSE } from "../src/studio/failure-cause";
 
 function unanswered(data: unknown): HTTPError {
   return new HTTPError({ status: 0, headers: new Headers(), data });
@@ -47,7 +48,7 @@ describe("failureCause", () => {
   });
 });
 
-describe("shownCause", () => {
+describe("shownCause, for a text with a system code", () => {
   it("cuts a query string and its token out of a URL in the text", () => {
     const cause = shownCause({
       message: "connect ECONNREFUSED for https://api.test/v1/users?token=s3cret&x=1#frag",
@@ -58,25 +59,26 @@ describe("shownCause", () => {
       code: "ECONNREFUSED",
       message: "connect ECONNREFUSED for https://api.test/v1/users",
     });
-    expect(JSON.stringify(cause)).not.toContain("s3cret");
-  });
-
-  it("cuts the user and password out of a URL in the text", () => {
-    const cause = shownCause({
-      message:
-        "Request cannot be constructed from a URL that includes credentials: http://user:pass@127.0.0.1:1/x?token=abc",
-    });
-
-    expect(cause?.message).toBe(
-      "Request cannot be constructed from a URL that includes credentials: http://127.0.0.1:1/x",
-    );
-    expect(cause?.message).not.toMatch(/user|pass|token|abc/);
   });
 
   it("cuts the secrets out of a URL the parser cannot read", () => {
-    const cause = shownCause({ message: "failed at http://admin:hunter2@[bad/path?key=k1" });
+    const cause = shownCause({
+      code: "ECONNREFUSED",
+      message: "failed at http://admin:hunter2@[bad/path?key=k1",
+    });
 
     expect(cause?.message).toBe("failed at http://[bad/path");
+  });
+
+  it("cuts a bearer token, and a secret pair, out of the text", () => {
+    const cause = shownCause({
+      code: "ECONNRESET",
+      message: "reset while sending Authorization Bearer B34rer with api_key=k3y",
+    });
+
+    expect(cause?.message).toBe(
+      "reset while sending Authorization Bearer [redacted] with api_key=[redacted]",
+    );
   });
 
   it("keeps a code that reads as a system error code", () => {
@@ -85,18 +87,47 @@ describe("shownCause", () => {
     }
   });
 
-  it("drops a code that does not read as one", () => {
-    for (const code of ["enotfound", "E", "Bearer abc", "A".repeat(65), 23, "E-1", "1ABC"]) {
-      expect(shownCause({ message: "failed", code })).toEqual({ message: "failed" });
-    }
-  });
-
   it("clears control characters and cuts a long text to 300 characters", () => {
-    const cause = shownCause({ message: `line one\nline two\u0000${"x".repeat(400)}` });
+    const cause = shownCause({
+      code: "ECONNRESET",
+      message: `line one\nline two\u0000${"x".repeat(400)}`,
+    });
 
     expect(cause?.message.startsWith("line one line two ")).toBe(true);
     expect(cause?.message).toHaveLength(300);
     expect(cause?.message.endsWith("…")).toBe(true);
+  });
+});
+
+describe("shownCause, for a text with no code", () => {
+  it("passes on what fetch itself says, a URL in it cut", () => {
+    expect(shownCause({ message: "Failed to fetch" })).toEqual({ message: "Failed to fetch" });
+    expect(shownCause({ message: "fetch failed" })).toEqual({ message: "fetch failed" });
+    expect(
+      shownCause({
+        message:
+          "Request cannot be constructed from a URL that includes credentials: http://user:pass@127.0.0.1:1/x?token=abc",
+      }),
+    ).toEqual({
+      message:
+        "Request cannot be constructed from a URL that includes credentials: http://127.0.0.1:1/x",
+    });
+  });
+
+  it("passes on no other text: an app's own fetch may have put a secret in it", () => {
+    const refused = shownCause({
+      message: 'Headers.append: "Bearer B34rer\nx" is an invalid header value.',
+    });
+    const thrown = shownCause({ message: "request to /me failed with Bearer B34rer" });
+
+    expect(refused).toEqual({ message: UNSHOWN_CAUSE });
+    expect(thrown).toEqual({ message: UNSHOWN_CAUSE });
+  });
+
+  it("treats a code that does not read as one as no code", () => {
+    for (const code of ["enotfound", "E", "Bearer abc", "A".repeat(65), 23, "E-1", "1ABC"]) {
+      expect(shownCause({ message: "something failed", code })).toEqual({ message: UNSHOWN_CAUSE });
+    }
   });
 
   it("has none for a value that is no cause", () => {

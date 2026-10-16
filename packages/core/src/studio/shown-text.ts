@@ -1,23 +1,24 @@
-const REDACTED = "[redacted]";
-const URL_IN_TEXT = /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>()]+/gi;
-const USERINFO = /^([a-z][a-z0-9+.-]*:\/\/)[^/?#]*@/i;
-/* The platform's Headers quotes the value it refused: an Authorization header read with its line break. */
-const INVALID_HEADER = /"[^"]*"(?= is an invalid header (?:value|name))/g;
-const AUTH_SCHEME =
-  /\b(Bearer|bearer|BEARER|Basic|basic|Token|Digest|Negotiate|NTLM|ApiKey|Api-Key)\s+(?!\[redacted\])[^\s"',;]+/g;
-const SECRET_PAIR =
-  /\b([\w.-]*?(?:token|secret|passw(?:or)?d|pwd|api[_-]?key|access[_-]?key|private[_-]?key|session[_-]?id|signature|credential|authorization|cookie)[\w.-]*)(["']?\s*[=:]\s*)(?![a-z][a-z0-9+.-]*:\/\/)("[^"]*"|'[^']*'|[^\s&,;"'}]+)/gi;
+import { REDACTED } from "./secret-words";
+import { textWithoutSecrets } from "./text-secrets";
+import { urlsWithoutSecrets } from "./url-secrets";
+
+/* How much more of a text than is kept is read: what credentials are cut from shortens it. */
+const READ_FACTOR = 4;
+const WHITESPACE = /\s/;
 
 /**
  * An error's text as Studio may be told it: control characters made
- * spaces, and what could be a credential cut out — a header value the
- * platform refused and quoted, what follows an authorization scheme
- * (`Bearer …`), the value of a pair whose name says it is secret
- * (`token=…`, `"password": …`), and in every URL its user, password,
- * query and fragment — then cut to `maxLength` characters.
+ * spaces, and what could be a credential cut out — in every URL its user,
+ * password, query, fragment and any path segment that reads as a token; a
+ * `user:password@` before a host; a header value the platform refused and
+ * quoted; a JWT or a key in a known provider's format; a credential after
+ * an authorization scheme; the value of a pair whose name says it is
+ * secret — then cut to `maxLength` characters.
  *
- * The error the caller receives keeps its text: only what Studio is told
- * is cut.
+ * Only the start of a long text is read, four times `maxLength`, so a text
+ * of any size costs the same; a word the cut falls inside is dropped
+ * rather than shown in part. The error the caller receives keeps its
+ * text: only what Studio is told is cut.
  *
  * @param text - The error's text
  * @param maxLength - The longest text kept; longer text ends with "…"
@@ -29,13 +30,18 @@ const SECRET_PAIR =
  * ```
  */
 export function shownText(text: string, maxLength = 2000): string {
-  const shown = printable(text)
-    .replace(INVALID_HEADER, `"${REDACTED}"`)
-    .replace(URL_IN_TEXT, withoutSecrets)
-    .replace(AUTH_SCHEME, `$1 ${REDACTED}`)
-    .replace(SECRET_PAIR, `$1$2${REDACTED}`)
-    .trim();
-  return shown.length > maxLength ? `${shown.slice(0, maxLength - 1)}…` : shown;
+  const shown = textWithoutSecrets(urlsWithoutSecrets(printable(readable(text, maxLength))));
+  const trimmed = shown.trim();
+  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
+}
+
+/* The start of a long text, ending where a word ends: half a token is still a token. */
+function readable(text: string, maxLength: number): string {
+  const limit = maxLength * READ_FACTOR;
+  if (text.length <= limit) return text;
+  let end = limit;
+  while (end > 0 && !WHITESPACE.test(text.charAt(end))) end -= 1;
+  return end > 0 ? text.slice(0, end) : REDACTED;
 }
 
 /* A line break or another control character would break the line Studio shows the text on. */
@@ -46,15 +52,4 @@ function printable(text: string): string {
     shown += code < 0x20 || code === 0x7f ? " " : character;
   }
   return shown;
-}
-
-/* What the URL addresses, never what it carries: no user, password, query or fragment. */
-function withoutSecrets(address: string): string {
-  try {
-    const url = new URL(address);
-    return `${url.protocol}//${url.host}${url.pathname}`;
-  } catch {
-    /* Not a URL the parser reads: cut by hand what could carry a secret. */
-    return address.replace(USERINFO, "$1").replace(/[?#].*$/, "");
-  }
 }

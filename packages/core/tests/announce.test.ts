@@ -137,14 +137,33 @@ describe("announceWhenRegistered", () => {
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ transports: ["sse"] }));
   });
 
-  it("announces again with the app's origin once a request brings it, and then no more", () => {
+  it("announces again with the app's origin once the server's own address brings it, and then no more", () => {
     vi.stubEnv("NODE_ENV", "development");
     registerSources({ api: fakeApi });
     const announce = announceWhenRegistered({ transports: ["http"], framework: "next" });
     const listener = vi.fn();
     consumeAnnouncements(listener);
 
-    announce("http://localhost:3000");
+    announce();
+    announce({ serverOrigin: "http://localhost:3000" });
+    announce({ serverOrigin: "http://localhost:3000" });
+
+    expect(listener.mock.calls.map(([entry]) => entry.listenOrigin)).toEqual([
+      undefined,
+      "http://localhost:3000",
+    ]);
+    setAppOrigin(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("takes from an older adapter's Host origin only this machine's own names", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    registerSources({ api: fakeApi });
+    const announce = announceWhenRegistered({ transports: ["http"], framework: "express" });
+    const listener = vi.fn();
+    consumeAnnouncements(listener);
+
+    announce("http://evil.example:3000");
     announce("http://localhost:3000");
 
     expect(listener.mock.calls.map(([entry]) => entry.listenOrigin)).toEqual([

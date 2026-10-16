@@ -115,17 +115,16 @@ async function dispatchStream(
   const subscription = await exec(sources, callOf(payload), { signal, requestId });
 
   let count = 0;
-  try {
-    for await (const event of subscription) {
-      count++;
-      socket.emit("playground:chunk", { rid: payload.rid, chunk: chunkOf(event) });
-    }
-  } finally {
-    socket.emit("playground:end", {
-      rid: payload.rid,
-      summary: { durationMs: performance.now() - startedAt, count },
-    });
+  /* A stream that fails ends with its error alone: Studio settles a run on
+     its first end, and an error sent after it never reached the Playground. */
+  for await (const event of subscription) {
+    count++;
+    socket.emit("playground:chunk", { rid: payload.rid, chunk: chunkOf(event) });
   }
+  socket.emit("playground:end", {
+    rid: payload.rid,
+    summary: { durationMs: performance.now() - startedAt, count },
+  });
 }
 
 function callOf(payload: PlaygroundExecutePayload): StreamCall {

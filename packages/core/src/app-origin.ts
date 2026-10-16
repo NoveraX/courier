@@ -34,9 +34,13 @@
  * # When set
  *
  * `attachRuntime()` sets this during startup, reading from
- * `courier.config.ts.runtime.appOrigin` or an env var fallback.
- * Framework adapters may also discover it from the first incoming
- * request's `Host` header when nothing more explicit is available.
+ * `courier.config.ts.runtime.appOrigin` or an env var fallback, and a
+ * standalone server or Studio's dev-server plugins adopt the address the
+ * server listens on. Framework adapters may also learn it, in development,
+ * from what the server knows of itself — the socket a request arrived on,
+ * or the framework's own address — and never from a request's headers,
+ * which would let whoever sends one take the Playground's calls elsewhere.
+ * See `discoverAppOrigin`.
  * User code should not call `setAppOrigin` directly — set
  * `runtime.appOrigin` in `courier.config.ts` or set the `COURIER_APP_URL`
  * environment variable.
@@ -49,6 +53,20 @@ import { isDevelopment } from "./utils/development";
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 const g = globalThis as Record<symbol, unknown>;
 
+/**
+ * Where Studio's dev-server plugins leave the address the dev server listens
+ * on, for the app's own process and any worker it starts — Nuxt runs its
+ * server in one — to find: below `COURIER_APP_URL` and `APP_URL`, which a
+ * developer sets.
+ */
+export const DEV_SERVER_ORIGIN_ENV = "COURIER_DEV_SERVER_ORIGIN";
+
+/** Where Next.js records the address its server listens on, as it starts, under a name of its own. */
+export const NEXT_ORIGIN_ENV = "__NEXT_PRIVATE_ORIGIN";
+
+/* Read in turn: what a developer sets, then what a server records of itself. */
+const ORIGIN_ENVS = ["COURIER_APP_URL", "APP_URL", DEV_SERVER_ORIGIN_ENV, NEXT_ORIGIN_ENV] as const;
+
 /** Set the user-app's HTTP origin. Called by `attachRuntime()`. */
 export function setAppOrigin(origin: string | undefined): void {
   if (origin === undefined) {
@@ -59,24 +77,32 @@ export function setAppOrigin(origin: string | undefined): void {
 }
 
 /**
- * Adopt the origin a framework adapter saw a request addressed to as the
- * app's origin, unless one is already set — config and environment win.
+ * Take an origin an adapter learned as the app's, in development, unless one
+ * is set — see `discoverAppOrigin`, which decides what may teach it.
  *
- * Adapters call it on every request until one carries a host, so a
- * host-less probe that arrives first does not leave the origin unset for the
- * life of the process, and Studio Playground proxy mode with it.
- *
- * Only in development, where Studio reads it: a deployed server never takes
- * its origin from a request, whose `Host` whoever sends the first one
- * chooses — and would keep for the life of the process.
- *
- * @param origin - `scheme://host[:port]` the request was addressed to, if known
+ * @param origin - The origin, as `discoverAppOrigin` built it
+ * @returns Whether it was taken
  * @example
- * discoverAppOrigin(new URL(request.url).origin);
+ * learnAppOrigin("http://localhost:3000");
  */
-export function discoverAppOrigin(origin: string | undefined): void {
-  if (!origin || origin === "null" || getAppOrigin() || !isDevelopment()) return;
-  setAppOrigin(origin);
+export function learnAppOrigin(origin: string): boolean {
+  if (getAppOrigin() || !isDevelopment()) return false;
+  g[APP_ORIGIN_KEY] = origin;
+  return true;
+}
+
+/**
+ * Adopt the address a server listens on as the app's origin, unless one is
+ * set: the server knows it itself, so it counts as configured. Only in
+ * development, where Studio reads it.
+ *
+ * @param url - The address the server listens on
+ * @example
+ * adoptListenOrigin("http://127.0.0.1:3001");
+ */
+export function adoptListenOrigin(url: string): void {
+  if (getAppOrigin() || !isDevelopment()) return;
+  setAppOrigin(url);
 }
 
 /** Read the raw `appOrigin` string. Returns `undefined` if not configured. */
@@ -99,7 +125,7 @@ export function getAppOriginParsed(): ResolveOrigin {
     throw new ConfigurationError(
       "APP_ORIGIN_NOT_CONFIGURED",
       [
-        "[courier] Studio Playground proxy mode requires `appOrigin` to be set.",
+        "[courier] Studio Playground proxy mode needs the app's origin (`appOrigin`), and none is known yet.",
         "",
         "Add it to courier.config.ts:",
         "  export default defineConfig({",
@@ -110,11 +136,19 @@ export function getAppOriginParsed(): ResolveOrigin {
         "Or set the COURIER_APP_URL environment variable:",
         "  COURIER_APP_URL=http://localhost:3000 npm run dev",
         "",
+        "In development it is learned from the server itself: the address Next.js",
+        "records as it starts, the server Studio's Vite plugin or Nuxt module sees serve",
+        "(SvelteKit, Astro, React Router, Nuxt), or the socket of the first request a",
+        "Courier route serves (Express, Fastify, NestJS, Hono on Node or Bun,",
+        "SolidStart), so open a page that calls the API first. Set it where Studio",
+        "cannot see the server: Deno, Cloudflare Workers, a server on a UNIX socket, or",
+        "an app that routes by the Host name it is reached at.",
+        "",
         "There is no auto-fallback because the correct value depends on your",
         "runtime (custom port, Docker host, HTTPS in dev, reverse proxy, etc.)",
         "and a wrong guess would silently route requests to nowhere.",
         "",
-        "See https://courier.noverax.cloud/docs/frameworks/nextjs#studio-app-origin",
+        "See https://courier.noverax.cloud/docs/api/config#app-origin",
       ].join("\n"),
     );
   }
@@ -148,14 +182,21 @@ export function getAppOriginParsed(): ResolveOrigin {
  *  2. `APP_URL` — generic convention used by Laravel, many Node boilerplates,
  *     and `dotenv` templates. Picked up only when `COURIER_APP_URL` is unset so
  *     existing project conventions don't require duplicate config.
+ *  3. `COURIER_DEV_SERVER_ORIGIN` — the address a dev server listens on, as
+ *     Studio's Vite plugin or Nuxt module saw it serve; never set by hand.
+ *  4. `__NEXT_PRIVATE_ORIGIN` — the address Next.js records its server
+ *     listens on as it starts, `https` only with its own certificate, before
+ *     it loads the app and its `instrumentation.ts`. Next's own name for it,
+ *     read last: where a Next version records none, its adapter learns the
+ *     address from the first request a Courier route serves.
  *
  * # Explicitly rejected sources (and why)
  *
  * **`NEXT_PUBLIC_APP_URL`** — `NEXT_PUBLIC_*` is a Next.js *client-side*
  * convention (variables with this prefix are inlined into the browser
  * bundle). Reading it for *server-side* Studio config would import the wrong
- * semantic into a framework-agnostic package. Next.js users who want
- * auto-detect should set `COURIER_APP_URL` explicitly.
+ * semantic into a framework-agnostic package; Next's record of its own
+ * server's address, above, is what names it.
  *
  * **Composed `PROTOCOL` + `HOST` + `PORT`** — three independent variables
  * cannot be combined safely:
@@ -178,13 +219,9 @@ export function getAppOriginParsed(): ResolveOrigin {
  */
 export function detectAppOrigin(): string | undefined {
   if (typeof process === "undefined" || !process.env) return undefined;
-  const env = process.env;
-
-  if (typeof env.COURIER_APP_URL === "string" && env.COURIER_APP_URL.length > 0) {
-    return env.COURIER_APP_URL;
-  }
-  if (typeof env.APP_URL === "string" && env.APP_URL.length > 0) {
-    return env.APP_URL;
+  for (const name of ORIGIN_ENVS) {
+    const value = process.env[name];
+    if (typeof value === "string" && value.length > 0) return value;
   }
   return undefined;
 }

@@ -5,6 +5,7 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
    file only by its full name; bundlers accept either. */
 import type { NextRequest } from "next/server.js";
 
+import { ownOrigin } from "./own-origin";
 import { publicRequest } from "./public-request";
 
 /**
@@ -51,11 +52,11 @@ export function apiRoute<TConnect extends ConnectResult = ConnectResult>(
 
   return {
     GET: (request: NextRequest) => {
-      announce(new URL(request.url).origin);
+      announce(ownOrigin(request));
       return handleGet(publicRequest(request));
     },
     POST: (request: NextRequest) => {
-      announce(new URL(request.url).origin);
+      announce(ownOrigin(request));
       return handlePost(publicRequest(request));
     },
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */

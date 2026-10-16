@@ -16,7 +16,7 @@ In a Next.js app it adds what this page sets up by hand — the API route, the r
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Next.js app into Studio with an `attachRuntime()` call in the `register()` of `instrumentation.ts` — the same function that registers your sources ([Step 1](#step-1-api-route)). In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the `registerSources()` call before it registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
+Wire your Next.js app into Studio with an `attachRuntime()` call in the `register()` of `instrumentation.ts` — the same function that registers your sources ([Step 1](#step-1-api-route)). In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the `registerSources()` call before it registers them. The `appOrigin` field — where the Playground sends its proxy calls — lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 ```ts title="instrumentation.ts"
 import { registerSources } from "@noverax/courier"
@@ -37,10 +37,10 @@ Alternatively, set the `COURIER_APP_URL` environment variable instead of pinning
 COURIER_APP_URL=http://localhost:3000 next dev
 ```
 
-Without either, the app learns its origin from the first request its Courier routes serve in development, the address that request was sent to. Studio shows each runtime with the origin it reports — the server's, and the page's for the browser's — in the sidebar's project card, and the Playground sends proxy calls there.
+Without either, in development the app learns its origin from Next.js itself: the address `next dev` records as it starts listening, `https` only with its own certificate, before any request. No `Host`, `X-Forwarded-Host` or `X-Forwarded-Proto` a request sends changes it, so a `*.localhost` name, a tunnel or a reverse proxy in front needs no setting — see [How the app learns its origin](/docs/api/config#app-origin). Studio shows each runtime with the origin it reports — the server's, and the page's for the browser's — in the sidebar's project card, and the Playground sends proxy calls there.
 
 <Callout variant="warning" title="No magic default">
-There is no `localhost:3000` auto-fallback. Until the config, the environment or a request names the origin, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS in dev, reverse proxy — and a wrong guess would silently route requests to nowhere.
+There is no `localhost:3000` auto-fallback. Until the config, the environment or the server itself names the origin, a Playground call in proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer to [how the app learns its origin](/docs/api/config#app-origin). The correct value depends on your runtime — custom port, Docker host, HTTPS in dev, reverse proxy — and a wrong guess would silently route requests to nowhere.
 </Callout>
 
 That connects the server. To see requests the browser makes, connect it too, from `instrumentation-client.ts` (Next.js 15.3 and later, under Turbopack or webpack):

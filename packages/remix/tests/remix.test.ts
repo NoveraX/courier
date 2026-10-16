@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe("the Remix handler", () => {
-  it("tells Studio which sources it serves, and where once a request says", async () => {
+  it("tells Studio which sources it serves, and no origin, which no request can prove", async () => {
     const { endpoint } = courier();
     registerSources({
       api: defineApi({
@@ -33,12 +33,14 @@ describe("the Remix handler", () => {
     const stop = consumeAnnouncements((entry) => announced.push(entry));
     const handler = courierHandler();
 
-    for (let i = 0; i < 2; i++) {
-      await handler({ request: new Request("http://app.test/api/request?_s=api&_m=ping") });
-    }
+    /* React Router tells neither the port nor the peer: no Host proves it names this server. */
+    const sent = (host: string) =>
+      new Request(`http://${host}/api/request?_s=api&_m=ping`, { headers: { host } });
+    await handler({ request: sent("app.test") });
+    for (let i = 0; i < 2; i++) await handler({ request: sent("localhost:4321") });
     stop();
 
-    /* Once as the sources are there, and once more as the first request names the app's origin. */
+    /* Once, as the sources are there: no request teaches the app's origin. */
     expect(
       announced.map((a) => [
         a.transports,
@@ -46,9 +48,6 @@ describe("the Remix handler", () => {
         a.sources.map(getSourceName),
         a.listenOrigin,
       ]),
-    ).toEqual([
-      [["http", "sse"], "remix", ["api"], undefined],
-      [["http", "sse"], "remix", ["api"], "http://app.test"],
-    ]);
+    ).toEqual([[["http", "sse"], "remix", ["api"], undefined]]);
   });
 });

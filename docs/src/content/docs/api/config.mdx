@@ -80,7 +80,18 @@ What `attachRuntime()` needs in the application's process.
 
 | Field | |
 | --- | --- |
-| `appOrigin` | The origin the application listens on, such as `http://localhost:3000`. Studio's Playground resolves a relative `proxyPath.sse` or `proxyPath.ws` against it. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then, in development, the origin the framework adapter sees on the first request — a deployed server never takes one from a request, whose `Host` its sender chooses. With none of them, a Playground stream or channel in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |
+| `appOrigin` | The origin the application listens on, such as `http://localhost:3000`, where Studio's Playground sends its proxy calls — requests, streams and channels alike. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then, in development, the address the server tells of itself: see [How the app learns its origin](#app-origin). A deployed server never learns one. With none of them, a Playground call in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |
+
+### How the app learns its origin <a id="app-origin"></a>
+
+In development, with no `appOrigin`, `COURIER_APP_URL` or `APP_URL`, the app learns its origin from the server itself, never from a header a request sends, so a reverse proxy, a tunnel, a container or a `*.localhost` name in front of it needs no setting:
+
+- **Next.js**, a Hono app inside a Next.js route among them: the address `next dev` records as it starts listening, `https` only with its own certificate, before any request.
+- **Express, Fastify, NestJS, Hono on Node or Bun, SolidStart:** the address and port of the socket the first request to a Courier route arrived on. Until a Courier route has served a request, a Playground call has nowhere to go: open a page that calls your API first.
+- **The [standalone server](/docs/deployment/standalone-server):** the address it listens on, as it starts.
+- **SvelteKit, Astro, React Router, Nuxt:** the address Studio's Vite plugin or Nuxt module sees the dev server start listening on, before any request. Under an app's own server that runs Vite in middleware mode, as React Router's custom server does, the socket of the first request that server hands Vite.
+
+Set `COURIER_APP_URL` where Studio cannot see the server — Deno, Cloudflare Workers, a server on a UNIX socket, or an app that routes by the name it is reached at — to the address the app's own process reaches its proxy route at: in a container, the container's own address and port, not the port the host publishes; behind a tunnel, the local address, not the public one, which would send the Playground's calls and their credentials through the tunnel's provider.
 
 ## agents
 

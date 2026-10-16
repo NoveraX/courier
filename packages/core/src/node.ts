@@ -1,11 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { discoverAppOrigin } from "./app-origin";
+import { discoverAppOrigin } from "./discover-app-origin";
 import { createLogger } from "./logger";
 import { addressedTo } from "./node-origin";
+import { serverOriginOf } from "./socket-origin";
 import { isAbortError } from "./utils/abort";
 
 const log = createLogger("Node");
 
+export type { ServerOrigin } from "./discover-app-origin";
 export { toWebRequest } from "./node-request";
 export {
   nodeIncomingRequest,
@@ -20,6 +22,7 @@ export {
   type WebSocketUpgradeOptions,
   wsFrameLimit,
 } from "./node-websocket";
+export { serverOriginOf } from "./socket-origin";
 export {
   type WebRequestOptions,
   webIncomingRequest,
@@ -45,14 +48,18 @@ export function extractOriginFromNodeRequest(nodeReq: IncomingMessage): string |
 }
 
 /**
- * Adopt the origin a Node request was addressed to as the app's origin,
- * unless one is set — see `discoverAppOrigin`. Node adapters call it on every
- * request; it costs a header read until one request carries a host.
+ * Learn the app's origin from a Node request, unless one is set: the address
+ * and port of the socket the server accepted it on — see `serverOriginOf`
+ * and `discoverAppOrigin`. Nothing the request sends decides it.
  *
  * @param nodeReq - The incoming request
+ * @example
+ * ```ts
+ * server.on("request", (req) => discoverNodeAppOrigin(req));
+ * ```
  */
 export function discoverNodeAppOrigin(nodeReq: IncomingMessage): void {
-  discoverAppOrigin(extractOriginFromNodeRequest(nodeReq));
+  discoverAppOrigin(serverOriginOf(nodeReq.socket));
 }
 
 /**

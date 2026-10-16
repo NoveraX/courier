@@ -22,8 +22,8 @@ export interface RequestRowProps {
 /**
  * A request in the Timeline: its state, method and name — marked shared
  * when another call's request answered it — its path, mode and status, how
- * long it took against a second, its size, when it began, and a pin when
- * it is pinned.
+ * long it took against a second, its size, when it began, and a pin when it
+ * is pinned.
  *
  * @param props - The request, whether it is open, what the row needs, and what opens it
  * @returns The row

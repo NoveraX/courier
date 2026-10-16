@@ -50,7 +50,7 @@ export async function registerFromConfig(
          no usable `sources` is the same kind of failure as one that will not
          load, and neither may end the host's startup. */
       registerSources(loaded.config.sources);
-      setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
+      configureAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
       let current = loaded.config;
       const reloaded = (config: CourierConfig): void => {
         current = config;
@@ -78,8 +78,14 @@ export async function registerFromConfig(
        which names the remedy. */
     log.error("courier.config could not be loaded; no sources were registered", err);
   }
-  setAppOrigin(detectAppOrigin());
+  configureAppOrigin(detectAppOrigin());
   return undefined;
+}
+
+/* A configured origin wins; with none, the one the server already told — its dev server
+   started, or an adapter saw where it listens — is kept, not cleared. */
+function configureAppOrigin(origin: string | undefined): void {
+  if (origin !== undefined) setAppOrigin(origin);
 }
 
 async function followConfig(

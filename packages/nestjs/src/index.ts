@@ -2,7 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import type { ServerOrigin } from "@noverax/courier/internal";
+import { sendWebResponse, serverOriginOf, toWebRequest } from "@noverax/courier/node";
 
 import { bodyNestParsed } from "./parsed-body";
 
@@ -92,14 +93,14 @@ export function courierSSEMiddleware<TConnect extends ConnectResult = ConnectRes
 function serve(
   handler: AdapterHandler,
   respond: (request: Request) => Promise<Response>,
-  announce: (addressedTo?: string) => void,
+  announce: (source?: ServerOrigin) => void,
 ): CourierNestMiddleware {
   const middleware = async (
     req: IncomingMessage,
     res: ServerResponse,
     next: (err?: unknown) => void,
   ): Promise<void> => {
-    announce(extractOriginFromNodeRequest(req));
+    announce(serverOriginOf(req.socket));
     try {
       const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
       await sendWebResponse(await respond(webReq), res);

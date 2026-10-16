@@ -9,12 +9,19 @@
  *
  * It reads courier.config from Vite's root, not the working directory, so
  * `vite apps/web`, run from above the app, sends the browser to the Studio
- * address the app's config names.
+ * address the app's config names. And when the dev server starts listening
+ * it tells the app that address, where the Playground sends its proxy calls;
+ * in middleware mode, the address of the app's own server, as the socket of
+ * the first request it hands Vite tells.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer as createHttpServer, request } from "node:http";
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { getAppOrigin, setAppOrigin } from "@noverax/courier";
+import { DEV_SERVER_ORIGIN_ENV } from "@noverax/courier/internal";
 import { createServer, type ViteDevServer } from "vite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { courierStudio } from "../src/plugins/vite";
 
@@ -24,6 +31,8 @@ const cleanups: Array<() => Promise<void> | void> = [];
 
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup();
+  setAppOrigin(undefined);
+  vi.unstubAllEnvs();
 });
 
 /** A project under the repository's node_modules, so its config resolves the workspace packages. */
@@ -48,6 +57,30 @@ async function serve(root: string, enabled?: boolean): Promise<ViteDevServer> {
   });
   cleanups.push(() => server.close());
   return server;
+}
+
+/* The app's own server, handing every request to Vite first, as React Router's custom server does. */
+async function appServerFor(vite: ViteDevServer): Promise<number> {
+  const app = createHttpServer((req, res) =>
+    vite.middlewares(req, res, () => {
+      res.statusCode = 404;
+      res.end();
+    }),
+  );
+  await new Promise<void>((resolve) => app.listen(0, "127.0.0.1", resolve));
+  cleanups.push(() => new Promise<void>((resolve) => app.close(() => resolve())));
+  return (app.address() as AddressInfo).port;
+}
+
+function sendTo(port: number, host: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const sent = request({ host: "127.0.0.1", port, path: "/", headers: { host } }, (res) => {
+      res.resume();
+      res.on("end", () => resolve());
+    });
+    sent.on("error", reject);
+    sent.end();
+  });
 }
 
 describe("courierStudio() for Vite", () => {
@@ -109,6 +142,58 @@ describe("courierStudio() for Vite", () => {
     const client = await server.transformRequest("/@vite/client");
 
     expect(client?.code).not.toContain("courier-studio-init");
+  });
+
+  it("tells the app where the dev server listens, the moment it starts, whatever a request names", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv(DEV_SERVER_ORIGIN_ENV, "");
+    delete process.env[DEV_SERVER_ORIGIN_ENV];
+    const server = await createServer({
+      root: project(),
+      configFile: false,
+      logLevel: "silent",
+      server: { host: "127.0.0.1", port: 0, ws: false },
+      plugins: [courierStudio({})],
+    });
+    cleanups.push(() => server.close());
+
+    await server.listen();
+    const listening = server.httpServer;
+    if (!listening) throw new Error("the dev server did not listen");
+    const { port } = listening.address() as AddressInfo;
+    await sendTo(port, "localhost:9999");
+
+    expect(getAppOrigin()).toBe(`http://localhost:${port}`);
+    expect(process.env[DEV_SERVER_ORIGIN_ENV]).toBe(`http://localhost:${port}`);
+  });
+
+  it("tells nothing in middleware mode until the app's own server hands Vite a request", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    await appServerFor(await serve(project()));
+
+    expect(getAppOrigin()).toBeUndefined();
+  });
+
+  it("tells, in middleware mode, where the app's own server listens, as the first request's socket says, whatever port it names", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv(DEV_SERVER_ORIGIN_ENV, "");
+    delete process.env[DEV_SERVER_ORIGIN_ENV];
+    const port = await appServerFor(await serve(project()));
+
+    await sendTo(port, "localhost:9999");
+
+    expect(getAppOrigin()).toBe(`http://localhost:${port}`);
+    expect(process.env[DEV_SERVER_ORIGIN_ENV]).toBe(`http://localhost:${port}`);
+  });
+
+  it("keeps, in middleware mode, an origin the app already has", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    setAppOrigin("https://shop.example");
+    const port = await appServerFor(await serve(project()));
+
+    await sendTo(port, "localhost:9999");
+
+    expect(getAppOrigin()).toBe("https://shop.example");
   });
 
   it("leaves server-side transforms alone", async () => {

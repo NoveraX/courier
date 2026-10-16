@@ -5,6 +5,12 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getAppOrigin, setAppOrigin } from "@noverax/courier";
+import {
+  adoptListenOrigin,
+  DEV_SERVER_ORIGIN_ENV,
+  NEXT_ORIGIN_ENV,
+} from "@noverax/courier/internal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { _resetRuntimeHandlesForTests, attachRuntime } from "../src/runtime/attach-runtime";
@@ -76,5 +82,62 @@ describe("the config a server runtime loaded", () => {
     const handle = await attachRuntime("test-config-2");
 
     expect(handle.config()).toBeUndefined();
+  });
+});
+
+describe("the app's origin a server runtime starts with", () => {
+  /* A project whose config names no origin, unless it is given one. */
+  function project(appOrigin?: string): void {
+    const dir = mkdtempSync(join(tmpdir(), "courier-runtime-origin-"));
+    projects.push(dir);
+    const runtime =
+      appOrigin === undefined ? "" : `, runtime: { appOrigin: ${JSON.stringify(appOrigin)} }`;
+    writeFileSync(join(dir, "courier.config.mjs"), `export default { sources: {}${runtime} };\n`);
+    vi.spyOn(process, "cwd").mockReturnValue(dir);
+  }
+
+  afterEach(() => {
+    setAppOrigin(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps the one a dev server's plugin adopted when nothing configures one", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    adoptListenOrigin("http://localhost:5173");
+    project();
+
+    await attachRuntime("test-origin-1");
+
+    expect(getAppOrigin()).toBe("http://localhost:5173");
+  });
+
+  it("takes the config's own over it", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    adoptListenOrigin("http://localhost:5173");
+    project("http://localhost:3000");
+
+    await attachRuntime("test-origin-2");
+
+    expect(getAppOrigin()).toBe("http://localhost:3000");
+  });
+
+  it("finds the dev server's address in the environment, as Nitro's worker does", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv(DEV_SERVER_ORIGIN_ENV, "http://localhost:3000");
+    project();
+
+    await attachRuntime("test-origin-3");
+
+    expect(getAppOrigin()).toBe("http://localhost:3000");
+  });
+
+  it("finds the address Next.js recorded as its server started, before any request", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv(NEXT_ORIGIN_ENV, "http://localhost:3116");
+    project();
+
+    await attachRuntime("test-origin-4");
+
+    expect(getAppOrigin()).toBe("http://localhost:3116");
   });
 });

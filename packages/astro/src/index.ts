@@ -48,8 +48,8 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "astro" });
   return (context: AstroEndpointContext) => {
-    announce(new URL(context.request.url).origin);
     rememberPeerAddress(context.request, astroClientAddress(context));
+    announce();
     return handle(context.request);
   };
 }

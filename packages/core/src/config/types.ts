@@ -214,6 +214,7 @@ export interface CourierServerConfig {
   /**
    * Answer only what a browser sent, refusing with 403 a request with
    * neither `Sec-Fetch-Site` nor `Origin` — a filter for noise, not a lock.
+   * Studio's Playground gets through in development alone, on a one-time pass.
    */
   browsersOnly?: boolean | undefined;
 }
@@ -224,26 +225,29 @@ export interface CourierServerConfig {
  *
  * Consumed by `attachRuntime()` when it loads `courier.config.ts` from disk.
  * Every field is optional; omit the whole `runtime` block for the common
- * dev case where Express/Fastify/Hono/NestJS adapters auto-discover the
- * listen origin from the first incoming request.
+ * dev case, where the app learns its origin from the server itself.
  */
 export interface CourierRuntimeConfig {
   /**
    * Canonical HTTP(S) origin the user-app listens on (e.g. `http://localhost:3000`).
    *
-   * Used by the Studio Playground proxy mode when `proxyPath.{sse,ws}` is a
-   * relative path — Node `fetch`/`new WebSocket` reject relative URLs and
-   * `globalThis.location` is unavailable in server contexts, so an explicit
-   * origin is required to resolve them to absolute URLs.
+   * Where Studio's Playground sends its proxy calls — requests, streams and
+   * channels alike — when the source's `proxyPath` is relative, as it is by
+   * default: Node `fetch`/`new WebSocket` reject relative URLs and
+   * `globalThis.location` is unavailable in server contexts, so an origin is
+   * required to resolve them to absolute URLs.
    *
    * Resolution order inside `attachRuntime()`:
    *   1. This field (`config.runtime.appOrigin`)
    *   2. `COURIER_APP_URL` environment variable
    *   3. `APP_URL` environment variable
-   *   4. Framework adapter auto-discovery (Express/Fastify/Hono/NestJS on
-   *      first request; standalone server from `.listen()` callback)
-   *   5. Undefined — Playground proxy SSE/WS throws
-   *      `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` on first use
+   *   4. In development, the server itself, never a request's headers: the
+   *      address Studio's Vite plugin or Nuxt module sees the dev server
+   *      serve on, the one Next.js records as it starts, a standalone
+   *      server's `.listen()` address, or the socket of the first request a
+   *      Courier route serves
+   *   5. Undefined — a Playground proxy call throws
+   *      `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")`
    *
    * There is no magic `http://localhost:3000` fallback because the correct
    * value depends on your runtime (custom port, Docker, HTTPS, reverse

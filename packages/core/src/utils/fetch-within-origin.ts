@@ -1,3 +1,4 @@
+import { inBrowserPage } from "./browser-page";
 import { parseUrl } from "./parse-url";
 
 /** As many redirects as `fetch` follows before it gives up. */
@@ -24,7 +25,9 @@ const BODY_HEADERS = [
  * answer is returned as it came, so the key never leaves the host it was
  * meant for. A redirect on the same origin is followed as `fetch` would,
  * except that a body sent as a stream cannot be sent twice, so a redirect
- * that would repeat it is returned instead.
+ * that would repeat it is returned instead. In a browser's page the page's
+ * own `fetch` follows redirects, as the browser's rules for credentials
+ * allow: one it was told to leave alone would answer with nothing to read.
  *
  * @param url - Where to send the request
  * @param init - The request, as it would be given to `fetch`
@@ -41,6 +44,7 @@ export async function fetchWithinOrigin(
   init: RequestInit,
   send: (url: string, init: RequestInit) => Promise<Response> = fetch,
 ): Promise<Response> {
+  if (inBrowserPage()) return send(url, init);
   const origin = new URL(url).origin;
   let target = url;
   let request: RequestInit = { ...init, redirect: "manual" };

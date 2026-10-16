@@ -1,5 +1,7 @@
 import type { Context } from "hono";
 
+import { nodeSocketOf } from "./node-socket";
+
 /**
  * The remote address of the connection a Hono request arrived on, as the
  * runtime serving Hono reports it.
@@ -27,12 +29,8 @@ export function peerAddressOf(c: Context): string | undefined {
 
 /** `@hono/node-server`: the socket of the Node request it hands over. */
 function nodeAddress(env: object): string | undefined {
-  const bindings = "server" in env && isObject(env.server) ? env.server : env;
-  if (!("incoming" in bindings) || !isObject(bindings.incoming)) return undefined;
-  const { incoming } = bindings;
-  if (!("socket" in incoming) || !isObject(incoming.socket)) return undefined;
-  const { socket } = incoming;
-  return "remoteAddress" in socket ? stringOrUndefined(socket.remoteAddress) : undefined;
+  const socket = nodeSocketOf(env);
+  return socket && "remoteAddress" in socket ? stringOrUndefined(socket.remoteAddress) : undefined;
 }
 
 /** Bun: the server passed as `env` answers `requestIP(request)`. */

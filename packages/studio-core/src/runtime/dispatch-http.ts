@@ -95,7 +95,7 @@ async function run(
     const { status, headers, data } = answer;
     return { kind: "http-result", status, data, headers: Object.fromEntries(headers) };
   } catch (err) {
-    return playgroundFailure(err);
+    return playgroundFailure(err, payload.mode === "proxy");
   }
 }
 
@@ -106,7 +106,8 @@ function isRawAnswer(value: unknown): value is { status: number; headers: Header
   return typeof value.status === "number" && value.headers instanceof Headers;
 }
 
-/* The proxy shows the call under the id its header names. */
+/* The proxy shows the call under the id its header names, and the call's
+   pass, which lets it past `browsersOnly`, is issued for that id. */
 function callOf(payload: PlaygroundExecutePayload, requestId: string): PlaygroundCall {
   return {
     source: payload.source,
@@ -114,6 +115,7 @@ function callOf(payload: PlaygroundExecutePayload, requestId: string): Playgroun
     method: payload.method,
     variables: variablesOf(payload),
     headers: { ...payload.headers, [STUDIO_REQUEST_HEADER]: requestId },
+    requestId,
   };
 }
 

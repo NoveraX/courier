@@ -156,6 +156,7 @@ export function PlaygroundWorkspace({
             sendingLabel={`${endpoint.label} ${parts.map((p) => p.text).join("")}`}
             onInspect={open}
             onCancel={run.cancel}
+            onRunAsServer={run.runAsServer}
           />
         }
       />

@@ -15,7 +15,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
@@ -213,5 +213,27 @@ describe("fetchWithinOrigin", () => {
 
     expect(response.status).toBe(307);
     expect(upstreamSeen).toHaveLength(1);
+  });
+
+  it("leaves a redirect to a browser page's own fetch, which a manual one would answer with nothing to read", async () => {
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("document", {});
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    const sent: RequestInit[] = [];
+    const send = async (_url: string, init: RequestInit): Promise<Response> => {
+      sent.push(init);
+      return new Response(null, { status: 200 });
+    };
+
+    const response = await fetchWithinOrigin(
+      `${upstreamURL}/redir?to=%2Fmoved`,
+      { headers: { accept: "*/*" } },
+      send,
+    );
+
+    expect(response.status).toBe(200);
+    expect(sent).toEqual([{ headers: { accept: "*/*" } }]);
   });
 });

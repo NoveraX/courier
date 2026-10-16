@@ -3,6 +3,7 @@ import { createHandler, handleWhileConnected } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 
 import { connectionOf } from "./event-connection";
+import { serverOriginOfEvent } from "./event-origin";
 import { requestOfEvent } from "./event-request";
 import type { CourierEventHandler, H3EventLike } from "./h3-event";
 
@@ -49,7 +50,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "nuxt" });
   const handler = async (event: H3EventLike): Promise<Response> => {
     const request = await requestOfEvent(event);
-    announce(new URL(request.url).origin);
+    announce(serverOriginOfEvent(event));
     return handleWhileConnected(handle, request, connectionOf(event));
   };
   return Object.assign(handler, { __is_handler__: true } as const);

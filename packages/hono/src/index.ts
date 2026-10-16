@@ -4,6 +4,7 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
 import { rememberPeerAddress } from "@noverax/courier/internal";
 import type { Context } from "hono";
 import { peerAddressOf } from "./peer-address";
+import { serverOriginOfHono } from "./server-origin";
 import type { HonoWSContext } from "./ws-adapter";
 import { createSocketAdapter, frameText } from "./ws-adapter";
 
@@ -32,8 +33,8 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
   return (c: Context) => {
-    announce(new URL(c.req.raw.url).origin);
     rememberPeerAddress(c.req.raw, peerAddressOf(c));
+    announce(serverOriginOfHono(c));
     return handle(c.req.raw);
   };
 }
@@ -52,8 +53,8 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
   const { handleSSE } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "hono" });
   return (c: Context) => {
-    announce(new URL(c.req.raw.url).origin);
     rememberPeerAddress(c.req.raw, peerAddressOf(c));
+    announce(serverOriginOfHono(c));
     return handleSSE(c.req.raw);
   };
 }
@@ -92,7 +93,7 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "hono" });
 
   return (c: Context): HonoWSEvents => {
-    announce(new URL(c.req.raw.url).origin);
+    announce(serverOriginOfHono(c));
     let adapter: ReturnType<typeof createSocketAdapter>;
 
     return {

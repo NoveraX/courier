@@ -140,6 +140,8 @@ await attachRuntime()
 
 Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin in Nuxt, `hooks.server.ts` in SvelteKit, or before `listen()` in a Node server. The runtime is `@noverax/courier-studio-core`'s; its README describes the options `attachRuntime()` takes.
 
+The Playground runs a call in Proxy mode from this runtime, through your app's own proxy route, at the app's origin. Under Vite and Nuxt, the integration that connects the browser also tells the server where the dev server listens, and Next.js records it as it starts; elsewhere the app learns it from the first request a Courier route serves — see [How the app learns its origin](/docs/api/config#app-origin).
+
 Studio keeps the latest 2000 requests your app makes in memory, so a Studio page that opens or reloads shows the ones made before it; clearing the Timeline clears them there too, except the pinned ones when **Preserve log** is on. A request or stream still open when its app stops, or loses its connection to Studio, is shown as failed: the app can no longer say how it ended.
 
 ## Host a public demo

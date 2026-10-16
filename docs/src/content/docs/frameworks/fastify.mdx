@@ -176,7 +176,7 @@ Add the hook on the root instance, where it runs for every route whichever plugi
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Fastify server into Studio with a single `attachRuntime()` call. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the app's own `registerSources()` call registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
+Wire your Fastify server into Studio with a single `attachRuntime()` call. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the app's own `registerSources()` call registers them. Studio's Playground sends its proxy calls to the app's origin, which in development the app learns from the server itself — the socket the first request to a Courier route arrived on — so open a page that calls your API before the first Playground call. Where Studio cannot see the server, set `courier.config.ts.runtime.appOrigin` or the `COURIER_APP_URL` env var — see [How the app learns its origin](/docs/api/config#app-origin).
 
 ```ts title="server.ts"
 import Fastify from "fastify"
@@ -205,7 +205,7 @@ COURIER_APP_URL=http://localhost:3001 node server.js
 ```
 
 <Callout variant="warning" title="No magic default">
-There is no `localhost:3001` auto-fallback. If `appOrigin` is missing, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
+There is no `localhost:3001` auto-fallback. Until the config, the environment or the server itself names the origin, a Playground call in proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer to [how the app learns its origin](/docs/api/config#app-origin). The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
 </Callout>
 
 ## Client-side setup

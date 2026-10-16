@@ -8,6 +8,7 @@
 import { registerSources, setAppOrigin } from "@noverax/courier";
 import { type BufferedAnnouncement, consumeAnnouncements } from "@noverax/courier/announce";
 import { courier, defineApi, getSourceName } from "@noverax/courier/define";
+import { adoptListenOrigin } from "@noverax/courier/internal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resetAnnouncements } from "../../core/src/announce/test-support";
@@ -20,7 +21,7 @@ afterEach(() => {
 });
 
 describe("the Astro handler", () => {
-  it("tells Studio which sources it serves, and where once a request says", async () => {
+  it("tells Studio which sources it serves, and where once the dev server's address is known", async () => {
     const { endpoint } = courier();
     registerSources({
       api: defineApi({
@@ -33,12 +34,17 @@ describe("the Astro handler", () => {
     const stop = consumeAnnouncements((entry) => announced.push(entry));
     const handler = courierHandler();
 
+    /* A request's Host teaches nothing; the dev server's address, as Studio's Vite plugin adopts it, does. */
+    const sent = (host: string) =>
+      new Request(`http://${host}/api/request?_s=api&_m=ping`, { headers: { host } });
+    await handler({ request: sent("localhost:4321"), clientAddress: "127.0.0.1" });
+    adoptListenOrigin("http://localhost:4321");
     for (let i = 0; i < 2; i++) {
-      await handler({ request: new Request("http://app.test/api/request?_s=api&_m=ping") });
+      await handler({ request: sent("app.test"), clientAddress: "127.0.0.1" });
     }
     stop();
 
-    /* Once as the sources are there, and once more as the first request names the app's origin. */
+    /* Once as the sources are there, and once more as the app's origin becomes known. */
     expect(
       announced.map((a) => [
         a.transports,
@@ -48,7 +54,7 @@ describe("the Astro handler", () => {
       ]),
     ).toEqual([
       [["http", "sse"], "astro", ["api"], undefined],
-      [["http", "sse"], "astro", ["api"], "http://app.test"],
+      [["http", "sse"], "astro", ["api"], "http://localhost:4321"],
     ]);
   });
 });

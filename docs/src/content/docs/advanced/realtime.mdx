@@ -87,7 +87,7 @@ A subscription ends in one of three ways, and the client can tell them apart.
 
 - **The client closes it** — `close()`, or a React hook unmounting. Nothing is reported.
 - **The server finishes it** — a stream's generator returned, or a channel closed itself. Iterating a stream ends (`for await` leaves its loop); a channel's status becomes `disconnected`. Neither reconnects.
-- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. Iterating a stream rejects with a `RealtimeError` carrying the code and message the server sent; a channel emits it on `error`, then its status becomes `disconnected`. A refusal answered with an HTTP status arrives as code `4000 + status`, so a `401` is `4401`.
+- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. Iterating a stream rejects with a `RealtimeError` carrying the code and message the server sent; a channel emits it on `error`, then its status becomes `disconnected`. A stream refused with a status no retry would change — a `4xx` other than `408` and `429`, or a redirect it does not follow, as one to another origin — arrives as code `4000 + status`, so a `401` is `4401` and a `302` is `4302`, and is not reconnected; a `408`, a `429` and a `5xx` are retried as a dropped connection is, after the `Retry-After` the server sent when it sent one.
 
 A dropped connection is none of these: the client reconnects, resumes a stream after the last event id it saw, and subscribes its channels again. When it has spent its retries, iterating the stream rejects with a `ConnectionError`.
 

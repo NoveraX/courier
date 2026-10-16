@@ -4,6 +4,7 @@ import type { CallPurpose } from "../middleware/types";
 import { generateRequestId, type StudioHooks, studioHooks } from "../studio";
 import { describeFormData } from "../studio/describe-form-data";
 import type { SchemaMetadata } from "../validation";
+import { agentShown } from "./agent-shown";
 import { estimateResponseSize, headersToObject, isFormData, normalizeHttpMethod } from "./helpers";
 import type { SharedAnswer } from "./shared-answer";
 
@@ -67,17 +68,6 @@ export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void
     ...(start.idempotencyKey && { idempotencyKey: start.idempotencyKey }),
     timestamp: Date.now(),
   });
-}
-
-/* Who the server let in stays out of Studio: it is the application's to show, and may hold a token. */
-function agentShown(agent: AgentCall): {
-  tool: string;
-  access: AgentCall["access"];
-  client?: string;
-} {
-  const client =
-    agent.client && [agent.client.name, agent.client.version].filter(Boolean).join(" ");
-  return { tool: agent.tool, access: agent.access, ...(client && { client }) };
 }
 
 /**

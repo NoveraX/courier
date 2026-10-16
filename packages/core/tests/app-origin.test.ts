@@ -6,12 +6,20 @@
  *  - Storage round-trip (`setAppOrigin` + `getAppOrigin` via globalThis)
  *  - Parsing semantics (`getAppOriginParsed` happy path + edge cases)
  *  - Strict APP_ORIGIN_NOT_CONFIGURED — no `localhost:3000` magic default
- *  - Env var auto-detect precedence (`COURIER_APP_URL` > `APP_URL` > none)
+ *  - Env var auto-detect precedence: `COURIER_APP_URL`, `APP_URL`, then the
+ *    address a dev server or Next.js recorded of itself, else none
  *  - Malformed URL surfaces a clean error
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { detectAppOrigin, getAppOrigin, getAppOriginParsed, setAppOrigin } from "../src/app-origin";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DEV_SERVER_ORIGIN_ENV,
+  detectAppOrigin,
+  getAppOrigin,
+  getAppOriginParsed,
+  NEXT_ORIGIN_ENV,
+  setAppOrigin,
+} from "../src/app-origin";
 import { isConfigurationError } from "../src/errors";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
@@ -26,6 +34,7 @@ afterEach(() => {
   delete (globalThis as Record<symbol, unknown>)[APP_ORIGIN_KEY];
   delete process.env.COURIER_APP_URL;
   delete process.env.APP_URL;
+  vi.unstubAllEnvs();
 });
 
 // ── Storage ─────────────────────────────────────────────────────────────────
@@ -143,5 +152,21 @@ describe("detectAppOrigin", () => {
   it("ignores empty APP_URL", () => {
     process.env.APP_URL = "";
     expect(detectAppOrigin()).toBeUndefined();
+  });
+
+  it("returns the address a dev server or Next.js recorded of itself, a dev server's first", () => {
+    vi.stubEnv(NEXT_ORIGIN_ENV, "http://localhost:3000");
+    expect(detectAppOrigin()).toBe("http://localhost:3000");
+
+    vi.stubEnv(DEV_SERVER_ORIGIN_ENV, "http://localhost:5173");
+    expect(detectAppOrigin()).toBe("http://localhost:5173");
+  });
+
+  it("lets what a developer sets win over what a server recorded", () => {
+    vi.stubEnv(NEXT_ORIGIN_ENV, "http://localhost:3000");
+    vi.stubEnv(DEV_SERVER_ORIGIN_ENV, "http://localhost:5173");
+    process.env.APP_URL = "http://app.example.com";
+
+    expect(detectAppOrigin()).toBe("http://app.example.com");
   });
 });

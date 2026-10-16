@@ -11,9 +11,10 @@
  * the same buffer through `consumeAnnouncements()`.
  */
 
-import { discoverAppOrigin, getAppOrigin } from "../app-origin";
+import { getAppOrigin } from "../app-origin";
 import type { AnySource } from "../define";
 import type { Sources } from "../define/types";
+import { discoverAppOrigin, type ServerOrigin } from "../discover-app-origin";
 import { getSources, onSourcesChange } from "../sources";
 
 /** Transports a runtime claims it can serve for the listed sources */
@@ -88,11 +89,12 @@ export function announceHosting(input: AnnounceHostingInput): void {
  * Announce what an adapter hosts as soon as sources are registered, without
  * requiring them when the adapter's handler is created.
  *
- * Call the returned function on each request, with the origin the request
- * was addressed to. It announces on the first call that finds the registry
- * populated, and once more when the app's origin is learned after that —
- * from a request, in development — so Studio shows where the app runs and
- * its Playground sends there; otherwise it does nothing. Before sources are
+ * Call the returned function on each request, with where the server itself
+ * listens when the adapter can tell — the socket the request arrived on, or
+ * the framework's own address. It announces on the first call that finds
+ * the registry populated, and once more when the app's origin is learned
+ * after that — in development — so Studio shows where the app runs and its
+ * Playground sends there; otherwise it does nothing. Before sources are
  * registered it does nothing and never throws, so a handler created at
  * module load works whenever `registerSources()` or `attachRuntime()` runs.
  * A request that arrives before any registration is answered by the
@@ -107,20 +109,22 @@ export function announceHosting(input: AnnounceHostingInput): void {
  * and the Playground can send to a freshly started app.
  *
  * @param input - What the adapter hosts, without the sources
- * @returns A function to call on each request, with the origin it was addressed to
+ * @returns A function to call on each request, with where the server
+ *   listens when the adapter can tell, which may teach the app its origin
+ *   (see `discoverAppOrigin`)
  *
  * @example
  * ```ts
  * const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
  * return (c) => {
- *   announce(new URL(c.req.raw.url).origin);
+ *   announce(serverOriginOf(c.env.incoming?.socket));
  *   return handle(c.req.raw);
  * };
  * ```
  */
 export function announceWhenRegistered(
   input: Omit<AnnounceHostingInput, "sources">,
-): (addressedTo?: string) => void {
+): (source?: ServerOrigin | string) => void {
   /* The origin the last announcement carried, or `null` before the first. */
   let announcedWith: string | undefined | null = null;
   let stopWaiting: (() => void) | undefined;
@@ -138,8 +142,8 @@ export function announceWhenRegistered(
   };
   stopWaiting = onSourcesChange(announce);
   announce(getSources());
-  return (addressedTo) => {
-    discoverAppOrigin(addressedTo);
+  return (source) => {
+    discoverAppOrigin(source);
     announce(getSources());
   };
 }

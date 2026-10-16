@@ -1,4 +1,7 @@
+import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+
+import { shareDevServerOrigin } from "./core/dev-server-origin";
 import { resolveSnippet } from "./core/resolve-snippet";
 import { runtimeEntryPath } from "./core/runtime-importer";
 import type { StudioPluginOptions } from "./core/types";
@@ -16,6 +19,12 @@ const PLUGIN_FILENAME = "courier-studio.client.mjs";
  */
 async function attachStudio(options: StudioPluginOptions, nuxt: NuxtLike): Promise<void> {
   if (!nuxt.options.dev) return;
+
+  /* Nitro serves from a worker whose sockets tell no address: it finds where the dev
+     server listens in the environment this process hands it. */
+  nuxt.hook("listen", (server, listener) => {
+    shareDevServerOrigin(server.address(), listener?.url?.startsWith("https:") === true);
+  });
 
   if (nuxt.options.builder === VITE_BUILDER) {
     nuxt.options.vite.plugins ??= [];
@@ -73,8 +82,17 @@ export const courierStudioModule: NuxtRawModule = Object.assign(attachStudio, {
   getMeta: async () => ({ name: "courier-studio" }),
 });
 
+/** The server `nuxt dev` listens on, as its `listen` hook hands it over. */
+interface ListeningServer {
+  address(): AddressInfo | string | null;
+}
+
 /** The part of Nuxt this module touches; its arrays hold more than it adds. */
 interface NuxtLike {
+  hook(
+    name: "listen",
+    run: (server: ListeningServer, listener: { url?: string } | undefined) => void,
+  ): void;
   options: {
     dev: boolean;
     builder: unknown;

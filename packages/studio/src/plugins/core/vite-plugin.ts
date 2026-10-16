@@ -1,6 +1,7 @@
 import type { Plugin } from "vite";
 import { RESOLVED_ID, RUNTIME_SPECIFIER, VIRTUAL_ID } from "./constants";
 import { courierClientDeps } from "./courier-client-deps";
+import { shareDevServerOrigin, shareFirstRequestOrigin } from "./dev-server-origin";
 import { isInjectionEnabled } from "./options";
 import { resolveSnippet } from "./resolve-snippet";
 import { RUNTIME_IMPORTER } from "./runtime-importer";
@@ -24,7 +25,10 @@ const DEV_SERVER = true;
  * It appends a dynamic import of the connect snippet to Vite's own client, so
  * the snippet reaches the browser whatever renders the page. The import is
  * dynamic so that a snippet that fails to load cannot take hot module
- * replacement down with it.
+ * replacement down with it. When the dev server starts listening it tells
+ * the app that address, where the Playground sends its proxy calls; in
+ * middleware mode the app's own server listens, and the socket of the first
+ * request it hands Vite tells where.
  *
  * @param framework - Names the browser runtime: `${framework}-browser`.
  * @param options - Plugin options shared by every Studio integration.
@@ -58,6 +62,17 @@ export function createStudioVitePlugin(framework: string, options?: StudioPlugin
        started. */
     configResolved(config) {
       projectRoot = config.root;
+    },
+    configureServer(server) {
+      if (!isInjectionEnabled(options, DEV_SERVER)) return;
+      const listener = server.httpServer;
+      if (!listener) {
+        server.middlewares.use(shareFirstRequestOrigin());
+        return;
+      }
+      listener.once("listening", () => {
+        shareDevServerOrigin(listener.address(), Boolean(server.config.server.https));
+      });
     },
     resolveId(source, importer) {
       if (source === VIRTUAL_ID) return RESOLVED_ID;

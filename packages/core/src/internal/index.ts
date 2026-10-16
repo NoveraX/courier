@@ -17,6 +17,7 @@ export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/add
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
+export { BROWSERS_ONLY_REFUSAL } from "../adapter/entry-gate";
 export { type ExposureDecision, exposureOf } from "../adapter/exposure";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
@@ -26,7 +27,12 @@ export {
   frameCredentials,
   frameHeadersOver,
 } from "../adapter/ws-frame-credentials";
-export { discoverAppOrigin, getAppOriginParsed } from "../app-origin";
+export {
+  adoptListenOrigin,
+  DEV_SERVER_ORIGIN_ENV,
+  getAppOriginParsed,
+  NEXT_ORIGIN_ENV,
+} from "../app-origin";
 export {
   buildClientProxy,
   type ClientShape,
@@ -48,6 +54,7 @@ export {
   subGroupsOf,
 } from "../define/group-tree";
 export { routesOf } from "../define/routes-of";
+export { discoverAppOrigin, type ServerOrigin } from "../discover-app-origin";
 export { readLogFormat } from "../logger/log-format";
 export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
 export { standardJsonSchema } from "../openapi/json-schema";
@@ -67,11 +74,14 @@ export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-
 export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
 export { addressedOrigin } from "../session/addressed-origin";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
+export { serverOriginOf } from "../socket-origin";
 export { getSourcesGeneration, onSourcesChange, prepareSources } from "../sources";
 export {
   abortPlayground,
   generateRequestId,
   PLAYGROUND_RID_HEADER,
+  STUDIO_PASS_HEADER,
+  STUDIO_PASS_REDEEMER,
   STUDIO_REQUEST_HEADER,
   type StudioHooks,
   studioHooks,
@@ -139,6 +149,7 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export { isLoopbackHostname } from "../utils/loopback-host";
 export { parseUrl } from "../utils/parse-url";
 export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
 export {

@@ -67,6 +67,11 @@ async function thirdParty(): Promise<{ origin: string; seen: Seen[] }> {
       res.end('{"error":"no key"}');
       return;
     }
+    if (req.url?.startsWith("/v1/feed/moved")) {
+      res.writeHead(307, { location: "/v1/feed/r1" });
+      res.end();
+      return;
+    }
     res.writeHead(200, { "content-type": "text/event-stream" });
     res.write('id: 7\nevent: tick\ndata: {"n":1}\n\n');
     res.write("data: plain text\n\n");
@@ -89,6 +94,23 @@ function wikiApi(origin: string) {
             .response<unknown>()
             .get(":room"),
         },
+      }),
+    },
+  });
+}
+
+/* The stream's source holding a key in a header of its own, which `fetch` keeps across origins. */
+function keyedApi(origin: string, redirect?: RequestRedirect) {
+  return defineApi({
+    expose: true,
+    name: "wiki",
+    baseURL: `${origin}/v1`,
+    headers: { Authorization: "Bearer k1", "x-service-key": "k-123" },
+    ...(redirect && { redirect }),
+    groups: {
+      live: defineGroup({
+        prefix: "feed",
+        endpoints: { room: stream.variables<{ room: string }>().response<unknown>().get(":room") },
       }),
     },
   });
@@ -174,6 +196,69 @@ describe("a stream another server serves, through the proxy", () => {
     })().catch((error: RealtimeError) => error);
 
     expect(failure).toMatchObject({ code: 4401 });
+  });
+
+  it("follows an upstream redirect on the upstream's own origin, with the source's headers", async () => {
+    const upstream = await thirdParty();
+    const api = wikiApi(upstream.origin);
+    const proxy = await proxyOf({ wiki: api });
+    const caller = createProxyCaller(routesOf(api, "wiki"), {
+      proxyPath: { sse: `${proxy}/api/sse` },
+    });
+
+    const subscription = await caller.live.room({ room: "moved" });
+    let first: unknown;
+    for await (const event of subscription) {
+      first = event;
+      break;
+    }
+
+    expect(first).toEqual(expect.objectContaining({ id: "7", data: { n: 1 } }));
+    expect(upstream.seen.map((seen) => seen.url)).toEqual(["/v1/feed/moved", "/v1/feed/r1"]);
+    expect(upstream.seen[1]?.headers.authorization).toBe("Bearer k1");
+  });
+
+  it("follows no upstream redirect to another origin, so the source's keys never reach it", async () => {
+    const foreign = await thirdParty();
+    const upstream = createServer((_req, res) => {
+      res.writeHead(302, { location: `${foreign.origin}/v1/feed/r1` });
+      res.end();
+    });
+    const api = keyedApi(await listen(upstream));
+    const proxy = await proxyOf({ wiki: api });
+    const caller = createProxyCaller(routesOf(api, "wiki"), {
+      proxyPath: { sse: `${proxy}/api/sse` },
+    });
+
+    /* Followed, the relay would stream the other host's events for good. */
+    const outcome = await Promise.race([
+      (async () => {
+        for await (const _event of await caller.live.room({ room: "r1" })) void _event;
+        return "ended";
+      })().catch((error: RealtimeError) => error),
+      new Promise((resolve) => setTimeout(() => resolve("still streaming"), 2000)),
+    ]);
+
+    expect(outcome).toMatchObject({ code: 4302 });
+    expect(foreign.seen).toEqual([]);
+  });
+
+  it("follows a redirect to another origin when the source names `redirect: follow` itself", async () => {
+    const foreign = await thirdParty();
+    const upstream = createServer((_req, res) => {
+      res.writeHead(302, { location: `${foreign.origin}/v1/feed/r1` });
+      res.end();
+    });
+    const api = keyedApi(await listen(upstream), "follow");
+    const proxy = await proxyOf({ wiki: api });
+    const caller = createProxyCaller(routesOf(api, "wiki"), {
+      proxyPath: { sse: `${proxy}/api/sse` },
+    });
+
+    const subscription = await caller.live.room({ room: "r1" });
+    for await (const _event of subscription) break;
+
+    expect(foreign.seen.map((seen) => seen.url)).toEqual(["/v1/feed/r1"]);
   });
 
   it("refuses a path parameter that would reach another route", async () => {

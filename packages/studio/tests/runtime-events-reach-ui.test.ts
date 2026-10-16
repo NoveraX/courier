@@ -33,7 +33,7 @@ async function closedPort(): Promise<number> {
   return typeof address === "object" && address ? address.port : 0;
 }
 
-function defineSources(baseURL: string, unreachableURL: string) {
+function defineSources(baseURL: string, closed: number) {
   const users = defineGroup({
     prefix: "users",
     endpoints: {
@@ -52,10 +52,16 @@ function defineSources(baseURL: string, unreachableURL: string) {
   });
   const gone = defineApi({
     expose: true,
-    baseURL: unreachableURL,
+    baseURL: `http://127.0.0.1:${closed}`,
     endpoints: { ping: endpoint.get("ping").response<unknown>() },
   });
-  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }), gone };
+  /* fetch refuses a URL with a user and password, and says so naming the URL. */
+  const signed = defineApi({
+    expose: true,
+    baseURL: `http://user:pa55@127.0.0.1:${closed}/v1?token=s3cret`,
+    endpoints: { whoami: endpoint.get("whoami").response<unknown>() },
+  });
+  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }), gone, signed };
 }
 
 beforeAll(async () => {
@@ -70,7 +76,7 @@ beforeAll(async () => {
     "GET /faults/slow": { status: 200, body: {}, delayMs: 1_000 },
   });
   studio = await startLiveStudio();
-  sources = defineSources(upstream.url, `http://127.0.0.1:${await closedPort()}/v1?token=s3cret`);
+  sources = defineSources(upstream.url, await closedPort());
   app = await startLiveApp(studio.url, "app", sources);
   await until(() => getRuntimeEntry("app") !== undefined, "the runtime to connect");
 });
@@ -156,14 +162,21 @@ describe("a call that fails", () => {
     expect((timedOut.error as { type: string }).type).toBe("timeout");
   });
 
-  it("reaches the UI with why no answer came, and no token from its URL", async () => {
+  it("reaches the UI with why no answer came", async () => {
     const failure = await failureOf("ping", () => createCaller(sources.gone).ping());
 
     expect(failure.error).toMatchObject({
       type: "network",
       cause: { code: "ECONNREFUSED", message: expect.stringContaining("ECONNREFUSED") },
     });
-    expect(JSON.stringify(failure)).not.toContain("s3cret");
+  });
+
+  it("reaches the UI naming no user, password or token of the URL fetch refused", async () => {
+    const failure = await failureOf("whoami", () => createCaller(sources.signed).whoami());
+
+    const cause = (failure.error as { cause?: { message: string } }).cause;
+    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+\/v1/);
+    expect(JSON.stringify(failure)).not.toMatch(/s3cret|pa55/);
   });
 
   it("reaches the UI, over the proxy, with why the upstream gave no answer", async () => {

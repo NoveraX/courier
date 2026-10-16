@@ -57,13 +57,22 @@ async function startUpstream(): Promise<string> {
   );
 }
 
-/* The app's proxy route, in this process, answering browsers only. */
-async function startProxy(): Promise<{ url: string; seen: Array<string | undefined> }> {
+/* The app's proxy route, in this process, answering browsers only — behind
+   whatever redirect a middleware in front of it answers with. */
+async function startProxy(
+  redirect?: (url: string) => string | undefined,
+): Promise<{ url: string; seen: Array<string | undefined> }> {
   const handler = createHandler({ browsersOnly: true });
   const seen: Array<string | undefined> = [];
   const url = await listen(
     createServer(async (req, res) => {
       seen.push(req.headers[STUDIO_PASS_HEADER] as string | undefined);
+      const location = redirect?.(req.url ?? "/");
+      if (location) {
+        req.resume();
+        res.writeHead(307, { location }).end();
+        return;
+      }
       await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
     }),
   );
@@ -305,5 +314,64 @@ describe("an SSE run through a proxy that answers browsers only", () => {
 
     const failure = framesOf("bo-feed-elsewhere").find((f) => f.event === "playground:error");
     expect(failure?.payload.error?.message).toBe(BROWSERS_ONLY_ADVICE);
+    expect(framesOf("bo-feed-elsewhere").some((f) => f.event === "playground:end")).toBe(false);
+  });
+});
+
+/* Whatever answers at another origin a redirect names, and every pass it was handed. */
+async function startInterceptor(): Promise<{ url: string; got: Array<string | undefined> }> {
+  const got: Array<string | undefined> = [];
+  const url = await listen(
+    createServer((req, res) => {
+      got.push(req.headers[STUDIO_PASS_HEADER] as string | undefined);
+      req.resume();
+      res.writeHead(200, { "content-type": "application/json" }).end("{}");
+    }),
+  );
+  return { url, got };
+}
+
+describe("a run through a proxy route that redirects", () => {
+  it("does not follow an HTTP redirect to another origin, and says why it stopped", async () => {
+    const interceptor = await startInterceptor();
+    await startProxy((path) => `${interceptor.url}${path}`);
+
+    run("bo-redirect", { headers: { authorization: "Bearer typed" } });
+    await until(() => ended("bo-redirect"), "the answer");
+
+    expect(interceptor.got).toEqual([]);
+    expect(resultOf("bo-redirect")).toMatchObject({ status: 307 });
+    expect(String(resultOf("bo-redirect")?.error)).toContain(
+      "answered with a redirect it does not follow",
+    );
+  });
+
+  it("does not follow a stream's redirect to another origin, on any connection", async () => {
+    const interceptor = await startInterceptor();
+    await startProxy((path) => `${interceptor.url}${path}`);
+
+    run("bo-feed-redirect", { group: "live", method: "feed", transport: "sse" });
+    await until(() => ended("bo-feed-redirect"), "the refusal");
+
+    const failure = framesOf("bo-feed-redirect").find((f) => f.event === "playground:error");
+    expect(framesOf("bo-feed-redirect").some((f) => f.event === "playground:end")).toBe(false);
+    expect(interceptor.got).toEqual([]);
+    expect(failure?.payload.error?.message).toContain(
+      "answered with a redirect it does not follow",
+    );
+  });
+
+  it("follows a redirect on the route's own origin, and is let through on its pass", async () => {
+    const { url, seen } = await startProxy((path) =>
+      path.includes("hop=1") ? undefined : `${path}&hop=1`,
+    );
+
+    run("bo-same-origin");
+    await until(() => ended("bo-same-origin"), "the answer");
+
+    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:/);
+    expect(resultOf("bo-same-origin")).toMatchObject({ status: 201 });
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toBe(seen[0]);
   });
 });

@@ -41,6 +41,7 @@ import {
   sanitizeRid,
   sanitizeWrite,
 } from "./playground-payloads";
+import { isStreamRedirect, redirectAdvice } from "./proxy-redirect";
 import {
   dispatchSSE,
   dispatchWS,
@@ -159,9 +160,11 @@ async function runExecute(
   }
 }
 
-/* A stream `browsersOnly` refused through the proxy is told why its pass did not carry it. */
+/* A stream `browsersOnly` refused through the proxy is told why its pass did
+   not carry it, and one that met a redirect it did not follow, why it stopped. */
 function failureOf(payload: PlaygroundExecutePayload, err: unknown): string {
   if (payload.mode === "proxy" && isBrowsersOnlyStreamRefusal(err)) return BROWSERS_ONLY_ADVICE;
+  if (payload.mode === "proxy" && isStreamRedirect(err)) return redirectAdvice();
   return err instanceof Error ? err.message : String(err);
 }
 

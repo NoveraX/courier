@@ -1,16 +1,17 @@
-import { getAppOrigin } from "@noverax/courier";
-import { STUDIO_PASS_HEADER } from "@noverax/courier/internal";
+import {
+  configuredAppOrigin,
+  isLoopbackHostname,
+  STUDIO_PASS_HEADER,
+} from "@noverax/courier/internal";
 import { issueStudioPass } from "./studio-passes";
-
-/* The names every machine gives itself: a route there is this machine's. */
-const LOOPBACK = /^(?:localhost|.+\.localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i;
 
 /**
  * The header carrying a fresh one-time pass for a Playground call through
  * the app's proxy route — none in a browser, which needs none, and none to
- * a route on any origin but the app's own or this machine's: only the
- * process serving the route could redeem it, and anywhere else it would
- * stay alive and unspent until the call ends.
+ * a route on any origin but this machine's own names or the app's origin
+ * as config or the environment set it: only the process serving the route
+ * could redeem it, and anywhere else it would stay alive and unspent until
+ * the call ends. An origin a request taught is no ground for it.
  *
  * @param requestId - The request Studio shows the call under
  * @param target - The proxy route's address, as the call reaches it
@@ -47,8 +48,8 @@ export function withoutPassHeader(headers: Record<string, string>): Record<strin
 function servedByApp(target: string | undefined): boolean {
   const url = target === undefined ? undefined : urlOf(target);
   if (url === undefined) return false;
-  if (LOOPBACK.test(url.hostname)) return true;
-  const app = getAppOrigin();
+  if (isLoopbackHostname(url.hostname)) return true;
+  const app = configuredAppOrigin();
   return app !== undefined && urlOf(app)?.origin === url.origin;
 }
 

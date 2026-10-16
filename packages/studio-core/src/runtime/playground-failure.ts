@@ -2,6 +2,7 @@ import { HTTPError, ValidationError } from "@noverax/courier";
 import { shownCause, shownText } from "@noverax/courier/internal";
 import { BROWSERS_ONLY_ADVICE, isBrowsersOnlyRefusal } from "./browsers-only-refusal";
 import type { HttpResultChunk } from "./dispatch-http";
+import { isRedirectStatus, redirectAdvice } from "./proxy-redirect";
 
 /** The status Courier's proxy answers a refused schema with. */
 const VALIDATION_FAILED = 422;
@@ -14,14 +15,16 @@ const VALIDATION_FAILED = 422;
  * read with its line break fails with an error that quotes it, and the
  * app's own fetch may throw anything. An upstream's answer stays whole:
  * the Playground shows it as the response. A call `browsersOnly` refused
- * through the proxy is told why Studio's one-time pass did not carry it.
+ * through the proxy is told why Studio's one-time pass did not carry it, and
+ * one stopped at a redirect it did not follow is told why, its address cut
+ * as any other text.
  *
  * @param err - What the call threw
  * @param proxied - Whether the call went through the app's proxy route
  * @returns The result chunk
  * @example
  * ```ts
- * try { … } catch (err) { return playgroundFailure(err); }
+ * try { … } catch (err) { return playgroundFailure(err, payload.mode === "proxy"); }
  * ```
  */
 export function playgroundFailure(err: unknown, proxied = false): HttpResultChunk {
@@ -32,6 +35,16 @@ export function playgroundFailure(err: unknown, proxied = false): HttpResultChun
       status: VALIDATION_FAILED,
       error: message,
       data: { success: false, message, target, issues },
+    };
+  }
+  if (proxied && err instanceof HTTPError && isRedirectStatus(err.status)) {
+    const location = err.headers.get("location");
+    const error = redirectAdvice(location === null ? null : shownText(location));
+    return {
+      kind: "http-result",
+      status: err.status,
+      error,
+      headers: Object.fromEntries(err.headers),
     };
   }
   if (err instanceof HTTPError) {

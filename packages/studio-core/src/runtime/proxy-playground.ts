@@ -64,7 +64,13 @@ export function callThroughProxy(
     proxyPath,
     ...(Object.keys(headers).length > 0 && { headers }),
   });
-  const scoped = onUploadProgress ? withOptions(client, { onUploadProgress }) : client;
+  /* A redirect is followed on the route's origin alone: the call's headers
+     and its pass are not taken to wherever the route, or what answers at
+     its address, points. */
+  const scoped = withOptions(client, {
+    withinOrigin: true,
+    ...(onUploadProgress && { onUploadProgress }),
+  });
   const root = raw ? member(scoped, "raw") : scoped;
   const owner = groupNames(call.group).reduce(member, root);
   const endpoint = member(owner, call.method);

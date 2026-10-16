@@ -130,17 +130,25 @@ describe("the headers of a Playground call", () => {
   });
 
   it("carry a pass to a route on this machine, under any of its names", () => {
-    for (const host of [
-      "localhost:3000",
-      "app.localhost",
-      "127.0.0.1:8080",
-      "127.1.2.3",
-      "[::1]:3000",
-    ]) {
+    for (const host of ["localhost:3000", "127.0.0.1:8080", "127.1.2.3", "[::1]:3000"]) {
       expect(Object.keys(passHeaders("pg_local", `http://${host}/api/request`))).toEqual([
         STUDIO_PASS_HEADER,
       ]);
     }
+  });
+
+  it("carry none to a name only a resolver keeps on this machine, or to 0.0.0.0", () => {
+    for (const host of ["app.localhost:3000", "0.0.0.0:7990", "192.168.1.20:3000"]) {
+      expect(passHeaders("pg_name", `http://${host}/api/request`)).toEqual({});
+    }
+  });
+
+  it("carry none to an origin a request taught, which is no configured one", () => {
+    Reflect.set(globalThis, Symbol.for("courier.app-origin"), "http://shop.example:3000");
+    Reflect.set(globalThis, Symbol.for("courier.app-origin.learned"), true);
+    onTestFinished(() => setAppOrigin(undefined));
+
+    expect(passHeaders("pg_taught", "http://shop.example:3000/api/request")).toEqual({});
   });
 
   it("carry a pass to a route on the app's own origin, and to no other", () => {

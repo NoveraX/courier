@@ -21,6 +21,7 @@ function streamsThroughProxy(sources: Sources, call: StreamCall, requestId: stri
       proxyPath: sse,
       headers: { ...headers, [PLAYGROUND_RID_HEADER]: requestId },
       connectHeaders: () => passHeaders(requestId, sse.sse),
+      withinOrigin: true,
     },
     ws: {
       proxyPath: proxyPathFor(definition, "ws"),

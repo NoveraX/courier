@@ -157,6 +157,33 @@ describe("create-courier", () => {
     expect(existsSync(join(root, ".mcp.json"))).toBe(true);
   }, 60_000);
 
+  it("says the steps left are above where nothing else is to change", () => {
+    const root = projectWith({
+      ...NEXT_WITH_PACKAGES,
+      "package.json": manifest(
+        {
+          ...JSON.parse(NEXT_WITH_PACKAGES["package.json"]).dependencies,
+          next: "15.5.9",
+        },
+        { scripts: { studio: "courier-studio", routes: "courier-cli routes" } },
+      ),
+      "courier.config.ts": "export default defineConfig({ sources: { shop } });\n",
+      "next.config.js":
+        'const { withCourierStudio } = require("@noverax/courier-studio/next");\nmodule.exports = withCourierStudio()({});\n',
+      "instrumentation.ts":
+        'import { registerSources } from "@noverax/courier";\nexport async function register() {\n  const { default: config } = await import("./courier.config");\n  registerSources(config.sources);\n  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");\n  await attachRuntime();\n}\n',
+      "app/api/request/route.ts":
+        'import { apiRoute } from "@noverax/courier-next";\nexport const { GET, POST } = apiRoute();\n',
+    });
+
+    const { status, out } = run([root, "--dry-run", "--no-mcp"]);
+
+    expect(status).toBe(0);
+    expect(out).toContain("Left to you");
+    expect(out).toContain("the steps left to you are above");
+    expect(out).not.toContain("Nothing is missing.");
+  }, 60_000);
+
   it("refuses a project without TypeScript, a framework it does not know, and a folder of files without package.json", () => {
     const noTs = run([projectWith({ "package.json": manifest({ next: "16.4.0" }) }), "--dry-run"]);
     const unknown = run([

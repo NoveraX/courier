@@ -50,7 +50,7 @@ export function plannedFile(project: Project, file: RecipeFile): PlannedFile {
 export function keptStep(file: PlannedFile): ManualStep {
   return {
     file: file.path,
-    what: `A file of yours is here, so it was left as it is: Courier's ${file.purpose} would hold`,
+    what: `A file of yours is here, so it was left as it is: Courier's ${file.purpose.replace(/^Courier's /, "")} would hold`,
     lines: file.content.trimEnd().split("\n"),
   };
 }

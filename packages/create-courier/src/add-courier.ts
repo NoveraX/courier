@@ -4,7 +4,7 @@ import { withAgents } from "./agents";
 import { applyPlan } from "./apply/apply-plan";
 import type { CreateRun } from "./create-run";
 import { frameworkOf } from "./framework-of";
-import { buildPlan, changesAnything } from "./plan/build-plan";
+import { buildPlan, changesAnything, type Plan } from "./plan/build-plan";
 import { nextLines, planLines } from "./plan/plan-lines";
 import { type ConfiguredSources, configuredSources } from "./project/configured-sources";
 import { importExtension } from "./project/module-style";
@@ -42,6 +42,13 @@ function configuredLine(configured: ConfiguredSources, changes: boolean): string
   const named = names.length > 0 ? ` (${names.join(", ")}${more ? ", and more" : ""})` : "";
   const then = changes ? " The plan adds no example, only what the project lacks." : "";
   return `Courier is set up here already: ${path} declares ${count}${named}.${then}`;
+}
+
+/* What a plan that changes nothing says: what is left to the person is listed above it. */
+function doneLine(plan: Plan, configured: boolean): string {
+  if (plan.manual.length > 0)
+    return "Nothing here is for the command to change: the steps left to you are above.";
+  return configured ? "Nothing is missing." : "Courier is set up here already.";
 }
 
 async function choicesOf(run: CreateRun, terminal: Terminal): Promise<SetupChoices> {
@@ -109,7 +116,7 @@ export async function addCourier(
   );
   if (!changesAnything(plan) && run.openapi === undefined) {
     terminal.print([
-      configured ? "Nothing is missing." : "Courier is set up here already.",
+      doneLine(plan, configured !== undefined),
       "",
       "Next",
       ...nextLines(plan.next, terminal.style),

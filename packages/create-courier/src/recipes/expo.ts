@@ -104,7 +104,9 @@ export function expoRecipe(ctx: RecipeContext): Recipe {
         command: ctx.manager.run("web"),
         what: tabbed
           ? "starts the app in the browser: open its Courier tab"
-          : "starts the app in the browser: open /courier",
+          : example
+            ? "starts the app in the browser: open /courier"
+            : "starts the app in the browser",
       },
       ...(tabbed
         ? [
@@ -113,7 +115,7 @@ export function expoRecipe(ctx: RecipeContext): Recipe {
               what: "starts it in the iOS simulator, with the same tab",
             },
           ]
-        : scheme
+        : scheme && example
           ? [{ command: "", what: `In the simulator or on a phone, open ${scheme}://courier` }]
           : []),
     ],

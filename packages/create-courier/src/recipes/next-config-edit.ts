@@ -55,9 +55,9 @@ export function nextStudioEnvEdit(ctx: RecipeContext): RecipeEdit[] {
   ];
 }
 
-/* Where the config first checks for `next dev`'s phase, outside its imports; -1 where it never does. */
+/* Where the config first checks for `next dev` — its phase, or the environment it runs in — outside its imports; -1 where it never does. */
 function phaseCheck(scan: SourceScan, imports: readonly ModuleImport[]): number {
-  const named = codeMatches(scan, /\bPHASE_DEVELOPMENT_SERVER\b/g)
+  const named = codeMatches(scan, /\bPHASE_DEVELOPMENT_SERVER\b|\bprocess\.env\.NODE_ENV\b/g)
     .map((match) => match.index)
     .filter((at) => !imports.some((each) => each.start <= at && at < each.end));
   const written = [...scan.text.matchAll(/(["'`])phase-development-server\1/g)]
@@ -69,10 +69,10 @@ function phaseCheck(scan: SourceScan, imports: readonly ModuleImport[]): number 
 
 /**
  * How a Next.js config connects Studio: `withCourierStudio` called, and
- * loaded only once the config has checked it runs under `next dev` — so
- * `next start` never needs Studio, a dev dependency — or loaded whatever
- * the command. A config that names it only in a comment or a string does
- * not connect it.
+ * loaded only once the config has checked it runs under `next dev` — by
+ * its phase, or by `NODE_ENV` — so `next start` never needs Studio, a dev
+ * dependency; or loaded whatever the command. A config that names it
+ * only in a comment or a string does not connect it.
  *
  * @param text - The config
  * @returns `dev-only`, `always`, or `undefined` where the config does not connect Studio

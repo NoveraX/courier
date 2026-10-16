@@ -137,15 +137,16 @@ describe("announceWhenRegistered", () => {
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ transports: ["sse"] }));
   });
 
-  it("announces again with the app's origin once a request brings it, and then no more", () => {
+  it("announces again with the app's origin once a request to this machine brings it, and then no more", () => {
     vi.stubEnv("NODE_ENV", "development");
     registerSources({ api: fakeApi });
     const announce = announceWhenRegistered({ transports: ["http"], framework: "next" });
     const listener = vi.fn();
     consumeAnnouncements(listener);
 
-    announce("http://localhost:3000");
-    announce("http://localhost:3000");
+    announce("http://evil.example", "evil.example");
+    announce("http://localhost:3000", "localhost:3000");
+    announce("http://localhost:3000", "localhost:3000");
 
     expect(listener.mock.calls.map(([entry]) => entry.listenOrigin)).toEqual([
       undefined,

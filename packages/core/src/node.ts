@@ -45,14 +45,14 @@ export function extractOriginFromNodeRequest(nodeReq: IncomingMessage): string |
 }
 
 /**
- * Adopt the origin a Node request was addressed to as the app's origin,
- * unless one is set — see `discoverAppOrigin`. Node adapters call it on every
- * request; it costs a header read until one request carries a host.
+ * Learn the app's origin from a Node request, unless one is set — only from
+ * one addressed to this machine by name in its own `Host`; see
+ * `discoverAppOrigin`. It costs a header read until one request qualifies.
  *
  * @param nodeReq - The incoming request
  */
 export function discoverNodeAppOrigin(nodeReq: IncomingMessage): void {
-  discoverAppOrigin(extractOriginFromNodeRequest(nodeReq));
+  discoverAppOrigin(extractOriginFromNodeRequest(nodeReq), nodeReq.headers.host);
 }
 
 /**

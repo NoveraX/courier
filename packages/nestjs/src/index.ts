@@ -92,14 +92,14 @@ export function courierSSEMiddleware<TConnect extends ConnectResult = ConnectRes
 function serve(
   handler: AdapterHandler,
   respond: (request: Request) => Promise<Response>,
-  announce: (addressedTo?: string) => void,
+  announce: (addressedTo?: string, host?: string | null) => void,
 ): CourierNestMiddleware {
   const middleware = async (
     req: IncomingMessage,
     res: ServerResponse,
     next: (err?: unknown) => void,
   ): Promise<void> => {
-    announce(extractOriginFromNodeRequest(req));
+    announce(extractOriginFromNodeRequest(req), req.headers.host);
     try {
       const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
       await sendWebResponse(await respond(webReq), res);

@@ -48,7 +48,7 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
 
   return (socket: unknown, request: FastifyRequest) => {
     if (!isSocket(socket)) throw pluginMissing();
-    announce(extractOriginFromNodeRequest(request.raw));
+    announce(extractOriginFromNodeRequest(request.raw), request.raw.headers.host);
     if (!checkedPayloadLimit) {
       checkedPayloadLimit = true;
       warnOnLargerPayloads(request.server, maxMessageSize);

@@ -59,7 +59,7 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
     maxPayload: wsFrameLimit(handlerOptions.maxMessageSize),
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
     onRequest: (request) => {
-      announce(extractOriginFromNodeRequest(request));
+      announce(extractOriginFromNodeRequest(request), request.headers.host);
     },
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });

@@ -32,7 +32,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
   return (c: Context) => {
-    announce(new URL(c.req.raw.url).origin);
+    announce(new URL(c.req.raw.url).origin, c.req.raw.headers.get("host"));
     rememberPeerAddress(c.req.raw, peerAddressOf(c));
     return handle(c.req.raw);
   };
@@ -52,7 +52,7 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
   const { handleSSE } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "hono" });
   return (c: Context) => {
-    announce(new URL(c.req.raw.url).origin);
+    announce(new URL(c.req.raw.url).origin, c.req.raw.headers.get("host"));
     rememberPeerAddress(c.req.raw, peerAddressOf(c));
     return handleSSE(c.req.raw);
   };
@@ -92,7 +92,7 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "hono" });
 
   return (c: Context): HonoWSEvents => {
-    announce(new URL(c.req.raw.url).origin);
+    announce(new URL(c.req.raw.url).origin, c.req.raw.headers.get("host"));
     let adapter: ReturnType<typeof createSocketAdapter>;
 
     return {

@@ -44,7 +44,7 @@ export function sseRoute<TConnect extends ConnectResult = ConnectResult>(
 
   return {
     GET: (request: NextRequest) => {
-      announce(new URL(request.url).origin);
+      announce(new URL(request.url).origin, request.headers.get("host"));
       return handleSSE(publicRequest(request));
     },
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */

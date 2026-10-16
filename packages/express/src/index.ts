@@ -89,10 +89,10 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
 /** Bridge an Express request to a Web handler and back. */
 function serve(
   respond: (request: Request) => Promise<Response>,
-  announce: (addressedTo?: string) => void,
+  announce: (addressedTo?: string, host?: string | null) => void,
 ): CourierMiddleware {
   return async (req, res, next) => {
-    announce(extractOriginFromNodeRequest(req));
+    announce(extractOriginFromNodeRequest(req), req.headers.host);
     try {
       await sendWebResponse(await respond(toWebRequest(req, res)), res);
     } catch (error) {

@@ -27,7 +27,12 @@ export {
   frameCredentials,
   frameHeadersOver,
 } from "../adapter/ws-frame-credentials";
-export { discoverAppOrigin, getAppOriginParsed } from "../app-origin";
+export {
+  adoptListenOrigin,
+  configuredAppOrigin,
+  discoverAppOrigin,
+  getAppOriginParsed,
+} from "../app-origin";
 export {
   buildClientProxy,
   type ClientShape,
@@ -142,6 +147,7 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export { isLoopbackHostname } from "../utils/loopback-host";
 export { parseUrl } from "../utils/parse-url";
 export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
 export {

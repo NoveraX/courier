@@ -107,20 +107,22 @@ export function announceHosting(input: AnnounceHostingInput): void {
  * and the Playground can send to a freshly started app.
  *
  * @param input - What the adapter hosts, without the sources
- * @returns A function to call on each request, with the origin it was addressed to
+ * @returns A function to call on each request, with the origin it was
+ *   addressed to and its own `Host` header, which may teach the app its
+ *   origin (see `discoverAppOrigin`)
  *
  * @example
  * ```ts
  * const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
  * return (c) => {
- *   announce(new URL(c.req.raw.url).origin);
+ *   announce(new URL(c.req.raw.url).origin, c.req.raw.headers.get("host"));
  *   return handle(c.req.raw);
  * };
  * ```
  */
 export function announceWhenRegistered(
   input: Omit<AnnounceHostingInput, "sources">,
-): (addressedTo?: string) => void {
+): (addressedTo?: string, host?: string | null) => void {
   /* The origin the last announcement carried, or `null` before the first. */
   let announcedWith: string | undefined | null = null;
   let stopWaiting: (() => void) | undefined;
@@ -138,8 +140,8 @@ export function announceWhenRegistered(
   };
   stopWaiting = onSourcesChange(announce);
   announce(getSources());
-  return (addressedTo) => {
-    discoverAppOrigin(addressedTo);
+  return (addressedTo, host) => {
+    discoverAppOrigin(addressedTo, host);
     announce(getSources());
   };
 }

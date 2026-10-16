@@ -51,11 +51,11 @@ export function apiRoute<TConnect extends ConnectResult = ConnectResult>(
 
   return {
     GET: (request: NextRequest) => {
-      announce(new URL(request.url).origin);
+      announce(new URL(request.url).origin, request.headers.get("host"));
       return handleGet(publicRequest(request));
     },
     POST: (request: NextRequest) => {
-      announce(new URL(request.url).origin);
+      announce(new URL(request.url).origin, request.headers.get("host"));
       return handlePost(publicRequest(request));
     },
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */

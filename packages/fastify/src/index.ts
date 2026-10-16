@@ -61,7 +61,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   });
 
   const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    announce(extractOriginFromNodeRequest(request.raw));
+    announce(extractOriginFromNodeRequest(request.raw), request.raw.headers.host);
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handle(webReq);
     await sendWebResponse(webRes, reply.raw);
@@ -105,7 +105,7 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "fastify" });
 
   const route = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    announce(extractOriginFromNodeRequest(request.raw));
+    announce(extractOriginFromNodeRequest(request.raw), request.raw.headers.host);
     reply.hijack();
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handleSSE(webReq);

@@ -1,8 +1,12 @@
 /**
  * Checks for what a runtime answers a Playground call with, before it is
- * passed on to the UI: its result chunks, its end and its error.
+ * passed on to the UI or to an agent's replay: its result chunks, its end
+ * and its error. An error's text, and the body of a request that got no
+ * answer, are cut as every error text Studio is told is, whichever runtime
+ * sent them.
  */
 
+import { shownCause, shownText } from "@noverax/courier/internal";
 import { hasDangerousKeys } from "./has-dangerous-keys";
 import { isPlainObject } from "./is-plain-object";
 
@@ -41,8 +45,8 @@ function sanitizeChunkInner(raw: unknown): SanitizedChunk | null {
     return {
       kind: "http-result",
       status: raw.status,
-      data: raw.data,
-      ...(typeof raw.error === "string" && { error: raw.error }),
+      data: raw.status === 0 ? unansweredBody(raw.data) : raw.data,
+      ...(typeof raw.error === "string" && { error: shownText(raw.error) }),
       ...(isStringRecord(raw.headers) && { headers: raw.headers }),
     };
   }
@@ -93,7 +97,13 @@ export function sanitizeError(raw: unknown): SanitizedErrorPayload | null {
   if (typeof raw.rid !== "string" || raw.rid.length === 0) return null;
   if (!isPlainObject(raw.error)) return null;
   if (typeof raw.error.message !== "string") return null;
-  return { rid: raw.rid, error: { message: raw.error.message } };
+  return { rid: raw.rid, error: { message: shownText(raw.error.message) } };
+}
+
+/* A request with no answer has no body of its own: what Courier gives it says why, and is cut as the cause is. */
+function unansweredBody(data: unknown): Record<string, unknown> | undefined {
+  const cause = shownCause(data);
+  return cause && { success: false, ...cause };
 }
 
 function isCount(value: unknown): value is number {

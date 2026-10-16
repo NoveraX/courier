@@ -1,3 +1,5 @@
+import { shownText } from "@noverax/courier/internal";
+
 import { isPlainObject } from "../is-plain-object";
 import type { WebhookDirectory } from "./webhook-directory";
 
@@ -66,6 +68,8 @@ function outcomeOf(reply: unknown): DeliveryOutcome {
   if (isPlainObject(reply) && reply.ok === true && typeof reply.status === "number") {
     return { ok: true, status: reply.status };
   }
-  const error = isPlainObject(reply) && typeof reply.error === "string" ? reply.error : undefined;
+  /* Cut as every error text Studio is told is, whichever runtime sent it. */
+  const error =
+    isPlainObject(reply) && typeof reply.error === "string" ? shownText(reply.error) : undefined;
   return { ok: false, reason: "refused", error: error ?? "The application did not deliver it." };
 }

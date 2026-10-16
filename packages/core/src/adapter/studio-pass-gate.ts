@@ -32,21 +32,46 @@ function removed(headers: Headers): boolean {
   return !headers.has(STUDIO_PASS_HEADER);
 }
 
+/* The requests a pass let through: what Studio marks, and nothing that only names their id. */
+const admitted = new WeakSet<Request>();
+
 /**
- * Redeem a pass Studio's runtime issued in this process. Outside
- * development, where no `process` says otherwise included, and where no
- * runtime is attached to redeem it, no pass is ever honoured; a malformed
- * one is not even looked at. Redeeming it spends it.
+ * Redeem the pass a request carried, issued by Studio's runtime in this
+ * process. Nothing is honoured outside development, where there is no
+ * `process` to say this is development, or where no runtime is attached to
+ * redeem it; a malformed pass is not even looked at. Redeeming it spends
+ * it, and the request is remembered as let through on it.
  *
- * @param pass - The pass the request carried, if any
+ * @param request - The request the pass came with
+ * @param pass - The pass it carried, if any
  * @returns `true` only for a pass the runtime issued and had not yet seen redeemed
  * @example
  * ```ts
- * if (config.browsersOnly && !sentByBrowser(request) && !redeemStudioPass(pass)) return refuse();
+ * if (config.browsersOnly && !sentByBrowser(request) && !redeemStudioPass(request, pass)) return refuse();
  * ```
  */
-export function redeemStudioPass(pass: string | undefined): boolean {
+export function redeemStudioPass(request: Request, pass: string | undefined): boolean {
   if (pass === undefined || !isDevelopment() || !isStudioPassShape(pass)) return false;
   const redeem: unknown = Reflect.get(globalThis, STUDIO_PASS_REDEEMER);
-  return typeof redeem === "function" && Reflect.apply(redeem, undefined, [pass]) === true;
+  if (typeof redeem !== "function" || Reflect.apply(redeem, undefined, [pass]) !== true) {
+    return false;
+  }
+  admitted.add(request);
+  return true;
+}
+
+/**
+ * Whether `browsersOnly` let this very request through on Studio's pass —
+ * as its Studio events say, so another request that names the same Studio
+ * request id is never taken for it.
+ *
+ * @param request - The request the proxy is serving, if any
+ * @returns `true` when its own pass was redeemed
+ * @example
+ * ```ts
+ * dt.onStreamOpen?.({ ...open, ...(admittedOnStudioPass(request) && { studioPass: true }) });
+ * ```
+ */
+export function admittedOnStudioPass(request: Request | undefined): boolean {
+  return request !== undefined && admitted.has(request);
 }

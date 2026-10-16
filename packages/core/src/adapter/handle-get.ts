@@ -7,6 +7,7 @@ import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { announceProxyCall, type ProxyCallEvents } from "./proxy-call-events";
 import { readRouting } from "./read-routing";
+import { admittedOnStudioPass } from "./studio-pass-gate";
 import { parseWireOptionsJson } from "./wire-options";
 
 /**
@@ -47,7 +48,13 @@ export function createGetHandler(
     const routing = readRouting(url);
     if (!routing) return errorResponse(400, "Missing required params: _s, _m");
 
-    const call = announceProxyCall(dt, "GET", routing, studioRequestIdOf(request.headers));
+    const call = announceProxyCall(
+      dt,
+      "GET",
+      routing,
+      studioRequestIdOf(request.headers),
+      admittedOnStudioPass(request),
+    );
     const decoded = parseWireVariables(url.searchParams.get(WIRE_VARIABLES_KEY));
     if (!decoded.ok) return refuse(call, decoded.reason);
     const accepted = parseWireOptionsJson(url.searchParams.get("_o"));

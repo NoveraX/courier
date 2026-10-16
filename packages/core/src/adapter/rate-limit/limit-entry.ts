@@ -3,6 +3,7 @@ import { studioRequestIdOf } from "../../studio/studio-request-id";
 import { discardBody } from "../discard-body";
 import { announceProxyCall } from "../proxy-call-events";
 import { readRouting } from "../read-routing";
+import { admittedOnStudioPass } from "../studio-pass-gate";
 import type { ProxyLimiter } from "./proxy-limiter";
 
 type Serve = (request: Request) => Promise<Response>;
@@ -43,7 +44,13 @@ export function limitEntry(
 function tellStudio(request: Request, refused: Response, dt: StudioHooks): void {
   const routing = readRouting(new URL(request.url));
   if (routing === undefined || (request.method !== "GET" && request.method !== "POST")) return;
-  const call = announceProxyCall(dt, request.method, routing, studioRequestIdOf(request.headers));
+  const call = announceProxyCall(
+    dt,
+    request.method,
+    routing,
+    studioRequestIdOf(request.headers),
+    admittedOnStudioPass(request),
+  );
   call.refused(refused.status, "Past the caller's rate limit");
 }
 

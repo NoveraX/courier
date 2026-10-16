@@ -45,6 +45,8 @@ export interface RequestLifecycleHooks {
         agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string };
         /** The key the call sends in its endpoint's idempotency header, the same on every attempt. */
         idempotencyKey?: string;
+        /** Set when `browsersOnly` let this request through only on the one-time pass Studio's runtime gave it. */
+        studioPass?: true;
         timestamp: number;
       }) => void)
     | undefined;

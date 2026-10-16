@@ -36,7 +36,7 @@ export function gateEntry(serve: Serve, config: HandlerConfig | undefined): Serv
     if (!isHostAllowed(request, config?.allowedHosts)) return refuseHost(request);
     if (request.method === "OPTIONS") return answerOptions(request, allowedOrigins);
     const pass = takeStudioPass(request);
-    if (config?.browsersOnly && !sentByBrowser(request) && !redeemStudioPass(pass)) {
+    if (config?.browsersOnly && !sentByBrowser(request) && !redeemStudioPass(request, pass)) {
       return refuseNonBrowser(request);
     }
     return withCorsHeaders(request, await serve(request), allowedOrigins);

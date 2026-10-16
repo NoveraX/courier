@@ -45,6 +45,8 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   Reflect.deleteProperty(globalThis, STUDIO_PASS_REDEEMER);
   studioHooks.onRequestEnd = undefined;
+  studioHooks.onRequestStart = undefined;
+  studioHooks.onStreamOpen = undefined;
   await new Promise<void>((resolve) => upstream.close(() => resolve()));
 });
 
@@ -220,12 +222,52 @@ describe("the pass header", () => {
   });
 });
 
+describe("the mark of a request let through on Studio's pass", () => {
+  it("goes on that request's own start events, never on another that names its id", async () => {
+    const starts: Array<{ id: string; studioPass?: true }> = [];
+    studioHooks.onRequestStart = (event) => {
+      starts.push({ id: event.id, ...(event.studioPass && { studioPass: event.studioPass }) });
+    };
+    const proxy = proxyOf();
+
+    await proxy.handle(
+      read(undefined, { [STUDIO_PASS_HEADER]: PASS, "x-courier-rid": "pg_run_1" }),
+    );
+    await proxy.handle(
+      read(undefined, { origin: "http://app.localhost", "x-courier-rid": "pg_run_1" }),
+    );
+
+    expect(starts.length).toBeGreaterThanOrEqual(4);
+    const half = starts.length / 2;
+    expect(starts.slice(0, half).every((start) => start.studioPass === true)).toBe(true);
+    expect(starts.slice(half).some((start) => start.studioPass !== undefined)).toBe(false);
+  });
+
+  it("goes on the stream's opening of a stream let through", async () => {
+    const opened: Array<true | undefined> = [];
+    studioHooks.onStreamOpen = (event) => {
+      opened.push(event.studioPass);
+    };
+    const stream = (headers: Record<string, string>) =>
+      new Request("http://app.localhost/api/sse?_s=api&_m=feed", {
+        headers: { accept: "text/event-stream", ...headers },
+      });
+
+    const passed = await proxyOf().handleSSE(stream({ [STUDIO_PASS_HEADER]: PASS }));
+    const browser = await proxyOf().handleSSE(stream({ origin: "http://app.localhost" }));
+    await passed.body?.cancel();
+    await browser.body?.cancel();
+
+    expect(opened).toEqual([true, undefined]);
+  });
+});
+
 describe("redeeming a pass", () => {
   it("honours none where there is no process to say this is development", () => {
     vi.stubGlobal("process", undefined);
     let redeemed: boolean;
     try {
-      redeemed = redeemStudioPass(PASS);
+      redeemed = redeemStudioPass(read(), PASS);
     } finally {
       vi.unstubAllGlobals();
     }
@@ -237,7 +279,7 @@ describe("redeeming a pass", () => {
   it("honours only a redeemer that answers true itself", () => {
     Reflect.set(globalThis, STUDIO_PASS_REDEEMER, () => "yes");
 
-    expect(redeemStudioPass(PASS)).toBe(false);
-    expect(redeemStudioPass(undefined)).toBe(false);
+    expect(redeemStudioPass(read(), PASS)).toBe(false);
+    expect(redeemStudioPass(read(), undefined)).toBe(false);
   });
 });

@@ -40,6 +40,12 @@ export interface ProxySSEDefaults {
    * what is good for one request only, as Studio's one-time pass is
    */
   connectHeaders?: (() => Record<string, string>) | undefined;
+  /**
+   * Follow a redirect only while it stays on the stream's origin: a
+   * server-side caller whose headers must not leave it, as Studio's
+   * Playground and its one-time pass. A browser follows redirects itself.
+   */
+  withinOrigin?: boolean | undefined;
 }
 
 /**
@@ -60,6 +66,7 @@ export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults
     headers: defaultHeaders,
     credentials = "include",
     connectHeaders,
+    withinOrigin,
   } = defaults;
 
   return function subscribeSSE(group, method, variables, options) {
@@ -67,6 +74,11 @@ export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults
     const headers = layerHeaders(defaultHeaders, options.headers);
     const sseBase = resolveProxyPath("sse", proxyPath, origin);
     const url = buildProxySSEUrl(sseBase, source, group, method, variables);
-    return executeSSE(url, { headers, credentials, ...(connectHeaders && { connectHeaders }) });
+    return executeSSE(url, {
+      headers,
+      credentials,
+      ...(connectHeaders && { connectHeaders }),
+      ...(withinOrigin && { withinOrigin }),
+    });
   };
 }

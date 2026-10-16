@@ -92,12 +92,13 @@ function finish<TData>(ctx: SSEConnectionCtx<TData>, failure: RealtimeError | un
 
 /**
  * A refusal no retry would change — the request itself is wrong or not
- * allowed — as the error the app reads. 408 and 429 are worth retrying.
+ * allowed, or a redirect the client does not follow, as to another origin —
+ * as the error the app reads. 408 and 429 are worth retrying.
  */
 function refusalFailure(error: unknown): RealtimeError | undefined {
   if (!(error instanceof SSEResponseError)) return undefined;
   const { statusCode, reason, issues } = error;
-  if (statusCode < 400 || statusCode >= 500 || RETRYABLE.has(statusCode)) return undefined;
+  if (statusCode < 300 || statusCode >= 500 || RETRYABLE.has(statusCode)) return undefined;
   log.error("SSE request refused, not reconnecting", error);
   return fromErrorCode(4000 + statusCode, reason, issues);
 }

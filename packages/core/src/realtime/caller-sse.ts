@@ -1,4 +1,5 @@
 import type { WebCredentials } from "../http-client/web-types";
+import { fetchWithinOrigin } from "../utils/fetch-within-origin";
 import { subscribeSSE } from "./sse/sse-client";
 import type { SSESubscription } from "./types";
 
@@ -10,6 +11,8 @@ export interface ProxiedStreamOptions {
   readonly credentials?: WebCredentials | undefined;
   /** Headers made afresh for each connection, a reconnection's included */
   readonly connectHeaders?: (() => Record<string, string>) | undefined;
+  /** Follow a redirect only while it stays on the stream's origin — see `fetchWithinOrigin` */
+  readonly withinOrigin?: boolean | undefined;
 }
 
 /**
@@ -29,13 +32,20 @@ export function executeSSE<TData = unknown>(
   url: string,
   options: ProxiedStreamOptions = {},
 ): SSESubscription<TData> {
-  const { headers, credentials, connectHeaders } = options;
-  if (!credentials && !connectHeaders) return subscribeSSE<TData>(url, { headers });
+  const { headers, credentials, connectHeaders, withinOrigin } = options;
+  const send = withinOrigin ? { fetch: sendWithinOrigin } : {};
+  if (!credentials && !connectHeaders) return subscribeSSE<TData>(url, { headers, ...send });
   return subscribeSSE<TData>(url, {
     headers,
+    ...send,
     beforeConnect: () => ({
       ...(credentials && { init: { credentials } }),
       ...(connectHeaders && { headers: connectHeaders() }),
     }),
   });
+}
+
+/* Each connection's request, and every hop it is redirected through on its own origin. */
+function sendWithinOrigin(url: string, init: RequestInit): Promise<Response> {
+  return fetchWithinOrigin(url, init);
 }

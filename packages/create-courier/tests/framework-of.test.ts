@@ -34,6 +34,27 @@ describe("frameworkOf", () => {
     expect(() => frameworkOf(next, "hono")).toThrow("but this project is built with Next.js");
   });
 
+  it("tells an app set up before by its own framework, not by Hono, which the mock installed as a dev dependency", () => {
+    const set = (dependencies: Record<string, string>) =>
+      readProject(
+        projectWith({
+          "package.json": manifest(dependencies, {
+            devDependencies: { hono: "^4.9.0", "@hono/node-server": "^1.19.0" },
+          }),
+          "tsconfig.json": "{}",
+        }),
+      );
+
+    expect(frameworkOf(set({ express: "^5.1.0" }), undefined).id).toBe("express");
+    expect(frameworkOf(set({ express: "^5.1.0" }), "express").id).toBe("express");
+    expect(frameworkOf(set({ vite: "^7.1.0", react: "19.2.0" }), undefined).id).toBe("react");
+    expect(frameworkOf(set({ vite: "^7.1.0", vue: "^3.5.0" }), undefined).id).toBe("vue");
+  });
+
+  it("tells a Hono app by Hono among the packages it runs with", () => {
+    expect(frameworkOf(projectListing({ hono: "^4.9.0" }), undefined).id).toBe("hono");
+  });
+
   it("says when the project lists no framework it knows", () => {
     const plain = projectListing({ lodash: "^4.17.0" });
 

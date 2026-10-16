@@ -51,6 +51,16 @@ describe("a call let through on Studio's pass", () => {
     expect(requests.find((r) => r.id === "c")?.studioPass).toBeUndefined();
   });
 
+  it("keeps its mark when the proxy's second start for it says nothing of it", () => {
+    const { requests } = applyEvents(
+      [],
+      [start("pg_b", { studioPass: true }), start("pg_b", { variables: { page: 2 } })],
+      OPTIONS,
+    );
+
+    expect(requests.find((r) => r.id === "pg_b")?.studioPass).toBe(true);
+  });
+
   it("is marked from its stream's opening", () => {
     const open = {
       type: "stream:open" as const,

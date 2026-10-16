@@ -6,10 +6,11 @@ interface BrowsersOnlyNoticeProps {
 }
 
 /**
- * Why the app's `browsersOnly` refused a Proxy-mode run, and the three ways
- * past it. The runtime sends every such run a one-time pass the proxy route
+ * Why the app's `browsersOnly` refused a Proxy-mode run, and the ways past
+ * it. The runtime sends every such run a one-time pass the proxy route
  * redeems only in the process the runtime is attached to, in development:
- * a refusal means the route runs elsewhere, or on a core that redeems none.
+ * a refusal means the route runs elsewhere, on a core that redeems none, or
+ * that the pass did not arrive whole and in time.
  *
  * @param props - What runs the call as server code
  * @returns The notice
@@ -25,7 +26,10 @@ export function BrowsersOnlyNotice({ onRunAsServer }: BrowsersOnlyNoticeProps): 
       <p className="m-0 text-label leading-normal text-fg-muted">
         The proxy route did not redeem Studio's one-time pass. Only Studio's runtime in the process
         that serves the route can, in development: an Edge route, workerd, a remote appOrigin or an
-        older Courier core never does.
+        older Courier core never does. The pass also fails when a proxy in front of the route takes
+        its header off, when the route is reached more than 30 seconds later, as while it compiles
+        on first request, when more than 256 calls are in flight, or when it was already spent: send
+        the call again.
       </p>
       <ul className="m-0 flex list-disc flex-col gap-1 pl-4 text-label leading-normal text-fg-muted">
         <li>Run the call in Direct mode, as your server code does.</li>

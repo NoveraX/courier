@@ -82,6 +82,10 @@ describe("a Proxy-mode run browsersOnly refused", () => {
     expect(note.textContent).toContain("Run the call in Direct mode");
     expect(note.textContent).toContain('browsersOnly: process.env.NODE_ENV === "production"');
     expect(note.textContent).toContain("on the Node runtime");
+    expect(note.textContent).toContain("a proxy in front of the route takes its header off");
+    expect(note.textContent).toContain("more than 30 seconds later");
+    expect(note.textContent).toContain("more than 256 calls are in flight");
+    expect(note.textContent).toContain("send the call again");
   });
 
   it("runs the call as server code from the notice", () => {

@@ -39,6 +39,7 @@ export function withRepeatedStart(r: RequestEntry, event: EventPayload): Request
     },
     url: fresh.url ?? r.url,
     sessionId: r.sessionId || fresh.sessionId,
+    ...((r.studioPass || fresh.studioPass) && { studioPass: true }),
   };
 }
 

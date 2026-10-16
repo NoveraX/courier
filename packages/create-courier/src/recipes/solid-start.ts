@@ -1,27 +1,24 @@
 import { viteStudioEdit } from "./edits/studio-browser";
-import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { proxyScripts, studioAttach } from "./shared/recipe-parts";
+import { proxyScripts, registerModule, sortParts, studioAttach } from "./shared/recipe-parts";
 import { solidDemo } from "./shared/solid-demo";
+import { addsExample, proxyStart, type ServerNeeds } from "./shared/wired";
 
 const DIR = "src/courier";
 
-function route(ctx: RecipeContext): RecipeFile {
+function route(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   const path = "src/routes/api/request.ts";
-  const studio = ctx.choices.studio ? `\n\n${studioAttach("import.meta.env.DEV", "")}` : "";
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierHandler } from "@noverax/courier-solid";
-
-import config from "${importSpecifier(path, "courier.config.ts", ctx.extension)}";
-
-/* The APIs courier.config.ts lists, which this route serves${ctx.choices.studio ? ";\n   while you develop, the server's calls show in Courier Studio" : ""}. */
-registerSources(config.sources);${studio}
-
+  const start = registerModule(ctx, path, needs, "this route serves");
+  const handler = 'import { courierHandler } from "@noverax/courier-solid";\n';
+  const head = needs.register
+    ? start.replace(/^import[^\n]*\n/, (line) => `${line}${handler}`)
+    : `${handler}${needs.studio ? `\n${start}` : ""}`;
+  const content = `${head}
 /* Courier's proxy route: the browser calls your API through it. */
 const handler = courierHandler();
 
@@ -44,15 +41,27 @@ export const POST = handler;
  * ```
  */
 export function solidStartRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   const config = ctx.project.exists("app.config.ts") ? "app.config.ts" : undefined;
   const studioEdit = viteStudioEdit(ctx.project, "solid");
+  const { parts } = proxyStart(
+    ctx,
+    (needs) => route(ctx, needs),
+    { module: "@noverax/courier-solid", exported: "courierHandler" },
+    studioAttach("import.meta.env.DEV", ""),
+  );
+  const { files, manual } = sortParts(parts);
+  /* SolidStart 1 keeps Vite's plugins in app.config.ts, under `vite`, which the command does not change. */
+  const studioByHand =
+    ctx.choices.studio &&
+    config !== undefined &&
+    studioEdit.change(ctx.project.read(config) ?? "") !== ctx.project.read(config);
   return {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
-      route(ctx),
+      ...files,
       ...(example
         ? [proxyCaller(ctx, DIR), solidDemo(ctx, "src/routes/courier.tsx", `${DIR}/caller.ts`)]
         : []),
@@ -61,16 +70,18 @@ export function solidStartRecipe(ctx: RecipeContext): Recipe {
     edits: ctx.choices.studio && config === undefined ? [studioEdit] : [],
     ...courierPackages(ctx, { adapter: "@noverax/courier-solid", proxy: true }),
     scripts: proxyScripts(ctx),
-    manual:
-      ctx.choices.studio && config !== undefined
+    manual: [
+      ...manual,
+      ...(studioByHand
         ? [
             {
               ...studioEdit.manual,
-              file: config,
+              file: config ?? "app.config.ts",
               what: "Connect the browser to Studio: add the plugin to the config's vite.plugins",
             },
           ]
-        : [],
+        : []),
+    ],
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

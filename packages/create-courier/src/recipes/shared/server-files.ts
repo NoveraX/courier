@@ -3,6 +3,7 @@ import { courierConfig, courierMocks, PLAIN_SOURCE, passOnConfig } from "./couri
 import { exampleApi } from "./example-api";
 import { htmlDemo } from "./html-demo";
 import { portableServerReach } from "./next-steps";
+import { addsExample } from "./wired";
 
 /** Where a server keeps Courier's modules, unless it keeps its code at the root. */
 export const SERVER_DIR = "src/courier";
@@ -27,7 +28,7 @@ export function serverDir(ctx: RecipeContext): string {
  * or none with a specification to import — the list of APIs beside the
  * server's code, which the server registers from, and `courier.config.ts`,
  * which passes it on to Studio and agents; the mock, and the demo page's
- * parts.
+ * parts. A project whose config declares APIs already keeps its config.
  *
  * @param ctx - The project, and what is set up in it
  * @param dir - The folder Courier's own modules go in
@@ -38,9 +39,15 @@ export function serverDir(ctx: RecipeContext): string {
  * ```
  */
 export function serverFiles(ctx: RecipeContext, dir: string): RecipeFile[] {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   const api = `${dir}/api.ts`;
   const list = `${dir}/config.ts`;
+  /* A project set up already keeps the config it has, wherever it holds the list. */
+  if (ctx.configured !== undefined) {
+    return [courierConfig(ctx, api, PLAIN_SOURCE, list), passOnConfig(ctx, list)].filter((file) =>
+      ctx.project.exists(file.path),
+    );
+  }
   return [
     ...(example ? exampleApi(ctx, dir, portableServerReach(ctx)) : []),
     courierConfig(ctx, api, PLAIN_SOURCE, list),
@@ -67,4 +74,42 @@ if (process.env.NODE_ENV !== "production") {
     .then(({ attachRuntime }) => attachRuntime())
     .catch((error: unknown) => console.warn("[courier] Could not connect to Studio:", error));
 }`;
+}
+
+/**
+ * The import a server's Courier file opens with where it registers the
+ * config's APIs.
+ *
+ * @param needs - What the server's start lacks
+ * @returns The line, or nothing where the APIs are registered elsewhere
+ * @example
+ * ```ts
+ * serverHead({ register: true, studio: true }); // 'import { registerSources } from "@noverax/courier";\n'
+ * ```
+ */
+export function serverHead(needs: { readonly register: boolean }): string {
+  return needs.register ? 'import { registerSources } from "@noverax/courier";\n' : "";
+}
+
+/**
+ * What a server's Courier file does once its imports are in: the example
+ * page's imports, the config's APIs registered and the server connected
+ * to Studio — each where it is still missing.
+ *
+ * @param needs - What the server's start lacks
+ * @param pageImports - The example page's imports, or nothing
+ * @param list - How the file imports the config's list
+ * @returns The code, from the blank line under the framework's imports
+ * @example
+ * ```ts
+ * serverStart({ register: true, studio: false }, "", "./config");
+ * ```
+ */
+export function serverStart(
+  needs: { readonly register: boolean; readonly studio: boolean },
+  pageImports: string,
+  list: string,
+): string {
+  const local = `${pageImports}${needs.register ? `import config from "${list}";\n` : ""}`;
+  return `${local === "" ? "" : `\n${local}`}${needs.register ? "\nregisterSources(config.sources);\n" : ""}${needs.studio ? `\n${studioAttachLater()}\n` : ""}`;
 }

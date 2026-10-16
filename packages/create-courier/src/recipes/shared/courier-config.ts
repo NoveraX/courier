@@ -101,7 +101,8 @@ export default defineConfig({
   sources: ${sources},${studioBlock(ctx)}${agentsBlock(ctx)}
 });
 `;
-  return { path, content, purpose };
+  /* A config that declares the project's APIs is the project's, however it is written. */
+  return { path, content, purpose, ...(ctx.configured ? { recognized: true } : {}) };
 }
 
 /**
@@ -131,6 +132,7 @@ export { default } from "${importSpecifier("courier.config.ts", list, ctx.extens
     path: "courier.config.ts",
     content,
     purpose: `passes ${list}'s list on to Studio and agents`,
+    ...(ctx.configured ? { recognized: true } : {}),
   };
 }
 

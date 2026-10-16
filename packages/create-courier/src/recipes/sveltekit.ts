@@ -1,33 +1,20 @@
 import { viteStudioEdit } from "./edits/studio-browser";
-import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import {
-  ownOrManual,
-  proxyScripts,
-  type RecipePart,
-  sortParts,
-  studioAttach,
-} from "./shared/recipe-parts";
+import { proxyScripts, type RecipePart, registerModule, sortParts } from "./shared/recipe-parts";
 import { svelteDemo } from "./shared/svelte-demo";
+import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
 
 const DIR = "src/lib/courier";
 
 /* `hooks.server.ts`: the APIs registered as the server starts, and the server connected to Studio while you develop. */
-function hooks(ctx: RecipeContext): RecipeFile {
+function hooks(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   const path = "src/hooks.server.ts";
-  const studio = ctx.choices.studio ? `\n\n${studioAttach("import.meta.env.DEV", "")}` : "";
-  const content = `import { registerSources } from "@noverax/courier";
-
-import config from "${importSpecifier(path, "courier.config.ts", ctx.extension)}";
-
-/* The APIs courier.config.ts lists, which the /api/request route serves${ctx.choices.studio ? ";\n   while you develop, the server's calls show in Courier Studio" : ""}. */
-registerSources(config.sources);${studio}
-`;
+  const content = registerModule(ctx, path, needs, "the /api/request route serves");
   return { path, content, purpose: "registers your APIs as the server starts" };
 }
 
@@ -53,12 +40,20 @@ export const POST = handler;
  * ```
  */
 export function svelteKitRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
-  const what = ctx.choices.studio
-    ? "Register Courier's APIs as the server starts, and connect it to Studio while you develop"
-    : "Register Courier's APIs as the server starts";
+  const example = addsExample(ctx);
+  const start = startFile(ctx, (needs) => hooks(ctx, needs), needsWhat, ["src/hooks.server.js"]);
+  const route = servingFile(
+    ctx,
+    {
+      path: "src/routes/api/request/+server.ts",
+      content: ROUTE,
+      purpose: "the route the browser calls your API through",
+    },
+    "@noverax/courier-sveltekit",
+    "courierHandler",
+  );
   const parts: RecipePart[] = [
-    ownOrManual(ctx, hooks(ctx), what, ["src/hooks.server.js"]),
+    ...(start ? [start] : []),
     ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "sveltekit")] : []),
   ];
   const { files, edits, manual } = sortParts(parts);
@@ -67,11 +62,7 @@ export function svelteKitRecipe(ctx: RecipeContext): Recipe {
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
-      {
-        path: "src/routes/api/request/+server.ts",
-        content: ROUTE,
-        purpose: "the route the browser calls your API through",
-      },
+      ...(route ? [route] : []),
       ...(example
         ? [
             proxyCaller(ctx, DIR),

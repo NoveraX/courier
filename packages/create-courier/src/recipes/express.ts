@@ -1,4 +1,5 @@
 import { codeStyleOf, namedImport } from "../edit/code-style";
+import { loads } from "../edit/imports";
 import { addImportLine } from "../edit/insert";
 import { scanSource } from "../edit/source-scan";
 import { firstExisting } from "./edits/studio-browser";
@@ -6,11 +7,24 @@ import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { proxyScripts } from "./shared/recipe-parts";
-import { serverDir, serverFiles, studioAttachLater } from "./shared/server-files";
+import { proxyScripts, sortParts } from "./shared/recipe-parts";
+import {
+  serverDir,
+  serverFiles,
+  serverHead,
+  serverStart,
+  studioAttachLater,
+} from "./shared/server-files";
+import { addsExample, listModule, proxyStart, type ServerNeeds } from "./shared/wired";
 
-function routes(ctx: RecipeContext, dir: string, withPage: boolean): RecipeFile {
+function routes(
+  ctx: RecipeContext,
+  dir: string,
+  withPage: boolean,
+  needs: ServerNeeds,
+): RecipeFile {
   const path = `${dir}/routes.ts`;
+  const list = importSpecifier(path, listModule(ctx, `${dir}/config.ts`), ctx.extension);
   const from = (file: string) => importSpecifier(path, `${dir}/${file}`, ctx.extension);
   const pageImports = withPage
     ? `import { emailOf, failure, usersPage } from "${from("page.ts")}";
@@ -35,14 +49,9 @@ courier.post("/courier", express.urlencoded({ extended: false }), async (request
 });
 `
     : "";
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierHandler } from "@noverax/courier-express";
+  const content = `${serverHead(needs)}import { courierHandler } from "@noverax/courier-express";
 import ${withPage ? "express, { Router }" : "{ Router }"} from "express";
-
-${pageImports}import config from "${from("config.ts")}";
-
-registerSources(config.sources);
-${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
+${serverStart(needs, pageImports, list)}
 /**
  * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}. Mount them before any body
  * parser: the proxy reads the request's body itself.
@@ -64,7 +73,7 @@ const APP = /^([ \t]*)(?:const|let) app = express\(\)[ \t]*(;?)[ \t]*$/m;
 
 /* The app with Courier's routes mounted right after it is created, before any body parser. */
 function mounted(text: string, specifier: string): string | undefined {
-  if (text.includes(specifier)) return text;
+  if (loads(text, specifier)) return text;
   const found = text.match(new RegExp(APP.source, "gm"));
   const app = APP.exec(text);
   if (found?.length !== 1 || app === null) return undefined;
@@ -113,14 +122,21 @@ function mountEdit(ctx: RecipeContext, dir: string): RecipeEdit {
  * ```
  */
 export function expressRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   const dir = serverDir(ctx);
+  const { parts, served } = proxyStart(
+    ctx,
+    (needs) => routes(ctx, dir, example, needs),
+    { module: "@noverax/courier-express", exported: "courierHandler" },
+    studioAttachLater(),
+  );
+  const { files, manual } = sortParts(parts);
   return {
-    files: [...serverFiles(ctx, dir), routes(ctx, dir, example)],
-    edits: [mountEdit(ctx, dir)],
+    files: [...serverFiles(ctx, dir), ...files],
+    edits: served ? [] : [mountEdit(ctx, dir)],
     ...courierPackages(ctx, { adapter: "@noverax/courier-express", proxy: true }),
     scripts: proxyScripts(ctx),
-    manual: [],
+    manual,
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

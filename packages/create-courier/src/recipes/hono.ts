@@ -1,16 +1,25 @@
 import { codeStyleOf, namedImport } from "../edit/code-style";
+import { loads } from "../edit/imports";
 import { addImportLine } from "../edit/insert";
 import { scanSource } from "../edit/source-scan";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { proxyScripts } from "./shared/recipe-parts";
-import { SERVER_DIR, serverFiles, studioAttachLater } from "./shared/server-files";
+import { proxyScripts, sortParts } from "./shared/recipe-parts";
+import {
+  SERVER_DIR,
+  serverFiles,
+  serverHead,
+  serverStart,
+  studioAttachLater,
+} from "./shared/server-files";
 import { rootDirIncludeEdit } from "./shared/tsconfig-include";
+import { addsExample, listModule, proxyStart, type ServerNeeds } from "./shared/wired";
 
-function routes(ctx: RecipeContext, withPage: boolean): RecipeFile {
+function routes(ctx: RecipeContext, withPage: boolean, needs: ServerNeeds): RecipeFile {
   const path = `${SERVER_DIR}/routes.ts`;
+  const list = importSpecifier(path, listModule(ctx, `${SERVER_DIR}/config.ts`), ctx.extension);
   const from = (file: string) => importSpecifier(path, `${SERVER_DIR}/${file}`, ctx.extension);
   const pageImports = withPage
     ? `import { emailOf, failure, usersPage } from "${from("page.ts")}";
@@ -29,14 +38,9 @@ courier.post("/courier", async (c) => {
 });
 `
     : "";
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierHandler } from "@noverax/courier-hono";
+  const content = `${serverHead(needs)}import { courierHandler } from "@noverax/courier-hono";
 import { Hono } from "hono";
-
-${pageImports}import config from "${from("config.ts")}";
-
-registerSources(config.sources);
-${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
+${serverStart(needs, pageImports, list)}
 /**
  * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}.
  */
@@ -58,7 +62,7 @@ const APP = /^([ \t]*)const app = new Hono(?:<[^>]*>)?\(\)[ \t]*(;?)[ \t]*$/m;
 
 /* The app with Courier's routes mounted right after it is created, as create-hono writes it. */
 function mounted(text: string, specifier: string): string | undefined {
-  if (text.includes(specifier)) return text;
+  if (loads(text, specifier)) return text;
   const found = text.match(new RegExp(APP.source, "gm"));
   const app = APP.exec(text);
   if (found?.length !== 1 || app === null) return undefined;
@@ -98,13 +102,24 @@ function mountEdit(ctx: RecipeContext): RecipeEdit {
  * ```
  */
 export function honoRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
+  const { parts, served } = proxyStart(
+    ctx,
+    (needs) => routes(ctx, example, needs),
+    { module: "@noverax/courier-hono", exported: "courierHandler" },
+    studioAttachLater(),
+  );
+  const { files, manual } = sortParts(parts);
   return {
-    files: [...serverFiles(ctx, SERVER_DIR), routes(ctx, example)],
-    edits: [mountEdit(ctx), ...rootDirIncludeEdit(ctx)],
+    files: [...serverFiles(ctx, SERVER_DIR), ...files],
+    /* A project set up already compiles its config as it is. */
+    edits: [
+      ...(served ? [] : [mountEdit(ctx)]),
+      ...(ctx.configured === undefined ? rootDirIncludeEdit(ctx) : []),
+    ],
     ...courierPackages(ctx, { adapter: "@noverax/courier-hono", proxy: true }),
     scripts: proxyScripts(ctx),
-    manual: [],
+    manual,
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

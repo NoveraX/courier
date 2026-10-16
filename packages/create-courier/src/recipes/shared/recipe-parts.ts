@@ -1,34 +1,8 @@
+import { importSpecifier } from "../import-specifier";
 import type { ManualStep, RecipeContext, RecipeEdit, RecipeFile } from "../recipe-types";
 
 /** What a recipe's wiring adds: a file of its own, a change to one of the project's, or a step left to the person. */
 export type RecipePart = RecipeFile | RecipeEdit | ManualStep;
-
-/**
- * A file of Courier's own, or — where the project has a file of that
- * name, or of one it takes in its place — the lines to add to it, for the
- * person.
- *
- * @param ctx - The project, and what is set up in it
- * @param file - The file
- * @param what - What its lines do, for the step left to the person
- * @param others - Other names the project may have it under: `.js`, another folder
- * @returns The file, or the step
- * @example
- * ```ts
- * ownOrManual(ctx, hooks, "Register Courier's APIs as the server starts", ["src/hooks.server.js"]);
- * ```
- */
-export function ownOrManual(
-  ctx: RecipeContext,
-  file: RecipeFile,
-  what: string,
-  others: readonly string[] = [],
-): RecipeFile | ManualStep {
-  const taken = [file.path, ...others].find((path) => ctx.project.exists(path));
-  return taken === undefined
-    ? file
-    : { file: taken, what, lines: file.content.trimEnd().split("\n") };
-}
 
 /**
  * A recipe's parts, sorted into its files, its edits and its steps.
@@ -107,4 +81,37 @@ export function studioAttach(condition: string, indent: string): string {
   ]
     .map((line) => `${indent}${line}`)
     .join("\n");
+}
+
+/**
+ * A module that starts Courier on a server as it loads — SvelteKit's
+ * hooks, Astro's middleware — with the parts still missing: the config's
+ * APIs registered, and the server connected to Studio while you develop.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @param path - The module, relative to the root
+ * @param needs - What is missing
+ * @param serves - What serves the APIs, for the comment
+ * @returns The module's code, up to where the framework's own exports go
+ * @example
+ * ```ts
+ * registerModule(ctx, "src/hooks.server.ts", { register: true, studio: true }, "the /api/request route serves");
+ * ```
+ */
+export function registerModule(
+  ctx: RecipeContext,
+  path: string,
+  needs: { readonly register: boolean; readonly studio: boolean },
+  serves: string,
+): string {
+  const studio = needs.studio ? studioAttach("import.meta.env.DEV", "") : "";
+  if (!needs.register)
+    return `/* While you develop, the server's calls show in Courier Studio. */\n${studio}\n`;
+  return `import { registerSources } from "@noverax/courier";
+
+import config from "${importSpecifier(path, "courier.config.ts", ctx.extension)}";
+
+/* The APIs courier.config.ts lists, which ${serves}${needs.studio ? ";\n   while you develop, the server's calls show in Courier Studio" : ""}. */
+registerSources(config.sources);${needs.studio ? `\n\n${studio}` : ""}
+`;
 }

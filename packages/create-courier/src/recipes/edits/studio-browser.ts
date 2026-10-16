@@ -1,5 +1,7 @@
-import { namedImport } from "../../edit/code-style";
+import { type CodeStyle, namedImport } from "../../edit/code-style";
 import { addToConfigList } from "../../edit/config-list";
+import { importsOf, usesExport } from "../../edit/imports";
+import { scanSource } from "../../edit/source-scan";
 import type { Project } from "../../project/read-project";
 import type { RecipeEdit } from "../recipe-types";
 
@@ -28,23 +30,40 @@ interface Integration {
   /** The item in the list: the integration called, or the module named. */
   readonly item: string;
   readonly from: string;
+  /** Other entries of Studio's whose integration connects the browser too: Vite's own, for an app Vite serves. */
+  readonly also?: readonly string[];
+}
+
+/* The config with the integration in its list — unless its code uses it already — and imported where it is not. */
+function withIntegration(text: string, integration: Integration): string | undefined {
+  const { callees, property, name, item, from, also = [] } = integration;
+  const scan = scanSource(text);
+  if (scan === undefined) return undefined;
+  const imports = importsOf(scan);
+  const studio = (specifier: string) => specifier === from || also.includes(specifier);
+  if (usesExport(scan, imports, studio, name, item.endsWith(")"))) return text;
+  const imported = imports.some(
+    (each) =>
+      studio(each.specifier) &&
+      each.bindings.some((binding) => binding.imported === name && binding.local === name),
+  );
+  return addToConfigList(text, {
+    callees,
+    property,
+    item: () => item,
+    ...(imported
+      ? {}
+      : { importLine: (fileStyle: CodeStyle) => namedImport(fileStyle, [name], from) }),
+  });
 }
 
 function integrationEdit(integration: Integration): RecipeEdit {
-  const { path, purpose, callees, property, name, item, from } = integration;
+  const { path, purpose, property, name, item, from } = integration;
   const style = { quote: '"', semi: true } as const;
   return {
     path,
     purpose,
-    change: (text) =>
-      text.includes(from)
-        ? text
-        : addToConfigList(text, {
-            callees,
-            property,
-            item: () => item,
-            importLine: (fileStyle) => namedImport(fileStyle, [name], from),
-          }),
+    change: (text) => withIntegration(text, integration),
     manual: {
       file: path,
       what: `Connect the browser to Studio: add ${item} to the config's ${property}`,
@@ -52,6 +71,9 @@ function integrationEdit(integration: Integration): RecipeEdit {
     },
   };
 }
+
+/* Studio's entries whose `courierStudio()` is Vite's plugin. */
+const VITE_ENTRIES = ["vite", "react", "vue", "sveltekit", "remix", "solid"];
 
 const VITE_CONFIGS = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs"];
 
@@ -77,6 +99,7 @@ export function viteStudioEdit(project: Project, entry: string): RecipeEdit {
     name: "courierStudio",
     item: "courierStudio()",
     from: `@noverax/courier-studio/${entry}`,
+    also: VITE_ENTRIES.map((each) => `@noverax/courier-studio/${each}`),
   });
 }
 

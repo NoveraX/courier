@@ -103,7 +103,11 @@ describe("create-courier", () => {
       routes: "courier-cli routes",
     });
     expect(again.status).toBe(0);
-    expect(again.out).toContain("Courier is set up here already.");
+    expect(again.out).toContain(
+      "Courier is set up here already: courier.config.ts declares 1 API (api).",
+    );
+    expect(again.out).toContain("Nothing is missing.");
+    expect(again.out).not.toContain("Left to you");
   }, 60_000);
 
   it("names the install commands with --no-install, and does not call Courier set up before they run", () => {
@@ -141,7 +145,8 @@ describe("create-courier", () => {
     const { status, out } = run([root, "--yes", "--no-install", "--mcp"]);
 
     expect(status).toBe(0);
-    expect(out).toMatch(/= src\/courier\/api\.ts +Courier's already, yours to change/);
+    expect(out).toMatch(/= courier\.config\.ts +Courier's already, yours to change/);
+    expect(out).not.toContain("src/courier/api.ts");
     expect(out).not.toContain("const users = defineGroup(");
     expect(out).toContain(
       "Your editor's agent can call the API's reads, as courier.config.ts offers them",

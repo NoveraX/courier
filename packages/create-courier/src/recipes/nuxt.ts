@@ -8,6 +8,7 @@ import { devStep, portableServerReach, routesStep, studioStep } from "./shared/n
 import { courierPackages } from "./shared/packages";
 import { proxyScripts } from "./shared/recipe-parts";
 import { vueDemo } from "./shared/vue-demo";
+import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
 
 /*
  * Nuxt 4 keeps the app in `app/` and code both sides use in `shared/`, which
@@ -20,25 +21,27 @@ function layoutOf(ctx: RecipeContext): { app: string; dir: string; caller: strin
     : { app: "", dir: "lib/courier", caller: "lib/courier/caller.ts" };
 }
 
-function serverPlugin(ctx: RecipeContext): RecipeFile {
+function serverPlugin(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   const path = "server/plugins/courier.ts";
-  const studio = ctx.choices.studio
+  const studio = needs.studio
     ? `
   if (import.meta.dev) {
     const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
     await attachRuntime();
   }`
     : "";
-  const content = `import { registerSources } from "@noverax/courier";
+  const head = needs.register
+    ? `import { registerSources } from "@noverax/courier";
 
 import config from "${importSpecifier(path, "courier.config.ts", ctx.extension)}";
 
 /**
  * Registers the APIs courier.config.ts lists as the server starts, which
- * the /api/request route serves${ctx.choices.studio ? "; while you develop, connects the server to\n * Courier Studio" : ""}.
- */
-export default defineNitroPlugin(async () => {
-  registerSources(config.sources);${studio}
+ * the /api/request route serves${needs.studio ? "; while you develop, connects the server to\n * Courier Studio" : ""}.
+ */`
+    : "/** While you develop, connects the server to Courier Studio. */";
+  const content = `${head}
+export default defineNitroPlugin(async () => {${needs.register ? "\n  registerSources(config.sources);" : ""}${studio}
 });
 `;
   return { path, content, purpose: "registers your APIs as the server starts" };
@@ -99,26 +102,33 @@ function pages(ctx: RecipeContext, app: string): { files: RecipeFile[]; edits: R
  */
 export function nuxtRecipe(ctx: RecipeContext): Recipe {
   const { app, dir, caller } = layoutOf(ctx);
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
+  const plugin = startFile(ctx, (needs) => serverPlugin(ctx, needs), needsWhat);
+  const route = servingFile(
+    ctx,
+    {
+      path: "server/api/request.ts",
+      content: ROUTE,
+      purpose: "the route the browser calls your API through",
+    },
+    "@noverax/courier-nuxt",
+    "courierHandler",
+  );
   const routing = example ? pages(ctx, app) : { files: [], edits: [] };
   return {
     files: [
       ...(example ? exampleApi(ctx, dir, portableServerReach(ctx)) : []),
       courierConfig(ctx, `${dir}/api.ts`),
       ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
-      serverPlugin(ctx),
-      {
-        path: "server/api/request.ts",
-        content: ROUTE,
-        purpose: "the route the browser calls your API through",
-      },
+      ...(plugin && "content" in plugin ? [plugin] : []),
+      ...(route ? [route] : []),
       ...(example ? [proxyCaller(ctx, dir), vueDemo(ctx, `${app}pages/courier.vue`, caller)] : []),
       ...routing.files,
     ],
     edits: [...routing.edits, ...(ctx.choices.studio ? [nuxtStudioEdit(ctx.project)] : [])],
     ...courierPackages(ctx, { adapter: "@noverax/courier-nuxt", proxy: true }),
     scripts: proxyScripts(ctx),
-    manual: [],
+    manual: plugin && "what" in plugin ? [plugin] : [],
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

@@ -38,13 +38,18 @@ function configText(project: Project): string | undefined {
  *
  * @param project - The project
  * @param choices - What is set up
+ * @param example - Whether the setup adds the example, whose mock takes a port
  * @returns The ports
  * @example
  * ```ts
  * await portsOf(project, choices); // { studio: 6281, mock: 7001 } while another Studio runs
  * ```
  */
-export async function portsOf(project: Project, choices: SetupChoices): Promise<Ports> {
+export async function portsOf(
+  project: Project,
+  choices: SetupChoices,
+  example = choices.openapi === undefined,
+): Promise<Ports> {
   const config = configText(project);
   const mocks = project.read("courier.mocks.ts");
   const studio =
@@ -52,7 +57,7 @@ export async function portsOf(project: Project, choices: SetupChoices): Promise<
     (config === undefined && choices.studio
       ? await firstFreePort(STUDIO_DEFAULT_PORT)
       : STUDIO_DEFAULT_PORT);
-  const wantsMock = choices.mocks && choices.openapi === undefined;
+  const wantsMock = choices.mocks && example;
   const mock =
     portIn(mocks, /port:\s*(\d+)/) ??
     (mocks === undefined && wantsMock ? await firstFreePort(MOCK_DEFAULT_PORT) : MOCK_DEFAULT_PORT);

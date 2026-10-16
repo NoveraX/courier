@@ -32,7 +32,8 @@ export function plannedFile(project: Project, file: RecipeFile): PlannedFile {
   const there = project.read(file.path);
   if (there === undefined) return { ...file, state: "create" };
   if (there === file.content) return { ...file, state: "same" };
-  return { ...file, state: there.includes("@noverax/courier") ? "courier" : "kept" };
+  const ours = file.recognized ?? there.includes("@noverax/courier");
+  return { ...file, state: ours ? "courier" : "kept" };
 }
 
 /**

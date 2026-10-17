@@ -1,13 +1,12 @@
 import { posix } from "node:path";
 
 import { isRecord } from "../is-record";
+import { tailKey, targetsOf } from "./module-target";
 import { projectCode } from "./project-code";
 import type { Project } from "./read-project";
 import { routeList, routeModule } from "./route-list";
 
 const EXTENSION = /\.(?:[cm]?[jt]s|[jt]sx)$/;
-/* A path alias the project's tooling resolves: `@/`, `~/`, `~~/`, `#shared/`, `$lib/`, or a path from the root. */
-const ALIAS = /^(?:@\/|@@\/|~~?\/|#|\$|src\/)/;
 /* The files a server starts from where nothing names its entry: `src/index.ts`, `server.js`, `src/main.ts`. */
 const ENTRY = /^(?:src\/)?(?:index|server|main|app)\.[cm]?[jt]s$/;
 /* A file a script runs: `tsx watch src/index.ts`, `node dist/main.js`, `fastify start app.js`. */
@@ -27,23 +26,14 @@ const LOADED_BY: ReadonlyArray<readonly [string, RegExp]> = [
 
 const cache = new WeakMap<Project, Set<string>>();
 
-/* A path as an alias may name it: its last two segments. */
-function aliasKey(path: string): string {
-  return `alias:${path.split("/").slice(-2).join("/")}`;
-}
-
-/* The files the project's code loads, by their path without extension: each relative import, and each alias by its last two segments. */
+/* The files the project's code loads, by their path without extension, and by the key of a framework's alias. */
 function importedBy(project: Project): Set<string> {
   const known = cache.get(project);
   if (known) return known;
   const loaded = new Set<string>();
   for (const file of projectCode(project)) {
     for (const { specifier } of file.imports) {
-      const bare = specifier.replace(EXTENSION, "");
-      if (bare.startsWith(".")) {
-        const path = posix.normalize(posix.join(posix.dirname(file.path), bare));
-        loaded.add(path).add(`${path}/index`);
-      } else if (ALIAS.test(bare)) loaded.add(aliasKey(bare.replace(/^(?:@@?|~~?)\//, "")));
+      for (const target of targetsOf(project, file.path, specifier)) loaded.add(target);
     }
   }
   cache.set(project, loaded);
@@ -85,7 +75,8 @@ function listedRoute(project: Project, path: string): boolean {
  * Whether anything loads a file of the project's: the framework, by its
  * place — Next.js's instrumentation, Nuxt's `server/`, SvelteKit's hooks,
  * a page or a route — the project's package.json, as its entry or a file a
- * script runs, or another file of its code, which imports it. A file that
+ * script runs, or another file of its code, which imports it — by a
+ * relative path or by one of the project's aliases. A file that
  * does Courier's part where nothing loads it does not do it.
  *
  * @param project - The project
@@ -106,5 +97,5 @@ export function isLoaded(project: Project, path: string): boolean {
   );
   if (byFramework || ENTRY.test(path) || entriesOf(project).has(bare)) return true;
   const imported = importedBy(project);
-  return imported.has(bare) || imported.has(aliasKey(bare));
+  return imported.has(bare) || imported.has(tailKey(bare));
 }

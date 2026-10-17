@@ -1,14 +1,12 @@
-import { posix } from "node:path";
 import { destructured, type ModuleImport, usesExport, usesOf } from "../edit/imports";
 import { codeMatches, nextCode } from "../edit/source-scan";
 import { configObjectPath } from "./config-file";
 import { isLoaded } from "./loaded-files";
+import { loadsFile } from "./module-target";
 import { type CodeFile, projectCode } from "./project-code";
 import type { Project } from "./read-project";
 
 const EXTENSION = /\.(?:[cm]?[jt]s|[jt]sx)$/;
-/* A path alias the project's tooling resolves: `@/`, `~/`, `~~/`, `#shared/`, `$lib/`, or a path from the root. */
-const ALIAS = /^(?:@\/|@@\/|~~?\/|#|\$|src\/)/;
 /* Files only a browser runs: a server's connection to Studio is never made there. */
 const CLIENT = /(?:^|\/)(?:instrumentation-client|[^/]*\.client)\.[^/]+$/;
 
@@ -16,23 +14,15 @@ const CORE = (specifier: string) => specifier === "@noverax/courier";
 const RUNTIME = (specifier: string) =>
   /^@noverax\/courier-studio-core(?:\/runtime)?$/.test(specifier);
 
-/* The modules that give the config's list: courier.config.ts, and the module it passes it on from. */
-function configModules(project: Project): string[] {
-  return [...new Set(["courier.config", configObjectPath(project).replace(EXTENSION, "")])];
-}
+/** Whether a file's specifier loads the config's list. */
+type NamesConfig = (from: string, specifier: string) => boolean;
 
-/* Whether a file's specifier names one of the modules: a relative path, or an alias whose last segments match. */
-function names(file: string, specifier: string, modules: readonly string[]): boolean {
-  const bare = specifier.replace(EXTENSION, "");
-  if (bare.startsWith(".")) {
-    return modules.includes(posix.normalize(posix.join(posix.dirname(file), bare)));
-  }
-  if (!ALIAS.test(bare)) return false;
-  const segments = bare.split("/");
-  return modules.some((module) => {
-    const tail = module.split("/").slice(-2);
-    return segments.slice(-tail.length).join("/") === tail.join("/");
-  });
+/* The modules that give the config's list — courier.config, and the module it passes it on from — however a file names them. */
+function configModules(project: Project): NamesConfig {
+  const modules = [
+    ...new Set(["courier.config", configObjectPath(project).replace(EXTENSION, "")]),
+  ];
+  return (from, specifier) => modules.some((module) => loadsFile(project, from, specifier, module));
 }
 
 /* A name as a pattern that matches it alone. */
@@ -41,12 +31,9 @@ function exactly(name: string): string {
 }
 
 /* The names a file holds the config's list under: the config imported, or its `sources` destructured from it. */
-function configNames(
-  file: CodeFile,
-  modules: readonly string[],
-): { configs: string[]; lists: string[] } {
+function configNames(file: CodeFile, modules: NamesConfig): { configs: string[]; lists: string[] } {
   const configs = file.imports
-    .filter((each) => names(file.path, each.specifier, modules))
+    .filter((each) => modules(file.path, each.specifier))
     .flatMap((each) => each.bindings)
     .filter((binding) => binding.imported === "default" || binding.imported === "*")
     .map((binding) => binding.local);
@@ -65,7 +52,7 @@ function configNames(
 /* Whether `registerSources(…)` is given the config's list: `config.sources`, or `sources` destructured from it. */
 function registersList(
   file: CodeFile,
-  modules: readonly string[],
+  modules: NamesConfig,
   imports: readonly ModuleImport[],
 ): boolean {
   const { configs, lists } = configNames(file, modules);

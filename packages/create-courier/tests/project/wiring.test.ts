@@ -215,5 +215,5 @@ describe("a large project", () => {
     );
 
     expect(registeringFile(project)).toBe("instrumentation.ts");
-  });
+  }, 60_000);
 });

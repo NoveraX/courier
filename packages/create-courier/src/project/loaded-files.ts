@@ -1,9 +1,9 @@
 import { posix } from "node:path";
 
-import { codeMatches, scanSource } from "../edit/source-scan";
 import { isRecord } from "../is-record";
 import { projectCode } from "./project-code";
 import type { Project } from "./read-project";
+import { routeList, routeModule } from "./route-list";
 
 const EXTENSION = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 /* A path alias the project's tooling resolves: `@/`, `~/`, `~~/`, `#shared/`, `$lib/`, or a path from the root. */
@@ -72,17 +72,13 @@ function entriesOf(project: Project): Set<string> {
   );
 }
 
-/* Whether React Router's routes file lists a route module, or reads the routes from the folder. */
+/* Whether React Router's routes file lists a route module, however it writes the path, or reads the routes from the folder. */
 function listedRoute(project: Project, path: string): boolean {
   const text = project.read("app/routes.ts") ?? project.read("app/routes.js");
   if (text === undefined) return true;
-  const scan = scanSource(text);
-  if (scan === undefined) return false;
-  if (codeMatches(scan, /\bflatRoutes\s*\(/g).length > 0) return true;
-  const route = path.replace(/^app\//, "");
-  return [...text.matchAll(/(["'])([^"'\n]+)\1/g)].some(
-    (match) => scan.literal[match.index] === 1 && match[2] === route,
-  );
+  const list = routeList(text);
+  if (list === undefined) return false;
+  return list.fromFolder || list.modules.has(routeModule(path.replace(/^app\//, "")));
 }
 
 /**

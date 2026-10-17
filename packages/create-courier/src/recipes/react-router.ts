@@ -2,7 +2,8 @@ import { codeStyleOf, quoted } from "../edit/code-style";
 import { appendItem } from "../edit/insert";
 import { defaultExportLiteral } from "../edit/literal";
 import { addNamedImport } from "../edit/named-import";
-import { codeMatches, scanSource } from "../edit/source-scan";
+import { scanSource } from "../edit/source-scan";
+import { routeList, routeModule } from "../project/route-list";
 import { viteStudioEdit } from "./edits/studio-browser";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
@@ -34,24 +35,27 @@ export const action = handler;
   return { path, content, purpose: "the route the browser calls your API through" };
 }
 
-/* The routes list with Courier's two in it, written in the file's style: the page, and the module that serves the proxy. */
+/*
+ * The routes list with Courier's two in it, written in the file's style:
+ * the page, and the module that serves the proxy — each unless the file
+ * lists its module already, however it writes the path. Where a route of
+ * the project's has its URL path, the change is left to the person: two
+ * routes of one path would clash.
+ */
 function withRoutes(text: string, example: boolean, proxy: string | undefined): string | undefined {
-  const first = scanSource(text);
-  if (first === undefined) return undefined;
-  const lists = (path: string) =>
-    [...text.matchAll(new RegExp(`(["'])${path.replace(/\./g, "\\.")}\\1`, "g"))].some(
-      (match) => first.literal[match.index] === 1,
-    );
-  if (codeMatches(first, /\bflatRoutes\s*\(/g).length > 0) return text;
+  const list = routeList(text);
+  if (list === undefined) return undefined;
+  if (list.fromFolder) return text;
+  const wanted = [
+    ...(example ? [["courier", "routes/courier.tsx"] as const] : []),
+    ...(proxy !== undefined ? [["api/request", proxy] as const] : []),
+  ].filter(([, module]) => !list.modules.has(routeModule(module)));
+  /* A route of the project's has the URL path already: which of the two serves it is the person's to say. */
+  if (wanted.some(([path]) => list.paths.has(path))) return undefined;
   const style = codeStyleOf(text);
-  const entries = [
-    ...(example && !lists("routes/courier.tsx")
-      ? [`route(${quoted(style, "courier")}, ${quoted(style, "routes/courier.tsx")})`]
-      : []),
-    ...(proxy !== undefined && !lists(proxy)
-      ? [`route(${quoted(style, "api/request")}, ${quoted(style, proxy)})`]
-      : []),
-  ];
+  const entries = wanted.map(
+    ([path, module]) => `route(${quoted(style, path)}, ${quoted(style, module)})`,
+  );
   if (entries.length === 0) return text;
   let changed = text;
   for (const entry of entries) {

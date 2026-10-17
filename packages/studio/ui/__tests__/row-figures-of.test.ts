@@ -12,6 +12,7 @@ import { rowFiguresOf } from "@/screens/explorer/row-figures-of";
 
 const IDLE: EndpointMetrics = {
   calls: 0,
+  shared: 0,
   p50: null,
   p95: null,
   errorRate: 0,

@@ -1,4 +1,5 @@
 import { isRequestId, REQUEST_ID_HEADER } from "../session/request-id";
+import { STUDIO_PASS_HEADER } from "../studio/studio-pass";
 import { keepBrowserCredentials } from "./keep-browser-credentials";
 import { filterHeaders } from "./merge-headers";
 
@@ -15,6 +16,8 @@ const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
  * A request id goes on only when it is one, so a page cannot write what it
  * likes into the upstream's logs; the credentials a browser sends by
  * itself, only where the API or the endpoint names `authorization`.
+ * Studio's pass never goes on, named or not: the proxy's gate takes it off,
+ * and a request whose headers could not be changed still keeps it here.
  *
  * @param incoming - The request's headers
  * @param named - The header names the API and the endpoint carry
@@ -39,6 +42,7 @@ export function forwardedRequestHeaders(
 ): Headers {
   const headers = filterHeaders(incoming, named);
   keepBrowserCredentials(headers, named, source);
+  headers.delete(STUDIO_PASS_HEADER);
   for (const name of headerNames(own)) if (HEADER_NAME.test(name)) headers.delete(name);
   const id = headers.get(REQUEST_ID_HEADER);
   if (id !== null && !isRequestId(id)) headers.delete(REQUEST_ID_HEADER);

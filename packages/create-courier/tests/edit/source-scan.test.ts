@@ -32,6 +32,17 @@ describe("scanSource", () => {
     expect(scan?.code[text.indexOf("`[") + 1]).toBe(0);
   });
 
+  it("marks the text of strings and templates as literal, and a comment as neither", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the scanned file's own template literal
+    const text = '// "a comment"\nconst s = "a string" + `a ${b} template`;';
+    const scan = scanSource(text);
+
+    expect(scan?.literal[text.indexOf('"a comment"')]).toBe(0);
+    expect(scan?.literal[text.indexOf('"a string"')]).toBe(1);
+    expect(scan?.literal[text.indexOf("template`")]).toBe(1);
+    expect(scan?.literal[text.indexOf("b}")]).toBe(0);
+  });
+
   it("divides after a value and starts a regular expression after an operator", () => {
     const text = "const x = (a) / 2 / (b); const r = x || /a\\/b/;";
 

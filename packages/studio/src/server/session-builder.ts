@@ -3,6 +3,9 @@
  */
 
 import { randomUUID } from "node:crypto";
+
+import { shownCause, shownText } from "@noverax/courier/internal";
+import { sharedOf } from "./saved-shared";
 import type { SavedRequest, SavedSession, SavedSessionApp, SessionStats } from "./session-types";
 import { headersWithoutCredentials } from "./storage/without-credentials";
 import { isObject } from "./validate-body";
@@ -35,10 +38,13 @@ const isString = (item: unknown): item is string => typeof item === "string";
 function errorOf(value: unknown): SavedRequest["error"] {
   if (!isObject(value) || typeof value.message !== "string") return undefined;
   const status = optionalNumber(value.status);
+  /* A saved request comes from a page or a file, and either can hold anything: checked as the runtime checks it. */
+  const cause = shownCause(value.cause);
   return {
     type: String(value.type ?? "unknown"),
     ...(status !== undefined && { status }),
-    message: value.message,
+    message: shownText(value.message),
+    ...(cause && { cause }),
   };
 }
 
@@ -70,6 +76,8 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     callerRuntimeId: optionalString(raw.callerRuntimeId),
     agent: agentOf(raw.agent),
     idempotencyKey: optionalString(raw.idempotencyKey),
+    ...(raw.studioPass === true && { studioPass: true }),
+    shared: sharedOf(raw.shared),
   };
 }
 

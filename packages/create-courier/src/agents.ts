@@ -1,5 +1,6 @@
 import { agentsPolicyEdit } from "./agents-policy-edit";
 import { mcpJsonEntry } from "./mcp-json-entry";
+import { configFile } from "./project/config-file";
 import type { Recipe, RecipeContext } from "./recipes/recipe-types";
 
 /**
@@ -22,7 +23,7 @@ import type { Recipe, RecipeContext } from "./recipes/recipe-types";
 export function withAgents(ctx: RecipeContext, recipe: Recipe): Recipe {
   if (!ctx.choices.mcp) return recipe;
   const entry = mcpJsonEntry(ctx.project);
-  const configured = ctx.project.read("courier.config.ts") !== undefined;
+  const configured = configFile(ctx.project) !== undefined;
   return {
     ...recipe,
     files: [...recipe.files, ...entry.files],

@@ -6,7 +6,7 @@ import {
   handleWhileConnected,
 } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { rememberPeerAddress } from "@noverax/courier/internal";
+import { addressedOf, rememberPeerAddress, rememberServerPort } from "@noverax/courier/internal";
 
 import { svelteKitClientAddress } from "./client-address";
 
@@ -22,7 +22,7 @@ export {
  */
 export interface SvelteKitRequestEvent {
   request: Request;
-  platform?: { req?: { socket?: ClientConnection } };
+  platform?: { req?: { socket?: ClientConnection & { readonly localPort?: number } } };
   /** The address the adapter reports the request came from. */
   getClientAddress?: (() => string) | undefined;
 }
@@ -64,8 +64,9 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "sveltekit" });
   return (event: SvelteKitRequestEvent) => {
-    announce(new URL(event.request.url).origin);
     rememberPeerAddress(event.request, svelteKitClientAddress(event));
+    rememberServerPort(event.request, event.platform?.req?.socket?.localPort);
+    announce(addressedOf(event.request));
     return handleWhileConnected(handle, event.request, event.platform?.req?.socket);
   };
 }

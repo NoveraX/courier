@@ -2,6 +2,7 @@ import { LoaderCircle, Send } from "lucide-react";
 
 import { MEDIA } from "@/design/breakpoints";
 import { Shortcut } from "@/design/shortcut";
+import { refusedByBrowsersOnly } from "@/features/playground/browsers-only-refusal";
 import { entryPayloadView } from "@/features/playground/entry-view";
 import { notForwardedOf } from "@/features/playground/not-forwarded";
 import { responseView } from "@/features/requests/payload-view";
@@ -16,6 +17,7 @@ import { TimingTab } from "@/inspector/tabs/timing-tab";
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry } from "@/store/types";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
+import { BrowsersOnlyNotice } from "./browsers-only-notice";
 import { WsComposer } from "./ws-composer";
 
 export type ResponseTab = "body" | "headers" | "timing" | "messages";
@@ -78,6 +80,8 @@ interface ResponseContentProps {
   sendingLabel: string;
   /** Give up on a call in flight. */
   onCancel: () => void;
+  /** Runs the call as server code, in Direct mode; `undefined` while a call is under way. */
+  onRunAsServer?: (() => void) | undefined;
 }
 
 /**
@@ -85,7 +89,8 @@ interface ResponseContentProps {
  * counter while a call is in flight, then the answer — its body, headers
  * and timing, or a stream's messages with a composer for a WebSocket —
  * shown as the inspector shows a request, from the request the run made.
- * Its headers add the ones the run wrote that a proxy did not pass on.
+ * Its headers add the ones the run wrote that a proxy did not pass on, and
+ * a body `browsersOnly` refused says why and how to get past it.
  *
  * @param props - The run, the request it made, the tab, the body's view mode, the time, the in-flight label and what cancels it
  * @returns The content
@@ -95,7 +100,7 @@ interface ResponseContentProps {
  * ```
  */
 export function ResponseContent(props: ResponseContentProps): React.ReactNode {
-  const { entry, row, tab, payload, now, sendingLabel, onCancel } = props;
+  const { entry, row, tab, payload, now, sendingLabel, onCancel, onRunAsServer } = props;
   if (!entry) return <Invitation />;
   const stream = entry.transport !== undefined;
   if (!stream && entry.status === "pending" && (!row || requestStateOf(row) === "pending")) {
@@ -144,7 +149,7 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
     );
   }
   if (tab === "timing") return row ? <TimingTab request={row} /> : <Waiting text={reported} />;
-  return (
+  const answer = (
     <PayloadTab
       view={row ? responseView(row) : entryPayloadView(entry)}
       mode={payload.mode}
@@ -152,5 +157,12 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
       whole={row ? requestWhole(row, "response") : undefined}
       searchLabel="Find in the answer"
     />
+  );
+  if (!refusedByBrowsersOnly(entry)) return answer;
+  return (
+    <div className="flex min-h-full flex-col">
+      <BrowsersOnlyNotice onRunAsServer={onRunAsServer} />
+      <div className="flex-1">{answer}</div>
+    </div>
   );
 }

@@ -32,7 +32,8 @@ export function plannedFile(project: Project, file: RecipeFile): PlannedFile {
   const there = project.read(file.path);
   if (there === undefined) return { ...file, state: "create" };
   if (there === file.content) return { ...file, state: "same" };
-  return { ...file, state: there.includes("@noverax/courier") ? "courier" : "kept" };
+  const ours = file.recognized ?? there.includes("@noverax/courier");
+  return { ...file, state: ours ? "courier" : "kept" };
 }
 
 /**
@@ -49,7 +50,7 @@ export function plannedFile(project: Project, file: RecipeFile): PlannedFile {
 export function keptStep(file: PlannedFile): ManualStep {
   return {
     file: file.path,
-    what: `A file of yours is here, so it was left as it is: Courier's ${file.purpose} would hold`,
+    what: `A file of yours is here, so it was left as it is: Courier's ${file.purpose.replace(/^Courier's /, "")} would hold`,
     lines: file.content.trimEnd().split("\n"),
   };
 }

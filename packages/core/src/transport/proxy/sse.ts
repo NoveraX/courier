@@ -35,6 +35,17 @@ export interface ProxySSEDefaults {
    * so a proxy route on another origin receives the user's session
    */
   credentials?: WebCredentials | undefined;
+  /**
+   * Headers made afresh for each connection, a reconnection's included:
+   * what is good for one request only, as Studio's one-time pass is
+   */
+  connectHeaders?: (() => Record<string, string>) | undefined;
+  /**
+   * Follow a redirect only while it stays on the stream's origin: a
+   * server-side caller whose headers must not leave it, as Studio's
+   * Playground and its one-time pass. A browser follows redirects itself.
+   */
+  withinOrigin?: boolean | undefined;
 }
 
 /**
@@ -49,13 +60,25 @@ export interface ProxySSEDefaults {
  * avoid producing a duplicate Timeline entry.
  */
 export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults = {}): SSEFactory {
-  const { proxyPath, origin, headers: defaultHeaders, credentials = "include" } = defaults;
+  const {
+    proxyPath,
+    origin,
+    headers: defaultHeaders,
+    credentials = "include",
+    connectHeaders,
+    withinOrigin,
+  } = defaults;
 
   return function subscribeSSE(group, method, variables, options) {
     assertNoProxyTransport(options);
     const headers = layerHeaders(defaultHeaders, options.headers);
     const sseBase = resolveProxyPath("sse", proxyPath, origin);
     const url = buildProxySSEUrl(sseBase, source, group, method, variables);
-    return executeSSE(url, { headers, credentials });
+    return executeSSE(url, {
+      headers,
+      credentials,
+      ...(connectHeaders && { connectHeaders }),
+      ...(withinOrigin && { withinOrigin }),
+    });
   };
 }

@@ -8,6 +8,7 @@ import { devStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { reactDemo, reactQuery } from "./shared/react-demo";
 import { studioScripts } from "./shared/recipe-parts";
+import { addsExample } from "./shared/wired";
 
 const DIR = "src/courier";
 
@@ -66,7 +67,7 @@ createRoot(root).render(
  * ```
  */
 export function reactViteRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   const page = {
     path: `${DIR}/courier-page.tsx`,
     query: `${DIR}/query.ts`,

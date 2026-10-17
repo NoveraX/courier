@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { discoverAppOrigin } from "./app-origin";
+import { type AddressedRequest, discoverAppOrigin } from "./discover-app-origin";
 import { createLogger } from "./logger";
 import { addressedTo } from "./node-origin";
 import { isAbortError } from "./utils/abort";
@@ -45,14 +45,36 @@ export function extractOriginFromNodeRequest(nodeReq: IncomingMessage): string |
 }
 
 /**
- * Adopt the origin a Node request was addressed to as the app's origin,
- * unless one is set — see `discoverAppOrigin`. Node adapters call it on every
- * request; it costs a header read until one request carries a host.
+ * What a Node request tells for the app's origin to be learned from it: its
+ * own `Host`, the port its socket was accepted on and the address it came
+ * from — see `discoverAppOrigin`.
+ *
+ * @param nodeReq - The incoming request
+ * @returns What `discoverAppOrigin` reads
+ * @example
+ * ```ts
+ * announce(addressedNodeRequest(req));
+ * ```
+ */
+export function addressedNodeRequest(nodeReq: IncomingMessage): AddressedRequest {
+  const host: unknown = nodeReq.headers.host;
+  return {
+    url: extractOriginFromNodeRequest(nodeReq),
+    host: typeof host === "string" ? host : undefined,
+    serverPort: nodeReq.socket.localPort,
+    peer: nodeReq.socket.remoteAddress,
+  };
+}
+
+/**
+ * Learn the app's origin from a Node request, unless one is set — see
+ * `discoverAppOrigin` for what a request may teach. It costs a header read
+ * until one request qualifies.
  *
  * @param nodeReq - The incoming request
  */
 export function discoverNodeAppOrigin(nodeReq: IncomingMessage): void {
-  discoverAppOrigin(extractOriginFromNodeRequest(nodeReq));
+  discoverAppOrigin(addressedNodeRequest(nodeReq));
 }
 
 /**

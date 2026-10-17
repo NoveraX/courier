@@ -103,6 +103,7 @@ describe("an endpoint's metrics", () => {
 
     expect(m).toMatchObject({
       calls: 3,
+      shared: 0,
       p50: 100,
       p95: 900,
       errors: 1,
@@ -112,6 +113,26 @@ describe("an endpoint's metrics", () => {
     });
     expect(m.errorRate).toBeCloseTo(33.33, 1);
     expect(m.active).toBe(true);
+  });
+
+  it("count a call another call's request answered, and take the durations from requests alone", () => {
+    const [sent] = REQUESTS;
+    if (!sent) throw new Error("no request to share");
+    const joined = {
+      ...sent,
+      id: "joined",
+      timing: { total: 5, middleware: 0, fetch: 5, validation: 0 },
+      shared: { by: "flight" as const, with: sent.id },
+    };
+
+    const m = metricsOf([sent, joined], NOW, NOW - 60_000);
+
+    expect(m).toMatchObject({
+      calls: 2,
+      shared: 1,
+      p50: sent.timing?.total,
+      p95: sent.timing?.total,
+    });
   });
 
   it("read as no traffic, healthy, degraded or critical", () => {

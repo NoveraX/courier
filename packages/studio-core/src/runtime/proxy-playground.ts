@@ -8,6 +8,7 @@ import {
   routesOf,
 } from "@noverax/courier/internal";
 import { member } from "../member";
+import { passHeaders, withoutPassHeader } from "./pass-headers";
 
 /* A path on the app's own origin: one leading slash, not a protocol-relative URL. */
 const RELATIVE_PATH = /^\/(?!\/)/;
@@ -19,6 +20,8 @@ export interface PlaygroundCall {
   method: string;
   variables: unknown;
   headers: Record<string, string>;
+  /** The request Studio shows the call under, which its one-time pass is issued for */
+  requestId?: string | undefined;
 }
 
 /**
@@ -55,11 +58,19 @@ export function callThroughProxy(
     ? routesOf(definition, call.source)
     : { source: call.source, endpoints: {} };
   assertMarked(definition, routes, call);
+  const proxyPath = proxyPathFor(definition, transportOf(definition, call));
+  const headers = { ...withoutPassHeader(call.headers), ...passOf(call, proxyPath) };
   const client: unknown = createProxyCaller(routes, {
-    proxyPath: proxyPathFor(definition, transportOf(definition, call)),
-    ...(Object.keys(call.headers).length > 0 && { headers: call.headers }),
+    proxyPath,
+    ...(Object.keys(headers).length > 0 && { headers }),
   });
-  const scoped = onUploadProgress ? withOptions(client, { onUploadProgress }) : client;
+  /* A redirect is followed on the route's origin alone: the call's headers
+     and its pass are not taken to wherever the route, or what answers at
+     its address, points. */
+  const scoped = withOptions(client, {
+    withinOrigin: true,
+    ...(onUploadProgress && { onUploadProgress }),
+  });
   const root = raw ? member(scoped, "raw") : scoped;
   const owner = groupNames(call.group).reduce(member, root);
   const endpoint = member(owner, call.method);
@@ -127,6 +138,12 @@ function proxyPathOf(definition: unknown): ProxyPath | undefined {
     return typeof value === "string" ? value : undefined;
   };
   return { http: pick("http"), sse: pick("sse"), ws: pick("ws") };
+}
+
+/* A pass for the route the call is sent to, which only the app's own may carry. */
+function passOf(call: PlaygroundCall, proxyPath: ProxyPath): Record<string, string> {
+  if (call.requestId === undefined) return {};
+  return passHeaders(call.requestId, proxyPath.http ?? proxyPath.sse ?? proxyPath.ws);
 }
 
 /* A client's `.with()` gives a client that sends every call with those options. */

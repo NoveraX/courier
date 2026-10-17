@@ -70,6 +70,19 @@ describe("the last minute", () => {
     expect(liveKpis([], NOW)).toEqual({ perMinute: 0, p95: null, errorRate: 0, liveStreams: 0 });
   });
 
+  it("takes the p95 from the calls that sent a request of their own, and counts every call", () => {
+    const sent = timed("sent", 500, 400);
+    const joined = timed("joined", 400, 20, { shared: { by: "flight", with: "sent" } });
+
+    expect(liveKpis([sent, joined], NOW)).toEqual({
+      perMinute: 2,
+      p95: 400,
+      errorRate: 0,
+      liveStreams: 0,
+    });
+    expect(endpointLatency([sent, joined], joined)).toEqual({ p95: 400, count: 1 });
+  });
+
   it("gives an endpoint's p95 over its finished calls", () => {
     const other = requestEntry({
       id: "x",

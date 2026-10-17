@@ -34,9 +34,12 @@
  * # When set
  *
  * `attachRuntime()` sets this during startup, reading from
- * `courier.config.ts.runtime.appOrigin` or an env var fallback.
- * Framework adapters may also discover it from the first incoming
- * request's `Host` header when nothing more explicit is available.
+ * `courier.config.ts.runtime.appOrigin` or an env var fallback, and a
+ * standalone server adopts the address it listens on. Framework adapters
+ * may also learn it, in development, from a request that proves it names
+ * this very server — see `discoverAppOrigin` — and never a name another
+ * machine or another port could answer for, which would take the
+ * Playground's calls there.
  * User code should not call `setAppOrigin` directly — set
  * `runtime.appOrigin` in `courier.config.ts` or set the `COURIER_APP_URL`
  * environment variable.
@@ -47,10 +50,13 @@ import type { ResolveOrigin } from "./proxy-caller";
 import { isDevelopment } from "./utils/development";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
+/* Set while the origin is one a request taught, rather than one configured. */
+const LEARNED_KEY = Symbol.for("courier.app-origin.learned");
 const g = globalThis as Record<symbol, unknown>;
 
 /** Set the user-app's HTTP origin. Called by `attachRuntime()`. */
 export function setAppOrigin(origin: string | undefined): void {
+  delete g[LEARNED_KEY];
   if (origin === undefined) {
     delete g[APP_ORIGIN_KEY];
     return;
@@ -59,24 +65,46 @@ export function setAppOrigin(origin: string | undefined): void {
 }
 
 /**
- * Adopt the origin a framework adapter saw a request addressed to as the
- * app's origin, unless one is already set — config and environment win.
+ * Take an origin a request taught as the app's, unless one is set — see
+ * `discoverAppOrigin`, which decides what a request may teach. It does not
+ * count as configured.
  *
- * Adapters call it on every request until one carries a host, so a
- * host-less probe that arrives first does not leave the origin unset for the
- * life of the process, and Studio Playground proxy mode with it.
- *
- * Only in development, where Studio reads it: a deployed server never takes
- * its origin from a request, whose `Host` whoever sends the first one
- * chooses — and would keep for the life of the process.
- *
- * @param origin - `scheme://host[:port]` the request was addressed to, if known
+ * @param origin - The origin, as `discoverAppOrigin` built it
  * @example
- * discoverAppOrigin(new URL(request.url).origin);
+ * learnAppOrigin("http://127.0.0.1:3000");
  */
-export function discoverAppOrigin(origin: string | undefined): void {
-  if (!origin || origin === "null" || getAppOrigin() || !isDevelopment()) return;
-  setAppOrigin(origin);
+export function learnAppOrigin(origin: string): void {
+  if (getAppOrigin() || !isDevelopment()) return;
+  g[APP_ORIGIN_KEY] = origin;
+  g[LEARNED_KEY] = true;
+}
+
+/**
+ * Adopt the address a server listens on as the app's origin, unless one is
+ * set: the server knows it itself, so it counts as configured. Only in
+ * development, where Studio reads it.
+ *
+ * @param url - The address the server listens on
+ * @example
+ * adoptListenOrigin("http://127.0.0.1:3001");
+ */
+export function adoptListenOrigin(url: string): void {
+  if (getAppOrigin() || !isDevelopment()) return;
+  setAppOrigin(url);
+}
+
+/**
+ * The app's origin when config, the environment or the server itself named
+ * it — not one a request taught. What may be trusted with more than a
+ * request: Studio's one-time pass goes to no learned origin but this
+ * machine's.
+ *
+ * @returns The configured origin, or `undefined`
+ * @example
+ * configuredAppOrigin(); // → "https://shop.example" when COURIER_APP_URL names it
+ */
+export function configuredAppOrigin(): string | undefined {
+  return g[LEARNED_KEY] === true ? undefined : getAppOrigin();
 }
 
 /** Read the raw `appOrigin` string. Returns `undefined` if not configured. */
@@ -109,6 +137,12 @@ export function getAppOriginParsed(): ResolveOrigin {
         "",
         "Or set the COURIER_APP_URL environment variable:",
         "  COURIER_APP_URL=http://localhost:3000 npm run dev",
+        "",
+        "In development it is learned only from a request whose own Host header",
+        "is localhost, 127.0.0.1 or [::1] on the port the server accepted it on,",
+        "sent from this machine, as far as the framework can tell; React Router",
+        "tells neither, so nothing is learned there. Behind a reverse proxy or a",
+        "tunnel, in Docker, on a *.localhost name or a network address, set it.",
         "",
         "There is no auto-fallback because the correct value depends on your",
         "runtime (custom port, Docker host, HTTPS in dev, reverse proxy, etc.)",

@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe("the Astro handler", () => {
-  it("tells Studio which sources it serves, and where once a request says", async () => {
+  it("tells Studio which sources it serves, and where once a request to this machine says", async () => {
     const { endpoint } = courier();
     registerSources({
       api: defineApi({
@@ -33,8 +33,12 @@ describe("the Astro handler", () => {
     const stop = consumeAnnouncements((entry) => announced.push(entry));
     const handler = courierHandler();
 
+    /* A name another machine could answer for teaches no origin; this machine's own, sent from it, does. */
+    const sent = (host: string) =>
+      new Request(`http://${host}/api/request?_s=api&_m=ping`, { headers: { host } });
+    await handler({ request: sent("app.test"), clientAddress: "127.0.0.1" });
     for (let i = 0; i < 2; i++) {
-      await handler({ request: new Request("http://app.test/api/request?_s=api&_m=ping") });
+      await handler({ request: sent("localhost:4321"), clientAddress: "127.0.0.1" });
     }
     stop();
 
@@ -48,7 +52,7 @@ describe("the Astro handler", () => {
       ]),
     ).toEqual([
       [["http", "sse"], "astro", ["api"], undefined],
-      [["http", "sse"], "astro", ["api"], "http://app.test"],
+      [["http", "sse"], "astro", ["api"], "http://localhost:4321"],
     ]);
   });
 });

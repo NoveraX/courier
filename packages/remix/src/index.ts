@@ -1,5 +1,6 @@
 import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
+import { addressedOf } from "@noverax/courier/internal";
 
 /**
  * Create a Remix resource route handler for the courier proxy.
@@ -31,7 +32,7 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "remix" });
   return ({ request }: { request: Request }) => {
-    announce(new URL(request.url).origin);
+    announce(addressedOf(request));
     return handle(request);
   };
 }

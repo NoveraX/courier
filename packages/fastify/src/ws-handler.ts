@@ -2,8 +2,8 @@ import type { ConnectResult, WebSocketLike, WSHandlerConfig } from "@noverax/cou
 import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
+  addressedNodeRequest,
   DEFAULT_WS_MAX_MESSAGE_SIZE,
-  extractOriginFromNodeRequest,
   toWebRequest,
   wsFrameLimit,
 } from "@noverax/courier/node";
@@ -48,7 +48,7 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
 
   return (socket: unknown, request: FastifyRequest) => {
     if (!isSocket(socket)) throw pluginMissing();
-    announce(extractOriginFromNodeRequest(request.raw));
+    announce(addressedNodeRequest(request.raw));
     if (!checkedPayloadLimit) {
       checkedPayloadLimit = true;
       warnOnLargerPayloads(request.server, maxMessageSize);

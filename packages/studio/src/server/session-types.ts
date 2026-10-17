@@ -52,7 +52,15 @@ export interface SavedRequest {
   dataCutFrom?: number | undefined;
   requestHeaders?: Record<string, string> | undefined;
   responseHeaders?: Record<string, string> | undefined;
-  error?: { type: string; status?: number; message: string } | undefined;
+  error?:
+    | {
+        type: string;
+        status?: number;
+        message: string;
+        /** Why no answer came: the system's code, where it gave one, and its text. */
+        cause?: { code?: string; message: string };
+      }
+    | undefined;
   startedAt: number;
   url?: string | undefined;
   /** The HTTP version the request went over, when its runtime could tell. */
@@ -64,6 +72,10 @@ export interface SavedRequest {
   agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string } | undefined;
   /** The key the call sent in its endpoint's idempotency header. */
   idempotencyKey?: string | undefined;
+  /** How its read was answered by another call's request, when it sent none of its own. */
+  shared?: { by: "flight" | "render"; with?: string } | undefined;
+  /** Set when `browsersOnly` let the Playground's call through on Studio's one-time pass. */
+  studioPass?: true | undefined;
 }
 
 export interface SessionStats {

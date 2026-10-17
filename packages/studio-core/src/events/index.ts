@@ -54,9 +54,11 @@ export type {
   RequestAgent,
   RequestEndEvent,
   RequestErrorEvent,
+  RequestFailureCause,
   RequestShapeEvent,
   RequestStartEvent,
   RequestTiming,
+  SharedAnswer,
 } from "./request";
 export type {
   StreamCloseEvent,

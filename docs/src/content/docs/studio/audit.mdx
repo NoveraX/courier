@@ -28,7 +28,7 @@ The severity filter and the search narrow the list. **Copy report** puts it on t
 | Oversized responses | Error | An endpoint's answers average more than 1 MB |
 | Slow endpoints | Warning | The 95th percentile passes 1 s |
 | Sequential waterfall | Warning | Independent requests wait for one another |
-| Duplicate requests | Warning | The same call, with the same variables, within 2 s |
+| Duplicate requests | Warning | The same call, with the same variables, within 2 s, each sending a request of its own |
 | High middleware overhead | Warning | Middleware takes more than 30% of a call's time |
 | Slow middleware detected | Warning | One middleware takes more than 50 ms |
 | Large request payloads | Warning | A request body passes 100 KB |
@@ -37,6 +37,8 @@ The severity filter and the search narrow the list. **Copy report** puts it on t
 | High validation overhead | Hint | Schema validation takes more than 20% of a call's time |
 | No response compression | Hint | Answers over 1 KB without `Content-Encoding` |
 | Empty array responses | Hint | An endpoint answered `[]` |
+
+A call whose read another call's request answered — it joined the identical read already in flight, or the render had read it already — sent no request: the Timeline marks it `shared`, its inspector names the call whose request answered it, and the performance findings and every latency figure count the requests that went out, while the call counts keep every call. See [Deduplication & Abort](/docs/advanced/abort).
 
 ### Reliability
 

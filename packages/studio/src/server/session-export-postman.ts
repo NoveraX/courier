@@ -86,6 +86,7 @@ export function exportAsPostman(session: SavedSession): PostmanCollection {
       name: `Courier Studio — ${session.name}`,
       schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
-    item: session.requests.map(requestToPostmanItem),
+    /* Requests to send again: a read answered by another call's request is that call's request. */
+    item: session.requests.filter((req) => req.shared === undefined).map(requestToPostmanItem),
   };
 }

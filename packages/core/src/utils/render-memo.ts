@@ -1,5 +1,6 @@
 import { abortReason } from "./abort-reason";
 import { type KeptAnswer, keepAnswer, replayAnswer } from "./kept-answer";
+import type { SharingCall } from "./shared-answer";
 import { shareFlight } from "./shared-flight";
 
 /** The reads one render has made, by what each sent; absent outside a render. */
@@ -50,10 +51,12 @@ export function forgetRenderReads(): void {
  * Answer a read: with the answer the render had for the same request, else
  * from the identical request in flight, else by sending it — and keep a
  * successful answer for the rest of the render once its body has arrived.
+ * A call answered without a request of its own is told whose answered it.
  *
  * @param key - What the request sends, written out
  * @param signal - Fires when this call stops waiting
  * @param send - Sends the request, cancelled through the signal it is given, if any
+ * @param call - The call, as Studio knows it, and what it is told when its answer is shared
  * @returns This call's answer
  * @example
  * ```ts
@@ -64,11 +67,12 @@ export function answerRead(
   key: string,
   signal: AbortSignal | undefined,
   send: (signal: AbortSignal | undefined) => Promise<Response>,
+  call?: SharingCall,
 ): Promise<Response> {
   const memo = provider?.();
   /* Outside a render the call joins its flight at once, before anything else it set off runs. */
-  if (memo === undefined) return shareFlight(key, signal, send);
-  return answerInRender(memo, key, signal, send);
+  if (memo === undefined) return shareFlight(key, signal, send, call);
+  return answerInRender(memo, key, signal, send, call);
 }
 
 async function answerInRender(
@@ -76,15 +80,21 @@ async function answerInRender(
   key: string,
   signal: AbortSignal | undefined,
   send: (signal: AbortSignal | undefined) => Promise<Response>,
+  call: SharingCall | undefined,
 ): Promise<Response> {
   const kept = await memo.get(key);
   if (signal?.aborted) throw abortReason(signal);
-  if (kept !== undefined) return replayAnswer(kept);
-  return shareFlight(key, signal, async (sendSignal) => {
+  if (kept !== undefined) {
+    call?.onShared?.({ by: "render", with: kept.by });
+    return replayAnswer(kept);
+  }
+  /* Only the call that sends the request runs this, so the answer kept is the one its request got. */
+  const sendAndKeep = async (sendSignal: AbortSignal | undefined): Promise<Response> => {
     const response = await send(sendSignal);
-    if (response.ok) remember(memo, key, keepAnswer(response.clone()));
+    if (response.ok) remember(memo, key, keepAnswer(response.clone(), call?.id));
     return response;
-  });
+  };
+  return shareFlight(key, signal, sendAndKeep, call);
 }
 
 /* A read whose body does not arrive whole is not kept, and the next one asks again. */

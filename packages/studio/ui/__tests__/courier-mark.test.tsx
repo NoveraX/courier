@@ -8,7 +8,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CourierMark } from "@/design/courier-mark";
+import { CourierLogo } from "@/design/courier-logo";
+import { COURIER_MARK_BOUNDS, CourierMark } from "@/design/courier-mark";
 import { CopyAsMenu } from "@/screens/playground/copy-as-menu";
 
 afterEach(cleanup);
@@ -24,6 +25,29 @@ describe("the Courier mark", () => {
     expect(svg?.getAttribute("aria-hidden")).toBe("true");
     expect(svg?.querySelector("path")?.getAttribute("d")).toBe(MARK_PATH);
     expect(svg?.querySelector("path")?.getAttribute("fill")).toBe("currentColor");
+  });
+
+  it("keeps a lucide glyph's share of clear room around it, centred", () => {
+    const { container } = render(<CourierMark className="size-3" />);
+    const box = container.querySelector("svg")?.getAttribute("viewBox")?.split(" ").map(Number);
+
+    expect(box).toEqual([-21, -37, 254, 254]);
+    const [x, y, w, h] = box ?? [];
+    // The mark spans 212 by 180; equal margins on opposite sides.
+    expect(-(x ?? 0) * 2 + 212).toBe(w);
+    expect(-(y ?? 0) * 2 + 180).toBe(h);
+    // 20 of 24 units across, between Terminal's 18 and Code's 22.
+    expect((212 / (w ?? 1)) * 24).toBeCloseTo(20, 0);
+  });
+
+  it("is not padded when it is the logo's", () => {
+    const { container } = render(<CourierLogo product="Studio" />);
+    const svg = container.querySelector("svg");
+
+    expect(svg?.getAttribute("viewBox")).toBe(COURIER_MARK_BOUNDS);
+    expect(COURIER_MARK_BOUNDS).toBe("0 0 212 180");
+    expect(svg?.getAttribute("class")).toBe("block w-7 shrink-0");
+    expect(svg?.querySelector("path")?.getAttribute("d")).toBe(MARK_PATH);
   });
 
   it("marks the Courier choice of the Copy as menu", () => {

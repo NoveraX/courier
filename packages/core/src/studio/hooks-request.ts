@@ -1,3 +1,6 @@
+import type { SharedAnswer } from "../utils/shared-answer";
+import type { FailureCause } from "./failure-cause";
+
 /**
  * How a request failed: an upstream's error answer, a refused schema, a
  * request that got no answer, one that ran out of time, one its caller
@@ -42,6 +45,8 @@ export interface RequestLifecycleHooks {
         agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string };
         /** The key the call sends in its endpoint's idempotency header, the same on every attempt. */
         idempotencyKey?: string;
+        /** Set when `browsersOnly` let this request through only on the one-time pass Studio's runtime gave it. */
+        studioPass?: true;
         timestamp: number;
       }) => void)
     | undefined;
@@ -68,6 +73,8 @@ export interface RequestLifecycleHooks {
               proxyToClient: number;
             }
           | undefined;
+        /** How the call's read was answered by another call's request, when it was */
+        shared?: SharedAnswer | undefined;
         timestamp: number;
       }) => void)
     | undefined;
@@ -88,6 +95,8 @@ export interface RequestLifecycleHooks {
           /** The upstream's status, when it answered. */
           status?: number | undefined;
           message: string;
+          /** Why no answer came, as the system said it: a DNS, connection or certificate failure. */
+          cause?: FailureCause | undefined;
         };
         /** The status the caller received, when it received one — a proxy's own 422 or 502. */
         status?: number | undefined;
@@ -113,6 +122,8 @@ export interface RequestLifecycleHooks {
           backendToProxy: number;
           proxyToClient: number;
         };
+        /** How the call's read was answered by another call's request, when it was */
+        shared?: SharedAnswer | undefined;
         timestamp: number;
       }) => void)
     | undefined;

@@ -1,3 +1,4 @@
+import type { ConfiguredSources } from "../project/configured-sources";
 import type { PackageManager } from "../project/package-manager";
 import type { Project } from "../project/read-project";
 
@@ -28,6 +29,12 @@ export interface RecipeContext {
   readonly ports: { readonly studio: number; readonly mock: number };
   /** Whether this run created the project, so the setup may move what a new project starts with. */
   readonly fresh: boolean;
+  /**
+   * The APIs the project's config declares already: Courier is set up
+   * there, so the setup adds no example — no API, page, mock or hooks —
+   * and only the parts the project still lacks.
+   */
+  readonly configured: ConfiguredSources | undefined;
 }
 
 /** A file the setup adds. */
@@ -37,6 +44,12 @@ export interface RecipeFile {
   readonly content: string;
   /** What it is for, in a few words, for the plan. */
   readonly purpose: string;
+  /**
+   * Whether a file of the project's at the path does this file's part
+   * already, as its code reads: it is then left as it is, else the person
+   * is shown what it lacks. Left out, a file that names Courier counts.
+   */
+  readonly recognized?: boolean;
 }
 
 /** A change the person makes in a file of theirs, which the command does not change. */

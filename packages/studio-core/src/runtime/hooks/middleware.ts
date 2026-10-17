@@ -1,4 +1,4 @@
-import { studioHooks } from "@noverax/courier/internal";
+import { shownText, studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -58,7 +58,7 @@ export function wireMiddlewareHooks(bus: EventBus, sessionId: string): void {
         name: e.name,
         index: e.index,
         phase: e.phase,
-        error: e.error,
+        error: shownText(e.error),
       }),
     );
   };

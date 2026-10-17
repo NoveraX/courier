@@ -36,7 +36,10 @@ export function frameworkOf(
     );
   }
   const found = asked === undefined ? framework : detectFramework(project);
-  if (found?.id !== framework.id) {
+  /* Named, a framework told only where the app runs with it counts in any list, while no other is found. */
+  const named =
+    found === undefined && framework.runsWith === true && project.lists(framework.marker);
+  if (found?.id !== framework.id && !named) {
     throw new Error(
       `--framework ${asked} sets ${framework.label} up, but this project ${builtWith(found)}`,
     );

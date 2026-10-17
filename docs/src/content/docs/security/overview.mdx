@@ -126,7 +126,7 @@ Studio can have a delivery sent to your app — **Deliver again** in a delivery'
 | What | Default | Option |
 | --- | --- | --- |
 | Calls from one caller through the proxy | None — set one | `rateLimit` |
-| Requests no browser sent | Served | `browsersOnly` |
+| Requests no browser sent, Studio's Playground in development aside | Served | `browsersOnly` |
 | A JSON body to the proxy | 1 MB | `maxBodyBytes` |
 | An upload to the proxy | 10 MB | `maxUploadBytes` |
 | A stream's lifetime | 30 minutes | `sseMaxLifetimeMs` |
@@ -144,7 +144,8 @@ Subscribing, leaving and re-authenticating are counted apart from other messages
 | --- | --- | --- |
 | A page on another local port | Admitted while `allowedOrigins` is empty and the app is served locally | Never |
 | Hosts answered while `allowedHosts` is empty | The local machine's names and IP addresses | Every name |
-| The app's origin, for Studio's Playground | Taken from the first request when not configured | Never taken from a request |
+| The app's origin, for Studio's Playground | Taken, when not configured, from a request whose own `Host` is `localhost`, `127.0.0.1` or `[::1]` on the port the server accepted it on, sent from this machine, as far as the framework tells — see [`appOrigin`](/docs/api/config) | Never taken from a request |
+| Studio's Playground under `browsersOnly` | Let through on a one-time pass only Studio's runtime in the process serving the route redeems — see [Proxy mode](/docs/proxy-mode/overview#rate-limits) | Refused, as a script is: no pass is honoured |
 
 Courier counts as in development wherever `NODE_ENV` is not `production`, so set it on every server you deploy, a custom Node server included.
 

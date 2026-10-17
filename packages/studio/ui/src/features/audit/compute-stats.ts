@@ -73,8 +73,10 @@ export function computeEndpointStats(requests: RequestEntry[]): Map<string, Endp
   return map;
 }
 
+/* The API's time is the requests': a read another call's request answered only waited for it. */
 function computeDurations(s: EndpointStats, reqs: RequestEntry[]): void {
   const durations = reqs
+    .filter((r) => r.shared === undefined)
     .map((r) => r.timing?.total ?? 0)
     .filter((d) => d > 0)
     .sort((a, b) => a - b);
@@ -98,7 +100,7 @@ function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
 
   for (const r of reqs) {
     const total = r.timing?.total;
-    if (!total || total <= 0) continue;
+    if (!total || total <= 0 || r.shared !== undefined) continue;
 
     if (r.timing?.middleware != null) {
       mwSum += r.timing.middleware / total;

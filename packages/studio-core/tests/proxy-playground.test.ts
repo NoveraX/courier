@@ -8,6 +8,7 @@
  */
 import { setAppOrigin } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "@noverax/courier/internal";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { callThroughProxy } from "../src/runtime/proxy-playground";
@@ -48,6 +49,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   setAppOrigin(undefined);
+  Reflect.deleteProperty(globalThis, Symbol.for("courier.studioPassBook"));
+  Reflect.deleteProperty(globalThis, STUDIO_PASS_REDEEMER);
 });
 
 const call = (method: string) => ({
@@ -88,5 +91,39 @@ describe("a Playground call through the proxy", () => {
       "shop.billing.invoices.void is not marked .expose(), so a page may not call it through the proxy",
     );
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("the pass a Playground call through the proxy carries", () => {
+  const { endpoint: get } = courier();
+  const elsewhere = {
+    far: defineApi({
+      expose: true,
+      baseURL: "https://api.example",
+      proxyPath: { http: "https://proxy.elsewhere.example/api/request" },
+      endpoints: { list: get.get("").response<unknown>() },
+    }),
+  };
+  const sentHeaders = () => new Headers(fetchSpy.mock.calls[0]?.[1]?.headers as HeadersInit);
+
+  it("goes to the app's own proxy route", async () => {
+    await callThroughProxy(sources, { ...call("list"), requestId: "pg_app" }, false);
+
+    expect(sentHeaders().get(STUDIO_PASS_HEADER)).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
+
+  it("never goes to a proxy route on another origin, and none is issued for it", async () => {
+    const far = { source: "far", group: "", method: "list", variables: undefined, headers: {} };
+    await callThroughProxy(elsewhere, { ...far, requestId: "pg_far" }, false);
+
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(sentHeaders().has(STUDIO_PASS_HEADER)).toBe(false);
+    expect(Reflect.get(globalThis, STUDIO_PASS_REDEEMER)).toBeUndefined();
+  });
+
+  it("is not sent for a call that names no request to issue it for", async () => {
+    await callThroughProxy(sources, call("list"), false);
+
+    expect(sentHeaders().has(STUDIO_PASS_HEADER)).toBe(false);
   });
 });

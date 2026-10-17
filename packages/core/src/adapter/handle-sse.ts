@@ -22,6 +22,7 @@ import { relayStream } from "./sse-relay";
 import { resolveSSEEndpoint, resolveSSEVariables } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
 import { createLifetimeSignal } from "./sse-utils";
+import { admittedOnStudioPass } from "./studio-pass-gate";
 
 const log = createLogger("SSE");
 
@@ -136,6 +137,7 @@ export function createSSEHandler(
       mode: "proxy",
       timestamp: Date.now(),
       requestHeaders: headersToRecord(request.headers),
+      ...(admittedOnStudioPass(request) && { studioPass: true }),
       /* What it answers with; its middleware's headers stay in the handler's context. */
       responseHeaders,
     });

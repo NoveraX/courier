@@ -29,7 +29,8 @@ function operationOf(r: RequestEntry): string {
  * The properties the Overview lists of a request: its endpoint — for a
  * webhook delivered to the app, the webhook and its event — its id, the
  * app that made it, the saved session it comes from while one is shown,
- * when it started, and its operation — or, for a stream, its protocol.
+ * why no answer came when the system said, when it started, and its
+ * operation — or, for a stream, its protocol.
  *
  * @param r - The request
  * @param context - Its app's kind, and the saved session shown
@@ -62,8 +63,17 @@ export function requestProperties(r: RequestEntry, context: PropertyContext): Re
     const count = attempt && attempt.of > 1 ? ` · call ${attempt.at} of ${attempt.of}` : "";
     properties.push({ label: "Idempotency key", value: `${r.idempotencyKey}${count}`, mono: true });
   }
+  if (r.studioPass) {
+    const value = "let through on Studio's one-time pass";
+    properties.push({ label: "browsersOnly", value, mono: false });
+  }
   if (context.sessionName)
     properties.push({ label: "Session", value: context.sessionName, mono: false });
+  const cause = r.error?.cause;
+  if (cause) {
+    const value = cause.code ? `${cause.code} · ${cause.message}` : cause.message;
+    properties.push({ label: "Cause", value, mono: true });
+  }
   properties.push({ label: "Started at", value: formatAbsoluteTime(r.startedAt), mono: true });
   if (isStreamRequest(r)) {
     const protocol = r.transport === "ws" ? "WebSocket" : "text/event-stream";

@@ -14,8 +14,9 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
   /* Oldest first: the store holds requests newest first, which would put
      every follower before its list call, so none would be found, and the
      window's early exit would never fire. */
+  /* Patterns of requests on the wire: a read another call's request answered sent none. */
   const completed = requests
-    .filter((r) => r.timing?.total)
+    .filter((r) => r.timing?.total && r.shared === undefined)
     .sort((a, b) => a.startedAt - b.startedAt);
   const items: AuditItem[] = [];
   const seen = new Set<string>();
@@ -75,7 +76,7 @@ function followersOf(completed: RequestEntry[], from: number, list: RequestEntry
 /** Detect sequential waterfall: 3+ requests that run strictly in series. */
 export function detectWaterfall(requests: RequestEntry[]): AuditItem[] {
   const completed = requests
-    .filter((r) => r.timing?.total)
+    .filter((r) => r.timing?.total && r.shared === undefined)
     .sort((a, b) => a.startedAt - b.startedAt);
 
   const items: AuditItem[] = [];

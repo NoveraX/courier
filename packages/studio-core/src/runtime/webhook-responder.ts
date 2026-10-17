@@ -3,6 +3,7 @@ import {
   knownWebhooks,
   onKnownWebhooks,
   parseUrl,
+  shownText,
 } from "@noverax/courier/internal";
 import type { Socket } from "socket.io-client";
 
@@ -88,7 +89,7 @@ async function deliveryOf(asked: unknown, send: typeof fetch): Promise<DeliveryA
     return { ok: true, status: response.status };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    return { ok: false, error: `The delivery to ${to} failed: ${reason}` };
+    return { ok: false, error: shownText(`The delivery to ${to} failed: ${reason}`) };
   }
 }
 

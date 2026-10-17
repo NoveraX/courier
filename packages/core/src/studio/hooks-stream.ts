@@ -18,6 +18,8 @@ export interface StreamHooks {
         mode: "direct" | "proxy";
         timestamp: number;
         requestHeaders?: Record<string, string>;
+        /** Set when `browsersOnly` let this request through only on the one-time pass Studio's runtime gave it. */
+        studioPass?: true;
         responseHeaders?: Record<string, string>;
       }) => void)
     | undefined;

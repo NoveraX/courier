@@ -1,9 +1,13 @@
-/* Headers that carry a credential by their name alone. */
+import { STUDIO_PASS_HEADER } from "../studio/studio-pass";
+
+/* Headers that carry a credential by their name alone — Studio's one-time pass
+   among them, which the proxy takes off before anything records a request. */
 const CREDENTIAL_HEADERS: ReadonlySet<string> = new Set([
   "authorization",
   "proxy-authorization",
   "cookie",
   "set-cookie",
+  STUDIO_PASS_HEADER,
 ]);
 
 /* A word of the name, between dashes or underscores: `x-api-key`, `x-auth-token`,

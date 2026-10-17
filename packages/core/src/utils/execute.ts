@@ -1,3 +1,4 @@
+import { admittedOnStudioPass } from "../adapter/studio-pass-gate";
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
@@ -141,6 +142,7 @@ export async function prepareAndRun(
     middlewareCount: middlewares.length,
     agent: context?.agent,
     idempotencyKey: middlewareCtx.idempotencyKey,
+    studioPass: admittedOnStudioPass(context?.req),
   });
 
   /* The token a write asks for first goes as calls go, under an id of its own. */

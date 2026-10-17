@@ -29,10 +29,11 @@
  */
 
 import type { Sources } from "@noverax/courier/define";
-import { abortPlayground, executeRequest } from "@noverax/courier/internal";
+import { abortPlayground, executeRequest, shownText } from "@noverax/courier/internal";
 import { wsEndpointKind } from "@noverax/courier/internal-streams";
 
 import { playgroundRequestId } from "../lib/playground-request-id";
+import { BROWSERS_ONLY_ADVICE, isBrowsersOnlyStreamRefusal } from "./browsers-only-refusal";
 import { dispatchHttp } from "./dispatch-http";
 import {
   type PlaygroundExecutePayload,
@@ -40,6 +41,7 @@ import {
   sanitizeRid,
   sanitizeWrite,
 } from "./playground-payloads";
+import { isStreamRedirect, redirectAdvice } from "./proxy-redirect";
 import {
   dispatchSSE,
   dispatchWS,
@@ -47,6 +49,7 @@ import {
   type PlaygroundChannel,
 } from "./responder-dispatch";
 import { streamOpenersFor } from "./stream-openers";
+import { revokeStudioPasses } from "./studio-passes";
 
 /** Minimal Socket.IO socket surface the responder needs. */
 export interface ResponderSocket {
@@ -150,14 +153,24 @@ async function runExecute(
       });
     }
   } catch (err) {
-    emitError(socket, payload.rid, err instanceof Error ? err.message : String(err));
+    emitError(socket, payload.rid, failureOf(payload, err));
   } finally {
     inFlight.delete(payload.rid);
+    revokeStudioPasses(playgroundRequestId(payload.rid));
   }
 }
 
+/* A stream `browsersOnly` refused through the proxy is told why its pass did
+   not carry it, and one that met a redirect it did not follow, why it stopped. */
+function failureOf(payload: PlaygroundExecutePayload, err: unknown): string {
+  if (payload.mode === "proxy" && isBrowsersOnlyStreamRefusal(err)) return BROWSERS_ONLY_ADVICE;
+  if (payload.mode === "proxy" && isStreamRedirect(err)) return redirectAdvice();
+  return err instanceof Error ? err.message : String(err);
+}
+
+/* Cut as every error text Studio is told is: a header value read with its line break fails quoting it. */
 function emitError(socket: ResponderSocket, rid: string, message: string): void {
-  socket.emit("playground:error", { rid, error: { message } });
+  socket.emit("playground:error", { rid, error: { message: shownText(message) } });
 }
 
 /* A message the channel refuses is reported on the entry it was written to. */

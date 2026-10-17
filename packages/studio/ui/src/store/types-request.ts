@@ -17,6 +17,23 @@ export interface RequestAgent {
   client?: string | undefined;
 }
 
+/**
+ * How a call's read was answered by another call's request, without one of
+ * its own: it joined the identical read already in flight (`flight`), or
+ * the render it was made in had read it already (`render`).
+ */
+export interface SharedAnswer {
+  by: "flight" | "render";
+  /** The call whose request answered, when Studio measured it */
+  with?: string | undefined;
+}
+
+/** Why a request got no answer, as the system said it: its code, where it gave one, and its text. */
+export interface RequestFailureCause {
+  code?: string | undefined;
+  message: string;
+}
+
 export interface RequestEntry {
   id: string;
   source: string;
@@ -39,11 +56,15 @@ export interface RequestEntry {
   agent?: RequestAgent | undefined;
   /** The key the call sent in its endpoint's idempotency header, the same on every attempt. */
   idempotencyKey?: string | undefined;
+  /** Set when `browsersOnly` let the Playground's call through on the one-time pass Studio's runtime gave it. */
+  studioPass?: true | undefined;
   type?: "query" | "mutation" | undefined;
   status: RequestStatus;
   statusCode?: number | undefined;
   timing?: RequestTiming | undefined;
   proxyTiming?: ProxyTiming | undefined;
+  /** How its read was answered by another call's request, when it sent none of its own */
+  shared?: SharedAnswer | undefined;
   size?: number | undefined;
   /** The answer, or a part of it when it was too large for its event; see `dataCutFrom`. */
   data?: unknown;
@@ -57,6 +78,8 @@ export interface RequestEntry {
         type: string;
         status?: number | undefined;
         message: string;
+        /** Why no answer came, when the runtime could tell. */
+        cause?: RequestFailureCause | undefined;
         validationIssues?: ValidationIssue[] | undefined;
       }
     | undefined;

@@ -10,6 +10,7 @@ import { flightKey, isRead } from "./flight-key";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
+import type { SharingCall } from "./shared-answer";
 import { timeoutSignal } from "./timeout-signal";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
@@ -45,6 +46,12 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
    * sent as `GET`, `HEAD` or `QUERY` reads.
    */
   reads?: boolean | undefined;
+  /**
+   * The call the request is made for, as Studio measures it: told when its
+   * read is answered by another call's request. Never part of what makes
+   * two requests identical.
+   */
+  call?: SharingCall | undefined;
 };
 
 export async function coreFetch(
@@ -66,6 +73,7 @@ export async function coreFetch(
     fetch: send = fetch,
     coalesce,
     reads,
+    call,
     ...rest
   } = options;
 
@@ -140,7 +148,7 @@ export async function coreFetch(
     response =
       key === undefined
         ? await sendOnce(finalSignal ?? undefined)
-        : await answerRead(key, finalSignal ?? undefined, sendOnce);
+        : await answerRead(key, finalSignal ?? undefined, sendOnce, call);
   } catch (error) {
     throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   }

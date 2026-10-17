@@ -10,6 +10,8 @@ import {
   readStringRecord,
 } from "./payload";
 import { readAgent } from "./read-agent";
+import { readCause } from "./read-cause";
+import { readShared } from "./read-shared";
 import type { ProxyTiming, RequestEntry, RequestStatus, ValidationIssue } from "./types";
 
 type EventPayload = Record<string, unknown>;
@@ -32,6 +34,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     mode: event.mode === "proxy" || event.mode === "webhook" ? event.mode : "direct",
     agent: readAgent(event.agent),
     idempotencyKey: optStr(event.idempotencyKey),
+    ...(event.studioPass === true && { studioPass: true }),
     type:
       event.endpointType === "query" || event.endpointType === "mutation"
         ? event.endpointType
@@ -53,6 +56,7 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
     statusCode: optNum(event.status),
     timing: readRequestTiming(event.timing),
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
+    shared: readShared(event.shared),
     size: optNum(event.size),
     data: event.data,
     dataCutFrom: optNum(event.dataCutFrom),
@@ -65,9 +69,9 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
 /**
  * A request that failed keeps what its caller received — the proxy's own
  * status where the upstream gave none — the upstream's headers, error body
- * and its size, the headers it came with when the runtime has them, how
- * long it ran and, for a proxied call, how that time split. Issues a
- * `validation:fail` recorded stay with it.
+ * and its size or, when no answer came, why, the headers it came with when
+ * the runtime has them, how long it ran and, for a proxied call, how that
+ * time split. Issues a `validation:fail` recorded stay with it.
  */
 export function withRequestError(r: RequestEntry, event: EventPayload): RequestEntry {
   const rawError = isPlainObject(event.error) ? event.error : undefined;
@@ -76,6 +80,7 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
         type: str(rawError.type, "Error"),
         status: optNum(rawError.status),
         message: str(rawError.message, "Unknown error"),
+        cause: readCause(rawError.cause),
         validationIssues: readList(rawError.validationIssues, isValidationIssue),
       }
     : undefined;
@@ -89,6 +94,7 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
     statusCode: optNum(event.status) ?? errorData?.status ?? r.statusCode,
     timing: readRequestTiming(event.timing) ?? r.timing,
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
+    shared: readShared(event.shared) ?? r.shared,
     size: optNum(event.size) ?? r.size,
     headers: readStringRecord(event.headers) ?? r.headers,
     requestHeaders: readStringRecord(event.requestHeaders) ?? r.requestHeaders,

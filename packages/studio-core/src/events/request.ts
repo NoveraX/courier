@@ -29,6 +29,12 @@ export interface RequestStartEvent extends StudioEvent {
   agent?: RequestAgent;
   /** The key the call sends in its endpoint's idempotency header, the same on every attempt. */
   idempotencyKey?: string;
+  /**
+   * Set when `browsersOnly` let the call through only on the one-time pass
+   * Studio's runtime gave the Playground's call: a page's call that says
+   * nothing of where it comes from is still refused.
+   */
+  studioPass?: true;
 }
 
 /** An agent's call, as Studio shows it: the tool, what it declared it does, and the client. */
@@ -65,6 +71,19 @@ export interface RequestEndEvent extends StudioEvent {
   requestHeaders: Record<string, string>;
   timing: RequestTiming;
   proxyTiming?: ProxyTiming;
+  /** How the call's read was answered by another call's request, when it was */
+  shared?: SharedAnswer;
+}
+
+/**
+ * How a read got its answer without a request of its own: it joined the
+ * identical read already in flight (`flight`), or the render it was made
+ * in had read the same thing already (`render`). `with` is the Studio id
+ * of the call whose request answered, when that call was measured.
+ */
+export interface SharedAnswer {
+  by: "flight" | "render";
+  with?: string;
 }
 
 export interface ProxyTiming {
@@ -81,6 +100,16 @@ export interface RequestTiming {
   validation: number;
 }
 
+/**
+ * Why a request got no answer: the system's error code, when it gave one,
+ * and its text, with every URL in it cut to its origin and path.
+ */
+export interface RequestFailureCause {
+  /** `ENOTFOUND`, `ECONNREFUSED`, `DEPTH_ZERO_SELF_SIGNED_CERT` — absent where the platform gives none, as a browser's fetch. */
+  code?: string;
+  message: string;
+}
+
 export interface RequestErrorEvent extends StudioEvent {
   type: "request:error";
   requestId: string;
@@ -89,6 +118,8 @@ export interface RequestErrorEvent extends StudioEvent {
     /** The upstream's status, when it answered. */
     status?: number;
     message: string;
+    /** Why no answer came, as the system said it — a DNS, connection or certificate failure. */
+    cause?: RequestFailureCause;
   };
   /** The status the caller received, when it received one — a proxy's own 422 or 502. */
   status?: number;
@@ -106,6 +137,8 @@ export interface RequestErrorEvent extends StudioEvent {
   timing?: RequestTiming;
   /** How a proxied call's time split, as for one that succeeded. */
   proxyTiming?: ProxyTiming;
+  /** How the call's read was answered by another call's request, when it was */
+  shared?: SharedAnswer;
 }
 
 export interface ProxyClientTimingEvent extends StudioEvent {

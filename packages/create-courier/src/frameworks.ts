@@ -39,6 +39,12 @@ export interface Framework {
   readonly marker: string;
   /** Another package the project must list too. */
   readonly also?: string;
+  /**
+   * Whether the marker tells the framework only as a dependency the app
+   * runs with: Courier's setup installs Hono for Studio's mock as a dev
+   * dependency, in an app built with another framework.
+   */
+  readonly runsWith?: boolean;
   readonly recipe?: (ctx: RecipeContext) => Recipe;
 }
 
@@ -59,7 +65,7 @@ export const FRAMEWORKS: readonly Framework[] = [
   { id: "expo", label: "Expo", marker: "expo", recipe: expoRecipe },
   { id: "nestjs", label: "NestJS", marker: "@nestjs/core", recipe: nestRecipe },
   { id: "fastify", label: "Fastify", marker: "fastify", recipe: fastifyRecipe },
-  { id: "hono", label: "Hono", marker: "hono", recipe: honoRecipe },
+  { id: "hono", label: "Hono", marker: "hono", runsWith: true, recipe: honoRecipe },
   { id: "express", label: "Express", marker: "express", recipe: expressRecipe },
   { id: "react", label: "React with Vite", marker: "vite", also: "react", recipe: reactViteRecipe },
   { id: "vue", label: "Vue with Vite", marker: "vite", also: "vue", recipe: vueViteRecipe },
@@ -78,7 +84,9 @@ export const FRAMEWORKS: readonly Framework[] = [
 export function detectFramework(project: Project): Framework | undefined {
   return FRAMEWORKS.find(
     (framework) =>
-      project.lists(framework.marker) &&
+      (framework.runsWith === true
+        ? project.manifest.dependencies[framework.marker] !== undefined
+        : project.lists(framework.marker)) &&
       (framework.also === undefined || project.lists(framework.also)),
   );
 }

@@ -3,8 +3,16 @@ import { importSpecifier } from "./import-specifier";
 import type { ManualStep, Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { proxyScripts } from "./shared/recipe-parts";
-import { serverDir, serverFiles } from "./shared/server-files";
+import { loadStep, proxyStart } from "./shared/proxy-start";
+import { proxyScripts, sortParts } from "./shared/recipe-parts";
+import {
+  serverDir,
+  serverFiles,
+  serverHead,
+  serverStart,
+  studioAttachLater,
+} from "./shared/server-files";
+import { addsExample, listModule, type ServerNeeds } from "./shared/wired";
 
 /* `fastify start -w` restarts the server on any change in the project, Studio's own data in .courier/ among them. */
 function watchesAll(command: string): boolean {
@@ -45,14 +53,21 @@ function pageRoutes(redirect: string): string {
   });`;
 }
 
-function plugin(ctx: RecipeContext, path: string, dir: string, withPage: boolean): RecipeFile {
+function plugin(
+  ctx: RecipeContext,
+  path: string,
+  dir: string,
+  withPage: boolean,
+  needs: ServerNeeds,
+): RecipeFile {
+  const list = importSpecifier(path, listModule(ctx, `${dir}/config.ts`), ctx.extension);
   const from = (file: string) => importSpecifier(path, `${dir}/${file}`, ctx.extension);
   /* Fastify 5 takes the address first; 4 took the status first. */
   const redirect =
     (majorOf(ctx.project.version("fastify")) ?? 5) >= 5
       ? 'reply.redirect("/courier", 303)'
       : 'reply.redirect(303, "/courier")';
-  const studio = ctx.choices.studio
+  const studio = needs.studio
     ? `
   if (process.env.NODE_ENV !== "production") {
     const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
@@ -64,16 +79,11 @@ function plugin(ctx: RecipeContext, path: string, dir: string, withPage: boolean
 import { caller } from "${from("server-caller.ts")}";
 `
     : "";
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierPlugin } from "@noverax/courier-fastify";
+  const content = `${serverHead(needs)}import { courierPlugin } from "@noverax/courier-fastify";
 import fp from "fastify-plugin";
-
-${pageImports}import config from "${from("config.ts")}";
-
-registerSources(config.sources);
-
+${serverStart({ ...needs, studio: false }, pageImports, list)}
 /**
- * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}${ctx.choices.studio ? ". While you develop, the\n * server's calls show in Courier Studio" : ""}.
+ * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}${needs.studio ? ". While you develop, the\n * server's calls show in Courier Studio" : ""}.
  */
 export default fp(async (fastify) => {${studio}
   await fastify.register(courierPlugin, { prefix: "/api/request" });${withPage ? pageRoutes(redirect) : ""}
@@ -99,24 +109,37 @@ export default fp(async (fastify) => {${studio}
  * ```
  */
 export function fastifyRecipe(ctx: RecipeContext): Recipe {
-  const example = ctx.choices.openapi === undefined;
+  const example = addsExample(ctx);
   const dir = serverDir(ctx);
   const path = autoloads(ctx) ? "src/plugins/courier.ts" : `${dir}/plugin.ts`;
-  const register: ManualStep[] = !autoloads(ctx)
-    ? [
-        {
-          file: "your server",
-          what: "Register Courier's plugin on your Fastify app",
-          lines: [
-            `import courier from "./${path.replace(/\.ts$/, ctx.extension === ".js" ? ".js" : "")}";`,
-            "await app.register(courier);",
-          ],
-        },
-      ]
-    : [];
+  const { parts, mount } = proxyStart(
+    ctx,
+    (needs) => plugin(ctx, path, dir, example, needs),
+    {
+      module: "@noverax/courier-fastify",
+      exported: "courierPlugin",
+      call: false,
+      connect: (path) => loadStep(path, "register its plugin on your Fastify app"),
+    },
+    studioAttachLater(),
+  );
+  const { files, manual } = sortParts(parts);
+  const register: ManualStep[] =
+    !autoloads(ctx) && mount
+      ? [
+          {
+            file: "your server",
+            what: "Register Courier's plugin on your Fastify app",
+            lines: [
+              `import courier from "./${path.replace(/\.ts$/, ctx.extension === ".js" ? ".js" : "")}";`,
+              "await app.register(courier);",
+            ],
+          },
+        ]
+      : [];
   const packages = courierPackages(ctx, { adapter: "@noverax/courier-fastify", proxy: true });
   return {
-    files: [...serverFiles(ctx, dir), plugin(ctx, path, dir, example)],
+    files: [...serverFiles(ctx, dir), ...files],
     edits: [],
     ...packages,
     dependencies: [...packages.dependencies, "fastify-plugin"],
@@ -130,7 +153,7 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
             change: ignoreCourier,
           }))
       : [],
-    manual: register,
+    manual: [...manual, ...register],
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

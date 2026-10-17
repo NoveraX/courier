@@ -30,6 +30,7 @@ export interface ProxyCallEvents {
  * @param routing - The endpoint the call names
  * @param namedId - The Studio request id the caller sent, which the call is
  *   shown under instead of a fresh one (see `studioRequestIdOf`)
+ * @param studioPass - Whether `browsersOnly` let the call through on Studio's pass
  * @returns The events for the rest of the call
  *
  * @example
@@ -44,6 +45,7 @@ export function announceProxyCall(
   proxyMethod: "GET" | "POST",
   routing: ProxyRouting,
   namedId?: string,
+  studioPass?: boolean,
 ): ProxyCallEvents {
   const requestId = dt.onRequestStart ? (namedId ?? generateRequestId()) : undefined;
   dt.onProxyReceive?.({ proxyMethod, ...routing, requestId, timestamp: Date.now() });
@@ -55,6 +57,7 @@ export function announceProxyCall(
       mode: "proxy",
       middlewareCount: 0,
       hasValidation: { variables: false, response: false },
+      ...(studioPass && { studioPass: true }),
       timestamp: Date.now(),
     });
   }

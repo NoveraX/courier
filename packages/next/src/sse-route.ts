@@ -5,6 +5,7 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
    file only by its full name; bundlers accept either. */
 import type { NextRequest } from "next/server.js";
 
+import { nextAddressed } from "./addressed";
 import { publicRequest } from "./public-request";
 
 /**
@@ -44,7 +45,7 @@ export function sseRoute<TConnect extends ConnectResult = ConnectResult>(
 
   return {
     GET: (request: NextRequest) => {
-      announce(new URL(request.url).origin, request.headers.get("host"));
+      announce(nextAddressed(request));
       return handleSSE(publicRequest(request));
     },
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */

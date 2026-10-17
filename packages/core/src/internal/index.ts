@@ -14,6 +14,7 @@
  */
 
 export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/address-trust";
+export { addressedOf } from "../adapter/addressed-request";
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
@@ -22,17 +23,13 @@ export { type ExposureDecision, exposureOf } from "../adapter/exposure";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
+export { rememberServerPort, serverPortOf } from "../adapter/server-port";
 export {
   type FrameCredentials,
   frameCredentials,
   frameHeadersOver,
 } from "../adapter/ws-frame-credentials";
-export {
-  adoptListenOrigin,
-  configuredAppOrigin,
-  discoverAppOrigin,
-  getAppOriginParsed,
-} from "../app-origin";
+export { adoptListenOrigin, configuredAppOrigin, getAppOriginParsed } from "../app-origin";
 export {
   buildClientProxy,
   type ClientShape,
@@ -54,6 +51,7 @@ export {
   subGroupsOf,
 } from "../define/group-tree";
 export { routesOf } from "../define/routes-of";
+export { type AddressedRequest, discoverAppOrigin } from "../discover-app-origin";
 export { readLogFormat } from "../logger/log-format";
 export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
 export { standardJsonSchema } from "../openapi/json-schema";

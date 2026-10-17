@@ -144,9 +144,10 @@ describe("announceWhenRegistered", () => {
     const listener = vi.fn();
     consumeAnnouncements(listener);
 
-    announce("http://evil.example", "evil.example");
-    announce("http://localhost:3000", "localhost:3000");
-    announce("http://localhost:3000", "localhost:3000");
+    const at = (host: string) => ({ url: `http://${host}/`, host, serverPort: 3000, peer: "::1" });
+    announce(at("evil.example:3000"));
+    announce(at("localhost:3000"));
+    announce(at("localhost:3000"));
 
     expect(listener.mock.calls.map(([entry]) => entry.listenOrigin)).toEqual([
       undefined,

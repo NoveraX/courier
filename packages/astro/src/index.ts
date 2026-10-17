@@ -1,6 +1,6 @@
 import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { rememberPeerAddress } from "@noverax/courier/internal";
+import { addressedOf, rememberPeerAddress } from "@noverax/courier/internal";
 
 import { astroClientAddress } from "./client-address";
 
@@ -48,8 +48,8 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "astro" });
   return (context: AstroEndpointContext) => {
-    announce(new URL(context.request.url).origin, context.request.headers.get("host"));
     rememberPeerAddress(context.request, astroClientAddress(context));
+    announce(addressedOf(context.request));
     return handle(context.request);
   };
 }

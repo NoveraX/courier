@@ -1,7 +1,7 @@
 import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import { addressedNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
 export { requestContext } from "./request-context";
@@ -61,7 +61,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   });
 
   const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    announce(extractOriginFromNodeRequest(request.raw), request.raw.headers.host);
+    announce(addressedNodeRequest(request.raw));
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handle(webReq);
     await sendWebResponse(webRes, reply.raw);
@@ -105,7 +105,7 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "fastify" });
 
   const route = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    announce(extractOriginFromNodeRequest(request.raw), request.raw.headers.host);
+    announce(addressedNodeRequest(request.raw));
     reply.hijack();
     const webReq = toWebRequest(request.raw, reply.raw);
     const webRes = await handleSSE(webReq);

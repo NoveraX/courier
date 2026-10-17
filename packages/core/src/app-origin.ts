@@ -36,10 +36,10 @@
  * `attachRuntime()` sets this during startup, reading from
  * `courier.config.ts.runtime.appOrigin` or an env var fallback, and a
  * standalone server adopts the address it listens on. Framework adapters
- * may also learn it, in development, from a request addressed to this
- * machine by name in its own `Host` header — never from `X-Forwarded-Host`,
- * and never a name another machine could answer for, which a page on any
- * site could otherwise make the Playground send its calls to.
+ * may also learn it, in development, from a request that proves it names
+ * this very server — see `discoverAppOrigin` — and never a name another
+ * machine or another port could answer for, which would take the
+ * Playground's calls there.
  * User code should not call `setAppOrigin` directly — set
  * `runtime.appOrigin` in `courier.config.ts` or set the `COURIER_APP_URL`
  * environment variable.
@@ -48,8 +48,6 @@
 import { ConfigurationError } from "./errors";
 import type { ResolveOrigin } from "./proxy-caller";
 import { isDevelopment } from "./utils/development";
-import { isLoopbackHostname } from "./utils/loopback-host";
-import { parseUrl } from "./utils/parse-url";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 /* Set while the origin is one a request taught, rather than one configured. */
@@ -67,34 +65,17 @@ export function setAppOrigin(origin: string | undefined): void {
 }
 
 /**
- * Learn the app's origin from a request a framework adapter serves, unless
- * one is already set — config and environment win.
+ * Take an origin a request taught as the app's, unless one is set — see
+ * `discoverAppOrigin`, which decides what a request may teach. It does not
+ * count as configured.
  *
- * Only a request addressed to this machine by name in its own `Host` —
- * `localhost`, `127.0.0.1`, `[::1]` — teaches it: the Playground sends its
- * calls, their headers and bodies to this origin, and a name another
- * machine could answer for, written by whoever sent the first request, or
- * by a page whose name points here, would take them there. The origin must
- * name that same host, so one an `X-Forwarded-Host` rewrote is not taken.
- * Adapters call it on every request until one qualifies.
- *
- * Only in development, where Studio reads it: a deployed server never takes
- * its origin from a request.
- *
- * @param origin - `scheme://host[:port]` the adapter saw the request addressed to, if known
- * @param host - The request's own `Host` header, if any
+ * @param origin - The origin, as `discoverAppOrigin` built it
  * @example
- * discoverAppOrigin(new URL(request.url).origin, request.headers.get("host"));
+ * learnAppOrigin("http://127.0.0.1:3000");
  */
-export function discoverAppOrigin(
-  origin: string | undefined,
-  host: string | null | undefined,
-): void {
-  if (!origin || !host || getAppOrigin() || !isDevelopment()) return;
-  const addressed = parseUrl(origin);
-  if (!addressed || !isLoopbackHostname(addressed.hostname)) return;
-  if (parseUrl(`${addressed.protocol}//${host}`)?.host !== addressed.host) return;
-  g[APP_ORIGIN_KEY] = addressed.origin;
+export function learnAppOrigin(origin: string): void {
+  if (getAppOrigin() || !isDevelopment()) return;
+  g[APP_ORIGIN_KEY] = origin;
   g[LEARNED_KEY] = true;
 }
 
@@ -157,10 +138,11 @@ export function getAppOriginParsed(): ResolveOrigin {
         "Or set the COURIER_APP_URL environment variable:",
         "  COURIER_APP_URL=http://localhost:3000 npm run dev",
         "",
-        "In development the origin is learned only from a request addressed to",
-        "localhost, 127.0.0.1 or [::1] by its own Host header. Behind a reverse",
-        "proxy or a tunnel, in Docker, on a *.localhost name or a network address,",
-        "set it: a name another machine could answer for is never learned.",
+        "In development it is learned only from a request whose own Host header",
+        "is localhost, 127.0.0.1 or [::1] on the port the server accepted it on,",
+        "sent from this machine, as far as the framework can tell; React Router",
+        "tells neither, so nothing is learned there. Behind a reverse proxy or a",
+        "tunnel, in Docker, on a *.localhost name or a network address, set it.",
         "",
         "There is no auto-fallback because the correct value depends on your",
         "runtime (custom port, Docker host, HTTPS in dev, reverse proxy, etc.)",

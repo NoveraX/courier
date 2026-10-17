@@ -11,9 +11,10 @@
  * the same buffer through `consumeAnnouncements()`.
  */
 
-import { discoverAppOrigin, getAppOrigin } from "../app-origin";
+import { getAppOrigin } from "../app-origin";
 import type { AnySource } from "../define";
 import type { Sources } from "../define/types";
+import { type AddressedRequest, discoverAppOrigin } from "../discover-app-origin";
 import { getSources, onSourcesChange } from "../sources";
 
 /** Transports a runtime claims it can serve for the listed sources */
@@ -107,22 +108,21 @@ export function announceHosting(input: AnnounceHostingInput): void {
  * and the Playground can send to a freshly started app.
  *
  * @param input - What the adapter hosts, without the sources
- * @returns A function to call on each request, with the origin it was
- *   addressed to and its own `Host` header, which may teach the app its
- *   origin (see `discoverAppOrigin`)
+ * @returns A function to call on each request, with what the adapter can
+ *   tell of it, which may teach the app its origin (see `discoverAppOrigin`)
  *
  * @example
  * ```ts
  * const announce = announceWhenRegistered({ transports: ["http"], framework: "hono" });
  * return (c) => {
- *   announce(new URL(c.req.raw.url).origin, c.req.raw.headers.get("host"));
+ *   announce(addressedOf(c.req.raw));
  *   return handle(c.req.raw);
  * };
  * ```
  */
 export function announceWhenRegistered(
   input: Omit<AnnounceHostingInput, "sources">,
-): (addressedTo?: string, host?: string | null) => void {
+): (addressed?: AddressedRequest) => void {
   /* The origin the last announcement carried, or `null` before the first. */
   let announcedWith: string | undefined | null = null;
   let stopWaiting: (() => void) | undefined;
@@ -140,8 +140,8 @@ export function announceWhenRegistered(
   };
   stopWaiting = onSourcesChange(announce);
   announce(getSources());
-  return (addressedTo, host) => {
-    discoverAppOrigin(addressedTo, host);
+  return (addressed) => {
+    if (addressed) discoverAppOrigin(addressed);
     announce(getSources());
   };
 }

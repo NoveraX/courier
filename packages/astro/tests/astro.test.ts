@@ -33,11 +33,13 @@ describe("the Astro handler", () => {
     const stop = consumeAnnouncements((entry) => announced.push(entry));
     const handler = courierHandler();
 
-    /* A name another machine could answer for teaches no origin; this machine's own does. */
+    /* A name another machine could answer for teaches no origin; this machine's own, sent from it, does. */
     const sent = (host: string) =>
       new Request(`http://${host}/api/request?_s=api&_m=ping`, { headers: { host } });
-    await handler({ request: sent("app.test") });
-    for (let i = 0; i < 2; i++) await handler({ request: sent("localhost:4321") });
+    await handler({ request: sent("app.test"), clientAddress: "127.0.0.1" });
+    for (let i = 0; i < 2; i++) {
+      await handler({ request: sent("localhost:4321"), clientAddress: "127.0.0.1" });
+    }
     stop();
 
     /* Once as the sources are there, and once more as the first request names the app's origin. */

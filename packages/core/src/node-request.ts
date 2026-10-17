@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { rememberPeerAddress } from "./adapter/peer-address";
+import { rememberServerPort } from "./adapter/server-port";
 import { ConfigurationError } from "./errors/configuration-error";
 import type { WebBody } from "./http-client/web-types";
 import { addressedTo } from "./node-origin";
@@ -98,6 +99,7 @@ export function toWebRequest(
 
   const request = new Request(url, init);
   rememberPeerAddress(request, nodeReq.socket.remoteAddress);
+  rememberServerPort(request, nodeReq.socket.localPort);
   if (nodeRes) HELD_UNTIL_ANSWERED.set(nodeRes, request);
   return request;
 }

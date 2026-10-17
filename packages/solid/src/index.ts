@@ -6,7 +6,7 @@ import {
   handleWhileConnected,
 } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { rememberPeerAddress } from "@noverax/courier/internal";
+import { addressedOf, rememberPeerAddress, rememberServerPort } from "@noverax/courier/internal";
 
 export {
   type SolidStartServerEvent,
@@ -16,11 +16,13 @@ export {
 
 /**
  * The parts of SolidStart's `APIEvent` the handler reads. `nativeEvent` is
- * the h3 event underneath, which on Node carries the response.
+ * the h3 event underneath, which on Node carries the request and response.
  */
 export interface SolidAPIEvent {
   request: Request;
-  nativeEvent?: { node?: { res?: ClientConnection } };
+  nativeEvent?: {
+    node?: { req?: { socket?: { readonly localPort?: number } }; res?: ClientConnection };
+  };
   /** The address SolidStart reports the request came from. */
   clientAddress?: string | undefined;
 }
@@ -58,8 +60,9 @@ export function courierHandler<TConnect extends ConnectResult = ConnectResult>(
   const { handle } = createHandler(config);
   const announce = announceWhenRegistered({ transports: ["http", "sse"], framework: "solid" });
   return ({ request, nativeEvent, clientAddress }: SolidAPIEvent) => {
-    announce(new URL(request.url).origin, request.headers.get("host"));
     rememberPeerAddress(request, clientAddress);
+    rememberServerPort(request, nativeEvent?.node?.req?.socket?.localPort);
+    announce(addressedOf(request));
     return handleWhileConnected(handle, request, nativeEvent?.node?.res);
   };
 }

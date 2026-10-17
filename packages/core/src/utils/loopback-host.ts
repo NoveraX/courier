@@ -18,3 +18,20 @@ const LOOPBACK = /^(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i;
 export function isLoopbackHostname(hostname: string): boolean {
   return LOOPBACK.test(hostname);
 }
+
+/**
+ * Whether a socket's peer address is this machine's own: a loopback
+ * address, written as IPv4, IPv6 or IPv4-mapped IPv6.
+ *
+ * @param address - The peer address, as a socket reports it
+ * @returns `true` for `127.0.0.0/8` and `::1`
+ * @example
+ * ```ts
+ * isLoopbackAddress("::ffff:127.0.0.1"); // → true
+ * isLoopbackAddress("192.168.1.20"); // → false
+ * ```
+ */
+export function isLoopbackAddress(address: string): boolean {
+  const ip = address.toLowerCase().replace(/^::ffff:/, "");
+  return ip === "::1" || /^127(?:\.\d{1,3}){3}$/.test(ip);
+}

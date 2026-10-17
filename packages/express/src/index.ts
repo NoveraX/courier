@@ -2,7 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import type { AddressedRequest } from "@noverax/courier/internal";
+import { addressedNodeRequest, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
 export { requestContext } from "./request-context";
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
@@ -89,10 +90,10 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
 /** Bridge an Express request to a Web handler and back. */
 function serve(
   respond: (request: Request) => Promise<Response>,
-  announce: (addressedTo?: string, host?: string | null) => void,
+  announce: (addressed?: AddressedRequest) => void,
 ): CourierMiddleware {
   return async (req, res, next) => {
-    announce(extractOriginFromNodeRequest(req), req.headers.host);
+    announce(addressedNodeRequest(req));
     try {
       await sendWebResponse(await respond(toWebRequest(req, res)), res);
     } catch (error) {

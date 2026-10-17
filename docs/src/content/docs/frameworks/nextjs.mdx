@@ -37,7 +37,7 @@ Alternatively, set the `COURIER_APP_URL` environment variable instead of pinning
 COURIER_APP_URL=http://localhost:3000 next dev
 ```
 
-Without either, in development the app learns its origin from the first request its Courier routes serve that is addressed to `localhost`, `127.0.0.1` or `[::1]`. Opened by any other name — a `*.localhost` one, a network address, through a tunnel or a reverse proxy — it learns none, so set `COURIER_APP_URL`. Studio shows each runtime with the origin it reports — the server's, and the page's for the browser's — in the sidebar's project card, and the Playground sends proxy calls there.
+Without either, in development the app learns its origin from the first request its Courier routes serve whose own `Host` is `localhost`, `127.0.0.1` or `[::1]` on the port `next dev` serves on. Next.js tells no address a request came from, so the port is what proves the request names this server. Opened by any other name or port — a `*.localhost` name, a network address, through a tunnel or a reverse proxy — it learns none, so set `COURIER_APP_URL`. Studio shows each runtime with the origin it reports — the server's, and the page's for the browser's — in the sidebar's project card, and the Playground sends proxy calls there.
 
 <Callout variant="warning" title="No magic default">
 There is no `localhost:3000` auto-fallback. Until the config, the environment or a request names the origin, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS in dev, reverse proxy — and a wrong guess would silently route requests to nowhere.

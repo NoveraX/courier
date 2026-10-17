@@ -1,6 +1,4 @@
-import { posix } from "node:path";
-
-import { isRecord } from "../is-record";
+import { autoloadFolders, entryFiles } from "./entry-files";
 import { tailKey, targetsOf } from "./module-target";
 import { projectCode } from "./project-code";
 import type { Project } from "./read-project";
@@ -9,8 +7,8 @@ import { routeList, routeModule } from "./route-list";
 const EXTENSION = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 /* The files a server starts from where nothing names its entry: `src/index.ts`, `server.js`, `src/main.ts`. */
 const ENTRY = /^(?:src\/)?(?:index|server|main|app)\.[cm]?[jt]s$/;
-/* A file a script runs: `tsx watch src/index.ts`, `node dist/main.js`, `fastify start app.js`. */
-const SCRIPT_FILE = /(?:^|[\s=])\.?\/?([\w@./-]+\.[cm]?[jt]sx?)(?=\s|$)/g;
+/* The modules React Router and Remix load around the routes: the root, and the entries. */
+const APP_MODULES = /^app\/(?:root|entry\.(?:server|client))\.[cm]?[jt]sx?$/;
 
 /* The files each framework loads by itself, by the package that tells the framework. */
 const LOADED_BY: ReadonlyArray<readonly [string, RegExp]> = [
@@ -20,6 +18,8 @@ const LOADED_BY: ReadonlyArray<readonly [string, RegExp]> = [
   ["@sveltejs/kit", /^src\/(?:hooks\.server\.[cm]?[jt]s|routes\/.+)$/],
   ["astro", /^src\/(?:middleware(?:\/index)?\.[cm]?[jt]s|pages\/.+)$/],
   ["@remix-run/dev", /^app\/routes\/.+/],
+  ["@remix-run/dev", APP_MODULES],
+  ["@react-router/dev", APP_MODULES],
   ["@solidjs/start", /^src\/routes\/.+/],
   ["@fastify/autoload", /^(?:src\/)?(?:plugins|routes)\/.+/],
 ];
@@ -40,29 +40,7 @@ function importedBy(project: Project): Set<string> {
   return loaded;
 }
 
-/* What package.json starts: its `main`, `module` and `bin`, and the files its scripts run — a build's output read as the source it is built from. */
-function entriesOf(project: Project): Set<string> {
-  let manifest: unknown;
-  try {
-    manifest = JSON.parse(project.read("package.json") ?? "{}");
-  } catch {
-    manifest = {};
-  }
-  const record = isRecord(manifest) ? manifest : {};
-  const bin = isRecord(record.bin) ? Object.values(record.bin) : [record.bin];
-  const named = [record.main, record.module, ...bin].filter((each) => typeof each === "string");
-  const run = Object.values(project.manifest.scripts).flatMap((script) =>
-    [...script.matchAll(SCRIPT_FILE)].map((match) => match[1] ?? ""),
-  );
-  return new Set(
-    [...named, ...run].flatMap((file) => {
-      const bare = posix.normalize(file.replace(/^\.\//, "")).replace(EXTENSION, "");
-      return [bare, bare.replace(/^(?:dist|build|out|lib)\//, "src/")];
-    }),
-  );
-}
-
-/* Whether React Router's routes file lists a route module, however it writes the path, or reads the routes from the folder. */
+/* Whether React Router's routes file lists a route module, or reads the routes from the folder. */
 function listedRoute(project: Project, path: string): boolean {
   const text = project.read("app/routes.ts") ?? project.read("app/routes.js");
   if (text === undefined) return true;
@@ -71,12 +49,18 @@ function listedRoute(project: Project, path: string): boolean {
   return list.fromFolder || list.modules.has(routeModule(path.replace(/^app\//, "")));
 }
 
+/* Whether Fastify's autoload registers the file, from a folder its code names. */
+function autoloaded(project: Project, path: string): boolean {
+  if (!project.lists("@fastify/autoload")) return false;
+  return autoloadFolders(project).some((folder) => path.startsWith(`${folder}/`));
+}
 /**
  * Whether anything loads a file of the project's: the framework, by its
  * place — Next.js's instrumentation, Nuxt's `server/`, SvelteKit's hooks,
- * a page or a route — the project's package.json, as its entry or a file a
- * script runs, or another file of its code, which imports it — by a
- * relative path or by one of the project's aliases. A file that
+ * a page or a route, the folder Fastify's autoload reads — the project's
+ * package.json or wrangler config, as its entry or a file a script runs,
+ * or another file of its code, which imports it — by a relative path or
+ * by one of the project's aliases. A file that
  * does Courier's part where nothing loads it does not do it.
  *
  * @param project - The project
@@ -95,7 +79,8 @@ export function isLoaded(project: Project, path: string): boolean {
   const byFramework = LOADED_BY.some(
     ([marker, pattern]) => project.lists(marker) && pattern.test(path),
   );
-  if (byFramework || ENTRY.test(path) || entriesOf(project).has(bare)) return true;
+  if (byFramework || autoloaded(project, path)) return true;
+  if (ENTRY.test(path) || entryFiles(project).has(bare)) return true;
   const imported = importedBy(project);
   return imported.has(bare) || imported.has(tailKey(bare));
 }

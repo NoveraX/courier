@@ -207,3 +207,28 @@ export function loads(text: string, specifier: string): boolean {
   const scan = scanSource(text);
   return scan !== undefined && importsOf(scan).some((each) => each.specifier === specifier);
 }
+
+/**
+ * Whether a file binds a name at all: an import gives it, or the code
+ * declares it — a const, a function, a class, a name destructured. A
+ * name a comment or a string holds is not bound.
+ *
+ * @param scan - The scanned file
+ * @param name - The name
+ * @returns Whether it is bound
+ * @example
+ * ```ts
+ * binds(scan, "courier"); // true where the file imports `{ courier }` from anywhere
+ * ```
+ */
+export function binds(scan: SourceScan, name: string): boolean {
+  const imported = importsOf(scan).some((each) =>
+    each.bindings.some((binding) => binding.local === name),
+  );
+  const exact = name.replace(/\$/g, "\\$");
+  const declared = new RegExp(
+    `\\b(?:(?:const|let|var|function|class)\\s+${exact}(?![\\w$])|(?:const|let|var)\\s*[{[][^}\\]]*(?<![\\w$.])${exact}(?![\\w$]))`,
+    "g",
+  );
+  return imported || codeMatches(scan, declared).length > 0;
+}

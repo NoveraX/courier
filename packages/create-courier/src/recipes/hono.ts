@@ -1,7 +1,7 @@
 import { codeStyleOf, namedImport } from "../edit/code-style";
-import { loads } from "../edit/imports";
 import { addImportLine } from "../edit/insert";
 import { scanSource } from "../edit/source-scan";
+import { type ImportState, importGuard } from "./edits/import-guard";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";
@@ -61,9 +61,10 @@ ${page}`;
 const ENTRY = "src/index.ts";
 const APP = /^([ \t]*)const app = new Hono(?:<[^>]*>)?\(\)[ \t]*(;?)[ \t]*$/m;
 
-/* The app with Courier's routes mounted right after it is created, as create-hono writes it. */
-function mounted(text: string, specifier: string): string | undefined {
-  if (loads(text, specifier)) return text;
+/* The app with Courier's routes mounted right after it is created, as create-hono writes it — unless the file loads it already, however it names it, or binds the name to something else — then the change is the person's. */
+function mounted(text: string, specifier: string, guard: ImportState): string | undefined {
+  if (guard === "loaded") return text;
+  if (guard !== "free") return undefined;
   const found = text.match(new RegExp(APP.source, "gm"));
   const app = APP.exec(text);
   if (found?.length !== 1 || app === null) return undefined;
@@ -81,7 +82,12 @@ function mountEdit(ctx: RecipeContext): RecipeEdit {
   return {
     path: ENTRY,
     purpose: "mounts Courier's routes on the app",
-    change: (text) => mounted(text, specifier),
+    change: (text) =>
+      mounted(
+        text,
+        specifier,
+        importGuard(ctx.project, ENTRY, text, "courier", `${SERVER_DIR}/routes.ts`),
+      ),
     manual: {
       file: ENTRY,
       what: "Mount Courier's routes on your Hono app",

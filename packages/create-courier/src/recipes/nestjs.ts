@@ -1,10 +1,6 @@
-import { codeStyleOf, namedImport } from "../edit/code-style";
-import { loads } from "../edit/imports";
-import { addImportLine, appendItem } from "../edit/insert";
-import { decoratorLiteral, propertyLiteral } from "../edit/literal";
-import { scanSource } from "../edit/source-scan";
+import { nestImportEdit } from "./edits/nest-module-import";
 import { importSpecifier } from "./import-specifier";
-import type { NextStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
+import type { NextStep, Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { loadStep, proxyStart } from "./shared/proxy-start";
@@ -17,8 +13,6 @@ import {
   studioAttachLater,
 } from "./shared/server-files";
 import { addsExample, listModule, type ServerNeeds } from "./shared/wired";
-
-const APP_MODULE = "src/app.module.ts";
 
 function courierModule(ctx: RecipeContext, withPage: boolean, needs: ServerNeeds): RecipeFile {
   const path = `${SERVER_DIR}/courier.module.ts`;
@@ -86,39 +80,6 @@ export class CourierController {
   return { path: controller, content: page, purpose: "the page that shows Courier at work" };
 }
 
-/* The root module with Courier's in its imports, as `nest new` writes it. */
-function imported(text: string, specifier: string): string | undefined {
-  if (loads(text, specifier)) return text;
-  const scan = scanSource(text);
-  const options = scan === undefined ? undefined : decoratorLiteral(scan, "Module");
-  if (scan === undefined || options === undefined) return undefined;
-  const imports = propertyLiteral(scan, options, "imports");
-  const changed =
-    imports === null
-      ? appendItem(scan, options, "imports: [CourierModule]")
-      : imports !== undefined && text[imports.open] === "["
-        ? appendItem(scan, imports, "CourierModule")
-        : undefined;
-  const rescanned = changed === undefined ? undefined : scanSource(changed);
-  return rescanned === undefined
-    ? undefined
-    : addImportLine(rescanned, namedImport(codeStyleOf(text), ["CourierModule"], specifier));
-}
-
-function importEdit(ctx: RecipeContext): RecipeEdit {
-  const specifier = importSpecifier(APP_MODULE, `${SERVER_DIR}/courier.module.ts`, ctx.extension);
-  return {
-    path: APP_MODULE,
-    purpose: "imports Courier's module into the app's",
-    change: (text) => imported(text, specifier),
-    manual: {
-      file: APP_MODULE,
-      what: "Import Courier's module into your root module",
-      lines: [`import { CourierModule } from "${specifier}";`, "imports: [CourierModule],"],
-    },
-  };
-}
-
 /* How the person starts the app, and where its page is: `nest new` prints no address, so the port is read from main.ts. */
 function startStep(ctx: RecipeContext, example: boolean): NextStep {
   const script = ctx.project.manifest.scripts["start:dev"] === undefined ? "start" : "start:dev";
@@ -158,7 +119,7 @@ export function nestRecipe(ctx: RecipeContext): Recipe {
   const { files, manual } = sortParts(parts);
   return {
     files: [...serverFiles(ctx, SERVER_DIR), ...files, ...(example ? [controller(ctx)] : [])],
-    edits: mount ? [importEdit(ctx)] : [],
+    edits: mount ? [nestImportEdit(ctx)] : [],
     ...courierPackages(ctx, { adapter: "@noverax/courier-nestjs", proxy: true }),
     scripts: proxyScripts(ctx),
     manual,

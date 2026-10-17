@@ -1,7 +1,7 @@
 import { codeStyleOf, namedImport } from "../edit/code-style";
-import { loads } from "../edit/imports";
 import { addImportLine } from "../edit/insert";
 import { scanSource } from "../edit/source-scan";
+import { type ImportState, importGuard } from "./edits/import-guard";
 import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
@@ -72,9 +72,15 @@ ${page}`;
 
 const APP = /^([ \t]*)(?:const|let) app = express\(\)[ \t]*(;?)[ \t]*$/m;
 
-/* The app with Courier's routes mounted right after it is created, before any body parser. */
-function mounted(text: string, specifier: string): string | undefined {
-  if (loads(text, specifier)) return text;
+/*
+ * The app with Courier's routes mounted right after it is created, before
+ * any body parser — unless the file loads them already, however it names
+ * them, or binds the name `courier` to something: then the mount is the
+ * person's, never a second binding of it.
+ */
+function mounted(text: string, specifier: string, guard: ImportState): string | undefined {
+  if (guard === "loaded") return text;
+  if (guard !== "free") return undefined;
   const found = text.match(new RegExp(APP.source, "gm"));
   const app = APP.exec(text);
   if (found?.length !== 1 || app === null) return undefined;
@@ -100,7 +106,8 @@ function mountEdit(ctx: RecipeContext, dir: string): RecipeEdit {
   return {
     path,
     purpose: "mounts Courier's routes on the app, before its body parsers",
-    change: (text) => mounted(text, specifier),
+    change: (text) =>
+      mounted(text, specifier, importGuard(ctx.project, path, text, "courier", `${dir}/routes.ts`)),
     manual: {
       file: "your server",
       what: "Mount Courier's routes on your Express app, before any body parser",

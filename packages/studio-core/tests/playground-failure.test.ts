@@ -1,12 +1,15 @@
 /**
  * What the Playground is shown of a call that failed: its error's text and
  * the body of a request that got no answer cut as every error text Studio
- * is told is, and an upstream's answer whole.
+ * is told is, and an upstream's answer whole. Through the proxy, a call
+ * `browsersOnly` refused is told why, and one stopped at a redirect is told
+ * where it pointed, that address cut as any other text.
  */
 import { HTTPError } from "@noverax/courier";
 import { UNSHOWN_CAUSE } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
+import { BROWSERS_ONLY_ADVICE } from "../src/runtime/browsers-only-refusal";
 import { playgroundFailure } from "../src/runtime/playground-failure";
 
 describe("playgroundFailure", () => {
@@ -58,5 +61,26 @@ describe("playgroundFailure", () => {
     );
 
     expect(failure).toMatchObject({ status: 404, error: "HTTP 404", data: body });
+  });
+
+  it("tells a call through the proxy that browsersOnly refused why its pass did not carry it", () => {
+    const refusal = () =>
+      new HTTPError({ status: 403, headers: new Headers(), data: { code: "BROWSERS_ONLY" } });
+
+    expect(playgroundFailure(refusal(), true).error).toBe(BROWSERS_ONLY_ADVICE);
+    expect(playgroundFailure(refusal(), false).error).toBe("HTTP 403");
+  });
+
+  it("cuts the address of a redirect a call through the proxy did not follow", () => {
+    const headers = new Headers({ location: "http://u:pa55@other.example/cb?token=s3cret" });
+    const failure = playgroundFailure(
+      new HTTPError({ status: 307, headers, data: undefined }),
+      true,
+    );
+
+    expect(failure.status).toBe(307);
+    expect(failure.error).toContain("http://other.example/cb");
+    expect(failure.error).not.toContain("s3cret");
+    expect(failure.error).not.toContain("pa55");
   });
 });

@@ -31,7 +31,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const port = await freePort();
   const address = settings.address(port);
   const api = await startApi(address);
-  const attacker = await startAttacker();
+  const attacker = await startAttacker(address);
   const root = await prepare(target, api.url);
   mkdirSync(LOGS, { recursive: true });
   const log = join(LOGS, `${target.id}.log`);

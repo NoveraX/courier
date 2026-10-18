@@ -60,8 +60,9 @@ async function echoUpstream(): Promise<string> {
 }
 
 /**
- * Serve one h3 1.x event per request, the way Nitro 2 does, answering 500
- * when the route throws.
+ * Serve one h3 1.x event per request, the way Nitro 2 does: a route that
+ * throws is logged and answered 500 without its error, and an answer
+ * already begun is left as it is.
  */
 async function serveEvent(
   handler: (event: NodeEvent) => Promise<Response>,
@@ -71,8 +72,10 @@ async function serveEvent(
   try {
     await sendWebResponse(await handler(new NodeEvent({ req, res })), res);
   } catch (error) {
+    console.error(error);
+    if (res.headersSent) return;
     res.writeHead(500, { "content-type": "text/plain" });
-    res.end(String(error));
+    res.end("Server Error");
   }
 }
 

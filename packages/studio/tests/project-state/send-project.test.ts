@@ -1,7 +1,8 @@
 /**
  * What a UI is sent of the project, and in what order: the imports list and
  * the source catalogue first, the status last; only the status while Studio
- * starts; and the status even when the lists cannot be built.
+ * starts; the status even when the lists cannot be built; and a failed
+ * config's text cut for a page without the token.
  */
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -89,6 +90,43 @@ describe("sendProject", () => {
     );
 
     expect(sent).toEqual([["config:status", { state: "starting", revision: 0 }]]);
+  });
+
+  it("tells a config that failed whole to the pages with the token, and cut to the others", () => {
+    const rooms = new Map<string, unknown[]>();
+    const pages = {
+      emit: vi.fn(),
+      to: (room: string) => ({
+        emit: (_event: string, payload: unknown) =>
+          rooms.set(room, [...(rooms.get(room) ?? []), payload]),
+      }),
+    };
+    const failure = {
+      code: "UNKNOWN" as const,
+      message: "courier.config.ts threw: cannot reach postgres://app:hunter2@db.internal/app",
+      at: 2_000,
+      cause: new Error("cannot reach the database"),
+    };
+
+    sendProject(
+      pages,
+      { revision: 2, starting: true, running: null, loadedAt: null, failure },
+      root,
+      createUpdateChecks(),
+    );
+
+    expect(rooms.get("pages:token")).toEqual([
+      expect.objectContaining({ error: { code: "UNKNOWN", message: failure.message } }),
+    ]);
+    expect(rooms.get("pages:read-only")).toEqual([
+      expect.objectContaining({
+        error: {
+          code: "UNKNOWN",
+          message: "courier.config.ts threw: cannot reach postgres://db.internal/app",
+        },
+      }),
+    ]);
+    expect(pages.emit).not.toHaveBeenCalled();
   });
 
   it("still sends the status when the lists cannot be built, and says why", () => {

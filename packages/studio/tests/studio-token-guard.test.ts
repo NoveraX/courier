@@ -458,6 +458,40 @@ describe("the live traffic", () => {
   });
 });
 
+describe("an error's text in the live traffic", () => {
+  it("reaches a page without the token with its credentials cut, and a page with it whole", async () => {
+    const app = await runtime();
+    const reader = await page();
+    const owner = await page(token());
+    const failure = {
+      type: "network",
+      message: "fetch failed for https://ana:pw@api.test/x?token=s3cret",
+      cause: { code: "ECONNREFUSED", message: "connect https://ana:pw@api.test/x" },
+    };
+    const lastOf = (socket: Awaited<ReturnType<typeof page>>) =>
+      new Promise((resolve) =>
+        socket.once("events", (events: unknown[]) => resolve(events.at(-1))),
+      );
+    const seenByReader = lastOf(reader);
+    const seenByOwner = lastOf(owner);
+
+    sendRuntimeEvents(app, [
+      { id: "e1", type: "request:error", timestamp: Date.now(), requestId: "r1", error: failure },
+    ]);
+
+    expect(await seenByReader).toEqual(
+      expect.objectContaining({
+        error: {
+          type: "network",
+          message: "fetch failed for https://api.test/x?token=[redacted]",
+          cause: { code: "ECONNREFUSED", message: "connect https://api.test/x" },
+        },
+      }),
+    );
+    expect(await seenByOwner).toEqual(expect.objectContaining({ error: failure }));
+  });
+});
+
 describe("a page with the token", () => {
   it("has the log cleared", async () => {
     const app = await runtime();

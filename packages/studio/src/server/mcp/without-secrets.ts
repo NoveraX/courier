@@ -1,7 +1,7 @@
 import { isCredentialHeader } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
-import { REDACTED } from "../storage/without-credentials";
+import { REDACTED } from "../secrets/redacted";
 
 /* Deep enough for any body a model should read; what lies deeper is cut, not walked. */
 const DEEPEST = 12;

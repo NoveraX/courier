@@ -1,7 +1,7 @@
 import { isPlainObject } from "../is-plain-object";
 import { isSecretName } from "../mcp/without-secrets";
+import { REDACTED } from "../secrets/redacted";
 import type { SavedRequest } from "../session-types";
-import { REDACTED } from "../storage/without-credentials";
 
 /* Deep enough for any body a request carries; what lies deeper is cut, not walked. */
 const DEEPEST = 64;

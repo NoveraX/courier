@@ -72,7 +72,9 @@ export function isTimeoutFailure(error: HTTPError): boolean {
  */
 export function transportFailure(error: Error): HTTPError {
   const cause = error.cause instanceof Error ? error.cause : error;
-  const code = "code" in cause ? String(cause.code) : undefined;
+  /* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
+  const code =
+    "code" in cause && typeof cause.code === "string" && cause.code !== "" ? cause.code : undefined;
   return new HTTPError(
     {
       status: 0,

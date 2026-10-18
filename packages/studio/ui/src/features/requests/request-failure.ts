@@ -19,9 +19,10 @@ export interface FailureView {
   /** A broken schema reads as a warning; anything else as an error. */
   severity: "warn" | "err";
   type: string;
-  code: string;
+  /** The code beside the type, when it says more than the type: `ECONNREFUSED` beside `NETWORK`, none beside `TIMEOUT`. */
+  code: string | undefined;
   message: string;
-  /** What the system said of a request that got no answer, when the runtime could tell. */
+  /** What the system said of a request that got no answer, when the runtime could tell and the message does not say it already. */
   cause: string | undefined;
   where: string;
   stages: FailureStage[];
@@ -134,14 +135,28 @@ export function failureOf(r: RequestEntry): FailureView | null {
           stages: stream ? streamStages(r) : httpStages(r, refused, broken),
           hint: failureHint(r),
         };
+  const type = error.type.toUpperCase();
   return {
     severity: state === "validation_error" ? "warn" : "err",
-    type: error.type.toUpperCase(),
-    code,
+    type,
+    code: code.toUpperCase() === type ? undefined : code,
     message: error.message,
-    cause: error.cause?.message,
+    cause: saysMore(error.cause?.message, error.message),
     ...parts,
     issues: error.validationIssues ?? [],
     raw,
   };
+}
+
+/* A cause whose text the message already holds — a timeout's, React Native's "Network request failed" — is not said twice. */
+function saysMore(cause: string | undefined, message: string): string | undefined {
+  if (cause === undefined) return undefined;
+  const plain = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/^the\s+/, "")
+      .replace(/[.\s]+$/, "");
+  const said = plain(message);
+  const told = plain(cause);
+  return said.includes(told) || told.includes(said) ? undefined : cause;
 }

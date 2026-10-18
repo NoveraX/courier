@@ -87,19 +87,13 @@ export {
   studioHooks,
 } from "../studio";
 export { CARRIED_BODY_BYTES, type CarriedBody, carriedBody } from "../studio/carried-body";
-export {
-  type FailureCause,
-  failureCause,
-  shownCause,
-  UNSHOWN_CAUSE,
-} from "../studio/failure-cause";
+
 export {
   type BodyPart,
   createKeptBodies,
   KEPT_BODY_BYTES,
   type KeptBodies,
 } from "../studio/kept-bodies";
-export { shownText } from "../studio/shown-text";
 export {
   type Banner,
   type BannerRow,

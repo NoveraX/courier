@@ -29,10 +29,11 @@
  */
 
 import type { Sources } from "@noverax/courier/define";
-import { abortPlayground, executeRequest, shownText } from "@noverax/courier/internal";
+import { abortPlayground, executeRequest } from "@noverax/courier/internal";
 import { wsEndpointKind } from "@noverax/courier/internal-streams";
 
 import { playgroundRequestId } from "../lib/playground-request-id";
+import { boundedText } from "./bounded-text";
 import { BROWSERS_ONLY_ADVICE, isBrowsersOnlyStreamRefusal } from "./browsers-only-refusal";
 import { dispatchHttp } from "./dispatch-http";
 import {
@@ -170,7 +171,7 @@ function failureOf(payload: PlaygroundExecutePayload, err: unknown): string {
 
 /* Cut as every error text Studio is told is: a header value read with its line break fails quoting it. */
 function emitError(socket: ResponderSocket, rid: string, message: string): void {
-  socket.emit("playground:error", { rid, error: { message: shownText(message) } });
+  socket.emit("playground:error", { rid, error: { message: boundedText(message) } });
 }
 
 /* A message the channel refuses is reported on the entry it was written to. */

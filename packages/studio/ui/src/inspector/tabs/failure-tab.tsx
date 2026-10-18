@@ -69,16 +69,18 @@ export function FailureTab({
             <span className={cn("font-mono text-badge tracking-[0.05em]", tone.text)}>
               {failure.type}
             </span>
-            <span
-              className={cn(
-                "flex h-4.5 items-center rounded-chip px-1.5 font-mono text-badge",
-                tone.badge,
-              )}
-            >
-              {failure.code}
-            </span>
+            {failure.code && (
+              <span
+                className={cn(
+                  "flex h-4.5 items-center rounded-chip px-1.5 font-mono text-badge",
+                  tone.badge,
+                )}
+              >
+                {failure.code}
+              </span>
+            )}
           </div>
-          <span className="text-prompt leading-[1.35] font-semibold text-pretty">
+          <span className="text-prompt leading-[1.35] font-semibold text-pretty whitespace-pre-line">
             {failure.message}
           </span>
           {failure.cause && (

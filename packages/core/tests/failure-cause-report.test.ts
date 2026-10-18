@@ -1,7 +1,9 @@
 /**
  * What Studio is told of a request that got no answer: why, as the system
- * said it — for a call made directly and for one the proxy received — and
- * nothing of the kind for a request the upstream answered.
+ * said it — for a call made directly and for one the proxy received, an
+ * address in it and all, which Studio shows whole to the page with its
+ * token and cuts as it leaves it — and nothing of the kind for a request
+ * the upstream answered.
  */
 import { createServer, type Server } from "node:http";
 import { type AddressInfo, createServer as createTcpServer } from "node:net";
@@ -13,7 +15,6 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { studioHooks } from "../src/studio";
-import { UNSHOWN_CAUSE } from "../src/studio/failure-cause";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const { endpoint } = courier();
@@ -78,7 +79,7 @@ describe("a request that got no answer", () => {
     expect(reportedError()?.cause).toMatchObject({ code: "ECONNREFUSED" });
   });
 
-  it("names no user, password or token the URL carried", async () => {
+  it("is reported as the platform said it, the address it named whole", async () => {
     const port = await closedPort();
 
     await createCaller(api(`http://user:pa55@127.0.0.1:${port}/v1?token=s3cret`))
@@ -86,11 +87,10 @@ describe("a request that got no answer", () => {
       .catch(() => undefined);
 
     const cause = reportedError()?.cause as { message: string } | undefined;
-    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+\/v1/);
-    expect(cause?.message).not.toMatch(/s3cret|pa55/);
+    expect(cause?.message).toMatch(/includes credentials: http:\/\/user:pa55@127\.0\.0\.1:\d+\/v1/);
   });
 
-  it("passes on none of what the app's own fetch threw", async () => {
+  it("is reported with what the app's own fetch threw, as it threw it", async () => {
     const thrown = 'Headers.append: "Bearer B34rer\nx" is an invalid header value.';
     const ownFetch = async (): Promise<Response> => {
       throw new TypeError(thrown);
@@ -106,8 +106,7 @@ describe("a request that got no answer", () => {
       .ping()
       .catch((error: unknown) => error);
 
-    expect(reportedError()?.cause).toEqual({ message: UNSHOWN_CAUSE });
-    expect(JSON.stringify(reportedError())).not.toContain("B34rer");
+    expect(reportedError()?.cause).toEqual({ message: thrown });
     expect((caught as { data: { message: string } }).data.message).toBe(thrown);
   });
 });

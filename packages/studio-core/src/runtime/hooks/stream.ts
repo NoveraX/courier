@@ -1,4 +1,4 @@
-import { shownText, studioHooks } from "@noverax/courier/internal";
+import { studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -7,6 +7,7 @@ import type {
   StreamMessageEvent,
   StreamOpenEvent,
 } from "../../events";
+import { boundedText } from "../bounded-text";
 import { trackWSStream, untrackWSStream } from "../ws-tracking";
 
 /** Create an event with session envelope */
@@ -78,7 +79,7 @@ export function wireStreamHooks(
         type: "stream:error",
         timestamp: e.timestamp,
         requestId: e.requestId,
-        error: shownText(e.error),
+        error: boundedText(e.error),
       }),
     );
   };

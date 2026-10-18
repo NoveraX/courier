@@ -33,6 +33,7 @@ vi.mock("../../src/server/last-modified-at", async (importOriginal) => {
 });
 
 import { BindingTable } from "../../src/server/catalog/binding-table";
+import { TOKEN_PAGES } from "../../src/server/live-events";
 import { createMockRegistry } from "../../src/server/mock-registry";
 import { createProjectState } from "../../src/server/project-state/create-project-state";
 import { clearStartupIssues } from "../../src/server/startup-issues";
@@ -157,8 +158,15 @@ describe("createProjectState", () => {
     writeFileSync(join(root, "courier.config.ts"), HANGS);
     const uiNamespace = io.of("/ui");
     const emit = vi.spyOn(uiNamespace, "emit");
+    /* A failure is told whole to the pages with the token, in a message of their own. */
+    const toTokenPages = vi.fn();
+    vi.spyOn(uiNamespace, "to").mockImplementation(
+      (room) => ({ emit: room === TOKEN_PAGES ? toTokenPages : vi.fn() }) as never,
+    );
     const statuses = () =>
-      emit.mock.calls.filter(([event]) => event === "config:status").map(([, payload]) => payload);
+      [...emit.mock.calls, ...toTokenPages.mock.calls]
+        .filter(([event]) => event === "config:status")
+        .map(([, payload]) => payload);
 
     project = createProjectState({
       projectRoot: root,

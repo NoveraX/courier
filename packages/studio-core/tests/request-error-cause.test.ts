@@ -1,4 +1,10 @@
-import { createKeptBodies, studioHooks, UNSHOWN_CAUSE } from "@noverax/courier/internal";
+/**
+ * Why a request got no answer, as its event carries it to Studio: the
+ * platform's code and text as they came — the page that holds Studio's
+ * token shows them whole, and Studio cuts what leaves it — a code kept
+ * only where it reads as a system's, Bun's PascalCase among them.
+ */
+import { createKeptBodies, studioHooks } from "@noverax/courier/internal";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { EventBus } from "../src/event-bus";
@@ -53,24 +59,22 @@ describe("why a request got no answer, as its event carries it", () => {
     });
   });
 
-  it("cuts a token and a password out of a URL in the text", () => {
-    const cause = failedWith({
-      code: "ECONNREFUSED",
-      message: "connect to https://user:pass@api.test/v1?token=s3cret failed",
-    })?.cause;
+  it("carries the text as it came, an address in it whole", () => {
+    const message = "connect to https://user:pass@api.test/v1?token=s3cret failed";
 
-    expect(cause).toEqual({
+    expect(failedWith({ code: "ECONNREFUSED", message })?.cause).toEqual({
       code: "ECONNREFUSED",
-      message: "connect to https://api.test/v1 failed",
+      message,
     });
   });
 
-  it("passes on no text whose code is not a system error code, nor one without a code", () => {
-    expect(failedWith({ code: "Bearer abc", message: "failed" })?.cause).toEqual({
-      message: UNSHOWN_CAUSE,
+  it("keeps Bun's code, and drops one that is no system's while keeping the text", () => {
+    expect(failedWith({ code: "ConnectionRefused", message: "Unable to connect" })?.cause).toEqual({
+      code: "ConnectionRefused",
+      message: "Unable to connect",
     });
-    expect(failedWith({ message: "request with Bearer B34rer failed" })?.cause).toEqual({
-      message: UNSHOWN_CAUSE,
+    expect(failedWith({ code: "Bearer abc", message: "failed" })?.cause).toEqual({
+      message: "failed",
     });
   });
 

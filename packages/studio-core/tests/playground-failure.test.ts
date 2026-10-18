@@ -1,14 +1,13 @@
 /**
- * What the Playground is shown of a call that failed: its error's text and
- * the body of a request that got no answer cut as every error text Studio
- * is told is, and an upstream's answer whole. Through the proxy, a call
- * `browsersOnly` refused is told why, and one stopped at a redirect is told
- * whose it was: the route's names where it pointed, that address cut as any
- * other text; the API's, which the proxy answers with its status alone,
- * says what to change in the source. A 304 is no redirect.
+ * What the Playground is shown of a call that failed — on the page that
+ * holds Studio's token, as the app was told it: its error's text, the
+ * cause and no more of a request that got no answer, and an upstream's
+ * answer whole. Through the proxy, a call `browsersOnly` refused is told
+ * why, and one stopped at a redirect is told whose it was: the route's
+ * names where it pointed; the API's, which the proxy answers with its
+ * status alone, says what to change in the source. A 304 is no redirect.
  */
 import { HTTPError } from "@noverax/courier";
-import { UNSHOWN_CAUSE } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
 import { BROWSERS_ONLY_ADVICE } from "../src/runtime/browsers-only-refusal";
@@ -16,7 +15,7 @@ import { playgroundFailure } from "../src/runtime/playground-failure";
 import { upstreamRedirectAdvice } from "../src/runtime/proxy-redirect";
 
 describe("playgroundFailure", () => {
-  it("cuts the token a refused header value carried out of the error", () => {
+  it("tells the error as the app was told it", () => {
     const failure = playgroundFailure(
       new TypeError('Headers.append: "Bearer B34rer\nx" is an invalid header value.'),
     );
@@ -24,21 +23,20 @@ describe("playgroundFailure", () => {
     expect(failure).toEqual({
       kind: "http-result",
       status: 500,
-      error: 'Headers.append: "[redacted]" is an invalid header value.',
+      error: 'Headers.append: "Bearer B34rer\nx" is an invalid header value.',
     });
   });
 
-  it("passes on none of what the app's own fetch put in a request with no answer", () => {
+  it("keeps the cause of a request with no answer, and no more of its body", () => {
     const failure = playgroundFailure(
       new HTTPError({
         status: 0,
         headers: new Headers(),
-        data: { success: false, message: "upstream refused x-api-key=s3cret" },
+        data: { success: false, message: "upstream refused x-api-key=s3cret", extra: 1 },
       }),
     );
 
-    expect(failure.data).toEqual({ success: false, message: UNSHOWN_CAUSE });
-    expect(JSON.stringify(failure)).not.toContain("s3cret");
+    expect(failure.data).toEqual({ success: false, message: "upstream refused x-api-key=s3cret" });
   });
 
   it("keeps the platform's reason and code for a request with no answer", () => {
@@ -74,7 +72,7 @@ describe("playgroundFailure", () => {
     expect(playgroundFailure(refusal(), false).error).toBe("HTTP 403");
   });
 
-  it("cuts the address of a redirect a call through the proxy did not follow", () => {
+  it("names where a redirect a call through the proxy did not follow pointed", () => {
     const headers = new Headers({ location: "http://u:pa55@other.example/cb?token=s3cret" });
     const failure = playgroundFailure(
       new HTTPError({ status: 307, headers, data: undefined }),
@@ -82,9 +80,7 @@ describe("playgroundFailure", () => {
     );
 
     expect(failure.status).toBe(307);
-    expect(failure.error).toContain("http://other.example/cb");
-    expect(failure.error).not.toContain("s3cret");
-    expect(failure.error).not.toContain("pa55");
+    expect(failure.error).toContain("http://u:pa55@other.example/cb?token=s3cret");
   });
 
   it("tells a call the API redirected elsewhere, which the proxy answers without a Location, what to change in the source", () => {

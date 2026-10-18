@@ -1,10 +1,4 @@
-import {
-  carriedBody,
-  type KeptBodies,
-  shownCause,
-  shownText,
-  studioHooks,
-} from "@noverax/courier/internal";
+import { carriedBody, type KeptBodies, studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -15,8 +9,10 @@ import type {
   RequestStartEvent,
   SharedAnswer,
 } from "../../events";
+import { readCause } from "../../events/read-cause";
 import { readShared } from "../../events/read-shared";
 import { answerShapeOf } from "../answer-shape";
+import { boundedText } from "../bounded-text";
 
 /* The mark of a call another call's request answered, as the event carries it, or nothing. */
 function sharedField(raw: unknown): { shared?: SharedAnswer } {
@@ -33,9 +29,9 @@ const createEvent = <TEvent extends AnyStudioEvent>(
 /**
  * Wire request lifecycle hooks to the bus. A body too large for an event —
  * the variables, the answer, an error's body — travels as a part of it, and
- * `bodies` keeps the whole for Studio to ask for. An error's text has what
- * could be a credential cut out: a header value read with its line break
- * fails with an error that quotes it.
+ * `bodies` keeps the whole for Studio to ask for. An error's text and why
+ * no answer came go as the app was told them — the page that holds
+ * Studio's token shows them whole, and Studio cuts what leaves it.
  */
 export function wireRequestHooks(
   bus: EventBus,
@@ -92,7 +88,7 @@ export function wireRequestHooks(
 
   studioHooks.onRequestError = (e) => {
     const answered = e.data === undefined ? undefined : carriedBody(e.data);
-    const cause = shownCause(e.error.cause);
+    const cause = readCause(e.error.cause);
     if (answered) bodies.keep(e.id, "response", answered);
     bus.emit(
       createEvent<RequestErrorEvent>(sessionId, {
@@ -102,7 +98,7 @@ export function wireRequestHooks(
         requestId: e.id,
         error: {
           type: e.error.type,
-          message: shownText(e.error.message),
+          message: boundedText(e.error.message),
           ...(e.error.status !== undefined && { status: e.error.status }),
           ...(cause && { cause }),
         },

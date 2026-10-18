@@ -1,4 +1,4 @@
-import { shownText, studioHooks } from "@noverax/courier/internal";
+import { studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -6,6 +6,7 @@ import type {
   MiddlewareErrorEvent,
   MiddlewareExitEvent,
 } from "../../events";
+import { boundedText } from "../bounded-text";
 
 /** Create an event with session envelope */
 const createEvent = <TEvent extends AnyStudioEvent>(
@@ -58,7 +59,7 @@ export function wireMiddlewareHooks(bus: EventBus, sessionId: string): void {
         name: e.name,
         index: e.index,
         phase: e.phase,
-        error: shownText(e.error),
+        error: boundedText(e.error),
       }),
     );
   };

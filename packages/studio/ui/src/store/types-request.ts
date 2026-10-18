@@ -1,7 +1,7 @@
-import type { SharedAnswer } from "@noverax/courier-studio-core";
+import type { RequestFailureCause, SharedAnswer } from "@noverax/courier-studio-core";
 import type { MiddlewareEntry, ProxyTiming, RequestTiming, ValidationIssue } from "./types-events";
 
-export type { SharedAnswer };
+export type { RequestFailureCause, SharedAnswer };
 
 // ── Request model (aggregated from events) ─────────────────────────────────
 
@@ -18,12 +18,6 @@ export interface RequestAgent {
   tool: string;
   access: "read" | "write" | "destructive";
   client?: string | undefined;
-}
-
-/** Why a request got no answer, as the system said it: its code, where it gave one, and its text. */
-export interface RequestFailureCause {
-  code?: string | undefined;
-  message: string;
 }
 
 export interface RequestEntry {

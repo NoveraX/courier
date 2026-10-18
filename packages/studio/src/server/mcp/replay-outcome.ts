@@ -1,7 +1,8 @@
 import type { ToolOutcome } from "@noverax/courier-mcp/internal";
 
 import type { PlaygroundRunOutcome } from "../playground-run";
-import { headersWithoutCredentials } from "../storage/without-credentials";
+import { cutText } from "../secrets/cut-text";
+import { withoutCredentials } from "../storage/without-credentials";
 import type { PlannedReplay } from "./replay-plan";
 import { withoutSecrets } from "./without-secrets";
 
@@ -12,7 +13,7 @@ const ANSWER_CHARS = 40_000;
  * What an agent is told of a replay: the new request's id — to read it in
  * full with `request` — the call, its status and duration, its failure and
  * its answer, every credential's value and every field named like a secret
- * replaced. An answer too long to hand over whole comes back as the start
+ * replaced, and its error's text cut. An answer too long to hand over whole comes back as the start
  * of its JSON, with its size. A replay that could not be sent says why.
  *
  * @param requestId - The id Studio records the new request under
@@ -30,10 +31,11 @@ export function replayedOutcome(
   outcome: PlaygroundRunOutcome,
 ): ToolOutcome {
   if (!outcome.ok)
-    return { ok: false, message: `${plan.call} was not sent again: ${outcome.message}` };
-  const result = outcome.chunks.find((chunk) => chunk.kind === "http-result");
-  if (result === undefined)
+    return { ok: false, message: `${plan.call} was not sent again: ${cutText(outcome.message)}` };
+  const found = outcome.chunks.find((chunk) => chunk.kind === "http-result");
+  if (found === undefined)
     return { ok: false, message: `${plan.call} ran, but its runtime sent back no result` };
+  const result = withoutCredentials(found) as typeof found;
   return {
     ok: true,
     data: {
@@ -44,7 +46,7 @@ export function replayedOutcome(
       durationMs: Math.round(outcome.durationMs),
       ...(result.error !== undefined && { error: result.error }),
       ...answerOf(withoutSecrets(result.data)),
-      ...(result.headers !== undefined && { headers: headersWithoutCredentials(result.headers) }),
+      ...(result.headers !== undefined && { headers: result.headers }),
     },
   };
 }

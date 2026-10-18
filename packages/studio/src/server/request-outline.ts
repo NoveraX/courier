@@ -4,8 +4,12 @@
  * memory as the events arrive, so an editor's figures for every endpoint
  * and an agent's list of requests are read without going through every
  * event the database holds — validation, middleware and fetch events, and
- * each answer whole.
+ * each answer whole. Only an agent and an editor read it, past the page
+ * that holds Studio's token, so it keeps each event as it leaves that page:
+ * its error's text and its cause cut.
  */
+
+import { withoutSecretTexts } from "./secrets/without-secret-texts";
 
 type RuntimeEvent = Record<string, unknown>;
 
@@ -56,7 +60,7 @@ export function createRequestOutline(
   const byRequest = new Map<string, RuntimeEvent[]>();
   const see = (requestId: string, event: RuntimeEvent): void => {
     if (typeof event.type !== "string" || !KEY_TYPES.has(event.type)) return;
-    const kept = withoutBodies(event);
+    const kept = withoutSecretTexts(withoutBodies(event));
     const events = byRequest.get(requestId);
     if (events) events.push(kept);
     else byRequest.set(requestId, [kept]);

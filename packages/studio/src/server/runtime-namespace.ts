@@ -35,7 +35,6 @@ import { runtimeEventsOf } from "./runtime-events-of";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
 import { admitRuntimeSocket } from "./runtime-trust";
-import { withShownErrorTexts } from "./shown-error-texts";
 import type { StudioToken } from "./studio-token";
 import type { WebhookDirectory } from "./webhooks/webhook-directory";
 
@@ -149,8 +148,9 @@ export function setupRuntimeNamespace(
 }
 
 /**
- * Pass on the events a `/runtime` message carried: each with its error's
- * text cut, named after the config source its call was made against, an
+ * Pass on the events a `/runtime` message carried, as the runtime sent them
+ * — the page with the token sees them whole, and what leaves it is cut by
+ * `withoutCredentials` — each named after the config source its call was made against, an
  * answer's shape counted for its endpoint's contract and going no further,
  * an agent's call named — then all of them to the UI namespace through
  * `broadcastRuntimeEvents`, the single canonical funnel for every event
@@ -164,7 +164,7 @@ function handleRuntimeEvents(
   const passed: Record<string, unknown>[] = [];
   for (const raw of raws) {
     if (!isRecord(raw) || Array.isArray(raw)) continue;
-    const attributed = attributeEvent(withShownErrorTexts(raw), deps.nameSource);
+    const attributed = attributeEvent(raw, deps.nameSource);
     if (deps.answers?.see(attributed)) continue;
     passed.push(deps.agentCalls?.stamp(attributed) ?? attributed);
   }

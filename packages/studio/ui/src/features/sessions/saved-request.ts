@@ -1,8 +1,7 @@
-import { readShared } from "@noverax/courier-studio-core";
+import { readCause, readShared } from "@noverax/courier-studio-core";
 import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
 import { httpVersionOf } from "@/store/http-version";
 import { readAgent } from "@/store/read-agent";
-import { readCause } from "@/store/read-cause";
 import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
 const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([

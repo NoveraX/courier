@@ -143,7 +143,7 @@ describe("a webhook delivered for Studio", () => {
     ).toEqual({ ok: false, error: "The delivery to http://localhost:1/hook failed: fetch failed" });
   });
 
-  it("says why with no token a failure quoted", async () => {
+  it("says why as the failure said it: Studio shows it to the page with its token, and cuts what leaves it", async () => {
     const { socket, ask } = studioSocket();
     answerWebhookDeliveries(socket, async () => {
       throw new TypeError('Headers.append: "Bearer B34rer\nx" is an invalid header value.');
@@ -154,7 +154,7 @@ describe("a webhook delivered for Studio", () => {
     ).toEqual({
       ok: false,
       error:
-        'The delivery to http://localhost:1/hook failed: Headers.append: "[redacted]" is an invalid header value.',
+        'The delivery to http://localhost:1/hook failed: Headers.append: "Bearer B34rer\nx" is an invalid header value.',
     });
   });
 

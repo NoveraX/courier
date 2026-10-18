@@ -1,4 +1,4 @@
-import { shownText, studioHooks } from "@noverax/courier/internal";
+import { studioHooks } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,
@@ -6,6 +6,7 @@ import type {
   HttpFetchErrorEvent,
   HttpFetchStartEvent,
 } from "../../events";
+import { boundedText } from "../bounded-text";
 import type { HttpVersions } from "../http-versions/http-version";
 
 /** Create an event with session envelope */
@@ -65,7 +66,7 @@ export function wireFetchHooks(
         type: "http:fetch:error",
         timestamp: e.timestamp,
         requestId: e.requestId,
-        message: shownText(e.message),
+        message: boundedText(e.message),
         ...(e.status !== undefined && { status: e.status }),
         ...(httpVersion && { httpVersion }),
       }),

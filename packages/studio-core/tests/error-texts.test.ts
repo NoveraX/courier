@@ -1,8 +1,8 @@
 /**
- * An error's text, as a runtime tells Studio of it, holds nothing that
- * could be a credential — while the error the caller receives keeps it
- * whole. A header value read from a file or the environment with its line
- * break fails with an error that quotes the value.
+ * An error's text, as a runtime tells Studio of it: as the app was told it
+ * — the page that holds Studio's token shows it whole, and Studio cuts what
+ * leaves that page — and no longer than an event carries, so a text that
+ * holds a whole answer does not flood the socket.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
@@ -18,7 +18,7 @@ import { wireStreamHooks } from "../src/runtime/hooks/stream";
 
 const { endpoint } = courier();
 const REFUSED = 'Headers.append: "Bearer B34rer\nx" is an invalid header value.';
-const SHOWN = 'Headers.append: "[redacted]" is an invalid header value.';
+const HUGE = "x".repeat(20_000);
 
 function wired(): AnyStudioEvent[] {
   const bus = new EventBus();
@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe("an error's text, as Studio is told it", () => {
-  it("names no token of a header value the platform refused, while the caller's error does", async () => {
+  it("is the text the caller's error holds", async () => {
     const events = wired();
     const api = defineApi({
       expose: true,
@@ -52,20 +52,21 @@ describe("an error's text, as Studio is told it", () => {
       .catch((error: unknown) => error);
 
     const failure = events.find((event) => event.type === "request:error");
-    expect(failure).toBeDefined();
-    expect(JSON.stringify(events)).not.toContain("B34rer");
+    expect(failure).toMatchObject({ error: { message: (caught as Error).message } });
     expect(String((caught as Error).message)).toContain("B34rer");
   });
 
-  it("cuts it from a fetch's failure", () => {
+  it("is a fetch's failure as it was, cut to the length an event carries", () => {
     const events = wired();
 
     studioHooks.onHttpFetchError?.({ requestId: "r1", message: REFUSED, timestamp: 1 });
+    studioHooks.onHttpFetchError?.({ requestId: "r2", message: HUGE, timestamp: 2 });
 
-    expect(events[0]).toMatchObject({ type: "http:fetch:error", message: SHOWN });
+    expect(events[0]).toMatchObject({ type: "http:fetch:error", message: REFUSED });
+    expect(events[1]).toMatchObject({ message: `${"x".repeat(7999)}…` });
   });
 
-  it("cuts it from a middleware's failure", () => {
+  it("is a middleware's failure as it was", () => {
     const events = wired();
 
     studioHooks.onMiddlewareError?.({
@@ -77,32 +78,39 @@ describe("an error's text, as Studio is told it", () => {
       timestamp: 1,
     });
 
-    expect(events[0]).toMatchObject({
-      type: "middleware:error",
-      error: "refused token=[redacted]",
-    });
+    expect(events[0]).toMatchObject({ type: "middleware:error", error: "refused token=s3cret" });
   });
 
-  it("cuts it from a stream's failure", () => {
+  it("is a stream's failure as it was, cut to the length an event carries", () => {
     const events = wired();
 
     studioHooks.onStreamError?.({ requestId: "r1", error: "closed Bearer B34rer", timestamp: 1 });
+    studioHooks.onStreamError?.({ requestId: "r2", error: HUGE, timestamp: 2 });
 
-    expect(events[0]).toMatchObject({ type: "stream:error", error: "closed Bearer [redacted]" });
+    expect(events[0]).toMatchObject({ type: "stream:error", error: "closed Bearer B34rer" });
+    expect(events[1]).toMatchObject({ error: `${"x".repeat(7999)}…` });
   });
 
-  it("cuts it from a request's failure, its kind kept", () => {
+  it("is a request's failure as it was, its kind and its cause kept", () => {
     const events = wired();
 
     studioHooks.onRequestError?.({
       id: "r1",
-      error: { type: "unknown", message: REFUSED },
+      error: {
+        type: "network",
+        message: REFUSED,
+        cause: { code: "ConnectionRefused", message: "connect https://ana:pw@api.test/x" },
+      },
       timestamp: 1,
     });
 
     expect(events[0]).toMatchObject({
       type: "request:error",
-      error: { type: "unknown", message: SHOWN },
+      error: {
+        type: "network",
+        message: REFUSED,
+        cause: { code: "ConnectionRefused", message: "connect https://ana:pw@api.test/x" },
+      },
     });
   });
 });

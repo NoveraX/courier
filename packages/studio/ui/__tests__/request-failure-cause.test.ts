@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  *
  * A request that got no answer shows why, as the system said it: its code
- * in the Error tab's badge, its text under the message and in the raw
+ * in the Error tab's badge — once, where it says what the kind does not —
+ * its text under the message unless the message says it, and in the raw
  * error, a fix chosen by the code, and both in the Overview — read back
  * the same from a saved session.
  */
@@ -39,7 +40,7 @@ function unanswered(code: string | undefined, said = "failed") {
     error: {
       type: "network",
       message: "Network request failed",
-      cause: { code, message: said },
+      cause: code === undefined ? { message: said } : { code, message: said },
     },
   });
 }
@@ -120,17 +121,36 @@ describe("the Error tab of a request that got no answer", () => {
     expect(JSON.parse(failure?.raw ?? "{}")).toMatchObject({ status: 502 });
   });
 
-  it("shows its kind in the badge when the system gave no code", () => {
-    const failure = failureOf(
+  it("shows its kind once when the system gave no code, or a code that says the same", () => {
+    const uncoded = failureOf(
       requestEntry({
         status: "error",
         statusCode: undefined,
         error: { type: "network", message: "Network request failed" },
       }),
     );
+    const timedOut = failureOf(
+      requestEntry({
+        status: "error",
+        statusCode: undefined,
+        error: {
+          type: "timeout",
+          message: "Request timed out after 5000 ms",
+          cause: { code: "TIMEOUT", message: "The request timed out after 5000 ms" },
+        },
+      }),
+    );
 
-    expect(failure?.code).toBe("network");
-    expect(failure?.cause).toBeUndefined();
+    expect([uncoded?.type, uncoded?.code]).toEqual(["NETWORK", undefined]);
+    expect([timedOut?.type, timedOut?.code]).toEqual(["TIMEOUT", undefined]);
+  });
+
+  it("says a cause the message already says once", () => {
+    const repeated = failureOf(unanswered(undefined, "Network request failed"));
+    const different = failureOf(unanswered("ECONNREFUSED", "connect ECONNREFUSED 127.0.0.1:1"));
+
+    expect(repeated?.cause).toBeUndefined();
+    expect(different?.cause).toBe("connect ECONNREFUSED 127.0.0.1:1");
   });
 });
 
@@ -147,6 +167,9 @@ describe("the fix suggested for a request that got no answer", () => {
       "ENETUNREACH",
       "UND_ERR_CONNECT_TIMEOUT",
       "UND_ERR_SOCKET",
+      "ConnectionRefused",
+      "ConnectionClosed",
+      "FailedToOpenSocket",
     ]) {
       expect(failureHint(unanswered(code))).toMatch(/connection to it failed/);
     }
@@ -160,6 +183,30 @@ describe("the fix suggested for a request that got no answer", () => {
     ]) {
       expect(failureHint(unanswered(code))).toMatch(/certificate was not trusted/);
     }
+  });
+
+  it("tells an answer that broke as it came, an API that sent no headers in time, and redirects with no end apart", () => {
+    for (const code of [
+      "Z_DATA_ERROR",
+      "Z_BUF_ERROR",
+      "UND_ERR_RES_CONTENT_LENGTH_MISMATCH",
+      "ERR_STREAM_PREMATURE_CLOSE",
+      "UND_ERR_BODY_TIMEOUT",
+    ]) {
+      const hint = failureHint(unanswered(code));
+      expect(hint).toMatch(/began to come back, but it broke/);
+      expect(hint).not.toMatch(/could not reach the API/);
+    }
+    expect(failureHint(unanswered("UND_ERR_HEADERS_TIMEOUT"))).toMatch(/sent no headers in time/);
+    expect(failureHint(unanswered(undefined, "redirect count exceeded"))).toMatch(
+      /redirects that never reached/,
+    );
+    expect(failureHint(unanswered(undefined, "The response redirected too many times"))).toMatch(
+      /redirects that never reached/,
+    );
+    expect(failureHint(unanswered("TooManyRedirects", "fetch() failed"))).toMatch(
+      /redirects that never reached/,
+    );
   });
 
   it("names a code it has no advice of its own for", () => {

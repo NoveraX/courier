@@ -1,4 +1,4 @@
-import type { RequestEntry } from "@/store/types";
+import type { RequestEntry, RequestFailureCause } from "@/store/types";
 import { requestStateOf } from "./request-state";
 
 /** A mark over a payload: how its schema check went, or the status that came with it. */
@@ -36,7 +36,8 @@ function isEmpty(value: unknown): boolean {
 /**
  * What the Response tab shows: the answer as JSON — or as text when it is
  * not JSON — marked with how its schema check went and the issues it
- * found; or why there is none.
+ * found; or why there is none — for a request that got no answer, what the
+ * system said of it.
  *
  * @param r - The request
  * @returns The view
@@ -73,6 +74,8 @@ export function responseView(r: RequestEntry): PayloadView {
   if (r.data !== undefined && r.data !== null) {
     return { value: r.data, cutFrom: r.dataCutFrom, chips, issues };
   }
+  const cause = r.error?.cause;
+  if (cause) return { empty: { title: "No answer", detail: causeText(cause) }, chips, issues };
   const title = r.statusCode === 204 ? "204 No Content" : "No content";
   return { empty: { title, detail: "The server answered with an empty body." }, chips, issues };
 }
@@ -103,4 +106,20 @@ export function requestView(r: RequestEntry): PayloadView {
     };
   }
   return { value, cutFrom: r.variablesCutFrom, chips, issues };
+}
+
+/**
+ * Why a request got no answer, in a line: the system's code, when it gave
+ * one, and its text.
+ *
+ * @param cause - Why it got none
+ * @returns The line
+ * @example
+ * ```ts
+ * causeText({ code: "ECONNREFUSED", message: "connect ECONNREFUSED 127.0.0.1:1" });
+ * // "ECONNREFUSED · connect ECONNREFUSED 127.0.0.1:1"
+ * ```
+ */
+export function causeText(cause: RequestFailureCause): string {
+  return cause.code === undefined ? cause.message : `${cause.code} · ${cause.message}`;
 }

@@ -59,6 +59,16 @@ describe("a Playground stream that failed", () => {
     expect(screen.getByRole("alert").textContent).toBe(reason);
   });
 
+  it("keeps the line breaks of a reason that has them", () => {
+    const reason = "Courier could not tell where the app listens.\nSet COURIER_APP_URL.";
+
+    show(entry({ response: reason }));
+
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe(reason);
+    expect(alert.className).toContain("whitespace-pre-line");
+  });
+
   it("says why above what it delivered first", () => {
     const row = requestEntry({
       id: "pg_e1",

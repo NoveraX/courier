@@ -1,18 +1,21 @@
 /**
- * What Studio passes on of a runtime's answer to a Playground call — to
- * the page that asked and to an agent's replay — holds no credential an
- * error's text quoted, whichever runtime sent it: a header value read
- * with its line break, a token the app's own fetch put in its message.
+ * What Studio passes on of a runtime's answer to a Playground call: to the
+ * page that asked — one with Studio's token — as the runtime sent it, a
+ * request with no answer keeping its cause and no more; to an agent's
+ * replay, and into the Playground's history, with every credential an
+ * error's text quoted cut — a header value read with its line break, a
+ * token the app's own fetch put in its message, one in a redirect's
+ * Location.
  */
-import { UNSHOWN_CAUSE } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
+
 import { replayedOutcome } from "../src/server/mcp/replay-outcome";
 import type { PlannedReplay } from "../src/server/mcp/replay-plan";
 import { sanitizeChunk, sanitizeError } from "../src/server/runtime-playground-chunk-sanitize";
-import { withShownErrorTexts } from "../src/server/shown-error-texts";
+import { withoutCredentials } from "../src/server/storage/without-credentials";
 
 const REFUSED = 'Headers.append: "Bearer B34rer\nx" is an invalid header value.';
-const SHOWN = 'Headers.append: "[redacted]" is an invalid header value.';
+const CUT = 'Headers.append: "[redacted]" is an invalid header value.';
 
 const plan = {
   request: { id: "r1" },
@@ -26,32 +29,24 @@ function chunkOf(chunk: Record<string, unknown>) {
   return sanitized.chunk;
 }
 
-describe("a Playground call's result", () => {
-  it("has the token a refused header value carried cut from its error", () => {
+describe("a Playground call's result, for the page that asked", () => {
+  it("keeps the error's text as the runtime sent it", () => {
     expect(chunkOf({ kind: "http-result", status: 500, error: REFUSED })).toEqual({
       kind: "http-result",
       status: 500,
-      error: SHOWN,
+      error: REFUSED,
+    });
+    expect(sanitizeError({ rid: "r1", error: { message: REFUSED } })).toEqual({
+      rid: "r1",
+      error: { message: REFUSED },
     });
   });
 
-  it("passes on none of what the app's own fetch put in a request with no answer", () => {
-    const chunk = chunkOf({
-      kind: "http-result",
-      status: 0,
-      error: "Network request failed",
-      data: { success: false, message: "upstream refused x-api-key=s3cret" },
-    });
-
-    expect(chunk).toMatchObject({ data: { success: false, message: UNSHOWN_CAUSE } });
-    expect(JSON.stringify(chunk)).not.toContain("s3cret");
-  });
-
-  it("keeps the platform's reason, and an upstream's answer whole", () => {
+  it("keeps a request with no answer's cause and no more, and an upstream's answer whole", () => {
     const unanswered = chunkOf({
       kind: "http-result",
       status: 0,
-      data: { success: false, message: "getaddrinfo ENOTFOUND api.test", code: "ENOTFOUND" },
+      data: { success: false, message: "getaddrinfo ENOTFOUND api.test", code: "ENOTFOUND", x: 1 },
     });
     const answered = chunkOf({
       kind: "http-result",
@@ -62,28 +57,42 @@ describe("a Playground call's result", () => {
     expect(unanswered).toMatchObject({
       data: { success: false, code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND api.test" },
     });
+    expect(unanswered).not.toHaveProperty("data.x");
     expect(answered).toMatchObject({ data: { token: "its own field" } });
-  });
-
-  it("has the token cut from a stream's error", () => {
-    expect(sanitizeError({ rid: "r1", error: { message: REFUSED } })).toEqual({
-      rid: "r1",
-      error: { message: SHOWN },
-    });
   });
 });
 
 describe("an agent's replay", () => {
-  it("is told the error with its token cut", () => {
-    const chunk = chunkOf({ kind: "http-result", status: 500, error: REFUSED });
+  it("is told the error, the cause and the redirect's Location with their credentials cut", () => {
+    const result = chunkOf({ kind: "http-result", status: 500, error: REFUSED });
+    const unanswered = chunkOf({
+      kind: "http-result",
+      status: 0,
+      data: { success: false, code: "ECONNREFUSED", message: "connect https://ana:pw@api.test/x" },
+    });
+    const redirected = chunkOf({
+      kind: "http-result",
+      status: 307,
+      headers: { location: "http://u:pa55@other.example/cb?token=s3cret" },
+    });
 
-    const outcome = replayedOutcome("pg_1", plan, { ok: true, chunks: [chunk], durationMs: 3 });
+    const outcomes = [result, unanswered, redirected].map((chunk) =>
+      replayedOutcome("pg_1", plan, { ok: true, chunks: [chunk], durationMs: 3 }),
+    );
 
-    expect(outcome).toMatchObject({ ok: true, data: { error: SHOWN } });
-    expect(JSON.stringify(outcome)).not.toContain("B34rer");
+    expect(outcomes[0]).toMatchObject({ ok: true, data: { error: CUT } });
+    expect(outcomes[1]).toMatchObject({
+      data: {
+        answer: { success: false, code: "ECONNREFUSED", message: "connect https://api.test/x" },
+      },
+    });
+    expect(outcomes[2]).toMatchObject({
+      data: { headers: { location: "http://other.example/cb?token=[redacted]" } },
+    });
+    expect(JSON.stringify(outcomes)).not.toMatch(/B34rer|pa55|s3cret|:pw@/);
   });
 
-  it("is told why the call was not sent with its token cut", () => {
+  it("is told why the call was not sent with its credentials cut", () => {
     const refused = sanitizeError({ rid: "r1", error: { message: REFUSED } });
 
     const outcome = replayedOutcome("pg_1", plan, {
@@ -95,42 +104,23 @@ describe("an agent's replay", () => {
   });
 });
 
-describe("an event a runtime sent", () => {
-  it("has the token cut from a request's failure and its cause", () => {
-    const event = withShownErrorTexts({
-      type: "request:error",
-      requestId: "r1",
-      error: {
-        type: "network",
-        message: REFUSED,
-        cause: { message: "upstream refused x-api-key=s3cret" },
-      },
+describe("a Playground call in the history Studio writes down", () => {
+  it("keeps the text it failed with, its result's error and its Location without their credentials", () => {
+    const entry = withoutCredentials({
+      id: "e1",
+      rid: "r1",
+      status: "error",
+      response: "refused token=s3cret",
+      responseHeaders: { location: "https://ana:pw@api.test/next?sig=abc123" },
+      chunks: [
+        { kind: "http-result", status: 502, error: REFUSED, headers: { "x-api-key": "k3y" } },
+      ],
     });
 
-    expect(event.error).toEqual({
-      type: "network",
-      message: SHOWN,
-      cause: { message: UNSHOWN_CAUSE },
+    expect(entry).toMatchObject({
+      response: "refused token=[redacted]",
+      responseHeaders: { location: "https://api.test/next?sig=[redacted]" },
+      chunks: [{ error: CUT, headers: { "x-api-key": "[redacted]" } }],
     });
-  });
-
-  it("has the token cut from a fetch's, a middleware's and a stream's failure", () => {
-    expect(withShownErrorTexts({ type: "http:fetch:error", message: REFUSED })).toEqual({
-      type: "http:fetch:error",
-      message: SHOWN,
-    });
-    expect(
-      withShownErrorTexts({ type: "middleware:error", error: "refused token=s3cret" }),
-    ).toEqual({ type: "middleware:error", error: "refused token=[redacted]" });
-    expect(withShownErrorTexts({ type: "stream:error", error: "closed Bearer B34rer" })).toEqual({
-      type: "stream:error",
-      error: "closed Bearer [redacted]",
-    });
-  });
-
-  it("is passed on as it was when it holds no error's text", () => {
-    const event = { type: "request:end", requestId: "r1", data: { token: "an answer's field" } };
-
-    expect(withShownErrorTexts(event)).toBe(event);
   });
 });

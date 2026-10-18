@@ -1,6 +1,8 @@
 import { createLogger } from "@noverax/courier";
+import { cutText } from "../secrets/cut-text";
 import type { UpdateChecks } from "../update-checks";
-import { configStatusOf } from "./config-status";
+import { type ConfigStatusPayload, configStatusOf } from "./config-status";
+import { emitToPages } from "./emit-to-pages";
 import { sendImportLists } from "./send-import-lists";
 import type { ProjectEventTarget, ProjectSnapshot } from "./types";
 
@@ -13,7 +15,10 @@ const log = createLogger("Studio");
  * starting there are no lists yet, and only the status is sent.
  *
  * The status is sent even when the lists cannot be built: the UI must still
- * learn how the config loads.
+ * learn how the config loads. A config that failed is told whole to a page
+ * with Studio's token, and with what could be a credential cut from its
+ * error's text to any other: a config that throws as it loads can say
+ * anything it held.
  *
  * Synchronous on purpose, and it must stay so: the UI takes the order its
  * packets arrive in as the order of the project's states, and socket.io
@@ -43,5 +48,11 @@ export function sendProject(
       log.warn("Studio could not send the imports and sources to the UI", err);
     }
   }
-  target.emit("config:status", configStatusOf(snapshot, root));
+  const status = configStatusOf(snapshot, root);
+  emitToPages(target, "config:status", status, statusWithoutSecrets(status));
+}
+
+function statusWithoutSecrets(status: ConfigStatusPayload): ConfigStatusPayload {
+  if (status.state !== "failed") return status;
+  return { ...status, error: { ...status.error, message: cutText(status.error.message) } };
 }

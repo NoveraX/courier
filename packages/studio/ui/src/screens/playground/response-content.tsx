@@ -63,7 +63,10 @@ function Invitation(): React.ReactNode {
 function Failed({ reason }: { reason: string }): React.ReactNode {
   return (
     <Centered>
-      <span role="alert" className="max-w-120 text-control break-words text-err">
+      <span
+        role="alert"
+        className="max-w-120 text-control break-words whitespace-pre-line text-err"
+      >
         {reason}
       </span>
     </Centered>

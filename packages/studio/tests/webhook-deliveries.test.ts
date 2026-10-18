@@ -188,7 +188,7 @@ describe("a webhook delivered from a page", () => {
     });
   });
 
-  it("says why an application could not deliver it with no token its failure quoted", async () => {
+  it("says why an application could not deliver it, as it said it, to the page that holds the token", async () => {
     const { url, post } = await studio();
     await runtime(url, {
       id: "older-app",
@@ -210,7 +210,8 @@ describe("a webhook delivered from a page", () => {
     ).toEqual({
       status: 422,
       body: {
-        error: 'The delivery failed: Headers.append: "[redacted]" is an invalid header value.',
+        error:
+          'The delivery failed: Headers.append: "Bearer B34rer\nx" is an invalid header value.',
       },
     });
   });

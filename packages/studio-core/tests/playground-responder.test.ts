@@ -208,7 +208,7 @@ describe("a call from the Playground whose header the platform refuses", () => {
     onTestFinished(() => registerSources({ api }));
   }
 
-  it("answers an HTTP call with the error, its token cut", async () => {
+  it("answers an HTTP call with the error as the app was told it", async () => {
     await registerLeaky();
 
     runtime?.emit("playground:execute", {
@@ -221,12 +221,10 @@ describe("a call from the Playground whose header the platform refuses", () => {
     });
     await until(() => framesOf("leaky-http").length > 0, "the failure");
 
-    const sent = JSON.stringify(framesOf("leaky-http"));
-    expect(sent).toContain("[redacted]");
-    expect(sent).not.toContain("B34rer");
+    expect(JSON.stringify(framesOf("leaky-http"))).toContain("B34rer");
   });
 
-  it("ends a stream with the error, its token cut", async () => {
+  it("ends a stream with the error as the app was told it", async () => {
     await registerLeaky();
 
     runtime?.emit("playground:execute", {
@@ -242,7 +240,7 @@ describe("a call from the Playground whose header the platform refuses", () => {
       "the failure",
     );
 
-    expect(JSON.stringify(framesOf("leaky-sse"))).not.toContain("B34rer");
+    expect(JSON.stringify(framesOf("leaky-sse"))).toContain("B34rer");
   });
 });
 

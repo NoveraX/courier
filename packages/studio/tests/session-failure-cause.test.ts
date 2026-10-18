@@ -1,9 +1,9 @@
 /**
- * A saved session keeps why a request got no answer, checked as the runtime
- * checks it: a page or a session file can hold anything, and a saved
- * session is handed around.
+ * A saved session keeps why a request got no answer, read in the shape the
+ * runtime gives it — a page or a session file can hold anything — and, as a
+ * saved session is written down and handed around, with what could be a
+ * credential cut from its text.
  */
-import { UNSHOWN_CAUSE } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
 import { buildSession } from "../src/server/session-builder";
@@ -31,7 +31,7 @@ describe("a saved request that got no answer", () => {
     });
   });
 
-  it("keeps no token, user or password a URL in the text carried", () => {
+  it("keeps no token, user or password a URL in the text carried, and the rest of it", () => {
     const error = savedErrorOf({
       type: "network",
       message: "Network request failed",
@@ -41,10 +41,13 @@ describe("a saved request that got no answer", () => {
       },
     });
 
-    expect(error?.cause).toEqual({ code: "ECONNRESET", message: "failed: https://api.test/v1" });
+    expect(error?.cause).toEqual({
+      code: "ECONNRESET",
+      message: "failed: https://api.test/v1?token=[redacted]#x",
+    });
   });
 
-  it("keeps no text without a system error code, and no cause in another shape", () => {
+  it("keeps a code only where it reads as one, and no cause in another shape", () => {
     const coded = savedErrorOf({
       type: "network",
       message: "Network request failed",
@@ -56,7 +59,7 @@ describe("a saved request that got no answer", () => {
       cause: 7,
     });
 
-    expect(coded?.cause).toEqual({ message: UNSHOWN_CAUSE });
+    expect(coded?.cause).toEqual({ message: "failed" });
     expect(shapeless).not.toHaveProperty("cause");
   });
 

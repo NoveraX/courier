@@ -16,6 +16,8 @@ const REFERENCES = /(?<![A-Za-z0-9_])@(?=[A-Za-z0-9])|#(?=\d)|(?<![A-Za-z0-9_])g
    zero-width space, so one goes before each dollar sign too. */
 const DOLLAR = /\$/g;
 const LINE_BREAKS = /[\r\n]+/g;
+/* A pipe, with the text's own backslash before it when it has one. */
+const CELL_PIPE = /(\\?)\|/g;
 /* Shows as nothing and is no space to Markdown, so it parts characters
    without changing what a reader sees. */
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
@@ -67,5 +69,10 @@ export function markdownText(text: string): string {
 export function markdownCode(text: string, { table = true }: { table?: boolean } = {}): string {
   const span = text.replace(LINE_BREAKS, " ").replace(/`/g, "'");
   if (!table) return span;
-  return span.replace(/\\(?=\|)/g, `\\${ZERO_WIDTH_SPACE}`).replace(/\|/g, "\\|");
+  return span.replace(CELL_PIPE, cellPipe);
+}
+
+/* A pipe escaped for a table cell, parted from the text's own backslash before it. */
+function cellPipe(_pipe: string, own: string): string {
+  return own === "" ? "\\|" : `\\${ZERO_WIDTH_SPACE}\\|`;
 }

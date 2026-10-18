@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { markdownCode, markdownText } from "../../src/commands/markdown-escape";
+import * as pageCopy from "../../ui/src/lib/markdown-escape";
 
 const ZWSP = "\u200B";
 
@@ -97,6 +98,7 @@ describe("markdownCode", () => {
       `x\\${ZWSP}\\|<img src=x onerror=alert(1)>`,
     );
     expect(markdownCode("a\\\\|b")).toBe(`a\\\\${ZWSP}\\|b`);
+    expect(markdownCode("\\||")).toBe(`\\${ZWSP}\\|\\|`);
   });
 
   it("leaves a backslash before a pipe alone outside a table", () => {
@@ -105,5 +107,30 @@ describe("markdownCode", () => {
 
   it("writes its line breaks as spaces", () => {
     expect(markdownCode("a\nb")).toBe("a b");
+  });
+});
+
+/* The page's audit export writes its report with a copy of these, which has
+   to read every text as this one does. */
+describe("the page's copy", () => {
+  const TEXTS = [
+    "",
+    "|",
+    "\\|",
+    "\\\\|",
+    "\\||",
+    "a`b|c",
+    "x\\|<img src=x onerror=alert(1)>",
+    "@octocat, see #12 and acme/shop#3, GH-4",
+    "$x costs $5 (or $6)",
+    "first\nsecond\r\nthird",
+    "_a_ user_id _b",
+    "[x](y) [z][w] &amp; &#39;",
+    "~~struck~~ *em* <b>",
+  ];
+
+  it.each(TEXTS)("writes %j as this one does", (text) => {
+    expect(pageCopy.markdownText(text)).toBe(markdownText(text));
+    expect(pageCopy.markdownCode(text)).toBe(markdownCode(text));
   });
 });

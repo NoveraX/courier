@@ -15,6 +15,7 @@ import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors/configuration-error";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
@@ -52,7 +53,7 @@ beforeEach(() => {
       new URL(input instanceof Request ? input.url : String(input), "http://app.local"),
       init,
     );
-    if (request.url.startsWith(UPSTREAM)) {
+    if (isUpstream(request.url, UPSTREAM)) {
       upstreamBodies.push(new Uint8Array(await request.arrayBuffer()));
       return Response.json({ ok: true });
     }

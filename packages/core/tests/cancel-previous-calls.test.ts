@@ -18,6 +18,7 @@ import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
@@ -133,7 +134,7 @@ describe("the proxy", () => {
       "fetch",
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
         const url = input instanceof Request ? input.url : String(input);
-        if (url.startsWith(UPSTREAM)) return slowUpstream(input, init);
+        if (isUpstream(url, UPSTREAM)) return slowUpstream(input, init);
         /* As real fetch does, a cancelled request rejects with its reason. */
         const signal = init?.signal;
         const answer = handler.handle(new Request(new URL(url, "http://app.localhost"), init));
@@ -167,9 +168,7 @@ describe("the proxy", () => {
 
     expect(await first).toBe(499);
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
-    expect(
-      proxied.mock.calls.filter(([input]) => !String(input).startsWith(UPSTREAM)),
-    ).toHaveLength(1);
+    expect(proxied.mock.calls.filter(([input]) => !isUpstream(input, UPSTREAM))).toHaveLength(1);
   });
 
   it("cancels in the browser client, which takes the source's list", async () => {

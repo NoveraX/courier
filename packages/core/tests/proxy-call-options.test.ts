@@ -15,6 +15,7 @@ import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
@@ -41,7 +42,7 @@ beforeEach(() => {
   const handler = createHandler();
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
-    if (url.startsWith(UPSTREAM)) {
+    if (isUpstream(url, UPSTREAM)) {
       upstreamHeaders.push(new Headers(init?.headers));
       return Response.json({ ok: true });
     }

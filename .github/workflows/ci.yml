@@ -100,13 +100,19 @@ jobs:
 
       - name: Test
         if: matrix.node-version != 24
-        run: npm test
+        run: npm test -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=vitest-report.json
 
       # The same suite, measured: coverage below the thresholds in
       # vitest.config.ts fails the job.
       - name: Test with coverage
         if: matrix.node-version == 24
-        run: npm run test:coverage
+        run: npm run test:coverage -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=vitest-report.json
+
+      # Every test a run skips is one its platform is known to skip, named in
+      # scripts/skipped-tests.json: one skipped without being named there, or
+      # named and run, fails the job, and the summary lists what was skipped.
+      - name: Check the skipped tests
+        run: npm run check:skipped -- vitest-report.json
 
       # The only gate that reads the declarations the packages publish; every
       # other one resolves sibling packages through their sources.
@@ -183,7 +189,13 @@ jobs:
         working-directory: docs
 
       - name: Test
-        run: npm test
+        run: npm test -- --reporter=default --reporter=github-actions --reporter=json --outputFile.json=vitest-report.json
+
+      # Every test a run skips is one its platform is known to skip, named in
+      # scripts/skipped-tests.json: one skipped without being named there, or
+      # named and run, fails the job, and the summary lists what was skipped.
+      - name: Check the skipped tests
+        run: npm run check:skipped -- vitest-report.json
 
       - name: Run the example
         run: npm run demo --workspace examples/basic

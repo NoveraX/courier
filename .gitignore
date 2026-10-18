@@ -35,6 +35,7 @@ Thumbs.db
 
 # Coverage & testing
 coverage/
+vitest-report.json
 
 # TanStack Router (auto-generated)
 routeTree.gen.ts

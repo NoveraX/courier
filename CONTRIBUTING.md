@@ -129,6 +129,15 @@ busy, and the Windows runner slower still.
 CI runs a test once. One that fails now and then is a bug in the test or in
 the code it tests, and its cause is found rather than retried away.
 
+A test that cannot run on a platform — a behaviour only another platform
+has, a service the run has none of — skips itself by a condition, and CI
+holds each run's skipped tests to `scripts/skipped-tests.json`: a test the
+list does not name for that platform, if skipped, or one it names, if run,
+fails the job. A new skip goes in the list with the change that makes it;
+the job's summary lists every test it skipped. The lists are the CI
+runners', so a machine with Redis running skips none of the Redis tests the
+macOS list names.
+
 Studio's flows also run in a real browser: `e2e/` starts Studio from its
 command line over a copy of a fixture project, and drives importing,
 updating and removing an API, the mock wizard and the mocks, and the

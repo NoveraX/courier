@@ -19,6 +19,9 @@ import { type ForwardProxy, startForwardProxy } from "../../core/tests/helpers/f
 import { testCertificates } from "../../core/tests/helpers/test-certificates";
 
 const TSX = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
+/* Past the 60 s Studio gives a fetch: a fetch that stalls ends with Studio's
+   own reason, rather than with its process stopped and nothing said. */
+const CHILD_TIMEOUT_MS = 75_000;
 const HOST = "openapi.courier.invalid";
 const certificates = testCertificates([HOST]);
 
@@ -71,15 +74,21 @@ function studioFetch(
         /* Only what the test names: the developer's own proxy variables must not reach it. */
         env: { NODE_ENV: "test", PATH: process.env.PATH, HTTPS_PROXY: proxy.url, ...env },
         encoding: "utf8",
-        timeout: 25_000,
+        timeout: CHILD_TIMEOUT_MS,
       },
       (error, stdout, stderr) =>
-        error ? reject(new Error(`${error.message}\n${stderr}`)) : resolve(JSON.parse(stdout)),
+        error
+          ? reject(
+              new Error(
+                `${error.message}\nstdout: ${stdout}\nstderr: ${stderr}\nthe proxy saw: ${proxy.seen.join(", ")}`,
+              ),
+            )
+          : resolve(JSON.parse(stdout)),
     );
   });
 }
 
-describe("Studio started behind a proxy", { timeout: 30_000 }, () => {
+describe("Studio started behind a proxy", { timeout: CHILD_TIMEOUT_MS + 5_000 }, () => {
   it("fetches through it, over TLS signed by the authority NODE_EXTRA_CA_CERTS names", async () => {
     proxy.seen.length = 0;
 

@@ -5,7 +5,7 @@
 import { randomUUID } from "node:crypto";
 
 import { shownCause, shownText } from "@noverax/courier/internal";
-import { sharedOf } from "./saved-shared";
+import { readShared } from "@noverax/courier-studio-core";
 import type { SavedRequest, SavedSession, SavedSessionApp, SessionStats } from "./session-types";
 import { headersWithoutCredentials } from "./storage/without-credentials";
 import { isObject } from "./validate-body";
@@ -76,7 +76,7 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     callerRuntimeId: optionalString(raw.callerRuntimeId),
     agent: agentOf(raw.agent),
     idempotencyKey: optionalString(raw.idempotencyKey),
-    shared: sharedOf(raw.shared),
+    shared: readShared(raw.shared),
   };
 }
 

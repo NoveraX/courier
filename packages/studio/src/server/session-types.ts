@@ -2,6 +2,8 @@
  * Session persistence types.
  */
 
+import type { SharedAnswer } from "@noverax/courier-studio-core";
+
 import type { SessionEnvironment } from "./session-file/session-environment";
 
 export interface SavedSession {
@@ -73,7 +75,7 @@ export interface SavedRequest {
   /** The key the call sent in its endpoint's idempotency header. */
   idempotencyKey?: string | undefined;
   /** How its read was answered by another call's request, when it sent none of its own. */
-  shared?: { by: "flight" | "render"; with?: string } | undefined;
+  shared?: SharedAnswer | undefined;
 }
 
 export interface SessionStats {

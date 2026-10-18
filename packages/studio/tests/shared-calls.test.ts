@@ -7,11 +7,13 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { requestFromSaved, savedRequestOf } from "@/features/sessions/saved-request";
 import { endpointStats } from "../src/server/editor/endpoint-stats";
 import { gatherRequests, summaryOf } from "../src/server/mcp/request-views";
 import { buildSession } from "../src/server/session-builder";
 import { exportAsHar } from "../src/server/session-export-har";
 import { exportAsPostman } from "../src/server/session-export-postman";
+import { requestEntry } from "../ui/__tests__/request-entry-fixture";
 
 const SHARED = { by: "flight", with: "sent" } as const;
 
@@ -77,6 +79,21 @@ describe("a saved session", () => {
 
     expect(exportAsHar(saved).log.entries).toHaveLength(2);
     expect(exportAsPostman(saved).item).toHaveLength(2);
+  });
+});
+
+describe("a session the page saves", () => {
+  it("keeps each call's mark, agent and idempotency key, through Studio's server and back", () => {
+    const agent = { tool: "list_items", access: "read", client: "code-editor 2.1.0" } as const;
+    const sent = requestEntry({ id: "sent", agent, idempotencyKey: "key-1" });
+    const joined = requestEntry({ id: "joined", shared: SHARED });
+
+    const saved = buildSession({ requests: [sent, joined].map(savedRequestOf), apps: [] });
+    const back = saved.requests.map(requestFromSaved);
+
+    expect(back.map((request) => request?.shared)).toEqual([undefined, SHARED]);
+    expect(back[0]).toMatchObject({ agent, idempotencyKey: "key-1" });
+    expect(exportAsHar(saved).log.entries).toHaveLength(1);
   });
 });
 

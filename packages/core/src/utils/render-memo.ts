@@ -88,13 +88,10 @@ async function answerInRender(
     call?.onShared?.({ by: "render", with: kept.by });
     return replayAnswer(kept);
   }
-  /* Only the call that sends the request runs this, so the answer kept is the one its request got. */
-  const sendAndKeep = async (sendSignal: AbortSignal | undefined): Promise<Response> => {
-    const response = await send(sendSignal);
-    if (response.ok) remember(memo, key, keepAnswer(response.clone(), call?.id));
-    return response;
-  };
-  return shareFlight(key, signal, sendAndKeep, call);
+  /* Kept as the answer comes, for the call its request belongs to, before any call reads it. */
+  return shareFlight(key, signal, send, call, (response, owner) => {
+    if (response.ok) remember(memo, key, keepAnswer(response.clone(), owner?.id));
+  });
 }
 
 /* A read whose body does not arrive whole is not kept, and the next one asks again. */

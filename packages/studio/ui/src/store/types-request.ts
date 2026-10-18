@@ -1,4 +1,7 @@
+import type { SharedAnswer } from "@noverax/courier-studio-core";
 import type { MiddlewareEntry, ProxyTiming, RequestTiming, ValidationIssue } from "./types-events";
+
+export type { SharedAnswer };
 
 // ── Request model (aggregated from events) ─────────────────────────────────
 
@@ -15,17 +18,6 @@ export interface RequestAgent {
   tool: string;
   access: "read" | "write" | "destructive";
   client?: string | undefined;
-}
-
-/**
- * How a call's read was answered by another call's request, without one of
- * its own: it joined the identical read already in flight (`flight`), or
- * the render it was made in had read it already (`render`).
- */
-export interface SharedAnswer {
-  by: "flight" | "render";
-  /** The call whose request answered, when Studio measured it */
-  with?: string | undefined;
 }
 
 /** Why a request got no answer, as the system said it: its code, where it gave one, and its text. */

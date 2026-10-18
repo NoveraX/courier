@@ -1,3 +1,4 @@
+import { readShared } from "@noverax/courier-studio-core";
 import { isPlainObject } from "@/socket/is-plain-object";
 import { num, optNum, optStr, str } from "./event-helpers";
 import { httpVersionOf } from "./http-version";
@@ -11,7 +12,6 @@ import {
 } from "./payload";
 import { readAgent } from "./read-agent";
 import { readCause } from "./read-cause";
-import { readShared } from "./read-shared";
 import type { ProxyTiming, RequestEntry, RequestStatus, ValidationIssue } from "./types";
 
 type EventPayload = Record<string, unknown>;

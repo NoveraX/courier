@@ -62,6 +62,7 @@ export type {
   ValidationPassEvent,
   ValidationStartEvent,
 } from "./events";
+export { readShared } from "./events/read-shared";
 export { isSafeHttpOrigin } from "./lib/is-safe-http-origin";
 export { playgroundRequestId } from "./lib/playground-request-id";
 export { applyStoreReport, readStoreReport } from "./mock-store";

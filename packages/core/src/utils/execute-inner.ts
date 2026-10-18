@@ -33,10 +33,14 @@ type InnerResult = {
 
 /**
  * Run the endpoint function, measure fetch timing, validate response.
+ *
+ * Each attempt a retry makes is told afresh whether another call's request
+ * answered it: only the attempt that ends the call decides.
  */
 export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult> {
   const vars = deps.variables;
   const ft0 = deps.hasStudio ? performance.now() : 0;
+  deps.timing.shared = undefined;
 
   let response: Awaited<ReturnType<typeof deps.endpoint>>;
   try {
@@ -110,9 +114,10 @@ function sharingCall(deps: InnerExecuteDeps): SharingCall {
 }
 
 /* The answer as it came, before the schema strips what it does not declare: Studio
-   reads its shape and compares the two, with code only Studio's runtime brings. */
+   reads its shape and compares the two, with code only Studio's runtime brings. An
+   answer another call's request brought is that request's, and told once, by it. */
 function reportAnswer(deps: InnerExecuteDeps, status: number, data: unknown): void {
   if (!deps.hasStudio || !deps.dt.onAnswer || !deps.schema?.response || deps.stream) return;
-  if (status < 200 || status > 299) return;
+  if (status < 200 || status > 299 || deps.timing.shared !== undefined) return;
   deps.dt.onAnswer({ requestId: deps.requestId, data, timestamp: Date.now() });
 }

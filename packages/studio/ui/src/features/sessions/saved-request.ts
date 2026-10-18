@@ -1,8 +1,8 @@
+import { readShared } from "@noverax/courier-studio-core";
 import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
 import { httpVersionOf } from "@/store/http-version";
 import { readAgent } from "@/store/read-agent";
 import { readCause } from "@/store/read-cause";
-import { readShared } from "@/store/read-shared";
 import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
 const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
@@ -14,9 +14,10 @@ const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
 ]);
 
 /**
- * What a saved session keeps of a request: what the Timeline shows of it,
- * without its stream events and middleware entries, which Studio does not
- * store.
+ * What a saved session keeps of a request: what the Timeline shows of it —
+ * the agent it ran for, its idempotency key and whether another call's
+ * request answered it among it — without its stream events and middleware
+ * entries, which Studio does not store.
  *
  * @param r - A request on screen
  * @returns The request as Studio's `/api/sessions/save` takes it
@@ -36,10 +37,13 @@ export function savedRequestOf(r: RequestEntry): Record<string, unknown> {
     variables: r.variables,
     variablesCutFrom: r.variablesCutFrom,
     mode: r.mode,
+    agent: r.agent,
+    idempotencyKey: r.idempotencyKey,
     type: r.type,
     status: r.status,
     statusCode: r.statusCode,
     timing: r.timing,
+    shared: r.shared,
     size: r.size,
     data: r.data,
     dataCutFrom: r.dataCutFrom,

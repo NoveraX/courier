@@ -20,11 +20,9 @@
  * is one of them is rebuilt the same way.
  */
 
+import { RESERVED_ENDPOINT_NAMES } from "./client-names";
 import { toCamelCase } from "./naming-utils";
 import type { ParsedEndpoint } from "./types";
-
-/** Keys a group, a source or a client holds beside its endpoints. */
-const RESERVED = new Set(["options", "raw", "with"]);
 
 /**
  * Rename only those endpoints whose names collide within the group.
@@ -47,8 +45,9 @@ export function uniqueEndpointNames(endpoints: ParsedEndpoint[], prefix = ""): P
     occurrences.set(endpoint.name, (occurrences.get(endpoint.name) ?? 0) + 1);
   }
 
-  const taken = new Set<string>(RESERVED);
-  const keeps = (name: string): boolean => occurrences.get(name) === 1 && !RESERVED.has(name);
+  const taken = new Set<string>(RESERVED_ENDPOINT_NAMES);
+  const keeps = (name: string): boolean =>
+    occurrences.get(name) === 1 && !RESERVED_ENDPOINT_NAMES.has(name);
   for (const name of occurrences.keys()) {
     if (keeps(name)) taken.add(name);
   }
@@ -57,7 +56,10 @@ export function uniqueEndpointNames(endpoints: ParsedEndpoint[], prefix = ""): P
     if (keeps(endpoint.name)) return endpoint;
 
     const candidate = nameFromPath(endpoint, prefix);
-    const name = settle(RESERVED.has(candidate) ? `${candidate}Request` : candidate, taken);
+    const name = settle(
+      RESERVED_ENDPOINT_NAMES.has(candidate) ? `${candidate}Request` : candidate,
+      taken,
+    );
     taken.add(name);
     return { ...endpoint, name };
   });

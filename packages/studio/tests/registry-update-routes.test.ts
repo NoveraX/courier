@@ -363,6 +363,44 @@ describe("updating a declared import as its entry says", () => {
     expect(field(preview.body, "code")).toBe("IMPORT_TRANSFORM_FAILED");
     expect(field(preview.body, "error")).toContain("no such tag");
   });
+
+  it("names the import when its transform returns a value Studio does not generate from", async () => {
+    const spec = await specServer(privateSpec);
+    servers.push(spec);
+    const crafted = declared(`${spec.url}/private/spec.json`).replace(
+      '(spec) => ({ ...spec, baseURL: "https://transformed.example" })',
+      '(spec) => ({ ...spec, schemas: { ...spec.schemas, "Pet; run()": { name: "Pet", type: "object" } } })',
+    );
+    const url = await start(crafted);
+
+    const preview = await post(url, "/api/apis/update/preview", {
+      name: "petstore",
+      newSpec: parseSpec(PRIVATE_SPEC),
+    });
+
+    expect(preview.status).toBe(400);
+    expect(field(preview.body, "code")).toBe("IMPORT_TRANSFORM_FAILED");
+    expect(field(preview.body, "error")).toBe(
+      'The transform of the import "petstore" in courier.config returned a specification Studio does not generate from: its schemas "Pet; run()" is refused: a name the code is written with is an identifier, in Latin letters, digits, _ and $.',
+    );
+  });
+
+  it("holds a transform's specification as it is generated from, after include and exclude", async () => {
+    const spec = await specServer(privateSpec);
+    servers.push(spec);
+    const renamed = declared(`${spec.url}/private/spec.json`).replace(
+      '(spec) => ({ ...spec, baseURL: "https://transformed.example" })',
+      '(spec) => ({ ...spec, groups: spec.groups.map((group) => group.name === "store" ? { ...group, name: "default" } : group) })',
+    );
+    const url = await start(renamed);
+
+    const preview = await post(url, "/api/apis/update/preview", {
+      name: "petstore",
+      newSpec: parseSpec(PRIVATE_SPEC),
+    });
+
+    expect(preview.status).toBe(200);
+  });
 });
 
 describe("a check whose caller goes away", () => {

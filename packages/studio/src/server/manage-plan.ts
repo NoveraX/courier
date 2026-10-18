@@ -12,6 +12,7 @@ import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { isTopLevel } from "../apis/parser/top-level";
 import { checkDirOverlap } from "./check-dir-overlap";
+import { generatedFromSpec } from "./generated-from-spec";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { FilePlan } from "./import-files/file-plan-types";
 import { importBodies } from "./import-files/import-bodies";
@@ -61,6 +62,8 @@ export interface ManagePlan {
  * @param running - The config Studio runs, which says where the routes module is
  * @returns The changes and their plan, or the error to answer with and its status
  * @throws {DirOverlapError} When another import owns a directory overlapping the import's
+ * @throws {InvalidSpecError} When a value the spec gives that would be written as code is refused
+ * @throws {SpecGenerationError} When the spec cannot be generated from
  */
 export async function planManage(
   body: ManageRequest,
@@ -109,7 +112,7 @@ export async function planManage(
     Object.keys(toAdd).length > 0
       ? await formatProjectFiles(
           root.path,
-          addedEndpointsCode(body.spec, toAdd, options, layout),
+          generatedFromSpec(() => addedEndpointsCode(body.spec, toAdd, options, layout)),
           formatters,
         )
       : undefined;
@@ -126,7 +129,7 @@ export async function planManage(
   }
   const fileOf = (group: string): string =>
     flat || isTopLevel(group) ? layout.sourceFile : layout.groupFile(group);
-  const proxy = proxyAfterChange(body.spec, options, layout);
+  const proxy = generatedFromSpec(() => proxyAfterChange(body.spec, options, layout));
   const whole = proxy ? (await formatProjectFiles(root.path, [proxy], formatters)).files : [];
   const changes = { toRemove: body.toRemove, added: addResult, removed: removeResult, whole };
   const request = managePlanRequest(layout, changes, entry, fileOf);

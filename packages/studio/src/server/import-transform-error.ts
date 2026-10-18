@@ -2,8 +2,9 @@ import { CourierError } from "@noverax/courier";
 
 /**
  * An import's `transform` threw, or returned something that is not a
- * specification. Nothing is generated. Answered 400: the transform in
- * courier.config is what needs fixing.
+ * specification or one Studio does not generate from. Nothing is
+ * generated. Answered 400: the transform in courier.config is what needs
+ * fixing.
  *
  * @example
  * ```ts

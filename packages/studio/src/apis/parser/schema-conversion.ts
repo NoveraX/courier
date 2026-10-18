@@ -7,27 +7,15 @@ import { convertObjectSchema } from "./convert-object-schema";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
 import { readConstraints } from "./read-constraints";
 import { referencedSchema } from "./referenced-schema";
+import { isSchemaType } from "./schema-type";
 import { asNode, fieldOf, listAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedSchema } from "./types";
 
 const PRIMITIVES = new Set(["string", "number", "integer", "boolean", "null"]);
-const SCHEMA_TYPES: ReadonlySet<string> = new Set([
-  ...PRIMITIVES,
-  "object",
-  "array",
-  "enum",
-  "ref",
-  "union",
-  "any",
-]);
 type PrimitiveType = "string" | "number" | "integer" | "boolean" | "null";
 
 function isPrimitiveType(type: string | undefined): type is PrimitiveType {
   return type !== undefined && PRIMITIVES.has(type);
-}
-
-function isSchemaType(type: string | undefined): type is ParsedSchema["type"] {
-  return type !== undefined && SCHEMA_TYPES.has(type);
 }
 
 /** A declared type the parsed schema can hold; `any` for none, or one it does not know. */

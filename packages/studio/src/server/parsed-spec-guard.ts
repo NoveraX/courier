@@ -12,7 +12,9 @@ const METHODS: ReadonlySet<unknown> = new Set(SUPPORTED_METHODS);
  * spec, as far as the generator relies on it before it can fail by itself:
  * the spec's own fields, its groups, and each endpoint's name, method and
  * paths. A schema malformed deeper than that makes generation fail, which
- * the routes answer 400.
+ * the routes answer 400, as does a value the generator would write as code
+ * that is not of a kind that can only be what it says — see
+ * `assertGeneratable`.
  *
  * @param value - A spec from a request body
  * @returns `true` when it has that shape

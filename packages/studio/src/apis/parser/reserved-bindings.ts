@@ -94,3 +94,37 @@ const GENERATED_IDENTIFIERS = new Set([
 export function isReservedBinding(name: string): boolean {
   return RESERVED_WORDS.has(name) || GENERATED_IDENTIFIERS.has(name);
 }
+
+/* What TypeScript reads as a type of its own where a type alias is named. */
+const TYPE_KEYWORDS = new Set([
+  "any",
+  "bigint",
+  "boolean",
+  "never",
+  "number",
+  "object",
+  "string",
+  "symbol",
+  "undefined",
+  "unknown",
+]);
+
+/**
+ * Tell whether a name may not name a schema's type alias: a reserved word,
+ * one of TypeScript's own types, or a name the generated files use
+ * themselves, which a type alias of the same name would collide with.
+ * Globals the generated code only reads as values, such as `Error`, are
+ * free: a schema called `Error` is as common as any.
+ *
+ * @param name - A schema's name, or one a schema refers to by
+ * @returns `true` when no type alias may take the name
+ * @example
+ * ```ts
+ * isReservedTypeName("string"); // true
+ * isReservedTypeName("z"); // true
+ * isReservedTypeName("Error"); // false
+ * ```
+ */
+export function isReservedTypeName(name: string): boolean {
+  return RESERVED_WORDS.has(name) || GENERATED_IDENTIFIERS.has(name) || TYPE_KEYWORDS.has(name);
+}

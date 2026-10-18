@@ -8,6 +8,7 @@ import type { ParsedSchema, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
 import type { DeclaredKind } from "./declared-in-lines";
 import { type ExtractedTypeNames, extractedTypeNames } from "./extracted-type-names";
+import { assertGeneratable } from "./generatable-spec";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
 import { generateProxyFile } from "./generate-proxy";
@@ -29,6 +30,7 @@ import { type WrittenGroup, writtenGroup } from "./written-group";
  * @param importName - The import's key under `imports`; `options.sourceName` when omitted, as the import wizard names both alike
  * @returns The files, each with its project-relative path
  * @throws {InvalidImportError} When the output directory or a name is refused
+ * @throws {InvalidSpecError} When a value the spec gives that would be written as code is not of a kind that can only be what it says
  * @example
  * ```ts
  * const files = generateCode(spec, { type: "openapi", outputDir: "src/api" }, "petStore");
@@ -42,6 +44,7 @@ export function generateCode(
   if (importName === undefined) {
     throw new InvalidImportError("importName", "", "the import has no name");
   }
+  assertGeneratable(spec);
   const opts = applyImportDefaults(options, resolveImportLayout(options, importName));
 
   /* A selection names endpoints by the specification's own groups. */

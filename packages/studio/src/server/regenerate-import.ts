@@ -1,10 +1,10 @@
-import { CourierError } from "@noverax/courier";
 import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { findFormatters, formatProjectFiles } from "@noverax/courier-cli/devkit";
 import type { GenerateOptions, ParsedSpec } from "../apis";
 import { createSpecDigest, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { ImportLayout } from "../apis/layout";
+import { generatedFromSpec } from "./generated-from-spec";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { ApplyReport } from "./import-files/apply-file-plan";
 import type { FilePlan } from "./import-files/file-plan-types";
@@ -14,7 +14,6 @@ import { regenerationRequest } from "./import-files/regeneration-request";
 import { type PlanConsent, type PlanQuoting, runPlan } from "./import-files/run-plan";
 import { saveImportEntry } from "./import-files/save-import-entry";
 import { formatPlannedWrites } from "./project-format/format-planned-writes";
-import { SpecGenerationError } from "./spec-generation-error";
 
 /** An import to generate afresh from a spec. */
 export interface Regeneration {
@@ -41,6 +40,7 @@ export interface Regeneration {
  *
  * @param regeneration - The import, where it goes, the spec and options, and its record
  * @returns The plan, and the recorded files left outside the import's directory
+ * @throws {InvalidSpecError} When a value the spec gives that would be written as code is refused
  * @throws {SpecGenerationError} When the spec cannot be generated from
  */
 export async function planRegeneration(
@@ -51,7 +51,9 @@ export async function planRegeneration(
   const formatters = findFormatters(root.path);
   const generated = await formatProjectFiles(
     root.path,
-    generate(spec, { ...options, ...(importExtension && { importExtension }) }, name),
+    generatedFromSpec(() =>
+      generateCode(spec, { ...options, ...(importExtension && { importExtension }) }, name),
+    ),
     formatters,
   );
   const { request, leftBehind } = regenerationRequest(root, layout, generated.files, entry);
@@ -88,17 +90,4 @@ export async function applyRegeneration(
     quoting,
   );
   return { report, leftBehind };
-}
-
-function generate(
-  spec: ParsedSpec,
-  options: GenerateOptions,
-  name: string,
-): ReturnType<typeof generateCode> {
-  try {
-    return generateCode(spec, options, name);
-  } catch (error) {
-    if (error instanceof CourierError) throw error;
-    throw new SpecGenerationError(error);
-  }
 }

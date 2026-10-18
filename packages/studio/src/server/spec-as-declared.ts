@@ -2,6 +2,8 @@ import type { CourierImportEntry } from "@noverax/courier/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { computeSpecHash, type ParsedSpec } from "../apis";
 import { filterSpec } from "../apis/filter-spec";
+import { assertGeneratable } from "../apis/generator/generatable-spec";
+import { InvalidSpecError } from "../apis/parser/invalid-spec-error";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { ImportTransformError } from "./import-transform-error";
 import { isParsedSpec } from "./parsed-spec-guard";
@@ -44,6 +46,17 @@ async function transformed(
   return next;
 }
 
+/* Refused here, a value the transform wrote is told as the transform's, which is what needs fixing. */
+function assertTransformGeneratable(name: string, spec: ParsedSpec): void {
+  try {
+    assertGeneratable(spec);
+  } catch (error) {
+    if (!(error instanceof InvalidSpecError)) throw error;
+    const problem = `returned a specification Studio does not generate from: its ${error.refusal}`;
+    throw new ImportTransformError(name, problem, error);
+  }
+}
+
 /**
  * The specification a declared import is generated from: the one pinned,
  * as the import's `transform` makes it, with only the endpoints its
@@ -55,7 +68,7 @@ async function transformed(
  * @param spec - The specification as parsed
  * @returns The specification to generate from
  * @throws {SpecPinMismatchError} When the import pins another hash
- * @throws {ImportTransformError} When the transform throws or returns no specification
+ * @throws {ImportTransformError} When the transform throws, or returns no specification or one Studio does not generate from
  * @example
  * ```ts
  * const spec = await specAsDeclared("petstore", entry, body.newSpec);
@@ -67,9 +80,12 @@ export async function specAsDeclared(
   spec: ParsedSpec,
 ): Promise<ParsedSpec> {
   checkPinnedHash(name, entry, spec);
-  const shaped =
-    entry.transform === undefined ? spec : await transformed(name, entry.transform, spec);
-  return filterSpec(shaped, entry.include, entry.exclude);
+  if (entry.transform === undefined) return filterSpec(spec, entry.include, entry.exclude);
+  const shaped = await transformed(name, entry.transform, spec);
+  /* Held as it is generated from: a value in an endpoint `exclude` leaves out is never written. */
+  const selected = filterSpec(shaped, entry.include, entry.exclude);
+  assertTransformGeneratable(name, selected);
+  return selected;
 }
 
 /** A specification to generate an import from, and the hash an update check compares. */
@@ -89,7 +105,7 @@ export interface DeclaredSpec {
  * @param spec - The specification as the request sends it
  * @returns The specification to generate from, and the hash to record
  * @throws {SpecPinMismatchError} When the import pins another hash
- * @throws {ImportTransformError} When the transform throws or returns no specification
+ * @throws {ImportTransformError} When the transform throws, or returns no specification or one Studio does not generate from
  * @example
  * ```ts
  * const { spec, specHash } = await declaredSpec(getImportEntry(imports, name), name, body.newSpec);

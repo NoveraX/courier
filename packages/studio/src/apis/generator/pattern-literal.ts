@@ -18,7 +18,7 @@ const LITERAL_ESCAPES: Readonly<Record<string, string>> = {
  * and an escape the pattern already has is left as it is — so the literal's
  * `source` is the one the pattern compiled from its string has.
  *
- * @param pattern - The pattern, as the parser compiled it
+ * @param pattern - The pattern: as the parser compiled it, or one sent to Studio whose literal closes (see `patternCloses`)
  * @returns Source text for the `RegExp`
  * @example
  * ```ts

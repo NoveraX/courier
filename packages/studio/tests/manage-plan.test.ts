@@ -2,7 +2,8 @@
  * Managing an import's endpoints names only endpoints its files hold: an
  * endpoint to remove that the files do not hold, and one to add that the
  * spec does not generate, are both refused with 400, not planned as a change
- * that changes nothing.
+ * that changes nothing. A specification Studio cannot generate an endpoint
+ * to add from is refused with 400 too, as a write refuses it.
  */
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -108,5 +109,90 @@ describe("removing an endpoint the import's files do not hold", () => {
     });
 
     expect(preview.status).toBe(200);
+  });
+});
+
+describe("a crafted specification sent to add endpoints", () => {
+  const NEXT = parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Pets", version: "1" },
+      paths: {
+        "/pets": {
+          get: {
+            operationId: "listPets",
+            tags: ["pets"],
+            responses: { "200": { description: "ok" } },
+          },
+          post: {
+            operationId: "createPet",
+            tags: ["pets"],
+            responses: { "200": { description: "ok" } },
+          },
+        },
+        "/pets/mine": {
+          get: {
+            operationId: "getPet",
+            tags: ["pets"],
+            responses: { "200": { description: "ok" } },
+          },
+        },
+      },
+    }),
+  );
+
+  /* The specification with the endpoint to add answering with the schema given, whatever its type says. */
+  function answering(schema: unknown): unknown {
+    const spec = structuredClone(NEXT);
+    const added = spec.groups
+      .flatMap((group) => group.endpoints)
+      .find((ep) => ep.name === "getPet");
+    Reflect.set(added ?? {}, "responseSchema", schema);
+    return spec;
+  }
+
+  it.each([
+    [
+      "a value it would write as code that is no name",
+      { name: "Mine", type: "ref", refName: "Mine; run()" },
+      "INVALID_SPEC",
+    ],
+    [
+      "a node it cannot read",
+      { name: "Mine", type: "object", properties: { a: null } },
+      "INVALID_SPEC",
+    ],
+    [
+      "a shape the generator fails on by itself",
+      { name: "Mine", type: "object", properties: {}, required: 5 },
+      "SPEC_NOT_GENERATED",
+    ],
+  ])("is answered 400 for %s, not as Studio's own failure", async (_label, schema, code) => {
+    /* With no record of the import's last write, the endpoint is added to its files as they stand. */
+    rmSync(join(root, ".courier/imports-state.json"));
+
+    const preview = await post("/api/apis/manage/preview", {
+      name: "pets",
+      spec: answering(schema),
+      toAdd: { pets: ["getPet"] },
+    });
+
+    expect(preview.status).toBe(400);
+    expect(preview.body).toMatchObject({ code });
+  });
+
+  it("is refused when it only removes, before the proxy caller is written from it", async () => {
+    rmSync(join(root, ".courier/imports-state.json"));
+    const crafted = structuredClone(NEXT);
+    Reflect.set(crafted.groups[0] ?? {}, "name", "pets; run()");
+
+    const preview = await post("/api/apis/manage/preview", {
+      name: "pets",
+      spec: crafted,
+      toRemove: { pets: ["createPet"] },
+    });
+
+    expect(preview.status).toBe(400);
+    expect(preview.body).toMatchObject({ code: "INVALID_SPEC" });
   });
 });

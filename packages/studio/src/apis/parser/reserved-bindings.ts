@@ -2,9 +2,11 @@
  * Words that may name an object property but may not name a binding.
  * A spec whose endpoints carry no tag is grouped under `default`, so the
  * generated `import { default }` and `export const default` were rejected by
- * the parser before any type checker ever saw them.
+ * the parser before any type checker ever saw them. `eval` and `arguments`
+ * are not reserved, but a module is strict, and in one they bind nothing.
  */
 const RESERVED_WORDS = new Set([
+  "arguments",
   "await",
   "break",
   "case",
@@ -18,6 +20,7 @@ const RESERVED_WORDS = new Set([
   "do",
   "else",
   "enum",
+  "eval",
   "export",
   "extends",
   "false",
@@ -79,8 +82,19 @@ const GENERATED_IDENTIFIERS = new Set([
 ]);
 
 /**
+ * Globals the generated code reads: `undefined`, which a call passes for a
+ * body it does not send, and `globalThis` and `Error`, by which a missing
+ * variable is found and told. A binding of one — a group, a source, a
+ * parameter — would take its place in the module that holds it: a
+ * parameter's value would be sent as the body, or a group read for the
+ * environment. A schema may still be named `Error`: it names a type.
+ */
+const READ_GLOBALS = new Set(["Error", "globalThis", "undefined"]);
+
+/**
  * Tell whether a camel-cased name may not be emitted as a binding as it is:
- * a reserved word, or a name the generated files use themselves.
+ * a reserved word, a name the generated files use themselves, or a global
+ * they read.
  *
  * @param name - A camel-cased name
  * @returns `true` when the name needs a suffix to be a binding
@@ -88,11 +102,12 @@ const GENERATED_IDENTIFIERS = new Set([
  * ```ts
  * isReservedBinding("default"); // true
  * isReservedBinding("courier"); // true
+ * isReservedBinding("globalThis"); // true
  * isReservedBinding("pets"); // false
  * ```
  */
 export function isReservedBinding(name: string): boolean {
-  return RESERVED_WORDS.has(name) || GENERATED_IDENTIFIERS.has(name);
+  return RESERVED_WORDS.has(name) || GENERATED_IDENTIFIERS.has(name) || READ_GLOBALS.has(name);
 }
 
 /* What TypeScript reads as a type of its own where a type alias is named. */

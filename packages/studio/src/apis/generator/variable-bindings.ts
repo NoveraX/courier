@@ -9,17 +9,8 @@ import { styledQuery } from "./styled-query";
 
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
-/* Bound by the closure itself, or not bindable in a module. */
-const TAKEN = new Set([
-  "http",
-  "body",
-  "form",
-  "formBody",
-  "formQuery",
-  "vars",
-  "arguments",
-  "eval",
-]);
+/* Bound by the closure itself; a name no module may bind is a reserved binding. */
+const TAKEN = new Set(["http", "body", "form", "formBody", "formQuery", "vars"]);
 
 /** A destructuring pattern, and the query string it feeds. */
 export interface Bindings {

@@ -14,6 +14,12 @@ import { readYaml } from "../../../src/apis/parser/read-yaml";
 /* A second or two on an idle machine; a loaded one may take several times that. */
 const TIMED_TEST_MS = 30_000;
 
+/* Eight times the keys take about eight times as long to read when the time
+   grows with them, and about fifty times as long when each key is compared
+   with every one before it, as `parse` does. A busy machine raises the first
+   to about twice that; this bound stays clear of both. */
+const MOST_TIMES_AS_LONG = 24;
+
 function outcome(read: (text: string) => unknown, text: string): unknown {
   try {
     return { value: read(text) };
@@ -56,9 +62,9 @@ describe("readYaml", () => {
   });
 
   it(
-    "reads a mapping four times as long in about four times the time, not sixteen",
+    "reads a mapping eight times as long in about eight times the time, not sixty-four",
     () => {
-      const [short, long] = [mapping(6_250), mapping(25_000)];
+      const [short, long] = [mapping(3_125), mapping(25_000)];
       readYaml(mapping(5_000));
 
       const ratio = timeRatio(
@@ -66,7 +72,7 @@ describe("readYaml", () => {
         () => readYaml(long),
       );
 
-      expect(ratio).toBeLessThan(8);
+      expect(ratio).toBeLessThan(MOST_TIMES_AS_LONG);
     },
     TIMED_TEST_MS,
   );
@@ -75,7 +81,7 @@ describe("readYaml", () => {
     "finds a key named twice at the end of a mapping in time that grows with it as well",
     () => {
       const repeated = (keys: number) => `${mapping(keys)}\n  k7: 2\n`;
-      const [short, long] = [repeated(6_250), repeated(25_000)];
+      const [short, long] = [repeated(3_125), repeated(25_000)];
       expect(() => readYaml(long)).toThrow(/^Map keys must be unique at line 25002, column 3/);
 
       const ratio = timeRatio(
@@ -83,7 +89,7 @@ describe("readYaml", () => {
         () => expect(() => readYaml(long)).toThrow(),
       );
 
-      expect(ratio).toBeLessThan(8);
+      expect(ratio).toBeLessThan(MOST_TIMES_AS_LONG);
     },
     TIMED_TEST_MS,
   );
@@ -94,9 +100,10 @@ function mapping(keys: number): string {
 }
 
 /* How many times longer the long run takes than the short one, each the
-   fastest of a few, the two taken in turn: the cost of the reading, not of
-   a busy machine's pauses, which slow both alike. */
-function timeRatio(short: () => void, long: () => void, runs = 5): number {
+   fastest of a few, the two taken in turn: the cost of the reading more
+   than of a busy machine's pauses, which still befall the long run more
+   often, as it gives them more time to land in. */
+function timeRatio(short: () => void, long: () => void, runs = 7): number {
   let shortest = Number.POSITIVE_INFINITY;
   let longest = Number.POSITIVE_INFINITY;
   for (let n = 0; n < runs; n++) {

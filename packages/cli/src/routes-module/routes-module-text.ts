@@ -3,6 +3,9 @@ import type { CourierRoutes, RouteShape } from "@noverax/courier/define";
 /** The words every routes module opens with, by which Courier knows a file it wrote. */
 export const ROUTES_MODULE_MARK = "Written by Courier from";
 
+/* What ends a comment; a source's name holding it would end the one it is named in. */
+const COMMENT_END = /\*\//g;
+
 /** One source's routes, under the name the module exports them by. */
 export interface NamedRoutes {
   exportName: string;
@@ -103,7 +106,8 @@ function untypedSource({ exportName, routes }: NamedRoutes): string[] {
 }
 
 function doc(source: string): string {
-  return `/** What a page's proxy client may call of \`${source}\`, and how it reaches each endpoint. */`;
+  const name = source.replace(COMMENT_END, "*\\/");
+  return `/** What a page's proxy client may call of \`${name}\`, and how it reaches each endpoint. */`;
 }
 
 function endpointLines(endpoints: Readonly<Record<string, RouteShape>>, indent: string): string[] {

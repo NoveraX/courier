@@ -2,8 +2,10 @@
  * The text of a routes module: a TypeScript one holds each source's routes
  * to the API it was written from and types the client by it, importing the
  * config as a type alone; a JavaScript one is the routes alone; and one with
- * no endpoint a page may call exports nothing.
+ * no endpoint a page may call exports nothing. A source's name stays a name
+ * in the comment it is named in, whatever it holds.
  */
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { routesModuleText } from "../../src/routes-module/routes-module-text";
@@ -110,6 +112,31 @@ describe("routesModuleText", () => {
     );
     expect(text.endsWith("};\n")).toBe(true);
   });
+
+  it.each([
+    ["TypeScript", "../courier.config"],
+    ["JavaScript", undefined],
+  ])(
+    "keeps a source's name a name in its %s comment, whatever the name holds",
+    (_kind, configSpecifier) => {
+      const named = {
+        exportName: "xRoutes",
+        routes: { ...shop.routes, source: "x*/a/*b*/run()/*" },
+      };
+
+      const text = routesModuleText({
+        configName: "courier.config.ts",
+        configSpecifier,
+        sources: [named],
+      });
+      const module = ts.createSourceFile("courier.routes.ts", text, ts.ScriptTarget.ESNext, true);
+
+      expect(text).toContain(
+        "/** What a page's proxy client may call of `x*\\/a/*b*\\/run()/*`, and how it reaches each endpoint. */",
+      );
+      expect(module.statements.filter(ts.isExpressionStatement)).toEqual([]);
+    },
+  );
 
   it("exports nothing when no endpoint is marked for a page to call", () => {
     const text = routesModuleText({

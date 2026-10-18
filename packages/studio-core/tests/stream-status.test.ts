@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { EventBus } from "../src/event-bus";
 import type { AnyStudioEvent } from "../src/events";
 import { wireStreamHooks } from "../src/runtime/hooks/stream";
+import { refusedSocketCause } from "./helpers/refused-socket-cause";
 
 const { stream, channel } = courier();
 const closers: Array<() => void> = [];
@@ -97,7 +98,7 @@ describe("a stream's connection, as Studio is told it", () => {
     ).toMatchObject({
       requestId: opened?.id,
       failures: 1,
-      cause: { message: "The socket closed with code 1006 before it opened" },
+      cause: await refusedSocketCause(),
     });
   });
 

@@ -30,6 +30,7 @@ import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { RealtimeError } from "../src/realtime/errors";
 import { studioHooks } from "../src/studio";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
+import { refusedSocketCause } from "./helpers/refused-socket-cause";
 
 const { stream, channel } = courier();
 const closers: Array<() => Promise<void>> = [];
@@ -412,7 +413,7 @@ describe("a channel another server serves, through the proxy", () => {
     expect(told.find((event) => event.status === "reconnecting")).toMatchObject({
       requestId: opened[0]?.requestId,
       failures: 1,
-      cause: { message: "The socket closed with code 1006 before it opened" },
+      cause: await refusedSocketCause(),
     });
   });
 

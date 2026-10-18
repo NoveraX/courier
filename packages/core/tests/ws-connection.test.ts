@@ -47,6 +47,10 @@ class MockWebSocket implements WSClientSocket {
     this.onmessage?.(new MessageEvent("message", { data }));
   }
 
+  simulateError(): void {
+    this.onerror?.(new Event("error"));
+  }
+
   simulateClose(code = 1000): void {
     this.readyState = 3;
     this.onclose?.({ code } as CloseEvent);
@@ -172,6 +176,44 @@ describe("createWSConnection", () => {
     vi.advanceTimersByTime(100);
     // New WebSocket instance created
     expect(MockWebSocket.instances).toHaveLength(2);
+    conn.close();
+  });
+
+  it("tries again after a socket that fails before it opens, though no close event follows", () => {
+    const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
+
+    /* As Node 22's WebSocket reports a refused connection: an error alone, the socket left connecting. */
+    lastWs().simulateError();
+    vi.advanceTimersByTime(0);
+
+    expect(conn.status).toBe("reconnecting");
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(2);
+    conn.close();
+  });
+
+  it("takes a socket that fails before it opens as closed once, when its close event follows", () => {
+    const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
+
+    lastWs().simulateError();
+    lastWs().simulateClose(1006);
+    vi.advanceTimersByTime(0);
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(2);
+    vi.advanceTimersByTime(1_000);
+
+    expect(MockWebSocket.instances).toHaveLength(2);
+    conn.close();
+  });
+
+  it("leaves an open socket's error to the close that follows it", () => {
+    const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
+    lastWs().simulateOpen();
+
+    lastWs().simulateError();
+    vi.advanceTimersByTime(0);
+
+    expect(conn.status).toBe("connected");
     conn.close();
   });
 

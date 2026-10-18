@@ -25,6 +25,7 @@ import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
 import { instrumentSSE, instrumentWSChannel, instrumentWSPush } from "../src/transport/instrument";
+import { refusedSocketCause } from "./helpers/refused-socket-cause";
 import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 const { stream, channel } = courier();
@@ -258,7 +259,7 @@ describe("a stream that opens no connection", () => {
 describe("a channel whose socket cannot be opened", () => {
   const WS_META = { ...META, transport: "ws" as const };
 
-  it("says the socket closed before it opened, where the platform says no more", async () => {
+  it("says why the socket closed before it opened: the platform's words, or its close where it gives none", async () => {
     const url = `ws://127.0.0.1:${await closedPort()}/api/ws`;
 
     const ch = instrumentWSChannel(
@@ -270,10 +271,7 @@ describe("a channel whose socket cannot be opened", () => {
 
     expect(statuses[0]).toMatchObject({ status: "connecting" });
     expect(reconnects().slice(0, 2)).toEqual([
-      expect.objectContaining({
-        failures: 1,
-        cause: { message: "The socket closed with code 1006 before it opened" },
-      }),
+      expect.objectContaining({ failures: 1, cause: await refusedSocketCause() }),
       expect.objectContaining({ failures: 2 }),
     ]);
   });
@@ -292,7 +290,7 @@ describe("a channel whose socket cannot be opened", () => {
     expect(reconnects()[0]).toMatchObject({
       requestId: "req_push",
       failures: 1,
-      cause: { message: "The socket closed with code 1006 before it opened" },
+      cause: await refusedSocketCause(),
     });
   });
 

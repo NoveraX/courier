@@ -8,7 +8,7 @@ import type { WSCredentials } from "./ws-credentials";
 import type { LifecycleContext } from "./ws-lifecycle-context";
 import { dispatchIncomingMessage } from "./ws-message-handler";
 import { decodeMessage, encodeMessage, type WSMessage } from "./ws-protocol";
-import type { WSCloseEventLike, WSMessageEventLike } from "./ws-types";
+import type { WSClientSocket, WSCloseEventLike, WSMessageEventLike } from "./ws-types";
 
 /** What handling a closed socket reads of its close event. */
 type SocketClosure = WSCloseEventLike;
@@ -56,10 +56,25 @@ function openSocket(ctx: LifecycleContext, credentials: WSCredentials | undefine
   ws.onopen = () => handleOpen(ctx);
   ws.onmessage = (ev) => handleMessage(ctx, ev);
   ws.onclose = (ev) => handleClose(ctx, ev);
-  /* onclose always fires after onerror; what the error said is told with the close. */
+  /* What the error said is told with the close that follows it. */
   ws.onerror = (ev) => {
     trail.error = ev;
+    if (!trail.opened) setTimeout(() => closeUnopened(ctx, ws), 0);
   };
+}
+
+/* A socket that failed before it opened is closed — with 1006, all a failed
+   handshake ever says — when no close event has told it so: Node 22's
+   WebSocket reports a refused connection with an error alone, and its socket
+   stays connecting. One whose close came is let go already, and no later
+   event of this one is heard. */
+function closeUnopened(ctx: LifecycleContext, ws: WSClientSocket): void {
+  if (ctx.refs.ws !== ws) return;
+  ws.onopen = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+  ws.onerror = null;
+  handleClose(ctx, { code: 1006, reason: "" });
 }
 
 function handleOpen(ctx: LifecycleContext): void {

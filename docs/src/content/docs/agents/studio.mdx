@@ -45,7 +45,7 @@ Some requests are not sent again: a [webhook](/docs/advanced/webhooks) came to t
 ## What it shows, and to whom
 
 - **Studio's token, or nothing.** The command reads `.courier/studio-token` from the project, so no token is written into an editor's settings; a request to Studio's `/mcp` without it is answered `401`. A page on another origin is refused.
-- **No credential, no secret.** Every header that carries a credential — `Authorization`, `Cookie`, `Set-Cookie`, an API key's — is replaced with `[redacted]`, and so is every field of a body named like a secret: `password`, `accessToken`, `client_secret`, `sessionId`. What an agent reads leaves your machine with its model's provider; those values stay behind. A replay's answer, and the variables a confirmation shows, are cleaned the same way; the request itself is sent with its values.
+- **No credential, no secret.** Every header that carries a credential — `Authorization`, `Cookie`, `Set-Cookie`, an API key's — is replaced with `[redacted]`, and so is every field of a body named like a secret: `password`, `accessToken`, `client_secret`, `sessionId`. An error's text, its cause and a request's address come with their credentials cut, as everything that leaves [Studio's page](/docs/studio/overview) does. What an agent reads leaves your machine with its model's provider; those values stay behind. A replay's answer, and the variables a confirmation shows, are cleaned the same way; the request itself is sent with its values.
 - **A person confirms each write.** `replay_write` runs nothing a person has not confirmed, whatever the client's own approval settings allow.
 - **Not on a public demo.** A Studio serving a public demo has no MCP endpoint.
 

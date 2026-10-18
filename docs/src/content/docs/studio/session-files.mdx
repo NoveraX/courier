@@ -29,6 +29,7 @@ A session saved in **Settings → Session history** keeps the environment it was
 
 - **Credentials.** The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf` or `api-key` in it is never saved, so no file carries it — see [Studio](/docs/studio/overview).
 - **Values named like secrets.** Every field of the variables or the answer whose name reads as such a header's would — `password`, `accessToken`, `client_secret`, `sessionId` — at any depth, and every such parameter in a request's query string, is replaced with `[redacted]`. Each one is listed before you save, by request and place.
+- **Credentials in texts.** An error's text and its cause, and a request's address, keep their words and lose their credentials — a URL's password and secret parameters, a token after `Bearer`, a provider's key — as everything that leaves [Studio's page](/docs/studio/overview#start-studio) does.
 - **Not a secret under an ordinary name.** A token in a field called `value` or `data` stays in: the list shows what was replaced, and the bodies are yours to look over before you share the file.
 
 ## Open a colleague's file

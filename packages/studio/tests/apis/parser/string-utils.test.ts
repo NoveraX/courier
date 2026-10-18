@@ -20,6 +20,14 @@ describe("stripHtml", () => {
     );
   });
 
+  /* The text is read as text — in a comment, on Studio's page — and never as
+     HTML again: a tag cut in two by another reads whole once that one is
+     dropped, and stays as text, as an escaped tag read once does. */
+  it("gives text, which may read like a tag, never HTML", () => {
+    expect(stripHtml("<scr<x>ipt>")).toBe("<script>");
+    expect(stripHtml("&lt;script&gt;")).toBe("<script>");
+  });
+
   it("keeps an entity it does not know as written", () => {
     expect(stripHtml("caf&eacute; &copy;")).toBe("caf&eacute; &copy;");
   });

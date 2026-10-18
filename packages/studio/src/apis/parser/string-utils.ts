@@ -24,7 +24,7 @@ function plainText(html: string): string {
  * the common entities read, white space collapsed.
  *
  * @param html - A tag's description, as the specification has it
- * @returns The text
+ * @returns The text, to be read as text: it is no HTML, and may read like a tag
  * @example
  * ```ts
  * stripHtml("<p>Pets &amp; <b>owners</b></p>"); // "Pets & owners"

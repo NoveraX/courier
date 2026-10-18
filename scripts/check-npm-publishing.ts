@@ -161,7 +161,7 @@ async function exchangeRefused(
   { fetch }: CheckDeps,
 ): Promise<string | undefined> {
   const exchange = new URL(
-    `-/npm/v1/oidc/token/exchange/package/${name.replace("/", "%2f")}`,
+    `-/npm/v1/oidc/token/exchange/package/${name.replaceAll("/", "%2f")}`,
     REGISTRY,
   );
   const response = await fetch(exchange, {

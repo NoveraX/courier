@@ -2,6 +2,9 @@ import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 
 const writers: ChildProcess[] = [];
 
+/* Opening a FIFO to write waits for a reader, so the write runs in a process of its own; no shell is asked. */
+const WRITE_FIFO = "require('node:fs').writeFileSync(process.argv[1], process.argv[2])";
+
 /**
  * Make a FIFO at `path` and start another process that writes `content` into
  * it once something opens it for reading.
@@ -16,7 +19,7 @@ const writers: ChildProcess[] = [];
  */
 export function makeFedFifo(path: string, content: string): void {
   execFileSync("mkfifo", [path]);
-  const writer = spawn("sh", ["-c", 'printf "%s" "$1" > "$0"', path, content], { stdio: "ignore" });
+  const writer = spawn(process.execPath, ["-e", WRITE_FIFO, path, content], { stdio: "ignore" });
   writers.push(writer);
 }
 

@@ -18,6 +18,7 @@
     "packages/studio/tests/port-problem-listeners.test.ts > portProblem with another listener on the port > ends its connection to a server that greets its clients without resetting it"
   ],
   "win32": [
+    "packages/cli/tests/project-fs/assert-named-inside.test.ts > every check of the project's folder > refuses a link outside by its name, before it asks whether the path is a link",
     "packages/cli/tests/project-fs/assert-opened-inside.test.ts > assertOpenedInside > lets a file through in a project named through the platform's own links, and still refuses one outside",
     "packages/cli/tests/project-fs/assert-opened-inside.test.ts > assertOpenedInside > lets a file through in a project reached through a link of its own",
     "packages/cli/tests/project-fs/assert-opened-inside.test.ts > assertOpenedInside > lets a file through that its path names inside the project",

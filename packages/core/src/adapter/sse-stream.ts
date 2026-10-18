@@ -90,6 +90,10 @@ export function createSSEStream(
           once: true,
         });
         heartbeatTimer = setInterval(() => sender.comment(SSE_HEARTBEAT), HEARTBEAT_INTERVAL);
+        /* At once: a host writes the answer's headers with its first bytes, and
+           a client hears the stream open only then — at its first event, or the
+           first heartbeat 25 s in, for a stream with nothing to say yet. */
+        sender.comment(SSE_HEARTBEAT);
 
         try {
           const generator = handler({ ...ctx, signal: combinedSignal });

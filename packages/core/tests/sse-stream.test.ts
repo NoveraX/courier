@@ -180,6 +180,26 @@ describe("createSSEStream", () => {
     expect(collected).toContain(": ping");
   });
 
+  it("writes a comment at once, so its headers go out before the handler has anything to send", async () => {
+    let release = () => {};
+    const parked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const handler: SSEHandler<unknown, unknown> = async function* () {
+      await parked;
+      yield { data: 1 };
+    };
+    const { ctx, abortController } = createCtx();
+    const reader = createSSEStream(handler, ctx, createOpts()).getReader();
+
+    const first = await reader.read();
+    release();
+    abortController.abort();
+    await reader.cancel();
+
+    expect(new TextDecoder().decode(first.value)).toBe(": ping\n\n");
+  });
+
   it("registers connection in registry on start", async () => {
     const registry = createMockRegistry();
     const handler = staticHandler([{ data: "x" }]);

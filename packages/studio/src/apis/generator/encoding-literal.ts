@@ -3,7 +3,7 @@
  */
 
 import type { FieldEncoding } from "../parser/types";
-import { objectKey } from "./literals";
+import { jsLiteral, objectKey } from "./literals";
 
 /**
  * Write how each field is encoded as an object literal.
@@ -19,7 +19,7 @@ import { objectKey } from "./literals";
 export function encodingLiteral(encoding: Readonly<Record<string, FieldEncoding>>): string {
   const fields = Object.entries(encoding).map(([name, field]) => {
     const parts = [
-      field.style === undefined ? null : `style: ${JSON.stringify(field.style)}`,
+      field.style === undefined ? null : `style: ${jsLiteral(field.style)}`,
       field.explode === undefined ? null : `explode: ${field.explode}`,
     ].filter((part) => part !== null);
     return `${objectKey(name)}: { ${parts.join(", ")} }`;

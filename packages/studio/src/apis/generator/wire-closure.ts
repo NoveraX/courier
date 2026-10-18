@@ -17,6 +17,7 @@ import { toInternalMethod } from "@noverax/courier/internal";
 import type { ParsedEndpoint } from "../parser/types";
 import { callOptions as options } from "./call-options";
 import { formClosure } from "./form-closure";
+import { jsLiteral } from "./literals";
 import { bodyKey, ownJsonMedia, type RequestBodyKind } from "./request-body";
 import { isEventStream, type ResponseReading } from "./response-reading";
 import { hasStyledQuery, styledQuery } from "./styled-query";
@@ -45,9 +46,9 @@ export function wireClosure(
   kind: RequestBodyKind,
   reading: ResponseReading = "json",
 ): string | null {
-  const read = reading === "json" ? null : `responseType: ${JSON.stringify(reading)}`;
+  const read = reading === "json" ? null : `responseType: ${jsLiteral(reading)}`;
   const method = toInternalMethod(ep.httpMethod);
-  const at = JSON.stringify(path);
+  const at = jsLiteral(path);
   const json = kind === "fields" || kind === "value" || kind === "nested";
   const placed = placingClosure(ep, method, at, kind, read, json ? ownJsonMedia(ep) : null);
   if (placed !== null) return placed;

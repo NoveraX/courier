@@ -30,6 +30,15 @@ describe("jsdocText", () => {
 
   it("leaves ordinary prose untouched", () => {
     expect(jsdocText("A list of todos.")).toBe("A list of todos.");
+    expect(jsdocText("<p>List <code>items</code></p>")).toBe("<p>List <code>items</code></p>");
+  });
+
+  /* A page's HTML parser knows no comment of the code's: a `</script` in one
+     ends a `<script>` the code is put in, and a `<!--` upsets it. */
+  it("breaks what would end or upset a page's script", () => {
+    expect(jsdocText("a </script> b <!-- c --> </SCRIPT>")).toBe(
+      "a <\\/script> b <\\!-- c --> <\\/SCRIPT>",
+    );
   });
 });
 

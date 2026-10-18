@@ -10,6 +10,7 @@ import { declaredSchema } from "./declared-schema";
 import { type EndpointContext, typeName } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { firstParagraph } from "./first-paragraph";
+import { jsLiteral } from "./literals";
 import { requestBodyKind } from "./request-body";
 import { isEventStream, type ResponseReading, responseReading } from "./response-reading";
 import { hasStyledQuery } from "./styled-query";
@@ -69,7 +70,7 @@ export function buildEndpointDefinition(
   if (headers.length > 0) context.uses.headerVariables = true;
   return buildEndpointChain({
     head,
-    address: `${head}.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
+    address: `${head}.${toInternalMethod(ep.httpMethod)}(${jsLiteral(path)})`,
     closure,
     /* A stream is its own kind; a request that reads says so past its closure. */
     reads: head === "endpoint" && isReadingMethod(ep.httpMethod),

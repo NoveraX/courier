@@ -1,5 +1,7 @@
 import { isRecord, parseSource } from "@noverax/courier-cli/devkit";
 
+import { jsLiteral } from "../generator/literals";
+
 /* What the entry is wrapped in to be parsed, before its first character. */
 const OPENING = "({ ";
 
@@ -46,7 +48,7 @@ export function rebaseEntryPath(
   const full = [...pathSegments(generatedPrefix), ...pathSegments(path.value)];
   const own = pathSegments(filePrefix);
   if (own.some((segment, at) => full[at] !== segment)) return null;
-  const rest = JSON.stringify(full.slice(own.length).join("/"));
+  const rest = jsLiteral(full.slice(own.length).join("/"));
   const at = path.start - OPENING.length;
   return `${code.slice(0, at)}${rest}${code.slice(path.end - OPENING.length)}`;
 }

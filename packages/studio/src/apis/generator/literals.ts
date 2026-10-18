@@ -15,20 +15,23 @@ export type SpecValue = string | number | boolean;
 const UNSAFE_IN_CODE = /[<>\u2028\u2029]/g;
 
 /**
- * Write a value as a JavaScript literal: `<`, `>` and the two line
- * separators as `\u` escapes, so the code stays whole wherever it is put,
- * a page's `<script>` among them.
+ * Write a value, or a list of values, as a JavaScript literal: `<`, `>`
+ * and the two line separators as `\u` escapes, so the code stays whole
+ * wherever it is put, a page's `<script>` among them. Each of them can only
+ * stand inside a string of the JSON text, so escaping it there is exact for
+ * a list too.
  *
- * @param value - Text or number taken from the specification
+ * @param value - Text or number taken from the specification, or a list of them
  * @returns Source text that evaluates back to exactly this value
  *
  * @example
  * ```ts
  * jsLiteral('a"b') // → '"a\\"b"'
  * jsLiteral("</script>") // → '"\\u003c/script\\u003e"'
+ * jsLiteral(["id", "<b>"]) // → '["id","\\u003cb\\u003e"]'
  * ```
  */
-export function jsLiteral(value: SpecValue): string {
+export function jsLiteral(value: SpecValue | readonly SpecValue[]): string {
   return JSON.stringify(value).replace(UNSAFE_IN_CODE, unicodeEscape);
 }
 

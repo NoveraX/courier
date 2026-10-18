@@ -1,6 +1,7 @@
 import type { ObjectExpression } from "oxc-parser";
 
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
+import { jsLiteral } from "../generator/literals";
 import { type DeclarationLayout, readLayout } from "./declaration-layout";
 
 /** A declaration's lines around its endpoints, and the options the user added to it. */
@@ -44,7 +45,7 @@ export function mergedShell(
   const ownOptions = options(own.declaration.config, own.parsed.text);
   const generatedPrefix = freshOptions.get("prefix");
   if (generatedPrefix !== undefined && prefix !== fresh.declaration.prefix) {
-    freshOptions.set("prefix", { ...generatedPrefix, text: `prefix: ${JSON.stringify(prefix)}` });
+    freshOptions.set("prefix", { ...generatedPrefix, text: `prefix: ${jsLiteral(prefix)}` });
   }
   const edits = optionEdits(own, ownOptions, freshOptions);
   const layout = edits && readLayout(applied(own.parsed.text, edits), own.declaration.name);

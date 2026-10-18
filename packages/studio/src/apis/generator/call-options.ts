@@ -1,3 +1,5 @@
+import { jsLiteral } from "./literals";
+
 /**
  * The options object of a call a generated closure makes, without its
  * braces: the body, the query string, how the answer is read and the body's
@@ -23,7 +25,7 @@ export function callOptions(
     body,
     searchParams === null ? null : `searchParams: ${searchParams}`,
     read,
-    media === null ? null : `headers: { "content-type": ${JSON.stringify(media)} }`,
+    media === null ? null : `headers: { "content-type": ${jsLiteral(media)} }`,
   ];
   return entries.filter((entry) => entry !== null).join(", ");
 }

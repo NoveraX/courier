@@ -241,6 +241,31 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "packages/studio/src/apis/generator/**",
+        "packages/studio/src/apis/merge/merged-shell.ts",
+        "packages/studio/src/apis/manage/rebase-entry-path.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "JSON": "Write a value into generated code with jsLiteral from the generator's literals, which escapes what would end a page's script."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/studio/src/apis/generator/literals.ts"],
+      "linter": { "rules": { "style": { "noRestrictedGlobals": "off" } } }
     }
   ]
 }

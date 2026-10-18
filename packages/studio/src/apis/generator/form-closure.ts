@@ -4,7 +4,7 @@
 
 import type { ParsedParameter } from "../parser/types";
 import { callOptions } from "./call-options";
-import { objectKey } from "./literals";
+import { jsLiteral, objectKey } from "./literals";
 import { styledQuery } from "./styled-query";
 
 /**
@@ -46,13 +46,13 @@ export function formClosure(
       ? `http.del(${at}, undefined, { ${callOptions("body", searchParams, read)} })`
       : `http.${method}(${at}, body, { ${callOptions(null, searchParams, read)} })`;
   /* The path's entries fill the path, and are not part of the body either. */
-  const taken = JSON.stringify(params.map((param) => param.name));
+  const taken = jsLiteral(params.map((param) => param.name));
   const copy = `const body = new globalThis.FormData(); form.forEach((value, key) => { if (!${taken}.includes(key)) body.append(key, value); });`;
   return `(http, form) => { ${copy} return ${send}; }`;
 }
 
 /** A query parameter's value, read from the form: every entry of a list. */
 function entry(param: ParsedParameter): string {
-  const name = JSON.stringify(param.name);
+  const name = jsLiteral(param.name);
   return param.type === "array" ? `form.getAll(${name})` : `form.get(${name}) ?? undefined`;
 }

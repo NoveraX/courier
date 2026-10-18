@@ -2,6 +2,7 @@
  * Helper functions for building the builder chain that describes an endpoint.
  */
 
+import { jsLiteral } from "./literals";
 import type { GeneratorSettings } from "./types";
 
 /** What an endpoint's chain is made of. */
@@ -82,10 +83,10 @@ export function buildEndpointChain(chain: EndpointChain): string {
     text += `.response<${chain.responseType}>()`;
   }
   if (chain.headers && chain.headers.length > 0) {
-    const names = chain.headers.map((name) => JSON.stringify(name)).join(", ");
+    const names = chain.headers.map((name) => jsLiteral(name)).join(", ");
     text += `.use(headerVariablesMiddleware([${names}]))`;
   }
-  if (chain.description) text += `.meta({ description: ${JSON.stringify(chain.description)} })`;
+  if (chain.description) text += `.meta({ description: ${jsLiteral(chain.description)} })`;
 
   return text;
 }

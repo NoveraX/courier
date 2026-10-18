@@ -1,9 +1,15 @@
 import { member } from "../member";
-import type { NodeReader } from "./schema-node";
-import { fieldsOf, listOf, nodeOf, scalarKind, valuesOf, withFlag } from "./schema-node";
+import type { NodeReader, SchemaNode } from "./schema-node";
+import { fieldsOf, listOf, nodeOf, scalarNode, valuesOf, withFlag } from "./schema-node";
+import { zodV3Limits, zodV4Limits } from "./zod-limits";
 
 function called(getter: unknown): unknown {
   return typeof getter === "function" ? getter() : undefined;
+}
+
+/* A refinement checks the value in a way its node does not hold. */
+function refined(node: SchemaNode | undefined, refinement: boolean): SchemaNode | undefined {
+  return node && refinement ? { ...node, checked: true } : node;
 }
 
 /**
@@ -41,8 +47,12 @@ export const readZodV4: NodeReader = (schema) => {
       return readZodV4(called(member(def, "getter")));
     case "object":
       return nodeOf("object", { fields: fieldsOf(member(def, "shape")) });
+    case "string":
+      return nodeOf("string", zodV4Limits(def));
+    case "number":
+      return nodeOf("number", zodV4Limits(def));
     case "array":
-      return nodeOf("array", { element: member(def, "element") });
+      return nodeOf("array", { element: member(def, "element"), ...zodV4Limits(def) });
     case "enum":
       return nodeOf("enum", { values: valuesOf(member(def, "entries")) });
     case "literal":
@@ -52,7 +62,7 @@ export const readZodV4: NodeReader = (schema) => {
     case "record":
       return nodeOf("record");
     default:
-      return nodeOf(scalarKind(type) ?? "unknown");
+      return scalarNode(type);
   }
 };
 
@@ -83,15 +93,19 @@ export const readZodV3: NodeReader = (schema) => {
     case "ZodBranded":
       return inner("type");
     case "ZodEffects":
-      return inner("schema");
+      return refined(inner("schema"), member(member(def, "effect"), "type") === "refinement");
     case "ZodPipeline":
       return inner("in");
     case "ZodLazy":
       return readZodV3(called(member(def, "getter")));
     case "ZodObject":
       return nodeOf("object", { fields: fieldsOf(called(member(def, "shape"))) });
+    case "ZodString":
+      return nodeOf("string", zodV3Limits(def));
+    case "ZodNumber":
+      return nodeOf("number", zodV3Limits(def));
     case "ZodArray":
-      return nodeOf("array", { element: member(def, "type") });
+      return nodeOf("array", { element: member(def, "type"), ...zodV3Limits(def) });
     case "ZodEnum":
       return nodeOf("enum", { values: listOf(member(def, "values")) });
     case "ZodNativeEnum":
@@ -104,6 +118,6 @@ export const readZodV3: NodeReader = (schema) => {
     case "ZodRecord":
       return nodeOf("record");
     default:
-      return nodeOf(scalarKind(name.replace(/^Zod/, "").toLowerCase()) ?? "unknown");
+      return scalarNode(name.replace(/^Zod/, "").toLowerCase());
   }
 };

@@ -1,9 +1,8 @@
 import type { Sources } from "@noverax/courier/define";
 import { eachGroup, groupOptionsOf } from "@noverax/courier/internal";
 import type { SourceMap } from "./events";
-import { extractSchemaFields } from "./schema-fields";
+import { extractSchemaFields, extractSchemaStub } from "./schema-fields";
 import { isEndpoint, probeEndpoint } from "./source-map-probe";
-import { extractSchemaStub } from "./source-map-schema";
 
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
 

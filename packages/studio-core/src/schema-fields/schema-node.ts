@@ -1,3 +1,5 @@
+import { member } from "../member";
+
 /** What a schema holds, as the field list reads it from any vendor. */
 export type NodeKind =
   | "string"
@@ -33,7 +35,24 @@ export interface SchemaNode {
   options?: readonly unknown[] | undefined;
   /** An enum's or a literal's values. */
   values?: readonly unknown[] | undefined;
+  /** The least a number may be, or the fewest characters or items a string or an array may hold. */
+  least?: number | undefined;
+  /** The most a number may be, or the most characters or items a string or an array may hold. */
+  most?: number | undefined;
+  /** What a number must be a multiple of. */
+  step?: number | undefined;
+  /** The format a string is checked for, by the name its vendor gives it: `email`, `uuid`, `date-time`. */
+  format?: string | undefined;
+  /**
+   * The schema checks a value in a way the node does not hold — a pattern,
+   * a refinement, a format with no sample — so one of its kind may still be
+   * refused.
+   */
+  checked?: boolean | undefined;
 }
+
+/** The bounds, the format and the further checks a schema declares for its value. */
+export type NodeLimits = Pick<SchemaNode, "least" | "most" | "step" | "format" | "checked">;
 
 /** Reads one vendor's schemas into nodes; `undefined` for one it cannot read. */
 export type NodeReader = (schema: unknown) => SchemaNode | undefined;
@@ -76,6 +95,23 @@ export function scalarKind(type: unknown): NodeKind | undefined {
     "unknown",
   ];
   return kinds.find((kind) => kind === type);
+}
+
+/**
+ * The node of a type every vendor names alike — or, for a type the readers
+ * have no kind for, one that may hold anything its schema checks for itself.
+ *
+ * @param type - The type name
+ * @returns The node
+ * @example
+ * ```ts
+ * scalarNode("string"); // { kind: "string", … }
+ * scalarNode("custom"); // { kind: "unknown", checked: true, … }
+ * ```
+ */
+export function scalarNode(type: unknown): SchemaNode {
+  const kind = scalarKind(type);
+  return kind ? nodeOf(kind) : nodeOf("unknown", { checked: true });
 }
 
 /**
@@ -136,7 +172,14 @@ export function listOf(value: unknown): readonly unknown[] {
  * ```
  */
 export function valuesOf(entries: unknown): readonly unknown[] {
-  return typeof entries === "object" && entries !== null
-    ? [...new Set(Object.values(entries))]
-    : [];
+  if (typeof entries !== "object" || entries === null) return [];
+  const values = Object.entries(entries)
+    .filter(([key, value]: [string, unknown]) => !mapsBack(entries, key, value))
+    .map(([, value]: [string, unknown]) => value);
+  return [...new Set(values)];
+}
+
+/* A numeric TypeScript enum maps each number back to its name, `E[0] === "A"`: no value of it. */
+function mapsBack(entries: object, key: string, value: unknown): boolean {
+  return typeof value === "string" && member(entries, value) === Number(key);
 }

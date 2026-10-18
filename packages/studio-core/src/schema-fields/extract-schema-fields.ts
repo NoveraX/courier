@@ -1,11 +1,8 @@
 import { createLogger } from "@noverax/courier";
 
-import { member } from "../member";
 import { fieldLabel } from "./field-label";
-import { readJsonSchema } from "./json-schema-node";
+import { readerOf } from "./reader-of";
 import type { NodeField, NodeReader } from "./schema-node";
-import { readValibot } from "./valibot-node";
-import { readZodV3, readZodV4 } from "./zod-node";
 
 const log = createLogger("Studio");
 
@@ -20,16 +17,6 @@ export interface SchemaField {
   /** What it holds: `string`, `object[]`, `"a" | "b"`, `number | null`. */
   type: string;
   required: boolean;
-}
-
-/* The reader a schema's vendor needs, and the value it reads from. */
-function readerOf(schema: unknown): { read: NodeReader; root: unknown } | undefined {
-  if (member(schema, "_zod") !== undefined) return { read: readZodV4, root: schema };
-  if (member(schema, "_def") !== undefined) return { read: readZodV3, root: schema };
-  if (member(schema, "kind") === "schema") return { read: readValibot, root: schema };
-  const toJsonSchema = member(schema, "toJsonSchema");
-  if (typeof toJsonSchema !== "function") return undefined;
-  return { read: readJsonSchema, root: Reflect.apply(toJsonSchema, schema, []) };
 }
 
 function collect(

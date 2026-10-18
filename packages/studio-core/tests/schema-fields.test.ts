@@ -83,6 +83,15 @@ describe("the fields of a variables schema", () => {
     ]);
   });
 
+  it("say a numeric TypeScript enum's numbers, not the names it maps them back to", () => {
+    const level = { Low: 0, High: 1, 0: "Low", 1: "High" } as const;
+
+    expect(extractSchemaFields(z.object({ level: z.enum(level) }))?.[0]?.type).toBe("0 | 1");
+    expect(extractSchemaFields(z3.object({ level: z3.nativeEnum(level) }))?.[0]?.type).toBe(
+      "0 | 1",
+    );
+  });
+
   it("are none for an object without fields, and unknown for a schema that is no object", () => {
     expect(extractSchemaFields(z.object({}))).toEqual([]);
     expect(extractSchemaFields(z.string())).toBeUndefined();

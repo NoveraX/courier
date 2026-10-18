@@ -1,6 +1,7 @@
 import { member } from "../member";
 import type { NodeReader } from "./schema-node";
-import { fieldsOf, listOf, nodeOf, scalarKind, valuesOf, withFlag } from "./schema-node";
+import { fieldsOf, listOf, nodeOf, scalarNode, valuesOf, withFlag } from "./schema-node";
+import { valibotLimits } from "./valibot-limits";
 
 /**
  * Reads a Valibot schema from its own properties: `type`, and what the type
@@ -31,8 +32,12 @@ export const readValibot: NodeReader = (schema) => {
     case "strict_object":
     case "object_with_rest":
       return nodeOf("object", { fields: fieldsOf(member(schema, "entries")) });
+    case "string":
+      return nodeOf("string", valibotLimits(schema));
+    case "number":
+      return nodeOf("number", valibotLimits(schema));
     case "array":
-      return nodeOf("array", { element: member(schema, "item") });
+      return nodeOf("array", { element: member(schema, "item"), ...valibotLimits(schema) });
     case "picklist":
       return nodeOf("enum", { values: listOf(member(schema, "options")) });
     case "enum":
@@ -45,6 +50,6 @@ export const readValibot: NodeReader = (schema) => {
     case "record":
       return nodeOf("record");
     default:
-      return nodeOf(scalarKind(type) ?? "unknown");
+      return scalarNode(type);
   }
 };

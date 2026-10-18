@@ -55,6 +55,7 @@
     "packages/server/tests/signal-handlers.test.ts > a server with default signal handling > drains on SIGINT too",
     "packages/server/tests/signal-handlers.test.ts > a server with default signal handling > ends the process itself once drained when nothing else handles the signal",
     "packages/server/tests/signal-handlers.test.ts > a server with default signal handling > lets a host that handles SIGTERM itself finish its cleanup",
+    "packages/studio-core/tests/path-aliases.test.ts > readPathAliases > fills the target's own wildcard, not one in the project folder's name",
     "packages/studio-core/tests/path-aliases.test.ts > readPathAliases > is not held up by a pipe where its tsconfig should be",
     "packages/studio-core/tests/prune-transform-cache.test.ts > pruneTransformCache > never follows a link, nor enters a subdirectory, whatever their age",
     "packages/studio-core/tests/read-studio-token.test.ts > readStudioToken > finds none, and says so once, where the file cannot be read",

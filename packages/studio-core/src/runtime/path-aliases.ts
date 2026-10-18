@@ -14,7 +14,7 @@
  * TypeScript does, would put its target before every path it loads.
  */
 
-import { normalize, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import { type InstalledPackages, installedPackages, packageNameOf } from "./installed-packages";
 import { scopeAliases, scopeOf } from "./scope-alias";
@@ -37,7 +37,9 @@ interface AliasEntry {
   prefix: string;
   suffix: string;
   wildcard: boolean;
-  /** Absolute targets, each still carrying its own `*` placeholder. */
+  /** The folder the targets are named from. */
+  base: string;
+  /** The targets as the tsconfig writes them, each still carrying its own `*` placeholder. */
   targets: readonly string[];
 }
 
@@ -81,15 +83,15 @@ function toEntries({ baseUrl, paths }: TsconfigPaths): AliasEntry[] {
   const entries: AliasEntry[] = [];
   for (const [pattern, targets] of Object.entries(paths)) {
     const star = pattern.indexOf("*");
-    const absolute = targets.map((target) => resolve(baseUrl, target));
     entries.push(
       star === -1
-        ? { prefix: pattern, suffix: "", wildcard: false, targets: absolute }
+        ? { prefix: pattern, suffix: "", wildcard: false, base: baseUrl, targets }
         : {
             prefix: pattern.slice(0, star),
             suffix: pattern.slice(star + 1),
             wildcard: true,
-            targets: absolute,
+            base: baseUrl,
+            targets,
           },
     );
   }
@@ -108,14 +110,24 @@ function candidatesOf(
     if (!best || entry.prefix.length > best.prefix.length) best = entry;
   }
   if (!best) return [];
-  if (!best.wildcard) return [...best.targets];
+  const { base } = best;
+  if (!best.wildcard) return best.targets.map((target) => resolve(base, target));
   const name = scopeOf(best.prefix) === undefined ? null : packageNameOf(specifier);
   if (name !== null && installed.has(name)) return [];
 
   const matched = specifier.slice(best.prefix.length, specifier.length - best.suffix.length);
-  /* The matched part keeps the specifier's forward slashes: each candidate is named as the system names files.
-     A target holds one `*` at most, as TypeScript requires, and that one is filled, as TypeScript fills it. */
-  return best.targets.map((target) => normalize(target.replace("*", matched)));
+  /* The matched part keeps the specifier's forward slashes: each candidate is named as the system names files. */
+  return best.targets.map((target) => resolve(base, withStarFilled(target, matched)));
+}
+
+/* A target holds one `*` at most, as TypeScript requires, and that one is
+   filled in the target as written — the folder it is named from may hold a
+   `*` of its own — with the matched part as written: a `$` in it is not read
+   as a replacement pattern, and the candidate is the file the loader that
+   runs the config loads for the import. */
+function withStarFilled(target: string, matched: string): string {
+  const star = target.indexOf("*");
+  return star === -1 ? target : `${target.slice(0, star)}${matched}${target.slice(star + 1)}`;
 }
 
 function matches(entry: AliasEntry, specifier: string): boolean {
@@ -138,8 +150,9 @@ function toLoaderAlias(
 ): Record<string, string> {
   const alias: Record<string, string> = {};
   for (const entry of entries) {
-    const target = entry.targets[0];
-    if (!target) continue;
+    const written = entry.targets[0];
+    if (!written) continue;
+    const target = resolve(entry.base, written);
     if (!entry.wildcard) {
       alias[entry.prefix] = target;
     } else if (entry.suffix === "" && target.endsWith("*")) {

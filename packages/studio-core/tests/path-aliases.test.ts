@@ -75,6 +75,46 @@ describe("readPathAliases", () => {
     ]);
   });
 
+  /* Filled with String.replace, `$$` read as one `$`, `$&` as the `*` itself,
+     and `` $` `` as the target before the `*`: the walker looked for a file
+     the import never names. */
+  it("fills the wildcard with the matched part as it is written, `$` and all", () => {
+    tsconfig({ compilerOptions: { paths: { "@/*": ["./src/*"] } } });
+    const aliases = readPathAliases(root);
+
+    for (const name of ["lib/$$price", "lib/$&x", "a$`b", "a$'b", "$postId"]) {
+      expect(aliases.candidatesFor(`@/${name}`)).toEqual([join(root, "src", name)]);
+    }
+  });
+
+  /* Filled after the target was joined to the project's folder, the `*` of
+     a folder named `star*proj` was filled in its stead. A name with a `*` is
+     no file name on Windows. */
+  it.skipIf(process.platform === "win32")(
+    "fills the target's own wildcard, not one in the project folder's name",
+    () => {
+      const project = join(root, "star*proj");
+      mkdirSync(project);
+      writeFileSync(
+        join(project, "tsconfig.json"),
+        JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }),
+      );
+
+      expect(readPathAliases(project).candidatesFor("@/lib/x")).toEqual([
+        join(project, "src/lib/x"),
+      ]);
+    },
+  );
+
+  it("fills only the first wildcard of a target, as TypeScript does", () => {
+    tsconfig({ compilerOptions: { paths: { "@/*": ["./src/*/*.ts", "./types.ts"] } } });
+
+    expect(readPathAliases(root).candidatesFor("@/api")).toEqual([
+      join(root, "src/api/*.ts"),
+      join(root, "types.ts"),
+    ]);
+  });
+
   it("resolves a mapping that points outside the project", () => {
     tsconfig({ compilerOptions: { paths: { "@shared/*": ["../shared/*"] } } });
 

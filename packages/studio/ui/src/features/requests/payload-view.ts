@@ -1,4 +1,4 @@
-import type { RequestEntry, RequestFailureCause } from "@/store/types";
+import type { RequestEntry, RequestFailureCause, ValidationIssue } from "@/store/types";
 import { requestStateOf } from "./request-state";
 
 /** A mark over a payload: how its schema check went, or the status that came with it. */
@@ -37,7 +37,8 @@ function isEmpty(value: unknown): boolean {
  * What the Response tab shows: the answer as JSON — or as text when it is
  * not JSON — marked with how its schema check went and the issues it
  * found; or why there is none — for a request that got no answer, what the
- * system said of it.
+ * system said of it, and for one whose variables the input schema refused,
+ * what the schema said of them.
  *
  * @param r - The request
  * @returns The view
@@ -73,6 +74,10 @@ export function responseView(r: RequestEntry): PayloadView {
   if (typeof r.data === "string") return { text: r.data, cutFrom: r.dataCutFrom, chips, issues };
   if (r.data !== undefined && r.data !== null) {
     return { value: r.data, cutFrom: r.dataCutFrom, chips, issues };
+  }
+  if (r.validated?.variables === "failed") {
+    const detail = refusalText(r.error?.validationIssues ?? []);
+    return { empty: { title: "Not sent", detail }, chips, issues };
   }
   const cause = r.error?.cause;
   if (cause) return { empty: { title: "No answer", detail: causeText(cause) }, chips, issues };
@@ -122,4 +127,24 @@ export function requestView(r: RequestEntry): PayloadView {
  */
 export function causeText(cause: RequestFailureCause): string {
   return cause.code === undefined ? cause.message : `${cause.code} · ${cause.message}`;
+}
+
+/**
+ * Why a call was not sent, in a line: the input schema refused its
+ * variables, and what it said of the first field it refused.
+ *
+ * @param issues - What the schema said of the variables
+ * @returns The line
+ * @example
+ * ```ts
+ * refusalText([{ path: "category", message: "Invalid option" }]);
+ * // "The variables broke the input schema, so nothing was sent. category — Invalid option"
+ * ```
+ */
+export function refusalText(issues: readonly ValidationIssue[]): string {
+  const lead = "The variables broke the input schema, so nothing was sent.";
+  const [first, ...rest] = issues;
+  if (!first) return lead;
+  const more = rest.length > 0 ? `, and ${rest.length} more the Request tab marks` : "";
+  return `${lead} ${first.path || "The variables"} — ${first.message}${more}`;
 }

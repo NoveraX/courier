@@ -148,7 +148,9 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
           )}
         >
           <look.icon aria-hidden="true" className="size-3 shrink-0" />
-          <span className="truncate">{check.label}</span>
+          <span className="truncate" title={check.label}>
+            {check.label}
+          </span>
         </div>
         {tab === "variables" && (
           <SchemaTable

@@ -74,6 +74,32 @@ describe("a failed request", () => {
     ]);
   });
 
+  it("is told as refused when the input schema refused its variables, apart from the requests that failed", () => {
+    useStudioStore.setState((state) => ({
+      requests: [
+        ...state.requests,
+        requestEntry({ id: "v", method: "create", validated: { variables: "failed" } }),
+        requestEntry({ id: "w", method: "update", validated: { variables: "failed" } }),
+      ],
+    }));
+
+    notifyOnEvents([{ type: "request:error", requestId: "v" }], useStudioStore.getState);
+    notifyOnEvents(
+      [
+        { type: "request:error", requestId: "v" },
+        { type: "request:error", requestId: "w" },
+        { type: "request:error", requestId: "b" },
+      ],
+      useStudioStore.getState,
+    );
+
+    expect(toasts.error.mock.calls).toEqual([
+      ["Refused by the input schema: api.users.create"],
+      ["2 calls refused by the input schema, the latest api.users.update"],
+      ["Request failed: api.users.get"],
+    ]);
+  });
+
   it("is not told again by the reads that shared it, when their events come later", () => {
     notifyOnEvents(
       [

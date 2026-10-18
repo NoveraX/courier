@@ -46,6 +46,18 @@ function statusCell(state: RequestState, label: string, value: string): StatCell
   return { label, value, tone, mono: false };
 }
 
+/* What the status says: the schema that refused the call or its answer, or the code's own words. */
+function reasonOf(
+  state: RequestState,
+  row: RequestEntry | undefined,
+  code: number | undefined,
+): string | undefined {
+  if (state === "validation_error") {
+    return row?.validated?.variables === "failed" ? "variables refused" : "schema mismatch";
+  }
+  return code ? httpStatusText(code) : undefined;
+}
+
 function httpCells(
   entry: PlaygroundHistoryEntry,
   row: RequestEntry | undefined,
@@ -57,8 +69,7 @@ function httpCells(
       ? "error"
       : "success";
   const code = row?.statusCode ?? entry.statusCode;
-  const reason =
-    state === "validation_error" ? "schema mismatch" : code ? httpStatusText(code) : undefined;
+  const reason = reasonOf(state, row, code);
   const total = row?.timing?.total ?? entry.duration;
   return [
     statusCell(

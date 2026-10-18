@@ -1,5 +1,6 @@
 import type { SchemaField } from "@noverax/courier-studio-core";
 
+import type { ValidationIssue } from "@/store/types";
 import { stripComments } from "./jsonc-helpers";
 
 /** What the editor's status line says about its text, and in what tone. */
@@ -76,4 +77,23 @@ export function headersCheckOf(text: string): InputCheck {
     return { tone: "err", label: "Every header's value must be a string" };
   }
   return { tone: "ok", label: "Valid JSON · sent with the call" };
+}
+
+/**
+ * What the Variables editor's status line says while it holds the
+ * variables the input schema refused when they were last sent: the first
+ * field it refused, and what it said of it.
+ *
+ * @param issues - What the schema said of the variables
+ * @returns The status
+ * @example
+ * ```ts
+ * refusedCheckOf([{ path: "category", message: "Invalid option" }]);
+ * // { tone: "err", label: "Refused by the input schema · category — Invalid option" }
+ * ```
+ */
+export function refusedCheckOf(issues: readonly ValidationIssue[]): InputCheck {
+  const [first] = issues;
+  const said = first ? ` · ${first.path || "the variables"} — ${first.message}` : "";
+  return { tone: "err", label: `Refused by the input schema${said}` };
 }

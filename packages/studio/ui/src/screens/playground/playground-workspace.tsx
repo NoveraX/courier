@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { MEDIA } from "@/design/breakpoints";
 import { endpointKey } from "@/features/explorer/endpoint-key";
-import { editorCheckOf } from "@/features/playground/editor-check";
+import { editorCheckOf, refusalOf } from "@/features/playground/editor-check";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import type { FormBodyField } from "@/features/playground/form-body";
 import { emptyField } from "@/features/playground/form-body";
@@ -84,6 +84,7 @@ export function PlaygroundWorkspace({
     { tab, variables: editors.variables.text, headers: editors.headers.text, asForm },
     endpoint.def,
     name,
+    refusalOf(shown, row),
   );
   const run = usePlaygroundRun({
     endpoint,

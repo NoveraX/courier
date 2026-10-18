@@ -4,7 +4,8 @@
  * The Playground in the new shell: the endpoint the address names, its
  * variables checked against the fields its schema declares, the URL with
  * its parameters, where it is served and the proxy route, a send and its
- * answer as the inspector shows it, the headers a proxy did not forward,
+ * answer as the inspector shows it, a send the input schema refused, the
+ * headers a proxy did not forward,
  * one stream at a time, ⌘↵,
  * the recent sends, copying the call as code, why it sends
  * nothing when the variables are not JSON, and what it says without an
@@ -176,6 +177,57 @@ describe("the Playground", () => {
     expect(within(response()).getByText("Status · Created")).toBeTruthy();
     expect(within(response()).getByText("201")).toBeTruthy();
     expect(within(response()).getByRole("button", { name: "Inspect" })).toBeTruthy();
+  });
+
+  it("says a send the input schema refused was not sent, in its answer and the editor's line, until the variables change", async () => {
+    const issue = { path: "name", message: "Expected string, received number" };
+    await openShell("/playground?endpoint=api.users.create");
+    await settle(() => fireEvent.change(editor(), { target: { value: '{ "name": 7 }' } }));
+
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Send/ })));
+    const rid = useStudioStore.getState().playgroundHistory[0]?.rid ?? "";
+    await settle(() => {
+      const store = useStudioStore.getState();
+      store.appendPlaygroundChunk(rid, {
+        kind: "http-result",
+        status: 422,
+        error: "Validation failed",
+        data: {
+          success: false,
+          message: "Validation failed",
+          target: "variables",
+          issues: [issue],
+        },
+      });
+      store.endPlayground(rid, { durationMs: 1 });
+      useStudioStore.setState({
+        requests: [
+          requestEntry({
+            id: `pg_${rid}`,
+            group: "users",
+            method: "create",
+            status: "validation_error",
+            statusCode: 422,
+            hasValidation: { variables: true, response: false },
+            validated: { variables: "failed" },
+            error: { type: "validation", message: "Validation failed", validationIssues: [issue] },
+          }),
+        ],
+      });
+    });
+
+    expect(within(response()).getByText("Status · variables refused")).toBeTruthy();
+    expect(within(response()).getByText("Not sent")).toBeTruthy();
+    expect(
+      within(response()).getByText(
+        "The variables broke the input schema, so nothing was sent. name — Expected string, received number",
+      ),
+    ).toBeTruthy();
+    expect(status().textContent).toBe(
+      "Refused by the input schema · name — Expected string, received number",
+    );
+    await settle(() => fireEvent.change(editor(), { target: { value: '{ "name": "Ada" }' } }));
+    expect(status().textContent).toBe("Valid · every field users.create requires is set");
   });
 
   it("lists the headers it wrote that the proxy did not forward, and how to carry them", async () => {

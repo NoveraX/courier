@@ -18,8 +18,10 @@ type Getter = () => StudioState;
  * is told with that request — a failed one says how many calls it failed —
  * and a slow toast is never one for a read that only waited on it. A
  * burst that fails many requests at once is told in one toast, not one
- * per request; a call its caller cancelled is no failure. A visitor of a
- * public demo is told of none: the traffic is every visitor's.
+ * per request; a call its caller cancelled is no failure, and one whose
+ * variables the input schema refused is told as refused, as it sent no
+ * request. A visitor of a public demo is told of none: the traffic is
+ * every visitor's.
  *
  * @param events - The events of the batch, oldest first
  * @param get - Reads the store after the batch was applied
@@ -44,8 +46,11 @@ export function notifyOnEvents(events: EventPayload[], get: Getter): void {
     : [];
   if (failed.length === 0 && slow.length === 0) return;
 
-  const labelOf = labeller(requests);
-  if (failed.length > 0) notifyFailed(failed, labelOf);
+  const byId = new Map(requests.map((r) => [r.id, r]));
+  const labelOf = labeller(byId);
+  const refused = (event: EventPayload) =>
+    byId.get(String(event.requestId ?? ""))?.validated?.variables === "failed";
+  if (failed.length > 0) notifyFailed(failed, labelOf, refused);
   for (const event of slow.slice(-MAX_SLOW_TOASTS)) notifySlowRequest(event, labelOf);
 }
 
@@ -67,8 +72,7 @@ function totalOf(event: EventPayload): number {
   return typeof timing?.total === "number" ? timing.total : -1;
 }
 
-function labeller(requests: RequestEntry[]): (event: EventPayload) => string {
-  const byId = new Map(requests.map((r) => [r.id, r]));
+function labeller(byId: ReadonlyMap<string, RequestEntry>): (event: EventPayload) => string {
   return (event) => {
     const entry = byId.get(String(event.requestId ?? ""));
     if (entry) return [entry.source, entry.group, entry.method].filter(Boolean).join(".");
@@ -76,14 +80,40 @@ function labeller(requests: RequestEntry[]): (event: EventPayload) => string {
   };
 }
 
-function notifyFailed(failed: EventPayload[], labelOf: (event: EventPayload) => string): void {
+/* The calls the input schema refused are told apart from the requests that failed: they sent none. */
+function notifyFailed(
+  failed: EventPayload[],
+  labelOf: (event: EventPayload) => string,
+  refused: (event: EventPayload) => boolean,
+): void {
   const sent = failed.filter((e) => !sharedEvent(e));
-  const last = sent.at(-1);
+  notifyRefused(sent.filter(refused), labelOf);
+  notifyFailedRequests(
+    failed,
+    sent.filter((e) => !refused(e)),
+    labelOf,
+  );
+}
+
+function notifyRefused(refused: EventPayload[], labelOf: (event: EventPayload) => string): void {
+  const last = refused.at(-1);
   if (last === undefined) return;
   const latest = labelOf(last);
-  const calls = callsNote(failed, sent);
-  if (sent.length === 1) toast.error(`Request failed: ${latest}${calls}`);
-  else toast.error(`${sent.length} requests failed, the latest ${latest}${calls}`);
+  if (refused.length === 1) toast.error(`Refused by the input schema: ${latest}`);
+  else toast.error(`${refused.length} calls refused by the input schema, the latest ${latest}`);
+}
+
+function notifyFailedRequests(
+  failed: EventPayload[],
+  requests: EventPayload[],
+  labelOf: (event: EventPayload) => string,
+): void {
+  const last = requests.at(-1);
+  if (last === undefined) return;
+  const latest = labelOf(last);
+  const calls = callsNote(failed, requests);
+  if (requests.length === 1) toast.error(`Request failed: ${latest}${calls}`);
+  else toast.error(`${requests.length} requests failed, the latest ${latest}${calls}`);
 }
 
 /* The calls the failed requests failed, where reads that shared their answers failed with them. */

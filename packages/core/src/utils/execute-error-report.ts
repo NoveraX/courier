@@ -58,8 +58,9 @@ export function failureKind(
  * message, the status, the upstream's headers, error body and its size, how
  * long it ran and — for a proxied call — how that time split, so its row and
  * every average read it as they read a success. A request that got no
- * answer carries why instead of a body: the system's code and text, with
- * anything in it that could be a credential cut out.
+ * answer carries why instead of a body: the system's code and text, as
+ * the platform said them — Studio cuts what leaves the page that holds its
+ * token.
  *
  * @param error - What the request threw
  * @param report - The request, and the hooks and timings Studio reads

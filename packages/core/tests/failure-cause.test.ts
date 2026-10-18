@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { HTTPError } from "../src/errors";
+import { ConfigurationError } from "../src/errors/configuration-error";
 import { failureCause } from "../src/studio/failure-cause";
 
 function unanswered(data: unknown): HTTPError {
@@ -55,9 +56,27 @@ describe("failureCause", () => {
     expect(failureCause(error)).toBeUndefined();
   });
 
-  it("has none for an error that is not a failed request", () => {
+  it("reads the system's code and text from a connection the app's own code made, as a middleware's fetch", () => {
+    const refused = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:4010"), {
+      code: "ECONNREFUSED",
+    });
+
+    expect(failureCause(new TypeError("fetch failed", { cause: refused }))).toEqual({
+      code: "ECONNREFUSED",
+      message: "connect ECONNREFUSED 127.0.0.1:4010",
+    });
+    expect(failureCause(refused)).toEqual({
+      code: "ECONNREFUSED",
+      message: "connect ECONNREFUSED 127.0.0.1:4010",
+    });
+  });
+
+  it("has none for an error that names no code, or one of Courier's own, which says what it is", () => {
     expect(failureCause(new Error("getaddrinfo ENOTFOUND x"))).toBeUndefined();
     expect(failureCause("ENOTFOUND")).toBeUndefined();
+    expect(
+      failureCause(new ConfigurationError("URL_NOT_ABSOLUTE", "A path where no page resolves it")),
+    ).toBeUndefined();
   });
 
   it("has none when the failure carries no text", () => {

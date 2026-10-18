@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { defineMiddleware } from "../src/middleware";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
@@ -108,6 +109,32 @@ describe("a request that got no answer", () => {
 
     expect(reportedError()?.cause).toEqual({ message: thrown });
     expect((caught as { data: { message: string } }).data.message).toBe(thrown);
+  });
+
+  it("is reported with why a middleware's own connection was refused", async () => {
+    const port = await closedPort();
+    const signIn = defineMiddleware("signIn", "before", async () => {
+      await fetch(`http://127.0.0.1:${port}/token`);
+    });
+    const guarded = defineApi({
+      expose: true,
+      baseURL: "http://127.0.0.1:1",
+      middleware: [signIn],
+      endpoints: { ping: endpoint.get("ping").response<unknown>() },
+    });
+
+    await createCaller(guarded)
+      .ping()
+      .catch(() => undefined);
+
+    expect(reportedError()).toMatchObject({
+      type: "unknown",
+      message: "fetch failed",
+      cause: {
+        code: "ECONNREFUSED",
+        message: expect.stringContaining(`ECONNREFUSED 127.0.0.1:${port}`),
+      },
+    });
   });
 });
 

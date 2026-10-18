@@ -30,7 +30,7 @@ const RANGE_PHRASE: Readonly<Record<AnalyticsRange, string>> = {
 };
 
 function latency(win: AnalyticsWindow, slowMs: number): KpiValue {
-  const durations = durationsOf(win.done);
+  const durations = durationsOf(win.sent);
   const p95 = percentile(durations, 0.95);
   const at = (fraction: number) => durationLabel(percentile(durations, fraction));
   return {
@@ -44,20 +44,20 @@ function latency(win: AnalyticsWindow, slowMs: number): KpiValue {
 }
 
 function success(win: AnalyticsWindow): KpiValue {
-  const rate = successRate(win.done) ?? 0;
+  const rate = successRate(win.sent) ?? 0;
   return {
     key: "success",
     label: "Success rate",
     value: `${rate.toFixed(1)}%`,
     tone: successHealth(rate),
     sparkTone: "ok",
-    sub: `${win.done.filter((r) => r.status === "success").length} succeeded`,
+    sub: `${win.sent.filter((r) => r.status === "success").length} succeeded`,
   };
 }
 
 function errors(win: AnalyticsWindow): KpiValue {
-  const failed = win.done.filter(isFailure).length;
-  const share = win.done.length === 0 ? 0 : (failed / win.done.length) * 100;
+  const failed = win.sent.filter(isFailure).length;
+  const share = win.sent.length === 0 ? 0 : (failed / win.sent.length) * 100;
   return {
     key: "errors",
     label: "Errors",
@@ -72,17 +72,19 @@ function size(win: AnalyticsWindow): KpiValue {
   return {
     key: "size",
     label: "Avg size",
-    value: formatSize(Math.round(averageSize(win.done) ?? 0)),
+    value: formatSize(Math.round(averageSize(win.sent) ?? 0)),
     tone: "normal",
     sparkTone: "type",
-    sub: `${formatSize(totalSize(win.done))} transferred`,
+    sub: `${formatSize(totalSize(win.sent))} transferred`,
   };
 }
 
 /**
  * What each of Analytics' headline figures shows for a window: the value,
  * the colour it reads in — latency against the slow threshold, the success
- * rate from 95% and 80% — and its line of context.
+ * rate from 95% and 80% — and its line of context. Each counts the requests
+ * the network carried; the total names the calls too where some sent none
+ * of their own.
  *
  * @param win - The window
  * @param range - The range it covers, for the total's context line
@@ -98,16 +100,18 @@ export function kpiValues(
   range: AnalyticsRange,
   slowMs: number,
 ): Record<KpiKey, KpiValue> {
-  const calls = String(win.done.length);
-  const perMinute = win.done.length / (win.span / 60_000);
+  const calls = win.done.length;
+  const perMinute = win.sent.length / (win.span / 60_000);
+  const alsoCalls =
+    calls === win.sent.length ? "" : ` · ${calls} ${calls === 1 ? "call" : "calls"}`;
   return {
     total: {
       key: "total",
       label: "Total requests",
-      value: calls,
+      value: String(win.sent.length),
       tone: "normal",
       sparkTone: "brand",
-      sub: RANGE_PHRASE[range],
+      sub: `${RANGE_PHRASE[range]}${alsoCalls}`,
     },
     success: success(win),
     p95: latency(win, slowMs),

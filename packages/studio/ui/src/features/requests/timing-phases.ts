@@ -29,8 +29,9 @@ const sum = (values: readonly (number | undefined)[]): number =>
  * How a request spent its time, phase after phase in the order Courier runs
  * them: the middleware before the call, the fetch, the validation, the
  * middleware after — or the middleware as one phase when its steps do not
- * say how they split — and what Courier itself took between them. A
- * webhook delivered to the app spends it on its checks, then its handler.
+ * say how they split — and what Courier itself took between them. A call
+ * another call's request answered waited where another fetches. A webhook
+ * delivered to the app spends it on its checks, then its handler.
  *
  * @param r - The request
  * @returns The total and the phases, or `null` before the request has timings
@@ -42,25 +43,27 @@ const sum = (values: readonly (number | undefined)[]): number =>
 export function timingPhasesOf(
   r: Pick<
     RequestEntry,
-    "timing" | "middlewareEntries" | "mode" | "error" | "statusCode" | "variables"
+    "timing" | "middlewareEntries" | "mode" | "error" | "statusCode" | "variables" | "shared"
   >,
 ): { total: number; phases: TimingPhase[] } | null {
   if (!r.timing) return null;
   if (r.mode === "webhook") return deliveryPhases(r.timing, deliveryStopOf(r));
   const { total, middleware, fetch, validation } = r.timing;
+  /* A call another call's request answered sent none: it waited for that one. */
+  const sent = r.shared ? "Waited" : "Fetch";
   const before = sum(r.middlewareEntries.map((e) => e.beforeDuration));
   const after = sum(r.middlewareEntries.map((e) => e.afterDuration));
   const split = before + after > 0;
   const parts: Omit<TimingPhase, "start">[] = split
     ? [
         { key: "middleware-in", label: "Middleware in", duration: before },
-        { key: "fetch", label: "Fetch", duration: fetch },
+        { key: "fetch", label: sent, duration: fetch },
         { key: "validation", label: "Validation", duration: validation },
         { key: "middleware-out", label: "Middleware out", duration: after },
       ]
     : [
         { key: "middleware", label: "Middleware", duration: middleware },
-        { key: "fetch", label: "Fetch", duration: fetch },
+        { key: "fetch", label: sent, duration: fetch },
         { key: "validation", label: "Validation", duration: validation },
       ];
   const measured = sum(parts.map((p) => p.duration));
@@ -120,7 +123,7 @@ export interface P95Comparison {
  * Compare a call with its endpoint's p95: in line within 15% of it.
  *
  * @param ms - The call's duration
- * @param latency - The endpoint's p95 and how many calls it rests on
+ * @param latency - The endpoint's p95 and how many requests it rests on
  * @param endpoint - The endpoint's name
  * @returns The comparison
  * @example
@@ -134,8 +137,8 @@ export function compareToP95(
   endpoint: string,
 ): P95Comparison {
   const ratio = latency.p95 > 0 ? ms / latency.p95 : 1;
-  const calls = `${latency.count} ${latency.count === 1 ? "call" : "calls"}`;
-  const detail = `${endpoint} p95 ${formatDuration(latency.p95)} · ${calls}`;
+  const requests = `${latency.count} ${latency.count === 1 ? "request" : "requests"}`;
+  const detail = `${endpoint} p95 ${formatDuration(latency.p95)} · ${requests}`;
   if (ratio > 1.15)
     return { label: `${ratio.toFixed(1)}× slower than p95`, trend: "slower", detail };
   if (ratio < 0.85) {

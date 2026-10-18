@@ -1,3 +1,4 @@
+import { sentOwnRequest } from "@/features/requests/own-requests";
 import { endpointName } from "@/features/requests/request-parts";
 import { requestStateOf } from "@/features/requests/request-state";
 import type { TimeWindow } from "./time-window";
@@ -7,8 +8,12 @@ import type { RequestItem } from "./waterfall-rows";
 export interface WaterfallInsights {
   windowMs: number;
   gaps: number;
+  /** The most requests that ran at once. */
   peak: number;
+  /** The calls in view. */
   inView: number;
+  /** The requests they sent: a read another call's request answered sent none. */
+  requestsInView: number;
   slowest: { total: number; name: string } | undefined;
   /** The share of a finished request's time spent fetching, on average; `undefined` with none finished. */
   fetchShare: number | undefined;
@@ -30,10 +35,11 @@ function peakOf(items: readonly RequestItem[]): number {
 }
 
 /**
- * What the Waterfall's figures say of the requests in view: how long the
+ * What the Waterfall's figures say of the calls in view: how long the
  * window lasts and how many idle gaps it compresses, how many requests ran
  * at once at most, the slowest one finished, and how much of a finished
- * call's time went on its fetch — a webhook delivered to the app makes none.
+ * request's time went on its fetch — a webhook delivered to the app makes
+ * none. A read another call's request answered sent none: it only waited.
  *
  * @param items - The requests in view, with their bars
  * @param window - The window they are drawn over
@@ -47,7 +53,8 @@ export function waterfallInsights(
   items: readonly RequestItem[],
   window: TimeWindow,
 ): WaterfallInsights {
-  const done = items.filter((i) => {
+  const sent = items.filter((i) => sentOwnRequest(i.request));
+  const done = sent.filter((i) => {
     const state = requestStateOf(i.request);
     return state !== "pending" && state !== "aborted" && i.bar.total > 0;
   });
@@ -62,8 +69,9 @@ export function waterfallInsights(
   return {
     windowMs: window.end - window.start,
     gaps: window.gaps.length,
-    peak: peakOf(items),
+    peak: peakOf(sent),
     inView: items.length,
+    requestsInView: sent.length,
     slowest: slowest && { total: slowest.bar.total, name: endpointName(slowest.request) },
     fetchShare: shares.length ? shares.reduce((sum, s) => sum + s, 0) / shares.length : undefined,
   };

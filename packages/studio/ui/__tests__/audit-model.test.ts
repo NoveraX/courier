@@ -87,7 +87,7 @@ describe("a finding as the page shows it", () => {
       {
         key: "a",
         label: "billing.invoices.list",
-        detail: "28% errors (39 calls)",
+        detail: "28% errors (39 requests)",
         requestIds: ["r1"],
       },
       { key: "b", label: "Expected a number", detail: "4x", requestIds: ["r2"] },
@@ -95,7 +95,7 @@ describe("a finding as the page shows it", () => {
   });
 
   it("sums up its first endpoint and how many more, or else its description", () => {
-    expect(summaryOf(item)).toBe("billing.invoices.list — 28% errors (39 calls) · 1 more");
+    expect(summaryOf(item)).toBe("billing.invoices.list — 28% errors (39 requests) · 1 more");
     expect(summaryOf({ description: "No responses are compressed." })).toBe(
       "No responses are compressed.",
     );
@@ -110,7 +110,7 @@ describe("a finding as the page shows it", () => {
         method: "POST",
         prefix: "billing.",
         name: "invoices.list",
-        detail: "28% errors (39 calls)",
+        detail: "28% errors (39 requests)",
         timelineQuery: "billing.invoices.list",
         firstRequestId: "r1",
       },
@@ -137,9 +137,20 @@ describe("a finding as the page shows it", () => {
     expect(
       findingEndpoints(burst, byId).map((e) => [e.prefix, e.name, e.detail, e.timelineQuery]),
     ).toEqual([
-      ["api.", "users.list", "1 call", "api.users.list"],
-      ["api.", "users.get", "2 calls", "api.users.get"],
+      ["api.", "users.list", "1 request", "api.users.list"],
+      ["api.", "users.get", "2 requests", "api.users.get"],
     ]);
+  });
+
+  it("counts the calls and the requests they sent where a read another call's request answered is among them", () => {
+    const burst = finding({ id: "n2", severity: "warning", requestIds: ["a", "b", "c"] });
+    const byId = new Map([
+      ["a", requestEntry({ id: "a" })],
+      ["b", requestEntry({ id: "b", shared: { by: "flight", with: "a" } })],
+      ["c", requestEntry({ id: "c" })],
+    ]);
+
+    expect(findingEndpoints(burst, byId).map((e) => e.detail)).toEqual(["3 calls · 2 requests"]);
   });
 
   it("draws out the lines of a suggested fix that make the fix", () => {

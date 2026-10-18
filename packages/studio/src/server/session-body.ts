@@ -7,7 +7,7 @@
 import type { SavedSessionApp } from "./session-types";
 import { isObject } from "./validate-body";
 
-/** The most requests a saved session holds: the most the UI keeps. */
+/** The most calls a saved session holds: the most the UI keeps. */
 export const MAX_SESSION_REQUESTS = 10_000;
 
 /* The ids Studio gives sessions, and nothing a path could be made of. */
@@ -62,7 +62,7 @@ export function readSaveBody(body: unknown): SaveRequest | SessionRefusal {
   if (name !== undefined && typeof name !== "string") return refuse("name must be a string.");
   if (!Array.isArray(requests)) return refuse("requests must be a list of the captured requests.");
   if (requests.length > MAX_SESSION_REQUESTS) {
-    return refuse(`A session holds at most ${MAX_SESSION_REQUESTS} requests.`, 413);
+    return refuse(`A session holds at most ${MAX_SESSION_REQUESTS} calls.`, 413);
   }
   if (!requests.every(isObject)) return refuse("Every request must be an object.");
   if (!Array.isArray(apps) || !apps.every(isApp)) return refuse("apps must be a list of apps.");

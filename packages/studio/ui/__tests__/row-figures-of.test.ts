@@ -2,7 +2,7 @@
  * The p95 and error rate an endpoint's row in the Explorer's Endpoints list
  * shows, in columns or stacked: coloured past the slow threshold and as
  * errors mount, `stream` for a called stream, `—` before anything is
- * measured.
+ * measured — an error rate before any request of its own.
  */
 import { describe, expect, it } from "vitest";
 
@@ -12,7 +12,7 @@ import { rowFiguresOf } from "@/screens/explorer/row-figures-of";
 
 const IDLE: EndpointMetrics = {
   calls: 0,
-  shared: 0,
+  requests: 0,
   p50: null,
   p95: null,
   errorRate: 0,
@@ -71,10 +71,14 @@ describe("rowFiguresOf", () => {
 
   it("colours the error rate amber from 5% and red from 20%", () => {
     const rate = (errorRate: number) =>
-      rowFiguresOf(endpoint({ calls: 10, p95: 80, errorRate }), 500).errors;
+      rowFiguresOf(endpoint({ calls: 10, requests: 10, p95: 80, errorRate }), 500).errors;
 
     expect(rate(0)).toEqual({ text: "0.0%", className: "text-fg-subtle" });
     expect(rate(7.5).className).toBe("text-warn");
     expect(rate(25)).toEqual({ text: "25.0%", className: "text-err" });
+  });
+
+  it("gives no error rate where every read was answered by another call's request", () => {
+    expect(rowFiguresOf(endpoint({ calls: 3, requests: 0 }), 500).errors.text).toBe("—");
   });
 });

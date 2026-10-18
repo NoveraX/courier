@@ -83,7 +83,7 @@ export function OverheadHero({ overview, looks }: OverheadHeroProps): React.Reac
             {noticeable ? "Middleware is noticeable" : "Middleware is lightweight"}
           </span>
           <span className="text-control leading-normal text-pretty text-fg-muted">
-            {`${formatDuration(perCall)} per request on average${slowest ? ` — ${slowest.name} is the most expensive step.` : "."}`}
+            {`${formatDuration(perCall)} per call on average${slowest ? ` — ${slowest.name} is the most expensive step.` : "."}`}
           </span>
           <div
             aria-hidden="true"
@@ -101,11 +101,7 @@ export function OverheadHero({ overview, looks }: OverheadHeroProps): React.Reac
         </div>
       </div>
       <div className="grid grid-cols-2 gap-px bg-line">
-        <Figure
-          label="Avg per request"
-          value={formatDuration(perCall)}
-          sub="across all middleware"
-        />
+        <Figure label="Avg per call" value={formatDuration(perCall)} sub="across all middleware" />
         <Figure
           label="Slowest step"
           value={slowest?.name ?? "—"}

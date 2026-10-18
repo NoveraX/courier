@@ -27,7 +27,7 @@ const CHECKS: readonly Check[] = [
     category: "performance",
     finds: ["err-n-plus-one-"],
     title: "No N+1 request patterns",
-    description: "No list call was followed by calls for its items, one after another.",
+    description: "No list request was followed by requests for its items, one after another.",
   },
   {
     id: "pass-waterfall",
@@ -41,7 +41,7 @@ const CHECKS: readonly Check[] = [
     category: "performance",
     finds: ["warn-duplicate-"],
     title: "No duplicate requests",
-    description: "No call was sent again with the same input right after the first.",
+    description: "No request was sent again with the same input right after the first.",
     more: sharedReads,
   },
   {
@@ -115,7 +115,7 @@ const CHECKS: readonly Check[] = [
     finds: ["sec-cookie-forwarding"],
     title: "No cookies forwarded through the proxy",
     applies: proxied,
-    description: "No proxied call carried the browser's cookies to the backend.",
+    description: "No proxied request carried the browser's cookies to the backend.",
   },
   {
     id: "pass-mode",

@@ -2,6 +2,7 @@ import { Archive, Download, FlaskConical, FolderOpen, Share, Trash2 } from "luci
 import { useState } from "react";
 
 import { shortAgo } from "@/features/explorer/endpoint-key";
+import { callsAndRequests } from "@/features/requests/own-requests";
 import type { SessionSummary } from "@/features/settings/session-summary";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +75,7 @@ export function SavedSessionRow({
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-control font-strong">{session.name}</span>
-        <span className="font-mono text-badge text-fg-subtle">{`${session.stats.totalRequests} requests · saved ${shortAgo(now - session.savedAt)} ago`}</span>
+        <span className="font-mono text-badge text-fg-subtle">{`${callsAndRequests(session.stats.totalCalls ?? session.stats.totalRequests, session.stats.totalRequests)} · saved ${shortAgo(now - session.savedAt)} ago`}</span>
       </span>
       <span
         className={cn(

@@ -1,4 +1,5 @@
 import { endpointKeyOf } from "@/features/explorer/endpoint-key";
+import { ownRequests } from "@/features/requests/own-requests";
 import { percentile } from "@/features/requests/percentile";
 import { endpointParts, httpMethodOf } from "@/features/requests/request-parts";
 import type { RequestEntry } from "@/store/types";
@@ -14,24 +15,28 @@ export interface EndpointRow {
   /** Its name past the source: `invoices.list`. */
   name: string;
   httpMethod: string;
+  /** Its calls, each a row of the Timeline. */
   calls: number;
-  /** Response times, ms; `null` while every call was cut short. */
+  /** Response times of the requests its calls sent, ms; `null` while every one was cut short. */
   avg: number | null;
   p50: number | null;
   p95: number | null;
   p99: number | null;
-  /** The average response, bytes. */
+  /** The average response of its requests, bytes. */
   size: number;
+  /** Its requests that failed. */
   failed: number;
-  /** The share of its calls that failed, 0–100. */
+  /** The share of its requests that failed, 0–100. */
   errorRate: number;
   /** Its calls, newest first. */
   requests: RequestEntry[];
 }
 
 function rowOf(key: string, newest: RequestEntry, calls: RequestEntry[]): EndpointRow {
-  const durations = durationsOf(calls);
-  const failed = calls.filter(isFailure).length;
+  /* The network carried a request once for every call it answered. */
+  const sent = ownRequests(calls);
+  const durations = durationsOf(sent);
+  const failed = sent.filter(isFailure).length;
   return {
     key,
     ...endpointParts(newest),
@@ -41,16 +46,17 @@ function rowOf(key: string, newest: RequestEntry, calls: RequestEntry[]): Endpoi
     p50: percentile(durations, 0.5),
     p95: percentile(durations, 0.95),
     p99: percentile(durations, 0.99),
-    size: averageSize(calls) ?? 0,
+    size: averageSize(sent) ?? 0,
     failed,
-    errorRate: (failed / calls.length) * 100,
+    errorRate: sent.length === 0 ? 0 : (failed / sent.length) * 100,
     requests: calls,
   };
 }
 
 /**
- * The endpoints the calls reached, one row each with its call count,
- * response times, average size and failures.
+ * The endpoints the calls reached, one row each with its call count and
+ * the response times, average size and failures of the requests they
+ * sent.
  *
  * @param done - The finished calls, oldest first
  * @returns One row an endpoint, the most recently called first

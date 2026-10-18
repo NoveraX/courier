@@ -1,6 +1,7 @@
 import type { RequestEntry } from "@/store/types-request";
 import type { Catalog } from "@/store/types-ui";
 import { auditScore } from "./audit-score";
+import { auditedCalls } from "./audited-calls";
 import { computeEndpointStats } from "./compute-stats";
 import { passedChecks } from "./passed-checks";
 import { collectCourierRules } from "./rules-courier";
@@ -55,8 +56,7 @@ export function runAudit(
   catalog: Catalog,
   context: AuditContext,
 ): AuditResult {
-  /* The audit weighs the calls the app makes; a webhook is a call made to it, by its sender. */
-  const completed = requests.filter((r) => r.status !== "pending" && r.mode !== "webhook");
+  const completed = auditedCalls(requests);
   const stats = computeEndpointStats(completed);
 
   const found = [

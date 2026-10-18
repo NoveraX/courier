@@ -1,9 +1,10 @@
 import { toast } from "sonner";
 
+import { callsAndRequests, ownRequests } from "@/features/requests/own-requests";
 import { apiClient } from "@/lib/api-client";
 import { downloadFile } from "@/lib/export";
 import { useStudioStore } from "@/store";
-import type { ExportFormat } from "@/store/types";
+import type { ExportFormat, RequestEntry } from "@/store/types";
 import { savedRequestOf } from "./saved-request";
 
 const EXTENSION: Readonly<Record<ExportFormat, string>> = {
@@ -50,7 +51,7 @@ export async function exportShownRequests(
     const name = shownSession ? `session-${shownSession.id}` : `courier-requests-${stamp(now)}`;
     downloadFile(blob, `${name}.${EXTENSION[format]}`);
     toast.success(
-      `Exported ${shownSession ? "the session" : `${requests.length} requests`} as ${format.toUpperCase()}`,
+      `Exported ${shownSession ? "the session" : exportedText(requests, format)} as ${format.toUpperCase()}`,
     );
     return true;
   } catch (error) {
@@ -59,4 +60,10 @@ export async function exportShownRequests(
     );
     return false;
   }
+}
+
+/* What an export of the live calls carries: JSON every call, a shared read marked; HAR and Postman the requests sent alone. */
+function exportedText(requests: readonly RequestEntry[], format: ExportFormat): string {
+  const sent = ownRequests(requests).length;
+  return callsAndRequests(format === "json" ? requests.length : sent, sent);
 }

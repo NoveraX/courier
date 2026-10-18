@@ -127,6 +127,7 @@ function sameStats(
     if (
       !other ||
       other.calls !== value.calls ||
+      other.requests !== value.requests ||
       other.failed !== value.failed ||
       other.pending !== value.pending ||
       other.p95 !== value.p95

@@ -12,8 +12,13 @@ const STAT_KEYS = [
   "totalSize",
 ] as const;
 
+/* A session saved before calls were counted apart from requests has no count of its calls. */
 function isStats(value: unknown): value is SessionStats {
-  return isObject(value) && STAT_KEYS.every((key) => typeof value[key] === "number");
+  return (
+    isObject(value) &&
+    STAT_KEYS.every((key) => typeof value[key] === "number") &&
+    (value.totalCalls === undefined || typeof value.totalCalls === "number")
+  );
 }
 
 function isSavedSession(value: unknown): value is SavedSession {

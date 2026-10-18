@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  *
  * The Middleware page on the new shell: what the session's middleware
- * costs, a card a middleware opening the chain of a call it failed in, the
+ * costs over every call it ran in — a read another call's request answered
+ * among them — a card a middleware opening the chain of a call it failed in, the
  * endpoints it weighs on opening their newest chain, the chain inspector
  * tracing a picked call — kept in the address apart from the inspector's
  * own — with a way into the inspector and no fetch for a call a middleware
@@ -77,13 +78,28 @@ describe("the Middleware page", () => {
   it("says what the session's middleware costs, each middleware with its runs and failures", async () => {
     await openShell("/middleware");
 
-    expect(screen.getByText("2 middleware · 3 requests traced")).toBeTruthy();
+    expect(screen.getByText("2 middleware · 3 calls traced")).toBeTruthy();
     const overhead = within(screen.getByRole("region", { name: "Overhead" }));
     expect(overhead.getByText("8.0%")).toBeTruthy();
     expect(overhead.getByText("Middleware is lightweight")).toBeTruthy();
     const auth = screen.getByRole("button", { name: /^auth/ });
     expect(auth.textContent).toContain("+ authorization");
     expect(auth.textContent).toContain("1 failed");
+  });
+
+  it("counts a read another call's request answered among the calls traced: its middleware ran", async () => {
+    const joined = {
+      ...call("joined", "list", [run("auth", 0), run("log", 1)]),
+      shared: { by: "flight" as const, with: "older" },
+    };
+    useStudioStore.setState({ requests: [joined, ...CALLS] });
+
+    await openShell("/middleware");
+
+    expect(screen.getByText("2 middleware · 4 calls traced")).toBeTruthy();
+    expect(screen.getByText(/per call on average/).textContent).toBe(
+      "8.0ms per call on average — auth is the most expensive step.",
+    );
   });
 
   it("opens the chain of a call a middleware failed in from its card", async () => {
@@ -119,7 +135,7 @@ describe("the Middleware page", () => {
   it("traces a picked call in the chain inspector, and opens it in the inspector", async () => {
     const router = await openShell("/middleware?view=chain");
 
-    const list = within(screen.getByRole("region", { name: "Requests" }));
+    const list = within(screen.getByRole("region", { name: "Calls" }));
     await settle(() => fireEvent.click(list.getAllByRole("button")[2] as HTMLElement));
     expect(router.state.location.search).toMatchObject({ trace: "older" });
     const chain = within(screen.getByRole("region", { name: "Chain" }));

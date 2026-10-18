@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { callsAndRequests } from "@/features/requests/own-requests";
 import { savedRequestOf } from "@/features/sessions/saved-request";
 import { showSavedSession } from "@/features/sessions/show-saved-session";
 import type { SessionSummary } from "@/features/settings/session-summary";
@@ -72,7 +73,9 @@ export function useSessionHistory(): SessionHistory {
   async function loadSession(id: string): Promise<void> {
     const shown = await attempt("load the session", () => showSavedSession(id));
     if (!shown) return;
-    toast.success(`Loaded ${shown.requests} requests from "${shown.name}"; recording paused`);
+    toast.success(
+      `Loaded ${callsAndRequests(shown.calls, shown.requests)} from "${shown.name}"; recording paused`,
+    );
   }
 
   async function deleteSession(id: string): Promise<void> {

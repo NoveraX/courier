@@ -237,7 +237,7 @@ describe("a session request Studio cannot read", () => {
 
     expect(reply.status).toBe(413);
     expect(field(reply.body, "error")).toBe(
-      `A session holds at most ${MAX_SESSION_REQUESTS} requests.`,
+      `A session holds at most ${MAX_SESSION_REQUESTS} calls.`,
     );
   });
 

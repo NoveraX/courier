@@ -80,7 +80,7 @@ export function AuditScreen(): React.ReactNode {
       />
       {loading.requests ? (
         <AuditSkeleton />
-      ) : report.requests === 0 ? (
+      ) : report.calls === 0 ? (
         <NoTraffic />
       ) : (
         <>

@@ -266,6 +266,45 @@ describe("the endpoints", () => {
   });
 });
 
+describe("a call another call's request answered", () => {
+  /* Slower, larger and failing, so counting it anywhere it does not belong would show. */
+  const sent = call(10_000, { ...timed(100), size: 100 });
+  const joined = call(9_000, {
+    ...timed(5_000),
+    size: 100,
+    status: "error",
+    shared: { by: "flight", with: sent.id },
+  });
+
+  it("sent no request: the window's requests leave it out, its calls do not", () => {
+    const win = analyticsWindow([sent, joined], "1m", NOW);
+
+    expect(win.done.map((r) => r.id)).toEqual([sent.id, joined.id]);
+    expect(win.sent.map((r) => r.id)).toEqual([sent.id]);
+  });
+
+  it("counts in no headline figure, and the total names the calls beside the requests", () => {
+    const kpis = kpiFigures(analyticsWindow([sent, joined], "1m", NOW), "1m", 500);
+
+    expect(kpis.map((k) => [k.key, k.value])).toEqual([
+      ["total", "1"],
+      ["success", "100.0%"],
+      ["p95", "100ms"],
+      ["errors", "0"],
+      ["throughput", "1.0/min"],
+      ["size", "100 B"],
+    ]);
+    expect(kpis[0]?.sub).toBe("last minute · 2 calls");
+  });
+
+  it("counts among its endpoint's calls, and in none of its request figures", () => {
+    const [row] = endpointRows(analyticsWindow([sent, joined], "1m", NOW).done);
+
+    expect(row).toMatchObject({ calls: 2, p95: 100, failed: 0, errorRate: 0, size: 100 });
+    expect(latencyBins(analyticsWindow([sent, joined], "1m", NOW).sent, 500).p95).toBe(100);
+  });
+});
+
 describe("the page's address", () => {
   it("keeps only what differs from the whole session sorted by the slowest p95", () => {
     expect(validateAnalyticsSearch({ range: "session", sort: "p95", dir: "desc" })).toEqual({});

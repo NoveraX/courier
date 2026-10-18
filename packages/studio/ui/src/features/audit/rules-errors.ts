@@ -1,3 +1,4 @@
+import { callsAndRequests, ownRequests } from "@/features/requests/own-requests";
 import type { RequestEntry } from "@/store/types-request";
 import type { Catalog } from "@/store/types-ui";
 import {
@@ -31,7 +32,7 @@ function highErrorRate(stats: Map<string, EndpointStats>): AuditItem[] {
       codeSuggestion: RETRY_SUGGESTION,
       endpoints: matched.map((s) => ({
         ...formatEp(s),
-        detail: `${(s.errorRate * 100).toFixed(0)}% errors (${s.count} calls)`,
+        detail: `${(s.errorRate * 100).toFixed(0)}% errors (${callsAndRequests(s.count, s.sent)})`,
       })),
     },
   ];
@@ -102,9 +103,10 @@ const SENSITIVE_PATTERNS = [
   /[?&][^=]*=eyJ[A-Za-z0-9_-]{20,}/,
 ];
 
+/* A URL is logged where its request goes: a read another call's request answered sent none. */
 function sensitiveDataInUrl(requests: RequestEntry[]): AuditItem[] {
   const matched: { url: string; id: string }[] = [];
-  for (const r of requests) {
+  for (const r of ownRequests(requests)) {
     if (!r.url) continue;
     for (const pattern of SENSITIVE_PATTERNS) {
       if (pattern.test(r.url)) {

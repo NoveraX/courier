@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Download, Layers, ScanLine, Snail } from "lucide-react";
 
+import { callsAndRequests } from "@/features/requests/own-requests";
 import type { WaterfallInsights } from "@/features/waterfall/waterfall-insights";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,7 @@ function insightsOf(figures: WaterfallInsights): Insight[] {
       label: "Peak concurrency",
       value: `${figures.peak} parallel`,
       tone: "text-fg",
-      sub: `of ${figures.inView} in view`,
+      sub: `of ${callsAndRequests(figures.inView, figures.requestsInView)} in view`,
     },
     {
       icon: Snail,

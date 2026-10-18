@@ -4,6 +4,7 @@ import { codeLabel } from "@/features/requests/request-parts";
 import { isFailedState, isStreamRequest } from "@/features/requests/request-state";
 import { formatAbsoluteTime, formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { SharedChip } from "@/screens/timeline/shared-chip";
 
 const BAR_FILL = { normal: "bg-brand", warn: "bg-warn", err: "bg-err" } as const;
 const DURATION_TEXT = { normal: "text-fg-muted", warn: "text-warn", err: "text-err" } as const;
@@ -33,8 +34,10 @@ function durationLabel({ request: r, state }: RecentCall, stream: boolean): stri
 /**
  * One call of an endpoint, as a list of them shows it — when it began, how
  * it went, its status, how long it took against the others and, when
- * asked, its size — opening in the inspector. A row too narrow for the bar
- * that sets its time against the others keeps the time in words alone.
+ * asked, its size — opening in the inspector; a call another call's
+ * request answered is marked `shared`. A row too narrow for the bar that
+ * sets its time against the others keeps the time in words alone, and the
+ * mark beside when it began.
  *
  * @param props - The call, the slow threshold, what opens it, and its columns and look
  * @returns The row
@@ -71,18 +74,33 @@ export function CallRow({
             : "grid-cols-[92px_44px_minmax(0,1fr)_58px] @max-[18rem]:grid-cols-[minmax(0,1fr)_44px_58px]",
         )}
       >
-        <span className="truncate text-fg-subtle">{formatAbsoluteTime(r.startedAt)}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-fg-subtle">
+          <span className="truncate">{formatAbsoluteTime(r.startedAt)}</span>
+          {r.shared && (
+            <span
+              className={cn(
+                "hidden",
+                withSize ? "@max-[23rem]:inline-flex" : "@max-[18rem]:inline-flex",
+              )}
+            >
+              <SharedChip shared={r.shared} />
+            </span>
+          )}
+        </span>
         <span className={codeTone(call)}>{codeLabel(r, state)}</span>
         <span
           className={cn(
-            "h-1 overflow-hidden rounded-[2px] bg-raised",
+            "flex min-w-0 items-center gap-2",
             withSize ? "@max-[23rem]:hidden" : "@max-[18rem]:hidden",
           )}
         >
-          <span
-            className={cn("block h-full", stream ? "bg-brand-dim" : BAR_FILL[tone])}
-            style={{ width: `${share * 100}%` }}
-          />
+          {r.shared && <SharedChip shared={r.shared} />}
+          <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-[2px] bg-raised">
+            <span
+              className={cn("block h-full", stream ? "bg-brand-dim" : BAR_FILL[tone])}
+              style={{ width: `${share * 100}%` }}
+            />
+          </span>
         </span>
         <span className={cn("text-right", stream ? "text-brand" : DURATION_TEXT[tone])}>
           {durationLabel(call, stream)}

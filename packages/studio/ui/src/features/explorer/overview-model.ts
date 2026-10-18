@@ -1,4 +1,5 @@
 import type { Tone } from "@/design/tone";
+import { ownRequests } from "@/features/requests/own-requests";
 import { isFailedState, requestStateOf } from "@/features/requests/request-state";
 import type { RequestEntry } from "@/store/types";
 import { ACTIVE_MS } from "./endpoint-metrics";
@@ -30,7 +31,8 @@ function share(part: number, whole: number): number {
 /**
  * The Overview's six figures: the sources and where they are defined, the
  * groups, the endpoints and how many were never called, how many are
- * active now, the share of called ones healthy, and the error rate.
+ * active now, the share of called ones healthy, and the share of requests
+ * that failed.
  *
  * @param model - The Explorer's model
  * @param requests - The session's requests
@@ -48,9 +50,9 @@ export function overviewFigures(
 ): OverviewFigure[] {
   const called = model.endpoints.filter((e) => e.metrics.calls > 0);
   const healthy = share(called.filter((e) => e.level === "healthy").length, called.length);
-  const done = requests.filter((r) => requestStateOf(r) !== "pending");
-  const failed = done.filter((r) => isFailedState(requestStateOf(r))).length;
-  const rate = done.length ? (failed / done.length) * 100 : 0;
+  const sent = ownRequests(requests.filter((r) => requestStateOf(r) !== "pending"));
+  const failed = sent.filter((r) => isFailedState(requestStateOf(r))).length;
+  const rate = sent.length ? (failed / sent.length) * 100 : 0;
   const active = model.endpoints.filter((e) => e.metrics.active).length;
   return [
     {
@@ -92,7 +94,7 @@ export function overviewFigures(
       key: "errors",
       label: "Error rate",
       value: `${rate.toFixed(1)}%`,
-      sub: `${failed} failed ${failed === 1 ? "call" : "calls"}`,
+      sub: `${failed} failed ${failed === 1 ? "request" : "requests"}`,
       tone: rate >= 5 ? "err" : "normal",
     },
   ];
@@ -100,7 +102,7 @@ export function overviewFigures(
 
 /**
  * The endpoints that rank highest by p95 (HTTP only), by error rate or by
- * calls — seven at most, each with its share of the top value.
+ * requests sent — seven at most, each with its share of the top value.
  *
  * @param model - The Explorer's model
  * @param by - What to rank by
@@ -115,7 +117,7 @@ export function topEndpoints(model: ExplorerModel, by: TopMetric): TopEntry[] {
     by === "errors"
       ? e.metrics.errorRate
       : by === "traffic"
-        ? e.metrics.calls
+        ? e.metrics.requests
         : (e.metrics.p95 ?? 0);
   const ranked = model.endpoints
     .filter((e) => e.metrics.calls > 0 && (by !== "latency" || e.transport === "http"))
@@ -130,16 +132,16 @@ export function topEndpoints(model: ExplorerModel, by: TopMetric): TopEntry[] {
 }
 
 /**
- * A source's success rate for its card: the share of its calls that did
- * not fail.
+ * A source's success rate for its card: the share of its requests that
+ * did not fail.
  *
  * @param source - The source
- * @returns 0–100, or `null` before any call
+ * @returns 0–100, or `null` before any request
  * @example
  * ```ts
  * successRate(source); // 98
  * ```
  */
 export function successRate(source: SourceNode): number | null {
-  return source.metrics.calls ? Math.round(100 - source.metrics.errorRate) : null;
+  return source.metrics.requests ? Math.round(100 - source.metrics.errorRate) : null;
 }

@@ -154,6 +154,33 @@ describe("the session history", () => {
     expect(useStudioStore.getState().paused).toBe(true);
   });
 
+  it("counts a saved session's requests apart from its calls, and says both as it loads", async () => {
+    const loaded = vi.spyOn(toast, "success");
+    const joined: RequestEntry = {
+      ...entry("r3", "success"),
+      shared: { by: "flight", with: "r1" },
+    };
+    useStudioStore.setState({ requests: [joined, entry("r2", "error"), entry("r1", "success")] });
+    const { result } = await history();
+
+    await act(() => result.current.saveCurrentSession("shared reads"));
+    await waitFor(() =>
+      expect(result.current.sessions.some((s) => s.name === "shared reads")).toBe(true),
+    );
+    const saved = result.current.sessions.find((s) => s.name === "shared reads");
+    await act(() => result.current.loadSession(saved?.id ?? ""));
+
+    expect(saved?.stats).toMatchObject({
+      totalRequests: 2,
+      totalCalls: 3,
+      successCount: 1,
+      errorCount: 1,
+    });
+    expect(loaded).toHaveBeenCalledWith(
+      'Loaded 3 calls · 2 requests from "shared reads"; recording paused',
+    );
+  });
+
   it("says why a session could not be loaded", async () => {
     const failed = vi.spyOn(toast, "error");
     const { result } = await history();

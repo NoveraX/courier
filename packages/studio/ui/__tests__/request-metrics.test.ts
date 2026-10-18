@@ -70,17 +70,24 @@ describe("the last minute", () => {
     expect(liveKpis([], NOW)).toEqual({ perMinute: 0, p95: null, errorRate: 0, liveStreams: 0 });
   });
 
-  it("takes the p95 from the calls that sent a request of their own, and counts every call", () => {
-    const sent = timed("sent", 500, 400);
-    const joined = timed("joined", 400, 20, { shared: { by: "flight", with: "sent" } });
+  it("count the requests the network carried: a call another call's request answered counts in none", () => {
+    /* Slower than the request it waited for, so counting it would show. */
+    const sent = timed("sent", 500, 100);
+    const joined = timed("joined", 400, 900, {
+      status: "error",
+      shared: { by: "flight", with: "sent" },
+    });
 
     expect(liveKpis([sent, joined], NOW)).toEqual({
-      perMinute: 2,
-      p95: 400,
+      perMinute: 1,
+      p95: 100,
       errorRate: 0,
       liveStreams: 0,
     });
-    expect(endpointLatency([sent, joined], joined)).toEqual({ p95: 400, count: 1 });
+    expect(endpointLatency([sent, joined], joined)).toEqual({ p95: 100, count: 1 });
+    expect(throughputBars([sent, joined], NOW).reduce((sum, b) => sum + b.ok + b.failed, 0)).toBe(
+      1,
+    );
   });
 
   it("gives an endpoint's p95 over its finished calls", () => {
@@ -132,7 +139,7 @@ describe("a request's time", () => {
     expect(compareToP95(300, { p95: 100, count: 12 }, "users.list")).toEqual({
       label: "3.0× slower than p95",
       trend: "slower",
-      detail: "users.list p95 100ms · 12 calls",
+      detail: "users.list p95 100ms · 12 requests",
     });
     expect(compareToP95(50, { p95: 100, count: 1 }, "users.list").label).toBe(
       "2.0× faster than p95",

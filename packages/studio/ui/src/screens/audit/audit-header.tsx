@@ -6,6 +6,7 @@ import { OverflowMenu } from "@/design/overflow-menu";
 import { Skeleton } from "@/design/skeleton";
 import { exportAsMarkdown } from "@/features/audit/export-report";
 import { shortAgo } from "@/features/explorer/endpoint-key";
+import { callsAndRequests } from "@/features/requests/own-requests";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/export";
 
@@ -15,12 +16,17 @@ const OUTLINE = `${BUTTON} border border-line bg-panel text-fg-muted hover:borde
 
 interface AuditHeaderProps {
   report: AuditReport;
-  /** Requests captured since the report ran. */
+  /** Calls captured since the report ran. */
   newSince: number;
   now: number;
-  /** Studio has not sent the requests yet: the figures are not known. */
+  /** Studio has not sent the calls yet: the figures are not known. */
   loading: boolean;
   onRerun: () => void;
+}
+
+/* What the report read: its calls and their requests, where some sent none, and the endpoints they reached. */
+function readText({ calls, requests, endpoints }: AuditReport): string {
+  return `${callsAndRequests(calls, requests)} · ${endpoints} ${endpoints === 1 ? "endpoint" : "endpoints"}`;
 }
 
 function analysedAgo(at: number, now: number): string {
@@ -29,7 +35,7 @@ function analysedAgo(at: number, now: number): string {
 
 /**
  * The Audit page's head: what the report read and when — with the
- * requests that came since — and Re-run, Copy report and Export .md. A
+ * calls that came since — and Re-run, Copy report and Export .md. A
  * phone keeps Export .md and puts the other two in a "⋯" menu beside it.
  *
  * @param props - The report, the traffic since, the time now, and what runs it again
@@ -46,7 +52,7 @@ export function AuditHeader({
   loading,
   onRerun,
 }: AuditHeaderProps): React.ReactNode {
-  const empty = report.requests === 0;
+  const empty = report.calls === 0;
   const markdown = (): string => exportAsMarkdown(report.result);
   const copy = (): void => void copyToClipboard(markdown(), "report");
   const download = (): void => {
@@ -61,7 +67,7 @@ export function AuditHeader({
           <Skeleton className="my-0.75 h-3 w-64 max-w-full" />
         ) : (
           <span className="text-control text-fg-subtle">
-            {`${report.requests} requests · ${report.endpoints} endpoints · ${analysedAgo(report.at, now)}`}
+            {`${readText(report)} · ${analysedAgo(report.at, now)}`}
             {newSince > 0 && <span className="text-brand">{` · ${newSince} new since`}</span>}
           </span>
         )}

@@ -46,7 +46,7 @@ export function detectDuplicates(requests: RequestEntry[]): AuditItem[] {
       severity: "warning",
       category: "performance",
       title: "Duplicate requests",
-      description: `"${labelOf(first)}" was called again with the same variables within ${DUPLICATE_WINDOW_MS / 1000} s — ${totalCount} calls in ${dupes.length} ${dupes.length === 1 ? "burst" : "bursts"}.`,
+      description: `"${labelOf(first)}" was called again with the same variables within ${DUPLICATE_WINDOW_MS / 1000} s — ${totalCount} requests in ${dupes.length} ${dupes.length === 1 ? "burst" : "bursts"}.`,
       suggestion:
         "Reads in flight together already go out as one; a read made again after the first one answered goes out again. Keep the answer: React Query or SWR in the browser, cacheMiddleware on the server — createServerCaller already reads once per render.",
       requestIds: allIds,

@@ -1,7 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * The Audit page on the new shell: what the report read and its score, the
+ * The Audit page on the new shell: what the report read — its calls and the
+ * requests they sent, the finished calls of the app — and its score, the
  * first finding open with its fix and the fixing line drawn out, the
  * severity, category and search filters kept in the address, an endpoint's
  * calls one link away, a report that holds still until Re-run and says what
@@ -87,6 +88,23 @@ describe("the Audit page", () => {
       /\.retry\(|\.timeout\(|authMiddleware/,
     );
     expect(findings().length).toBe(expected.items.length);
+  });
+
+  it("counts the calls it read and the requests they sent, and not a call in flight or a webhook", async () => {
+    useStudioStore.setState({
+      requests: [
+        ...TRAFFIC,
+        call("joined", { method: "list", shared: { by: "flight", with: "ok1" } }),
+        call("waiting", { method: "list", status: "pending" }),
+        call("hook", { method: "received", mode: "webhook" }),
+      ],
+    });
+
+    await openShell("/audit");
+
+    expect(
+      screen.getByText(/^9 calls · 8 requests · 4 endpoints · analysed just now/),
+    ).toBeTruthy();
   });
 
   it("keeps the severity, the category and the search in the address", async () => {
@@ -176,5 +194,16 @@ describe("the Audit page", () => {
     expect(screen.getByText(/^8 requests/)).toBeTruthy();
     expect(screen.queryByText(/new since/)).toBeNull();
     expect(screen.getByRole("button", { expanded: true }).textContent).toContain("High error rate");
+  });
+
+  it("reads a call held in flight as the page opened, once it finishes", async () => {
+    const waiting = call("waiting", { method: "list", status: "pending" });
+    useStudioStore.setState({ requests: [waiting] });
+    await openShell("/audit");
+    expect(screen.getByText("No requests to audit")).toBeTruthy();
+
+    await settle(() => useStudioStore.setState({ requests: [{ ...waiting, status: "success" }] }));
+
+    expect(screen.getByText(/^1 request · 1 endpoint · analysed just now/)).toBeTruthy();
   });
 });

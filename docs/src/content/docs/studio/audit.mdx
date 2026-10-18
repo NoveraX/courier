@@ -4,7 +4,7 @@ export const metadata = { title: "Audit", description: "How Studio's Audit reads
 
 The Audit page reads the requests Studio recorded — the calls your app made, in the session it shows — and says what they reveal: an endpoint that fails one call in four, a list call followed by forty detail calls, a write sent without credentials, a response that arrives without the headers that protect it. It reads traffic, not code, so a finding names the calls behind it, and a fix is checked by making the calls again.
 
-It runs when the page opens and keeps its findings still while you read them. The header says when it ran and how many requests arrived since; **Re-run** reads them. A webhook delivery is left out — your app was called, it made no call — and so is a request still in flight.
+It runs when the page opens and keeps its findings still while you read them. The header says what it read — the calls, and the requests they sent where a shared read sent none — when it ran, and how many calls arrived since; **Re-run** reads them. A webhook delivery is left out — your app was called, it made no call — and so is a call still in flight.
 
 ## Findings
 
@@ -23,7 +23,7 @@ The severity filter and the search narrow the list. **Copy report** puts it on t
 
 | Finding | Severity | When |
 | --- | --- | --- |
-| N+1 request pattern | Error | A list call followed by detail calls to one endpoint, one per item |
+| N+1 request pattern | Error | A list request followed by detail requests to one endpoint, one per item |
 | Timeout risk | Error | The 95th percentile of an endpoint's duration passes 5 s |
 | Oversized responses | Error | An endpoint's answers average more than 1 MB |
 | Slow endpoints | Warning | The 95th percentile passes 1 s |
@@ -33,20 +33,20 @@ The severity filter and the search narrow the list. **Copy report** puts it on t
 | Slow middleware detected | Warning | One middleware takes more than 50 ms |
 | Large request payloads | Warning | A request body passes 100 KB |
 | No caching detected | Hint | The same reads, answered again and again, none through a cache |
-| High proxy overhead | Hint | The trips to and from the proxy take more than a third of a call |
+| High proxy overhead | Hint | The trips to and from the proxy take more than a third of a request |
 | High validation overhead | Hint | Schema validation takes more than 20% of a call's time |
 | No response compression | Hint | Answers over 1 KB without `Content-Encoding` |
 | Empty array responses | Hint | An endpoint answered `[]` |
 
-A call whose read another call's request answered — it joined the identical read already in flight, or the render had read it already — sent no request: the Timeline marks it `shared`, its inspector names the call whose request answered it, and the performance findings and every latency figure count the requests that went out, while the call counts keep every call. See [Deduplication & Abort](/docs/advanced/abort).
+A call whose read another call's request answered — it joined the identical read already in flight, or the render had read it already — sent no request: the Timeline marks it `shared`, and its inspector names the call whose request answered it. What a finding says of the API counts the requests that went out: latency, failures, statuses and sizes, the answers it gave, the URLs, bodies and cookies sent, and the patterns on the wire — N+1, chains in series, duplicates. What it says of your code counts every call: the calls themselves, and middleware's and validation's share of a call's time, as the Middleware page does. A finding names both counts where they differ, as `50% errors (4 calls · 2 requests)`. See [Deduplication & Abort](/docs/advanced/abort).
 
 ### Reliability
 
 | Finding | Severity | When |
 | --- | --- | --- |
-| High error rate | Error | More than 20% of an endpoint's calls fail |
+| High error rate | Error | More than 20% of an endpoint's requests fail |
 | Errors without response validation | Error | An endpoint fails and has no response schema to read its errors |
-| Repeated validation failures | Warning | The same validation error, again and again |
+| Repeated validation failures | Warning | The same validation error in answer after answer |
 | Inconsistent response sizes | Warning | One endpoint's answers vary wildly in size |
 | Retried writes without an idempotency key | Hint | A write runs retry middleware and its calls carry no idempotency key: Courier sends it once, or with `mutations: true` sends it again where the upstream cannot tell a repeat |
 

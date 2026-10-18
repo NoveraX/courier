@@ -1,6 +1,7 @@
 /**
  * What a hint says above a call and in its hover: the endpoint, how many
- * calls it had, how many failed and are in flight, how long they took, the
+ * calls it had and — where reads another call's request answered sent
+ * none — the requests they sent, how many failed and are in flight, how long they took, the
  * statuses they ended with and the latest failure — written as text, never
  * as Markdown the API's message could slip a link into.
  */
@@ -31,6 +32,18 @@ describe("a hint", () => {
     expect(hintTitle({ ...STATS, calls: 0, failed: 0, pending: 0 }, true)).toBe(
       "shop orders.place · no calls yet",
     );
+  });
+
+  it("names the requests the calls sent where reads another call's request answered sent none", () => {
+    const sharing = { ...STATS, requests: 20 };
+
+    expect(hintTitle(sharing, false)).toBe(
+      "orders.place · 34 calls · 20 requests · 1 failed · 2 in flight · p95 1.4 s",
+    );
+    expect(hoverText(sharing, "http://localhost:6280", 2_000)).toContain(
+      "34 calls, 20 requests, 1 failed, 2 in flight",
+    );
+    expect(hintTitle({ ...STATS, requests: 34 }, false)).toBe(hintTitle(STATS, false));
   });
 
   it("counts a stream's or a channel's connections, and the ones still open", () => {

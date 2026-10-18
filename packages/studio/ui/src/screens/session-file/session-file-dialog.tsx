@@ -2,6 +2,7 @@ import { Download, Loader2, Share, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { DialogFrame } from "@/design/dialog-frame";
+import { callsAndRequests } from "@/features/requests/own-requests";
 import type { SessionFileDraft } from "@/features/sessions/session-file";
 import { downloadSessionFile, sessionFileName } from "@/features/sessions/session-file";
 import { useSessionFileDialog } from "@/features/sessions/session-file-dialog-store";
@@ -23,7 +24,7 @@ function Contents({ draft }: { draft: SessionFileDraft }): React.ReactNode {
           {sessionFileName(draft.name)}
         </span>
         <span className="ml-auto shrink-0 text-small text-fg-subtle tabular-nums @max-[30rem]:ml-0">
-          {draft.requests} request{draft.requests === 1 ? "" : "s"}
+          {callsAndRequests(draft.calls, draft.requests)}
           {draft.failed > 0 && <span className="text-err"> · {draft.failed} failed</span>}
         </span>
       </div>

@@ -1,3 +1,4 @@
+import { ownRequests } from "@/features/requests/own-requests";
 import { post } from "@/lib/api-client";
 import { useStudioStore } from "@/store";
 import { isRecord } from "@/store/event-helpers";
@@ -8,6 +9,8 @@ import { environmentOf } from "./session-environment";
 /** The saved session shown, as a toast tells it. */
 export interface ShownSaved {
   name: string;
+  calls: number;
+  /** The requests its calls sent: a read another call's request answered sent none. */
   requests: number;
 }
 
@@ -36,5 +39,5 @@ export async function showSavedSession(id: string): Promise<ShownSaved | undefin
   useStudioStore
     .getState()
     .showSession({ id, name, ...(environment && { environment }) }, requests);
-  return { name, requests: requests.length };
+  return { name, calls: requests.length, requests: ownRequests(requests).length };
 }

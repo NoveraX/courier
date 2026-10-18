@@ -18,7 +18,7 @@ interface Notice {
 
 function droppedNotice(dropped: number): Notice | null {
   if (dropped <= 0) return null;
-  const detail = `${dropped} older requests dropped — raise the limit in Settings`;
+  const detail = `${dropped} older ${dropped === 1 ? "call" : "calls"} dropped — raise the limit in Settings`;
   return { key: "dropped", label: `${dropped} dropped`, detail, tone: "text-warn" };
 }
 

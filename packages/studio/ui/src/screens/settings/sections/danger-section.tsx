@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { RotateCcw, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 
+import { ownRequests } from "@/features/requests/own-requests";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import type { useSessionHistory } from "@/settings/use-session-history";
 import { useStudioStore } from "@/store";
@@ -66,7 +67,8 @@ function Confirm({ danger, onCancel }: { danger: Danger; onCancel: () => void })
  */
 export function DangerSection({ history, onResetSettings }: DangerSectionProps): React.ReactNode {
   const clearRequests = useClearRequests();
-  const requests = useStudioStore((s) => s.requests.length);
+  const calls = useStudioStore((s) => s.requests.length);
+  const requests = useStudioStore((s) => ownRequests(s.requests).length);
   const [asking, setAsking] = useState<Action | null>(null);
   const done = (run: () => void) => () => {
     run();
@@ -79,7 +81,11 @@ export function DangerSection({ history, onResetSettings }: DangerSectionProps):
       description: "Removes every request from this page and from what Studio replays",
       button: "Clear",
       icon: Trash2,
-      question: `Delete ${requests} captured request${requests === 1 ? "" : "s"}?`,
+      /* What goes is every call; they are requests alone where none shared another's. */
+      question:
+        calls === requests
+          ? `Delete ${requests} captured request${requests === 1 ? "" : "s"}?`
+          : `Delete ${calls} captured calls?`,
       confirm: "Delete requests",
       run: done(clearRequests),
     },

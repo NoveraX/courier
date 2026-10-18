@@ -81,11 +81,11 @@ export function ChainView({
   return (
     <div className="grid grid-cols-1 items-start gap-4 min-[1000px]:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
       <section
-        aria-label="Requests"
+        aria-label="Calls"
         className="flex max-h-[calc(100dvh-170px)] flex-col overflow-hidden rounded-sheet border border-line bg-panel max-sm:max-h-75 min-[1000px]:sticky min-[1000px]:top-0"
       >
         <div className="flex h-11.5 shrink-0 items-center gap-2 border-b border-line px-3.5">
-          <h2 className="m-0 text-ui font-semibold">Requests</h2>
+          <h2 className="m-0 text-ui font-semibold">Calls</h2>
           <span className="text-label text-fg-subtle">pick one to trace</span>
         </div>
         <div className="overflow-auto p-1">

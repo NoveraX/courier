@@ -1,7 +1,7 @@
 import type { ColorMetric } from "@/features/explorer/metric-value";
 import { formatDuration, formatSize } from "@/lib/formatters";
 
-/** Each step of the heatmap's scale, good to bad — or, for traffic, few calls to many. */
+/** Each step of the heatmap's scale, good to bad — or, for traffic, few requests to many. */
 export const HEAT_FILLS: Readonly<Record<"health" | "traffic", readonly string[]>> = {
   health: ["bg-ok/55", "bg-warn/55", "bg-err/55", "bg-err"],
   traffic: ["bg-brand/22", "bg-brand/42", "bg-brand/65", "bg-brand"],
@@ -11,14 +11,14 @@ export const HEAT_FILLS: Readonly<Record<"health" | "traffic", readonly string[]
 export const TOTAL_LABEL: Readonly<Record<ColorMetric, string>> = {
   latency: "P95",
   errors: "Errors",
-  traffic: "Calls",
+  traffic: "Requests",
   size: "Avg",
 };
 
 /**
  * A heatmap value as its cell's tooltip says it.
  *
- * @param value - The value, or `null` for a span with no calls
+ * @param value - The value, or `null` for a span that sent no requests
  * @param metric - What it measures
  * @returns The text
  * @example
@@ -27,16 +27,16 @@ export const TOTAL_LABEL: Readonly<Record<ColorMetric, string>> = {
  * ```
  */
 export function heatCellText(value: number | null, metric: ColorMetric): string {
-  if (value === null) return "no calls";
+  if (value === null) return "no requests";
   if (metric === "errors") return `${value.toFixed(0)}% errors`;
-  if (metric === "traffic") return `${value} ${value === 1 ? "call" : "calls"}`;
+  if (metric === "traffic") return `${value} ${value === 1 ? "request" : "requests"}`;
   return metric === "size" ? formatSize(Math.round(value)) : `${formatDuration(value)} p95`;
 }
 
 /**
  * A heatmap row's figure over the whole session.
  *
- * @param value - The figure, or `null` with no calls
+ * @param value - The figure, or `null` with no requests
  * @param metric - What it measures
  * @returns The text
  * @example

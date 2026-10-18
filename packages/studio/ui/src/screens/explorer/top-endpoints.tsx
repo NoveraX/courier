@@ -37,7 +37,7 @@ interface TopEndpointsProps {
 }
 
 /**
- * The seven endpoints that rank highest by p95, by error rate or by calls,
+ * The seven endpoints that rank highest by p95, by error rate or by requests,
  * each with a bar against the top one; a click opens its panel. On a phone
  * the bar gives the name its room.
  *

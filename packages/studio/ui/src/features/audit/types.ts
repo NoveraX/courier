@@ -46,8 +46,13 @@ export interface EndpointStats {
   method: string;
   avgDuration: number;
   p95: number;
+  /** The share of its requests that failed (0-1) */
   errorRate: number;
+  /** The calls the app's code made to it */
   count: number;
+  /** The requests its calls sent: a read another call's request answered sent none */
+  sent: number;
+  /** The size of each answer its requests got */
   sizes: number[];
   avgSize: number;
   hasVariablesValidation: boolean;
@@ -55,18 +60,19 @@ export interface EndpointStats {
   /** Whether any call sent variables, which a schema could have checked */
   sentVariables: boolean;
   modes: Set<string>;
+  /** The status code of each answer its requests got */
   statusCodes: number[];
-  /** Avg middleware time as fraction of total (0-1) */
+  /** Middleware's share of a call's time, averaged over its calls (0-1) */
   middlewareOverhead: number;
-  /** Avg validation time as fraction of total (0-1) */
+  /** Validation's share of a call's time, averaged over its calls (0-1) */
   validationOverhead: number;
-  /** The share of a proxied call's whole time spent on the trips to and from the proxy, on average (0-1) */
+  /** The share of a proxied request's whole time spent on the trips to and from the proxy, on average (0-1) */
   proxyOverhead: number;
   /** HTTP methods used (GET, POST, etc.) */
   httpMethods: Set<string>;
   /** Endpoint type from catalog */
   type?: "query" | "mutation" | undefined;
-  /** All request IDs for this endpoint */
+  /** The ids of all its calls */
   requestIds: string[];
   /** Whether any call went through a cache, hit or miss */
   cached: boolean;

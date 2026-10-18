@@ -317,10 +317,12 @@ describe("Studio's audit and replays over MCP", () => {
 
     const all = audit.structuredContent as {
       score: number;
+      calls: number;
       requests: number;
       findings: { severity: string; endpoints?: { endpoint: string }[] }[];
     };
-    expect(all.requests).toBe(4);
+    /* The finished calls the app made: one still in flight and a webhook are not read. */
+    expect([all.calls, all.requests]).toEqual([2, 2]);
     expect(all.score).toBeGreaterThan(0);
     expect(all.findings.length).toBeGreaterThan(0);
     expect(all.findings.some((f) => f.severity === "pass")).toBe(false);

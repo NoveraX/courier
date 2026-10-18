@@ -1,43 +1,17 @@
+import { readShared } from "@noverax/courier-studio-core";
+
 import { isPlainObject } from "../is-plain-object";
 import { gatherRequests } from "../mcp/request-views";
 import type { CatalogEndpoint } from "./endpoint-catalog";
+import type { EndpointStats } from "./endpoint-stats-types";
 import { type StreamTally, streamTallies } from "./stream-tallies";
 
 type RuntimeEvent = Record<string, unknown>;
 
-/** How an endpoint's calls went, as an editor shows it beside a call. */
-export interface EndpointStats {
-  readonly source: string;
-  readonly endpoint: string;
-  /** What it does: a stream's or a channel's calls are its connections */
-  readonly kind: CatalogEndpoint["kind"];
-  /** Calls Studio kept, finished or not — for a stream or a channel, the connections opened */
-  readonly calls: number;
-  /** Calls that failed */
-  readonly failed: number;
-  /** Calls still waiting for their answer — for a stream or a channel, the connections still open */
-  readonly pending: number;
-  /** How many calls ended with each status, `"failed"` for one that got none */
-  readonly statuses: Readonly<Record<string, number>>;
-  /** Half the finished calls that sent a request of their own took no longer, in milliseconds */
-  readonly p50?: number | undefined;
-  /** Nineteen in twenty of them took no longer */
-  readonly p95?: number | undefined;
-  /** When the latest call started */
-  readonly lastAt?: number | undefined;
-  /** The latest failure, why, and the request Studio keeps it as — which its inspector opens */
-  readonly lastFailure?:
-    | {
-        readonly at: number;
-        readonly status?: number;
-        readonly message: string;
-        readonly request?: string;
-      }
-    | undefined;
-}
-
 interface Tally {
   calls: number;
+  /** Calls whose read another call's request answered. */
+  shared: number;
   failed: number;
   pending: number;
   statuses: Record<string, number>;
@@ -49,7 +23,9 @@ interface Tally {
 /**
  * How each endpoint's calls went, from the requests Studio keeps: every
  * endpoint the config defines, one never called with no calls; a stream's
- * or a channel's are its connections, open or ended. A webhook delivered
+ * or a channel's are its connections, open or ended. Its failures,
+ * statuses and times are the requests' its calls sent: a read another
+ * call's request answered is one of its calls alone. A webhook delivered
  * to the app is no endpoint's call, and is left out.
  *
  * @param events - The key events Studio's request log keeps: each request's and stream's start and end
@@ -71,6 +47,7 @@ export function endpointStats(
     const key = `${String(start.source)}\u0000${idOf(start)}`;
     const tally = tallies.get(key) ?? {
       calls: 0,
+      shared: 0,
       failed: 0,
       pending: 0,
       statuses: {},
@@ -95,12 +72,14 @@ function streamStatsOf(
   kind: "stream" | "channel",
   tally: StreamTally | undefined,
 ): EndpointStats {
-  if (!tally) return { source, endpoint, kind, calls: 0, failed: 0, pending: 0, statuses: {} };
+  if (!tally)
+    return { source, endpoint, kind, calls: 0, requests: 0, failed: 0, pending: 0, statuses: {} };
   return {
     source,
     endpoint,
     kind,
     calls: tally.opened,
+    requests: tally.opened,
     failed: tally.failed,
     pending: tally.open,
     statuses: {},
@@ -127,14 +106,18 @@ function count(
     tally.pending += 1;
     return;
   }
+  /* The API's figures are its requests': a read another call's request answered sent none, and holds that request's answer. */
+  if (readShared(settled.shared) !== undefined) {
+    tally.shared += 1;
+    return;
+  }
   const status =
     numberOf(settled.status) ??
     (isPlainObject(error?.error) ? numberOf(error.error.status) : undefined);
   const label = status === undefined ? "failed" : String(status);
   tally.statuses[label] = (tally.statuses[label] ?? 0) + 1;
-  /* The API's time is the requests': a read answered by another call's request only waited for it. */
   const total = isPlainObject(settled.timing) ? numberOf(settled.timing.total) : undefined;
-  if (total !== undefined && settled.shared === undefined) tally.durations.push(total);
+  if (total !== undefined) tally.durations.push(total);
   if (!error) return;
   tally.failed += 1;
   const message =
@@ -150,12 +133,14 @@ function statsOf(
   endpoint: string,
   tally: Tally | undefined,
 ): Omit<EndpointStats, "kind"> {
-  if (!tally) return { source, endpoint, calls: 0, failed: 0, pending: 0, statuses: {} };
+  if (!tally)
+    return { source, endpoint, calls: 0, requests: 0, failed: 0, pending: 0, statuses: {} };
   const sorted = [...tally.durations].sort((a, b) => a - b);
   return {
     source,
     endpoint,
     calls: tally.calls,
+    requests: tally.calls - tally.shared,
     failed: tally.failed,
     pending: tally.pending,
     statuses: tally.statuses,

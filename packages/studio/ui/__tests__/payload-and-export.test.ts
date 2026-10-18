@@ -4,7 +4,7 @@
  * What the inspector's Response and Request tabs show of a payload — or
  * why there is none — and the Timeline's export: the saved session's when
  * one is shown, else the live requests', downloaded under a name of the
- * moment, a failure told in a toast.
+ * moment, what it carries and a failure told in a toast.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -105,6 +105,24 @@ describe("exporting the requests", () => {
       responseType: "blob",
     });
     expect(download).toHaveBeenCalledWith(blob, "session-s1.postman_collection.json");
+  });
+
+  it("says what each format carries: JSON every call, a HAR or a collection the requests sent", async () => {
+    post.mockResolvedValue(blob);
+    useStudioStore.setState({
+      requests: [
+        requestEntry({ id: "joined", shared: { by: "flight", with: "r1" } }),
+        requestEntry(),
+      ],
+    });
+
+    await exportShownRequests("json", now);
+    await exportShownRequests("har", now);
+
+    expect(toast.success.mock.calls).toEqual([
+      ["Exported 2 calls · 1 request as JSON"],
+      ["Exported 1 request as HAR"],
+    ]);
   });
 
   it("says why when Studio cannot export", async () => {

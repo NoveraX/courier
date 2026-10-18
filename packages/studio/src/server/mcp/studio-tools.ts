@@ -59,7 +59,7 @@ function requestsTool({ requestLog }: StudioToolDeps): ServedTool {
     name: "requests",
     title: "Recorded requests",
     description:
-      "The requests Studio recorded from the running app, newest first: endpoint, method, mode, status, duration and error. Narrow them to the failed ones, to an endpoint, or to fewer.",
+      "The requests Studio recorded from the running app, newest first: endpoint, method, mode, status, duration and error — and, for a read another call's request answered, how it was shared: it sent no request of its own. Narrow them to the failed ones, to an endpoint, or to fewer.",
     inputSchema: {
       type: "object",
       properties: {

@@ -1,5 +1,6 @@
 import { FileInput, History, Save } from "lucide-react";
 import { useState } from "react";
+import { callsAndRequests, ownRequests } from "@/features/requests/own-requests";
 import { pickSessionFile } from "@/features/sessions/open-session-file";
 import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
 import { saveAsTest } from "@/features/tests/recorded-test-store";
@@ -29,7 +30,8 @@ interface SessionsSectionProps {
  * ```
  */
 export function SessionsSection({ history }: SessionsSectionProps): React.ReactNode {
-  const requests = useStudioStore((s) => s.requests.length);
+  const calls = useStudioStore((s) => s.requests.length);
+  const requests = useStudioStore((s) => ownRequests(s.requests).length);
   const format = useStudioStore((s) => s.settings.defaultExportFormat);
   const now = useNow();
   const [name, setName] = useState("");
@@ -52,7 +54,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
     >
       <SettingRow
         label="Current session"
-        description={`${requests} request${requests === 1 ? "" : "s"} on this page`}
+        description={`${callsAndRequests(calls, requests)} on this page`}
         control={
           <span className="flex gap-2 @max-[30rem]:w-full">
             <input
@@ -65,7 +67,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
             />
             <button
               type="button"
-              disabled={requests === 0 || saving}
+              disabled={calls === 0 || saving}
               onClick={() => void save()}
               className="flex h-7.5 shrink-0 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong whitespace-nowrap text-fg hover:border-line-strong disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
             >

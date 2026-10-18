@@ -127,7 +127,8 @@ function isRequest(value: unknown): value is RecordedRequest {
     typeof value.source === "string" &&
     typeof value.endpoint === "string" &&
     typeof value.startedAt === "number" &&
-    (value.state === "success" || value.state === "error" || value.state === "pending")
+    (value.state === "success" || value.state === "error" || value.state === "pending") &&
+    (value.shared === undefined || (isRecord(value.shared) && typeof value.shared.by === "string"))
   );
 }
 

@@ -1,8 +1,9 @@
 import type { RequestEntry } from "@/store/types";
+import { sentOwnRequest } from "./own-requests";
 import { percentile } from "./percentile";
 import { isFailedState, isStreamRequest, requestStateOf } from "./request-state";
 
-/** The requests that began in one second: the ones that went well, and the ones that failed. */
+/** The requests that went out in one second: the ones that went well, and the ones that failed. */
 export interface ThroughputBar {
   ok: number;
   failed: number;
@@ -12,9 +13,9 @@ export interface ThroughputBar {
 
 /** What the last minute of traffic comes to. */
 export interface LiveKpis {
-  /** Requests that began in the last minute. */
+  /** Requests that went out in the last minute. */
   perMinute: number;
-  /** The p95 of the ones of them that finished with a request of their own; `null` while none did. */
+  /** The p95 of the ones of them that finished; `null` while none did. */
   p95: number | null;
   /** The share of the finished ones that failed, 0–1. */
   errorRate: number;
@@ -25,8 +26,9 @@ export interface LiveKpis {
 const MINUTE = 60_000;
 
 /**
- * The requests that began in each of the last seconds, oldest second first
- * — streams left out, since one lasts longer than a second.
+ * The requests that went out in each of the last seconds, oldest second
+ * first — streams left out, since one lasts longer than a second, and a
+ * call another call's request answered, which sent none.
  *
  * @param requests - The requests the Timeline holds
  * @param now - The time now
@@ -48,7 +50,7 @@ export function throughputBars(
     secondsAgo: seconds - 1 - i,
   }));
   for (const r of requests) {
-    if (isStreamRequest(r)) continue;
+    if (isStreamRequest(r) || !sentOwnRequest(r)) continue;
     const ago = Math.floor((now - r.startedAt) / 1000);
     const bar = bars[seconds - 1 - ago];
     if (ago < 0 || !bar) continue;
@@ -59,8 +61,9 @@ export function throughputBars(
 }
 
 /**
- * The last minute of traffic: how many requests began, the p95 and error
- * rate of the ones that finished, and the streams open now.
+ * The last minute of traffic: how many requests went out, the p95 and
+ * error rate of the ones that finished, and the streams open now. A call
+ * another call's request answered sent none: it counts in none of them.
  *
  * @param requests - The requests the Timeline holds
  * @param now - The time now
@@ -82,12 +85,11 @@ export function liveKpis(requests: readonly RequestEntry[], now: number): LiveKp
       if (state === "streaming") liveStreams++;
       continue;
     }
-    if (now - r.startedAt >= MINUTE) continue;
+    if (now - r.startedAt >= MINUTE || !sentOwnRequest(r)) continue;
     perMinute++;
     if (state === "pending" || state === "aborted" || r.timing === undefined) continue;
     finished++;
-    /* The API's time is the requests': a read answered by another call's request only waited for it. */
-    if (r.shared === undefined) durations.push(r.timing.total);
+    durations.push(r.timing.total);
     if (isFailedState(state)) failed++;
   }
   const errorRate = finished > 0 ? failed / finished : 0;
@@ -115,7 +117,7 @@ export function endpointLatency(
   for (const other of requests) {
     if (other.source !== r.source || other.group !== r.group || other.method !== r.method) continue;
     if (isStreamRequest(other) || other.timing === undefined) continue;
-    if (requestStateOf(other) === "aborted" || other.shared !== undefined) continue;
+    if (requestStateOf(other) === "aborted" || !sentOwnRequest(other)) continue;
     durations.push(other.timing.total);
   }
   const p95 = percentile(durations, 0.95);

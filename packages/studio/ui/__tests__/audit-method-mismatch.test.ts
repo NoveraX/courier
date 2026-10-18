@@ -18,6 +18,7 @@ function stats(type: "query" | "mutation", method: string): EndpointStats {
     p95: 10,
     errorRate: 0,
     count: 1,
+    sent: 1,
     sizes: [10],
     avgSize: 10,
     hasVariablesValidation: true,

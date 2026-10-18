@@ -274,4 +274,30 @@ describe("the figures", () => {
     expect(insights.fetchShare).toBeCloseTo((10 / 40 + 60 / 90 + 30 / 60) / 3);
     expect(insights.inView).toBe(3);
   });
+
+  it("take concurrency, the slowest and the share fetching from the requests sent, counting every call in view", () => {
+    const shared = { by: "flight", with: "b" } as const;
+    const items = [
+      item("a", 0, 40),
+      item("b", 10, 90),
+      item("j1", 12, 88, { shared }),
+      item("j2", 15, 200, { shared }),
+    ];
+
+    const insights = waterfallInsights(
+      items,
+      timeWindowOf(
+        items.map((i) => ({ start: i.request.startedAt, end: i.request.startedAt + i.bar.total })),
+        0,
+      ),
+    );
+
+    expect(insights).toMatchObject({
+      peak: 2,
+      inView: 4,
+      requestsInView: 2,
+      slowest: { total: 90, name: "api.users.list" },
+    });
+    expect(insights.fetchShare).toBeCloseTo((10 / 40 + 60 / 90) / 2);
+  });
 });

@@ -1,3 +1,4 @@
+import { ownRequests } from "@/features/requests/own-requests";
 import { percentile } from "@/features/requests/percentile";
 import { isFailedState, isStreamRequest, requestStateOf } from "@/features/requests/request-state";
 import type { RequestEntry } from "@/store/types";
@@ -10,7 +11,7 @@ export const HEAT_INTERVALS = 20;
 
 export interface HeatRow {
   endpoint: EndpointNode;
-  /** One value per span; `null` where it had no calls. */
+  /** One value per span; `null` where it sent no requests. */
   cells: (number | null)[];
   total: number | null;
 }
@@ -27,16 +28,16 @@ function spanOf(model: ExplorerModel): { start: number; intervalMs: number } {
   return { start: model.now - span, intervalMs: span / HEAT_INTERVALS };
 }
 
+/* A span's figure is its requests': a read another call's request answered sent none, and only waited for it. */
 function cellValue(calls: readonly RequestEntry[], metric: ColorMetric): number | null {
-  const done = calls.filter((r) => requestStateOf(r) !== "pending");
-  if (!done.length) return null;
+  const sent = ownRequests(calls.filter((r) => requestStateOf(r) !== "pending"));
+  if (!sent.length) return null;
   if (metric === "errors")
-    return (done.filter((r) => isFailedState(requestStateOf(r))).length / done.length) * 100;
-  if (metric === "traffic") return done.length;
-  const http = done.filter((r) => !isStreamRequest(r) && requestStateOf(r) !== "aborted");
-  /* The API's time is the requests': a read another call's request answered only waited for it. */
+    return (sent.filter((r) => isFailedState(requestStateOf(r))).length / sent.length) * 100;
+  if (metric === "traffic") return sent.length;
+  const http = sent.filter((r) => !isStreamRequest(r) && requestStateOf(r) !== "aborted");
   const values = http
-    .map((r) => (metric === "size" ? r.size : r.shared === undefined ? r.timing?.total : undefined))
+    .map((r) => (metric === "size" ? r.size : r.timing?.total))
     .filter((v): v is number => v !== undefined);
   if (!values.length) return null;
   return metric === "size"
@@ -45,18 +46,19 @@ function cellValue(calls: readonly RequestEntry[], metric: ColorMetric): number 
 }
 
 function totalOf(m: EndpointMetrics, metric: ColorMetric): number | null {
-  if (!m.calls) return null;
+  if (!m.requests) return null;
   if (metric === "errors") return m.errorRate;
-  if (metric === "traffic") return m.calls;
+  if (metric === "traffic") return m.requests;
   if (metric === "size") return m.avgSize || null;
   return m.p95;
 }
 
 /**
- * The heatmap: each called HTTP endpoint's calls over the session split
- * into equal spans, every span valued by the metric — its p95 duration,
- * the share that failed, how many there were, or their average size —
- * with the endpoint's figure over the whole session beside it.
+ * The heatmap: each called HTTP endpoint's requests over the session
+ * split into equal spans, every span valued by the metric — its p95
+ * duration, the share that failed, how many there were, or their answers'
+ * average size — with the endpoint's figure over the whole session beside
+ * it.
  *
  * @param model - The Explorer's model
  * @param metric - What to value the spans by

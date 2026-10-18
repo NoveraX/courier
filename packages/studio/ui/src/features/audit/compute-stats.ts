@@ -1,3 +1,4 @@
+import { ownRequests, sentOwnRequest } from "@/features/requests/own-requests";
 import type { RequestEntry } from "@/store/types-request";
 import type { EndpointStats } from "./types";
 
@@ -21,6 +22,7 @@ function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
     p95: 0,
     errorRate: 0,
     count: 0,
+    sent: 0,
     sizes: [],
     avgSize: 0,
     hasVariablesValidation: false,
@@ -39,54 +41,66 @@ function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
   };
 }
 
-/** Pre-aggregate per-endpoint statistics from raw requests. */
+/**
+ * Each endpoint's figures, from the calls the audit reads. What the code
+ * does — its calls, modes, schemas, middleware and validation — counts
+ * every call; what the API did — its latency, failures, statuses and
+ * sizes — counts the requests sent, since a read another call's request
+ * answered sent none and holds that request's answer.
+ *
+ * @param requests - The calls the audit reads
+ * @returns The figures, by endpoint key
+ * @example
+ * ```ts
+ * computeEndpointStats(completed).get("api:users:list")?.sent; // the requests it sent
+ * ```
+ */
 export function computeEndpointStats(requests: RequestEntry[]): Map<string, EndpointStats> {
-  const map = new Map<string, EndpointStats>();
-
+  const groups = new Map<string, { stats: EndpointStats; calls: RequestEntry[] }>();
   for (const r of requests) {
     const key = buildKey(r);
-    let s = map.get(key);
-    if (!s) {
-      s = createEmptyStats(r, key);
-      map.set(key, s);
-    }
-
-    s.count++;
-    s.requestIds.push(r.id);
-    s.modes.add(r.mode);
-    if (r.httpMethod) s.httpMethods.add(r.httpMethod.toUpperCase());
-    if (r.hasValidation.variables) s.hasVariablesValidation = true;
-    if (r.hasValidation.response) s.hasResponseValidation = true;
-    if (carriesVariables(r.variables)) s.sentVariables = true;
-    if (r.size != null) s.sizes.push(r.size);
-    if (r.statusCode != null) s.statusCodes.push(r.statusCode);
-    if (r.cache) s.cached = true;
-    if (r.idempotencyKey !== undefined) s.keyed = true;
+    const group = groups.get(key) ?? { stats: createEmptyStats(r, key), calls: [] };
+    groups.set(key, group);
+    group.calls.push(r);
+    addCall(group.stats, r);
   }
-
-  for (const [key, s] of map) {
-    const reqs = requests.filter((r) => buildKey(r) === key);
-    computeDurations(s, reqs);
-    computeOverheads(s, reqs);
+  const map = new Map<string, EndpointStats>();
+  for (const [key, { stats, calls }] of groups) {
+    computeDurations(stats, ownRequests(calls));
+    computeOverheads(stats, calls);
+    map.set(key, stats);
   }
-
   return map;
 }
 
-/* The API's time is the requests': a read another call's request answered only waited for it. */
-function computeDurations(s: EndpointStats, reqs: RequestEntry[]): void {
-  const durations = reqs
-    .filter((r) => r.shared === undefined)
+function addCall(s: EndpointStats, r: RequestEntry): void {
+  s.count++;
+  s.requestIds.push(r.id);
+  s.modes.add(r.mode);
+  if (r.httpMethod) s.httpMethods.add(r.httpMethod.toUpperCase());
+  if (r.hasValidation.variables) s.hasVariablesValidation = true;
+  if (r.hasValidation.response) s.hasResponseValidation = true;
+  if (carriesVariables(r.variables)) s.sentVariables = true;
+  if (r.cache) s.cached = true;
+  if (r.idempotencyKey !== undefined) s.keyed = true;
+  if (!sentOwnRequest(r)) return;
+  s.sent++;
+  if (r.size != null) s.sizes.push(r.size);
+  if (r.statusCode != null) s.statusCodes.push(r.statusCode);
+}
+
+function computeDurations(s: EndpointStats, sent: RequestEntry[]): void {
+  const durations = sent
     .map((r) => r.timing?.total ?? 0)
     .filter((d) => d > 0)
     .sort((a, b) => a - b);
 
-  const errors = reqs.filter((r) => r.status === "error" || r.status === "validation_error").length;
+  const errors = sent.filter((r) => r.status === "error" || r.status === "validation_error").length;
 
   s.avgDuration =
     durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
   s.p95 = percentile(durations, 95);
-  s.errorRate = s.count > 0 ? errors / s.count : 0;
+  s.errorRate = sent.length > 0 ? errors / sent.length : 0;
   s.avgSize = s.sizes.length > 0 ? s.sizes.reduce((a, b) => a + b, 0) / s.sizes.length : 0;
 }
 
@@ -100,7 +114,7 @@ function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
 
   for (const r of reqs) {
     const total = r.timing?.total;
-    if (!total || total <= 0 || r.shared !== undefined) continue;
+    if (!total || total <= 0) continue;
 
     if (r.timing?.middleware != null) {
       mwSum += r.timing.middleware / total;
@@ -110,7 +124,8 @@ function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
       valSum += r.timing.validation / total;
       valCount++;
     }
-    if (r.proxyTiming) {
+    /* Weighed against the server's run: a read another call's request answered joined that request part-way. */
+    if (r.proxyTiming && sentOwnRequest(r)) {
       /* The browser measures the trips to and from the proxy; they lie outside the server's total. */
       const legs = (r.proxyTiming.clientToProxy ?? 0) + (r.proxyTiming.proxyToClient ?? 0);
       proxySum += legs / (legs + total);

@@ -91,7 +91,7 @@ function IgnorePatterns({ settings }: { settings: SettingsDraft }): React.ReactN
 }
 
 /**
- * Settings → Recording: how many requests Studio keeps, whether they
+ * Settings → Recording: how many calls Studio keeps, whether they
  * survive a reload, and the paths and endpoints it does not record.
  *
  * @param props - The draft
@@ -112,12 +112,12 @@ export function RecordingSection({ settings }: { settings: SettingsDraft }): Rea
       tone="text-err"
     >
       <SettingRow
-        label="Max requests"
-        description="Beyond this many, the oldest requests are dropped"
+        label="Max calls"
+        description="Beyond this many, the oldest calls are dropped"
         edited={changed.has("maxRequests")}
         control={
           <Segmented
-            label="Max requests"
+            label="Max calls"
             options={MAX_REQUESTS}
             value={String(draft.maxRequests)}
             onChange={(v) => set("maxRequests", Number(v))}

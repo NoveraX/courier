@@ -10,8 +10,8 @@ export interface RowFigure {
 /**
  * The p95 and the error rate an endpoint's row in the Endpoints list shows:
  * the p95 amber past the slow threshold and red past twice it, `stream` for
- * a called stream, `—` with nothing measured; the error rate amber from 5%
- * and red from 20%, `—` before any call.
+ * a called stream, `—` with nothing measured; the share of its requests
+ * that failed amber from 5% and red from 20%, `—` before any request.
  *
  * @param e - The endpoint
  * @param slowMs - The slow threshold, in milliseconds
@@ -38,8 +38,8 @@ function p95Of(e: EndpointNode, slowMs: number): RowFigure {
 }
 
 function errorsOf(e: EndpointNode): RowFigure {
-  const { calls, errorRate } = e.metrics;
-  if (!calls) return { text: "—", className: "text-fg-subtle" };
+  const { requests, errorRate } = e.metrics;
+  if (!requests) return { text: "—", className: "text-fg-subtle" };
   const className = errorRate >= 20 ? "text-err" : errorRate >= 5 ? "text-warn" : "text-fg-subtle";
   return { text: `${errorRate.toFixed(1)}%`, className };
 }

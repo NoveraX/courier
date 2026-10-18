@@ -23,7 +23,11 @@ export interface SessionFileDraft {
   /** The file as Studio wrote it — what is saved, unchanged. */
   file: unknown;
   name: string;
+  /** Its calls, a read another call's request answered among them. */
+  calls: number;
+  /** The requests they sent. */
   requests: number;
+  /** The requests that failed. */
   failed: number;
   environment: SessionEnvironment;
   redactions: Redaction[];
@@ -107,8 +111,9 @@ function draftOf(file: unknown): SessionFileDraft | undefined {
   return {
     file,
     name: String(session.name),
-    requests: requests.length,
-    failed: requests.filter(isFailed).length,
+    calls: requests.length,
+    requests: requests.filter(sentOwn).length,
+    failed: requests.filter((r) => sentOwn(r) && isFailed(r)).length,
     environment,
     redactions: places.flatMap((place) => redactionOf(place, requests)),
   };
@@ -122,6 +127,11 @@ function redactionOf(place: string, requests: readonly unknown[]): Redaction[] {
     ? [request.group, request.method].filter((part) => typeof part === "string" && part).join(".")
     : "";
   return [{ at: Number(index) + 1, endpoint, field }];
+}
+
+/* A call that sent a request of its own: a read another call's request answered carries the mark of it. */
+function sentOwn(request: unknown): boolean {
+  return isPlainObject(request) && request.shared === undefined;
 }
 
 function isFailed(request: unknown): boolean {

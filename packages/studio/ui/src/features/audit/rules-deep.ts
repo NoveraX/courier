@@ -1,3 +1,4 @@
+import { ownRequests } from "@/features/requests/own-requests";
 import type { RequestEntry } from "@/store/types-request";
 import type { AuditItem } from "./types";
 
@@ -39,10 +40,10 @@ function slowMiddleware(requests: RequestEntry[]): AuditItem[] {
   ];
 }
 
-/** Response is an empty array — possible wrong params or stale endpoint. */
+/** Response is an empty array — possible wrong params or stale endpoint. An answer counts once, however many reads it answered. */
 function emptyArrayResponse(requests: RequestEntry[]): AuditItem[] {
   const grouped = new Map<string, string[]>();
-  for (const r of requests) {
+  for (const r of ownRequests(requests)) {
     if (r.status !== "success" || !Array.isArray(r.data) || r.data.length > 0) continue;
     const label = r.group ? `${r.source}.${r.group}.${r.method}` : `${r.source}.${r.method}`;
     const ids = grouped.get(label) ?? [];
@@ -69,10 +70,10 @@ function emptyArrayResponse(requests: RequestEntry[]): AuditItem[] {
   ];
 }
 
-/** Request payload > 100KB: its size whole, when its event carried a part of it. */
+/** Request payload > 100KB: its size whole, when its event carried a part of it. A read another call's request answered sent none. */
 function largeRequestPayload(requests: RequestEntry[]): AuditItem[] {
   const large: { r: RequestEntry; size: number }[] = [];
-  for (const r of requests) {
+  for (const r of ownRequests(requests)) {
     if (isEmptyBody(r.variables)) continue;
     const size = r.variablesCutFrom ?? estimateSize(r.variables);
     if (size > 102_400) large.push({ r, size });

@@ -85,6 +85,20 @@ describe("the drawer's status", () => {
     ]);
   });
 
+  it("counts a read another call's request answered among the calls, and not its failure or bytes", () => {
+    useStudioStore.setState((state) => ({
+      requests: [
+        request("joined", { status: "error", size: 1024, shared: { by: "flight", with: "b" } }),
+        ...state.requests,
+      ],
+    }));
+
+    render(<StatusDetails />);
+
+    const lines = [...status().querySelectorAll("p")].map((line) => line.textContent);
+    expect(lines.slice(2, 4)).toEqual(["5 calls · 4 req · 2.0 KB", "1 err1 pending1 stream"]);
+  });
+
   it("gives every notice in full, where the bar gives a few words and a title", () => {
     useStudioStore.setState({
       droppedRequests: 3,
@@ -98,7 +112,7 @@ describe("the drawer's status", () => {
     render(<StatusDetails />);
     render(<StatusNotices place="bar" />);
 
-    expect(within(status()).getByText(/^3 older requests dropped/)).toBeTruthy();
+    expect(within(status()).getByText(/^3 older calls dropped/)).toBeTruthy();
     expect(
       within(status()).getByText(
         "Binding conflict on api (http) — claimed by a, b. Stop all but one runtime to resolve.",
@@ -110,7 +124,7 @@ describe("the drawer's status", () => {
     expect(conflict.textContent).toBe("binding conflict");
     expect(conflict.getAttribute("title")).toMatch(/^Binding conflict on api \(http\)/);
     expect(screen.getByText("3 dropped").getAttribute("title")).toBe(
-      "3 older requests dropped — raise the limit in Settings",
+      "3 older calls dropped — raise the limit in Settings",
     );
   });
 

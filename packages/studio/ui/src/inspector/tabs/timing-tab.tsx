@@ -1,4 +1,4 @@
-import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { Link2, Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 import { TONE_TEXT } from "@/design/tone";
 import { durationTone } from "@/features/requests/duration-tone";
@@ -33,8 +33,10 @@ const TREND = {
 /**
  * How a call spent its time: the total against its endpoint's p95, phase
  * by phase on one scale, the middleware chain step by step, and — for a
- * proxied call — the route it took. Where the phases are narrow, as on a
- * phone, each names itself over its bar, so the bars keep the full width.
+ * proxied call — the route it took. A call another call's request answered
+ * is set against no p95: it says whose request it waited for. Where the
+ * phases are narrow, as on a phone, each names itself over its bar, so the
+ * bars keep the full width.
  *
  * @param props - The request
  * @returns The tab
@@ -54,10 +56,12 @@ export function TimingTab({ request }: { request: RequestEntry }): React.ReactNo
       </p>
     );
   }
-  const latency = endpointLatency(requests, request);
+  const latency = request.shared ? null : endpointLatency(requests, request);
   const comparison = latency
     ? compareToP95(timing.total, latency, endpointName(request))
     : undefined;
+  const owner = request.shared?.with;
+  const waitedFor = owner === undefined ? undefined : requests.find((r) => r.id === owner);
   const tone = durationTone(timing.total, slowMs);
   const scale = Math.max(1, timing.total);
   return (
@@ -75,6 +79,7 @@ export function TimingTab({ request }: { request: RequestEntry }): React.ReactNo
           </span>
         </div>
         {comparison && <Comparison {...comparison} />}
+        {request.shared && <Waited owner={waitedFor} />}
       </div>
       <div className="@container overflow-hidden rounded-panel border border-line">
         <div className="grid h-7.5 grid-cols-[118px_minmax(0,1fr)_52px] items-center gap-3 border-b border-line bg-panel-subtle px-3 font-mono text-micro text-fg-subtle @max-[420px]:grid-cols-1">
@@ -116,6 +121,23 @@ export function TimingTab({ request }: { request: RequestEntry }): React.ReactNo
       </div>
       <MiddlewarePipeline request={request} />
       <ProxyRoute request={request} />
+    </div>
+  );
+}
+
+/* Whose request a call another call's request answered waited for. */
+function Waited({ owner }: { owner: RequestEntry | undefined }): React.ReactNode {
+  return (
+    <div className="flex flex-col items-end gap-1 text-right">
+      <span className="flex items-center gap-1.25 text-small font-semibold text-fg-muted">
+        <Link2 aria-hidden="true" className="size-3" />
+        Shared
+      </span>
+      <span className="text-label text-fg-subtle">
+        {owner
+          ? `Waited for the request ${endpointName(owner)} sent`
+          : "Waited for another call's request"}
+      </span>
     </div>
   );
 }

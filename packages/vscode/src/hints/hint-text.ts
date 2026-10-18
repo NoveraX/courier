@@ -56,9 +56,10 @@ export function hintTitle(stats: EndpointStats, withSource: boolean): string {
 }
 
 /**
- * How an endpoint's calls went, without its name: how many, how many failed
- * and are still waiting, and how long nineteen in twenty took — as the
- * Courier view writes it beside the endpoint.
+ * How an endpoint's calls went, without its name: how many — and the
+ * requests they sent, where reads another call's request answered sent
+ * none — how many failed and are still waiting, and how long nineteen in
+ * twenty took — as the Courier view writes it beside the endpoint.
  *
  * @param stats - How the endpoint's calls went
  * @returns The figures
@@ -70,7 +71,7 @@ export function hintTitle(stats: EndpointStats, withSource: boolean): string {
 export function figuresOf(stats: EndpointStats): string {
   const words = wordsOf(stats);
   if (stats.calls === 0) return `no ${words.many} yet`;
-  const parts = [counted(stats.calls, words)];
+  const parts = [counted(stats.calls, words), ...requestsOf(stats)];
   if (stats.failed > 0) parts.push(`${stats.failed} failed`);
   if (stats.pending > 0) parts.push(`${stats.pending} ${words.waiting}`);
   if (stats.p95 !== undefined) parts.push(`p95 ${formatMs(stats.p95)}`);
@@ -100,7 +101,8 @@ export function hoverText(stats: EndpointStats, studio: string, now: number): st
     lines.push(`No ${words.many} yet in this session.`);
   } else {
     const waiting = stats.pending > 0 ? `, ${stats.pending} ${words.waiting}` : "";
-    lines.push(`${counted(stats.calls, words)}, ${stats.failed} failed${waiting}`);
+    const sent = requestsOf(stats).map((part) => `, ${part}`);
+    lines.push(`${counted(stats.calls, words)}${sent.join("")}, ${stats.failed} failed${waiting}`);
     if (stats.p50 !== undefined && stats.p95 !== undefined) {
       lines.push("", `p50 ${formatMs(stats.p50)} · p95 ${formatMs(stats.p95)}`);
     }
@@ -177,4 +179,10 @@ export function ago(ms: number): string {
  */
 export function studioLink(page: string): string {
   return `command:courier.openStudioPage?${encodeURIComponent(JSON.stringify([page]))}`;
+}
+
+/* The requests an endpoint's calls sent, said only where reads another call's request answered sent none. */
+function requestsOf({ calls, requests }: EndpointStats): string[] {
+  if (requests === undefined || requests === calls) return [];
+  return [`${requests} ${requests === 1 ? "request" : "requests"}`];
 }

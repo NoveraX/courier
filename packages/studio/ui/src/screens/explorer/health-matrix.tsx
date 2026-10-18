@@ -1,6 +1,7 @@
 import { CardSection } from "@/design/card-section";
 import { type HealthLevel, LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { ExplorerModel, GroupNode } from "@/features/explorer/explorer-model";
+import { callsAndRequests } from "@/features/requests/own-requests";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -13,9 +14,9 @@ const LEVEL_TEXT: Readonly<Record<HealthLevel, string>> = {
 };
 
 function tipOf(group: GroupNode): string {
-  const { calls, errorRate, p95 } = group.metrics;
+  const { calls, requests, errorRate, p95 } = group.metrics;
   const latency = p95 === null ? "—" : formatDuration(p95);
-  return `${group.key} · ${calls} calls · ${errorRate.toFixed(1)}% errors · p95 ${latency}`;
+  return `${group.key} · ${callsAndRequests(calls, requests)} · ${errorRate.toFixed(1)}% errors · p95 ${latency}`;
 }
 
 interface HealthMatrixProps {

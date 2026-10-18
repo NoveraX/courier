@@ -65,6 +65,28 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the Waterfall", () => {
+  it("counts the calls in view and the requests they sent, where a read shared another's", async () => {
+    const [, , list] = REQUESTS;
+    if (!list) throw new Error("no request to share");
+    useStudioStore.setState({
+      requests: [
+        ...REQUESTS,
+        {
+          ...list,
+          id: "joined",
+          startedAt: list.startedAt + 5,
+          shared: { by: "flight", with: "list" },
+        },
+      ],
+    });
+
+    await openShell("/waterfall");
+
+    expect(screen.getByText("of 4 calls · 3 requests in view")).toBeTruthy();
+    expect(within(rowOf("joined") as HTMLElement).getByText("shared")).toBeTruthy();
+    expect(within(rowOf("list") as HTMLElement).queryByText("shared")).toBeNull();
+  });
+
   it("draws each request with its figures and the count it shows of all", async () => {
     await openShell("/waterfall");
 

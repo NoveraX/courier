@@ -5,7 +5,7 @@ import { connectionLabel } from "./connection-label";
 import { SessionLength } from "./session-length";
 import { StatusNotices } from "./status-notices";
 import { studioPort } from "./studio-port";
-import { countTraffic } from "./traffic-counts";
+import { capturedText, countTraffic } from "./traffic-counts";
 import { useWatchState } from "./watch-state";
 
 /* The connection's line, coloured as the status bar's segment is. */
@@ -32,11 +32,12 @@ function ConnectionLine(): React.ReactNode {
 /* The traffic's lines: what was captured, what failed, what is still in flight. */
 function TrafficLines(): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
-  const { errors, pending, streams, bytes } = countTraffic(requests);
+  const counts = countTraffic(requests);
+  const { errors, pending, streams, bytes } = counts;
   return (
     <>
       <p>
-        {requests.length} req · {formatSize(bytes)}
+        {capturedText(counts)} · {formatSize(bytes)}
       </p>
       {errors + pending + streams > 0 && (
         <p className="flex flex-wrap gap-x-3.5">

@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { methodText } from "@/design/method-color";
 import { cn } from "@/lib/utils";
+import { SharedChip } from "@/screens/timeline/shared-chip";
 import type { RequestEntry } from "@/store";
 import { useStudioStore } from "@/store";
 import { captureMetrics } from "./capture-metrics";
@@ -49,8 +50,9 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
       <span className={cn("text-meta font-semibold", methodText(request.httpMethod ?? ""))}>
         {request.httpMethod ?? "—"}
       </span>
-      <span className="flex min-w-0 gap-2 overflow-hidden whitespace-nowrap">
+      <span className="flex min-w-0 items-baseline gap-2 overflow-hidden whitespace-nowrap">
         <span className="text-fg">{request.source}</span>
+        {request.shared && <SharedChip shared={request.shared} />}
         <span className="truncate text-fg-subtle">{pathOf(request)}</span>
       </span>
       <span
@@ -88,8 +90,9 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
 }
 
 /**
- * The capture panel once requests arrive: four numbers, then the latest
- * ten calls — each opens in the Timeline. A panel as narrow as a phone's
+ * The capture panel once requests arrive: four numbers about the requests,
+ * then the latest ten calls, a read another call's request answered
+ * marked — each opens in the Timeline. A panel as narrow as a phone's
  * sets the numbers two by two and each call on two lines.
  *
  * @returns The panel's body
@@ -104,7 +107,7 @@ export function CaptureStream(): React.ReactNode {
   const live = useStudioStore((s) => s.connected && !s.paused);
   const metrics = captureMetrics(requests, tick >= 0 ? Date.now() : 0);
   const cells = [
-    { label: "Requests", value: String(metrics.count), tone: "text-fg" },
+    { label: "Requests", value: String(metrics.requests), tone: "text-fg" },
     { label: "Req / s", value: metrics.perSecond.toFixed(1), tone: "text-fg" },
     {
       label: "p95",

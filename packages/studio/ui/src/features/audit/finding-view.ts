@@ -1,4 +1,5 @@
 import { endpointKeyOf } from "@/features/explorer/endpoint-key";
+import { callsAndRequests, ownRequests } from "@/features/requests/own-requests";
 import { endpointParts, httpMethodOf } from "@/features/requests/request-parts";
 import type { RequestEntry } from "@/store/types-request";
 import type { AuditItem } from "./types";
@@ -30,7 +31,7 @@ const DOTTED_NAME = /^[\w$-]+(?:\.[\w$-]+)+$/;
  * @returns The line
  * @example
  * ```ts
- * summaryOf(item); // "billing.invoices.list — 28% errors (39 calls) · 2 more"
+ * summaryOf(item); // "billing.invoices.list — 28% errors (39 requests) · 2 more"
  * ```
  */
 export function summaryOf(item: Pick<AuditItem, "endpoints" | "description">): string {
@@ -40,7 +41,7 @@ export function summaryOf(item: Pick<AuditItem, "endpoints" | "description">): s
   return `${first.label}${detail}${rest.length > 0 ? ` · ${rest.length} more` : ""}`;
 }
 
-/* The endpoints a finding's calls reached, for a finding that names calls rather than endpoints. */
+/* The endpoints a finding's calls reached, for a finding that names calls rather than endpoints, with how many calls and requests each. */
 function endpointsOfCalls(
   ids: readonly string[],
   requests: ReadonlyMap<string, RequestEntry>,
@@ -58,7 +59,7 @@ function endpointsOfCalls(
     const [first] = calls;
     if (!first) return [];
     const { prefix, name } = endpointParts(first);
-    const detail = `${calls.length} call${calls.length === 1 ? "" : "s"}`;
+    const detail = callsAndRequests(calls.length, ownRequests(calls).length);
     return [
       {
         key,

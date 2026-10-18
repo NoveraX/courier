@@ -19,7 +19,7 @@ export interface CourierView extends vscode.Disposable {
 
 /**
  * The Courier view: each project's endpoints and how their calls went,
- * a badge on the Activity Bar counting the endpoints with failed calls,
+ * a badge on the Activity Bar counting the endpoints with failed requests,
  * and — while no Studio runs — the welcome that starts one or sets Courier
  * up. The context keys it sets choose which welcome shows.
  *
@@ -66,7 +66,9 @@ export function createCourierView(sources: CourierViewSources): CourierView {
 }
 
 function failingText(failing: number): string {
-  return failing === 1 ? "1 endpoint has failed calls" : `${failing} endpoints have failed calls`;
+  return failing === 1
+    ? "1 endpoint has failed requests"
+    : `${failing} endpoints have failed requests`;
 }
 
 async function setContext(key: string, value: boolean): Promise<void> {

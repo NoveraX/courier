@@ -1,3 +1,4 @@
+import { ownRequests } from "@/features/requests/own-requests";
 import type { RequestEntry } from "@/store/types-request";
 import type { Catalog } from "@/store/types-ui";
 import { AUTH_SUGGESTION } from "./code-suggestions";
@@ -60,11 +61,11 @@ function mutationWithoutAuth(requests: RequestEntry[]): AuditItem[] {
 const LEAK_HEADERS = ["server", "x-powered-by", "x-aspnet-version", "x-debug"];
 const VERSION_PATTERN = /\d+\.\d+/;
 
-/** Response headers that leak server software and version. */
+/** Response headers that leak server software and version: an answer's, once however many reads it answered. */
 function serverVersionLeak(requests: RequestEntry[]): AuditItem[] {
   const leaks: { header: string; value: string; id: string }[] = [];
 
-  for (const r of requests) {
+  for (const r of ownRequests(requests)) {
     if (!r.headers) continue;
     for (const key of LEAK_HEADERS) {
       const value = r.headers[key];
@@ -116,9 +117,11 @@ function missingSecurityHeaders(requests: RequestEntry[]): AuditItem[] {
   ];
 }
 
-/** Cookie forwarding to a different domain via proxy. */
+/** Cookie forwarding to a different domain via proxy: a read another call's request answered carried none to the backend. */
 function cookieForwarding(requests: RequestEntry[]): AuditItem[] {
-  const proxyReqs = requests.filter((r) => r.mode === "proxy" && r.requestHeaders?.cookie);
+  const proxyReqs = ownRequests(requests).filter(
+    (r) => r.mode === "proxy" && r.requestHeaders?.cookie,
+  );
   if (proxyReqs.length === 0) return [];
 
   return [
@@ -128,7 +131,7 @@ function cookieForwarding(requests: RequestEntry[]): AuditItem[] {
       category: "security",
       title: "Cookies forwarded via proxy",
       description:
-        "These calls carry the browser's cookies to the backend, because their source or endpoint names \"cookie\" among its forwarded headers. Every cookie of the app's origin goes with them, its own session included.",
+        "These requests carry the browser's cookies to the backend, because their source or endpoint names \"cookie\" among its forwarded headers. Every cookie of the app's origin goes with them, its own session included.",
       suggestion:
         'Name "cookie" only on the endpoints that need the session, and only for a backend you trust with it.',
       requestIds: proxyReqs.slice(0, 5).map((r) => r.id),

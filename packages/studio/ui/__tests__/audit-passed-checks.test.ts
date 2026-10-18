@@ -98,10 +98,10 @@ describe("the duplicate check, passed", () => {
     );
 
     expect(shared?.description).toBe(
-      "No call was sent again with the same input right after the first. 1 identical read got its answer from a request another call made — in flight, or earlier in the render — and sent none of its own.",
+      "No request was sent again with the same input right after the first. 1 identical read got its answer from a request another call made — in flight, or earlier in the render — and sent none of its own.",
     );
     expect(alone?.description).toBe(
-      "No call was sent again with the same input right after the first.",
+      "No request was sent again with the same input right after the first.",
     );
   });
 });

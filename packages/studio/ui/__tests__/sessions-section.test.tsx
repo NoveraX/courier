@@ -103,6 +103,23 @@ describe("saving the current session", () => {
     expect(screen.getByLabelText("Name for the session")).toHaveProperty("value", "");
   });
 
+  it("lists a saved session by its calls and the requests they sent", async () => {
+    useStudioStore.setState((state) => ({
+      requests: [
+        trafficRequest({ id: "req-3", shared: { by: "flight", with: "req-1" } }),
+        ...state.requests,
+      ],
+    }));
+    await startStudio();
+    render(<Harness />);
+    await screen.findByText("0 sessions · kept in .courier/studio.db");
+
+    await saveSession("Shared reads");
+
+    expect(await screen.findByText(/^3 calls · 2 requests · saved /)).toBeTruthy();
+    expect(screen.getByText("1 error")).toBeTruthy();
+  });
+
   it("says why Studio refused a save and keeps the name to retry with", async () => {
     /* One more request than a session holds. */
     const requests = Array.from({ length: 10_001 }, (_, i) => trafficRequest({ id: `req-${i}` }));
@@ -115,7 +132,7 @@ describe("saving the current session", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "Could not save the session: A session holds at most 10000 requests.",
+        "Could not save the session: A session holds at most 10000 calls.",
       ),
     );
     expect(screen.getByLabelText("Name for the session")).toHaveProperty("value", "Debugging auth");

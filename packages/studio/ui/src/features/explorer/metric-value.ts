@@ -11,8 +11,8 @@ const LARGE_BYTES = 4_000;
 
 /**
  * An endpoint's figure under the metric the Explorer colours by: its p95,
- * the share of calls that failed, its calls a minute, or its average size —
- * with the tone it reads in.
+ * the share of its requests that failed, its requests a minute, or their
+ * answers' average size — with the tone it reads in.
  *
  * @param m - Its metrics
  * @param metric - What to show
@@ -29,7 +29,7 @@ export function metricValue(
   slowMs: number,
 ): { text: string; tone: Tone } {
   if (metric === "errors") {
-    if (!m.calls) return { text: "—", tone: "muted" };
+    if (!m.requests) return { text: "—", tone: "muted" };
     return {
       text: `${m.errorRate.toFixed(1)}%`,
       tone: m.errorRate >= 20 ? "err" : m.errorRate >= 5 ? "warn" : "ok",
@@ -46,8 +46,9 @@ export function metricValue(
       tone: m.avgSize > LARGE_BYTES ? "warn" : "normal",
     };
   }
+  /* No time measured, though requests went out: a stream's. */
   if (m.p95 === null)
-    return m.calls ? { text: "live", tone: "brand" } : { text: "—", tone: "muted" };
+    return m.requests ? { text: "live", tone: "brand" } : { text: "—", tone: "muted" };
   return {
     text: formatDuration(m.p95),
     tone: m.p95 > slowMs * 2 ? "err" : m.p95 > slowMs ? "warn" : "ok",

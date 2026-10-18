@@ -78,11 +78,19 @@ export interface SavedRequest {
   shared?: SharedAnswer | undefined;
 }
 
+/** What a saved session's requests come to: a read another call's request answered sent none, and is in its calls alone. */
 export interface SessionStats {
+  /** The requests its calls sent. */
   totalRequests: number;
+  /** Its calls; a session saved before calls were counted apart has only its requests. */
+  totalCalls?: number | undefined;
+  /** The requests that succeeded. */
   successCount: number;
+  /** The requests that failed. */
   errorCount: number;
+  /** The requests' average duration, ms. */
   avgDuration: number;
+  /** The bytes their answers brought. */
   totalSize: number;
 }
 

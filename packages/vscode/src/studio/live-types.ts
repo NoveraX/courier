@@ -11,6 +11,8 @@ export interface RecordedRequest {
   readonly durationMs?: number | undefined;
   readonly startedAt: number;
   readonly error?: string | undefined;
+  /** How its read was answered by another call's request, when it sent none of its own — an older Studio says nothing */
+  readonly shared?: { readonly by: string; readonly with?: string | undefined } | undefined;
 }
 
 /** Which recorded requests to list: the failed ones, one endpoint's, and how many. */

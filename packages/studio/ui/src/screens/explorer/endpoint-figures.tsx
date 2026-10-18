@@ -5,8 +5,9 @@ import { formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /**
- * An endpoint's four figures: its calls — and how many of them another
- * call's request answered — p95, error rate and average size.
+ * An endpoint's four figures: its calls — and the requests they sent,
+ * where reads another call's request answered sent none — and, over those
+ * requests, its p95, error rate and average answer size.
  *
  * @param props - The endpoint and the slow threshold
  * @returns The figures
@@ -22,13 +23,13 @@ export function EndpointFigures({
   endpoint: EndpointNode;
   slowMs: number;
 }): React.ReactNode {
-  const { calls, shared, p95, errorRate, avgSize } = endpoint.metrics;
+  const { calls, requests, p95, errorRate, avgSize } = endpoint.metrics;
   const cells: { label: string; value: string; tone: Tone; note?: string }[] = [
     {
       label: "Calls",
       value: String(calls),
       tone: "normal",
-      ...(shared > 0 && { note: `${shared} shared` }),
+      ...(requests !== calls && { note: `${requests} ${requests === 1 ? "request" : "requests"}` }),
     },
     {
       label: "P95",
@@ -37,7 +38,7 @@ export function EndpointFigures({
     },
     {
       label: "Errors",
-      value: calls ? `${errorRate.toFixed(1)}%` : "—",
+      value: requests ? `${errorRate.toFixed(1)}%` : "—",
       tone: errorRate >= 5 ? "err" : "normal",
     },
     { label: "Avg size", value: avgSize ? formatSize(Math.round(avgSize)) : "—", tone: "normal" },
@@ -53,7 +54,7 @@ export function EndpointFigures({
             {cell.label}
             {cell.note && (
               <span
-                title="Calls whose read another call's request answered, with no request of their own"
+                title="The requests these calls sent: a read another call's request answered sent none of its own"
                 className="truncate text-fg-muted"
               >
                 · {cell.note}

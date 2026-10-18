@@ -106,11 +106,13 @@ function requestItem(node: RequestNode, now: number): vscode.TreeItem {
         ? String(request.status)
         : request.state;
   const took = request.durationMs !== undefined ? formatMs(request.durationMs) : undefined;
-  item.description = [request.method, outcome, took, ago(now - request.startedAt)]
+  const shared = request.shared ? "shared" : undefined;
+  item.description = [request.method, outcome, took, shared, ago(now - request.startedAt)]
     .filter(Boolean)
     .join(" · ");
   item.tooltip = [
     `${request.method ?? ""} ${request.source}.${request.endpoint}`.trim(),
+    request.shared && "Another call's request answered its read: it sent none of its own",
     request.error,
   ]
     .filter(Boolean)

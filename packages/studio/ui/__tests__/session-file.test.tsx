@@ -118,6 +118,31 @@ describe("writing a session file", () => {
     ]);
   });
 
+  it("counts the calls, the requests they sent and the requests that failed, a shared read among the calls alone", async () => {
+    const [, failed] = FILE.session.requests;
+    answer({
+      "/api/sessions/file": {
+        ...FILE,
+        session: {
+          ...FILE.session,
+          requests: [
+            ...FILE.session.requests,
+            { ...failed, id: "r3", shared: { by: "flight", with: "r2" } },
+          ],
+        },
+      },
+    });
+
+    const draft = await prepareSessionFile({ kind: "shown" });
+    render(<SessionFileDialog />);
+    await act(async () => shareSessionFile({ kind: "shown" }));
+
+    expect(draft).toMatchObject({ calls: 3, requests: 2, failed: 1 });
+    expect(within(screen.getByRole("dialog")).getByText(/^3 calls · 2 requests/).textContent).toBe(
+      "3 calls · 2 requests · 1 failed",
+    );
+  });
+
   it("refuses an answer that is not a session file", async () => {
     answer({ "/api/sessions/file": { log: { entries: [] } } });
 
@@ -186,6 +211,26 @@ describe("opening a session file", () => {
       paused: true,
     });
     expect(useStudioStore.getState().requests.map((r) => r.id)).toEqual(["r1"]);
+    expect(toast.success).toHaveBeenCalledWith(
+      "Opened checkout.courier-session.json: 1 request; recording paused",
+    );
+  });
+
+  it("says how many calls and requests it holds, where a read another call's request answered is among them", async () => {
+    const [sent] = LOADED.requests;
+    answer({
+      "/api/sessions/import": { id: "s2", name: LOADED.name },
+      "/api/sessions/load": {
+        ...LOADED,
+        requests: [...LOADED.requests, { ...sent, id: "r2", shared: { by: "flight", with: "r1" } }],
+      },
+    });
+
+    await openSessionFile(new File([JSON.stringify(FILE)], "checkout.courier-session.json"));
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "Opened checkout.courier-session.json: 2 calls · 1 request; recording paused",
+    );
   });
 
   it("refuses a file that is not JSON before asking Studio, and tells Studio's reason for one it refuses", async () => {

@@ -8,7 +8,7 @@ const READ_METHODS = new Set(["GET", "HEAD", "QUERY"]);
 const WATERFALL_MIN_CHAIN = 3;
 const WATERFALL_MIN_TOTAL_MS = 2000;
 
-/** Detect N+1: list call followed by N detail calls within a time window. */
+/** Detect N+1: a list request followed by N detail requests within a time window. */
 /** Requests passed here are already filtered to completed in run-audit.ts */
 export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
   /* Oldest first: the store holds requests newest first, which would put
@@ -44,7 +44,7 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
       severity: "error",
       category: "performance",
       title: "N+1 request pattern",
-      description: `List call to "${labelOf(listReq)}" followed by ${matching.length} sequential detail calls to "${labelOf(firstMatch)}".`,
+      description: `A list request to "${labelOf(listReq)}" was followed by ${matching.length} detail requests to "${labelOf(firstMatch)}", one after another.`,
       suggestion: "Fetch all needed data in one request, or use batching.",
       codeSuggestion: `// Consider batching:\nconst items = await ${callOf(listReq)};\n// Instead of N calls, fetch all at once`,
       requestIds: allIds,

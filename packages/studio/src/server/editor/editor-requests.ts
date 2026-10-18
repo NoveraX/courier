@@ -1,3 +1,5 @@
+import type { SharedAnswer } from "@noverax/courier-studio-core";
+
 import { gatherRequests, summaryOf } from "../mcp/request-views";
 
 type RuntimeEvent = Record<string, unknown>;
@@ -15,6 +17,8 @@ export interface EditorRequest {
   readonly durationMs?: number | undefined;
   readonly startedAt: number;
   readonly error?: string | undefined;
+  /** How its read was answered by another call's request, when it sent none of its own. */
+  readonly shared?: SharedAnswer | undefined;
 }
 
 /** Which requests an editor asks for. */

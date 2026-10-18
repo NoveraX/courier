@@ -206,4 +206,22 @@ describe("Settings", () => {
 
     expect(useStudioStore.getState().requests).toHaveLength(0);
   });
+
+  it("counts the calls it would clear, where a read another call's request answered is among them", async () => {
+    const [first] = useStudioStore.getState().requests;
+    if (!first) throw new Error("no request captured");
+    useStudioStore.setState((state) => ({
+      requests: [
+        { ...first, id: "joined", shared: { by: "flight", with: first.id } },
+        ...state.requests,
+      ],
+    }));
+    await openShell("/settings");
+
+    expect(section("Session history").getByText("3 calls · 2 requests on this page")).toBeTruthy();
+    await settle(() =>
+      fireEvent.click(section("Danger zone").getByRole("button", { name: "Clear" })),
+    );
+    expect(screen.getByRole("alertdialog", { name: "Delete 3 captured calls?" })).toBeTruthy();
+  });
 });

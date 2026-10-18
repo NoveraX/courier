@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 
+import { callsAndRequests } from "@/features/requests/own-requests";
 import { post } from "@/lib/api-client";
 import { isPlainObject } from "@/socket/is-plain-object";
 import { showSavedSession } from "./show-saved-session";
@@ -39,7 +40,9 @@ export async function openSessionFile(file: File): Promise<boolean> {
     }
     const shown = await showSavedSession(opened.id);
     if (!shown) throw new Error("Studio sent no session");
-    toast.success(`Opened ${file.name}: ${shown.requests} requests; recording paused`);
+    toast.success(
+      `Opened ${file.name}: ${callsAndRequests(shown.calls, shown.requests)}; recording paused`,
+    );
     return true;
   } catch (error) {
     toast.error(

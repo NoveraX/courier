@@ -161,7 +161,7 @@ describe("the Explorer's graph", () => {
     expect(within(graph).getByText("Endpoints · 4")).toBeTruthy();
     expect(
       within(graph).getByRole("button", {
-        name: /^api\.orders\.create · POST \/orders · Critical · Calls [\d.]+\/m, p50 \S+, p95 900ms, Errors 50\.0%$/,
+        name: /^api\.orders\.create · POST \/orders · Critical · Requests [\d.]+\/m, p50 \S+, p95 900ms, Errors 50\.0%$/,
       }),
     ).toBeTruthy();
     expect(
@@ -332,7 +332,7 @@ describe("the overview", () => {
     expect(figure("Endpoints")).toBe("Endpoints41 never called");
     expect(figure("Active now")).toBe("Active now2called in last 6s");
     expect(figure("Healthy")).toBe("Healthy67%of called endpoints");
-    expect(figure("Error rate")).toBe("Error rate25.0%1 failed call");
+    expect(figure("Error rate")).toBe("Error rate25.0%1 failed request");
   });
 
   it("opens a group's endpoints from the matrix and a call from the activity", async () => {

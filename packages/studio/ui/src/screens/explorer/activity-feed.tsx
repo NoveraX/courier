@@ -6,6 +6,7 @@ import { codeLabel, httpMethodOf } from "@/features/requests/request-parts";
 import { isFailedState, isStreamRequest, requestStateOf } from "@/features/requests/request-state";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { SharedChip } from "@/screens/timeline/shared-chip";
 import type { RequestEntry } from "@/store/types";
 import { EndpointName } from "./endpoint-name";
 import { methodClassOf } from "./method-class";
@@ -42,7 +43,10 @@ function ActivityRow({ request: r, now, slowMs, onOpen }: ActivityRowProps): Rea
     >
       <span className="text-fg-subtle">{shortAgo(now - r.startedAt)}</span>
       <span className={cn("text-micro font-semibold", methodClassOf(method))}>{method}</span>
-      <EndpointName source={r.source} group={r.group ?? ""} method={r.method} />
+      <span className="flex min-w-0 items-center gap-1.5">
+        <EndpointName source={r.source} group={r.group ?? ""} method={r.method} />
+        {r.shared && <SharedChip shared={r.shared} />}
+      </span>
       <span
         className={cn(
           isFailedState(state) ? "text-err" : state === "pending" ? "text-warn" : "text-ok",
@@ -74,8 +78,9 @@ interface ActivityFeedProps {
 
 /**
  * The newest calls as they come in — when, how each went, which endpoint,
- * its status and duration — each opening in the inspector. On a phone the
- * columns close up around the endpoint's name.
+ * marked where another call's request answered it, its status and
+ * duration — each opening in the inspector. On a phone the columns close
+ * up around the endpoint's name.
  *
  * @param props - The requests, the time now, the slow threshold, whether Studio records, and what opens a call
  * @returns The card

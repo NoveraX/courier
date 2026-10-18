@@ -47,7 +47,7 @@ function SourceCard({ source }: { source: SourceNode }): React.ReactNode {
 
 /**
  * A card per source: where it points, its groups and endpoints, and the
- * share of its calls that succeeded, coloured by its health.
+ * share of its requests that succeeded, coloured by its health.
  *
  * @param props - The model
  * @returns The card of cards

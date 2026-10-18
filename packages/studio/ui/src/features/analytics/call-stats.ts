@@ -16,22 +16,19 @@ export function isFailure(r: Pick<RequestEntry, "status">): boolean {
 }
 
 /**
- * How long the calls took — those cut short left out, since an aborted
- * call's time is the caller's, not the server's, and those another call's
- * request answered, which only waited for it.
+ * How long the requests took — those cut short left out, since an aborted
+ * call's time is the caller's, not the server's.
  *
- * @param calls - The calls
+ * @param requests - The calls that sent a request of their own
  * @returns Their durations, ms, in their order
  * @example
  * ```ts
- * durationsOf(calls); // [61, 140, 2210]
+ * durationsOf(win.sent); // [61, 140, 2210]
  * ```
  */
-export function durationsOf(calls: readonly RequestEntry[]): number[] {
-  return calls.flatMap((r) =>
-    r.status === "aborted" || r.timing === undefined || r.shared !== undefined
-      ? []
-      : [r.timing.total],
+export function durationsOf(requests: readonly RequestEntry[]): number[] {
+  return requests.flatMap((r) =>
+    r.status === "aborted" || r.timing === undefined ? [] : [r.timing.total],
   );
 }
 

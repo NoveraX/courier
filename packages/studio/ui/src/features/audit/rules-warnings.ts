@@ -1,3 +1,4 @@
+import { ownRequests } from "@/features/requests/own-requests";
 import type { RequestEntry } from "@/store/types-request";
 import type { Catalog } from "@/store/types-ui";
 import { P95_SLOW_MS } from "./thresholds";
@@ -47,7 +48,7 @@ function inconsistentSizes(stats: Map<string, EndpointStats>): AuditItem[] {
       severity: "warning",
       category: "reliability",
       title: "Inconsistent response sizes",
-      description: "Response size varies wildly across calls.",
+      description: "Response size varies wildly from one request to the next.",
       suggestion: "Check if the endpoint returns different shapes under different conditions.",
       endpoints: matched.map(({ s, cv }) => ({
         ...formatEp(s),
@@ -70,7 +71,7 @@ function middlewareOverhead(stats: Map<string, EndpointStats>): AuditItem[] {
       severity: "warning",
       category: "performance",
       title: "High middleware overhead",
-      description: "Middleware takes more than 30% of total request time.",
+      description: "Middleware takes more than 30% of these calls' time.",
       suggestion: "Review middleware chain — reduce, reorder, or cache expensive middleware.",
       endpoints: matched.map((s) => ({
         ...formatEp(s),
@@ -105,10 +106,11 @@ function httpMethodMismatch(stats: Map<string, EndpointStats>): AuditItem[] {
   ];
 }
 
+/* An answer that fails its schema counts once: the reads another call's request answered failed on that same answer. */
 function repeatedValidationFailures(requests: RequestEntry[]): AuditItem[] {
   const failMap = new Map<string, { count: number; message: string; ids: string[] }>();
 
-  for (const r of requests) {
+  for (const r of ownRequests(requests)) {
     if (r.status !== "validation_error" || !r.error?.validationIssues) continue;
     for (const issue of r.error.validationIssues) {
       const key = `${r.source}:${r.group ?? ""}:${r.method}:${issue.message}`;

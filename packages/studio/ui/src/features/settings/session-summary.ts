@@ -8,7 +8,10 @@ export interface SessionSummary {
   startedAt: number;
   duration: number;
   stats: {
+    /** The requests its calls sent. */
     totalRequests: number;
+    /** Its calls; a session saved before calls were counted apart has only its requests. */
+    totalCalls?: number | undefined;
     successCount: number;
     errorCount: number;
     avgDuration: number;
@@ -59,5 +62,9 @@ function isSessionSummary(item: unknown): item is SessionSummary {
 }
 
 function hasStats(stats: unknown): boolean {
-  return isPlainObject(stats) && STAT_FIELDS.every((field) => typeof stats[field] === "number");
+  return (
+    isPlainObject(stats) &&
+    STAT_FIELDS.every((field) => typeof stats[field] === "number") &&
+    (stats.totalCalls === undefined || typeof stats.totalCalls === "number")
+  );
 }

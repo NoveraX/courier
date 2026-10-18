@@ -1,6 +1,7 @@
 /**
  * The live views: the latest requests a Studio recorded, newest first, or
- * the failed ones alone, a monorepo's projects apart; the mocks, each
+ * the failed ones alone, a read another call's request answered marked, a
+ * monorepo's projects apart; the mocks, each
  * scenario under its mock with the one in force marked and the others a
  * click away; and the changes to a mock, made with the project's token,
  * Studio's refusal said in words a person acts on.
@@ -64,6 +65,30 @@ describe("the Requests view", () => {
       { failed: false, limit: 50 },
       { failed: true, limit: 50 },
     ]);
+  });
+
+  it("marks a read another call's request answered, and says why on hover", async () => {
+    const joined: RecordedRequest = {
+      ...REQUEST,
+      id: "r3",
+      state: "success",
+      status: 200,
+      error: undefined,
+      shared: { by: "flight", with: "r2" },
+    };
+    const view = createRequestsView(
+      async () => [{ project: shop, studio: STUDIO }],
+      async () => [joined, REQUEST],
+    );
+
+    const rows = (await view.getChildren()) ?? [];
+    const [marked, own] = rows.map(
+      (row) => view.getTreeItem(row as RequestNode) as { description: string; tooltip: string },
+    );
+
+    expect(marked?.description).toMatch(/^POST · 200 · 40 ms · shared · /);
+    expect(marked?.tooltip).toContain("Another call's request answered its read");
+    expect(own?.description).not.toContain("shared");
   });
 
   it("lists a monorepo's projects apart, and says when nothing came yet", async () => {

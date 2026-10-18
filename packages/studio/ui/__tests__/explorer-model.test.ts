@@ -12,14 +12,14 @@ import { endpointKey, keyParts, lastCallLabel, shortAgo } from "@/features/explo
 import { levelOf, metricsOf } from "@/features/explorer/endpoint-metrics";
 import { endpointTags } from "@/features/explorer/endpoint-tags";
 import { endpointRows, kindCounts } from "@/features/explorer/endpoints-table";
-import type { EndpointNode } from "@/features/explorer/explorer-model";
+import type { EndpointNode, SourceNode } from "@/features/explorer/explorer-model";
 import { explorerModelOf } from "@/features/explorer/explorer-model";
 import { graphLayoutOf } from "@/features/explorer/graph-layout";
 import { heatmapOf, heatStep } from "@/features/explorer/heatmap-model";
 import { methodLabelOf } from "@/features/explorer/method-label";
 import { metricValue } from "@/features/explorer/metric-value";
 import { nodeFiguresOf } from "@/features/explorer/node-figures";
-import { overviewFigures, topEndpoints } from "@/features/explorer/overview-model";
+import { overviewFigures, successRate, topEndpoints } from "@/features/explorer/overview-model";
 import { axisMark, heatCellText, heatTotalText } from "@/screens/explorer/heat-format";
 import type { Catalog, CatalogEndpoint, RequestEntry } from "@/store/types";
 import { requestEntry } from "./request-entry-fixture";
@@ -103,7 +103,7 @@ describe("an endpoint's metrics", () => {
 
     expect(m).toMatchObject({
       calls: 3,
-      shared: 0,
+      requests: 3,
       p50: 100,
       p95: 900,
       errors: 1,
@@ -113,26 +113,6 @@ describe("an endpoint's metrics", () => {
     });
     expect(m.errorRate).toBeCloseTo(33.33, 1);
     expect(m.active).toBe(true);
-  });
-
-  it("count a call another call's request answered, and take the durations from requests alone", () => {
-    const [sent] = REQUESTS;
-    if (!sent) throw new Error("no request to share");
-    const joined = {
-      ...sent,
-      id: "joined",
-      timing: { total: 5, middleware: 0, fetch: 5, validation: 0 },
-      shared: { by: "flight" as const, with: sent.id },
-    };
-
-    const m = metricsOf([sent, joined], NOW, NOW - 60_000);
-
-    expect(m).toMatchObject({
-      calls: 2,
-      shared: 1,
-      p50: sent.timing?.total,
-      p95: sent.timing?.total,
-    });
   });
 
   it("read as no traffic, healthy, degraded or critical", () => {
@@ -482,7 +462,7 @@ describe("the heatmap's words", () => {
       heatCellText(null, "latency"),
       heatCellText(812, "latency"),
       heatCellText(1, "traffic"),
-    ]).toEqual(["no calls", "812ms p95", "1 call"]);
+    ]).toEqual(["no requests", "812ms p95", "1 request"]);
     expect([heatTotalText(null, "errors"), heatTotalText(7.66, "errors")]).toEqual(["—", "7.7%"]);
     expect([axisMark(221_000), axisMark(55_000)]).toEqual(["−3m 41s", "−55s"]);
   });
@@ -516,7 +496,7 @@ describe("a call's way across the graph", () => {
 });
 
 describe("a graph node's figures on hover", () => {
-  it("give its calls a minute, its median and p95, and the share that failed", () => {
+  it("give its requests a minute, its median and p95, and the share that failed", () => {
     const m = metricsOf(
       [call("orders", "create"), call("orders", "create", { status: "error" })],
       NOW,
@@ -524,7 +504,7 @@ describe("a graph node's figures on hover", () => {
     );
 
     expect(nodeFiguresOf(m, 500).map((f) => [f.label, f.tone])).toEqual([
-      ["Calls", "normal"],
+      ["Requests", "normal"],
       ["p50", "ok"],
       ["p95", "ok"],
       ["Errors", "err"],
@@ -532,3 +512,85 @@ describe("a graph node's figures on hover", () => {
     expect(nodeFiguresOf(metricsOf([], NOW, NOW), 500)).toEqual([]);
   });
 });
+
+describe("the reads another call's request answered", () => {
+  const owner = call("orders", "list", {
+    id: "o",
+    startedAt: NOW - 30_000,
+    status: "error",
+    statusCode: 502,
+    size: 900,
+    timing: { total: 400, middleware: 0, fetch: 400, validation: 0 },
+  });
+  const joined = (id: string, startedAt = NOW - 20_000): RequestEntry => ({
+    ...owner,
+    id,
+    startedAt,
+    timing: { total: 5, middleware: 0, fetch: 5, validation: 0 },
+    shared: { by: "flight", with: "o" },
+  });
+  const ok = call("orders", "list", { id: "k", startedAt: NOW - 60_000, size: 100 });
+  const calls = [joined("j1"), joined("j2"), owner, ok];
+  const sharing = explorerModelOf(CATALOG, calls, NOW, 500);
+  const alone = metricsOf([joined("j1")], NOW, NOW - 60_000);
+
+  it("count among the calls, and leave the API's failures, pace, sizes and time to the requests", () => {
+    expect(metricsOf(calls, NOW, NOW - 60_000)).toMatchObject({
+      calls: 4,
+      requests: 2,
+      errors: 1,
+      errorRate: 50,
+      perMinute: 2,
+      avgSize: 500,
+      p50: 400,
+      p95: 400,
+    });
+  });
+
+  it("leave an endpoint whose every read another call's request answered with no rate and no time", () => {
+    expect(alone).toMatchObject({ calls: 1, requests: 0 });
+    expect(nodeFiguresOf(alone, 500).find((f) => f.label === "Errors")).toEqual({
+      label: "Errors",
+      value: "—",
+      tone: "muted",
+    });
+    expect(metricValue(alone, "errors", 500)).toEqual({ text: "—", tone: "muted" });
+    expect(metricValue(alone, "latency", 500)).toEqual({ text: "—", tone: "muted" });
+    expect(
+      successRate(explorerModelOf(CATALOG, [joined("j1")], NOW, 500).sources[0] as SourceNode),
+    ).toBeNull();
+  });
+
+  it("chart the requests alone on an endpoint's latency, and mark none of the reads that only waited", () => {
+    expect(latencyBars(endpointOf(sharing, "api.orders.list")).map((b) => b.request.id)).toEqual([
+      "k",
+      "o",
+    ]);
+  });
+
+  it("value the heatmap's spans by their requests, a span of shared reads alone sending none", () => {
+    const traffic = heatmapOf(sharing, "traffic").rows[0];
+    const errors = heatmapOf(sharing, "errors").rows[0];
+
+    expect(traffic?.cells.filter((c) => c !== null)).toEqual([1, 1]);
+    expect(traffic?.total).toBe(2);
+    expect(errors?.cells.filter((c) => c !== null)).toEqual([0, 100]);
+    expect(errors?.total).toBe(50);
+  });
+
+  it("rank and rate the Overview by the requests sent", () => {
+    const figures = overviewFigures(sharing, calls, "courier.config.ts");
+    const errorRate = figures.find((f) => f.key === "errors");
+
+    expect([errorRate?.value, errorRate?.sub]).toEqual(["50.0%", "1 failed request"]);
+    expect(topEndpoints(sharing, "traffic").map((t) => [t.endpoint.key, t.value])).toEqual([
+      ["api.orders.list", 2],
+    ]);
+  });
+});
+
+function endpointOf(m: ReturnType<typeof explorerModelOf>, key: string): EndpointNode {
+  const found = m.endpoints.find((e) => e.key === key);
+  if (!found) throw new Error(`no endpoint ${key}`);
+  return found;
+}

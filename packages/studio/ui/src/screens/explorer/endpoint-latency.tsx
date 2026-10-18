@@ -9,7 +9,7 @@ interface EndpointLatencyProps {
 }
 
 /**
- * An endpoint's latency chart: a bar per recent finished call, oldest
+ * An endpoint's latency chart: a bar per recent finished request, oldest
  * first, red where it failed and amber past the slow threshold, with its
  * median and the longest shown.
  *
@@ -29,7 +29,7 @@ export function EndpointLatency({ endpoint, slowMs }: EndpointLatencyProps): Rea
       <div className="flex items-baseline gap-2">
         <h3 className="text-label font-semibold text-fg-muted">Latency</h3>
         <span className="text-label text-fg-subtle">
-          last {bars.length} {bars.length === 1 ? "call" : "calls"}
+          last {bars.length} {bars.length === 1 ? "request" : "requests"}
         </span>
         <div className="flex-1" />
         {bars.length > 0 && p50 !== null && (
@@ -40,7 +40,7 @@ export function EndpointLatency({ endpoint, slowMs }: EndpointLatencyProps): Rea
       </div>
       <div className="flex h-16 items-end gap-0.75 rounded-panel border border-line bg-inset p-2">
         {bars.length === 0 && (
-          <span className="m-auto text-label text-fg-subtle">No finished HTTP calls yet</span>
+          <span className="m-auto text-label text-fg-subtle">No finished HTTP requests yet</span>
         )}
         {bars.map((bar) => (
           <span

@@ -54,7 +54,7 @@ describe("the status @courier gives", () => {
 
     const lines = facts.split("\n");
     expect(lines[0]).toBe(
-      "**4 endpoints**, 3 called, 12 calls in this session; 1 with failed calls.",
+      "**4 endpoints**, 3 called, 12 calls in this session; 1 with failed requests.",
     );
     expect(lines[2]).toMatch(
       /^- `shop\.orders\.place` · .* — last failure 1 min ago: Ledger \\\*down\\\* retry$/,
@@ -67,7 +67,7 @@ describe("the status @courier gives", () => {
 
   it("says so when nothing was called", () => {
     expect(statusFacts([stats("orders.place", { calls: 0 })], NOW)).toBe(
-      "**1 endpoint**, 0 called, 0 calls in this session; 0 with failed calls.",
+      "**1 endpoint**, 0 called, 0 calls in this session; 0 with failed requests.",
     );
   });
 });

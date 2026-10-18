@@ -70,6 +70,28 @@ describe("the Timeline", () => {
     expect(screen.getByText("requests", { exact: false }).textContent).toBe("4 requests");
   });
 
+  it("marks a read another call's request answered in its row, and no other", async () => {
+    useStudioStore.setState({
+      requests: [
+        requestEntry({
+          id: "joined",
+          method: "list",
+          startedAt: NOW - 500,
+          shared: { by: "flight", with: "old" },
+        }),
+        ...REQUESTS,
+      ],
+    });
+
+    await openShell("/timeline");
+
+    const row = (id: string) => document.querySelector(`[data-request-id="${id}"]`) as HTMLElement;
+    expect(within(row("joined")).getByText("shared").getAttribute("title")).toMatch(
+      /^Joined the identical read already in flight/,
+    );
+    expect(within(row("old")).queryByText("shared")).toBeNull();
+  });
+
   it("shows a quick view and keeps it in the address", async () => {
     const router = await openShell("/timeline");
 

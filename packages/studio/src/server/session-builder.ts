@@ -109,23 +109,31 @@ function credentialFree(
   return headers && headersWithoutCredentials(headers);
 }
 
-/** Compute session stats from requests */
-function computeStats(requests: SavedRequest[]): SessionStats {
-  const successCount = requests.filter((r) => r.status === "success").length;
-  const errorCount = requests.filter(
+/* The figures of the requests sent: a read another call's request answered sent none, and holds that request's answer. */
+function computeStats(calls: SavedRequest[]): SessionStats {
+  const sent = calls.filter((r) => r.shared === undefined);
+  const successCount = sent.filter((r) => r.status === "success").length;
+  const errorCount = sent.filter(
     (r) => r.status === "error" || r.status === "validation_error",
   ).length;
 
-  const durations = requests
+  const durations = sent
     .map((r) => r.timing?.total)
     .filter((d): d is number => typeof d === "number");
 
   const avgDuration =
     durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
 
-  const totalSize = requests.reduce((sum, r) => sum + (r.size ?? 0), 0);
+  const totalSize = sent.reduce((sum, r) => sum + (r.size ?? 0), 0);
 
-  return { totalRequests: requests.length, successCount, errorCount, avgDuration, totalSize };
+  return {
+    totalRequests: sent.length,
+    totalCalls: calls.length,
+    successCount,
+    errorCount,
+    avgDuration,
+    totalSize,
+  };
 }
 
 /* The first and last start time, read in one pass: spreading thousands of them into Math.min overflows the stack. */

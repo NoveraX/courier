@@ -156,6 +156,19 @@ describe("the ready-made pairs", () => {
     expect(pairOf([calls[1] as RequestEntry], "latest")).toBeNull();
   });
 
+  it("take the failure and the slowest from the requests sent, not the reads that shared them", () => {
+    const shared = { by: "flight", with: "n1" } as const;
+    const sharing = [
+      timed("j5", 2, { startedAt: 5, shared }),
+      timed("e6", 900, { method: "get", status: "error", statusCode: 502, startedAt: 6, shared }),
+      ...calls,
+    ];
+
+    expect(pairOf(sharing, "failure")?.map((r) => r.id)).toEqual(["g2", "e3"]);
+    expect(pairOf(sharing, "slow")?.map((r) => r.id)).toEqual(["n0", "n1"]);
+    expect(pairOf(sharing, "latest")?.map((r) => r.id)).toEqual(["n4", "j5"]);
+  });
+
   it("are drawn from finished HTTP calls only", () => {
     const held = [
       ...calls,

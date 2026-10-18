@@ -84,7 +84,7 @@ export function MiddlewareScreen(): React.ReactNode {
           {loading.requests ? (
             <Skeleton className="my-0.75 h-3 w-56" />
           ) : (
-            <span className="text-control text-fg-subtle">{`${overview.stats.length} middleware · ${calls.length} requests traced`}</span>
+            <span className="text-control text-fg-subtle">{`${overview.stats.length} middleware · ${calls.length} ${calls.length === 1 ? "call" : "calls"} traced`}</span>
           )}
         </div>
         <div className="flex-1" />

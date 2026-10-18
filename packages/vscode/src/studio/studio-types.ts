@@ -5,8 +5,12 @@ export interface EndpointStats {
   /** What it does — a stream's or a channel's calls are its connections; an older Studio leaves it out */
   readonly kind?: "query" | "mutation" | "stream" | "channel" | undefined;
   readonly calls: number;
+  /** The requests its calls sent, a read another call's request answered sending none — an older Studio leaves it out */
+  readonly requests?: number | undefined;
+  /** The requests that failed */
   readonly failed: number;
   readonly pending: number;
+  /** How many requests ended with each status */
   readonly statuses: Readonly<Record<string, number>>;
   readonly p50?: number | undefined;
   readonly p95?: number | undefined;

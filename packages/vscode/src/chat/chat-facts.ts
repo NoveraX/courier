@@ -9,7 +9,7 @@ const MOST_FINDINGS = 10;
 
 /**
  * How the endpoints are doing, as a chat answer says it: the totals, the
- * endpoints with failed calls first, then the slowest, each with its
+ * endpoints with failed requests first, then the slowest, each with its
  * figures and its latest failure.
  *
  * @param stats - Every endpoint's figures
@@ -28,7 +28,7 @@ export function statusFacts(stats: readonly EndpointStats[], now: number): strin
     .sort((a, b) => (b.p95 ?? 0) - (a.p95 ?? 0));
   const calls = called.reduce((sum, each) => sum + each.calls, 0);
   const lines = [
-    `**${counted(stats.length, "endpoint")}**, ${called.length} called, ${counted(calls, "call")} in this session; ${failing.length} with failed calls.`,
+    `**${counted(stats.length, "endpoint")}**, ${called.length} called, ${counted(calls, "call")} in this session; ${failing.length} with failed requests.`,
   ];
   if (called.length > 0) lines.push("");
   for (const each of [...failing, ...slow].slice(0, MOST_ENDPOINTS)) {
@@ -112,9 +112,10 @@ export function requestFacts(
       const method = request.method ? ` ${request.method}` : "";
       const status = request.state === "pending" ? "pending" : (request.status ?? "no answer");
       const took = request.durationMs !== undefined ? ` in ${formatMs(request.durationMs)}` : "";
+      const shared = request.shared ? ", answered by another call's request" : "";
       const why =
         request.error && request.error !== `HTTP ${status}` ? `: ${plain(request.error)}` : "";
-      return `-${endpoint}${method} → ${status}${took}, ${ago(now - request.startedAt)}${why}`;
+      return `-${endpoint}${method} → ${status}${took}${shared}, ${ago(now - request.startedAt)}${why}`;
     })
     .join("\n");
 }

@@ -57,7 +57,7 @@ export function proxyLatencyOverhead(stats: Map<string, EndpointStats>): AuditIt
       category: "performance",
       title: "High proxy overhead",
       description:
-        "The trips to and from the proxy take more than a third of these calls' time — over half again what the server spends on them.",
+        "The trips to and from the proxy take more than a third of these requests' time — over half again what the server spends on them.",
       suggestion: "Use direct mode for endpoints that don't need server-side secrets.",
       endpoints: matched.map((s) => ({
         ...formatEndpoint(s),
@@ -78,11 +78,11 @@ export function validationOverhead(stats: Map<string, EndpointStats>): AuditItem
       severity: "hint",
       category: "performance",
       title: "High validation overhead",
-      description: "Schema validation takes more than 20% of total request time.",
+      description: "Schema validation takes more than 20% of these calls' time.",
       suggestion: "Simplify the schema or use a faster validation library.",
       endpoints: matched.map((s) => ({
         ...formatEndpoint(s),
-        detail: `${(s.validationOverhead * 100).toFixed(0)}% of request time`,
+        detail: `${(s.validationOverhead * 100).toFixed(0)}% of call time`,
       })),
     },
   ];

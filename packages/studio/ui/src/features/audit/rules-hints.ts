@@ -25,7 +25,7 @@ export function collectPasses(stats: Map<string, EndpointStats>): AuditItem[] {
       s.hasResponseValidation &&
       s.errorRate < 0.05 &&
       s.p95 < 500 &&
-      s.count >= 3,
+      s.sent >= 3,
   );
   if (matched.length === 0) return [];
   return [

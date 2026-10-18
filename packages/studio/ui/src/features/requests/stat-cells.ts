@@ -118,7 +118,12 @@ export function statCellsOf(r: RequestEntry, context: StatContext): StatCell[] {
       : {
           label: "Duration",
           value: formatDuration(total),
-          sub: p95 === null ? "" : `p95 ${formatDuration(p95)}`,
+          /* A call another call's request answered waited for it: its time is no request's to set against the p95. */
+          sub: r.shared
+            ? "waited for another call"
+            : p95 === null
+              ? ""
+              : `p95 ${formatDuration(p95)}`,
           tone: durationTone(total, slowMs),
           mono: true,
         };

@@ -63,8 +63,8 @@ export function useAnalytics(): AnalyticsModel {
     return {
       win,
       kpis: kpiFigures(win, view.range, slowMs),
-      latency: latencyBins(win.done, slowMs),
-      statuses: statusBreakdown(win.done),
+      latency: latencyBins(win.sent, slowMs),
+      statuses: statusBreakdown(win.sent),
       series: requestSeries(win),
       rows: endpointRows(win.done),
     };

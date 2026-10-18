@@ -1,7 +1,9 @@
 import type { ServedTool } from "@noverax/courier-mcp/internal";
 
+import { auditedCalls } from "@/features/audit/audited-calls";
 import { runAudit } from "@/features/audit/run-audit";
 import type { AuditEndpoint, AuditItem, AuditSeverity } from "@/features/audit/types";
+import { ownRequests } from "@/features/requests/own-requests";
 import { buildCatalog } from "@/store/build-catalog";
 import type { ScannedSource } from "../build-source-scan";
 import type { RequestLog } from "../request-log";
@@ -25,7 +27,8 @@ const NAMED_REQUESTS = 5;
  * The tool that runs Studio's audit over the requests it recorded — the
  * audit its Audit page runs, by the same rules — and answers with the score
  * and each finding: what is wrong, how badly, which endpoints it concerns,
- * a few of the requests behind it, and the fix, often as code.
+ * a few of the requests behind it, and the fix, often as code — with the
+ * calls it read and the requests they sent, as the page's head counts them.
  *
  * @param inputs - The request log, the declared sources and the attached runtimes
  * @returns The tool
@@ -89,10 +92,12 @@ function auditOf(
         (item.severity === "pass" && args.passed === true)) &&
       (wanted === undefined || concerns(item, wanted)),
   );
+  const read = auditedCalls(requests);
   return {
     score: result.score,
     breakdown: result.breakdown,
-    requests: requests.length,
+    calls: read.length,
+    requests: ownRequests(read).length,
     findings: findings.map(findingOf),
   };
 }

@@ -5,7 +5,8 @@
  * until another is; picking a framework shows its steps; each copy
  * completes its step, here and in the sidebar's progress; an attached app
  * completes the connect step and opens the way to the Timeline — and a
- * project set up already goes straight on, unless the setup was asked for.
+ * project set up already goes straight on, unless the setup was asked for;
+ * the capture panel counts the requests sent and marks a shared read.
  */
 import {
   createMemoryHistory,
@@ -23,6 +24,7 @@ import { useSetupStore } from "@/features/welcome/setup-store";
 import { validateWelcomeSearch } from "@/features/welcome/welcome-search";
 import { WelcomeScreen } from "@/screens/welcome/welcome-screen";
 import { useStudioStore } from "@/store";
+import { requestEntry } from "./request-entry-fixture";
 
 async function open(url: string) {
   const root = createRootRoute({ component: Outlet });
@@ -139,6 +141,27 @@ describe("the setup", () => {
     expect(screen.getByRole("button", { name: /Go to Timeline/ }).hasAttribute("disabled")).toBe(
       false,
     );
+  });
+
+  it("counts the requests the captured calls sent, and marks a read another call's request answered", async () => {
+    const sent = requestEntry({ id: "sent", startedAt: Date.now() - 1_000 });
+    useStudioStore.setState({
+      requests: [
+        requestEntry({
+          id: "joined",
+          startedAt: Date.now() - 500,
+          shared: { by: "flight", with: "sent" },
+        }),
+        sent,
+      ],
+    });
+
+    await open("/?setup=true&framework=react");
+
+    expect(screen.getByText("Requests").nextElementSibling?.textContent).toBe("1");
+    const [joined, own] = screen.getAllByRole("button", { name: /api/ });
+    expect(joined?.textContent).toContain("shared");
+    expect(own?.textContent).not.toContain("shared");
   });
 
   it("goes on to the Timeline for a project whose app is attached, unless the setup was asked for", async () => {

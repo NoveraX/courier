@@ -68,7 +68,8 @@ export function AnalyticsScreen(): React.ReactNode {
   const { view, win, endpoints } = model;
   const sub = [
     project,
-    plural(win.done.length, "completed request"),
+    ...(win.done.length === win.sent.length ? [] : [plural(win.done.length, "call")]),
+    plural(win.sent.length, "completed request"),
     plural(endpoints.length, "endpoint"),
   ];
   return (
@@ -115,8 +116,8 @@ export function AnalyticsScreen(): React.ReactNode {
             <LatencyChart latency={model.latency} />
             <StatusChart
               groups={model.statuses}
-              total={win.done.length}
-              successRate={successRate(win.done) ?? 0}
+              total={win.sent.length}
+              successRate={successRate(win.sent) ?? 0}
             />
             <RequestsChart series={model.series} span={win.span} saved={model.saved} />
           </div>

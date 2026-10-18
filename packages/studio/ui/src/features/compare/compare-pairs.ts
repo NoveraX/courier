@@ -1,4 +1,5 @@
 import { endpointKeyOf } from "@/features/explorer/endpoint-key";
+import { ownRequests } from "@/features/requests/own-requests";
 import { isFailedState, isStreamRequest } from "@/features/requests/request-state";
 import type { RequestEntry } from "@/store/types-request";
 
@@ -25,19 +26,22 @@ export function comparable(requests: readonly RequestEntry[]): RequestEntry[] {
   );
 }
 
+/* A success and a failure the API answered: a read another call's request answered holds a copy of that answer. */
 function failurePair(calls: readonly RequestEntry[]): RequestPair | null {
-  for (const failed of calls) {
+  const sent = ownRequests(calls);
+  for (const failed of sent) {
     if (!isFailedState(failed.status)) continue;
     const key = endpointKeyOf(failed);
-    const ok = calls.find((r) => r.status === "success" && endpointKeyOf(r) === key);
+    const ok = sent.find((r) => r.status === "success" && endpointKeyOf(r) === key);
     if (ok) return [ok, failed];
   }
   return null;
 }
 
+/* The API's fastest and slowest: a read another call's request answered only waited, part of that request's time. */
 function slowPair(calls: readonly RequestEntry[]): RequestPair | null {
   const byKey = new Map<string, RequestEntry[]>();
-  for (const r of calls) {
+  for (const r of ownRequests(calls)) {
     if (r.timing === undefined) continue;
     const key = endpointKeyOf(r);
     const list = byKey.get(key);
@@ -70,8 +74,9 @@ function latestPair(calls: readonly RequestEntry[]): RequestPair | null {
 
 /**
  * A ready-made pair: a success and a failure of one endpoint, the fastest
- * and slowest calls of the endpoint whose time varies most, or the newest
- * call and the one before it to the same endpoint.
+ * and slowest requests of the endpoint whose time varies most — both drawn
+ * from the requests sent — or the newest call and the one before it to the
+ * same endpoint.
  *
  * @param calls - The candidates, newest first
  * @param preset - Which pair

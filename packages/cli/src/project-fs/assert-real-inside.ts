@@ -1,6 +1,7 @@
 import { lstatSync } from "node:fs";
 import { relative } from "node:path";
 import { errnoCode } from "../util/errno-code";
+import { assertNamedInside } from "./assert-named-inside";
 import { assertResolvesInside } from "./assert-resolves-inside";
 import { PathOutsideProjectError } from "./path-outside-project-error";
 import type { ProjectRoot } from "./project-root";
@@ -13,7 +14,7 @@ import type { ProjectRoot } from "./project-root";
  *
  * @param root - The project
  * @param path - An absolute path inside `root.path` by name
- * @throws {PathOutsideProjectError} When the path is a link or leads outside the project
+ * @throws {PathOutsideProjectError} When the path is outside the project by name, is a link, or leads outside
  * @throws The file system's error when a part of the path cannot be read
  * @example
  * ```ts
@@ -21,6 +22,7 @@ import type { ProjectRoot } from "./project-root";
  * ```
  */
 export function assertRealInside(root: ProjectRoot, path: string): void {
+  assertNamedInside(root, path);
   if (isLink(path)) {
     throw new PathOutsideProjectError(relative(root.path, path), "it is a symbolic link");
   }

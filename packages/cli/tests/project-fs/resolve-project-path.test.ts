@@ -1,5 +1,6 @@
 import { posix, win32 } from "node:path";
 import { describe, expect, it } from "vitest";
+import { isWithin } from "../../src/project-fs/is-within";
 import { PathOutsideProjectError } from "../../src/project-fs/path-outside-project-error";
 import { resolveProjectPath } from "../../src/project-fs/resolve-project-path";
 
@@ -50,6 +51,41 @@ describe("resolveProjectPath", () => {
   it("refuses a drive-relative path, a stream name and a NUL byte", () => {
     for (const path of ["C:foo.ts", "src/a.ts:stream", "src/a\0.ts", ""]) {
       expect(refusal(path, win32, "C:\\proj")).toBeInstanceOf(PathOutsideProjectError);
+    }
+  });
+
+  it("keeps a name that starts with two dots inside, and the project itself", () => {
+    expect(resolveProjectPath("/proj", "..foo/a.ts", posix)).toBe("/proj/..foo/a.ts");
+    expect(resolveProjectPath("C:\\proj", "..foo\\a.ts", win32)).toBe("C:\\proj\\..foo\\a.ts");
+    expect(resolveProjectPath("/proj", "src/..", posix)).toBe("/proj");
+  });
+
+  it("accepts exactly the paths isWithin calls inside, by either platform's rules", () => {
+    const paths = [
+      "a",
+      "a/b",
+      "./a",
+      "a/..",
+      "a/../..",
+      "..",
+      "../a",
+      "..foo",
+      "..foo/../..",
+      ".../x",
+      "a/./b/../../c",
+      "a/../../proj/x",
+      "a\\..\\..\\x",
+      "src/..\\..",
+      "src\\..\\a",
+    ];
+    for (const [api, root] of [
+      [posix, "/proj"],
+      [win32, "C:\\proj"],
+    ] as const) {
+      for (const path of paths) {
+        const inside = isWithin(root, api.resolve(root, path), api);
+        expect([path, refusal(path, api, root) === null]).toEqual([path, inside]);
+      }
     }
   });
 

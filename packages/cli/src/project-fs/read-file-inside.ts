@@ -3,6 +3,7 @@ import { open, realpath } from "node:fs/promises";
 import { relative } from "node:path";
 import { errnoCode } from "../util/errno-code";
 import { NotRegularFileError } from "../util/not-regular-file-error";
+import { assertNamedInside } from "./assert-named-inside";
 import { assertOpenedInside } from "./assert-opened-inside";
 import { isWithin } from "./is-within";
 import { PathOutsideProjectError } from "./path-outside-project-error";
@@ -31,7 +32,7 @@ export interface FileInside {
  * @param root - The project
  * @param path - The file's absolute path, inside the project by name
  * @returns Its bytes and stats, or `null` when there is nothing at the path
- * @throws {PathOutsideProjectError} When the path leads outside the project, or was swapped while it opened
+ * @throws {PathOutsideProjectError} When the path is outside the project by name, leads outside it, or was swapped while it opened
  * @throws {NotRegularFileError} When the path leads to a directory, a FIFO or anything but a regular file
  * @throws The file system's error for anything else, such as `EACCES`
  * @example
@@ -41,6 +42,7 @@ export interface FileInside {
  * ```
  */
 export async function readFileInside(root: ProjectRoot, path: string): Promise<FileInside | null> {
+  assertNamedInside(root, path);
   const real = await placeOf(path);
   if (real === null) return null;
   if (!isWithin(root.real, real)) {

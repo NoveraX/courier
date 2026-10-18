@@ -1,6 +1,7 @@
 import { lstatSync, realpathSync } from "node:fs";
 import { dirname, relative } from "node:path";
 import { errnoCode } from "../util/errno-code";
+import { assertNamedInside } from "./assert-named-inside";
 import { isWithin } from "./is-within";
 import { PathOutsideProjectError } from "./path-outside-project-error";
 import type { ProjectRoot } from "./project-root";
@@ -13,7 +14,7 @@ import type { ProjectRoot } from "./project-root";
  *
  * @param root - The project
  * @param path - An absolute path inside `root.path` by name
- * @throws {PathOutsideProjectError} When the path leads outside the project
+ * @throws {PathOutsideProjectError} When the path, by its name or where it leads, is outside the project
  * @throws The file system's error when a part of the path cannot be read
  * @example
  * ```ts
@@ -21,6 +22,7 @@ import type { ProjectRoot } from "./project-root";
  * ```
  */
 export function assertResolvesInside(root: ProjectRoot, path: string): void {
+  assertNamedInside(root, path);
   const existing = deepestExisting(path);
   if (isWithin(root.real, realpathSync.native(existing))) return;
   const shown = relative(root.path, path) || ".";

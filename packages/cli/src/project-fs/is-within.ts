@@ -24,7 +24,5 @@ import type { PathApi } from "./path-api";
  */
 export function isWithin(parent: string, child: string, api: PathApi = nodePath): boolean {
   const relative = api.relative(parent, child);
-  if (relative === "") return true;
-  if (api.isAbsolute(relative)) return false;
-  return relative.split(api.sep)[0] !== "..";
+  return relative !== ".." && !relative.startsWith(`..${api.sep}`) && !api.isAbsolute(relative);
 }

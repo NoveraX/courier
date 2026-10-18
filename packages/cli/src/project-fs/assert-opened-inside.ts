@@ -1,5 +1,6 @@
 import { type BigIntStats, fstatSync, realpathSync, statSync } from "node:fs";
 import { relative } from "node:path";
+import { assertNamedInside } from "./assert-named-inside";
 import { isWithin } from "./is-within";
 import { PathOutsideProjectError } from "./path-outside-project-error";
 import type { ProjectRoot } from "./project-root";
@@ -21,7 +22,7 @@ import type { ProjectRoot } from "./project-root";
  * @param root - The project
  * @param path - The absolute path the file was opened by
  * @param fd - The open file's descriptor, which the caller closes
- * @throws {PathOutsideProjectError} When the path now leads outside the project, or to another file
+ * @throws {PathOutsideProjectError} When the path is outside the project by name, now leads outside it, or to another file
  * @throws The file system's error when the path no longer resolves
  * @example
  * ```ts
@@ -29,6 +30,7 @@ import type { ProjectRoot } from "./project-root";
  * ```
  */
 export function assertOpenedInside(root: ProjectRoot, path: string, fd: number): void {
+  assertNamedInside(root, path);
   const shown = relative(root.path, path);
   const real = realpathSync.native(path);
   if (!isWithin(root.real, real)) {

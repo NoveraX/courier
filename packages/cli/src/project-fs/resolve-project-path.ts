@@ -31,7 +31,9 @@ export function resolveProjectPath(root: string, path: string, api: PathApi = no
   const problem = lexicalProblem(path);
   if (problem !== null) throw new PathOutsideProjectError(path, problem);
   const resolved = api.resolve(root, path);
-  if (!isWithin(root, resolved, api)) {
+  /* Checked where the path is made, in the platform's terms: a path whose way from the root climbs, or that names another root, is outside. */
+  const fromRoot = api.relative(root, resolved);
+  if (fromRoot === ".." || fromRoot.startsWith(`..${api.sep}`) || api.isAbsolute(fromRoot)) {
     throw new PathOutsideProjectError(path, "it leaves the project");
   }
   return resolved;

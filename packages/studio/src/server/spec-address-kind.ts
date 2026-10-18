@@ -5,13 +5,17 @@ import { BlockList, isIPv4, isIPv6 } from "node:net";
  *
  * `unspecified` is no destination at all — `0.0.0.0/8` or `::` — yet
  * connecting to it reaches this machine's own services, so nothing allows it.
+ * `benchmarking` is 198.18.0.0/15, which no host on the internet has:
+ * fake-IP proxy tools (Clash, Surge, sing-box) answer every name with one of
+ * its addresses and connect it to the host the name was, so where such an
+ * address leads is the proxy's choice, a host of the network among them.
  */
-export type SpecAddressKind = "loopback" | "private" | "unspecified" | "public";
+export type SpecAddressKind = "loopback" | "private" | "unspecified" | "benchmarking" | "public";
 
 /* Ranges that are not the public internet: private networks, shared address
    space (CGNAT, Tailscale), link-local, documentation, relay, multicast,
-   reserved and broadcast. The benchmarking range 198.18.0.0/15 is not among
-   them: fake-IP proxy tools (Clash, Surge) answer every name with it. */
+   reserved and broadcast. The benchmarking range 198.18.0.0/15 is a kind of
+   its own: fake-IP proxy tools answer every name with it. */
 const PRIVATE_V4: ReadonlyArray<readonly [string, number]> = [
   ["10.0.0.0", 8],
   ["100.64.0.0", 10],
@@ -59,7 +63,7 @@ for (const [address, prefix] of PRIVATE_V6) privateV6.addSubnet(address, prefix,
  * otherwise slip past a check of dotted IPv4.
  *
  * @param address - An IPv4 or IPv6 address, without brackets or zone
- * @returns Whether it is this machine, a private network, no destination, or the public internet
+ * @returns Whether it is this machine, a private network, no destination, the range a fake-IP proxy answers with, or the public internet
  *
  * @example
  * ```ts
@@ -85,6 +89,7 @@ function kindOfV4(address: string): SpecAddressKind {
   if (address.startsWith("127.")) return "loopback";
   if (address.startsWith("0.")) return "unspecified";
   if (address === "255.255.255.255") return "private";
+  if (address.startsWith("198.18.") || address.startsWith("198.19.")) return "benchmarking";
   return privateV4.check(address, "ipv4") ? "private" : "public";
 }
 

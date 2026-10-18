@@ -3,8 +3,9 @@
  * fetches at once, a few megabytes of their bodies held between them, less
  * time each, and each one stopped the moment its caller goes away — so
  * callers that hang up, or hosts that answer slowly, cannot pile work and
- * memory up behind them. Their names are looked up from public DNS, never
- * by this machine's resolver, and a lookup counts until it has settled.
+ * memory up behind them. Their names are asked of this machine's name
+ * servers directly, never of its resolver, and a lookup counts until it has
+ * settled.
  */
 import dns from "node:dns";
 import { createServer, type Server } from "node:http";
@@ -24,7 +25,7 @@ import {
 /* The test's hosts listen on this machine; here they stand for hosts on the public internet. */
 vi.mock("../src/server/address-kind-here", () => ({ addressKindHere: () => "public" }));
 
-/* Public DNS as the tests answer it: a name of a test host, or a query that never answers. */
+/* The name servers as the tests answer them: a name of a test host, or a query that never answers. */
 const names = vi.hoisted(() => ({
   resolve4: (_hostname: string): Promise<string[]> => Promise.resolve(["127.0.0.1"]),
   cancel: (): void => {},
@@ -194,7 +195,7 @@ describe("the fetches Studio runs for callers without the token", () => {
     expect(await fetching).toMatchObject({ code: "SPEC_TIMEOUT" });
   });
 
-  it("look a name up from public DNS, never with this machine's resolver", async () => {
+  it("ask a name of the name servers directly, never of this machine's resolver", async () => {
     const host = await answering("{}");
     const lookup = vi.spyOn(dns, "lookup");
     const promisedLookup = vi.spyOn(dns.promises, "lookup");

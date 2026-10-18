@@ -1,9 +1,11 @@
 /**
  * A caller without the project's token has its hosts' names looked up from
- * public DNS by a resolver of its request's own: every address, IPv4 and
- * IPv6, must be public; a name that resolves to no public address and one
- * that does not resolve at all are refused alike, naming the host alone;
- * and a lookup stops at once with its request.
+ * the name servers this machine uses, asked directly by a resolver of its
+ * request's own: every address, IPv4 and IPv6, must be public — none of the
+ * range a fake-IP proxy answers every name with, which leads wherever the
+ * proxy takes it; a name that resolves to no public address and one that
+ * does not resolve at all are refused alike, naming the host alone; and a
+ * lookup stops at once with its request.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -88,6 +90,7 @@ describe("publicLookups", () => {
     ["this machine", ["127.0.0.1"], ["::1"]],
     ["a private IPv6 address beside a public IPv4 one", ["93.184.215.14"], ["fd00::7"]],
     ["the address that means every interface", ["0.0.0.0"], notFound()],
+    ["the range a fake-IP proxy answers every name with", ["198.18.0.37"], notFound()],
   ])("refuses a name that resolves to %s, naming the host alone", async (_, v4, v6) => {
     const lookups = publicLookups(PUBLIC_ONLY, () => answering(v4, v6));
 

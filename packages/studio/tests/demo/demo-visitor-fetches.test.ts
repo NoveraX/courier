@@ -20,7 +20,7 @@ import { VISITOR_FETCHES } from "../../src/server/visitor-fetches";
 /* The slow host listens on this machine; here it stands for a host on the public internet. */
 vi.mock("../../src/server/address-kind-here", () => ({ addressKindHere: () => "public" }));
 
-/* Public DNS whose answers the test holds back: a lookup cancelling does not end, as this machine's do. */
+/* Name servers whose answers the test holds back: a lookup cancelling does not end, as this machine's do. */
 const lookups = vi.hoisted(() => ({ waiting: [] as Array<(addresses: string[]) => void> }));
 
 vi.mock("../../src/server/public-resolver", () => ({

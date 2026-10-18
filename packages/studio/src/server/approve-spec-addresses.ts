@@ -1,6 +1,7 @@
 import { addressKindHere } from "./address-kind-here";
 import type { LookupPolicy } from "./guarded-lookup";
 import { readInterfaces } from "./own-addresses";
+import type { SpecAddressKind } from "./spec-address-kind";
 import { SpecFetchError } from "./spec-fetch-error";
 
 /**
@@ -14,9 +15,15 @@ import { SpecFetchError } from "./spec-fetch-error";
  * the request there — passes only when the policy admits the host, which it
  * is asked once, whatever the number of such addresses.
  *
+ * An address of the benchmarking range passes as a public one when a name
+ * was looked up to it — a fake-IP proxy's answer for the name the request
+ * gave — and as a private one when the URL writes it out, where no name
+ * says where the proxy takes it.
+ *
  * @param addresses - The addresses the host is, without brackets
  * @param policy - What besides the public internet the request may reach
  * @param describe - How to name the host in a refusal, given the address refused
+ * @param options - Whether the URL writes the addresses out, rather than a name looked up to them
  * @throws {SpecFetchError} For an address that means every interface, or a private one not admitted
  * @throws {SpecHostsUnavailableError} When Studio cannot tell whether the project admits the host
  *
@@ -29,13 +36,20 @@ export async function approveSpecAddresses(
   addresses: readonly string[],
   policy: LookupPolicy,
   describe: (address: string) => string,
+  { written = false }: { written?: boolean } = {},
 ): Promise<void> {
   let withheld: string | undefined;
   const interfaces = readInterfaces();
   for (const address of addresses) {
     const kind = addressKindHere(address, interfaces);
     if (kind === "unspecified") throw SpecFetchError.unspecifiedHost(describe(address));
-    if (kind === "private" || (kind === "loopback" && !policy.loopback)) withheld ??= address;
+    if (isWithheld(kind, policy, written)) withheld ??= address;
   }
   if (withheld !== undefined) await policy.admitPrivate(describe(withheld));
+}
+
+/* Whether an address of this kind is reached only when the policy admits its host. */
+function isWithheld(kind: SpecAddressKind, policy: LookupPolicy, written: boolean): boolean {
+  if (kind === "loopback") return !policy.loopback;
+  return kind === "private" || (kind === "benchmarking" && written);
 }

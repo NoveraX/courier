@@ -51,7 +51,8 @@ const PROJECT: FetchLimits = {
 };
 
 /* What this machine cannot check, a caller without the token cannot reach;
-   its names are resolved from public DNS, by lookups that stop with it. */
+   its names are asked of this machine's name servers directly, by lookups
+   that stop with it. */
 const VISITOR: FetchLimits = {
   deadlineMs: VISITOR_FETCH_DEADLINE_MS,
   maxBytes: PUBLIC_SPEC_MAX_BYTES,
@@ -90,7 +91,8 @@ const PUBLIC_ONLY =
  * A caller without the project's token — a page opened without Studio's
  * link, a visitor of a public demo — reaches the public internet only, never
  * through the proxy: what this machine cannot check, it cannot reach. Its
- * names are resolved from public DNS, never by this machine's resolver, and
+ * names are asked of this machine's name servers directly, never of its
+ * resolver, and
  * a name that does not resolve is refused as one that resolves to a private
  * address, by its name alone. Its fetch reads no more than a demo takes
  * pasted in, in less time, and only as one of the few such fetches Studio

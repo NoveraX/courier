@@ -22,9 +22,9 @@ const BUSY = `Studio fetches up to ${VISITOR_FETCHES} specifications at once for
  * {@link VISITOR_FETCHES} places Studio keeps for them, held until the fetch
  * has really ended — its connection closed and its name lookup settled, not
  * merely its caller gone — so callers that hang up cannot have more fetches
- * or lookups under way than that between them. Their names are looked up
- * from public DNS by lookups that stop with the fetch, never by this
- * machine's resolver, whose few threads every lookup of the process waits
+ * or lookups under way than that between them. Their names are asked of
+ * this machine's name servers directly, by lookups that stop with the fetch,
+ * never of its resolver, whose few threads every lookup of the process waits
  * for: a caller without the token cannot hold up the developer's own.
  *
  * The places are the process's, shared by every Studio in it: they guard

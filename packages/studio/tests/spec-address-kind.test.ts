@@ -60,11 +60,25 @@ describe("specAddressKind", () => {
     expect(specAddressKind(address)).toBe("unspecified");
   });
 
+  /* Fake-IP proxy tools answer every name with one of these, and take it to
+     the host the name was: where it leads is the proxy's choice. */
+  it.each([
+    "198.18.0.1",
+    "198.18.0.37",
+    "198.19.255.254",
+    "::ffff:198.18.0.1",
+    "::ffff:c612:25",
+    "64:ff9b::c612:25",
+  ])("takes %s for the benchmarking range a fake-IP proxy answers with", (address) => {
+    expect(specAddressKind(address)).toBe("benchmarking");
+  });
+
   it.each([
     "8.8.8.8",
     "172.32.0.1",
     "1.1.1.1",
-    "198.18.0.1",
+    "198.17.255.255",
+    "198.20.0.1",
     "2606:4700::1111",
     "64:ff9b::808:808",
     "2002:808:808::1",

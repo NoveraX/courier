@@ -18,7 +18,7 @@ import { TOKEN_HEADER } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
-/* Public DNS as these tests answer it: each name its addresses, or none. */
+/* The name servers as these tests answer them: each name its addresses, or none. */
 const publicNames = vi.hoisted(() => new Map<string, string[]>());
 
 vi.mock("../src/server/public-resolver", () => ({

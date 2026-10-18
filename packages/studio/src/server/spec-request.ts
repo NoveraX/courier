@@ -27,9 +27,10 @@ export interface SpecRequestOptions {
   readonly signal?: AbortSignal | undefined;
   /**
    * How its host's name is looked up: as this machine resolves it
-   * (`"system"`, the default), or from public DNS by a resolver of the
-   * request's own (`"public"`), for a caller that reaches the public
-   * internet only — a lookup that stops with the request, and is waited for
+   * (`"system"`, the default), or asked of this machine's name servers
+   * directly by a resolver of the request's own (`"public"`), for a caller
+   * that reaches the public internet only — a lookup that stops with the
+   * request, and is waited for
    */
   readonly names?: "system" | "public" | undefined;
 }
@@ -60,7 +61,8 @@ export interface SpecRequestOptions {
  *
  * A host's name is looked up as this machine resolves it, or — with
  * `names: "public"`, for a caller that reaches the public internet only —
- * from public DNS by a lookup of the request's own (see `publicLookups`).
+ * asked of this machine's name servers directly, by a lookup of the
+ * request's own (see `publicLookups`).
  *
  * Aborted or out of time, the request stops where it is — its connection
  * closed, the body read so far let go, a lookup it can stop stopped — and
@@ -139,7 +141,9 @@ function sent(
 
 async function admitWrittenOut(url: URL, policy: LookupPolicy): Promise<void> {
   const bare = url.hostname.replace(/^\[|\]$/g, "");
-  if (isIP(bare) !== 0) await approveSpecAddresses([bare], policy, () => url.hostname);
+  if (isIP(bare) !== 0) {
+    await approveSpecAddresses([bare], policy, () => url.hostname, { written: true });
+  }
 }
 
 function open(

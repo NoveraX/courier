@@ -56,6 +56,16 @@ describe("guardedLookup", () => {
     expect(await lookup(false)).toEqual({ error: null, address: "93.184.215.14" });
   });
 
+  /* A fake-IP proxy answers every name with an address of 198.18.0.0/15 and
+     takes it to the host the name was, for the developer who typed it. */
+  it("connects to the address a fake-IP proxy answers the name with, asking the project nothing", async () => {
+    answers.addresses = [{ address: "198.18.0.37", family: 4 }];
+    const policy = policyFor(false, false);
+
+    expect(await lookupWith(policy)).toEqual({ error: null, address: "198.18.0.37" });
+    expect(policy.admitPrivate).not.toHaveBeenCalled();
+  });
+
   it("refuses a name that resolves into a private network", async () => {
     answers.addresses = [{ address: "10.0.0.7", family: 4 }];
 

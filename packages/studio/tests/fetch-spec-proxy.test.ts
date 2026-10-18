@@ -33,7 +33,7 @@ vi.mock("node:dns", async (importOriginal) => {
   return { ...actual, promises: { ...actual.promises, lookup } };
 });
 
-/* Public DNS, which a caller without the token's names are looked up from, knows none of the test's names. */
+/* The name servers a caller without the token has its names asked of know none of the test's names. */
 vi.mock("../src/server/public-resolver", () => ({
   publicResolver: () => ({
     resolve4: async (hostname: string) => {
@@ -190,7 +190,7 @@ describe("with Node's proxy on", () => {
     expect(hits).toEqual([]);
   });
 
-  it("sends nothing through it for a caller without the token, refusing a name public DNS does not know", async () => {
+  it("sends nothing through it for a caller without the token, refusing a name its name servers do not know", async () => {
     const through = await behindProxy();
     RESOLVED.set("hidden.example", unresolvable("hidden.example"));
 

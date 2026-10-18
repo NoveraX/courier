@@ -82,6 +82,35 @@ describe("fetchSpec", () => {
     });
   });
 
+  /* Where an address of the range a fake-IP proxy answers every name with
+     leads is the proxy's choice: written out, no name says which host it is. */
+  it.each(["http://198.18.0.37/spec.json", "http://[::ffff:198.18.0.37]/spec.json"])(
+    "reaches %s, written out, only as a host the project names",
+    async (url) => {
+      const allowlist = listing();
+
+      await expect(fetchSpec(url, allowlist)).rejects.toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+      expect(allowlist).toHaveBeenCalled();
+    },
+  );
+
+  it("refuses a redirect to an address of the fake-IP range without following it", async () => {
+    const base = await serve(() => ({ status: 302, location: "http://198.18.0.37/spec.json" }));
+
+    await expect(fetchSpec(`${base}/spec.json`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_HOST_PRIVATE",
+    });
+  });
+
+  it("refuses an address of the fake-IP range to a caller without the token, whatever the project names", async () => {
+    const allowlist = listing("198.18.0.37");
+
+    await expect(
+      fetchSpec("http://198.18.0.37/spec.json", allowlist, { reach: "public" }),
+    ).rejects.toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+    expect(allowlist).not.toHaveBeenCalled();
+  });
+
   it("refuses a redirect into a private network without following it", async () => {
     const base = await serve(() => ({
       status: 302,

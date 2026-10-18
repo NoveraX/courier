@@ -44,15 +44,32 @@ function endless(): Server {
   });
 }
 
+/** Serve `ticks` from an upstream through the proxy, as a call that streams its answer. */
+function proxyTicks(upstream: string): void {
+  const { endpoint } = courier();
+  registerSources({
+    api: defineApi({
+      expose: true,
+      baseURL: upstream,
+      endpoints: { ticks: endpoint.post("ticks") },
+    }),
+  });
+}
+
+/** Call `ticks` through the proxy, asking for its answer unread. */
+function streamedCall(proxy: string): Promise<Response> {
+  return fetch(`${proxy}/api/request?_s=api&_m=ticks`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ options: { stream: true } }),
+  });
+}
+
 describe("a streamed answer the client cancels", () => {
   it("ends quietly on the server", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    const upstream = await listen(endless());
-    const { endpoint } = courier();
-    registerSources({
-      api: defineApi({ baseURL: upstream, endpoints: { ticks: endpoint.post("ticks") } }),
-    });
+    proxyTicks(await listen(endless()));
     const { handle } = createHandler();
     const failures: unknown[] = [];
     let sent: Promise<void> | undefined;
@@ -66,14 +83,18 @@ describe("a streamed answer the client cancels", () => {
       }),
     );
 
-    const response = await fetch(`${proxy}/api/request`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ source: "api", method: "ticks", options: { stream: true } }),
-    });
+    const response = await streamedCall(proxy);
     const reader = response.body!.getReader();
-    for (let chunk = 0; chunk < 3; chunk += 1) await reader.read();
+    let read = "";
+    while (!read.includes("tick\ntick\n")) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      read += new TextDecoder().decode(value);
+    }
     await reader.cancel();
+
+    expect(response.status).toBe(200);
+    expect(read).toContain("tick\ntick\n");
 
     await vi.waitFor(() => expect(sent).toBeDefined());
     await sent;

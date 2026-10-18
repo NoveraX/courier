@@ -73,18 +73,34 @@ export function sourceAuth(
   return options ? { middleware: `authMiddleware({ ${options} })`, helper: REQUIRE_ENV } : null;
 }
 
+/*
+ * How the variable each kind of scheme reads its secret from ends, after
+ * the source's name. Looked up in a map, a type no scheme has — one a
+ * specification sent to Studio may hold — finds no suffix rather than
+ * being turned into a key.
+ */
+const VARIABLE_SUFFIX: ReadonlyMap<unknown, string> = new Map(
+  Object.entries({
+    bearer: "TOKEN",
+    basic: "CREDENTIALS",
+    oauth2: "ACCESS_TOKEN",
+    apiKey: "API_KEY",
+  } satisfies Record<Exclude<ParsedSecurityScheme["type"], "unknown">, string>),
+);
+
 function middlewareOptions(scheme: ParsedSecurityScheme, prefix: string): string | null {
-  const token = (suffix: string): string => `getToken: () => requireEnv("${prefix}_${suffix}")`;
+  const suffix = VARIABLE_SUFFIX.get(scheme.type);
+  if (suffix === undefined) return null;
+  const token = `getToken: () => requireEnv("${prefix}_${suffix}")`;
   switch (scheme.type) {
     case "bearer":
-      return token("TOKEN");
-    case "basic":
-      return `scheme: "Basic", ${token("CREDENTIALS")}`;
     case "oauth2":
-      return token("ACCESS_TOKEN");
+      return token;
+    case "basic":
+      return `scheme: "Basic", ${token}`;
     case "apiKey":
       if (scheme.in !== "header" || !scheme.paramName) return null;
-      return `header: ${jsLiteral(scheme.paramName)}, scheme: "", ${token("API_KEY")}`;
+      return `header: ${jsLiteral(scheme.paramName)}, scheme: "", ${token}`;
     default:
       return null;
   }

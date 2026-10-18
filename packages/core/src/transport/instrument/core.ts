@@ -1,4 +1,7 @@
 import { generateRequestId, studioHooks } from "../../studio";
+import type { StreamStatusEvent } from "../../studio/hooks-stream";
+import { streamStatusEvent } from "./stream-status";
+import type { Reconnect } from "./watch-connection";
 
 const PREVIEW_MAX = 512;
 
@@ -40,6 +43,11 @@ export interface StreamInstrumentation {
   emitClose(reason: "complete" | "error" | "disconnect"): void;
   /** Emit stream:error then close with reason "error" */
   emitError(error: unknown): void;
+  /**
+   * Tell how the stream's connection stands — with why the last one ended,
+   * on `reconnecting`. Nothing more once the stream has closed.
+   */
+  emitStatus(status: StreamStatusEvent["status"], reconnect?: Reconnect): void;
 }
 
 /**
@@ -125,6 +133,10 @@ export function beginStream(
         duration: Date.now() - startTime,
         timestamp: Date.now(),
       });
+    },
+    emitStatus(status, reconnect) {
+      if (closed) return;
+      studioHooks.onStreamStatus?.(streamStatusEvent(requestId, status, reconnect));
     },
     emitError(error) {
       if (closed) return;

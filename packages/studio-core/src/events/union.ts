@@ -37,6 +37,7 @@ import type {
   StreamErrorEvent,
   StreamMessageEvent,
   StreamOpenEvent,
+  StreamStatusEvent,
 } from "./stream";
 import type { CallSupersededEvent } from "./superseded";
 import type { UploadCompleteEvent, UploadProgressEvent } from "./upload";
@@ -73,6 +74,7 @@ export type AnyStudioEvent =
   | StreamMessageEvent
   | StreamCloseEvent
   | StreamErrorEvent
+  | StreamStatusEvent
   | MockServerConnectEvent
   | MockServerDisconnectEvent
   | MockServerStatusEvent

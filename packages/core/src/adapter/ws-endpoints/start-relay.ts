@@ -16,6 +16,8 @@ import {
   transportOwnerOf,
 } from "../../transport/direct/source-transport";
 import { sourceHeadersOf } from "../../transport/direct/stream-request";
+import { streamStatusEvent } from "../../transport/instrument/stream-status";
+import { watchConnection } from "../../transport/instrument/watch-connection";
 import { lazyChannel } from "../../transport/lazy-streams";
 import { layerHeaders } from "../../utils/layer-headers";
 import { sha256Hex } from "../../utils/sha256-hex";
@@ -50,7 +52,8 @@ export interface RelayTarget {
  * carry transports of their own. An error the
  * upstream ends it with ends the client's, with the upstream's code; an
  * error about one message is passed on and the subscription goes on. The
- * client leaving lets go of the upstream subscription.
+ * client leaving lets go of the upstream subscription. Studio, when it
+ * watches, is told how the upstream connection stands and why one ended.
  *
  * @param ctx - The client's socket
  * @param topic - The topic the client is subscribed under
@@ -77,10 +80,18 @@ export function startRelay(
       executeWSChannel<unknown, unknown>(address.url, address.topic, variables, options),
     ),
   );
+  const tracked = ctx.subscriptionIds.get(topic);
+  const unwatch =
+    tracked && ctx.dt.onStreamStatus
+      ? watchConnection(upstream, (status, reconnect) =>
+          ctx.dt.onStreamStatus?.(streamStatusEvent(tracked.requestId, status, reconnect)),
+        )
+      : undefined;
   let ended = false;
   const end = (error?: RealtimeError): void => {
     if (ended) return;
     ended = true;
+    unwatch?.();
     sendSubscriptionEnd(
       ctx,
       topic,
@@ -114,6 +125,7 @@ export function startRelay(
     topic,
     cleanup: async () => {
       ended = true;
+      unwatch?.();
       upstream.close();
     },
     onMessage: async (payload) => {

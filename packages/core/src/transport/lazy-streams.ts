@@ -1,4 +1,5 @@
 import { ConnectionError, RealtimeError } from "../realtime/errors";
+import { retryOf, shareRetry } from "../realtime/retry-of";
 import type { ConnectionStatus, SSEEvent, SSESubscription, WSChannel } from "../realtime/types";
 import { Listeners } from "./listeners";
 import type { SSEFactory, WSChannelFactory } from "./types";
@@ -185,7 +186,7 @@ export function lazyChannel(
       listeners.emit("status", "disconnected");
     },
   );
-  return {
+  const channel: WSChannel<unknown, unknown> = {
     send: (data) => {
       if (real) return real.send(data);
       if (closed || failed) return false;
@@ -201,4 +202,7 @@ export function lazyChannel(
       return real?.status ?? (closed || failed ? "disconnected" : "connecting");
     },
   };
+  /* Why it reconnects is the real one's: a relay watches the channel it was handed. */
+  shareRetry(channel, () => real && retryOf(real));
+  return channel;
 }

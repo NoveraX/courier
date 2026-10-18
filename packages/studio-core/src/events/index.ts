@@ -65,6 +65,7 @@ export type {
   StreamErrorEvent,
   StreamMessageEvent,
   StreamOpenEvent,
+  StreamStatusEvent,
 } from "./stream";
 export type { CallSupersededEvent } from "./superseded";
 export type { EventType, SourceMap, StudioEvent } from "./types";

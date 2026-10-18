@@ -3,6 +3,7 @@ import { acquireConnection, type ConnectionLease, leaseWhenFound } from "./calle
 import { createConnectionState } from "./connection-state";
 import { RealtimeError } from "./errors";
 import { forwardConnectionStatus } from "./forward-status";
+import { retryOf, shareRetry } from "./retry-of";
 import type { ConnectionStatus, WSChannel } from "./types";
 import { qualifyTopic } from "./ws/topic-key";
 import type { WSConnectionConfig } from "./ws/ws-types";
@@ -105,7 +106,7 @@ export function executeWSChannel<TSend, TReceive>(
     for (const data of early.splice(0)) conn.send(qTopic, data);
   }
 
-  return {
+  const channel = {
     send(data: TSend) {
       if (ended) {
         log.warn(`Message not sent: the channel ${qTopic} has ended`);
@@ -131,6 +132,9 @@ export function executeWSChannel<TSend, TReceive>(
       return state.current;
     },
   } as WSChannel<TSend, TReceive>;
+  /* The connection's, which it shares with every channel on its socket. */
+  shareRetry(channel, () => lease && retryOf(lease.connection));
+  return channel;
 }
 
 function addTo<THandler>(handlers: Set<THandler>, handler: THandler): () => void {

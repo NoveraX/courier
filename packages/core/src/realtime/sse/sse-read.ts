@@ -14,6 +14,12 @@ const INTERNAL_ERROR = 5000;
 /** How one connection ended: the server said so, or it just stopped. */
 export type ConnectionEnd = "complete" | "dropped" | RealtimeError;
 
+/** How far one connection got: whether it delivered anything, or was given up on as silent. */
+export interface ConnectionProgress {
+  received: boolean;
+  silent: boolean;
+}
+
 /**
  * Read one connection until it ends.
  *
@@ -27,7 +33,7 @@ export type ConnectionEnd = "complete" | "dropped" | RealtimeError;
  */
 export async function readConnection<TData>(
   ctx: SSEConnectionCtx<TData>,
-  progress: { received: boolean },
+  progress: ConnectionProgress,
 ): Promise<ConnectionEnd> {
   const connection = new AbortController();
   const stop = () => connection.abort();
@@ -35,7 +41,10 @@ export async function readConnection<TData>(
   let silence: ReturnType<typeof setTimeout> | undefined;
   const expectMore = () => {
     clearTimeout(silence);
-    silence = setTimeout(stop, ctx.config.heartbeatTimeout);
+    silence = setTimeout(() => {
+      progress.silent = true;
+      stop();
+    }, ctx.config.heartbeatTimeout);
   };
 
   try {

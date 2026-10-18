@@ -28,6 +28,8 @@ import {
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { RealtimeError } from "../src/realtime/errors";
+import { studioHooks } from "../src/studio";
+import type { StreamStatusEvent } from "../src/studio/hooks-stream";
 
 const { stream, channel } = courier();
 const closers: Array<() => Promise<void>> = [];
@@ -377,6 +379,41 @@ describe("a channel another server serves, through the proxy", () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(errors.map((error) => [error.code, error.message])).toEqual([[4000, "Room closed"]]);
+  });
+
+  it("tells Studio how its upstream connection stands, under the subscription's id", async () => {
+    const closed = createServer();
+    const gone = await listen(closed);
+    await new Promise<void>((resolve) => closed.close(() => resolve()));
+    const api = relayedChat(gone);
+    const proxy = await serveChannels({ chat: api }, "/api/ws");
+    const opened: Array<{ requestId: string; mode: string }> = [];
+    const told: StreamStatusEvent[] = [];
+    studioHooks.onStreamOpen = (event) => opened.push(event);
+    studioHooks.onStreamStatus = (event) => told.push(event);
+    closers.push(async () => {
+      delete studioHooks.onStreamOpen;
+      delete studioHooks.onStreamStatus;
+    });
+    const caller = createProxyCaller(routesOf(api, "chat"), {
+      proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
+    });
+
+    const room = caller.live.room({ room: "r1" });
+    closers.push(async () => room.close());
+    await expect
+      .poll(() => told.filter((event) => event.status === "reconnecting").length, {
+        timeout: 5_000,
+      })
+      .toBeGreaterThanOrEqual(1);
+
+    expect(opened[0]).toMatchObject({ mode: "proxy" });
+    expect(told[0]).toMatchObject({ requestId: opened[0]?.requestId, status: "connecting" });
+    expect(told.find((event) => event.status === "reconnecting")).toMatchObject({
+      requestId: opened[0]?.requestId,
+      failures: 1,
+      cause: { message: "The socket closed with code 1006 before it opened" },
+    });
   });
 
   it("ends the client's subscription with why the upstream refused its connection", async () => {

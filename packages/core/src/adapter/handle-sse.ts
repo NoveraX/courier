@@ -9,6 +9,8 @@ import {
   registerPlaygroundAbort,
   studioHooks,
 } from "../studio";
+import { streamStatusEvent } from "../transport/instrument/stream-status";
+import type { StatusTeller } from "../transport/instrument/watch-connection";
 import { randomId } from "../utils/random-id";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
@@ -153,8 +155,12 @@ export function createSSEHandler(
     };
 
     const label = streamLabel({ source, group, method });
+    /* A relayed stream reconnects to its upstream while the client's stays open. */
+    const tellStatus: StatusTeller | undefined = dt.onStreamStatus
+      ? (status, reconnect) => dt.onStreamStatus?.(streamStatusEvent(requestId, status, reconnect))
+      : undefined;
     const sseHandler = resolved.relayed
-      ? relayStream(resolved.api, group ?? "", method)
+      ? relayStream(resolved.api, group ?? "", method, tellStatus)
       : (ctx: SSEContext) => eventsOf(resolved.endpoint, ctx, label);
     const stream = createSSEStream(sseHandler, sseCtx, {
       connectionId,

@@ -47,6 +47,7 @@ export type EventType =
   | "stream:message"
   | "stream:close"
   | "stream:error"
+  | "stream:status"
   // Mock server
   | "mock:server:connect"
   | "mock:server:disconnect"

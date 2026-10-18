@@ -1,5 +1,6 @@
 import type { SSEEvent, SSESubscription } from "../../realtime/types";
 import { beginStream, type StreamInstrumentation, type StreamMeta } from "./core";
+import { watchConnection } from "./watch-connection";
 
 /**
  * Wrap an SSESubscription with browser-side studio instrumentation.
@@ -10,6 +11,10 @@ import { beginStream, type StreamInstrumentation, type StreamMeta } from "./core
  * - `complete` — iterator finished naturally (server closed stream cleanly)
  * - `disconnect` — consumer called `.close()` or broke out of the iterator
  * - `error` — iterator threw or .next() rejected
+ *
+ * How its connection stands is told as it changes — being opened, open,
+ * being opened again with why the last one ended — for a subscription that
+ * opens one; one served in process stands connected and tells nothing.
  */
 export function instrumentSSE<TData>(
   subscription: SSESubscription<TData>,
@@ -21,6 +26,7 @@ export function instrumentSSE<TData>(
 
   const originalIterator = subscription[Symbol.asyncIterator].bind(subscription);
   const originalClose = subscription.close.bind(subscription);
+  watchConnection(subscription, instr.emitStatus);
 
   return {
     [Symbol.asyncIterator](): AsyncIterableIterator<SSEEvent<TData>> {

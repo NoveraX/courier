@@ -2,6 +2,7 @@ import { LIMITS } from "../../adapter/limits";
 import { createLogger } from "../../logger";
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
 import { createConnectionState } from "../connection-state";
+import { shareRetry } from "../retry-of";
 import { createMessageQueue } from "./message-queue";
 import { platformSocketFactory } from "./platform-socket";
 import { createServerSilence } from "./server-silence";
@@ -11,7 +12,8 @@ import {
   subscribeToTopic,
   type TopicOpsContext,
 } from "./topic-operations";
-import { clearReconnectTimer, connect, dropSocket, type LifecycleContext } from "./ws-lifecycle";
+import { clearReconnectTimer, connect, dropSocket } from "./ws-lifecycle";
+import type { LifecycleContext } from "./ws-lifecycle-context";
 import { encodeMessage } from "./ws-protocol";
 import { createTopicRegistry } from "./ws-topics";
 import type { WSClientSocket, WSConnection, WSConnectionConfig } from "./ws-types";
@@ -49,12 +51,15 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     attempt: 0,
     closed: false,
     reconnectTimer: null as ReturnType<typeof setTimeout> | null,
+    trail: { failures: 0, opened: false, received: false, error: undefined, retry: undefined },
   };
 
+  const silenceMs =
+    (config.heartbeat?.intervalMs ?? 25_000) + (config.heartbeat?.timeoutMs ?? 10_000);
   const silence = createServerSilence({
-    silenceMs: (config.heartbeat?.intervalMs ?? 25_000) + (config.heartbeat?.timeoutMs ?? 10_000),
+    silenceMs,
     log,
-    onSilenceTimeout: () => dropSocket(lifecycleCtx, 4100, "Server silence"),
+    onSilenceTimeout: () => dropSocket(lifecycleCtx, 4100, "Server silence", silenceMs),
   });
 
   const sendRaw = (data: string): boolean => {
@@ -107,7 +112,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
   if (config.onStatusChange) state.subscribe(config.onStatusChange);
   connect(lifecycleCtx);
 
-  return {
+  const connection: WSConnection = {
     subscribe: (topic, handler, variables) => subscribeToTopic(opsCtx, topic, handler, variables),
     send: (topic, payload) => sendToTopic(opsCtx, topic, payload),
     authenticate,
@@ -117,6 +122,8 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     },
     onStatusChange: (handler) => state.subscribe(handler),
   };
+  shareRetry(connection, () => refs.trail.retry);
+  return connection;
 }
 
 function gracefulClose(lifecycleCtx: LifecycleContext, opsCtx: TopicOpsContext): void {

@@ -1,53 +1,14 @@
-import type { ScopedLogger } from "../../logger";
 import { calculateBackoff } from "../backoff";
-import type { ConnectionState } from "../connection-state";
+import type { ConnectionRetry } from "../retry-of";
 import { answerAuthRequired } from "./auth-refresh";
 import { closeFailure, MESSAGE_TOO_BIG, tellOfOversizedMessage } from "./close-failure";
-import type { createMessageQueue } from "./message-queue";
 import { shouldReconnect } from "./reconnect-classifier";
-import type { ServerSilenceDetector } from "./server-silence";
 import { requestSubscription } from "./topic-operations";
-import type { TopicRegistry } from "./topic-registry-types";
-import type { WSAuthFrame, WSCredentials } from "./ws-credentials";
+import type { WSCredentials } from "./ws-credentials";
+import type { LifecycleContext } from "./ws-lifecycle-context";
 import { dispatchIncomingMessage } from "./ws-message-handler";
 import { decodeMessage, encodeMessage, type WSMessage } from "./ws-protocol";
-import type {
-  WSClientSocket,
-  WSCloseEventLike,
-  WSConnectionConfig,
-  WSMessageEventLike,
-  WSSocketFactory,
-} from "./ws-types";
-
-/**
- * Mutable per-connection state shared between lifecycle handlers.
- *
- * Encapsulating it as an object lets the open/message/close handlers live
- * in their own module while keeping the original closure semantics intact.
- * `ws` and `attempt` are reassigned across reconnect cycles, so they
- * cannot be passed by value.
- */
-export interface LifecycleContext {
-  config: WSConnectionConfig;
-  state: ConnectionState;
-  log: ScopedLogger;
-  topics: TopicRegistry;
-  queue: ReturnType<typeof createMessageQueue>;
-  silence: ServerSilenceDetector;
-  factory: WSSocketFactory;
-  sendRaw(data: string): boolean;
-  /** Send the socket's credentials again, asked for anew */
-  authenticate(): void;
-  /** Mutable refs — handlers reassign these */
-  refs: {
-    ws: WSClientSocket | null;
-    /** The frame the open socket proves who it is with */
-    frame: WSAuthFrame | undefined;
-    attempt: number;
-    closed: boolean;
-    reconnectTimer: ReturnType<typeof setTimeout> | null;
-  };
-}
+import type { WSCloseEventLike, WSMessageEventLike } from "./ws-types";
 
 /** What handling a closed socket reads of its close event. */
 type SocketClosure = WSCloseEventLike;
@@ -81,24 +42,29 @@ export function connect(ctx: LifecycleContext): void {
 function credentialsFailed(ctx: LifecycleContext, error: unknown): void {
   if (ctx.refs.closed) return;
   ctx.log.warn("The socket's credentials could not be had; trying again", error);
-  scheduleReconnect(ctx);
+  scheduleReconnect(ctx, { error, opened: false });
 }
 
 function openSocket(ctx: LifecycleContext, credentials: WSCredentials | undefined): void {
   if (ctx.refs.closed) return;
   ctx.refs.frame = credentials?.frame;
+  const { trail } = ctx.refs;
+  trail.opened = trail.received = false;
+  trail.error = undefined;
   const ws = ctx.factory(ctx.config.url, ctx.config.protocols, credentials?.handshake);
   ctx.refs.ws = ws;
   ws.onopen = () => handleOpen(ctx);
   ws.onmessage = (ev) => handleMessage(ctx, ev);
   ws.onclose = (ev) => handleClose(ctx, ev);
-  ws.onerror = () => {
-    /* onclose always fires after onerror */
+  /* onclose always fires after onerror; what the error said is told with the close. */
+  ws.onerror = (ev) => {
+    trail.error = ev;
   };
 }
 
 function handleOpen(ctx: LifecycleContext): void {
   clearReconnectTimer(ctx);
+  ctx.refs.trail.opened = true;
   /* Before anything else, whether it carries credentials or not: the server
      admits the connection on it, holding what follows until it has. */
   ctx.sendRaw(encodeMessage({ type: "auth", payload: ctx.refs.frame ?? {} }));
@@ -116,6 +82,7 @@ function handleMessage(ctx: LifecycleContext, ev: WSMessageEventLike): void {
      as soon as it opens: a server that accepts the upgrade and closes at
      once kept every reconnect at the first, shortest delay. */
   ctx.refs.attempt = 0;
+  ctx.refs.trail.received = true;
   let msg: WSMessage;
   try {
     msg = decodeMessage(String(ev.data));
@@ -144,7 +111,12 @@ function handleMessage(ctx: LifecycleContext, ev: WSMessageEventLike): void {
  * @param code - The close code to record, and to send should the frame get through
  * @param reason - Why the socket was given up on
  */
-export function dropSocket(ctx: LifecycleContext, code: number, reason: string): void {
+export function dropSocket(
+  ctx: LifecycleContext,
+  code: number,
+  reason: string,
+  silentFor?: number,
+): void {
   const ws = ctx.refs.ws;
   if (!ws) return;
   ws.onopen = null;
@@ -152,10 +124,10 @@ export function dropSocket(ctx: LifecycleContext, code: number, reason: string):
   ws.onclose = null;
   ws.onerror = null;
   ws.close(code, reason);
-  handleClose(ctx, { code, reason });
+  handleClose(ctx, { code, reason }, silentFor);
 }
 
-function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
+function handleClose(ctx: LifecycleContext, ev: SocketClosure, silentFor?: number): void {
   ctx.silence.stop();
   ctx.refs.ws = null;
   /* The next socket subscribes afresh: what is sent meanwhile waits for it. */
@@ -168,15 +140,30 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
     return;
   }
   if (ev.code === MESSAGE_TOO_BIG) tellOfOversizedMessage(ctx.topics, ctx.log, ev);
-  scheduleReconnect(ctx);
+  const { error, opened } = ctx.refs.trail;
+  scheduleReconnect(ctx, {
+    closed: { code: ev.code, reason: ev.reason },
+    error,
+    opened,
+    ...(silentFor !== undefined && { silentFor }),
+  });
 }
 
-function scheduleReconnect(ctx: LifecycleContext): void {
+/* Why it reconnects is noted before it says so, for whoever hears it to ask. */
+function scheduleReconnect(
+  ctx: LifecycleContext,
+  ended: Omit<ConnectionRetry, "failures" | "retryIn">,
+): void {
+  const delay = calculateBackoff(ctx.refs.attempt, ctx.config.backoff);
+  const { trail } = ctx.refs;
+  trail.failures = trail.received ? 0 : trail.failures + 1;
+  trail.received = false;
+  trail.retry = { failures: trail.failures, retryIn: delay, ...ended };
   ctx.state.set("reconnecting");
   /* Whoever heard of the drop may have closed the connection for good. */
   if (ctx.refs.closed) return;
   clearReconnectTimer(ctx);
-  const delay = calculateBackoff(ctx.refs.attempt++, ctx.config.backoff);
+  ctx.refs.attempt++;
   ctx.log.info(`Reconnecting in ${delay}ms (attempt ${ctx.refs.attempt})`);
   ctx.refs.reconnectTimer = setTimeout(() => connect(ctx), delay);
 }

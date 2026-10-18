@@ -3,6 +3,7 @@ import { observeData } from "../../realtime/observe-data";
 import type { ConnectionStatus, SSESubscription, WSChannel } from "../../realtime/types";
 import { beginStream, type StreamMeta } from "./core";
 import { instrumentSSE } from "./sse";
+import { watchConnection } from "./watch-connection";
 
 /** A channel the wrapper can observe: a `WSChannel`, or one whose `send` settles. */
 type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
@@ -38,6 +39,8 @@ type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
  *
  * Reconnect cycles (`connecting`/`reconnecting`) do NOT trigger close —
  * the lifecycle spans the entire WSChannel lifetime, not individual sockets.
+ * They are told as how its connection stands: being opened, open, being
+ * opened again with why the socket before ended.
  */
 export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
   channel: TChannel,
@@ -60,6 +63,7 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
     unsubData();
     unsubStatus();
     unsubError();
+    unwatch();
   };
 
   /* Inbound (server→client) frames are tagged "data". Watched rather than
@@ -68,6 +72,8 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
   const unsubData = observeData(inner, (data) => {
     instr.emitMessage(data, "data");
   });
+
+  const unwatch = watchConnection(inner, instr.emitStatus);
 
   const unsubError = inner.on("error", (error) => {
     endError = error;

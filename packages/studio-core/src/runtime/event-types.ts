@@ -32,6 +32,7 @@ export const RUNTIME_EVENT_TYPES: readonly string[] = [
   "stream:message",
   "stream:close",
   "stream:error",
+  "stream:status",
   "cache:hit",
   "cache:miss",
   "cache:store",

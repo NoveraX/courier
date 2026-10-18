@@ -1,8 +1,9 @@
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
 import { createConnectionState } from "../connection-state";
+import { shareRetry } from "../retry-of";
 import type { ConnectionStatus, SSESubscription } from "../types";
 import { createEventQueue } from "./event-queue";
-import { runConnectionLoop } from "./sse-connection";
+import { runConnectionLoop, type SSEConnectionCtx } from "./sse-connection";
 import type { SubscribeSSEOptions } from "./sse-types";
 
 /**
@@ -32,7 +33,7 @@ export function subscribeSSE<TData = unknown>(
 
   linkSignal(options.signal, controller);
 
-  void runConnectionLoop({
+  const ctx: SSEConnectionCtx<TData> = {
     url,
     controller,
     state,
@@ -49,7 +50,8 @@ export function subscribeSSE<TData = unknown>(
     },
     lastEventId: options.lastEventId,
     serverRetryMs: undefined,
-  });
+  };
+  void runConnectionLoop(ctx);
 
   /* Ended by its reader — close(), or a loop left early — the stream is
      disconnected; it went on reporting the status it had before. */
@@ -58,7 +60,7 @@ export function subscribeSSE<TData = unknown>(
     state.set("disconnected");
   });
 
-  return {
+  const subscription: SSESubscription<TData> = {
     [Symbol.asyncIterator]() {
       return iter;
     },
@@ -77,6 +79,8 @@ export function subscribeSSE<TData = unknown>(
       return state.subscribe(handler);
     },
   };
+  shareRetry(subscription, () => ctx.retry);
+  return subscription;
 }
 
 function linkSignal(external: AbortSignal | undefined, controller: AbortController): void {

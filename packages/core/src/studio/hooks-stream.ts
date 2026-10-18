@@ -5,8 +5,25 @@
  * Studio inject messages into live WS connections, and the dev-only HMR
  * hook fired when defineApi() (re-)creates a source.
  */
+import type { FailureCause } from "./failure-cause";
 
-/** Stream (SSE/WS) lifecycle: open, message, close, error */
+/** How a stream's connection stands, as Studio is told it. */
+export interface StreamStatusEvent {
+  requestId: string;
+  /** Being opened, open, or being opened again after the last one ended */
+  status: "connecting" | "open" | "reconnecting";
+  /** On `reconnecting`: whether a connection of the stream has opened before */
+  openedBefore?: boolean | undefined;
+  /** On `reconnecting`: connections in a row that ended before they delivered anything */
+  failures?: number | undefined;
+  /** On `reconnecting`: why the last connection ended */
+  cause?: FailureCause | undefined;
+  /** On `reconnecting`: in how many ms the next connection opens */
+  retryIn?: number | undefined;
+  timestamp: number;
+}
+
+/** Stream (SSE/WS) lifecycle: open, message, close, error, and how its connection stands */
 export interface StreamHooks {
   onStreamOpen?:
     | ((event: {
@@ -48,6 +65,14 @@ export interface StreamHooks {
   onStreamError?:
     | ((event: { requestId: string; error: string; timestamp: number }) => void)
     | undefined;
+
+  /**
+   * How the connection of a stream that opens one stands: being opened,
+   * open, or being opened again — with why the last one ended. A stream
+   * that opens none, as one served in process, tells nothing and stands
+   * open from `onStreamOpen` on.
+   */
+  onStreamStatus?: ((event: StreamStatusEvent) => void) | undefined;
 }
 
 /** WS playground integration — bridges Studio UI to live WS connections */

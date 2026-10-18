@@ -1,5 +1,6 @@
 import { HTTPError } from "../errors";
 import { ConfigurationError } from "../errors/configuration-error";
+import type { FailureCause } from "../studio/failure-cause";
 import { isAbortError } from "../utils/abort";
 import { abortReason } from "../utils/abort-reason";
 import { platformError } from "../utils/platform-error";
@@ -71,18 +72,37 @@ export function isTimeoutFailure(error: HTTPError): boolean {
  * @returns The HTTPError to throw
  */
 export function transportFailure(error: Error): HTTPError {
-  const cause = error.cause instanceof Error ? error.cause : error;
-  /* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
-  const code =
-    "code" in cause && typeof cause.code === "string" && cause.code !== "" ? cause.code : undefined;
+  const { code, message } = platformCause(error);
   return new HTTPError(
     {
       status: 0,
       headers: new Headers(),
-      data: { success: false, message: describe(cause, code), ...(code && { code }) },
+      data: { success: false, message, ...(code && { code }) },
     },
     { cause: error },
   );
+}
+
+/**
+ * What the platform said of a connection it could not make or keep: the
+ * system's code, where it gave one, and its text — read from the error's
+ * cause where fetch wraps it, as undici's `fetch failed` does.
+ *
+ * @param error - What fetch, or a stream's connection, failed with
+ * @returns The code and the text
+ * @example
+ * ```ts
+ * platformCause(new TypeError("fetch failed", { cause: refused }));
+ * // → { code: "ECONNREFUSED", message: "connect ECONNREFUSED 127.0.0.1:4010" }
+ * ```
+ */
+export function platformCause(error: Error): FailureCause {
+  const cause = error.cause instanceof Error ? error.cause : error;
+  /* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
+  const code =
+    "code" in cause && typeof cause.code === "string" && cause.code !== "" ? cause.code : undefined;
+  const message = describe(cause, code);
+  return code === undefined ? { message } : { code, message };
 }
 
 /* Status 0 like any request that got no answer, but named for what it was,

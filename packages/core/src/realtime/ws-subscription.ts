@@ -2,6 +2,7 @@ import { acquireConnection, type ConnectionLease, leaseWhenFound } from "./calle
 import { createConnectionState } from "./connection-state";
 import { RealtimeError } from "./errors";
 import { forwardConnectionStatus } from "./forward-status";
+import { retryOf, shareRetry } from "./retry-of";
 import { createEventQueue } from "./sse/event-queue";
 import type { ConnectionStatus, SSESubscription } from "./types";
 import { qualifyTopic } from "./ws/topic-key";
@@ -79,7 +80,7 @@ export function executeWSPush<TData>(
   const close = () => finish(undefined);
   const iter = queue.iterator(close);
 
-  return {
+  const subscription: SSESubscription<TData> = {
     [Symbol.asyncIterator]() {
       return iter;
     },
@@ -94,4 +95,7 @@ export function executeWSPush<TData>(
       return state.subscribe(handler);
     },
   };
+  /* The connection's, which it shares with every subscription on its socket. */
+  shareRetry(subscription, () => lease && retryOf(lease.connection));
+  return subscription;
 }

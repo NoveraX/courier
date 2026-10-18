@@ -6,7 +6,9 @@ import type {
   StreamErrorEvent,
   StreamMessageEvent,
   StreamOpenEvent,
+  StreamStatusEvent,
 } from "../../events";
+import { readCause } from "../../events/read-cause";
 import { boundedText } from "../bounded-text";
 import { trackWSStream, untrackWSStream } from "../ws-tracking";
 
@@ -80,6 +82,25 @@ export function wireStreamHooks(
         timestamp: e.timestamp,
         requestId: e.requestId,
         error: boundedText(e.error),
+      }),
+    );
+  };
+
+  /* The cause goes as the platform said it, in the shape a request's takes;
+     Studio cuts what leaves the page that holds its token. */
+  studioHooks.onStreamStatus = (e) => {
+    const cause = readCause(e.cause);
+    bus.emit(
+      createEvent<StreamStatusEvent>(sessionId, {
+        id: e.requestId,
+        type: "stream:status",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        status: e.status,
+        ...(e.openedBefore !== undefined && { openedBefore: e.openedBefore }),
+        ...(e.failures !== undefined && { failures: e.failures }),
+        ...(e.retryIn !== undefined && { retryIn: e.retryIn }),
+        ...(cause && { cause }),
       }),
     );
   };

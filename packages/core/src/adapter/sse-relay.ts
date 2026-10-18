@@ -9,6 +9,7 @@ import type { PlatformFetch } from "../http-client/source-transport";
 import type { SSEHandler } from "../realtime/types";
 import { streamInitOf, transportOf } from "../transport/direct/source-transport";
 import { streamRequest } from "../transport/direct/stream-request";
+import { type StatusTeller, watchConnection } from "../transport/instrument/watch-connection";
 import { fetchWithinOrigin } from "../utils/fetch-within-origin";
 import { layerHeaders } from "../utils/layer-headers";
 
@@ -26,13 +27,16 @@ import { layerHeaders } from "../utils/layer-headers";
  * credentials never reach another host — a redirect elsewhere refuses the
  * stream — unless the source names a `redirect` mode of its own. Its events are handed on as they
  * came, ids and names included; a dropped upstream connection is reopened,
- * resuming from the last id, while the client's stays open. The relay ends when the upstream
+ * resuming from the last id, while the client's stays open — Studio, when
+ * it watches, is told how the upstream connection stands and why one
+ * ended. The relay ends when the upstream
  * stream ends, fails as it fails, and closes the upstream when the client
  * leaves.
  *
  * @param api - The source the stream belongs to
  * @param group - The stream's group, empty for none
  * @param method - The stream's name
+ * @param tell - What hears how the upstream connection stands, when Studio watches
  * @returns The handler, run as a served stream's is
  * @example
  * ```ts
@@ -44,6 +48,7 @@ export function relayStream(
   api: object,
   group: string,
   method: string,
+  tell?: StatusTeller,
 ): SSEHandler<unknown, unknown> {
   return async function* relay(ctx) {
     /* The stream client loads with the first relayed stream, not with every
@@ -56,7 +61,7 @@ export function relayStream(
     const transport = transportOf(api, group);
     const init = streamInitOf(api, transport);
     const send = relayFetch(transport.fetch, init);
-    yield* subscribeSSE(request.url, {
+    const upstream = subscribeSSE(request.url, {
       headers: layerHeaders({ Accept: "text/event-stream" }, request.sourceHeaders, ctx.headers),
       parse: readStreamData,
       signal: ctx.signal,
@@ -64,6 +69,12 @@ export function relayStream(
       ...(send && { fetch: send }),
       ...(Object.keys(init).length > 0 && { beforeConnect: () => ({ init }) }),
     });
+    const unwatch = tell && watchConnection(upstream, tell);
+    try {
+      yield* upstream;
+    } finally {
+      unwatch?.();
+    }
   };
 }
 

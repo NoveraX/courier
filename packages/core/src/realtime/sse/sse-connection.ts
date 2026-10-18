@@ -2,9 +2,10 @@ import { createLogger } from "../../logger";
 import { calculateBackoff } from "../backoff";
 import type { ConnectionState } from "../connection-state";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
+import type { ConnectionRetry } from "../retry-of";
 import type { BackoffConfig } from "../types";
 import type { EventQueue } from "./event-queue";
-import { type ConnectionEnd, readConnection } from "./sse-read";
+import { type ConnectionEnd, type ConnectionProgress, readConnection } from "./sse-read";
 import { SSEResponseError } from "./sse-response";
 import type { SubscribeSSEOptions } from "./sse-types";
 
@@ -37,6 +38,8 @@ export interface SSEConnectionCtx<TData> {
   readonly config: SSEConnectionConfig;
   lastEventId: string | undefined;
   serverRetryMs: number | undefined;
+  /** Why the last connection ended, as the subscription reported `reconnecting` */
+  retry?: ConnectionRetry | undefined;
 }
 
 /**
@@ -55,16 +58,17 @@ export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Pr
   let lastError: unknown;
 
   while (!ctx.controller.signal.aborted) {
-    const progress = { received: false };
+    const progress: ConnectionProgress = { received: false, silent: false };
     ctx.state.set("connecting");
     let end: ConnectionEnd = "dropped";
+    let failed: unknown;
     try {
       end = await readConnection(ctx, progress);
     } catch (error) {
       if (ctx.controller.signal.aborted) break;
       const refused = refusalFailure(error);
       if (refused) return finish(ctx, refused);
-      lastError = error;
+      lastError = failed = error;
       if (error instanceof SSEResponseError) ctx.serverRetryMs ??= error.retryAfterMs;
       log.warn("SSE connection lost, will retry", error);
     }
@@ -74,14 +78,31 @@ export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Pr
     if (failures >= ctx.config.maxAttempts) return finish(ctx, gaveUp(failures, lastError));
     if (ctx.controller.signal.aborted) break;
 
+    const delay = noteRetry(ctx, failures, progress, failed);
     ctx.state.set("reconnecting");
-    const step = Math.max(0, failures - 1);
-    const delay = ctx.serverRetryMs ?? calculateBackoff(step, ctx.config.backoff);
-    ctx.serverRetryMs = undefined;
     await sleep(delay, ctx.controller.signal);
   }
 
   finish(ctx, undefined);
+}
+
+/* Noted before the subscription reports `reconnecting`, so whoever hears it can ask why. */
+function noteRetry<TData>(
+  ctx: SSEConnectionCtx<TData>,
+  failures: number,
+  progress: ConnectionProgress,
+  failed: unknown,
+): number {
+  const step = Math.max(0, failures - 1);
+  const delay = ctx.serverRetryMs ?? calculateBackoff(step, ctx.config.backoff);
+  ctx.serverRetryMs = undefined;
+  ctx.retry = {
+    failures,
+    retryIn: delay,
+    ...(failed !== undefined && { error: failed }),
+    ...(progress.silent && { silentFor: ctx.config.heartbeatTimeout }),
+  };
+  return delay;
 }
 
 function finish<TData>(ctx: SSEConnectionCtx<TData>, failure: RealtimeError | undefined): void {

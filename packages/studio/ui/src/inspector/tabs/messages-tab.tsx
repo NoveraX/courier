@@ -1,9 +1,14 @@
-import { CircleCheck, Unplug } from "lucide-react";
+import { CircleCheck, RotateCw, TriangleAlert, Unplug } from "lucide-react";
 import { useState } from "react";
 
 import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
-import { streamEnding, streamSparkline } from "@/features/requests/stream-activity";
+import {
+  type StreamEnding,
+  streamEnding,
+  streamSparkline,
+} from "@/features/requests/stream-activity";
+import { connectionBanner } from "@/features/requests/stream-connection";
 import { streamMessages, streamStats } from "@/features/requests/stream-summary";
 import { useSessionEnd } from "@/features/sessions/use-session-end";
 import { useNow } from "@/hooks/use-tick";
@@ -14,6 +19,25 @@ import { MessageList } from "./message-list";
 
 const STAT_TONE = { brand: "text-brand", ok: "text-ok", normal: "text-fg" } as const;
 
+const ENDING_TONE = {
+  ok: { box: "border-ok/30 bg-ok/8", icon: CircleCheck, color: "text-ok" },
+  warn: { box: "border-warn/30 bg-warn/8", icon: TriangleAlert, color: "text-warn" },
+  err: { box: "border-err/30 bg-err/8", icon: Unplug, color: "text-err" },
+} as const;
+
+function Ending({ ending }: { ending: StreamEnding }): React.ReactNode {
+  const { box, icon: Icon, color } = ENDING_TONE[ending.tone];
+  return (
+    <div
+      className={cn("flex items-start gap-2.5 rounded-[9px] border px-3 py-2.5 text-control", box)}
+    >
+      <Icon aria-hidden="true" className={cn("mt-0.5 size-3.5 shrink-0", color)} />
+      <span className="shrink-0 font-strong">{ending.title}</span>
+      <span className="min-w-0 text-fg-muted [overflow-wrap:anywhere]">{ending.detail}</span>
+    </div>
+  );
+}
+
 function pretty(preview: string): string {
   try {
     return JSON.stringify(JSON.parse(preview), null, 2);
@@ -23,8 +47,9 @@ function pretty(preview: string): string {
 }
 
 /**
- * A stream's messages: how it ended once it has, its figures, how its
- * messages spread over time, the list of them, and the one chosen in full.
+ * A stream's messages: how it ended once it has — or, while its connection
+ * is being opened or opened again, why — its figures, how its messages
+ * spread over time, the list of them, and the one chosen in full.
  *
  * @param props - The stream
  * @returns The tab
@@ -40,26 +65,19 @@ export function MessagesTab({ request }: { request: RequestEntry }): React.React
   const messages = streamMessages(request);
   const message = messages.find((m) => m.seq === chosen) ?? messages[0];
   const ending = streamEnding(request, now);
+  const trouble = connectionBanner(request, now);
   const { heights, span } = streamSparkline(request, now);
   const live = ending === null;
   return (
     <div className="flex flex-col gap-3.5 px-4.5 pt-4.5 pb-7">
-      {ending && (
-        <div
-          className={cn(
-            "flex items-center gap-2.5 rounded-[9px] border px-3 py-2.5 text-control",
-            ending.failed ? "border-err/30 bg-err/8" : "border-ok/30 bg-ok/8",
-          )}
-        >
-          {ending.failed ? (
-            <Unplug aria-hidden="true" className="size-3.5 text-err" />
-          ) : (
-            <CircleCheck aria-hidden="true" className="size-3.5 text-ok" />
-          )}
-          <span className="font-strong">{ending.title}</span>
-          <span className="truncate text-fg-muted">{ending.detail}</span>
+      {trouble && (
+        <div className="flex items-start gap-2.5 rounded-[9px] border border-warn/30 bg-warn/8 px-3 py-2.5 text-control">
+          <RotateCw aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warn" />
+          <span className="font-strong">{trouble.title}</span>
+          <span className="min-w-0 text-fg-muted [overflow-wrap:anywhere]">{trouble.detail}</span>
         </div>
       )}
+      {ending && <Ending ending={ending} />}
       <dl className="m-0 grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-line bg-line max-sm:grid-cols-2">
         {streamStats(request, now).map((stat) => (
           <div key={stat.label} className="flex flex-col gap-1.25 bg-inset px-3 py-2.5">

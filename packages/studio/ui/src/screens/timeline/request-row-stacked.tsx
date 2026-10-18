@@ -2,7 +2,7 @@ import { Pin } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
 import { codeLabel, pathOf } from "@/features/requests/request-parts";
-import { STATE_META } from "@/features/requests/request-state";
+import { stateLabelOf } from "@/features/requests/stream-connection";
 import { cn } from "@/lib/utils";
 import type { RequestRowProps } from "./request-row";
 import { codeTone } from "./row-values";
@@ -65,7 +65,7 @@ export function StackedRequestRow({
         <span className={duration.tone}>{duration.text}</span>
         <span className="text-fg-subtle">{time}</span>
       </span>
-      <span className="sr-only">{`${STATE_META[state].label}${r.pinned ? ", pinned" : ""}`}</span>
+      <span className="sr-only">{`${stateLabelOf(r, state)}${r.pinned ? ", pinned" : ""}`}</span>
     </button>
   );
 }

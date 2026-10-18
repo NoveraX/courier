@@ -74,7 +74,7 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
   const listKeyEvents = db.prepare(
     "SELECT request_id, json_remove(body, '$.data', '$.variables', '$.headers', '$.requestHeaders') AS body " +
       "FROM request_events WHERE json_extract(body, '$.type') IN " +
-      "('request:start', 'request:end', 'request:error', 'stream:open', 'stream:close', 'stream:error') " +
+      "('request:start', 'request:end', 'request:error', 'stream:open', 'stream:close', 'stream:error', 'stream:status') " +
       "ORDER BY seq",
   );
   const eventsOfRequest = db.prepare(
@@ -86,6 +86,9 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
       "ON CONFLICT (id) DO UPDATE SET open = excluded.open, events = excluded.events",
   );
   const deleteEvents = db.prepare("DELETE FROM request_events WHERE request_id = ?");
+  const deleteStatus = db.prepare(
+    "DELETE FROM request_events WHERE request_id = ? AND json_extract(body, '$.type') = 'stream:status'",
+  );
   const deleteRequest = db.prepare("DELETE FROM requests WHERE id = ?");
 
   return {
@@ -125,6 +128,8 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
           deleteRequest.run(id);
         }
         for (const { id, event } of batch.events) {
+          /* A stream keeps how its connection stands now: one that reconnects for hours tells it at every try. */
+          if (event.type === "stream:status") deleteStatus.run(id);
           insertEvent.run(id, JSON.stringify(withoutCredentials(event)));
         }
         for (const row of batch.requests)

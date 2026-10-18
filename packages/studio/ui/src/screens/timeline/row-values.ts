@@ -2,6 +2,7 @@ import { durationTone } from "@/features/requests/duration-tone";
 import type { RequestState } from "@/features/requests/request-state";
 import { isStreamRequest } from "@/features/requests/request-state";
 import { streamEnd } from "@/features/requests/stream-activity";
+import { connectionTroubleOf } from "@/features/requests/stream-connection";
 import { formatDuration, formatSize } from "@/lib/formatters";
 import type { RequestEntry, TimestampFormat } from "@/store/types";
 
@@ -17,7 +18,8 @@ export interface RowContext {
 }
 
 /**
- * The colour of a row's status: a stream's own, an error's, a broken
+ * The colour of a row's status: a stream's own — a warning's while its
+ * connection is being opened or opened again — an error's, a broken
  * schema's, a success's, or muted while it runs or once aborted.
  *
  * @param r - The request
@@ -29,12 +31,11 @@ export interface RowContext {
  * ```
  */
 export function codeTone(r: RequestEntry, state: RequestState): string {
-  if (isStreamRequest(r))
-    return state === "error"
-      ? "text-err"
-      : r.transport === "ws"
-        ? "text-syntax-keyword"
-        : "text-brand";
+  if (isStreamRequest(r)) {
+    if (state === "error") return "text-err";
+    if (connectionTroubleOf(r)) return "text-warn";
+    return r.transport === "ws" ? "text-syntax-keyword" : "text-brand";
+  }
   if (state === "pending" || state === "aborted") return "text-fg-subtle";
   if (state === "validation_error") return "text-warn";
   return (r.statusCode ?? 0) >= 400 || state === "error" ? "text-err" : "text-ok";
@@ -53,8 +54,8 @@ export interface DurationCell {
 
 /**
  * A row's duration: its text, its colour, and the bar beside it — its
- * share of a second; a stream's time open, and how long one in flight has
- * run so far.
+ * share of a second; a stream's time open, or that its connection is being
+ * opened or opened again, and how long one in flight has run so far.
  *
  * @param r - The request
  * @param state - Its state
@@ -73,6 +74,12 @@ export function durationOf(
   if (isStreamRequest(r)) {
     const open = formatDuration(streamEnd(r, endedAt ?? now) - r.startedAt);
     const live = state === "streaming" && endedAt === undefined;
+    const trouble = live ? connectionTroubleOf(r) : undefined;
+    /* Being opened, it runs as a request in flight does; opened again, it says so. */
+    if (trouble) {
+      const text = trouble.status === "connecting" ? open : "retrying";
+      return { text, tone: "text-warn", bar: 100, fill: "bg-warn" };
+    }
     return {
       text: live ? `live ${open}` : open,
       tone: live ? "text-brand" : "text-fg-muted",

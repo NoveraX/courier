@@ -22,6 +22,7 @@ import {
   withStreamMessage,
   withStreamOpen,
 } from "./handle-stream-events";
+import { withStreamStatus } from "./handle-stream-status";
 import { requestFromUpload, withUploadComplete, withUploadProgress } from "./handle-upload-events";
 import { withValidationOutcome } from "./handle-validation-events";
 import type { RequestDraft } from "./request-draft";
@@ -95,6 +96,7 @@ const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryCha
   ["stream:message", withStreamMessage],
   ["stream:close", withStreamClose],
   ["stream:error", withStreamError],
+  ["stream:status", withStreamStatus],
   ["cache:hit", withCacheHit],
   ["cache:miss", withCacheMiss],
   ["upload:complete", withUploadComplete],

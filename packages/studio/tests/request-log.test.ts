@@ -181,3 +181,72 @@ describe("a runtime that goes away", () => {
     );
   });
 });
+
+describe("a stream that reconnects", () => {
+  const refused = (failures: number, message = "connect ECONNREFUSED 127.0.0.1:4010") =>
+    event("stream:status", {
+      requestId: "s1",
+      status: "reconnecting",
+      openedBefore: false,
+      failures,
+      retryIn: 1000,
+      cause: { code: "ECONNREFUSED", message },
+    });
+
+  it("is shown to a page that connects as its connection stands now, past the cap on its events", async () => {
+    const studio = await startStudio();
+    const app = await runtime(studio);
+    const watching = await ui(studio);
+    const opened = event("stream:open", {
+      requestId: "s1",
+      source: "api",
+      method: "ticks",
+      transport: "sse",
+    });
+    const messages = Array.from({ length: 300 }, (_, i) =>
+      event("stream:message", { requestId: "s1", seq: i + 1, eventType: "data", dataSize: 1 }),
+    );
+    sendRuntimeEvents(app, [
+      opened,
+      event("stream:status", { requestId: "s1", status: "connecting" }),
+    ]);
+    sendRuntimeEvents(app, [refused(1), refused(2)]);
+    sendRuntimeEvents(app, messages);
+    sendRuntimeEvents(app, [refused(3)]);
+    await expect.poll(() => watching.events.length).toBe(305);
+
+    const reloaded = await ui(studio);
+
+    await expect.poll(() => reloaded.replays.length).toBe(1);
+    const told = reloaded.replays[0]?.filter((e) => e.type === "stream:status");
+    expect(told).toEqual([expect.objectContaining({ status: "reconnecting", failures: 3 })]);
+    expect(reloaded.replays[0]?.at(-1)).toMatchObject({ type: "stream:status" });
+  });
+
+  it("tells a page without the token why its last connection ended with the credentials cut", async () => {
+    const studio = await runStudio(project());
+    const app = await runtime(studio.url);
+    const holder = await ui(studio.url, studio.token);
+    const reader = await ui(studio.url);
+    const opened = event("stream:open", {
+      requestId: "s1",
+      source: "api",
+      method: "ticks",
+      transport: "sse",
+    });
+
+    sendRuntimeEvents(app, [
+      opened,
+      refused(1, "connect https://ana:pw@api.test/feed?token=s3cret"),
+    ]);
+    await expect.poll(() => reader.events.length).toBe(2);
+    await expect.poll(() => holder.events.length).toBe(2);
+
+    expect(holder.events[1]).toMatchObject({
+      cause: { code: "ECONNREFUSED", message: "connect https://ana:pw@api.test/feed?token=s3cret" },
+    });
+    expect(reader.events[1]).toMatchObject({
+      cause: { code: "ECONNREFUSED", message: "connect https://api.test/feed?token=[redacted]" },
+    });
+  });
+});

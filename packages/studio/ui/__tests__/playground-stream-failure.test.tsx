@@ -94,4 +94,57 @@ describe("a Playground stream that failed", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText("Connecting…")).toBeTruthy();
   });
+
+  it("says why it reconnects, over its messages, while the runtime opens its connection again", () => {
+    const row = requestEntry({
+      id: "pg_e1",
+      transport: "sse",
+      status: "pending",
+      streamStatus: "streaming",
+      statusCode: undefined,
+      streamEventCount: 0,
+      streamConnection: {
+        status: "reconnecting",
+        since: 1,
+        openedBefore: false,
+        failures: 2,
+        cause: { code: "ECONNREFUSED", message: "connect ECONNREFUSED 127.0.0.1:4010" },
+      },
+    });
+
+    show(entry({ status: "pending", streamStatus: "streaming" }), row);
+
+    expect(screen.getByText("Reconnecting")).toBeTruthy();
+    expect(
+      screen.getByText("ECONNREFUSED · connect ECONNREFUSED 127.0.0.1:4010 · 2 failed attempts"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Closed with an error")).toBeNull();
+  });
+
+  it("says its caller closed it while it reconnected, as a warning, with why", () => {
+    const row = requestEntry({
+      id: "pg_e1",
+      transport: "sse",
+      status: "success",
+      streamStatus: "complete",
+      streamCloseReason: "disconnect",
+      streamDuration: 20_000,
+      statusCode: undefined,
+      streamConnection: {
+        status: "reconnecting",
+        since: 1,
+        openedBefore: false,
+        failures: 4,
+        cause: { code: "ECONNREFUSED", message: "connect ECONNREFUSED 127.0.0.1:4511" },
+      },
+    });
+
+    show(entry({ status: "success", streamStatus: "complete" }), row);
+
+    const title = screen.getByText("Closed by the caller while reconnecting");
+    expect(title.parentElement?.className).toContain("border-warn");
+    expect(
+      screen.getByText(/^ECONNREFUSED · connect ECONNREFUSED 127\.0\.0\.1:4511 · closed after/),
+    ).toBeTruthy();
+  });
 });

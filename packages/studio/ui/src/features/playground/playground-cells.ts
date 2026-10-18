@@ -3,6 +3,7 @@ import { httpStatusText } from "@/features/requests/http-status-text";
 import type { RequestState } from "@/features/requests/request-state";
 import { requestStateOf, STATE_META } from "@/features/requests/request-state";
 import type { StatCell } from "@/features/requests/stat-cells";
+import { connectionTroubleOf, troubleTitle } from "@/features/requests/stream-connection";
 import { formatDuration, formatRelativeTime, formatSize } from "@/lib/formatters";
 import type { RequestEntry } from "@/store/types";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
@@ -85,10 +86,13 @@ function streamCells(
   now: number,
 ): StatCell[] {
   const state = row ? requestStateOf(row) : STREAM_STATES[entry.streamStatus ?? "connecting"];
+  const trouble = row ? connectionTroubleOf(row) : undefined;
   const status =
-    state === "connecting"
-      ? { ...statusCell("pending", "Status", "Connecting…") }
-      : statusCell(state, "Status", STATE_META[state].label);
+    state === "connecting" || trouble?.status === "connecting"
+      ? statusCell("pending", "Status", "Connecting…")
+      : trouble
+        ? statusCell("pending", "Status", troubleTitle(trouble))
+        : statusCell(state, "Status", STATE_META[state].label);
   const open = entry.duration ?? Math.max(0, now - entry.timestamp);
   const count = row
     ? Math.max(row.streamEventCount ?? 0, row.streamEvents?.length ?? 0)

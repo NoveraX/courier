@@ -1,10 +1,19 @@
 import { num, optStr, str } from "./event-helpers";
 import { readStringRecord } from "./payload";
-import type { RequestEntry, StreamEventRecord } from "./types";
+import type { RequestEntry, StreamCloseReason, StreamEventRecord } from "./types";
 
 type EventPayload = Record<string, unknown>;
 
 const MAX_STREAM_EVENTS = 200;
+
+const CLOSE_REASONS: ReadonlySet<string> = new Set<StreamCloseReason>([
+  "complete",
+  "disconnect",
+  "shutdown",
+  "max_lifetime",
+  "slow_consumer",
+  "error",
+]);
 
 /** Append to array with cap — avoids spread+slice on every call */
 function appendCapped<T>(prev: T[] | undefined, item: T, max: number): T[] {
@@ -79,25 +88,36 @@ export function withStreamMessage(r: RequestEntry, event: EventPayload): Request
   };
 }
 
-/** Finalize a stream — mark as complete with duration */
+/** Finalize a stream — mark as complete with duration, and why it closed */
 export function withStreamClose(r: RequestEntry, event: EventPayload): RequestEntry {
-  const failed = str(event.reason, "complete") === "error";
+  const reason = str(event.reason, "complete");
+  const failed = reason === "error";
   return {
     ...r,
     status: failed ? "error" : "success",
     streamStatus: failed ? "error" : "complete",
+    ...(CLOSE_REASONS.has(reason) && { streamCloseReason: reason as StreamCloseReason }),
     streamEventCount: Math.max(num(event.eventCount), r.streamEventCount ?? 0),
     streamTotalBytes: Math.max(num(event.totalBytes), r.streamTotalBytes ?? 0),
     streamDuration: num(event.duration),
   };
 }
 
-/** Mark a stream as errored */
+/**
+ * Mark a stream as errored — one that gave up reconnecting with why its
+ * last connection ended, as it was told then.
+ */
 export function withStreamError(r: RequestEntry, event: EventPayload): RequestEntry {
+  const connection = r.streamConnection;
+  const cause = connection?.status === "reconnecting" ? connection.cause : undefined;
   return {
     ...r,
     status: "error",
     streamStatus: "error",
-    error: { type: "StreamError", message: str(event.error, "Stream error") },
+    error: {
+      type: "StreamError",
+      message: str(event.error, "Stream error"),
+      ...(cause && { cause }),
+    },
   };
 }

@@ -1,7 +1,8 @@
 import type { RequestEntry } from "@/store/types";
 import { codeLabel, endpointName, httpMethodOf } from "./request-parts";
 import type { RequestState } from "./request-state";
-import { isFailedState, isStreamRequest, requestStateOf, STATE_META } from "./request-state";
+import { isFailedState, isStreamRequest, requestStateOf } from "./request-state";
+import { stateLabelOf } from "./stream-connection";
 
 /** The Timeline's quick views: everything, the failures, the slow, the unfinished. */
 export const TIMELINE_VIEWS = ["all", "errors", "slow", "pending"] as const;
@@ -99,7 +100,7 @@ function matchesSearch(r: RequestEntry, state: RequestState, search: string): bo
     r.url ?? "",
     codeLabel(r, state),
     httpMethodOf(r),
-    STATE_META[state].label,
+    stateLabelOf(r, state),
     r.transport ?? "http",
     r.agent ? `agent ${r.agent.tool} ${r.agent.client ?? ""}` : "",
   ];

@@ -3,8 +3,9 @@ import { networkHint } from "./network-hint";
 
 /**
  * What usually fixes a request that failed this way, told from its kind
- * and status — for one that got no answer, from the system's code — or
- * nothing when they say too little to advise on.
+ * and status — for one that got no answer, and a stream that gave up
+ * reconnecting, from the system's code — or nothing when they say too
+ * little to advise on.
  *
  * @param r - The request that failed
  * @returns The advice, or `undefined`
@@ -20,6 +21,9 @@ export function failureHint(
   const kind = r.error?.type;
   const status = r.statusCode ?? r.error?.status;
   if (r.transport === "sse" || r.transport === "ws") {
+    /* One that gave up reconnecting says why its last connection failed, as a request with no answer does. */
+    const cause = r.error?.cause;
+    if (cause?.code !== undefined) return networkHint(cause);
     return "The stream ended with an error before the server closed it. The server's logs tell why; a proxy in between may also close connections it finds idle.";
   }
   if (kind === "validation") {

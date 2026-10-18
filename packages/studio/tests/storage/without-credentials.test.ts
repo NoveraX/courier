@@ -112,6 +112,21 @@ describe("an event or a history entry, as it is written down", () => {
     ]);
   });
 
+  it("has why a stream's last connection ended cut, and a cause in another shape left out", () => {
+    const told = withoutCredentials({
+      type: "stream:status",
+      requestId: "s1",
+      status: "reconnecting",
+      cause: { code: "ECONNREFUSED", message: "connect https://ana:pw@api.test/feed" },
+    });
+    const malformed = withoutCredentials({ type: "stream:status", cause: "token=s3cret" });
+
+    expect(told).toMatchObject({
+      cause: { code: "ECONNREFUSED", message: "connect https://api.test/feed" },
+    });
+    expect(malformed).toEqual({ type: "stream:status" });
+  });
+
   it("keeps an address without its password or its secret parameters, in a redirect's Location too", () => {
     const fetched = withoutCredentials({
       type: "http:fetch:start",

@@ -63,6 +63,28 @@ describe("a hint", () => {
     ).toContain("2 streams, 0 failed, 2 open");
   });
 
+  it("tells the open streams being opened again apart from the ones open", () => {
+    const live = { ...STATS, endpoint: "live.orders", kind: "stream" as const, statuses: {} };
+    const reconnecting = {
+      ...live,
+      p95: undefined,
+      calls: 3,
+      failed: 0,
+      pending: 2,
+      reconnecting: 1,
+    };
+
+    expect(hintTitle(reconnecting, false)).toBe(
+      "live.orders · 3 streams · 1 reconnecting · 1 open",
+    );
+    expect(hintTitle({ ...reconnecting, reconnecting: 2 }, false)).toBe(
+      "live.orders · 3 streams · 2 reconnecting",
+    );
+    expect(hoverText(reconnecting, "http://localhost:6280", 0)).toContain(
+      "3 streams, 0 failed, 1 reconnecting, 1 open",
+    );
+  });
+
   it("tells the figures in full in its hover, and the latest failure as plain text", () => {
     const text = hoverText(STATS, "http://localhost:6280", 121_000);
 

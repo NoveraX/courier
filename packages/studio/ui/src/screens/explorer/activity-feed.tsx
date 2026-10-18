@@ -4,6 +4,7 @@ import { methodLabelOf } from "@/features/explorer/method-label";
 import { durationTone } from "@/features/requests/duration-tone";
 import { codeLabel, httpMethodOf } from "@/features/requests/request-parts";
 import { isFailedState, isStreamRequest, requestStateOf } from "@/features/requests/request-state";
+import { connectionTroubleOf, liveWord } from "@/features/requests/stream-connection";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { SharedChip } from "@/screens/timeline/shared-chip";
@@ -30,7 +31,7 @@ function ActivityRow({ request: r, now, slowMs, onOpen }: ActivityRowProps): Rea
   const total = r.timing?.total;
   const duration = stream
     ? state === "streaming"
-      ? "live"
+      ? liveWord(r)
       : "closed"
     : state === "pending" || total === undefined
       ? "···"
@@ -58,7 +59,11 @@ function ActivityRow({ request: r, now, slowMs, onOpen }: ActivityRowProps): Rea
       <span
         className={cn(
           "text-right",
-          stream || total === undefined ? "text-brand" : DURATION_TEXT[durationTone(total, slowMs)],
+          stream && connectionTroubleOf(r)
+            ? "text-warn"
+            : stream || total === undefined
+              ? "text-brand"
+              : DURATION_TEXT[durationTone(total, slowMs)],
         )}
       >
         {duration}

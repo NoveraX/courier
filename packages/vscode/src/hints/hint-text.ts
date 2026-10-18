@@ -58,8 +58,9 @@ export function hintTitle(stats: EndpointStats, withSource: boolean): string {
 /**
  * How an endpoint's calls went, without its name: how many — and the
  * requests they sent, where reads another call's request answered sent
- * none — how many failed and are still waiting, and how long nineteen in
- * twenty took — as the Courier view writes it beside the endpoint.
+ * none — how many failed, are being opened again, for a stream, and are
+ * still waiting, and how long nineteen in twenty took — as the Courier
+ * view writes it beside the endpoint.
  *
  * @param stats - How the endpoint's calls went
  * @returns The figures
@@ -73,7 +74,9 @@ export function figuresOf(stats: EndpointStats): string {
   if (stats.calls === 0) return `no ${words.many} yet`;
   const parts = [counted(stats.calls, words), ...requestsOf(stats)];
   if (stats.failed > 0) parts.push(`${stats.failed} failed`);
-  if (stats.pending > 0) parts.push(`${stats.pending} ${words.waiting}`);
+  const reconnecting = stats.reconnecting ?? 0;
+  if (reconnecting > 0) parts.push(`${reconnecting} reconnecting`);
+  if (stats.pending > reconnecting) parts.push(`${stats.pending - reconnecting} ${words.waiting}`);
   if (stats.p95 !== undefined) parts.push(`p95 ${formatMs(stats.p95)}`);
   return parts.join(" · ");
 }
@@ -100,9 +103,14 @@ export function hoverText(stats: EndpointStats, studio: string, now: number): st
   if (stats.calls === 0) {
     lines.push(`No ${words.many} yet in this session.`);
   } else {
-    const waiting = stats.pending > 0 ? `, ${stats.pending} ${words.waiting}` : "";
+    const reconnecting = stats.reconnecting ?? 0;
+    const again = reconnecting > 0 ? `, ${reconnecting} reconnecting` : "";
+    const open = stats.pending - reconnecting;
+    const waiting = open > 0 ? `, ${open} ${words.waiting}` : "";
     const sent = requestsOf(stats).map((part) => `, ${part}`);
-    lines.push(`${counted(stats.calls, words)}${sent.join("")}, ${stats.failed} failed${waiting}`);
+    lines.push(
+      `${counted(stats.calls, words)}${sent.join("")}, ${stats.failed} failed${again}${waiting}`,
+    );
     if (stats.p50 !== undefined && stats.p95 !== undefined) {
       lines.push("", `p50 ${formatMs(stats.p50)} · p95 ${formatMs(stats.p95)}`);
     }

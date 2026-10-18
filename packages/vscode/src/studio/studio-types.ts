@@ -10,6 +10,8 @@ export interface EndpointStats {
   /** The requests that failed */
   readonly failed: number;
   readonly pending: number;
+  /** For a stream or a channel: of those still open, the ones being opened again — an older Studio leaves it out */
+  readonly reconnecting?: number | undefined;
   /** How many requests ended with each status */
   readonly statuses: Readonly<Record<string, number>>;
   readonly p50?: number | undefined;

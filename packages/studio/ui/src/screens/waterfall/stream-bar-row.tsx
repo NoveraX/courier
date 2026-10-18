@@ -2,6 +2,7 @@ import { ChevronsLeft } from "lucide-react";
 
 import { requestStateOf } from "@/features/requests/request-state";
 import { streamEnd } from "@/features/requests/stream-activity";
+import { liveWord } from "@/features/requests/stream-connection";
 import type { TimeWindow, TrackScale } from "@/features/waterfall/time-window";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
   const place = TRACK_LAYOUT[layout];
   const state = requestStateOf(r);
   const live = state === "streaming";
+  const word = liveWord(r);
   const ws = r.transport === "ws";
   const end = streamEnd(r, now);
   const from = Math.max(r.startedAt, window.start);
@@ -74,8 +76,8 @@ export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
         request={r}
         method={ws ? "WS" : "SSE"}
         methodClass={ws ? "text-syntax-keyword" : "text-brand"}
-        duration={live ? "live" : formatDuration(end - r.startedAt)}
-        durationClass={live ? "text-brand" : "text-fg-muted"}
+        duration={live ? word : formatDuration(end - r.startedAt)}
+        durationClass={live ? (word === "live" ? "text-brand" : "text-warn") : "text-fg-muted"}
         width={labelPx}
         indent
         selected={selected}

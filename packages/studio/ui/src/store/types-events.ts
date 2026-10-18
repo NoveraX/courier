@@ -29,7 +29,8 @@ export type EventType =
   | "stream:open"
   | "stream:message"
   | "stream:close"
-  | "stream:error";
+  | "stream:error"
+  | "stream:status";
 
 export interface StudioEvent {
   id: string;

@@ -141,6 +141,14 @@ export function createRequestLog(
       }
       const request = requests.get(id);
       if (!request) return;
+      /* How an open stream's connection stands replaces how it stood: kept
+         past the cap and not counted, as the rows keep only the latest. */
+      if (event.type === "stream:status") {
+        if (!request.open) return;
+        writes.event(id, event);
+        changes += 1;
+        return;
+      }
       /* The event that ends a request is kept past the cap, so a replay
          never shows as open a request that ended. */
       const closing = isClosing(event);

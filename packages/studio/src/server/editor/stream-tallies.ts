@@ -2,10 +2,11 @@ import { isPlainObject } from "../is-plain-object";
 
 type RuntimeEvent = Record<string, unknown>;
 
-/** How an endpoint's streams went: opened, still open, failed, and the latest failure. */
+/** How an endpoint's streams went: opened, still open — and of those, being opened again — failed, and the latest failure. */
 export interface StreamTally {
   opened: number;
   open: number;
+  reconnecting: number;
   failed: number;
   lastAt?: number;
   lastFailure?: { at: number; message: string; request: string };
@@ -16,13 +17,15 @@ interface Stream {
   key: string;
   at: number;
   ended: boolean;
+  reconnecting: boolean;
   failure?: string;
 }
 
 /**
  * How each endpoint's streams and channels went, from the events Studio
  * keeps: a stream is counted once however often it is announced, open
- * until it closes, failed when it ends with an error.
+ * until it closes — reconnecting while its runtime says its connection is
+ * being opened again — failed when it ends with an error.
  *
  * @param events - The events Studio's request log keeps
  * @param keyOf - The key an endpoint is tallied by, from its source and its call in the client
@@ -48,11 +51,14 @@ export function streamTallies(
         key,
         at: typeof event.timestamp === "number" ? event.timestamp : 0,
         ended: false,
+        reconnecting: false,
       });
     }
     const stream = streams.get(id);
     if (!stream) continue;
-    if (event.type === "stream:close") {
+    if (event.type === "stream:status") {
+      stream.reconnecting = event.status === "reconnecting";
+    } else if (event.type === "stream:close") {
       stream.ended = true;
       if (event.reason === "error") stream.failure ??= "The stream ended with an error";
     } else if (event.type === "stream:error") {
@@ -71,9 +77,10 @@ export function streamTallies(
 function tally(streams: Iterable<Stream>): Map<string, StreamTally> {
   const tallies = new Map<string, StreamTally>();
   for (const stream of streams) {
-    const current = tallies.get(stream.key) ?? { opened: 0, open: 0, failed: 0 };
+    const current = tallies.get(stream.key) ?? { opened: 0, open: 0, reconnecting: 0, failed: 0 };
     current.opened += 1;
     if (!stream.ended) current.open += 1;
+    if (!stream.ended && stream.reconnecting) current.reconnecting += 1;
     current.lastAt = Math.max(current.lastAt ?? 0, stream.at);
     if (stream.failure !== undefined) {
       current.failed += 1;

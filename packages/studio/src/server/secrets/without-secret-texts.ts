@@ -14,10 +14,11 @@ const TEXT_FIELDS: ReadonlyMap<string, string> = new Map([
 /**
  * An event, a Playground history entry or one of its chunks, with the
  * texts that could hold a credential cut as they leave the token page: an
- * address under `url`, an error's text and its cause, the text a failed
- * Playground call ended with, and a Playground result's error and the
- * body Courier gives a request that got no answer. Everything else — the
- * headers, the variables, the answer — is as it was.
+ * address under `url`, an error's text and its cause, why a stream's last
+ * connection ended, the text a failed Playground call ended with, and a
+ * Playground result's error and the body Courier gives a request that got
+ * no answer. Everything else — the headers, the variables, the answer — is
+ * as it was.
  *
  * @param value - The event, entry or chunk
  * @returns A copy, its texts cut
@@ -36,6 +37,12 @@ export function withoutSecretTexts(
   const text = field === undefined ? undefined : copy[field];
   if (field !== undefined && typeof text === "string") copy[field] = cutText(text);
   if (isPlainObject(copy.error)) copy.error = errorWithoutSecrets(copy.error);
+  /* Why a stream's last connection ended, on how its connection stands. */
+  if (copy.cause !== undefined) {
+    const cause = cutCause(copy.cause);
+    if (cause) copy.cause = cause;
+    else delete copy.cause;
+  }
   /* A Playground call that failed ends with its error's text in place of an answer. */
   if (copy.status === "error" && typeof copy.response === "string") {
     copy.response = cutText(copy.response);

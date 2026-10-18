@@ -14,6 +14,8 @@ export interface EndpointStats {
   readonly failed: number;
   /** Calls still waiting for their answer — for a stream or a channel, the connections still open */
   readonly pending: number;
+  /** For a stream or a channel: of those still open, the ones being opened again after their last connection ended */
+  readonly reconnecting?: number | undefined;
   /** How many requests ended with each status, `"failed"` for one that got none */
   readonly statuses: Readonly<Record<string, number>>;
   /** Half the finished calls that sent a request of their own took no longer, in milliseconds */

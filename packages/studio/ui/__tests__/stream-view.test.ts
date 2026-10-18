@@ -85,8 +85,55 @@ describe("an event stream", () => {
   it("stopped when it closed, and says it completed", () => {
     expect(streamEnd(closed, OPENED + 99_000)).toBe(OPENED + 4_000);
     expect(streamEnding(closed, OPENED + 20_000)).toEqual({
-      failed: false,
+      tone: "ok",
       title: "Stream completed",
+      detail: "closed after 4.00s · 16s ago",
+    });
+  });
+
+  it("says who closed it, when its server did not finish it", () => {
+    const at = OPENED + 20_000;
+
+    expect(streamEnding({ ...closed, streamCloseReason: "disconnect" }, at)).toEqual({
+      tone: "ok",
+      title: "Closed by the caller",
+      detail: "closed after 4.00s · 16s ago",
+    });
+    expect(streamEnding({ ...closed, streamCloseReason: "shutdown" }, at)).toMatchObject({
+      tone: "warn",
+      title: "Closed as the server shut down",
+    });
+    expect(streamEnding({ ...closed, streamCloseReason: "slow_consumer" }, at)).toMatchObject({
+      tone: "warn",
+      title: "Closed for reading too slowly",
+    });
+  });
+
+  it("says it closed while its connection was being opened again, and why the last one ended", () => {
+    const reconnecting = {
+      ...closed,
+      streamCloseReason: "disconnect" as const,
+      streamConnection: {
+        status: "reconnecting" as const,
+        since: OPENED,
+        openedBefore: false,
+        failures: 4,
+        cause: { code: "ECONNREFUSED", message: "connect ECONNREFUSED 127.0.0.1:4511" },
+      },
+    };
+    const connecting = {
+      ...reconnecting,
+      streamConnection: { status: "connecting" as const, since: OPENED, openedBefore: false },
+    };
+
+    expect(streamEnding(reconnecting, OPENED + 20_000)).toEqual({
+      tone: "warn",
+      title: "Closed by the caller while reconnecting",
+      detail: "ECONNREFUSED · connect ECONNREFUSED 127.0.0.1:4511 · closed after 4.00s · 16s ago",
+    });
+    expect(streamEnding(connecting, OPENED + 20_000)).toEqual({
+      tone: "warn",
+      title: "Closed by the caller while connecting",
       detail: "closed after 4.00s · 16s ago",
     });
   });
@@ -106,7 +153,7 @@ describe("an event stream", () => {
     };
 
     expect(streamEnding(failed, OPENED + 20_000)).toEqual({
-      failed: true,
+      tone: "err",
       title: "Closed with an error",
       detail: "closed 1006 · 16s ago",
     });

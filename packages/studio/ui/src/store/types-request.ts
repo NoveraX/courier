@@ -92,6 +92,42 @@ export interface RequestEntry {
   streamDuration?: number | undefined;
   /** Captured stream events with metadata (capped to last 200) */
   streamEvents?: StreamEventRecord[] | undefined;
+  /** Why an ended stream closed, as its runtime said it */
+  streamCloseReason?: StreamCloseReason | undefined;
+  /**
+   * How a live stream's connection stands, as its runtime told it. None for
+   * a stream served in process, or one a runtime older than this told of:
+   * such a stream stands open.
+   */
+  streamConnection?: StreamConnection | undefined;
+}
+
+/**
+ * Why a stream closed: its server finished it, its caller closed it, its
+ * server shut down, its lifetime ran out, its caller read too slowly, or
+ * it failed.
+ */
+export type StreamCloseReason =
+  | "complete"
+  | "disconnect"
+  | "shutdown"
+  | "max_lifetime"
+  | "slow_consumer"
+  | "error";
+
+/** How a live stream's connection stands: being opened, open, or being opened again. */
+export interface StreamConnection {
+  status: "connecting" | "open" | "reconnecting";
+  /** When it came to stand so: the first of the tries it is still making */
+  since: number;
+  /** Whether a connection of the stream has opened before */
+  openedBefore: boolean;
+  /** On `reconnecting`: connections in a row that ended before they delivered anything */
+  failures?: number | undefined;
+  /** On `reconnecting`: why the last connection ended, as the platform said it */
+  cause?: RequestFailureCause | undefined;
+  /** On `reconnecting`: when the next connection opens */
+  retryAt?: number | undefined;
 }
 
 /** A captured stream event in the request timeline */

@@ -239,6 +239,16 @@ describe("stream:close", () => {
     expect(updated.streamTotalBytes).toBe(500);
   });
 
+  it("keeps why it closed, and no reason in another shape", () => {
+    const entry = makeEntry({ id: "r-1" });
+    const closed = (reason: unknown) =>
+      reqAt(apply([entry], "stream:close", { requestId: "r-1", reason, duration: 10 }).requests, 0);
+
+    expect(closed("disconnect").streamCloseReason).toBe("disconnect");
+    expect(closed("max_lifetime").streamCloseReason).toBe("max_lifetime");
+    expect(closed("vanished").streamCloseReason).toBeUndefined();
+  });
+
   it("sets error status when reason is error", () => {
     const entry = makeEntry({ id: "r-1" });
     const result = apply([entry], "stream:close", {

@@ -72,7 +72,9 @@ const EVENTS = [
   opened("s1", 6),
   { type: "stream:close", requestId: "s1", reason: "disconnect" },
   opened("s2", 7),
+  { type: "stream:status", requestId: "s2", status: "reconnecting", failures: 1 },
   opened("s3", 8),
+  { type: "stream:status", requestId: "s3", status: "reconnecting", failures: 1 },
   { type: "stream:error", requestId: "s3", error: "Upstream closed the stream" },
 ];
 
@@ -188,6 +190,7 @@ describe("the editor routes", () => {
         requests: 3,
         failed: 1,
         pending: 1,
+        reconnecting: 1,
         statuses: {},
         lastAt: 8,
         lastFailure: { at: 8, message: "Upstream closed the stream", request: "s3" },

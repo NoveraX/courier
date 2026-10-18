@@ -108,6 +108,32 @@ describe("a request log's key events", () => {
     expect(second.log.keyEvents()).toEqual(live);
   });
 
+  it("hold how a stream's connection stood last, after a restart too", () => {
+    const root = project();
+    const first = run(root);
+    const status = (failures: number): Event => ({
+      type: "stream:status",
+      requestId: "s1",
+      status: "reconnecting",
+      failures,
+    });
+    first.log.record(
+      { type: "stream:open", requestId: "s1", source: "api", method: "ticks" },
+      "socket-1",
+    );
+    first.log.record(status(1), "socket-1");
+    first.log.record(status(2), "socket-1");
+    first.stop();
+
+    const second = run(root);
+
+    expect(second.log.keyEvents().map((event) => [event.type, event.failures])).toEqual([
+      ["stream:open", undefined],
+      ["stream:status", 2],
+      ["stream:error", undefined],
+    ]);
+  });
+
   it("let a request go when the log does", () => {
     const { log } = run(project());
     for (let at = 0; at <= MAX_REQUESTS; at++) log.record(start(`r${at}`), "socket-1");

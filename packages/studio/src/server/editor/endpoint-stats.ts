@@ -82,6 +82,7 @@ function streamStatsOf(
     requests: tally.opened,
     failed: tally.failed,
     pending: tally.open,
+    reconnecting: tally.reconnecting,
     statuses: {},
     lastAt: tally.lastAt,
     lastFailure: tally.lastFailure,

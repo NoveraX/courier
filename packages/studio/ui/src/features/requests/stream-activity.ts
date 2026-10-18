@@ -1,6 +1,8 @@
 import { formatDuration, formatRelativeTime } from "@/lib/formatters";
 import type { RequestEntry } from "@/store/types";
 import { requestStateOf } from "./request-state";
+import { closedBy, closedOrdinarily } from "./stream-close";
+import { troubleText } from "./stream-connection";
 
 /**
  * When a stream stopped, or now while it streams — never before it opened:
@@ -54,31 +56,48 @@ export function streamSparkline(
   return { heights: counts.map((c) => c / top), span };
 }
 
+/** How a stream's end is told: in the colour of a close that went as streams go, one to look into, or a failure. */
+export interface StreamEnding {
+  tone: "ok" | "warn" | "err";
+  title: string;
+  detail: string;
+}
+
 /**
- * How a stream ended, once it has.
+ * How a stream ended, once it has: completed, closed by its caller, its
+ * server or its lifetime; closed while its connection was being opened or
+ * opened again, with why the last one ended; or failed, with the error.
  *
  * @param r - The stream
  * @param now - The time now
- * @returns Whether it completed or failed, and what to say of it; `null` while it streams
+ * @returns What to say of its end; `null` while it streams
  * @example
  * ```ts
  * streamEnding(stream, Date.now())?.title; // "Stream completed"
  * ```
  */
-export function streamEnding(
-  r: RequestEntry,
-  now: number,
-): { failed: boolean; title: string; detail: string } | null {
+export function streamEnding(r: RequestEntry, now: number): StreamEnding | null {
   const state = requestStateOf(r);
   if (state === "streaming") return null;
   const ago = formatRelativeTime(streamEnd(r, now), now);
   if (state === "error") {
-    return {
-      failed: true,
-      title: "Closed with an error",
-      detail: `${r.error?.message ?? "no reason given"} · ${ago}`,
-    };
+    const detail = `${r.error?.message ?? "no reason given"} · ${ago}`;
+    return { tone: "err", title: "Closed with an error", detail };
   }
   const open = r.streamDuration === undefined ? "" : ` after ${formatDuration(r.streamDuration)}`;
-  return { failed: false, title: "Stream completed", detail: `closed${open} · ${ago}` };
+  const last = r.streamConnection;
+  if (last !== undefined && last.status !== "open") {
+    const why = last.status === "reconnecting" ? `${troubleText(last)} · ` : "";
+    return {
+      tone: "warn",
+      title: `${closedBy(r)} while ${last.status}`,
+      detail: `${why}closed${open} · ${ago}`,
+    };
+  }
+  const completed = r.streamCloseReason === undefined || r.streamCloseReason === "complete";
+  return {
+    tone: closedOrdinarily(r) ? "ok" : "warn",
+    title: completed ? "Stream completed" : closedBy(r),
+    detail: `closed${open} · ${ago}`,
+  };
 }

@@ -15,6 +15,8 @@ export type {
   RequestFailureCause,
   RequestStatus,
   SharedAnswer,
+  StreamCloseReason,
+  StreamConnection,
   StreamEventRecord,
   UploadState,
 } from "./types-request";

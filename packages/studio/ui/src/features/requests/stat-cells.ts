@@ -5,6 +5,7 @@ import { durationTone } from "./duration-tone";
 import type { StateTone } from "./request-state";
 import { isStreamRequest, requestStateOf, STATE_META } from "./request-state";
 import { streamEnd } from "./stream-activity";
+import { connectionTroubleOf, troubleTitle } from "./stream-connection";
 
 /** One of the four figures over the inspector's tabs. */
 export interface StatCell {
@@ -34,7 +35,15 @@ function contentKind(headers: RequestEntry["headers"]): string {
 
 function statusCell(r: RequestEntry): StatCell {
   const state = requestStateOf(r);
-  const meta = STATE_META[state];
+  const trouble = connectionTroubleOf(r);
+  /* A stream that closed while its connection was not open closed with nothing to show for it. */
+  const unopened =
+    state === "closed" && r.streamConnection !== undefined && r.streamConnection.status !== "open";
+  const meta = trouble
+    ? { label: troubleTitle(trouble), tone: "warn" as const }
+    : unopened
+      ? { label: STATE_META.closed.label, tone: "warn" as const }
+      : STATE_META[state];
   const stream = isStreamRequest(r) ? (r.transport === "ws" ? "WebSocket" : "SSE") : undefined;
   const code = r.statusCode ? String(r.statusCode) : undefined;
   const sub = stream
@@ -90,7 +99,7 @@ export function statCellsOf(r: RequestEntry, context: StatContext): StatCell[] {
           state !== "streaming"
             ? `closed ${closed}`
             : endedAt === undefined
-              ? "live"
+              ? (connectionTroubleOf(r)?.status ?? "live")
               : "open when saved",
         tone: "normal",
         mono: true,

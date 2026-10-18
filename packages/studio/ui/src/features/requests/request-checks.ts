@@ -1,6 +1,8 @@
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry, ValidationIssue } from "@/store/types";
 import { isStreamRequest, requestStateOf } from "./request-state";
+import { closedBy } from "./stream-close";
+import { connectionTroubleOf, failuresText, neverOpened, troubleText } from "./stream-connection";
 import { deliveryChecks } from "./webhook-parts";
 
 /** A check the Overview lists: what Courier verified of the request, and how it went. */
@@ -86,35 +88,63 @@ function cacheCheck(cache: NonNullable<RequestEntry["cache"]>): RequestCheck {
   return { label: "Cache", detail: `Served from the cache${age}`, meta: "hit", state: "ok" };
 }
 
-function streamChecks(r: RequestEntry): RequestCheck[] {
-  const state = requestStateOf(r);
-  const opened = r.transport === "ws" ? "Upgraded to a WebSocket" : "Opened as text/event-stream";
-  const connection: RequestCheck =
-    state === "error"
-      ? {
-          label: "Connection",
-          detail: r.error?.message ?? "Closed with an error",
-          meta: "",
-          state: "err",
-        }
-      : state === "streaming"
-        ? { label: "Connection", detail: "Open", meta: "live", state: "ok" }
-        : {
-            label: "Connection",
-            detail: "Closed by the server",
-            meta: r.streamDuration === undefined ? "" : formatDuration(r.streamDuration),
-            state: "ok",
-          };
-  return [
-    {
+function handshakeCheck(r: RequestEntry): RequestCheck {
+  if (neverOpened(r)) {
+    const waiting =
+      r.streamConnection?.status === "connecting" && requestStateOf(r) === "streaming";
+    return {
       label: "Handshake",
-      detail: opened,
-      meta: r.statusCode ? String(r.statusCode) : "",
-      state: "ok",
-    },
-    connection,
-    middlewareCheck(r),
-  ];
+      detail: waiting ? "Not opened yet" : "Never opened",
+      meta: "",
+      state: waiting ? "idle" : "err",
+    };
+  }
+  const opened = r.transport === "ws" ? "Upgraded to a WebSocket" : "Opened as text/event-stream";
+  return {
+    label: "Handshake",
+    detail: opened,
+    meta: r.statusCode ? String(r.statusCode) : "",
+    state: "ok",
+  };
+}
+
+function connectionCheck(r: RequestEntry): RequestCheck {
+  const state = requestStateOf(r);
+  if (state === "error") {
+    return {
+      label: "Connection",
+      detail: r.error?.message ?? "Closed with an error",
+      meta: "",
+      state: "err",
+    };
+  }
+  if (state !== "streaming") {
+    const meta = r.streamDuration === undefined ? "" : formatDuration(r.streamDuration);
+    const last = r.streamConnection;
+    if (last === undefined || last.status === "open") {
+      return { label: "Connection", detail: closedBy(r), meta, state: "ok" };
+    }
+    const why = last.status === "reconnecting" ? ` — ${troubleText(last)}` : "";
+    return {
+      label: "Connection",
+      detail: `${closedBy(r)} while ${last.status}${why}`,
+      meta,
+      state: "warn",
+    };
+  }
+  const trouble = connectionTroubleOf(r);
+  if (trouble?.status === "connecting") {
+    return { label: "Connection", detail: "Connecting", meta: "", state: "idle" };
+  }
+  if (trouble) {
+    const detail = `Reconnecting — ${troubleText(trouble)}`;
+    return { label: "Connection", detail, meta: failuresText(trouble), state: "warn" };
+  }
+  return { label: "Connection", detail: "Open", meta: "live", state: "ok" };
+}
+
+function streamChecks(r: RequestEntry): RequestCheck[] {
+  return [handshakeCheck(r), connectionCheck(r), middlewareCheck(r)];
 }
 
 /**

@@ -2,7 +2,7 @@ import { Pin } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
 import { codeLabel, pathOf } from "@/features/requests/request-parts";
-import { STATE_META } from "@/features/requests/request-state";
+import { stateLabelOf } from "@/features/requests/stream-connection";
 import { cn } from "@/lib/utils";
 import type { RequestAgent, RequestEntry } from "@/store/types";
 import type { RowContext } from "./row-values";
@@ -104,7 +104,7 @@ export function RequestRow({
         )}
       >
         <Pin aria-hidden="true" className="size-3" />
-        <span className="sr-only">{`${STATE_META[state].label}${r.pinned ? ", pinned" : ""}`}</span>
+        <span className="sr-only">{`${stateLabelOf(r, state)}${r.pinned ? ", pinned" : ""}`}</span>
       </span>
     </button>
   );

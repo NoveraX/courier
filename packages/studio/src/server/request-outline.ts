@@ -1,6 +1,7 @@
 /**
  * What a list of requests is made of: the events that open and end each
- * request the log keeps, without the bodies and headers they carry. Kept in
+ * request the log keeps, and how each stream's connection stands now,
+ * without the bodies and headers they carry. Kept in
  * memory as the events arrive, so an editor's figures for every endpoint
  * and an agent's list of requests are read without going through every
  * event the database holds — validation, middleware and fetch events, and
@@ -13,7 +14,7 @@ import { withoutSecretTexts } from "./secrets/without-secret-texts";
 
 type RuntimeEvent = Record<string, unknown>;
 
-/* The events a request or a stream opens and ends with. */
+/* The events a request or a stream opens and ends with, and how a stream's connection stands. */
 const KEY_TYPES: ReadonlySet<string> = new Set([
   "request:start",
   "request:end",
@@ -21,6 +22,7 @@ const KEY_TYPES: ReadonlySet<string> = new Set([
   "stream:open",
   "stream:close",
   "stream:error",
+  "stream:status",
 ]);
 
 /* What a list leaves to the request's own page: what it sent and was answered with. */
@@ -62,8 +64,16 @@ export function createRequestOutline(
     if (typeof event.type !== "string" || !KEY_TYPES.has(event.type)) return;
     const kept = withoutSecretTexts(withoutBodies(event));
     const events = byRequest.get(requestId);
-    if (events) events.push(kept);
-    else byRequest.set(requestId, [kept]);
+    if (!events) {
+      byRequest.set(requestId, [kept]);
+      return;
+    }
+    /* How a stream's connection stands replaces how it stood, as the log's rows keep it. */
+    if (kept.type === "stream:status") {
+      const before = events.findIndex((e) => e.type === "stream:status");
+      if (before !== -1) events.splice(before, 1);
+    }
+    events.push(kept);
   };
   for (const { id, event } of stored) see(id, event);
   return {

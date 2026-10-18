@@ -2,6 +2,7 @@ import { durationTone } from "@/features/requests/duration-tone";
 import type { RecentCall } from "@/features/requests/recent-calls";
 import { codeLabel } from "@/features/requests/request-parts";
 import { isFailedState, isStreamRequest } from "@/features/requests/request-state";
+import { connectionTroubleOf, liveWord } from "@/features/requests/stream-connection";
 import { formatAbsoluteTime, formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { SharedChip } from "@/screens/timeline/shared-chip";
@@ -19,14 +20,14 @@ interface CallRowProps {
   className?: string | undefined;
 }
 
-function codeTone({ state }: RecentCall): string {
+function codeTone({ request: r, state }: RecentCall): string {
   if (state === "aborted") return "text-fg-subtle";
   if (isFailedState(state)) return "text-err";
-  return state === "pending" ? "text-warn" : "text-ok";
+  return state === "pending" || connectionTroubleOf(r) ? "text-warn" : "text-ok";
 }
 
 function durationLabel({ request: r, state }: RecentCall, stream: boolean): string {
-  if (stream) return state === "streaming" ? "live" : "closed";
+  if (stream) return state === "streaming" ? liveWord(r) : "closed";
   const total = r.timing?.total;
   return state === "pending" || total === undefined ? "···" : formatDuration(total);
 }
@@ -102,7 +103,12 @@ export function CallRow({
             />
           </span>
         </span>
-        <span className={cn("text-right", stream ? "text-brand" : DURATION_TEXT[tone])}>
+        <span
+          className={cn(
+            "text-right",
+            !stream ? DURATION_TEXT[tone] : connectionTroubleOf(r) ? "text-warn" : "text-brand",
+          )}
+        >
           {durationLabel(call, stream)}
         </span>
         {withSize && (

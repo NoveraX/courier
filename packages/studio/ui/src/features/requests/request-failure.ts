@@ -4,6 +4,7 @@ import type { ValidationIssue } from "@/store/types-events";
 import { failureHint } from "./failure-hints";
 import { endpointParts } from "./request-parts";
 import { isFailedState, isStreamRequest, requestStateOf } from "./request-state";
+import { neverOpened } from "./stream-connection";
 import { deliveryFailureOf, deliveryStopOf } from "./webhook-delivery";
 import { deliveryStages } from "./webhook-parts";
 
@@ -86,11 +87,20 @@ function webhookParts(r: RequestEntry): Pick<FailureView, "where" | "stages" | "
 
 function streamStages(r: RequestEntry): FailureStage[] {
   const count = r.streamEventCount ?? r.streamEvents?.length ?? 0;
+  const never = neverOpened(r);
   return [
-    { label: "Handshake", state: "ok", meta: r.transport === "ws" ? "upgraded" : "opened" },
-    { label: "Messages", state: "ok", meta: plural(count, "message") },
+    never
+      ? { label: "Handshake", state: "err", meta: "never opened" }
+      : { label: "Handshake", state: "ok", meta: r.transport === "ws" ? "upgraded" : "opened" },
+    { label: "Messages", state: never ? "skip" : "ok", meta: plural(count, "message") },
     { label: "Close", state: "err", meta: "with an error" },
   ];
+}
+
+function streamWhere(r: RequestEntry): string {
+  return neverOpened(r)
+    ? "The stream ended without a connection ever opening"
+    : "The stream ended with an error";
 }
 
 /**
@@ -131,7 +141,7 @@ export function failureOf(r: RequestEntry): FailureView | null {
     r.mode === "webhook"
       ? webhookParts(r)
       : {
-          where: stream ? "The stream ended with an error" : whereItFailed(r, refused, broken),
+          where: stream ? streamWhere(r) : whereItFailed(r, refused, broken),
           stages: stream ? streamStages(r) : httpStages(r, refused, broken),
           hint: failureHint(r),
         };

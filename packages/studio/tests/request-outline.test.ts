@@ -22,6 +22,28 @@ describe("the outline of the request log", () => {
     ]);
   });
 
+  it("keeps how a stream's connection stands now, in place of how it stood, its cause cut", () => {
+    const status = (failures: number) => ({
+      type: "stream:status",
+      requestId: "s1",
+      status: "reconnecting",
+      failures,
+      cause: { code: "ECONNREFUSED", message: "connect https://ana:pw@api.test/feed" },
+    });
+    const outline = createRequestOutline([
+      { id: "s1", event: { type: "stream:open", requestId: "s1" } },
+    ]);
+
+    outline.see("s1", status(1));
+    outline.see("s1", { type: "stream:message", requestId: "s1", seq: 1 });
+    outline.see("s1", status(2));
+
+    expect(outline.events()).toEqual([
+      { type: "stream:open", requestId: "s1" },
+      { ...status(2), cause: { code: "ECONNREFUSED", message: "connect https://api.test/feed" } },
+    ]);
+  });
+
   it("keeps a failure's text and its cause with their credentials cut, as they arrive and as stored", () => {
     const failure = {
       type: "request:error",

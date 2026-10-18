@@ -102,12 +102,16 @@ describe("handleCors — preflight", () => {
     expect(res._status).toBe(403);
   });
 
-  it("serves the server's own origin when nothing is configured", () => {
+  /* The server's own page sends no preflight: one from an origin that reads
+     as the server's own is refused, as one from any unlisted origin is. */
+  it("refuses a preflight from the server's own origin when it is not listed", () => {
     const res = createMockRes();
 
     handleCors(preflight("http://api.example.com"), res, []);
 
-    expect(res._status).toBe(204);
+    expect(res._status).toBe(403);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+    expect(res._headers.Vary).toBe("Origin");
   });
 });
 
@@ -115,11 +119,14 @@ describe("handleCors — the request itself", () => {
   const request = (origin?: string) =>
     createMockReq({ headers: { host: "api.example.com", ...(origin ? { origin } : {}) } });
 
-  it("lets a request with no Origin through untouched", () => {
+  /* Its answer differs from the one a listed page gets, so a cache in
+     between keeps the two apart. */
+  it("lets a request with no Origin through, its answer varying by Origin", () => {
     const res = createMockRes();
 
     expect(handleCors(request(), res, ["http://example.com"])).toBe(false);
     expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+    expect(res._headers.Vary).toBe("Origin");
   });
 
   /**
@@ -137,7 +144,7 @@ describe("handleCors — the request itself", () => {
     expect(res._headers.Vary).toBe("Origin");
   });
 
-  it("blocks a request from an origin that is not configured", () => {
+  it("blocks a request from an origin that is not configured, the refusal varying by Origin", () => {
     const res = createMockRes();
 
     const handled = handleCors(request("http://evil.com"), res, ["http://trusted.com"]);
@@ -145,12 +152,33 @@ describe("handleCors — the request itself", () => {
     expect(handled).toBe(true);
     expect(res._status).toBe(403);
     expect(JSON.parse(res._body)).toEqual({ success: false, message: "Origin not allowed" });
+    expect(res._headers.Vary).toBe("Origin");
   });
 
-  it("serves the server's own origin without needing configuration", () => {
+  it("serves the server's own origin, granting it nothing it does not need", () => {
     const res = createMockRes();
 
     expect(handleCors(request("http://api.example.com"), res, undefined)).toBe(false);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+  });
+
+  /* Behind a proxy that ends TLS and is not trusted with X-Forwarded-Proto,
+     the server reads its own address as http:, and a page on that plain-HTTP
+     origin read the users' answers to the HTTPS one, cookies and all. */
+  it("grants nothing to a page that reads as its own behind a proxy that ends TLS", () => {
+    const res = createMockRes();
+    const req = createMockReq({
+      headers: {
+        host: "api.example.com",
+        origin: "http://api.example.com",
+        "x-forwarded-proto": "https",
+      },
+      socket: { remoteAddress: "203.0.113.5" } as IncomingMessage["socket"],
+    });
+
+    expect(handleCors(req, res, ["https://app.example.com"])).toBe(false);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+    expect(res._headers["Access-Control-Allow-Credentials"]).toBeUndefined();
   });
 });
 
@@ -185,6 +213,7 @@ describe("handleCors — a page let through in development", () => {
       expect(handleCors(fromLocalPage(origin), res, undefined)).toBe(false);
       expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
       expect(res._headers["Access-Control-Allow-Credentials"]).toBeUndefined();
+      expect(res._headers.Vary).toBe("Origin");
     }
   });
 
@@ -392,15 +421,16 @@ describe("a running server's answer to a page on another origin", () => {
     await stop();
   });
 
-  /* The grant the server makes itself, which the upstream's own Vary replaced. */
-  it("varies by Origin beside the upstream's Vary when it grants its own page", async () => {
+  /* Its own page needs no grant; its answer varies by Origin all the same,
+     which the upstream's own Vary once replaced. */
+  it("varies by Origin beside the upstream's Vary on its own page's answer, granting nothing", async () => {
     const { url, stop } = await serve();
     const own = new URL(url).origin;
 
     const res = await fetch(url, { headers: { Origin: own, "Sec-Fetch-Site": "same-origin" } });
     await res.body?.cancel();
 
-    expect(res.headers.get("access-control-allow-origin")).toBe(own);
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
     expect(res.headers.get("vary")).toBe("Origin, Accept-Encoding");
     await stop();
   });

@@ -11,12 +11,16 @@ import { sendError } from "./send-error";
  *
  * The response carries `Access-Control-Allow-Origin` as the preflight does,
  * so a configured cross-origin caller that passed the check can read the
- * answer. As in the core adapters, that is granted to a listed page — and
- * to the server's own — and to no other: in development a page on another
- * port of the local machine is let through, so the Studio can drive the
- * app, but it never reads what it is answered, since any local tool or dev
- * server is such a page. The matcher is the core's, so `*.example.com`
- * means here what it means everywhere else.
+ * answer. As in the core adapters, that is granted to a listed page and to
+ * no other: in development a page on another port of the local machine is
+ * let through, so the Studio can drive the app, but it never reads what it
+ * is answered, since any local tool or dev server is such a page. The
+ * server's own page needs no grant, and none is made to an origin that
+ * reads as its own: behind a proxy that ends TLS and is not trusted with its
+ * forwarded scheme, the server reads its own address as `http:`, and a page
+ * on that plain-HTTP origin would read its users' answers. Every answer
+ * varies by `Origin`, the refusals with it. The matcher is the core's, so
+ * `*.example.com` means here what it means everywhere else.
  *
  * @param req - The incoming request
  * @param res - The response being prepared
@@ -43,13 +47,13 @@ export function handleCors(
      trust with X-Forwarded-* is still its own, and a cross-site request
      without an Origin is still cross-site. */
   const allowed = isOriginAccepted(origin, self, allowedOrigins, req.headers["sec-fetch-site"]);
-  const granted =
-    allowed && !!origin && (origin === self || isOriginListed(origin, allowedOrigins));
+  const isAllowedReader = (page: string): boolean => isOriginListed(page, allowedOrigins);
+  addVary(res, "Origin");
 
   if (req.method === "OPTIONS" && origin) {
     /* Refused as the adapters refuse it, so a client reads one answer: a
        preflight asks to read, which a page let through is not granted. */
-    if (!granted) {
+    if (!allowed || !isAllowedReader(origin)) {
       sendError(res, 403, "Origin not allowed");
       return true;
     }
@@ -71,11 +75,10 @@ export function handleCors(
     return true;
   }
 
-  if (granted && origin !== undefined) {
+  if (origin !== undefined && isAllowedReader(origin)) {
     /* The browser needs this on the answer, not only on the preflight. */
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    addVary(res, "Origin");
   }
 
   return false;

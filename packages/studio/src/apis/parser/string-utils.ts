@@ -16,7 +16,10 @@ const ENTITIES: Readonly<Record<string, string>> = {
 /* Each entity read once: `&amp;lt;` is the text `&lt;`, not `<`. The text is
    prose for comments and the page, never HTML again. */
 function plainText(html: string): string {
-  return html.replace(TAG, "").replace(ENTITY, (entity, name: string) => ENTITIES[name] ?? entity);
+  return html
+    .split(TAG)
+    .join("")
+    .replace(ENTITY, (entity, name: string) => ENTITIES[name] ?? entity);
 }
 
 /**

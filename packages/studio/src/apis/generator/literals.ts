@@ -11,8 +11,13 @@
 /** A value a specification may list in an `enum`. */
 export type SpecValue = string | number | boolean;
 
+/* What would end a `<script>` the code is shown in, or a line where an older parser reads one. */
+const UNSAFE_IN_CODE = /[<>\u2028\u2029]/g;
+
 /**
- * Write a value as a JavaScript literal.
+ * Write a value as a JavaScript literal: `<`, `>` and the two line
+ * separators as `\u` escapes, so the code stays whole wherever it is put,
+ * a page's `<script>` among them.
  *
  * @param value - Text or number taken from the specification
  * @returns Source text that evaluates back to exactly this value
@@ -20,10 +25,15 @@ export type SpecValue = string | number | boolean;
  * @example
  * ```ts
  * jsLiteral('a"b') // → '"a\\"b"'
+ * jsLiteral("</script>") // → '"\\u003c/script\\u003e"'
  * ```
  */
 export function jsLiteral(value: SpecValue): string {
-  return JSON.stringify(value);
+  return JSON.stringify(value).replace(UNSAFE_IN_CODE, unicodeEscape);
+}
+
+function unicodeEscape(char: string): string {
+  return `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`;
 }
 
 /**
@@ -39,5 +49,5 @@ export function jsLiteral(value: SpecValue): string {
  * ```
  */
 export function objectKey(name: string): string {
-  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : jsLiteral(name);
 }

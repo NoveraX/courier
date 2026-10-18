@@ -50,6 +50,16 @@ describe("literal writers", () => {
     expect(jsLiteral("a\\b")).toBe('"a\\\\b"');
   });
 
+  it("writes what would end a script element, or a line in an older parser, as escapes that read back the same", () => {
+    for (const value of ["</script><script>alert(1)</script>", "a\u2028b\u2029c", "x > y"]) {
+      const written = jsLiteral(value);
+
+      expect(written).not.toMatch(/[<>\u2028\u2029]/);
+      expect(JSON.parse(written)).toBe(value);
+    }
+    expect(objectKey("<b>")).toBe('"\\u003cb\\u003e"');
+  });
+
   it("quotes a key only when it must", () => {
     expect(objectKey("id")).toBe("id");
     expect(objectKey("user-id")).toBe('"user-id"');

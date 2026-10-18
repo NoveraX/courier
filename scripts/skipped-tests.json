@@ -43,6 +43,7 @@
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > refuses a FIFO without waiting for a writer",
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > rethrows any other failure to open the file",
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > returns the permission bits of the file it read",
+    "packages/create-courier/tests/project/path-aliases.test.ts > aliasedFiles > fills the target's star, not one in the project folder's name",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > does not bring a swept connection back on its next heartbeat",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > stops calling error handlers once disconnected, and leaves no listener behind",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > sweeps a topic holding more stale connections than Lua can unpack at once",

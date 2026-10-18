@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { configObjectPath } from "../../src/project/config-file";
@@ -63,6 +64,32 @@ describe("aliasedFiles", () => {
 
     expect(aliasedFiles(project, "#feature/courier")).toEqual(["src/courier/courier"]);
   });
+
+  /* Filled with String.replace, `$$` read as one `$` and `$&` as the `*` itself. */
+  it("puts what the star matched in its target as written, `$` and all", () => {
+    const project = projectOf({
+      "tsconfig.json": '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }',
+    });
+
+    expect(aliasedFiles(project, "@/lib/$$price")).toEqual(["src/lib/$$price"]);
+    expect(aliasedFiles(project, "@/lib/$&x")).toEqual(["src/lib/$&x"]);
+  });
+
+  /* Filled after the target was joined to the project's folder, the `*` of a
+     folder named `star*proj` was filled too. A name with a `*` is no file
+     name on Windows. */
+  it.skipIf(process.platform === "win32")(
+    "fills the target's star, not one in the project folder's name",
+    () => {
+      const root = projectWith({
+        "star*proj/package.json": "{}",
+        "star*proj/tsconfig.json": '{ "compilerOptions": { "paths": { "@/*": ["./src/*"] } } }',
+      });
+      const project = readProject(join(root, "star*proj"));
+
+      expect(aliasedFiles(project, "@/lib/x")).toEqual(["src/lib/x"]);
+    },
+  );
 
   it("names no file for a package, nor without a tsconfig or imports", () => {
     expect(aliasedFiles(projectOf({ "tsconfig.json": "{}" }), "express")).toEqual([]);

@@ -10,7 +10,9 @@ const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", "
 /** A prefix the project's tooling maps to folders: a tsconfig `paths` key, or a package.json `imports` key. */
 interface Alias {
   readonly key: string;
-  /** Each target, as an absolute path that may hold one `*`. */
+  /** The folder its targets are named from. */
+  readonly base: string;
+  /** Each target as written, which may hold a `*`. */
   readonly targets: readonly string[];
 }
 
@@ -42,9 +44,10 @@ function tsconfigAliases(project: Project): Aliases {
   const paths = pathsLevel && isRecord(pathsLevel.options.paths) ? pathsLevel.options.paths : {};
   const aliases = Object.entries(paths).map(([key, targets]) => ({
     key,
-    targets: (Array.isArray(targets) ? targets : [])
-      .filter((target): target is string => typeof target === "string")
-      .map((target) => resolve(from, target)),
+    base: from,
+    targets: (Array.isArray(targets) ? targets : []).filter(
+      (target): target is string => typeof target === "string",
+    ),
   }));
   return { aliases, baseUrl };
 }
@@ -72,7 +75,7 @@ function packageImports(project: Project): Alias[] {
   const imports = isRecord(manifest) && isRecord(manifest.imports) ? manifest.imports : {};
   return Object.entries(imports).flatMap(([key, value]) => {
     const target = importTarget(value);
-    return target?.startsWith("./") ? [{ key, targets: [resolve(project.root, target)] }] : [];
+    return target?.startsWith("./") ? [{ key, base: project.root, targets: [target] }] : [];
   });
 }
 
@@ -86,6 +89,14 @@ function aliasesOf(project: Project): Aliases {
   };
   cache.set(project, aliases);
   return aliases;
+}
+
+/* A target as written with every `*` filled with what the key's matched, as
+   Node fills an import's — a tsconfig target holds one at most — before it
+   is named from its folder, whose own name may hold a `*`; a `$` in what
+   matched is not read as a replacement pattern. */
+function withStars(target: string, star: string): string {
+  return target.split("*").join(star);
 }
 
 /* What a key's `*` stands for in a specifier, or `undefined` where the key does not match it. */
@@ -132,10 +143,10 @@ function isCode(project: Project, path: string): boolean {
 export function aliasedFiles(project: Project, specifier: string): string[] {
   const { aliases, baseUrl } = aliasesOf(project);
   const plain = specifier.replace(EXTENSION, "");
-  const mapped = aliases.flatMap(({ key, targets }) => {
+  const mapped = aliases.flatMap(({ key, base, targets }) => {
     const star = captured(key, specifier) ?? captured(key, plain);
     if (star === undefined) return [];
-    return targets.flatMap((target) => bare(project, target.replaceAll("*", star)) ?? []);
+    return targets.flatMap((target) => bare(project, resolve(base, withStars(target, star))) ?? []);
   });
   const fromBase = baseUrl === undefined ? undefined : bare(project, resolve(baseUrl, plain));
   const based = fromBase !== undefined && isCode(project, fromBase) ? [fromBase] : [];

@@ -1,8 +1,10 @@
 import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
 import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
-import { sendWebResponse, serverOriginOf, toWebRequest } from "@noverax/courier/node";
+import { serverOriginOf, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
+
+import { sendHijacked } from "./send-hijacked";
 
 export { requestContext } from "./request-context";
 export { courierWSHandler } from "./ws-handler";
@@ -62,10 +64,7 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
 
   const proxy = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     announce(serverOriginOf(request.raw.socket));
-    const webReq = toWebRequest(request.raw, reply.raw);
-    const webRes = await handle(webReq);
-    await sendWebResponse(webRes, reply.raw);
-    reply.hijack();
+    await sendHijacked(reply, await handle(toWebRequest(request.raw, reply.raw)));
   };
 
   /* The proxy caller calls exactly one path, so that path is all the plugin
@@ -106,10 +105,7 @@ export function courierSSEHandler<TConnect extends ConnectResult = ConnectResult
 
   const route = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     announce(serverOriginOf(request.raw.socket));
-    reply.hijack();
-    const webReq = toWebRequest(request.raw, reply.raw);
-    const webRes = await handleSSE(webReq);
-    await sendWebResponse(webRes, reply.raw);
+    await sendHijacked(reply, await handleSSE(toWebRequest(request.raw, reply.raw)));
   };
   return Object.assign(route, { sseConnections, shutdownSSE });
 }

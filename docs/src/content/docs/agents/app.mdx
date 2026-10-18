@@ -41,8 +41,12 @@ app.all("/mcp", (c) => mcp.handle(c.req.raw))
 ```ts
 import { sendWebResponse, toWebRequest } from "@noverax/courier/node"
 
-app.all("/mcp", async (req, res) => {
-  await sendWebResponse(await mcp.handle(toWebRequest(req, res)), res)
+app.all("/mcp", async (req, res, next) => {
+  try {
+    await sendWebResponse(await mcp.handle(toWebRequest(req, res)), res)
+  } catch (error) {
+    next(error)
+  }
 })
 ```
 

@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import type * as CourierModule from "@noverax/courier";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -153,6 +154,40 @@ describe("courierMiddleware", () => {
 
     await middleware(raw, res, next);
     expect(next).toHaveBeenCalledWith(error);
+  });
+
+  /* Handed on, an error after the head reached Fastify's error handler on
+     Nest's Fastify platform, which wrote 500 over the head already sent and
+     threw, taking the process down. */
+  it("hands on no error once the answer is under way, and logs it", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const mockHandle = vi.fn().mockResolvedValue(new Response(breakingBody()));
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
+    const middleware = courierMiddleware();
+    const next = vi.fn();
+    let served: Promise<void> | undefined;
+    const server = createServer((req, res) => {
+      served = middleware(req, res, next);
+    });
+    try {
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const { port } = server.address() as AddressInfo;
+
+      const outcome = await fetch(`http://127.0.0.1:${port}/api/request?_s=api&_m=list`)
+        .then((response) => response.text())
+        .then(
+          () => "whole",
+          (error: unknown) => (error instanceof Error ? error.name : "unknown"),
+        );
+
+      expect(outcome).toBe("TypeError");
+      await expect(served).resolves.toBeUndefined();
+      expect(next).not.toHaveBeenCalled();
+      expect(logged).toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+      server.close();
+    }
   });
 
   it("works as NestJS-compatible middleware (req, res, next signature)", () => {
@@ -352,3 +387,19 @@ describe("courierWSAttach", () => {
     offSpy.mockRestore();
   });
 });
+
+/** A body that sends its first chunk, then fails as an upstream that reset would. */
+function breakingBody(): ReadableStream<Uint8Array> {
+  let sent = false;
+  return new ReadableStream({
+    async pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(new TextEncoder().encode("first chunk\n"));
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      throw new Error("upstream reset mid-body");
+    },
+  });
+}

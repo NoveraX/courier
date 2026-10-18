@@ -39,9 +39,9 @@ export function createRequestListener(
     } catch (err) {
       log.error("Request handler error", err);
       /* A response already under way cannot turn into an error answer; one
-         appended to its body corrupted it, or wrote after its end. */
+         appended to its body corrupted it. Its body broke off, and
+         sendWebResponse has cut its connection. */
       if (!res.headersSent) sendError(res, 500, "Internal server error");
-      else if (!res.writableEnded) res.end();
     }
   };
 }

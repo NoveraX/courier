@@ -86,15 +86,23 @@ function drained(nodeRes: ServerResponse): Promise<void> {
  *
  * The body is read no faster than the client reads it: an SSE stream whose
  * client stopped reading would otherwise be buffered in memory without
- * bound, and its generator would never learn to pause.
+ * bound, and its generator would never learn to pause. A body that breaks
+ * off while its client is still reading cuts the connection, so the part
+ * sent is never taken for the whole answer.
  *
  * @param webRes - The response to send
  * @param nodeRes - The Node response to write it to
  * @returns Once the body is written, or the client has gone
+ * @throws The body's own error when it breaks off, once the connection is cut
  * @example
  * ```ts
  * createServer(async (req, res) => {
- *   await sendWebResponse(await handler(toWebRequest(req, res)), res);
+ *   try {
+ *     await sendWebResponse(await handler(toWebRequest(req, res)), res);
+ *   } catch (error) {
+ *     console.error(error);
+ *     if (!res.headersSent) res.writeHead(500).end();
+ *   }
  * });
  * ```
  */
@@ -115,13 +123,22 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
   if (vary !== "") headersObj.vary = vary;
 
   nodeRes.writeHead(webRes.status, headersObj);
+  if (webRes.body) await writeBody(webRes.body, nodeRes);
+  nodeRes.end();
+}
 
-  if (!webRes.body) {
-    nodeRes.end();
-    return;
-  }
-
-  const reader = webRes.body.getReader();
+/* Write a body as its client reads it. Ended after a body that broke off, the
+   answer would pass for whole: a chunked one cut short reads as complete, and
+   one of a stated length keeps its client waiting for the rest. So the
+   connection is cut first, and only then is the response ended, which writes
+   nothing more yet tells a framework that reads an ended response as answered
+   — Fastify, middie, an adapter of an older release — not to answer it again
+   over the head already sent. */
+async function writeBody(
+  body: NonNullable<Response["body"]>,
+  nodeRes: ServerResponse,
+): Promise<void> {
+  const reader = body.getReader();
   /* A client that leaves mid-stream stops the body too — a streamed upstream
      response is then no longer downloaded for nobody. The listener goes once
      the body is written: a later close would cancel a reader already let go. */
@@ -133,18 +150,24 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
   try {
     for (;;) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) return;
       if (!nodeRes.write(value)) await drained(nodeRes);
     }
   } catch (error) {
     /* The client left, and the proxy stopped the body along with the upstream
        call behind it: there is nobody to deliver to, and nothing failed. */
-    if (!nodeRes.destroyed || nodeRes.writableFinished) throw error;
-    log.debug("The client left while its response was streaming", error);
+    if (nodeRes.destroyed && !nodeRes.writableFinished) {
+      log.debug("The client left while its response was streaming", error);
+      return;
+    }
+    nodeRes.destroy();
+    /* Cut short, the body no longer has the length it stated. */
+    nodeRes.strictContentLength = false;
+    nodeRes.end();
+    throw error;
   } finally {
     nodeRes.off("close", onClose);
     reader.releaseLock();
-    nodeRes.end();
   }
 }
 

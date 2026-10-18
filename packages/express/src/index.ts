@@ -1,12 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
-import { createHandler } from "@noverax/courier";
+import { createHandler, createLogger } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import type { ServerOrigin } from "@noverax/courier/internal";
 import { sendWebResponse, serverOriginOf, toWebRequest } from "@noverax/courier/node";
 
 export { requestContext } from "./request-context";
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
+
+const log = createLogger("Express");
 
 /** An Express middleware for Courier. */
 export type CourierMiddleware = (
@@ -101,6 +103,10 @@ function serve(
         next(error);
         return;
       }
+      log.error("Request handler error", error);
+      /* An answer already under way cannot turn into an error answer: its
+         body broke off, and sendWebResponse has cut its connection. */
+      if (res.headersSent) return;
       res.writeHead(500, { "content-type": "application/json" });
       res.end(JSON.stringify({ success: false, message: "Internal server error" }));
     }

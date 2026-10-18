@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import type * as CourierModule from "@noverax/courier";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -191,22 +192,59 @@ describe("courierHandler", () => {
     expect(next).toHaveBeenCalledWith(error);
   });
 
-  it("sends 500 when no next function provided", async () => {
-    const mockHandle = vi.fn().mockRejectedValue(new Error("fail"));
+  it("sends 500 when no next function provided, and logs why", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failure = new Error("fail");
+    const mockHandle = vi.fn().mockRejectedValue(failure);
     mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
-
     const handler = courierHandler();
 
-    const { status, body } = await makeNodeRequest(handler, {
-      method: "GET",
-      path: "/api/request?_s=api&_m=list",
-    });
+    try {
+      const { status, body } = await makeNodeRequest(handler, {
+        method: "GET",
+        path: "/api/request?_s=api&_m=list",
+      });
 
-    expect(status).toBe(500);
-    expect(JSON.parse(body)).toEqual({
-      success: false,
-      message: "Internal server error",
+      expect(status).toBe(500);
+      expect(JSON.parse(body)).toEqual({
+        success: false,
+        message: "Internal server error",
+      });
+      expect(logged).toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  /* Its head sent, the answer could not turn into a 500: writing one threw,
+     and the middleware failed with it, the error behind it never logged. */
+  it("cuts off an answer whose body breaks, when no next function is provided", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const mockHandle = vi.fn().mockResolvedValue(new Response(breakingBody()));
+    mockCreateHandler.mockReturnValue(createMockHandlerResult({ handle: mockHandle }));
+    const handler = courierHandler();
+    let served: Promise<void> | undefined;
+    const server = createServer((req, res) => {
+      served = handler(req, res);
     });
+    try {
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const { port } = server.address() as AddressInfo;
+
+      const outcome = await fetch(`http://127.0.0.1:${port}/api/request?_s=api&_m=list`)
+        .then((response) => response.text())
+        .then(
+          () => "whole",
+          (error: unknown) => (error instanceof Error ? error.name : "unknown"),
+        );
+
+      expect(outcome).toBe("TypeError");
+      await expect(served).resolves.toBeUndefined();
+      expect(logged).toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+      server.close();
+    }
   });
 });
 
@@ -296,6 +334,22 @@ describe("courierSSEHandler", () => {
 });
 
 // --- Test helpers ---
+
+/** A body that sends its first chunk, then fails as an upstream that reset would. */
+function breakingBody(): ReadableStream<Uint8Array> {
+  let sent = false;
+  return new ReadableStream({
+    async pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(new TextEncoder().encode("first chunk\n"));
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      throw new Error("upstream reset mid-body");
+    },
+  });
+}
 
 type RequestOptions = {
   method: string;

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
-import { createHandler } from "@noverax/courier";
+import { createHandler, createLogger } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import type { ServerOrigin } from "@noverax/courier/internal";
 import { sendWebResponse, serverOriginOf, toWebRequest } from "@noverax/courier/node";
@@ -9,6 +9,8 @@ import { bodyNestParsed } from "./parsed-body";
 
 export { requestContext } from "./request-context";
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
+
+const log = createLogger("NestJS");
 
 /**
  * A NestJS middleware for Courier that can drain the SSE streams it serves.
@@ -105,6 +107,14 @@ function serve(
       const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
       await sendWebResponse(await respond(webReq), res);
     } catch (error) {
+      /* An answer already under way cannot turn into an error answer: its
+         body broke off, and sendWebResponse has cut its connection. Handed
+         on, it reached Fastify's error handler on Nest's Fastify platform,
+         which wrote 500 over the head already sent and threw. */
+      if (res.headersSent) {
+        log.error("Request handler error", error);
+        return;
+      }
       next(error);
     }
   };

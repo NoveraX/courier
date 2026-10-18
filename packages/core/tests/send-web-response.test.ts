@@ -7,7 +7,9 @@
  * warning with a full stack.
  *
  * And a `Vary` set on the Node response before the answer is sent — the
- * `Origin` a CORS grant depends on — is kept beside the answer's own.
+ * `Origin` a CORS grant depends on — is kept beside the answer's own. A body
+ * that breaks off while its client is still reading cuts the connection, so
+ * the client never takes the part sent for the whole answer.
  */
 import { createServer, type Server } from "node:http";
 import { type AddressInfo, connect } from "node:net";
@@ -134,6 +136,124 @@ describe("a streamed answer the client does not read", () => {
     expect(pulled).toBeGreaterThan(0);
     expect(pulled).toBeLessThan(1_000);
     client.destroy();
+  });
+});
+
+/** A body that sends its first chunk, then fails as an upstream that reset would. */
+function breakingBody(): ReadableStream<Uint8Array> {
+  let sent = false;
+  return new ReadableStream({
+    async pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(new TextEncoder().encode("first chunk\n"));
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      throw new Error("upstream reset mid-body");
+    },
+  });
+}
+
+/** An upstream that sends the start of its answer, then drops the connection. */
+function dropping(): Server {
+  return createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "text/plain" });
+    res.write("tick\n");
+    setTimeout(() => res.destroy(), 20);
+  });
+}
+
+/* What the client made of an answer: the whole of it, or the name of what broke it. */
+async function outcomeOf(answer: Promise<Response>): Promise<string> {
+  try {
+    return `whole: ${await (await answer).text()}`;
+  } catch (error) {
+    return error instanceof Error ? error.name : "unknown";
+  }
+}
+
+describe("an answer whose body breaks off", () => {
+  async function serving(init?: ResponseInit): Promise<{ url: string; failures: unknown[] }> {
+    const failures: unknown[] = [];
+    const url = await listen(
+      createServer((_req, res) => {
+        sendWebResponse(new Response(breakingBody(), init), res).catch((failure: unknown) => {
+          failures.push(failure);
+        });
+      }),
+    );
+    return { url, failures };
+  }
+
+  /* Ended, a chunked answer cut short read as complete: its client took the
+     first chunk for the whole answer. */
+  it("cuts the connection, so a chunked body cut short is not taken for whole", async () => {
+    const { url, failures } = await serving();
+
+    expect(await outcomeOf(fetch(url))).toBe("TypeError");
+    expect(failures).toEqual([expect.objectContaining({ message: "upstream reset mid-body" })]);
+  });
+
+  /* Ended, an answer of a stated length kept its client waiting for the rest. */
+  it("cuts the connection, so a body of a stated length keeps no client waiting", async () => {
+    const { url } = await serving({ headers: { "content-length": "100" } });
+
+    expect(await outcomeOf(fetch(url, { signal: AbortSignal.timeout(2_000) }))).toBe("TypeError");
+  });
+
+  /* A framework that reads an ended response as answered — Fastify, middie,
+     an adapter of an older release — answered it again over the head
+     already sent, and threw. */
+  it("leaves the response ended, so nothing answers it again", async () => {
+    let ended: boolean | undefined;
+    const url = await listen(
+      createServer((_req, res) => {
+        sendWebResponse(new Response(breakingBody()), res).catch(() => {
+          ended = res.writableEnded;
+        });
+      }),
+    );
+
+    expect(await outcomeOf(fetch(url))).toBe("TypeError");
+    await vi.waitFor(() => expect(ended).toBe(true));
+  });
+
+  it("ends a response held strictly to its length too, and fails with the body's error", async () => {
+    const failures: unknown[] = [];
+    let ended: boolean | undefined;
+    const url = await listen(
+      createServer((_req, res) => {
+        res.strictContentLength = true;
+        const answer = new Response(breakingBody(), { headers: { "content-length": "100" } });
+        sendWebResponse(answer, res).catch((failure: unknown) => {
+          failures.push(failure);
+          ended = res.writableEnded;
+        });
+      }),
+    );
+
+    expect(await outcomeOf(fetch(url, { signal: AbortSignal.timeout(2_000) }))).toBe("TypeError");
+    await vi.waitFor(() => expect(ended).toBe(true));
+    expect(failures).toEqual([expect.objectContaining({ message: "upstream reset mid-body" })]);
+  });
+
+  it("is cut off on its way from an upstream that dropped it, too", async () => {
+    proxyTicks(await listen(dropping()));
+    const { handle } = createHandler();
+    const failures: unknown[] = [];
+    const proxy = await listen(
+      createServer(async (req, res) => {
+        await sendWebResponse(await handle(toWebRequest(req, res)), res).catch(
+          (failure: unknown) => {
+            failures.push(failure);
+          },
+        );
+      }),
+    );
+
+    expect(await outcomeOf(streamedCall(proxy))).toBe("TypeError");
+    expect(failures).toHaveLength(1);
   });
 });
 

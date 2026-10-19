@@ -1,5 +1,6 @@
 import { ChartColumn, Download } from "lucide-react";
 
+import { EmptyPanel } from "@/design/empty-panel";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { Skeleton } from "@/design/skeleton";
@@ -35,15 +36,11 @@ function plural(count: number, word: string): string {
 
 function Nothing({ range }: { range: AnalyticsRange }): React.ReactNode {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-dialog border border-line bg-panel px-6 py-16 text-center">
-      <ChartColumn aria-hidden="true" className="size-5 text-fg-subtle" />
-      <p className="m-0 text-ui font-strong">{NOTHING_IN[range]}</p>
-      <p className="m-0 max-w-90 text-small text-fg-subtle">
-        {range === "session"
-          ? "Analytics charts your app's HTTP calls as they complete: latency, status codes and every endpoint they reach."
-          : "Choose a longer range, or make a few calls from your app."}
-      </p>
-    </div>
+    <EmptyPanel icon={ChartColumn} title={NOTHING_IN[range]}>
+      {range === "session"
+        ? "Analytics charts your app's HTTP calls as they complete: latency, status codes and every endpoint they reach."
+        : "Choose a longer range, or make a few calls from your app."}
+    </EmptyPanel>
   );
 }
 
@@ -73,7 +70,7 @@ export function AnalyticsScreen(): React.ReactNode {
     plural(endpoints.length, "endpoint"),
   ];
   return (
-    <div className="mx-auto flex w-full max-w-360 flex-col gap-4 px-6 pt-6 pb-10 max-sm:px-4 max-sm:pt-4">
+    <div className="mx-auto flex min-h-full w-full max-w-360 flex-col gap-4 px-6 pt-6 pb-10 max-sm:px-4 max-sm:pt-4">
       <header className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Analytics</h1>

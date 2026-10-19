@@ -85,7 +85,7 @@ export function ApisScreen(): React.ReactNode {
   };
   return (
     <>
-      <div className="mx-auto flex w-full max-w-360 flex-col gap-5.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
+      <div className="mx-auto flex min-h-full w-full max-w-360 flex-col gap-5.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
         <ApisHeader
           summary={
             loading

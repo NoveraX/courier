@@ -2,7 +2,8 @@ import { Play } from "lucide-react";
 
 /**
  * What the Playground says when it cannot send: no app is attached to run
- * the calls, or no source declares an endpoint yet.
+ * the calls, or no source declares an endpoint yet — in the middle of the
+ * view, which it fills.
  *
  * @param props - Which of the two it is
  * @returns The notice
@@ -17,7 +18,7 @@ export function PlaygroundOffline({
   reason: "no-app" | "no-endpoints";
 }): React.ReactNode {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center">
+    <div className="flex min-h-full flex-col items-center justify-center gap-2 p-10 text-center">
       <span className="flex size-11 items-center justify-center rounded-dialog border border-line-strong bg-panel text-fg-subtle">
         <Play aria-hidden="true" className="size-4.5" />
       </span>

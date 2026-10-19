@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { relativeTime } from "@/features/waterfall/time-ticks";
+import { cn } from "@/lib/utils";
 import { RowMenu } from "@/request-list/row-menu";
 import { useStudioStore } from "@/store";
 import { GroupRow } from "./group-row";
@@ -51,6 +52,7 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
     setCursorPx(x >= 0 && x <= scale.trackPx ? x : null);
   });
   const layout = model.stacked ? "stacked" : "columns";
+  const empty = model.rows.length === 0;
   const rowLabelPx = labelWidthIn(model.stacked, labelPx, visiblePx, scale.trackPx);
   const at = cursorPx === null ? null : scale.fromPx(cursorPx);
   const cursor =
@@ -69,7 +71,10 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
       }}
       className="relative min-h-0 flex-1 overflow-auto"
     >
-      <div className="relative min-w-full" style={{ width: labelPx + scale.trackPx }}>
+      <div
+        className={cn("relative min-w-full", empty && "flex min-h-full flex-col")}
+        style={{ width: labelPx + scale.trackPx }}
+      >
         <WaterfallRuler {...lines} />
         <WaterfallGrid {...lines} />
         <RowMenu>
@@ -111,10 +116,10 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
             )}
           </div>
         </RowMenu>
-        {model.rows.length === 0 && (
+        {empty && (
           <div
             style={{ width: Math.min(visiblePx, labelPx + scale.trackPx) }}
-            className="sticky left-0 flex flex-col items-center gap-2 px-5 py-18 text-center"
+            className="sticky left-0 flex flex-1 flex-col items-center justify-center gap-2 px-5 py-18 text-center"
           >
             <span className="text-title font-semibold">
               {model.total ? "No requests in view" : "Waiting for requests"}

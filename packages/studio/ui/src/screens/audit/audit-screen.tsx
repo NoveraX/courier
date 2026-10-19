@@ -3,6 +3,7 @@ import { Shield } from "lucide-react";
 import { useState } from "react";
 
 import { useAuditReport } from "@/audit/use-audit-report";
+import { EmptyPanel } from "@/design/empty-panel";
 import { categoryScores } from "@/features/audit/audit-score";
 import type { AuditSearch } from "@/features/audit/audit-search";
 import { categoryTally, matchesFinding, severityCounts } from "@/features/audit/finding-filter";
@@ -21,13 +22,9 @@ import { ScoreHero } from "./score-hero";
 
 function NoTraffic(): React.ReactNode {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-dialog border border-line bg-panel px-6 py-16 text-center">
-      <Shield aria-hidden="true" className="size-5 text-fg-subtle" />
-      <p className="m-0 text-ui font-strong">No requests to audit</p>
-      <p className="m-0 max-w-90 text-small text-fg-subtle">
-        The audit reads this session's traffic — make a few calls from your app, then run it again.
-      </p>
-    </div>
+    <EmptyPanel icon={Shield} title="No requests to audit">
+      The audit reads this session's traffic — make a few calls from your app, then run it again.
+    </EmptyPanel>
   );
 }
 
@@ -70,7 +67,7 @@ export function AuditScreen(): React.ReactNode {
     "best-practices": categoryTally(items, "best-practices"),
   };
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
+    <div className="mx-auto flex min-h-full w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
       <AuditHeader
         report={report}
         newSince={newSince}

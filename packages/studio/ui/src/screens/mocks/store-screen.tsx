@@ -117,7 +117,9 @@ function RecordsPane({
   waiting: boolean;
 }): React.ReactNode {
   if (!open) {
-    return <p className="p-10 text-center text-control text-fg-subtle">No collection to show</p>;
+    return (
+      <p className="m-auto p-10 text-center text-control text-fg-subtle">No collection to show</p>
+    );
   }
   if (waiting && server.recordsProblem) {
     return (

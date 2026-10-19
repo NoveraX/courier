@@ -98,7 +98,7 @@ function DropHint(): React.ReactNode {
 
 function Waiting(): React.ReactNode {
   return (
-    <div className="flex flex-col items-center gap-2.5 px-5 py-20 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-2.5 px-5 py-20 text-center">
       <span className="text-title font-semibold">Waiting for requests</span>
       <span className="text-ui text-fg-muted">
         Make API calls from your app to see them here as they happen.
@@ -120,7 +120,7 @@ function Waiting(): React.ReactNode {
 
 function NoMatches({ onReset }: { onReset: () => void }): React.ReactNode {
   return (
-    <div className="flex flex-col items-center gap-2.5 px-5 py-16 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-2.5 px-5 py-16 text-center">
       <Activity aria-hidden="true" className="size-4 text-fg-subtle" />
       <span className="text-title font-semibold">No requests match</span>
       <span className="text-ui text-fg-muted">Try a different search, or reset the filters.</span>

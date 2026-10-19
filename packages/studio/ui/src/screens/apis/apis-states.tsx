@@ -15,7 +15,7 @@ function Centered({
   children: React.ReactNode;
 }): React.ReactNode {
   return (
-    <div className="mx-auto flex max-w-130 flex-col items-center gap-3 px-6 py-16 text-center">
+    <div className="mx-auto flex max-w-130 flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
       <h2 className="text-heading font-semibold">{title}</h2>
       {children}
     </div>

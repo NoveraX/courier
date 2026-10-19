@@ -1,6 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { LayoutDashboard, Workflow } from "lucide-react";
 
+import { EmptyPanel } from "@/design/empty-panel";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { Skeleton } from "@/design/skeleton";
@@ -26,14 +27,10 @@ const VIEWS: readonly SegmentedOption<MiddlewareView>[] = [
 
 function NoMiddleware(): React.ReactNode {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-dialog border border-line bg-panel px-6 py-16 text-center">
-      <Workflow aria-hidden="true" className="size-5 text-fg-subtle" />
-      <p className="m-0 text-ui font-strong">No call has run through middleware yet</p>
-      <p className="m-0 max-w-100 text-small text-fg-subtle">
-        Middleware declared on an API, a group or an endpoint shows here once a call runs through
-        it: what each one costs, and every call's chain step by step.
-      </p>
-    </div>
+    <EmptyPanel icon={Workflow} title="No call has run through middleware yet">
+      Middleware declared on an API, a group or an endpoint shows here once a call runs through it:
+      what each one costs, and every call's chain step by step.
+    </EmptyPanel>
   );
 }
 
@@ -77,7 +74,7 @@ export function MiddlewareScreen(): React.ReactNode {
   };
   const chosen = calls.find((r) => r.id === search.trace) ?? calls[0];
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
+    <div className="mx-auto flex min-h-full w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
       <header className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Middleware</h1>

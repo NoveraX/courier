@@ -33,7 +33,7 @@ export function MockScenariosScreen(): React.ReactNode {
   if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   if (server.scenarios.length === 0) {
     return (
-      <p className="mx-auto max-w-120 p-10 text-center text-control text-fg-subtle">
+      <p className="m-auto max-w-120 p-10 text-center text-control text-fg-subtle">
         This mock declares no scenarios. Add some with{" "}
         <span className="font-mono">defineScenario</span> under{" "}
         <span className="font-mono">scenarios</span> in courier.mocks.ts.

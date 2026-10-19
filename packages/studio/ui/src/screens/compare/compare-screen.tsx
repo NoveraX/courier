@@ -1,5 +1,6 @@
 import { ArrowLeftRight, ArrowUpDown, GitCompare } from "lucide-react";
 
+import { EmptyPanel } from "@/design/empty-panel";
 import { compareSummary } from "@/features/compare/compare-summary";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { CompareBody } from "./compare-body";
@@ -11,14 +12,10 @@ import { useCompareModel } from "./use-compare-model";
 
 function NotEnough(): React.ReactNode {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 rounded-dialog border border-line bg-panel px-6 py-16 text-center">
-      <GitCompare aria-hidden="true" className="size-5 text-fg-subtle" />
-      <p className="m-0 text-ui font-strong">Compare needs two finished requests</p>
-      <p className="m-0 max-w-90 text-small text-fg-subtle">
-        Make a few calls from your app; Compare lines up any two of them — response, headers, timing
-        and variables.
-      </p>
-    </div>
+    <EmptyPanel icon={GitCompare} title="Compare needs two finished requests">
+      Make a few calls from your app; Compare lines up any two of them — response, headers, timing
+      and variables.
+    </EmptyPanel>
   );
 }
 
@@ -39,7 +36,7 @@ export function CompareScreen(): React.ReactNode {
   const { pair } = model;
   const loading = useFirstLoad();
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-4 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
+    <div className="mx-auto flex min-h-full w-full max-w-320 flex-col gap-4 px-6 pt-6 pb-12 max-sm:px-4 max-sm:pt-4">
       <CompareHeader preset={pair ? model.preset : undefined} onPreset={model.applyPreset} />
       {loading.requests ? (
         <CompareSkeleton />

@@ -159,7 +159,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     }
 
     /* After the pins, which name live requests: the session keeps its own. */
-    if (sessions && view) bindView(socket, { view, requestLog }, shown);
+    if (sessions && view) bindView(socket, { view, requestLog, pins }, shown);
     if (playgroundHistory) {
       bindPlaygroundHistory(socket, playgroundHistory, { trusted, demo: demo !== undefined });
     }

@@ -8,6 +8,7 @@ import type { Socket } from "socket.io";
 
 import type { RequestLog } from "./request-log";
 import type { SavedSession } from "./session-types";
+import type { RequestPins } from "./storage/request-pins";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
 
@@ -16,6 +17,8 @@ export interface ViewDeps {
   sessions: SessionStore;
   view: StudioView;
   requestLog?: RequestLog | undefined;
+  /** The requests pinned, which a page is told again with the live requests. */
+  pins?: RequestPins | undefined;
 }
 
 /**
@@ -46,26 +49,29 @@ export function shownSession({
  * Show a page that connects the saved session the pages show, if any — in
  * place of the live requests, which it is not sent then — and take its
  * `view:live`: the pages show the live requests again, and the page is
- * sent them.
+ * sent them and, as on connecting, which of them are pinned.
  *
  * @param socket - The page's socket
- * @param deps - The view, and the live requests
+ * @param deps - The view, the live requests and their pins
  * @param shown - The session the pages show, from {@link shownSession}
  * @example
  * ```ts
  * uiNamespace.on("connection", (socket) =>
- *   bindView(socket, { view, requestLog }, shownSession({ sessions, view })),
+ *   bindView(socket, { view, requestLog, pins }, shownSession({ sessions, view })),
  * );
  * ```
  */
 export function bindView(
   socket: Socket,
-  { view, requestLog }: Pick<ViewDeps, "view" | "requestLog">,
+  { view, requestLog, pins }: Pick<ViewDeps, "view" | "requestLog" | "pins">,
   shown: SavedSession | undefined,
 ): void {
   if (shown) socket.emit("view:session", shown);
   socket.on("view:live", () => {
     view.showLive();
-    if (requestLog) socket.emit("events:replay", requestLog.replayPayload());
+    if (!requestLog) return;
+    socket.emit("events:replay", requestLog.replayPayload());
+    /* The replay carries no pins: without them, the requests a page pinned came back unpinned. */
+    if (pins) socket.emit("requests:pinned", pins.ids());
   });
 }

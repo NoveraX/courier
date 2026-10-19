@@ -321,16 +321,27 @@ describe("a saved session", () => {
   });
 });
 
-/** A page that connects, with the session it is shown and the replays it is sent. */
-async function page(): Promise<{ socket: Socket; shown: unknown[]; replays: unknown[] }> {
+/** A page that connects, with the session it is shown, the replays it is sent and the pins. */
+async function page(): Promise<{
+  socket: Socket;
+  shown: unknown[];
+  replays: unknown[];
+  pinned: unknown[];
+}> {
   const socket = connect(`${url}/ui`, {
     transports: ["websocket"],
     reconnection: false,
     auth: { token: studio?.token },
   });
-  const seen = { socket, shown: [] as unknown[], replays: [] as unknown[] };
+  const seen = {
+    socket,
+    shown: [] as unknown[],
+    replays: [] as unknown[],
+    pinned: [] as unknown[],
+  };
   socket.on("view:session", (session: unknown) => seen.shown.push(session));
   socket.on("events:replay", (payload: unknown) => seen.replays.push(replayed(payload)));
+  socket.on("requests:pinned", (ids: unknown) => seen.pinned.push(ids));
   await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
   return seen;
 }
@@ -354,6 +365,21 @@ describe("the session a page loads", () => {
     expect(reloaded.shown[0]).toMatchObject({ name: "login flow" });
     expect(next.shown).toEqual([]);
     next.socket.disconnect();
+  });
+
+  it("sends a page that goes back to live the pins with the live requests", async () => {
+    const saved = await call("save", { name: "login flow", requests: REQUESTS });
+    await call("load", { id: field(saved.body, "id") });
+    const reloaded = await page();
+    await expect.poll(() => reloaded.pinned.length).toBe(1);
+
+    reloaded.socket.emit("requests:pin", { id: "r1", pinned: true });
+    reloaded.socket.emit("view:live");
+
+    await expect.poll(() => reloaded.pinned.length).toBe(2);
+    expect(reloaded.replays).toHaveLength(1);
+    expect(reloaded.pinned[1]).toEqual(["r1"]);
+    reloaded.socket.disconnect();
   });
 
   it("is shown no more once it is deleted", async () => {

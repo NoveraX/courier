@@ -5,9 +5,9 @@
 import { ownValue } from "../own-value";
 import type { ParsedEndpoint, ParsedSchemaProperty } from "../parser/types";
 import { type EndpointContext, endpointTypeStyle } from "./endpoint-context";
-import { propertyType, schemaToTsType, type TypeStyle } from "./inline-types";
+import { fieldType, schemaToTsType, type TypeStyle } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
-import { objectKey } from "./literals";
+import { typeKey } from "./literals";
 import { parameterProperty } from "./parameter-property";
 import { bodyKey, requestBodyKind } from "./request-body";
 import { variableParameters } from "./variable-parameters";
@@ -57,7 +57,7 @@ export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContex
     /* A body the operation does not require may be left out. */
     const optional = ep.requestBodyOptional === true;
     if (parts.length === 0) return optional ? `${body} | undefined` : body;
-    const key = `${objectKey(bodyKey(ep))}${optional ? "?" : ""}`;
+    const key = `${typeKey(bodyKey(ep))}${optional ? "?" : ""}`;
     return `{ ${[...parts, `${key}: ${body}${optional ? " | undefined" : ""}`].join("; ")} }`;
   }
   if (kind === "fields" && ep.requestBody?.type !== "object") {
@@ -113,5 +113,5 @@ function field(
     context.options.includeComments && prop.description
       ? `/** ${jsdocText(prop.description)} */ `
       : "";
-  return `${doc}${objectKey(name)}${propertyType(prop, !prop.required, style)}`;
+  return `${doc}${fieldType(name, prop, !prop.required, style)}`;
 }

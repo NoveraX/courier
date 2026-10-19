@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
+import { EXACT_OPTIONAL, fieldType } from "../../src/apis/generator/inline-types";
 import { parseSpec } from "../../src/apis/parser";
 import { compileProject, removeProjects, writeProject } from "../helpers/generated-project";
 
@@ -115,5 +116,26 @@ afterAll(() => {
 describe("a map written inline", () => {
   it.each(VARIANTS.map(([label]) => label))("is typed by its values, %s", (label) => {
     expect(problems.get(label)).toEqual([]);
+  });
+});
+
+describe("fieldType", () => {
+  const text = { type: "string", required: false } as const;
+
+  it("types an optional field named like an Object member so the member stands in for it", () => {
+    expect(fieldType("constructor", text, true, EXACT_OPTIONAL)).toBe(
+      'constructor?: string | globalThis.Object["constructor"]',
+    );
+    expect(fieldType("toString", text, true, EXACT_OPTIONAL)).toBe(
+      'toString?: string | globalThis.Object["toString"]',
+    );
+  });
+
+  it("types a required one, __proto__ and any other field as they are", () => {
+    expect(fieldType("constructor", { ...text, required: true }, false, EXACT_OPTIONAL)).toBe(
+      "constructor: string",
+    );
+    expect(fieldType("__proto__", text, true, EXACT_OPTIONAL)).toBe("__proto__?: string");
+    expect(fieldType("user-id", text, true, EXACT_OPTIONAL)).toBe('"user-id"?: string');
   });
 });

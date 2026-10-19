@@ -16,6 +16,7 @@
 import { toInternalMethod } from "@noverax/courier/internal";
 import type { ParsedEndpoint } from "../parser/types";
 import { callOptions as options } from "./call-options";
+import { destructuringClosure } from "./destructuring-closure";
 import { formClosure } from "./form-closure";
 import { jsLiteral } from "./literals";
 import { bodyKey, ownJsonMedia, type RequestBodyKind } from "./request-body";
@@ -89,21 +90,25 @@ function placingClosure(
     if (kind === "none") return null;
     /* A body named in the options is sent as it is, so the path parameters
        are taken out of it here. */
-    const { pattern, searchParams } = destructure(
+    const { pattern, searchParams, ownCopy } = destructure(
       query,
       params.filter((p) => p.in === "path"),
     );
     const rest = pattern ? `${pattern}, ...body` : "...body";
-    return `(http, { ${rest} }) => http.del(${at}, void 0, { ${options("json: body", searchParams, read, media)} })`;
+    const call = `http.del(${at}, void 0, { ${options("json: body", searchParams, read, media)} })`;
+    return destructuringClosure(rest, call, ownCopy);
   }
-  const { pattern, searchParams } = destructure(query, []);
+  const { pattern, searchParams, ownCopy } = destructure(query, []);
   if (searchParams === null && media === null) return null;
   /* The path is filled from every variable, whatever the closure passes. */
   if (kind === "none") {
-    return `(http, { ${pattern} }) => http.${method}(${at}, void 0, { ${options(null, searchParams, read)} })`;
+    const call = `http.${method}(${at}, void 0, { ${options(null, searchParams, read)} })`;
+    return destructuringClosure(pattern, call, ownCopy);
   }
-  const body = pattern ? `{ ${pattern}, ...body }` : "body";
-  return `(http, ${body}) => http.${method}(${at}, body, { ${options(null, searchParams, read, media)} })`;
+  const call = `http.${method}(${at}, body, { ${options(null, searchParams, read, media)} })`;
+  return pattern
+    ? destructuringClosure(`${pattern}, ...body`, call, ownCopy)
+    : `(http, body) => ${call}`;
 }
 
 function wholeBodyClosure(
@@ -125,12 +130,13 @@ function wholeBodyClosure(
       : null;
   }
   const key = bodyKey(ep);
-  const { pattern, searchParams } = destructure(
+  const { pattern, searchParams, ownCopy } = destructure(
     ep.parameters.filter((param) => param.in === "query"),
     [],
   );
   const bindings = pattern ? `${pattern}, ${key}` : key;
-  return `(http, { ${bindings} }) => http.${method}(${at}, void 0, { ${options(`${option}: ${sent(key)}`, searchParams, read, media)} })`;
+  const call = `http.${method}(${at}, void 0, { ${options(`${option}: ${sent(key)}`, searchParams, read, media)} })`;
+  return destructuringClosure(bindings, call, ownCopy);
 }
 
 /**

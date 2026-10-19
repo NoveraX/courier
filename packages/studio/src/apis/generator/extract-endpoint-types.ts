@@ -3,6 +3,8 @@
  * Inline objects become named types in the schemas/types file.
  */
 
+import { defineOwn } from "../define-own";
+import { ownValue } from "../own-value";
 import type {
   ParsedEndpoint,
   ParsedGroup,
@@ -125,19 +127,24 @@ export function paramsToExtract(ep: ParsedEndpoint, bodyName?: string): ParsedSc
     return null;
   }
 
+  /* Every key defined as its own: a parameter or a field named `__proto__` is one too. */
   const properties: Record<string, ParsedSchemaProperty> = {};
-  for (const param of params) properties[param.name] = parameterProperty(param);
+  for (const param of params) defineOwn(properties, param.name, parameterProperty(param));
   if (nested) {
     const required = ep.requestBodyOptional !== true;
-    properties[bodyKey(ep)] = bodyName
-      ? { type: "ref", refName: bodyName, required }
-      : { type: "object", required, shape: nested };
+    defineOwn(
+      properties,
+      bodyKey(ep),
+      bodyName
+        ? { type: "ref", refName: bodyName, required }
+        : { type: "object", required, shape: nested },
+    );
   } else {
     const fields = ep.requestBody?.properties ?? {};
-    for (const [name, prop] of Object.entries(fields)) if (name) properties[name] = prop;
+    for (const [name, prop] of Object.entries(fields)) if (name) defineOwn(properties, name, prop);
   }
 
-  const required = Object.keys(properties).filter((name) => properties[name]?.required);
+  const required = Object.keys(properties).filter((name) => ownValue(properties, name)?.required);
   return { name: "", type: "object", properties, required };
 }
 

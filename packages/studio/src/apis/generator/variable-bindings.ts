@@ -2,6 +2,7 @@
  * How an endpoint's closure takes parameters out of its variables.
  */
 
+import { isInheritedName } from "../parser/inherited-names";
 import { isReservedBinding } from "../parser/reserved-bindings";
 import type { ParsedParameter } from "../parser/types";
 import { objectKey } from "./literals";
@@ -21,13 +22,19 @@ export interface Bindings {
    * parameter has a style of its own — or `null` without query parameters.
    */
   searchParams: string | null;
+  /**
+   * Whether the pattern takes a name every object inherits, so that it is
+   * to be read from a copy of the variables' own fields with no prototype.
+   */
+  ownCopy: boolean;
 }
 
 /**
  * Take parameters out of the variables: the query parameters, to be sent in
  * the query string, and others only to be left out of what remains. A name
- * that cannot be bound as it is — `page-size`, `class`, `body` — is taken
- * under a local name of its own.
+ * that cannot be bound as it is — `page-size`, `class`, `body`, `__proto__`
+ * — is taken under a local name of its own, and one every object inherits
+ * is to be read from the variables' own fields only.
  *
  * @param query - The query parameters
  * @param omitted - Parameters only to be left out of the rest
@@ -35,7 +42,7 @@ export interface Bindings {
  * @example
  * ```ts
  * destructure([dryRun, pageSize], []);
- * // { pattern: 'dryRun, "page-size": param1', searchParams: '{ dryRun, "page-size": param1 }' }
+ * // { pattern: 'dryRun, "page-size": param1', searchParams: '{ dryRun, "page-size": param1 }', ownCopy: false }
  * ```
  */
 export function destructure(
@@ -53,9 +60,12 @@ export function destructure(
   return {
     pattern: pattern.join(", "),
     searchParams: fields.length > 0 ? styledQuery(`{ ${fields.join(", ")} }`, query) : null,
+    ownCopy: [...query, ...omitted].some((param) => isInheritedName(param.name)),
   };
 }
 
 function bindable(name: string): boolean {
-  return IDENTIFIER.test(name) && !isReservedBinding(name) && !TAKEN.has(name);
+  return (
+    IDENTIFIER.test(name) && !isReservedBinding(name) && !TAKEN.has(name) && name !== "__proto__"
+  );
 }

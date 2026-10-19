@@ -2,9 +2,10 @@
  * Converts ParsedSchema to inline TypeScript type strings.
  */
 
+import { isObjectMember } from "../parser/object-members";
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
 import { typeUnion } from "./enum-literals";
-import { objectKey } from "./literals";
+import { jsLiteral, typeKey } from "./literals";
 
 /** How an optional property is written. */
 export interface TypeStyle {
@@ -65,7 +66,7 @@ function objectToTsType(schema: ParsedSchema, style: TypeStyle): string {
   const props: string[] = [];
   for (const [name, prop] of Object.entries(schema.properties ?? {})) {
     if (!name) continue;
-    props.push(`${objectKey(name)}${propertyType(prop, !required.has(name), style)}`);
+    props.push(fieldType(name, prop, !required.has(name), style));
   }
   if (props.length > 0) return `{ ${props.join("; ")} }`;
   /* No property of its own: a map, typed by its values when it says what
@@ -81,6 +82,34 @@ function objectToTsType(schema: ParsedSchema, style: TypeStyle): string {
  * @param style - How an optional property is written
  * @returns The mark, the colon and the type
  */
+/**
+ * A field of an object type: its key, whether it may be left out, and its
+ * type. An optional field named like a member TypeScript reads on every
+ * object — `constructor`, `toString` — takes that member's type too: an
+ * object without the field has the member, so the type took no object
+ * that left the field out, and reading the field of one gives the member.
+ *
+ * @param name - The field's name, as the specification writes it
+ * @param prop - The field
+ * @param optional - Whether it may be left out
+ * @param style - How optional fields are written
+ * @returns The field, `key?: type`
+ * @example
+ * ```ts
+ * fieldType("constructor", { type: "string", required: false }, true, EXACT_OPTIONAL);
+ * // → 'constructor?: string | globalThis.Object["constructor"]'
+ * ```
+ */
+export function fieldType(
+  name: string,
+  prop: ParsedSchemaProperty,
+  optional: boolean,
+  style: TypeStyle,
+): string {
+  const member = optional && isObjectMember(name) ? ` | globalThis.Object[${jsLiteral(name)}]` : "";
+  return `${typeKey(name)}${propertyType(prop, optional, style)}${member}`;
+}
+
 export function propertyType(
   prop: ParsedSchemaProperty,
   optional: boolean,

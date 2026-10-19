@@ -3,9 +3,8 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
-import { EXACT_OPTIONAL, propertyType, schemaToTsType, type TypeStyle } from "./inline-types";
+import { EXACT_OPTIONAL, fieldType, schemaToTsType, type TypeStyle } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
-import { objectKey } from "./literals";
 import type { GeneratorSettings } from "./types";
 
 /**
@@ -31,7 +30,7 @@ export function schemaToInterface(schema: ParsedSchema, style = EXACT_OPTIONAL):
   for (const [name, prop] of fields) {
     if (!name) continue;
     if (prop.description) lines.push(`  /** ${jsdocText(prop.description)} */`);
-    lines.push(`  ${objectKey(name)}${propertyType(prop, !required.has(name), style)};`);
+    lines.push(`  ${fieldType(name, prop, !required.has(name), style)};`);
   }
 
   return `{\n${lines.join("\n")}\n};`;

@@ -196,4 +196,35 @@ describe("an endpoint's variables", () => {
 
     expect(schemas).toMatch(/export type IssuesCreateParams = \{[^}]*title: string;/s);
   });
+
+  it("keep a parameter named __proto__ as a field of their own", () => {
+    const spec = parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Shop", version: "1" },
+        paths: {
+          "/things": {
+            get: {
+              operationId: "listThings",
+              tags: ["things"],
+              parameters: [
+                { name: "__proto__", in: "query", schema: { type: "string" } },
+                { name: "q", in: "query", schema: { type: "string" } },
+              ],
+              responses: { "200": { description: "ok" } },
+            },
+          },
+        },
+      }),
+    );
+    const schemas = generateCode(
+      spec,
+      { type: "openapi", outputDir: "src", validation: "none" },
+      "shop",
+    ).find((f) => f.path.endsWith("things/schemas.ts"))?.content;
+
+    expect(schemas).toMatch(
+      /export type ListThingsParams = \{\s*__proto__\?: string;\s*q\?: string;/s,
+    );
+  });
 });

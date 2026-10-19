@@ -324,7 +324,7 @@ describe("assertGeneratable", () => {
   it("refuses an endpoint its client could not be called by", () => {
     const named = (name: unknown) => (c: Crafted) => set(first(c), "name", name);
 
-    for (const name of ["options", "raw", "with", "pets.list", "", ["list"]]) {
+    for (const name of ["options", "raw", "with", "__proto__", "pets.list", "", ["list"]]) {
       expect(refusedAt(named(name))).toBe("groups[0].endpoints[0].name");
     }
     expect(

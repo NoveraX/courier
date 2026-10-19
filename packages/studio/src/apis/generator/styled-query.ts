@@ -5,6 +5,7 @@
  * Swagger 2.0 list is joined with commas.
  */
 
+import { defineOwn } from "../define-own";
 import type { FieldEncoding, ParsedEndpoint, ParsedParameter } from "../parser/types";
 import { encodingLiteral } from "./encoding-literal";
 
@@ -38,7 +39,7 @@ export function hasStyledQuery(ep: ParsedEndpoint): boolean {
 export function styledQuery(values: string, params: readonly ParsedParameter[]): string {
   const encoding: Record<string, FieldEncoding> = {};
   for (const param of params) {
-    if (param.in === "query" && param.encoding) encoding[param.name] = param.encoding;
+    if (param.in === "query" && param.encoding) defineOwn(encoding, param.name, param.encoding);
   }
   if (Object.keys(encoding).length === 0) return values;
   return `formQuery(${values}, ${encodingLiteral(encoding)})`;

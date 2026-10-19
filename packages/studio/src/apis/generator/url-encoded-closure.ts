@@ -1,5 +1,6 @@
 import type { ParsedEndpoint } from "../parser/types";
 import { callOptions } from "./call-options";
+import { destructuringClosure } from "./destructuring-closure";
 import { encodingLiteral } from "./encoding-literal";
 import { destructure } from "./variable-bindings";
 
@@ -31,7 +32,7 @@ export function urlEncodedClosure(
   key: string | null = null,
 ): string {
   /* Under a key, the fields are apart from the path parameters already. */
-  const { pattern, searchParams } = destructure(
+  const { pattern, searchParams, ownCopy } = destructure(
     ep.parameters.filter((param) => param.in === "query"),
     key === null ? ep.parameters.filter((param) => param.in === "path") : [],
   );
@@ -43,5 +44,5 @@ export function urlEncodedClosure(
   const form = `formBody(${fields}${encoding})`;
   const sent = key !== null && ep.requestBodyOptional ? `${key} === void 0 ? null : ${form}` : form;
   const options = callOptions(`body: ${sent}`, searchParams, read);
-  return `(http, { ${bindings} }) => http.${method}(${at}, void 0, { ${options} })`;
+  return destructuringClosure(bindings, `http.${method}(${at}, void 0, { ${options} })`, ownCopy);
 }

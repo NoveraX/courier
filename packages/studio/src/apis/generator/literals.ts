@@ -39,18 +39,41 @@ function unicodeEscape(char: string): string {
   return `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`;
 }
 
+const IDENTIFIER = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/;
+
 /**
- * Write a name as an object key, quoting it only when it has to be.
+ * Write a name as a key of an object literal, quoting it only when it has
+ * to be. `__proto__` is written as a computed key: bare or quoted, an object
+ * literal takes it for the object's prototype, and the field is lost.
  *
  * @param name - Property name taken from the specification
  * @returns The bare name when it is a valid identifier, otherwise a quoted key
  *
  * @example
  * ```ts
- * objectKey("id")      // → "id"
- * objectKey("user-id") // → '"user-id"'
+ * objectKey("id")        // → "id"
+ * objectKey("user-id")   // → '"user-id"'
+ * objectKey("__proto__") // → '["__proto__"]'
  * ```
  */
 export function objectKey(name: string): string {
-  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : jsLiteral(name);
+  if (name === "__proto__") return `[${jsLiteral(name)}]`;
+  return typeKey(name);
+}
+
+/**
+ * Write a name as a property of an object type, quoting it only when it has
+ * to be: `__proto__` too, which in a type names a field and sets nothing.
+ *
+ * @param name - Property name taken from the specification
+ * @returns The bare name when it is a valid identifier, otherwise a quoted key
+ *
+ * @example
+ * ```ts
+ * typeKey("__proto__") // → "__proto__"
+ * typeKey("user-id")   // → '"user-id"'
+ * ```
+ */
+export function typeKey(name: string): string {
+  return IDENTIFIER.test(name) ? name : jsLiteral(name);
 }

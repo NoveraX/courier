@@ -49,6 +49,9 @@ function checkEndpointNames(endpoints: unknown, at: SpecPath): void {
     if (typeof name !== "string" || name === "" || name.includes(".")) {
       nameAt.refuse(name, "an endpoint is named by a string with no dot in it");
     }
+    if (name === "__proto__") {
+      nameAt.refuse(name, "an object literal would take it for its prototype");
+    }
     if (RESERVED_ENDPOINT_NAMES.has(name)) {
       nameAt.refuse(name, "its client keeps the name for itself");
     }

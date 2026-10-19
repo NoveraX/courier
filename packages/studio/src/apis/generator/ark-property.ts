@@ -32,8 +32,13 @@ const META_KEYS: ReadonlySet<string> = new Set(["...", "+"]);
  */
 export function arkProperty(name: string, optional: boolean, value: string): string {
   if (optional && !name.endsWith(BACKSLASH)) return `${jsLiteral(`${name}?`)}: ${value}`;
-  const key = jsLiteral(requiredKey(name));
+  const key = literalKey(requiredKey(name));
   return optional ? `${key}: ${value}.optional()` : `${key}: ${value}`;
+}
+
+/* `__proto__` computed: written as a string, an object literal takes it for the object's prototype. */
+function literalKey(key: string): string {
+  return key === "__proto__" ? `[${jsLiteral(key)}]` : jsLiteral(key);
 }
 
 /* The key ArkType reads as a required property of exactly this name. */

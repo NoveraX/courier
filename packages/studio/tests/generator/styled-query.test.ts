@@ -9,8 +9,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
+import { styledQuery } from "../../src/apis/generator/styled-query";
 import { parseSpec } from "../../src/apis/parser";
-import type { ParsedSpec } from "../../src/apis/parser/types";
+import type { ParsedParameter, ParsedSpec } from "../../src/apis/parser/types";
 import {
   compileProject,
   endpointAt,
@@ -256,5 +257,22 @@ describe("the parsed parameters", () => {
       ["expand", { style: "deepObject", explode: true }],
       ["limit", undefined],
     ]);
+  });
+});
+
+describe("styledQuery", () => {
+  it("writes the encoding of a parameter named __proto__ under a key of its own", () => {
+    const param: ParsedParameter = {
+      name: "__proto__",
+      in: "query",
+      required: false,
+      type: "object",
+      description: "",
+      encoding: { style: "deepObject", explode: true },
+    };
+
+    expect(styledQuery('{ ["__proto__"]: param0 }', [param])).toBe(
+      'formQuery({ ["__proto__"]: param0 }, { ["__proto__"]: { style: "deepObject", explode: true } })',
+    );
   });
 });

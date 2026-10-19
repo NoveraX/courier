@@ -109,6 +109,11 @@ describe("arkProperty", () => {
   it("makes an optional name ending in a backslash optional through its value", () => {
     expect(arkProperty("a\\", true, "V")).toBe(`${JSON.stringify("a\\")}: V.optional()`);
   });
+
+  it("computes a required __proto__, which a quoted key would take for the prototype", () => {
+    expect(arkProperty("__proto__", false, "V")).toBe('["__proto__"]: V');
+    expect(arkProperty("__proto__", true, "V")).toBe('"__proto__?": V');
+  });
 });
 
 describe("a schema whose property names read as ArkType's key syntax", () => {

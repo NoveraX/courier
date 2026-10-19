@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
   agentRules: false,
   /* A page that moved keeps its old address, so a link published to it still arrives; the
      docs' own address is the first page's, for good, so search engines index that page alone. */
+  /* A docs page as Markdown, at its own address with .md after it. */
+  async rewrites() {
+    return [{ source: "/docs/:path+.md", destination: "/markdown/:path+" }]
+  },
   async redirects() {
     return [
       { source: "/docs", destination: "/docs/introduction", permanent: true },

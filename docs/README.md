@@ -36,7 +36,8 @@ A Next.js app, with a small Express backend the live examples call.
 | `/reference` | The API reference, read from the documentation's API pages |
 | `/studio` | Courier Studio's page |
 | `/mcp` | The MCP server's page |
-| `/llms.txt`, `/llms-full.txt` | Every page for language models: an index, and the whole documentation as Markdown |
+| `/docs/<section>/<page>.md` | A docs page as Markdown, for language models and agents; its `Link` header names the page as canonical |
+| `/llms.txt`, `/llms-full.txt` | Every page for language models: an index linking each page's Markdown, and the whole documentation as one file; kept out of search results |
 | `/og/<page>` | Each page's social card, drawn from its title and description when the site is built; the home page's is `/opengraph-image` |
 
 ## Run it

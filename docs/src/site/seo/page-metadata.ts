@@ -16,6 +16,8 @@ export interface SeoPage {
   section?: string | undefined
   /** When the page last changed, `YYYY-MM-DD`, for a page that says. */
   updated?: string | undefined
+  /** Where the page is served as Markdown, for a page written as text. */
+  markdown?: string | undefined
 }
 
 function fullTitle({ title, standalone }: SeoPage): string {
@@ -61,7 +63,10 @@ export function pageMetadata(page: SeoPage): Metadata {
   return {
     title: page.standalone ? { absolute: page.title } : page.title,
     description: page.description,
-    alternates: { canonical: page.path },
+    alternates: {
+      canonical: page.path,
+      ...(page.markdown ? { types: { "text/markdown": page.markdown } } : {}),
+    },
     openGraph: openGraph(page),
     twitter: { card: "summary_large_image", title: fullTitle(page), description: page.description },
   }

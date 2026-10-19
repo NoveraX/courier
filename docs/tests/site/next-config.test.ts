@@ -1,6 +1,7 @@
 /**
  * What the site's Next.js config routes before any page: the docs' own
- * address, which redirects for good to the first page, and a moved page's.
+ * address, which redirects for good to the first page, and a docs page's
+ * address with .md after it, which serves the page as Markdown.
  */
 import { describe, expect, it } from "vitest"
 
@@ -13,5 +14,11 @@ describe("the site's routing", () => {
       destination: "/docs/introduction",
       permanent: true,
     })
+  })
+
+  it("serves a docs page's Markdown at its own address with .md after it", async () => {
+    expect(await nextConfig.rewrites?.()).toEqual([
+      { source: "/docs/:path+.md", destination: "/markdown/:path+" },
+    ])
   })
 })

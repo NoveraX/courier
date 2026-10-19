@@ -9,9 +9,12 @@ import { cn } from "@/site/cn"
 import type { SearchEntry } from "@/site/content/search-index"
 import { searchDocs } from "@/site/content/search-index"
 import { useReturnFocus } from "@/site/use-return-focus"
+import { useSearchIndex } from "./use-search-index"
+
+/* What the palette says when the index would not load; opening it again tries again. */
+const SEARCH_FAILED = "Search could not load the pages. Close it and open it again."
 
 interface SearchPaletteProps {
-  entries: readonly SearchEntry[]
   open: boolean
   onOpenChange: (open: boolean) => void
   /** The header's Search, which focus goes back to when nothing else had it. */
@@ -22,23 +25,25 @@ interface SearchPaletteProps {
  * Search over the docs and the API reference, as ⌘K or the header's
  * Search opens it: typed words narrow the pages and exports, ↑ ↓ move
  * through them, ↵ opens one. Closed without opening one, it gives focus
- * back to where it was.
+ * back to where it was. The pages and exports come from the search index
+ * the site serves, fetched once the page is idle.
  *
- * @param props - The pages and exports, whether the palette is open, and the Search that opens it
+ * @param props - Whether the palette is open, and the Search that opens it
  * @returns The palette
  * @example
  * ```tsx
- * <SearchPalette entries={entries} open={open} onOpenChange={setOpen} returnTo={searchButton} />
+ * <SearchPalette open={open} onOpenChange={setOpen} returnTo={searchButton} />
  * ```
  */
-export function SearchPalette({ entries, open, onOpenChange, returnTo }: SearchPaletteProps) {
+export function SearchPalette({ open, onOpenChange, returnTo }: SearchPaletteProps) {
   const router = useRouter()
   const id = useId()
   const [query, setQuery] = useState("")
   const [chosen, setChosen] = useState(0)
   const dismissed = useRef(false)
   const returnFocus = useReturnFocus(returnTo, { shortcut: true })
-  const results = searchDocs(entries, query)
+  const { entries, failed } = useSearchIndex(open)
+  const results = entries ? searchDocs(entries, query) : []
   const go = (entry: SearchEntry | undefined) => {
     if (!entry) return
     returnFocus.leave()
@@ -118,7 +123,7 @@ export function SearchPalette({ entries, open, onOpenChange, returnTo }: SearchP
             ))}
             {results.length === 0 && (
               <p className="m-0 px-2.75 py-6 text-center text-control text-fg-subtle">
-                No pages match
+                {entries ? "No pages match" : failed ? SEARCH_FAILED : "Loading…"}
               </p>
             )}
           </div>

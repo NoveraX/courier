@@ -79,6 +79,11 @@ export const REFERENCE_SECTIONS: NavSection[] = [
         description: "rawData: status + headers",
       },
       { title: "Options", href: "/docs/examples/options", description: "timeout, retry, cache" },
+      {
+        title: "Singleton",
+        href: "/docs/examples/singleton",
+        description: "One typed client for the whole app",
+      },
     ],
   },
 ]

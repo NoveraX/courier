@@ -92,6 +92,18 @@ describe("an asset the build does not have", () => {
   });
 });
 
+describe("robots.txt", () => {
+  it("is a crawler's text, letting it read the noindex every answer carries, not the app", async () => {
+    const url = await serve(builtUi("node_modules", "@noverax", "courier-studio", "ui", "dist"));
+
+    const reply = await get(`${url}/robots.txt`);
+
+    expect(reply.status).toBe(200);
+    expect(reply.type).toContain("text/plain");
+    expect(reply.text).toBe("User-agent: *\nAllow: /\n");
+  });
+});
+
 describe("serveStudioUi in a plain install", () => {
   it("answers a page with the app", async () => {
     const url = await serve(builtUi("node_modules", "@noverax", "courier-studio", "ui", "dist"));

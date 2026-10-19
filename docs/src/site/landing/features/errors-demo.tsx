@@ -34,7 +34,9 @@ export function ErrorsDemo() {
             at === lit
               ? "border-[rgb(var(--tone-rgb)/0.5)] bg-[rgb(var(--tone-rgb)/0.07)]"
               : "border-line bg-panel",
-            at <= lit ? "opacity-100" : "opacity-35"
+            /* The steps not reached yet are dimmed as the motion goes, and shown whole to a
+               reader who asks for more contrast. */
+            at <= lit ? "opacity-100" : "opacity-35 contrast-more:opacity-100"
           )}
         >
           <code className="min-w-0 flex-1 truncate text-label text-fg">{row.expr}</code>

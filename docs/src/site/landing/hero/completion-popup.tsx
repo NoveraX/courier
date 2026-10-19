@@ -43,7 +43,14 @@ export function CompletionPopup({
             ƒ
           </span>
           <span className="text-fg">{name}</span>
-          <span className="ml-auto min-w-0 truncate text-fg-subtle">{sig}</span>
+          <span
+            className={cn(
+              "ml-auto min-w-0 truncate",
+              at === picked ? "text-fg-muted" : "text-fg-subtle"
+            )}
+          >
+            {sig}
+          </span>
         </div>
       ))}
     </div>

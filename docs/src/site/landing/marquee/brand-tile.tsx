@@ -1,13 +1,14 @@
 import type { CSSProperties } from "react"
 
 import { cn } from "@/site/cn"
-import { BrandIcon } from "@/site/landing/brand-icon"
 import type { Brand } from "@/site/landing/brands"
 import { isPale, rgbOf } from "@/site/landing/brands"
+import { brandSymbolId } from "./brand-symbols"
 
 /**
- * A brand as a tile: its mark on a tinted square, its name, and what
- * Courier offers it. Hovering rings it in the brand's colour.
+ * A brand as a tile: its mark on a tinted square — drawn from the page's
+ * sprite — its name, and what Courier offers it. Hovering rings it in the
+ * brand's colour.
  *
  * @param props - The brand
  * @returns The tile
@@ -30,7 +31,9 @@ export function BrandTile({ brand }: { brand: Brand }) {
           className={cn(isPale(brand.hex) && "text-fg")}
           style={isPale(brand.hex) ? undefined : { color: brand.hex }}
         >
-          <BrandIcon path={brand.path} className="block size-5" />
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="block size-5">
+            <use href={`#${brandSymbolId(brand)}`} />
+          </svg>
         </span>
       </span>
       <span className="flex flex-col gap-0.75">

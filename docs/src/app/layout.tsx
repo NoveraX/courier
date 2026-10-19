@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
-import { QueryProvider } from "@/site/query-provider"
 import {
   DOCS_TITLE_SUFFIX,
   ORGANIZATION,
@@ -64,9 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen antialiased">
-        <ThemeProvider>
-          <QueryProvider>{children}</QueryProvider>
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   )

@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 
 import { referenceMarkdown } from "@/site/content/reference-markdown"
 import { BUILDER_VERBS, ENTRY_POINTS } from "@/site/content/reference-modules"
-import { siteSearchEntries } from "@/site/content/site-search"
 import { coreVersion } from "@/site/content/version"
 import { referenceSections } from "@/site/reference/reference-data"
 import { referenceUpdated } from "@/site/reference/reference-updated"
@@ -22,7 +21,6 @@ export default async function ReferencePage() {
       <JsonLd graph={referenceGraph(updated, coreVersion())} />
       <ReferenceView
         sections={sections}
-        searchable={await siteSearchEntries()}
         entryPoints={ENTRY_POINTS}
         verbs={BUILDER_VERBS}
         version={coreVersion()}

@@ -41,7 +41,9 @@ export function withoutNull(given: SpecNode): { node: SpecNode; nullable: boolea
 
 /**
  * Does this property take a form a single field cannot describe — one of
- * several alternatives, or an `allOf` that adds properties of its own?
+ * several alternatives, or an `allOf` that adds up more than one schema:
+ * properties of its own, or two schemas it refers to or composes, each
+ * adding fields the other lacks?
  *
  * A `type` beside `anyOf` normally just narrows the type, as in a string
  * that is one of two formats; only an object uses `anyOf` to say which of
@@ -52,22 +54,41 @@ export function withoutNull(given: SpecNode): { node: SpecNode; nullable: boolea
  * @example
  * ```ts
  * isComposite({ anyOf: [{ type: "string" }, { $ref: "#/components/schemas/Product" }] }); // true
+ * isComposite({ allOf: [{ $ref: "#/components/schemas/A" }, { $ref: "#/components/schemas/B" }] }); // true
  * ```
  */
 export function isComposite(node: SpecNode): boolean {
   if (node.oneOf || node.anyOf) return !node.type || node.type === "object" || !!node.properties;
   const allOf = listAt(node, "allOf");
   if (allOf.length < 2) return false;
-  return allOf.some(
-    (member) => isNode(member) && (Boolean(member.properties) || member.type === "object"),
-  );
+  if (
+    allOf.some(
+      (member) => isNode(member) && (Boolean(member.properties) || member.type === "object"),
+    )
+  ) {
+    return true;
+  }
+  return composedSchemas(allOf) > 1;
+}
+
+/* The schemas an `allOf` adds up: each one it refers to, once, and each composition among its members. */
+function composedSchemas(members: readonly unknown[]): number {
+  const references = new Set<string>();
+  let compositions = 0;
+  for (const member of members) {
+    const ref = fieldOf(member, "$ref");
+    if (typeof ref === "string") references.add(ref);
+    else if (Array.isArray(fieldOf(member, "allOf"))) compositions += 1;
+  }
+  return references.size + compositions;
 }
 
 /**
  * The member an `allOf` stands for when it composes nothing.
  *
  * `allOf: [{ $ref: X }]` is how OpenAPI 3.0 attaches a description or
- * `nullable` to a reference; the other members only annotate it.
+ * `nullable` to a reference; the other members only annotate it, or name
+ * that schema again.
  *
  * @param members - The `allOf` members
  * @returns The reference among them, or all of them merged

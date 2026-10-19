@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: docTitles().get(path) ?? meta.title,
     description: meta.description,
     section: findNavContext(path)?.section.label,
+    updated: meta.updated,
   })
 }
 

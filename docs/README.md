@@ -73,6 +73,20 @@ It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
 it is up, and the container stops, to be started again, when either server
 does.
 
+## Writing a page
+
+A page is an MDX file under `src/content/docs` that opens with its metadata:
+
+```js
+export const metadata = { title: "Quick Start", description: "…", mode: "both", updated: "2026-10-14" }
+```
+
+`updated` is the day the page's text last changed: the page shows it under
+its title, and the sitemap and the page's structured data hand it to search
+engines. Change a page's text and set its date to that day. CI refuses a
+page whose text changed under an older date; from the repository's root,
+`npm run check:page-dates -- --fix` writes today's date where one is due.
+
 ## Live examples
 
 | Example | Route |

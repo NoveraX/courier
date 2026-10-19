@@ -4,6 +4,7 @@ import { jsxText } from "./jsx-literals"
 export interface SourceMetadata {
   title?: string | undefined
   description?: string | undefined
+  updated?: string | undefined
 }
 
 /**
@@ -33,8 +34,8 @@ export function metadataLines(lines: readonly string[]): { start: number; end: n
 
 /**
  * The fields a docs page's metadata export writes as plain strings — what
- * the page is titled and what it covers — read from its source, where no
- * MDX compiler is at hand.
+ * the page is titled, what it covers and when it last changed — read from
+ * its source, where no MDX compiler is at hand.
  *
  * @param source - The page's MDX source
  * @returns The fields it writes as strings
@@ -51,5 +52,6 @@ export function sourceMetadata(source: string): SourceMetadata {
   return {
     title: jsxText(block, "title"),
     description: jsxText(block, "description"),
+    updated: jsxText(block, "updated"),
   }
 }

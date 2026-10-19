@@ -50,6 +50,14 @@ describe("a page's metadata", () => {
     })
   })
 
+  it("says when a docs page last changed", () => {
+    const dated = pageMetadata({ ...page, section: "Getting Started", updated: "2026-10-14" })
+    expect(dated.openGraph).toMatchObject({ type: "article", modifiedTime: "2026-10-14" })
+    expect(pageMetadata({ ...page, section: "Getting Started" }).openGraph).not.toHaveProperty(
+      "modifiedTime"
+    )
+  })
+
   it("leaves the home page its own card, which Next.js names with its hash", () => {
     const home = pageMetadata({ ...SITE_PAGES.home, standalone: true })
     expect(home.openGraph).not.toHaveProperty("images")

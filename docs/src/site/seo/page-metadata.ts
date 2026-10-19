@@ -14,6 +14,8 @@ export interface SeoPage {
   standalone?: boolean | undefined
   /** The docs section the page belongs to, for a docs page. */
   section?: string | undefined
+  /** When the page last changed, `YYYY-MM-DD`, for a page that says. */
+  updated?: string | undefined
 }
 
 function fullTitle({ title, standalone }: SeoPage): string {
@@ -37,9 +39,9 @@ function openGraph(page: SeoPage): NonNullable<Metadata["openGraph"]> {
     description: page.description,
     ...images(page),
   }
-  return page.section
-    ? { ...shared, type: "article", section: page.section }
-    : { ...shared, type: "website" }
+  if (!page.section) return { ...shared, type: "website" }
+  const modified = page.updated ? { modifiedTime: page.updated } : {}
+  return { ...shared, type: "article", section: page.section, ...modified }
 }
 
 /**

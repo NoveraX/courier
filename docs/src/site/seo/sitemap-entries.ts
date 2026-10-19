@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next"
 
 import { docSlugs, docSource } from "@/site/content/docs-files"
 import { docsNav, flatNavItems } from "@/site/content/docs-nav"
+import { API_SECTION } from "@/site/content/nav-reference"
 import { sourceMetadata } from "@/site/content/source-metadata"
 import { referenceUpdated } from "@/site/reference/reference-updated"
 import { EXAMPLE_PAGES } from "@/site/sandbox/example-pages"
@@ -21,7 +22,7 @@ function docsPages(): MetadataRoute.Sitemap {
 }
 
 function referencePage(): MetadataRoute.Sitemap[number] {
-  const api = docsNav.find((section) => section.label === "API Reference")?.items ?? []
+  const api = docsNav.find((section) => section.label === API_SECTION)?.items ?? []
   const updated = referenceUpdated(api.map((item) => item.href))
   return {
     url: absoluteUrl(SITE_PAGES.reference.path),

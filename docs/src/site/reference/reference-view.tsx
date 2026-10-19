@@ -4,6 +4,7 @@ import { BookMarked, ChevronRight, GitCommitHorizontal, Package } from "lucide-r
 import Link from "next/link"
 import { useRef, useState } from "react"
 
+import { API_SECTION } from "@/site/content/nav-reference"
 import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
 import { PageActions } from "@/site/layout/page-actions"
 import { SiteHeader } from "@/site/layout/site-header"
@@ -17,9 +18,8 @@ import type { ReferenceSection } from "./reference-data"
 import { ReferenceDrawer } from "./reference-drawer"
 import type { ListedExport } from "./reference-sidebar"
 import { ReferenceSidebar } from "./reference-sidebar"
+import { REFERENCE_TITLE } from "./reference-title"
 import { useSectionSpy } from "./use-section-spy"
-
-const TITLE = "API reference"
 
 interface ReferenceViewProps {
   sections: readonly ReferenceSection[]
@@ -93,23 +93,27 @@ export function ReferenceView({
           exports={listed}
           filter={exportFilter}
           active={active}
-          title={TITLE}
+          title={REFERENCE_TITLE}
           markdown={markdown}
         />
         <main id="main-content" className="DocSearch-content min-w-0 max-w-[900px] pt-10 pb-30">
-          {/* DocSearch files the page under the section DocSearch-lvl0 names, and
-              leaves the trail itself out of the page's text. */}
+          {/* DocSearch files the page under the section DocSearch-lvl0 names — the
+              docs' API Reference, where search lists the exports beside the
+              functions' own pages — and leaves the trail out of the page's text. */}
           <p className="DocSearch-skip m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
             <BookMarked aria-hidden="true" className="size-3.25 text-brand" />
             <Link href={"/docs/introduction"} className="-my-1.5 py-1.5 hover:text-fg">
               Docs
             </Link>
             <ChevronRight aria-hidden="true" className="size-3" />
-            <span className="DocSearch-lvl0 text-fg-muted">{TITLE}</span>
+            <span className="text-fg-muted">{REFERENCE_TITLE}</span>
+            <span hidden className="DocSearch-lvl0">
+              {API_SECTION}
+            </span>
           </p>
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <h1 className="m-0 text-h1 font-semibold tracking-h1 text-fg">{TITLE}</h1>
-            <PageActions title={TITLE} fileName="api-reference.md" markdown={markdown} />
+            <h1 className="m-0 text-h1 font-semibold tracking-h1 text-fg">{REFERENCE_TITLE}</h1>
+            <PageActions title={REFERENCE_TITLE} fileName="api-reference.md" markdown={markdown} />
           </div>
           <p className="m-0 mt-4 max-w-[62ch] text-lead text-fg-muted">
             Every export the docs describe, read from its page: where to import it from, its

@@ -3,6 +3,7 @@ import { loadDoc } from "@/site/content/doc-module"
 import { docSource } from "@/site/content/docs-files"
 import { docsNav } from "@/site/content/docs-nav"
 import type { CodeFence } from "@/site/content/mdx-sections"
+import { API_SECTION } from "@/site/content/nav-reference"
 import type { ReferenceEntry, ReferenceParam } from "@/site/content/reference"
 import { referenceEntry } from "@/site/content/reference"
 
@@ -25,8 +26,6 @@ export interface ReferenceSection extends Omit<ReferenceEntry, "signature" | "ex
   /** The docs page the entry is read from. */
   page: string
 }
-
-const API_SECTION = "API Reference"
 
 async function shown(fence: CodeFence | null | undefined): Promise<ShownCode | null> {
   return fence ? { code: fence.code, html: await highlight(fence.code, fence.language) } : null

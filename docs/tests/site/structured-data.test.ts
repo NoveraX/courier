@@ -26,12 +26,14 @@ import {
 const DOCS = fileURLToPath(new URL("../../src/content/docs", import.meta.url))
 const SITE = "https://courier.noverax.cloud"
 
-function docPages(dir = DOCS): { href: string; source: string }[] {
+/* The address is made of the folder names, as the site makes it: a path
+   relative to the docs holds backslashes on Windows. */
+function docPages(dir = DOCS, address = "/docs"): { href: string; source: string }[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const file = path.join(dir, entry.name)
-    if (entry.isDirectory()) return docPages(file)
+    if (entry.isDirectory()) return docPages(file, `${address}/${entry.name}`)
     if (!entry.name.endsWith(".mdx")) return []
-    const href = `/docs/${path.relative(DOCS, file).slice(0, -".mdx".length)}`
+    const href = `${address}/${entry.name.slice(0, -".mdx".length)}`
     return [{ href, source: readFileSync(file, "utf8") }]
   })
 }

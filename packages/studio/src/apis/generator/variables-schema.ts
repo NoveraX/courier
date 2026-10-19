@@ -1,3 +1,4 @@
+import { ownValue } from "../own-value";
 import type { ParsedEndpoint, ParsedParameter, ParsedSchema } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
 import { constantsDeclared, declaredSchema } from "./declared-schema";
@@ -92,7 +93,9 @@ function bodySchema(ep: ParsedEndpoint, context: EndpointContext): string | null
 function extendable(ep: ParsedEndpoint, context: EndpointContext): boolean {
   const ref = ep.requestBody?.refName;
   return (
-    ref !== undefined && !context.lazy.has(ref) && context.spec.schemas[ref]?.type === "object"
+    ref !== undefined &&
+    !context.lazy.has(ref) &&
+    ownValue(context.spec.schemas, ref)?.type === "object"
   );
 }
 

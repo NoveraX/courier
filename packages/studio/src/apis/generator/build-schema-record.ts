@@ -1,3 +1,4 @@
+import { ownValue } from "../own-value";
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { collectGroupSchemas, collectRefsDeep, withDependencies } from "./schema-refs";
 
@@ -33,10 +34,11 @@ export function buildSchemaRecord(
   for (const schema of Object.values(extracted)) collectRefsDeep(schema, direct);
   for (const name of withDependencies(direct, extendedSpec)) names.add(name);
 
+  /* By a name of its own: one a schema refers to by, such as `constructor`, finds nothing inherited. */
   const result: Record<string, ParsedSchema> = {};
   for (const name of names) {
-    if (spec.schemas[name]) result[name] = spec.schemas[name];
-    else if (extracted[name]) result[name] = extracted[name];
+    const schema = ownValue(spec.schemas, name) ?? ownValue(extracted, name);
+    if (schema) result[name] = schema;
   }
   return result;
 }

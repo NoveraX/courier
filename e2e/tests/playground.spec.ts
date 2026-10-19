@@ -34,19 +34,27 @@ test("sends a call through the app, and shows the upstream's answer", async ({ p
   await expect(page).toHaveURL(/\/timeline/);
   await page.getByRole("link", { name: "Playground" }).click();
 
-  await page.locator("main button").first().click();
+  await endpointOf(page).click();
   /* Typed before the list's search takes the focus, the keys would reach the
      button that opened it, and Enter would close the list again. */
   await expect(page.getByPlaceholder(/^Search \d+ endpoints/)).toBeFocused();
   await page.keyboard.type("users.list");
   await page.keyboard.press("Enter");
-  await expect(page.locator("main button").first()).toContainText("list");
+  await expect(endpointOf(page)).toContainText("list");
   await page.getByRole("button", { name: /^Send/ }).click();
 
   const response = page.locator("main");
   await expect(response.getByText("Ada Lovelace").first()).toBeVisible();
   await expect(response.getByText("200").first()).toBeVisible();
 });
+
+/* The button naming the Playground's endpoint, which opens the list of them.
+   Found by its name, not as the view's first button: the Playground's code
+   loads when it is first opened, and until it has, the view still shows
+   the Timeline, whose first button is its own. */
+function endpointOf(page: Page) {
+  return page.getByRole("button", { name: /^Endpoint: / });
+}
 
 /* The Playground on `users.get`, its variables' editor ready to type in. */
 async function variablesOf(page: Page) {
@@ -55,12 +63,12 @@ async function variablesOf(page: Page) {
      app attached; a page opened before that move would be undone by it. */
   await expect(page).toHaveURL(/\/timeline/);
   await page.getByRole("link", { name: "Playground" }).click();
-  await page.locator("main button").first().click();
+  await endpointOf(page).click();
   await expect(page.getByPlaceholder(/^Search \d+ endpoints/)).toBeFocused();
   await page.keyboard.type("users.get");
   await page.keyboard.press("Enter");
   /* Typed before the choice lands, the text would go to the endpoint shown before. */
-  await expect(page.locator("main button").first()).toContainText(/users \/ get/);
+  await expect(endpointOf(page)).toContainText(/users \/ get/);
   return page.getByRole("textbox", { name: "Variables" });
 }
 

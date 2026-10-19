@@ -37,8 +37,13 @@ async function startLargeUpstream(): Promise<{ url: string; close(): Promise<voi
 
 async function sendUsersList(page: Page): Promise<void> {
   await page.goto(studio.link);
+  /* The link opens the setup, which moves to the Timeline once it sees the
+     app attached; a page opened before that move would be undone by it. */
+  await expect(page).toHaveURL(/\/timeline/);
   await page.getByRole("link", { name: "Playground" }).click();
-  await page.locator("main button").first().click();
+  /* By its name, not as the view's first button: until the Playground's code
+     has loaded, the view still shows the Timeline. */
+  await page.getByRole("button", { name: /^Endpoint: / }).click();
   await expect(page.getByPlaceholder(/^Search \d+ endpoints/)).toBeFocused();
   await page.keyboard.type("users.list");
   await page.keyboard.press("Enter");

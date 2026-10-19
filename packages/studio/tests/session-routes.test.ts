@@ -336,15 +336,17 @@ async function page(): Promise<{ socket: Socket; shown: unknown[]; replays: unkn
 }
 
 describe("the session a page loads", () => {
-  it("is shown to a page that connects, across a restart, until one goes back to live", async () => {
+  it("is shown to a page that connects in place of the live requests, across a restart, until one goes back to live", async () => {
     const saved = await call("save", { name: "login flow", requests: REQUESTS });
     await call("load", { id: field(saved.body, "id") });
     await restart();
 
     const reloaded = await page();
     await expect.poll(() => reloaded.shown.length).toBe(1);
+    /* In place of the live requests, which the page would draw before the session came. */
+    expect(reloaded.replays).toEqual([]);
     reloaded.socket.emit("view:live");
-    await expect.poll(() => reloaded.replays.length).toBe(2);
+    await expect.poll(() => reloaded.replays.length).toBe(1);
     reloaded.socket.disconnect();
     const next = await page();
     await expect.poll(() => next.replays.length).toBe(1);

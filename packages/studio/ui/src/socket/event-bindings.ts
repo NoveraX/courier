@@ -23,9 +23,10 @@ type EventPayload = StudioEvent & Record<string, unknown>;
  * before, which ends the page's wait for them — one the page cannot read
  * ends it too, since Studio has said what it has. A mock-server event goes
  * to the mock store at once.
- * When the pages show a saved session, Studio sends it after the replay, as
- * `view:session`, and it is shown in place of the live requests. The
- * requests the mocks answered come as `mock:events:replay`.
+ * When the pages show a saved session, Studio sends it in place of the
+ * replay, as `view:session`, and it is shown in place of the live requests;
+ * it ends the wait as the replay does. The requests the mocks answered come
+ * as `mock:events:replay`.
  *
  * @param socket - The `/ui` socket
  * @param store - Reads the store's event actions
@@ -63,9 +64,11 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
 
   const onView = (data: unknown): void => {
     const shown = shownSessionOf(data);
-    if (!shown) return;
-    queue.flush();
-    store().showSession(shown.session, shown.requests);
+    if (shown) {
+      queue.flush();
+      store().showSession(shown.session, shown.requests);
+    }
+    store().setReceived("requests");
   };
 
   const onMockReplay = (data: unknown): void => {

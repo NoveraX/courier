@@ -37,7 +37,7 @@ import { bindPageState } from "./ui-page-state";
 import { bindPlaygroundHistory } from "./ui-playground-history";
 import { bindRequestPins } from "./ui-request-pins";
 import { guardUiWrites, type VisitorPolicy } from "./ui-token-guard";
-import { bindView } from "./ui-view";
+import { bindView, shownSession } from "./ui-view";
 import type { WatcherStatus } from "./watcher-status";
 
 export interface SetupUiNamespaceDeps {
@@ -140,11 +140,15 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     watcherStatus?.sendSnapshot(socket);
     if (databaseSize) socket.emit("storage:size", { onDisk: databaseSize() });
 
+    /* A page that loaded a saved session is shown it again in place of the
+       live requests: sent them first, it drew them before the session came. */
+    const shown = sessions && view ? shownSession({ sessions, view }) : undefined;
+
     /* The requests captured before this UI connected, so a page that loads
        or reloads shows them. Clearing the log in one page forgets them here
        too, except the ones it keeps. */
     if (requestLog) {
-      socket.emit("events:replay", requestLog.replayPayload());
+      if (!shown) socket.emit("events:replay", requestLog.replayPayload());
       if (pins) bindRequestPins(socket, pins);
       socket.on("requests:clear", (raw: unknown) => {
         const keep = keptIdsOf(raw);
@@ -154,8 +158,8 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       });
     }
 
-    /* After the live requests: a page that loaded a saved session shows it again. */
-    if (sessions && view) bindView(socket, { sessions, view, requestLog });
+    /* After the pins, which name live requests: the session keeps its own. */
+    if (sessions && view) bindView(socket, { view, requestLog }, shown);
     if (playgroundHistory) {
       bindPlaygroundHistory(socket, playgroundHistory, { trusted, demo: demo !== undefined });
     }

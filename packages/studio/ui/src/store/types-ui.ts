@@ -20,7 +20,10 @@ export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "re
 export interface Received {
   /** The runtimes attached: the first `binding:snapshot`. */
   runtimes: boolean;
-  /** The requests Studio captured before: the first `events:replay`. */
+  /**
+   * The requests Studio captured before, the first `events:replay` — or, while
+   * the pages show a saved session, the session sent in their place.
+   */
   requests: boolean;
 }
 

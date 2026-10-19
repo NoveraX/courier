@@ -3,9 +3,10 @@
  */
 /**
  * A page that loaded a saved session shows it again after a reload: Studio
- * keeps the session shown, and sends it to a page that connects, after the
- * live requests. Going back to live tells Studio, which sends the live
- * requests again.
+ * keeps the session shown, and sends it to a page that connects in place of
+ * the live requests, so the page waits for nothing more once it came, and
+ * draws no live request before it. Going back to live tells Studio, which
+ * sends the live requests then.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -58,8 +59,8 @@ async function studio(shown: unknown): Promise<{ url: string; asked: string[] }>
   server = new Server(http);
   const asked: string[] = [];
   server.of("/ui").on("connection", (socket: ServerSocket) => {
-    socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     if (shown) socket.emit("view:session", shown);
+    else socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     socket.on("view:live", () => {
       asked.push("view:live");
       socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
@@ -81,7 +82,13 @@ async function connectPage(url: string): Promise<void> {
 }
 
 beforeEach(() => {
-  useStudioStore.setState({ requests: [], paused: false, shownSession: null, droppedRequests: 0 });
+  useStudioStore.setState({
+    requests: [],
+    paused: false,
+    shownSession: null,
+    droppedRequests: 0,
+    received: { runtimes: false, requests: false },
+  });
 });
 
 afterEach(async () => {
@@ -102,6 +109,24 @@ describe("a page that connects while the pages show a saved session", () => {
     const state = useStudioStore.getState();
     expect(state.requests.map((request) => request.id)).toEqual(["r1"]);
     expect(state.paused).toBe(true);
+  });
+
+  it("waits for no live request once the session came in their place", async () => {
+    const { url } = await studio(SAVED);
+
+    await connectPage(url);
+
+    await vi.waitFor(() => expect(useStudioStore.getState().received.requests).toBe(true));
+    expect(useStudioStore.getState().requests.map((request) => request.id)).toEqual(["r1"]);
+  });
+
+  it("waits no more for a session it cannot read either", async () => {
+    const { url } = await studio({ id: "s_2" });
+
+    await connectPage(url);
+
+    await vi.waitFor(() => expect(useStudioStore.getState().received.requests).toBe(true));
+    expect(useStudioStore.getState().shownSession).toBeNull();
   });
 
   it("goes back to the live requests, and tells Studio", async () => {

@@ -56,6 +56,7 @@ const SAVED = {
 /** A Studio that shows `shown` to each page that connects, and records what the pages ask. */
 async function studio(
   shown: unknown,
+  { refuse = false } = {},
 ): Promise<{ url: string; asked: string[]; pages: ServerSocket[] }> {
   const http = createServer();
   server = new Server(http);
@@ -67,7 +68,9 @@ async function studio(
     else socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     socket.on("view:live", () => {
       asked.push("view:live");
-      socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
+      /* As Studio answers a page without its token. */
+      if (refuse) socket.emit("studio:read-only", { error: "No token" });
+      else socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     });
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
@@ -92,6 +95,7 @@ beforeEach(() => {
     shownSession: null,
     droppedRequests: 0,
     received: { runtimes: false, requests: false },
+    projectWritable: false,
   });
 });
 
@@ -124,6 +128,19 @@ describe("a page that connects while the pages show a saved session", () => {
     expect(useStudioStore.getState().requests.map((request) => request.id)).toEqual(["r1"]);
   });
 
+  it("keeps the session on a page without Studio's token, which Studio refuses", async () => {
+    const { url, asked } = await studio(SAVED, { refuse: true });
+    await connectPage(url);
+    await vi.waitFor(() => expect(useStudioStore.getState().shownSession).not.toBeNull());
+    const { result } = renderHook(() => useBackToLive());
+
+    act(() => result.current());
+
+    await vi.waitFor(() => expect(asked).toEqual(["view:live"]));
+    expect(useStudioStore.getState().shownSession).toEqual({ id: "s_1", name: "login flow" });
+    expect(useStudioStore.getState().requests.map((request) => request.id)).toEqual(["r1"]);
+  });
+
   it("leaves the session for the live requests Studio replays, never mixing the two", async () => {
     const { url, pages } = await studio(SAVED);
     await connectPage(url);
@@ -148,6 +165,7 @@ describe("a page that connects while the pages show a saved session", () => {
   });
 
   it("goes back to the live requests, and tells Studio", async () => {
+    useStudioStore.setState({ projectWritable: true });
     const { url, asked } = await studio(SAVED);
     await connectPage(url);
     await vi.waitFor(() => expect(useStudioStore.getState().shownSession).not.toBeNull());

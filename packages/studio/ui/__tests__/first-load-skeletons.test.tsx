@@ -127,6 +127,24 @@ describe("a page connected before Studio has sent the requests it captured", () 
   });
 });
 
+describe("a page that goes back to the live requests from a saved session", () => {
+  it("shows them loading until Studio sends them, not that none came", async () => {
+    useStudioStore.setState({
+      connected: true,
+      connectionStatus: "connected",
+      received: EVERYTHING,
+      configStatus: LOADED,
+      shownSession: { id: "s_1", name: "login flow" },
+    });
+    await openShell("/timeline");
+
+    act(() => useStudioStore.getState().showLive());
+
+    expect(screen.getByRole("status", { name: "" }).textContent).toBe("Loading the requests");
+    expect(screen.queryByText("Waiting for requests")).toBeNull();
+  });
+});
+
 describe("what a page still waits for", () => {
   it("waits for everything before it first connects", () => {
     const status = "connecting";

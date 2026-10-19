@@ -57,13 +57,14 @@ export function createActions(
     showSession: (shownSession, requests) =>
       set({ shownSession, requests, heldRequests: [], droppedRequests: 0, paused: true }),
     showLive: () =>
-      set({
+      set((state) => ({
         shownSession: null,
         requests: [],
         heldRequests: [],
         droppedRequests: 0,
         paused: false,
-      }),
+        received: { ...state.received, requests: false },
+      })),
     togglePin: (id) =>
       set((s) => ({
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),

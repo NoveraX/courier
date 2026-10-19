@@ -36,7 +36,11 @@ export interface StudioState {
   connectionStatus: ConnectionStatus;
   reconnectAttempt: number;
   connected: boolean;
-  /** Which of what Studio sends a page as it connects has come; each stays once it has. */
+  /**
+   * Which of what Studio sends a page as it connects has come; each stays once
+   * it has, but the requests, awaited again when the page goes back to the
+   * live requests, which Studio sends it then.
+   */
   received: Received;
 
   // Binding-table snapshot (server-authoritative runtime/source ownership)
@@ -118,7 +122,10 @@ export interface StudioState {
   clearRequests: () => void;
   /** Show a saved session's requests in place of the live ones, recording paused. */
   showSession: (session: ShownSession, requests: RequestEntry[]) => void;
-  /** Show the live requests again: the saved session goes, and recording resumes. */
+  /**
+   * Show the live requests again, once Studio sends them: the saved session
+   * goes, and recording resumes.
+   */
   showLive: () => void;
   togglePin: (id: string) => void;
   /** Pin, or unpin, the requests named, as Studio says another page did. */

@@ -67,6 +67,15 @@ describe("the fields of a variables schema", () => {
     expect(extractSchemaFields(schema)?.toSorted(byPath)).toEqual(ORDER.toSorted(byPath));
   });
 
+  it("are read from an ArkType schema with a Date or a narrow, which its JSON Schema cannot hold", () => {
+    const schema = type({ at: "Date", sku: "string" }).narrow((value) => value.sku !== "");
+
+    expect(extractSchemaFields(schema)).toEqual([
+      { path: "at", type: "unknown", required: true },
+      { path: "sku", type: "string", required: true },
+    ]);
+  });
+
   it("say what a literal, a union and an array of scalars hold", () => {
     const schema = z.object({
       kind: z.literal("order"),

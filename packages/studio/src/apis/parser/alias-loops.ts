@@ -4,9 +4,10 @@ import type { ParsedSchema } from "./types";
 
 /**
  * Read each schema on a loop of references a value takes as it is — a
- * reference to another schema, or a union holding one, until the chain
- * comes back: `X: { $ref: X }`, `A: B` beside `B: A`, `X: oneOf [X, Y]` —
- * as what the loop can only be. Every schema of such a loop takes the same
+ * reference to another schema, or a union holding one, written inside
+ * another union too, until the chain comes back: `X: { $ref: X }`, `A: B`
+ * beside `B: A`, `X: oneOf [X, Y]`, `X: oneOf [{ $ref: X, nullable: true },
+ * Y]` — as what the loop can only be. Every schema of such a loop takes the same
  * values, those its schemas take besides one another, so `X: oneOf [X, Y]`
  * is `Y`; a loop that takes nothing else, or `null` alone, names no value,
  * so every value is one, and it is read as unknown. Written out, each was
@@ -46,7 +47,7 @@ export function withoutAliasLoops(
 function immediateRefs(schema: ParsedSchema | undefined): string[] {
   if (schema?.type === "ref") return schema.refName === undefined ? [] : [schema.refName];
   if (schema?.type !== "union") return [];
-  return (schema.variants ?? []).flatMap((variant) =>
+  return flatVariants(schema).flatMap((variant) =>
     variant.type === "ref" && variant.refName !== undefined ? [variant.refName] : [],
   );
 }
@@ -57,10 +58,22 @@ function variantsBesides(
   loop: ReadonlySet<string>,
 ): ParsedSchema[] {
   if (schema?.type !== "union") return [];
-  return (schema.variants ?? []).filter(
+  return flatVariants(schema).filter(
     (variant) =>
       !(variant.type === "ref" && variant.refName !== undefined && loop.has(variant.refName)),
   );
+}
+
+/* A union's variants in order, a union written inside it read as the variants it holds — the
+   nullable reference OpenAPI 3.0 writes, `{ $ref: X, nullable: true }`, is one — however deep. */
+function flatVariants(schema: ParsedSchema): ParsedSchema[] {
+  const flat: ParsedSchema[] = [];
+  const pending = (schema.variants ?? []).toReversed();
+  for (let variant = pending.pop(); variant !== undefined; variant = pending.pop()) {
+    if (variant.type !== "union") flat.push(variant);
+    else for (const inner of (variant.variants ?? []).toReversed()) pending.push(inner);
+  }
+  return flat;
 }
 
 /* Each variant once, however many schemas of the loop hold it, its name aside. */

@@ -128,6 +128,50 @@ describe("withoutAliasLoops, a union that holds itself", () => {
     expect(read.C).toEqual(alias("C", "A"));
   });
 
+  it("is what it holds besides itself where it holds itself through a union inside it", () => {
+    const nullable = withoutAliasLoops({
+      Item: {
+        name: "Item",
+        type: "union",
+        variants: [
+          {
+            name: "ItemVariant1",
+            type: "union",
+            variants: [alias("ItemRef", "Item"), { name: "ItemNull", type: "null" }],
+          },
+          count,
+        ],
+      },
+    });
+    const nested = withoutAliasLoops({
+      Item: {
+        name: "Item",
+        type: "union",
+        variants: [
+          { name: "ItemVariant1", type: "union", variants: [alias("ItemRef", "Item"), text] },
+          count,
+        ],
+      },
+    });
+
+    expect(nullable.Item).toEqual({
+      name: "Item",
+      type: "union",
+      variants: [
+        { name: "ItemVariant1", type: "null" },
+        { ...count, name: "ItemVariant2" },
+      ],
+    });
+    expect(nested.Item).toEqual({
+      name: "Item",
+      type: "union",
+      variants: [
+        { ...text, name: "ItemVariant1" },
+        { ...count, name: "ItemVariant2" },
+      ],
+    });
+  });
+
   it("stays as it is where it names itself inside a list", () => {
     const schemas: Record<string, ParsedSchema> = {
       Tree: {
@@ -177,6 +221,45 @@ describe("parseSpec, a oneOf that holds itself", () => {
       const dir = writeProject(`alias-loops/one-of-${validation}`, files);
 
       expect(parseSpec(SPEC).schemas.Holder?.type).toBe("object");
+      expect(compileProject(dir, ["src/api/shop/index.ts"], STRICT)).toEqual([]);
+    },
+    60_000,
+  );
+});
+
+describe("parseSpec, a oneOf that holds itself through a union inside it", () => {
+  const SPEC = document({
+    Nullable: { oneOf: [{ ...ref("Nullable"), nullable: true }, { type: "number" }] },
+    Composed: { oneOf: [{ allOf: [ref("Composed")], nullable: true }, { type: "number" }] },
+    Nested: { oneOf: [{ oneOf: [ref("Nested"), { type: "string" }] }, { type: "number" }] },
+    Holder: {
+      type: "object",
+      properties: { nullable: ref("Nullable"), composed: ref("Composed"), nested: ref("Nested") },
+    },
+  });
+
+  it("is what it holds besides itself", () => {
+    const { schemas } = parseSpec(SPEC);
+    const types = (name: string) =>
+      schemas[name]?.type === "union"
+        ? schemas[name]?.variants?.map((variant) => variant.type)
+        : [];
+
+    expect(types("Nullable")).toEqual(["null", "number"]);
+    expect(types("Composed")).toEqual(["null", "number"]);
+    expect(types("Nested")).toEqual(["string", "number"]);
+  });
+
+  it.each([["zod"], ["valibot"], ["arktype"], ["none"]] as const)(
+    "generates code that compiles, validated with %s",
+    (validation) => {
+      const files = generateCode(
+        parseSpec(SPEC),
+        { type: "openapi", outputDir: "src/api", validation, generateTypes: true },
+        "shop",
+      );
+      const dir = writeProject(`alias-loops/inside-${validation}`, files);
+
       expect(compileProject(dir, ["src/api/shop/index.ts"], STRICT)).toEqual([]);
     },
     60_000,

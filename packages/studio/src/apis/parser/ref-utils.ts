@@ -12,7 +12,9 @@ import type { ParsedSecurityScheme, SpecNode } from "./types";
  * to nothing rather than to a partly-walked object — callers decide what an
  * unresolved reference means. `~1` and `~0` are the escapes a pointer uses for
  * a slash and a tilde inside a key; a pointer whose percent escape decodes to
- * no text names no key, and resolves to nothing too.
+ * no text names no key, and resolves to nothing too. A segment names a list's
+ * item by its index, `#/components/schemas/Both/allOf/0`, as a bundler
+ * writes a shared item and YAML's alias of a list's item becomes.
  */
 export function resolveRef(spec: SpecNode, ref: string): SpecNode {
   return asNode(refTarget(spec, ref));
@@ -35,12 +37,23 @@ export function refTarget(spec: SpecNode, ref: string): unknown {
   if (typeof ref !== "string" || !ref.startsWith("#/")) return undefined;
   let result: unknown = spec;
   for (const part of ref.slice(2).split("/")) {
-    if (!isNode(result)) return undefined;
     const key = decodePointer(part);
     if (key === undefined) return undefined;
-    result = fieldOf(result, key);
+    result = Array.isArray(result)
+      ? itemAt(result, key)
+      : isNode(result)
+        ? fieldOf(result, key)
+        : undefined;
+    if (result === undefined) return undefined;
   }
   return result;
+}
+
+/* A list's item a pointer's segment names, as JSON Pointer writes an index: `0`, or digits with no leading zero. */
+const INDEX = /^(?:0|[1-9]\d*)$/;
+
+function itemAt(list: readonly unknown[], key: string): unknown {
+  return INDEX.test(key) && Number(key) < list.length ? list[Number(key)] : undefined;
 }
 
 /* A pointer's segment as the key it names, or `undefined` when its percent escapes decode to no text. */

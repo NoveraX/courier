@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -52,19 +52,11 @@ patch.mutate({ id: 1, name: "Patched Name" })
 const remove = q.users.useMutation("remove")
 remove.mutate({ id: 1 })`
 
-export const metadata = docsMetadata(
-  "CRUD Operations",
-  "Full create, read, update, and delete cycle with useMutation and useQuery."
-)
+export const metadata = exampleMetadata("crud")
 
 export default function CrudExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/crud"
-      title="CRUD Operations"
-      description="Full create, read, update, and delete cycle with useMutation and useQuery."
-      mode="proxy"
-    >
+    <ExamplePage name="crud">
       <ExampleSection
         title="Full CRUD"
         description="Manage the users of the docs backend with every HTTP method: create one, pick one to update or patch, or delete one."

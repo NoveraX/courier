@@ -1,6 +1,7 @@
 import { loadDoc } from "@/site/content/doc-module"
 import { docSource } from "@/site/content/docs-files"
 import { flatNavItems } from "@/site/content/docs-nav"
+import { LLMS_HEADERS } from "@/site/content/llms"
 import { pageMarkdown } from "@/site/content/page-markdown"
 
 export const dynamic = "force-static"
@@ -17,5 +18,5 @@ export async function GET(): Promise<Response> {
     })
   )
   const text = pages.filter((page): page is string => page !== null).join("\n---\n\n")
-  return new Response(text, { headers: { "content-type": "text/plain; charset=utf-8" } })
+  return new Response(text, { headers: LLMS_HEADERS })
 }

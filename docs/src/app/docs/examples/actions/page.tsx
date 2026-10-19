@@ -1,6 +1,6 @@
 import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api"
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -66,21 +66,13 @@ function UserRow({ user }) {
   )
 }`
 
-export const metadata = docsMetadata(
-  "Server Actions",
-  "Mutate data with Server Actions + direct mode. The page revalidates automatically after each action."
-)
+export const metadata = exampleMetadata("actions")
 
 export default async function ActionsExamplesPage() {
   const users = await action.users.getAll()
 
   return (
-    <ExamplePage
-      href="/docs/examples/actions"
-      title="Server Actions"
-      description="Mutate data with Server Actions + direct mode. The page revalidates automatically after each action."
-      mode="direct"
-    >
+    <ExamplePage name="actions">
       <ExampleSection
         title="Server Action Definition"
         description='Define actions in a "use server" file. call runs on the server, revalidatePath refreshes the page.'

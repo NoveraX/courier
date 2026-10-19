@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -51,19 +51,11 @@ const caller = createProxyCaller(apiRoutes, {
   },
 })`
 
-export const metadata = docsMetadata(
-  "Error Handling",
-  "HTTPError class, isHTTPError type guard, and global error callbacks."
-)
+export const metadata = exampleMetadata("errors")
 
 export default function ErrorsExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/errors"
-      title="Error Handling"
-      description="HTTPError class, isHTTPError type guard, and global error callbacks."
-      mode="both"
-    >
+    <ExamplePage name="errors">
       <ExampleSection
         title="HTTPError — Catch & Inspect"
         description="HTTPError provides status, data, and headers. Select an error code and trigger it."

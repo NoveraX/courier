@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -25,19 +25,11 @@ const { data, isFetching, refetch } = q.users.useQuery("getById", {
 
 refetch()`
 
-export const metadata = docsMetadata(
-  "Basic Requests",
-  "Simple GET and POST requests using the proxy mode with React Query hooks."
-)
+export const metadata = exampleMetadata("basic")
 
 export default function BasicExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/basic"
-      title="Basic Requests"
-      description="Simple GET and POST requests using the proxy mode with React Query hooks."
-      mode="proxy"
-    >
+    <ExamplePage name="basic">
       <ExampleSection
         title="GET — Fetch Users"
         description="useQuery fetches when the component mounts. What it fetched is cached and fetched again when it goes stale."

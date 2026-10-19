@@ -1,4 +1,4 @@
-export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would and take uploads as a strict server does, from Studio's Network tab or in code, and halt a run on its own.", mode: "both" }
+export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would and take uploads as a strict server does, from Studio's Network tab or in code, and halt a run on its own.", mode: "both", updated: "2026-10-08" }
 
 A mock can answer as a slow or unreliable network would, and take uploads as a server with limits does. It adds latency to its answers, caps how fast it sends them and how fast uploads arrive, refuses an upload over a size or of a type it does not take, and fails a share of calls with any HTTP error status, a timeout, a dropped connection or an upload cut off partway. Set the conditions in Studio's **Network** tab while the mock runs, or declare them with the mock in code. Stop conditions end a run on their own once it fails too often, grows too slow, or has run long enough.
 

@@ -1,5 +1,6 @@
 import { SITE_URL } from "@/site/site-url"
 import { jsxCells, jsxObjects, jsxRows, jsxText } from "./jsx-literals"
+import { metadataLines } from "./source-metadata"
 
 const CALLOUT_OPEN = /^<Callout\b(.*)>\s*$/
 const MODE_BADGE = /\s*<ModeBadge mode="(\w+)" \/>/g
@@ -8,16 +9,8 @@ const UPLOAD_LAB =
   "*On the site, a live upload runs here: drawn as the browser reports its progress, and through `smoothProgress`.*"
 
 function withoutMetadata(lines: readonly string[]): string[] {
-  const start = lines.findIndex((line) => line.startsWith("export const metadata"))
-  if (start < 0) return [...lines]
-  let depth = 0
-  let end = start
-  for (; end < lines.length; end++) {
-    const line = lines[end] ?? ""
-    depth += (line.match(/[{[]/g)?.length ?? 0) - (line.match(/[}\]]/g)?.length ?? 0)
-    if (depth <= 0) break
-  }
-  return [...lines.slice(0, start), ...lines.slice(end + 1)]
+  const range = metadataLines(lines)
+  return range ? [...lines.slice(0, range.start), ...lines.slice(range.end + 1)] : [...lines]
 }
 
 function calloutLines(attributes: string, body: readonly string[]): string[] {

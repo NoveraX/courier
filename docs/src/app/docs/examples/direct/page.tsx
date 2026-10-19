@@ -1,6 +1,6 @@
 import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 import { ServerAnswer } from "@/site/sandbox/server-answer"
@@ -22,10 +22,7 @@ const user = await caller.users.getById({ id: 1 })`
 const fetchPostsCode = `// Access any request group via dot-notation
 const posts = await caller.posts.getAll()`
 
-export const metadata = docsMetadata(
-  "Direct Mode",
-  "Server Components fetch data directly from the backend — no proxy, no API route, no client JS."
-)
+export const metadata = exampleMetadata("direct")
 
 export default async function DirectExamplesPage() {
   const users = await caller.users.getAll()
@@ -33,12 +30,7 @@ export default async function DirectExamplesPage() {
   const posts = await caller.posts.getAll()
 
   return (
-    <ExamplePage
-      href="/docs/examples/direct"
-      title="Direct Mode"
-      description="Server Components fetch data directly from the backend — no proxy, no API route, no client JS."
-      mode="direct"
-    >
+    <ExamplePage name="direct">
       <ExampleSection
         title="Setup"
         description="createCaller uses the same source definitions as proxy mode. One line to set up."

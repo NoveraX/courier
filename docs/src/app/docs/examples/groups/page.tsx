@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -44,19 +44,11 @@ const user  = q.users.useQuery("getById", { variables: { id: 1 } })
 //   posts:getAll  → GET  /posts
 //   users:getById → GET  /users/1`
 
-export const metadata = docsMetadata(
-  "Request Groups",
-  "Organize endpoints into groups with prefixes using defineGroup."
-)
+export const metadata = exampleMetadata("groups")
 
 export default function GroupsExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/groups"
-      title="Request Groups"
-      description="Organize endpoints into groups with prefixes using defineGroup."
-      mode="both"
-    >
+    <ExamplePage name="groups">
       <ExampleSection
         title="Group Definition"
         description="Each group has a prefix that goes in front of every path it calls."

@@ -88,6 +88,14 @@ const ALIASES: Readonly<Record<string, BundledLanguage>> = {
   yml: "yaml",
 }
 
+/**
+ * How long a line may take to highlight: without limit. Shiki stops after
+ * half a second and paints the rest of the line one colour, and the first
+ * lines it reads compile its grammar's patterns, which outlasts that on a
+ * busy build machine. The code is the site's own, so no line runs away.
+ */
+export const TOKENIZE_TIME_LIMIT = 0
+
 /** The loaded highlighter. */
 export type Highlighter = Awaited<ReturnType<typeof createHighlighter>>
 

@@ -1,10 +1,10 @@
 import { ImageResponse } from "next/og"
 
+import { COURIER_MARK_PATH as MARK } from "@/site/courier-mark"
+
 export const alt = "Courier — type-safe HTTP for any framework"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
-
-const MARK = "M212 0H90a90 90 0 0 0 0 180h122l-52-50H90a40 40 0 0 1 0-80h70Z"
 
 export default async function OGImage() {
   return new ImageResponse(

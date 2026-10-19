@@ -44,7 +44,12 @@ export interface FilePlanSummary {
   dir: string;
   writes: Array<{ path: string; action: PlannedWriteAction; was: FileOwnership }>;
   removals: Array<{ path: string; was: FileOwnership }>;
-  kept: Array<{ path: string; reason: KeptReason }>;
+  /**
+   * Files left as they are. One a file imports that a pending step would
+   * remove or rewrite names those steps as `unless`: it goes once all of
+   * them are allowed.
+   */
+  kept: Array<{ path: string; reason: KeptReason; unless?: string[] }>;
   pending: PlanConfirmation[];
   /** Files Studio cannot write at all, being links or not files; a plan with any is not applied. */
   blocked: Array<{ path: string; reason: "link" | "not-a-file" }>;

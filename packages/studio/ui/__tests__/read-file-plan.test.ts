@@ -28,12 +28,26 @@ describe("readFilePlan", () => {
     expect(readFilePlan(PLAN)).toEqual(PLAN);
   });
 
+  it("reads the steps whose allowing removes a file kept as imported", () => {
+    const kept = [
+      {
+        path: "src/api/pets/schemas.ts",
+        reason: "imported",
+        unless: ["src/api/pets/gone/index.ts"],
+      },
+    ];
+
+    expect(readFilePlan({ ...PLAN, kept })?.kept).toEqual(kept);
+  });
+
   it("reads nothing when any part is malformed", () => {
     const malformed: unknown[] = [
       { ...PLAN, digest: "" },
       { ...PLAN, writes: [{ path: "a.ts", action: "delete", was: "recorded" }] },
       { ...PLAN, pending: [{ path: "a.ts", kind: "replace", reason: "foreign" }] },
       { ...PLAN, kept: [{ path: "", reason: "edited" }] },
+      { ...PLAN, kept: [{ path: "a.ts", reason: "imported", unless: [] }] },
+      { ...PLAN, kept: [{ path: "a.ts", reason: "imported", unless: ["b.ts", 1] }] },
       { ...PLAN, blocked: "none" },
       { ...PLAN, forgotten: ["a.ts", 4] },
       JSON.parse('{"__proto__": {"digest": "x"}}'),

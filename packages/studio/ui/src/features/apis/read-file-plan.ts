@@ -74,7 +74,10 @@ function readRemoval(item: Item, path: string): FilePlanSummary["removals"][numb
 
 function readKept(item: Item, path: string): FilePlanSummary["kept"][number] | undefined {
   const reason = oneOf(KEPT, item.reason);
-  return reason ? { path, reason } : undefined;
+  if (!reason) return undefined;
+  if (item.unless === undefined) return { path, reason };
+  const unless = readPaths(item.unless);
+  return unless && unless.length > 0 ? { path, reason, unless } : undefined;
 }
 
 function readBlocked(item: Item, path: string): FilePlanSummary["blocked"][number] | undefined {

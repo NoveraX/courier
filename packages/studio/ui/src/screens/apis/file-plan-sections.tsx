@@ -1,6 +1,7 @@
 import { Ban } from "lucide-react";
 import { TickBox } from "@/design/tick-box";
-import { KEPT_LABEL, pendingLabel, writeLabel } from "@/features/apis/file-plan-labels";
+import { pendingLabel, writeLabel } from "@/features/apis/file-plan-labels";
+import { planFileRows } from "@/features/apis/plan-file-rows";
 import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 import { formatList } from "@/lib/formatters";
 
@@ -52,6 +53,7 @@ export function FilePlanSections({
     action === "unchanged" ? [] : [{ path, note: writeLabel(action, was) }],
   );
   const unchanged = plan.writes.filter((w) => w.action === "unchanged").length;
+  const { removed, kept } = planFileRows(plan, confirmed);
   return (
     <div className="flex flex-col gap-3.5 rounded-[11px] border border-line p-3.5">
       {plan.blocked.length > 0 && (
@@ -102,14 +104,8 @@ export function FilePlanSections({
         </section>
       )}
       <FileList title="Written" rows={writes} />
-      <FileList
-        title="Removed, with a copy kept"
-        rows={plan.removals.map(({ path }) => ({ path, note: "removed" }))}
-      />
-      <FileList
-        title="Left as they are"
-        rows={plan.kept.map(({ path, reason }) => ({ path, note: KEPT_LABEL[reason] }))}
-      />
+      <FileList title="Removed, with a copy kept" rows={removed} />
+      <FileList title="Left as they are" rows={kept} />
       {unchanged > 0 && (
         <p className="m-0 text-small text-fg-subtle">
           {unchanged === 1 ? "1 file is" : `${unchanged} files are`} already as Studio would write

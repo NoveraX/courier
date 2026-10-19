@@ -13,7 +13,12 @@ export interface PlanSummary {
   dir: string;
   writes: Array<{ path: string; action: PlannedWrite["action"]; was: Ownership }>;
   removals: Array<{ path: string; was: Ownership }>;
-  kept: Array<{ path: string; reason: KeptReason }>;
+  /**
+   * Each file left as it is, and why. One a file imports that a step waiting
+   * for consent would remove or rewrite lists those steps as `unless`: it
+   * goes once all of them are allowed.
+   */
+  kept: Array<{ path: string; reason: KeptReason; unless?: string[] }>;
   pending: Confirmation[];
   blocked: FilePlan["blocked"];
   forgotten: string[];

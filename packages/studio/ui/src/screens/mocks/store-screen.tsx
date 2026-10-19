@@ -10,6 +10,7 @@ import { useStoreCrud } from "@/mocks/use-store-crud";
 import type { MockCollectionEntry, MockServerInfo } from "@/store/mock-slice";
 import { CollectionTable } from "./collection-table";
 import { MocksSkeleton } from "./mocks-skeleton";
+import { NoMockServers } from "./no-mock-servers";
 import { useCurrentInView } from "./use-current-in-view";
 import { useMockRecords } from "./use-mock-records";
 import { useMockServer } from "./use-mock-server";
@@ -46,7 +47,7 @@ export function MockStoreScreen(): React.ReactNode {
   const open =
     server?.collections.find((c) => c.name === search.collection) ?? server?.collections[0];
   useCurrentInView(navRef, open?.name);
-  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : <NoMockServers />;
   return (
     <div className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] max-[700px]:grid-cols-1 max-[700px]:grid-rows-[auto_minmax(0,1fr)]">
       <nav ref={navRef} aria-label="Collections" className={NAV}>

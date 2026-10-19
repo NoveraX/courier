@@ -18,6 +18,7 @@ import { FaultPanel } from "./fault-panel";
 import { LatencyPanel } from "./latency-panel";
 import { MocksSkeleton } from "./mocks-skeleton";
 import { NetworkHero } from "./network-hero";
+import { NoMockServers } from "./no-mock-servers";
 import { ObservedPanel } from "./observed-panel";
 import { RouteOverridesPanel } from "./route-overrides-panel";
 import { RouteRatesNote } from "./route-rates-note";
@@ -117,6 +118,6 @@ export function MockNetworkScreen(): React.ReactNode {
   const { server } = useMockServer();
   const first = useFirstLoad();
   const loading = first.requests || first.sources;
-  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : <NoMockServers />;
   return <NetworkTab key={server.serverId} server={server} />;
 }

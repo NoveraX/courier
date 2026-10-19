@@ -9,6 +9,7 @@ import { inspectorOf } from "@/features/requests/inspector-of";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { useStudioStore } from "@/store";
 import { MocksSkeleton } from "./mocks-skeleton";
+import { NoMockServers } from "./no-mock-servers";
 import { RoutesList } from "./routes-list";
 import { useMockServer } from "./use-mock-server";
 
@@ -39,7 +40,7 @@ export function MockRoutesScreen(): React.ReactNode {
   const search: MockRoutesSearch = useSearch({ from: "/mocks/routes" });
   const navigate = useNavigate({ from: "/mocks/routes" });
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
-  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : <NoMockServers />;
   const kind = search.kind ?? "all";
   const set = (patch: MockRoutesSearch) =>
     void navigate({

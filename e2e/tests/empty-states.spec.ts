@@ -57,6 +57,8 @@ const NOTICES = [
   ["/middleware", "No call has run through middleware yet"],
   ["/compare", "Compare needs two finished requests"],
   ["/mocks", "No mock servers yet"],
+  ["/mocks/routes", "No mock servers yet"],
+  ["/mocks/logs", "No mock servers yet"],
 ] as const;
 
 test("puts each page's notice in the middle of the space the page leaves it", async ({ page }) => {

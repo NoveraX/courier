@@ -14,6 +14,7 @@ import { useMockStore } from "@/store/mock-slice";
 import { LogsToolbar } from "./logs-toolbar";
 import { MockLogList } from "./mock-log-list";
 import { MocksSkeleton } from "./mocks-skeleton";
+import { NoMockServers } from "./no-mock-servers";
 import { useMockServer } from "./use-mock-server";
 
 const LABELS: Readonly<Record<LogFilter, string>> = {
@@ -47,7 +48,7 @@ export function MockLogsScreen(): React.ReactNode {
   const paused = useMockStore((s) => s.logsPaused);
   const togglePaused = useMockStore((s) => s.toggleLogsPaused);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
-  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : <NoMockServers />;
   const logs = logsOf(allLogs, server.serverId);
   const counts = filterCounts(logs);
   const show = search.show ?? "all";

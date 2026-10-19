@@ -7,6 +7,7 @@ import { inspectorOf } from "@/features/requests/inspector-of";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { MocksSkeleton } from "./mocks-skeleton";
+import { NoMockServers } from "./no-mock-servers";
 import { ScenarioCard } from "./scenario-card";
 import { ScenarioDetail } from "./scenario-detail";
 import { useMockServer } from "./use-mock-server";
@@ -30,7 +31,7 @@ export function MockScenariosScreen(): React.ReactNode {
   const search: MockScenariosSearch = useSearch({ from: "/mocks/scenarios" });
   const navigate = useNavigate({ from: "/mocks/scenarios" });
   const underCard = useMediaQuery(MEDIA.phone);
-  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : <NoMockServers />;
   if (server.scenarios.length === 0) {
     return (
       <p className="m-auto max-w-120 p-10 text-center text-control text-fg-subtle">

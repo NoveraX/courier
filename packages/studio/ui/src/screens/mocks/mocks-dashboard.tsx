@@ -1,14 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  Activity,
-  CircleAlert,
-  Flame,
-  GitFork,
-  Route,
-  Server,
-  Sparkles,
-  Timer,
-} from "lucide-react";
+import { Activity, CircleAlert, Flame, GitFork, Route, Timer } from "lucide-react";
 
 import { FigureGrid } from "@/design/figure-grid";
 import type { MockFigure } from "@/features/mocks/dashboard-model";
@@ -17,13 +8,12 @@ import { logsOf } from "@/features/mocks/mock-log";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { useMockInspector } from "@/inspector/use-mock-inspector";
-import { openMockWizard } from "@/mocks/wizard/open-mock-wizard";
-import { useAddMockBlocked } from "@/mocks/wizard/use-add-mock-blocked";
 import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
 import { CollectionCards } from "./collection-cards";
 import { LiveActivity } from "./live-activity";
 import { MocksSkeleton } from "./mocks-skeleton";
+import { NoMockServers } from "./no-mock-servers";
 import { TopRoutes } from "./top-routes";
 import { useMockServer } from "./use-mock-server";
 
@@ -35,31 +25,6 @@ const ICONS: Readonly<Record<MockFigure["key"], LucideIcon>> = {
   scenario: GitFork,
   chaos: Flame,
 };
-
-function NoServers(): React.ReactNode {
-  const blocked = useAddMockBlocked();
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center">
-      <span className="flex size-11 items-center justify-center rounded-dialog border border-line-strong bg-panel text-fg-subtle">
-        <Server aria-hidden="true" className="size-4.5" />
-      </span>
-      <p className="text-title font-semibold">No mock servers yet</p>
-      <p className="max-w-95 text-small text-fg-subtle">
-        {blocked ??
-          "Generate mocks for one of your API sources, and Studio serves realistic answers from its schemas."}
-      </p>
-      <button
-        type="button"
-        onClick={openMockWizard}
-        disabled={blocked !== null}
-        className="mt-2 flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-fg px-3 text-control font-semibold text-bg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
-      >
-        <Sparkles aria-hidden="true" className="size-3.25" />
-        Generate mocks
-      </button>
-    </div>
-  );
-}
 
 /**
  * The Mocks dashboard: the server's six figures, its newest answers, its
@@ -80,7 +45,7 @@ export function MocksDashboard(): React.ReactNode {
   const sheet = useMockInspector();
   const first = useFirstLoad();
   const loading = first.requests || first.sources;
-  if (!server) return loading ? <MocksSkeleton view="dashboard" /> : <NoServers />;
+  if (!server) return loading ? <MocksSkeleton view="dashboard" /> : <NoMockServers />;
   const logs = logsOf(allLogs, server.serverId);
   const figures = mockFigures(server, logs, now, slowMs).map((figure) => ({
     ...figure,

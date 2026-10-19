@@ -2,9 +2,12 @@ import type { ReactNode } from "react"
 
 import { findNavContext } from "@/site/content/docs-nav"
 import { neighbors } from "@/site/content/neighbors"
+import { coreVersion } from "@/site/content/version"
 import { DocsPager } from "@/site/layout/docs-pager"
 import { DocsToc } from "@/site/layout/docs-toc"
 import { PageHead } from "@/site/layout/page-head"
+import { JsonLd } from "@/site/seo/json-ld"
+import { docsGraph } from "@/site/seo/structured-data/page-graphs"
 import { EXAMPLE_PAGES, type ExampleName } from "./example-pages"
 
 interface ExamplePageProps {
@@ -30,6 +33,7 @@ export function ExamplePage({ name, children }: ExamplePageProps) {
   const href = `/docs/examples/${name}`
   return (
     <>
+      <JsonLd graph={docsGraph({ path: href, title, description }, coreVersion())} />
       <main id="main-content" className="min-w-0 max-w-[820px] pt-10 pb-27.5">
         <PageHead meta={{ title, description, mode }} section={findNavContext(href)?.section} />
         <article

@@ -8,11 +8,14 @@ import { findNavContext } from "@/site/content/docs-nav"
 import { neighbors } from "@/site/content/neighbors"
 import { pageMarkdown } from "@/site/content/page-markdown"
 import { readingMinutes } from "@/site/content/reading-time"
+import { coreVersion } from "@/site/content/version"
 import { DocsPager } from "@/site/layout/docs-pager"
 import { DocsToc } from "@/site/layout/docs-toc"
 import { PageHead } from "@/site/layout/page-head"
 import { SITE_COMPONENTS } from "@/site/mdx/site-components"
+import { JsonLd } from "@/site/seo/json-ld"
 import { pageMetadata } from "@/site/seo/page-metadata"
+import { docsGraph } from "@/site/seo/structured-data/page-graphs"
 
 interface PageProps {
   params: Promise<{ slug: string[] }>
@@ -43,8 +46,15 @@ export default async function DocPage({ params }: PageProps) {
   const { Content, meta } = await loadDoc(slug)
   const href = `/docs/${slug.join("/")}`
   const markdown = pageMarkdown(source, meta.title, meta.description)
+  const page = {
+    path: href,
+    title: meta.title,
+    description: meta.description,
+    updated: meta.updated,
+  }
   return (
     <>
+      <JsonLd graph={docsGraph(page, coreVersion())} />
       <main id="main-content" className="min-w-0 max-w-[820px] pt-10 pb-27.5">
         <PageHead
           meta={meta}

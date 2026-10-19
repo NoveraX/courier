@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -71,19 +71,11 @@ const caller = createProxyCaller(apiRoutes, {
   },
 })`
 
-export const metadata = docsMetadata(
-  "Request Options",
-  "Configure timeout, retry, cache, and Next.js revalidation per request or globally."
-)
+export const metadata = exampleMetadata("options")
 
 export default function OptionsExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/options"
-      title="Request Options"
-      description="Configure timeout, retry, cache, and Next.js revalidation per request or globally."
-      mode="both"
-    >
+    <ExamplePage name="options">
       <ExampleSection
         title="Timeout"
         description="The /slow endpoint takes 3 seconds. Set a shorter timeout to trigger a timeout error."

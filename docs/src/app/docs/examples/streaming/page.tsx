@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -48,19 +48,11 @@ router.get("/stream", (_req, res) => {
   }, 500)
 })`
 
-export const metadata = docsMetadata(
-  "Streaming",
-  "Stream responses progressively with stream: true. Chunks arrive in real time via SSE."
-)
+export const metadata = exampleMetadata("streaming")
 
 export default function StreamingExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/streaming"
-      title="Streaming"
-      description="Stream responses progressively with stream: true. Chunks arrive in real time via SSE."
-      mode="both"
-    >
+    <ExamplePage name="streaming">
       <ExampleSection
         title="Backend — SSE Endpoint"
         description="Express sends Server-Sent Events with 500ms intervals. The proxy forwards the stream to the client."

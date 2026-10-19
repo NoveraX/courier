@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -31,19 +31,11 @@ const searchCaller = createProxyCaller(apiRoutes, {
 // A newer call cancels the one still in flight: it rejects with status 499
 await searchCaller.misc.slow()`
 
-export const metadata = docsMetadata(
-  "Deduplication & Abort",
-  "Identical reads in flight share one request, a newer call cancels the one it replaces, and any call can be aborted."
-)
+export const metadata = exampleMetadata("abort")
 
 export default function AbortExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/abort"
-      title="Deduplication & Abort"
-      description="Identical reads in flight share one request, a newer call cancels the one it replaces, and any call can be aborted."
-      mode="both"
-    >
+    <ExamplePage name="abort">
       <ExampleSection
         title="Identical reads share one request"
         description="Three identical reads start together. The browser counts the requests that reached the proxy."

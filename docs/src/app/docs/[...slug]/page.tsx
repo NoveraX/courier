@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import { docsMetadata } from "@/lib/metadata"
 import { loadDoc } from "@/site/content/doc-module"
+import { docTitles } from "@/site/content/doc-titles"
 import { docSlugs, docSource } from "@/site/content/docs-files"
 import { findNavContext } from "@/site/content/docs-nav"
 import { neighbors } from "@/site/content/neighbors"
@@ -12,6 +12,7 @@ import { DocsPager } from "@/site/layout/docs-pager"
 import { DocsToc } from "@/site/layout/docs-toc"
 import { PageHead } from "@/site/layout/page-head"
 import { SITE_COMPONENTS } from "@/site/mdx/site-components"
+import { pageMetadata } from "@/site/seo/page-metadata"
 
 interface PageProps {
   params: Promise<{ slug: string[] }>
@@ -25,7 +26,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params
   if (!docSource(slug)) return {}
   const { meta } = await loadDoc(slug)
-  return docsMetadata(meta.title, meta.description)
+  const path = `/docs/${slug.join("/")}`
+  return pageMetadata({
+    path,
+    title: docTitles().get(path) ?? meta.title,
+    description: meta.description,
+    section: findNavContext(path)?.section.label,
+  })
 }
 
 export default async function DocPage({ params }: PageProps) {

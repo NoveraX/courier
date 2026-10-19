@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -65,19 +65,11 @@ await encodedCaller.echo.send({ name: "John" })
 await encodedCaller.echo.retrieve({ page: 1 })
 // Query includes: format=json&page=1`
 
-export const metadata = docsMetadata(
-  "Encoding",
-  "Custom body and search params encoding with default values."
-)
+export const metadata = exampleMetadata("encoding")
 
 export default function EncodingExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/encoding"
-      title="Encoding"
-      description="Custom body and search params encoding with default values."
-      mode="both"
-    >
+    <ExamplePage name="encoding">
       <ExampleSection
         title="Source Configuration"
         description="Configure encoding options on the defineApi call. These apply to all endpoints in the source."

@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { jsonText } from "../src/apis/registry/json-text";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
@@ -68,7 +69,7 @@ async function post(url: string, path: string, body: unknown, withToken: boolean
       origin: url,
       ...(withToken ? tokenHeader(studio) : {}),
     },
-    body: JSON.stringify(body),
+    body: jsonText(body) ?? "",
   });
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 }
@@ -153,5 +154,32 @@ describe("a crafted specification sent to write", () => {
     expect(body.code).toBe("SPEC_NOT_GENERATED");
     expect(existsSync(join(root, "src"))).toBe(false);
     expect(readFileSync(join(root, "courier.config.ts"), "utf8")).toBe(CONFIG);
+  });
+});
+
+describe("a specification nested deeper than JSON.stringify's recursion goes, sent to write", () => {
+  it("is hashed and written, where hashing it answered 500", async () => {
+    const url = await start();
+    let shape: Record<string, unknown> = { name: "Leaf", type: "string" };
+    for (let depth = 0; depth < 20_000; depth += 1) {
+      shape = {
+        name: `Level${depth}`,
+        type: "object",
+        properties: { next: { required: false, type: "object", shape } },
+        required: [],
+      };
+    }
+    const deep = { ...CRAFTED, schemas: { Deep: shape } };
+
+    const { status, body } = await post(
+      url,
+      "/api/apis/write",
+      { sourceName: "shop", spec: deep, options: OPTIONS },
+      true,
+    );
+
+    expect(status).toBe(200);
+    expect(body.error).toBeUndefined();
+    expect(existsSync(join(root, "src/api/shop/source.ts"))).toBe(true);
   });
 });

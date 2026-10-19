@@ -1,4 +1,5 @@
 import type { ParsedSpec } from "../apis";
+import { jsonText } from "../apis/registry/json-text";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { SpecTooLargeError } from "./spec-too-large-error";
 
@@ -16,6 +17,6 @@ import { SpecTooLargeError } from "./spec-too-large-error";
  * ```
  */
 export function refuseUnsendable(spec: ParsedSpec): void {
-  const bytes = Buffer.byteLength(JSON.stringify(spec));
+  const bytes = Buffer.byteLength(jsonText(spec) ?? "");
   if (bytes > MAX_MESSAGE_BYTES) throw new SpecTooLargeError(bytes);
 }

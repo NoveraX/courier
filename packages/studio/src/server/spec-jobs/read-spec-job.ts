@@ -1,4 +1,5 @@
 import { parseSpec } from "../../apis/parser/parse-spec";
+import { jsonText } from "../../apis/registry/json-text";
 import { computeSpecHash } from "../../apis/registry/spec-hash";
 import { resolveBaseURL } from "../../apis/resolve-base-url";
 import type { ReplyTo, SpecReadJob } from "./spec-job-protocol";
@@ -24,7 +25,7 @@ import type { ReplyTo, SpecReadJob } from "./spec-job-protocol";
 export function readSpecJob({ text, url, maxBytes, hash }: SpecReadJob): ReplyTo<"spec:read"> {
   const parsed = parseSpec(text);
   const spec = url === undefined ? parsed : resolveBaseURL(parsed, url);
-  const json = JSON.stringify(spec);
+  const json = jsonText(spec) ?? "";
   const bytes = Buffer.byteLength(json);
   const hashed = hash === true ? { hash: computeSpecHash(spec) } : {};
   if (bytes > maxBytes) return { kind: "spec:read", tooLarge: bytes, ...hashed };

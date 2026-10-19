@@ -2,11 +2,16 @@ import { docsNav } from "./docs-nav"
 
 /**
  * What the llms files are served with: plain text, kept out of search
- * results — they repeat the docs pages, which are what a search should find.
+ * results — they repeat the docs pages, which are what a search should find —
+ * and checked with the site on every request, as Next serves robots.txt and
+ * the sitemap. Left to Next, a static route goes out with `s-maxage=31536000`,
+ * and a CDN that caches text files keeps serving the copy from an earlier
+ * deploy for up to a year.
  */
 export const LLMS_HEADERS = {
   "content-type": "text/plain; charset=utf-8",
   "x-robots-tag": "noindex",
+  "cache-control": "public, max-age=0, must-revalidate",
 } as const
 
 /**

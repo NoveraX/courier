@@ -7,9 +7,9 @@ import { useRef, useState } from "react"
 import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
 import type { SearchEntry } from "@/site/content/search-index"
 import { PageActions } from "@/site/layout/page-actions"
-import { SearchPalette } from "@/site/layout/search-palette"
 import { SiteHeader } from "@/site/layout/site-header"
-import { useSearchShortcut } from "@/site/layout/use-search-shortcut"
+import { SearchDialog } from "@/site/search/search-dialog"
+import { useSearchDialog } from "@/site/search/use-search-dialog"
 import { SiteFooter } from "@/site/site-footer"
 import { BuilderTable } from "./builder-table"
 import { EntryPointsTable } from "./entry-points-table"
@@ -61,10 +61,8 @@ export function ReferenceView({
 }: ReferenceViewProps) {
   const [filter, setFilter] = useState("")
   const [listing, setListing] = useState(false)
-  const [searching, setSearching] = useState(false)
-  const searchButton = useRef<HTMLButtonElement>(null)
+  const search = useSearchDialog()
   const menuButton = useRef<HTMLButtonElement>(null)
-  useSearchShortcut(setSearching)
   const shown = sections.filter((section) => matches(section, filter))
   const listed: ListedExport[] = [
     ...shown.map(({ id, name, kind }) => ({ id, name, kind })),
@@ -81,16 +79,16 @@ export function ReferenceView({
     <div className="min-h-screen bg-bg">
       <SiteHeader
         part="api"
-        onSearch={() => setSearching(true)}
+        onSearch={() => search.setOpen(true)}
         onMenu={() => setListing(true)}
-        searchRef={searchButton}
+        searchRef={search.opener}
         menuRef={menuButton}
       />
-      <SearchPalette
+      <SearchDialog
         entries={searchable}
-        open={searching}
-        onOpenChange={setSearching}
-        returnTo={searchButton}
+        open={search.open}
+        onOpenChange={search.setOpen}
+        returnTo={search.opener}
       />
       <ReferenceDrawer
         exports={listed}

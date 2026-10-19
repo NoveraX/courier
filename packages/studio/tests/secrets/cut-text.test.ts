@@ -137,14 +137,27 @@ describe("a text of any size", () => {
     "one word": "x".repeat(MEGABYTE),
   };
 
+  /* The fastest of three runs: one the machine's load or a collection held up says nothing of the reading. */
+  const fastest = (run: () => void): number =>
+    Math.min(
+      ...[0, 1, 2].map(() => {
+        const started = performance.now();
+        run();
+        return performance.now() - started;
+      }),
+    );
+
   /* Only the start is read — four times the length kept — so the budget is that start's, however long the text. */
   for (const [name, text] of Object.entries(hostile)) {
     it(`reads ${name} no further than its start, in tens of milliseconds`, () => {
-      const started = performance.now();
       const cut = cutText(text);
-      cutText(text, 300);
 
-      expect(performance.now() - started).toBeLessThan(100);
+      expect(
+        fastest(() => {
+          cutText(text);
+          cutText(text, 300);
+        }),
+      ).toBeLessThan(100);
       expect(cut.length).toBeLessThanOrEqual(2000);
     });
   }

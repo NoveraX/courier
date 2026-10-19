@@ -1,11 +1,14 @@
-import { sendsVariablesInQuery, withoutTrailingSlashes } from "@noverax/courier/internal";
+import {
+  fillPathParams,
+  pathParamNames,
+  sendsVariablesInQuery,
+  withoutTrailingSlashes,
+} from "@noverax/courier/internal";
 
 import type { SnippetInput } from "@/lib/snippets";
 import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
 import { queryString } from "./query-string";
 import type { RequestValues } from "./request-values";
-
-const PARAM_PATTERN = /:(\w+)/g;
 
 /**
  * The URL an endpoint is served at, with its path parameters as `:name`:
@@ -63,10 +66,10 @@ export function snippetInput(
   const method = endpoint.httpMethod ?? (endpoint.type === "mutation" ? "POST" : "GET");
   const { variables, headers } = values;
   const fields = isRecord(variables) ? variables : undefined;
-  const params = new Set([...url.matchAll(PARAM_PATTERN)].map((match) => match[1]));
-  const filled = url.replace(PARAM_PATTERN, (placeholder: string, name: string) => {
+  const params = new Set(pathParamNames(url));
+  const filled = fillPathParams(url, (name) => {
     const value = fields?.[name];
-    return value === undefined || value === "" ? placeholder : encodeURIComponent(String(value));
+    return value === undefined || value === "" ? `:${name}` : encodeURIComponent(String(value));
   });
   const rest = fields
     ? Object.fromEntries(Object.entries(fields).filter(([name]) => !params.has(name)))

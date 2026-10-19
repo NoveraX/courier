@@ -1,3 +1,5 @@
+import { pathParamNames } from "@noverax/courier/internal";
+
 import type { GenerateOptions, ParsedSpec, ScannedSource } from "@/features/apis/types";
 
 // ── Endpoint counting ───────────────────────────────────────────────────────
@@ -21,7 +23,7 @@ const BODY_METHODS = new Set(["post", "put", "patch", "query"]);
 function needsVariables(
   a: ScannedSource["groups"][number]["endpoints"][number]["analysis"],
 ): boolean {
-  return BODY_METHODS.has(a.httpMethod) || a.path.includes(":");
+  return BODY_METHODS.has(a.httpMethod) || pathParamNames(a.path).length > 0;
 }
 
 /** Count R/V/S stats from scanned endpoint analysis data */

@@ -84,6 +84,35 @@ describe("a request whose URL is a plain string", () => {
   });
 });
 
+describe("a request whose path puts a colon inside a segment, as Google's methods do", () => {
+  const spec = () =>
+    collection(
+      [
+        {
+          name: "Revoke sessions",
+          request: { method: "POST", url: "{{baseUrl}}/users/:id/sessions:revoke" },
+        },
+      ],
+      { variable: [{ key: "baseUrl", value: server.url }] },
+    );
+
+  it("takes the colon for text, and a segment Postman starts with one for its variable", () => {
+    const endpoint = parseSpec(spec()).groups[0]?.endpoints[0];
+
+    expect(endpoint?.parameters.map((parameter) => parameter.name)).toEqual(["id"]);
+    expect(endpoint?.path).toBe("/sessions::revoke");
+  });
+
+  it("is sent with the colon as Postman writes it", async () => {
+    await call(spec(), "revokeSessions")({ id: "u1" });
+
+    expect(server.requests.at(-1)).toMatchObject({
+      method: "POST",
+      path: "/users/u1/sessions:revoke",
+    });
+  });
+});
+
 describe("a request whose body Postman writes in GraphQL mode", () => {
   const spec = () =>
     collection(

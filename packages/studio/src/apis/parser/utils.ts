@@ -4,6 +4,7 @@
 
 export { convertSchemaInline } from "./convert-schema-inline";
 export { inferSchemaFromValue } from "./infer-schema";
+export { namesPathParam } from "./names-path-param";
 export {
   generateEndpointName,
   toBindingName,

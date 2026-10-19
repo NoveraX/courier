@@ -1,3 +1,5 @@
+import { pathParamNames } from "@noverax/courier/internal";
+
 import type { CatalogEndpoint } from "@/store/types-ui";
 
 /**
@@ -24,6 +26,5 @@ function sampleOf(endpoint: CatalogEndpoint): Record<string, unknown> {
   if (endpoint.variablesStub && Object.keys(endpoint.variablesStub).length > 0) {
     return endpoint.variablesStub;
   }
-  const params = endpoint.path?.match(/:(\w+)/g) ?? [];
-  return Object.fromEntries(params.map((p) => [p.slice(1), ""]));
+  return Object.fromEntries(pathParamNames(endpoint.path ?? "").map((name) => [name, ""]));
 }

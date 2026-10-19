@@ -3,6 +3,7 @@
  */
 
 import { RESERVED_GROUP_NAMES } from "./client-names";
+import { namesPathParam } from "./names-path-param";
 import { isReservedBinding } from "./reserved-bindings";
 
 const CYRILLIC_MAP: Record<string, string> = {
@@ -139,7 +140,7 @@ export function generateEndpointName(method: string, path: string): string {
   const lastSegment = segments.pop() ?? "";
   const isPlural = lastSegment.endsWith("s");
 
-  const hasPathParam = path.includes("{") || path.includes(":");
+  const hasPathParam = namesPathParam(path);
 
   if (method === "get" && !hasPathParam) return `getAll${!isPlural ? toPascal(lastSegment) : ""}`;
   if (method === "get" && hasPathParam) return `getById`;

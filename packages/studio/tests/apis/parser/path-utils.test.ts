@@ -3,7 +3,8 @@
  * it, and for any number of paths: that one spread every path's length into
  * one call, which a specification of some 125 000 paths overflowed. And a
  * path template as a Courier path: each parameter under a name a `:name`
- * placeholder reads whole, or the reason the path cannot be written.
+ * placeholder reads whole, a colon written as text doubled so that the path
+ * sends it, or the reason the path cannot be written.
  */
 import { describe, expect, it } from "vitest";
 
@@ -75,6 +76,22 @@ describe("convertPathParams", () => {
   it("writes each placeholder as `:name`, a name of any characters but a brace or a slash", () => {
     expect(convertPathParams("/files/{name}.{ext}")).toBe("/files/:name.:ext");
     expect(convertPathParams("/a/{1st}/{id.v}")).toBe("/a/:_1st/:id_v");
+  });
+
+  it("doubles a colon a specification writes as text, beside a parameter too", () => {
+    expect(convertPathParams("/v1/urlInspection/index:inspect")).toBe(
+      "/v1/urlInspection/index::inspect",
+    );
+    expect(convertPathParams("/v4/spreadsheets/{spreadsheetId}:batchUpdate")).toBe(
+      "/v4/spreadsheets/:spreadsheetId::batchUpdate",
+    );
+    expect(convertPathParams("/at/12:30")).toBe("/at/12::30");
+  });
+
+  it("keeps a segment Postman starts with a colon as its path variable", () => {
+    expect(convertPathParams("/users/:userId/sessions:revoke")).toBe(
+      "/users/:userId/sessions::revoke",
+    );
   });
 });
 

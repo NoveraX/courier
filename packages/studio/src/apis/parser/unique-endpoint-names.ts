@@ -21,6 +21,7 @@
  */
 
 import { RESERVED_ENDPOINT_NAMES } from "./client-names";
+import { namesPathParam } from "./names-path-param";
 import { toCamelCase } from "./naming-utils";
 import type { ParsedEndpoint } from "./types";
 
@@ -78,7 +79,7 @@ function nameFromPath(endpoint: ParsedEndpoint, prefix: string): string {
   const base = toCamelCase([endpoint.httpMethod, ...segments].join("_"));
   /* Two operations on the same resource differ only by taking a parameter —
      `GET /keys` and `GET /keys/{id}` would otherwise land on one name. */
-  const addressesOne = path.includes("{") || path.includes(":");
+  const addressesOne = namesPathParam(path);
   return addressesOne ? `${base}ById` : base;
 }
 

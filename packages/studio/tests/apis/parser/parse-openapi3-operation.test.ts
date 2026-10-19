@@ -169,6 +169,53 @@ describe.each(VALIDATORS)("a query parameter named with a hyphen (%s)", (validat
   });
 });
 
+describe.each(VALIDATORS)(
+  "a path that puts a colon before a word, as Google's (%s)",
+  (validation) => {
+    const answers = {
+      "200": {
+        description: "ok",
+        content: { "application/json": { schema: { $ref: "#/components/schemas/File" } } },
+      },
+    };
+    const copyFile = {
+      tags: ["files"],
+      operationId: "copyFile",
+      parameters: [{ name: "file_id", in: "path", required: true, schema: { type: "string" } }],
+      responses: answers,
+    };
+    const purgeFiles = { tags: ["files"], operationId: "purgeFiles", responses: answers };
+    const spec = () =>
+      specWith({
+        "/files/{file_id}:copy": { post: copyFile },
+        "/files:purge": { post: purgeFiles },
+      });
+
+    it("is sent with the colon as the specification writes it, beside a parameter too", async () => {
+      await expect(callFor(spec(), validation, "copyFile")({ file_id: "f1" })).resolves.toEqual({
+        id: "f1",
+      });
+      expect(server.requests.at(-1)).toMatchObject({ method: "POST", path: "/v1/files/f1:copy" });
+
+      await callFor(spec(), validation, "purgeFiles")();
+      expect(server.requests.at(-1)).toMatchObject({ method: "POST", path: "/v1/files:purge" });
+    });
+
+    it("is generated with the colon doubled, and compiles with the parameter alone required", () => {
+      const files = generate(spec(), validation);
+      const code = files.map((file) => file.content).join("\n");
+      const check = [
+        'import { boxApi } from "./src/box/index";',
+        'export const copy = () => boxApi.files.copyFile({ file_id: "f1" });',
+      ].join("\n");
+
+      expect(code).toContain('"files/:file_id::copy"');
+      expect(code).toContain('"files::purge"');
+      expect(project.diagnostics(`colon-${validation}`, files, check)).toEqual([]);
+    });
+  },
+);
+
 describe("a parameter whose schema refers to a component", () => {
   function parameters(schemas: object, parameter: object) {
     const parsed = parseSpec(

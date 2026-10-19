@@ -2,18 +2,46 @@
  * Path manipulation utilities for OpenAPI/Postman parsers.
  */
 
+import { escapePathText } from "@noverax/courier/internal";
+
 import { transliterate } from "./naming-utils";
 import { gatheredPaths, sharedPrefix } from "./shared-path";
 
 /* A path parameter's placeholder; its name holds no brace and no slash. */
 const PLACEHOLDER = /\{([^{}/]+)\}/g;
 
+/* One placeholder, whole, to split a segment around. */
+const ONE_PLACEHOLDER = /(\{[^{}/]+\})/;
+
 /* What a `:name` placeholder reads as part of its name. */
 const NAME_CHARACTER = /[A-Za-z0-9_]/;
 
-/** Convert OpenAPI path params `{id}` to Courier-style `:id` */
+/**
+ * The path an endpoint declares, from a specification's path: each
+ * placeholder `{id}` becomes `:id`, a segment Postman starts with a colon is
+ * its path variable as it is, and every other colon is doubled, so that the
+ * endpoint sends it as written.
+ *
+ * @param path - The path, as the specification writes it
+ * @returns The path, as the generated endpoint writes it
+ * @example
+ * ```ts
+ * convertPathParams("/v4/spreadsheets/{spreadsheetId}:batchUpdate"); // → "/v4/spreadsheets/:spreadsheetId::batchUpdate"
+ * convertPathParams("/v1/urlInspection/index:inspect"); // → "/v1/urlInspection/index::inspect"
+ * ```
+ */
 export function convertPathParams(path: string): string {
-  return path.replace(PLACEHOLDER, (_, name: string) => `:${pathParamName(name)}`);
+  return path.split("/").map(convertSegment).join("/");
+}
+
+function convertSegment(segment: string): string {
+  if (segment.startsWith(":")) return segment;
+  return segment
+    .split(ONE_PLACEHOLDER)
+    .map((part) =>
+      ONE_PLACEHOLDER.test(part) ? `:${pathParamName(part.slice(1, -1))}` : escapePathText(part),
+    )
+    .join("");
 }
 
 /**

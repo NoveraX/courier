@@ -1,8 +1,8 @@
-import { withoutTrailingSlashes } from "@noverax/courier/internal";
 import { Copy } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
+import { mockRouteUrl } from "@/features/mocks/route-url";
 import { copyToClipboard } from "@/lib/clipboard";
 import { buildCurlSnippet } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,7 @@ export function RouteDetail({
   serverUrl: string;
   stacked: boolean;
 }): React.ReactNode {
-  const url = `${withoutTrailingSlashes(serverUrl)}${route.fullPath}`;
+  const url = mockRouteUrl(serverUrl, route.fullPath);
   const schema = Object.entries(route.responseSchema ?? {});
   return (
     <div

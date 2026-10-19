@@ -233,6 +233,8 @@ describe("a page's live events", () => {
       handleEvents: vi.fn(),
       replayEvents: vi.fn(),
       showSession: vi.fn(),
+      shownSession: null,
+      showLive: vi.fn(),
       setReceived: vi.fn(),
     };
     bindEvents(socket, () => store);

@@ -54,11 +54,15 @@ const SAVED = {
 };
 
 /** A Studio that shows `shown` to each page that connects, and records what the pages ask. */
-async function studio(shown: unknown): Promise<{ url: string; asked: string[] }> {
+async function studio(
+  shown: unknown,
+): Promise<{ url: string; asked: string[]; pages: ServerSocket[] }> {
   const http = createServer();
   server = new Server(http);
   const asked: string[] = [];
+  const pages: ServerSocket[] = [];
   server.of("/ui").on("connection", (socket: ServerSocket) => {
+    pages.push(socket);
     if (shown) socket.emit("view:session", shown);
     else socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     socket.on("view:live", () => {
@@ -67,7 +71,7 @@ async function studio(shown: unknown): Promise<{ url: string; asked: string[] }>
     });
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
-  return { url: `http://127.0.0.1:${(http.address() as AddressInfo).port}/ui`, asked };
+  return { url: `http://127.0.0.1:${(http.address() as AddressInfo).port}/ui`, asked, pages };
 }
 
 async function connectPage(url: string): Promise<void> {
@@ -118,6 +122,20 @@ describe("a page that connects while the pages show a saved session", () => {
 
     await vi.waitFor(() => expect(useStudioStore.getState().received.requests).toBe(true));
     expect(useStudioStore.getState().requests.map((request) => request.id)).toEqual(["r1"]);
+  });
+
+  it("leaves the session for the live requests Studio replays, never mixing the two", async () => {
+    const { url, pages } = await studio(SAVED);
+    await connectPage(url);
+    await vi.waitFor(() => expect(useStudioStore.getState().shownSession).not.toBeNull());
+
+    /* As Studio replays to a page that went back to live while it was out of reach, on reconnecting. */
+    pages[0]?.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
+
+    await vi.waitFor(() =>
+      expect(useStudioStore.getState().requests.map((request) => request.id)).toEqual(["live-1"]),
+    );
+    expect(useStudioStore.getState()).toMatchObject({ shownSession: null, paused: false });
   });
 
   it("waits no more for a session it cannot read either", async () => {

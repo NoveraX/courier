@@ -11,7 +11,7 @@ import { shownSessionOf } from "./shown-session-of";
 /** The part of the store runtime events write. */
 export type EventsStore = Pick<
   StudioState,
-  "handleEvents" | "replayEvents" | "showSession" | "setReceived"
+  "handleEvents" | "replayEvents" | "showSession" | "shownSession" | "showLive" | "setReceived"
 >;
 
 type EventPayload = StudioEvent & Record<string, unknown>;
@@ -50,11 +50,15 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
   const onEvents = (events: unknown): void => {
     if (Array.isArray(events)) for (const event of events) onEvent(event);
   };
-  /* Live events queued before the replay arrived belong before it. */
+  /* Live events queued before the replay arrived belong before it. Studio
+     replays only while the pages show the live requests: a session this page
+     still shows, as one that went back to live while Studio was out of reach
+     does, goes rather than take the live requests into it. */
   const onReplay = (data: unknown): void => {
     const events = replayedEvents(data);
     if (events) {
       queue.flush();
+      if (store().shownSession) store().showLive();
       store().replayEvents(
         events.filter((e): e is EventPayload => isStudioEvent(e) && !isMockEvent(e.type)),
       );

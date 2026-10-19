@@ -6,7 +6,8 @@ import {
   prepareConfigUndeclaration,
 } from "../config-edit/prepare-config-undeclaration";
 import { undeclarePreviewOf } from "../config-edit/undeclare-preview-of";
-import { type PlanSummary, summarizePlan } from "../import-files/plan-summary";
+import type { PlanSummary } from "../import-files/plan-summary";
+import { previewSummary } from "../import-files/preview-summary";
 import { importsSnapshotOf } from "../imports-bridge";
 import { readForRemoval } from "../project-state/read-for-removal";
 import { type RemovalConfigNotes, removalConfigNotes } from "../removal-config-notes";
@@ -59,7 +60,11 @@ export async function previewImportRemoval(
   const notes = removalConfigNotes(projectRoot, name, running, paths);
   const prepared = running && prepareConfigUndeclaration(name, running, projectRoot, paths);
   const loads = project.snapshot().failure === null;
-  return { plan: summarizePlan(planned), ...notes, config: shown(prepared, loads, local) };
+  return {
+    plan: previewSummary(projectRootAt(projectRoot), planned),
+    ...notes,
+    config: shown(prepared, loads, local),
+  };
 }
 
 /* The change as this caller may see it: planned against a config that loads, for a page on this machine. */

@@ -3,7 +3,8 @@ import { resolveImportLayout } from "../apis/layout";
 import { checkDeclaredDirectory } from "./check-declared-directory";
 import { checkDirOverlap } from "./check-dir-overlap";
 import { describeImportDeclaration } from "./describe-import-declaration";
-import { type PlanSummary, summarizePlan } from "./import-files/plan-summary";
+import type { PlanSummary } from "./import-files/plan-summary";
+import { previewSummary } from "./import-files/preview-summary";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { readConfigToAct } from "./project-state/read-config-to-act";
 import type { ProjectImports } from "./project-state/types";
@@ -77,7 +78,7 @@ export async function planImportWrite(
 ): Promise<ImportWritePlan> {
   const { regeneration, declaration } = await prepare(body, deps);
   const { plan, leftBehind } = await planRegeneration(regeneration);
-  return { plan: summarizePlan(plan), leftBehind, declaration };
+  return { plan: previewSummary(regeneration.root, plan), leftBehind, declaration };
 }
 
 /**

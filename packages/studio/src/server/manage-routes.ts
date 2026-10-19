@@ -4,7 +4,7 @@
 
 import { projectRootAt } from "@noverax/courier-cli/devkit";
 import type { ApisRouteDeps } from "./apis-routes";
-import { summarizePlan } from "./import-files/plan-summary";
+import { previewSummary } from "./import-files/preview-summary";
 import { getImportEntry, importsSnapshotOf } from "./imports-bridge";
 import { withImportsLock } from "./imports-lock";
 import { handleManageApply } from "./manage-apply";
@@ -86,7 +86,7 @@ async function handlePreviewRoute(
       return;
     }
     const { addResult, removeResult, plan } = planned;
-    res.json({ addResult, removeResult, plan: summarizePlan(plan) });
+    res.json({ addResult, removeResult, plan: previewSummary(projectRootAt(projectRoot), plan) });
   } catch (err) {
     sendRouteFailure(res, err, "Failed to preview changes");
   }

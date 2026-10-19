@@ -10,7 +10,8 @@ import { resolveImportLayout } from "../apis/layout";
 import type { BreakingChange, SpecDiff } from "../apis/merge/types";
 import { checkDirOverlap } from "./check-dir-overlap";
 import type { ApplyReport } from "./import-files/apply-file-plan";
-import { type PlanSummary, summarizePlan } from "./import-files/plan-summary";
+import type { PlanSummary } from "./import-files/plan-summary";
+import { previewSummary } from "./import-files/preview-summary";
 import type { PlanConsent } from "./import-files/run-plan";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { applyRegeneration, planRegeneration, type Regeneration } from "./regenerate-import";
@@ -62,7 +63,7 @@ export async function handlePreviewUpdate(
   const { plan, leftBehind } = await planRegeneration(regeneration);
   const specDiff = computeSpecDiff(regeneration.entry, regeneration.spec);
   return {
-    plan: summarizePlan(plan),
+    plan: previewSummary(root, plan),
     leftBehind,
     breakingChanges: specDiff?.breakingChanges ?? [],
     ...(specDiff !== undefined && { specDiff }),

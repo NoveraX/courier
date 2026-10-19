@@ -196,6 +196,27 @@ describe("the shell", () => {
     expect(screen.getByRole("button", { name: "Pause recording" }).textContent).toBe("REC");
   });
 
+  it("holds the recording button's place until Studio has said what the page shows", async () => {
+    attach();
+    useStudioStore.setState({ received: { runtimes: true, requests: false } });
+    await open("/view");
+    expect(screen.queryByRole("button", { name: "Pause recording" })).toBeNull();
+    expect(screen.queryByText("OFFLINE")).toBeNull();
+
+    act(() => useStudioStore.getState().setReceived("requests"));
+
+    expect(screen.getByRole("button", { name: "Pause recording" }).textContent).toBe("REC");
+  });
+
+  it("says nothing of recording while the page first connects", async () => {
+    useStudioStore.setState({ connected: false, connectionStatus: "connecting" });
+
+    await open("/view");
+
+    expect(screen.queryByText("OFFLINE")).toBeNull();
+    expect(screen.queryByText("REC")).toBeNull();
+  });
+
   it("leaves the recording button off the setup page until an app attaches", async () => {
     await open();
     expect(screen.queryByText("OFFLINE")).toBeNull();

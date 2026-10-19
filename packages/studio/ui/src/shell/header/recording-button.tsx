@@ -1,4 +1,5 @@
 import { Button } from "@/design/button";
+import { Skeleton } from "@/design/skeleton";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
@@ -29,10 +30,12 @@ interface RecordingButtonProps {
  * requests are recorded, `PAUSED` while they are not — or while a saved
  * session is shown in place of the live requests — and `OFFLINE` while no
  * app is attached or Studio cannot be reached. A click pauses or resumes,
- * or goes back to the live requests.
+ * or goes back to the live requests. Until Studio has said what the page
+ * shows — the live requests or a saved session — a block holds its place:
+ * the page cannot tell yet whether it records.
  *
  * @param props - Whether to leave it out while nothing is recorded
- * @returns The button, or nothing while it is left out
+ * @returns The button, a block in its place while the page waits, or nothing while it is left out
  * @example
  * ```tsx
  * <RecordingButton hideIdle={onSetupPage} />
@@ -43,8 +46,14 @@ export function RecordingButton({ hideIdle = false }: RecordingButtonProps): Rea
   const connected = useStudioStore((s) => s.connected);
   const attached = useStudioStore((s) => s.bindingSnapshot.runtimeCount > 0);
   const session = useStudioStore((s) => s.shownSession);
+  const waiting = useStudioStore(
+    (s) => s.connectionStatus === "connecting" || (s.connected && !s.received.requests),
+  );
   const togglePaused = useStudioStore((s) => s.togglePaused);
   const backToLive = useBackToLive();
+  if (waiting) {
+    return hideIdle ? null : <Skeleton className="h-7.5 w-16 rounded-control pointer-coarse:h-9" />;
+  }
   const state: RecordingState =
     paused || session ? "paused" : !connected ? "offline" : attached ? "recording" : "idle";
   if (hideIdle && (state === "idle" || state === "offline")) return null;

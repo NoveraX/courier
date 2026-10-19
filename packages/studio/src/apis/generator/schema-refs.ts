@@ -5,31 +5,46 @@
 import { ownValue } from "../own-value";
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 
-/** Topological sort: ensures schemas are emitted after their dependencies */
+/**
+ * Order schemas so each comes after every schema it names, in the order a
+ * depth-first walk from each name in turn finishes them. The walk keeps a
+ * list of its own rather than the call stack, so a chain of references as
+ * long as a specification can make is ordered as surely as a short one.
+ *
+ * @param schemas - The schemas, by name
+ * @returns Each name with its schema, dependencies first
+ * @example
+ * ```ts
+ * topoSortSchemas({ Pet: refersToTag, Tag: tag }).map(([name]) => name); // ["Tag", "Pet"]
+ * ```
+ */
 export function topoSortSchemas(schemas: Record<string, ParsedSchema>): [string, ParsedSchema][] {
   const names = new Set(Object.keys(schemas));
   const visited = new Set<string>();
   const result: [string, ParsedSchema][] = [];
-
-  function getDeps(schema: ParsedSchema): string[] {
+  const depsOf = (schema: ParsedSchema): string[] => {
     const refs = new Set<string>();
     collectRefsDeep(schema, refs);
     return [...refs].filter((ref) => names.has(ref));
-  }
-
-  function visit(name: string) {
-    if (visited.has(name)) return;
-    visited.add(name);
-    const schema = ownValue(schemas, name);
-    if (!schema) return;
-    for (const dep of getDeps(schema)) {
-      visit(dep);
+  };
+  for (const root of names) {
+    const frames: Array<{ name: string; schema: ParsedSchema; deps: string[]; at: number }> = [];
+    const enter = (name: string): void => {
+      if (visited.has(name)) return;
+      visited.add(name);
+      const schema = ownValue(schemas, name);
+      if (schema) frames.push({ name, schema, deps: depsOf(schema), at: 0 });
+    };
+    enter(root);
+    for (let frame = frames.at(-1); frame !== undefined; frame = frames.at(-1)) {
+      const dep = frame.deps[frame.at];
+      frame.at += 1;
+      if (dep !== undefined) enter(dep);
+      else {
+        frames.pop();
+        result.push([frame.name, frame.schema]);
+      }
     }
-    result.push([name, schema]);
-  }
-
-  for (const name of names) {
-    visit(name);
   }
   return result;
 }
@@ -46,29 +61,42 @@ export function topoSortSchemas(schemas: Record<string, ParsedSchema>): [string,
  * @param into - Set the names are added to
  */
 export function collectRefsDeep(schema: ParsedSchema | null | undefined, into: Set<string>): void {
-  walk(schema, into, new Set());
+  /* What is left to do, the next of it last. Each schema's work is laid down in reverse, so
+     names are added in the order a walk down each schema in turn reaches them, however deep. */
+  const pending: Work[] = schema ? [{ schema }] : [];
+  /* A recursive schema refers to itself; identity is what stops the walk. */
+  const seen = new Set<ParsedSchema>();
+  for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+    if ("ref" in next) {
+      into.add(next.ref);
+      continue;
+    }
+    if (seen.has(next.schema)) continue;
+    seen.add(next.schema);
+    if (next.schema.refName) into.add(next.schema.refName);
+    for (const work of workOf(next.schema).reverse()) pending.push(work);
+  }
 }
 
-function walk(
-  schema: ParsedSchema | null | undefined,
-  into: Set<string>,
-  seen: Set<ParsedSchema>,
-): void {
-  /* A recursive schema refers to itself; identity is what stops the walk. */
-  if (!schema || seen.has(schema)) return;
-  seen.add(schema);
+/** A schema to walk, or a field's reference to add. */
+type Work = { readonly schema: ParsedSchema } | { readonly ref: string };
 
-  if (schema.refName) into.add(schema.refName);
-  walk(schema.items, into, seen);
-  for (const variant of schema.variants ?? []) walk(variant, into, seen);
-  walk(schema.valueType, into, seen);
-
+/* What walking a schema comes to after its own reference, in order. */
+function workOf(schema: ParsedSchema): Work[] {
+  const work: Work[] = [];
+  const walk = (inner: ParsedSchema | undefined): void => {
+    if (inner) work.push({ schema: inner });
+  };
+  walk(schema.items);
+  for (const variant of schema.variants ?? []) walk(variant);
+  walk(schema.valueType);
   for (const prop of Object.values(schema.properties ?? {})) {
-    if (prop.refName) into.add(prop.refName);
-    walk(prop.items, into, seen);
-    walk(prop.shape, into, seen);
-    walk(prop.valueType, into, seen);
+    if (prop.refName) work.push({ ref: prop.refName });
+    walk(prop.items);
+    walk(prop.shape);
+    walk(prop.valueType);
   }
+  return work;
 }
 
 /**

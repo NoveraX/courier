@@ -9,6 +9,7 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { stronglyConnected } from "../strongly-connected";
 import { collectRefsDeep } from "./schema-refs";
 
 /** One component: a single schema, or several that name each other. */
@@ -24,6 +25,8 @@ export interface SchemaComponent {
  *
  * Tarjan's algorithm closes a component only once everything it reaches has
  * been closed, so the order it produces is already the order to write them in.
+ * It walks with a list of its own, so a chain of references of any length is
+ * walked once.
  *
  * @param schemas - Schemas about to be written to one file
  * @returns Components in declaration order
@@ -36,54 +39,11 @@ export interface SchemaComponent {
  */
 export function schemaComponents(schemas: Record<string, ParsedSchema>): SchemaComponent[] {
   const edges = referenceEdges(schemas);
-  const order = new Map<string, number>();
-  const low = new Map<string, number>();
-  const stack: string[] = [];
-  const onStack = new Set<string>();
-  const components: SchemaComponent[] = [];
-
-  function visit(name: string): void {
-    order.set(name, order.size);
-    low.set(name, order.get(name) as number);
-    stack.push(name);
-    onStack.add(name);
-
-    for (const next of edges.get(name) ?? []) {
-      if (!order.has(next)) {
-        visit(next);
-        low.set(name, Math.min(low.get(name) as number, low.get(next) as number));
-      } else if (onStack.has(next)) {
-        low.set(name, Math.min(low.get(name) as number, order.get(next) as number));
-      }
-    }
-
-    if (low.get(name) !== order.get(name)) return;
-    components.push(closeComponent(name, stack, onStack, edges));
-  }
-
-  for (const name of Object.keys(schemas)) {
-    if (!order.has(name)) visit(name);
-  }
-  return components;
-}
-
-/** Pop the finished component off the stack. */
-function closeComponent(
-  root: string,
-  stack: string[],
-  onStack: Set<string>,
-  edges: Map<string, string[]>,
-): SchemaComponent {
-  const names: string[] = [];
-  for (;;) {
-    const name = stack.pop() as string;
-    onStack.delete(name);
-    names.push(name);
-    if (name === root) break;
-  }
-  names.reverse();
-  const cyclic = names.length > 1 || (edges.get(root) ?? []).includes(root);
-  return { names, cyclic };
+  const targets = (name: string): string[] => edges.get(name) ?? [];
+  return stronglyConnected(Object.keys(schemas), targets).map((names) => ({
+    names,
+    cyclic: names.length > 1 || names.some((name) => targets(name).includes(name)),
+  }));
 }
 
 /** Which schemas in the file each schema names. */

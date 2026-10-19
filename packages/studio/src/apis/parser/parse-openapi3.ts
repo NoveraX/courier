@@ -2,6 +2,7 @@
  * OpenAPI 3.x specification parser.
  */
 
+import { withoutAliasLoops } from "./alias-loops";
 import { componentIdentifier } from "./component-identifier";
 import { buildGroups } from "./openapi-groups";
 import { groupEndpointsByTag } from "./openapi3-endpoints";
@@ -77,7 +78,7 @@ function parseSchemas(spec: SpecNode): Record<string, ReturnType<typeof convertS
     const identifier = componentIdentifier(spec, name);
     schemas[identifier] = convertSchema(identifier, asNode(schema), spec);
   }
-  return schemas;
+  return withoutAliasLoops(schemas);
 }
 
 function parseTagDescriptions(spec: SpecNode): Map<string, string> {

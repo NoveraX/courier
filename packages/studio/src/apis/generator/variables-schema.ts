@@ -5,6 +5,7 @@ import { constantsDeclared, declaredSchema } from "./declared-schema";
 import { type EndpointContext, schemaConstant } from "./endpoint-context";
 import {
   extendSchemaWithParams,
+  extensionCallsValidator,
   objectWithBody,
   optionalSchema,
   parametersSchema,
@@ -48,12 +49,17 @@ export function variablesSchema(
   if (params.length === 0 && !optional) return body;
   /* A parameter's schema may name others, whose constants the file imports. */
   if (!constantsDeclared(params.flatMap(parameterSchemas), context)) return null;
-  context.uses.validator = true;
+  const isObject = extendable(ep, context);
+  /* Extended with named schemas alone, the body's schema calls no validation library. */
+  const extended = kind === "fields" && params.length > 0;
+  if (!extended || extensionCallsValidator(params, context.options, isObject)) {
+    context.uses.validator = true;
+  }
   if (params.length === 0) return optionalSchema(body, context.options);
   if (kind !== "fields") {
     return objectWithBody(body, params, bodyKey(ep), context.options, optional);
   }
-  return extendSchemaWithParams(body, params, context.options, extendable(ep, context));
+  return extendSchemaWithParams(body, params, context.options, isObject);
 }
 
 /* Parameters alone are typed rather than validated, unless one is

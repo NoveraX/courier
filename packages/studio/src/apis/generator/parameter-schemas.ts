@@ -55,6 +55,35 @@ export function extendSchemaWithParams(
   return schemaExpr;
 }
 
+/* A schema's constant, named and nothing more: what writing it calls no validation library for. */
+const CONSTANT = /^[A-Za-z_$][\w$]*$/;
+
+/**
+ * Whether {@link extendSchemaWithParams} writes the validation library's
+ * own name, rather than only methods of the schemas it names: extending an
+ * object with parameters that are each a named schema —
+ * `UserSchema.extend({ owner: OwnerSchema })` — calls none, so a file whose
+ * every use is such imports nothing from it.
+ *
+ * @param params - The parameters the body is extended with
+ * @param options - Generation options, read for the validation library
+ * @param isObject - Whether the body's schema is an object that can be extended
+ * @returns Whether the schema written calls the library
+ * @example
+ * ```ts
+ * extensionCallsValidator([owner], { validation: "zod" }, true); // → false, owner being a named schema
+ * ```
+ */
+export function extensionCallsValidator(
+  params: readonly ParsedParameter[],
+  options: GeneratorSettings,
+  isObject: boolean,
+): boolean {
+  if (options.validation === "valibot" || (options.validation === "zod" && !isObject)) return true;
+  if (options.validation !== "zod" && options.validation !== "arktype") return false;
+  return params.some((param) => !CONSTANT.test(parameterValue(param, options)));
+}
+
 /**
  * The schema of variables holding the parameters and, under a key of its
  * own, a body that is not a set of fields: a list, a scalar.
@@ -135,14 +164,21 @@ export function parametersSchema(
  * the server would have answered helps nobody.
  */
 function parameterField(param: ParsedParameter, options: GeneratorSettings): string {
-  const prop = parameterProperty(param);
-  const optional = !prop.required;
+  const optional = !parameterProperty(param).required;
+  const value = parameterValue(param, options);
   if (options.validation === "zod") {
-    return `${objectKey(param.name)}: ${propToZod(prop)}${optional ? ".optional()" : ""}`;
+    return `${objectKey(param.name)}: ${value}${optional ? ".optional()" : ""}`;
   }
   if (options.validation === "valibot") {
-    const valibot = propToValibot(prop);
-    return `${objectKey(param.name)}: ${optional ? `v.optional(${valibot})` : valibot}`;
+    return `${objectKey(param.name)}: ${optional ? `v.optional(${value})` : value}`;
   }
-  return arkProperty(param.name, optional, propToArkType(prop));
+  return arkProperty(param.name, optional, value);
+}
+
+/* A parameter's own schema, before it is made optional. */
+function parameterValue(param: ParsedParameter, options: GeneratorSettings): string {
+  const prop = parameterProperty(param);
+  if (options.validation === "zod") return propToZod(prop);
+  if (options.validation === "valibot") return propToValibot(prop);
+  return propToArkType(prop);
 }

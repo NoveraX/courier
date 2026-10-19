@@ -162,3 +162,66 @@ describe("a flat import", () => {
     expect(imports).toContain("type DeletedCustomer");
   });
 });
+
+describe("a body extended only with parameters that are named schemas", () => {
+  const named = { $ref: "#/components/schemas/User" };
+  const spec = (query: unknown) =>
+    parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Users", version: "1" },
+        servers: [{ url: "https://users.test" }],
+        paths: {
+          "/users": {
+            post: {
+              operationId: "addUser",
+              tags: ["users"],
+              parameters: [{ name: "q", in: "query", schema: query }],
+              requestBody: { required: true, content: { "application/json": { schema: named } } },
+              responses: {
+                200: { description: "ok", content: { "application/json": { schema: named } } },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            User: {
+              type: "object",
+              properties: { id: { type: "string", readOnly: true }, name: { type: "string" } },
+            },
+          },
+        },
+      }),
+    );
+  const groupFile = (query: unknown, validation: GenerateOptions["validation"]) =>
+    generateCode(spec(query), { type: "openapi", outputDir: "src/api", validation }, "users");
+
+  it.each(["zod", "arktype"] as const)(
+    "imports no %s it does not call, and compiles with noUnusedLocals",
+    (validation) => {
+      const files = groupFile(named, validation);
+      const users = files.find((file) => file.path === "src/api/users/users/index.ts");
+      const dir = writeProject(`endpoint-imports/extended-${validation}`, files);
+
+      expect(users?.content).not.toMatch(/from "(zod|arktype)"/);
+      expect(
+        compileProject(dir, ["src/api/users/index.ts"], { ...STRICT, noUnusedLocals: true }),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(["zod", "arktype"] as const)(
+    "imports %s once a parameter is written with it",
+    (validation) => {
+      const files = groupFile({ type: "string", minLength: 2 }, validation);
+      const users = files.find((file) => file.path === "src/api/users/users/index.ts");
+      const dir = writeProject(`endpoint-imports/extended-text-${validation}`, files);
+
+      expect(users?.content).toMatch(/from "(zod|arktype)"/);
+      expect(
+        compileProject(dir, ["src/api/users/index.ts"], { ...STRICT, noUnusedLocals: true }),
+      ).toEqual([]);
+    },
+  );
+});

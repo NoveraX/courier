@@ -32,12 +32,13 @@ function isParameter(segment: string): boolean {
  */
 export function sharedRoot(paths: readonly string[]): number {
   const all = paths.map(segmentsOf);
-  const [first = [], ...rest] = all;
-  const above = Math.min(...all.map((segments) => segments.length)) - 1;
+  const first = all[0] ?? [];
+  /* Folded rather than spread into one call, which some 125 000 paths overflowed. */
+  const above = all.reduce((least, segments) => Math.min(least, segments.length), Infinity) - 1;
   let depth = 0;
   for (const segment of first) {
     if (depth >= above || isParameter(segment)) break;
-    if (!rest.every((other) => other[depth] === segment)) break;
+    if (!all.every((other) => other[depth] === segment)) break;
     depth += 1;
   }
   return depth;

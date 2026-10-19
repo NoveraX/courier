@@ -41,6 +41,12 @@ describe("sharedRoot", () => {
   it("reads a path without the query some specifications write into its key", () => {
     expect(sharedRoot(["/responses?beta=true", "/responses/{id}?beta=true"])).toBe(0);
   });
+
+  it("finds the root of 300 000 paths", () => {
+    const paths = Array.from({ length: 300_000 }, (_, at) => `/v1/items/${at}`);
+
+    expect(sharedRoot(paths)).toBe(2);
+  });
 });
 
 describe("pathGroupKey", () => {

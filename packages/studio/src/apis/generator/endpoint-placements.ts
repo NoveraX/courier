@@ -66,8 +66,9 @@ function byPathSegment(all: Sourced[]): EndpointPlacement[] {
   const bySegment = new Map<string, Sourced[]>();
   for (const item of all) {
     const segment = pathGroupKey(item.source.fullPath, root);
-    if (segment === null) top.push(item);
-    else bySegment.set(segment, [...(bySegment.get(segment) ?? []), item]);
+    const grouped = segment === null ? top : bySegment.get(segment);
+    if (grouped) grouped.push(item);
+    else if (segment !== null) bySegment.set(segment, [item]);
   }
   const claim = groupNameClaimer();
   const grouped = [...bySegment].flatMap(([segment, items]) => {

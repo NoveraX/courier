@@ -1,15 +1,21 @@
+import { ownValue } from "../own-value";
+import { stronglyConnected } from "../strongly-connected";
 import type { ParsedSchema } from "./types";
 
 /**
- * Read as unknown each schema that stands only for itself: one that is a
- * reference to another schema, and that one to another, until the chain
- * comes back — `X: { $ref: X }`, `A: B` beside `B: A`, any of them `null`
- * too. Such a schema names no value, so every value is one; written out,
- * it was a type that referred to itself, which no project compiles. A
- * schema that refers into the loop from outside stays a reference to it.
+ * Read each schema on a loop of references a value takes as it is — a
+ * reference to another schema, or a union holding one, until the chain
+ * comes back: `X: { $ref: X }`, `A: B` beside `B: A`, `X: oneOf [X, Y]` —
+ * as what the loop can only be. Every schema of such a loop takes the same
+ * values, those its schemas take besides one another, so `X: oneOf [X, Y]`
+ * is `Y`; a loop that takes nothing else, or `null` alone, names no value,
+ * so every value is one, and it is read as unknown. Written out, each was
+ * a type that referred to itself, which no project compiles. A schema that
+ * refers into the loop from outside stays a reference to it, and one that
+ * names itself inside a field or a list stays as it is.
  *
  * @param schemas - The component schemas, by identifier
- * @returns The same schemas, those in a loop read as unknown
+ * @returns The same schemas, those on a loop read as what it takes
  * @example
  * ```ts
  * withoutAliasLoops({ Tag: { name: "Tag", type: "ref", refName: "Tag" } });
@@ -19,43 +25,67 @@ import type { ParsedSchema } from "./types";
 export function withoutAliasLoops(
   schemas: Record<string, ParsedSchema>,
 ): Record<string, ParsedSchema> {
-  const looping = aliasLoops(schemas);
-  if (looping.size === 0) return schemas;
+  const targets = (name: string): string[] => immediateRefs(ownValue(schemas, name));
+  const loops = stronglyConnected(Object.keys(schemas), targets).filter(
+    (set) => set.length > 1 || set.some((name) => targets(name).includes(name)),
+  );
+  if (loops.length === 0) return schemas;
   const read: Record<string, ParsedSchema> = { ...schemas };
-  for (const name of looping) {
-    const description = schemas[name]?.description;
-    read[name] = { name, type: "any", ...(description !== undefined && { description }) };
+  for (const loop of loops) {
+    const members = new Set(loop);
+    const besides = distinct(
+      loop.flatMap((name) => variantsBesides(ownValue(schemas, name), members)),
+    );
+    for (const name of loop)
+      read[name] = loopRead(name, ownValue(schemas, name)?.description, besides);
   }
   return read;
 }
 
-/* The schemas on a chain of references that comes back to itself; each is walked once. */
-function aliasLoops(schemas: Record<string, ParsedSchema>): Set<string> {
-  const looping = new Set<string>();
-  const settled = new Set<string>();
-  for (const start of Object.keys(schemas)) {
-    const walked: string[] = [];
-    const onWalk = new Set<string>();
-    let at: string | undefined = start;
-    while (at !== undefined && !settled.has(at) && !onWalk.has(at)) {
-      walked.push(at);
-      onWalk.add(at);
-      at = aliasOf(Object.hasOwn(schemas, at) ? schemas[at] : undefined);
-    }
-    if (at !== undefined && onWalk.has(at)) {
-      for (const name of walked.slice(walked.indexOf(at))) looping.add(name);
-    }
-    for (const name of walked) settled.add(name);
-  }
-  return looping;
+/* The schemas a value of this one is, as it is: what it refers to, or what its union's variants do. */
+function immediateRefs(schema: ParsedSchema | undefined): string[] {
+  if (schema?.type === "ref") return schema.refName === undefined ? [] : [schema.refName];
+  if (schema?.type !== "union") return [];
+  return (schema.variants ?? []).flatMap((variant) =>
+    variant.type === "ref" && variant.refName !== undefined ? [variant.refName] : [],
+  );
 }
 
-/* The schema another one only stands for: its reference, alone or beside `null`. */
-function aliasOf(schema: ParsedSchema | undefined): string | undefined {
-  if (schema?.type === "ref") return schema.refName;
-  if (schema?.type !== "union" || schema.variants?.length !== 2) return undefined;
-  const [first, second] = schema.variants;
-  if (first?.type === "ref" && second?.type === "null") return first.refName;
-  if (second?.type === "ref" && first?.type === "null") return second.refName;
-  return undefined;
+/* A union's variants that are not a reference back into the loop. */
+function variantsBesides(
+  schema: ParsedSchema | undefined,
+  loop: ReadonlySet<string>,
+): ParsedSchema[] {
+  if (schema?.type !== "union") return [];
+  return (schema.variants ?? []).filter(
+    (variant) =>
+      !(variant.type === "ref" && variant.refName !== undefined && loop.has(variant.refName)),
+  );
+}
+
+/* Each variant once, however many schemas of the loop hold it, its name aside. */
+function distinct(variants: readonly ParsedSchema[]): ParsedSchema[] {
+  const seen = new Set<string>();
+  return variants.filter((variant) => {
+    const { name: _name, ...shape } = variant;
+    const key = JSON.stringify(shape);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/* A schema of the loop, as what the loop takes: unknown, the one schema, or a union of them. */
+function loopRead(
+  name: string,
+  description: string | undefined,
+  besides: readonly ParsedSchema[],
+): ParsedSchema {
+  const described = description === undefined ? {} : { description };
+  if (besides.every((variant) => variant.type === "null"))
+    return { name, type: "any", ...described };
+  const [sole] = besides;
+  if (besides.length === 1 && sole !== undefined) return { ...sole, name, ...described };
+  const variants = besides.map((variant, at) => ({ ...variant, name: `${name}Variant${at + 1}` }));
+  return { name, type: "union", variants, ...described };
 }

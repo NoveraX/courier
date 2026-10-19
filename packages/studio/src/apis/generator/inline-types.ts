@@ -75,14 +75,6 @@ function objectToTsType(schema: ParsedSchema, style: TypeStyle): string {
 }
 
 /**
- * The part of a property declaration after its key: `?: T | null`.
- *
- * @param prop - The property
- * @param optional - Whether the key may be absent
- * @param style - How an optional property is written
- * @returns The mark, the colon and the type
- */
-/**
  * A field of an object type: its key, whether it may be left out, and its
  * type. An optional field named like a member TypeScript reads on every
  * object — `constructor`, `toString` — takes that member's type too: an
@@ -110,6 +102,18 @@ export function fieldType(
   return `${typeKey(name)}${propertyType(prop, optional, style)}${member}`;
 }
 
+/**
+ * The part of a property declaration after its key: `?: T | null`.
+ *
+ * @param prop - The property
+ * @param optional - Whether the key may be absent
+ * @param style - How an optional property is written
+ * @returns The mark, the colon and the type
+ * @example
+ * ```ts
+ * propertyType({ type: "string", required: false, nullable: true }, true, EXACT_OPTIONAL); // → "?: string | null"
+ * ```
+ */
 export function propertyType(
   prop: ParsedSchemaProperty,
   optional: boolean,

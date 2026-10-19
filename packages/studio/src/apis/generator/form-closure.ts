@@ -36,14 +36,14 @@ export function formClosure(
   const query = params.filter((param) => param.in === "query");
   if (query.length === 0) {
     return method === "del"
-      ? `(http, form) => http.del(${at}, undefined, { ${callOptions("body: form", null, read)} })`
+      ? `(http, form) => http.del(${at}, void 0, { ${callOptions("body: form", null, read)} })`
       : null;
   }
   const values = `{ ${query.map((param) => `${objectKey(param.name)}: ${entry(param)}`).join(", ")} }`;
   const searchParams = styledQuery(values, query);
   const send =
     method === "del"
-      ? `http.del(${at}, undefined, { ${callOptions("body", searchParams, read)} })`
+      ? `http.del(${at}, void 0, { ${callOptions("body", searchParams, read)} })`
       : `http.${method}(${at}, body, { ${callOptions(null, searchParams, read)} })`;
   /* The path's entries fill the path, and are not part of the body either. */
   const taken = jsLiteral(params.map((param) => param.name));
@@ -54,5 +54,5 @@ export function formClosure(
 /** A query parameter's value, read from the form: every entry of a list. */
 function entry(param: ParsedParameter): string {
   const name = jsLiteral(param.name);
-  return param.type === "array" ? `form.getAll(${name})` : `form.get(${name}) ?? undefined`;
+  return param.type === "array" ? `form.getAll(${name})` : `form.get(${name}) ?? void 0`;
 }

@@ -127,7 +127,7 @@ describe("a name a module cannot bind, or one the generated code reads", () => {
     const group = files.find((file) => file.path.endsWith("/undefined-group/index.ts"));
 
     expect(group?.content).toContain(
-      '(http, { undefined: param0 }) => http.post("things", undefined, { searchParams: { undefined: param0 } })',
+      '(http, { undefined: param0 }) => http.post("things", void 0, { searchParams: { undefined: param0 } })',
     );
     expect(
       files.find((file) => file.path.endsWith("/global-this-group/index.ts"))?.content,

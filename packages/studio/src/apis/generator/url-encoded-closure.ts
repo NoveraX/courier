@@ -19,7 +19,7 @@ import { destructure } from "./variable-bindings";
  * @example
  * ```ts
  * urlEncodedClosure(createCustomer, "post", '"customers"', null);
- * // '(http, { expand, ...body }) => http.post("customers", undefined,
+ * // '(http, { expand, ...body }) => http.post("customers", void 0,
  * //   { body: formBody(body, { metadata: { style: "deepObject", explode: true } }), searchParams: { expand } })'
  * ```
  */
@@ -41,8 +41,7 @@ export function urlEncodedClosure(
   const fields = key ?? "body";
   /* A body under its own key that the operation does not require may be absent. */
   const form = `formBody(${fields}${encoding})`;
-  const sent =
-    key !== null && ep.requestBodyOptional ? `${key} === undefined ? null : ${form}` : form;
+  const sent = key !== null && ep.requestBodyOptional ? `${key} === void 0 ? null : ${form}` : form;
   const options = callOptions(`body: ${sent}`, searchParams, read);
-  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options} })`;
+  return `(http, { ${bindings} }) => http.${method}(${at}, void 0, { ${options} })`;
 }

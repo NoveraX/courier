@@ -94,13 +94,13 @@ function placingClosure(
       params.filter((p) => p.in === "path"),
     );
     const rest = pattern ? `${pattern}, ...body` : "...body";
-    return `(http, { ${rest} }) => http.del(${at}, undefined, { ${options("json: body", searchParams, read, media)} })`;
+    return `(http, { ${rest} }) => http.del(${at}, void 0, { ${options("json: body", searchParams, read, media)} })`;
   }
   const { pattern, searchParams } = destructure(query, []);
   if (searchParams === null && media === null) return null;
   /* The path is filled from every variable, whatever the closure passes. */
   if (kind === "none") {
-    return `(http, { ${pattern} }) => http.${method}(${at}, undefined, { ${options(null, searchParams, read)} })`;
+    return `(http, { ${pattern} }) => http.${method}(${at}, void 0, { ${options(null, searchParams, read)} })`;
   }
   const body = pattern ? `{ ${pattern}, ...body }` : "body";
   return `(http, ${body}) => http.${method}(${at}, body, { ${options(null, searchParams, read, media)} })`;
@@ -121,7 +121,7 @@ function wholeBodyClosure(
   /* A header parameter, too, puts the body under a key of its own. */
   if (variableParameters(ep).length === 0) {
     return method === "del" || media !== null
-      ? `(http, body) => http.${method}(${at}, undefined, { ${options(`${option}: ${sent("body")}`, null, read, media)} })`
+      ? `(http, body) => http.${method}(${at}, void 0, { ${options(`${option}: ${sent("body")}`, null, read, media)} })`
       : null;
   }
   const key = bodyKey(ep);
@@ -130,7 +130,7 @@ function wholeBodyClosure(
     [],
   );
   const bindings = pattern ? `${pattern}, ${key}` : key;
-  return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options(`${option}: ${sent(key)}`, searchParams, read, media)} })`;
+  return `(http, { ${bindings} }) => http.${method}(${at}, void 0, { ${options(`${option}: ${sent(key)}`, searchParams, read, media)} })`;
 }
 
 /**

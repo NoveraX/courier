@@ -6,6 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { generateCode } from "../../../src/apis/generator";
+import { parseSpec } from "../../../src/apis/parser";
 import { buildGroups } from "../../../src/apis/parser/openapi-groups";
 import type { ParsedEndpoint, ParsedGroup } from "../../../src/apis/parser/types";
 import { uniqueEndpointNames } from "../../../src/apis/parser/unique-endpoint-names";
@@ -143,6 +145,31 @@ describe("buildGroups", () => {
       "invoices=invoices",
       "refunds=refunds/:id",
     ]);
+  });
+
+  it("names a group after a tag of 300 characters within 128, and the import is generated", () => {
+    const ok = { 200: { description: "ok" } };
+    const long = "a".repeat(300);
+    const spec = parseSpec(
+      JSON.stringify({
+        openapi: "3.1.0",
+        info: { title: "Shop", version: "1" },
+        tags: [{ name: long }, { name: `${long} again` }],
+        paths: {
+          "/a": { get: { operationId: "listA", tags: [long], responses: ok } },
+          "/b": { get: { operationId: "listB", tags: [`${long} again`], responses: ok } },
+        },
+      }),
+    );
+    const files = generateCode(spec, { type: "openapi", outputDir: "src/api" }, "shop");
+
+    expect(spec.groups.map((group) => group.name)).toEqual([
+      "a".repeat(128),
+      `${"a".repeat(127)}2`,
+    ]);
+    expect(files.some((file) => file.path === `src/api/shop/${"a".repeat(128)}/index.ts`)).toBe(
+      true,
+    );
   });
 
   it("builds a chain of 3 000 nested tags", () => {

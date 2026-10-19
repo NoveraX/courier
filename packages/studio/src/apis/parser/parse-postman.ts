@@ -2,6 +2,7 @@
  * Postman Collection parser.
  */
 
+import { groupNameClaimer } from "./group-name-claimer";
 import { isSupportedMethod } from "./http-methods";
 import { collectionVariables, commonBase, requestBase } from "./postman-base";
 import {
@@ -29,7 +30,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
   const version = textAt(info, "version") ?? "1.0.0";
 
   const groups: ParsedGroup[] = [];
-  const takenGroupNames = new Set<string>();
+  const claimGroupName = groupNameClaimer();
   const skipped: SkippedOperation[] = [];
   const securitySchemes: ParsedSecurityScheme[] = [];
   const collectionAuth = authScheme(nodeAt(collection, "auth"));
@@ -102,7 +103,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       groups.push({
         /* Two folders may carry the same name; one group file would have
            overwritten the other. */
-        name: claimGroupName(toGroupName(groupName), takenGroupNames),
+        name: claimGroupName(toGroupName(groupName)),
         description: "",
         prefix: convertPathParams(prefix),
         endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
@@ -137,16 +138,4 @@ function requestsIn(items: readonly unknown[]): SpecNode[] {
     const request = nodeAt(item, "request");
     return request ? [request] : [];
   });
-}
-
-/** Take a group name, or the first numbered variant still free. */
-function claimGroupName(name: string, taken: Set<string>): string {
-  let candidate = name;
-  let n = 2;
-  while (taken.has(candidate)) {
-    candidate = `${name}${n}`;
-    n += 1;
-  }
-  taken.add(candidate);
-  return candidate;
 }

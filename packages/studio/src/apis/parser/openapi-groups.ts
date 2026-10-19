@@ -2,6 +2,7 @@
  * The groups an OpenAPI specification's endpoints are generated in.
  */
 
+import { groupNameClaimer } from "./group-name-claimer";
 import {
   joinSharedPaths,
   NO_PATHS,
@@ -19,10 +20,11 @@ import { convertPathParams, toGroupName } from "./utils";
  *
  * A group is named after its tag, or after the last segment of the path its
  * endpoints share when the tag makes no name, and gets a number when another
- * group already took that name. Its prefix is the path its endpoints — and
- * those of every group inside it — share, after its parent group's. A tag
- * only other tags sit under becomes a group of its own, so they have one to
- * sit in.
+ * group already took that name; a name over the 128 characters a folder is
+ * named from is cut, its number included. Its prefix is the path its
+ * endpoints — and those of every group inside it — share, after its parent
+ * group's. A tag only other tags sit under becomes a group of its own, so
+ * they have one to sit in.
  *
  * @param endpointsByTag - Endpoints under the first tag each declares
  * @param tagDescriptions - The description the specification gives each tag
@@ -44,12 +46,11 @@ export function buildGroups(
   const parentOf = (tag: string) => parents.get(tag);
   const prefixes = subtreePrefixes(tags, endpointsByTag, parents);
   const names = new Map<string, string>();
-  const usedNames = new Set<string>();
+  const claim = groupNameClaimer();
 
   return tags.map((tag): ParsedGroup => {
     const prefix = prefixes.get(tag) ?? "/";
-    const name = deduplicateName(resolveGroupName(tag, prefix), usedNames);
-    usedNames.add(name);
+    const name = claim(resolveGroupName(tag, prefix));
     names.set(tag, name);
     const parent = parentOf(tag);
     const endpoints = endpointsByTag.get(tag) ?? [];
@@ -125,11 +126,4 @@ function resolveGroupName(tag: string, prefix: string): string {
   if (name) return name;
   const lastSegment = prefix.split("/").filter(Boolean).pop();
   return lastSegment ? toGroupName(lastSegment) : "defaultGroup";
-}
-
-function deduplicateName(name: string, usedNames: Set<string>): string {
-  if (!usedNames.has(name)) return name;
-  let i = 2;
-  while (usedNames.has(`${name}${i}`)) i++;
-  return `${name}${i}`;
 }

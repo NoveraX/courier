@@ -1,7 +1,7 @@
 import { posix } from "node:path";
 import { withoutTrailingSlashes } from "@noverax/courier/internal";
 
-import { MAX_NAME_LENGTH } from "./check-import-name";
+import { MAX_NAME_LENGTH } from "../max-name-length";
 import { hasControlCharacter } from "./has-control-character";
 import { InvalidImportError } from "./invalid-import-error";
 import { isWindowsDevice } from "./windows-device";

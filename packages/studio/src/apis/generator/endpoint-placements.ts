@@ -1,3 +1,4 @@
+import { groupNameClaimer } from "../parser/group-name-claimer";
 import { TOP_LEVEL } from "../parser/top-level";
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
 import { uniqueEndpointNames } from "../parser/unique-endpoint-names";
@@ -68,12 +69,12 @@ function byPathSegment(all: Sourced[]): EndpointPlacement[] {
     if (segment === null) top.push(item);
     else bySegment.set(segment, [...(bySegment.get(segment) ?? []), item]);
   }
-  const taken = new Set<string>();
+  const claim = groupNameClaimer();
   const grouped = [...bySegment].flatMap(([segment, items]) => {
     const prefix = findCommonPrefix(items.map((item) => item.source.fullPath));
     /* A URL segment is not an identifier: Twilio's `2010-04-01` became
        `20100401`, and `export const 20100401` does not parse. */
-    const name = claim(toGroupName(segment), taken);
+    const name = claim(toGroupName(segment));
     /* The URL the caller builds uses `:name`; leaving the specification's
        braces in put a literal `{AccountSid}` into the request. */
     const group = { name, description: "", prefix: convertPathParams(prefix) };
@@ -98,16 +99,4 @@ function placedIn(
     const endpoint = named[index] ?? item.source;
     return { ...item, group, endpoint: { ...endpoint, path: pathOf(item.source) } };
   });
-}
-
-/** Take a name, or the first numbered variant of it that is still free. */
-function claim(name: string, taken: Set<string>): string {
-  let candidate = name;
-  let n = 2;
-  while (taken.has(candidate)) {
-    candidate = `${name}${n}`;
-    n += 1;
-  }
-  taken.add(candidate);
-  return candidate;
 }

@@ -1,8 +1,6 @@
+import { MAX_NAME_LENGTH } from "../max-name-length";
 import { hasControlCharacter } from "./has-control-character";
 import { InvalidImportError } from "./invalid-import-error";
-
-/** The longest name an import may have. */
-export const MAX_NAME_LENGTH = 128;
 
 /**
  * Refuse an import name Studio cannot write safely: an empty one, one

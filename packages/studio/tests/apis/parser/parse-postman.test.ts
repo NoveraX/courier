@@ -147,3 +147,38 @@ describe("a collection whose requests name {{baseUrl}}", () => {
     },
   );
 });
+
+describe("parsePostman, group names", () => {
+  /* A collection of one folder per name, each holding one request. */
+  function folders(...names: string[]): string {
+    return JSON.stringify({
+      info: { name: "Acme", schema: "https://schema.getpostman.com/json/collection/v2.1.0/" },
+      item: names.map((name, at) => ({
+        name,
+        item: [
+          { name: `Request ${at}`, request: { method: "GET", url: `https://acme.test/r${at}` } },
+        ],
+      })),
+    });
+  }
+
+  it("names a group after a folder of 140 characters within 128, and the import is generated", () => {
+    const spec = parseSpec(folders("f".repeat(140)));
+    const files = generateCode(spec, { type: "openapi", outputDir: "src/api" }, "acme");
+
+    expect(spec.groups.map((group) => group.name)).toEqual(["f".repeat(128)]);
+    expect(files.some((file) => file.path === `src/api/acme/${"f".repeat(128)}/index.ts`)).toBe(
+      true,
+    );
+  });
+
+  it("numbers three folders of one long name within 128", () => {
+    const long = "f".repeat(140);
+
+    expect(parseSpec(folders(long, long, long)).groups.map((group) => group.name)).toEqual([
+      "f".repeat(128),
+      `${"f".repeat(127)}2`,
+      `${"f".repeat(127)}3`,
+    ]);
+  });
+});

@@ -1,7 +1,8 @@
 import { posix } from "node:path";
+import { MAX_NAME_LENGTH } from "../max-name-length";
 import { toBindingName, toCamelCase } from "../parser/naming-utils";
 import { canonicalOutputDir, STUDIO_OFF_LIMITS } from "./canonical-output-dir";
-import { checkImportName, MAX_NAME_LENGTH } from "./check-import-name";
+import { checkImportName } from "./check-import-name";
 import { directoryName } from "./directory-name";
 import { InvalidImportError, type InvalidImportField } from "./invalid-import-error";
 

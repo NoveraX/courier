@@ -4,14 +4,14 @@ const GRACEFUL_TIMEOUT = 3000;
 const FORCE_TIMEOUT = 2000;
 
 /**
- * Ask a worker to stop and wait until it has exited.
+ * Ask a worker to stop, or end it, and wait until it has exited.
  *
  * A worker that has not exited three seconds after the request is sent
  * SIGTERM, and SIGKILL two seconds after that. Resolves at once for a worker
  * that has already exited, and leaves no timer behind.
  *
  * @param child - The worker
- * @param askToStop - Sends the worker its stop message
+ * @param askToStop - Sends the worker its stop message, or ends it
  * @returns Resolves once the worker has exited
  * @example
  * ```ts

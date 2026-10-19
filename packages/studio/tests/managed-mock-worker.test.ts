@@ -6,7 +6,8 @@
  *
  * It serves its routes, lists them as Studio described them, reports a bad
  * declaration, a mocks file without a default export or a taken port, and
- * stops at once when asked while its mocks file is still loading.
+ * stops at once when asked while its mocks file is still loading, also
+ * while the file's own code keeps the worker from reading any message.
  */
 import {
   mkdirSync,
@@ -38,7 +39,7 @@ afterEach(async () => {
 /** A project under the repository's node_modules, so its files resolve the workspace packages. */
 function project(
   mocks: string,
-  { loadDelayMs = 0, exportLine = `export default defineMocks(${mocks});` } = {},
+  { loadDelayMs = 0, busyMs = 0, exportLine = `export default defineMocks(${mocks});` } = {},
 ): string {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
   mkdirSync(cache, { recursive: true });
@@ -62,6 +63,7 @@ function project(
     join(root, "courier.mocks.ts"),
     'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
       'import { api } from "./src/api";\n' +
+      `for (const until = Date.now() + ${busyMs}; Date.now() < until; );\n` +
       `await new Promise((resolve) => setTimeout(resolve, ${loadDelayMs}));\n` +
       `${exportLine}\n`,
   );
@@ -161,6 +163,30 @@ describe("a managed mock server", () => {
       avoidPorts: [],
     });
     await new Promise((resolve) => setTimeout(resolve, 300));
+    const asked = Date.now();
+    await pm.kill("apiMock");
+
+    expect(Date.now() - asked).toBeLessThan(1500);
+    expect(events.onReady).not.toHaveBeenCalled();
+    expect(events.onExited).not.toHaveBeenCalled();
+  }, 20_000);
+
+  it("stops at once when asked while its mocks file's code still runs, reading no message", async () => {
+    const port = await freePort();
+    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`, {
+      busyMs: 4000,
+    });
+    const { events, pm } = manager();
+
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: true,
+      avoidPorts: [],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     const asked = Date.now();
     await pm.kill("apiMock");
 

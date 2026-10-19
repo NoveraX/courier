@@ -4,9 +4,11 @@
  * Studio forks its own worker with no loader flags, from the project's
  * directory, with the worker's output in Studio's terminal. An exit Studio
  * did not ask for — a signal, or an exit of the worker's own, with any code —
- * is reported. A stop resolves once the worker has exited and leaves no timer
- * behind, and the worker it replaced cannot take a new worker's place. The
- * host keeps its own signal handlers.
+ * is reported. A worker that serves is asked to stop; one that serves
+ * nothing yet, which may still be running the mocks file's code and reads
+ * no message meanwhile, is ended at once. A stop resolves once the worker
+ * has exited and leaves no timer behind, and the worker it replaced cannot
+ * take a new worker's place. The host keeps its own signal handlers.
  */
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -178,14 +180,40 @@ describe("a managed mock that ends", () => {
   });
 });
 
+/* What the worker says once its server listens. */
+function serving(child: FakeChild): void {
+  child.emit("message", { type: "ready", port: 7401, url: "http://localhost:7401", routes: [] });
+}
+
 describe("stopping a managed mock", () => {
-  it("leaves no timer behind once the worker has exited", async () => {
+  it("asks a worker that serves to stop, and leaves no timer behind once it has exited", async () => {
     vi.useFakeTimers();
     const { pm } = manager();
     pm.spawn(request);
+    const child = forks[0]?.child as FakeChild;
+    serving(child);
 
     await pm.kill("apiMock");
 
+    expect(child.send).toHaveBeenLastCalledWith({ type: "stop" }, expect.any(Function));
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    await pm.dispose();
+  });
+
+  it("ends a worker that serves nothing yet at once, and leaves no timer behind", async () => {
+    vi.useFakeTimers();
+    const { pm } = manager();
+    pm.spawn(request);
+    const child = forks[0]?.child as FakeChild;
+
+    const stopping = pm.kill("apiMock");
+    const signals = child.kill.mock.calls.map(([signal]: unknown[]) => signal);
+    await vi.advanceTimersByTimeAsync(50);
+    await stopping;
+
+    expect(signals).toEqual(["SIGTERM"]);
+    expect(child.send).not.toHaveBeenCalledWith({ type: "stop" }, expect.any(Function));
     expect(vi.getTimerCount()).toBe(0);
     await pm.dispose();
   });
@@ -196,6 +224,7 @@ describe("stopping a managed mock", () => {
     const { pm } = manager();
     pm.spawn(request);
     const child = forks[0]?.child as FakeChild;
+    serving(child);
     let stopped = false;
 
     const stopping = pm.kill("apiMock").then(() => {

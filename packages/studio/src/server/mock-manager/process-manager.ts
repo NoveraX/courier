@@ -81,11 +81,15 @@ export function createProcessManager(
   const children = new Map<string, ChildProcess>();
   /** Workers Studio asked to stop; their exit is expected. */
   const stopping = new WeakSet<ChildProcess>();
+  /** Workers that said their server listens. */
+  const serving = new WeakSet<ChildProcess>();
   const commands = new WeakMap<ChildProcess, CommandReplies>();
 
   function route(serverId: string, child: ChildProcess, msg: ChildMessage): void {
-    if (msg.type === "ready") events.onReady(serverId, msg);
-    else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal);
+    if (msg.type === "ready") {
+      serving.add(child);
+      events.onReady(serverId, msg);
+    } else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal);
     else if (msg.type === "stopped") events.onStopped(serverId);
     else if (msg.type === "events") events.onEvents(serverId, msg.events);
     else if (msg.type === "command-result") commands.get(child)?.settle(msg);
@@ -139,7 +143,12 @@ export function createProcessManager(
     const child = children.get(serverId);
     if (!child) return;
     stopping.add(child);
-    await stopWorker(child, () => send(serverId, child, { type: "stop" }));
+    /* A worker that serves nothing yet may still be running the mocks file's
+       code, and reads no message until that is done; it ends at once. */
+    const end = serving.has(child)
+      ? () => send(serverId, child, { type: "stop" })
+      : () => child.kill("SIGTERM");
+    await stopWorker(child, end);
     if (children.get(serverId) === child) children.delete(serverId);
   }
 

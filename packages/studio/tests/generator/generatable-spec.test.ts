@@ -350,6 +350,31 @@ describe("assertGeneratable", () => {
     expect(refusedAt((c) => set(c.groups[0] ?? {}, "parent", "ghost"))).toBe("groups[0].parent");
   });
 
+  it("refuses two groups written to one folder, as a Windows device name and its escape are", () => {
+    for (const device of ["con", "aux", "nul", "com1"]) {
+      const group = (name: string): ParsedGroup => ({
+        name,
+        description: "",
+        prefix: "/",
+        endpoints: [],
+      });
+      const refusal = refusalOf((c) => c.groups.push(group(device), group(`_${device}`)));
+
+      expect(refusal?.field).toBe(`groups[${spec().groups.length + 1}].name`);
+      expect(refusal?.message).toContain(
+        `is refused: another group, "${device}", is written to the same folder, "_${device}"`,
+      );
+    }
+  });
+
+  it("takes a group named as a device's folder when no group takes the device's name", () => {
+    expect(
+      refusalOf((c) =>
+        c.groups.push({ name: "_con", description: "", prefix: "/", endpoints: [] }),
+      ),
+    ).toBeNull();
+  });
+
   it("refuses a chain of parents that loops, which nothing would be generated in", () => {
     expect(refusalOf((c) => set(c.groups[0] ?? {}, "parent", "pets"))?.message).toContain(
       "is refused: its chain of parents loops",

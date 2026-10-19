@@ -16,6 +16,7 @@ import type { TextEdit } from "../../server/mocks-edit/types";
 import { dropUnusedImports } from "./drop-unused-imports";
 import { planEntryRemoval } from "./entry-removal";
 import { findApiGroups } from "./group-declaration";
+import { placedGroupImports } from "./group-import-locals";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
 
 /** A group to add: its name, the name source.ts imports it under, and the module it lives in. */
@@ -35,7 +36,9 @@ function parsedSource(path: string, content: string) {
 /**
  * Add groups to a source file: each gets an entry in `groups` and an
  * import of its module, in the file's own layout and quotes. A group the
- * file lists already, or a name it binds already, is not added again.
+ * file lists already is not added again, nor its import where the file
+ * imports it already; under a name the file binds to something else, it
+ * is imported under the first numbered name left free.
  *
  * @param path - The source file, project-relative
  * @param existingContent - The file as it is
@@ -57,10 +60,10 @@ export function addGroupsToSourceFile(
   );
   const adding = newGroups.filter((group) => !listed.has(group.name));
   if (adding.length === 0) return existingContent;
-  const bindings = collectModuleBindings(parsed.program);
+  const placed = placedGroupImports(parsed.program, collectModuleBindings(parsed.program), adding);
   const style = detectStyle(parsed, groups);
-  const statements = adding
-    .filter((group) => !bindings.has(group.local))
+  const statements = placed
+    .filter((group) => !group.imported)
     .map((group) => {
       const clause = group.local === group.name ? group.name : `${group.name} as ${group.local}`;
       const text = `import { ${clause} } from ${quoteString(group.importPath, style.quote)}`;
@@ -75,7 +78,7 @@ export function addGroupsToSourceFile(
     singleLineFile: false,
   };
   const entries = () =>
-    adding.map((group) =>
+    placed.map((group) =>
       group.local === group.name ? group.name : `${group.name}: ${group.local}`,
     );
   const edits: TextEdit[] = [...planListInsertion(list, site, entries)];

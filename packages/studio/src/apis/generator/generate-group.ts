@@ -3,11 +3,13 @@
  */
 
 import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
+import { boundNames } from "./bound-names";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
 import { basesDeclaration, defineImport, endpointImports } from "./endpoint-imports";
 import { sortedStatements } from "./import-order";
 import { jsLiteral } from "./literals";
+import { moduleLocalNames } from "./module-local-names";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 /**
@@ -41,26 +43,31 @@ export function generateGroupFile(
   const inner = spec.groups.filter((g) => g.parent === group.name);
   const holds = group.endpoints.length > 0;
 
+  const others = [
+    holds
+      ? defineImport(context, "defineGroup")
+      : `import { defineGroup } from "@noverax/courier/define";`,
+    ...endpointImports(context),
+  ];
+  const bases = holds ? [basesDeclaration(context), ""] : [];
+  const locals = innerLocals(inner, group.name, [...others, ...bases]);
   const lines = [
     ...sortedStatements([
-      holds
-        ? defineImport(context, "defineGroup")
-        : `import { defineGroup } from "@noverax/courier/define";`,
-      ...endpointImports(context),
+      ...others,
       ...inner.map(
         (g) =>
-          `import { ${g.name} as ${innerLocal(g)} } from "${options.layout.innerGroupSpecifier(g.name)}${options.importExtension}";`,
+          `import { ${g.name} as ${locals.get(g.name)} } from "${options.layout.innerGroupSpecifier(g.name)}${options.importExtension}";`,
       ),
     ]),
     "",
-    ...(holds ? [basesDeclaration(context), ""] : []),
+    ...bases,
     `export const ${group.name} = defineGroup({`,
     `  prefix: ${jsLiteral(group.prefix)},`,
     `  endpoints: {`,
     ...entries,
     `  },`,
     ...(inner.length > 0
-      ? [`  groups: {`, ...inner.map((g) => `    ${g.name}: ${innerLocal(g)},`), `  },`]
+      ? [`  groups: {`, ...inner.map((g) => `    ${g.name}: ${locals.get(g.name)},`), `  },`]
       : []),
     `});`,
     "",
@@ -69,7 +76,12 @@ export function generateGroupFile(
   return { path: options.layout.groupFile(group.name), content: lines.join("\n") };
 }
 
-/* The name a group's file imports a group inside it under. */
-function innerLocal(group: ParsedGroup): string {
-  return `${group.name}Group`;
+/* The name a group's file imports each group inside it under: `${name}Group`, or one clear of every other name the file binds. */
+function innerLocals(
+  inner: readonly ParsedGroup[],
+  groupName: string,
+  statements: readonly string[],
+): ReadonlyMap<string, string> {
+  const preferred = new Map(inner.map((g) => [g.name, `${g.name}Group`]));
+  return moduleLocalNames(preferred, new Set([groupName, ...boundNames(statements)]));
 }

@@ -15,6 +15,7 @@ import { quoteString } from "../../server/mocks-edit/plan/quote-string";
 import { unwrapExpression } from "../../server/mocks-edit/plan/unwrap-expression";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { findGroupDeclaration } from "./group-declaration";
+import { placedGroupImports } from "./group-import-locals";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
 import { removeEntries, type SourceGroupImport } from "./update-source-file";
 
@@ -76,15 +77,15 @@ export function addGroupsToGroupFile(
   );
   const adding = inner.filter((group) => !listed.has(group.name));
   if (adding.length === 0) return existingContent;
-  const bindings = collectModuleBindings(parsed.program);
+  const placed = placedGroupImports(parsed.program, collectModuleBindings(parsed.program), adding);
   const style = detectStyle(parsed, declaration.config);
-  const statements = adding
-    .filter((group) => !bindings.has(group.local))
+  const statements = placed
+    .filter((group) => !group.imported)
     .map((group) => {
       const text = `import { ${group.name} as ${group.local} } from ${quoteString(group.importPath, style.quote)}`;
       return style.semicolons ? `${text};` : text;
     });
-  const entries = adding.map((group) => `${group.name}: ${group.local}`);
+  const entries = placed.map((group) => `${group.name}: ${group.local}`);
   const list = groups ?? declaration.config;
   const site = {
     text: existingContent,

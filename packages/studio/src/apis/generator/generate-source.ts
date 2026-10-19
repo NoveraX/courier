@@ -5,6 +5,7 @@
 
 import type { ParsedEndpoint, ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { sourceAuth } from "./auth-middleware";
+import { boundNames } from "./bound-names";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
 import { basesDeclaration, defineImport, endpointImports } from "./endpoint-imports";
@@ -12,6 +13,7 @@ import { groupLocalName } from "./group-local-name";
 import { sortedStatements } from "./import-order";
 import { jsdocText } from "./jsdoc-text";
 import { jsLiteral } from "./literals";
+import { moduleLocalNames } from "./module-local-names";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 /** The endpoints a source holds itself, in no group, as they are written. */
@@ -55,23 +57,32 @@ export function generateSourceFile(
     ? sourceAuth(spec.securitySchemes, options.sourceName)
     : null;
   const lists = groups.length > 0 || (!holds && options.groupBy !== "single");
-  const imports = sortedStatements([
+  const others = [
     holds
       ? defineImport(context, "defineApi")
       : `import { defineApi } from "@noverax/courier/define";`,
     ...endpointImports(context, auth ? ["authMiddleware"] : []),
-    ...groups.map((group) => groupImport(group, options)),
+  ];
+  const bases = holds ? [basesDeclaration(context), ""] : [];
+  const locals = groupLocals(groups, options.sourceName, [
+    ...others,
+    ...bases,
+    ...(auth?.helper ?? []),
+  ]);
+  const imports = sortedStatements([
+    ...others,
+    ...groups.map((group) => groupImport(group, locals, options)),
   ]);
   const lines = [
     ...imports,
     "",
-    ...(holds ? [basesDeclaration(context), ""] : []),
+    ...bases,
     `export const ${options.sourceName} = defineApi({`,
     `  baseURL: ${jsLiteral(spec.baseURL)},`,
     ...exposure(options),
     ...(auth ? [`  middleware: [${auth.middleware}],`] : []),
     ...(holds || !lists ? [`  endpoints: {`, ...entries, `  },`] : []),
-    ...(lists ? groupEntries(groups, options) : []),
+    ...(lists ? groupEntries(groups, locals, options) : []),
     `});`,
     "",
     ...(auth ? auth.helper : []),
@@ -87,20 +98,40 @@ function exposure(options: ResolvedGenerateOptions): string[] {
   return [...(options.includeComments ? [comment] : []), "  expose: true,"];
 }
 
-function groupImport(group: ParsedGroup, options: ResolvedGenerateOptions): string {
-  const local = groupLocalName(group.name, options.sourceName);
+/* The name each group is imported under: its own, or one clear of the source and of every other name the file binds. */
+function groupLocals(
+  groups: readonly ParsedGroup[],
+  sourceName: string,
+  statements: readonly string[],
+): ReadonlyMap<string, string> {
+  const preferred = new Map(
+    groups.map((group) => [group.name, groupLocalName(group.name, sourceName)]),
+  );
+  return moduleLocalNames(preferred, new Set([sourceName, ...boundNames(statements)]));
+}
+
+function groupImport(
+  group: ParsedGroup,
+  locals: ReadonlyMap<string, string>,
+  options: ResolvedGenerateOptions,
+): string {
+  const local = locals.get(group.name) ?? group.name;
   const imported = local === group.name ? group.name : `${group.name} as ${local}`;
   const from = `${options.layout.groupSpecifier(group.name, "index")}${options.importExtension}`;
   return `import { ${imported} } from "${from}";`;
 }
 
-function groupEntries(groups: readonly ParsedGroup[], options: ResolvedGenerateOptions): string[] {
+function groupEntries(
+  groups: readonly ParsedGroup[],
+  locals: ReadonlyMap<string, string>,
+  options: ResolvedGenerateOptions,
+): string[] {
   const lines = [`  groups: {`];
   for (const group of groups) {
     if (options.includeComments && group.description) {
       lines.push(`    /** ${jsdocText(group.description)} */`);
     }
-    const local = groupLocalName(group.name, options.sourceName);
+    const local = locals.get(group.name) ?? group.name;
     lines.push(local === group.name ? `    ${group.name},` : `    ${group.name}: ${local},`);
   }
   lines.push(`  },`);

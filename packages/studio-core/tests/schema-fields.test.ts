@@ -36,9 +36,16 @@ const VALIBOT_OWN = Object.assign(
   ),
   { fields: valibotFields },
 );
+/* ArkType's describes itself as its fields are, and its check carries that description. */
+const arkFields = type({ id: "string", "constructor?": "string" });
+const arkCheck = Object.assign((value: object) => typeof value === "object", {
+  "~standard": arkFields["~standard"],
+});
 const ARK_OWN = Object.assign(
-  type("object").narrow(() => true),
-  { fields: type({ id: "string", "constructor?": "string" }) },
+  Object.defineProperty(type("object").narrow(arkCheck), "~standard", {
+    value: arkFields["~standard"],
+  }),
+  { fields: arkFields },
 );
 const OWN = [
   { path: "id", type: "string", required: true },
@@ -62,6 +69,11 @@ describe("the fields of a variables schema", () => {
     expect(extractSchemaFields(VALIBOT_OWN)).toEqual(OWN);
     expect(extractSchemaFields(v.object({ thing: VALIBOT_OWN }))?.length).toBe(3);
     expect(extractSchemaFields(ARK_OWN)?.toSorted(byPath)).toEqual(OWN.toSorted(byPath));
+    expect(
+      extractSchemaFields(type({ thing: ARK_OWN }))
+        ?.map((field) => field.path)
+        .toSorted(),
+    ).toEqual(["thing", "thing.constructor", "thing.id"]);
   });
 
   it("are read from Zod v4, optional and defaulted fields not required", () => {

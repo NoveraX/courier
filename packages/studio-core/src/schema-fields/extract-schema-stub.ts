@@ -109,7 +109,13 @@ function objectSample(
     const node = read(field.schema);
     const sample = sampleOf(node, read, depth);
     if (!sample.sure && (field.optional ?? node?.optional ?? false)) continue;
-    value[field.name] = sample.value;
+    /* A key of its own: assigned, a field `__proto__` set the sample's prototype instead. */
+    Object.defineProperty(value, field.name, {
+      value: sample.value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
     sure &&= sample.sure;
   }
   return { value, sure };

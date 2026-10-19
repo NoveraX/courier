@@ -18,6 +18,26 @@ import { extractSchemaStub } from "../src/schema-fields";
 const LEVEL = { Low: 0, High: 1, 0: "Low", 1: "High" } as const;
 
 describe("the sample variables of a schema", () => {
+  it("keep a field named __proto__ as a key of its own, and pass it", () => {
+    /* As Studio's generator writes a zod object with a field `__proto__`, which it checks apart. */
+    const fields = z.looseObject({ id: z.string() });
+    const proto = z.object({ note: z.string().min(1) });
+    const schema = Object.assign(
+      z.custom<object>((value) => {
+        if (typeof value !== "object" || value === null) return false;
+        const own = Object.getOwnPropertyDescriptor(value, "__proto__");
+        return fields.safeParse(value).success && proto.safeParse(own?.value).success;
+      }),
+      { fields, proto },
+    );
+
+    const stub = extractSchemaStub(schema);
+
+    expect(Object.getOwnPropertyDescriptor(stub, "__proto__")?.value).toEqual({ note: "x" });
+    expect(Object.getPrototypeOf(stub)).toBe(Object.prototype);
+    expect(schema.safeParse(stub).success).toBe(true);
+  });
+
   it("are read through a generated _ownFields, and pass it", () => {
     /* As Studio's generator writes an object with a field named like a member every object has. */
     const fields = z.looseObject({ id: z.string().min(2), constructor: z.string().optional() });

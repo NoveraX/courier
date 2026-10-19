@@ -113,6 +113,17 @@ const TEXT = `{
         }
       }
     },
+    "/boxes": {
+      "post": {
+        "operationId": "addBox",
+        "tags": ["things"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Box" } } }
+        },
+        "responses": { "204": { "description": "kept" } }
+      }
+    },
     "/strict": {
       "post": {
         "operationId": "addStrict",
@@ -273,9 +284,26 @@ describe.each(LIBRARIES)("an object with inherited names, validated with %s", (v
     const variables = schemaOf(validation, "ThingInput");
 
     expect(addThing?.variablesFields?.map((field) => field.path)).toEqual(
-      expect.arrayContaining(["id", "constructor", "toString", "valueOf", "dryRun"]),
+      expect.arrayContaining(["id", "constructor", "toString", "valueOf", "__proto__", "dryRun"]),
     );
+    expect(Object.hasOwn(Object(addThing?.variablesStub), "__proto__")).toBe(true);
+    expect(Object.getPrototypeOf(addThing?.variablesStub)).toBe(Object.prototype);
     expect((await validated(variables, addThing?.variablesStub)).issues).toBeUndefined();
+  });
+
+  it("lists the fields of such objects inside another in the Playground", () => {
+    const shop = loadGenerated(generated(validation), "src/api/shop/source.ts").shop;
+    const map = extractSourceMap({ shop } as Parameters<typeof extractSourceMap>[0]);
+    const addBox = map.shop?.groups.things?.endpoints.addBox;
+
+    expect(addBox?.variablesFields?.map((field) => field.path)).toEqual(
+      expect.arrayContaining([
+        "thing.id",
+        "thing.constructor",
+        "thing.__proto__",
+        "note.hasOwnProperty",
+      ]),
+    );
   });
 
   it("compiles with every check on, a consumer that leaves the inherited names out among it", () => {

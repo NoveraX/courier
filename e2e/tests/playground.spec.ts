@@ -29,6 +29,9 @@ test.afterAll(async () => {
 
 test("sends a call through the app, and shows the upstream's answer", async ({ page }) => {
   await page.goto(studio.link);
+  /* The link opens the setup, which moves to the Timeline once it sees the
+     app attached; a page opened before that move would be undone by it. */
+  await expect(page).toHaveURL(/\/timeline/);
   await page.getByRole("link", { name: "Playground" }).click();
 
   await page.locator("main button").first().click();

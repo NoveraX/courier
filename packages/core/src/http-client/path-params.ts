@@ -1,5 +1,5 @@
 import { isFieldRecord } from "../utils/body-kind";
-import { extractParamNames } from "../utils/helpers";
+import { pathParamNames } from "../utils/path-template";
 import { omitParams } from "../utils/url";
 
 /**
@@ -9,7 +9,7 @@ import { omitParams } from "../utils/url";
  */
 export function stripPathParams(path: string, variables: unknown): unknown {
   if (variables === undefined || variables === null) return undefined;
-  const paramNames = extractParamNames(path);
+  const paramNames = pathParamNames(path);
   if (paramNames.length === 0) return variables;
 
   const rest = omitParams(variables, paramNames);

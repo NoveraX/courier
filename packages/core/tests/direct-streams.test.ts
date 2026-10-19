@@ -46,6 +46,7 @@ function api(origin: string) {
         prefix: "chat",
         endpoints: {
           stream: stream.variables<{ id: string }>().response<unknown>().get(":id/stream"),
+          copies: stream.variables<{ id: string }>().response<unknown>().get(":id/copies/:id"),
         },
       }),
     },
@@ -66,6 +67,15 @@ describe("a direct caller's stream of another server", () => {
       authorization: "Bearer k1",
       "x-api-key": "key",
     });
+  });
+
+  it("fills a parameter its path names twice, as a call does", async () => {
+    const upstream = await thirdParty();
+    const caller = createCaller(api(upstream.origin));
+
+    for await (const _event of await caller.chat.copies({ id: "c1" })) void _event;
+
+    expect(upstream.seen[0]?.url).toBe("/chat/c1/copies/c1");
   });
 
   it("refuses a path parameter that would reach another route, and sends nothing", async () => {

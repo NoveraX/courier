@@ -19,6 +19,37 @@ describe("the names of a path's parameters", () => {
     expectTypeOf<PathParamNames<"a/:1/b">>().toBeNever();
     expectTypeOf<PathParamNames<string>>().toBeNever();
   });
+
+  it("read a doubled colon as one colon the path sends as written", () => {
+    expectTypeOf<PathParamNames<"v1/urlInspection/index::inspect">>().toBeNever();
+    expectTypeOf<PathParamNames<"v1/:name::cancel">>().toEqualTypeOf<"name">();
+    expectTypeOf<PathParamNames<"rates/:::pair">>().toEqualTypeOf<"pair">();
+    expectTypeOf<PathParamNames<"a::::b">>().toBeNever();
+  });
+
+  it("are not read in an absolute URL's scheme and host", () => {
+    expectTypeOf<PathParamNames<"https://[2001:db8::1]:8443/users/:id">>().toEqualTypeOf<"id">();
+    expectTypeOf<PathParamNames<"https://user:secret@api.test/v1">>().toBeNever();
+    expectTypeOf<PathParamNames<"wss://host.test:9000">>().toBeNever();
+    expectTypeOf<PathParamNames<":proto://host/:id">>().toEqualTypeOf<"proto" | "id">();
+  });
+});
+
+describe("a path with a colon it sends as written", () => {
+  it("asks the variables for its parameters alone", () => {
+    const inspect = endpoint.post("v1/urlInspection/index::inspect").response<unknown>();
+    const cancel = endpoint.post("v1/:name::cancel").response<unknown>();
+
+    expectTypeOf<InferVariables<typeof inspect>>().toEqualTypeOf<void>();
+    expectTypeOf<InferVariables<typeof cancel>>().toEqualTypeOf<{ name: string | number }>();
+
+    const typeOnly = () => {
+      endpoint.post(":spreadsheetId::batchUpdate").variables<{ spreadsheetId: string }>();
+      // @ts-expect-error — the variables do not name :spreadsheetId
+      endpoint.post(":spreadsheetId::batchUpdate").variables<{ batchUpdate: string }>();
+    };
+    expect(typeOnly).toBeTypeOf("function");
+  });
 });
 
 describe("an endpoint that declares no variables", () => {

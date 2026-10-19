@@ -1,6 +1,7 @@
 import { probeOptions } from "../define/probe";
 import { isFormData, sendsVariablesInQuery } from "../utils/helpers";
 import { parseUrl } from "../utils/parse-url";
+import { fillPathParams, pathParamNames } from "../utils/path-template";
 import type { PlacedEndpoint } from "./endpoints";
 import type { JSONSchema } from "./types";
 
@@ -14,7 +15,6 @@ export interface OperationInput {
   readonly servers?: Array<{ url: string }> | undefined;
 }
 
-const PARAM = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 /* Headers a session or the proxy writes itself, which an operation's parameters do not repeat. */
 const WRITTEN_FOR_IT = new Set(["authorization", "cookie", "content-type", "accept"]);
 
@@ -38,7 +38,7 @@ export function inputOf(
   variables: JSONSchema | undefined,
 ): OperationInput {
   const { path, servers, fixed } = addressOf(endpoint.path);
-  const names = [...path.matchAll(PARAM)].map((match) => match[1] ?? "");
+  const names = pathParamNames(path);
   const properties = propertiesOf(variables);
   const parameters: JSONSchema[] = [
     ...names.map((name) => ({
@@ -59,7 +59,8 @@ export function inputOf(
   const inQuery = sendsVariablesInQuery(endpoint.method === "del" ? "delete" : endpoint.method);
   if (inQuery) parameters.push(...queryParameters(rest));
   return {
-    path: `/${path.replace(PARAM, "{$1}")}`,
+    /* OpenAPI writes a parameter in braces, and a colon is its own text there. */
+    path: `/${fillPathParams(path, (name) => `{${name}}`)}`,
     parameters,
     ...(!inQuery && { requestBody: bodyOf(endpoint, rest) }),
     ...(servers && { servers }),

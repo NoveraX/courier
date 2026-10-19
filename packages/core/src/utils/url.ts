@@ -3,15 +3,15 @@ import type { SearchParamsSerializer } from "../http-client/types";
 import { isFieldRecord } from "./body-kind";
 import { defineOwn } from "./define-own";
 import { isFormData } from "./helpers";
+import { fillPathParams, pathParamNames } from "./path-template";
 
 const MULTIPLE_SLASHES = /\/+/g;
 const ABSOLUTE_URL = /^https?:\/\//i;
-const PARAM_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 /* A path is filled where it is used: a cache of one closure per path kept a
    closure per distinct path for good, and saved nothing a replace costs. */
 const fillPath = (path: string, params: Record<string, unknown>): string =>
-  path.replace(PARAM_RE, (_, name: string) => encodePathParam(name, params[name]));
+  fillPathParams(path, (name) => encodePathParam(name, params[name]));
 
 /**
  * One path segment, from a parameter's own value.
@@ -51,15 +51,6 @@ function encodePathParam(name: string, value: unknown): string {
 export function changesRoute(segment: string): boolean {
   return segment === "" || segment === "." || segment === "..";
 }
-
-export const extractParamNames = (path: string): string[] => {
-  const names: string[] = [];
-  const re = new RegExp(PARAM_RE.source, PARAM_RE.flags);
-  for (let match = re.exec(path); match !== null; match = re.exec(path)) {
-    if (match[1]) names.push(match[1]);
-  }
-  return names;
-};
 
 export const pathJoin = (parts: string[]): string =>
   parts.join("/").replace(MULTIPLE_SLASHES, "/").replace(/^\//, "");
@@ -143,7 +134,7 @@ export const compileUrl = (
   const pathOptions = { ...variablesObject, ...generatedPathOptions };
   const pathKeys: Record<string, unknown> = {};
 
-  const paramNames = extractParamNames(urlPath);
+  const paramNames = pathParamNames(urlPath);
   const newVariables = omitParams(variables, paramNames);
 
   /* Own values only: a parameter named `constructor` the call left out is missing, not Object's. */

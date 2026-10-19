@@ -1,8 +1,8 @@
 import { endpointPath } from "../../define/address";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
 import { RealtimeValidationError } from "../../realtime/errors";
-import { extractParamNames } from "../../utils/helpers";
 import { isRecord } from "../../utils/is-record";
+import { fillPathParams, pathParamNames } from "../../utils/path-template";
 import { changesRoute } from "../../utils/url";
 
 /** Where one call to a remote stream or channel goes, relative to its group. */
@@ -12,8 +12,6 @@ export interface CallAddress {
   /** The variables the call sends, less those its path took. */
   readonly variables: Record<string, unknown> | undefined;
 }
-
-const PARAM = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 /**
  * Work out where one call to a remote stream or channel goes.
@@ -63,29 +61,31 @@ function isProbe(value: unknown): value is AnyProbe {
 }
 
 function fillParams(path: string, variables: Record<string, unknown> | undefined): CallAddress {
-  const names = extractParamNames(path);
-  if (names.length === 0) return { path, variables };
+  const filled = fillPathParams(path, (name) => segmentOf(name, variables?.[name]));
+  const names = pathParamNames(path);
+  if (names.length === 0) return { path: filled, variables };
 
   const rest = { ...variables };
-  const filled = path.replace(PARAM, (_match, name: string) => {
-    const value = rest[name];
-    if (value === undefined || value === null) {
-      throw new RealtimeValidationError(
-        `Missing required path parameter "${name}": pass it in the variables`,
-      );
-    }
-    delete rest[name];
-    /* Relayed by a proxy, a `..` reached a route above the declared one with
-       the server's credentials. */
-    const segment = String(value);
-    if (changesRoute(segment)) {
-      throw new RealtimeValidationError(
-        `Path parameter "${name}" cannot be "${segment}": it would change the route`,
-      );
-    }
-    return encodeURIComponent(segment);
-  });
+  for (const name of names) delete rest[name];
   return { path: filled, variables: Object.keys(rest).length > 0 ? rest : undefined };
+}
+
+/* One parameter's segment of the path, from its value. */
+function segmentOf(name: string, value: unknown): string {
+  if (value === undefined || value === null) {
+    throw new RealtimeValidationError(
+      `Missing required path parameter "${name}": pass it in the variables`,
+    );
+  }
+  /* Relayed by a proxy, a `..` reached a route above the declared one with
+     the server's credentials. */
+  const segment = String(value);
+  if (changesRoute(segment)) {
+    throw new RealtimeValidationError(
+      `Path parameter "${name}" cannot be "${segment}": it would change the route`,
+    );
+  }
+  return encodeURIComponent(segment);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {

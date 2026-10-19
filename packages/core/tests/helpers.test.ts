@@ -88,6 +88,12 @@ describe("compileUrl", () => {
     expect(vars).toEqual({ name: "test" });
   });
 
+  it("sends a doubled colon as one, beside the parameter its segment holds", () => {
+    const [url, vars] = compileUrl("v1/:name::cancel", { name: "op-1", force: true });
+    expect(url).toBe("v1/op-1:cancel");
+    expect(vars).toEqual({ force: true });
+  });
+
   it("removes path params from variables", () => {
     const [, vars] = compileUrl("users/:id/posts/:postId", {
       id: "1",

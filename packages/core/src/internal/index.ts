@@ -145,6 +145,13 @@ export {
 export { isCredentialHeader } from "../utils/is-credential-header";
 export { isLoopbackHostname } from "../utils/loopback-host";
 export { parseUrl } from "../utils/parse-url";
+export {
+  escapePathText,
+  fillPathParams,
+  type PathPiece,
+  pathParamNames,
+  pathPieces,
+} from "../utils/path-template";
 export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
 export {
   type RenderMemo,

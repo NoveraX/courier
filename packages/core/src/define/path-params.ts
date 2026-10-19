@@ -28,8 +28,10 @@ type Lower =
   | "y"
   | "z";
 type Digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
-type NameStart = Lower | Uppercase<Lower> | "_";
+type Letter = Lower | Uppercase<Lower>;
+type NameStart = Letter | "_";
 type NameChar = NameStart | Digit;
+type SchemeChar = Letter | Digit | "+" | "-" | ".";
 
 type TakeName<
   TRest extends string,
@@ -46,21 +48,49 @@ type NameAt<TRest extends string> = TRest extends `${infer C}${string}`
     : never
   : never;
 
+type SchemeRest<TRest extends string> = TRest extends `${infer C}${infer TTail}`
+  ? C extends SchemeChar
+    ? SchemeRest<TTail>
+    : false
+  : true;
+
+type IsScheme<TScheme extends string> = TScheme extends `${infer C}${infer TTail}`
+  ? C extends Letter
+    ? SchemeRest<TTail>
+    : false
+  : false;
+
+/* The part of a path its parameters are read from: an absolute URL's scheme and host hold none. */
+type LocalPart<TPath extends string> = TPath extends `${infer TScheme}://${infer TAfter}`
+  ? IsScheme<TScheme> extends true
+    ? TAfter extends `${string}/${infer TLocal}`
+      ? TLocal
+      : ""
+    : TPath
+  : TPath;
+
+/* `::` is one colon sent as written; any other colon starts a parameter when a name follows it. */
+type NamesIn<TPath extends string> = TPath extends `${string}:${infer TRest}`
+  ? TRest extends `:${infer TAfter}`
+    ? NamesIn<TAfter>
+    : NameAt<TRest> | NamesIn<TRest>
+  : never;
+
 /**
  * The names of a path's `:name` parameters, read as the request is built: a
- * letter or `_`, then letters, digits and `_`. A path known only as `string`
- * names none.
+ * letter or `_`, then letters, digits and `_`. `::` is one colon the path
+ * sends as written, and an absolute URL's scheme and host hold no
+ * parameter. A path known only as `string` names none.
  *
  * @example
  * ```ts
  * type Names = PathParamNames<"orgs/:orgId/users/:id.json">; // "orgId" | "id"
+ * type Google = PathParamNames<"v1/:name::cancel">; // "name"
  * ```
  */
 export type PathParamNames<TPath extends string> = string extends TPath
   ? never
-  : TPath extends `${string}:${infer TRest}`
-    ? NameAt<TRest> | PathParamNames<TRest>
-    : never;
+  : NamesIn<LocalPart<TPath>>;
 
 /** What a type error names when variables leave out a path's parameters. */
 export interface PathParamsMissing<TNames extends string> {

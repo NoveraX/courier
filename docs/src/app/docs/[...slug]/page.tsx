@@ -37,7 +37,7 @@ export default async function DocPage({ params }: PageProps) {
   const markdown = pageMarkdown(source, meta.title, meta.description)
   return (
     <>
-      <main id="main-content" className="min-w-0 max-w-[820px] pt-10 pb-27.5">
+      <main id="main-content" className="DocSearch-content min-w-0 max-w-[820px] pt-10 pb-27.5">
         <PageHead
           meta={meta}
           section={findNavContext(href)?.section}

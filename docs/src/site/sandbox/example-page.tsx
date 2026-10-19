@@ -27,7 +27,7 @@ interface ExamplePageProps extends DocMeta {
 export function ExamplePage({ href, title, description, mode, children }: ExamplePageProps) {
   return (
     <>
-      <main id="main-content" className="min-w-0 max-w-[820px] pt-10 pb-27.5">
+      <main id="main-content" className="DocSearch-content min-w-0 max-w-[820px] pt-10 pb-27.5">
         <PageHead meta={{ title, description, mode }} section={findNavContext(href)?.section} />
         <article
           data-article=""

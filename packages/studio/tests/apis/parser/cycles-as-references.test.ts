@@ -31,6 +31,18 @@ describe("cyclesAsReferences", () => {
     expect(a.next).toBe(b);
   });
 
+  it("writes a key holding % with its percent escaped, so the reference reads back as that key", () => {
+    const node: Record<string, unknown> = { type: "object" };
+    node.properties = { child: node };
+    const document = { components: { schemas: { Tree: { properties: { "share%": node } } } } };
+
+    cyclesAsReferences(document);
+
+    expect(node.properties).toEqual({
+      child: { $ref: "#/components/schemas/Tree/properties/share%25" },
+    });
+  });
+
   it("keeps an object several places share, none of them inside it, shared", () => {
     const shared = { type: "string" };
     const document = { one: { value: shared }, two: { value: shared } };
@@ -94,5 +106,30 @@ describe("parseSpec, a YAML schema inside itself", () => {
       type: "object",
       properties: { id: { type: "string" }, child: { type: "ref", refName: "Tree" } },
     });
+  });
+
+  it("follows one back under a key holding %, as under any other key", () => {
+    const tree = (key: string) =>
+      yaml([
+        "    Tree:",
+        "      type: object",
+        "      properties:",
+        `        "${key}": &node`,
+        "          type: object",
+        "          properties:",
+        "            label: { type: string }",
+        "            child: *node",
+      ]);
+    const plain = parseSpec(tree("share"));
+    const child = (key: string) => {
+      const parsed = parseSpec(tree(key));
+      return { property: parsed.schemas.Tree?.properties?.[key]?.shape?.properties?.child, parsed };
+    };
+
+    for (const key of ["share%", "a%20b"]) {
+      const { property, parsed } = child(key);
+      expect(property).toEqual(plain.schemas.Tree?.properties?.share?.shape?.properties?.child);
+      expect(parsed.skipped).toEqual([]);
+    }
   });
 });

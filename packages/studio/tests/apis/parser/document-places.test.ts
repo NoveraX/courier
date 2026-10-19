@@ -1,6 +1,6 @@
 /**
- * The places of a document's objects, by JSON pointer: a key's `~` and `/`
- * escaped, each object once however many places hold it, and in order.
+ * The places of a document's objects, by JSON pointer: a key's `~`, `/`
+ * and `%` escaped, each object once however many places hold it, and in order.
  */
 import { describe, expect, it } from "vitest";
 
@@ -10,11 +10,12 @@ describe("placesIn", () => {
   it("points at each object wanted, its keys escaped as a JSON pointer writes them", () => {
     const document = {
       paths: { "/pets/{id}": { get: { "x~tag": { mark: true } } } },
-      components: { schemas: { Pet: { mark: true } } },
+      components: { schemas: { Pet: { mark: true }, "Share%": { mark: true } } },
     };
 
     expect(placesIn(document, (node) => node.mark === true).map((place) => place.pointer)).toEqual([
       "#/components/schemas/Pet",
+      "#/components/schemas/Share%25",
       "#/paths/~1pets~1{id}/get/x~0tag",
     ]);
   });

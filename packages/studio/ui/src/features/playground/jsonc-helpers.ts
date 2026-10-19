@@ -42,15 +42,40 @@ interface ToggleCommentResult {
   end: number;
 }
 
+/* One line's `// ` going in or coming out: where, in the text as it was,
+   and how many characters it adds — or takes away, when negative. */
+interface MarkEdit {
+  at: number;
+  length: number;
+}
+
+/* Where a place in the text lands once the marks are in or out: past a mark
+   added before it, or right at it when `withText`, and where a mark taken
+   away around it stood. */
+function moved(place: number, edits: readonly MarkEdit[], withText: boolean): number {
+  let shift = 0;
+  for (const { at, length } of edits) {
+    if (length > 0 && (place > at || (withText && place === at))) shift += length;
+    else if (length < 0 && place > at) shift -= Math.min(-length, place - at);
+  }
+  return place + shift;
+}
+
 /**
  * Toggle `// ` line comments across the selection range. If every line is
  * already commented, uncomment them; otherwise prefix each line with `// `.
+ * The selection keeps the text it held: it grows over a mark added at its
+ * edge, a caret stays before the text it stood before, and one inside a
+ * mark taken away lands where the mark stood.
  *
  * @param text - The full editor contents
  * @param selStart - Selection start offset (0-indexed)
  * @param selEnd - Selection end offset (0-indexed)
- * @returns The updated text plus a new selection range that compensates for
- *   inserted/removed comment markers.
+ * @returns The updated text and where the selection now is
+ * @example
+ * ```ts
+ * toggleComment('{\n  "a": 1\n}', 2, 10); // → { text: '{\n  // "a": 1\n}', start: 2, end: 13 }
+ * ```
  */
 export function toggleComment(text: string, selStart: number, selEnd: number): ToggleCommentResult {
   const lines = text.split("\n");
@@ -61,23 +86,25 @@ export function toggleComment(text: string, selStart: number, selEnd: number): T
     .slice(startLine, endLine + 1)
     .every((l) => l.trimStart().startsWith("//"));
 
-  let offset = 0;
+  const edits: MarkEdit[] = [];
+  let lineAt = lines.slice(0, startLine).reduce((at, line) => at + line.length + 1, 0);
   for (let i = startLine; i <= endLine; i++) {
-    const line = lines[i];
-    if (line === undefined) continue;
+    const line = lines[i] ?? "";
+    const indent = line.length - line.trimStart().length;
     if (allCommented) {
-      // Uncomment: remove `// ` or `//`
-      const idx = line.indexOf("//");
-      if (idx === -1) continue;
-      const removed = line[idx + 2] === " " ? 3 : 2;
-      lines[i] = line.slice(0, idx) + line.slice(idx + removed);
-      if (i === startLine) offset -= removed;
+      const removed = line[indent + 2] === " " ? 3 : 2;
+      lines[i] = line.slice(0, indent) + line.slice(indent + removed);
+      edits.push({ at: lineAt + indent, length: -removed });
     } else {
-      const indent = line.match(/^(\s*)/)?.[1] ?? "";
-      lines[i] = `${indent}// ${line.slice(indent.length)}`;
-      if (i === startLine) offset += 3;
+      lines[i] = `${line.slice(0, indent)}// ${line.slice(indent)}`;
+      edits.push({ at: lineAt + indent, length: 3 });
     }
+    lineAt += line.length + 1;
   }
 
-  return { text: lines.join("\n"), start: selStart + offset, end: selEnd + offset };
+  return {
+    text: lines.join("\n"),
+    start: moved(selStart, edits, selStart === selEnd),
+    end: moved(selEnd, edits, true),
+  };
 }

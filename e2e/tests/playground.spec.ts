@@ -96,6 +96,25 @@ test("undoes the indent Tab adds, as it undoes typing", async ({ page }) => {
   expect([sample, '{\n"id": ""\n}', '{\nx"id": ""\n}']).toContain(await editor.inputValue());
 });
 
+test("keeps the lines ⌘/ comments out selected, their marks with them", async ({ page }) => {
+  const editor = await variablesOf(page);
+  await editor.fill('{\n  "a": 1,\n  "b": 2\n}');
+  await editor.evaluate((area) => {
+    if (area instanceof HTMLTextAreaElement) area.setSelectionRange(2, 20);
+  });
+
+  await page.keyboard.press("ControlOrMeta+/");
+
+  await expect(editor).toHaveValue('{\n  // "a": 1,\n  // "b": 2\n}');
+  const selected = () =>
+    editor.evaluate((area) =>
+      area instanceof HTMLTextAreaElement
+        ? area.value.slice(area.selectionStart, area.selectionEnd)
+        : null,
+    );
+  await expect.poll(selected).toBe('  // "a": 1,\n  // "b": 2');
+});
+
 test("records the call on the Timeline", async ({ page }) => {
   await page.goto(studio.link);
 

@@ -13,15 +13,37 @@ import { deriveSourceName } from "../src/features/apis/derive-source-name";
 
 describe("toggleComment", () => {
   it("comments every selected line, keeping each one's indent", () => {
-    expect(toggleComment('{\n  "a": 1,\n  "b": 2\n}', 2, 20)).toEqual({
-      text: '{\n  // "a": 1,\n  // "b": 2\n}',
-      start: 5,
-      end: 23,
-    });
+    expect(toggleComment('{\n  "a": 1,\n  "b": 2\n}', 2, 20).text).toBe(
+      '{\n  // "a": 1,\n  // "b": 2\n}',
+    );
   });
 
   it("uncomments the selection when every line of it is commented", () => {
     expect(toggleComment("// a\n//b", 0, 7).text).toBe("a\nb");
+  });
+
+  it("keeps the lines it comments out selected whole, the marks with them", () => {
+    const { text, start, end } = toggleComment('{\n  "a": 1,\n  "b": 2\n}', 2, 20);
+
+    expect(text.slice(start, end)).toBe('  // "a": 1,\n  // "b": 2');
+  });
+
+  it("keeps the lines it uncomments selected whole", () => {
+    const { text, start, end } = toggleComment('{\n  // "a": 1,\n  // "b": 2\n}', 2, 26);
+
+    expect(text.slice(start, end)).toBe('  "a": 1,\n  "b": 2');
+  });
+
+  it("keeps a caret before the text it stood before", () => {
+    const line = '  "a": 1';
+
+    expect(toggleComment(line, 2, 2)).toMatchObject({ start: 5, end: 5 });
+    expect(toggleComment(line, 1, 1)).toMatchObject({ start: 1, end: 1 });
+  });
+
+  it("puts a caret inside a mark it takes away where the mark stood", () => {
+    expect(toggleComment("  // a", 3, 3)).toMatchObject({ text: "  a", start: 2, end: 2 });
+    expect(toggleComment("  // a", 0, 0)).toMatchObject({ start: 0, end: 0 });
   });
 });
 

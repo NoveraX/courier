@@ -62,7 +62,7 @@ interface Settle<TValue> {
  * @throws The signal's reason, when it was aborted before any process started
  * @example
  * ```ts
- * const { reply, exited } = runInProcess({ kind: "spec:diff", oldSpec, newSpec }, VISITOR_DIFF, signal);
+ * const { reply, exited } = runInProcess({ kind: "spec:diff", oldJson, newJson }, VISITOR_DIFF, signal);
  * ```
  */
 export function runInProcess<TJob extends SpecJob>(
@@ -127,9 +127,10 @@ function watch<TJob extends SpecJob>(
 }
 
 /* Give the process its job, which Node copies to it at once — or cannot:
-   a value nested some thousands of levels deep, which JSON still parses,
-   throws here, in the process's message handler, and would end Studio. A
-   job that is copied but cannot reach the process fails as the process's own. */
+   a value Node fails to copy throws here, in the process's message handler,
+   and would end Studio. A job's specifications go as JSON text, which no
+   depth stops. A job that is copied but cannot reach the process fails as
+   the process's own. */
 function sendJob(worker: WorkerProcess, job: SpecJob, fail: (reason: unknown) => void): void {
   try {
     worker.child.send(job, (error) => {

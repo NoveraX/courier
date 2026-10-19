@@ -1,4 +1,5 @@
 import type { ParsedSpec, SpecDiff } from "../../apis";
+import { jsonText } from "../../apis/registry/json-text";
 import { TRUSTED_JOB, VISITOR_DIFF } from "./job-budgets";
 import { inJobPlace } from "./job-places";
 import { runInProcess } from "./run-in-process";
@@ -35,7 +36,11 @@ export async function diffInProcess(
   newSpec: ParsedSpec,
   { trusted, signal, budget }: SpecWorkOptions,
 ): Promise<SpecDiff> {
-  const job: SpecDiffJob = { kind: "spec:diff", oldSpec, newSpec };
+  const job: SpecDiffJob = {
+    kind: "spec:diff",
+    oldJson: jsonText(oldSpec) ?? "null",
+    newJson: jsonText(newSpec) ?? "null",
+  };
   const within = budget ?? (trusted ? TRUSTED_JOB : VISITOR_DIFF);
   const reply = await inJobPlace(trusted, signal, () => runInProcess(job, within, signal));
   if ("diff" in reply) return reply.diff;

@@ -56,7 +56,7 @@ function sent(paths: number): ParsedSpec {
   return JSON.parse(JSON.stringify(parseSpec(JSON.stringify(document)))) as ParsedSpec;
 }
 
-/* A schema nested as deep as JSON parses, and deeper than Node copies from one process to another. */
+/* A schema nested as deep as JSON parses, and deeper than Node copies a value from one process to another. */
 function nested(depth: number): ParsedSpec {
   let schema: ParsedSchema = { name: "Deep", type: "string" };
   for (let level = 0; level < depth; level++) {
@@ -157,17 +157,42 @@ describe("the places callers without the token share", () => {
   });
 });
 
-describe("a specification nested deeper than Node hands to a process", () => {
-  it("is refused as more than Studio works on, and Studio goes on", async () => {
-    const generating = await failureOf(
-      generateInProcess(nested(20_000), OPTIONS, { trusted: false }),
-    );
-    const comparing = await failureOf(diffInProcess(nested(20_000), sent(1), { trusted: false }));
+describe("a specification nested deeper than Node copies to a process", () => {
+  it("reaches its process as JSON, and is generated from and compared there", async () => {
+    const generated = await generateInProcess(nested(20_000), OPTIONS, { trusted: false });
+    const compared = await diffInProcess(nested(20_000), sent(1), { trusted: false });
 
-    expect(generating).toBeInstanceOf(SpecWorkLimitError);
-    expect(generating).toMatchObject({ httpStatus: 413, code: "SPEC_WORK_LIMIT" });
-    expect(String((generating as Error).message)).toContain("nested too deeply");
-    expect(comparing).toBeInstanceOf(SpecWorkLimitError);
+    expect(generated).toEqual(generateCode(nested(20_000), OPTIONS));
+    expect(compared).toEqual(diffSpecs(nested(20_000), sent(1)));
+  });
+
+  it("is refused as nesting too deep where generating it runs out of stack, and Studio goes on", async () => {
+    const answered = nested(20_000);
+    const [group] = answered.groups;
+    const [endpoint] = group?.endpoints ?? [];
+    if (!group || !endpoint) throw new Error("the specification has no endpoint");
+    const deep = {
+      ...answered,
+      groups: [
+        {
+          ...group,
+          endpoints: [
+            {
+              ...endpoint,
+              responseSchema: { name: "Deep", type: "ref" as const, refName: "Deep" },
+            },
+          ],
+        },
+      ],
+    };
+
+    const generating = await failureOf(generateInProcess(deep, OPTIONS, { trusted: false }));
+
+    expect(generating).toBeInstanceOf(SpecWorkRefusedError);
+    expect(generating).toMatchObject({ code: "CODE_NOT_GENERATED" });
+    expect(String((generating as Error).message)).toBe(
+      "The specification nests its schemas deeper than Studio can generate code for.",
+    );
     expect(await generateInProcess(sent(1), OPTIONS, { trusted: false })).toEqual(
       generateCode(sent(1), OPTIONS),
     );

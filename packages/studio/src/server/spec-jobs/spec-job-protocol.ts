@@ -1,4 +1,4 @@
-import type { GeneratedFile, GenerateOptions, ParsedSpec, SpecDiff } from "../../apis";
+import type { GeneratedFile, GenerateOptions, SpecDiff } from "../../apis";
 
 /**
  * The version of what Studio and its spec worker script say to each other.
@@ -6,7 +6,7 @@ import type { GeneratedFile, GenerateOptions, ParsedSpec, SpecDiff } from "../..
  * runs from — says another, or nothing, and is not asked anything. It
  * changes whenever a job, a reply or the greeting changes shape.
  */
-export const SPEC_JOB_PROTOCOL = 4;
+export const SPEC_JOB_PROTOCOL = 5;
 
 /** What a worker process says once its script has loaded, before it is given its job. */
 export interface WorkerReady {
@@ -27,18 +27,24 @@ export interface SpecReadJob {
   hash?: boolean | undefined;
 }
 
-/** A specification to generate an import's code from. */
+/**
+ * A specification to generate an import's code from. A specification goes
+ * as its JSON text: Node copies a value to another process with a
+ * recursion of its own, which stops some thousands of levels deep, short
+ * of what the parser reads.
+ */
 export interface SpecGenerateJob {
   kind: "spec:generate";
-  spec: ParsedSpec;
+  /** The parsed specification, as JSON. */
+  specJson: string;
   options: GenerateOptions;
 }
 
-/** Two specifications to compare. */
+/** Two specifications to compare, each as its JSON text. */
 export interface SpecDiffJob {
   kind: "spec:diff";
-  oldSpec: ParsedSpec;
-  newSpec: ParsedSpec;
+  oldJson: string;
+  newJson: string;
 }
 
 /** What a worker process is asked to do. */

@@ -1,4 +1,5 @@
 import type { GeneratedFile, GenerateOptions, ParsedSpec } from "../../apis";
+import { jsonText } from "../../apis/registry/json-text";
 import { TRUSTED_JOB, VISITOR_GENERATE } from "./job-budgets";
 import { inJobPlace } from "./job-places";
 import { runInProcess } from "./run-in-process";
@@ -37,7 +38,11 @@ export async function generateInProcess(
   options: GenerateOptions,
   { trusted, signal, budget }: SpecWorkOptions,
 ): Promise<GeneratedFile[]> {
-  const job: SpecGenerateJob = { kind: "spec:generate", spec, options };
+  const job: SpecGenerateJob = {
+    kind: "spec:generate",
+    specJson: jsonText(spec) ?? "null",
+    options,
+  };
   const within = budget ?? (trusted ? TRUSTED_JOB : VISITOR_GENERATE);
   const reply = await inJobPlace(trusted, signal, () => runInProcess(job, within, signal));
   if ("files" in reply) return reply.files;

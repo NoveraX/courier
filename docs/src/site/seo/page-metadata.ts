@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 
+import { OG_IMAGE_SIZE, ogImagePath } from "./og-image"
 import { DOCS_TITLE_SUFFIX, SITE_LOCALE, SITE_NAME } from "./site-identity"
 
 /** What a page says of itself to search engines and to the sites it is shared on. */
@@ -15,9 +16,6 @@ export interface SeoPage {
   section?: string | undefined
 }
 
-/* Every page shares the site's card until it is drawn one of its own. */
-const SHARED_CARD = "/opengraph-image"
-
 function fullTitle({ title, standalone }: SeoPage): string {
   return standalone ? title : `${title} — ${DOCS_TITLE_SUFFIX}`
 }
@@ -26,7 +24,8 @@ function fullTitle({ title, standalone }: SeoPage): string {
    card is set here. */
 function images(page: SeoPage) {
   if (page.path === "/") return {}
-  return { images: [{ url: SHARED_CARD, width: 1200, height: 630, alt: fullTitle(page) }] }
+  const card = { url: ogImagePath(page.path), ...OG_IMAGE_SIZE, alt: fullTitle(page) }
+  return { images: [{ ...card, type: "image/png" }] }
 }
 
 function openGraph(page: SeoPage): NonNullable<Metadata["openGraph"]> {

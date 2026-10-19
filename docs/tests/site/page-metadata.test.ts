@@ -46,7 +46,7 @@ describe("a page's metadata", () => {
       locale: "en_US",
       title: "Quick Start — Courier Docs",
       description: "Install it.",
-      images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+      images: [{ url: "/og/docs/quick-start", width: 1200, height: 630, type: "image/png" }],
     })
   })
 

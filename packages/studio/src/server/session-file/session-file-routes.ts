@@ -62,6 +62,7 @@ export function registerSessionFileRoutes(app: RouteApp, deps: SessionFileDeps):
       const session = {
         ...buildSession(read),
         ...(file.environment && { environment: file.environment }),
+        fromFile: true,
       };
       deps.sessions.save(session);
       deps.view.showSession(session.id);

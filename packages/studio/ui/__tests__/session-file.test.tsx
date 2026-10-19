@@ -28,11 +28,13 @@ import {
   shareSessionFile,
   useSessionFileDialog,
 } from "@/features/sessions/session-file-dialog-store";
+import { showSavedSession } from "@/features/sessions/show-saved-session";
 import { useSessionFileDrop } from "@/features/sessions/use-session-file-drop";
 import { post } from "@/lib/api-client";
 import { downloadFile } from "@/lib/export";
 import { SessionFileDialog } from "@/screens/session-file/session-file-dialog";
 import { OpenedSessionBanner } from "@/screens/timeline/opened-session-banner";
+import { shownSessionOf } from "@/socket/shown-session-of";
 import { useStudioStore } from "@/store";
 import { requestEntry } from "./request-entry-fixture";
 
@@ -65,7 +67,11 @@ const LOADED = {
   name: "Checkout fails (opened from a file)",
   requests: [{ id: "r1", source: "shop", method: "login", startedAt: 1, status: "success" }],
   environment: ENVIRONMENT,
+  fromFile: true,
 };
+
+/* A session saved here: Studio keeps where it was recorded with it too. */
+const SAVED_HERE = { ...LOADED, id: "s3", name: "Saved here", fromFile: undefined };
 
 function answer(routes: Record<string, unknown>): void {
   vi.mocked(post).mockImplementation(async (url: string) => {
@@ -301,6 +307,21 @@ describe("a session opened from a file", () => {
     useStudioStore.setState({ shownSession: { id: "s1", name: "saved here" } });
     render(<OpenedSessionBanner />);
     expect(screen.queryByRole("region", { name: "Opened from a session file" })).toBeNull();
+  });
+
+  it("shows a session saved here without one, though Studio keeps where it was recorded", async () => {
+    answer({ "/api/sessions/load": SAVED_HERE });
+
+    await showSavedSession("s3");
+    render(<OpenedSessionBanner />);
+
+    expect(useStudioStore.getState().shownSession).toEqual({ id: "s3", name: "Saved here" });
+    expect(screen.queryByRole("region", { name: "Opened from a session file" })).toBeNull();
+  });
+
+  it("is told from one saved here after a reload too", () => {
+    expect(shownSessionOf(LOADED)?.session.environment).toEqual(ENVIRONMENT);
+    expect(shownSessionOf(SAVED_HERE)?.session.environment).toBeUndefined();
   });
 
   it("names no host for a session a public demo recorded, and sets nothing beside it", async () => {

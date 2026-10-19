@@ -35,7 +35,8 @@ export async function showSavedSession(id: string): Promise<ShownSaved | undefin
     .map(requestFromSaved)
     .filter((r): r is RequestEntry => r !== undefined);
   const name = String(session.name);
-  const environment = environmentOf(session.environment);
+  /* Every session keeps where it was recorded; only one from a file is shown with it. */
+  const environment = session.fromFile === true ? environmentOf(session.environment) : undefined;
   useStudioStore
     .getState()
     .showSession({ id, name, ...(environment && { environment }) }, requests);

@@ -30,7 +30,8 @@ export function shownSessionOf(data: unknown): ShownSessionPayload | undefined {
   const requests = data.requests
     .map(requestFromSaved)
     .filter((request): request is RequestEntry => request !== undefined);
-  const environment = environmentOf(data.environment);
+  /* Every session keeps where it was recorded; only one from a file is shown with it. */
+  const environment = data.fromFile === true ? environmentOf(data.environment) : undefined;
   return {
     session: { id: data.id, name: data.name, ...(environment && { environment }) },
     requests,

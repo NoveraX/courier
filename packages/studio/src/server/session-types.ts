@@ -23,8 +23,13 @@ export interface SavedSession {
   requests: SavedRequest[];
   /** Session summary stats */
   stats: SessionStats;
-  /** What it was recorded on, when it was opened from a session file. */
+  /** What it was recorded on: the Studio that saved it, or the one its session file names. */
   environment?: SessionEnvironment | undefined;
+  /**
+   * Opened from a session file a colleague sent, rather than saved here: the
+   * pages show where it was recorded beside it.
+   */
+  fromFile?: boolean | undefined;
 }
 
 export interface SavedSessionApp {

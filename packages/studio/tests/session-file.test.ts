@@ -145,6 +145,18 @@ describe("a session file", () => {
     expect(opened.name).toBe("Checkout bug (opened from a file)");
     expect(loaded.requests[0].variables.password).toBe("[redacted]");
     expect(loaded.environment.definitions.shop).toBe(file.environment.definitions.shop);
+    expect(loaded.fromFile).toBe(true);
+  });
+
+  it("tells a session opened from a file from one saved here, which keeps its environment too", async () => {
+    const saved = await (
+      await post("/api/sessions/save", { name: "Mine", requests: REQUESTS }, true)
+    ).json();
+
+    const here = await (await post("/api/sessions/load", { id: saved.id }, true)).json();
+
+    expect(here.environment).toMatchObject({ node: process.version });
+    expect(here.fromFile).toBeUndefined();
   });
 
   it("names the environment this Studio runs in, to set beside a file's", async () => {

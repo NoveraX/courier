@@ -1,21 +1,13 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 import { SINGLETON_SAMPLES } from "./singleton-samples"
 
-export const metadata = docsMetadata(
-  "Typed Singleton",
-  "Create a single typed request instance with full type inference across your entire application."
-)
+export const metadata = exampleMetadata("singleton")
 
 export default function SingletonExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/singleton"
-      title="Typed Singleton"
-      description="Create a single typed request instance with full type inference across your entire application."
-      mode="both"
-    >
+    <ExamplePage name="singleton">
       <ExampleSection
         title="The Singleton Pattern"
         description="One createProxyQueryCaller call exports typed hooks for the entire app."

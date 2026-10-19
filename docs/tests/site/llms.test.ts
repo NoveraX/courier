@@ -1,6 +1,7 @@
 /**
  * The docs as llms.txt: what Courier is, where the whole documentation is
- * as one file, and every page by section with a link and what it covers.
+ * as one file, and every page by section with a link — to its Markdown,
+ * for a page written as text — and what it covers.
  */
 import { describe, expect, it } from "vitest"
 
@@ -8,8 +9,10 @@ import { docsNav } from "@/site/content/docs-nav"
 import { llmsIndex } from "@/site/content/llms"
 
 describe("llms.txt", () => {
-  const text = llmsIndex("https://docs.test", (href) =>
-    href === "/docs/quick-start" ? "First call" : ""
+  const text = llmsIndex(
+    "https://docs.test",
+    (href) => (href === "/docs/quick-start" ? "First call" : ""),
+    (href) => !href.startsWith("/docs/examples/")
   )
 
   it("names Courier, then points at the whole documentation in one file", () => {
@@ -22,9 +25,18 @@ describe("llms.txt", () => {
     )
   })
 
-  it("lists every page under its section, linked, with what it covers when known", () => {
+  it("says every docs page is served as Markdown too", () => {
+    expect(text.split("\n")[6]).toBe(
+      "Every docs page is served as Markdown too, at its address with .md after it, as the links below are."
+    )
+  })
+
+  it("lists every page under its section, linked as Markdown, with what it covers when known", () => {
     expect(text).toContain(
-      "## Getting Started\n\n- [Installation](https://docs.test/docs/installation)\n- [Quick Start](https://docs.test/docs/quick-start): First call"
+      "## Getting Started\n\n- [Installation](https://docs.test/docs/installation.md)\n- [Quick Start](https://docs.test/docs/quick-start.md): First call"
+    )
+    expect(text).toContain(
+      "- [Basic](https://docs.test/docs/examples/basic): Simple GET/POST requests"
     )
     expect(text.match(/^- \[/gm)).toHaveLength(docsNav.reduce((n, s) => n + s.items.length, 0))
   })

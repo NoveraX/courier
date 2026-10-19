@@ -7,6 +7,8 @@ export interface DocMeta {
   description: string
   /** Which way of calling the API the page is about, when it is about one. */
   mode?: "direct" | "proxy" | "both" | undefined
+  /** When the page last changed, `YYYY-MM-DD`: every docs page writes it, an examples page does not. */
+  updated?: string | undefined
 }
 
 /** A docs page: its content, ready to render, and what it says of itself. */

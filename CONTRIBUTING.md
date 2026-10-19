@@ -35,9 +35,10 @@ npm run check:docs
 npm run check:packages
 npm run check:publish
 npm run check:browser
+npm run check:page-dates
 ```
 
-Five of them are easy to skip by accident and worth understanding:
+Six of them are easy to skip by accident and worth understanding:
 
 - `npx tsc --noEmit` typechecks the **whole workspace as one program**, tests
   included. A per-package `typecheck` can pass while this fails, because the
@@ -64,6 +65,12 @@ Five of them are easy to skip by accident and worth understanding:
   in its commit. It fails too when a page takes a core module only a
   server runs, or Node, an edge runtime or React Native takes its browser
   stand-in (below).
+- `npm run check:page-dates` asks every docs page whose text your branch
+  changed for its date: the `updated` field of the page's metadata, which
+  the site shows on the page and hands to search engines, must be no older
+  than the day you changed the text. A change to the date alone, or to a
+  page's spacing, needs none. `npm run check:page-dates -- --fix` writes
+  today's date into each page that needs it.
 
 ## Working in the code
 

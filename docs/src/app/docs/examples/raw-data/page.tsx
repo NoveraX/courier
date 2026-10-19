@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -23,19 +23,11 @@ const response = await caller.users.raw.getAll()
 //    ^? HttpResponse<{ data: User[]; total: number }>
 //       { status: number; headers: Headers; data: … }`
 
-export const metadata = docsMetadata(
-  "Raw Data Mode",
-  "Access full response metadata through .raw — status code, headers, and data in one object."
-)
+export const metadata = exampleMetadata("raw-data")
 
 export default function RawDataExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/raw-data"
-      title="Raw Data Mode"
-      description="Access full response metadata through .raw — status code, headers, and data in one object."
-      mode="both"
-    >
+    <ExamplePage name="raw-data">
       <ExampleSection
         title="Normal Mode"
         description="Returns just the response data."

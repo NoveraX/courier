@@ -1,7 +1,7 @@
-import type { SearchEntry } from "@/site/content/search-index"
 import { localGroups } from "./local-results"
 import type { RecentSearch } from "./recent-searches"
 import type { SearchGroup } from "./search-types"
+import type { SearchIndexState } from "./use-search-index"
 
 /** Where search stands with what was typed. */
 export type SearchStatus = "idle" | "searching" | "done" | "failed"
@@ -20,6 +20,12 @@ export interface SearchView {
   titlesOnly: boolean
   /** An answer to what was typed is on its way. */
   searching: boolean
+  /**
+   * Why the site's own pages are missing from a list made of them: still
+   * on their way, or not fetched. `null` when they are there, or when the
+   * list does not need them.
+   */
+  missingPages: "loading" | "failed" | null
 }
 
 /** The group of results opened from search before. */
@@ -40,9 +46,14 @@ function recentGroup(recent: readonly RecentSearch[]): SearchGroup[] {
 interface SearchViewInput {
   query: string
   answer: IndexAnswer
-  /** The pages and exports the site lists itself. */
-  entries: readonly SearchEntry[]
+  /** The pages and exports the site lists itself, as far as they have been fetched. */
+  pages: SearchIndexState
   recent: readonly RecentSearch[]
+}
+
+function missing({ entries, failed }: SearchIndexState): SearchView["missingPages"] {
+  if (entries) return null
+  return failed ? "failed" : "loading"
 }
 
 /**
@@ -50,29 +61,31 @@ interface SearchViewInput {
  * opened lately, then every page and export to browse. While the index
  * answers for the first time, the pages whose titles match; then its
  * latest answer, kept until the next arrives. When the index cannot be
- * reached, the pages whose titles match, said to be just that.
+ * reached, the pages whose titles match, said to be just that. A list
+ * made of the site's pages before they have arrived says why they are
+ * not there.
  *
  * @param input - What was typed, the index's answer, the site's pages and the recent results
  * @returns The groups to list and how they were found
  * @example
  * ```ts
- * searchView({ query: "", answer, entries, recent }).groups[0]?.label // "Recent"
+ * searchView({ query: "", answer, pages, recent }).groups[0]?.label // "Recent"
  * ```
  */
-export function searchView({ query, answer, entries, recent }: SearchViewInput): SearchView {
+export function searchView({ query, answer, pages, recent }: SearchViewInput): SearchView {
   const typed = query.trim()
+  const listed = (words: string) => (pages.entries ? localGroups(pages.entries, words) : [])
+  const lacking = missing(pages)
   if (!typed) {
-    return {
-      groups: [...recentGroup(recent), ...localGroups(entries, "")],
-      titlesOnly: false,
-      searching: false,
-    }
+    const groups = [...recentGroup(recent), ...listed("")]
+    return { groups, titlesOnly: false, searching: false, missingPages: lacking }
   }
   if (answer.status === "failed") {
-    return { groups: localGroups(entries, typed), titlesOnly: true, searching: false }
+    return { groups: listed(typed), titlesOnly: true, searching: false, missingPages: lacking }
   }
   if (answer.groups === null) {
-    return { groups: localGroups(entries, typed), titlesOnly: false, searching: true }
+    return { groups: listed(typed), titlesOnly: false, searching: true, missingPages: null }
   }
-  return { groups: answer.groups, titlesOnly: false, searching: answer.status === "searching" }
+  const searching = answer.status === "searching"
+  return { groups: answer.groups, titlesOnly: false, searching, missingPages: null }
 }

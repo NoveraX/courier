@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react"
 
-import type { SearchEntry } from "@/site/content/search-index"
 import { SearchDialog } from "@/site/search/search-dialog"
 import { useSearchDialog } from "@/site/search/use-search-dialog"
 import { MobileDrawer } from "./mobile-drawer"
@@ -15,14 +14,14 @@ import { SiteHeader } from "./site-header"
  * the search over the docs and the API and the menu it opens — ⌘K or
  * Ctrl+K opens search anywhere, and `/` where nothing is being typed.
  *
- * @param props - The part of the site, and every page and export search can find
+ * @param props - The part of the site
  * @returns The chrome
  * @example
  * ```tsx
- * <DocsChrome part="docs" entries={entries} />
+ * <DocsChrome part="docs" />
  * ```
  */
-export function DocsChrome({ part, entries }: { part: SitePart; entries: readonly SearchEntry[] }) {
+export function DocsChrome({ part }: { part: SitePart }) {
   const search = useSearchDialog()
   const [menu, setMenu] = useState(false)
   const menuButton = useRef<HTMLButtonElement>(null)
@@ -36,12 +35,7 @@ export function DocsChrome({ part, entries }: { part: SitePart; entries: readonl
         searchRef={search.opener}
         menuRef={menuButton}
       />
-      <SearchDialog
-        entries={entries}
-        open={search.open}
-        onOpenChange={search.setOpen}
-        returnTo={search.opener}
-      />
+      <SearchDialog open={search.open} onOpenChange={search.setOpen} returnTo={search.opener} />
       <MobileDrawer open={menu} onOpenChange={setMenu} returnTo={menuButton} />
     </>
   )

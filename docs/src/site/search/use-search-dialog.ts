@@ -23,7 +23,7 @@ export interface SearchDialogState {
  * ```tsx
  * const search = useSearchDialog()
  * <SiteHeader onSearch={() => search.setOpen(true)} searchRef={search.opener} />
- * <SearchDialog entries={entries} open={search.open} onOpenChange={search.setOpen} returnTo={search.opener} />
+ * <SearchDialog open={search.open} onOpenChange={search.setOpen} returnTo={search.opener} />
  * ```
  */
 export function useSearchDialog(): SearchDialogState {

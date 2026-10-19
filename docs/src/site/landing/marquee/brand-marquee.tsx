@@ -1,6 +1,7 @@
 import { cn } from "@/site/cn"
 import type { Brand } from "@/site/landing/brands"
 import { ADAPTER_BRANDS, RUNTIME_BRANDS } from "@/site/landing/brands"
+import { BrandSymbols } from "./brand-symbols"
 import { BrandTile } from "./brand-tile"
 
 const EDGES =
@@ -68,6 +69,7 @@ export function BrandMarquee() {
           </li>
         ))}
       </ul>
+      <BrandSymbols brands={[...ADAPTER_BRANDS, ...RUNTIME_BRANDS]} />
       <div className="flex flex-col gap-3">
         <MarqueeRow brands={ADAPTER_BRANDS} />
         <MarqueeRow brands={RUNTIME_BRANDS} reverse />

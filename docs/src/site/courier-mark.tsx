@@ -1,5 +1,8 @@
 import { cn } from "@/site/cn"
 
+/** The mark's outline, in a 212 by 180 box. */
+export const COURIER_MARK_PATH = "M212 0H90a90 90 0 0 0 0 180h122l-52-50H90a40 40 0 0 1 0-80h70Z"
+
 /**
  * Courier's mark, drawn in the colour of the text around it.
  *
@@ -26,10 +29,7 @@ export function CourierMark({
       focusable="false"
       className={cn("block", className)}
     >
-      <path
-        fill="currentColor"
-        d="M212 0H90a90 90 0 0 0 0 180h122l-52-50H90a40 40 0 0 1 0-80h70Z"
-      />
+      <path fill="currentColor" d={COURIER_MARK_PATH} />
     </svg>
   )
 }

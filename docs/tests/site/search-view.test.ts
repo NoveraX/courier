@@ -3,8 +3,10 @@
  * opened lately and every page to browse; while the docs' index answers
  * for the first time, the pages whose titles match; then the index's
  * latest answer, kept while the next is on its way; and when the index
- * cannot be reached, the matching titles, said to be titles alone. The
- * search sent to the index asks for snippets alone, its matches marked.
+ * cannot be reached, the matching titles, said to be titles alone. Until
+ * the site's own pages have arrived, a list made of them says they are on
+ * their way, or could not be fetched, rather than that nothing matched.
+ * The search sent to the index asks for snippets alone, its matches marked.
  */
 import { describe, expect, it } from "vitest"
 
@@ -54,18 +56,22 @@ const answer = (status: IndexAnswer["status"], groups: SearchGroup[] | null): In
   groups,
 })
 
+const pages = { entries, failed: false }
+const pagesLoading = { entries: null, failed: false }
+const pagesFailed = { entries: null, failed: true }
+
 describe("what search lists", () => {
   it("lists the recent results, then every page, while nothing is typed", () => {
-    const view = searchView({ query: "  ", answer: answer("idle", indexGroups), entries, recent })
+    const view = searchView({ query: "  ", answer: answer("idle", indexGroups), pages, recent })
 
     expect(view.groups[0]?.id).toBe(RECENT_GROUP)
     expect(view.groups[0]?.options[0]?.id).toBe("recent:/docs/installation")
     expect(view.groups.slice(1).flatMap((group) => group.options)).toHaveLength(3)
-    expect(view).toMatchObject({ titlesOnly: false, searching: false })
+    expect(view).toMatchObject({ titlesOnly: false, searching: false, missingPages: null })
   })
 
   it("lists the matching titles while the index answers for the first time", () => {
-    const view = searchView({ query: "proxy", answer: answer("searching", null), entries, recent })
+    const view = searchView({ query: "proxy", answer: answer("searching", null), pages, recent })
 
     expect(view.groups.flatMap((group) => group.options).map((option) => option.href)).toEqual([
       "/reference#create-proxy-caller",
@@ -78,7 +84,7 @@ describe("what search lists", () => {
     const view = searchView({
       query: "proxy m",
       answer: answer("searching", indexGroups),
-      entries,
+      pages,
       recent,
     })
 
@@ -90,25 +96,105 @@ describe("what search lists", () => {
     const view = searchView({
       query: "proxy",
       answer: answer("done", indexGroups),
-      entries,
+      pages,
       recent,
     })
 
-    expect(view).toEqual({ groups: indexGroups, titlesOnly: false, searching: false })
+    expect(view).toEqual({
+      groups: indexGroups,
+      titlesOnly: false,
+      searching: false,
+      missingPages: null,
+    })
   })
 
   it("falls back on the matching titles, said to be titles alone, when the index cannot be reached", () => {
     const view = searchView({
       query: "install",
       answer: answer("failed", indexGroups),
-      entries,
+      pages,
       recent,
     })
 
     expect(view.groups.flatMap((group) => group.options).map((option) => option.href)).toEqual([
       "/docs/installation",
     ])
-    expect(view).toMatchObject({ titlesOnly: true, searching: false })
+    expect(view).toMatchObject({ titlesOnly: true, searching: false, missingPages: null })
+  })
+})
+
+describe("what search lists before the site's pages have arrived", () => {
+  it("lists the recent results and says the pages are on their way", () => {
+    const view = searchView({
+      query: "",
+      answer: answer("idle", null),
+      pages: pagesLoading,
+      recent,
+    })
+
+    expect(view.groups.map((group) => group.id)).toEqual([RECENT_GROUP])
+    expect(view.missingPages).toBe("loading")
+  })
+
+  it("keeps the recent results and says the pages could not be fetched", () => {
+    const view = searchView({ query: "", answer: answer("idle", null), pages: pagesFailed, recent })
+
+    expect(view.groups.map((group) => group.id)).toEqual([RECENT_GROUP])
+    expect(view.missingPages).toBe("failed")
+  })
+
+  it("says the titles are on their way, not that nothing matched, when the index cannot be reached either", () => {
+    const view = searchView({
+      query: "install",
+      answer: answer("failed", null),
+      pages: pagesLoading,
+      recent,
+    })
+
+    expect(view).toEqual({
+      groups: [],
+      titlesOnly: true,
+      searching: false,
+      missingPages: "loading",
+    })
+  })
+
+  it("says the titles could not be fetched when neither they nor the index can be had", () => {
+    const view = searchView({
+      query: "install",
+      answer: answer("failed", null),
+      pages: pagesFailed,
+      recent,
+    })
+
+    expect(view).toMatchObject({ groups: [], titlesOnly: true, missingPages: "failed" })
+  })
+
+  it("says only that it searches while the index answers for the first time", () => {
+    const view = searchView({
+      query: "proxy",
+      answer: answer("searching", null),
+      pages: pagesFailed,
+      recent,
+    })
+
+    expect(view).toEqual({ groups: [], titlesOnly: false, searching: true, missingPages: null })
+  })
+
+  it("lists the index's answer whatever became of the pages", () => {
+    const view = searchView({
+      query: "proxy",
+      answer: answer("done", indexGroups),
+      pages: pagesFailed,
+      recent,
+    })
+
+    expect(view).toEqual({
+      groups: indexGroups,
+      titlesOnly: false,
+      searching: false,
+      missingPages: null,
+    })
   })
 })
 

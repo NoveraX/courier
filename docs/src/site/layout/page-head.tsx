@@ -1,7 +1,8 @@
-import { ChevronRight, Clock } from "lucide-react"
+import { CalendarDays, ChevronRight, Clock } from "lucide-react"
 
 import type { DocMeta } from "@/site/content/doc-module"
 import type { NavSection } from "@/site/content/docs-nav"
+import { formatPageDate } from "@/site/content/page-dates"
 import { ModeBadge } from "@/site/mdx/mode-badge"
 import { PageActions } from "./page-actions"
 
@@ -17,8 +18,9 @@ interface PageHeadProps {
 
 /**
  * The top of a docs page: where it sits in the docs, its title with what
- * can be done with the page, what it is about, and how long it takes to
- * read — with the way of calling the API it is about, when it is about one.
+ * can be done with the page, what it is about, how long it takes to read
+ * and when it last changed — with the way of calling the API it is about,
+ * when it is about one.
  *
  * @param props - The page's metadata and section, and — for a page written as text — its reading time and Markdown
  * @returns The head
@@ -53,6 +55,14 @@ export function PageHead({ meta, section, minutes, page }: PageHeadProps) {
           <span className="flex items-center gap-1.5">
             <Clock aria-hidden="true" className="size-3.25" />
             {minutes} min read
+          </span>
+        )}
+        {meta.updated && (
+          <span className="flex items-center gap-1.5">
+            <CalendarDays aria-hidden="true" className="size-3.25" />
+            <span>
+              Updated <time dateTime={meta.updated}>{formatPageDate(meta.updated)}</time>
+            </span>
           </span>
         )}
         {meta.mode && <ModeBadge mode={meta.mode} />}

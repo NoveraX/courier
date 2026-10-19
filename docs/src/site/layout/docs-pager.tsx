@@ -3,7 +3,8 @@ import Link from "next/link"
 
 import type { NavItem } from "@/site/content/docs-nav"
 
-const CARD =
+/** A link to another page, drawn as a card: the pager's, and the not-found page's. */
+export const PAGE_CARD =
   "block rounded-panel border border-line bg-panel px-4 py-3.5 text-fg transition-colors hover:border-line-strong"
 
 /**
@@ -24,7 +25,7 @@ export function DocsPager({ previous, next }: { previous?: NavItem; next?: NavIt
       className="mt-11 grid grid-cols-1 gap-2.5 border-t border-line pt-6 min-[620px]:grid-cols-2"
     >
       {previous ? (
-        <Link href={previous.href} className={CARD}>
+        <Link href={previous.href} className={PAGE_CARD}>
           <span className="flex items-center gap-1.5 text-label text-fg-subtle">
             <ArrowLeft aria-hidden="true" className="size-3" />
             Previous
@@ -35,7 +36,7 @@ export function DocsPager({ previous, next }: { previous?: NavItem; next?: NavIt
         <span />
       )}
       {next && (
-        <Link href={next.href} className={`${CARD} text-right`}>
+        <Link href={next.href} className={`${PAGE_CARD} text-right`}>
           <span className="flex items-center justify-end gap-1.5 text-label text-fg-subtle">
             Next
             <ArrowRight aria-hidden="true" className="size-3" />

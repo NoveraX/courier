@@ -1,4 +1,4 @@
-import { languageOf, SITE_THEME_NAME, siteHighlighter } from "./highlighter"
+import { languageOf, SITE_THEME_NAME, siteHighlighter, TOKENIZE_TIME_LIMIT } from "./highlighter"
 
 /**
  * Code as highlighted HTML in the site's code colours: a `<pre>` of one
@@ -15,5 +15,9 @@ import { languageOf, SITE_THEME_NAME, siteHighlighter } from "./highlighter"
  */
 export async function highlight(code: string, language: string): Promise<string> {
   const engine = await siteHighlighter()
-  return engine.codeToHtml(code, { lang: languageOf(language), theme: SITE_THEME_NAME })
+  return engine.codeToHtml(code, {
+    lang: languageOf(language),
+    theme: SITE_THEME_NAME,
+    tokenizeTimeLimit: TOKENIZE_TIME_LIMIT,
+  })
 }

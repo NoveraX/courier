@@ -1,4 +1,4 @@
-import { languageOf, SITE_THEME, siteHighlighter } from "./highlighter"
+import { languageOf, SITE_THEME, siteHighlighter, TOKENIZE_TIME_LIMIT } from "./highlighter"
 
 /** The site's code colours, by what they paint. */
 export type CodeTone =
@@ -52,6 +52,7 @@ export async function highlightTokens(code: string, language: string): Promise<C
   const lines = engine.codeToTokensBase(code, {
     lang: languageOf(language),
     theme: SITE_THEME,
+    tokenizeTimeLimit: TOKENIZE_TIME_LIMIT,
   })
   return lines.map((line) =>
     line.map(({ content, color }) => ({ text: content, tone: toneOf(color) }))

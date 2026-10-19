@@ -1,3 +1,5 @@
+"use client"
+
 import { Menu, Search } from "lucide-react"
 import Link from "next/link"
 import type { Ref } from "react"
@@ -5,6 +7,8 @@ import type { Ref } from "react"
 import { cn } from "@/site/cn"
 import { CourierMark } from "@/site/courier-mark"
 import { GitHubMark } from "@/site/github-mark"
+import { preloadDocsSearch } from "@/site/search/docsearch-client"
+import { useShortcutLabel } from "@/site/search/use-shortcut-label"
 import { ThemeSwitch } from "./theme-switch"
 
 /** The part of the site a page belongs to. */
@@ -29,7 +33,9 @@ interface SiteHeaderProps {
 /**
  * The header of the docs and the API reference alike: the logo with a
  * switch between the two parts beside it, the current one lit, then search
- * over both, the theme and GitHub — and, on a narrow screen, the menu.
+ * over both — its shortcut named as the reader's keyboard names it, its
+ * client loading as the pointer reaches it — the theme and GitHub, and, on
+ * a narrow screen, the menu.
  *
  * @param props - The part the page is in, what Search and Menu open, and the buttons themselves
  * @returns The header
@@ -39,6 +45,7 @@ interface SiteHeaderProps {
  * ```
  */
 export function SiteHeader({ part, onSearch, onMenu, searchRef, menuRef }: SiteHeaderProps) {
+  const shortcut = useShortcutLabel()
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-150">
       <div className="mx-auto flex h-14 max-w-[1520px] items-center gap-3.5 px-6 min-[640px]:gap-5">
@@ -71,13 +78,16 @@ export function SiteHeader({ part, onSearch, onMenu, searchRef, menuRef }: SiteH
           ref={searchRef}
           type="button"
           aria-label="Search the docs and the API"
+          aria-keyshortcuts="Meta+K Control+K"
           onClick={onSearch}
+          onPointerEnter={preloadDocsSearch}
+          onFocus={preloadDocsSearch}
           className="flex size-7.5 cursor-pointer items-center justify-center rounded-control border border-line bg-panel text-control text-fg-subtle transition-colors hover:border-line-strong hover:text-fg-muted min-[640px]:w-auto min-[640px]:justify-start min-[640px]:gap-7.5 min-[640px]:pr-2 min-[640px]:pl-2.75"
         >
           <Search aria-hidden="true" className="size-3.25" />
           <span className="hidden min-[640px]:inline">Search</span>
           <kbd className="hidden rounded-[4px] border border-line px-1.25 py-px font-mono text-micro min-[640px]:inline">
-            ⌘K
+            {shortcut}
           </kbd>
         </button>
         <div className="hidden min-[640px]:block">

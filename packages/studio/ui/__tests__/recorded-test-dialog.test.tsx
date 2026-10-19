@@ -8,7 +8,7 @@
  * there would be replaced until that is agreed to. A plan that changed is
  * asked for again.
  */
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn(), get: vi.fn(), apiClient: { post: vi.fn() } }));
@@ -68,7 +68,15 @@ async function open(): Promise<ReturnType<typeof within>> {
   render(<RecordedTestDialog />);
   await act(async () => {
     saveAsTest({ kind: "shown" });
-    await new Promise((done) => setTimeout(done, 400));
+  });
+  /* The dialog asks for the plan once its choices settle. A fixed pause just
+     past that lost the race when a busy run started the dialog's timer late:
+     wait for the request itself, then for its answer to land. */
+  await waitFor(() => expect(post).toHaveBeenCalledWith("/api/tests/plan", expect.anything()), {
+    timeout: 5_000,
+  });
+  await act(async () => {
+    await new Promise((done) => setTimeout(done, 0));
   });
   return within(screen.getByRole("dialog"));
 }
@@ -153,12 +161,15 @@ describe("saving the requests as a test", () => {
     const dialog = await open();
 
     await act(async () => fireEvent.click(dialog.getByRole("button", { name: "Write the test" })));
-    await act(async () => {
-      await new Promise((done) => setTimeout(done, 400));
-    });
 
+    await waitFor(
+      () =>
+        expect(
+          vi.mocked(post).mock.calls.filter(([url]) => url === "/api/tests/plan"),
+        ).toHaveLength(2),
+      { timeout: 5_000 },
+    );
     expect(toast.info).toHaveBeenCalledWith("The test is not the one shown any more");
-    expect(vi.mocked(post).mock.calls.filter(([url]) => url === "/api/tests/plan")).toHaveLength(2);
     expect(useRecordedTestDialog.getState().target).not.toBeNull();
   });
 

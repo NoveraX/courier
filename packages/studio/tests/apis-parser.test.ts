@@ -305,7 +305,7 @@ describe("parseSpec — OpenAPI 3.x", () => {
     const spec = parseSpec(OPENAPI3_SPEC);
 
     expect(spec.groups[0]!.prefix).toBe("/pets");
-    // Single-endpoint groups get "/" since findCommonPrefix needs 2+ paths
+    // A lone endpoint's group takes its path's parent: `/` for `/users`
     expect(spec.groups[1]!.prefix).toBe("/");
   });
 });

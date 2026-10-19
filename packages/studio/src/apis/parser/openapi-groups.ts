@@ -2,9 +2,16 @@
  * The groups an OpenAPI specification's endpoints are generated in.
  */
 
+import {
+  joinSharedPaths,
+  NO_PATHS,
+  type SharedPath,
+  sharedPathOf,
+  sharedPrefix,
+} from "./shared-path";
 import type { ParsedEndpoint, ParsedGroup } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import { convertPathParams, findCommonPrefix, toGroupName } from "./utils";
+import { convertPathParams, toGroupName } from "./utils";
 
 /**
  * Turn the endpoints of each tag into a group, a tag OpenAPI 3.2 nests
@@ -35,14 +42,7 @@ export function buildGroups(
 ): ParsedGroup[] {
   const tags = tagsInOrder([...endpointsByTag.keys()], parents);
   const parentOf = (tag: string) => parents.get(tag);
-  const below = (tag: string): string[] => tags.filter((t) => parentOf(t) === tag);
-  const subtree = (tag: string): ParsedEndpoint[] => [
-    ...(endpointsByTag.get(tag) ?? []),
-    ...below(tag).flatMap(subtree),
-  ];
-  const prefixes = new Map(
-    tags.map((tag) => [tag, findCommonPrefix(subtree(tag).map((e) => e.fullPath))]),
-  );
+  const prefixes = subtreePrefixes(tags, endpointsByTag, parents);
   const names = new Map<string, string>();
   const usedNames = new Set<string>();
 
@@ -71,14 +71,47 @@ export function buildGroups(
 /* Each tag with endpoints, each tag it sits under before it, in first-appearance order. */
 function tagsInOrder(withEndpoints: string[], parents: ReadonlyMap<string, string>): string[] {
   const ordered: string[] = [];
-  const add = (tag: string): void => {
-    if (ordered.includes(tag)) return;
-    const parent = parents.get(tag);
-    if (parent !== undefined) add(parent);
-    ordered.push(tag);
-  };
-  for (const tag of withEndpoints) add(tag);
+  const placed = new Set<string>();
+  for (const tag of withEndpoints) {
+    const chain: string[] = [];
+    for (
+      let at: string | undefined = tag;
+      at !== undefined && !placed.has(at);
+      at = parents.get(at)
+    ) {
+      chain.push(at);
+      placed.add(at);
+    }
+    for (const outer of chain.toReversed()) ordered.push(outer);
+  }
   return ordered;
+}
+
+/*
+ * The path the endpoints of each tag and of every tag inside it share.
+ * Each tag comes after the tag it sits in, so walking them backwards
+ * settles a tag's subtree before its parent's: every endpoint is read once,
+ * not once more for each tag above it.
+ */
+function subtreePrefixes(
+  tags: readonly string[],
+  endpointsByTag: ReadonlyMap<string, ParsedEndpoint[]>,
+  parents: ReadonlyMap<string, string>,
+): Map<string, string> {
+  const below = new Map<string, SharedPath>();
+  const prefixes = new Map<string, string>();
+  for (const tag of tags.toReversed()) {
+    let shared = below.get(tag) ?? NO_PATHS;
+    for (const endpoint of endpointsByTag.get(tag) ?? []) {
+      shared = joinSharedPaths(shared, sharedPathOf(endpoint.fullPath));
+    }
+    prefixes.set(tag, sharedPrefix(shared));
+    const parent = parents.get(tag);
+    if (parent !== undefined) {
+      below.set(parent, joinSharedPaths(below.get(parent) ?? NO_PATHS, shared));
+    }
+  }
+  return prefixes;
 }
 
 /* A path after the path it extends: `/billing/invoices` within `/billing` is `invoices`. */

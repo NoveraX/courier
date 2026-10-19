@@ -2,6 +2,8 @@
  * Path manipulation utilities for OpenAPI/Postman parsers.
  */
 
+import { joinSharedPaths, NO_PATHS, sharedPathOf, sharedPrefix } from "./shared-path";
+
 /** Convert OpenAPI path params `{id}` to Courier-style `:id` */
 export function convertPathParams(path: string): string {
   return path.replace(/\{([\w-]+)\}/g, (_, name: string) => `:${pathParamName(name)}`);
@@ -36,28 +38,21 @@ export function extractPostmanPath(url: string): string {
   }
 }
 
-/** Find common path prefix from a set of paths */
-export function findCommonPrefix(paths: string[]): string {
-  if (paths.length === 0) return "/";
-  if (paths.length === 1) {
-    const first = paths[0] ?? "";
-    const parts = first.split("/").filter(Boolean);
-    if (parts.length <= 1) return "/";
-    return `/${parts.slice(0, -1).join("/")}`;
-  }
-
-  const segments = paths.map((p) => p.split("/").filter(Boolean));
-  const minLen = Math.min(...segments.map((s) => s.length));
-  const common: string[] = [];
-  const firstSegments = segments[0] ?? [];
-
-  for (let i = 0; i < minLen; i++) {
-    const segment = firstSegments[i];
-    if (!segment || segment.startsWith("{") || segment.startsWith(":")) break;
-    if (segments.every((s) => s[i] === segment)) {
-      common.push(segment);
-    } else break;
-  }
-
-  return common.length > 0 ? `/${common.join("/")}` : "/";
+/**
+ * The prefix a group of paths takes: the parent of a lone path, or what
+ * several share up to their first parameter — `/` when that is nothing.
+ * Each path is read once, however many there are.
+ *
+ * @param paths - The group's paths, as the specification writes them
+ * @returns The prefix, starting with `/`
+ * @example
+ * ```ts
+ * findCommonPrefix(["/pets", "/pets/{id}"]); // → "/pets"
+ * findCommonPrefix(["/pets/{id}/toys"]); // → "/pets/{id}"
+ * ```
+ */
+export function findCommonPrefix(paths: readonly string[]): string {
+  let shared = NO_PATHS;
+  for (const path of paths) shared = joinSharedPaths(shared, sharedPathOf(path));
+  return sharedPrefix(shared);
 }

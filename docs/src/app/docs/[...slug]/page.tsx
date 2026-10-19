@@ -21,13 +21,17 @@ interface PageProps {
   params: Promise<{ slug: string[] }>
 }
 
+/* The docs are the pages written when the site is built: any other address is not found at once. */
+export const dynamicParams = false
+
 export function generateStaticParams(): { slug: string[] }[] {
   return docSlugs().map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  if (!docSource(slug)) return {}
+  /* An address with no page takes the not-found page's title, on the server and in the browser alike. */
+  if (!docSource(slug)) notFound()
   const { meta } = await loadDoc(slug)
   const path = `/docs/${slug.join("/")}`
   return pageMetadata({

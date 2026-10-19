@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useRef, useState } from "react"
 
 import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
-import type { SearchEntry } from "@/site/content/search-index"
 import { PageActions } from "@/site/layout/page-actions"
 import { SearchPalette } from "@/site/layout/search-palette"
 import { SiteHeader } from "@/site/layout/site-header"
@@ -24,8 +23,6 @@ const TITLE = "API reference"
 
 interface ReferenceViewProps {
   sections: readonly ReferenceSection[]
-  /** What search finds: the exports, then every docs page, as from the docs. */
-  searchable: readonly SearchEntry[]
   entryPoints: readonly EntryPoint[]
   verbs: readonly BuilderVerb[]
   version: string
@@ -44,16 +41,15 @@ function matches(section: ReferenceSection, filter: string): boolean {
  * modules to import from and how an endpoint begins. ⌘K, or Search, finds
  * the exports and every docs page.
  *
- * @param props - The exports, what search finds, the modules, the builder's starters, the version and the page as Markdown
+ * @param props - The exports, the modules, the builder's starters, the version and the page as Markdown
  * @returns The page
  * @example
  * ```tsx
- * <ReferenceView sections={sections} searchable={entries} entryPoints={ENTRY_POINTS} verbs={BUILDER_VERBS} version="0.0.0" markdown={md} />
+ * <ReferenceView sections={sections} entryPoints={ENTRY_POINTS} verbs={BUILDER_VERBS} version="0.0.0" markdown={md} />
  * ```
  */
 export function ReferenceView({
   sections,
-  searchable,
   entryPoints,
   verbs,
   version,
@@ -86,12 +82,7 @@ export function ReferenceView({
         searchRef={searchButton}
         menuRef={menuButton}
       />
-      <SearchPalette
-        entries={searchable}
-        open={searching}
-        onOpenChange={setSearching}
-        returnTo={searchButton}
-      />
+      <SearchPalette open={searching} onOpenChange={setSearching} returnTo={searchButton} />
       <ReferenceDrawer
         exports={listed}
         filter={exportFilter}

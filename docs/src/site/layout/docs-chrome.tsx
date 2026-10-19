@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react"
 
-import type { SearchEntry } from "@/site/content/search-index"
 import { MobileDrawer } from "./mobile-drawer"
 import { ReadingProgress } from "./reading-progress"
 import { SearchPalette } from "./search-palette"
@@ -15,14 +14,14 @@ import { useSearchShortcut } from "./use-search-shortcut"
  * the search over the docs and the API and the menu it opens — ⌘K or
  * Ctrl+K opens search anywhere.
  *
- * @param props - The part of the site, and every page and export search can find
+ * @param props - The part of the site
  * @returns The chrome
  * @example
  * ```tsx
- * <DocsChrome part="docs" entries={entries} />
+ * <DocsChrome part="docs" />
  * ```
  */
-export function DocsChrome({ part, entries }: { part: SitePart; entries: readonly SearchEntry[] }) {
+export function DocsChrome({ part }: { part: SitePart }) {
   const [searching, setSearching] = useState(false)
   const [menu, setMenu] = useState(false)
   const searchButton = useRef<HTMLButtonElement>(null)
@@ -38,12 +37,7 @@ export function DocsChrome({ part, entries }: { part: SitePart; entries: readonl
         searchRef={searchButton}
         menuRef={menuButton}
       />
-      <SearchPalette
-        entries={entries}
-        open={searching}
-        onOpenChange={setSearching}
-        returnTo={searchButton}
-      />
+      <SearchPalette open={searching} onOpenChange={setSearching} returnTo={searchButton} />
       <MobileDrawer open={menu} onOpenChange={setMenu} returnTo={menuButton} />
     </>
   )

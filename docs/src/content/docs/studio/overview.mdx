@@ -1,4 +1,4 @@
-export const metadata = { title: "Studio", description: "A development server with a web UI: inspect requests, explore endpoints, call them from a playground, and run mock servers.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Studio", description: "A development server with a web UI: inspect requests, explore endpoints, call them from a playground, and run mock servers.", mode: "both", updated: "2026-10-19" }
 
 ## Overview
 
@@ -171,7 +171,7 @@ Studio counts a visitor by the address the proxy in front of it reports last in 
 Behind a CDN or a DDoS filter as well, name its addresses or ranges in `trustedProxies`, such as `demo: { trustedProxies: ["198.51.100.0/24", "2001:db8::/32"] }`: Studio reads past their entries to the address the first of them saw. The proxy in front of Studio must pass those entries on rather than replace them with the filter's address, as Traefik does for the addresses in its entry point's `forwardedHeaders.trustedIPs` and Caddy for its `trusted_proxies`. A filter that also names the visitor in a header of its own — DDoS-Guard's `DDG-Connecting-IP`, Cloudflare's `CF-Connecting-IP` — needs no change to that proxy: name the header in `addressHeader` too, and Studio reads it from every request that came through the filter, and from no other. Name only your own proxies and your provider's published ranges: Studio believes whatever address they report.
 </Callout>
 
-The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/master/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.
+The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. Search engines leave the demo out of their results, as they do any Studio: every answer says `X-Robots-Tag: noindex, nofollow`, and its `robots.txt` lets a crawler read that. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/master/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.
 
 ## Next steps
 

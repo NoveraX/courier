@@ -1,8 +1,10 @@
 import Link from "next/link"
 import type { ComponentPropsWithoutRef } from "react"
 
+/* Underlined faintly at rest, as colour alone does not tell a link from the text around it,
+   and fully on hover. */
 const LINK =
-  "text-brand underline-offset-3 hover:text-[color-mix(in_srgb,var(--color-brand)_75%,var(--color-fg))] hover:underline"
+  "text-brand underline decoration-current/40 underline-offset-3 hover:text-[color-mix(in_srgb,var(--color-brand)_75%,var(--color-fg))] hover:decoration-current"
 
 /**
  * A link in a page's text: another page of the site in place, an anchor on

@@ -2,6 +2,7 @@ import { declaredEncoding } from "./field-encoding";
 import { firstSchemaIn } from "./media-schemas";
 import { fieldOf, isNode, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { FieldEncoding, ParsedEndpoint } from "./types";
+import { followedRef } from "./unresolved-refs";
 import { convertSchemaInline, resolveRef } from "./utils";
 
 type ParsedRequestBody = Pick<
@@ -31,7 +32,7 @@ export function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedRequestBod
   const declared = fieldOf(op, "requestBody");
   if (!declared) return { requestBody: null };
   const ref = textAt(declared, "$ref");
-  const body = ref ? resolveRef(spec, ref) : declared;
+  const body = ref ? followedRef(spec, ref, "the operation is read without a body") : declared;
   const media = firstSchemaIn(fieldOf(body, "content"));
   /* Stripe gives 298 operations, every GET among them, a form that admits
      no field at all; taken for a map, it became a `body` each call had to

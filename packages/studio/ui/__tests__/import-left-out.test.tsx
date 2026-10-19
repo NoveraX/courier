@@ -3,7 +3,8 @@
  *
  * What the import wizard says Studio left out of an import: the operations
  * it could not import, and apart from them the patterns too long to check
- * values against, each named where it was.
+ * values against and the references to parts the document does not hold,
+ * each named where it was.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -54,6 +55,22 @@ describe("what an import leaves out", () => {
       screen.getByText("1 operation and 2 pattern checks left out of this import"),
     ).toBeTruthy();
     expect(screen.getByText(`PATTERN ${PATTERN.path}`).getAttribute("title")).toBe(PATTERN.reason);
+  });
+
+  it("counts the references to nothing apart from the operations and the patterns", () => {
+    const ref = {
+      method: "REF",
+      path: "#/components/schemas/Pet/properties/owner",
+      reason: "it refers to #/components/schemas/Owner, which this document does not hold",
+    };
+    step([TRACE, PATTERN, ref, { ...ref, path: "#/components/schemas/Pet/properties/sitter" }]);
+
+    expect(
+      screen.getByText(
+        "1 operation, 1 pattern check and 2 missing references left out of this import",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(`REF ${ref.path}`).getAttribute("title")).toBe(ref.reason);
   });
 
   it("names only what it left out", () => {

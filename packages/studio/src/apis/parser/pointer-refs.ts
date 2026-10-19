@@ -9,8 +9,8 @@
  * converted in place.
  */
 
-import { resolveRef } from "./ref-utils";
 import type { SpecNode } from "./types";
+import { followedRef } from "./unresolved-refs";
 
 /* The references being read right now, innermost last. */
 const expanding = new Set<string>();
@@ -53,9 +53,10 @@ export function expandPointer<TConverted>(
   unresolved: () => TConverted,
 ): TConverted {
   if (spec === undefined || expanding.has(ref)) return unresolved();
+  const target = followedRef(spec, ref, "its value is read as unknown");
   expanding.add(ref);
   try {
-    return convert(resolveRef(spec, ref));
+    return convert(target);
   } finally {
     expanding.delete(ref);
   }

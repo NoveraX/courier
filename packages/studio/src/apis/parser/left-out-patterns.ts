@@ -1,5 +1,6 @@
+import { placesIn } from "./document-places";
 import { MAX_PATTERN_LENGTH } from "./max-pattern-length";
-import { isNode, type SpecNode } from "./spec-node";
+import { type SpecNode, textAt } from "./spec-node";
 import type { ParsedSpec, SkippedOperation } from "./types";
 
 /* The patterns left out while a specification is parsed; none outside a parse. */
@@ -47,26 +48,12 @@ export function withLeftOutPatterns(document: SpecNode, parse: () => ParsedSpec)
   return { ...parsed, skipped: [...parsed.skipped, ...placesOf(document, noted)] };
 }
 
-/* Each object that writes one of the patterns, found without recursion —
-   a document can nest deeper than the stack goes — and each object once,
-   since YAML's aliases can make the same object appear in many places, or
-   inside itself. */
+/* Each object that writes one of the patterns, where the document writes it. */
 function placesOf(document: SpecNode, patterns: ReadonlySet<string>): SkippedOperation[] {
-  const places: SkippedOperation[] = [];
-  const seen = new Set<object>();
-  const pending: Array<{ value: unknown; pointer: string }> = [{ value: document, pointer: "#" }];
-  for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
-    const { value, pointer } = next;
-    if (typeof value !== "object" || value === null || seen.has(value)) continue;
-    seen.add(value);
-    const pattern = isNode(value) ? value.pattern : undefined;
-    if (typeof pattern === "string" && patterns.has(pattern)) places.push(note(pointer, pattern));
-    const children: Array<[string, unknown]> = Object.entries(value);
-    for (const [key, child] of children) {
-      pending.push({ value: child, pointer: `${pointer}/${escaped(key)}` });
-    }
-  }
-  return places.sort((a, b) => a.path.localeCompare(b.path));
+  const writesOne = (node: SpecNode) => patterns.has(textAt(node, "pattern") ?? "");
+  return placesIn(document, writesOne).map(({ pointer, node }) =>
+    note(pointer, textAt(node, "pattern") ?? ""),
+  );
 }
 
 function note(pointer: string, pattern: string): SkippedOperation {
@@ -75,9 +62,4 @@ function note(pointer: string, pattern: string): SkippedOperation {
     path: pointer,
     reason: `its pattern is ${pattern.length} characters long, more than the ${MAX_PATTERN_LENGTH} Studio compiles, so values are not checked against it`,
   };
-}
-
-/* A JSON pointer writes `~` and `/` in a key as `~0` and `~1`. */
-function escaped(key: string): string {
-  return key.replaceAll("~", "~0").replaceAll("/", "~1");
 }

@@ -10,6 +10,7 @@ import { readYaml } from "./read-yaml";
 import { fieldOf, isNode } from "./spec-node";
 import { splitDirections } from "./split-directions";
 import type { ParsedSpec, SpecFormat } from "./types";
+import { withUnresolvedRefs } from "./unresolved-refs";
 
 /**
  * A top-level `openapi` or `swagger` key, quoted or not: at the start of a
@@ -39,8 +40,9 @@ export function detectFormat(raw: string): SpecFormat {
  * Parse an OpenAPI 3, Swagger 2 or Postman specification, as JSON or YAML.
  *
  * What the parse leaves out is listed in `skipped`: an operation the
- * builder cannot express, a reference outside the document, and a pattern
- * too long to compile, by where the document writes it.
+ * builder cannot express, a reference pointing outside the document or at
+ * a part it does not hold, and a pattern too long to compile, by where the
+ * document writes it.
  *
  * @param raw - The text as it was read or pasted
  * @returns The parsed specification
@@ -73,7 +75,9 @@ export function parseSpec(raw: string): ParsedSpec {
   /* The request and the answer a schema describes differ where its fields
      are readOnly or writeOnly: they are typed apart. */
   const parse = format.startsWith("swagger2") ? parseSwagger2 : parseOpenApi3;
-  return withLeftOutPatterns(parsed, () => splitDirections(parse(parsed)));
+  return withUnresolvedRefs(parsed, () =>
+    withLeftOutPatterns(parsed, () => splitDirections(parse(parsed))),
+  );
 }
 
 /* The document the text holds, or `undefined` when it is not JSON — which no

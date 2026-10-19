@@ -3,6 +3,7 @@
  */
 
 import { toSafeIdentifier } from "./naming-utils";
+import { componentSchemaName } from "./ref-utils";
 import { nodeAt, type SpecNode } from "./spec-node";
 
 /* One table per specification, built once. */
@@ -30,6 +31,27 @@ const TABLES = new WeakMap<SpecNode, ReadonlyMap<string, string>>();
 export function componentIdentifier(spec: SpecNode | undefined, component: string): string {
   if (!spec) return toSafeIdentifier(component);
   return tableOf(spec).get(component) ?? toSafeIdentifier(component);
+}
+
+/**
+ * The component schema a reference names, when the specification declares
+ * it. A reference to one it does not declare points nowhere: referred to by
+ * name, it became code naming a type nothing declared.
+ *
+ * @param ref - The reference
+ * @param spec - The whole specification; without one, any component named is taken
+ * @returns The component's name, or `undefined` for a reference that names
+ *   no declared component
+ * @example
+ * ```ts
+ * declaredComponentName("#/components/schemas/Pet", spec); // → "Pet"
+ * declaredComponentName("#/components/schemas/Missing", spec); // → undefined
+ * ```
+ */
+export function declaredComponentName(ref: string, spec: SpecNode | undefined): string | undefined {
+  const component = componentSchemaName(ref);
+  if (component === undefined || spec === undefined) return component;
+  return tableOf(spec).has(component) ? component : undefined;
 }
 
 /**

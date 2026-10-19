@@ -3,11 +3,12 @@
  */
 
 import { mergedComposition } from "./recursive-compositions";
-import { resolveRef } from "./ref-utils";
+
 import { referencedSchema } from "./referenced-schema";
 import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
 import { isNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedSchema } from "./types";
+import { followedRef } from "./unresolved-refs";
 
 /**
  * Merge every member of an `allOf` into one schema.
@@ -91,7 +92,7 @@ function flattenAllOf(
     if (ref) {
       if (!spec || seen.has(ref)) continue;
       seen.add(ref);
-      const target = normalizeTypeArray(resolveRef(spec, ref));
+      const target = normalizeTypeArray(followedRef(spec, ref, "what it adds is left out"));
       if (target.allOf) out.push(...flattenAllOf(listAt(target, "allOf"), spec, seen));
       else out.push(target);
       continue;

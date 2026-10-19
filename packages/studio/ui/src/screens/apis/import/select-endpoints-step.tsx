@@ -26,16 +26,18 @@ interface SelectEndpointsStepProps {
   onToggleAll: () => void;
 }
 
-/* An operation Studio could not import, or a pattern too long to check values against. */
+/* An operation Studio could not import, a pattern too long to check values against, or a reference to a part the document does not hold. */
 function leftOut(skipped: readonly { method: string }[]): string {
   const patterns = skipped.filter((entry) => entry.method === "PATTERN").length;
-  const operations = skipped.length - patterns;
-  return [
+  const references = skipped.filter((entry) => entry.method === "REF").length;
+  const operations = skipped.length - patterns - references;
+  const parts = [
     operations > 0 ? plural(operations, "operation") : "",
     patterns > 0 ? plural(patterns, "pattern check") : "",
-  ]
-    .filter(Boolean)
-    .join(" and ");
+    references > 0 ? plural(references, "missing reference") : "",
+  ].filter(Boolean);
+  const last = parts.pop() ?? "";
+  return parts.length > 0 ? `${parts.join(", ")} and ${last}` : last;
 }
 
 /**

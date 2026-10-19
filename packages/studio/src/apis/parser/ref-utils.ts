@@ -15,16 +15,32 @@ import type { ParsedSecurityScheme, SpecNode } from "./types";
  * no text names no key, and resolves to nothing too.
  */
 export function resolveRef(spec: SpecNode, ref: string): SpecNode {
-  if (typeof ref !== "string" || !ref.startsWith("#/")) return {};
+  return asNode(refTarget(spec, ref));
+}
 
+/**
+ * What a local JSON pointer points at, as {@link resolveRef} follows it.
+ *
+ * @param spec - The whole document
+ * @param ref - The reference
+ * @returns The value there, or `undefined` when the reference points
+ *   nowhere: into another file, past what the document holds, or through
+ *   an escape that decodes to no text
+ * @example
+ * ```ts
+ * refTarget(spec, "#/components/schemas/Missing"); // → undefined
+ * ```
+ */
+export function refTarget(spec: SpecNode, ref: string): unknown {
+  if (typeof ref !== "string" || !ref.startsWith("#/")) return undefined;
   let result: unknown = spec;
   for (const part of ref.slice(2).split("/")) {
-    if (!isNode(result)) return {};
+    if (!isNode(result)) return undefined;
     const key = decodePointer(part);
-    if (key === undefined) return {};
+    if (key === undefined) return undefined;
     result = fieldOf(result, key);
   }
-  return asNode(result);
+  return result;
 }
 
 /* A pointer's segment as the key it names, or `undefined` when its percent escapes decode to no text. */

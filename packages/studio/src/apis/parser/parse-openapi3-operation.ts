@@ -10,6 +10,7 @@ import { readConstraints } from "./read-constraints";
 import { enumValues } from "./schema-conversion";
 import { asNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedEndpoint, ParsedParameter } from "./types";
+import { followedRef } from "./unresolved-refs";
 import {
   convertPathParams,
   convertSchemaInline,
@@ -143,6 +144,6 @@ function isStructured(shape: SpecNode): boolean {
 function scalarComponent(shape: SpecNode, spec: SpecNode): SpecNode | undefined {
   const ref = textAt(shape, "$ref");
   if (ref === undefined) return undefined;
-  const target = normalizeTypeArray(resolveRef(spec, ref));
+  const target = normalizeTypeArray(followedRef(spec, ref, "its value is read as a string"));
   return isStructured(target) ? undefined : target;
 }

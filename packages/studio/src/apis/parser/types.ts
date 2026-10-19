@@ -27,9 +27,9 @@ export interface ParsedSpec {
  * silently reporting a smaller endpoint count or checking less.
  */
 export interface SkippedOperation {
-  /** Uppercased HTTP method, e.g. "OPTIONS"; `ALL` for a whole path item, `PATTERN` for a schema's pattern */
+  /** Uppercased HTTP method, e.g. "OPTIONS"; `ALL` for a whole path item, `PATTERN` for a schema's pattern, `REF` for a reference pointing nowhere */
   method: string;
-  /** Path as written in the spec; for a pattern, the JSON pointer of the schema that writes it */
+  /** Path as written in the spec; for a pattern or a reference, the JSON pointer of where the document writes it */
   path: string;
   reason: string;
 }

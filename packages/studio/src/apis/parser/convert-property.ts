@@ -2,11 +2,10 @@
  * Converts one property of an OpenAPI object schema.
  */
 
-import { componentIdentifier } from "./component-identifier";
+import { componentIdentifier, declaredComponentName } from "./component-identifier";
 import { expandPointer } from "./pointer-refs";
 import { isComposite, soleMember, withoutNull } from "./property-forms";
 import { readConstraints } from "./read-constraints";
-import { componentSchemaName } from "./ref-utils";
 import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
 import { asNode, fieldOf, isNode, listAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedSchema, ParsedSchemaProperty } from "./types";
@@ -53,7 +52,7 @@ export function convertProperty(
   };
 
   const ref = textAt(node, "$ref");
-  const component = ref !== undefined ? componentSchemaName(ref) : undefined;
+  const component = ref !== undefined ? declaredComponentName(ref, spec) : undefined;
   if (ref !== undefined && component === undefined) {
     return pointedProperty(name, ref, raw, base, required, spec);
   }

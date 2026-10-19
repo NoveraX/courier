@@ -2,9 +2,8 @@
  * The schema a `$ref` stands for.
  */
 
-import { componentIdentifier } from "./component-identifier";
+import { componentIdentifier, declaredComponentName } from "./component-identifier";
 import { expandPointer } from "./pointer-refs";
-import { componentSchemaName } from "./ref-utils";
 import { convertSchema } from "./schema-conversion";
 import type { ParsedSchema, SpecNode } from "./types";
 
@@ -31,7 +30,7 @@ export function referencedSchema(
   description: string | undefined,
   spec: SpecNode | undefined,
 ): ParsedSchema {
-  const component = componentSchemaName(ref);
+  const component = declaredComponentName(ref, spec);
   if (component !== undefined) {
     return { name, type: "ref", refName: componentIdentifier(spec, component), description };
   }

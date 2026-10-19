@@ -1,7 +1,8 @@
 import { firstSchemaIn } from "./media-schemas";
 import { fieldOf, isNode, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedEndpoint } from "./types";
-import { convertSchemaInline, resolveRef } from "./utils";
+import { followedRef } from "./unresolved-refs";
+import { convertSchemaInline } from "./utils";
 
 /** `200`, `204`, and the `2XX` wildcard in either case. */
 const SUCCESS_CODE = /^2(?:\d\d|XX)$/i;
@@ -31,7 +32,7 @@ export function parseResponse(
   const success = successResponse(fieldOf(op, "responses"));
   if (!success) return { responseSchema: null };
   const ref = textAt(success, "$ref");
-  const resp = ref ? resolveRef(spec, ref) : success;
+  const resp = ref ? followedRef(spec, ref, "its answer is read as unknown") : success;
   const media = firstSchemaIn(fieldOf(resp, "content"));
   if (media) {
     return {

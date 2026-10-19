@@ -2,6 +2,7 @@
  * Converts OpenAPI object schemas with properties into ParsedSchema.
  */
 
+import { ownValue } from "../own-value";
 import { convertProperty, mapValueType } from "./convert-property";
 import { asNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedSchema, ParsedSchemaProperty } from "./types";
@@ -14,7 +15,9 @@ export function convertObjectSchema(name: string, schema: SpecNode, spec?: SpecN
     name,
     type: "object",
     properties,
-    required: [...requiredFields].filter((field) => properties[field]?.required !== false),
+    required: [...requiredFields].filter(
+      (field) => ownValue(properties, field)?.required !== false,
+    ),
     description: textAt(schema, "description"),
     /* A schema that names no properties but declares what its values look
        like is a map; without this it was emitted as an empty type nothing
@@ -27,18 +30,14 @@ function extractProperties(
   schema: SpecNode,
   spec?: SpecNode,
 ): Record<string, ParsedSchemaProperty> {
-  const properties: Record<string, ParsedSchemaProperty> = {};
   const requiredFields = requiredOf(schema);
-
-  for (const [propName, propSchema] of Object.entries(nodeAt(schema, "properties") ?? {})) {
-    properties[propName] = convertProperty(
+  /* Built from entries, so a field named `__proto__` is a field of its own like any other. */
+  return Object.fromEntries(
+    Object.entries(nodeAt(schema, "properties") ?? {}).map(([propName, propSchema]) => [
       propName,
-      asNode(propSchema),
-      requiredFields.has(propName),
-      spec,
-    );
-  }
-  return properties;
+      convertProperty(propName, asNode(propSchema), requiredFields.has(propName), spec),
+    ]),
+  );
 }
 
 /* The fields a schema requires, as the names it lists. */

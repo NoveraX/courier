@@ -8,6 +8,7 @@
  * named `host}`, which no caller could supply.
  */
 
+import { defineOwn } from "../define-own";
 import { inferSchemaFromValue } from "./infer-schema";
 import { pathParamName } from "./path-utils";
 import { withoutHost } from "./postman-base";
@@ -107,7 +108,7 @@ export function requestBody(body: SpecNode | undefined): ParsedSchema | null {
   for (const field of fields) {
     const key = textAt(field, "key");
     if (key === undefined || field.disabled === true) continue;
-    shape[key] = fieldOf(field, "value") ?? "";
+    defineOwn(shape, key, fieldOf(field, "value") ?? "");
   }
   return Object.keys(shape).length > 0 ? inferSchemaFromValue("RequestBody", shape) : null;
 }

@@ -1,3 +1,4 @@
+import { defineOwn } from "../define-own";
 import type { ParsedEndpoint, ParsedParameter, ParsedSchema, ParsedSchemaProperty } from "./types";
 
 type Direction = "read" | "write";
@@ -46,8 +47,9 @@ function fieldsVariant(
   const required = new Set(declared ?? []);
   for (const [name, prop] of Object.entries(fields)) {
     if (prop.direction !== undefined && prop.direction !== to) continue;
-    properties[name] = propertyVariant(prop, to, inputs);
-    if (properties[name]?.required) required.add(name);
+    const variant = propertyVariant(prop, to, inputs);
+    defineOwn(properties, name, variant);
+    if (variant.required) required.add(name);
   }
   return { properties, required: [...required] };
 }

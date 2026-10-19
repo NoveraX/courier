@@ -2,6 +2,7 @@
  * Converts a schema composed with `allOf` into the one it adds up to.
  */
 
+import { defineOwn } from "../define-own";
 import { mergedComposition } from "./recursive-compositions";
 
 import { referencedSchema } from "./referenced-schema";
@@ -46,7 +47,9 @@ function merged(
   let enumeration: unknown;
   let type: unknown = "object";
   for (const sub of flattenAllOf(listAt(schema, "allOf"), spec)) {
-    Object.assign(properties, nodeAt(sub, "properties"));
+    for (const [key, value] of Object.entries(nodeAt(sub, "properties") ?? {})) {
+      defineOwn(properties, key, value);
+    }
     required.push(...listAt(sub, "required"));
     if (sub.enum) enumeration = sub.enum;
     if (sub.type) type = sub.type;

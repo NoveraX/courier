@@ -4,6 +4,7 @@
  * generated client entirely.
  */
 
+import { defineOwn } from "../define-own";
 import { collectionEncoding } from "./field-encoding";
 import { asNode, fieldOf, type SpecNode, textAt } from "./spec-node";
 import { formMediaType } from "./swagger2-media-types";
@@ -35,8 +36,9 @@ export function withFormBody(
   for (const field of fields) {
     const name = textAt(field, "name");
     if (name === undefined) continue;
-    properties[name] = fieldSchema(field);
-    if (field.type === "array") encoding[name] = collectionEncoding(field.collectionFormat);
+    defineOwn(properties, name, fieldSchema(field));
+    if (field.type === "array")
+      defineOwn(encoding, name, collectionEncoding(field.collectionFormat));
     if (field.required) required.push(name);
   }
   const content = {

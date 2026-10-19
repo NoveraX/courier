@@ -8,6 +8,7 @@
  * Kubernetes'.
  */
 
+import { defineOwn } from "../define-own";
 import { isOperationKey } from "./http-methods";
 import { parseOpenApi3 } from "./parse-openapi3";
 import { resolveRef } from "./ref-utils";
@@ -50,7 +51,7 @@ function convertPaths(spec: SpecNode): SpecNode {
       if (!isOperationKey(method) || !isNode(operation)) continue;
       converted[method] = withResponses(withBody(operation, spec), spec);
     }
-    paths[path] = converted;
+    defineOwn(paths, path, converted);
   }
   return paths;
 }
@@ -103,9 +104,13 @@ function withResponses(op: SpecNode, spec: SpecNode): SpecNode {
     const ref = textAt(written, "$ref");
     const response = ref ? resolveRef(spec, ref) : written;
     const schema = fieldOf(response, "schema");
-    converted[code] = schema
-      ? { description: fieldOf(response, "description"), content: { [mediaType]: { schema } } }
-      : written;
+    defineOwn(
+      converted,
+      code,
+      schema
+        ? { description: fieldOf(response, "description"), content: { [mediaType]: { schema } } }
+        : written,
+    );
   }
   return { ...op, responses: converted };
 }

@@ -1,3 +1,4 @@
+import { defineOwn } from "../define-own";
 import { declaredEncoding } from "./field-encoding";
 import { firstSchemaIn } from "./media-schemas";
 import { fieldOf, isNode, nodeAt, type SpecNode, textAt } from "./spec-node";
@@ -72,7 +73,7 @@ function fieldEncodings(encoding: SpecNode | undefined): Record<string, FieldEnc
   const fields: Record<string, FieldEncoding> = {};
   for (const [name, entry] of Object.entries(encoding)) {
     const declared = declaredEncoding(fieldOf(entry, "style"), fieldOf(entry, "explode"));
-    if (declared) fields[name] = declared;
+    if (declared) defineOwn(fields, name, declared);
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
 }

@@ -2,6 +2,7 @@
  * Infer ParsedSchema from runtime JavaScript values (Postman/HAR imports).
  */
 
+import { defineOwn } from "../define-own";
 import type { ParsedSchema, ParsedSchemaProperty } from "./types";
 
 export function inferSchemaFromValue(name: string, value: unknown): ParsedSchema {
@@ -20,13 +21,13 @@ export function inferSchemaFromValue(name: string, value: unknown): ParsedSchema
       /* A nested object or array has a shape of its own: a list is typed by
          its first element, an object by its own fields. */
       const nested = `${name}${key.charAt(0).toUpperCase()}${key.slice(1)}`;
-      properties[key] = {
+      defineOwn(properties, key, {
         type: propertyType(val),
         required: true,
         ...(Array.isArray(val) &&
           val.length > 0 && { items: inferSchemaFromValue(`${nested}Item`, val[0]) }),
         ...(isFields(val) && { shape: inferSchemaFromValue(nested, val) }),
-      };
+      });
     }
     return { name, type: "object", properties, required: Object.keys(properties) };
   }

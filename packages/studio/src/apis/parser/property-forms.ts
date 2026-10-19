@@ -2,6 +2,7 @@
  * The forms a property's schema can take, told apart before it is converted.
  */
 
+import { defineOwn } from "../define-own";
 import { acceptsNull, stripNull } from "./nullable-schema";
 import { normalizeTypeArray } from "./schema-conversion";
 import { asNode, fieldOf, isNode, listAt, type SpecNode, textAt } from "./spec-node";
@@ -103,7 +104,9 @@ export function soleMember(members: SpecNode[]): SpecNode {
   const reference = members.find((member) => member?.$ref);
   if (reference) return annotated(reference, members);
   const merged: SpecNode = {};
-  for (const member of members) Object.assign(merged, member);
+  for (const member of members) {
+    for (const [key, value] of Object.entries(member ?? {})) defineOwn(merged, key, value);
+  }
   return merged;
 }
 

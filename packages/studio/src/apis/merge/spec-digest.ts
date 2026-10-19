@@ -4,6 +4,7 @@
  * enums, nested schemas, and other heavy fields.
  */
 
+import { defineOwn } from "../define-own";
 import type { ParsedEndpoint, ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import type { DigestEndpoint, DigestGroup, DigestSchema, SpecDigest } from "./types";
 
@@ -41,7 +42,7 @@ function digestSchemas(schemas: Record<string, ParsedSchema>): Record<string, Di
     if (schema.properties) {
       digest.properties = {};
       for (const [prop, val] of Object.entries(schema.properties)) {
-        digest.properties[prop] = { type: val.type, required: val.required };
+        defineOwn(digest.properties, prop, { type: val.type, required: val.required });
       }
     }
     result[name] = digest;

@@ -4,6 +4,7 @@ import { computeSpecHash, type ParsedSpec } from "../apis";
 import { filterSpec } from "../apis/filter-spec";
 import { assertGeneratable } from "../apis/generator/generatable-spec";
 import { InvalidSpecError } from "../apis/parser/invalid-spec-error";
+import { jsonText } from "../apis/registry/json-text";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { ImportTransformError } from "./import-transform-error";
 import { isParsedSpec } from "./parsed-spec-guard";
@@ -33,7 +34,7 @@ async function transformed(
   transform: NonNullable<CourierImportEntry["transform"]>,
   spec: ParsedSpec,
 ): Promise<ParsedSpec> {
-  const copy = structuredClone(spec);
+  const copy = jsonCopy(spec);
   let result: unknown;
   try {
     result = await transform(copy);
@@ -118,4 +119,12 @@ export async function declaredSpec(
 ): Promise<DeclaredSpec> {
   const specHash = computeSpecHash(spec);
   return { spec: entry === undefined ? spec : await specAsDeclared(name, entry, spec), specHash };
+}
+
+/* A copy of the spec through its JSON text, which no depth the parser reads stops, as structuredClone's recursion did some 700 objects deep. */
+function jsonCopy(spec: ParsedSpec): ParsedSpec {
+  const copy: unknown = JSON.parse(jsonText(spec) ?? "null");
+  if (!isParsedSpec(copy))
+    throw new Error("A specification's JSON text read back as no specification");
+  return copy;
 }

@@ -1,8 +1,11 @@
 import { escapeForRegex } from "../escape-for-regex";
 import type { ParsedImport } from "../merge/types";
 
+/* Not a name's part, nor a member read through a dot — but spread, `...Name`, it is the name. */
+const NOT_AFTER = "(?<![\\w$])(?<!(?<!\\.\\.)\\.)";
+
 function uses(text: string, name: string, member = false): boolean {
-  return new RegExp(`(?<![\\w$.])${escapeForRegex(name)}${member ? "\\." : "(?![\\w$])"}`).test(
+  return new RegExp(`${NOT_AFTER}${escapeForRegex(name)}${member ? "\\." : "(?![\\w$])"}`).test(
     text,
   );
 }

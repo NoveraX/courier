@@ -11,7 +11,8 @@ import type { ParsedSecurityScheme, SpecNode } from "./types";
  * A pointer into another file, or one this document never defines, resolves
  * to nothing rather than to a partly-walked object — callers decide what an
  * unresolved reference means. `~1` and `~0` are the escapes a pointer uses for
- * a slash and a tilde inside a key.
+ * a slash and a tilde inside a key; a pointer whose percent escape decodes to
+ * no text names no key, and resolves to nothing too.
  */
 export function resolveRef(spec: SpecNode, ref: string): SpecNode {
   if (typeof ref !== "string" || !ref.startsWith("#/")) return {};
@@ -19,13 +20,27 @@ export function resolveRef(spec: SpecNode, ref: string): SpecNode {
   let result: unknown = spec;
   for (const part of ref.slice(2).split("/")) {
     if (!isNode(result)) return {};
-    result = fieldOf(result, decodePointer(part));
+    const key = decodePointer(part);
+    if (key === undefined) return {};
+    result = fieldOf(result, key);
   }
   return asNode(result);
 }
 
-function decodePointer(part: string): string {
-  return decodeURIComponent(part).replace(/~1/g, "/").replace(/~0/g, "~");
+/* A pointer's segment as the key it names, or `undefined` when its percent escapes decode to no text. */
+function decodePointer(part: string): string | undefined {
+  const decoded = percentDecoded(part);
+  return decoded?.replace(/~1/g, "/").replace(/~0/g, "~");
+}
+
+function percentDecoded(part: string): string | undefined {
+  if (!part.includes("%")) return part;
+  try {
+    return decodeURIComponent(part);
+  } catch (error) {
+    if (error instanceof URIError) return undefined;
+    throw error;
+  }
 }
 
 /* A component schema, as OpenAPI 3 and Swagger 2.0 each address one. */
@@ -38,7 +53,8 @@ const COMPONENT = /^#\/(?:components\/schemas|definitions)\/([^/]+)$/;
  * @param ref - The reference
  * @returns The component's name, or `undefined` for a reference pointing
  *   anywhere else — into a path, a response, another schema's property, or
- *   another document
+ *   another document — and for a name whose percent escape decodes to no
+ *   text, which no component is named by
  * @example
  * ```ts
  * componentSchemaName("#/components/schemas/Pet"); // "Pet"

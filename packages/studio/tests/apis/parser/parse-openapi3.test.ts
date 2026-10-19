@@ -139,3 +139,50 @@ describe("a parameter written as a reference this document does not declare", ()
     ]);
   });
 });
+
+describe("a reference whose percent escape is malformed", () => {
+  it("types the schema it names as one this document does not define, and parses the rest", () => {
+    const parsed = parseSpec(
+      document(
+        { "/pets": { get: { operationId: "listPets", ...answers } } },
+        {
+          schemas: {
+            Pet: {
+              type: "object",
+              properties: { id: { type: "string" }, owner: { $ref: "#/components/schemas/%zz" } },
+            },
+          },
+        },
+      ),
+    );
+
+    expect(parsed.schemas.Pet?.properties?.id?.type).toBe("string");
+    expect(parsed.schemas.Pet?.properties?.owner?.type).toBe("any");
+    expect(parsed.groups.flatMap((group) => group.endpoints.map((e) => e.name))).toEqual([
+      "listPets",
+    ]);
+  });
+
+  it("leaves out a parameter or a path item it names, and says so", () => {
+    const parsed = parseSpec(
+      document({
+        "/a": {
+          get: {
+            operationId: "getA",
+            parameters: [{ $ref: "#/components/parameters/%E0%A4%A" }],
+            ...answers,
+          },
+        },
+        "/b": { $ref: "#/components/pathItems/%C3%28" },
+      }),
+    );
+
+    expect(parsed.skipped.map(({ path, reason }) => [path, reason])).toEqual([
+      [
+        "/a",
+        "parameter #/components/parameters/%E0%A4%A is not in this document, so it is left out",
+      ],
+      ["/b", "path item references #/components/pathItems/%C3%28, which is not in this document"],
+    ]);
+  });
+});

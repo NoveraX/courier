@@ -6,7 +6,17 @@
 import { describe, expect, it } from "vitest"
 
 import { docsNav } from "@/site/content/docs-nav"
-import { llmsIndex } from "@/site/content/llms"
+import { LLMS_HEADERS, llmsIndex } from "@/site/content/llms"
+
+describe("the llms files' headers", () => {
+  it("say plain text, kept out of search results and checked with the site on every request", () => {
+    expect(LLMS_HEADERS).toEqual({
+      "content-type": "text/plain; charset=utf-8",
+      "x-robots-tag": "noindex",
+      "cache-control": "public, max-age=0, must-revalidate",
+    })
+  })
+})
 
 describe("llms.txt", () => {
   const text = llmsIndex(

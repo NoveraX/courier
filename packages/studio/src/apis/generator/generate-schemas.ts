@@ -21,6 +21,7 @@ import { ownFieldsHelper } from "./own-fields-helper";
 import { schemaComponents } from "./schema-components";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
+import { schemasValidatorImport } from "./schemas-validator-import";
 import type { GeneratedFile, GeneratorSettings, ResolvedGenerateOptions } from "./types";
 
 /** A schemas or types module the generator wrote, and the names it exports. */
@@ -35,28 +36,26 @@ export function generateSchemasFile(
   options: ResolvedGenerateOptions,
   groupName?: string,
 ): SchemaModule {
-  const lines: string[] = [];
-
-  if (options.validation === "zod") {
-    lines.push(`import { z } from "zod";`, "");
-  } else if (options.validation === "valibot") {
-    lines.push(`import * as v from "valibot";`, "");
-  } else if (options.validation === "arktype") {
-    lines.push(`import { type } from "arktype";`, "");
-  }
-
+  const body: string[] = [];
   /* An object whose fields include a name every object inherits is written through `_ownFields`. */
   const helper = holdsOwnFields(Object.values(schemas))
     ? ownFieldsHelper(options.validation)
     : null;
+  let cycle = false;
   if (options.validation === "arktype") {
-    writeArkTypeFile(lines, schemas, options, helper);
+    cycle = writeArkTypeFile(body, schemas, options, helper);
   } else {
-    if (helper !== null) lines.push(helper);
+    if (helper !== null) body.push(helper);
     /* A cycle cannot be sorted so every reference points backwards; its
        members are written lazily instead. */
-    writeEntries(lines, topoSortSchemas(schemas), options, findCyclicSchemas(schemas));
+    writeEntries(body, topoSortSchemas(schemas), options, findCyclicSchemas(schemas));
   }
+  /* ArkType's types before its named import, as linters order them; the library only when called. */
+  const imports = [
+    ...(cycle ? [`import type * as ark from "arktype";`] : []),
+    ...schemasValidatorImport(options.validation, body),
+  ];
+  const lines = imports.length > 0 ? [...imports, "", ...body] : body;
 
   return {
     file: {
@@ -72,18 +71,16 @@ export function generateSchemasFile(
 /**
  * ArkType builds each schema as it is declared, so schemas are written in an
  * order where every reference points backwards — except within a cycle, whose
- * members name each other lazily.
+ * members name each other lazily. Whether one is, which its types import.
  */
 function writeArkTypeFile(
   lines: string[],
   schemas: Record<string, ParsedSchema>,
   options: GeneratorSettings,
   helper: string | null,
-): void {
+): boolean {
   const components = schemaComponents(schemas);
   const hasCycle = components.some((component) => component.cyclic);
-  /* Before the named import of the same module, as linters order them. */
-  if (hasCycle) lines.unshift(`import type * as ark from "arktype";`);
   if (hasCycle) lines.push(ARKTYPE_CYCLE_HELPER);
   if (helper !== null) lines.push(helper);
 
@@ -101,6 +98,7 @@ function writeArkTypeFile(
   }
 
   if (hasCycle) lines.push("declared = true;", "");
+  return hasCycle;
 }
 
 /** Write one declaration per schema, in the order given. */

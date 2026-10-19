@@ -46,6 +46,26 @@ describe("Studio's storage, as its pages are told it", () => {
     expect(emit).toHaveBeenCalledWith("storage:size", { onDisk: expect.any(Number) });
   });
 
+  it("sends every page the live requests and their pins once the sessions are cleared", () => {
+    const { storage, emit } = wired();
+
+    storage.routes.announce(["sessions"]);
+
+    expect(emit.mock.calls.map(([event]) => event).slice(0, 3)).toEqual([
+      "storage:cleared",
+      "events:replay",
+      "requests:pinned",
+    ]);
+  });
+
+  it("sends no live requests for a clear that leaves the sessions be", () => {
+    const { storage, emit } = wired();
+
+    storage.routes.announce(["requests", "mockLogs"]);
+
+    expect(emit.mock.calls.map(([event]) => event)).not.toContain("events:replay");
+  });
+
   it("tells every page the size every ten minutes, until stopped", () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const { storage, emit } = wired();

@@ -22,7 +22,8 @@ export interface StorageWiring {
  * Wire Studio's storage to its pages: each is told the room the database
  * takes as it connects, every ten minutes, and after a clear — so a page
  * past the size set says so — and every page is told what a clear took, to
- * let go of its own copy.
+ * let go of its own copy; once the saved sessions go, it is sent the live
+ * requests too, which a page that showed one goes back to.
  *
  * @param deps - Studio's stores, the project, its mocks, and the pages' namespace
  * @returns The size, the routes' needs, and how to stop
@@ -51,6 +52,12 @@ export function wireStorage(deps: {
       mocks,
       announce: (kinds) => {
         uiNamespace.emit("storage:cleared", { kinds });
+        /* A page that showed a saved session goes back to the live requests:
+           sent them and their pins, it shows them rather than nothing. */
+        if (kinds.includes("sessions")) {
+          uiNamespace.emit("events:replay", stores.requestLog.replayPayload());
+          uiNamespace.emit("requests:pinned", stores.pins.ids());
+        }
         tell();
       },
     },

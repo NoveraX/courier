@@ -114,6 +114,8 @@ describe("a tool's schemas", () => {
         .variables(z.string().min(1))
         .agent({ description: "S", access: "write" }),
       byPath: endpoint.get("items/:id/parts/:part").agent(read("P")),
+      byMethod: endpoint.post("ops/:name::cancel").agent({ description: "C", access: "write" }),
+      byRepeated: endpoint.get(":id/copies/:id").agent(read("R")),
       byUnion: endpoint
         .post("u")
         .variables(z.union([z.object({ a: z.string() }), z.object({ b: z.number() })]))
@@ -181,6 +183,19 @@ describe("a tool's schemas", () => {
       required: ["id", "part"],
     });
     expect(byName.get("byPath")?.takesVariables).toBe(false);
+  });
+
+  it("names no parameter for a colon the path sends as written, and each parameter once", () => {
+    expect(byName.get("byMethod")?.inputSchema).toEqual({
+      type: "object",
+      properties: { name: { type: ["string", "number"] } },
+      required: ["name"],
+    });
+    expect(byName.get("byRepeated")?.inputSchema).toEqual({
+      type: "object",
+      properties: { id: { type: ["string", "number"] } },
+      required: ["id"],
+    });
   });
 });
 

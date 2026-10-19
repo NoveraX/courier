@@ -1,5 +1,6 @@
 import {
   type PlacedEndpoint,
+  pathParamNames,
   standardJsonSchema,
   withDefaultsShown,
 } from "@noverax/courier/internal";
@@ -14,8 +15,6 @@ export interface ToolSchemas {
   readonly takesVariables: boolean;
   readonly outputSchema: JSONSchema | undefined;
 }
-
-const PATH_PARAM = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
 /**
  * What a tool takes and answers with, as JSON Schema, from its endpoint's
@@ -72,9 +71,10 @@ export function toolSchemasOf(
   };
 }
 
-/* Each `:name` of the path, required; anything beside them may be what a type alone declared. */
+/* Each `:name` of the path, required once however often the path holds it; anything beside them
+   may be what a type alone declared. */
 function pathParamsSchema(path: string): JSONSchema {
-  const names = [...path.matchAll(PATH_PARAM)].map((match) => match[1] as string);
+  const names = [...new Set(pathParamNames(path))];
   if (names.length === 0) return { type: "object" };
   const properties = Object.fromEntries(
     names.map((name) => [name, { type: ["string", "number"] }]),

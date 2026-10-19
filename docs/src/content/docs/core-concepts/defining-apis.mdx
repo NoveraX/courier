@@ -1,4 +1,4 @@
-export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-10-19" }
 
 ## Overview
 
@@ -195,6 +195,8 @@ endpoint.get(":id/posts/:postId").variables<{ id: string; postId: string }>().re
 // caller.users.getUserPost({ id: "1", postId: "42" })
 // → GET /users/1/posts/42
 ```
+
+A parameter may share its segment with text, as `:id.json` does, and `::` is one colon the path sends as written, for a Google-style method: `index::inspect` is requested as `index:inspect`.
 
 A parameter can also come from `pathOptions` on the source or the group, so the variables type does not have to list it. One that neither provides fails the call before any request is made, with an `HTTPError` 400 whose message names it: `Missing required path parameter "postId": pass it in the variables, or return it from pathOptions`. See [Path Parameters](/docs/advanced/path-params).
 

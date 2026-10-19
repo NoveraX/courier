@@ -1,8 +1,8 @@
-export const metadata = { title: "Path Parameters", description: "Dynamic URL segments using :param syntax with built-in regex compilation.", mode: "both", updated: "2026-09-29" }
+export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with the :param syntax, filled from the variables or pathOptions, and a colon sent as written for Google-style methods.", mode: "both", updated: "2026-10-19" }
 
 ## Basic syntax
 
-Use the `:paramName` syntax in URL paths to define dynamic segments. Courier compiles these paths using an internal regex parser and substitutes values from variables or `pathOptions`:
+Use the `:paramName` syntax in URL paths to define dynamic segments. Courier fills each one with a value from the variables or from `pathOptions`, encoded into its segment:
 
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -52,6 +52,62 @@ export const articles = defineGroup({
 ```
 
 Variables that fill no parameter by name — a form, a raw body, a list — are not checked, and neither are the parameters of a group's prefix, which `pathOptions` may supply (see below).
+
+## How a path is read
+
+- A parameter is a colon and a name: a letter or `_`, then letters, digits and `_`. The name ends at the first other character, so a parameter may share its segment with text or with another parameter: `:id.json`, `flights/:from-:to`.
+- A colon before anything else — a digit, a dash, the end of the path — is sent as written: `at/12:30`.
+- `::` is one colon sent as written, even before a name. See the next section.
+- The scheme and host of an absolute URL are never read: a port or an IPv6 address, as in `https://[2001:db8::1]:8443/users/:id`, holds no parameter.
+
+The types read a path the same way, so the variables an endpoint asks for are the parameters its requests fill.
+
+## A colon the path sends as written
+
+Google's APIs name a method on a resource after a colon — `index:inspect`, `{name}:cancel`, `spreadsheets/{spreadsheetId}:batchUpdate` — where a single colon before a word would start a parameter. Write the colon twice and it is sent once:
+
+```ts title="api/search-console.ts"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+type Inspection = { inspectionResult: { indexStatusResult: { verdict: string } } }
+
+const urlInspection = defineGroup({
+  prefix: "v1/urlInspection",
+  endpoints: {
+    // POST /v1/urlInspection/index:inspect, its variables as the JSON body
+    inspect: endpoint
+      .post("index::inspect")
+      .variables<{ inspectionUrl: string; siteUrl: string }>()
+      .response<Inspection>(),
+  },
+})
+
+export const searchConsole = defineApi({
+  baseURL: "https://searchconsole.googleapis.com",
+  groups: { urlInspection },
+})
+```
+
+A parameter can stand right before such a colon, and the doubled colon is no parameter to the types:
+
+```ts title="Custom methods"
+const operations = defineGroup({
+  prefix: "v1",
+  endpoints: {
+    // variables: { name: string | number } → POST /v1/op-1:cancel
+    cancel: endpoint.post(":name::cancel").response<void>(),
+    // POST /v1/sheet-1:batchUpdate, { requests } as the body
+    batchUpdate: endpoint
+      .post(":spreadsheetId::batchUpdate")
+      .variables<{ spreadsheetId: string; requests: unknown[] }>()
+      .response<void>(),
+  },
+})
+```
+
+Encoding the colon is no way around it: `index%3Ainspect` is another path, and Google's API does not answer it. Everything that reads the path reads `::` the same way: an [OpenAPI document](/docs/advanced/openapi) gives the path with one colon, `/v1/urlInspection/index:inspect`; [Studio's import](/docs/studio/import-api) doubles a colon a specification's path writes as text; and the mock server serves the endpoint where the client sends it.
 
 ## Variables as path params
 
@@ -189,19 +245,6 @@ A key `pathOptions` returns belongs to the server. A caller's variable of the sa
 
 To let the caller choose a path parameter, leave it out of `pathOptions` and declare it in the endpoint's variables.
 </Callout>
-
-## Path compilation caching
-
-Courier caches compiled path functions for performance. Each unique path string is compiled once using an internal regex parser and reused across all subsequent requests:
-
-```typescript
-// Path compilation functions are cached for performance.
-// The first call to compile "/users/:id" creates and caches the regex.
-// Subsequent calls reuse the cached function.
-
-// This means paths like "/users/:id" are compiled once,
-// no matter how many times they are called with different variables.
-```
 
 <Callout variant="warning" title="Missing and unsafe path params">
 A path parameter that neither `pathOptions` nor the variables provide, or that is `undefined` or `null`, fails the call with an `HTTPError` 400 before any request is made. Its `message`, and `data.message` through the proxy too, name the parameter and where its value comes from: `Missing required path parameter "id": pass it in the variables, or return it from pathOptions`. So does a value of `""`, `"."` or `".."`: each would address a different route than the endpoint declares — `..` one level up, even when encoded — so it is refused rather than sent. Any other value, including the word `"undefined"`, is encoded into its segment as it is.

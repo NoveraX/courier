@@ -4,141 +4,101 @@
 
 import { groupNameClaimer } from "./group-name-claimer";
 import { groupNameOf } from "./group-name-of";
-import { isSupportedMethod } from "./http-methods";
 import { collectionVariables, commonBase, requestBase } from "./postman-base";
-import {
-  authScheme,
-  requestBody,
-  requestBodyMediaType,
-  requestParameters,
-  requestPath,
-} from "./postman-request";
+import { type PostmanCollection, postmanEndpoint } from "./postman-endpoint";
+import { walkPostmanFolders } from "./postman-folders";
+import { authScheme } from "./postman-request";
 import { gatheredPaths, sharedPrefix } from "./shared-path";
-import { asNode, fieldOf, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
+import { listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import { topLevelGroup } from "./top-level";
-import type {
-  ParsedEndpoint,
-  ParsedGroup,
-  ParsedSecurityScheme,
-  ParsedSpec,
-  SkippedOperation,
-} from "./types";
+import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import { convertPathParams, toCamelCase } from "./utils";
+import { convertPathParams } from "./utils";
 
+/**
+ * Read a Postman collection: a group for each folder that holds requests,
+ * named after the folder, and the collection's own requests in the API
+ * itself. Folders are walked without recursion, however deep they nest.
+ *
+ * @param collection - The collection, as read from its JSON
+ * @returns The parsed specification
+ * @example
+ * ```ts
+ * parsePostman(JSON.parse(text)).groups.map((group) => group.name); // → ["users", "orders"]
+ * ```
+ */
 export function parsePostman(collection: SpecNode): ParsedSpec {
   const info = nodeAt(collection, "info");
-  const title = textAt(info, "name") ?? "Postman Collection";
-  const version = textAt(info, "version") ?? "1.0.0";
-
+  const items = listAt(collection, "item");
+  const variables = collectionVariables(collection);
+  const auth = authScheme(nodeAt(collection, "auth"));
+  const read: PostmanCollection = {
+    variables,
+    /* The base most requests share, not whichever host the first request
+       names. */
+    baseURL: commonBase(requestsIn(items).map((request) => requestBase(request.url, variables))),
+    auth,
+    skipped: [],
+    securitySchemes: auth ? [auth] : [],
+  };
   const groups: ParsedGroup[] = [];
   const claimGroupName = groupNameClaimer();
-  const skipped: SkippedOperation[] = [];
-  const securitySchemes: ParsedSecurityScheme[] = [];
-  const collectionAuth = authScheme(nodeAt(collection, "auth"));
-  if (collectionAuth) securitySchemes.push(collectionAuth);
-  const variables = collectionVariables(collection);
-  /* The base most requests share, not whichever host the first request
-     names. */
-  const baseURL = commonBase(
-    requestsIn(listAt(collection, "item")).map((request) => requestBase(request.url, variables)),
+  walkPostmanFolders(
+    items,
+    (item, request, folder) => postmanEndpoint(item, request, folder, read),
+    (folder, endpoints) => {
+      if (endpoints.length === 0) return;
+      /* `null` for the collection itself, whose requests sit in no folder and so in no group. */
+      if (folder === null) groups.unshift(topLevelGroup(endpoints));
+      else groups.push(folderGroup(folder, endpoints, claimGroupName));
+    },
   );
 
-  /* `null` for the collection itself, whose requests sit in no folder and so in no group. */
-  function processItems(items: readonly unknown[], groupName: string | null) {
-    const endpoints: ParsedEndpoint[] = [];
-
-    for (const entry of items) {
-      const item = asNode(entry);
-      if (item.item) {
-        processItems(listAt(item, "item"), textAt(item, "name") ?? groupName ?? "");
-        continue;
-      }
-
-      const request = nodeAt(item, "request");
-      if (!request) continue;
-
-      const method = (textAt(request, "method") ?? "GET").toLowerCase();
-      const path = requestPath(request.url);
-      const base = requestBase(request.url, variables);
-
-      if (!isSupportedMethod(method)) {
-        skipped.push({
-          method: method.toUpperCase(),
-          path,
-          reason: `${method.toUpperCase()} has no counterpart in the endpoint builder`,
-        });
-        continue;
-      }
-
-      const ownAuth = authScheme(nodeAt(request, "auth"));
-      if (ownAuth && !securitySchemes.some((s) => s.name === ownAuth.name)) {
-        securitySchemes.push(ownAuth);
-      }
-      const body = requestBody(nodeAt(request, "body"));
-      const mediaType = body ? requestBodyMediaType(nodeAt(request, "body")) : undefined;
-
-      endpoints.push({
-        name: toCamelCase(textAt(item, "name") ?? `${method}${path}`),
-        operationId: null,
-        httpMethod: method,
-        path: convertPathParams(path),
-        fullPath: path,
-        description: textAt(item, "name") ?? "",
-        secured: Boolean(ownAuth ?? collectionAuth),
-        requestBody: body,
-        ...(mediaType && { requestBodyMediaType: mediaType }),
-        parameters: requestParameters(request.url),
-        responseSchema: null,
-        tags: groupName === null ? [] : [groupName],
-        /* A request written with a host of its own is still sent there. */
-        ...(base !== undefined && base !== baseURL && { origin: base }),
-      });
-    }
-
-    if (groupName === null) {
-      if (endpoints.length > 0) groups.unshift(topLevelGroup(endpoints));
-      return;
-    }
-    if (endpoints.length > 0) {
-      const shared = gatheredPaths(endpoints.map((e) => e.fullPath));
-      const prefix = sharedPrefix(shared);
-      groups.push({
-        /* Two folders may carry the same name; one group file would have
-           overwritten the other. */
-        name: claimGroupName(groupNameOf(groupName, shared.segments)),
-        description: "",
-        prefix: convertPathParams(prefix),
-        endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
-          ...e,
-          path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
-        })),
-      });
-    }
-  }
-
-  processItems(listAt(collection, "item"), null);
-
   return {
-    title,
-    version,
+    title: textAt(info, "name") ?? "Postman Collection",
+    version: textAt(info, "version") ?? "1.0.0",
     description: "",
     /* Every request URL carries the host; hardcoding "/" pointed the client
        at the caller's own origin. */
-    baseURL: baseURL ?? "/",
+    baseURL: read.baseURL ?? "/",
     format: "postman",
     groups,
     schemas: {},
-    securitySchemes,
-    skipped,
+    securitySchemes: read.securitySchemes,
+    skipped: read.skipped,
   };
 }
 
-/** Every request in the collection, however deep its folders nest. */
+/* A folder's requests as a group, under the folder's name: two folders may carry the same name,
+   and one group file would have overwritten the other. */
+function folderGroup(
+  folder: string,
+  endpoints: ParsedEndpoint[],
+  claimGroupName: (name: string) => string,
+): ParsedGroup {
+  const shared = gatheredPaths(endpoints.map((e) => e.fullPath));
+  const prefix = sharedPrefix(shared);
+  return {
+    name: claimGroupName(groupNameOf(folder, shared.segments)),
+    description: "",
+    prefix: convertPathParams(prefix),
+    endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({
+      ...e,
+      path: convertPathParams(e.fullPath.slice(prefix.length) || "/"),
+    })),
+  };
+}
+
+/** Every request in the collection, however deep its folders nest, in the order it lists them. */
 function requestsIn(items: readonly unknown[]): SpecNode[] {
-  return items.flatMap((item): SpecNode[] => {
-    if (fieldOf(item, "item")) return requestsIn(listAt(item, "item"));
-    const request = nodeAt(item, "request");
-    return request ? [request] : [];
-  });
+  const requests: SpecNode[] = [];
+  walkPostmanFolders(
+    items,
+    (_, request) => {
+      requests.push(request);
+      return undefined;
+    },
+    () => undefined,
+  );
+  return requests;
 }

@@ -179,6 +179,23 @@ describe("parsePostman, group names", () => {
     ]);
   });
 
+  it("reads folders nested 10 000 deep", () => {
+    /* Written as text: JSON.stringify itself recurses, and runs out of stack at this depth. */
+    const deep =
+      '{"name":"Deep","item":[{"name":"Ping","request":{"method":"GET","url":"https://acme.test/ping"}}]}';
+    const levels = Array.from(
+      { length: 10_000 },
+      (_, depth) => `{"name":"Level ${depth}","item":[`,
+    );
+    const folder = `${levels.join("")}${deep}${"]}".repeat(10_000)}`;
+    const info =
+      '"info":{"name":"Acme","schema":"https://schema.getpostman.com/json/collection/v2.1.0/"}';
+
+    expect(parseSpec(`{${info},"item":[${folder}]}`).groups.map((group) => group.name)).toEqual([
+      "deep",
+    ]);
+  });
+
   it("numbers three folders of one long name within 128", () => {
     const long = "f".repeat(140);
 

@@ -12,7 +12,7 @@ import type { GeneratorSettings } from "./types";
  * @returns The declarations, or `null`
  * @example
  * ```ts
- * if (holdsOwnFields(schemas)) lines.push(ownFieldsHelper(options.validation) ?? "");
+ * if (callsOwnFields(declarations.join("\n"))) lines.push(ownFieldsHelper(options.validation) ?? "");
  * ```
  */
 export function ownFieldsHelper(validation: GeneratorSettings["validation"]): string | null {

@@ -1,7 +1,7 @@
 import type { ParsedSchema } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
+import { callsOwnFields } from "./calls-own-fields";
 import { type EndpointContext, hasSchemaConstant, schemaConstant } from "./endpoint-context";
-import { holdsOwnFields } from "./holds-own-fields";
 import { collectRefsDeep } from "./schema-refs";
 import { getSchemaRefName, schemaToValidation } from "./schema-utils";
 
@@ -31,9 +31,10 @@ export function declaredSchema(
   if (!emitsSchemas(context.options) || !schema || hasFields(schema)) return null;
   if (!namesDeclared(schema, context)) return null;
   context.uses.validator = true;
+  const written = schemaToValidation(schema, context.options);
   /* An object inside it whose fields include a name every object inherits is written through `_ownFields`. */
-  if (holdsOwnFields([schema])) context.uses.ownFields = true;
-  return schemaToValidation(schema, context.options);
+  if (callsOwnFields(`(${written});`)) context.uses.ownFields = true;
+  return written;
 }
 
 /* An object with fields; a map, which has none, is written as a record. */

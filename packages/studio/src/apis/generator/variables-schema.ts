@@ -1,10 +1,9 @@
 import { ownValue } from "../own-value";
-import { isInheritedName } from "../parser/inherited-names";
 import type { ParsedEndpoint, ParsedParameter, ParsedSchema } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
+import { callsOwnFields } from "./calls-own-fields";
 import { constantsDeclared, declaredSchema } from "./declared-schema";
 import { type EndpointContext, schemaConstant } from "./endpoint-context";
-import { holdsOwnFields } from "./holds-own-fields";
 import { ownsInheritedField } from "./owns-inherited-field";
 import {
   extendSchemaWithParams,
@@ -64,26 +63,18 @@ export function variablesSchema(
     ? ownedBody(ownValue(context.spec.schemas, ep.requestBody?.refName ?? ""))
     : null;
   if (kind !== "fields") {
-    if (ownsAny(params)) usesOwnFields(context);
-    return objectWithBody(body, params, bodyKey(ep), context.options, optional);
+    return written(objectWithBody(body, params, bodyKey(ep), context.options, optional), context);
   }
-  if (owned !== null || ownsAny(params)) usesOwnFields(context);
-  return extendSchemaWithParams(body, params, context.options, isObject, owned);
+  return written(extendSchemaWithParams(body, params, context.options, isObject, owned), context);
 }
 
-/* Parameters written through `_ownFields`: one named like a member every object inherits, or
-   one whose schema holds an object with a field so named. */
-function ownsAny(params: readonly ParsedParameter[]): boolean {
-  return (
-    params.some((param) => isInheritedName(param.name)) ||
-    holdsOwnFields(params.flatMap(parameterSchemas))
-  );
-}
-
-/* The variables write an object through `_ownFields`, which the file declares. */
-function usesOwnFields(context: EndpointContext): void {
+/* The variables' schema; one that writes an object through `_ownFields` has the file declare it,
+   and the library it calls imported. */
+function written(schema: string, context: EndpointContext): string {
+  if (!callsOwnFields(`(${schema});`)) return schema;
   context.uses.ownFields = true;
   context.uses.validator = true;
+  return schema;
 }
 
 /* A body written through `_ownFields`, and whether zod checks a field `__proto__` of it apart. */
@@ -101,8 +92,7 @@ function checkedParameters(ep: ParsedEndpoint, context: EndpointContext): string
   if (!parametersNeedChecks(params, context.spec.schemas)) return null;
   if (!constantsDeclared(params.flatMap(parameterSchemas), context)) return null;
   context.uses.validator = true;
-  if (ownsAny(params)) usesOwnFields(context);
-  return parametersSchema(params, context.options);
+  return written(parametersSchema(params, context.options), context);
 }
 
 /* Fields written inline are extracted as a type of their own, with the

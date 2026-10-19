@@ -124,6 +124,42 @@ const TEXT = `{
         "responses": { "204": { "description": "kept" } }
       }
     },
+    "/loose": {
+      "post": {
+        "operationId": "addLoose",
+        "tags": ["loose"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": { "id": { "type": "string" }, "constructor": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": { "toString": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/strict": {
       "post": {
         "operationId": "addStrict",
@@ -277,6 +313,25 @@ describe.each(LIBRARIES)("an object with inherited names, validated with %s", (v
     expect(refused).toBeInstanceOf(Error);
   });
 
+  it("checks a body and an answer the endpoint's own file writes, a list and a map of such objects", async () => {
+    let answer: unknown = { a: {} };
+    vi.stubGlobal("fetch", async () => Response.json(answer));
+    const addLoose = endpointAt(
+      loadGenerated(generated(validation), "src/api/shop/index.ts").shopApi,
+      "loose",
+      "addLoose",
+    );
+
+    const taken = await addLoose([{ id: "a" }]);
+    const refused = await addLoose([{ id: "a", constructor: 5 }]).catch((error: unknown) => error);
+    answer = { a: { toString: 5 } };
+    const wrong = await addLoose([{ id: "a" }]).catch((error: unknown) => error);
+
+    expect(taken).toEqual({ a: {} });
+    expect(refused).toBeInstanceOf(Error);
+    expect(wrong).toBeInstanceOf(Error);
+  });
+
   it("lists the fields of the variables in the Playground, and starts them with values it takes", async () => {
     const shop = loadGenerated(generated(validation), "src/api/shop/source.ts").shop;
     const map = extractSourceMap({ shop } as Parameters<typeof extractSourceMap>[0]);
@@ -321,6 +376,86 @@ describe.each(LIBRARIES)("an object with inherited names, validated with %s", (v
     ).toEqual([]);
   }, 60_000);
 });
+
+/* An object with an inherited name, set beside a reference: the field is written as the reference alone. */
+const OWNING = { type: "object", properties: { constructor: { type: "string" } } };
+
+const BESIDE = JSON.stringify({
+  openapi: "3.1.0",
+  info: { title: "Shop", version: "1" },
+  servers: [{ url: "https://shop.test" }],
+  components: {
+    schemas: {
+      Thing: { type: "object", properties: { id: { type: "string" } } },
+      Box: {
+        type: "object",
+        properties: {
+          thing: { $ref: "#/components/schemas/Thing", items: OWNING },
+          other: { $ref: "#/components/schemas/Thing", additionalProperties: OWNING },
+        },
+      },
+    },
+  },
+  paths: {
+    "/boxes": {
+      post: {
+        operationId: "addBox",
+        tags: ["boxes"],
+        parameters: [
+          {
+            name: "near",
+            in: "query",
+            schema: { $ref: "#/components/schemas/Thing", items: OWNING },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/Box" } } },
+        },
+        responses: {
+          "200": {
+            description: "ok",
+            content: {
+              "application/json": {
+                schema: {
+                  oneOf: [
+                    { $ref: "#/components/schemas/Thing", items: OWNING },
+                    { type: "string" },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+describe.each(LIBRARIES)(
+  "a reference with an inherited name beside it, written with %s",
+  (validation) => {
+    it("declares no _ownFields, which nothing calls, and compiles with every check on", () => {
+      const files = generateCode(
+        parseSpec(BESIDE),
+        { type: "openapi", outputDir: "src/api", validation, generateTypes: true },
+        "shop",
+      );
+      const dir = writeProject(`own-fields/beside-${validation}`, files, {});
+
+      expect(
+        files.filter((file) => file.content.includes("_ownFields")).map((file) => file.path),
+      ).toEqual([]);
+      expect(
+        compileProject(dir, ["src/api/shop/index.ts"], {
+          ...STRICT,
+          noUnusedLocals: true,
+          noUnusedParameters: true,
+        }),
+      ).toEqual([]);
+    }, 60_000);
+  },
+);
 
 describe("an object with inherited names, described", () => {
   it("is described as its fields are by zod, its field __proto__ among them", () => {

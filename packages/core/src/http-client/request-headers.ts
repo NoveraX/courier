@@ -2,8 +2,8 @@
  * Lay one set of request headers over another.
  *
  * A name present in both takes its value from `over`; every other header of
- * either set is kept. Nothing is filtered: both sets were written by the
- * application, not received from a browser.
+ * either set is kept, one named `__proto__` too. Nothing is filtered: both
+ * sets were written by the application, not received from a browser.
  *
  * @param base - Headers that apply unless something more specific names them
  * @param over - Headers that win where both name the same header
@@ -16,11 +16,19 @@
  * ```
  */
 export function overlayHeaders(base?: HeadersInit, over?: HeadersInit): Headers {
-  const merged = new Headers(base);
-  new Headers(over).forEach((value, name) => {
+  const merged = headersFrom(base);
+  headersFrom(over).forEach((value, name) => {
     merged.set(name, value);
   });
   return merged;
+}
+
+/* A new `Headers` of any form a caller gives them: a record as its own entries, since Node's
+   conversion of a whole record drops a key `__proto__`. */
+function headersFrom(init: HeadersInit | undefined): Headers {
+  const whole = init === undefined || typeof init !== "object" || init instanceof Headers;
+  if (whole || Symbol.iterator in init) return new Headers(init);
+  return new Headers(Object.entries(init));
 }
 
 /**

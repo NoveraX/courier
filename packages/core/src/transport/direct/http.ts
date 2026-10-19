@@ -3,6 +3,7 @@ import type { AnyDefinedApi } from "../../define/types";
 import { HTTPError } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
 import { executeRequest } from "../../utils/execute";
+import { layerHeaders } from "../../utils/layer-headers";
 import type { HTTPExecutor } from "../types";
 
 export interface DirectHTTPDefaults {
@@ -70,9 +71,11 @@ function mergeOptions(
 ): Record<string, unknown> {
   const merged: Record<string, unknown> = { ...options };
   if (raw) merged.rawData = true;
+  /* Laid name by name, a record's own entries read: handed to `Headers` whole, Node's conversion of
+     the call's record dropped a header `__proto__`. */
   if (defaultHeaders) {
     merged.headers = options.headers
-      ? { ...defaultHeaders, ...Object.fromEntries(new Headers(options.headers as HeadersInit)) }
+      ? layerHeaders(defaultHeaders, options.headers)
       : defaultHeaders;
   }
   return merged;

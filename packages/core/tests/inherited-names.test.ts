@@ -104,6 +104,37 @@ describe("a key named __proto__", () => {
     expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
   });
 
+  it("is a header of its own when a call's headers are laid over the client's", async () => {
+    const sent: Headers[] = [];
+    vi.stubGlobal("fetch", async (input: Request | URL | string, init?: RequestInit) => {
+      sent.push(new Request(input, init).headers);
+      return Response.json({});
+    });
+    const { endpoint } = courier();
+    const closure = own('{ "__proto__": "closure" }') as Record<string, string>;
+    const api = defineApi({
+      name: "things",
+      baseURL: "https://api.test",
+      endpoints: {
+        list: endpoint.get("things"),
+        listed: endpoint.via((http) => http.get("things", undefined, { headers: closure })),
+      },
+    });
+    const client = createCaller(api, {
+      headers: own('{ "__proto__": "base", "a": "1" }') as Record<string, string>,
+    });
+
+    await client.list();
+    await client.with({ headers: own('{ "__proto__": "call" }') as Record<string, string> }).list();
+    await client.listed();
+
+    expect(sent.map((headers) => [headers.get("__proto__"), headers.get("a")])).toEqual([
+      ["base", "1"],
+      ["call", "1"],
+      ["closure", "1"],
+    ]);
+  });
+
   it("is a header of its own when headers are merged, shown or written", async () => {
     const sent: Headers[] = [];
     vi.stubGlobal("fetch", async (input: Request | URL | string, init?: RequestInit) => {

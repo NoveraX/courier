@@ -1,5 +1,6 @@
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from "@standard-schema/spec";
 
+import { defineOwn } from "../utils/define-own";
 import type { JSONSchema, JSONSchemaFallback, SchemaSide } from "./types";
 
 /* What a document's schemas share: the definitions each schema carried, hoisted to its components. */
@@ -119,16 +120,18 @@ function freeName(
   return name;
 }
 
-/* A copy with each `#/$defs/<name>` reference pointed at the component it moved to. */
+/* A copy with each `#/$defs/<name>` reference pointed at the component it moved to.
+   Each key is the copy's own, so a property named `__proto__` stays a property. */
 function rewritten(value: unknown, names: ReadonlyMap<string, string>): unknown {
   if (Array.isArray(value)) return value.map((item) => rewritten(item, names));
   if (!isRecord(value)) return value;
   const copy: Record<string, unknown> = {};
   for (const [key, inner] of Object.entries(value)) {
-    copy[key] =
+    const written =
       key === "$ref" && typeof inner === "string"
         ? reference(inner, names)
         : rewritten(inner, names);
+    defineOwn(copy, key, written);
   }
   return copy;
 }

@@ -45,7 +45,7 @@ export function inputOf(
       name,
       in: "path",
       required: true,
-      schema: properties[name] ?? { type: "string" },
+      schema: ownProperty(properties, name) ?? { type: "string" },
     })),
     ...[...fixed].map(([name, value]) => ({
       name,
@@ -84,6 +84,12 @@ function propertiesOf(schema: JSONSchema | undefined): Record<string, JSONSchema
   return typeof properties === "object" && properties !== null
     ? (properties as Record<string, JSONSchema>)
     : {};
+}
+
+/* A property the variables' schema declares itself: read by name, a path parameter named
+   `constructor` it lacks took Object's own constructor for its schema. */
+function ownProperty(properties: Record<string, JSONSchema>, name: string): JSONSchema | undefined {
+  return Object.hasOwn(properties, name) ? properties[name] : undefined;
 }
 
 /* The variables' schema without the properties the path takes. */

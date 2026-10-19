@@ -6,10 +6,13 @@
  * body Studio is shown, merged headers and those a response is written
  * with. Read by name, a `constructor` the caller left out gave Object's
  * own: a default for it was never filled in, a path took the function's
- * text, and an exported schema lost the type its default says.
+ * text, and an exported schema lost the type its default says. An OpenAPI
+ * document lost a property `__proto__` as it moved a schema's references,
+ * and typed a path parameter named `constructor` with Object's function.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { StandardJSONSchemaV1, StandardSchemaV1 } from "@standard-schema/spec";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
@@ -20,6 +23,7 @@ import { createFetch } from "../src/fetch";
 import { headerVariablesMiddleware } from "../src/middleware";
 import { sendWebResponse } from "../src/node";
 import { appendSetCookie } from "../src/node-set-cookie";
+import { toOpenAPI } from "../src/openapi";
 import { withDefaultsShown } from "../src/openapi/variable-defaults";
 import { carriedBody } from "../src/studio/carried-body";
 import { compileUrl } from "../src/utils/url";
@@ -159,5 +163,59 @@ describe("a name every object inherits that the caller left out", () => {
         '{ "q": { "type": "string" }, "constructor": { "type": "string", "default": "c" }, "__proto__": { "type": "integer", "default": 2 } }',
       ),
     );
+  });
+});
+
+/* A schema whose library describes it as the JSON text says, as one that keeps a field `__proto__` does. */
+function describedAs(json: string): StandardSchemaV1 & StandardJSONSchemaV1 {
+  return {
+    "~standard": {
+      version: 1,
+      vendor: "test",
+      validate: (value) => ({ value }),
+      jsonSchema: { input: () => own(json), output: () => own(json) },
+    },
+  };
+}
+
+describe("an OpenAPI document", () => {
+  it("keeps a property named __proto__ as a property, its reference moved with it", () => {
+    const { endpoint } = courier();
+    const api = defineApi({
+      name: "things",
+      baseURL: "https://t.example",
+      endpoints: {
+        add: endpoint
+          .post("things")
+          .variables(
+            describedAs(
+              '{ "type": "object", "properties": { "__proto__": { "$ref": "#/$defs/Tag" } }, "$defs": { "Tag": { "type": "string" } } }',
+            ),
+          ),
+      },
+    });
+
+    const body = toOpenAPI(api).paths["/things"]?.post?.requestBody;
+    const content = body?.content as Record<string, { schema: { properties: object } }> | undefined;
+    const properties = content?.["application/json"]?.schema.properties;
+
+    expect(Object.entries(properties ?? {})).toEqual([
+      ["__proto__", { $ref: "#/components/schemas/add.variables.Tag" }],
+    ]);
+  });
+
+  it("types a path parameter named like a member every object has as a string", () => {
+    const { endpoint } = courier();
+    const api = defineApi({
+      name: "things",
+      baseURL: "https://t.example",
+      endpoints: { get: endpoint.get("things/:constructor").variables<{ constructor: string }>() },
+    });
+
+    const parameters = toOpenAPI(api).paths["/things/{constructor}"]?.get?.parameters;
+
+    expect(parameters).toEqual([
+      { name: "constructor", in: "path", required: true, schema: { type: "string" } },
+    ]);
   });
 });

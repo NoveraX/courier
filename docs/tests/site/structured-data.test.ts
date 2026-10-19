@@ -77,6 +77,10 @@ describe("the graphs", () => {
       "SoftwareSourceCode",
       "WebPage",
     ])
+    expect(graph[1]).toMatchObject({
+      name: "Courier",
+      alternateName: ["Courier by NoveraX", "@noverax/courier"],
+    })
     expect(graph[2]).toMatchObject({
       name: "Courier",
       alternateName: "@noverax/courier",

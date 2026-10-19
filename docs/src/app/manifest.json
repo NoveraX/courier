@@ -1,7 +1,7 @@
 {
   "name": "Courier",
   "short_name": "Courier",
-  "description": "Courier's documentation: define your API once in plain TypeScript and call it from any framework.",
+  "description": "The type-safe HTTP client for TypeScript: define your API once and call it from any framework.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

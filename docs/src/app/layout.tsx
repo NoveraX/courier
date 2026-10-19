@@ -4,7 +4,13 @@ import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
 import { QueryProvider } from "@/site/query-provider"
-import { DOCS_TITLE_SUFFIX, ORGANIZATION, SITE_LOCALE, SITE_NAME } from "@/site/seo/site-identity"
+import {
+  DOCS_TITLE_SUFFIX,
+  ORGANIZATION,
+  SITE_KEYWORDS,
+  SITE_LOCALE,
+  SITE_NAME,
+} from "@/site/seo/site-identity"
 import { SITE_PAGES } from "@/site/seo/site-pages"
 import { SITE_URL } from "@/site/site-url"
 import { ThemeProvider } from "@/site/theme-provider"
@@ -29,6 +35,7 @@ export const metadata: Metadata = {
   authors: [{ name: ORGANIZATION.name, url: ORGANIZATION.url }],
   creator: ORGANIZATION.name,
   publisher: ORGANIZATION.name,
+  keywords: [...SITE_KEYWORDS],
   /* A search result may quote a page at any length and show its images at full size. */
   robots: { "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   /* A version, a port or a status code in a code sample is not a number to call. */

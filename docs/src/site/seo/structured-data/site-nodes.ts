@@ -1,4 +1,9 @@
-import { ORGANIZATION, REPOSITORY_URL, SITE_NAME } from "@/site/seo/site-identity"
+import {
+  ORGANIZATION,
+  REPOSITORY_URL,
+  SITE_ALTERNATE_NAMES,
+  SITE_NAME,
+} from "@/site/seo/site-identity"
 import { SITE_PAGES } from "@/site/seo/site-pages"
 import { absoluteUrl, type JsonLdNode, nodeId, reference } from "./json-ld-node"
 
@@ -45,6 +50,7 @@ export function websiteNode(): JsonLdNode {
     "@id": nodeId("/", "website"),
     url: absoluteUrl("/"),
     name: SITE_NAME,
+    alternateName: [...SITE_ALTERNATE_NAMES],
     description: SITE_PAGES.home.description,
     inLanguage: "en",
     publisher: reference(organizationNode()),
@@ -62,6 +68,8 @@ export interface PackageFacts {
   directory: string
   /** The runtimes it runs on, when it says. */
   runtimes?: readonly string[] | undefined
+  /** What it is found by, when it says. */
+  keywords?: readonly string[] | undefined
   version?: string | undefined
 }
 
@@ -90,6 +98,7 @@ export function softwareNode(facts: PackageFacts): JsonLdNode {
     license: MIT,
     isAccessibleForFree: true,
     ...(facts.runtimes ? { runtimePlatform: [...facts.runtimes] } : {}),
+    ...(facts.keywords ? { keywords: facts.keywords.join(", ") } : {}),
     ...(facts.version ? { version: facts.version } : {}),
     author: reference(organizationNode()),
     publisher: reference(organizationNode()),

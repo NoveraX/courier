@@ -1,3 +1,4 @@
+import { SITE_KEYWORDS } from "@/site/seo/site-identity"
 import { SITE_PAGES } from "@/site/seo/site-pages"
 import type { PackageFacts } from "./site-nodes"
 
@@ -9,6 +10,7 @@ export const COURIER_PACKAGE = {
   description: SITE_PAGES.home.description,
   directory: "packages/core",
   runtimes: ["Node.js", "Bun", "Deno", "Cloudflare Workers", "Web browsers", "React Native"],
+  keywords: SITE_KEYWORDS,
 } as const satisfies PackageFacts
 
 /** Courier Studio, which its page is about. */

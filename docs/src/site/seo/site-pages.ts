@@ -13,23 +13,23 @@ export interface SitePage {
 export const SITE_PAGES = {
   home: {
     path: "/",
-    title: "@noverax/courier — type-safe HTTP for any framework, any REST backend",
+    title: "Courier — type-safe HTTP client for TypeScript",
     description:
-      "Define your API once in plain TypeScript. Get end-to-end inference, one proxy route for every endpoint, React Query bindings and middleware — against any REST backend, which needs zero changes.",
+      "Define your API once in plain TypeScript and call it from any framework: end-to-end types, one proxy route for every endpoint, React Query hooks, any REST API.",
     card: { eyebrow: "Courier", headline: "Type-safe HTTP for any framework" },
   },
   studio: {
     path: "/studio",
-    title: "Courier Studio — see every request your app makes",
+    title: "Courier Studio — API debugger and mock server for TypeScript",
     description:
-      "Courier Studio is a visual debugger for your API layer. Inspect live traffic, replay calls, mock backends, inject failures and audit quality — from one tab next to your dev server.",
+      "A visual debugger for your API layer: inspect live traffic, replay calls, mock backends, inject failures and audit quality — in one tab beside your dev server.",
     card: { eyebrow: "Courier Studio", headline: "See every request your app makes" },
   },
   mcp: {
     path: "/mcp",
-    title: "Courier MCP server — your API, as tools for AI agents",
+    title: "Courier MCP server — your REST API as tools for AI agents",
     description:
-      "Mark the endpoints an agent may call. Courier serves them over MCP to Claude Code, Cursor and every MCP client — typed from your schemas, run through your middleware, confirmed by a person before anything is undone.",
+      "Courier serves the endpoints you mark over MCP to Claude Code, Cursor and any client: typed from your schemas, a person confirming what cannot be undone.",
     card: { eyebrow: "Courier MCP server", headline: "Your API, as tools for AI agents" },
   },
   reference: {

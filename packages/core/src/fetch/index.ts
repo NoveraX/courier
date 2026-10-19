@@ -15,6 +15,7 @@
 import { HTTPError } from "../errors";
 import { getResponseData } from "../http-client/response";
 import type { ResponseType } from "../http-client/types";
+import { defineOwn } from "../utils/define-own";
 import { coreFetch } from "../utils/fetch";
 import type { FetchClient, FetchClientOptions, RequestOptions } from "./types";
 
@@ -34,11 +35,9 @@ function mergeHeaders(
   if (!defaults && !overrides) return undefined;
   const result = { ...defaults };
   if (overrides instanceof Headers) {
-    overrides.forEach((value, key) => {
-      result[key] = value;
-    });
+    for (const [key, value] of overrides.entries()) defineOwn(result, key, value);
   } else if (overrides) {
-    Object.assign(result, overrides);
+    for (const [key, value] of Object.entries(overrides)) defineOwn(result, key, value);
   }
   return result;
 }

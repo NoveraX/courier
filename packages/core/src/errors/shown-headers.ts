@@ -1,3 +1,4 @@
+import { defineOwn } from "../utils/define-own";
 import { isCredentialHeader } from "../utils/is-credential-header";
 
 const HIDDEN = "[redacted]";
@@ -19,7 +20,8 @@ const HIDDEN = "[redacted]";
 export function shownHeaders(headers: Headers): Record<string, string | string[]> {
   const shown: Record<string, string | string[]> = {};
   headers.forEach((value, name) => {
-    if (name !== "set-cookie") shown[name] = isCredentialHeader(name) ? hidden(name, value) : value;
+    if (name !== "set-cookie")
+      defineOwn(shown, name, isCredentialHeader(name) ? hidden(name, value) : value);
   });
   const cookies = setCookiesShown(headers);
   if (cookies !== undefined) shown["set-cookie"] = cookies;

@@ -1,3 +1,4 @@
+import { defineOwn } from "../utils/define-own";
 import { type FormFieldEncoding, formBody } from "./form-body";
 
 /**
@@ -36,8 +37,15 @@ export function formQuery(
   const values: Record<string, string | string[]> = {};
   for (const [name, value] of formBody(Object.fromEntries(present), encoding)) {
     const earlier = Object.hasOwn(values, name) ? values[name] : undefined;
-    if (earlier === undefined) values[name] = value;
-    else values[name] = Array.isArray(earlier) ? [...earlier, value] : [earlier, value];
+    defineOwn(
+      values,
+      name,
+      earlier === undefined
+        ? value
+        : Array.isArray(earlier)
+          ? [...earlier, value]
+          : [earlier, value],
+    );
   }
   return values;
 }

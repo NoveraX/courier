@@ -1,6 +1,7 @@
 import { HTTPError } from "../errors";
 import type { SearchParamsSerializer } from "../http-client/types";
 import { isFieldRecord } from "./body-kind";
+import { defineOwn } from "./define-own";
 import { isFormData } from "./helpers";
 
 const MULTIPLE_SLASHES = /\/+/g;
@@ -145,8 +146,13 @@ export const compileUrl = (
   const paramNames = extractParamNames(urlPath);
   const newVariables = omitParams(variables, paramNames);
 
+  /* Own values only: a parameter named `constructor` the call left out is missing, not Object's. */
   for (const pathKey of paramNames) {
-    pathKeys[pathKey] = pathOptions[pathKey];
+    defineOwn(
+      pathKeys,
+      pathKey,
+      Object.hasOwn(pathOptions, pathKey) ? pathOptions[pathKey] : undefined,
+    );
   }
 
   try {

@@ -1,3 +1,5 @@
+import { defineOwn } from "../utils/define-own";
+
 /** The most of a body, as JSON, that one of Studio's events carries. */
 export const CARRIED_BODY_BYTES: number = 16 * 1024;
 
@@ -67,8 +69,8 @@ function cutFields(fields: Record<string, unknown>, room: number): Record<string
   let dropped = 0;
   entries.forEach(([key, value], index) => {
     const size = sizes[index] ?? 0;
-    if (small.has(index) || size <= share) kept[key] = value;
-    else if (share >= MIN_ROOM) kept[key] = cut(value, share - key.length - 4);
+    if (small.has(index) || size <= share) defineOwn(kept, key, value);
+    else if (share >= MIN_ROOM) defineOwn(kept, key, cut(value, share - key.length - 4));
     else dropped += 1;
   });
   if (dropped > 0) kept["…"] = plural(dropped, "field");

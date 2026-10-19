@@ -1,3 +1,4 @@
+import { defineOwn } from "../utils/define-own";
 import { isRecord } from "../utils/is-record";
 import { defineMiddleware } from "./define";
 import type { Middleware } from "./types";
@@ -34,7 +35,7 @@ export function headerVariablesMiddleware(names: readonly string[]): Middleware 
     if (!isRecord(ctx.variables)) return;
     const rest: Record<string, unknown> = {};
     for (const [name, value] of Object.entries(ctx.variables)) {
-      if (!headers.has(name)) rest[name] = value;
+      if (!headers.has(name)) defineOwn(rest, name, value);
       else if (value !== undefined && value !== null) ctx.headers.set(name, headerText(value));
     }
     ctx.variables = rest;

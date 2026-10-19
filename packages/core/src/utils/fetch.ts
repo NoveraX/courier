@@ -90,8 +90,7 @@ export async function coreFetch(
     }
   }
 
-  const requestHeaders =
-    headers instanceof Headers ? headers : new Headers((headers as HeadersInit) || undefined);
+  const requestHeaders = headersOf(headers);
 
   let requestBody: WebBody | null | undefined = body;
   if (json !== undefined) {
@@ -156,3 +155,11 @@ export async function coreFetch(
 }
 
 function ignoreProgress(): void {}
+
+/* A record's own entries, in pairs: handed to Headers whole, Node's conversion of it drops a key `__proto__`. */
+function headersOf(headers: HeadersInit | undefined): Headers {
+  if (headers instanceof Headers) return headers;
+  return new Headers(
+    headers === undefined || Array.isArray(headers) ? headers : Object.entries(headers),
+  );
+}

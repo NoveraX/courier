@@ -4,6 +4,7 @@ import { createLogger } from "./logger";
 import { addressedTo } from "./node-origin";
 import { serverOriginOf } from "./socket-origin";
 import { isAbortError } from "./utils/abort";
+import { defineOwn } from "./utils/define-own";
 
 const log = createLogger("Node");
 
@@ -109,11 +110,7 @@ function drained(nodeRes: ServerResponse): Promise<void> {
 export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse): Promise<void> {
   const headersObj: Record<string, string | string[]> = {};
   for (const [key, value] of webRes.headers.entries()) {
-    if (key === "set-cookie") {
-      headersObj[key] = webRes.headers.getSetCookie();
-    } else {
-      headersObj[key] = value;
-    }
+    defineOwn(headersObj, key, key === "set-cookie" ? webRes.headers.getSetCookie() : value);
   }
   /* writeHead's headers replace the ones set before it, so a `Vary` set
      before it — the `Origin` a CORS grant depends on — is joined with the

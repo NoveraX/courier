@@ -1,4 +1,5 @@
 import type { OutgoingHttpHeaders, ServerResponse } from "node:http";
+import { defineOwn } from "./utils/define-own";
 
 /* The cookies added to each response, kept until its head is written. */
 const HELD = new WeakMap<ServerResponse, string[]>();
@@ -57,7 +58,7 @@ function withoutCookies(res: ServerResponse, headers: unknown): unknown {
   if (typeof headers !== "object" || headers === null) return headers;
   const kept: OutgoingHttpHeaders = {};
   for (const [name, value] of Object.entries(headers as OutgoingHttpHeaders)) {
-    if (name.toLowerCase() !== "set-cookie") kept[name] = value;
+    if (name.toLowerCase() !== "set-cookie") defineOwn(kept, name, value);
     else if (value !== undefined) res.appendHeader("set-cookie", cookiesOf(value));
   }
   return kept;

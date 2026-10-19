@@ -1,3 +1,4 @@
+import { defineOwn } from "../utils/define-own";
 import type { JSONSchema } from "./types";
 
 /* What JSON Schema says of a value's type, for a variable no schema describes. */
@@ -46,7 +47,8 @@ export function withDefaultsShown(
       : {};
   const properties = { ...described };
   for (const [name, value] of Object.entries(defaults)) {
-    properties[name] = { ...(described[name] ?? schemaOfValue(value)), default: value };
+    const declared = Object.hasOwn(described, name) ? described[name] : undefined;
+    defineOwn(properties, name, { ...(declared ?? schemaOfValue(value)), default: value });
   }
   const required = Array.isArray(base.required)
     ? base.required.filter((name) => typeof name !== "string" || !Object.hasOwn(defaults, name))

@@ -1,5 +1,6 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { cloneData } from "../utils/clone-data";
+import { defineOwn } from "../utils/define-own";
 
 /* Data a call's variables may hold: what JSON writes as it is. */
 function isData(value: unknown): boolean {
@@ -71,8 +72,10 @@ export function withVariableDefaults(
   const prototype: unknown = Object.getPrototypeOf(variables);
   if (prototype !== Object.prototype && prototype !== null) return variables;
   const merged: Record<string, unknown> = { ...variables };
+  /* Read and defined as the call's own: a variable named `constructor` it left out takes its default. */
   for (const [name, value] of Object.entries(defaults)) {
-    if (merged[name] === undefined) merged[name] = cloneData(value);
+    const given = Object.hasOwn(merged, name) ? merged[name] : undefined;
+    if (given === undefined) defineOwn(merged, name, cloneData(value));
   }
   return merged;
 }

@@ -38,6 +38,7 @@ A Next.js app, with a small Express backend the live examples call.
 | `/mcp` | The MCP server's page |
 | `/docs/<section>/<page>.md` | A docs page as Markdown, for language models and agents; its `Link` header names the page as canonical |
 | `/llms.txt`, `/llms-full.txt` | Every page for language models: an index linking each page's Markdown, and the whole documentation as one file; kept out of search results |
+| `/search-index.json` | What search finds — every docs page and export — fetched once a page is idle rather than carried in each page |
 | `/og/<page>` | Each page's social card, drawn from its title and description when the site is built; the home page's is `/opengraph-image` |
 
 ## Run it

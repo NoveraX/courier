@@ -1,9 +1,10 @@
 /**
  * How a closure takes parameters out of the variables: a name that can be
  * bound as it is, as it is; any other — `page-size`, `body`, `__proto__` —
- * under a local name of its own; and a pattern that takes a name every
- * object inherits says so, so that the closure reads it from the
- * variables' own fields only.
+ * under a local name of its own, and so a name a binding would shadow a
+ * global by — `Date`, `constructor` —, which linters refuse; and a pattern
+ * that takes a name every object inherits says so, so that the closure
+ * reads it from the variables' own fields only.
  */
 import { describe, expect, it } from "vitest";
 
@@ -33,6 +34,17 @@ describe("destructure", () => {
       searchParams: '{ ["__proto__"]: param0 }',
       ownCopy: true,
     });
+  });
+
+  it("binds a name a binding would shadow a global by under a local name", () => {
+    expect(destructure([query("Date"), query("String"), query("constructor")], [])).toEqual({
+      pattern: "Date: param0, String: param1, constructor: param2",
+      searchParams: "{ Date: param0, String: param1, constructor: param2 }",
+      ownCopy: true,
+    });
+    expect(destructure([], [{ ...query("toString"), in: "path" }]).pattern).toBe(
+      "toString: param0",
+    );
   });
 
   it("reads a name every object inherits from the variables' own fields", () => {

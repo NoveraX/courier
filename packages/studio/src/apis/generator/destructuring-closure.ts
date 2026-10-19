@@ -18,7 +18,7 @@
  */
 export function destructuringClosure(pattern: string, call: string, ownCopy: boolean): string {
   if (!ownCopy) return `(http, { ${pattern} }) => ${call}`;
-  /* Through `globalThis`: a parameter named `Object` the pattern binds would be read here before it is bound. */
+  /* Through `globalThis`, which no binding takes: an `Object` the pattern bound would be read here before it is bound. */
   const copy = "globalThis.Object.assign(globalThis.Object.create(null), vars)";
   return `(http, vars) => { const { ${pattern} } = ${copy}; return ${call}; }`;
 }

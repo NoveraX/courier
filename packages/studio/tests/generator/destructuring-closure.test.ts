@@ -23,8 +23,8 @@ describe("destructuringClosure", () => {
 
   it("reads an inherited name the caller left out as undefined, and one given as given", () => {
     const source = destructuringClosure(
-      'constructor, ["__proto__"]: param1, ...body',
-      'http.put("items", body, { searchParams: { constructor, ["__proto__"]: param1 } })',
+      'constructor: param0, ["__proto__"]: param1, ...body',
+      'http.put("items", body, { searchParams: { constructor: param0, ["__proto__"]: param1 } })',
       true,
     );
 
@@ -47,7 +47,7 @@ describe("destructuringClosure", () => {
     ]);
   });
 
-  it("reads Object through globalThis, so a parameter named Object can be taken", () => {
+  it("reads Object through globalThis, whatever the pattern binds", () => {
     const source = destructuringClosure(
       "Object, constructor",
       'http.put("items", { Object, constructor })',

@@ -4,6 +4,7 @@
 
 import { isInheritedName } from "../parser/inherited-names";
 import { isReservedBinding } from "../parser/reserved-bindings";
+import { isRestrictedGlobal } from "../parser/restricted-globals";
 import type { ParsedParameter } from "../parser/types";
 import { objectKey } from "./literals";
 import { styledQuery } from "./styled-query";
@@ -32,9 +33,11 @@ export interface Bindings {
 /**
  * Take parameters out of the variables: the query parameters, to be sent in
  * the query string, and others only to be left out of what remains. A name
- * that cannot be bound as it is — `page-size`, `class`, `body`, `__proto__`
- * — is taken under a local name of its own, and one every object inherits
- * is to be read from the variables' own fields only.
+ * that cannot be bound as it is — `page-size`, `class`, `body` — is taken
+ * under a local name of its own, and so is one a binding would shadow a
+ * global by — `Date`, `String` — or one every object inherits —
+ * `constructor`, `__proto__` —, which is read from the variables' own
+ * fields only.
  *
  * @param query - The query parameters
  * @param omitted - Parameters only to be left out of the rest
@@ -66,6 +69,10 @@ export function destructure(
 
 function bindable(name: string): boolean {
   return (
-    IDENTIFIER.test(name) && !isReservedBinding(name) && !TAKEN.has(name) && name !== "__proto__"
+    IDENTIFIER.test(name) &&
+    !isReservedBinding(name) &&
+    !TAKEN.has(name) &&
+    !isInheritedName(name) &&
+    !isRestrictedGlobal(name)
   );
 }

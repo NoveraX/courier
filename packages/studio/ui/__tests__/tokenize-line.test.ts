@@ -81,6 +81,48 @@ describe("tokenizeJsonLine", () => {
   });
 });
 
+describe("a line still being typed", () => {
+  const json = (line: string) =>
+    tokenizeJsonLine(line)
+      .filter((t) => t.tone !== "space")
+      .map((t) => [t.text, t.tone]);
+
+  it("draws a quote typed alone as the string it opens, to the end of the line", () => {
+    expect(json('  "')).toEqual([['"', "string"]]);
+    expect(json('  "ci')).toEqual([['"ci', "string"]]);
+    expect(json('  "city": "sp')).toEqual([
+      ['"city"', "function"],
+      [":", "punctuation"],
+      ['"sp', "string"],
+    ]);
+  });
+
+  it("keeps every character of a JSON line whose string is not closed", () => {
+    const lines = ['  "', '  "a\\"b', '  "a\\', '  "x": "y", "', 'He said "hi', 'tru"e'];
+
+    for (const line of lines) {
+      expect(
+        tokenizeJsonLine(line)
+          .map((t) => t.text)
+          .join(""),
+      ).toBe(line);
+    }
+  });
+
+  it("keeps every character of a code line whose quote is not closed", () => {
+    const lines = ["const s = `multi", "echo don't", "curl -d 'it'\\''s'", '"', "'", "`"];
+
+    for (const line of lines) {
+      expect(
+        tokenizeLine(line)
+          .map((t) => t.text)
+          .join(""),
+      ).toBe(line);
+    }
+    expect(tones('const u = "http://x')).toContainEqual(['"http://x', "string"]);
+  });
+});
+
 describe("a comment in a code snippet", () => {
   const tones = (line: string) =>
     tokenizeLine(line)

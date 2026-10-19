@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 import type { Started } from "../support/process";
 import { createProject, type Project } from "../support/project";
@@ -43,6 +43,34 @@ test("sends a call through the app, and shows the upstream's answer", async ({ p
   const response = page.locator("main");
   await expect(response.getByText("Ada Lovelace").first()).toBeVisible();
   await expect(response.getByText("200").first()).toBeVisible();
+});
+
+/* The Playground on `users.get`, its variables' editor ready to type in. */
+async function variablesOf(page: Page) {
+  await page.goto(studio.link);
+  /* The link opens the setup, which moves to the Timeline once it sees the
+     app attached; a page opened before that move would be undone by it. */
+  await expect(page).toHaveURL(/\/timeline/);
+  await page.getByRole("link", { name: "Playground" }).click();
+  await page.locator("main button").first().click();
+  await expect(page.getByPlaceholder(/^Search \d+ endpoints/)).toBeFocused();
+  await page.keyboard.type("users.get");
+  await page.keyboard.press("Enter");
+  /* Typed before the choice lands, the text would go to the endpoint shown before. */
+  await expect(page.locator("main button").first()).toContainText(/users \/ get/);
+  return page.getByRole("textbox", { name: "Variables" });
+}
+
+test("draws a quote in the variables the moment it is typed", async ({ page }) => {
+  const editor = await variablesOf(page);
+  /* The coloured text the editor draws under its transparent textarea. */
+  const drawn = editor.locator("xpath=preceding-sibling::pre[1]");
+
+  await editor.fill("{");
+  await page.keyboard.type('"');
+
+  await expect(editor).toHaveValue('{"');
+  await expect(drawn).toHaveText('{"');
 });
 
 test("records the call on the Timeline", async ({ page }) => {

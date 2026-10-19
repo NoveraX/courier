@@ -37,7 +37,11 @@ const KEYWORDS: ReadonlySet<string> = new Set([
   "websocat",
 ]);
 
-const PIECES = /("(?:[^"\\]|\\.)*"|'[^']*'|`[^`]*`)|([A-Za-z_$][\w$]*)|(\s+)|([^\sA-Za-z_$"'`]+)/g;
+/* A quote the line never closes — a template literal over several lines, a
+   shell word with an apostrophe — opens a string to the end of the line,
+   so the line is drawn whole. */
+const PIECES =
+  /("(?:[^"\\]|\\.)*(?:"|\\?$)|'[^']*'?|`[^`]*`?)|([A-Za-z_$][\w$]*)|(\s+)|([^\sA-Za-z_$"'`]+)/g;
 
 /* A line of a comment block or a line comment: `/**`, ` * text`, ` */ `, `; // text`. */
 const COMMENT_LINE = /^(\s*)((?:\/\/|\/\*|\*).*)$/;
@@ -47,7 +51,8 @@ const COMMENT_LINE = /^(\s*)((?:\/\/|\/\*|\*).*)$/;
  * strings, keywords and a command's flags, a name followed by `(` as a
  * call, a capitalised name as a type, a comment — a line of a comment
  * block, or what follows `//` — the rest as plain names and punctuation.
- * A light pass — the snippets Studio shows are short and well formed.
+ * A light pass — the snippets Studio shows are short and well formed — that
+ * still keeps every character of the line.
  *
  * @param line - One line of code
  * @returns Its pieces, in order

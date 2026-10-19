@@ -46,13 +46,16 @@ function started(id: string): Event {
 }
 
 /** A Studio that replays `replay` to each page that connects, and hands over its socket. */
-async function studio(replay: Event[]): Promise<{ url: string; pages: ServerSocket[] }> {
+async function studio(replay: Event[] | Buffer): Promise<{ url: string; pages: ServerSocket[] }> {
   const http = createServer();
   server = new Server(http);
   const pages: ServerSocket[] = [];
   server.of("/ui").on("connection", (socket) => {
     pages.push(socket);
-    socket.emit("events:replay", Buffer.from(JSON.stringify(replay)));
+    socket.emit(
+      "events:replay",
+      Buffer.isBuffer(replay) ? replay : Buffer.from(JSON.stringify(replay)),
+    );
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   return { url: `http://127.0.0.1:${(http.address() as AddressInfo).port}/ui`, pages };
@@ -147,5 +150,36 @@ describe("clearing the log", () => {
 
     expect(ids()).toEqual(["kept"]);
     await expect.poll(() => cleared).toEqual([{ keep: ["kept"] }]);
+  });
+});
+
+describe("the page's wait for the requests", () => {
+  beforeEach(() => {
+    useStudioStore.setState({ received: { runtimes: false, requests: false } });
+  });
+
+  it("ends once Studio has replayed them", async () => {
+    const { url } = await studio([started("r1")]);
+
+    await connectPage(url);
+
+    await expect.poll(() => useStudioStore.getState().received.requests).toBe(true);
+    expect(ids()).toEqual(["r1"]);
+  });
+
+  it("ends for a replay the page cannot read too, keeping the requests it holds", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    useStudioStore.setState({ requests: [entry("held")] });
+    const { url } = await studio(Buffer.from("not a replay"));
+
+    await connectPage(url);
+
+    await expect.poll(() => useStudioStore.getState().received.requests).toBe(true);
+    expect(ids()).toEqual(["held"]);
+    expect(warn).toHaveBeenCalledWith(
+      "Studio sent a replay this page could not read",
+      expect.anything(),
+    );
+    warn.mockRestore();
   });
 });

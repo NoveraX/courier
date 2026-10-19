@@ -59,6 +59,7 @@ beforeEach(() => {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     requests: TRAFFIC,
     heldRequests: [],
     shownSession: null,

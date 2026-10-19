@@ -5,7 +5,8 @@
  * says so as loading — in the shape of what it will show — never as an
  * empty project: no "Waiting for requests", "No endpoints yet" or "No app
  * attached" before Studio has had its say, nor once connected before
- * Studio has said which apps are attached. The rule itself decides by the
+ * Studio has said which apps are attached and sent the requests it
+ * captured. The rule itself decides by the
  * connection, by what Studio has sent, and by how the config loads.
  */
 import { act, cleanup, screen } from "@testing-library/react";
@@ -93,6 +94,39 @@ describe("a page connected before Studio has named the apps attached", () => {
   });
 });
 
+describe("a page connected before Studio has sent the requests it captured", () => {
+  beforeEach(() => {
+    useStudioStore.setState({
+      connected: true,
+      connectionStatus: "connected",
+      received: { runtimes: true, requests: false },
+      configStatus: LOADED,
+    });
+  });
+
+  it.each([
+    ["/timeline", "Waiting for requests"],
+    ["/waterfall", "Waiting for requests"],
+    ["/analytics", "No completed requests yet"],
+    ["/audit", "No requests to audit"],
+    ["/middleware", "No call has run through middleware yet"],
+    ["/compare", "Compare needs two finished requests"],
+  ])("%s shows the requests loading, not that none came", async (url, empty) => {
+    await openShell(url);
+
+    expect(screen.getByRole("status", { name: "" }).textContent).toBe("Loading the requests");
+    expect(screen.queryByText(empty)).toBeNull();
+  });
+
+  it("says none came once Studio has sent none", async () => {
+    await openShell("/timeline");
+
+    act(() => useStudioStore.getState().setReceived("requests"));
+
+    expect(screen.getByText("Waiting for requests")).toBeTruthy();
+  });
+});
+
 describe("what a page still waits for", () => {
   it("waits for everything before it first connects", () => {
     const status = "connecting";
@@ -109,6 +143,14 @@ describe("what a page still waits for", () => {
 
     expect(firstLoad({ ...connected, received: NOTHING }).runtimes).toBe(true);
     expect(firstLoad({ ...connected, received: EVERYTHING }).runtimes).toBe(false);
+  });
+
+  it("waits, once connected, until Studio has sent the requests it captured", () => {
+    const connected = { status: "connected", config: LOADED, sourceCount: 0 } as const;
+    const runtimesOnly = { runtimes: true, requests: false } as const;
+
+    expect(firstLoad({ ...connected, received: runtimesOnly }).requests).toBe(true);
+    expect(firstLoad({ ...connected, received: EVERYTHING }).requests).toBe(false);
   });
 
   it("waits for the sources while Studio loads the config, and for nothing once it has", () => {

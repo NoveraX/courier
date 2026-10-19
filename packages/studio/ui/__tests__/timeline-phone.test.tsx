@@ -56,6 +56,7 @@ beforeEach(() => {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     requests: REQUESTS,
     heldRequests: [],
     paused: false,
@@ -118,12 +119,20 @@ describe("the Timeline on a phone", () => {
   });
 
   it("measures the list once it is drawn, when the page loaded before Studio sent the requests", async () => {
-    useStudioStore.setState({ connected: false, connectionStatus: "connecting" });
+    useStudioStore.setState({
+      connected: false,
+      connectionStatus: "connecting",
+      received: { runtimes: false, requests: false },
+    });
     await openShell("/timeline");
     expect(rows()).toEqual([]);
 
     await act(async () => {
-      useStudioStore.setState({ connected: true, connectionStatus: "connected" });
+      useStudioStore.setState({
+        connected: true,
+        connectionStatus: "connected",
+        received: { runtimes: true, requests: true },
+      });
     });
 
     expect(rowOf("failed").className).toContain("h-13");

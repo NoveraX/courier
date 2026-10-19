@@ -23,8 +23,8 @@ export interface FirstLoadInput {
 
 /**
  * Whether a page is still waiting for its first data: before it first
- * connects to Studio; for the runtimes, while connected until Studio has
- * said which apps are attached; and for the sources, while Studio has not
+ * connects to Studio; for the runtimes and the requests, while connected
+ * until Studio has sent them; and for the sources, while Studio has not
  * loaded courier.config yet. A page that lost Studio, or already shows
  * sources, waits for nothing: it says what it has.
  *
@@ -42,7 +42,7 @@ export function firstLoad({ status, received, config, sourceCount }: FirstLoadIn
   const connected = status === "connected";
   const configPending = config === null || config.state === "starting";
   return {
-    requests: connecting,
+    requests: connecting || (connected && !received.requests),
     runtimes: connecting || (connected && !received.runtimes),
     sources: sourceCount === 0 && (connecting || (connected && configPending)),
   };

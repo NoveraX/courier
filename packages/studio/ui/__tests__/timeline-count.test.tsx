@@ -19,7 +19,11 @@ const other = requestEntry({ id: "other", method: "get" });
 afterEach(cleanup);
 
 function countWith(requests: ReturnType<typeof requestEntry>[], shown: number): string {
-  useStudioStore.setState({ connectionStatus: "connected", requests });
+  useStudioStore.setState({
+    connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
+    requests,
+  });
   return render(<TimelineCount shown={shown} />).container.textContent ?? "";
 }
 

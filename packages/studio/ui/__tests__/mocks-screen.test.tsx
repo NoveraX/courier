@@ -35,6 +35,7 @@ beforeEach(() => {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     requests: [],
     heldRequests: [],
     mocksFileStatus: null,
@@ -51,6 +52,7 @@ describe("the Mocks pages", () => {
   it("offer to generate a first mock while there is none", async () => {
     useStudioStore.setState({
       connectionStatus: "connected",
+      received: { runtimes: true, requests: true },
       configStatus: {
         state: "loaded",
         revision: 1,

@@ -229,7 +229,12 @@ describe("a page's live events", () => {
       emit,
       timeout: () => ({ emit }),
     } as unknown as Socket;
-    const store = { handleEvents: vi.fn(), replayEvents: vi.fn(), showSession: vi.fn() };
+    const store = {
+      handleEvents: vi.fn(),
+      replayEvents: vi.fn(),
+      showSession: vi.fn(),
+      setReceived: vi.fn(),
+    };
     bindEvents(socket, () => store);
     const live = { id: "e1", timestamp: 1, sessionId: "mock-manager" };
 

@@ -21,6 +21,7 @@ import { bodyHash } from "../../src/server/import-files/body-hash";
 import { FilePlanError } from "../../src/server/import-files/file-plan-error";
 import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
 import { signGeneratedFile } from "../../src/server/import-files/generated-header";
+import { keepImported } from "../../src/server/import-files/keep-imported";
 import { planFiles } from "../../src/server/import-files/plan-files";
 import type { RecordedFile } from "../../src/server/import-files/recorded-file";
 import { withConfirmations } from "../../src/server/import-files/with-confirmations";
@@ -42,6 +43,24 @@ const GROUP = (listBody: string) =>
     "  },",
     "});",
     "",
+  ].join("\n");
+
+/* An API holding an endpoint of its own, so it is merged, and the groups it imports. */
+const API = (groups: readonly string[], below = "") =>
+  [
+    'import { courier, defineApi } from "@noverax/courier/define";',
+    ...groups.map((group) => `import { ${group} } from "./${group}/index";`),
+    "",
+    "const { endpoint } = courier();",
+    "",
+    "export const shop = defineApi({",
+    '  baseURL: "https://shop.example",',
+    "  endpoints: {",
+    '    health: endpoint.get("health"),',
+    "  },",
+    `  groups: { ${groups.join(", ")} },`,
+    "});",
+    below,
   ].join("\n");
 
 let scratch: string;
@@ -237,6 +256,58 @@ describe("planFiles, for the files an operation wants", () => {
       carriesEdits: true,
       body: edited,
     });
+  });
+
+  it("merges a file without its import of a file the operation removes, so that file goes", () => {
+    const asWritten = API(["pets", "store"]);
+    const wanted = API(["pets"]);
+    written(`${DIR}/source.ts`, asWritten);
+    written(`${DIR}/store/index.ts`, "export const store = {};\n");
+    const recorded = {
+      [`${DIR}/source.ts`]: recordOf(asWritten, { endpoints: generateFingerprints(asWritten) }),
+      [`${DIR}/store/index.ts`]: recordOf("export const store = {};\n"),
+    };
+    const target: PlanTarget = {
+      path: `${DIR}/source.ts`,
+      body: wanted,
+      kind: "merge",
+      endpoints: generateFingerprints(wanted),
+    };
+
+    const result = keepImported(root, plan([target], [`${DIR}/store/index.ts`], recorded));
+
+    expect(result.writes[0]?.body).not.toContain("./store/index");
+    expect(result.writes[0]?.body).toContain('import { pets } from "./pets/index";');
+    expect(result.removals.map((removal) => removal.path)).toEqual([`${DIR}/store/index.ts`]);
+    expect(result.kept).toEqual([]);
+  });
+
+  it("keeps that import, and the file, where code the merge keeps uses it", () => {
+    const asWritten = API(["pets", "store"]);
+    const wanted = API(["pets"]);
+    written(
+      `${DIR}/source.ts`,
+      API(["pets", "store"], "export const mine = [store];\n"),
+      asWritten,
+    );
+    written(`${DIR}/store/index.ts`, "export const store = {};\n");
+    const recorded = {
+      [`${DIR}/source.ts`]: recordOf(asWritten, { endpoints: generateFingerprints(asWritten) }),
+      [`${DIR}/store/index.ts`]: recordOf("export const store = {};\n"),
+    };
+    const target: PlanTarget = {
+      path: `${DIR}/source.ts`,
+      body: wanted,
+      kind: "merge",
+      endpoints: generateFingerprints(wanted),
+    };
+
+    const result = keepImported(root, plan([target], [`${DIR}/store/index.ts`], recorded));
+
+    expect(result.writes[0]?.body).toContain('import { store } from "./store/index";');
+    expect(result.writes[0]?.body).toContain("export const mine = [store];");
+    expect(result.removals).toEqual([]);
+    expect(result.kept).toEqual([{ path: `${DIR}/store/index.ts`, reason: "imported" }]);
   });
 
   it("uses a header's claim when there is no record, a fresh clone's files", () => {

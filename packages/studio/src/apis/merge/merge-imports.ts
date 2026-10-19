@@ -5,7 +5,10 @@
  * extras. Of a module the generated file imports too, a name only the file
  * imported is kept while the merged code uses it: a schema the spec no
  * longer has would otherwise stay imported from a module that no longer
- * exports it.
+ * exports it. A module the update removes — the file of a group the
+ * specification dropped — stays imported only while the merged code uses a
+ * name it brings: its import went on keeping that file, though the update
+ * said it was removed.
  */
 
 import { parseSource } from "@noverax/courier-cli/devkit";
@@ -24,6 +27,7 @@ type Uses = (specifier: string) => boolean;
  * @param generated - The freshly generated file's imports
  * @param changes - Where the imports kept for the user are noted
  * @param code - The merged code below the imports, which a kept name must be used in
+ * @param removed - Whether a module is a file the update removes
  * @returns The import lines
  * @example
  * ```ts
@@ -35,6 +39,7 @@ export function mergeImports(
   generated: ParsedImport[],
   changes: MergeChange[],
   code: string,
+  removed: (source: string) => boolean = () => false,
 ): string[] {
   const merged = new Map<string, ParsedImport>();
   const used = usesIn(code);
@@ -45,16 +50,22 @@ export function mergeImports(
 
   for (const imp of existing) {
     const gen = merged.get(imp.source);
-    if (!gen) {
+    if (gen) {
+      merged.set(imp.source, unionImport(gen, imp, used));
+    } else if (removed(imp.source) && !stillUsed(imp, used)) {
+      changes.push({
+        type: "removed",
+        target: `import:${imp.source}`,
+        detail: "its module is removed",
+      });
+    } else {
       merged.set(imp.source, imp);
       changes.push({
         type: "preserved",
         target: `import:${imp.source}`,
         detail: "user import preserved",
       });
-      continue;
     }
-    merged.set(imp.source, unionImport(gen, imp, used));
   }
 
   return [...merged.values()].map(formatImport);
@@ -72,6 +83,13 @@ function usesIn(code: string): Uses {
   }
   return (specifier) =>
     new RegExp(`(?<![\\w$])${escapeForRegex(local(specifier))}(?![\\w$])`).test(code);
+}
+
+/* Whether the merged code uses a name the import binds: one that binds none runs the module for its effects, and stays. */
+function stillUsed(imp: ParsedImport, uses: Uses): boolean {
+  if (imp.namespaceImport) return uses(imp.namespaceImport);
+  const bound = [...imp.names, ...imp.typeNames];
+  return bound.length === 0 || bound.some(uses);
 }
 
 function unionImport(generated: ParsedImport, existing: ParsedImport, uses: Uses): ParsedImport {

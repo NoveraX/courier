@@ -48,21 +48,22 @@ export function planFiles(
   };
   const targetIdentities = new Set<string>();
   const targeted = new Set<string>();
+  const targetPaths = new Set(request.targets.map((target) => target.path));
+  const removing = [...new Set(request.removals)].filter((path) => !targetPaths.has(path));
   for (const target of request.targets) {
     if (targeted.has(target.path)) throw new DuplicateTargetError(target.path);
     targeted.add(target.path);
     const disk = diskAt(root, request.dir, target.path);
     if (disk.kind === "file") targetIdentities.add(identityOf(disk));
     const record = recordFor(target.path);
-    const outcome = planTarget(target, disk, ownershipOf(disk, record, request.importName), record);
+    const ownership = ownershipOf(disk, record, request.importName);
+    const outcome = planTarget(target, disk, ownership, record, removing);
     if ("blocked" in outcome) plan.blocked.push({ path: target.path, reason: outcome.blocked });
     else if (outcome.confirm)
       plan.pending.push({ confirmation: outcome.confirm, write: outcome.write });
     else plan.writes.push(outcome.write);
   }
-  const targetPaths = new Set(request.targets.map((target) => target.path));
-  for (const path of new Set(request.removals)) {
-    if (targetPaths.has(path)) continue;
+  for (const path of removing) {
     const disk = diskAt(root, request.dir, path);
     if (disk.kind === "file" && targetIdentities.has(identityOf(disk))) {
       plan.forgotten.push(path);

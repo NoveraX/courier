@@ -3,6 +3,7 @@
  * Pure function — no file I/O.
  */
 
+import { posix } from "node:path";
 import type { GeneratedFile } from "../generator/types";
 import type { UpdateFileResult, UpdateResult } from "../registry/types";
 import { declaresEndpoints } from "./declares-endpoints";
@@ -30,6 +31,7 @@ import { readsAsDeclaration } from "./reads-as-declaration";
  * @param fingerprints - Stored fingerprints for the source (endpoint name → hash)
  * @param generated - Freshly generated files from the new spec
  * @param existingFiles - Map of file path → content for files currently on disk
+ * @param removing - Files the update removes that `existingFiles` does not hold
  * @returns Preview with merged files
  * @example
  * ```ts
@@ -40,16 +42,32 @@ export function previewUpdate(
   fingerprints: Record<string, string>,
   generated: GeneratedFile[],
   existingFiles: Record<string, string>,
+  removing: readonly string[] = [],
 ): UpdateResult {
-  const files = generated.map((gen) =>
-    mergeOrOverwrite(gen, existingFiles[gen.path], fingerprints),
-  );
-
   /* Detect files on disk that are no longer in the generated set */
   const generatedPaths = new Set(generated.map((g) => g.path));
   const deletedFiles = Object.keys(existingFiles).filter((p) => !generatedPaths.has(p));
+  /* A merged file stops importing a file removed here once nothing it keeps uses it, or the import keeps that file. */
+  const removedModules = new Set(
+    [...deletedFiles, ...removing.filter((p) => !generatedPaths.has(p))].map(withoutExtension),
+  );
+  const files = generated.map((gen) =>
+    mergeOrOverwrite(gen, existingFiles[gen.path], fingerprints, (source) =>
+      removedModules.has(moduleOf(gen.path, source) ?? ""),
+    ),
+  );
 
   return { files, deletedFiles, breakingChanges: [] };
+}
+
+/* The file a relative module names, from the file importing it, without its extension. */
+function moduleOf(file: string, specifier: string): string | undefined {
+  if (!specifier.startsWith("./") && !specifier.startsWith("../")) return undefined;
+  return withoutExtension(posix.join(posix.dirname(file), specifier));
+}
+
+function withoutExtension(path: string): string {
+  return path.replace(/\.(?:[cm]?[jt]sx?)$/, "");
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -58,6 +76,7 @@ function mergeOrOverwrite(
   gen: GeneratedFile,
   existing: string | undefined,
   fingerprints: Record<string, string>,
+  removed: (source: string) => boolean,
 ): UpdateFileResult {
   /* Both versions must declare endpoints: the merge keeps what surrounds
      them and takes the declaration from the generated file, so one that
@@ -75,7 +94,7 @@ function mergeOrOverwrite(
      everything else the file carried — the base it configures, imports the
      user added, helpers below the group — none of which the endpoint
      classification says anything about. */
-  const result = mergeGroupFile(existing, gen.content, fp);
+  const result = mergeGroupFile(existing, gen.content, fp, removed);
   if (!readsAsDeclaration(gen.path, result.content)) return unmergeable(gen);
 
   return {

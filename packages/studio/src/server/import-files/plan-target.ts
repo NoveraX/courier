@@ -26,10 +26,11 @@ type ExistingFile = Extract<DiskFile, { kind: "file" }>;
  * @param disk - What is at its path now
  * @param ownership - Who that belongs to
  * @param record - What Studio recorded about it, if anything
+ * @param removing - The files the operation removes, which a merged file stops importing once nothing it keeps uses them
  * @returns The outcome
  * @example
  * ```ts
- * const outcome = planTarget(target, disk, ownershipOf(disk, record, name), record);
+ * const outcome = planTarget(target, disk, ownershipOf(disk, record, name), record, removals);
  * ```
  */
 export function planTarget(
@@ -37,11 +38,13 @@ export function planTarget(
   disk: DiskFile,
   ownership: Ownership,
   record: RecordedFile | undefined,
+  removing: readonly string[],
 ): TargetOutcome {
   if (disk.kind === "link" || disk.kind === "not-a-file") return { blocked: disk.kind };
   if (disk.kind === "absent") return { write: written(target, "create", target.body, ownership) };
   /* A file the merge cannot read is replaced whole, and only once the user allows it. */
-  const merged = target.kind === "merge" ? mergedBody(target, disk, ownership, record) : null;
+  const merged =
+    target.kind === "merge" ? mergedBody(target, disk, ownership, record, removing) : null;
   const body = merged ?? target.body;
   const whole = target.kind === "generated" || (target.kind === "merge" && merged === null);
   const carriesEdits =
@@ -104,11 +107,15 @@ function mergedBody(
   disk: ExistingFile,
   ownership: Ownership,
   record: RecordedFile | undefined,
+  removing: readonly string[],
 ): string | null {
   const fingerprints = writtenFingerprints(disk, ownership, record);
-  const [merged] = previewUpdate(fingerprints, [{ path: target.path, content: target.body }], {
-    [target.path]: disk.body,
-  }).files;
+  const [merged] = previewUpdate(
+    fingerprints,
+    [{ path: target.path, content: target.body }],
+    { [target.path]: disk.body },
+    removing,
+  ).files;
   if (merged === undefined) return target.body;
   return merged.status === "conflict" ? null : merged.content;
 }

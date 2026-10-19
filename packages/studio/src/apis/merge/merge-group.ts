@@ -52,6 +52,7 @@ interface Side {
  * @param existingContent - The file on disk
  * @param generatedContent - The file the import generated
  * @param fingerprints - How each endpoint of the file compares with what Studio wrote
+ * @param removed - Whether a module the file imports is a file the update removes, imported no longer once nothing merged uses it
  * @returns The merged file; a `conflict` holding the generated file when the
  *   merge cannot keep the file's edits
  * @example
@@ -63,6 +64,7 @@ export function mergeGroupFile(
   existingContent: string,
   generatedContent: string,
   fingerprints: FingerprintResult,
+  removed: (source: string) => boolean = () => false,
 ): MergeResult {
   const fresh = side(readLayout(generatedContent));
   const read = fresh && side(readLayout(existingContent, fresh.layout.declaration.name));
@@ -80,7 +82,7 @@ export function mergeGroupFile(
   for (const option of shell.kept) {
     changes.push({ type: "preserved", target: `option:${option}`, detail: "added by hand" });
   }
-  const content = assemble(own, fresh, entries, shell, changes);
+  const content = assemble(own, fresh, entries, shell, changes, removed);
   if (!holdsMerge(content, own.layout, fresh.layout, entries)) {
     return conflict(generatedContent, MISREAD);
   }
@@ -143,6 +145,7 @@ function assemble(
   entries: readonly MergedEntry[],
   shell: MergedShell,
   changes: MergeChange[],
+  removed: (source: string) => boolean,
 ): string {
   const { head, trailingCode } = own.info;
   /* What the file already declares wins, so a base someone renamed or
@@ -155,7 +158,8 @@ function assemble(
   const { header, footer } = shell;
   /* A name the file imported that nothing merged uses any more goes with the code that used it. */
   const code = [...head, ...preamble, ...header, ...endpoints, ...footer, ...trailing];
-  const imports = mergeImports(own.info.imports, fresh.info.imports, changes, code.join("\n"));
+  const merged = code.join("\n");
+  const imports = mergeImports(own.info.imports, fresh.info.imports, changes, merged, removed);
   return buildFile({ head, imports, preamble, header, endpoints, footer, trailing });
 }
 

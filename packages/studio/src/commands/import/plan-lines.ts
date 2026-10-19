@@ -3,6 +3,7 @@ import type { TerminalStyle } from "@noverax/courier/internal";
 import type { ParsedSpec } from "../../apis";
 import type { Confirmation, KeptReason } from "../../server/import-files/file-plan-types";
 import type { PlanSummary } from "../../server/import-files/plan-summary";
+import { terminalText } from "../terminal-text";
 
 const FORMATS: Readonly<Record<ParsedSpec["format"], string>> = {
   openapi3: "OpenAPI 3",
@@ -68,9 +69,12 @@ export function specLines(
   const picked = selected
     ? Object.values(selected).reduce((sum, names) => sum + names.length, 0)
     : null;
+  /* The specification's text, a path or a reference, is shown as it is, never acted on. */
   return [
-    `Import ${name} from ${from}: ${FORMATS[spec.format]}, ${holds}${picked === null ? "" : `, ${picked} of them picked`}`,
-    ...spec.skipped.map((op) => `  Left out: ${op.method} ${op.path}, ${op.reason}`),
+    `Import ${terminalText(name)} from ${terminalText(from)}: ${FORMATS[spec.format]}, ${holds}${picked === null ? "" : `, ${picked} of them picked`}`,
+    ...spec.skipped.map(
+      (op) => `  Left out: ${terminalText(`${op.method} ${op.path}, ${op.reason}`)}`,
+    ),
   ];
 }
 

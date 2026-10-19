@@ -302,6 +302,14 @@ describe("courier-studio import", { timeout: 60_000 }, () => {
     expect(read("lib/sources.ts")).toBe("export const sources = {};\n");
   });
 
+  it("shows a character a terminal acts on in what it refuses as its escape", async () => {
+    const run = await studioImport([spec, "--dry-run", "--validation", "yup\u001b]0;TITLE\u0007"]);
+
+    expect(run.status).toBe(1);
+    expect(run.output).toContain('not "yup\\u001b]0;TITLE\\u0007"');
+    expect(run.output).not.toContain("\u001b");
+  });
+
   it("says how to start a project with no courier.config.ts, and refuses an option it does not take", async () => {
     const unknown = await studioImport([spec, "--dry-run", "--validation", "yup"]);
     rmSync(join(dir, "courier.config.ts"));

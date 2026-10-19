@@ -49,6 +49,29 @@ describe("what is imported", () => {
     expect(lines.slice(1)).toEqual([expect.stringMatching(/^ {2}Left out: TRACE \/debug, /)]);
   });
 
+  it("shows a character a terminal acts on that the specification gives as its escape", () => {
+    const hostile = parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Pet Store", version: "1" },
+        paths: {
+          "/pets\u001b]0;TITLE\u0007": {
+            trace: { operationId: "trace", responses: { 200: { description: "ok" } } },
+          },
+        },
+      }),
+    );
+
+    const [, left] = specLines("petStore", "./open\u202eapi.json", hostile, null);
+
+    expect(left).toMatch(/^ {2}Left out: TRACE \/pets\\u001b\]0;TITLE\\u0007, /);
+    expect(specLines("petStore", "./open\u202eapi.json", hostile, null)[0]).toContain(
+      "from ./open\\u202eapi.json:",
+    );
+    const acted = [...(left ?? "")].filter((char) => char < " " || char === "\u202e");
+    expect(acted).toEqual([]);
+  });
+
   it("says how many endpoints are picked when not every one is", () => {
     expect(specLines("petStore", "-", spec, { pets: ["listPets"] })[0]).toContain(
       ", 1 of them picked",

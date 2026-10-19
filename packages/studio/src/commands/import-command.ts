@@ -2,6 +2,7 @@ import { createLogger } from "@noverax/courier";
 import { DOTENV_ARG } from "@noverax/courier-cli/devkit";
 import { type ArgsDef, defineCommand } from "citty";
 import { runImport } from "./import/run-import";
+import { terminalText } from "./terminal-text";
 
 const log = createLogger("Import");
 
@@ -111,7 +112,7 @@ export const importCommand = defineCommand({
       process.exitCode = await runImport(args.spec, args);
     } catch (error) {
       /* One line naming the problem, as the server's own start does, and a failing status. */
-      log.error(error instanceof Error ? error.message : String(error));
+      log.error(terminalText(error instanceof Error ? error.message : String(error)));
       process.exitCode = 1;
     }
   },

@@ -102,8 +102,7 @@ export interface BindingSnapshot {
   rows: BindingStatusRow[];
   runtimeCount: number;
   sourceCount: number;
-  /** Each runtime connected, and whether it runs in a browser or on a server. */
-  /** Each runtime connected, and where it is served when it said so: the page's origin, the app's. */
+  /** Each runtime connected, whether it runs in a browser or on a server, and where it is served when it said so: the page's origin, the app's. */
   runtimes: Array<{ runtimeId: string; kind: "browser" | "server"; origin?: string }>;
   /** When Studio saw the first of the runtimes attached now arrive; absent while none is. */
   activeSince?: number;

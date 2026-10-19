@@ -1,3 +1,4 @@
+import { addressOf } from "./call-address";
 import { nameListItems } from "./list-items";
 import { type CalledPath, pathTemplate } from "./path-template";
 import type { JsonSchema } from "./sample-schema";
@@ -9,6 +10,8 @@ export interface TrafficCall {
   method: string;
   httpMethod: string | undefined;
   url: string | undefined;
+  /** The origin of the page or app that made the call, which a path is read against. */
+  origin?: string | undefined;
   variables: unknown;
   status: number | undefined;
   data: unknown;
@@ -22,7 +25,7 @@ export interface TrafficSpec {
   document: JsonSchema;
   endpoints: number;
   calls: number;
-  leftOut: { streams: number; unanswered: number; conflicting: string[] };
+  leftOut: { streams: number; unanswered: number; unaddressed: number; conflicting: string[] };
 }
 
 /** A call placed on its route: its path's segments after the base path, and its query. */
@@ -37,8 +40,9 @@ export interface PlacedCall extends CalledPath {
  * after the variables they carried — its query or body, and its answer,
  * each schema merged from every call. The import wizard turns it into code,
  * so a source the app defines in its own code becomes a typed, declared one.
- * A stream, a call with no answer and one with no address say nothing a
- * document can hold, and are counted as left out.
+ * A path a browser recorded is read against the origin of the page that
+ * made it. A stream, a call with no answer and one with no address Studio
+ * can read say nothing a document can hold, and are counted as left out.
  *
  * @param source - The source's name, the document's title
  * @param calls - Its recorded calls
@@ -49,20 +53,25 @@ export interface PlacedCall extends CalledPath {
  * ```
  */
 export function openapiFromTraffic(source: string, calls: readonly TrafficCall[]): TrafficSpec {
-  const leftOut = { streams: 0, unanswered: 0, conflicting: [] as string[] };
+  const leftOut = { streams: 0, unanswered: 0, unaddressed: 0, conflicting: [] as string[] };
   const placed: PlacedCall[] = [];
   let origin: string | undefined;
   for (const call of calls) {
     if (call.transport !== "http") leftOut.streams++;
-    else if (call.status === undefined || !call.url) leftOut.unanswered++;
+    else if (call.status === undefined) leftOut.unanswered++;
     else {
-      const url = new URL(call.url);
-      origin ??= url.origin;
+      const address = addressOf(call.url, call.origin);
+      if (address === null) {
+        leftOut.unaddressed++;
+        continue;
+      }
+      origin ??= address.origin;
+      const { pathname, searchParams } = address.url;
       placed.push({
         call,
-        query: url.searchParams,
+        query: searchParams,
         variables: call.variables,
-        segments: segmentsOf(url.pathname),
+        segments: segmentsOf(pathname),
       });
     }
   }
@@ -70,10 +79,9 @@ export function openapiFromTraffic(source: string, calls: readonly TrafficCall[]
   const byEndpoint = new Map<string, PlacedCall[]>();
   for (const one of placed) {
     const key = one.call.group ? `${one.call.group}.${one.call.method}` : one.call.method;
-    byEndpoint.set(key, [
-      ...(byEndpoint.get(key) ?? []),
-      { ...one, segments: one.segments.slice(base.length) },
-    ]);
+    const endpointCalls = byEndpoint.get(key) ?? [];
+    if (endpointCalls.length === 0) byEndpoint.set(key, endpointCalls);
+    endpointCalls.push({ ...one, segments: one.segments.slice(base.length) });
   }
   const paths: Record<string, Record<string, JsonSchema>> = {};
   for (const [key, endpointCalls] of byEndpoint) {
@@ -98,9 +106,7 @@ export function openapiFromTraffic(source: string, calls: readonly TrafficCall[]
         version: "0.0.0",
         description: `Read from ${placed.length} calls Studio recorded.`,
       },
-      servers: [
-        { url: `${origin ?? "http://localhost"}${base.length > 0 ? `/${base.join("/")}` : ""}` },
-      ],
+      servers: [{ url: serverUrl(origin, base, placed.length > 0) }],
       tags: groups.map((name) => ({ name })),
       paths,
       ...(Object.keys(schemas).length > 0 && { components: { schemas } }),
@@ -125,11 +131,18 @@ function segmentsOf(pathname: string): string[] {
     });
 }
 
+/* The API's address: its origin and base path; the base path alone for calls made by path from a page of no known origin, which reach the page's own. */
+function serverUrl(origin: string | undefined, base: readonly string[], placed: boolean): string {
+  const path = base.length > 0 ? `/${base.join("/")}` : "";
+  if (origin !== undefined) return `${origin}${path}`;
+  return placed ? path || "/" : "http://localhost";
+}
+
 /* The segments every endpoint's paths start with — the API's own base path — when there are several endpoints, each keeping one of its own. */
 function basePath(placed: readonly PlacedCall[]): string[] {
   const endpoints = new Set(placed.map((one) => `${one.call.group}.${one.call.method}`));
   if (endpoints.size < 2 || placed.length === 0) return [];
-  const shortest = Math.min(...placed.map((one) => one.segments.length));
+  const shortest = placed.reduce((least, one) => Math.min(least, one.segments.length), Infinity);
   const base: string[] = [];
   for (let at = 0; at < shortest - 1; at++) {
     const segment = placed[0]?.segments[at];

@@ -3,7 +3,9 @@
  * source's recorded calls — each route with its parameters named after the
  * variables they carried, its query or body, and its answer, each schema
  * merged from every call — which the import wizard turns into code as it
- * does any specification. A stream and a call with no answer are left out.
+ * does any specification. A path a browser recorded is read against the
+ * page's origin. A stream, a call with no answer and one with no address
+ * are left out.
  */
 import { describe, expect, it } from "vitest";
 
@@ -211,5 +213,79 @@ describe("an OpenAPI document read from traffic", () => {
       /export type ProductsListItem = \{\s*\n\s*\/\*\* Inferred from traffic: [^*]+ \*\/\s*\n\s*id: string;/,
     );
     expect(code).toContain("z.array(ProductsListItemSchema)");
+  });
+});
+
+describe("an OpenAPI document read from calls a page made by path", () => {
+  const byPath = [
+    call({ url: "/api/products/p_1", origin: "https://app.example" }),
+    call({
+      method: "list",
+      url: "/api/products?page=2",
+      origin: "https://app.example",
+      variables: { page: 2 },
+    }),
+  ];
+
+  it("reads a path against the origin of the page that made it", () => {
+    const spec = openapiFromTraffic("shop", byPath);
+
+    expect(spec).toMatchObject({ endpoints: 2, calls: 2 });
+    expect(spec.document.servers).toEqual([{ url: "https://app.example/api" }]);
+  });
+
+  it("names the server by its path alone when no origin is known", () => {
+    const spec = openapiFromTraffic(
+      "shop",
+      byPath.map(({ origin: _origin, ...rest }) => rest),
+    );
+
+    expect(spec.document.servers).toEqual([{ url: "/api" }]);
+    expect(spec.endpoints).toBe(2);
+  });
+
+  it("leaves out and counts a call whose address is neither a URL nor a path, and reads the rest", () => {
+    const spec = openapiFromTraffic("shop", [
+      ...byPath,
+      call({ url: "products" }),
+      call({ url: undefined }),
+    ]);
+
+    expect(spec).toMatchObject({
+      endpoints: 2,
+      calls: 2,
+      leftOut: { unaddressed: 2, unanswered: 0 },
+    });
+  });
+
+  it("never throws, whatever the address", () => {
+    const odd = [
+      "http://[::1",
+      "/%zz",
+      "javascript:alert(1)",
+      "pets",
+      "//cdn.example/x",
+      "",
+      "data:,x",
+    ];
+
+    expect(() =>
+      openapiFromTraffic(
+        "shop",
+        odd.map((url) => call({ url })),
+      ),
+    ).not.toThrow();
+    expect(
+      openapiFromTraffic(
+        "shop",
+        odd.map((url) => call({ url })),
+      ).leftOut.unaddressed,
+    ).toBe(6);
+  });
+
+  it("keeps the server of the first absolute call", () => {
+    const spec = openapiFromTraffic("shop", [call({}), ...byPath]);
+
+    expect(spec.document.servers).toEqual([{ url: "https://shop.example/api" }]);
   });
 });

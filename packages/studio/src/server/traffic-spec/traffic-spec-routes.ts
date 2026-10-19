@@ -1,3 +1,4 @@
+import { isSafeHttpOrigin } from "@noverax/courier-studio-core";
 import type { RouteApp } from "../route-types";
 import { isObject } from "../validate-body";
 import { openapiFromTraffic, type TrafficCall } from "./openapi-from-traffic";
@@ -38,13 +39,15 @@ export function registerTrafficSpecRoutes(app: RouteApp): void {
 
 function callOf(value: unknown): TrafficCall[] {
   if (!isObject(value) || typeof value.method !== "string") return [];
-  const { group, method, httpMethod, url, variables, status, data, dataCut, transport } = value;
+  const { group, method, httpMethod, url, origin, variables, status, data, dataCut, transport } =
+    value;
   return [
     {
       group: typeof group === "string" ? group : "",
       method,
       httpMethod: typeof httpMethod === "string" ? httpMethod : undefined,
-      url: typeof url === "string" && URL.canParse(url) ? url : undefined,
+      url: typeof url === "string" ? url : undefined,
+      origin: isOrigin(origin) ? origin : undefined,
       variables,
       status: typeof status === "number" ? status : undefined,
       data,
@@ -52,4 +55,9 @@ function callOf(value: unknown): TrafficCall[] {
       transport: transport === "sse" || transport === "ws" ? transport : "http",
     },
   ];
+}
+
+/* An http(s) origin and nothing after it, as a page says where it is served. */
+function isOrigin(value: unknown): value is string {
+  return typeof value === "string" && isSafeHttpOrigin(value) && new URL(value).origin === value;
 }

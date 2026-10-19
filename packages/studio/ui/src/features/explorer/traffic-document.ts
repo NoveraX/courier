@@ -8,7 +8,7 @@ export interface TrafficDocument {
   text: string;
   /** How many endpoints it holds. */
   endpoints: number;
-  /** What the calls held that the document could not: a stream's calls, calls with no answer. */
+  /** What the calls held that the document could not: a stream's calls, calls with no answer or no address. */
   leftOut: unknown;
 }
 
@@ -26,10 +26,14 @@ export interface TrafficDocument {
  * ```
  */
 export async function readTrafficDocument(source: string): Promise<TrafficDocument> {
-  const calls = useStudioStore
-    .getState()
-    .requests.filter((r) => r.source === source && r.purpose === undefined)
-    .map(callOf);
+  const { requests, bindingSnapshot } = useStudioStore.getState();
+  /* A page whose source has a relative base URL records a path, which Studio reads against the page's origin. */
+  const origins = new Map(
+    bindingSnapshot.runtimes.map((runtime) => [runtime.runtimeId, runtime.origin]),
+  );
+  const calls = requests
+    .filter((r) => r.source === source && r.purpose === undefined)
+    .map((r) => callOf(r, origins.get(r.sessionId)));
   const answer = await post<unknown>("/api/apis/traffic-spec", { source, calls });
   if (!isPlainObject(answer) || typeof answer.text !== "string")
     throw new Error("Studio read no document");
@@ -40,12 +44,13 @@ export async function readTrafficDocument(source: string): Promise<TrafficDocume
   };
 }
 
-function callOf(r: RequestEntry): Record<string, unknown> {
+function callOf(r: RequestEntry, origin: string | undefined): Record<string, unknown> {
   return {
     group: r.group ?? "",
     method: r.method,
     httpMethod: r.httpMethod,
     url: r.url,
+    origin,
     variables: r.variables,
     status: r.statusCode,
     data: r.data,

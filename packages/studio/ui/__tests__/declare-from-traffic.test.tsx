@@ -122,6 +122,41 @@ describe("declaring a source from its traffic", () => {
     expect(useImportRequest.getState().request).toEqual({ content: DOCUMENT, fromTraffic: true });
   });
 
+  it("sends each call with the origin of the page that made it, and names the calls it could not address", async () => {
+    useStudioStore.setState({
+      requests: [
+        requestEntry({
+          id: "c",
+          source: "billing",
+          method: "get",
+          sessionId: "tab-1",
+          url: "/api/invoices",
+        }),
+      ],
+      bindingSnapshot: {
+        rows: [],
+        runtimeCount: 1,
+        sourceCount: 1,
+        runtimes: [{ runtimeId: "tab-1", kind: "browser", origin: "https://app.example" }],
+      },
+    });
+    vi.mocked(post).mockResolvedValue({
+      text: DOCUMENT,
+      endpoints: 1,
+      leftOut: { streams: 0, unanswered: 0, unaddressed: 3, conflicting: [] },
+    });
+
+    await declareFromTraffic("billing");
+
+    expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/traffic-spec", {
+      source: "billing",
+      calls: [expect.objectContaining({ url: "/api/invoices", origin: "https://app.example" })],
+    });
+    expect(toast.info).toHaveBeenCalledWith(
+      "Read billing from its traffic. Left out: 3 calls with no address Studio could read.",
+    );
+  });
+
   it("says so when no call could be read into an endpoint, asking nothing", async () => {
     vi.mocked(post).mockResolvedValue({ text: DOCUMENT, endpoints: 0 });
 

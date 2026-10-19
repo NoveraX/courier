@@ -39,13 +39,16 @@ export async function declareFromTraffic(source: string): Promise<boolean> {
 /* What the document could not hold, said once the wizard opens. */
 function leftOutText(value: unknown): string {
   if (!isPlainObject(value)) return "";
-  const { streams, unanswered, conflicting } = value;
+  const { streams, unanswered, unaddressed, conflicting } = value;
   const named = Array.isArray(conflicting)
     ? conflicting.filter((name) => typeof name === "string")
     : [];
   return [
     typeof streams === "number" && streams > 0 && `${streams} stream calls`,
     typeof unanswered === "number" && unanswered > 0 && `${unanswered} calls with no answer`,
+    typeof unaddressed === "number" &&
+      unaddressed > 0 &&
+      `${unaddressed} calls with no address Studio could read`,
     named.length > 0 && `${named.join(", ")}, whose route another endpoint took`,
   ]
     .filter(Boolean)

@@ -1,5 +1,11 @@
+import { segmentTemplate } from "./segment-template";
+
 /**
  * Match a request path against an endpoint's path template.
+ *
+ * A segment of text matches itself, `::` standing for one colon in it; a
+ * parameter takes a whole segment, or its part of one it shares with text,
+ * as Google's `:name::cancel` does.
  *
  * @param template Group-relative template, such as `":room/events"`
  * @param path     Group-relative request path, such as `"lobby/events"`
@@ -8,6 +14,7 @@
  * @example
  * ```ts
  * matchPath(":room/events", "lobby/events"); // { room: "lobby" }
+ * matchPath(":room::watch", "lobby:watch");  // { room: "lobby" }
  * matchPath("ws-room", "room");              // undefined
  * ```
  */
@@ -18,14 +25,14 @@ export function matchPath(template: string, path: string): Record<string, string
 
   const params: Record<string, string> = {};
   for (const [index, segment] of expected.entries()) {
-    const value = actual[index] ?? "";
-    if (!segment.startsWith(":")) {
-      if (segment !== value) return undefined;
-      continue;
+    const { names, match } = segmentTemplate(segment);
+    const values = match(actual[index] ?? "");
+    if (values === undefined) return undefined;
+    for (const [at, name] of names.entries()) {
+      const decoded = decodeSegment(values[at] ?? "");
+      if (decoded === undefined) return undefined;
+      params[name] = decoded;
     }
-    const decoded = decodeSegment(value);
-    if (decoded === undefined) return undefined;
-    params[segment.slice(1)] = decoded;
   }
   return params;
 }

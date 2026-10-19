@@ -1,4 +1,5 @@
 import type { PrefixMapping } from "../server/prefix-route-types";
+import { specificity } from "../server/segment-template";
 import type { RouteInfo } from "./route-types";
 
 /**
@@ -66,12 +67,9 @@ export function buildPrefixMappings(
 
 /* More segments first, then position by position a fixed segment before a parameter. */
 function byPrefixSpecificity(a: PrefixMapping, b: PrefixMapping): number {
-  const segments = (prefix: string) => prefix.split("/").filter(Boolean);
-  const [left, right] = [segments(a.prefix), segments(b.prefix)];
+  const [left, right] = [specificity(a.prefix), specificity(b.prefix)];
   if (left.length !== right.length) return right.length - left.length;
-  const rank = (parts: string[]) =>
-    parts.map((part) => (part.startsWith(":") ? "1" : "0")).join("");
-  return rank(left).localeCompare(rank(right));
+  return left.localeCompare(right);
 }
 
 /** Flatten user-supplied seed config into a `{ groupName: count }` map */

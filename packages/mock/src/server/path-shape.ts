@@ -1,3 +1,7 @@
+import { pathPieces } from "@noverax/courier/internal";
+
+import { segmentKind } from "./segment-template";
+
 /**
  * How an endpoint's path, relative to its group prefix, addresses records:
  *
@@ -5,8 +9,9 @@
  * - `record` — one parameter segment naming a record (`":id"`)
  * - `lookup` — fixed segments, then one parameter naming a record by
  *   another field (`"by-email/:email"`)
- * - `other` — anything else: fixed sub-paths (`"stats"`) and paths that go
- *   on past a parameter (`":id/orders"`)
+ * - `other` — anything else: fixed sub-paths (`"stats"`), paths that go
+ *   on past a parameter (`":id/orders"`), and a parameter beside text in
+ *   its segment (`":name::cancel"`)
  */
 export type PathShape = "collection" | "record" | "lookup" | "other";
 
@@ -44,8 +49,8 @@ export function pathShape(path: string): PathShape {
  */
 export function recordParam(path: string): string | undefined {
   const segments = path.split("/").filter(Boolean);
-  const last = segments[segments.length - 1];
-  if (!last?.startsWith(":")) return undefined;
-  const fixedBefore = segments.slice(0, -1).every((segment) => !segment.startsWith(":"));
-  return fixedBefore ? last.slice(1) : undefined;
+  const [last, ...beside] = pathPieces(segments.at(-1) ?? "");
+  if (last?.kind !== "param" || beside.length > 0) return undefined;
+  const fixedBefore = segments.slice(0, -1).every((segment) => segmentKind(segment) === "text");
+  return fixedBefore ? last.name : undefined;
 }

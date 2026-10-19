@@ -26,6 +26,7 @@ import {
   resolveGetMethod,
   resolveMethod,
 } from "./route-helpers";
+import { routePath } from "./route-path";
 
 /**
  * Register catch-all routes that map real HTTP paths to mock endpoints.
@@ -48,6 +49,9 @@ export function registerPrefixRoutes(
   for (const mapping of mappings) {
     const prefix = mapping.prefix.replace(/^\//, "");
     const eps = mapping.endpoints;
+    /* `/users` and `/users/:id`, a prefix written as Hono routes it, a colon in it included. */
+    const collection = routePath(prefix).route;
+    const record = routePath(`${prefix}/:id`).route;
 
     // A group without a prefix of its own: each endpoint at its own path, no catch-alls
     if (mapping.exact) {
@@ -57,7 +61,7 @@ export function registerPrefixRoutes(
     }
 
     // GET /prefix → list endpoint
-    app.get(`/${prefix}`, (c) => {
+    app.get(collection, (c) => {
       const variables = parseQueryParams(new URL(c.req.url).searchParams);
       const hasParams = Object.keys(variables).length > 0;
       const method = hasParams
@@ -75,7 +79,7 @@ export function registerPrefixRoutes(
     registerDeclaredRoutes(app, prefix, eps ?? [], mapping.group, config);
 
     // GET /prefix/:id → get-by-id endpoint
-    app.get(`/${prefix}/:id`, (c) => {
+    app.get(record, (c) => {
       const id = parseId(c.req.param("id") ?? "");
       const ep = resolveByOperation(eps, "get");
       const method =
@@ -85,7 +89,7 @@ export function registerPrefixRoutes(
     });
 
     // POST /prefix → create endpoint
-    app.post(`/${prefix}`, async (c) => {
+    app.post(collection, async (c) => {
       const ep = resolveByOperation(eps, "create");
       const method =
         ep?.name ??
@@ -96,7 +100,7 @@ export function registerPrefixRoutes(
     });
 
     // PUT /prefix/:id → replace/upsert endpoint
-    app.put(`/${prefix}/:id`, async (c) => {
+    app.put(record, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
       const ep = resolveByOperation(eps, "replace");
       const method =
@@ -114,7 +118,7 @@ export function registerPrefixRoutes(
     });
 
     // PATCH /prefix/:id → update endpoint
-    app.patch(`/${prefix}/:id`, async (c) => {
+    app.patch(record, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
       const ep = resolveByOperation(eps, "update");
       const method =
@@ -132,7 +136,7 @@ export function registerPrefixRoutes(
     });
 
     // DELETE /prefix → deleteAll endpoint
-    app.delete(`/${prefix}`, (c) => {
+    app.delete(collection, (c) => {
       const ep = resolveByOperation(eps, "deleteAll");
       const method =
         ep?.name ??
@@ -145,7 +149,7 @@ export function registerPrefixRoutes(
     });
 
     // DELETE /prefix/:id → delete endpoint
-    app.delete(`/${prefix}/:id`, async (c) => {
+    app.delete(record, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
       const ep = resolveByOperation(eps, "delete");
       const method =

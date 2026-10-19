@@ -5,6 +5,8 @@ import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { RAW_BESIDE_PATH_VALUES } from "./raw-body-refusal";
 import { type BodyRefusal, bodyValue, type RequestBody } from "./read-request-body";
 import { parsePathParams, parseQueryParams, servedByCatchAll } from "./route-helpers";
+import { routePath } from "./route-path";
+import { specificity } from "./segment-template";
 
 const METHODS = new Set<string>([
   "GET",
@@ -58,16 +60,16 @@ export function registerDeclaredRoutes(
     const method = (ep.httpMethod ?? "GET").toUpperCase();
     /* A route at the collection root is `/users`, not `/users/`, which a
        request to the collection never matches. */
-    const path = `/${[prefix, ...ep.path.split("/")].filter(Boolean).join("/")}`;
+    const { route, params } = routePath(`${prefix}/${ep.path}`);
     /* Hono answers every HEAD with the GET route at its path, so a HEAD
        endpoint is a GET route that hands any other request on. */
-    app.on(method === "HEAD" ? "GET" : method, path, async (c, next) => {
+    app.on(method === "HEAD" ? "GET" : method, route, async (c, next) => {
       if (method === "HEAD" && c.req.method !== "HEAD") return next();
       /* A path that fixes query values answers only a request that carries them. */
       if (!carriesFixedQuery(c.req.url, ep.fixedQuery)) return next();
       const read = await inputOf(c, method, () => config.readBody(c, group, ep.name));
       if ("error" in read) return config.refuse(c, group, ep.name, read);
-      const variables = variablesOf(read, ep, parsePathParams(c.req.param()));
+      const variables = variablesOf(read, ep, parsePathParams(params(c.req.param())));
       if ("error" in variables) return config.refuse(c, group, ep.name, variables);
       return config.handleRequest(c, group, ep.name, variables.value);
     });
@@ -119,15 +121,9 @@ function headFirst(a: MappedEndpoint, b: MappedEndpoint): number {
 
 /** Fixed segments sort before parameters, position by position */
 function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
-  const rank = (ep: MappedEndpoint) =>
-    ep.path
-      .split("/")
-      .filter(Boolean)
-      .map((segment) => (segment.startsWith(":") ? "1" : "0"))
-      .join("");
   /* At one path, the endpoint whose query is fixed comes first: the other takes what is left. */
   const fixes = (ep: MappedEndpoint) => Object.keys(ep.fixedQuery ?? {}).length;
-  return rank(a).localeCompare(rank(b)) || fixes(b) - fixes(a);
+  return specificity(a.path).localeCompare(specificity(b.path)) || fixes(b) - fixes(a);
 }
 
 /**

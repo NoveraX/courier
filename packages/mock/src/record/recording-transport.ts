@@ -3,6 +3,7 @@ import type { AnyDefinedApi, CourierRoutes } from "@noverax/courier/define";
 import {
   createDirectHTTPExecutor,
   createProxyHTTPExecutor,
+  fillPathParams,
   routesOf,
   withoutTrailingSlashes,
 } from "@noverax/courier/internal";
@@ -110,14 +111,13 @@ function routeTable(source: AnyDefinedApi): Map<string, RouteInfo> {
   return table;
 }
 
-const PATH_PARAM = /:(\w+)/g;
-
+/* The path a call went to, a parameter it gave no value for left as `:name`. */
 function fillPath(path: string, variables: unknown): string {
-  return path.replace(PATH_PARAM, (match, name: string) => {
+  return fillPathParams(path, (name) => {
     const value = prop(variables, name);
     return typeof value === "string" || typeof value === "number"
       ? encodeURIComponent(String(value))
-      : match;
+      : `:${name}`;
   });
 }
 

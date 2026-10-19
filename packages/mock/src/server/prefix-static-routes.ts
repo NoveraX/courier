@@ -7,6 +7,7 @@ import type { Hono } from "hono";
 
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { parsePathParams, parseQueryParams } from "./route-helpers";
+import { routePath } from "./route-path";
 
 /**
  * Register SSE endpoints as GET routes at the path each declares.
@@ -41,10 +42,10 @@ export function registerSSERoutes(
   for (const ep of endpoints) {
     if (ep.transport !== "sse") continue;
 
-    const path = (ep.path || ep.name).split("/").filter(Boolean).join("/");
-    app.get(`/${prefix}/${path}`, (c) => {
+    const { route, params } = routePath(`${prefix}/${ep.path || ep.name}`);
+    app.get(route, (c) => {
       const query = parseQueryParams(new URL(c.req.url).searchParams);
-      const variables = { ...query, ...parsePathParams(c.req.param()) };
+      const variables = { ...query, ...parsePathParams(params(c.req.param())) };
       return config.handleRequest(c, group, ep.name, variables);
     });
   }

@@ -1,5 +1,6 @@
 import type { PlacedEndpoint } from "@noverax/courier/internal";
 
+import { segmentTemplate } from "../server/segment-template";
 import type { RecordingProblem } from "./types";
 
 const VERB: Readonly<Record<string, string>> = {
@@ -67,11 +68,12 @@ function segmentsOf(address: string): string[] | undefined {
     .map(decoded);
 }
 
-/* The route's segments, from the end: a parameter takes any segment, the rest only themselves. */
+/* The route's segments, from the end: a parameter takes any segment or its part of one, text only
+   itself, `::` standing for one colon in it. */
 function fits(recorded: readonly string[], route: readonly string[]): boolean {
   if (route.length > recorded.length) return false;
   const tail = recorded.slice(recorded.length - route.length);
-  return route.every((segment, at) => segment.startsWith(":") || segment === tail[at]);
+  return route.every((segment, at) => segmentTemplate(segment).match(tail[at] ?? "") !== undefined);
 }
 
 function decoded(segment: string): string {

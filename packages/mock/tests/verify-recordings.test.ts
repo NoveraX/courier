@@ -131,6 +131,26 @@ describe("a recorded call checked against the definition", () => {
     expect(checks[2]?.problems[0]?.message).toBe("products.archive is no longer defined");
   });
 
+  it("fits a call recorded where a doubled colon sends one beside a parameter, and no other", async () => {
+    const methods = shop({
+      archive: endpoint.post(":id::archive").variables(z.object({ id: z.string() })),
+    });
+    const archived = (url: string) =>
+      recording({
+        method: "archive",
+        request: { method: "POST", url },
+        response: { status: 200, data: {}, headers: {} },
+      });
+
+    const [fits, other] = await verifyRecordings(methods, [
+      archived("https://shop.example/api/products/p_1:archive"),
+      archived("https://shop.example/api/products/p_1:restore"),
+    ]);
+
+    expect(fits?.problems).toEqual([]);
+    expect(other?.problems.map((problem) => problem.kind)).toEqual(["path-changed"]);
+  });
+
   it("names the variables and the answer a schema now refuses, with each place", async () => {
     const stricter = shop({
       get: endpoint

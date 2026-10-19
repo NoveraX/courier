@@ -13,6 +13,8 @@
  * All helpers are pure and synchronous.
  */
 
+import { pathPieces } from "@noverax/courier/internal";
+
 import { type PathShape, pathShape } from "./path-shape";
 import type { EndpointOperation, MappedEndpoint } from "./prefix-route-types";
 
@@ -61,9 +63,8 @@ export function buildIdVars(
   id: string | number,
 ): Record<string, unknown> {
   if (!ep?.path) return { id };
-  const match = ep.path.match(/^:(\w+)/);
-  const paramName = match?.[1];
-  return paramName ? { [paramName]: id, id } : { id };
+  const [first] = pathPieces(ep.path);
+  return first?.kind === "param" ? { [first.name]: id, id } : { id };
 }
 
 /** Resolve GET method: if variables have known filter keys, use specific method */

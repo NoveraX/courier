@@ -3,6 +3,7 @@ import {
   groupOptionsOf,
   normalizeHttpMethod,
   type PlacedGroup,
+  pathParamNames,
 } from "@noverax/courier/internal";
 import { recordParam } from "../server/path-shape";
 import { channelShape } from "./channel-shape";
@@ -159,7 +160,7 @@ function analyzeEndpoint(
     prefix,
     path,
     fullPath,
-    hasIdParam: path.includes(":"),
+    hasIdParam: pathParamNames(path).length > 0,
     ...(idParam !== undefined && { idParam }),
     /* One of two operations at a path its query tells apart is no collection's CRUD. */
     operation: declared.fixed ? "custom" : detectOperation(httpMethod, path),

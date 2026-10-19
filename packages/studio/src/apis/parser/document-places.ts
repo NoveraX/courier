@@ -1,3 +1,4 @@
+import { pointerSegment } from "./pointer-segment";
 import { isNode, type SpecNode } from "./spec-node";
 
 /** An object of a document, and the JSON pointer of where the document writes it. */
@@ -32,13 +33,8 @@ export function placesIn(document: SpecNode, wanted: (node: SpecNode) => boolean
     if (isNode(value) && wanted(value)) places.push({ pointer, node: value });
     const children: Array<[string, unknown]> = Object.entries(value);
     for (const [key, child] of children) {
-      pending.push({ value: child, pointer: `${pointer}/${escaped(key)}` });
+      pending.push({ value: child, pointer: `${pointer}/${pointerSegment(key)}` });
     }
   }
   return places.sort((a, b) => a.pointer.localeCompare(b.pointer));
-}
-
-/* A JSON pointer writes `~` and `/` in a key as `~0` and `~1`. */
-function escaped(key: string): string {
-  return key.replaceAll("~", "~0").replaceAll("/", "~1");
 }

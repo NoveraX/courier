@@ -2,6 +2,7 @@
  * Main spec parser entry point: detects format and delegates to specific parsers.
  */
 
+import { cyclesAsReferences } from "./cycles-as-references";
 import { withLeftOutPatterns } from "./left-out-patterns";
 import { parseOpenApi3 } from "./parse-openapi3";
 import { parsePostman } from "./parse-postman";
@@ -68,8 +69,10 @@ export function parseSpec(raw: string): ParsedSpec {
     );
   }
 
-  const parsed: unknown = format.endsWith("-yaml") ? readYaml(text) : json;
-  if (!isNode(parsed)) throw new Error("The specification holds no object at its top level.");
+  const read: unknown = format.endsWith("-yaml") ? readYaml(text) : json;
+  if (!isNode(read)) throw new Error("The specification holds no object at its top level.");
+  /* Only YAML's aliases can put an object inside itself. */
+  const parsed = format.endsWith("-yaml") ? cyclesAsReferences(read) : read;
 
   if (format === "postman") return parsePostman(parsed);
   /* The request and the answer a schema describes differ where its fields

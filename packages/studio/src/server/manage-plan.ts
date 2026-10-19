@@ -12,6 +12,7 @@ import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { isTopLevel } from "../apis/parser/top-level";
 import { checkDirOverlap } from "./check-dir-overlap";
+import { checkFormerFolder } from "./check-former-folder";
 import { generatedFromSpec } from "./generated-from-spec";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { FilePlan } from "./import-files/file-plan-types";
@@ -62,6 +63,7 @@ export interface ManagePlan {
  * @param running - The config Studio runs, which says where the routes module is
  * @returns The changes and their plan, or the error to answer with and its status
  * @throws {DirOverlapError} When another import owns a directory overlapping the import's
+ * @throws {ImportRenamedError} When the import's files are still where Studio 0.3.0 bound it otherwise
  * @throws {InvalidSpecError} When a value the spec gives that would be written as code is refused
  * @throws {SpecGenerationError} When the spec cannot be generated from
  */
@@ -77,6 +79,7 @@ export async function planManage(
   const entry = getImportState(imports, body.name);
   const layout = resolveImportLayout(declared, body.name);
   checkDirOverlap(body.name, layout.dir, imports);
+  checkFormerFolder(root, body.name, declared, layout, entry);
   const onDisk = importBodies(root, layout.dir);
   const flat = isFlatImport(declared);
   /* Endpoints are picked as the import lists them; one it cannot generate would be a dangling import. */

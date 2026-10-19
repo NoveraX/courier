@@ -280,7 +280,7 @@ It exits 0 once the import is written and declared, or its plan shown with `--dr
 
 ### Which files Studio changes
 
-Studio changes an import's files — when it writes the import, updates it, adds or removes endpoints, or removes the import — only inside the import's folder, and decides for each file by who it belongs to. It records every file it writes, with a hash of its content, in `.courier/imports-state.json`, and starts each with two lines that say so:
+Studio changes an import's files — when it writes the import, updates it, adds or removes endpoints, or removes the import — only inside the import's folder, or, removing an import Studio 0.3.0 bound as `eval`, `arguments`, `undefined` or `globalThis`, inside the folder 0.3.0 wrote it into, and decides for each file by who it belongs to. It records every file it writes, with a hash of its content, in `.courier/imports-state.json`, and starts each with two lines that say so:
 
 ```ts
 // @courier-generated {"import":"pets","sha256":"3f2a…"}
@@ -291,6 +291,7 @@ Studio changes an import's files — when it writes the import, updates it, adds
 - **A file you changed** keeps your edits to endpoints when Studio updates it. A file Studio would replace whole, or remove, waits for you instead — and so does a file whose endpoints Studio cannot read as code, one saved mid-edit say, since it cannot keep your edits in it.
 - **A file Studio did not write** — one you added to the folder, or one its first line says Studio wrote for another import — is never removed, and replacing it waits for you.
 - **A symbolic link or a folder where a file should be** is never written through, replaced or removed, and nothing is written through a folder link that leads out of the project. A change that would write one of them is refused until you move it out of the way.
+- **A group Studio names otherwise than the Studio that wrote it** — `evalGroup` where 0.3.0 named a group `eval`, and so for `arguments`, `undefined` and `globalThis`, or after its path where its tag spells no name — takes its new name the next time the import is written, updated or managed. Manage keeps its endpoints, reading the group's old file as the group it is now. That file then belongs to a group the specification no longer has, and goes as such a file does: at once when Studio wrote it and nobody changed it, once you allow it when you did. What you changed in it is not carried into the group's new file; the copy in `.courier/backups/` keeps it.
 
 When a change holds steps that wait for you, Studio shows them with the rest of the change, each with its own checkbox, and takes only the steps you tick; a file left unticked stays as it is, and so does every file it imports: Studio never removes a file that a file staying in the import's folder imports, and the message after the change counts it among the files left as they were. An update, a change to endpoints and a removal are applied only as you previewed them: if a file changed in the meantime, Studio shows the change as it now stands instead. A write needs no preview, and asks only when a step waits for you.
 
@@ -308,6 +309,7 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 | `DECLARATION_MISMATCH` | 409 | `imports` declares the import in another folder, or with another type, validation, grouping, client or other generation option, than the wizard's options; the message names each one. An update and Manage generate as declared, so an import written otherwise would change layout at the next of them. |
 | `DIR_OVERLAP` | 409 | Another import owns the folder, or one inside or around it. |
 | `NAME_TAKEN` | 409 | `sources` declares another API under the import's name. |
+| `IMPORT_RENAMED` | 409 | The import's files are still where Studio 0.3.0 bound it as `eval`, `arguments`, `undefined` or `globalThis`, which this release binds as a reserved word's is, `evalGroup` in `eval-group/`. Studio does not move an import's files: remove the import, which takes them from that folder, then import it again; where both folders hold its files, delete the one you do not keep first. |
 | `FILE_NOT_RECOGNIZED` | 409 | A file Studio would add endpoints to no longer shows where its endpoints are. |
 | `ENDPOINT_OUTSIDE_PREFIX` | 409 | An endpoint you add would call a URL the prefix its group file declares cannot reach, or Studio cannot read that prefix; add it by hand, or import the API again under the same name. An endpoint the file's prefix can reach is written relative to it, whatever prefix the specification gives the group. |
 | `IMPORTS_STATE_UNSAFE` | 409 | Studio cannot read `.courier/imports-state.json`, or keep a copy of it, so saving it would lose the other imports' records. |

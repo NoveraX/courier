@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { applyManage, previewManage } from "@/apis/client-file-changes";
+import { refusedWhateverTheSpec } from "@/apis/refused-whatever-the-spec";
 import { appliedMessage, countsOf } from "@/features/apis/applied-notes";
 import { serializeSets } from "@/features/apis/manage-sets";
 import { consentBody, consentFor, toggleConfirmed } from "@/features/apis/plan-consent";
@@ -8,7 +9,6 @@ import { readFilePlan } from "@/features/apis/read-file-plan";
 import type { ManagePreviewResult, ManageStep, ParsedSpec } from "@/features/apis/types";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
 import type { ManageChange } from "@/features/apis/types-manage";
-import { isTokenRefusal } from "@/lib/token-refusal";
 
 /** What the manage dialog applies, and how it reports. */
 export interface ManagePlanInput {
@@ -86,7 +86,7 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
         setConsent(consentFor(plan));
       } catch (err) {
         setError(messageOf(err, "Preview failed"));
-        setStep(isTokenRefusal(err) ? "needs-token" : "inventory");
+        setStep(refusedWhateverTheSpec(err) ? "refused" : "inventory");
       }
     },
     [spec, sourceName, changeOf, setStep, setError],

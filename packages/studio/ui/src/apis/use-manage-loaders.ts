@@ -6,9 +6,9 @@
 
 import { useCallback } from "react";
 import { fetchInventory, parseSpecFromRaw, parseSpecFromUrl } from "@/apis/client";
+import { refusedWhateverTheSpec } from "@/apis/refused-whatever-the-spec";
 import type { EndpointInventory, ManageStep, ParsedSpec } from "@/features/apis/types";
 import { readTrafficDocument } from "@/features/explorer/traffic-document";
-import { isTokenRefusal } from "@/lib/token-refusal";
 
 interface LoaderDeps {
   setStep: (step: ManageStep) => void;
@@ -28,7 +28,7 @@ export function useInventoryLoaders(deps: LoaderDeps): InventoryLoaders {
   const { setStep, setError, setInventory, setSpec } = deps;
 
   /* The inventory of the spec `read` gives; back to the spec, where another can be given, when it
-     fails — unless Studio refused the page for want of the token, which no other spec changes. */
+     fails — unless Studio refused it for a reason no other spec changes. */
   const load = useCallback(
     async (name: string, read: () => Promise<ParsedSpec>, failure: string) => {
       setStep("loading");
@@ -41,7 +41,7 @@ export function useInventoryLoaders(deps: LoaderDeps): InventoryLoaders {
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : failure);
-        setStep(isTokenRefusal(err) ? "needs-token" : "reupload");
+        setStep(refusedWhateverTheSpec(err) ? "refused" : "reupload");
         return false;
       }
     },

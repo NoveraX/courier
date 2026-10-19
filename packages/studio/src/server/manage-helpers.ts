@@ -11,6 +11,7 @@ import { resolveImportLayout } from "../apis/layout";
 import { buildEndpointInventory } from "../apis/manage";
 import { diskListing } from "../apis/manage/disk-listing";
 import type { EndpointInventory } from "../apis/manage/types";
+import { checkFormerFolder } from "./check-former-folder";
 import { importBodies } from "./import-files/import-bodies";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { manageFingerprints } from "./manage-fingerprints";
@@ -30,6 +31,7 @@ interface InventoryRequest {
  * @param root - The project
  * @param specHash - The hash of the spec as sent, when the declaration reshaped it
  * @returns The inventory, or the error to answer with and its status
+ * @throws {ImportRenamedError} When the import's files are still where Studio 0.3.0 bound it otherwise
  *
  * @example
  * ```ts
@@ -50,6 +52,7 @@ export function handleInventory(
   if (!spec) return { error: "Spec is required for inventory", status: 400 };
 
   const layout = resolveImportLayout(entry, body.name);
+  checkFormerFolder(root, body.name, entry, layout, state);
   const existingFiles = importBodies(root, layout.dir);
   const diskGroups = diskListing(layout, existingFiles);
   const fingerprints = manageFingerprints(state, existingFiles);

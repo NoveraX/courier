@@ -4,7 +4,9 @@
 /**
  * The manage dialog as the user sees it: every refusal is said on the step
  * it leaves the user on, a page without the project's token is told so and
- * offered no step that would be refused again, a plan Studio cannot apply
+ * offered no step that would be refused again, and so is an import Studio
+ * 0.3.0 bound under another name, which no spec given again changes; a
+ * plan Studio cannot apply
  * offers nothing to allow and is previewed again instead, and an apply
  * under way can be neither repeated nor cancelled.
  */
@@ -133,11 +135,25 @@ describe("the manage dialog", () => {
 
     await act(async () => manage.start(SOURCE, SPEC));
 
-    expect(manage.step).toBe("needs-token");
+    expect(manage.step).toBe("refused");
     expect(screen.getByRole("alert").textContent).toBe(reason);
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Parse and continue" })).toBeNull();
     expect(screen.getByRole("button", { name: "Later" })).toBeTruthy();
+  });
+
+  it("says what to do with an import Studio 0.3.0 bound otherwise, and offers no spec to give again", async () => {
+    const reason =
+      'The import "undefined" has its files in src/api/undefined, where Studio 0.3.0 bound it as undefined. Remove the import, then import it again.';
+    vi.mocked(post).mockRejectedValueOnce(refusal("IMPORT_RENAMED", reason));
+    render(<Harness />);
+
+    await act(async () => manage.start(SOURCE, SPEC));
+
+    expect(manage.step).toBe("refused");
+    expect(screen.getByRole("alert").textContent).toBe(reason);
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Parse and continue" })).toBeNull();
   });
 
   it("tells a page whose token Studio no longer takes why it refused the preview", async () => {
@@ -145,7 +161,7 @@ describe("the manage dialog", () => {
       Promise.reject(refusal("STUDIO_TOKEN_REQUIRED", "Open the link Studio printed.")),
     );
 
-    expect(manage.step).toBe("needs-token");
+    expect(manage.step).toBe("refused");
     expect(screen.getByRole("alert").textContent).toBe("Open the link Studio printed.");
     expect(screen.queryByRole("button", { name: "Preview changes" })).toBeNull();
   });

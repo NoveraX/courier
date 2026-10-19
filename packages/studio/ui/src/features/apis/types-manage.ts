@@ -62,14 +62,15 @@ export interface ManagePreviewResult {
 }
 
 /**
- * Where the manage dialog stands. `needs-token`: Studio refused to read the
- * import's files for a page without the project's token, and nothing on
- * the page can change that.
+ * Where the manage dialog stands. `refused`: Studio refused for a reason no
+ * spec given again changes — the page lacks the project's token, or the
+ * import's files are still where Studio 0.3.0 bound it under another name
+ * — and nothing on the page can change that.
  */
 export type ManageStep =
   | "loading"
   | "reupload"
-  | "needs-token"
+  | "refused"
   | "inventory"
   | "preview"
   | "applying"

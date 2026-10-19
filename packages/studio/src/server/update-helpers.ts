@@ -9,6 +9,7 @@ import type { ImportStateEntry } from "../apis/imports-state";
 import { resolveImportLayout } from "../apis/layout";
 import type { BreakingChange, SpecDiff } from "../apis/merge/types";
 import { checkDirOverlap } from "./check-dir-overlap";
+import { checkFormerFolder } from "./check-former-folder";
 import type { ApplyReport } from "./import-files/apply-file-plan";
 import type { PlanSummary } from "./import-files/plan-summary";
 import { previewSummary } from "./import-files/preview-summary";
@@ -50,6 +51,7 @@ type Refusal = { error: string; status: number };
  * @param running - The config Studio runs, which says where the routes module is
  * @returns The plan and the spec's changes, or the error to answer with and its status
  * @throws {SpecPinMismatchError} When the import pins another spec
+ * @throws {ImportRenamedError} When the import's files are still where Studio 0.3.0 bound it otherwise
  * @throws {ImportTransformError} When the import's transform fails
  */
 export async function handlePreviewUpdate(
@@ -81,6 +83,7 @@ export async function handlePreviewUpdate(
  * @returns What was written, removed and kept, or the error to answer with and its status
  * @throws {FilePlanError} When the plan is refused as it stands
  * @throws {SpecPinMismatchError} When the import pins another spec
+ * @throws {ImportRenamedError} When the import's files are still where Studio 0.3.0 bound it otherwise
  * @throws {ImportTransformError} When the import's transform fails
  */
 export async function handleApplyUpdate(
@@ -106,14 +109,16 @@ async function regenerationOf(
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
   const layout = resolveImportLayout(entry, body.name);
+  const state = getImportState(imports, body.name);
   checkDirOverlap(body.name, layout.dir, imports);
+  checkFormerFolder(root, body.name, entry, layout, state);
   return {
     root,
     name: body.name,
     layout,
     ...(await declaredSpec(entry, body.name, body.newSpec)),
     options: { ...withRoutesModule(entry, running), selectedEndpoints: null },
-    entry: getImportState(imports, body.name),
+    entry: state,
   };
 }
 

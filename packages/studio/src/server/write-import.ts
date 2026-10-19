@@ -2,6 +2,7 @@ import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { resolveImportLayout } from "../apis/layout";
 import { checkDeclaredDirectory } from "./check-declared-directory";
 import { checkDirOverlap } from "./check-dir-overlap";
+import { checkFormerFolder } from "./check-former-folder";
 import { describeImportDeclaration } from "./describe-import-declaration";
 import type { PlanSummary } from "./import-files/plan-summary";
 import { previewSummary } from "./import-files/preview-summary";
@@ -42,15 +43,18 @@ async function prepare(
   const entry = getImportEntry(imports, name);
   checkDeclaredDirectory(name, entry, body.options);
   const layout = resolveImportLayout(entry ?? body.options, name);
+  const root = projectRootAt(projectRoot);
+  const state = getImportState(imports, name);
   checkDirOverlap(name, layout.dir, imports);
+  checkFormerFolder(root, name, entry ?? body.options, layout, state);
   const declaration = describeImportDeclaration({ name, body, loaded, root: projectRoot });
   const regeneration: Regeneration = {
-    root: projectRootAt(projectRoot),
+    root,
     name,
     layout,
     ...(await declaredSpec(entry, name, body.spec)),
     options: withRoutesModule(body.options, loaded),
-    entry: getImportState(imports, name),
+    entry: state,
     origin: body.origin ?? "given",
   };
   return { regeneration, declaration };
@@ -66,6 +70,7 @@ async function prepare(
  * @returns The plan, the files left behind, and what the config must still declare
  * @throws {ProjectUnavailableError} While the config does not load as it is on disk
  * @throws {DeclarationMismatchError} When the import's declaration gives other options
+ * @throws {ImportRenamedError} When the import's files are still where Studio 0.3.0 bound it otherwise
  * @example
  * ```ts
  * const { plan } = await withImportsLock(() => planImportWrite(body, deps));
@@ -95,13 +100,15 @@ export async function planImportWrite(
  * It changes no config: the result says what the config must still
  * declare for the import — the generated source under `sources` and the
  * entry under `imports`. While `sources` declares another API under the
- * import's name, or another import owns a directory overlapping the
- * import's, nothing is written.
+ * import's name, another import owns a directory overlapping the
+ * import's, or the import's files are still where Studio 0.3.0 bound it
+ * under another name, nothing is written.
  *
  * @param body - The import's name, its specification, the options and the consent given
  * @param deps - The project the import's declaration is read from
  * @returns What was written, removed and kept, and what the config must still declare
  * @throws {FilePlanError} `NEEDS_CONFIRMATION` with the plan while steps wait for consent
+ * @throws {ImportRenamedError} When the import's files are still where Studio 0.3.0 bound it otherwise
  * @example
  * ```ts
  * const result = await withImportsLock(() => writeImport(body, deps));

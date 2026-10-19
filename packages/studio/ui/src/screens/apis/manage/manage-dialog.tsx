@@ -18,7 +18,7 @@ const STEPS = [
 const EMPTY: ReuploadState = { content: "", parsing: false, error: null };
 
 function stepIndex(step: UseManageReturn["step"]): number {
-  if (step === "reupload" || step === "needs-token") return 0;
+  if (step === "reupload" || step === "refused") return 0;
   return step === "preview" || step === "applying" ? 2 : 1;
 }
 

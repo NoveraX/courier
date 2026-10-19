@@ -34,7 +34,7 @@ export function ExamplePage({ name, children }: ExamplePageProps) {
   return (
     <>
       <JsonLd graph={docsGraph({ path: href, title, description }, coreVersion())} />
-      <main id="main-content" className="min-w-0 max-w-[820px] pt-10 pb-27.5">
+      <main id="main-content" className="DocSearch-content min-w-0 max-w-[820px] pt-10 pb-27.5">
         <PageHead meta={{ title, description, mode }} section={findNavContext(href)?.section} />
         <article
           data-article=""

@@ -6,9 +6,9 @@ import { useRef, useState } from "react"
 
 import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
 import { PageActions } from "@/site/layout/page-actions"
-import { SearchPalette } from "@/site/layout/search-palette"
 import { SiteHeader } from "@/site/layout/site-header"
-import { useSearchShortcut } from "@/site/layout/use-search-shortcut"
+import { SearchDialog } from "@/site/search/search-dialog"
+import { useSearchDialog } from "@/site/search/use-search-dialog"
 import { SiteFooter } from "@/site/site-footer"
 import { BuilderTable } from "./builder-table"
 import { EntryPointsTable } from "./entry-points-table"
@@ -57,10 +57,8 @@ export function ReferenceView({
 }: ReferenceViewProps) {
   const [filter, setFilter] = useState("")
   const [listing, setListing] = useState(false)
-  const [searching, setSearching] = useState(false)
-  const searchButton = useRef<HTMLButtonElement>(null)
+  const search = useSearchDialog()
   const menuButton = useRef<HTMLButtonElement>(null)
-  useSearchShortcut(setSearching)
   const shown = sections.filter((section) => matches(section, filter))
   const listed: ListedExport[] = [
     ...shown.map(({ id, name, kind }) => ({ id, name, kind })),
@@ -77,12 +75,12 @@ export function ReferenceView({
     <div className="min-h-screen bg-bg">
       <SiteHeader
         part="api"
-        onSearch={() => setSearching(true)}
+        onSearch={() => search.setOpen(true)}
         onMenu={() => setListing(true)}
-        searchRef={searchButton}
+        searchRef={search.opener}
         menuRef={menuButton}
       />
-      <SearchPalette open={searching} onOpenChange={setSearching} returnTo={searchButton} />
+      <SearchDialog open={search.open} onOpenChange={search.setOpen} returnTo={search.opener} />
       <ReferenceDrawer
         exports={listed}
         filter={exportFilter}
@@ -98,14 +96,16 @@ export function ReferenceView({
           title={TITLE}
           markdown={markdown}
         />
-        <main id="main-content" className="min-w-0 max-w-[900px] pt-10 pb-30">
-          <p className="m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
+        <main id="main-content" className="DocSearch-content min-w-0 max-w-[900px] pt-10 pb-30">
+          {/* DocSearch files the page under the section DocSearch-lvl0 names, and
+              leaves the trail itself out of the page's text. */}
+          <p className="DocSearch-skip m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
             <BookMarked aria-hidden="true" className="size-3.25 text-brand" />
             <Link href={"/docs/introduction"} className="-my-1.5 py-1.5 hover:text-fg">
               Docs
             </Link>
             <ChevronRight aria-hidden="true" className="size-3" />
-            <span className="text-fg-muted">{TITLE}</span>
+            <span className="DocSearch-lvl0 text-fg-muted">{TITLE}</span>
           </p>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <h1 className="m-0 text-h1 font-semibold tracking-h1 text-fg">{TITLE}</h1>

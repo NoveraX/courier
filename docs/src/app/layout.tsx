@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
+import { ALGOLIA_SITE_VERIFICATION } from "@/site/search/docsearch-config"
 import {
   DOCS_TITLE_SUFFIX,
   ORGANIZATION,
@@ -41,6 +42,9 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false, address: false, email: false },
   openGraph: { type: "website", siteName: SITE_NAME, locale: SITE_LOCALE },
   twitter: { card: "summary_large_image" },
+  verification: {
+    other: { "algolia-site-verification": ALGOLIA_SITE_VERIFICATION },
+  },
   other: {
     "apple-mobile-web-app-title": SITE_NAME,
   },

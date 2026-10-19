@@ -33,10 +33,12 @@ export function PageHead({ meta, section, minutes, page }: PageHeadProps) {
   const SectionIcon = section?.icon
   return (
     <header>
+      {/* DocSearch files the page under the section DocSearch-lvl0 names, and
+          leaves the trail itself out of the page's text. */}
       {section && SectionIcon && (
-        <p className="m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
+        <p className="DocSearch-skip m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
           <SectionIcon aria-hidden="true" className="size-3.25 text-brand" />
-          <span>{section.label}</span>
+          <span className="DocSearch-lvl0">{section.label}</span>
           <ChevronRight aria-hidden="true" className="size-3" />
           <span className="text-fg-muted">{meta.title}</span>
         </p>

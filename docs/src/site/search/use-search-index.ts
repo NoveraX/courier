@@ -5,13 +5,15 @@ import { useEffect, useState } from "react"
 import type { SearchEntry } from "@/site/content/search-index"
 import { SEARCH_INDEX_PATH, searchIndexOf } from "@/site/content/search-index-file"
 
-/* One request for the whole visit: every palette, on every page, reads the same index. */
+/* One request for the whole visit: search, on every page, reads the same index. */
 let loading: Promise<SearchEntry[] | null> | undefined
 
-async function fetchIndex(): Promise<SearchEntry[] | null> {
+async function fetchIndex(): Promise<SearchEntry[]> {
   const response = await fetch(SEARCH_INDEX_PATH)
   if (!response.ok) throw new Error(`The search index answered ${response.status}`)
-  return searchIndexOf(await response.json())
+  const entries = searchIndexOf(await response.json())
+  if (!entries) throw new Error("The search index holds something other than pages")
+  return entries
 }
 
 function loadIndex(): Promise<SearchEntry[] | null> {
@@ -31,11 +33,12 @@ export interface SearchIndexState {
 }
 
 /**
- * The pages and exports search finds, fetched once the page is idle — or
- * at once when the palette opens first — so no page carries the index in
- * its own HTML. A load that failed is tried again as the palette opens.
+ * The pages and exports search lists itself, fetched once the page is
+ * idle — or at once when search opens first — so no page carries the
+ * index in its own HTML. A load that failed is tried again as search
+ * opens again.
  *
- * @param open - Whether the palette is open
+ * @param open - Whether search is open
  * @returns The entries, `null` until they load, and whether the last try failed
  * @example
  * ```ts

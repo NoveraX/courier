@@ -17,6 +17,7 @@ import { EndpointOutsidePrefixError } from "./endpoint-outside-prefix-error";
 import { fileBase } from "./file-base";
 import { type GeneratedEntry, generatedEndpoints } from "./generated-entries";
 import { endpointNames, findGroupDeclaration } from "./group-declaration";
+import { helpersNeeded } from "./helpers-needed";
 import { planMissingImports } from "./plan-missing-imports";
 import { entryUrl, pathSegments, rebaseEntryPath } from "./rebase-entry-path";
 import { referencedImports } from "./referenced-imports";
@@ -40,8 +41,10 @@ function entryText({ comment, code }: GeneratedEntry, indent: string, eol: strin
  * wrote, how the base is named, the code after the declaration. Of several
  * declarations, the one named as generated is added to. The base is
  * declared as generated, above the declaration and its comments, only when
- * the file names none; only names the added code uses are imported. An
- * endpoint the file has already is not added again.
+ * the file names none; only names the added code uses are imported. A
+ * helper the added code calls that the file lacks, such as `_ownFields`,
+ * goes after the file's last line, as the generator writes it after the
+ * declaration. An endpoint the file has already is not added again.
  *
  * @param path - The file, project-relative, to name in a refusal
  * @param existingContent - Current file on disk
@@ -83,7 +86,8 @@ export function appendEndpointsToGroup(
       ? streamBase(parsed, bindings)
       : { base: STREAM, edit: null, line: null };
   /* A path is written relative to the prefix it was generated under; the file's may differ. */
-  const fresh = findGroupDeclaration(parseSource("generated.ts", generatedContent).program, name);
+  const freshFile = parseSource("generated.ts", generatedContent);
+  const fresh = findGroupDeclaration(freshFile.program, name);
   const generatedPrefix = fresh?.prefix ?? "";
   const bases = [base, stream.base];
   const texts = added.map(([key, entry]) => {
@@ -94,7 +98,9 @@ export function appendEndpointsToGroup(
     };
   });
   const preamble = fileBaseName === null ? generated.preamble.join(style.eol) : (stream.line ?? "");
-  const referenced = [preamble, ...texts.map((t) => t.code)].join("\n");
+  const code = texts.map((t) => t.code).join("\n");
+  const helpers = fresh ? helpersNeeded(freshFile, fresh.statement.end, code, bindings) : "";
+  const referenced = [preamble, code, helpers].join("\n");
   const edits: TextEdit[] = [
     ...planMissingImports(
       parsed,
@@ -104,6 +110,7 @@ export function appendEndpointsToGroup(
     ),
   ];
   if (stream.edit !== null) edits.push(stream.edit);
+  if (helpers !== "") edits.push(helpersAtEnd(existingContent, helpers, style.eol));
   if (preamble !== "")
     edits.push(
       insertion(
@@ -122,6 +129,12 @@ export function appendEndpointsToGroup(
     existingContent,
     [...edits].sort((a, b) => a.start - b.start),
   );
+}
+
+/* The helpers after the file's last line, a blank line before them, in the file's line ends. */
+function helpersAtEnd(existingContent: string, helpers: string, eol: string): TextEdit {
+  const gap = existingContent.endsWith("\n") ? eol : `${eol}${eol}`;
+  return insertion(existingContent.length, `${gap}${helpers.split("\n").join(eol)}${eol}`);
 }
 
 /* The entry with its path relative to the file's prefix, when the two prefixes differ. */

@@ -20,6 +20,7 @@ import { DatabaseSync } from "node:sqlite";
 import { answerShapeOf } from "@noverax/courier-studio-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { ZOD_OWN_FIELDS } from "../../src/apis/generator/own-fields-zod";
 import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/config-loader";
 import { contractReport } from "../../src/server/contract-drift/contract-report";
 import {
@@ -200,6 +201,39 @@ describe("a schema fix, planned", () => {
       status: "manual",
       reason: expect.stringContaining("no record"),
     });
+  });
+});
+
+describe("a schema fix through _ownFields", () => {
+  it("changes the fields of an object a generated module writes through _ownFields", async () => {
+    writeFileSync(
+      join(root, "src/schemas.ts"),
+      [
+        'import { z } from "zod";',
+        "",
+        "export const Seller = z.object({ name: z.string() });",
+        "",
+        "export const Product = _ownFields(z.looseObject({",
+        "  id: z.string(),",
+        "  constructor: z.string().optional(),",
+        "  stock: z.number(),",
+        "  seller: Seller.optional(),",
+        "}));",
+        "",
+        ZOD_OWN_FIELDS,
+      ].join("\n"),
+    );
+    running = await loadCourierConfig(root);
+
+    const plan = await planSchemaFix(running, answers, root, {
+      source: "shop",
+      endpoint: "products.get",
+    });
+
+    expect(plan.status).toBe("ready");
+    const after = plan.status === "ready" ? (plan.files[0]?.after ?? "") : "";
+    expect(after).toContain("  stock: z.string(),");
+    expect(after).toContain("export const Product = _ownFields(z.looseObject({");
   });
 });
 

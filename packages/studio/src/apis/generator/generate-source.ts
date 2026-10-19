@@ -8,7 +8,12 @@ import { sourceAuth } from "./auth-middleware";
 import { boundNames } from "./bound-names";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
-import { basesDeclaration, defineImport, endpointImports } from "./endpoint-imports";
+import {
+  basesDeclaration,
+  defineImport,
+  endpointImports,
+  ownFieldsDeclaration,
+} from "./endpoint-imports";
 import { groupLocalName } from "./group-local-name";
 import { sortedStatements } from "./import-order";
 import { jsdocText } from "./jsdoc-text";
@@ -64,6 +69,7 @@ export function generateSourceFile(
     ...endpointImports(context, auth ? ["authMiddleware"] : []),
   ];
   const bases = holds ? [basesDeclaration(context), ""] : [];
+  const helper = ownFieldsDeclaration(context);
   const locals = groupLocals(groups, options.sourceName, [
     ...others,
     ...bases,
@@ -86,6 +92,7 @@ export function generateSourceFile(
     `});`,
     "",
     ...(auth ? auth.helper : []),
+    ...helper,
   ];
   return { path: options.layout.sourceFile, content: lines.join("\n") };
 }

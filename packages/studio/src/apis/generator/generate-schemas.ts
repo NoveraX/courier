@@ -16,6 +16,8 @@ import {
   generateRefSchema,
   generateUnionSchema,
 } from "./generate-schema-entries";
+import { holdsOwnFields } from "./holds-own-fields";
+import { ownFieldsHelper } from "./own-fields-helper";
 import { schemaComponents } from "./schema-components";
 import { topoSortSchemas } from "./schema-refs";
 import { schemaToInterface } from "./schema-types";
@@ -43,9 +45,14 @@ export function generateSchemasFile(
     lines.push(`import { type } from "arktype";`, "");
   }
 
+  /* An object whose fields include a name every object inherits is written through `_ownFields`. */
+  const helper = holdsOwnFields(Object.values(schemas))
+    ? ownFieldsHelper(options.validation)
+    : null;
   if (options.validation === "arktype") {
-    writeArkTypeFile(lines, schemas, options);
+    writeArkTypeFile(lines, schemas, options, helper);
   } else {
+    if (helper !== null) lines.push(helper);
     /* A cycle cannot be sorted so every reference points backwards; its
        members are written lazily instead. */
     writeEntries(lines, topoSortSchemas(schemas), options, findCyclicSchemas(schemas));
@@ -71,12 +78,14 @@ function writeArkTypeFile(
   lines: string[],
   schemas: Record<string, ParsedSchema>,
   options: GeneratorSettings,
+  helper: string | null,
 ): void {
   const components = schemaComponents(schemas);
   const hasCycle = components.some((component) => component.cyclic);
   /* Before the named import of the same module, as linters order them. */
   if (hasCycle) lines.unshift(`import type * as ark from "arktype";`);
   if (hasCycle) lines.push(ARKTYPE_CYCLE_HELPER);
+  if (helper !== null) lines.push(helper);
 
   for (const { names, cyclic } of components) {
     const entries = names.flatMap((name): [string, ParsedSchema][] => {

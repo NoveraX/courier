@@ -4,6 +4,8 @@
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
 import { jsLiteral, objectKey, type SpecValue } from "./literals";
+import { ownFieldsCall } from "./own-fields-call";
+import { ownsInheritedField } from "./owns-inherited-field";
 import { withValibotChecks } from "./valibot-checks";
 
 export function schemaToValibot(schema: ParsedSchema): string {
@@ -40,7 +42,8 @@ export function schemaToValibot(schema: ParsedSchema): string {
     }
     /* An answer keeps the fields its specification does not declare, as
        ArkType's objects do. */
-    return `v.looseObject({\n${propLines.join(",\n")},\n})`;
+    const object = `v.looseObject({\n${propLines.join(",\n")},\n})`;
+    return ownsInheritedField(schema) ? ownFieldsCall(object) : object;
   }
 
   return withValibotChecks(primitiveToValibot(schema.type), schema.constraints);

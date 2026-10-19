@@ -4,8 +4,9 @@
  * no formatter of its own, or one that lints in CI, accepts it unchanged.
  * Tags out of alphabetical order, groups inside groups, endpoints in no
  * group, schemas the groups share and a cycle among them are all here,
- * and parameters named like a global or a member every object inherits,
- * which a closure must not bind under their own names.
+ * parameters named like a global or a member every object inherits, which
+ * a closure must not bind under their own names, and a schema with a field
+ * so named, which its module checks through a helper of its own.
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -75,7 +76,10 @@ const SPEC = parseSpec(
     components: {
       securitySchemes: { bearer: { type: "http", scheme: "bearer" } },
       schemas: {
-        Status: { type: "object", properties: { ok: { type: "boolean" } } },
+        Status: {
+          type: "object",
+          properties: { ok: { type: "boolean" }, constructor: { type: "string" } },
+        },
         Node: { type: "object", properties: { next: ref("Node") } },
         Animal: { type: "object", properties: { node: ref("Node"), status: ref("Status") } },
         Invoice: { type: "object", properties: { node: ref("Node") } },

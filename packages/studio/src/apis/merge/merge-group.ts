@@ -7,7 +7,8 @@
  * - Modified endpoints (user changed): preserve user body, update config from spec
  * - New endpoints: add from generated
  * - User-added endpoints (not in spec): preserve
- * - Non-endpoint code (trailing helpers): preserve
+ * - Non-endpoint code (trailing helpers): preserve, but for a helper Studio
+ *   writes, such as `_ownFields`, that no merged code calls any more
  *
  * Both files are cut into their parts by their syntax, and the merged file is
  * read back the same way before it is offered: a file that cannot be cut into
@@ -15,6 +16,8 @@
  * write, is a conflict, never a quiet success.
  */
 
+import { dropUnusedImports } from "../manage/drop-unused-imports";
+import { withoutUnusedHelpers } from "../manage/unused-helpers";
 import { type DeclarationLayout, readLayout } from "./declaration-layout";
 import { holdsMerge } from "./holds-merge";
 import { mergeEndpoints } from "./merge-endpoints";
@@ -86,7 +89,11 @@ export function mergeGroupFile(
   if (!holdsMerge(content, own.layout, fresh.layout, entries)) {
     return conflict(generatedContent, MISREAD);
   }
-  return { content, status: resolveStatus(changes), changes };
+  return {
+    content: withoutStaleHelpers(content, changes),
+    status: resolveStatus(changes),
+    changes,
+  };
 }
 
 function side(layout: DeclarationLayout | null): Side | null {
@@ -161,6 +168,17 @@ function assemble(
   const merged = code.join("\n");
   const imports = mergeImports(own.info.imports, fresh.info.imports, changes, merged, removed);
   return buildFile({ head, imports, preamble, header, endpoints, footer, trailing });
+}
+
+/* The file without a helper Studio wrote that the endpoints merged no longer call, nor the imports only it used. */
+function withoutStaleHelpers(content: string, changes: MergeChange[]): string {
+  const left = withoutUnusedHelpers("index.ts", content);
+  for (const name of left.removed) {
+    changes.push({ type: "removed", target: `helper:${name}`, detail: "no endpoint calls it" });
+  }
+  return left.removed.length > 0
+    ? dropUnusedImports("index.ts", left.text, left.references)
+    : content;
 }
 
 /* The generated file, for a file on disk the merge cannot keep whole. */

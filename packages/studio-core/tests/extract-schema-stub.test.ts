@@ -18,6 +18,23 @@ import { extractSchemaStub } from "../src/schema-fields";
 const LEVEL = { Low: 0, High: 1, 0: "Low", 1: "High" } as const;
 
 describe("the sample variables of a schema", () => {
+  it("are read through a generated _ownFields, and pass it", () => {
+    /* As Studio's generator writes an object with a field named like a member every object has. */
+    const fields = z.looseObject({ id: z.string().min(2), constructor: z.string().optional() });
+    const schema = Object.assign(
+      z.preprocess((value) => value, fields),
+      {
+        fields,
+        proto: undefined,
+      },
+    );
+
+    const stub = extractSchemaStub(schema);
+
+    expect(stub).toMatchObject({ id: "xx" });
+    expect(schema.safeParse(stub).success).toBe(true);
+  });
+
   it("keep a Zod schema's lower bounds, and pass it", () => {
     const schema = z.object({
       every: z.number().int().min(100),

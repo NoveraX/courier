@@ -4,6 +4,7 @@
 
 import type { EndpointContext } from "./endpoint-context";
 import { namedStatement } from "./named-statement";
+import { ownFieldsHelper } from "./own-fields-helper";
 import type { ResolvedGenerateOptions } from "./types";
 
 /** What a schema's constant adds to its name: `PetSchema` validates `Pet`. */
@@ -130,4 +131,25 @@ export function basesDeclaration(context: EndpointContext): string {
    schemas.ts, holding types. */
 function schemasModule(options: ResolvedGenerateOptions, at: "./" | "../"): string {
   return `${at}${options.generateSchemas ? "schemas" : "types"}${options.importExtension}`;
+}
+
+/**
+ * The declarations of `_ownFields` a file of endpoints writes after its
+ * declaration, as it writes every helper of its own, when one of its
+ * definitions writes an object through it. A function is called before
+ * its declaration as well as after it, and an update carries the code
+ * after a file's declaration into the file it merges with, so a file
+ * Studio wrote before such a field was in its specification gets the
+ * helper with the first call to it.
+ *
+ * @param context - The file's endpoints and what they use
+ * @returns The lines, the last one blank, or none
+ * @example
+ * ```ts
+ * const lines = [...declaration, "", ...ownFieldsDeclaration(context)];
+ * ```
+ */
+export function ownFieldsDeclaration(context: EndpointContext): string[] {
+  const helper = context.uses.ownFields ? ownFieldsHelper(context.options.validation) : null;
+  return helper === null ? [] : [helper.trimEnd(), ""];
 }

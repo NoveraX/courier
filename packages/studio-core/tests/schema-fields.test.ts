@@ -21,7 +21,49 @@ const ORDER = [
   { path: "note", type: "string | null", required: false },
 ];
 
+/* An object checked through a generated `_ownFields`, as Studio's generator writes it for a field
+   named like a member every object inherits: its fields kept as `fields`, zod's `__proto__` as `proto`. */
+const zodFields = z.looseObject({ id: z.string(), constructor: z.string().optional() });
+const ZOD_OWN = Object.assign(
+  z.preprocess((value) => value, zodFields),
+  { fields: zodFields, proto: z.number().optional() },
+);
+const valibotFields = v.looseObject({ id: v.string(), constructor: v.optional(v.string()) });
+const VALIBOT_OWN = Object.assign(
+  v.pipe(
+    v.unknown(),
+    v.transform((value) => value),
+  ),
+  { fields: valibotFields },
+);
+const ARK_OWN = Object.assign(
+  type("object").narrow(() => true),
+  { fields: type({ id: "string", "constructor?": "string" }) },
+);
+const OWN = [
+  { path: "id", type: "string", required: true },
+  { path: "constructor", type: "string", required: false },
+];
+
 describe("the fields of a variables schema", () => {
+  it("are read through a generated _ownFields, inside another object too", () => {
+    const byPath = (a: { path: string }, b: { path: string }) => a.path.localeCompare(b.path);
+
+    expect(extractSchemaFields(ZOD_OWN)).toEqual([
+      ...OWN,
+      { path: "__proto__", type: "number", required: false },
+    ]);
+    expect(extractSchemaFields(z.object({ thing: ZOD_OWN }))?.map((field) => field.path)).toEqual([
+      "thing",
+      "thing.id",
+      "thing.constructor",
+      "thing.__proto__",
+    ]);
+    expect(extractSchemaFields(VALIBOT_OWN)).toEqual(OWN);
+    expect(extractSchemaFields(v.object({ thing: VALIBOT_OWN }))?.length).toBe(3);
+    expect(extractSchemaFields(ARK_OWN)?.toSorted(byPath)).toEqual(OWN.toSorted(byPath));
+  });
+
   it("are read from Zod v4, optional and defaulted fields not required", () => {
     const schema = z.object({
       items: z.array(z.object({ sku: z.string(), qty: z.number().int() })),

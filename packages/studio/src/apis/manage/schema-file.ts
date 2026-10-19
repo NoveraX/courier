@@ -64,10 +64,12 @@ function bindingsOf(statement: Statement | { type: string }): string[] {
   return isDeclaration(statement) ? declaredNames(statement) : [];
 }
 
+/* An overload's signature declares its function as the body does: zod's `_ownFields` has two. */
 function isDeclaration(statement: { type: string }): statement is Declaration {
   return [
     "VariableDeclaration",
     "FunctionDeclaration",
+    "TSDeclareFunction",
     "ClassDeclaration",
     "TSTypeAliasDeclaration",
     "TSInterfaceDeclaration",
@@ -82,6 +84,7 @@ function declaredNames(declaration: Declaration): string[] {
         d.id.type === "Identifier" ? [d.id.name] : [],
       );
     case "FunctionDeclaration":
+    case "TSDeclareFunction":
     case "ClassDeclaration":
       return declaration.id === null ? [] : [declaration.id.name];
     case "TSTypeAliasDeclaration":

@@ -5,6 +5,8 @@
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
 import { zodEnum } from "./enum-literals";
 import { objectKey } from "./literals";
+import { ownFieldsCall, type ProtoField } from "./own-fields-call";
+import { ownsInheritedField } from "./owns-inherited-field";
 import { withZodChecks } from "./zod-checks";
 
 export function schemaToZod(schema: ParsedSchema): string {
@@ -27,15 +29,17 @@ export function schemaToZod(schema: ParsedSchema): string {
   if (schema.type === "object" && schema.properties) {
     const required = new Set(schema.required ?? []);
     const propLines: string[] = [];
+    /* zod checks no field `__proto__` of an object: `_ownFields` checks it apart. */
+    let proto: ProtoField | undefined;
     for (const [name, prop] of Object.entries(schema.properties)) {
       if (!name) continue;
       let zodType = propToZod(prop);
       if (!required.has(name)) zodType += ".optional()";
       if (prop.nullable) zodType += ".nullable()";
-      const key = objectKey(name);
-      propLines.push(`  ${key}: ${zodType}`);
+      if (name === "__proto__") proto = { schema: zodType, required: required.has(name) };
+      else propLines.push(`  ${objectKey(name)}: ${zodType}`);
     }
-    if (propLines.length === 0) {
+    if (propLines.length === 0 && proto === undefined) {
       return schema.valueType
         ? `z.record(z.string(), ${schemaToZod(schema.valueType)})`
         : "z.record(z.string(), z.unknown())";
@@ -43,7 +47,11 @@ export function schemaToZod(schema: ParsedSchema): string {
     /* An answer keeps the fields its specification does not declare, as
        ArkType's objects do: a strict object dropped whatever an API added
        after its specification was written. */
-    return `z.looseObject({\n${propLines.join(",\n")},\n})`;
+    const object =
+      propLines.length === 0
+        ? "z.looseObject({})"
+        : `z.looseObject({\n${propLines.join(",\n")},\n})`;
+    return ownsInheritedField(schema) ? ownFieldsCall(object, proto) : object;
   }
 
   return withZodChecks(primitiveToZod(schema.type), schema.constraints);

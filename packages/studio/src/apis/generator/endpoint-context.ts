@@ -30,6 +30,11 @@ export interface EndpointUses {
   formQuery: boolean;
   /** Whether a definition sends variables as headers with `headerVariablesMiddleware`. */
   headerVariables: boolean;
+  /**
+   * Whether a definition writes an object through `_ownFields`, which the
+   * file then declares: one whose fields include a name every object inherits.
+   */
+  ownFields: boolean;
   /** The builders the definitions start from: `endpoint`, `stream`. */
   readonly bases: Set<"endpoint" | "stream">;
 }
@@ -85,6 +90,7 @@ export function endpointContext(
       formBody: false,
       formQuery: false,
       headerVariables: false,
+      ownFields: false,
       bases: new Set(),
     },
   };

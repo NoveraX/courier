@@ -53,8 +53,10 @@ const KEEPS_FIELDS: ReadonlySet<string> = new Set([
 /**
  * Read an expression as a Zod schema: `z.object({…})`, an object it
  * `.extend({…})`s, `z.array(…)` or `.array()`, through the modifiers that
- * keep its fields where they are written, and through the names it is
- * bound to, in this module or one it imports.
+ * keep its fields where they are written, through `_ownFields(…)`, which a
+ * generated module writes an object with a field named like `constructor`
+ * through, and through the names it is bound to, in this module or one it
+ * imports.
  *
  * @param modules - The project's modules
  * @param placed - The expression, and the module it is written in
@@ -73,6 +75,8 @@ export function written(modules: SourceModules, placed: Placed): Written {
       ? { kind: "unread", why: `${node.name} is bound to no schema Studio can read` }
       : written(modules, bound);
   }
+  const fields = ownFieldsArgument(node);
+  if (fields !== undefined) return written(modules, { path, node: fields });
   if (
     node.type !== "CallExpression" ||
     node.callee.type !== "MemberExpression" ||
@@ -136,6 +140,14 @@ export function keyName(property: ObjectProperty): string | undefined {
   const { key } = property;
   if (key.type === "Identifier") return key.name;
   return key.type === "Literal" && typeof key.value === "string" ? key.value : undefined;
+}
+
+/* The object `_ownFields(object, …)` checks, which holds its fields as they are written. */
+function ownFieldsArgument(node: Expression): Expression | undefined {
+  if (node.type !== "CallExpression" || node.callee.type !== "Identifier") return undefined;
+  if (node.callee.name !== "_ownFields") return undefined;
+  const [first] = node.arguments;
+  return first === undefined || first.type === "SpreadElement" ? undefined : first;
 }
 
 function unwrapped(node: Expression): Expression {

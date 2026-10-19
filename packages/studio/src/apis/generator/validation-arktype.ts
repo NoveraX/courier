@@ -9,6 +9,8 @@ import { arkProperty } from "./ark-property";
 import { arkExpressionOf, withArkChecks } from "./arktype-checks";
 import { arkExpression, enumerated } from "./arktype-expression";
 import { jsLiteral } from "./literals";
+import { ownFieldsCall } from "./own-fields-call";
+import { ownsInheritedField } from "./owns-inherited-field";
 
 /**
  * How to name a schema that sits on the same reference cycle as the one
@@ -59,7 +61,7 @@ export function schemaToArkType(schema: ParsedSchema, lazy?: LazyTargets): strin
       propLines.push(`  ${arkProperty(name, !required.has(name), propToArkType(prop, lazy))}`);
     }
     if (propLines.length === 0) return mapOf(schema.valueType, lazy);
-    return objectOf(propLines);
+    return ownsInheritedField(schema) ? ownFieldsCall(objectOf(propLines)) : objectOf(propLines);
   }
 
   const { constraints } = schema;

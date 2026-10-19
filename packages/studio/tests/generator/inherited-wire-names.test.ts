@@ -84,7 +84,12 @@ const CONSUMER = [
   "",
 ].join("\n");
 
-const OPTIONS: Partial<GenerateOptions> = { validation: "none" };
+const VARIANTS: [string, Partial<GenerateOptions>][] = [
+  ["zod", {}],
+  ["valibot", { validation: "valibot" }],
+  ["arktype", { validation: "arktype" }],
+  ["no validation", { validation: "none" }],
+];
 
 let upstream: UpstreamServer;
 
@@ -97,40 +102,39 @@ afterAll(async () => {
   removeProjects("inherited-wire-names");
 });
 
-function files() {
+function files(options: Partial<GenerateOptions>) {
   return generateCode(
     spec(upstream.origin),
-    { type: "openapi", outputDir: "src/api", ...OPTIONS },
+    { type: "openapi", outputDir: "src/api", ...options },
     "shop",
   );
 }
 
-describe("a generated client whose names every object inherits", () => {
-  it("sends no query parameter the caller left out", async () => {
-    upstream.requests.length = 0;
-    const putThing = endpointAt(
-      loadGenerated(files(), "src/api/shop/index.ts").shopApi,
-      "things",
-      "putThing",
-    );
+function putThing(options: Partial<GenerateOptions>) {
+  return endpointAt(
+    loadGenerated(files(options), "src/api/shop/index.ts").shopApi,
+    "things",
+    "putThing",
+  );
+}
 
-    await putThing({ id: "1", body: { id: "a" } });
+describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
+  it("sends no query parameter the caller left out, and takes an answer without such fields", async () => {
+    upstream.requests.length = 0;
+
+    const answer = await putThing(options)({ id: "1", body: { id: "a" } });
 
     const [sent] = upstream.requests;
     expect(sent?.path).toBe("/things/1");
     expect(sent?.query).toEqual([]);
     expect(JSON.parse(sent?.body ?? "null")).toEqual({ id: "a" });
+    expect(answer).toEqual({ id: "a" });
   });
 
   it("sends each one the caller gave, under its own name", async () => {
     upstream.requests.length = 0;
-    const putThing = endpointAt(
-      loadGenerated(files(), "src/api/shop/index.ts").shopApi,
-      "things",
-      "putThing",
-    );
 
-    await putThing(
+    await putThing(options)(
       JSON.parse('{ "id": "1", "constructor": "c", "__proto__": "p", "body": { "id": "a" } }'),
     );
 
@@ -142,7 +146,9 @@ describe("a generated client whose names every object inherits", () => {
   });
 
   it("compiles a call that leaves the optional ones out, under strict and exact optional types", () => {
-    const dir = writeProject("inherited-wire-names/none", files(), { "consumer.ts": CONSUMER });
+    const dir = writeProject(`inherited-wire-names/${label}`, files(options), {
+      "consumer.ts": CONSUMER,
+    });
 
     expect(compileProject(dir, ["consumer.ts"])).toEqual([]);
     expect(

@@ -1,6 +1,7 @@
 import type { ParsedSchema } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
 import { type EndpointContext, hasSchemaConstant, schemaConstant } from "./endpoint-context";
+import { holdsOwnFields } from "./holds-own-fields";
 import { collectRefsDeep } from "./schema-refs";
 import { getSchemaRefName, schemaToValidation } from "./schema-utils";
 
@@ -30,6 +31,8 @@ export function declaredSchema(
   if (!emitsSchemas(context.options) || !schema || hasFields(schema)) return null;
   if (!namesDeclared(schema, context)) return null;
   context.uses.validator = true;
+  /* An object inside it whose fields include a name every object inherits is written through `_ownFields`. */
+  if (holdsOwnFields([schema])) context.uses.ownFields = true;
   return schemaToValidation(schema, context.options);
 }
 

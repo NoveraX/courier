@@ -5,6 +5,7 @@ import { dropUnusedImports } from "./drop-unused-imports";
 import { planEntryRemoval } from "./entry-removal";
 import { findGroupDeclaration } from "./group-declaration";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
+import { withoutUnusedHelpers } from "./unused-helpers";
 import { groupsObject } from "./update-group-file";
 
 /** What removing endpoints from a file leaves, and what it took. */
@@ -18,7 +19,8 @@ export interface EndpointRemoval {
 /**
  * Remove endpoints from a file that declares them, reading it as code:
  * each goes with its doc comment and its comma, and the names only it
- * used go from the imports. Every other character stays as it is — the
+ * used go from the imports, as does a helper Studio wrote that only it
+ * called, such as `_ownFields`. Every other character stays as it is — the
  * code naming the base, the endpoints and comments left, the code after
  * the declaration.
  *
@@ -62,7 +64,9 @@ export function removeEndpointsFromFile(
   if (indices.size === properties.length && !keepEmpty && !holdsGroups) {
     return { content: null, removedCode };
   }
-  const without = applyEdits(content, planEntryRemoval(parsed, properties, start, indices));
+  const removed = applyEdits(content, planEntryRemoval(parsed, properties, start, indices));
+  const without = withoutUnusedHelpers(path, removed);
   const used = new Set(removedCode.flatMap((code) => code.match(/[A-Za-z_$][\w$]*/g) ?? []));
-  return { content: dropUnusedImports(path, without, used), removedCode };
+  for (const name of without.references) used.add(name);
+  return { content: dropUnusedImports(path, without.text, used), removedCode };
 }

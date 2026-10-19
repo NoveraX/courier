@@ -1,4 +1,5 @@
 import { member } from "../member";
+import { ownFieldsOf, withProtoField } from "./own-fields";
 import type { NodeReader, SchemaNode } from "./schema-node";
 import { fieldsOf, listOf, nodeOf, scalarNode, valuesOf, withFlag } from "./schema-node";
 import { zodV3Limits, zodV4Limits } from "./zod-limits";
@@ -25,6 +26,8 @@ function refined(node: SchemaNode | undefined, refinement: boolean): SchemaNode 
 export const readZodV4: NodeReader = (schema) => {
   const def = member(member(schema, "_zod"), "def");
   if (def === undefined) return undefined;
+  const own = ownFieldsOf(schema);
+  if (own !== undefined) return withProtoField(readZodV4(own.fields), own.proto);
   const type = member(def, "type");
   const inner = () => readZodV4(member(def, "innerType"));
   switch (type) {

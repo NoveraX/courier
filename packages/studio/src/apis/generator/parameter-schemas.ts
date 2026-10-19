@@ -3,9 +3,11 @@
  * body's fields, beside a body under a key of its own, or alone.
  */
 
+import { isInheritedName } from "../parser/inherited-names";
 import type { ParsedParameter } from "../parser/types";
 import { arkProperty } from "./ark-property";
 import { objectKey } from "./literals";
+import { ownFieldsCall, type ProtoField } from "./own-fields-call";
 import { parameterProperty } from "./parameter-property";
 import type { GeneratorSettings } from "./types";
 import { propToArkType } from "./validation-arktype";
@@ -24,6 +26,9 @@ import { propToZod } from "./validation-zod";
  * @param params - The parameters to add
  * @param options - Generation options, read for the validation library
  * @param isObject - Whether the body's schema is an object that can be extended
+ * @param owned - How the body's schema is written when its fields include a
+ *   name every object inherits: through `_ownFields`, its own fields reached
+ *   through `fields`, and for zod whether it has a field `__proto__`
  * @returns The schema of the variables
  * @example
  * ```ts
@@ -35,24 +40,35 @@ export function extendSchemaWithParams(
   params: readonly ParsedParameter[],
   options: GeneratorSettings,
   isObject = true,
+  owned: OwnedBody | null = null,
 ): string {
   if (params.length === 0) return schemaExpr;
-  const fields = params.map((param) => parameterField(param, options)).join(", ");
-
+  const inherits = owned !== null || params.some((param) => isInheritedName(param.name));
+  const base = owned === null ? schemaExpr : `${schemaExpr}.fields`;
   if (options.validation === "zod") {
+    const { fields, proto } = zodFields(params);
     /* `.extend` belongs to an object schema; a body that is one of several
        shapes has to be intersected instead. */
-    return isObject
-      ? `${schemaExpr}.extend({ ${fields} })`
-      : `z.intersection(${schemaExpr}, z.object({ ${fields} }))`;
+    if (!isObject) return `z.intersection(${schemaExpr}, ${zodObject(fields, proto, inherits)})`;
+    const extended = `${base}.extend({ ${fields} })`;
+    const kept: ProtoField | undefined = owned?.proto
+      ? { schema: `${schemaExpr}.proto`, required: owned.proto === "required" }
+      : undefined;
+    return inherits ? ownFieldsCall(extended, proto ?? kept) : extended;
   }
+  const fields = params.map((param) => parameterField(param, options)).join(", ");
   if (options.validation === "valibot") {
-    return isObject
-      ? `v.object({ ...${schemaExpr}.entries, ${fields} })`
-      : `v.intersect([${schemaExpr}, v.object({ ${fields} })])`;
+    if (!isObject)
+      return `v.intersect([${schemaExpr}, ${owning(`v.object({ ${fields} })`, inherits)}])`;
+    return owning(`v.object({ ...${base}.entries, ${fields} })`, inherits);
   }
-  if (options.validation === "arktype") return `${schemaExpr}.and({ ${fields} })`;
+  if (options.validation === "arktype") return owning(`${base}.and({ ${fields} })`, inherits);
   return schemaExpr;
+}
+
+/** A body whose fields include a name every object inherits: whether zod checks a field `__proto__` of it apart. */
+export interface OwnedBody {
+  proto: "required" | "optional" | null;
 }
 
 /* A schema's constant, named and nothing more: what writing it calls no validation library for. */
@@ -106,16 +122,25 @@ export function objectWithBody(
   options: GeneratorSettings,
   optional = false,
 ): string {
-  const fields = params.map((param) => parameterField(param, options));
+  const inherits = params.some((param) => isInheritedName(param.name));
   if (options.validation === "zod") {
+    const { fields, proto } = zodFields(params);
     const body = optional ? `${bodyExpr}.optional()` : bodyExpr;
-    return `z.object({ ${[...fields, `${objectKey(key)}: ${body}`].join(", ")} })`;
+    const all = [...(fields === "" ? [] : [fields]), `${objectKey(key)}: ${body}`].join(", ");
+    return zodObject(all, proto, inherits);
   }
+  const fields = params.map((param) => parameterField(param, options));
   if (options.validation === "valibot") {
     const body = optional ? `v.optional(${bodyExpr})` : bodyExpr;
-    return `v.object({ ${[...fields, `${objectKey(key)}: ${body}`].join(", ")} })`;
+    return owning(
+      `v.object({ ${[...fields, `${objectKey(key)}: ${body}`].join(", ")} })`,
+      inherits,
+    );
   }
-  return `type({ ${[...fields, arkProperty(key, optional, bodyExpr)].join(", ")} })`;
+  return owning(
+    `type({ ${[...fields, arkProperty(key, optional, bodyExpr)].join(", ")} })`,
+    inherits,
+  );
 }
 
 /**
@@ -152,11 +177,37 @@ export function parametersSchema(
   params: readonly ParsedParameter[],
   options: GeneratorSettings,
 ): string {
+  const inherits = params.some((param) => isInheritedName(param.name));
+  if (options.validation === "zod") {
+    const { fields, proto } = zodFields(params);
+    return zodObject(fields, proto, inherits);
+  }
   const fields = params.map((param) => parameterField(param, options)).join(", ");
-  if (options.validation === "zod") return `z.object({ ${fields} })`;
-  if (options.validation === "valibot") return `v.object({ ${fields} })`;
-  return `type({ ${fields} })`;
+  if (options.validation === "valibot") return owning(`v.object({ ${fields} })`, inherits);
+  return owning(`type({ ${fields} })`, inherits);
 }
+
+/* zod's fields of parameters, and the one named `__proto__` apart: an object of zod checks none. */
+function zodFields(params: readonly ParsedParameter[]): { fields: string; proto?: ProtoField } {
+  const proto = params.find((param) => param.name === "__proto__");
+  const others = params.filter((param) => param !== proto);
+  const fields = others.map((param) => parameterField(param, ZOD)).join(", ");
+  if (proto === undefined) return { fields };
+  const required = parameterProperty(proto).required;
+  const value = parameterValue(proto, ZOD);
+  return { fields, proto: { schema: required ? value : `${value}.optional()`, required } };
+}
+
+function zodObject(fields: string, proto: ProtoField | undefined, inherits: boolean): string {
+  const object = `z.object({ ${fields} })`;
+  return inherits ? ownFieldsCall(object, proto) : object;
+}
+
+function owning(object: string, inherits: boolean): string {
+  return inherits ? ownFieldsCall(object) : object;
+}
+
+const ZOD: GeneratorSettings = { validation: "zod" };
 
 /**
  * One parameter as a field of an object schema. A format is not checked: a

@@ -6,7 +6,12 @@ import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { boundNames } from "./bound-names";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
-import { basesDeclaration, defineImport, endpointImports } from "./endpoint-imports";
+import {
+  basesDeclaration,
+  defineImport,
+  endpointImports,
+  ownFieldsDeclaration,
+} from "./endpoint-imports";
 import { sortedStatements } from "./import-order";
 import { jsLiteral } from "./literals";
 import { moduleLocalNames } from "./module-local-names";
@@ -50,6 +55,7 @@ export function generateGroupFile(
     ...endpointImports(context),
   ];
   const bases = holds ? [basesDeclaration(context), ""] : [];
+  const helper = ownFieldsDeclaration(context);
   const locals = innerLocals(inner, group.name, [...others, ...bases]);
   const lines = [
     ...sortedStatements([
@@ -71,6 +77,7 @@ export function generateGroupFile(
       : []),
     `});`,
     "",
+    ...helper,
   ];
 
   return { path: options.layout.groupFile(group.name), content: lines.join("\n") };

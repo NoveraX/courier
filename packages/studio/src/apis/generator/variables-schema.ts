@@ -1,11 +1,15 @@
 import { ownValue } from "../own-value";
+import { isInheritedName } from "../parser/inherited-names";
 import type { ParsedEndpoint, ParsedParameter, ParsedSchema } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
 import { constantsDeclared, declaredSchema } from "./declared-schema";
 import { type EndpointContext, schemaConstant } from "./endpoint-context";
+import { holdsOwnFields } from "./holds-own-fields";
+import { ownsInheritedField } from "./owns-inherited-field";
 import {
   extendSchemaWithParams,
   extensionCallsValidator,
+  type OwnedBody,
   objectWithBody,
   optionalSchema,
   parametersSchema,
@@ -56,10 +60,37 @@ export function variablesSchema(
     context.uses.validator = true;
   }
   if (params.length === 0) return optionalSchema(body, context.options);
+  const owned = isObject
+    ? ownedBody(ownValue(context.spec.schemas, ep.requestBody?.refName ?? ""))
+    : null;
   if (kind !== "fields") {
+    if (ownsAny(params)) usesOwnFields(context);
     return objectWithBody(body, params, bodyKey(ep), context.options, optional);
   }
-  return extendSchemaWithParams(body, params, context.options, isObject);
+  if (owned !== null || ownsAny(params)) usesOwnFields(context);
+  return extendSchemaWithParams(body, params, context.options, isObject, owned);
+}
+
+/* Parameters written through `_ownFields`: one named like a member every object inherits, or
+   one whose schema holds an object with a field so named. */
+function ownsAny(params: readonly ParsedParameter[]): boolean {
+  return (
+    params.some((param) => isInheritedName(param.name)) ||
+    holdsOwnFields(params.flatMap(parameterSchemas))
+  );
+}
+
+/* The variables write an object through `_ownFields`, which the file declares. */
+function usesOwnFields(context: EndpointContext): void {
+  context.uses.ownFields = true;
+  context.uses.validator = true;
+}
+
+/* A body written through `_ownFields`, and whether zod checks a field `__proto__` of it apart. */
+function ownedBody(schema: ParsedSchema | undefined): OwnedBody | null {
+  if (!ownsInheritedField(schema)) return null;
+  if (!Object.hasOwn(schema?.properties ?? {}, "__proto__")) return { proto: null };
+  return { proto: schema?.required?.includes("__proto__") ? "required" : "optional" };
 }
 
 /* Parameters alone are typed rather than validated, unless one is
@@ -70,6 +101,7 @@ function checkedParameters(ep: ParsedEndpoint, context: EndpointContext): string
   if (!parametersNeedChecks(params, context.spec.schemas)) return null;
   if (!constantsDeclared(params.flatMap(parameterSchemas), context)) return null;
   context.uses.validator = true;
+  if (ownsAny(params)) usesOwnFields(context);
   return parametersSchema(params, context.options);
 }
 

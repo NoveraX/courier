@@ -1,5 +1,6 @@
 import { member } from "../member";
 import { readJsonSchema } from "./json-schema-node";
+import { ownFieldsOf } from "./own-fields";
 import type { NodeReader } from "./schema-node";
 import { readValibot } from "./valibot-node";
 import { readZodV3, readZodV4 } from "./zod-node";
@@ -24,9 +25,11 @@ export function readerOf(schema: unknown): { read: NodeReader; root: unknown } |
   if (member(schema, "_zod") !== undefined) return { read: readZodV4, root: schema };
   if (member(schema, "_def") !== undefined) return { read: readZodV3, root: schema };
   if (member(schema, "kind") === "schema") return { read: readValibot, root: schema };
-  const toJsonSchema = member(schema, "toJsonSchema");
+  /* ArkType's `_ownFields` is a check of its own, which JSON Schema writes as an object with no field. */
+  const described = ownFieldsOf(schema)?.fields ?? schema;
+  const toJsonSchema = member(described, "toJsonSchema");
   if (typeof toJsonSchema !== "function") return undefined;
-  const arktype = member(member(schema, "~standard"), "vendor") === "arktype";
-  const root: unknown = Reflect.apply(toJsonSchema, schema, arktype ? [ARKTYPE_OPTIONS] : []);
+  const arktype = member(member(described, "~standard"), "vendor") === "arktype";
+  const root: unknown = Reflect.apply(toJsonSchema, described, arktype ? [ARKTYPE_OPTIONS] : []);
   return { read: readJsonSchema, root };
 }

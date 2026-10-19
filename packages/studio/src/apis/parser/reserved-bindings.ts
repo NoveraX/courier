@@ -63,6 +63,8 @@ const RESERVED_WORDS = new Set([
  * uses it, and that file would not compile.
  */
 const GENERATED_IDENTIFIERS = new Set([
+  "_OwnFieldsOf",
+  "_ownFields",
   "ark",
   "authMiddleware",
   "courier",

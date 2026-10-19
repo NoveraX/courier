@@ -12,7 +12,8 @@ import { describe, expect, it } from "vitest";
 
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
-import { isReservedBinding } from "../../../src/apis/parser/reserved-bindings";
+import { toGroupName } from "../../../src/apis/parser/naming-utils";
+import { isReservedBinding, isReservedTypeName } from "../../../src/apis/parser/reserved-bindings";
 
 const SPEC = parseSpec(
   JSON.stringify({
@@ -79,6 +80,14 @@ describe("a name a module cannot bind, or one the generated code reads", () => {
     for (const name of ["eval", "arguments", "undefined", "globalThis", "Error"]) {
       expect(isReservedBinding(name)).toBe(true);
     }
+  });
+
+  it("is the helper a module checks inherited names through, whose names no tag or import gives", () => {
+    expect(isReservedBinding("_ownFields")).toBe(true);
+    expect(isReservedTypeName("_OwnFieldsOf")).toBe(true);
+    /* Studio writes a leading underscore only before a digit, so a tag of these words keeps its name. */
+    expect(isReservedBinding("ownFields")).toBe(false);
+    expect(toGroupName("own fields")).toBe("ownFields");
   });
 
   it("names a tag's group with a suffix, so every module generated loads as strict code", () => {

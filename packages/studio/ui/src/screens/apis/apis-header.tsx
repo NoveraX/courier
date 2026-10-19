@@ -8,8 +8,11 @@ import { ExportOpenApiButton } from "./export-openapi-button";
 import { exportedSource } from "./exported-source";
 
 interface ApisHeaderProps {
-  /** What the project declares, said under the title; nothing while it loads. */
-  summary: string | undefined;
+  /**
+   * What the project declares, said under the title: a bar while it loads,
+   * `null` when Studio could not be reached to tell it.
+   */
+  summary: string | null | undefined;
   /** Whether there is an import to check, and whether a check runs now. */
   check: { can: boolean; running: boolean; onCheck: () => void };
   exporter: UseOpenApiExportReturn;
@@ -44,9 +47,11 @@ export function ApisHeader(props: ApisHeaderProps): React.ReactNode {
         {summary === undefined ? (
           <Skeleton className="my-0.75 h-3 w-64 max-sm:col-span-full max-sm:row-start-2 max-sm:w-48" />
         ) : (
-          <span className="text-control text-fg-subtle max-sm:col-span-full max-sm:row-start-2">
-            {summary}
-          </span>
+          summary !== null && (
+            <span className="text-control text-fg-subtle max-sm:col-span-full max-sm:row-start-2">
+              {summary}
+            </span>
+          )
         )}
       </div>
       <div className="flex-1 max-sm:hidden" />

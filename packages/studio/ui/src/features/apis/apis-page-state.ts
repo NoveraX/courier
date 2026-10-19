@@ -1,5 +1,6 @@
 import { configFileName } from "@/store/config-file-name";
 import type { ConfigStatusPayload } from "@/store/config-status";
+import type { ConnectionStatus } from "@/store/types-ui";
 
 /**
  * Why the sources shown are not what the config on disk declares: it does
@@ -11,8 +12,10 @@ export type ConfigNoticeState =
 
 /** What the APIs page shows. */
 export type ApisPageView =
-  /** The UI is not connected to Studio. */
+  /** The page is connecting to Studio for the first time. */
   | { kind: "connecting" }
+  /** Studio cannot be reached, and never told the page what the config declares. */
+  | { kind: "unreachable" }
   /** Studio has not told yet how the config loads, or its first load runs. */
   | { kind: "loading" }
   /** The project has no config, and Studio never ran one. */
@@ -29,11 +32,13 @@ export type ApisPageState = ApisPageView & { importBlocked: string | null };
 
 /** What the APIs page is derived from. */
 export interface ApisPageInput {
-  connected: boolean;
+  connection: ConnectionStatus;
   status: ConfigStatusPayload | null;
   /** How many sources the catalogue Studio sent lists. */
   sourceCount: number;
 }
+
+const NOT_CONNECTED = "Studio is not connected";
 
 /**
  * Decide what the APIs page shows from the connection and the config's
@@ -41,6 +46,10 @@ export interface ApisPageInput {
  * the status, a project without a config, a config that never loaded and a
  * config with no sources each get their own state. While the config does not
  * load, the page keeps the sources Studio runs and says since when.
+ *
+ * Only the page's first connection is waited for. Cut off from Studio, the
+ * page shows what Studio told it last, or says Studio cannot be reached when
+ * it told nothing — it never loads for ever.
  *
  * Import is allowed only while the config loads: Studio declares every import
  * in it, and refuses to import while it cannot read it.
@@ -51,12 +60,14 @@ export interface ApisPageInput {
  * @example
  * ```ts
  * const status = { state: "missing", revision: 1, configFile: null, lastGoodAt: null } as const;
- * apisPageState({ connected: true, status, sourceCount: 0 });
+ * apisPageState({ connection: "connected", status, sourceCount: 0 });
  * // → { kind: "no-config", importBlocked: "Create courier.config.ts first" }
+ * apisPageState({ connection: "disconnected", status: null, sourceCount: 0 });
+ * // → { kind: "unreachable", importBlocked: "Studio is not connected" }
  * ```
  */
-export function apisPageState({ connected, status, sourceCount }: ApisPageInput): ApisPageState {
-  if (!connected) return { kind: "connecting", importBlocked: "Studio is not connected" };
+export function apisPageState({ connection, status, sourceCount }: ApisPageInput): ApisPageState {
+  if (connection !== "connected") return offlineState(connection, status, sourceCount);
   /* No status yet is this page's wait, not Studio loading the config. */
   if (status === null) return { kind: "loading", importBlocked: "Waiting for Studio" };
   if (status.state === "starting") {
@@ -67,6 +78,20 @@ export function apisPageState({ connected, status, sourceCount }: ApisPageInput)
 }
 
 type ConfigOutcome = Exclude<ConfigStatusPayload, { state: "starting" }>;
+
+function offlineState(
+  connection: ConnectionStatus,
+  status: ConfigStatusPayload | null,
+  sourceCount: number,
+): ApisPageState {
+  if (connection === "connecting") return { kind: "connecting", importBlocked: NOT_CONNECTED };
+  if (status === null || status.state === "starting") {
+    const view: ApisPageView =
+      sourceCount > 0 ? { kind: "sources", notice: null } : { kind: "unreachable" };
+    return { ...view, importBlocked: NOT_CONNECTED };
+  }
+  return { ...viewOf(status, configFileName(status), sourceCount), importBlocked: NOT_CONNECTED };
+}
 
 function viewOf(status: ConfigOutcome, file: string, sourceCount: number): ApisPageView {
   if (status.state === "failed" && status.lastGoodAt === null) {

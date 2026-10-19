@@ -51,11 +51,11 @@ export function useRegistry(): UseRegistryReturn {
   // Live data from socket (pushed by server on connect + file changes)
   const scanSources = useStudioStore((s) => s.scanSources);
   const registrySources = useStudioStore((s) => s.registrySources);
-  const connected = useStudioStore((s) => s.connected);
+  const connection = useStudioStore((s) => s.connectionStatus);
   const configStatus = useStudioStore((s) => s.configStatus);
   const page = useMemo(
-    () => apisPageState({ connected, status: configStatus, sourceCount: scanSources.length }),
-    [connected, configStatus, scanSources.length],
+    () => apisPageState({ connection, status: configStatus, sourceCount: scanSources.length }),
+    [connection, configStatus, scanSources.length],
   );
   const statuses = useMemo(
     () => checkStatuses(registrySources, pageStatuses),

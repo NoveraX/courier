@@ -204,4 +204,34 @@ describe("the APIs page", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/automatically/)).toBeNull();
   });
+
+  it("says Studio is not connected, not loading for ever, when Studio never answered", async () => {
+    useStudioStore.setState({
+      connected: false,
+      connectionStatus: "disconnected",
+      configStatus: null,
+      scanSources: [],
+      registrySources: [],
+    });
+
+    await openShell("/apis");
+
+    const page = screen.getByRole("main");
+    expect(within(page).getByRole("heading", { name: "Studio is not connected" })).toBeTruthy();
+    expect(within(page).queryByText(/imported ·/)).toBeNull();
+    expect(page.querySelector(".animate-pulse, [class*='animate-pulse']")).toBeNull();
+    expect(within(page).getByRole("button", { name: "Import API" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("keeps the sources Studio sent once the page loses it", async () => {
+    useStudioStore.setState({ connected: false, connectionStatus: "reconnecting" });
+
+    await openShell("/apis");
+
+    expect(card()).toBeTruthy();
+    expect(screen.getByText("1 imported · 1 hand-written · 3 endpoints")).toBeTruthy();
+  });
 });

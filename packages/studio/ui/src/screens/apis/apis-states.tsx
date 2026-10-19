@@ -88,6 +88,26 @@ export function NoSources({
 }
 
 /**
+ * The APIs page while Studio cannot be reached and never told it what the
+ * config declares: it says so, where it would otherwise load for ever.
+ *
+ * @returns The state
+ * @example
+ * ```tsx
+ * {page.kind === "unreachable" && <Unreachable />}
+ * ```
+ */
+export function Unreachable(): React.ReactNode {
+  return (
+    <Centered title="Studio is not connected">
+      <p className="text-control text-fg-subtle">
+        The APIs courier.config declares show here as soon as this page reaches Studio again.
+      </p>
+    </Centered>
+  );
+}
+
+/**
  * The config's last load failed or the file was deleted: what the page
  * shows is what Studio loaded before.
  *

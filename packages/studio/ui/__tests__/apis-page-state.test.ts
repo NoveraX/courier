@@ -2,7 +2,8 @@
  * `apisPageState` decides what the APIs page shows. The page waits only for
  * what it cannot know yet: once Studio tells how the config loads, every
  * state has a page of its own, and Import is refused while the config does
- * not load.
+ * not load. Cut off from Studio, it shows what it was told last, or that
+ * Studio cannot be reached — it waits only for its first connection.
  */
 
 import { describe, expect, it } from "vitest";
@@ -35,21 +36,54 @@ function missing(
 }
 
 describe("apisPageState", () => {
-  it("shows the skeleton while the UI is not connected", () => {
-    const page = apisPageState({ connected: false, status: LOADED, sourceCount: 4 });
+  it("shows the skeleton while the page first connects", () => {
+    const page = apisPageState({ connection: "connecting", status: null, sourceCount: 0 });
 
-    expect(page.kind).toBe("connecting");
-    expect(page.importBlocked).toBe("Studio is not connected");
+    expect(page).toEqual({ kind: "connecting", importBlocked: "Studio is not connected" });
+  });
+
+  it("says Studio cannot be reached, instead of loading, when it never told the page anything", () => {
+    for (const connection of ["disconnected", "reconnecting"] as const) {
+      expect(apisPageState({ connection, status: null, sourceCount: 0 })).toEqual({
+        kind: "unreachable",
+        importBlocked: "Studio is not connected",
+      });
+    }
+    expect(
+      apisPageState({
+        connection: "disconnected",
+        status: { state: "starting", revision: 0 },
+        sourceCount: 0,
+      }).kind,
+    ).toBe("unreachable");
+  });
+
+  it("keeps what Studio told last once the page loses it, and refuses Import", () => {
+    expect(apisPageState({ connection: "disconnected", status: LOADED, sourceCount: 4 })).toEqual({
+      kind: "sources",
+      notice: null,
+      importBlocked: "Studio is not connected",
+    });
+    expect(
+      apisPageState({ connection: "reconnecting", status: missing(null), sourceCount: 0 }),
+    ).toEqual({ kind: "no-config", importBlocked: "Studio is not connected" });
+    expect(
+      apisPageState({
+        connection: "disconnected",
+        status: { state: "starting", revision: 0 },
+        sourceCount: 2,
+      }).kind,
+    ).toBe("sources");
   });
 
   it("shows the skeleton until Studio tells how the config loads", () => {
-    expect(apisPageState({ connected: true, status: null, sourceCount: 0 })).toEqual({
+    expect(apisPageState({ connection: "connected", status: null, sourceCount: 0 })).toEqual({
       kind: "loading",
       importBlocked: "Waiting for Studio",
     });
     expect(
       apisPageState({
-        connected: true,
+        connection: "connected",
         status: { state: "starting", revision: 0 },
         sourceCount: 0,
       }),
@@ -57,13 +91,13 @@ describe("apisPageState", () => {
   });
 
   it("leaves the skeleton for a project without courier.config", () => {
-    const page = apisPageState({ connected: true, status: missing(null), sourceCount: 0 });
+    const page = apisPageState({ connection: "connected", status: missing(null), sourceCount: 0 });
 
     expect(page).toEqual({ kind: "no-config", importBlocked: "Create courier.config.ts first" });
   });
 
   it("leaves the skeleton for a project whose config never loaded", () => {
-    const page = apisPageState({ connected: true, status: failed(null), sourceCount: 0 });
+    const page = apisPageState({ connection: "connected", status: failed(null), sourceCount: 0 });
 
     expect(page).toEqual({
       kind: "broken",
@@ -76,7 +110,7 @@ describe("apisPageState", () => {
   it("shows the last good sources with an error notice when the config fails, naming no file: the one that failed may be another", () => {
     const status = failed(1_000, "courier.config.ts");
 
-    const page = apisPageState({ connected: true, status, sourceCount: 3 });
+    const page = apisPageState({ connection: "connected", status, sourceCount: 3 });
 
     expect(page).toEqual({
       kind: "sources",
@@ -91,7 +125,7 @@ describe("apisPageState", () => {
   });
 
   it("shows the last good sources with a warning notice when the config was deleted", () => {
-    const page = apisPageState({ connected: true, status: missing(1_000), sourceCount: 3 });
+    const page = apisPageState({ connection: "connected", status: missing(1_000), sourceCount: 3 });
 
     expect(page).toEqual({
       kind: "sources",
@@ -103,7 +137,7 @@ describe("apisPageState", () => {
   it("names the file Studio ran when it was deleted, whatever its extension", () => {
     const status = missing(1_000, "courier.config.mjs");
 
-    const page = apisPageState({ connected: true, status, sourceCount: 3 });
+    const page = apisPageState({ connection: "connected", status, sourceCount: 3 });
 
     expect(page).toEqual({
       kind: "sources",
@@ -113,14 +147,14 @@ describe("apisPageState", () => {
   });
 
   it("keeps the notice when the config Studio still runs declared no sources", () => {
-    const page = apisPageState({ connected: true, status: missing(1_000), sourceCount: 0 });
+    const page = apisPageState({ connection: "connected", status: missing(1_000), sourceCount: 0 });
 
     expect(page.kind).toBe("empty");
     expect(page.kind === "empty" && page.notice?.tone).toBe("warning");
   });
 
   it("shows the sources of a config that loads, and allows Import", () => {
-    expect(apisPageState({ connected: true, status: LOADED, sourceCount: 2 })).toEqual({
+    expect(apisPageState({ connection: "connected", status: LOADED, sourceCount: 2 })).toEqual({
       kind: "sources",
       notice: null,
       importBlocked: null,
@@ -128,7 +162,7 @@ describe("apisPageState", () => {
   });
 
   it("shows the empty page for a config that loads and declares no sources", () => {
-    expect(apisPageState({ connected: true, status: LOADED, sourceCount: 0 })).toEqual({
+    expect(apisPageState({ connection: "connected", status: LOADED, sourceCount: 0 })).toEqual({
       kind: "empty",
       notice: null,
       importBlocked: null,
@@ -137,22 +171,22 @@ describe("apisPageState", () => {
 
   it("allows Import only while the config loads", () => {
     const blocked = [
-      apisPageState({ connected: false, status: null, sourceCount: 0 }),
-      apisPageState({ connected: true, status: null, sourceCount: 0 }),
+      apisPageState({ connection: "disconnected", status: null, sourceCount: 0 }),
+      apisPageState({ connection: "connected", status: null, sourceCount: 0 }),
       apisPageState({
-        connected: true,
+        connection: "connected",
         status: { state: "starting", revision: 0 },
         sourceCount: 0,
       }),
-      apisPageState({ connected: true, status: failed(null), sourceCount: 0 }),
-      apisPageState({ connected: true, status: failed(1_000), sourceCount: 1 }),
-      apisPageState({ connected: true, status: missing(null), sourceCount: 0 }),
-      apisPageState({ connected: true, status: missing(1_000), sourceCount: 1 }),
+      apisPageState({ connection: "connected", status: failed(null), sourceCount: 0 }),
+      apisPageState({ connection: "connected", status: failed(1_000), sourceCount: 1 }),
+      apisPageState({ connection: "connected", status: missing(null), sourceCount: 0 }),
+      apisPageState({ connection: "connected", status: missing(1_000), sourceCount: 1 }),
     ];
 
     for (const page of blocked) expect(page.importBlocked).toEqual(expect.any(String));
     expect(
-      apisPageState({ connected: true, status: LOADED, sourceCount: 0 }).importBlocked,
+      apisPageState({ connection: "connected", status: LOADED, sourceCount: 0 }).importBlocked,
     ).toBeNull();
   });
 });

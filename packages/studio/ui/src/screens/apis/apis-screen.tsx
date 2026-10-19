@@ -12,7 +12,7 @@ import { useNow } from "@/hooks/use-tick";
 import { ApiCard } from "./api-card";
 import { ApisHeader } from "./apis-header";
 import { ApisSkeleton } from "./apis-skeleton";
-import { ConfigNoticeBar, NoConfig, NoSources } from "./apis-states";
+import { ConfigNoticeBar, NoConfig, NoSources, Unreachable } from "./apis-states";
 import { ExportOpenApiDialog } from "./export-openapi-dialog";
 import { HandWrittenTable } from "./hand-written-table";
 import { ImportDialog } from "./import/import-dialog";
@@ -90,7 +90,9 @@ export function ApisScreen(): React.ReactNode {
           summary={
             loading
               ? undefined
-              : `${imported.length} imported · ${handWritten.length} hand-written · ${plural(endpoints, "endpoint")}`
+              : page.kind === "unreachable"
+                ? null
+                : `${imported.length} imported · ${handWritten.length} hand-written · ${plural(endpoints, "endpoint")}`
           }
           check={{
             can: imported.length > 0,
@@ -103,6 +105,7 @@ export function ApisScreen(): React.ReactNode {
           onImport={() => importWizard.openWizard()}
         />
         {loading && <ApisSkeleton />}
+        {page.kind === "unreachable" && <Unreachable />}
         {page.kind === "no-config" && <NoConfig />}
         {page.kind === "broken" && <NoSources broken={page} />}
         {(page.kind === "sources" || page.kind === "empty") && page.notice && (

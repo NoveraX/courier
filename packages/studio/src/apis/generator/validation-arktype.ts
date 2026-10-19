@@ -4,6 +4,7 @@
  * Every function returns code for an ArkType type object.
  */
 
+import { ownValue } from "../own-value";
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
 import { arkProperty } from "./ark-property";
 import { arkExpressionOf, withArkChecks } from "./arktype-checks";
@@ -61,7 +62,13 @@ export function schemaToArkType(schema: ParsedSchema, lazy?: LazyTargets): strin
       propLines.push(`  ${arkProperty(name, !required.has(name), propToArkType(prop, lazy))}`);
     }
     if (propLines.length === 0) return mapOf(schema.valueType, lazy);
-    return ownsInheritedField(schema) ? ownFieldsCall(objectOf(propLines)) : objectOf(propLines);
+    if (!ownsInheritedField(schema)) return objectOf(propLines);
+    /* ArkType leaves a field `__proto__` out of what it writes of the object: `_ownFields` writes it. */
+    const proto = ownValue(schema.properties, "__proto__");
+    return ownFieldsCall(
+      objectOf(propLines),
+      proto && { schema: propToArkType(proto, lazy), required: false },
+    );
   }
 
   const { constraints } = schema;

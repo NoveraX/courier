@@ -3,6 +3,8 @@
  * named like a member every object inherits — `constructor`, `toString`,
  * `__proto__`: zod read such a field the value lacked as the member every
  * object has, and refused it, and it checks no field `__proto__` at all.
+ * It compiles with a zod that writes no JSON Schema, before 4.2, and then
+ * describes the object by none.
  * Every global it reads is read through `globalThis`, and every type it
  * names is zod's or its own, so a schema named `Object` or `Record` takes
  * the place of none.
@@ -70,8 +72,19 @@ function _ownFields(
     if (!checked.success || !given.success) return z.NEVER;
     return own ? { ...checked.data, ["__proto__"]: given.data } : checked.data;
   });
+  type Described = { readonly [key: string]: unknown };
+  type Converter = {
+    readonly input: (options: { readonly target: string }) => Described;
+    readonly output: (options: { readonly target: string }) => Described;
+  };
+  /* zod writes JSON Schema from 4.2 on; with an earlier zod the object is described by none. */
+  const fieldsStandard: { readonly jsonSchema?: Converter } = fields["~standard"];
+  const protoStandard: { readonly jsonSchema?: Converter } = proto["~standard"];
+  const converter = fieldsStandard.jsonSchema;
+  const field = protoStandard.jsonSchema;
+  if (converter === undefined || field === undefined) return globalThis.Object.assign(schema, { fields, proto });
   /* The fields' description, with \`__proto__\` among its properties as a key of its own. */
-  const withProto = (base: { [key: string]: unknown }, described: { [key: string]: unknown }) => {
+  const withProto = (base: Described, described: Described) => {
     const { $schema: _dialect, ...field } = described;
     const properties: { [key: string]: unknown } =
       typeof base.properties === "object" && base.properties !== null ? { ...base.properties } : {};
@@ -85,9 +98,7 @@ function _ownFields(
     const taken = proto.safeParse(undefined).success ? required : [...required, "__proto__"];
     return { ...base, properties, required: taken };
   };
-  const converter = fields["~standard"].jsonSchema;
-  const field = proto["~standard"].jsonSchema;
-  const jsonSchema: typeof converter = {
+  const jsonSchema: Converter = {
     input: (options) => withProto(converter.input(options), field.input(options)),
     output: (options) => withProto(converter.output(options), field.output(options)),
   };

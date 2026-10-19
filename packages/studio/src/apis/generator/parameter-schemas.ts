@@ -62,7 +62,13 @@ export function extendSchemaWithParams(
       return `v.intersect([${schemaExpr}, ${owning(`v.object({ ${fields} })`, inherits)}])`;
     return owning(`v.object({ ...${base}.entries, ${fields} })`, inherits);
   }
-  if (options.validation === "arktype") return owning(`${base}.and({ ${fields} })`, inherits);
+  if (options.validation === "arktype") {
+    const extended = `${base}.and({ ${fields} })`;
+    const kept: ProtoField | undefined = owned?.proto
+      ? { schema: `${schemaExpr}.proto`, required: false }
+      : undefined;
+    return inherits ? ownFieldsCall(extended, arkProto(params) ?? kept) : extended;
+  }
   return schemaExpr;
 }
 
@@ -137,10 +143,8 @@ export function objectWithBody(
       inherits,
     );
   }
-  return owning(
-    `type({ ${[...fields, arkProperty(key, optional, bodyExpr)].join(", ")} })`,
-    inherits,
-  );
+  const object = `type({ ${[...fields, arkProperty(key, optional, bodyExpr)].join(", ")} })`;
+  return inherits ? ownFieldsCall(object, arkProto(params)) : object;
 }
 
 /**
@@ -184,7 +188,13 @@ export function parametersSchema(
   }
   const fields = params.map((param) => parameterField(param, options)).join(", ");
   if (options.validation === "valibot") return owning(`v.object({ ${fields} })`, inherits);
-  return owning(`type({ ${fields} })`, inherits);
+  return inherits ? ownFieldsCall(`type({ ${fields} })`, arkProto(params)) : `type({ ${fields} })`;
+}
+
+/* ArkType's description of a parameter `__proto__`, which it leaves out of what it writes of the object. */
+function arkProto(params: readonly ParsedParameter[]): ProtoField | undefined {
+  const proto = params.find((param) => param.name === "__proto__");
+  return proto && { schema: parameterValue(proto, ARK), required: false };
 }
 
 /* zod's fields of parameters, and the one named `__proto__` apart: an object of zod checks none. */
@@ -208,6 +218,7 @@ function owning(object: string, inherits: boolean): string {
 }
 
 const ZOD: GeneratorSettings = { validation: "zod" };
+const ARK: GeneratorSettings = { validation: "arktype" };
 
 /**
  * One parameter as a field of an object schema. A format is not checked: a

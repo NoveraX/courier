@@ -330,24 +330,35 @@ describe("an object with inherited names, described", () => {
     });
   });
 
-  it("is described by ArkType as its fields are, and inside another as an object", () => {
+  it("is described by ArkType as its fields are, its field __proto__ among them, wherever it sits", () => {
     const shop = loadGenerated(generated("arktype"), "src/api/shop/source.ts").shop;
     const document = toOpenAPI(shop as Parameters<typeof toOpenAPI>[0]);
     const operation = document.paths["/things"]?.post;
+    const body = operation?.requestBody;
+    const answer = operation?.responses["200"];
 
-    expect(operation?.requestBody).toMatchObject({
+    expect(JSON.stringify(body)).toContain('"__proto__":{"type":"string","maxLength":3}');
+    expect(body).toMatchObject({
       content: {
         "application/json": {
           schema: { type: "object", properties: { constructor: { type: "string" } } },
         },
       },
     });
-    expect(operation?.responses["200"]).toMatchObject({
+    /* Inside another schema its check carries its description, so it is written as it is alone. */
+    expect(answer).toMatchObject({
       content: {
         "application/json": {
-          schema: { properties: { note: { type: "object" }, thing: { type: "object" } } },
+          schema: {
+            properties: {
+              note: { properties: { id: { type: "string" }, constructor: { type: "string" } } },
+              thing: { properties: { id: { type: "string" } } },
+              list: { items: { properties: { id: { type: "string" } } } },
+            },
+          },
         },
       },
     });
+    expect(JSON.stringify(answer)).toContain('"__proto__":{"type":"string"}');
   });
 });

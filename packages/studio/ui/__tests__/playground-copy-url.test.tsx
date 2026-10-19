@@ -30,6 +30,7 @@ beforeEach(() => {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     scanSources: [API],
     bindingSnapshot: BOUND,
     requests: [],

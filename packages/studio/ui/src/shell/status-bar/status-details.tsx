@@ -12,6 +12,7 @@ import { useWatchState } from "./watch-state";
 function ConnectionLine(): React.ReactNode {
   const status = useStudioStore((s) => s.connectionStatus);
   const snapshot = useStudioStore((s) => s.bindingSnapshot);
+  const known = useStudioStore((s) => s.received.runtimes);
   const since = useStudioStore((s) => s.sessionStartedAt);
   const attached = status === "connected" && snapshot.runtimeCount > 0;
   return (
@@ -23,7 +24,7 @@ function ConnectionLine(): React.ReactNode {
         status === "disconnected" && "text-err",
       )}
     >
-      <span className="font-medium">{connectionLabel(status, snapshot)}</span>
+      <span className="font-medium">{connectionLabel(status, known ? snapshot : null)}</span>
       {attached && since !== null && <SessionLength since={since} />}
     </p>
   );

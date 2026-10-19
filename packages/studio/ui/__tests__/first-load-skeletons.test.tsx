@@ -4,10 +4,11 @@
  * Before a page has first connected to Studio it has nothing to show, and
  * says so as loading — in the shape of what it will show — never as an
  * empty project: no "Waiting for requests", "No endpoints yet" or "No app
- * attached" before Studio has had its say. The rule itself decides by the
- * connection and by how the config loads.
+ * attached" before Studio has had its say, nor once connected before
+ * Studio has said which apps are attached. The rule itself decides by the
+ * connection, by what Studio has sent, and by how the config loads.
  */
-import { cleanup, screen } from "@testing-library/react";
+import { act, cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { firstLoad } from "@/features/loading/first-load";
@@ -26,10 +27,14 @@ const LOADED = {
   loadedAt: Date.now(),
 } as const;
 
+const NOTHING = { runtimes: false, requests: false } as const;
+const EVERYTHING = { runtimes: true, requests: true } as const;
+
 beforeEach(() => {
   useStudioStore.setState({
     connected: false,
     connectionStatus: "connecting",
+    received: NOTHING,
     configStatus: null,
     requests: [],
     scanSources: [],
@@ -63,34 +68,76 @@ describe("a page before it first connects to Studio", () => {
   });
 });
 
+describe("a page connected before Studio has named the apps attached", () => {
+  beforeEach(() => {
+    useStudioStore.setState({
+      connected: true,
+      connectionStatus: "connected",
+      configStatus: LOADED,
+    });
+  });
+
+  it("shows the Playground loading, not that no app is attached", async () => {
+    await openShell("/playground");
+
+    expect(screen.getByRole("status", { name: "" }).textContent).toBe("Loading the endpoints");
+    expect(screen.queryByText("No app attached")).toBeNull();
+  });
+
+  it("says no app is attached once Studio has said none is", async () => {
+    await openShell("/playground");
+
+    act(() => useStudioStore.getState().setReceived("runtimes"));
+
+    expect(screen.getByText("No app attached")).toBeTruthy();
+  });
+});
+
 describe("what a page still waits for", () => {
   it("waits for everything before it first connects", () => {
-    expect(firstLoad({ status: "connecting", config: null, sourceCount: 0 })).toEqual({
+    const status = "connecting";
+
+    expect(firstLoad({ status, received: NOTHING, config: null, sourceCount: 0 })).toEqual({
       requests: true,
+      runtimes: true,
       sources: true,
     });
+  });
+
+  it("waits, once connected, until Studio has said which apps are attached", () => {
+    const connected = { status: "connected", config: LOADED, sourceCount: 0 } as const;
+
+    expect(firstLoad({ ...connected, received: NOTHING }).runtimes).toBe(true);
+    expect(firstLoad({ ...connected, received: EVERYTHING }).runtimes).toBe(false);
   });
 
   it("waits for the sources while Studio loads the config, and for nothing once it has", () => {
     const starting = { state: "starting", revision: 0 } as const;
+    const connected = { status: "connected", received: EVERYTHING, sourceCount: 0 } as const;
 
-    expect(firstLoad({ status: "connected", config: starting, sourceCount: 0 })).toEqual({
+    expect(firstLoad({ ...connected, config: starting })).toEqual({
       requests: false,
+      runtimes: false,
       sources: true,
     });
-    expect(firstLoad({ status: "connected", config: LOADED, sourceCount: 0 }).sources).toBe(false);
+    expect(firstLoad({ ...connected, config: LOADED }).sources).toBe(false);
   });
 
   it("keeps showing the sources it has while Studio loads the config again", () => {
+    const starting = { state: "starting", revision: 0 } as const;
+
     expect(
-      firstLoad({ status: "connected", config: { state: "starting", revision: 0 }, sourceCount: 2 })
+      firstLoad({ status: "connected", received: EVERYTHING, config: starting, sourceCount: 2 })
         .sources,
     ).toBe(false);
   });
 
   it("waits for nothing once Studio cannot be reached: the page says what it has", () => {
-    expect(firstLoad({ status: "disconnected", config: null, sourceCount: 0 })).toEqual({
+    const status = "disconnected";
+
+    expect(firstLoad({ status, received: NOTHING, config: null, sourceCount: 0 })).toEqual({
       requests: false,
+      runtimes: false,
       sources: false,
     });
   });

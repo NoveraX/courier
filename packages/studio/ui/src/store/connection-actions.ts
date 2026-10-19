@@ -7,6 +7,7 @@ type ConnectionActions = Pick<
   | "setStudioInfo"
   | "setConnectionStatus"
   | "setReconnectAttempt"
+  | "setReceived"
   | "setBindingSnapshot"
   | "setBindingError"
 >;
@@ -41,6 +42,8 @@ export function createConnectionActions(set: StudioSet): ConnectionActions {
       if (status === "connected") set({ reconnectAttempt: 0 });
     },
     setReconnectAttempt: (attempt) => set({ reconnectAttempt: attempt }),
+    setReceived: (part) =>
+      set((s) => (s.received[part] ? s : { received: { ...s.received, [part]: true } })),
     setBindingSnapshot: (snapshot: BindingSnapshot) =>
       set((s) => {
         const sessionStartedAt = snapshot.runtimeCount > 0 ? (snapshot.activeSince ?? null) : null;

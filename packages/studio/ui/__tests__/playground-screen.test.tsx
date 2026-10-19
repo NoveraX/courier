@@ -78,6 +78,7 @@ beforeEach(() => {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     scanSources: [SOURCE],
     bindingSnapshot: BOUND,
     requests: [],

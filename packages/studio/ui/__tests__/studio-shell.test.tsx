@@ -59,6 +59,7 @@ function attach(): void {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     studioInfo: {
       version: "1.2.3",
       startedAt: 1_700,
@@ -86,6 +87,7 @@ beforeEach(() => {
     studioInfo: null,
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] },
     requests: [],
     paused: false,
@@ -135,6 +137,17 @@ describe("the shell", () => {
 
     expect(screen.getByText("Studio unreachable")).toBeTruthy();
     expect(screen.queryByText("vite-browser · localhost:5173")).toBeNull();
+  });
+
+  it("says the page is still connecting until Studio has said which apps are attached", async () => {
+    useStudioStore.setState({ received: { runtimes: false, requests: false } });
+    await open();
+    const footer = screen.getByRole("contentinfo");
+    expect(within(footer).getByText("connecting…")).toBeTruthy();
+
+    act(() => useStudioStore.getState().setReceived("runtimes"));
+
+    expect(within(footer).getByText("waiting for an app")).toBeTruthy();
   });
 
   it("says Studio waits for an app until one attaches, then counts runtimes and sources", async () => {

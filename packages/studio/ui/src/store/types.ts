@@ -41,6 +41,7 @@ export type {
   PlaygroundChunk,
   PlaygroundEndSummary,
   PlaygroundHistoryEntry,
+  Received,
   Settings,
   SourceInfo,
   SourceMap,

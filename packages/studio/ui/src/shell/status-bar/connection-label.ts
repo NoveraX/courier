@@ -11,10 +11,11 @@ export const CONNECTION_TITLE =
  * attached and the sources they serve — or, where only browsers are
  * attached and serve none, that they call their APIs directly, which is
  * no fault — that Studio waits for an app, or what it does about a
- * connection lost.
+ * connection lost. Until Studio has said which apps are attached, the
+ * page is still connecting.
  *
  * @param status - The connection's state
- * @param snapshot - The runtimes attached, and what they serve
+ * @param snapshot - The runtimes attached, and what they serve; `null` until Studio has said
  * @returns The words
  * @example
  * ```ts
@@ -23,15 +24,14 @@ export const CONNECTION_TITLE =
  */
 export function connectionLabel(
   status: ConnectionStatus,
-  snapshot: Pick<BindingSnapshot, "runtimeCount" | "sourceCount" | "runtimes">,
+  snapshot: Pick<BindingSnapshot, "runtimeCount" | "sourceCount" | "runtimes"> | null,
 ): string {
-  const { runtimeCount, sourceCount, runtimes } = snapshot;
-  if (status === "connected" && runtimeCount > 0) {
-    const browsers = runtimes.length > 0 && runtimes.every((runtime) => runtime.kind === "browser");
-    const served = sourceCount === 0 && browsers ? "direct calls" : plural(sourceCount, "source");
-    return `${plural(runtimeCount, "runtime")} · ${served}`;
-  }
-  if (status === "connected") return "waiting for an app";
   if (status === "reconnecting") return "reconnecting…";
-  return status === "connecting" ? "connecting…" : "disconnected";
+  if (status === "disconnected") return "disconnected";
+  if (status === "connecting" || snapshot === null) return "connecting…";
+  const { runtimeCount, sourceCount, runtimes } = snapshot;
+  if (runtimeCount === 0) return "waiting for an app";
+  const browsers = runtimes.length > 0 && runtimes.every((runtime) => runtime.kind === "browser");
+  const served = sourceCount === 0 && browsers ? "direct calls" : plural(sourceCount, "source");
+  return `${plural(runtimeCount, "runtime")} · ${served}`;
 }

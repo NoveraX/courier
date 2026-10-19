@@ -1,7 +1,8 @@
 /**
  * The status bar's words for Studio's connection: what is attached and
  * what it serves — an app in the browser that calls its APIs directly is
- * said to, rather than read as serving nothing.
+ * said to, rather than read as serving nothing — and no word of an app
+ * before Studio has said which are attached.
  */
 import { describe, expect, it } from "vitest";
 
@@ -40,5 +41,10 @@ describe("connectionLabel", () => {
     expect(connectionLabel("reconnecting", none)).toBe("reconnecting…");
     expect(connectionLabel("connecting", none)).toBe("connecting…");
     expect(connectionLabel("disconnected", none)).toBe("disconnected");
+  });
+
+  it("is still connecting until Studio has said which apps are attached", () => {
+    expect(connectionLabel("connected", null)).toBe("connecting…");
+    expect(connectionLabel("reconnecting", null)).toBe("reconnecting…");
   });
 });

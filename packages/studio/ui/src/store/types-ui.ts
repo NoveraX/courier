@@ -12,6 +12,18 @@ export type Theme = "dark" | "light" | "system";
 /** `connecting` until the page's first connection to Studio settles. */
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "reconnecting";
 
+/**
+ * Which of what Studio sends a page as it connects has come since the page
+ * loaded: until it has, a page cannot tell an app not attached, or no
+ * request captured, from one Studio has not named yet.
+ */
+export interface Received {
+  /** The runtimes attached: the first `binding:snapshot`. */
+  runtimes: boolean;
+  /** The requests Studio captured before: the first `events:replay`. */
+  requests: boolean;
+}
+
 // ── Catalog (server-authoritative merged source map) ────────────────────────
 
 export interface CatalogEndpoint {

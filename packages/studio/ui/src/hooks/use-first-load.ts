@@ -14,7 +14,8 @@ import { useStudioStore } from "@/store";
  */
 export function useFirstLoad(): FirstLoad {
   const status = useStudioStore((s) => s.connectionStatus);
+  const received = useStudioStore((s) => s.received);
   const config = useStudioStore((s) => s.configStatus);
   const sourceCount = useStudioStore((s) => s.scanSources.length);
-  return firstLoad({ status, config, sourceCount });
+  return firstLoad({ status, received, config, sourceCount });
 }

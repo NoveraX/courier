@@ -6,6 +6,7 @@ import { detectFramework } from "@/features/welcome/detect-framework";
 import { FRAMEWORKS } from "@/features/welcome/frameworks";
 import { setupProgress } from "@/features/welcome/setup-progress";
 import { useSetupStore } from "@/features/welcome/setup-store";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useStudioStore } from "@/store";
 import { FrameworkGrid } from "./framework-grid";
 import { LiveCapture } from "./live-capture";
@@ -16,7 +17,8 @@ import { StepsCard } from "./steps-card";
  * picked until another is — follow its steps, each complete as its command
  * or snippet is copied and the connect step once an app attaches, and watch
  * the first requests arrive beside it. A project set up already goes on to
- * the Timeline, unless the setup was asked for.
+ * the Timeline, unless the setup was asked for; until Studio has said
+ * whether an app is attached, the page waits to know which it shows.
  *
  * @returns The screen
  * @example
@@ -36,6 +38,7 @@ export function WelcomeScreen(): React.ReactNode {
   const detected = dependencies ? detectFramework(dependencies) : null;
   const detectedId = detected?.id;
   const attached = snapshot.runtimeCount > 0;
+  const loading = useFirstLoad();
   useEffect(() => {
     if (fromLink) select(fromLink);
     else if (detectedId && frameworkId === null) select(detectedId);
@@ -44,6 +47,8 @@ export function WelcomeScreen(): React.ReactNode {
     if (attached && !completed) complete();
     return <Navigate to="/timeline" replace />;
   }
+  /* Shown before Studio names the app attached, the setup would flash on the way to the Timeline. */
+  if (!setup && !fromLink && loading.runtimes) return null;
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId) ?? null;
   const progress = framework ? setupProgress(framework, copied, attached, false) : null;
   const percent = progress ? (progress.done / progress.total) * 100 : 0;

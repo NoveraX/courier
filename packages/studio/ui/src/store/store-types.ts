@@ -10,6 +10,7 @@ import type {
   PlaygroundChunk,
   PlaygroundEndSummary,
   PlaygroundHistoryEntry,
+  Received,
   RequestEntry,
   Settings,
   StudioEvent,
@@ -35,6 +36,8 @@ export interface StudioState {
   connectionStatus: ConnectionStatus;
   reconnectAttempt: number;
   connected: boolean;
+  /** Which of what Studio sends a page as it connects has come; each stays once it has. */
+  received: Received;
 
   // Binding-table snapshot (server-authoritative runtime/source ownership)
   bindingSnapshot: BindingSnapshot;
@@ -95,6 +98,8 @@ export interface StudioState {
   setStudioInfo: (info: StudioInfo) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setReconnectAttempt: (attempt: number) => void;
+  /** Note that Studio has sent the page this part of what it sends a page as it connects. */
+  setReceived: (part: keyof Received) => void;
 
   // Actions — Binding snapshot
   setBindingSnapshot: (snapshot: BindingSnapshot) => void;

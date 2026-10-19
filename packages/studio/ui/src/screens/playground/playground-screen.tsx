@@ -24,7 +24,7 @@ export function PlaygroundScreen(): React.ReactNode {
   const { choices, endpoint, choose } = usePlaygroundModel();
   const loading = useFirstLoad();
   /* An app may attach before Studio has loaded the config that names its endpoints. */
-  if (loading.requests || (attached && !endpoint && loading.sources)) return <PlaygroundSkeleton />;
+  if (loading.runtimes || (attached && !endpoint && loading.sources)) return <PlaygroundSkeleton />;
   if (!connected || !attached) return <PlaygroundOffline reason="no-app" />;
   if (!endpoint) return <PlaygroundOffline reason="no-endpoints" />;
   return <PlaygroundWorkspace choices={choices} endpoint={endpoint} onChoose={choose} />;

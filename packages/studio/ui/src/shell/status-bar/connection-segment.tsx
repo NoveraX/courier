@@ -20,9 +20,10 @@ import { SessionLength } from "./session-length";
 export function ConnectionSegment(): React.ReactNode {
   const status = useStudioStore((s) => s.connectionStatus);
   const snapshot = useStudioStore((s) => s.bindingSnapshot);
+  const known = useStudioStore((s) => s.received.runtimes);
   const since = useStudioStore((s) => s.sessionStartedAt);
   const attached = status === "connected" && snapshot.runtimeCount > 0;
-  const label = connectionLabel(status, snapshot);
+  const label = connectionLabel(status, known ? snapshot : null);
   return (
     <div
       title={attached ? CONNECTION_TITLE : undefined}

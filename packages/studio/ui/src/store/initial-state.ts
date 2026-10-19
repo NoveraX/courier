@@ -8,6 +8,7 @@ export type InitialState = Pick<
   | "studioInfo"
   | "connectionStatus"
   | "reconnectAttempt"
+  | "received"
   | "bindingSnapshot"
   | "lastBindingError"
   | "requests"
@@ -38,6 +39,7 @@ export function createInitialState(savedTheme: StudioState["theme"]): InitialSta
     studioInfo: null,
     connectionStatus: "connecting",
     reconnectAttempt: 0,
+    received: { runtimes: false, requests: false },
     bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] },
     lastBindingError: null,
     requests: [],

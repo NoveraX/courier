@@ -63,11 +63,12 @@ function attach(): void {
 
 beforeEach(() => {
   localStorage.clear();
-  useSetupStore.setState({ frameworkId: null, copied: new Set() });
+  useSetupStore.setState({ frameworkId: null, copied: new Set(), completed: false });
   useStudioStore.setState({
     studioInfo: null,
     connected: true,
     connectionStatus: "connected",
+    received: { runtimes: true, requests: true },
     requests: [],
     paused: false,
     bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] },
@@ -174,5 +175,31 @@ describe("the setup", () => {
     cleanup();
     const asked = await open("/?setup=true");
     expect(asked.state.location.pathname).toBe("/");
+  });
+});
+
+describe("the setup before Studio has said whether an app is attached", () => {
+  beforeEach(() => {
+    useStudioStore.setState({ received: { runtimes: false, requests: false } });
+  });
+
+  it("shows nothing of itself, and goes on to the Timeline once Studio names an app", async () => {
+    const router = await open("/");
+    expect(screen.queryByText("Connect your app to Studio")).toBeNull();
+
+    act(() => {
+      attach();
+      useStudioStore.getState().setReceived("runtimes");
+    });
+
+    expect(router.state.location.pathname).toBe("/timeline");
+  });
+
+  it("shows itself once Studio has said no app is attached", async () => {
+    await open("/");
+
+    act(() => useStudioStore.getState().setReceived("runtimes"));
+
+    expect(screen.getByText("Connect your app to Studio")).toBeTruthy();
   });
 });

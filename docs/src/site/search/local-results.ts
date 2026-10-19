@@ -61,9 +61,9 @@ export function markWords(text: string, patterns: readonly RegExp[]): HighlightP
 /**
  * The pages and exports the site lists itself, under their sections: every
  * one while nothing is typed, else those whose title, section or
- * description holds every typed word, the words marked in the titles —
- * what search offers to browse, and what it finds when the docs' index
- * cannot be reached.
+ * description holds every typed word, the words marked in the titles, an
+ * entry inside a page under that page's name — what search offers to
+ * browse, and what it finds when the docs' index cannot be reached.
  *
  * @param entries - The pages and exports
  * @param query - What was typed
@@ -87,7 +87,7 @@ export function localGroups(entries: readonly SearchEntry[], query: string): Sea
       id: entry.href,
       href: entry.href,
       title: markWords(entry.title, patterns),
-      trail: [],
+      trail: entry.page ? [entry.page] : [],
       kind: entry.href.includes("#") ? "heading" : "page",
     })
   }

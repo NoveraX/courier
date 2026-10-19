@@ -22,8 +22,9 @@ const entries: SearchEntry[] = [
   {
     title: "createProxyCaller",
     href: "/reference#create-proxy-caller",
-    group: "API reference",
+    group: "API Reference",
     description: "",
+    page: "API reference",
   },
   {
     title: "Installation",
@@ -226,9 +227,35 @@ describe("the pages the site lists itself", () => {
   it("groups them under their sections, an export leading to its section of the reference", () => {
     const groups = localGroups(entries, "proxy caller")
 
-    expect(groups.map((group) => group.label)).toEqual(["API reference", "Proxy Mode"])
-    expect(groups[0]?.options[0]).toMatchObject({ kind: "heading", trail: [] })
-    expect(groups[1]?.options[0]?.kind).toBe("page")
+    expect(groups.map((group) => group.label)).toEqual(["API Reference", "Proxy Mode"])
+    expect(groups[0]?.options[0]).toMatchObject({ kind: "heading", trail: ["API reference"] })
+    expect(groups[1]?.options[0]).toMatchObject({ kind: "page", trail: [] })
+  })
+
+  it("lists an export beside the API page of the same name, the export under the page it is on", () => {
+    const exportAndPage: SearchEntry[] = [
+      {
+        title: "createCaller",
+        href: "/reference#create-caller",
+        group: "API Reference",
+        description: "",
+        page: "API reference",
+      },
+      {
+        title: "createCaller",
+        href: "/docs/api/create-caller",
+        group: "API Reference",
+        description: "",
+      },
+    ]
+
+    const groups = localGroups(exportAndPage, "createcaller")
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.options.map(({ href, kind, trail }) => ({ href, kind, trail }))).toEqual([
+      { href: "/reference#create-caller", kind: "heading", trail: ["API reference"] },
+      { href: "/docs/api/create-caller", kind: "page", trail: [] },
+    ])
   })
 })
 

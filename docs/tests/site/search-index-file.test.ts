@@ -1,7 +1,7 @@
 /**
  * The search index a page fetches from the site rather than carrying it:
  * read only when every entry has its title, address, section and
- * description.
+ * description, and names the page it is a part of, if at all, in words.
  */
 import { describe, expect, it } from "vitest"
 
@@ -24,10 +24,17 @@ describe("the search index file", () => {
     expect(searchIndexOf([])).toEqual([])
   })
 
+  it("is read with the page an entry is a part of", () => {
+    const onThePage = { ...ENTRY, href: "/reference#define", page: "API reference" }
+
+    expect(searchIndexOf([onThePage])).toEqual([onThePage])
+  })
+
   it("is refused when it is anything else", () => {
     expect(searchIndexOf({ entries: [ENTRY] })).toBeNull()
     expect(searchIndexOf([{ ...ENTRY, href: 3 }])).toBeNull()
     expect(searchIndexOf([{ title: "T" }])).toBeNull()
+    expect(searchIndexOf([{ ...ENTRY, page: 3 }])).toBeNull()
     expect(searchIndexOf(null)).toBeNull()
   })
 })

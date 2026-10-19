@@ -2,10 +2,16 @@ import { Code2, Play } from "lucide-react"
 
 import type { NavSection } from "./nav-types"
 
+/**
+ * The section of the API's functions, one page each — the one search also
+ * lists the API reference's exports under.
+ */
+export const API_SECTION = "API Reference"
+
 /** The reference sections: the API's functions, one page each, and the runnable examples. */
 export const REFERENCE_SECTIONS: NavSection[] = [
   {
-    label: "API Reference",
+    label: API_SECTION,
     icon: Code2,
     items: [
       { title: "defineApi", href: "/docs/api/define" },

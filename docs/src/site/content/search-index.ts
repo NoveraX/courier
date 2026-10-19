@@ -7,6 +7,8 @@ export interface SearchEntry {
   /** The navigation section it is in. */
   group: string
   description: string
+  /** The page it is a part of, when it leads into one: the API reference, for an export. */
+  page?: string
 }
 
 /**

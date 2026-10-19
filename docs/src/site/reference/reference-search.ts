@@ -1,9 +1,13 @@
+import { API_SECTION } from "@/site/content/nav-reference"
 import type { SearchEntry } from "@/site/content/search-index"
 import type { ReferenceSection } from "./reference-data"
+import { REFERENCE_TITLE } from "./reference-title"
 
 /**
  * The reference's exports as search lists them, each leading to its own
- * section of the reference rather than to its docs page.
+ * section of the reference rather than to its docs page — under the API
+ * Reference section, beside the functions' own pages, each marked as being
+ * on the reference.
  *
  * @param sections - The reference's exports
  * @returns One entry an export, in the reference's order
@@ -18,7 +22,8 @@ export function referenceSearchEntries(
   return sections.map((section) => ({
     title: section.name,
     href: `/reference#${section.id}`,
-    group: "API reference",
+    group: API_SECTION,
     description: section.desc,
+    page: REFERENCE_TITLE,
   }))
 }

@@ -1,7 +1,8 @@
 /**
  * Search, from the docs or the API reference, finds the reference's
  * exports, each leading to its own section of it, ahead of the docs pages
- * it also finds.
+ * it also finds — under the same API Reference section as the functions'
+ * own pages, each marked as being on the reference.
  */
 import { describe, expect, it } from "vitest"
 
@@ -19,14 +20,16 @@ describe("search over the API reference", () => {
       {
         title: "createCaller",
         href: "/reference#create-caller",
-        group: "API reference",
+        group: "API Reference",
         description: "Direct mode.",
+        page: "API reference",
       },
       {
         title: "CallOptions",
         href: "/reference#call-options",
-        group: "API reference",
+        group: "API Reference",
         description: "The options one call takes.",
+        page: "API reference",
       },
     ])
   })

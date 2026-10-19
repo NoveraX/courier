@@ -14,6 +14,13 @@ export type TargetOutcome =
 
 type ExistingFile = Extract<DiskFile, { kind: "file" }>;
 
+/** The file a target is merged with in place of the file at its path, with whose it is and what Studio recorded. */
+export interface MergeBase {
+  disk: ExistingFile;
+  ownership: Ownership;
+  record: RecordedFile | undefined;
+}
+
 /**
  * Plan one file an operation wants: create it, replace it, merge it with the
  * version on disk, or ask first. Studio's own untouched file is replaced; an
@@ -27,6 +34,7 @@ type ExistingFile = Extract<DiskFile, { kind: "file" }>;
  * @param ownership - Who that belongs to
  * @param record - What Studio recorded about it, if anything
  * @param removing - The files the operation removes, which a merged file stops importing once nothing it keeps uses them
+ * @param base - The file a renamed group was written to, merged with in place of the file at the target's path
  * @returns The outcome
  * @example
  * ```ts
@@ -39,12 +47,21 @@ export function planTarget(
   ownership: Ownership,
   record: RecordedFile | undefined,
   removing: readonly string[],
+  base?: MergeBase,
 ): TargetOutcome {
   if (disk.kind === "link" || disk.kind === "not-a-file") return { blocked: disk.kind };
-  if (disk.kind === "absent") return { write: written(target, "create", target.body, ownership) };
+  const from = base ?? (disk.kind === "file" ? { disk, ownership, record } : undefined);
   /* A file the merge cannot read is replaced whole, and only once the user allows it. */
   const merged =
-    target.kind === "merge" ? mergedBody(target, disk, ownership, record, removing) : null;
+    target.kind === "merge" && from !== undefined
+      ? mergedBody(target, from.disk, from.ownership, from.record, removing)
+      : null;
+  if (disk.kind === "absent") {
+    const body = merged ?? target.body;
+    return {
+      write: { ...written(target, "create", body, ownership), carriesEdits: body !== target.body },
+    };
+  }
   const body = merged ?? target.body;
   const whole = target.kind === "generated" || (target.kind === "merge" && merged === null);
   const carriesEdits =

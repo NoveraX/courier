@@ -7,12 +7,14 @@ import { isTopLevel, qualifiedName } from "../apis/parser/top-level";
  * The endpoints a request asks to remove that the import's files do not
  * hold, as `group.endpoint`, the API's own by name alone: a group without a
  * file, or a name its file does not declare. The API's own endpoints are in
- * its source; a flat import has no others.
+ * its source; a flat import has no others. A group Studio now names
+ * otherwise than its file is read from the file it was written to.
  *
  * @param toRemove - The endpoints to remove, by group
  * @param layout - Where the import's files are
  * @param onDisk - The import's files as they are, by path
  * @param flat - Whether the import is generated as one flat group
+ * @param moved - The file on disk each renamed group's file is written from, by the file it is written to
  * @returns The endpoints not there to remove; none when every one is
  * @example
  * ```ts
@@ -24,9 +26,14 @@ export function unknownRemovals(
   layout: ImportLayout,
   onDisk: Readonly<Record<string, string>>,
   flat: boolean,
+  moved: ReadonlyMap<string, string> = new Map(),
 ): string[] {
-  const fileOf = (group: string): string | undefined =>
-    flat && !isTopLevel(group) ? undefined : endpointFile(layout, group, onDisk);
+  const fileOf = (group: string): string | undefined => {
+    if (isTopLevel(group)) return endpointFile(layout, group, onDisk);
+    return flat
+      ? undefined
+      : (moved.get(layout.groupFile(group)) ?? endpointFile(layout, group, onDisk));
+  };
   const unknown: string[] = [];
   for (const [group, names] of Object.entries(toRemove)) {
     const file = fileOf(group);

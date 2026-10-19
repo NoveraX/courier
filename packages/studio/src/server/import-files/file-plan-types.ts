@@ -35,6 +35,12 @@ export interface PlanTarget {
   kind: TargetKind;
   /** The fingerprint of each endpoint as generated, to record. */
   endpoints: Record<string, string>;
+  /**
+   * The file on disk an endpoint file's group was written to before Studio
+   * named it otherwise, which it is merged with in place of the file at its
+   * own path, so the endpoints the user added or edited go with the group.
+   */
+  mergeFrom?: string;
 }
 
 /** What an operation asks of an import's files. */

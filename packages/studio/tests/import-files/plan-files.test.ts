@@ -194,6 +194,59 @@ describe("planFiles, for the files an operation wants", () => {
     expect(result.writes[0]?.body).toContain("deletePet");
   });
 
+  it("merges a renamed group's file with the file it was written to, under its new name", () => {
+    const asGenerated = GROUP("");
+    const before = asGenerated.replace("export const pets", "export const group");
+    const edited = before.replace(
+      '    createPet: endpoint.post("/"),',
+      '    createPet: endpoint.post("/"),\n    searchPets: endpoint.get("search"),',
+    );
+    written(`${DIR}/group/index.ts`, edited, before);
+    const recorded = {
+      [`${DIR}/group/index.ts`]: recordOf(before, { endpoints: generateFingerprints(before) }),
+    };
+
+    const result = plan(
+      [
+        {
+          path: `${DIR}/pets/index.ts`,
+          body: asGenerated,
+          kind: "merge",
+          endpoints: generateFingerprints(asGenerated),
+          mergeFrom: `${DIR}/group/index.ts`,
+        },
+      ],
+      [],
+      recorded,
+    );
+
+    expect(result.writes[0]).toMatchObject({ action: "create", carriesEdits: true });
+    expect(result.writes[0]?.body).toContain("export const pets = defineGroup({");
+    expect(result.writes[0]?.body).toContain('searchPets: endpoint.get("search")');
+    expect(result.writes[0]?.body).not.toContain("export const group");
+  });
+
+  it("merges a renamed group's file with nothing from a file Studio did not write", () => {
+    const asGenerated = GROUP("");
+    put(`${DIR}/group/index.ts`, asGenerated.replace("export const pets", "export const group"));
+
+    const result = plan(
+      [
+        {
+          path: `${DIR}/pets/index.ts`,
+          body: asGenerated,
+          kind: "merge",
+          endpoints: generateFingerprints(asGenerated),
+          mergeFrom: `${DIR}/group/index.ts`,
+        },
+      ],
+      [],
+    );
+
+    expect(result.writes[0]).toMatchObject({ action: "create", carriesEdits: false });
+    expect(result.writes[0]?.body).toBe(asGenerated);
+  });
+
   it("holds a merge that leaves out an endpoint the user edited, though it keeps another edit", () => {
     const asGenerated = GROUP("");
     const edited = GROUP(".query<{ page: number }>()").replace(

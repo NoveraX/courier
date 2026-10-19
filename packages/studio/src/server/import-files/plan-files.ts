@@ -2,13 +2,14 @@ import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { PathOutsideProjectError, resolveProjectPath } from "@noverax/courier-cli/devkit";
 import { type DiskFile, readDiskFile } from "./disk-file";
 import { DuplicateTargetError } from "./duplicate-target-error";
-import type { FilePlan, PlanRequest } from "./file-plan-types";
+import type { FilePlan, PlanRequest, PlanTarget } from "./file-plan-types";
 import { obstacleOnTheWay } from "./obstacle-on-the-way";
 import { ownershipOf } from "./ownership";
 import { planDigest } from "./plan-digest";
 import { planRemoval } from "./plan-removal";
-import { planTarget } from "./plan-target";
+import { type MergeBase, planTarget } from "./plan-target";
 import type { RecordedFile } from "./recorded-file";
+import { withGroupNameOf } from "./with-group-name-of";
 
 /**
  * Work out, without touching anything, what an operation does to an
@@ -57,7 +58,8 @@ export function planFiles(
     if (disk.kind === "file") targetIdentities.add(identityOf(disk));
     const record = recordFor(target.path);
     const ownership = ownershipOf(disk, record, request.importName);
-    const outcome = planTarget(target, disk, ownership, record, removing);
+    const base = mergeBase(root, request, target, recordFor);
+    const outcome = planTarget(target, disk, ownership, record, removing, base);
     if ("blocked" in outcome) plan.blocked.push({ path: target.path, reason: outcome.blocked });
     else if (outcome.confirm)
       plan.pending.push({ confirmation: outcome.confirm, write: outcome.write });
@@ -78,6 +80,24 @@ export function planFiles(
     else plan.removals.push(outcome.remove);
   }
   return { ...plan, digest: planDigest(plan) };
+}
+
+/* The file a renamed group was written to, to merge with, when it is one of Studio's for the import. */
+function mergeBase(
+  root: ProjectRoot,
+  request: PlanRequest,
+  target: PlanTarget,
+  recordFor: (path: string) => RecordedFile | undefined,
+): MergeBase | undefined {
+  const path = target.mergeFrom;
+  if (path === undefined) return undefined;
+  const disk = diskAt(root, request.dir, path);
+  if (disk.kind !== "file") return undefined;
+  const record = recordFor(path);
+  const ownership = ownershipOf(disk, record, request.importName);
+  if (ownership === "foreign") return undefined;
+  /* Merged under the name the group has now, which the file it is written to declares. */
+  return { disk: { ...disk, body: withGroupNameOf(disk.body, target.body) }, ownership, record };
 }
 
 function diskAt(root: ProjectRoot, dir: string, path: string): DiskFile {

@@ -19,14 +19,16 @@ export interface RegenerationRequest {
 
 /**
  * Ask for an import's files as freshly generated: each generated file is a
- * target, merged with the version on disk when it declares endpoints; every
- * file Studio recorded writing, or finds claimed by its header, in the
- * import's directory and not generated now, is a file no longer wanted.
+ * target, merged with the version on disk when it declares endpoints — a
+ * renamed group's with the file its group was written to before — and
+ * every file Studio recorded writing, or finds claimed by its header, in
+ * the import's directory and not generated now, is a file no longer wanted.
  *
  * @param root - The project
  * @param layout - Where the import's files go
  * @param generated - The files generated for it
  * @param entry - What Studio recorded about the import, if anything
+ * @param moved - The file on disk each renamed group's file is written from, by the file it is written to
  * @returns The request, and the recorded files left outside the directory
  * @example
  * ```ts
@@ -38,6 +40,7 @@ export function regenerationRequest(
   layout: ImportLayout,
   generated: ReadonlyArray<{ path: string; content: string }>,
   entry: ImportStateEntry | undefined,
+  moved: ReadonlyMap<string, string> = new Map(),
 ): RegenerationRequest {
   const inDir = (path: string): boolean => path.startsWith(`${layout.dir}/`);
   const recorded = Object.keys(entry?.files ?? {});
@@ -50,12 +53,17 @@ export function regenerationRequest(
     request: {
       importName: layout.importName,
       dir: layout.dir,
-      targets: generated.map((file) => ({
-        path: file.path,
-        body: file.content,
-        kind: declaresEndpoints(file.content) ? "merge" : "generated",
-        endpoints: generateFingerprints(file.content),
-      })),
+      targets: generated.map((file) => {
+        const merges = declaresEndpoints(file.content);
+        const from = merges ? moved.get(file.path) : undefined;
+        return {
+          path: file.path,
+          body: file.content,
+          kind: merges ? "merge" : "generated",
+          endpoints: generateFingerprints(file.content),
+          ...(from !== undefined && { mergeFrom: from }),
+        };
+      }),
       removals: [...candidates].filter((path) => !targetPaths.has(path)),
     },
     leftBehind: recorded.filter((path) => !inDir(path)),

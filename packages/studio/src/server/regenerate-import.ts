@@ -4,10 +4,12 @@ import type { GenerateOptions, ParsedSpec } from "../apis";
 import { createSpecDigest, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { ImportLayout } from "../apis/layout";
+import { renamedGroupFiles } from "../apis/manage/renamed-group-files";
 import { generatedFromSpec } from "./generated-from-spec";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { ApplyReport } from "./import-files/apply-file-plan";
 import type { FilePlan } from "./import-files/file-plan-types";
+import { importBodies } from "./import-files/import-bodies";
 import { planFiles } from "./import-files/plan-files";
 import { recordAfterApply } from "./import-files/record-after-apply";
 import { regenerationRequest } from "./import-files/regeneration-request";
@@ -33,8 +35,9 @@ export interface Regeneration {
 
 /**
  * Plan generating an import afresh: its files as the spec gives them now,
- * merged with the user's edits to endpoints, and the files it had that the
- * spec no longer gives. The files are formatted as the project formats its
+ * merged with the user's edits to endpoints — a group named otherwise than
+ * its files are, with the file it was written to — and the files it had
+ * that the spec no longer gives. The files are formatted as the project formats its
  * code before anything reads them, so the endpoints' fingerprints, the plan
  * shown and the files written are of the same text.
  *
@@ -56,7 +59,9 @@ export async function planRegeneration(
     ),
     formatters,
   );
-  const { request, leftBehind } = regenerationRequest(root, layout, generated.files, entry);
+  /* A group Studio now names otherwise is written from the file its group was in. */
+  const moved = renamedGroupFiles(spec, options.groupBy, layout, importBodies(root, layout.dir));
+  const { request, leftBehind } = regenerationRequest(root, layout, generated.files, entry, moved);
   const planned = planFiles(root, request, entry?.files ?? {});
   return { plan: await formatPlannedWrites(root.path, planned, formatters, generated), leftBehind };
 }

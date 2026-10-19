@@ -1,6 +1,7 @@
 import type { LoadedForRoutes, ProjectRoot } from "@noverax/courier-cli/devkit";
 import { findFormatters, formatProjectFiles } from "@noverax/courier-cli/devkit";
 import { computeSpecHash, type ParsedSpec } from "../apis";
+import { assertGeneratable } from "../apis/generator/generatable-spec";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
@@ -8,6 +9,7 @@ import { addedEndpointsCode } from "../apis/manage/added-endpoints-code";
 import { isFlatImport } from "../apis/manage/flat-import";
 import { listedSelection } from "../apis/manage/listed-selection";
 import { proxyAfterChange } from "../apis/manage/proxy-after-change";
+import { renamedGroupFiles } from "../apis/manage/renamed-group-files";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { isTopLevel } from "../apis/parser/top-level";
@@ -87,7 +89,11 @@ export async function planManage(
   if (unknown.length > 0) {
     return { error: `The spec generates no endpoint ${unknown.join(", ")} to add`, status: 400 };
   }
-  const absent = unknownRemovals(body.toRemove, layout, onDisk, flat);
+  /* Its names are held to what code can be written with before any is read as a file's. */
+  assertGeneratable(body.spec);
+  /* A group Studio now names otherwise is the group on disk the inventory pairs it with. */
+  const moved = renamedGroupFiles(body.spec, declared.groupBy, layout, onDisk);
+  const absent = unknownRemovals(body.toRemove, layout, onDisk, flat, moved);
   if (absent.length > 0) {
     return {
       error: `The import's files hold no endpoint ${absent.join(", ")} to remove`,
@@ -95,13 +101,15 @@ export async function planManage(
     };
   }
   /* A newer specification is an update: what stays is generated from it afresh. So is
-     regenerating, from the same one: a newer Studio may write it differently. */
+     regenerating, from the same one: a newer Studio may write it differently — and so is a
+     change to an import whose groups it names otherwise, written to their new files. */
   const specHash = body.specHash ?? computeSpecHash(body.spec);
   if (body.regenerate === true && entry === undefined) {
     const error = `Studio has no record of writing ${body.name}, so it cannot tell your edits from its code; import it again instead`;
     return { error, status: 409 };
   }
-  if (entry !== undefined && (entry.specHash !== specHash || body.regenerate === true)) {
+  const update = entry?.specHash !== specHash || body.regenerate === true || moved.size > 0;
+  if (entry !== undefined && update) {
     return planManageUpdate({ ...body, specHash }, imports, root, { declared, entry, layout });
   }
   const toAdd = Object.fromEntries(

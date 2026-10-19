@@ -4,7 +4,7 @@
 
 import { acceptsNull, stripNull } from "./nullable-schema";
 import { normalizeTypeArray } from "./schema-conversion";
-import { asNode, fieldOf, isNode, listAt, type SpecNode } from "./spec-node";
+import { asNode, fieldOf, isNode, listAt, type SpecNode, textAt } from "./spec-node";
 
 /**
  * Separate "may be null" from the forms a property takes.
@@ -88,19 +88,34 @@ function composedSchemas(members: readonly unknown[]): number {
  *
  * `allOf: [{ $ref: X }]` is how OpenAPI 3.0 attaches a description or
  * `nullable` to a reference; the other members only annotate it, or name
- * that schema again.
+ * that schema again. The description and the `nullable` they give are the
+ * reference's, beside what it says itself.
  *
  * @param members - The `allOf` members
- * @returns The reference among them, or all of them merged
+ * @returns The reference among them, annotated, or all of them merged
  * @example
  * ```ts
- * soleMember([{ $ref: "#/components/schemas/Pet" }, { description: "The pet" }]); // { $ref: … }
+ * soleMember([{ $ref: "#/components/schemas/Pet" }, { description: "The pet", nullable: true }]);
+ * // → { $ref: "#/components/schemas/Pet", description: "The pet", nullable: true }
  * ```
  */
 export function soleMember(members: SpecNode[]): SpecNode {
   const reference = members.find((member) => member?.$ref);
-  if (reference) return reference;
+  if (reference) return annotated(reference, members);
   const merged: SpecNode = {};
   for (const member of members) Object.assign(merged, member);
   return merged;
+}
+
+/* A reference with the description and the `nullable` its fellow members give, where it gives none. */
+function annotated(reference: SpecNode, members: readonly SpecNode[]): SpecNode {
+  const description =
+    textAt(reference, "description") ??
+    members.map((member) => textAt(member, "description")).find((text) => text !== undefined);
+  const nullable = members.some((member) => fieldOf(member, "nullable") === true);
+  return {
+    ...reference,
+    ...(description !== undefined && { description }),
+    ...(nullable && { nullable: true }),
+  };
 }

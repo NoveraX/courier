@@ -65,7 +65,7 @@ export function convertProperty(
     const member = soleMember(listAt(node, "allOf").map(asNode));
     const inner = {
       ...member,
-      description: base.description,
+      description: base.description ?? textAt(member, "description"),
       nullable: nullable || member.nullable,
     };
     const converted = convertProperty(name, inner, required, spec);

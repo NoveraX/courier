@@ -2,13 +2,14 @@
  * The form a property's schema takes: a property whose `allOf` adds up two
  * schemas — two it refers to, or one and a composition — takes the fields
  * of both, where it took the first one's alone; one that names a single
- * schema and annotates it stays a reference to that schema.
+ * schema and annotates it stays a reference to that schema, with the
+ * description and the `nullable` its annotations give.
  */
 import { describe, expect, it } from "vitest";
 
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
-import { isComposite } from "../../../src/apis/parser/property-forms";
+import { isComposite, soleMember } from "../../../src/apis/parser/property-forms";
 import type { ParsedSchema } from "../../../src/apis/parser/types";
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -54,6 +55,22 @@ describe("isComposite", () => {
   });
 });
 
+describe("soleMember", () => {
+  it("gives the reference the description and the nullable its fellow members give", () => {
+    expect(soleMember([ref("A"), { description: "The holder's A" }, { nullable: true }])).toEqual({
+      $ref: "#/components/schemas/A",
+      description: "The holder's A",
+      nullable: true,
+    });
+  });
+
+  it("keeps the description a reference gives itself", () => {
+    expect(
+      soleMember([{ ...ref("A"), description: "Its own" }, { description: "Another" }]),
+    ).toEqual({ $ref: "#/components/schemas/A", description: "Its own" });
+  });
+});
+
 describe("parseSpec, a property composed of two schemas", () => {
   it("takes the fields of both", () => {
     const { schemas } = parseSpec(holder({ allOf: [ref("A"), ref("B")] }));
@@ -72,10 +89,11 @@ describe("parseSpec, a property composed of two schemas", () => {
     });
   });
 
-  it("stays a reference to the one schema an annotated allOf names", () => {
-    const { schemas } = parseSpec(holder({ allOf: [ref("A"), { description: "The holder's A" }] }));
+  it("stays a reference to the one schema an annotated allOf names, annotated", () => {
+    const annotations = { description: "The holder's A", nullable: true };
+    const { schemas } = parseSpec(holder({ allOf: [ref("A"), annotations] }));
 
-    expect(both(schemas.Holder)).toMatchObject({ type: "ref", refName: "A" });
+    expect(both(schemas.Holder)).toMatchObject({ type: "ref", refName: "A", ...annotations });
   });
 
   it("is generated with the fields of both", () => {

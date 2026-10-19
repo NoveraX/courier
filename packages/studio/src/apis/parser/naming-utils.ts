@@ -41,7 +41,18 @@ const CYRILLIC_MAP: Record<string, string> = {
   я: "ya",
 };
 
-function transliterate(str: string): string {
+/**
+ * A text with each letter the table above holds spelled in Latin ones;
+ * every other character as it is.
+ *
+ * @param str - The text
+ * @returns The text, transliterated
+ * @example
+ * ```ts
+ * transliterate("orders-1"); // → "orders-1"
+ * ```
+ */
+export function transliterate(str: string): string {
   let result = "";
   for (const ch of str) {
     const lower = ch.toLowerCase();

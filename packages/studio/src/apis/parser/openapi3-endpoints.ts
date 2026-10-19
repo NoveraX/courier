@@ -1,5 +1,6 @@
 import { isOperationKey, isSupportedMethod } from "./http-methods";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
+import { unwritablePath } from "./path-utils";
 import { isNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedEndpoint, SkippedOperation } from "./types";
 import { resolveRef } from "./utils";
@@ -43,6 +44,11 @@ export function groupEndpointsByTag(spec: SpecNode): TaggedEndpoints {
     const item = pathItemOf(spec, methods);
     if (typeof item === "string") {
       skipped.push({ method: "ALL", path, reason: item });
+      continue;
+    }
+    const unwritable = unwritablePath(path);
+    if (unwritable !== undefined) {
+      skipped.push({ method: "ALL", path, reason: unwritable });
       continue;
     }
 

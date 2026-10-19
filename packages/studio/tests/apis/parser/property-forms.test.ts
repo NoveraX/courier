@@ -46,12 +46,16 @@ describe("isComposite", () => {
     expect(isComposite({ allOf: [ref("A"), ref("B")] })).toBe(true);
     expect(isComposite({ allOf: [ref("A"), { allOf: [ref("B")] }] })).toBe(true);
     expect(isComposite({ allOf: [ref("A"), { properties: { c: {} } }] })).toBe(true);
+    expect(isComposite({ allOf: [ref("A"), { allOf: [{ allOf: [ref("B")] }] }] })).toBe(true);
+    expect(isComposite({ allOf: [ref("A"), { allOf: [{ properties: { c: {} } }] }] })).toBe(true);
   });
 
   it("takes an allOf that names one schema, however often, and annotates it, as that schema", () => {
     expect(isComposite({ allOf: [ref("A")] })).toBe(false);
     expect(isComposite({ allOf: [ref("A"), { description: "The holder's A" }] })).toBe(false);
     expect(isComposite({ allOf: [ref("A"), ref("A")] })).toBe(false);
+    expect(isComposite({ allOf: [ref("A"), { allOf: [{ description: "The A" }] }] })).toBe(false);
+    expect(isComposite({ allOf: [ref("A"), { allOf: [ref("A")] }] })).toBe(false);
   });
 });
 
@@ -60,6 +64,14 @@ describe("soleMember", () => {
     expect(soleMember([ref("A"), { description: "The holder's A" }, { nullable: true }])).toEqual({
       $ref: "#/components/schemas/A",
       description: "The holder's A",
+      nullable: true,
+    });
+  });
+
+  it("gives the reference what an allOf among its fellow members gives", () => {
+    expect(soleMember([ref("A"), { allOf: [{ description: "The A", nullable: true }] }])).toEqual({
+      $ref: "#/components/schemas/A",
+      description: "The A",
       nullable: true,
     });
   });
@@ -94,6 +106,20 @@ describe("parseSpec, a property composed of two schemas", () => {
     const { schemas } = parseSpec(holder({ allOf: [ref("A"), annotations] }));
 
     expect(both(schemas.Holder)).toMatchObject({ type: "ref", refName: "A", ...annotations });
+  });
+
+  it("stays a reference where an allOf among its members annotates it, or names it again", () => {
+    const annotating = parseSpec(
+      holder({ allOf: [ref("A"), { allOf: [{ description: "The A" }] }] }),
+    );
+    const repeating = parseSpec(holder({ allOf: [ref("A"), { allOf: [ref("A")] }] }));
+
+    expect(both(annotating.schemas.Holder)).toMatchObject({
+      type: "ref",
+      refName: "A",
+      description: "The A",
+    });
+    expect(both(repeating.schemas.Holder)).toMatchObject({ type: "ref", refName: "A" });
   });
 
   it("is generated with the fields of both", () => {

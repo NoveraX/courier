@@ -72,16 +72,36 @@ export function isComposite(node: SpecNode): boolean {
   return composedSchemas(allOf) > 1;
 }
 
-/* The schemas an `allOf` adds up: each one it refers to, once, and each composition among its members. */
+/* The schemas an `allOf` adds up: each one it refers to, once, and each object of fields of its own.
+   An `allOf` among its members adds what it holds, so one that only annotates, or names a schema
+   named already, adds none. */
 function composedSchemas(members: readonly unknown[]): number {
   const references = new Set<string>();
-  let compositions = 0;
-  for (const member of members) {
+  let objects = 0;
+  for (const member of flatMembers(members)) {
     const ref = fieldOf(member, "$ref");
     if (typeof ref === "string") references.add(ref);
-    else if (Array.isArray(fieldOf(member, "allOf"))) compositions += 1;
+    else if (isNode(member) && (Boolean(member.properties) || member.type === "object"))
+      objects += 1;
   }
-  return references.size + compositions;
+  return references.size + objects;
+}
+
+/* An `allOf`'s members, and those of every `allOf` among them, however deep, each once. */
+function flatMembers(members: readonly unknown[]): unknown[] {
+  const flat: unknown[] = [];
+  const seen = new Set<unknown>();
+  const pending = members.toReversed();
+  while (pending.length > 0) {
+    const member = pending.pop();
+    if (seen.has(member)) continue;
+    seen.add(member);
+    flat.push(member);
+    const nested =
+      typeof fieldOf(member, "$ref") === "string" ? undefined : fieldOf(member, "allOf");
+    if (Array.isArray(nested)) for (const inner of nested.toReversed()) pending.push(inner);
+  }
+  return flat;
 }
 
 /**
@@ -89,8 +109,8 @@ function composedSchemas(members: readonly unknown[]): number {
  *
  * `allOf: [{ $ref: X }]` is how OpenAPI 3.0 attaches a description or
  * `nullable` to a reference; the other members only annotate it, or name
- * that schema again. The description and the `nullable` they give are the
- * reference's, beside what it says itself.
+ * that schema again, an `allOf` among them too. The description and the
+ * `nullable` they give are the reference's, beside what it says itself.
  *
  * @param members - The `allOf` members
  * @returns The reference among them, annotated, or all of them merged
@@ -112,10 +132,11 @@ export function soleMember(members: SpecNode[]): SpecNode {
 
 /* A reference with the description and the `nullable` its fellow members give, where it gives none. */
 function annotated(reference: SpecNode, members: readonly SpecNode[]): SpecNode {
+  const fellows = flatMembers(members);
   const description =
     textAt(reference, "description") ??
-    members.map((member) => textAt(member, "description")).find((text) => text !== undefined);
-  const nullable = members.some((member) => fieldOf(member, "nullable") === true);
+    fellows.map((member) => textAt(member, "description")).find((text) => text !== undefined);
+  const nullable = fellows.some((member) => fieldOf(member, "nullable") === true);
   return {
     ...reference,
     ...(description !== undefined && { description }),

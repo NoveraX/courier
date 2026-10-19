@@ -61,9 +61,36 @@ function moved(place: number, edits: readonly MarkEdit[], withText: boolean): nu
   return place + shift;
 }
 
+/* The first and last line a selection holds: a caret holds its own line,
+   and a selection that ends where a line starts holds none of that line. */
+function heldLines(text: string, start: number, end: number): { first: number; last: number } {
+  const first = text.slice(0, start).split("\n").length - 1;
+  const last = text.slice(0, end).split("\n").length - 1;
+  return { first, last: end > start && text[end - 1] === "\n" ? last - 1 : last };
+}
+
+const isBlank = (line: string): boolean => line.trim() === "";
+
+interface ToggledLine {
+  line: string;
+  edit: MarkEdit;
+}
+
+/* A line with its mark put in, or taken out, and that edit; `lineAt` is where the line starts. */
+function toggled(line: string, lineAt: number, uncomment: boolean): ToggledLine {
+  const indent = line.length - line.trimStart().length;
+  const [lead, body] = [line.slice(0, indent), line.slice(indent)];
+  const at = lineAt + indent;
+  if (!uncomment) return { line: `${lead}// ${body}`, edit: { at, length: 3 } };
+  const removed = body[2] === " " ? 3 : 2;
+  return { line: lead + body.slice(removed), edit: { at, length: -removed } };
+}
+
 /**
- * Toggle `// ` line comments across the selection range. If every line is
- * already commented, uncomment them; otherwise prefix each line with `// `.
+ * Toggle `// ` line comments across the lines the selection holds. If every
+ * line is already commented, uncomment them; otherwise prefix each line with
+ * `// `. Blank lines stay as they are, unless the selection holds nothing
+ * else: a caret on an empty line gets a mark to type a comment after.
  * The selection keeps the text it held: it grows over a mark added at its
  * edge, a caret stays before the text it stood before, and one inside a
  * mark taken away lands where the mark stood.
@@ -79,25 +106,19 @@ function moved(place: number, edits: readonly MarkEdit[], withText: boolean): nu
  */
 export function toggleComment(text: string, selStart: number, selEnd: number): ToggleCommentResult {
   const lines = text.split("\n");
-  const startLine = text.slice(0, selStart).split("\n").length - 1;
-  const endLine = text.slice(0, selEnd).split("\n").length - 1;
-
-  const allCommented = lines
-    .slice(startLine, endLine + 1)
-    .every((l) => l.trimStart().startsWith("//"));
+  const { first, last } = heldLines(text, selStart, selEnd);
+  const held = lines.slice(first, last + 1);
+  const skipBlank = !held.every(isBlank);
+  const uncomment = held.every((l) => (skipBlank && isBlank(l)) || l.trimStart().startsWith("//"));
 
   const edits: MarkEdit[] = [];
-  let lineAt = lines.slice(0, startLine).reduce((at, line) => at + line.length + 1, 0);
-  for (let i = startLine; i <= endLine; i++) {
+  let lineAt = lines.slice(0, first).reduce((at, line) => at + line.length + 1, 0);
+  for (let i = first; i <= last; i++) {
     const line = lines[i] ?? "";
-    const indent = line.length - line.trimStart().length;
-    if (allCommented) {
-      const removed = line[indent + 2] === " " ? 3 : 2;
-      lines[i] = line.slice(0, indent) + line.slice(indent + removed);
-      edits.push({ at: lineAt + indent, length: -removed });
-    } else {
-      lines[i] = `${line.slice(0, indent)}// ${line.slice(indent)}`;
-      edits.push({ at: lineAt + indent, length: 3 });
+    if (!(skipBlank && isBlank(line))) {
+      const next = toggled(line, lineAt, uncomment);
+      lines[i] = next.line;
+      edits.push(next.edit);
     }
     lineAt += line.length + 1;
   }

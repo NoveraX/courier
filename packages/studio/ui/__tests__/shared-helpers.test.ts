@@ -45,6 +45,25 @@ describe("toggleComment", () => {
     expect(toggleComment("  // a", 3, 3)).toMatchObject({ text: "  a", start: 2, end: 2 });
     expect(toggleComment("  // a", 0, 0)).toMatchObject({ start: 0, end: 0 });
   });
+
+  it("leaves out the line a selection only reaches the start of", () => {
+    const { text, start, end } = toggleComment('"a": 1,\n"b": 2,\n"c": 3', 0, 16);
+
+    expect(text).toBe('// "a": 1,\n// "b": 2,\n"c": 3');
+    expect(text.slice(start, end)).toBe('// "a": 1,\n// "b": 2,\n');
+  });
+
+  it("leaves the blank lines of a selection as they are", () => {
+    expect(toggleComment('"a": 1,\n\n"b": 2', 0, 15).text).toBe('// "a": 1,\n\n// "b": 2');
+  });
+
+  it("uncomments a commented block with a blank line in it at once", () => {
+    expect(toggleComment('// "a": 1,\n\n// "b": 2', 0, 21).text).toBe('"a": 1,\n\n"b": 2');
+  });
+
+  it("marks an empty line the caret is on, for a comment to be typed after", () => {
+    expect(toggleComment("{\n\n}", 2, 2)).toEqual({ text: "{\n// \n}", start: 5, end: 5 });
+  });
 });
 
 describe("nextTheme", () => {

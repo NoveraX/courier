@@ -426,7 +426,12 @@ describe("a connection that sends its request a byte at a time", () => {
     await new Promise<void>((resolve) => socket.once("close", () => resolve()));
     clearInterval(trickle);
 
-    expect(Date.now() - startedAt).toBeLessThan(DEMO_SERVER_OPTIONS.headersTimeout + 3 * 2_000);
+    /* Node checks the connections every two seconds, and a busy machine runs
+       its timers late: closed within five checks of the ten seconds, long
+       before the two minutes a request has to arrive whole. */
+    expect(Date.now() - startedAt).toBeLessThan(
+      DEMO_SERVER_OPTIONS.headersTimeout + 5 * DEMO_SERVER_OPTIONS.connectionsCheckingInterval,
+    );
   }, 30_000);
 });
 

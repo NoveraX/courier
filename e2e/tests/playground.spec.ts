@@ -73,6 +73,26 @@ test("draws a quote in the variables the moment it is typed", async ({ page }) =
   await expect(drawn).toHaveText('{"');
 });
 
+test("undoes the indent Tab adds, as it undoes typing", async ({ page }) => {
+  const editor = await variablesOf(page);
+  const sample = await editor.inputValue();
+  await editor.fill('{\n"id": ""\n}');
+  await editor.evaluate((area) => {
+    if (area instanceof HTMLTextAreaElement) area.setSelectionRange(2, 2);
+  });
+  await page.keyboard.type("x");
+  await page.keyboard.press("Tab");
+  await expect(editor).toHaveValue('{\nx  "id": ""\n}');
+
+  await page.keyboard.press("ControlOrMeta+z");
+
+  /* Chrome undoes the indent alone; Safari undoes the run of typing the
+     indent ended, as it undoes any typing. Either way the text is one it
+     held before, where a wiped history left the indent in place. */
+  await expect.poll(() => editor.inputValue()).not.toBe('{\nx  "id": ""\n}');
+  expect([sample, '{\n"id": ""\n}', '{\nx"id": ""\n}']).toContain(await editor.inputValue());
+});
+
 test("records the call on the Timeline", async ({ page }) => {
   await page.goto(studio.link);
 

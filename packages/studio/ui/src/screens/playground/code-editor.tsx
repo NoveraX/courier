@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { CODE_TONES } from "@/design/code/code-lines";
 import { tokenizeJsoncLine } from "@/design/code/tokenize-jsonc-line";
 import { toggleComment } from "@/features/playground/jsonc-helpers";
+import { replacedRange } from "@/features/playground/replaced-range";
 
 interface CodeEditorProps {
   value: string;
@@ -36,10 +37,23 @@ function edit(
   };
 }
 
+/* Typed through the browser's own editing, an edit joins the textarea's
+   undo history; a value set from outside wipes that history, and ⌘Z then
+   undoes nothing typed before it. False where the browser has no way to. */
+function typeEdit(area: HTMLTextAreaElement, before: string, after: string): boolean {
+  if (typeof document.execCommand !== "function") return false;
+  const { from, to, insert } = replacedRange(before, after);
+  area.setSelectionRange(from, to);
+  return insert === ""
+    ? document.execCommand("delete")
+    : document.execCommand("insertText", false, insert);
+}
+
 /**
  * The Playground's JSON editor: numbered lines, the text coloured as JSON
  * with comments, the caret in the brand colour. Tab indents, Shift+Tab
- * outdents, ⌘/ or Ctrl+/ comments lines out — a commented line is not sent. On a
+ * outdents, ⌘/ or Ctrl+/ comments lines out — a commented line is not sent —
+ * and ⌘Z or Ctrl+Z undoes each of them like typing. On a
  * touch screen its text is large enough that a phone does not zoom in on
  * it, and the keyboard leaves it as typed: no capitals, corrections or
  * curly quotes.
@@ -58,7 +72,9 @@ export function CodeEditor({ value, onChange, label }: CodeEditorProps): React.R
     const next = edit(event, value);
     if (!next) return;
     event.preventDefault();
-    onChange(next.text);
+    if (next.text !== value && !typeEdit(event.currentTarget, value, next.text)) {
+      onChange(next.text);
+    }
     requestAnimationFrame(() => area.current?.setSelectionRange(next.start, next.end));
   };
   return (

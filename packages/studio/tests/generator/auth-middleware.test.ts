@@ -1,12 +1,18 @@
 /**
  * The auth middleware a source is generated with: the first security
  * scheme the specification declares, its secret read from a variable named
- * after the source on every request.
+ * after the source on every request, by a reader that names no type a
+ * schema of the source could take the place of.
  */
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
+import { generateCode } from "../../src/apis/generator";
 import { sourceAuth } from "../../src/apis/generator/auth-middleware";
+import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSecurityScheme } from "../../src/apis/parser/types";
+import { compileProject, removeProjects, STRICT, writeProject } from "../helpers/generated-project";
+
+afterAll(() => removeProjects("auth-middleware"));
 
 function middlewareOf(scheme: ParsedSecurityScheme): string | undefined {
   return sourceAuth([scheme], "pet-store")?.middleware;
@@ -72,4 +78,48 @@ describe("sourceAuth", () => {
     expect(auth?.helper.join("\n")).toContain("function requireEnv(name: string): string {");
     expect(auth?.middleware).toContain("getToken: () => requireEnv(");
   });
+
+  it("compiles beside a schema named Record that the source imports", () => {
+    const spec = parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Shop", version: "1" },
+        components: {
+          securitySchemes: { bearer: { type: "http", scheme: "bearer" } },
+          schemas: { Record: { type: "object", properties: { id: { type: "string" } } } },
+        },
+        security: [{ bearer: [] }],
+        paths: {
+          "/records": {
+            get: {
+              operationId: "listRecords",
+              responses: {
+                "200": {
+                  description: "ok",
+                  content: {
+                    "application/json": { schema: { $ref: "#/components/schemas/Record" } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    );
+    const files = generateCode(
+      spec,
+      { type: "openapi", outputDir: "src/api", groupBy: "single", addAuthMiddleware: true },
+      "shop",
+    );
+    const source = files.find((file) => file.path.endsWith("/source.ts"))?.content ?? "";
+
+    expect(source).toMatch(/import \{[^}]*\bRecord\b/);
+    expect(
+      compileProject(
+        writeProject("auth-middleware/record", files),
+        ["src/api/shop/index.ts"],
+        STRICT,
+      ),
+    ).toEqual([]);
+  }, 60_000);
 });

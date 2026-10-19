@@ -350,6 +350,24 @@ describe("assertGeneratable", () => {
     expect(refusedAt((c) => set(c.groups[0] ?? {}, "parent", "ghost"))).toBe("groups[0].parent");
   });
 
+  it("refuses a chain of parents that loops, which nothing would be generated in", () => {
+    expect(refusalOf((c) => set(c.groups[0] ?? {}, "parent", "pets"))?.message).toContain(
+      "is refused: its chain of parents loops",
+    );
+    expect(
+      refusedAt((c) => {
+        c.groups.push({
+          name: "kinds",
+          description: "",
+          prefix: "/kinds",
+          endpoints: [],
+          parent: "pets",
+        });
+        set(c.groups[0] ?? {}, "parent", "kinds");
+      }),
+    ).toBe("groups[0].parent");
+  });
+
   it("refuses a node that is not an object, and takes one left out or null as absent", () => {
     expect(refusedAt((c) => set(pet(c), "a", null))).toBe("schemas.Pet.properties.a");
     expect(refusedAt((c) => set(pet(c).kind?.shape ?? {}, "variants", [null]))).toBe(

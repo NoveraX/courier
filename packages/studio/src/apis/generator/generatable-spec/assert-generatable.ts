@@ -1,6 +1,7 @@
 import { isNode } from "../../parser/spec-node";
 import type { ParsedSpec } from "../../parser/types";
 import { checkGroup } from "./check-group";
+import { checkGroupNames } from "./check-group-names";
 import { checkName } from "./check-name";
 import { checkSchema } from "./check-schema";
 import { PendingNodes } from "./pending-nodes";
@@ -19,9 +20,9 @@ import { SpecPath } from "./spec-path";
  * names the generated code is called by are held to what it can be called
  * by: an endpoint's, a string with no dot that its client does not keep
  * for itself, and no other endpoint's of its group; a parameter's, a
- * string; a group's, no other group's, and a parent's, a group's. A node on
- * the way to a value is an object and a list a list; one left out, or
- * `null`, holds nothing to refuse.
+ * string; a group's, no other group's, and a parent's, a group's, in a
+ * chain that does not loop. A node on the way to a value is an object and a
+ * list a list; one left out, or `null`, holds nothing to refuse.
  *
  * Every specification Studio's parser gives passes. One sent back to
  * Studio, or one an import's transform returns, is held to it before a
@@ -49,22 +50,4 @@ export function assertGeneratable(spec: ParsedSpec): void {
   pending.each(checkGroup, spec.groups, root, "groups");
   pending.checkAll();
   checkGroupNames(spec.groups, root.field("groups"));
-}
-
-/* A group is known by its name: two of one name are written to one folder, and a parent names one of them. */
-function checkGroupNames(listed: unknown, at: SpecPath): void {
-  if (!Array.isArray(listed)) return;
-  const groups: readonly unknown[] = listed;
-  const names = new Set<unknown>();
-  groups.forEach((group, index) => {
-    if (!isNode(group)) return;
-    if (names.has(group.name)) {
-      at.index(index).field("name").refuse(group.name, "another group has the name");
-    }
-    names.add(group.name);
-  });
-  groups.forEach((group, index) => {
-    if (!isNode(group) || group.parent == null || names.has(group.parent)) return;
-    at.index(index).field("parent").refuse(group.parent, "it names no group of the specification");
-  });
 }

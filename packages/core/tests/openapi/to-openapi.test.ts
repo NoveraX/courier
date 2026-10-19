@@ -139,6 +139,37 @@ describe("an API written as OpenAPI", () => {
     });
   });
 
+  it("leaves only the part ArkType cannot describe unspecified: a Date, a check of its own", () => {
+    const events = defineApi({
+      name: "events",
+      baseURL: "https://e.example",
+      endpoints: {
+        add: endpoint
+          .post("events")
+          .variables(type({ text: "string" }).narrow((value) => value.text.length > 0))
+          .response(type({ at: "Date", id: "string" })),
+      },
+    });
+
+    const document = toOpenAPI(events);
+    const operation = document.paths["/events"]?.post;
+
+    expect(operation?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        "application/json": {
+          schema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
+        },
+      },
+    });
+    expect(operation?.responses["200"]).toMatchObject({
+      content: {
+        "application/json": { schema: { properties: { at: {}, id: { type: "string" } } } },
+      },
+    });
+    expectValid(document);
+  });
+
   it("moves a recursive schema's definitions to the components, its references with them", () => {
     type TreeNode = { name: string; children?: TreeNode[] | undefined };
     const Node: z.ZodType<TreeNode> = z.object({

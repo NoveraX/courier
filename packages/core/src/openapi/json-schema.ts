@@ -10,6 +10,14 @@ const COMPONENT = "#/components/schemas/";
 /* OpenAPI's rule for a component's name. */
 const NOT_IN_A_NAME = /[^A-Za-z0-9._-]/g;
 
+/* What a library is told so that a part JSON cannot hold — a Date, a function, a check of the
+   library's own — is left unspecified rather than the whole schema refused: ArkType writes such
+   a part as what it can say of it, which its default refuses; zod, and any other, as nothing. */
+const UNREPRESENTABLE_AS_ANY = { unrepresentable: "any" };
+const LIBRARY_OPTIONS: ReadonlyMap<string, Record<string, unknown>> = new Map([
+  ["arktype", { fallback: (context: { base: unknown }) => context.base }],
+]);
+
 /**
  * A schema as JSON Schema 2020-12, the dialect OpenAPI 3.1 and 3.2 take.
  * Zod, ArkType and every library that implements Standard JSON Schema
@@ -72,11 +80,12 @@ export function standardJsonSchema(
 }
 
 function convertedBy(schema: StandardSchemaV1, side: SchemaSide): JSONSchema | undefined {
-  const converter = (schema["~standard"] as Partial<StandardJSONSchemaV1.Props>).jsonSchema;
+  const standard = schema["~standard"] as Partial<StandardJSONSchemaV1.Props>;
+  const converter = standard.jsonSchema;
   if (typeof converter?.[side] !== "function") return undefined;
+  const libraryOptions = LIBRARY_OPTIONS.get(standard.vendor ?? "") ?? UNREPRESENTABLE_AS_ANY;
   try {
-    /* A value JSON cannot hold — a Date, a function — is left unspecified rather than refused. */
-    return converter[side]({ target: "draft-2020-12", libraryOptions: { unrepresentable: "any" } });
+    return converter[side]({ target: "draft-2020-12", libraryOptions });
   } catch {
     return undefined;
   }

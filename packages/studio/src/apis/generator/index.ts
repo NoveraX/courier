@@ -1,4 +1,3 @@
-export { deriveSourceName } from "./derive-source-name";
 export { generateCode } from "./generate-code";
 export { groupLocalName } from "./group-local-name";
 export type { GeneratedFile, GenerateOptions, ResolvedGenerateOptions } from "./types";

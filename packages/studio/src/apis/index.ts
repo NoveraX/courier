@@ -3,7 +3,7 @@ export type {
   GenerateOptions,
   ResolvedGenerateOptions,
 } from "./generator";
-export { applyImportDefaults, DEFAULT_OPTIONS, deriveSourceName, generateCode } from "./generator";
+export { applyImportDefaults, DEFAULT_OPTIONS, generateCode } from "./generator";
 export type { ImportStateEntry, ImportsState } from "./imports-state";
 export {
   hasSpecChanged,

@@ -2,6 +2,7 @@
  * Converts a schema composed with `allOf` into the one it adds up to.
  */
 
+import { mergedComposition } from "./recursive-compositions";
 import { resolveRef } from "./ref-utils";
 import { referencedSchema } from "./referenced-schema";
 import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
@@ -13,7 +14,9 @@ import type { ParsedSchema } from "./types";
  *
  * An `allOf` member that is a reference carries the inherited half of the
  * type. Skipping it dropped every one of those properties from the emitted
- * type, and the validator then stripped them off the response.
+ * type, and the validator then stripped them off the response. A
+ * composition found inside itself — a category's `parent` composed of the
+ * category — is declared as a schema of its own, which it refers to.
  *
  * @param name - The schema's name
  * @param schema - The schema holding the `allOf`
@@ -26,6 +29,17 @@ import type { ParsedSchema } from "./types";
  */
 export function convertAllOf(name: string, schema: SpecNode, spec?: SpecNode): ParsedSchema {
   const description = textAt(schema, "description");
+  return mergedComposition(listAt(schema, "allOf"), name, description, () =>
+    merged(name, schema, description, spec),
+  );
+}
+
+function merged(
+  name: string,
+  schema: SpecNode,
+  description: string | undefined,
+  spec: SpecNode | undefined,
+): ParsedSchema {
   const properties: Record<string, unknown> = {};
   const required: unknown[] = [];
   let enumeration: unknown;

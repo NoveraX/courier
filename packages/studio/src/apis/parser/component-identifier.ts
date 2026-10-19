@@ -29,12 +29,30 @@ const TABLES = new WeakMap<SpecNode, ReadonlyMap<string, string>>();
  */
 export function componentIdentifier(spec: SpecNode | undefined, component: string): string {
   if (!spec) return toSafeIdentifier(component);
+  return tableOf(spec).get(component) ?? toSafeIdentifier(component);
+}
+
+/**
+ * Every identifier the specification's component schemas are declared by.
+ *
+ * @param spec - The whole specification
+ * @returns The identifiers
+ * @example
+ * ```ts
+ * componentIdentifiers(spec).has("OrderItem2"); // → true, beside "OrderItem"
+ * ```
+ */
+export function componentIdentifiers(spec: SpecNode): ReadonlySet<string> {
+  return new Set(tableOf(spec).values());
+}
+
+function tableOf(spec: SpecNode): ReadonlyMap<string, string> {
   let table = TABLES.get(spec);
   if (!table) {
     table = identifierTable(spec);
     TABLES.set(spec, table);
   }
-  return table.get(component) ?? toSafeIdentifier(component);
+  return table;
 }
 
 function identifierTable(spec: SpecNode): ReadonlyMap<string, string> {

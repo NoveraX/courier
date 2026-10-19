@@ -16,6 +16,21 @@ import type { SpecNode } from "./types";
 const expanding = new Set<string>();
 
 /**
+ * How many references are being read in place right now, each inside the
+ * one before. A composition met again inside itself with no more of them
+ * open came back to itself without passing through one.
+ *
+ * @returns The count
+ * @example
+ * ```ts
+ * const before = pointersBeingRead();
+ * ```
+ */
+export function pointersBeingRead(): number {
+  return expanding.size;
+}
+
+/**
  * Convert what a reference points at, in place of the reference.
  *
  * @param ref - A reference that names no component schema

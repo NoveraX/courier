@@ -2,7 +2,7 @@
  * Path manipulation utilities for OpenAPI/Postman parsers.
  */
 
-import { joinSharedPaths, NO_PATHS, sharedPathOf, sharedPrefix } from "./shared-path";
+import { gatheredPaths, sharedPrefix } from "./shared-path";
 
 /** Convert OpenAPI path params `{id}` to Courier-style `:id` */
 export function convertPathParams(path: string): string {
@@ -52,7 +52,5 @@ export function extractPostmanPath(url: string): string {
  * ```
  */
 export function findCommonPrefix(paths: readonly string[]): string {
-  let shared = NO_PATHS;
-  for (const path of paths) shared = joinSharedPaths(shared, sharedPathOf(path));
-  return sharedPrefix(shared);
+  return sharedPrefix(gatheredPaths(paths));
 }

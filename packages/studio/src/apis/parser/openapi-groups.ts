@@ -3,25 +3,26 @@
  */
 
 import { groupNameClaimer } from "./group-name-claimer";
+import { groupNameOf } from "./group-name-of";
 import {
+  gatheredPaths,
   joinSharedPaths,
   NO_PATHS,
   type SharedPath,
-  sharedPathOf,
   sharedPrefix,
 } from "./shared-path";
 import type { ParsedEndpoint, ParsedGroup } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import { convertPathParams, toGroupName } from "./utils";
+import { convertPathParams } from "./utils";
 
 /**
  * Turn the endpoints of each tag into a group, a tag OpenAPI 3.2 nests
  * under another into a group inside that tag's group.
  *
  * A group is named after its tag, or after the last segment of the path its
- * endpoints share when the tag makes no name, and gets a number when another
- * group already took that name; a name over the 128 characters a folder is
- * named from is cut, its number included. Its prefix is the path its
+ * endpoints share when the tag holds nothing a name is spelled with, and
+ * gets a number when another group already took that name; a name over the
+ * 128 characters a folder is named from is cut, its number included. Its prefix is the path its
  * endpoints — and those of every group inside it — share, after its parent
  * group's. A tag only other tags sit under becomes a group of its own, so
  * they have one to sit in.
@@ -44,13 +45,14 @@ export function buildGroups(
 ): ParsedGroup[] {
   const tags = tagsInOrder([...endpointsByTag.keys()], parents);
   const parentOf = (tag: string) => parents.get(tag);
-  const prefixes = subtreePrefixes(tags, endpointsByTag, parents);
+  const subtrees = subtreePaths(tags, endpointsByTag, parents);
+  const prefixes = new Map([...subtrees].map(([tag, shared]) => [tag, sharedPrefix(shared)]));
   const names = new Map<string, string>();
   const claim = groupNameClaimer();
 
   return tags.map((tag): ParsedGroup => {
     const prefix = prefixes.get(tag) ?? "/";
-    const name = claim(resolveGroupName(tag, prefix));
+    const name = claim(groupNameOf(tag, subtrees.get(tag)?.segments ?? []));
     names.set(tag, name);
     const parent = parentOf(tag);
     const endpoints = endpointsByTag.get(tag) ?? [];
@@ -89,41 +91,31 @@ function tagsInOrder(withEndpoints: string[], parents: ReadonlyMap<string, strin
 }
 
 /*
- * The path the endpoints of each tag and of every tag inside it share.
- * Each tag comes after the tag it sits in, so walking them backwards
- * settles a tag's subtree before its parent's: every endpoint is read once,
- * not once more for each tag above it.
+ * The paths of each tag's endpoints and of every tag inside it. Each tag
+ * comes after the tag it sits in, so walking them backwards settles a tag's
+ * subtree before its parent's: every endpoint is read once, not once more
+ * for each tag above it.
  */
-function subtreePrefixes(
+function subtreePaths(
   tags: readonly string[],
   endpointsByTag: ReadonlyMap<string, ParsedEndpoint[]>,
   parents: ReadonlyMap<string, string>,
-): Map<string, string> {
-  const below = new Map<string, SharedPath>();
-  const prefixes = new Map<string, string>();
+): Map<string, SharedPath> {
+  const subtrees = new Map<string, SharedPath>();
   for (const tag of tags.toReversed()) {
-    let shared = below.get(tag) ?? NO_PATHS;
-    for (const endpoint of endpointsByTag.get(tag) ?? []) {
-      shared = joinSharedPaths(shared, sharedPathOf(endpoint.fullPath));
-    }
-    prefixes.set(tag, sharedPrefix(shared));
+    const own = gatheredPaths((endpointsByTag.get(tag) ?? []).map((e) => e.fullPath));
+    const shared = joinSharedPaths(subtrees.get(tag) ?? NO_PATHS, own);
+    subtrees.set(tag, shared);
     const parent = parents.get(tag);
     if (parent !== undefined) {
-      below.set(parent, joinSharedPaths(below.get(parent) ?? NO_PATHS, shared));
+      subtrees.set(parent, joinSharedPaths(subtrees.get(parent) ?? NO_PATHS, shared));
     }
   }
-  return prefixes;
+  return subtrees;
 }
 
 /* A path after the path it extends: `/billing/invoices` within `/billing` is `invoices`. */
 function within(path: string, outer: string): string {
   if (outer === "/" || !path.startsWith(outer)) return path;
   return path.slice(outer.length).replace(/^\//, "");
-}
-
-function resolveGroupName(tag: string, prefix: string): string {
-  const name = toGroupName(tag);
-  if (name) return name;
-  const lastSegment = prefix.split("/").filter(Boolean).pop();
-  return lastSegment ? toGroupName(lastSegment) : "defaultGroup";
 }

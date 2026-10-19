@@ -172,6 +172,13 @@ describe("parsePostman, group names", () => {
     );
   });
 
+  it("names a group whose folder spells no name after the path its requests share", () => {
+    expect(parseSpec(folders("***", "~~~")).groups.map((group) => group.name)).toEqual([
+      "r0",
+      "r1",
+    ]);
+  });
+
   it("numbers three folders of one long name within 128", () => {
     const long = "f".repeat(140);
 

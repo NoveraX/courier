@@ -28,6 +28,22 @@ export function sharedPathOf(path: string): SharedPath {
 }
 
 /**
+ * Paths, gathered into one set.
+ *
+ * @param paths - Paths, as the specification writes them
+ * @returns The set holding them all
+ * @example
+ * ```ts
+ * gatheredPaths(["/pets", "/pets/{id}"]); // → { count: 2, segments: ["pets"] }
+ * ```
+ */
+export function gatheredPaths(paths: readonly string[]): SharedPath {
+  let shared = NO_PATHS;
+  for (const path of paths) shared = joinSharedPaths(shared, sharedPathOf(path));
+  return shared;
+}
+
+/**
  * Two sets of paths, gathered into one.
  *
  * @param a - Paths gathered so far

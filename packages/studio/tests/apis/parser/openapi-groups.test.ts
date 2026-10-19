@@ -172,6 +172,32 @@ describe("buildGroups", () => {
     );
   });
 
+  it("names a group whose tag spells no name after the path its endpoints share", () => {
+    const ok = { 200: { description: "ok" } };
+    const get = (operationId: string, tag: string) => ({
+      get: { operationId, tags: [tag], responses: ok },
+    });
+    const spec = parseSpec(
+      JSON.stringify({
+        openapi: "3.1.0",
+        info: { title: "Shop", version: "1" },
+        paths: {
+          "/api/users": get("listUsers", "***"),
+          "/api/users/{id}": get("getUser", "***"),
+          "/api/orders": get("listOrders", "+++"),
+          "/login": get("logIn", "~~~"),
+          "/logout": get("logOut", "~~~"),
+        },
+      }),
+    );
+
+    expect(spec.groups.map((group) => `${group.name}=${group.prefix}`)).toEqual([
+      "users=/api/users",
+      "orders=/api",
+      "group=/",
+    ]);
+  });
+
   it("builds a chain of 3 000 nested tags", () => {
     const parents = new Map(
       Array.from({ length: 2_999 }, (_, at): [string, string] => [`t${at + 1}`, `t${at}`]),

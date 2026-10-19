@@ -3,6 +3,7 @@
  */
 
 import { groupNameClaimer } from "./group-name-claimer";
+import { groupNameOf } from "./group-name-of";
 import { isSupportedMethod } from "./http-methods";
 import { collectionVariables, commonBase, requestBase } from "./postman-base";
 import {
@@ -12,6 +13,7 @@ import {
   requestParameters,
   requestPath,
 } from "./postman-request";
+import { gatheredPaths, sharedPrefix } from "./shared-path";
 import { asNode, fieldOf, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import { topLevelGroup } from "./top-level";
 import type {
@@ -22,7 +24,7 @@ import type {
   SkippedOperation,
 } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import { convertPathParams, findCommonPrefix, toCamelCase, toGroupName } from "./utils";
+import { convertPathParams, toCamelCase } from "./utils";
 
 export function parsePostman(collection: SpecNode): ParsedSpec {
   const info = nodeAt(collection, "info");
@@ -99,11 +101,12 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       return;
     }
     if (endpoints.length > 0) {
-      const prefix = findCommonPrefix(endpoints.map((e) => e.fullPath));
+      const shared = gatheredPaths(endpoints.map((e) => e.fullPath));
+      const prefix = sharedPrefix(shared);
       groups.push({
         /* Two folders may carry the same name; one group file would have
            overwritten the other. */
-        name: claimGroupName(toGroupName(groupName)),
+        name: claimGroupName(groupNameOf(groupName, shared.segments)),
         description: "",
         prefix: convertPathParams(prefix),
         endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({

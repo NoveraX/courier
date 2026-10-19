@@ -6,10 +6,19 @@
  * that takes a name every object inherits says so, so that the closure
  * reads it from the variables' own fields only.
  */
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
+import { generateCode } from "../../src/apis/generator";
 import { destructure } from "../../src/apis/generator/variable-bindings";
+import { parseSpec } from "../../src/apis/parser";
 import type { ParsedParameter } from "../../src/apis/parser/types";
+import {
+  compileProject,
+  loadGenerated,
+  removeProjects,
+  STRICT,
+  writeProject,
+} from "../helpers/generated-project";
 
 const query = (name: string): ParsedParameter => ({
   name,
@@ -47,10 +56,65 @@ describe("destructure", () => {
     );
   });
 
+  it("gives a local name no parameter of the pattern is bound under", () => {
+    expect(destructure([query("Date"), query("param0"), query("page-size")], [])).toEqual({
+      pattern: 'Date: param0_2, param0, "page-size": param2',
+      searchParams: '{ Date: param0_2, param0, "page-size": param2 }',
+      ownCopy: false,
+    });
+  });
+
   it("reads a name every object inherits from the variables' own fields", () => {
     for (const name of ["constructor", "toString", "valueOf", "hasOwnProperty"]) {
       expect(destructure([query(name)], []).ownCopy).toBe(true);
     }
     expect(destructure([], [{ ...query("constructor"), in: "path" }]).ownCopy).toBe(true);
   });
+});
+
+afterAll(() => removeProjects("variable-bindings"));
+
+describe("a closure taking a parameter under a local name another parameter has", () => {
+  it("compiles and loads", () => {
+    const spec = parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Shop", version: "1" },
+        servers: [{ url: "https://shop.test" }],
+        paths: {
+          "/notes": {
+            put: {
+              operationId: "putNote",
+              parameters: [
+                { name: "Date", in: "query", schema: { type: "string" } },
+                { name: "param0", in: "query", schema: { type: "string" } },
+              ],
+              requestBody: {
+                content: {
+                  "application/json": {
+                    schema: { type: "object", properties: { text: { type: "string" } } },
+                  },
+                },
+              },
+              responses: { "204": { description: "saved" } },
+            },
+          },
+        },
+      }),
+    );
+    const files = generateCode(
+      spec,
+      { type: "openapi", outputDir: "src/api", validation: "none" },
+      "shop",
+    );
+
+    expect(() => loadGenerated(files, "src/api/shop/index.ts")).not.toThrow();
+    expect(
+      compileProject(
+        writeProject("variable-bindings/collision", files),
+        ["src/api/shop/index.ts"],
+        STRICT,
+      ),
+    ).toEqual([]);
+  }, 60_000);
 });

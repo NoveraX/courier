@@ -54,8 +54,11 @@ export function destructure(
 ): Bindings {
   const pattern: string[] = [];
   const fields: string[] = [];
-  [...query, ...omitted].forEach((param, index) => {
-    const local = bindable(param.name) ? param.name : `param${index}`;
+  const params = [...query, ...omitted];
+  /* A local name is one no parameter of the pattern is bound under as it is. */
+  const taken = new Set(params.filter((param) => bindable(param.name)).map((param) => param.name));
+  params.forEach((param, index) => {
+    const local = bindable(param.name) ? param.name : localName(index, taken);
     const binding = local === param.name ? local : `${objectKey(param.name)}: ${local}`;
     pattern.push(binding);
     if (index < query.length) fields.push(binding);
@@ -65,6 +68,14 @@ export function destructure(
     searchParams: fields.length > 0 ? styledQuery(`{ ${fields.join(", ")} }`, query) : null,
     ownCopy: [...query, ...omitted].some((param) => isInheritedName(param.name)),
   };
+}
+
+/* `param${index}`, or the first of its numbered forms nothing of the pattern binds yet. */
+function localName(index: number, taken: Set<string>): string {
+  let name = `param${index}`;
+  for (let n = 2; taken.has(name); n += 1) name = `param${index}_${n}`;
+  taken.add(name);
+  return name;
 }
 
 function bindable(name: string): boolean {

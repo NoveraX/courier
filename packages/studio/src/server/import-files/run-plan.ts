@@ -3,7 +3,7 @@ import { type ApplyReport, applyFilePlan } from "./apply-file-plan";
 import { FilePlanError } from "./file-plan-error";
 import type { FilePlan } from "./file-plan-types";
 import { keepImported } from "./keep-imported";
-import { summarizePlan } from "./plan-summary";
+import { previewSummary } from "./preview-summary";
 import { withConfirmations } from "./with-confirmations";
 
 /**
@@ -49,7 +49,8 @@ export async function runPlan(
   quoting: PlanQuoting,
   beforeApply?: (applied: FilePlan) => Promise<void>,
 ): Promise<ApplyReport> {
-  const summary = summarizePlan(plan);
+  /* Shown as a preview shows it: the files the apply would keep, kept. */
+  const summary = previewSummary(root, plan);
   if (plan.blocked.length > 0) {
     const paths = plan.blocked.map((b) => b.path);
     throw new FilePlanError(

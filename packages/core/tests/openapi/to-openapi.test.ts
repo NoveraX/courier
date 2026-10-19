@@ -170,6 +170,45 @@ describe("an API written as OpenAPI", () => {
     expectValid(document);
   });
 
+  it("describes an ArkType check that carries the schema of what it checks, wherever it sits", () => {
+    const fields = type({ id: "string", "constructor?": "string" });
+    const check = Object.assign((value: object) => typeof value === "object", {
+      "~standard": fields["~standard"],
+    });
+    const owned = type("object").narrow(check);
+    const box = defineApi({
+      name: "box",
+      baseURL: "https://b.example",
+      endpoints: { get: endpoint.get("box").response(type({ thing: owned, list: owned.array() })) },
+    });
+
+    const answer = toOpenAPI(box).paths["/box"]?.get?.responses["200"];
+    const described = { type: "object", properties: { id: { type: "string" } }, required: ["id"] };
+
+    expect(answer).toMatchObject({
+      content: {
+        "application/json": {
+          schema: { properties: { thing: described, list: { type: "array", items: described } } },
+        },
+      },
+    });
+  });
+
+  it("writes an ArkType array with elements after its rest as an array, unspecified", () => {
+    const rows = defineApi({
+      name: "rows",
+      baseURL: "https://r.example",
+      endpoints: { get: endpoint.get("rows").response(type(["...", "string[]", "number"])) },
+    });
+
+    const answer = toOpenAPI(rows).paths["/rows"]?.get?.responses["200"];
+
+    expect(answer).toMatchObject({
+      content: { "application/json": { schema: { type: "array" } } },
+    });
+    expect(JSON.stringify(answer)).not.toContain('"items"');
+  });
+
   it("moves a recursive schema's definitions to the components, its references with them", () => {
     type TreeNode = { name: string; children?: TreeNode[] | undefined };
     const Node: z.ZodType<TreeNode> = z.object({
@@ -266,6 +305,47 @@ describe("a schema its library cannot describe", () => {
     name: "notes",
     baseURL: "https://n.example",
     endpoints: { add: endpoint.post("notes").variables(v.object({ text: v.string() })) },
+  });
+
+  it("is unspecified when the fallback converter throws, the rest of the document written", () => {
+    const document = toOpenAPI(notes, {
+      jsonSchema: () => {
+        throw new Error("cannot convert");
+      },
+    });
+
+    expect(document.paths["/notes"]?.post?.requestBody).toEqual({
+      required: false,
+      content: { "application/json": {} },
+    });
+  });
+
+  it("is described by its fields when it keeps the object it checks as fields", () => {
+    const fields = v.object({ text: v.string() });
+    const wrapper = Object.assign(
+      v.pipe(
+        v.unknown(),
+        v.transform((value) => value),
+      ),
+      { fields },
+    );
+    const owned = defineApi({
+      name: "owned",
+      baseURL: "https://o.example",
+      endpoints: { add: endpoint.post("notes").variables(wrapper) },
+    });
+    const asked: unknown[] = [];
+
+    const body = toOpenAPI(owned, {
+      jsonSchema: (schema) => {
+        asked.push(schema);
+        if (schema !== fields) throw new Error("a pipe cannot be converted");
+        return { type: "object", properties: { text: { type: "string" } } };
+      },
+    }).paths["/notes"]?.post?.requestBody;
+
+    expect(asked).toEqual([fields]);
+    expect(body).toMatchObject({ content: { "application/json": { schema: { type: "object" } } } });
   });
 
   it("is unspecified, or what the fallback converter writes", () => {

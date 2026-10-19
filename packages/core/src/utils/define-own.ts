@@ -4,7 +4,8 @@
  * key is lost: a variable, a field or a header of that name went missing
  * from the record built of them.
  *
- * @param record - The record, such as the variables a call sends
+ * @param record - The record, such as the variables a call sends: an object
+ *   literal, or one with no prototype, which no key but `__proto__` sets through a setter
  * @param key - The key, as the caller or the wire spells it
  * @param value - Its value
  * @example
@@ -19,6 +20,12 @@ export function defineOwn<TValue>(
   key: string,
   value: TValue,
 ): void {
+  /* `__proto__` alone is a setter every object inherits: any other key, `constructor` too, assigned
+     is a key of the record's own, and assigning costs a tenth of defining it. */
+  if (key !== "__proto__") {
+    record[key] = value;
+    return;
+  }
   Object.defineProperty(record, key, {
     value,
     enumerable: true,

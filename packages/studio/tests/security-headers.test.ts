@@ -3,7 +3,8 @@
  * sends requests on the developer's behalf — so no site may frame it, which
  * would let it lure a click onto it: only VS Code and the editors built on
  * it, which show Studio in a tab of their own. Every answer says the type
- * of what it sends is the one it names.
+ * of what it sends is the one it names, and that no search engine may index
+ * it: Studio is a tool, a public demo of it included.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, type Server } from "node:http";
@@ -69,10 +70,11 @@ function expectGuarded(response: Response): void {
   expect(policy).not.toContain("unsafe-eval");
   expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
 }
 
 describe("Studio's API", () => {
-  it("forbids framing and sniffing, and sends no referrer on", async () => {
+  it("forbids framing, sniffing and indexing, and sends no referrer on", async () => {
     const response = await fetch(`${origin}/api/health`);
 
     expect(response.status).toBe(200);
@@ -80,14 +82,17 @@ describe("Studio's API", () => {
   });
 });
 
-describe.each(["/", "/timeline", "/assets/app-1a2b.js"])("the UI's answer to %s", (path) => {
-  it("forbids framing and sniffing, and sends no referrer on", async () => {
-    const response = await fetch(`${uiOrigin}${path}`);
+describe.each(["/", "/timeline", "/assets/app-1a2b.js", "/robots.txt"])(
+  "the UI's answer to %s",
+  (path) => {
+    it("forbids framing, sniffing and indexing, and sends no referrer on", async () => {
+      const response = await fetch(`${uiOrigin}${path}`);
 
-    expect(response.status).toBe(200);
-    expectGuarded(response);
-  });
-});
+      expect(response.status).toBe(200);
+      expectGuarded(response);
+    });
+  },
+);
 
 describe("Studio loaded into a frame", () => {
   it("leaves the frame to the policy, which admits only VS Code's windows and webviews", async () => {

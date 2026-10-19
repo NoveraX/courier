@@ -17,6 +17,10 @@ import type { NextFunction, Request, Response } from "express-serve-static-core"
  * its own: one injected into what it shows could not load, call out or send
  * a form anywhere. Styles may be inline, as the components it is built from
  * set them.
+ *
+ * Studio is a tool, not a site: no search engine indexes what it answers or
+ * follows its links, a public demo of it included, whose visitors come from
+ * the product's own pages.
  */
 const POLICY = [
   "default-src 'self'",
@@ -36,6 +40,7 @@ const HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Content-Security-Policy", POLICY],
   ["X-Content-Type-Options", "nosniff"],
   ["Referrer-Policy", "no-referrer"],
+  ["X-Robots-Tag", "noindex, nofollow"],
 ];
 
 /**

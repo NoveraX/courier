@@ -321,11 +321,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
+
+      # A docs page whose text changed must say when, in its `updated` date:
+      # the site shows the date on the page and hands it to search engines.
+      # Checked on the pull request, against the commits that wrote the
+      # change: master takes only what a pull request brought, and a squash
+      # merge would date the whole change by the day it was merged.
+      - name: Check the dates of the changed docs pages
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-page-dates.mjs "$BASE" "$HEAD_SHA"
 
       - run: npm ci
 

@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -63,19 +63,11 @@ const api = defineApi({
 
 // Logs: [courier] api users:getAll 200 45ms`
 
-export const metadata = docsMetadata(
-  "Middleware",
-  "Request middleware for logging, transformation, and error handling."
-)
+export const metadata = exampleMetadata("middleware")
 
 export default function MiddlewareExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/middleware"
-      title="Middleware"
-      description="Request middleware for logging, transformation, and error handling."
-      mode="both"
-    >
+    <ExamplePage name="middleware">
       <ExampleSection
         title="Middleware Configuration"
         description="Middleware functions are defined on the source. They run in order for every request."

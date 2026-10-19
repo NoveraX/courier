@@ -97,6 +97,7 @@
     "check:publish": "node scripts/check-publish.mjs",
     "check:browser": "node scripts/check-browser-bundles.mjs",
     "check:routes": "node scripts/check-routes.mjs",
+    "check:page-dates": "node scripts/check-page-dates.mjs",
     "check:names:test": "vitest run scripts/check-name-conflicts.test.mjs",
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"

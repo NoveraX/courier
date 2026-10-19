@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -28,19 +28,11 @@ getAll: endpoint.get("").variables<{ page?: number; limit?: number }>().response
 await caller.users.getAll({ page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
 
-export const metadata = docsMetadata(
-  "Path Parameters",
-  "Dynamic URL segments with :param placeholders, auto-replaced from variables."
-)
+export const metadata = exampleMetadata("path-params")
 
 export default function PathParamsExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/path-params"
-      title="Path Parameters"
-      description="Dynamic URL segments with :param placeholders, auto-replaced from variables."
-      mode="both"
-    >
+    <ExamplePage name="path-params">
       <ExampleSection
         title="Simple :id"
         description="A single path parameter replaced from the variables object."

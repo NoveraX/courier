@@ -1,4 +1,4 @@
-export const metadata = { title: "Breaking Changes in CI", description: "Report on every pull request what a change to the API definition does to its callers — an endpoint removed, a field the calls must now send, one gone from the answer — with the recorded calls each change touches.", mode: "both" }
+export const metadata = { title: "Breaking Changes in CI", description: "Report on every pull request what a change to the API definition does to its callers — an endpoint removed, a field the calls must now send, one gone from the answer — with the recorded calls each change touches.", mode: "both", updated: "2026-10-13" }
 
 Inside one repository the compiler already stops a change that breaks a call site. The API's other callers — a mobile app on last month's release, a partner's integration, another team's service — have no compiler to stop it. `courier-studio diff` is that check: it sets the definition in your branch against the one at a git ref, says what each change does to the callers, counts the recorded calls each changed endpoint has, and fails on a change that breaks them.
 

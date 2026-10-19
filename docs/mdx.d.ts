@@ -5,5 +5,6 @@ declare module "*.mdx" {
     title: string
     description: string
     mode?: "direct" | "proxy" | "both"
+    updated: string
   }
 }

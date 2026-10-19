@@ -1,4 +1,4 @@
-import { docsMetadata } from "@/lib/metadata"
+import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
@@ -39,19 +39,11 @@ const files = defineGroup({
   },
 })`
 
-export const metadata = docsMetadata(
-  "File Upload",
-  "FormData file upload with progress tracking. Courier auto-detects FormData and handles encoding."
-)
+export const metadata = exampleMetadata("upload")
 
 export default function UploadExamplesPage() {
   return (
-    <ExamplePage
-      href="/docs/examples/upload"
-      title="File Upload"
-      description="FormData file upload with progress tracking. Courier auto-detects FormData and handles encoding."
-      mode="both"
-    >
+    <ExamplePage name="upload">
       <ExampleSection
         title="Simple Upload"
         description="Single-request file upload. FormData is auto-detected by courier."

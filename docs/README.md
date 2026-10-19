@@ -35,7 +35,10 @@ A Next.js app, with a small Express backend the live examples call.
 | `/docs/examples/<name>` | Live examples, each calling the Express backend through Courier |
 | `/reference` | The API reference, read from the documentation's API pages |
 | `/studio` | Courier Studio's page |
-| `/llms.txt`, `/llms-full.txt` | Every page for language models: an index, and the whole documentation as Markdown |
+| `/mcp` | The MCP server's page |
+| `/docs/<section>/<page>.md` | A docs page as Markdown, for language models and agents; its `Link` header names the page as canonical |
+| `/llms.txt`, `/llms-full.txt` | Every page for language models: an index linking each page's Markdown, and the whole documentation as one file; kept out of search results |
+| `/og/<page>` | Each page's social card, drawn from its title and description when the site is built; the home page's is `/opengraph-image` |
 
 ## Run it
 
@@ -70,6 +73,20 @@ docker build -f docs/Dockerfile -t courier-site .
 It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
 it is up, and the container stops, to be started again, when either server
 does.
+
+## Writing a page
+
+A page is an MDX file under `src/content/docs` that opens with its metadata:
+
+```js
+export const metadata = { title: "Quick Start", description: "…", mode: "both", updated: "2026-10-14" }
+```
+
+`updated` is the day the page's text last changed: the page shows it under
+its title, and the sitemap and the page's structured data hand it to search
+engines. Change a page's text and set its date to that day. CI refuses a
+page whose text changed under an older date; from the repository's root,
+`npm run check:page-dates -- --fix` writes today's date where one is due.
 
 ## Live examples
 

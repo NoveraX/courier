@@ -4,13 +4,15 @@ import { SETTINGS_PAGE, SHELL_NAV } from "../nav";
 
 /**
  * Where the page sits: its group and its name — `Inspect / Timeline`,
- * `System / Settings`, or `Studio / Welcome` for the setup.
+ * `System / Settings`, `Studio / Welcome` for the setup, or
+ * `Studio / Not found` for an address that is no page.
  *
  * @param pathname - The page's path
  * @returns The two parts
  * @example
  * ```ts
  * crumbsOf("/"); // ["Studio", "Welcome"]
+ * crumbsOf("/no-such-page"); // ["Studio", "Not found"]
  * ```
  */
 export function crumbsOf(pathname: string): [string, string] {
@@ -21,7 +23,7 @@ export function crumbsOf(pathname: string): [string, string] {
     const item = group.items.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`));
     if (item) return [group.label, item.label];
   }
-  return ["Studio", "Welcome"];
+  return pathname === "/" ? ["Studio", "Welcome"] : ["Studio", "Not found"];
 }
 
 /**

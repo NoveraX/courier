@@ -42,4 +42,9 @@ describe("the header's trail", () => {
     expect(crumbsOf("/settings")).toEqual(["System", "Settings"]);
     expect(crumbsOf("/")).toEqual(["Studio", "Welcome"]);
   });
+
+  it("names an address that is no page as not found, not as the setup", () => {
+    expect(crumbsOf("/no-such-page")).toEqual(["Studio", "Not found"]);
+    expect(crumbsOf("/timeline")).toEqual(["Inspect", "Timeline"]);
+  });
 });

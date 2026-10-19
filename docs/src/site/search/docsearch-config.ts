@@ -11,6 +11,13 @@ export const DOCSEARCH = {
 } as const
 
 /**
+ * The code Algolia asks every page of the site to carry in an
+ * `algolia-site-verification` meta tag, so the domain is known to be the
+ * project's before DocSearch crawls it.
+ */
+export const ALGOLIA_SITE_VERIFICATION = "E91100986FF6EDF9"
+
+/**
  * Where "Search by Algolia" leads, as the DocSearch program asks every
  * search it powers to say.
  *

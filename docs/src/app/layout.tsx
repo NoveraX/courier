@@ -4,6 +4,7 @@ import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
 import { QueryProvider } from "@/site/query-provider"
+import { ALGOLIA_SITE_VERIFICATION } from "@/site/search/docsearch-config"
 import { ThemeProvider } from "@/site/theme-provider"
 
 import "./globals.css"
@@ -41,6 +42,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+  },
+  verification: {
+    other: { "algolia-site-verification": ALGOLIA_SITE_VERIFICATION },
   },
   other: {
     "apple-mobile-web-app-title": "Courier",

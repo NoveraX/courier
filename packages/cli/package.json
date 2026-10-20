@@ -65,7 +65,7 @@
   "dependencies": {
     "@noverax/courier-studio-core": "0.3.1",
     "citty": "^0.2.2",
-    "oxc-parser": "0.153.0"
+    "oxc-parser": "0.154.0"
   },
   "peerDependencies": {
     "@noverax/courier": "^0.3.1"

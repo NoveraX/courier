@@ -33,7 +33,7 @@ export function DocsSidebar({ version }: { version: string }) {
     return wasFolded === undefined ? holdsCurrent || byDefault : !wasFolded
   }
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-56px)] self-start overflow-y-auto pt-6 pr-4 pb-15 [scrollbar-width:thin] min-[1000px]:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-56px-var(--consent-bar-shown,0px))] self-start overflow-y-auto pt-6 pr-4 pb-15 [scrollbar-width:thin] min-[1000px]:block">
       <div className="mb-2.5 flex items-center gap-2">
         <span className="flex h-7.5 items-center gap-1.75 rounded-control border border-line bg-panel px-2.5 font-mono text-meta tracking-normal whitespace-nowrap text-fg-muted">
           <GitBranch aria-hidden="true" className="size-3 text-fg-subtle" />v{version}

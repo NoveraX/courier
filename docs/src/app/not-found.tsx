@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Page not found" }
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <div className="flex min-h-[calc(100vh-var(--consent-bar-shown,0px))] flex-col bg-bg">
       <a
         href="#main-content"
         className="sr-only z-95 rounded-control bg-brand px-4 py-2 text-control text-bg focus:not-sr-only focus:fixed focus:top-3 focus:left-4"

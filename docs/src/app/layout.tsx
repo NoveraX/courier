@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
+import { ConsentBanner } from "@/site/consent/consent-banner"
+import { consentBootstrap } from "@/site/consent/consent-bootstrap"
 import { ALGOLIA_SITE_VERIFICATION } from "@/site/search/docsearch-config"
 import {
   DOCS_TITLE_SUFFIX,
@@ -67,7 +69,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
+        {/* Decides before the first paint whether the consent bar shows: a fixed script, built
+            from constants, with no reader input in it. */}
+        <script dangerouslySetInnerHTML={{ __html: consentBootstrap() }} />
+        <ThemeProvider>
+          {/* First in the page, so a keyboard reader meets the question before the page's links. */}
+          <ConsentBanner />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

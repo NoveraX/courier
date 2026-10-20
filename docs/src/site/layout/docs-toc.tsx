@@ -23,7 +23,7 @@ export function DocsToc({ title, markdown }: { title: string; markdown?: string 
   const headings = useHeadings()
   const active = useActiveHeading(headings)
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-56px)] self-start overflow-y-auto py-10 min-[1240px]:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-56px-var(--consent-bar-shown,0px))] self-start overflow-y-auto py-10 min-[1240px]:block">
       {headings.length > 0 && (
         <nav aria-label="On this page" className="mb-5.5">
           <p className="m-0 mb-2.5 flex items-center gap-1.75 text-label font-semibold text-fg">

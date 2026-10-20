@@ -1,3 +1,4 @@
+import { FooterLegal } from "@/site/consent/footer-legal"
 import { CourierMark } from "@/site/courier-mark"
 import { TopLink } from "@/site/top-link"
 import { FOOTER_COLUMNS } from "./footer-columns"
@@ -9,7 +10,8 @@ const LINK = "-my-1.25 py-1.25 text-nav text-fg-muted hover:text-fg"
 
 /**
  * The landing page's footer: Courier in a line with its install command,
- * four columns of links, and the licence with what Courier needs to run.
+ * four columns of links, and the licence — with the privacy notice and
+ * Cookie settings — beside what Courier needs to run.
  *
  * @param props - The version of Courier released
  * @returns The footer
@@ -68,7 +70,10 @@ export function LandingFooter({ version }: { version: string }) {
           </div>
         </div>
         <div className="mt-13 flex flex-wrap items-center justify-between gap-3.5 border-t border-line pt-5.5 pb-6.5 text-small text-fg-subtle">
-          <span>© 2026 NoveraX · Released under the MIT licence</span>
+          <span className="flex flex-wrap items-center gap-x-5.5 gap-y-2">
+            <span>© 2026 NoveraX · Released under the MIT licence</span>
+            <FooterLegal className="-my-1 py-1 hover:text-fg" />
+          </span>
           <span className="font-mono text-[11px] tracking-normal">
             v{version} · TypeScript 6.0+ · Node ≥ 22
           </span>

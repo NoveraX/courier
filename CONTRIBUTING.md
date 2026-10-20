@@ -294,19 +294,21 @@ npm takes the packages through trusted publishing, with no token: each
 package names this repository's `ci.yml` and its `release` environment as
 its trusted publisher, and npm exchanges the release job's own short-lived
 identity for the right to publish it, with provenance. A package is set up
-once by a maintainer signed in to npm:
+once by a maintainer signed in to npm, who also has it refuse tokens
+altogether, so a token that leaks publishes nothing:
 
 ```bash
 npm trust github @noverax/courier --file ci.yml --repo NoveraX/courier --env release --allow-publish
+npm access set mfa=publish @noverax/courier
 ```
 
 `npm trust list @noverax/courier` shows what a package trusts. Before it tags
-anything, the release asks npm, for every package, to make that exchange; a
-package with no trusted publisher yet is published with the `NPM_TOKEN` the
-environment holds, and the run names it with the command above. Once every
-package is set up, the token is deleted from the environment, and each
-package refuses tokens altogether with
-`npm access set mfa=publish @noverax/courier`.
+anything, the release asks npm, for every package, to make that exchange.
+The `release` environment holds no npm token to fall back on, so a package
+npm will not let the run publish stops the release there, and the run names
+the command that sets it up. npm sets up only a package it already has: a
+new package's first version is published by hand, by a maintainer signed in
+to npm, and the package is set up after it.
 
 The packages are published by `scripts/release.ts` with the npm that comes
 with Node, never by semantic-release's own npm plugin, which `.releaserc.json`

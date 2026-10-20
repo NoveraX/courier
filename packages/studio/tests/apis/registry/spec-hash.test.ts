@@ -1,8 +1,10 @@
 /**
  * A specification's hash: the one recorded before for the same
  * specification, as every recorded hash is compared with it, and one for a
- * specification nested deeper than JSON.stringify's recursion goes, which
- * failed every write and update of it.
+ * specification nested deeper than JSON.stringify's recursion goes on some
+ * platforms, where hashing it failed every write and update of it: the same
+ * hash whichever way its text is written, so a hash recorded on one version
+ * of Node is the one another gives.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -11,14 +13,28 @@ import { describe, expect, it } from "vitest";
 import { parseSpec } from "../../../src/apis/parser";
 import type { ParsedSchema, ParsedSpec } from "../../../src/apis/parser/types";
 import { computeSpecHash } from "../../../src/apis/registry/spec-hash";
+import { writeJsonText } from "../../../src/apis/registry/write-json-text";
 
 const ROOT = new URL("../../../../../", import.meta.url);
+
+function hashed(content: string): string {
+  return createHash("sha256").update(content).digest("hex").slice(0, 32);
+}
 
 /* The hash as it was written, with JSON.stringify alone. */
 function recordedHash(spec: ParsedSpec): string {
   const { title, version, groups, schemas, securitySchemes } = spec;
-  const content = JSON.stringify({ title, version, groups, schemas, securitySchemes });
-  return createHash("sha256").update(content).digest("hex").slice(0, 32);
+  return hashed(JSON.stringify({ title, version, groups, schemas, securitySchemes }));
+}
+
+/* The hash of the same text written without recursion, as past JSON.stringify's depth. */
+function writtenHash(spec: ParsedSpec): string {
+  const { title, version, groups, schemas, securitySchemes } = spec;
+  const pieces: string[] = [];
+  writeJsonText({ title, version, groups, schemas, securitySchemes }, (piece) => {
+    pieces.push(piece);
+  });
+  return hashed(pieces.join(""));
 }
 
 function deep(levels: number): ParsedSpec {
@@ -60,9 +76,11 @@ describe("computeSpecHash", () => {
     expect(computeSpecHash(deep(500))).toBe(recordedHash(deep(500)));
   });
 
-  it("hashes a specification nested 20 000 deep, the same each time", () => {
-    expect(() => recordedHash(deep(20_000))).toThrow(RangeError);
-    expect(computeSpecHash(deep(20_000))).toBe(computeSpecHash(deep(20_000)));
-    expect(computeSpecHash(deep(20_000))).not.toBe(computeSpecHash(deep(19_999)));
+  it("hashes a specification nested 20 000 deep the same each time, whichever way its text is written", () => {
+    const hash = computeSpecHash(deep(20_000));
+
+    expect(hash).toBe(writtenHash(deep(20_000)));
+    expect(computeSpecHash(deep(20_000))).toBe(hash);
+    expect(computeSpecHash(deep(19_999))).not.toBe(hash);
   });
 });

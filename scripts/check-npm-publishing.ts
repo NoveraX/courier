@@ -9,10 +9,10 @@
  * package, to exchange the run's identity for a publish token — as
  * `npm publish` itself does first — and throws away what it gets.
  *
- * A package with no trusted publisher yet is published with the token the
- * `release` environment holds, while it holds one that npm accepts, and the
- * run says which ones and how to set them up. A package with neither stops
- * the release here, before the tag, rather than halfway through publishing.
+ * No token stands in for a trusted publisher: the `release` environment
+ * holds none, and the packages refuse tokens. A package npm does not trust
+ * the run for stops the release here, before the tag, rather than halfway
+ * through publishing, and the run says which ones and how to set them up.
  *
  * Usage: tsx scripts/check-npm-publishing.ts
  */
@@ -45,16 +45,13 @@ export interface CheckDeps {
   env: Record<string, string | undefined>;
   fetch: typeof fetch;
   npmVersion(): string;
-  /** Whether npm accepts the token the environment holds: `npm whoami` with it. */
-  tokenAccepted(): boolean;
 }
 
 /**
- * Check that every package can be published, through trusted publishing or,
- * while a package has none, with the environment's token.
+ * Check that npm trusts the run to publish every package.
  *
  * @param names - The packages the release publishes
- * @param deps - The run's environment, fetch, npm's version and the token check
+ * @param deps - The run's environment, fetch and npm's version
  * @returns Whether the release may go on, and what to print
  * @example
  * ```ts
@@ -93,21 +90,10 @@ export async function checkPublishing(
     deps.env,
   );
   const list = [...reasons].map(([name, reason]) => `  ${name}: ${reason}`);
-  if (deps.env.NODE_AUTH_TOKEN && deps.tokenAccepted()) {
-    return {
-      ok: true,
-      lines: [
-        `::warning::npm: ${reasons.size} of ${names.length} packages have no trusted publisher and publish with the release environment's token.`,
-        ...list,
-        "Set them up, then remove the token:",
-        ...setUp,
-      ],
-    };
-  }
   return {
     ok: false,
     lines: [
-      `::error::npm: ${reasons.size} of ${names.length} packages can be published neither through trusted publishing nor with a token npm accepts.`,
+      `::error::npm: ${reasons.size} of ${names.length} packages cannot be published through trusted publishing.`,
       ...list,
       "Set them up:",
       ...setUp,
@@ -218,14 +204,6 @@ async function main(): Promise<void> {
     env: process.env,
     fetch,
     npmVersion: () => execFileSync("npm", ["--version"], { encoding: "utf8" }).trim(),
-    tokenAccepted: () => {
-      try {
-        execFileSync("npm", ["whoami"], { stdio: ["ignore", "pipe", "pipe"] });
-        return true;
-      } catch {
-        return false;
-      }
-    },
   });
   for (const line of lines) (ok ? console.log : console.error)(line);
   if (!ok) process.exit(1);

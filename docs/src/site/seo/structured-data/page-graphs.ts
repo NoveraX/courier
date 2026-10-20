@@ -7,6 +7,7 @@ import { techArticleNode, webPageNode } from "./page-nodes"
 import { organizationNode, type PackageFacts, softwareNode, websiteNode } from "./site-nodes"
 
 const HOME: Crumb = { name: "Courier", path: "/" }
+const PRIVACY: Crumb = { name: SITE_PAGES.privacy.card.headline, path: SITE_PAGES.privacy.path }
 const DOCS: Crumb = { name: "Docs", path: "/docs/introduction" }
 
 /** A docs page, as its graph needs it. */
@@ -112,5 +113,29 @@ export function referenceGraph(updated: string | undefined, version: string): Js
     courier,
     techArticleNode({ path, title, description, about: courier, updated }),
     breadcrumbList([HOME, { name: title, path }]),
+  ]
+}
+
+/**
+ * A legal page's structured data — the privacy notice, the consent to
+ * analytics: the page, about the site, with the way to it from the root;
+ * the consent through the notice it belongs to.
+ *
+ * @param page - The page
+ * @param updated - When its text last changed, `YYYY-MM-DD`
+ * @returns The page's graph
+ * @example
+ * ```tsx
+ * <JsonLd graph={legalGraph(SITE_PAGES.privacy, legalUpdated("privacy"))} />
+ * ```
+ */
+export function legalGraph(page: SitePage, updated: string | undefined): JsonLdNode[] {
+  const site = websiteNode()
+  const trail = page.path === PRIVACY.path ? [] : [PRIVACY]
+  return [
+    organizationNode(),
+    site,
+    webPageNode({ ...page, about: site, updated }),
+    breadcrumbList([HOME, ...trail, { name: page.card.headline, path: page.path }]),
   ]
 }

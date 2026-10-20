@@ -46,7 +46,8 @@ export function techArticleNode(page: PageFacts): JsonLdNode {
 }
 
 /**
- * A landing page: its name and description, its card, and what it is about.
+ * A landing or legal page: its name and description, its card, what it is
+ * about, and when it last changed, for a page that says.
  *
  * @param page - The page
  * @returns The node
@@ -66,5 +67,6 @@ export function webPageNode(page: PageFacts): JsonLdNode {
     isPartOf: reference(websiteNode()),
     about: reference(page.about),
     primaryImageOfPage: { "@type": "ImageObject", url: absoluteUrl(ogImagePath(page.path)) },
+    ...(page.updated ? { dateModified: page.updated } : {}),
   }
 }

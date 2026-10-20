@@ -36,6 +36,7 @@ A Next.js app, with a small Express backend the live examples call.
 | `/reference` | The API reference, read from the documentation's API pages |
 | `/studio` | Courier Studio's page |
 | `/mcp` | The MCP server's page |
+| `/privacy`, `/privacy/consent` | The privacy notice, and the consent to analytics a reader gives by choosing Accept, written in MDX under `src/content/legal` |
 | `/docs/<section>/<page>.md` | A docs page as Markdown, for language models and agents; its `Link` header names the page as canonical |
 | `/llms.txt`, `/llms-full.txt` | Every page for language models: an index linking each page's Markdown, and the whole documentation as one file; kept out of search results |
 | `/search-index.json` | What search finds — every docs page and export — fetched once a page is idle rather than carried in each page |

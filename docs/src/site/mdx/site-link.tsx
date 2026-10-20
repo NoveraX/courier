@@ -8,7 +8,7 @@ const LINK =
 
 /**
  * A link in a page's text: another page of the site in place, an anchor on
- * this page as it is, and anything else in a new tab.
+ * this page or an e-mail address as it is, and anything else in a new tab.
  *
  * @param props - The anchor's props
  * @returns The link
@@ -18,7 +18,7 @@ const LINK =
  * ```
  */
 export function SiteLink({ href = "", children, ...props }: ComponentPropsWithoutRef<"a">) {
-  if (href.startsWith("#")) {
+  if (href.startsWith("#") || href.startsWith("mailto:")) {
     return (
       <a href={href} className={LINK} {...props}>
         {children}

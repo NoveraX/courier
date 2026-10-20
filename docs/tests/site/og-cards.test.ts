@@ -46,6 +46,8 @@ describe("the cards", () => {
       SITE_PAGES.studio.path,
       SITE_PAGES.mcp.path,
       SITE_PAGES.reference.path,
+      SITE_PAGES.privacy.path,
+      SITE_PAGES.consent.path,
     ]
     expect(pages.length).toBeGreaterThan(100)
     expect([...cards.keys()].sort()).toEqual(pages.sort())

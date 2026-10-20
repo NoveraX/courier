@@ -1,3 +1,5 @@
+import { CONSENT_PATH, PRIVACY_PATH } from "@/site/legal/legal-paths"
+
 /** A page of the site besides the docs: what its tab, search result and social card say. */
 export interface SitePage {
   /** The page's address, which is also its canonical URL. */
@@ -9,7 +11,7 @@ export interface SitePage {
   card: { eyebrow: string; headline: string }
 }
 
-/** The landing pages and the API reference, by name. */
+/** The landing pages, the API reference and the legal pages, by name. */
 export const SITE_PAGES = {
   home: {
     path: "/",
@@ -38,5 +40,17 @@ export const SITE_PAGES = {
     description:
       "Every export the docs describe: where to import it from, its signature, the fields it takes and an example.",
     card: { eyebrow: "API reference", headline: "Every export, its signature and an example" },
+  },
+  privacy: {
+    path: PRIVACY_PATH,
+    title: "Privacy notice — Courier",
+    description: "What this site collects, why, and the choices you have.",
+    card: { eyebrow: "Courier", headline: "Privacy notice" },
+  },
+  consent: {
+    path: CONSENT_PATH,
+    title: "Consent to analytics — Courier",
+    description: "What you agree to by choosing Accept, and how to withdraw.",
+    card: { eyebrow: "Courier", headline: "Consent to analytics" },
   },
 } as const satisfies Record<string, SitePage>

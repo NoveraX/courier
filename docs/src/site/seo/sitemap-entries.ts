@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next"
 
 import { docSlugs, docSource } from "@/site/content/docs-files"
 import { docsNav, flatNavItems } from "@/site/content/docs-nav"
+import { type LegalPage, legalUpdated } from "@/site/content/legal-files"
 import { API_SECTION } from "@/site/content/nav-reference"
 import { sourceMetadata } from "@/site/content/source-metadata"
 import { referenceUpdated } from "@/site/reference/reference-updated"
@@ -30,9 +31,15 @@ function referencePage(): MetadataRoute.Sitemap[number] {
   }
 }
 
+function legalPage(name: LegalPage): MetadataRoute.Sitemap[number] {
+  const updated = legalUpdated(name)
+  return { url: absoluteUrl(SITE_PAGES[name].path), ...(updated ? { lastModified: updated } : {}) }
+}
+
 /**
  * The site's sitemap: every page by its canonical address — the landing
- * pages, the API reference, every docs page and every example — each with
+ * pages, the API reference, every docs page, every example and the legal
+ * pages — each with
  * the day its text last changed when the page says, and no date otherwise:
  * a search engine trusts the dates of a sitemap only while they are true.
  *
@@ -49,5 +56,7 @@ export function sitemapEntries(): MetadataRoute.Sitemap {
     referencePage(),
     ...docsPages(),
     ...Object.keys(EXAMPLE_PAGES).map((name) => ({ url: absoluteUrl(`/docs/examples/${name}`) })),
+    legalPage("privacy"),
+    legalPage("consent"),
   ]
 }

@@ -28,6 +28,7 @@ import {
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { RealtimeError } from "../src/realtime/errors";
+import type { SSESubscription } from "../src/realtime/types";
 import { studioHooks } from "../src/studio";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
 import { refusedSocketCause } from "./helpers/refused-socket-cause";
@@ -129,6 +130,25 @@ async function proxyOf(sources: Record<string, object>, { deaf = false } = {}): 
   return listen(server);
 }
 
+/**
+ * The first `count` events a subscription yields, after which it is left.
+ * Should fewer come, it is closed two seconds on, so a test fails on what
+ * did come rather than on its own time running out.
+ */
+async function firstEvents(subscription: SSESubscription, count: number): Promise<unknown[]> {
+  const events: unknown[] = [];
+  const deadline = setTimeout(() => subscription.close(), 2_000);
+  try {
+    for await (const event of subscription) {
+      events.push(event);
+      if (events.length === count) break;
+    }
+  } finally {
+    clearTimeout(deadline);
+  }
+  return events;
+}
+
 describe("a stream another server serves, through the proxy", () => {
   it("is opened with the source's headers and relayed event by event, ids and names kept", async () => {
     const upstream = await thirdParty();
@@ -139,12 +159,7 @@ describe("a stream another server serves, through the proxy", () => {
     });
 
     const subscription = await caller.live.room({ room: "r1", since: "2026" });
-    const events: unknown[] = [];
-    for await (const event of subscription) {
-      events.push(event);
-      if (events.length === 2) break;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const events = await firstEvents(subscription, 2);
 
     expect(events).toEqual([
       expect.objectContaining({ id: "7", event: "tick", data: { n: 1 } }),
@@ -152,7 +167,7 @@ describe("a stream another server serves, through the proxy", () => {
     ]);
     expect(upstream.seen[0]?.url).toBe("/v1/feed/r1?since=2026");
     expect(upstream.seen[0]?.headers.authorization).toBe("Bearer k1");
-    expect(upstream.seen[0]?.closed).toBe(true);
+    await expect.poll(() => upstream.seen[0]?.closed, { timeout: 2_000 }).toBe(true);
   });
 
   it("closes the upstream when its client leaves, though the request never says so", async () => {
@@ -164,9 +179,10 @@ describe("a stream another server serves, through the proxy", () => {
     });
 
     const subscription = await caller.live.room({ room: "r1" });
-    for await (const _event of subscription) break;
+    const events = await firstEvents(subscription, 1);
 
-    await expect.poll(() => upstream.seen[0]?.closed, { timeout: 2000 }).toBe(true);
+    expect(events).toHaveLength(1);
+    await expect.poll(() => upstream.seen[0]?.closed, { timeout: 2_000 }).toBe(true);
   });
 
   it("resumes the upstream from the id the client resumes from", async () => {
@@ -179,11 +195,13 @@ describe("a stream another server serves, through the proxy", () => {
       headers: { Accept: "text/event-stream", "Last-Event-ID": "7" },
       signal: controller.signal,
     });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    /* The proxy answers before it opens the upstream, so the upstream's request comes later. */
+    await expect
+      .poll(() => upstream.seen[0]?.headers["last-event-id"], { timeout: 2_000 })
+      .toBe("7");
     controller.abort();
 
     expect(response.status).toBe(200);
-    expect(upstream.seen[0]?.headers["last-event-id"]).toBe("7");
   });
 
   it("fails as the upstream refuses it", async () => {
@@ -194,9 +212,8 @@ describe("a stream another server serves, through the proxy", () => {
       proxyPath: { sse: `${proxy}/api/sse` },
     });
 
-    const failure = await (async () => {
-      for await (const _event of await caller.live.room({ room: "secret" })) void _event;
-    })().catch((error: RealtimeError) => error);
+    const subscription = await caller.live.room({ room: "secret" });
+    const failure = await firstEvents(subscription, 1).catch((error: RealtimeError) => error);
 
     expect(failure).toMatchObject({ code: 4401 });
   });
@@ -210,11 +227,7 @@ describe("a stream another server serves, through the proxy", () => {
     });
 
     const subscription = await caller.live.room({ room: "moved" });
-    let first: unknown;
-    for await (const event of subscription) {
-      first = event;
-      break;
-    }
+    const [first] = await firstEvents(subscription, 1);
 
     expect(first).toEqual(expect.objectContaining({ id: "7", data: { n: 1 } }));
     expect(upstream.seen.map((seen) => seen.url)).toEqual(["/v1/feed/moved", "/v1/feed/r1"]);
@@ -239,7 +252,7 @@ describe("a stream another server serves, through the proxy", () => {
         for await (const _event of await caller.live.room({ room: "r1" })) void _event;
         return "ended";
       })().catch((error: RealtimeError) => error),
-      new Promise((resolve) => setTimeout(() => resolve("still streaming"), 2000)),
+      new Promise((resolve) => setTimeout(() => resolve("still streaming"), 2_000)),
     ]);
 
     expect(outcome).toMatchObject({ code: 4302 });
@@ -259,8 +272,9 @@ describe("a stream another server serves, through the proxy", () => {
     });
 
     const subscription = await caller.live.room({ room: "r1" });
-    for await (const _event of subscription) break;
+    const events = await firstEvents(subscription, 1);
 
+    expect(events).toHaveLength(1);
     expect(foreign.seen.map((seen) => seen.url)).toEqual(["/v1/feed/r1"]);
   });
 
@@ -356,12 +370,11 @@ describe("a channel another server serves, through the proxy", () => {
     const room = caller.live.room({ room: "r1" });
     const heard: string[] = [];
     room.on("data", (line) => heard.push(line.text));
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await expect.poll(() => heard, { timeout: 2_000 }).toEqual(["welcome to r1"]);
 
     room.send({ text: "hi" });
-    await new Promise((resolve) => setTimeout(resolve, 150));
 
-    expect(heard).toEqual(["welcome to r1", "echo hi"]);
+    await expect.poll(() => heard, { timeout: 2_000 }).toEqual(["welcome to r1", "echo hi"]);
     room.close();
   });
 
@@ -372,14 +385,17 @@ describe("a channel another server serves, through the proxy", () => {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
     });
     const room = caller.live.room({ room: "r1" });
+    const heard: string[] = [];
     const errors: RealtimeError[] = [];
+    room.on("data", (line) => heard.push(line.text));
     room.on("error", (error) => errors.push(error));
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await expect.poll(() => heard, { timeout: 2_000 }).toEqual(["welcome to r1"]);
 
     room.send({ text: "bye" });
-    await new Promise((resolve) => setTimeout(resolve, 150));
 
-    expect(errors.map((error) => [error.code, error.message])).toEqual([[4000, "Room closed"]]);
+    await expect
+      .poll(() => errors.map((error) => [error.code, error.message]), { timeout: 2_000 })
+      .toEqual([[4000, "Room closed"]]);
   });
 
   it("tells Studio how its upstream connection stands, under the subscription's id", async () => {
@@ -404,7 +420,7 @@ describe("a channel another server serves, through the proxy", () => {
     closers.push(async () => room.close());
     await expect
       .poll(() => told.filter((event) => event.status === "reconnecting").length, {
-        timeout: 5_000,
+        timeout: 2_000,
       })
       .toBeGreaterThanOrEqual(1);
 
@@ -435,7 +451,7 @@ describe("a channel another server serves, through the proxy", () => {
 
     /* A channel starts out disconnected: its error is the sign it was refused. */
     await expect
-      .poll(() => errors.map((error) => [error.code, error.message]), { timeout: 10_000 })
+      .poll(() => errors.map((error) => [error.code, error.message]), { timeout: 2_000 })
       .toEqual([[4401, "Connection rejected"]]);
     await expect.poll(() => room.status).toBe("disconnected");
     vi.restoreAllMocks();
@@ -444,6 +460,7 @@ describe("a channel another server serves, through the proxy", () => {
   it("tells the client of a message the upstream had no room to take", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const received: string[] = [];
+    let joining = false;
     const slowRoom = defineApi({
       expose: true,
       name: "chat",
@@ -457,6 +474,7 @@ describe("a channel another server serves, through the proxy", () => {
               .response<{ text: string }>()
               .implement(() => ({
                 async onJoin() {
+                  joining = true;
                   await new Promise((resolve) => setTimeout(resolve, 600));
                 },
                 onMessage(_ctx, message) {
@@ -476,16 +494,18 @@ describe("a channel another server serves, through the proxy", () => {
     const room = caller.live.room({ room: "r1" });
     const errors: RealtimeError[] = [];
     room.on("error", (error) => errors.push(error));
-    await expect.poll(() => room.status, { timeout: 10_000 }).toBe("connected");
+    /* Three waits, one behind the room's slow join: 4 s each, within the test's own 15. Sent
+       while the upstream joins, the messages wait in the relay, which holds 100 of them. */
+    await expect.poll(() => joining, { timeout: 4_000 }).toBe(true);
 
     for (let n = 0; n < 105; n++) room.send({ text: `m${n}` });
 
-    await expect.poll(() => received.length, { timeout: 10_000 }).toBe(100);
-    await expect.poll(() => errors.length, { timeout: 10_000 }).toBe(5);
+    await expect.poll(() => received.length, { timeout: 4_000 }).toBe(100);
+    await expect.poll(() => errors.length, { timeout: 4_000 }).toBe(5);
     expect(errors.map((error) => error.code)).toEqual([4429, 4429, 4429, 4429, 4429]);
     room.close();
     vi.restoreAllMocks();
-  });
+  }, 15_000);
 
   it("tells the client once of a message too large for the upstream", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -496,14 +516,15 @@ describe("a channel another server serves, through the proxy", () => {
       ws: { maxMessageSize: 200_000 },
     });
     const room = caller.live.room({ room: "r1" });
+    const heard: string[] = [];
     const errors: RealtimeError[] = [];
+    room.on("data", (line) => heard.push(line.text));
     room.on("error", (error) => errors.push(error));
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await expect.poll(() => heard, { timeout: 2_000 }).toEqual(["welcome to r1"]);
 
     room.send({ text: "x".repeat(100_000) });
-    await new Promise((resolve) => setTimeout(resolve, 200));
 
-    expect(errors.map((error) => error.code)).toEqual([4413]);
+    await expect.poll(() => errors.map((error) => error.code), { timeout: 2_000 }).toEqual([4413]);
     room.close();
     vi.restoreAllMocks();
   });

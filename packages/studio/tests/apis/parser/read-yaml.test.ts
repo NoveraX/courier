@@ -10,14 +10,18 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
 import { readYaml } from "../../../src/apis/parser/read-yaml";
+import { cpuTimed } from "../../helpers/cpu-timed";
 
-/* A second or two on an idle machine; a loaded one may take several times that. */
-const TIMED_TEST_MS = 30_000;
+/* A few seconds on an idle machine, which a busy one stretches tenfold and
+   more: the checks hold the reading to its CPU, which the load leaves as it
+   is, and the time a test may run only keeps it from running for ever. */
+const TIMED_TEST_MS = 120_000;
 
-/* Eight times the keys take about eight times as long to read when the time
-   grows with them, and about fifty times as long when each key is compared
-   with every one before it, as `parse` does. A busy machine raises the first
-   to about twice that; this bound stays clear of both. */
+/* Eight times the keys take about eight times the CPU to read when the cost
+   grows with them, and about fifty times when each key is compared with
+   every one before it, as `parse` does. Counted in CPU, which a busy
+   machine leaves as it is, the first stays below ten; this bound stays
+   clear of both. */
 const MOST_TIMES_AS_LONG = 24;
 
 function outcome(read: (text: string) => unknown, text: string): unknown {
@@ -99,22 +103,16 @@ function mapping(keys: number): string {
   return `x:\n${Array.from({ length: keys }, (_, n) => `  k${n}: 1`).join("\n")}`;
 }
 
-/* How many times longer the long run takes than the short one, each the
-   fastest of a few, the two taken in turn: the cost of the reading more
-   than of a busy machine's pauses, which still befall the long run more
-   often, as it gives them more time to land in. */
+/* How many times the CPU the long run takes is the short one's, each the
+   least of a few, the two taken in turn. The time that passes would grow
+   with a busy machine's pauses, which befall the long run more often, as it
+   gives them more time to land in; a run waiting its turn takes no CPU. */
 function timeRatio(short: () => void, long: () => void, runs = 7): number {
   let shortest = Number.POSITIVE_INFINITY;
   let longest = Number.POSITIVE_INFINITY;
   for (let n = 0; n < runs; n++) {
-    shortest = Math.min(shortest, timed(short));
-    longest = Math.min(longest, timed(long));
+    shortest = Math.min(shortest, cpuTimed(short).ms);
+    longest = Math.min(longest, cpuTimed(long).ms);
   }
   return longest / shortest;
-}
-
-function timed(run: () => void): number {
-  const started = performance.now();
-  run();
-  return performance.now() - started;
 }

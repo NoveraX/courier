@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { MAX_PATTERN_LENGTH } from "../../src/apis/parser/max-pattern-length";
 import { readConstraints } from "../../src/apis/parser/read-constraints";
+import { cpuTimed } from "../helpers/cpu-timed";
 
 describe("readConstraints", () => {
   it("reads a string's lengths and pattern", () => {
@@ -100,25 +101,26 @@ describe("readConstraints", () => {
     });
   });
 
+  /* Both count the CPU the reading takes, which a busy machine does not stretch. */
   it("leaves out a pattern longer than any a real specification writes, without compiling it", () => {
     const pattern = "\\p{L}".repeat(200_000);
-    const started = performance.now();
 
-    const read = readConstraints({ pattern, maxLength: 3 }, "string");
+    const { value: read, ms } = cpuTimed(() =>
+      readConstraints({ pattern, maxLength: 3 }, "string"),
+    );
 
     /* Compiling it takes seconds before the engine refuses it as too large. */
     expect(read).toEqual({ maxLength: 3 });
-    expect(performance.now() - started).toBeLessThan(1_000);
+    expect(ms).toBeLessThan(1_000);
   });
 
   it("compiles a pattern of the longest length allowed in milliseconds", () => {
     const pattern = "\\p{L}".repeat(Math.floor(MAX_PATTERN_LENGTH / 5));
-    const started = performance.now();
 
-    expect(readConstraints({ pattern }, "string")).toEqual({
-      pattern: { source: pattern, unicode: true },
-    });
-    expect(performance.now() - started).toBeLessThan(500);
+    const { value: read, ms } = cpuTimed(() => readConstraints({ pattern }, "string"));
+
+    expect(read).toEqual({ pattern: { source: pattern, unicode: true } });
+    expect(ms).toBeLessThan(500);
   });
 
   it("reads nothing from a schema that constrains nothing", () => {

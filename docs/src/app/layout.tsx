@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
+import { SiteAnalytics } from "@/site/analytics/site-analytics"
 import { ConsentBanner } from "@/site/consent/consent-banner"
 import { consentBootstrap } from "@/site/consent/consent-bootstrap"
 import { ALGOLIA_SITE_VERIFICATION } from "@/site/search/docsearch-config"
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {/* First in the page, so a keyboard reader meets the question before the page's links. */}
           <ConsentBanner />
           {children}
+          <SiteAnalytics />
         </ThemeProvider>
       </body>
     </html>

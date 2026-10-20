@@ -76,6 +76,11 @@ It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
 it is up, and the container stops, to be started again, when either server
 does.
 
+Visits are counted with Yandex Metrica on courier.noverax.cloud's production
+build only, and only once the reader accepts in the bar at the foot of the
+page: a local run, a preview or a test sends nothing. The counter and its page
+views are in `src/site/analytics`; the reader's answer, in `src/site/consent`.
+
 ## Writing a page
 
 A page is an MDX file under `src/content/docs` that opens with its metadata:

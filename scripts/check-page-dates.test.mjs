@@ -95,6 +95,19 @@ describe("checkPageDates", () => {
     expect(checkPageDates({ repo, base, head, today: "2026-10-19" })).toHaveLength(1);
   });
 
+  it("asks a legal page for its date as well", () => {
+    const base = git(["rev-parse", "HEAD"]);
+    const head = commit(
+      "docs/src/content/legal/privacy.mdx",
+      page("Terms.", "2026-09-01"),
+      "2026-10-19",
+    );
+
+    const problems = checkPageDates({ repo, base, head, today: "2026-10-20" });
+
+    expect(problems.map(({ path }) => path)).toEqual(["docs/src/content/legal/privacy.mdx"]);
+  });
+
   it("writes today's date into a page changed in the working tree, with --fix", () => {
     const base = git(["rev-parse", "HEAD"]);
     writeFileSync(join(repo, PAGE), page("Edited, not committed.", "2026-10-01"));

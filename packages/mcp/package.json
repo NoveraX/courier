@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Your Courier API as tools for AI agents: an MCP server over stdio and Streamable HTTP that offers only the endpoints you mark, through your middleware, with a person confirming what cannot be undone",
   "keywords": [
     "courier",
@@ -75,11 +75,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier-studio-core": "0.3.0",
+    "@noverax/courier-studio-core": "0.3.1",
     "citty": "^0.2.2"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.3.0"
+    "@noverax/courier": "^0.3.1"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.3.1",

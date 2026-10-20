@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-next",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Next.js adapter for Courier: one App Router route that proxies typed calls to any backend, createAction for Server Actions, and the user's session in Server Components and Route Handlers",
   "keywords": [
     "courier",
@@ -91,7 +91,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.3.0",
+    "@noverax/courier": "^0.3.1",
     "next": ">=14",
     "react": ">=18"
   },

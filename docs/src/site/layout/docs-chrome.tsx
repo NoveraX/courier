@@ -14,14 +14,14 @@ import { SiteHeader } from "./site-header"
  * the search over the docs and the API and the menu it opens — ⌘K or
  * Ctrl+K opens search anywhere, and `/` where nothing is being typed.
  *
- * @param props - The part of the site
+ * @param props - The part of the site, when the page is in one
  * @returns The chrome
  * @example
  * ```tsx
  * <DocsChrome part="docs" />
  * ```
  */
-export function DocsChrome({ part }: { part: SitePart }) {
+export function DocsChrome({ part }: { part?: SitePart | undefined }) {
   const search = useSearchDialog()
   const [menu, setMenu] = useState(false)
   const menuButton = useRef<HTMLButtonElement>(null)

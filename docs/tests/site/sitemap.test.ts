@@ -15,6 +15,7 @@ const { docSlugs, docSource } = await import("@/site/content/docs-files")
 const { sourceMetadata } = await import("@/site/content/source-metadata")
 const { EXAMPLE_PAGES } = await import("@/site/sandbox/example-pages")
 const { sitemapEntries } = await import("@/site/seo/sitemap-entries")
+const { legalUpdated } = await import("@/site/content/legal-files")
 const { default: robots } = await import("@/app/robots")
 cwd.mockRestore()
 
@@ -28,8 +29,9 @@ describe("the sitemap", () => {
     const docs = docSlugs().map((slug) => `${SITE}/docs/${slug.join("/")}`)
     const examples = Object.keys(EXAMPLE_PAGES).map((name) => `${SITE}/docs/examples/${name}`)
     const landing = [`${SITE}/`, `${SITE}/studio`, `${SITE}/mcp`, `${SITE}/reference`]
+    const legal = [`${SITE}/privacy`, `${SITE}/privacy/consent`]
     expect(new Set(urls).size).toBe(urls.length)
-    expect([...urls].sort()).toEqual([...landing, ...docs, ...examples].sort())
+    expect([...urls].sort()).toEqual([...landing, ...docs, ...examples, ...legal].sort())
     expect(urls.every((url) => url.startsWith(`${SITE}/`))).toBe(true)
     expect(urls).not.toContain(`${SITE}/docs`)
   })
@@ -43,6 +45,15 @@ describe("the sitemap", () => {
     expect(entries.find(({ url }) => url.endsWith("/docs/examples/basic"))?.lastModified).toBe(
       undefined
     )
+  })
+
+  it("dates a legal page by the date its text says", () => {
+    for (const name of ["privacy", "consent"] as const) {
+      const updated = legalUpdated(name)
+      expect(updated, name).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      const path = name === "privacy" ? "/privacy" : "/privacy/consent"
+      expect(entries.find(({ url }) => url === `${SITE}${path}`)?.lastModified, name).toBe(updated)
+    }
   })
 
   it("dates the API reference by the newest API page it reads", () => {

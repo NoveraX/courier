@@ -45,7 +45,7 @@ export function ReferenceSidebar({
   markdown,
 }: ReferenceSidebarProps) {
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-56px)] self-start overflow-y-auto pt-6 pr-4 pb-15 [scrollbar-width:thin] min-[1000px]:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-56px-var(--consent-bar-shown,0px))] self-start overflow-y-auto pt-6 pr-4 pb-15 [scrollbar-width:thin] min-[1000px]:block">
       <ExportFilter {...filter} />
       <p className="m-0 mb-2.5 flex items-center gap-1.75 text-label font-semibold text-fg">
         <Package aria-hidden="true" className="size-3.25 text-fg-subtle" />

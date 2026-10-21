@@ -1,4 +1,7 @@
 import type { ReactNode } from "react"
+
+import { cn } from "@/site/cn"
+import { FooterLegal } from "@/site/consent/footer-legal"
 import { PageLink } from "@/site/landing/page-link"
 
 /** A column of a product page's footer: its heading and links. */
@@ -14,7 +17,7 @@ const LINK = "-my-1 py-1 text-control text-fg-subtle hover:text-fg"
 /**
  * A product page's footer — Studio's, the MCP server's: the product's
  * name and what it is, and three columns of links, the product's own
- * first.
+ * first; the last ends with the privacy notice and Cookie settings.
  *
  * @param props - The product's wordmark, its line, and the columns
  * @returns The footer
@@ -39,7 +42,7 @@ export function ProductFooter({
           {brand}
           <span className="max-w-[34ch] text-control leading-[1.55] text-fg-subtle">{line}</span>
         </div>
-        {columns.map((column) => (
+        {columns.map((column, index) => (
           <nav key={column.heading} aria-label={column.heading} className="flex flex-col gap-2.5">
             <span className="text-label font-semibold text-fg-muted">{column.heading}</span>
             {column.links.map((link) =>
@@ -59,6 +62,7 @@ export function ProductFooter({
                 </PageLink>
               )
             )}
+            {index === columns.length - 1 && <FooterLegal className={cn(LINK, "text-left")} />}
           </nav>
         ))}
       </div>

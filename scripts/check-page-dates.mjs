@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /// <reference types="node" />
 /**
- * Check that every docs page whose text changed says when. A page under
- * docs/src/content/docs that a change rewrote, beyond its own date, must
- * write an `updated` date no older than the day the change was written:
- * the site shows the date on the page and hands it to search engines.
+ * Check that every docs and legal page whose text changed says when. A
+ * page under docs/src/content/docs or docs/src/content/legal that a change
+ * rewrote, beyond its own date, must write an `updated` date no older than
+ * the day the change was written: the site shows the date on the page and
+ * hands it to search engines, and a legal page's date is the one its terms
+ * have held since.
  *
  *   node scripts/check-page-dates.mjs [--fix] [<base>] [<head>]
  *
@@ -23,7 +25,7 @@ import { fileURLToPath } from "node:url";
 import { dateProblem, pageDate, pageText, withPageDate } from "./page-dates.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const PAGES = "docs/src/content/docs";
+const PAGES = ["docs/src/content/docs", "docs/src/content/legal"];
 
 function git(repo, ...args) {
   return execFileSync("git", ["-C", repo, ...args], {
@@ -61,7 +63,16 @@ function mergeBase(repo, base, head) {
 
 /** The pages a change touched, each with the path it had before a rename. */
 function changedPages(repo, base, head) {
-  const diff = git(repo, "diff", "--name-status", "-M", base, ...(head ? [head] : []), "--", PAGES);
+  const diff = git(
+    repo,
+    "diff",
+    "--name-status",
+    "-M",
+    base,
+    ...(head ? [head] : []),
+    "--",
+    ...PAGES,
+  );
   const pages = diff
     .split("\n")
     .filter((line) => line.endsWith(".mdx"))
@@ -71,7 +82,7 @@ function changedPages(repo, base, head) {
       to ? { path: to, before: from } : { path: from, before: status === "A" ? null : from },
     );
   if (head) return pages;
-  const untracked = git(repo, "ls-files", "--others", "--exclude-standard", "--", PAGES);
+  const untracked = git(repo, "ls-files", "--others", "--exclude-standard", "--", ...PAGES);
   const added = untracked.split("\n").filter((path) => path.endsWith(".mdx"));
   return [...pages, ...added.map((path) => ({ path, before: null }))];
 }
@@ -99,8 +110,8 @@ function changedOn(repo, base, head, page, today) {
 }
 
 /**
- * The docs pages whose text changed after base without their date saying
- * so — written with today's date instead when `fix` is set.
+ * The docs and legal pages whose text changed after base without their
+ * date saying so — written with today's date instead when `fix` is set.
  *
  * @param {{ repo?: string, base?: string, head?: string, today?: string, fix?: boolean }} options
  * @returns {{ path: string, problem: string }[]} The pages left wrong
@@ -136,10 +147,10 @@ function main() {
     process.exit(2);
   }
   if (problems.length === 0) {
-    console.log("check-page-dates: every docs page whose text changed says when");
+    console.log("check-page-dates: every docs and legal page whose text changed says when");
     return;
   }
-  console.error("\nThese docs pages changed without saying when:\n");
+  console.error("\nThese pages changed without saying when:\n");
   for (const { path, problem } of problems) console.error(`  ${path} ${problem}`);
   console.error(
     '\nSet each page\'s `updated: "YYYY-MM-DD"` to the day you changed it, or run\n  npm run check:page-dates -- --fix\n',

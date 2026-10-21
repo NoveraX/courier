@@ -14,8 +14,8 @@ export interface PageCard {
 
 /**
  * The social card of every page the site draws one for, by address: the
- * docs pages under their section, the examples, the API reference and the
- * Studio and MCP pages. The home page draws its own.
+ * docs pages under their section, the examples, the API reference, the
+ * Studio and MCP pages and the legal pages. The home page draws its own.
  *
  * @returns The cards, by address
  * @example
@@ -25,7 +25,8 @@ export interface PageCard {
  */
 export function pageCards(): Map<string, PageCard> {
   const cards = new Map<string, PageCard>()
-  for (const page of [SITE_PAGES.studio, SITE_PAGES.mcp, SITE_PAGES.reference]) {
+  const { studio, mcp, reference, privacy, consent } = SITE_PAGES
+  for (const page of [studio, mcp, reference, privacy, consent]) {
     cards.set(page.path, { ...page.card, description: page.description })
   }
   for (const slug of docSlugs()) {

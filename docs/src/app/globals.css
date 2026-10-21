@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../site/tokens.css";
 @import "../site/overlays.css";
+@import "../site/consent/consent-bar.css";
 @import "../site/landing/landing.css";
 @import "../site/studio-landing/studio-landing.css";

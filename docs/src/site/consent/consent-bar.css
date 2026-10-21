@@ -1,0 +1,36 @@
+/* The consent bar is in every page and shows only while the root element carries
+   data-consent-bar, set before the first paint and kept by the page's code after it. */
+[data-consent-banner] {
+  display: none;
+}
+
+html[data-consent-bar] [data-consent-banner] {
+  display: block;
+}
+
+/* Room for the bar: its measured height once the page's code runs, and before that its
+   usual height, so nothing the reader can reach ends under it. */
+:root {
+  --consent-bar: 9rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --consent-bar: 3.5rem;
+  }
+}
+
+html[data-consent-bar] {
+  --consent-bar-shown: var(--consent-bar);
+  scroll-padding-bottom: calc(var(--consent-bar) + 1rem);
+}
+
+html[data-consent-bar] body {
+  padding-bottom: var(--consent-bar);
+}
+
+@media print {
+  html[data-consent-bar] body {
+    padding-bottom: 0;
+  }
+}

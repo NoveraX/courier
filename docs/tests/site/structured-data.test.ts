@@ -20,6 +20,7 @@ import {
   docsGraph,
   homeGraph,
   landingGraph,
+  legalGraph,
   referenceGraph,
 } from "@/site/seo/structured-data/page-graphs"
 
@@ -145,6 +146,26 @@ describe("the graphs", () => {
     )
     expectWhole(studio)
     expectWhole(reference)
+  })
+
+  it("describe a legal page as about the site, the consent on the way through the notice", () => {
+    const privacy = legalGraph(SITE_PAGES.privacy, "2026-10-21")
+    const consent = legalGraph(SITE_PAGES.consent, undefined)
+    const notice = privacy.find((node) => node["@type"] === "WebPage")
+    expect(notice?.about).toEqual({ "@id": `${SITE}/#website` })
+    expect(notice?.dateModified).toBe("2026-10-21")
+    expect(consent.find((node) => node["@type"] === "WebPage")).not.toHaveProperty("dateModified")
+    expect(crumbs(privacy)).toEqual([
+      ["Courier", "/"],
+      ["Privacy notice", "/privacy"],
+    ])
+    expect(crumbs(consent)).toEqual([
+      ["Courier", "/"],
+      ["Privacy notice", "/privacy"],
+      ["Consent to analytics", "/privacy/consent"],
+    ])
+    expectWhole(privacy)
+    expectWhole(consent)
   })
 
   it("are whole for every docs page and example", () => {

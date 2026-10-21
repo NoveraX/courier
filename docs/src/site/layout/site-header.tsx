@@ -20,8 +20,8 @@ const PARTS: readonly { part: SitePart; label: string; href: string }[] = [
 ]
 
 interface SiteHeaderProps {
-  /** The part the page is in, lit in the switch beside the logo. */
-  part: SitePart
+  /** The part the page is in, lit in the switch beside the logo; none for a page in neither. */
+  part?: SitePart | undefined
   onSearch: () => void
   onMenu: () => void
   /** The Search button, which search gives focus back to as it closes. */

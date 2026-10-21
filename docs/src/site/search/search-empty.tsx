@@ -18,11 +18,13 @@ export function SearchEmpty({ query }: { query: string }) {
       <p className="m-0 text-control text-fg-muted">Nothing matches “{query}”</p>
       <p className="m-0 mt-1.5 text-small text-fg-subtle">
         Try other words, or{" "}
+        {/* The link carries what was typed, which the analytics counter, told of every link
+            followed out of the site, is kept from reading. */}
         <a
           href={issue}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-fg-muted underline decoration-line-strong underline-offset-2 transition-colors hover:text-fg"
+          className="ym-disable-tracklink text-fg-muted underline decoration-line-strong underline-offset-2 transition-colors hover:text-fg"
         >
           tell us what you were looking for
         </a>

@@ -193,7 +193,7 @@
     "compression": "^1.8.2",
     "express": "^5.1.0",
     "open": "^11.0.4",
-    "oxc-parser": "0.153.0",
+    "oxc-parser": "0.154.0",
     "socket.io": "^4.8.3",
     "yaml": "^2.9.1"
   },

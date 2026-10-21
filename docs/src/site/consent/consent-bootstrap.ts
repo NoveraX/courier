@@ -4,6 +4,7 @@ import {
   CONSENT_MAX_AGE_MS,
   CONSENT_VERSION,
 } from "./consent-config"
+import { scriptLiteral } from "./script-literal"
 
 /**
  * The attribute the page's root element carries while the consent bar is
@@ -27,9 +28,5 @@ export const CONSENT_BAR_ATTRIBUTE = "data-consent-bar"
  * ```
  */
 export function consentBootstrap(): string {
-  return `(function(){try{var n=navigator;if(n.globalPrivacyControl===true||n.doNotTrack==="1")return;var r=JSON.parse(localStorage.getItem(${JSON.stringify(
-    CONSENT_KEY
-  )})||"null");if(r&&r.version===${CONSENT_VERSION}&&(r.choice==="granted"||r.choice==="denied")&&typeof r.decided==="number"&&isFinite(r.decided)){var a=Date.now()-r.decided;if(a<=${CONSENT_MAX_AGE_MS}&&a>=-${CONSENT_CLOCK_SKEW_MS})return}}catch(e){}document.documentElement.setAttribute(${JSON.stringify(
-    CONSENT_BAR_ATTRIBUTE
-  )},"")})()`
+  return `(function(){try{var n=navigator;if(n.globalPrivacyControl===true||n.doNotTrack==="1")return;var r=JSON.parse(localStorage.getItem(${scriptLiteral(CONSENT_KEY)})||"null");if(r&&r.version===${CONSENT_VERSION}&&(r.choice==="granted"||r.choice==="denied")&&typeof r.decided==="number"&&isFinite(r.decided)){var a=Date.now()-r.decided;if(a<=${CONSENT_MAX_AGE_MS}&&a>=-${CONSENT_CLOCK_SKEW_MS})return}}catch(e){}document.documentElement.setAttribute(${scriptLiteral(CONSENT_BAR_ATTRIBUTE)},"")})()`
 }

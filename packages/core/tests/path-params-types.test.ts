@@ -33,6 +33,13 @@ describe("the names of a path's parameters", () => {
     expectTypeOf<PathParamNames<"wss://host.test:9000">>().toBeNever();
     expectTypeOf<PathParamNames<":proto://host/:id">>().toEqualTypeOf<"proto" | "id">();
   });
+
+  it("are not read in a query or a fragment the path writes", () => {
+    expectTypeOf<PathParamNames<"users/:id?expand=:what">>().toEqualTypeOf<"id">();
+    expectTypeOf<PathParamNames<"search?q=:term#:frag">>().toBeNever();
+    expectTypeOf<PathParamNames<"https://api.test?x=/:y">>().toBeNever();
+    expectTypeOf<PathParamNames<"a#b?c=:d">>().toBeNever();
+  });
 });
 
 describe("a path with a colon it sends as written", () => {

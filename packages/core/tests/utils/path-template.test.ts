@@ -99,6 +99,25 @@ describe("pathPieces", () => {
   });
 });
 
+describe("a path's query and fragment", () => {
+  it("hold no parameter, and are sent as written, a doubled colon too", () => {
+    expect(pathParamNames("users/:id?expand=:what")).toEqual(["id"]);
+    expect(pathParamNames("search?q=:term#:frag")).toEqual([]);
+    expect(fillPathParams("users/:id?expand=:what&at=a::b", () => "7")).toBe(
+      "users/7?expand=:what&at=a::b",
+    );
+    expect(fillPathParams("https://api.test?x=/:y", marked)).toBe("https://api.test?x=/:y");
+  });
+
+  it("are text in the pieces, after the last parameter", () => {
+    expect(pathPieces("items/:id?sort=:field")).toEqual([
+      { kind: "text", text: "items/" },
+      { kind: "param", name: "id" },
+      { kind: "text", text: "?sort=:field" },
+    ]);
+  });
+});
+
 describe("escapePathText", () => {
   it("writes text so that the path sends it as written", () => {
     const path = escapePathText("index:inspect");

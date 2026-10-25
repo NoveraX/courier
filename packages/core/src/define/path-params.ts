@@ -60,6 +60,15 @@ type IsScheme<TScheme extends string> = TScheme extends `${infer C}${infer TTail
     : false
   : false;
 
+/* A path up to its query or fragment, which hold no parameter. */
+type BeforeQuery<TPath extends string> = TPath extends `${infer THead}?${string}`
+  ? BeforeFragment<THead>
+  : BeforeFragment<TPath>;
+
+type BeforeFragment<TPath extends string> = TPath extends `${infer THead}#${string}`
+  ? THead
+  : TPath;
+
 /* The part of a path its parameters are read from: an absolute URL's scheme and host hold none. */
 type LocalPart<TPath extends string> = TPath extends `${infer TScheme}://${infer TAfter}`
   ? IsScheme<TScheme> extends true
@@ -79,18 +88,20 @@ type NamesIn<TPath extends string> = TPath extends `${string}:${infer TRest}`
 /**
  * The names of a path's `:name` parameters, read as the request is built: a
  * letter or `_`, then letters, digits and `_`. `::` is one colon the path
- * sends as written, and an absolute URL's scheme and host hold no
- * parameter. A path known only as `string` names none.
+ * sends as written, and neither an absolute URL's scheme and host nor a
+ * query or fragment the path writes holds a parameter. A path known only as
+ * `string` names none.
  *
  * @example
  * ```ts
  * type Names = PathParamNames<"orgs/:orgId/users/:id.json">; // "orgId" | "id"
  * type Google = PathParamNames<"v1/:name::cancel">; // "name"
+ * type Query = PathParamNames<"users/:id?expand=:what">; // "id"
  * ```
  */
 export type PathParamNames<TPath extends string> = string extends TPath
   ? never
-  : NamesIn<LocalPart<TPath>>;
+  : NamesIn<LocalPart<BeforeQuery<TPath>>>;
 
 /** What a type error names when variables leave out a path's parameters. */
 export interface PathParamsMissing<TNames extends string> {

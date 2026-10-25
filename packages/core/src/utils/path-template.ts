@@ -7,7 +7,9 @@
  * `index::inspect` is sent as `index:inspect`. Any other colon, one before
  * a digit, a dash or the end, is sent as written. The scheme and host of an
  * absolute URL are never read, so a port or an IPv6 address holds no
- * parameter.
+ * parameter; nor does a query or a fragment the path writes after `?` or
+ * `#`, which is text — a read's variables go to its query string
+ * themselves.
  */
 
 /** A piece of a path: text it sends as written, or a parameter filled from the variables. */
@@ -15,12 +17,23 @@ export type PathPiece =
   | { readonly kind: "text"; readonly text: string }
   | { readonly kind: "param"; readonly name: string };
 
-const PIECE = /::|:([a-zA-Z_][a-zA-Z0-9_]*)/g;
-const ORIGIN = /^[a-z][a-z\d+.-]*:\/\/[^/]*/i;
+/** A path cut where its parameters are read: an absolute URL's scheme and host before, its query and fragment after. */
+interface PathParts {
+  readonly origin: string;
+  readonly local: string;
+  readonly rest: string;
+}
 
-/* The scheme and host of an absolute URL, read as text; `""` for a path. */
-function originOf(path: string): string {
-  return ORIGIN.exec(path)?.[0] ?? "";
+const PIECE = /::|:([a-zA-Z_][a-zA-Z0-9_]*)/g;
+const ORIGIN = /^[a-z][a-z\d+.-]*:\/\/[^/?#]*/i;
+const QUERY_OR_FRAGMENT = /[?#]/;
+
+function partsOf(path: string): PathParts {
+  const origin = ORIGIN.exec(path)?.[0] ?? "";
+  const after = path.slice(origin.length);
+  const end = after.search(QUERY_OR_FRAGMENT);
+  if (end < 0) return { origin, local: after, rest: "" };
+  return { origin, local: after.slice(0, end), rest: after.slice(end) };
 }
 
 /**
@@ -32,11 +45,12 @@ function originOf(path: string): string {
  * ```ts
  * pathParamNames("orgs/:orgId/users/:id.json"); // → ["orgId", "id"]
  * pathParamNames("v1/:name::cancel"); // → ["name"]
+ * pathParamNames("users?sort=:field"); // → []
  * ```
  */
 export function pathParamNames(path: string): string[] {
   const names: string[] = [];
-  for (const match of path.slice(originOf(path).length).matchAll(PIECE)) {
+  for (const match of partsOf(path).local.matchAll(PIECE)) {
     if (match[1] !== undefined) names.push(match[1]);
   }
   return names;
@@ -53,16 +67,15 @@ export function pathParamNames(path: string): string[] {
  * ```ts
  * fillPathParams("v1/:name::cancel", () => "op-1"); // → "v1/op-1:cancel"
  * fillPathParams("v1/urlInspection/index::inspect", () => ""); // → "v1/urlInspection/index:inspect"
+ * fillPathParams("items/:id?expand=:what", () => "7"); // → "items/7?expand=:what"
  * ```
  */
 export function fillPathParams(path: string, fill: (name: string) => string): string {
-  const origin = originOf(path);
-  return (
-    origin +
-    path
-      .slice(origin.length)
-      .replace(PIECE, (_piece, name: string | undefined) => (name === undefined ? ":" : fill(name)))
+  const { origin, local, rest } = partsOf(path);
+  const filled = local.replace(PIECE, (_piece, name: string | undefined) =>
+    name === undefined ? ":" : fill(name),
   );
+  return `${origin}${filled}${rest}`;
 }
 
 /**
@@ -79,8 +92,7 @@ export function fillPathParams(path: string, fill: (name: string) => string): st
  * ```
  */
 export function pathPieces(path: string): PathPiece[] {
-  const origin = originOf(path);
-  const local = path.slice(origin.length);
+  const { origin, local, rest } = partsOf(path);
   const pieces: PathPiece[] = [];
   let text = origin;
   let from = 0;
@@ -96,7 +108,7 @@ export function pathPieces(path: string): PathPiece[] {
     pieces.push({ kind: "param", name });
     text = "";
   }
-  text += local.slice(from);
+  text += local.slice(from) + rest;
   if (text !== "") pieces.push({ kind: "text", text });
   return pieces;
 }

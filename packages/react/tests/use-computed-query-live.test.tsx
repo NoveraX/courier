@@ -17,10 +17,15 @@ type User = { id: string; name: string };
 
 let server: TestServer;
 let queryClient: QueryClient;
-let listDelay: number;
-/* When set, the stream sends its events only once the list has been answered. */
+/* When set, the stream sends its events only once the list's answer has rendered. */
 let listAnswered: Promise<void> | undefined;
-let answerList: () => void = () => {};
+/* Otherwise the list is answered only once the stream has sent its events. */
+let changesSent: Promise<void>;
+let sentChanges: () => void = () => {};
+
+/* The list and the stream come over real sockets, which on a busy machine
+   takes longer than the one second waitFor waits by default. */
+const SOCKETS = { timeout: 3000 };
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client: queryClient }, children);
@@ -29,12 +34,18 @@ function wrapper({ children }: { children: ReactNode }) {
 function sendChanges(res: ServerResponse) {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   res.write(": open\n\n");
+  const events = [1, 2].map(
+    (n) => `id: ${n}\ndata: ${JSON.stringify({ id: `c${n}`, name: `Changed ${n}` })}\n\n`,
+  );
+  if (!listAnswered) {
+    /* Both in one write, so the list cannot come between them. */
+    res.write(events.join(""), () => sentChanges());
+    return;
+  }
   const timers: ReturnType<typeof setTimeout>[] = [];
-  const gap = listAnswered ? 100 : 50;
-  void (listAnswered ?? Promise.resolve()).then(() => {
-    for (const n of [1, 2]) {
-      const event = JSON.stringify({ id: `c${n}`, name: `Changed ${n}` });
-      timers.push(setTimeout(() => res.write(`id: ${n}\ndata: ${event}\n\n`), n * gap));
+  void listAnswered.then(() => {
+    for (const [at, event] of events.entries()) {
+      timers.push(setTimeout(() => res.write(event), (at + 1) * 100));
     }
   });
   res.on("close", () => {
@@ -54,14 +65,18 @@ function makeCaller() {
 }
 
 beforeEach(async () => {
-  listDelay = 300;
   listAnswered = undefined;
+  changesSent = new Promise((resolve) => {
+    sentChanges = resolve;
+  });
   server = await startTestServer((_req, res, url) => {
     if (url.pathname === "/users/changes") return sendChanges(res);
-    setTimeout(() => {
-      sendJson(res, [{ id: "1", name: "Alice" }]);
-      answerList();
-    }, listDelay);
+    const answer = () => sendJson(res, [{ id: "1", name: "Alice" }]);
+    /* Waiting for the events rather than a fixed time: on a busy machine the
+       stream can open after any delay chosen here. Then a moment for the
+       client to take them in before the list. */
+    if (listAnswered) answer();
+    else void changesSent.then(() => setTimeout(answer, 100));
   });
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 });
@@ -87,8 +102,14 @@ describe("useComputedQuery against a real list and stream", () => {
       { wrapper },
     );
 
-    await waitFor(() =>
-      expect(result.current.data?.map((u) => u.name)).toEqual(["Alice", "Changed 1", "Changed 2"]),
+    await waitFor(
+      () =>
+        expect(result.current.data?.map((u) => u.name)).toEqual([
+          "Alice",
+          "Changed 1",
+          "Changed 2",
+        ]),
+      SOCKETS,
     );
     expect(seen.filter((entry) => entry.startsWith("success")).at(0)).toBe(
       "success:Alice,Changed 1,Changed 2",
@@ -96,9 +117,11 @@ describe("useComputedQuery against a real list and stream", () => {
   });
 
   it("merges events that arrive after the first fetch straight away", async () => {
-    listDelay = 0;
+    let rendered: () => void = () => {};
+    /* Once the list has rendered, not once it is sent: a client still taking the list in
+       would hold the first event and fold it into the first answer. */
     listAnswered = new Promise((resolve) => {
-      answerList = resolve;
+      rendered = resolve;
     });
     const q = makeCaller();
     const seen: string[] = [];
@@ -109,6 +132,7 @@ describe("useComputedQuery against a real list and stream", () => {
           mapper: (current, event) => [...(current ?? []), event.data],
         });
         seen.push(`${query.status}:${(query.data ?? []).map((u) => u.name).join(",")}`);
+        if (query.status === "success") rendered();
         return query;
       },
       { wrapper },
@@ -116,8 +140,14 @@ describe("useComputedQuery against a real list and stream", () => {
 
     /* The list first, alone, then the events on top of it. Each render is
        logged, not caught by polling, which a busy machine can miss. */
-    await waitFor(() =>
-      expect(result.current.data?.map((u) => u.name)).toEqual(["Alice", "Changed 1", "Changed 2"]),
+    await waitFor(
+      () =>
+        expect(result.current.data?.map((u) => u.name)).toEqual([
+          "Alice",
+          "Changed 1",
+          "Changed 2",
+        ]),
+      SOCKETS,
     );
     expect(seen.filter((entry) => entry.startsWith("success")).at(0)).toBe("success:Alice");
   });

@@ -53,16 +53,28 @@ async function listen(maxConnectionsPerIP: number): Promise<number> {
   return (server.address() as AddressInfo).port;
 }
 
-/** "open", or the close code a connection from `host` gets. */
+/**
+ * "open", the close code a connection from `host` gets, or "silent" when it
+ * gets neither within two seconds. A connection over the cap is closed as the
+ * server takes it and answers nothing, while one it keeps answers a ping — so
+ * a busy machine, slow to close, cannot pass a refused connection off as open,
+ * as a fixed wait for the close did, and a server that answers neither fails
+ * the test by what it did rather than by the test's own time running out.
+ */
 function connect(host: string, port: number): Promise<string> {
   return new Promise((resolve) => {
     const client = new WebSocket(`ws://${host}:${port}/api/ws`);
     clients.push(client);
-    const opened = setTimeout(() => resolve("open"), 300);
-    client.on("close", (code) => {
-      clearTimeout(opened);
-      resolve(`close:${code}`);
+    const silent = setTimeout(() => resolve("silent"), 2000);
+    const finish = (outcome: string): void => {
+      clearTimeout(silent);
+      resolve(outcome);
+    };
+    client.on("open", () => client.send(JSON.stringify({ type: "ping" })));
+    client.on("message", (frame) => {
+      if ((JSON.parse(String(frame)) as { type?: string }).type === "pong") finish("open");
     });
+    client.on("close", (code) => finish(`close:${code}`));
     client.on("error", () => undefined);
   });
 }
@@ -90,7 +102,8 @@ describe("the per-address WebSocket cap behind Hono", () => {
       connect("127.0.0.1", port),
     ]);
 
-    expect(outcomes.filter((outcome) => outcome === "close:4429")).toHaveLength(1);
+    /* Which of the three is refused is a race; that the other two are kept is not. */
+    expect([...outcomes].sort()).toEqual(["close:4429", "open", "open"]);
   });
 });
 

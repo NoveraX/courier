@@ -32,6 +32,10 @@ const OPTIONS: ts.CompilerOptions = {
   types: ["vitest/globals"],
 };
 
+/* A program compiled against the packages' declarations: a fraction of a
+   second alone, seconds more beside a full run with coverage. */
+const COMPILE_TIMEOUT = 60_000;
+
 /** The first TypeScript block under a README heading. */
 function snippetUnder(heading: string): string {
   const section = README.indexOf(`\n${heading}\n`);
@@ -68,16 +72,24 @@ afterAll(() => {
 });
 
 describe("the core README", () => {
-  it("has a Testing snippet that compiles", () => {
-    const file = write("testing.test.ts", `${snippetUnder("## Testing")}\nexport {}\n`);
+  it(
+    "has a Testing snippet that compiles",
+    () => {
+      const file = write("testing.test.ts", `${snippetUnder("## Testing")}\nexport {}\n`);
 
-    expect(diagnostics(file)).toEqual([]);
-  });
+      expect(diagnostics(file)).toEqual([]);
+    },
+    COMPILE_TIMEOUT,
+  );
 
-  it("has a Building Server Adapters snippet that compiles", () => {
-    const snippet = snippetUnder("## Building Server Adapters");
-    const file = write("adapter.ts", `${snippet}\nexport {}\n`);
+  it(
+    "has a Building Server Adapters snippet that compiles",
+    () => {
+      const snippet = snippetUnder("## Building Server Adapters");
+      const file = write("adapter.ts", `${snippet}\nexport {}\n`);
 
-    expect(diagnostics(file)).toEqual([]);
-  });
+      expect(diagnostics(file)).toEqual([]);
+    },
+    COMPILE_TIMEOUT,
+  );
 });

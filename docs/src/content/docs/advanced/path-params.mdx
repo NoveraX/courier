@@ -1,4 +1,4 @@
-export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with the :param syntax, filled from the variables or pathOptions, and a colon sent as written for Google-style methods.", mode: "both", updated: "2026-10-19" }
+export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with the :param syntax, filled from the variables or pathOptions, and a colon sent as written for Google-style methods.", mode: "both", updated: "2026-10-25" }
 
 ## Basic syntax
 
@@ -59,6 +59,7 @@ Variables that fill no parameter by name — a form, a raw body, a list — are 
 - A colon before anything else — a digit, a dash, the end of the path — is sent as written: `at/12:30`.
 - `::` is one colon sent as written, even before a name. See the next section.
 - The scheme and host of an absolute URL are never read: a port or an IPv6 address, as in `https://[2001:db8::1]:8443/users/:id`, holds no parameter.
+- A query written into the path is sent as written, a `:name` or a `::` in it too: `items?sort=:field` asks for no variable. A read's variables go to its query string themselves, beside the ones the path fixes.
 
 The types read a path the same way, so the variables an endpoint asks for are the parameters its requests fill.
 

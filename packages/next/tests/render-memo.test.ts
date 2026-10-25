@@ -7,8 +7,10 @@ import { courier, defineApi } from "@noverax/courier/define";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { echo, startUpstream, type Upstream } from "../../core/tests/helpers/upstream";
+import { createServerCaller } from "../src/server-caller";
 
-/* One render: React's cache hands out the same value for the whole of it. */
+/* One render: React's cache hands out the same value for the whole of it.
+   Hoisted above the imports, so the server caller is built on it. */
 vi.mock("react", () => ({
   cache: <TValue>(make: () => TValue) => {
     let made: TValue | undefined;
@@ -30,7 +32,6 @@ afterEach(async () => {
 
 describe("createServerCaller within one render", () => {
   it("reads once what the page's metadata and its body both read, and anew after a write", async () => {
-    const { createServerCaller } = await import("../src/server-caller");
     upstream = await startUpstream(echo);
     const site = createServerCaller(
       defineApi({

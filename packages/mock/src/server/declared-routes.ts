@@ -1,6 +1,7 @@
 import { sendsVariablesInQuery } from "@noverax/courier/internal";
 import type { Context, Hono } from "hono";
 
+import { byFixedQuery, carriesFixedQuery, withoutFixedQuery } from "./fixed-query";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { RAW_BESIDE_PATH_VALUES } from "./raw-body-refusal";
 import { type BodyRefusal, bodyValue, type RequestBody } from "./read-request-body";
@@ -92,21 +93,6 @@ function needsOwnRoute(ep: MappedEndpoint): boolean {
   return isServedHttp(ep) && !servedByCatchAll(ep);
 }
 
-function carriesFixedQuery(url: string, fixed: MappedEndpoint["fixedQuery"]): boolean {
-  if (fixed === undefined) return true;
-  const query = new URL(url).searchParams;
-  return Object.entries(fixed).every(([name, value]) => query.getAll(name).includes(value));
-}
-
-/* The variables without the values the path fixes, which no variable declares. */
-function withoutFixedQuery(
-  input: Record<string, unknown>,
-  fixed: MappedEndpoint["fixedQuery"],
-): Record<string, unknown> {
-  if (fixed === undefined) return input;
-  return Object.fromEntries(Object.entries(input).filter(([name]) => !Object.hasOwn(fixed, name)));
-}
-
 /* An HTTP endpoint with a verb the mock serves. */
 function isServedHttp(ep: MappedEndpoint): boolean {
   if (ep.transport === "sse" || ep.transport === "ws") return false;
@@ -122,8 +108,7 @@ function headFirst(a: MappedEndpoint, b: MappedEndpoint): number {
 /** Fixed segments sort before parameters, position by position */
 function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
   /* At one path, the endpoint whose query is fixed comes first: the other takes what is left. */
-  const fixes = (ep: MappedEndpoint) => Object.keys(ep.fixedQuery ?? {}).length;
-  return specificity(a.path).localeCompare(specificity(b.path)) || fixes(b) - fixes(a);
+  return specificity(a.path).localeCompare(specificity(b.path)) || byFixedQuery(a, b);
 }
 
 /**

@@ -1,5 +1,6 @@
 import { logger } from "@noverax/courier";
 
+import { byFixedQuery, carriesFixedQuery } from "../fixed-query";
 import { matchPath } from "../match-path";
 import type { PrefixMapping } from "../prefix-route-types";
 import { parseQueryParams } from "../route-helpers";
@@ -10,6 +11,8 @@ export interface WSRoute {
   method: string;
   /** Parameters the endpoint's path captured (`:room` → `{ room }`) */
   params: Record<string, string>;
+  /** Query values the endpoint's path fixes, which its variables leave out */
+  fixedQuery?: Readonly<Record<string, string>> | undefined;
 }
 
 /**
@@ -18,7 +21,9 @@ export interface WSRoute {
  * Matches the path after the group prefix against each WS endpoint's
  * declared path — the one a direct client connects to — so
  * `channel.connect("ws-room")` named `room` answers `/chat/ws-room`. A
- * mapping that lists only method names is matched by name.
+ * query the path writes is matched as an HTTP endpoint's is: the path before
+ * it routes, and the channel answers only a request that carries the
+ * query's values. A mapping that lists only method names is matched by name.
  * Returns null when no mapping matches the path.
  */
 export function resolveWSRoute(url: string, mappings: PrefixMapping[]): WSRoute | null {
@@ -30,18 +35,21 @@ export function resolveWSRoute(url: string, mappings: PrefixMapping[]): WSRoute 
     if (!pathname.startsWith(`${prefix}/`)) continue;
 
     const tail = pathname.slice(prefix.length + 1);
-    const route = mapping.endpoints ? byDeclaredPath(mapping, tail) : byName(mapping, tail);
+    const route = mapping.endpoints ? byDeclaredPath(mapping, tail, url) : byName(mapping, tail);
     if (route) return route;
   }
 
   return null;
 }
 
-function byDeclaredPath(mapping: PrefixMapping, tail: string): WSRoute | null {
-  for (const ep of mapping.endpoints ?? []) {
-    if (ep.transport !== "ws") continue;
+function byDeclaredPath(mapping: PrefixMapping, tail: string, url: string): WSRoute | null {
+  /* At one path, the channel whose query is fixed comes first: the other takes what is left. */
+  for (const ep of [...(mapping.endpoints ?? [])].sort(byFixedQuery)) {
+    if (ep.transport !== "ws" || !carriesFixedQuery(url, ep.fixedQuery)) continue;
     const params = matchPath(ep.path || ep.name, tail);
-    if (params) return { group: mapping.group, method: ep.name, params };
+    if (!params) continue;
+    const { fixedQuery } = ep;
+    return { group: mapping.group, method: ep.name, params, ...(fixedQuery && { fixedQuery }) };
   }
   return null;
 }

@@ -12,6 +12,7 @@ import {
   headersOf,
   PROXY_WS_PATH,
 } from "../channel-sockets";
+import { withoutFixedQuery } from "../fixed-query";
 import type { PrefixMapping } from "../prefix-route-types";
 import type { RequestHooks } from "../route-types";
 import { WSConnectionRegistry } from "./connection-registry";
@@ -155,7 +156,8 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
       return;
     }
 
-    const variables = { ...parseVariablesFromUrl(url), ...route.params };
+    const query = withoutFixedQuery(parseVariablesFromUrl(url), route.fixedQuery);
+    const variables = { ...query, ...route.params };
     const opening = {
       headers: headersOf(req),
       path: requestPath(url) ?? url,

@@ -5,6 +5,7 @@
 
 import type { Hono } from "hono";
 
+import { byFixedQuery, carriesFixedQuery, withoutFixedQuery } from "./fixed-query";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { parsePathParams, parseQueryParams } from "./route-helpers";
 import { routePath } from "./route-path";
@@ -16,7 +17,9 @@ import { routePath } from "./route-path";
  * `stream.get("stream")` is requested at `/{prefix}/stream`, and a path
  * parameter is filled in from the call's variables — so the mock serves it
  * there. The rest of the variables arrive as the query string; both are
- * forwarded to the stream function.
+ * forwarded to the stream function. A query the path writes is routed by
+ * the path before it, as an HTTP endpoint's is: the stream answers only a
+ * request that carries the query's values, which its variables leave out.
  *
  * Must be called before `/:id` to prevent the catch-all from matching first.
  *
@@ -39,13 +42,16 @@ export function registerSSERoutes(
   group: string,
   config: PrefixRouteConfig,
 ): void {
-  for (const ep of endpoints) {
-    if (ep.transport !== "sse") continue;
-
+  /* At one path, the stream whose query is fixed comes first: the other takes what is left. */
+  for (const ep of endpoints.filter((e) => e.transport === "sse").sort(byFixedQuery)) {
     const { route, params } = routePath(`${prefix}/${ep.path || ep.name}`);
-    app.get(route, (c) => {
+    app.get(route, (c, next) => {
+      if (!carriesFixedQuery(c.req.url, ep.fixedQuery)) return next();
       const query = parseQueryParams(new URL(c.req.url).searchParams);
-      const variables = { ...query, ...parsePathParams(params(c.req.param())) };
+      const variables = {
+        ...withoutFixedQuery(query, ep.fixedQuery),
+        ...parsePathParams(params(c.req.param())),
+      };
       return config.handleRequest(c, group, ep.name, variables);
     });
   }

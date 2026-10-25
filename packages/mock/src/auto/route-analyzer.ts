@@ -124,17 +124,20 @@ function analyzeEndpoint(
   // path they declare, where a direct client connects (`stream.get("feed")`
   // → /notifications/feed), or at their name when they declare none.
   if (transport === "sse" || transport === "ws") {
-    const path = realtimePath(endpointFn, endpointName);
-    const fullPath = `${prefix}/${path}`.replace(/\/+/g, "/");
+    /* A query its path writes is sent as written: it is routed by the path before it. */
+    const declared = splitQuery(realtimePath(endpointFn, endpointName));
+    const path = declared.path.split("/").filter(Boolean).join("/") || endpointName;
+    const at = `${prefix}/${path}`.replace(/\/+/g, "/");
     routes.push({
       group: groupName,
       endpoint: endpointName,
       httpMethod: "GET",
       prefix,
       path,
-      fullPath,
+      fullPath: declared.query ? `${at}?${declared.query}` : at,
       hasIdParam: false,
       operation: "custom",
+      ...(declared.fixed && { fixedQuery: declared.fixed }),
       responseSchema: schema?.response,
       variablesSchema: schema?.variables,
       type: schema?.type,

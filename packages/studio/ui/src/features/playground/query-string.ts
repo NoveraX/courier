@@ -28,6 +28,24 @@ export function queryString(variables: Readonly<Record<string, unknown>>): strin
   return `?${entries.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join("&")}`;
 }
 
+/**
+ * A URL with a read's query added: after `?` when the URL writes no query of
+ * its own, after `&` when its path writes one already, as the client sends
+ * both.
+ *
+ * @param url - The URL, with the query its path writes
+ * @param query - What `queryString` gave: `?key=value&…`, or `""`
+ * @returns The URL with both queries
+ * @example
+ * ```ts
+ * withQuery("http://x.test/items?sort=asc", "?page=2"); // → "http://x.test/items?sort=asc&page=2"
+ * ```
+ */
+export function withQuery(url: string, query: string): string {
+  if (query === "" || !url.includes("?")) return `${url}${query}`;
+  return `${url}&${query.slice(1)}`;
+}
+
 function pushScalar(entries: [string, string][], key: string, value: unknown): void {
   if (value === undefined || value === null) return;
   entries.push([key, scalarText(value)]);

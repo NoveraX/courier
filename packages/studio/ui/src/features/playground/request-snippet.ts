@@ -7,7 +7,7 @@ import {
 
 import type { SnippetInput } from "@/lib/snippets";
 import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
-import { queryString } from "./query-string";
+import { queryString, withQuery } from "./query-string";
 import type { RequestValues } from "./request-values";
 
 /**
@@ -76,7 +76,7 @@ export function snippetInput(
     : variables;
 
   if (sendsVariablesInQuery(method)) {
-    return { url: filled + queryString(isRecord(rest) ? rest : {}), method, headers };
+    return { url: withQuery(filled, queryString(isRecord(rest) ? rest : {})), method, headers };
   }
   const hasBody = isRecord(rest) ? Object.keys(rest).length > 0 : rest !== undefined;
   return { url: filled, method, headers, ...(hasBody && { body: rest }) };

@@ -61,3 +61,24 @@ export async function stopWS(served: ServedWS | undefined): Promise<void> {
 export function settle(ms = 30): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/**
+ * How many of a server's connections have joined a topic.
+ *
+ * A channel a test opens is subscribed only once its frame has reached the
+ * server. What the channel sends itself waits on its client until the server
+ * confirms the subscription, but a broadcast made before then reaches no one.
+ * Poll this, rather than wait a fixed time a busy machine outlasts, to know
+ * the server has registered the topic.
+ *
+ * @param served - What `serveWS` returned, if it ran
+ * @returns The connections subscribed to at least one topic
+ * @example
+ * ```ts
+ * await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(2);
+ * ```
+ */
+export function subscribers(served: ServedWS | undefined): number {
+  const connections = served?.handler.connections.list() ?? [];
+  return connections.filter((connection) => connection.topicCount > 0).length;
+}

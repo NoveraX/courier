@@ -16,7 +16,7 @@ import type { WSChannelContext } from "../src/realtime/types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeDirectWSChannel } from "../src/transport/in-process/ws-channel";
 import { createPlaygroundWSRegistry } from "../src/transport/in-process/ws-registry";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { type ServedWS, serveWS, settle, stopWS, subscribers } from "./helpers/ws-server";
 
 const { channel } = courier();
 
@@ -70,12 +70,11 @@ describe("a channel's ctx.send", () => {
   it("sends the value as the response schema produces it", async () => {
     served = await serveWS({ room: relay() });
     const alice = join(served.url, "alice");
-    await settle(60);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(1);
 
     alice.ch.send({ say: { n: 1 } });
-    await settle(60);
 
-    expect(alice.data).toEqual([{ n: 1, unit: "ms" }]);
+    await expect.poll(() => alice.data, { timeout: 2000 }).toEqual([{ n: 1, unit: "ms" }]);
     alice.ch.close();
   });
 
@@ -83,13 +82,13 @@ describe("a channel's ctx.send", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     served = await serveWS({ room: relay() });
     const alice = join(served.url, "alice");
-    await settle(60);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(1);
 
     alice.ch.send({ say: { n: "not-a-number" } });
     alice.ch.send({ say: { n: 2 } });
-    await settle(60);
 
-    expect(alice.data).toEqual([{ n: 2, unit: "ms" }]);
+    /* The refusal of the first comes on the same socket before the second's value. */
+    await expect.poll(() => alice.data, { timeout: 2000 }).toEqual([{ n: 2, unit: "ms" }]);
     expect(alice.errors.map((error) => error.code)).toEqual([4422]);
     expect(alice.ch.status).toBe("connected");
     alice.ch.close();
@@ -99,15 +98,16 @@ describe("a channel's ctx.send", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     served = await serveWS({ room: relay(asyncSchema) });
     const alice = join(served.url, "alice");
-    await settle(60);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(1);
 
     alice.ch.send({ say: { n: 1 } });
-    await settle(60);
 
+    await expect
+      .poll(() => alice.errors.map((error) => [error.code, error.message]), { timeout: 2000 })
+      .toEqual([[5000, "Handler error"]]);
+    /* What should never come would come right behind the refusal. */
+    await settle(60);
     expect(alice.data).toEqual([]);
-    expect(alice.errors.map((error) => [error.code, error.message])).toEqual([
-      [5000, "Handler error"],
-    ]);
     alice.ch.close();
   });
 });
@@ -117,12 +117,11 @@ describe("a channel's ctx.broadcast", () => {
     served = await serveWS({ room: relay() });
     const alice = join(served.url, "alice");
     const bob = join(served.url, "bob");
-    await settle(60);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(2);
 
     alice.ch.send({ shout: { n: 3 } });
-    await settle(60);
 
-    expect(bob.data).toEqual([{ n: 3, unit: "ms" }]);
+    await expect.poll(() => bob.data, { timeout: 2000 }).toEqual([{ n: 3, unit: "ms" }]);
     alice.ch.close();
     bob.ch.close();
   });
@@ -132,13 +131,16 @@ describe("a channel's ctx.broadcast", () => {
     served = await serveWS({ room: relay() });
     const alice = join(served.url, "alice");
     const bob = join(served.url, "bob");
-    await settle(60);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(2);
 
     alice.ch.send({ shout: { n: "loud" } });
-    await settle(60);
 
+    await expect
+      .poll(() => alice.errors.map((error) => error.code), { timeout: 2000 })
+      .toEqual([4422]);
+    /* A broadcast that should not go out would reach Bob about when the refusal reaches Alice. */
+    await settle(60);
     expect(bob.data).toEqual([]);
-    expect(alice.errors.map((error) => error.code)).toEqual([4422]);
     alice.ch.close();
     bob.ch.close();
   });

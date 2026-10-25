@@ -16,7 +16,7 @@ import type { RealtimeError } from "../src/realtime/errors";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeDirectWSChannel } from "../src/transport/in-process/ws-channel";
 import { createPlaygroundWSRegistry } from "../src/transport/in-process/ws-registry";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { type ServedWS, serveWS, settle, stopWS, subscribers } from "./helpers/ws-server";
 
 const { channel, stream } = courier();
 
@@ -67,14 +67,23 @@ describe("a channel keyed by room", () => {
     const alice = join(served.url, "r1", "alice");
     const bob = join(served.url, "r1", "bob");
     const carol = join(served.url, "r2", "carol");
-    await settle(80);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(3);
 
     alice.ch.send({ text: "hi from alice" });
-    await settle(80);
 
-    expect(alice.data).toEqual([{ from: "echo", text: "hi from alice" }]);
-    expect(bob.data).toEqual([{ from: "alice", text: "hi from alice" }]);
-    expect(carol.data).toEqual([]);
+    await expect
+      .poll(() => [alice.data, bob.data], { timeout: 2000 })
+      .toEqual([
+        [{ from: "echo", text: "hi from alice" }],
+        [{ from: "alice", text: "hi from alice" }],
+      ]);
+    /* A line that should reach no one else would arrive about when Bob's did. */
+    await settle(80);
+    expect([alice.data, bob.data, carol.data]).toEqual([
+      [{ from: "echo", text: "hi from alice" }],
+      [{ from: "alice", text: "hi from alice" }],
+      [],
+    ]);
     for (const member of [alice, bob, carol]) member.ch.close();
   });
 
@@ -82,12 +91,13 @@ describe("a channel keyed by room", () => {
     served = await serveWS({ room: chatRoom(true) });
     const alice = join(served.url, "r1", "alice");
     const bob = join(served.url, "r1", "bob");
-    await settle(80);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(2);
 
     bob.ch.send({ text: "hi from bob" });
-    await settle(80);
 
-    expect(alice.data).toEqual([{ from: "bob", text: "hi from bob" }]);
+    await expect
+      .poll(() => alice.data, { timeout: 2000 })
+      .toEqual([{ from: "bob", text: "hi from bob" }]);
     alice.ch.close();
     bob.ch.close();
   });
@@ -104,12 +114,12 @@ describe("a channel keyed by room", () => {
     served = await serveWS({ room: broken });
 
     const alice = join(served.url, "r1", "alice");
-    await settle(80);
 
-    expect(alice.errors.map((error) => [error.code, error.message])).toEqual([
-      [5000, "Subscription failed"],
-    ]);
-    expect(alice.ch.status).toBe("disconnected");
+    await expect
+      .poll(() => [alice.errors.map((error) => [error.code, error.message]), alice.ch.status], {
+        timeout: 2000,
+      })
+      .toEqual([[[5000, "Subscription failed"]], "disconnected"]);
   });
 });
 
@@ -118,11 +128,15 @@ describe("a channel without a key", () => {
     served = await serveWS({ room: chatRoom(false) });
     const alice = join(served.url, "r1", "alice");
     const bob = join(served.url, "r1", "bob");
-    await settle(80);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(2);
 
     alice.ch.send({ text: "hi from alice" });
-    await settle(80);
 
+    /* Alice's echo says her line was handled; a broadcast to Bob would come about then. */
+    await expect
+      .poll(() => alice.data, { timeout: 2000 })
+      .toEqual([{ from: "echo", text: "hi from alice" }]);
+    await settle(80);
     expect(bob.data).toEqual([]);
     alice.ch.close();
     bob.ch.close();
@@ -146,9 +160,10 @@ describe("a keyed channel served in-process", () => {
     bob.on("data", (line) => heard.push(line));
 
     alice.send({ text: "hi from alice" });
-    await settle();
 
-    expect(heard).toEqual([{ from: "alice", text: "hi from alice" }]);
+    await expect
+      .poll(() => heard, { timeout: 2000 })
+      .toEqual([{ from: "alice", text: "hi from alice" }]);
     alice.close();
     bob.close();
   });

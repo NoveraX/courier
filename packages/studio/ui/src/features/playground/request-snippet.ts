@@ -1,4 +1,5 @@
 import {
+  encodePathValue,
   fillPathParams,
   pathParamNames,
   sendsVariablesInQuery,
@@ -11,8 +12,9 @@ import { queryString, withQuery } from "./query-string";
 import type { RequestValues } from "./request-values";
 
 /**
- * The URL an endpoint is served at, with its path parameters as `:name`:
- * the source's base URL, then the group's prefix, then the endpoint's path.
+ * The URL an endpoint is served at, with its path parameters as its path
+ * writes them: the source's base URL, then the group's prefix, then the
+ * endpoint's path.
  *
  * @param source - The endpoint's source
  * @param prefix - The prefix of the endpoint's group
@@ -67,9 +69,11 @@ export function snippetInput(
   const { variables, headers } = values;
   const fields = isRecord(variables) ? variables : undefined;
   const params = new Set(pathParamNames(url));
-  const filled = fillPathParams(url, (name) => {
+  const filled = fillPathParams(url, (name, { keepsSlashes, written }) => {
     const value = fields?.[name];
-    return value === undefined || value === "" ? `:${name}` : encodeURIComponent(String(value));
+    return value === undefined || value === ""
+      ? written
+      : encodePathValue(String(value), keepsSlashes);
   });
   const rest = fields
     ? Object.fromEntries(Object.entries(fields).filter(([name]) => !params.has(name)))

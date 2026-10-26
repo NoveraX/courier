@@ -1,4 +1,6 @@
 import {
+  encodePathValue,
+  type PathPiece,
   pathPieces,
   sendsVariablesInQuery,
   withoutTrailingSlashes,
@@ -27,18 +29,23 @@ function segmentParts(path: string, fields: Record<string, unknown>, used: Set<s
         continue;
       }
       used.add(piece.name);
-      parts.push(paramPart(lead, piece.name, fields[piece.name]));
+      parts.push(paramPart(lead, piece, fields[piece.name]));
     }
   }
   return parts;
 }
 
-/* A parameter's piece of the URL: its value, encoded, or `:name` while it has none. */
-function paramPart(lead: string, name: string, value: unknown): UrlPart {
+/* A parameter's piece of the URL: its value, encoded — a `{+name}`'s slashes kept — or the
+   parameter as the path writes it while it has none. */
+function paramPart(
+  lead: string,
+  param: Extract<PathPiece, { kind: "param" }>,
+  value: unknown,
+): UrlPart {
   const filled = value !== undefined && value !== null && value !== "";
   return filled
-    ? { text: `${lead}${encodeURIComponent(String(value))}`, kind: "param" }
-    : { text: `${lead}:${name}`, kind: "missing" };
+    ? { text: `${lead}${encodePathValue(String(value), param.keepsSlashes)}`, kind: "param" }
+    : { text: `${lead}${param.written}`, kind: "missing" };
 }
 
 function fieldsOf(variables: unknown): Record<string, unknown> {
@@ -49,8 +56,9 @@ function fieldsOf(variables: unknown): Record<string, unknown> {
 
 /**
  * The URL a call goes to, in pieces: the source's origin, each path
- * segment with its parameters filled from the variables — or left as
- * `:name` while missing — and its text as it is sent, `::` as one colon;
+ * segment with its parameters filled from the variables — or left as the
+ * path writes them while missing — and its text as it is sent, `::` as one
+ * colon;
  * then a query the path writes, as written; and, for a method that sends no
  * body, the remaining variables as the query, after `&` when the path wrote
  * one. A WebSocket's origin reads `ws://`.

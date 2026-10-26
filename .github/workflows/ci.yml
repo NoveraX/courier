@@ -20,9 +20,14 @@ concurrency:
 permissions:
   contents: read
 
+# A job's time limit is at least twice its longest run of the last weeks,
+# not counting the runs a stalled download held: a download that stalls now
+# fails its job within minutes rather than holding it for the six hours
+# GitHub would allow.
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -156,6 +161,7 @@ jobs:
   # containers, so the Redis tests skip here; the Linux job runs them.
   platforms:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -206,6 +212,7 @@ jobs:
   # a React Native app cannot load fails here rather than in someone's app.
   react-native:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -266,6 +273,7 @@ jobs:
   browser:
     needs: browser-image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container:
       image: ${{ needs.browser-image.outputs.image }}
       options: --user 1001 --ipc=host --init
@@ -301,6 +309,7 @@ jobs:
   # window; the suite reads the hints the editor shows over a call.
   editor:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -342,6 +351,7 @@ jobs:
   # as for every job, waits for this one to pass.
   commits:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -362,6 +372,7 @@ jobs:
 
   docs:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -410,6 +421,7 @@ jobs:
   superseded:
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       actions: write
     steps:
@@ -440,6 +452,8 @@ jobs:
     needs: [ci, platforms, react-native, browser, editor, frameworks, quickstart, commits, docs, superseded]
     if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # No time limit: a release stopped half way through publishing would
+    # leave npm and the marketplaces with different versions
     environment: release
     # One release at a time; a second approved meanwhile waits for it
     concurrency:

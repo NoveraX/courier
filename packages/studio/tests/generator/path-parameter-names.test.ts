@@ -2,8 +2,9 @@
  * A path parameter whose name a `:name` placeholder cannot read whole — a
  * dot, a leading digit, a hyphen — is generated under a name it
  * can, the same in the path and in the variables, so the client compiles and
- * fills the path; an operation whose parameter is followed at once by a
- * letter or a digit is left out, and the parse says why.
+ * fills the path; a parameter followed at once by a letter or a digit is
+ * written in braces, which end its name, and Google's `{+name}` stays a
+ * parameter whose value keeps its slashes.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -31,6 +32,7 @@ const SPEC = JSON.stringify({
     "/files/{1st}/{id.v}": operation("getFile", "1st", "id.v"),
     "/folders/{folder-id}": operation("getFolder", "folder-id"),
     "/items/{id}5": operation("getItem", "id"),
+    "/v1/{+name}:cancel": operation("cancelOperation", "name"),
   },
 });
 
@@ -45,21 +47,15 @@ describe("path parameters a placeholder cannot read whole", () => {
     expect(getFolder).toMatchObject({ path: "folders/:folder_id" });
   });
 
-  it("leave out an operation whose parameter a letter or a digit follows, and say why", () => {
+  it("write a parameter a letter or a digit follows in braces, and Google's {+name} as it is", () => {
     const spec = parseSpec(SPEC);
+    const [, , getItem, cancelOperation] = spec.groups[0]?.endpoints ?? [];
 
-    expect(spec.groups[0]?.endpoints.map((endpoint) => endpoint.name)).toEqual([
-      "getFile",
-      "getFolder",
-    ]);
-    expect(spec.skipped).toEqual([
-      {
-        method: "ALL",
-        path: "/items/{id}5",
-        reason:
-          "its parameter {id} is followed by 5, which a path parameter's name would take in, so its operations are left out",
-      },
-    ]);
+    expect(spec.skipped).toEqual([]);
+    expect(getItem).toMatchObject({ path: "items/{id}5" });
+    expect(getItem?.parameters.map((parameter) => parameter.name)).toEqual(["id"]);
+    expect(cancelOperation).toMatchObject({ path: "v1/{+name}::cancel" });
+    expect(cancelOperation?.parameters.map((parameter) => parameter.name)).toEqual(["name"]);
   });
 
   it("generate a client that compiles", () => {

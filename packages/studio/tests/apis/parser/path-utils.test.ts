@@ -88,6 +88,19 @@ describe("convertPathParams", () => {
     expect(convertPathParams("/at/12:30")).toBe("/at/12::30");
   });
 
+  it("writes a parameter in braces where text a name could take in follows it", () => {
+    expect(convertPathParams("/files/{id}abc")).toBe("/files/{id}abc");
+    expect(convertPathParams("/items/{id}5/{id}.json")).toBe("/items/{id}5/:id.json");
+    expect(convertPathParams("/users/{user-id}_profile")).toBe("/users/{user_id}_profile");
+  });
+
+  it("keeps Google's {+name}, whose value keeps its slashes, a colon after it doubled", () => {
+    expect(convertPathParams("/v1/{+name}")).toBe("/v1/{+name}");
+    expect(convertPathParams("/v1/{+name}:cancel")).toBe("/v1/{+name}::cancel");
+    expect(convertPathParams("/v1/{+parent}/sitemaps")).toBe("/v1/{+parent}/sitemaps");
+    expect(convertPathParams("/v1/{+resource-name}")).toBe("/v1/{+resource_name}");
+  });
+
   it("keeps a segment Postman starts with a colon as its path variable", () => {
     expect(convertPathParams("/users/:userId/sessions:revoke")).toBe(
       "/users/:userId/sessions::revoke",
@@ -96,12 +109,14 @@ describe("convertPathParams", () => {
 });
 
 describe("unwritablePath", () => {
-  it("finds a parameter followed at once by a letter, a digit or _", () => {
-    expect(unwritablePath("/items/{id}5")).toBe(
-      "its parameter {id} is followed by 5, which a path parameter's name would take in, so its operations are left out",
-    );
-    expect(unwritablePath("/users/{userId}_profile")).toMatch(
-      /^its parameter \{userId\} is followed by _/,
+  it("writes a parameter followed at once by a letter, a digit or _, which braces end", () => {
+    expect(unwritablePath("/items/{id}5")).toBeUndefined();
+    expect(unwritablePath("/users/{userId}_profile")).toBeUndefined();
+  });
+
+  it("finds two parameters whose names come out as one, `+` before a name or not", () => {
+    expect(unwritablePath("/a/{+a-b}/{a_b}")).toBe(
+      "its parameters {a-b} and {a_b} would both be named a_b, so its operations are left out",
     );
   });
 

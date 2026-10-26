@@ -7,18 +7,21 @@ import { escapePathText } from "@noverax/courier/internal";
 import { transliterate } from "./naming-utils";
 import { gatheredPaths, sharedPrefix } from "./shared-path";
 
-/* A path parameter's placeholder; its name holds no brace and no slash. */
-const PLACEHOLDER = /\{([^{}/]+)\}/g;
+/* A path parameter's placeholder, `+` before the name of one whose value keeps its slashes, as
+   Google's `{+name}` writes it; its name holds no brace and no slash. */
+const PLACEHOLDER = /\{(\+?)([^{}/]+)\}/g;
 
 /* One placeholder, whole, to split a segment around. */
-const ONE_PLACEHOLDER = /(\{[^{}/]+\})/;
+const ONE_PLACEHOLDER = /(\{\+?[^{}/]+\})/;
 
 /* What a `:name` placeholder reads as part of its name. */
 const NAME_CHARACTER = /[A-Za-z0-9_]/;
 
 /**
  * The path an endpoint declares, from a specification's path: each
- * placeholder `{id}` becomes `:id`, a segment Postman starts with a colon is
+ * placeholder `{id}` becomes `:id` — or stays `{id}` where text a name
+ * could take in follows it at once — Google's `{+name}` stays a parameter
+ * whose value keeps its slashes, a segment Postman starts with a colon is
  * its path variable as it is, and every other colon is doubled, so that the
  * endpoint sends it as written.
  *
@@ -27,7 +30,8 @@ const NAME_CHARACTER = /[A-Za-z0-9_]/;
  * @example
  * ```ts
  * convertPathParams("/v4/spreadsheets/{spreadsheetId}:batchUpdate"); // → "/v4/spreadsheets/:spreadsheetId::batchUpdate"
- * convertPathParams("/v1/urlInspection/index:inspect"); // → "/v1/urlInspection/index::inspect"
+ * convertPathParams("/v1/{+name}:cancel"); // → "/v1/{+name}::cancel"
+ * convertPathParams("/files/{id}abc"); // → "/files/{id}abc"
  * ```
  */
 export function convertPathParams(path: string): string {
@@ -36,12 +40,20 @@ export function convertPathParams(path: string): string {
 
 function convertSegment(segment: string): string {
   if (segment.startsWith(":")) return segment;
-  return segment
-    .split(ONE_PLACEHOLDER)
-    .map((part) =>
-      ONE_PLACEHOLDER.test(part) ? `:${pathParamName(part.slice(1, -1))}` : escapePathText(part),
+  const parts = segment.split(ONE_PLACEHOLDER);
+  return parts
+    .map((part, at) =>
+      at % 2 === 1 ? placeholderOf(part, parts[at + 1] ?? "") : escapePathText(part),
     )
     .join("");
+}
+
+/* A placeholder as the endpoint's path writes it, given the text after it. */
+function placeholderOf(placeholder: string, after: string): string {
+  const keepsSlashes = placeholder.startsWith("{+");
+  const name = pathParamName(placeholder.slice(keepsSlashes ? 2 : 1, -1));
+  if (keepsSlashes) return `{+${name}}`;
+  return NAME_CHARACTER.test(after.charAt(0)) ? `{${name}}` : `:${name}`;
 }
 
 /**
@@ -68,27 +80,21 @@ export function pathParamName(name: string): string {
 }
 
 /**
- * Why a path template cannot be written as a Courier path, if it cannot: a
- * parameter followed at once by a letter, a digit or `_` — `/items/{id}5`
- * — which its `:name` placeholder would read as part of its name, or two
- * parameters whose names come out as one.
+ * Why a path template cannot be written as a Courier path, if it cannot:
+ * two parameters whose names come out as one.
  *
  * @param path - The path, as the specification writes it
  * @returns The reason its operations are left out, or `undefined` for a path that can be written
  * @example
  * ```ts
- * unwritablePath("/items/{id}5"); // → "its parameter {id} is followed by 5, …"
- * unwritablePath("/files/{name}.{ext}"); // → undefined
+ * unwritablePath("/a/{a-b}/{a_b}"); // → "its parameters {a-b} and {a_b} would both be named a_b, …"
+ * unwritablePath("/items/{id}5"); // → undefined
  * ```
  */
 export function unwritablePath(path: string): string | undefined {
   const written = new Map<string, string>();
   for (const match of path.matchAll(PLACEHOLDER)) {
-    const [placeholder, given = ""] = match;
-    const next = path.charAt(match.index + placeholder.length);
-    if (NAME_CHARACTER.test(next)) {
-      return `its parameter {${given}} is followed by ${next}, which a path parameter's name would take in, so its operations are left out`;
-    }
+    const given = match[2] ?? "";
     const name = pathParamName(given);
     const other = written.get(name);
     if (other !== undefined && other !== given) {

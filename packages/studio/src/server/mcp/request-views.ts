@@ -2,6 +2,7 @@ import { readShared, type SharedAnswer } from "@noverax/courier-studio-core";
 
 import { isPlainObject } from "../is-plain-object";
 import { withoutCredentials } from "../storage/without-credentials";
+import { failureSummary } from "./failure-summary";
 import { withoutSecrets } from "./without-secrets";
 
 type RuntimeEvent = Record<string, unknown>;
@@ -18,6 +19,7 @@ export interface RequestSummary {
   readonly status?: number | undefined;
   readonly durationMs?: number | undefined;
   readonly startedAt: number;
+  /** What it failed with and, for one that got no answer, why — see {@link failureSummary}. */
   readonly error?: string | undefined;
   /** How its read was answered by another call's request, when it sent none of its own. */
   readonly shared?: SharedAnswer | undefined;
@@ -88,7 +90,7 @@ export function summaryOf(id: string, gathered: Gathered): RequestSummary {
     status: numberOf(end?.status) ?? numberOf(error?.status) ?? numberOf(failure?.status),
     durationMs: numberOf(timing?.total),
     startedAt: numberOf(start.timestamp) ?? 0,
-    error: typeof failure?.message === "string" ? failure.message : undefined,
+    error: failureSummary(failure),
     shared: readShared(end?.shared ?? error?.shared),
   };
 }

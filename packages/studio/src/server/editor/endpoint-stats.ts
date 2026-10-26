@@ -1,6 +1,7 @@
 import { readShared } from "@noverax/courier-studio-core";
 
 import { isPlainObject } from "../is-plain-object";
+import { failureSummary } from "../mcp/failure-summary";
 import { gatherRequests } from "../mcp/request-views";
 import type { CatalogEndpoint } from "./endpoint-catalog";
 import type { EndpointStats } from "./endpoint-stats-types";
@@ -121,10 +122,8 @@ function count(
   if (total !== undefined) tally.durations.push(total);
   if (!error) return;
   tally.failed += 1;
-  const message =
-    isPlainObject(error.error) && typeof error.error.message === "string"
-      ? error.error.message
-      : "Failed";
+  /* Said as the request's own line says it: for one that got no answer, why. */
+  const message = failureSummary(error.error) ?? "Failed";
   if (at >= (tally.lastFailure?.at ?? 0))
     tally.lastFailure = { at, ...(status !== undefined && { status }), message, request };
 }

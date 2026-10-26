@@ -104,6 +104,11 @@ export const PROSE: readonly string[] = [
   "Set COURIER_APP_URL=http://localhost:3000 where Studio cannot see the server.\nThen restart.",
   "GET https://api.example.com/v1/users?page=2&sort=createdAt failed",
   "upstream answered 502 for https://api.example.com/v1/orders?id=123e4567-e89b-12d3-a456-426614174000",
+  "GET https://api.example.com failed for ana@example.test",
+  "Sync to https://api.example.com:8443 failed for ana@example.test",
+  '{"webhook":"http://localhost:3000","owner":"ana@example.test"}',
+  "(see http://localhost:3000) and write to ana@example.test",
+  "GET http://[::1]:3000 failed for ana@example.test",
 ];
 
 const join = (...parts: string[]): string => parts.join("");
@@ -171,4 +176,22 @@ export const SECRETS: readonly (readonly [text: string, secret: string])[] = [
     "POST https://discord.example/api/webhooks/123456789012345678/AbCdEf-GhIjKl_MnOpQrStUvWxYz0123456789 failed",
     "MnOpQrStUvWxYz0123456789",
   ],
+  /* A password a quote, a space or a bracket splits: the same word on both sides, so neither half may come out. */
+  [
+    "Request cannot be constructed from a URL that includes credentials: http://ana:pa55w0rd'pa55w0rd@127.0.0.1:4010/v4/user/42/hosts",
+    "pa55w0rd",
+  ],
+  [
+    'Request cannot be constructed from a URL that includes credentials: http://ana:pa55w0rd"pa55w0rd@127.0.0.1:4010/v4/user/42/hosts',
+    "pa55w0rd",
+  ],
+  [
+    "Request cannot be constructed from a URL that includes credentials: http://ana:pa55w0rd pa55w0rd@127.0.0.1:4010/v4/user/42/hosts",
+    "pa55w0rd",
+  ],
+  ["Failed to parse URL from http://ana:pa55w0rd pa55w0rd@api.example.com:99999/v4", "pa55w0rd"],
+  ["connect to postgres://app:pa55w0rd'pa55w0rd@db.internal:5432/app failed", "pa55w0rd"],
+  ['connect to postgres://app:pa55w0rd"pa55w0rd@db.internal:5432/app failed', "pa55w0rd"],
+  ["connect to postgres://app:pa55w0rd pa55w0rd@db.internal:5432/app failed", "pa55w0rd"],
+  ["connect to postgres://app:pa55w0rd(pa55w0rd)@db.internal:5432/app failed", "pa55w0rd"],
 ];

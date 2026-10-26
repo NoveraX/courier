@@ -7,9 +7,10 @@
  *    + framework adapters that re-emit events)
  *  - `extractSourceMap` + `isSafeHttpOrigin` — pure utilities used by
  *    framework adapters and the Studio dev server
- *  - `cutText` + `urlWithoutSecrets` + `REDACTED` — an error's text and an
- *    address with what could be a credential cut out, as Studio's server
- *    keeps them
+ *  - `cutText` + `urlWithoutSecrets` + `splitUrlsWithoutSecrets` +
+ *    `REDACTED` — an error's text and an address with what could be a
+ *    credential cut out, as Studio's server keeps them and as Courier MCP
+ *    tells an agent why a call failed
  *
  * Runtime-side functionality (`attachRuntime`, `loadCourierConfig`,
  * `announceHosting`, `setAppOrigin`, …) lives behind
@@ -75,5 +76,6 @@ export { type AnswerShape, answerShapeOf, type ShapeType } from "./runtime/answe
 export type { SchemaField } from "./schema-fields";
 export { cutText } from "./secrets/cut-text";
 export { REDACTED } from "./secrets/redacted";
+export { splitUrlsWithoutSecrets } from "./secrets/split-urls-without-secrets";
 export { urlWithoutSecrets } from "./secrets/url-without-secrets";
 export { extractSourceMap } from "./source-map";

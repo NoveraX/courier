@@ -61,7 +61,18 @@ function defineSources(baseURL: string, closed: number) {
     baseURL: `http://user:pa55@127.0.0.1:${closed}/v1?token=s3cret`,
     endpoints: { whoami: endpoint.get("whoami").response<unknown>() },
   });
-  return { api: defineApi({ expose: true, baseURL, groups: { users, faults } }), gone, signed };
+  /* A password a quote and a space split, which fetch quotes as it was given. */
+  const split = defineApi({
+    expose: true,
+    baseURL: `http://user:pa55w0rd' pa55w0rd@127.0.0.1:${closed}/v1`,
+    endpoints: { whoami: endpoint.get("whoami").response<unknown>() },
+  });
+  return {
+    api: defineApi({ expose: true, baseURL, groups: { users, faults } }),
+    gone,
+    signed,
+    split,
+  };
 }
 
 beforeAll(async () => {
@@ -175,8 +186,16 @@ describe("a call that fails", () => {
     const failure = await failureOf("whoami", () => createCaller(sources.signed).whoami());
 
     const cause = (failure.error as { cause?: { message: string } }).cause;
-    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+\/v1/);
+    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+$/);
     expect(JSON.stringify(failure)).not.toMatch(/s3cret|pa55/);
+  });
+
+  it("reaches the UI naming no part of a password a quote or a space splits", async () => {
+    const failure = await failureOf("whoami", () => createCaller(sources.split).whoami());
+
+    const cause = (failure.error as { cause?: { message: string } }).cause;
+    expect(cause?.message).toMatch(/includes credentials: http:\/\/127\.0\.0\.1:\d+$/);
+    expect(JSON.stringify(failure)).not.toMatch(/pa55/);
   });
 
   it("reaches the UI, over the proxy, with why the upstream gave no answer", async () => {

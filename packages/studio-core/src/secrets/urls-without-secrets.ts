@@ -1,4 +1,5 @@
 import { REDACTED } from "./redacted";
+import { splitUrlsWithoutSecrets } from "./split-urls-without-secrets";
 import { urlWithoutSecrets } from "./url-without-secrets";
 
 /*
@@ -13,7 +14,9 @@ const BARE_USERINFO = /(^|[\s"'(<,;=])[^\s@:/"'<>]{1,64}:[^\s@/"'<>]{1,128}@(?=[
 /**
  * A text with every address in it cut as {@link urlWithoutSecrets} cuts
  * one, and a `user:password@` written before a host without a scheme cut
- * too.
+ * too. An address no single word holds — one fetch quotes as it refuses
+ * it, a password a quote or a space splits — loses its credentials whole
+ * first, as {@link splitUrlsWithoutSecrets} cuts them.
  *
  * @param text - The text, already cut to a bounded length
  * @returns The text with its addresses cut
@@ -24,7 +27,7 @@ const BARE_USERINFO = /(^|[\s"'(<,;=])[^\s@:/"'<>]{1,64}:[^\s@/"'<>]{1,128}@(?=[
  * ```
  */
 export function urlsWithoutSecrets(text: string): string {
-  return text
+  return splitUrlsWithoutSecrets(text)
     .replace(
       URL_IN_TEXT,
       (_match, before: string, address: string) => before + urlWithoutSecrets(address),

@@ -1,6 +1,6 @@
 import {
   type PlacedEndpoint,
-  pathParamNames,
+  pathPieces,
   standardJsonSchema,
   withDefaultsShown,
 } from "@noverax/courier/internal";
@@ -71,15 +71,26 @@ export function toolSchemasOf(
   };
 }
 
-/* Each `:name` of the path, required once however often the path holds it; anything beside them
+/* An agent would send a `{+name}` value's slashes encoded unless it is told. */
+const KEEPS_SLASHES = "May hold slashes, which are sent as written";
+
+/* Each parameter of the path, required once however often the path holds it; anything beside them
    may be what a type alone declared. */
 function pathParamsSchema(path: string): JSONSchema {
-  const names = [...new Set(pathParamNames(path))];
-  if (names.length === 0) return { type: "object" };
+  /* Whether each parameter keeps its slashes, by its name. */
+  const params = new Map<string, boolean>();
+  for (const piece of pathPieces(path)) {
+    if (piece.kind === "param" && !params.has(piece.name))
+      params.set(piece.name, piece.keepsSlashes);
+  }
+  if (params.size === 0) return { type: "object" };
   const properties = Object.fromEntries(
-    names.map((name) => [name, { type: ["string", "number"] }]),
+    [...params].map(([name, keepsSlashes]) => [
+      name,
+      { type: ["string", "number"], ...(keepsSlashes && { description: KEEPS_SLASHES }) },
+    ]),
   );
-  return { type: "object", properties, required: names };
+  return { type: "object", properties, required: [...params.keys()] };
 }
 
 /* An object, or a choice between objects: a tool's arguments may then be the variables themselves. */

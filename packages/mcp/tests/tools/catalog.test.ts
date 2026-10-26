@@ -117,6 +117,9 @@ describe("a tool's schemas", () => {
       byMethod: endpoint.post("ops/:name::cancel").agent({ description: "C", access: "write" }),
       byRepeated: endpoint.get(":id/copies/:id").agent(read("R")),
       byQuery: endpoint.get("items/:id?expand=:what").agent(read("E")),
+      byBraced: endpoint
+        .post("v1/{+name}::cancel/{rev}x")
+        .agent({ description: "B", access: "write" }),
       byUnion: endpoint
         .post("u")
         .variables(z.union([z.object({ a: z.string() }), z.object({ b: z.number() })]))
@@ -196,6 +199,20 @@ describe("a tool's schemas", () => {
       type: "object",
       properties: { id: { type: ["string", "number"] } },
       required: ["id"],
+    });
+  });
+
+  it("names a parameter in braces, and says that a {+name} may hold slashes", () => {
+    expect(byName.get("byBraced")?.inputSchema).toEqual({
+      type: "object",
+      properties: {
+        name: {
+          type: ["string", "number"],
+          description: "May hold slashes, which are sent as written",
+        },
+        rev: { type: ["string", "number"] },
+      },
+      required: ["name", "rev"],
     });
   });
 

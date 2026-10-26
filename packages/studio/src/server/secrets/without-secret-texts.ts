@@ -1,7 +1,7 @@
+import { cutText, urlWithoutSecrets } from "@noverax/courier-studio-core";
+
 import { isPlainObject } from "../is-plain-object";
 import { cutCause } from "./cut-cause";
-import { cutText } from "./cut-text";
-import { urlWithoutSecrets } from "./url-without-secrets";
 
 /* The field of each event that holds an error's text as a string. */
 const TEXT_FIELDS: ReadonlyMap<string, string> = new Map([

@@ -1,8 +1,6 @@
-import { readShared } from "@noverax/courier-studio-core";
+import { cutText, readShared, urlWithoutSecrets } from "@noverax/courier-studio-core";
 
 import { cutCause } from "./secrets/cut-cause";
-import { cutText } from "./secrets/cut-text";
-import { urlWithoutSecrets } from "./secrets/url-without-secrets";
 import type { SavedRequest } from "./session-types";
 import { headersWithoutCredentials } from "./storage/without-credentials";
 import { isObject } from "./validate-body";

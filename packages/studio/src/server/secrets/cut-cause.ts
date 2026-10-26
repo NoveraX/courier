@@ -1,6 +1,4 @@
-import { type RequestFailureCause, readCause } from "@noverax/courier-studio-core";
-
-import { cutText } from "./cut-text";
+import { cutText, type RequestFailureCause, readCause } from "@noverax/courier-studio-core";
 
 /**
  * Why a request got no answer, as it leaves Studio's token page: its code

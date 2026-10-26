@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { urlWithoutSecrets } from "../../src/server/secrets/url-without-secrets";
+import { urlWithoutSecrets } from "../../src/secrets/url-without-secrets";
 
 describe("an address", () => {
   it("loses its user and password, and the value of each parameter its name gives away", () => {

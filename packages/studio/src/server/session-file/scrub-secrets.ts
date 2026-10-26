@@ -1,6 +1,7 @@
+import { REDACTED } from "@noverax/courier-studio-core";
+
 import { isPlainObject } from "../is-plain-object";
 import { isSecretName } from "../mcp/without-secrets";
-import { REDACTED } from "../secrets/redacted";
 import type { SavedRequest } from "../session-types";
 
 /* Deep enough for any body a request carries; what lies deeper is cut, not walked. */

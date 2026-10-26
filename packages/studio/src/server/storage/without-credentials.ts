@@ -1,8 +1,7 @@
 import { isCredentialHeader } from "@noverax/courier/internal";
+import { REDACTED, urlWithoutSecrets } from "@noverax/courier-studio-core";
 
 import { isPlainObject } from "../is-plain-object";
-import { REDACTED } from "../secrets/redacted";
-import { urlWithoutSecrets } from "../secrets/url-without-secrets";
 import { withoutSecretTexts } from "../secrets/without-secret-texts";
 
 /**

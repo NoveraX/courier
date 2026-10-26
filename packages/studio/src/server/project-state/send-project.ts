@@ -1,5 +1,6 @@
 import { createLogger } from "@noverax/courier";
-import { cutText } from "../secrets/cut-text";
+import { cutText } from "@noverax/courier-studio-core";
+
 import type { UpdateChecks } from "../update-checks";
 import { type ConfigStatusPayload, configStatusOf } from "./config-status";
 import { emitToPages } from "./emit-to-pages";

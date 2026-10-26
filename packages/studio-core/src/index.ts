@@ -7,6 +7,9 @@
  *    + framework adapters that re-emit events)
  *  - `extractSourceMap` + `isSafeHttpOrigin` — pure utilities used by
  *    framework adapters and the Studio dev server
+ *  - `cutText` + `urlWithoutSecrets` + `REDACTED` — an error's text and an
+ *    address with what could be a credential cut out, as Studio's server
+ *    keeps them
  *
  * Runtime-side functionality (`attachRuntime`, `loadCourierConfig`,
  * `announceHosting`, `setAppOrigin`, …) lives behind
@@ -70,4 +73,7 @@ export { playgroundRequestId } from "./lib/playground-request-id";
 export { applyStoreReport, readStoreReport } from "./mock-store";
 export { type AnswerShape, answerShapeOf, type ShapeType } from "./runtime/answer-shape";
 export type { SchemaField } from "./schema-fields";
+export { cutText } from "./secrets/cut-text";
+export { REDACTED } from "./secrets/redacted";
+export { urlWithoutSecrets } from "./secrets/url-without-secrets";
 export { extractSourceMap } from "./source-map";

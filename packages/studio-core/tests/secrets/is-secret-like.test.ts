@@ -5,8 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { isSecretLike } from "../../src/server/secrets/is-secret-like";
-import { REDACTED } from "../../src/server/secrets/redacted";
+import { isSecretLike } from "../../src/secrets/is-secret-like";
+import { REDACTED } from "../../src/secrets/redacted";
 
 describe("a word", () => {
   it("reads as a credential with digits among letters, case inside it, a key's symbols, or at length", () => {

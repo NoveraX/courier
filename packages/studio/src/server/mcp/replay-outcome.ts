@@ -1,7 +1,7 @@
 import type { ToolOutcome } from "@noverax/courier-mcp/internal";
+import { cutText } from "@noverax/courier-studio-core";
 
 import type { PlaygroundRunOutcome } from "../playground-run";
-import { cutText } from "../secrets/cut-text";
 import { withoutCredentials } from "../storage/without-credentials";
 import type { PlannedReplay } from "./replay-plan";
 import { withoutSecrets } from "./without-secrets";

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { urlsWithoutSecrets } from "../../src/server/secrets/urls-without-secrets";
+import { urlsWithoutSecrets } from "../../src/secrets/urls-without-secrets";
 
 describe("the addresses in a text", () => {
   it("are cut where they stand, the words around them kept", () => {

@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { cutText } from "../../src/server/secrets/cut-text";
+import { cutText } from "../../src/secrets/cut-text";
 import { PROSE, SECRETS } from "./error-text-corpus";
 
 const stripeKey = ["sk", "live", "4eC39HqLyjWDarjtT1zdp7dc"].join("_");

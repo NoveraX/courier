@@ -2,12 +2,15 @@
  * An endpoint whose path writes a parameter in braces — Google's `{+name}`,
  * whose value keeps its slashes, or a `{id}` that text follows at once —
  * shown and copied in the Playground as the call sends it, a parameter
- * still to fill shown as the path writes it.
+ * still to fill shown as the path writes it, and a base URL whose path
+ * holds a colon copied as written rather than read as a parameter.
  */
 import { describe, expect, it } from "vitest";
 import type { EndpointAnalysis, ScannedEndpoint, ScannedSource } from "@/features/apis/types";
 import { mockRouteUrl } from "@/features/mocks/route-url";
+import { draftSnippet } from "@/features/playground/draft-snippet";
 import { endpointChoicesOf } from "@/features/playground/endpoint-choices";
+import { endpointUrl, snippetInput } from "@/features/playground/request-snippet";
 import { requestUrlParts } from "@/features/playground/request-url";
 import { variablesStubOf } from "@/features/playground/variables-stub";
 import { buildCatalog } from "@/store/build-catalog";
@@ -24,7 +27,7 @@ function scanned(
 
 const GOOGLE: ScannedSource = {
   name: "api",
-  baseURL: "https://api.example.com",
+  baseURL: "https://api.example.com/v1:beta",
   filePath: "src/api.ts",
   isImported: false,
   hasClient: false,
@@ -68,6 +71,20 @@ describe("the Playground's URL of a path with a parameter in braces", () => {
       text: "/{+name}",
       kind: "missing",
     });
+  });
+});
+
+describe("a snippet of a call", () => {
+  it("is copied as the call sends it, the base URL's colon as written", () => {
+    const { def, entry } = choice("cancel");
+    const url = endpointUrl(entry, "", def);
+
+    expect(
+      snippetInput(url, def, { variables: { name: "projects/p/operations/o" }, headers: {} }),
+    ).toMatchObject({ url: "https://api.example.com/v1:beta/projects/p/operations/o:cancel" });
+    expect(
+      draftSnippet(choice("file"), { variables: { id: "x7" }, headers: {} }, "shell"),
+    ).toContain("'https://api.example.com/v1:beta/files/x7abc'");
   });
 });
 

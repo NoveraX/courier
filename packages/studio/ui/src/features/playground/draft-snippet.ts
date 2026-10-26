@@ -1,4 +1,4 @@
-import { withoutTrailingSlashes } from "@noverax/courier/internal";
+import { escapePathText, withoutTrailingSlashes } from "@noverax/courier/internal";
 
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { requestSnippet } from "@/features/requests/request-snippets";
@@ -28,7 +28,8 @@ export function draftSnippet(
   flavor: SnippetFlavor,
 ): string {
   if (endpoint.transport === "http" && flavor !== "courier") {
-    const template = `${withoutTrailingSlashes(endpoint.entry.baseURL)}${endpoint.path}`;
+    /* The base URL is sent as written: a colon in its path is text, never a parameter. */
+    const template = `${escapePathText(withoutTrailingSlashes(endpoint.entry.baseURL))}${endpoint.path}`;
     const input = snippetInput(template, endpoint.def, values);
     return flavor === "shell" ? buildCurlSnippet(input) : buildFetchSnippet(input);
   }

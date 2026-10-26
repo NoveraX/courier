@@ -1,5 +1,6 @@
 import {
   encodePathValue,
+  escapePathText,
   fillPathParams,
   pathParamNames,
   sendsVariablesInQuery,
@@ -13,19 +14,21 @@ import type { RequestValues } from "./request-values";
 
 /**
  * The URL an endpoint is served at, with its path parameters as its path
- * writes them: the source's base URL, then the group's prefix, then the
+ * writes them: the source's base URL, written as text so that a colon in
+ * it is never read as a parameter, then the group's prefix, then the
  * endpoint's path.
  *
  * @param source - The endpoint's source
  * @param prefix - The prefix of the endpoint's group
  * @param endpoint - The endpoint
- * @returns The URL, or `""` when where it is served is unknown: an endpoint
- *   only seen in traffic, or a stream or a channel, which the app serves
+ * @returns The URL as a path reads it, each of the base URL's colons
+ *   doubled, or `""` when where it is served is unknown: an endpoint only
+ *   seen in traffic, or a stream or a channel, which the app serves
  *
  * @example
  * ```ts
  * endpointUrl({ baseURL: "http://localhost:7501", groups: {} }, "users", byId);
- * // → "http://localhost:7501/users/:id"
+ * // → "http:://localhost::7501/users/:id", which snippetInput sends to http://localhost:7501/users/…
  * ```
  */
 export function endpointUrl(
@@ -34,7 +37,7 @@ export function endpointUrl(
   endpoint: EndpointInfo | null,
 ): string {
   if (!source || !endpoint || endpoint.path === undefined || endpoint.transport) return "";
-  return [source.baseURL, prefix, endpoint.path]
+  return [escapePathText(source.baseURL), prefix, endpoint.path]
     .filter((part) => part !== "")
     .reduce(
       (url, part) =>

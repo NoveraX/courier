@@ -115,6 +115,8 @@ export const compileUrl = (
   generatedPathOptions?: Record<string, unknown>,
   searchParamsSerializer?: SearchParamsSerializer,
 ): [string, unknown, Record<string, unknown>] => {
+  /* A closure's path is known only now; one a value interpolated a # into is refused too. */
+  if (rawUrlPath.includes("#")) throw pathRefusal(FRAGMENT_IN_PATH);
   const [urlPath = "", searchParameters] = rawUrlPath.split("?");
   const objectSearchParameters = searchParamsSerializer
     ? searchParamsSerializer.parse(searchParameters || "")
@@ -150,15 +152,30 @@ export const compileUrl = (
 
     return [url, newVariables, objectSearchParameters];
   } catch (error) {
-    /* No request was made, so "HTTP 400" would say nothing: the error says
-       what is wrong with the path itself. */
-    if (error instanceof Error) {
-      throw new HTTPError(
-        { status: 400, headers: new Headers(), data: { success: false, message: error.message } },
-        { message: error.message },
-      );
-    }
-
+    if (error instanceof Error) throw pathRefusal(error.message);
     throw error;
   }
 };
+
+/** Why a path holding a `#` is refused when a call is addressed. */
+export const FRAGMENT_IN_PATH =
+  "A path holds a #, which never reaches the server: write %23 for a # it sends, or put a value into a closure's path with http.path";
+
+/**
+ * The error a call's path is refused with: no request was made, so
+ * "HTTP 400" would say nothing, and the error says what is wrong with the
+ * path itself.
+ *
+ * @param message - What is wrong with the path
+ * @returns The error, status 400, its message in its data too
+ * @example
+ * ```ts
+ * throw pathRefusal('Missing required path parameter "id"');
+ * ```
+ */
+export function pathRefusal(message: string): HTTPError {
+  return new HTTPError(
+    { status: 400, headers: new Headers(), data: { success: false, message } },
+    { message },
+  );
+}

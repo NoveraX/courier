@@ -164,16 +164,30 @@ export type VariablesForPath<TVariables, TPath extends string> =
       : { [TName in PathParamNames<TPath>]: string | number }
     : TVariables;
 
+/** What a type error names when a path writes a fragment, which never reaches the server. */
+export interface PathFragmentRefused {
+  readonly "a request sends its path up to the #: write %23 for a # the path sends": true;
+}
+
+type HasFragment<TPath extends string> = string extends TPath
+  ? false
+  : TPath extends `${string}#${string}`
+    ? true
+    : false;
+
 /**
- * A path, as the builder takes it after variables were declared: one whose
- * parameters the variables do not all name is refused where it is written.
+ * A path, as the builder takes it: one that writes a fragment is refused
+ * where it is written, and so, after variables were declared, is one whose
+ * parameters the variables do not all name.
  */
 export type CheckedPath<TPath extends string, TVariables> =
-  Undeclared<TVariables> extends true
-    ? TPath
-    : [MissingFrom<PathParamNames<TPath>, TVariables>] extends [never]
+  HasFragment<TPath> extends true
+    ? TPath & PathFragmentRefused
+    : Undeclared<TVariables> extends true
       ? TPath
-      : TPath & PathParamsMissing<MissingFrom<PathParamNames<TPath>, TVariables>>;
+      : [MissingFrom<PathParamNames<TPath>, TVariables>] extends [never]
+        ? TPath
+        : TPath & PathParamsMissing<MissingFrom<PathParamNames<TPath>, TVariables>>;
 
 /**
  * The arguments of `.variables()` after the path: the schema, when the

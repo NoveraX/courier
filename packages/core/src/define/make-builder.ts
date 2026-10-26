@@ -1,4 +1,5 @@
 import type { HttpMethod } from "../http-client/types";
+import { assertNoFragment } from "./assert-no-fragment";
 import type { BuilderState } from "./builder";
 import { assertServedTopicKey, withTopicKey } from "./channel-topic";
 import { kindFor, sealHandler } from "./descriptor";
@@ -44,6 +45,7 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
     terminal: string = method,
   ): AnyBuilder => {
     assertServedTopicKey(state, terminal);
+    assertNoFragment(path, `.${terminal}(${JSON.stringify(path)})`);
     return makeAddressed(
       { ...state, kind: kindFor(state.kind, method) },
       {
@@ -90,6 +92,7 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
     via: (probe: AnyProbe, options: AnyEndpointOptions = {}) => {
       assertServedTopicKey(state, "via");
       const shape = probeWire(probe);
+      assertNoFragment(shape.path, `The path ${JSON.stringify(shape.path)} that .via() addresses`);
       /* The closure hides its verb, so the endpoint is taken to write until
          `.reads()` says otherwise — a write served over a cacheable GET is the
          dangerous mistake, not the reverse. */

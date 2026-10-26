@@ -21,7 +21,7 @@ const ROUTES = `const apiRoutes = { source: "api", endpoints: {
 
 /** Each scenario a page builds, and its budget at start: minified and gzipped, in KiB. */
 export const SCENARIOS = [
-  { name: "definitions", code: `${DEFINE}\nconsole.log(api);`, budget: [21.8, 8.3] },
+  { name: "definitions", code: `${DEFINE}\nconsole.log(api);`, budget: [22.5, 8.7] },
   {
     name: "direct caller",
     code: `${DEFINE}\nimport { createCaller } from "@noverax/courier";\ncreateCaller(api).users.getAll().then(console.log);`,

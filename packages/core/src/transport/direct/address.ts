@@ -9,6 +9,7 @@ import {
   pathParamNames,
   routeChangingPart,
 } from "../../utils/path-template";
+import { FRAGMENT_IN_PATH } from "../../utils/url";
 
 /** Where one call to a remote stream or channel goes, relative to its group. */
 export interface CallAddress {
@@ -36,7 +37,7 @@ const callPath = pathWriter((message) => new RealtimeValidationError(message));
  * @param method - The endpoint's name in its group
  * @param variables - The call's variables
  * @returns The path and the variables left to send
- * @throws RealtimeValidationError when a `:param` has no value, or a value would change the route
+ * @throws RealtimeValidationError when a `:param` has no value, a value would change the route, or the path holds a #
  *
  * @example
  * ```ts
@@ -69,6 +70,7 @@ function isProbe(value: unknown): value is AnyProbe {
 }
 
 function fillParams(path: string, variables: Record<string, unknown> | undefined): CallAddress {
+  if (path.includes("#")) throw new RealtimeValidationError(FRAGMENT_IN_PATH);
   const filled = fillPathParams(path, (name, { keepsSlashes }) =>
     segmentOf(name, variables?.[name], keepsSlashes),
   );

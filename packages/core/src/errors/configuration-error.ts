@@ -91,6 +91,12 @@ export type ConfigurationErrorCode =
    */
   | "ENDPOINT_EXTRA_WIRE_CALL"
   /**
+   * An endpoint's or a group's path writes a fragment: what follows `#` never
+   * reaches the server, so a read's query written after it was dropped too.
+   * A `#` the path sends is written `%23`.
+   */
+  | "PATH_FRAGMENT"
+  /**
    * A builder slot was filled twice. Slots replace rather than merge, so a
    * second call is a mistake rather than a refinement and is reported at the
    * definition site instead of silently discarding one of the two values.

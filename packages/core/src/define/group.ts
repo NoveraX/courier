@@ -1,5 +1,6 @@
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { GroupOptions } from "../http-client/types";
+import { assertNoFragment } from "./assert-no-fragment";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type {
   DefinedGroup,
@@ -66,6 +67,12 @@ export function defineGroup(
   config: GroupOptions & { endpoints?: OwnEndpoints | undefined; groups?: OwnGroups | undefined },
 ): DefinedGroup | DefinedNestingGroup {
   const { endpoints = {}, ...groupOptions } = config;
+  if (groupOptions.prefix) {
+    assertNoFragment(
+      groupOptions.prefix,
+      `The group prefix ${JSON.stringify(groupOptions.prefix)}`,
+    );
+  }
   assertNoReservedName(endpoints, "group");
   if (groupOptions.groups) assertNoReservedGroupName(groupOptions.groups);
   assertTransportOptions(groupOptions, "group");

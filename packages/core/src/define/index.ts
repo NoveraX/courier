@@ -49,7 +49,7 @@ export type {
   InferVariables,
   InferVariablesOut,
 } from "./marker";
-export type { PathParamNames, PathParamsMissing } from "./path-params";
+export type { PathFragmentRefused, PathParamNames, PathParamsMissing } from "./path-params";
 export type { PathWriter } from "./path-tag";
 export type {
   ChannelProbe,

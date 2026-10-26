@@ -231,11 +231,46 @@ jobs:
         run: npm run bundle
         working-directory: examples/expo
 
+  # The image the browser job runs in: Playwright's own, of the release the
+  # lockfile pins.
+  browser-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Name the browsers' image
+        id: image
+        run: |
+          image=$(node scripts/playwright-image.mjs)
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
   # Studio's flows in a real browser: each test file starts Studio from its
   # command line over its own copy of a fixture project, and drives the pages
   # as a developer does. A failure keeps its trace and screenshots.
+  #
+  # Chrome's, Safari's and Firefox's engines, as developers open Studio in
+  # them, come in Playwright's image with every library, font and display
+  # server they load, so the job never waits on the system's package mirror,
+  # which at times sent them slower than a job may run. As the runner's user,
+  # who owns the workspace and HOME as Firefox requires, with the host's
+  # shared memory for Chromium and an init process that reaps what each
+  # Studio leaves. Its clock reads UTC, as the runner's does, whatever the
+  # image is set to.
   browser:
+    needs: browser-image
     runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.browser-image.outputs.image }}
+      options: --user 1001 --ipc=host --init
+      env:
+        TZ: UTC
     steps:
       - uses: actions/checkout@v7
 
@@ -248,10 +283,6 @@ jobs:
 
       - name: Build packages
         run: npm run build
-
-      # Chrome's, Safari's and Firefox's engines, as developers open Studio in them
-      - name: Install the browsers
-        run: npx playwright install --with-deps chromium webkit firefox
 
       - name: Studio in a browser
         run: npm run test:e2e

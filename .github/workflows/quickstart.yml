@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ids: ${{ steps.list.outputs.ids }}
+      image: ${{ steps.image.outputs.image }}
     steps:
       - uses: actions/checkout@v7
 
@@ -49,11 +50,29 @@ jobs:
         # Split on purpose: one id per word
         run: echo "ids=$(node scripts/test-quickstart.mjs --list $TARGETS)" >> "$GITHUB_OUTPUT"
 
+      - name: Name the browser's image
+        id: image
+        run: |
+          image=$(node scripts/playwright-image.mjs)
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
   quickstart:
     needs: targets
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # In Playwright's own image of the release the lockfile pins: Chromium
+    # comes with every library, font and display server it loads, so no job
+    # waits on the system's package mirror, which at times sent them slower
+    # than the job may run. As the runner's user, who owns the workspace and
+    # HOME, with the host's shared memory for Chromium and an init process
+    # that reaps what the servers leave. Its clock reads UTC, as the runner's
+    # does, whatever the image is set to.
+    container:
+      image: ${{ needs.targets.outputs.image }}
+      options: --user 1001 --ipc=host --init
+      env:
+        TZ: UTC
     strategy:
       fail-fast: false
       matrix:
@@ -71,9 +90,6 @@ jobs:
       # The registry serves the packages packed from their builds
       - name: Build packages
         run: npm run build
-
-      - name: Install the browser
-        run: npx playwright install --with-deps chromium
 
       - name: The quick start with ${{ matrix.target }}
         env:

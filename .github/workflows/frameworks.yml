@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ids: ${{ steps.list.outputs.ids }}
+      image: ${{ steps.image.outputs.image }}
     steps:
       - uses: actions/checkout@v7
 
@@ -48,11 +49,29 @@ jobs:
         # Split on purpose: one id per word
         run: echo "ids=$(node scripts/test-frameworks.mjs --list $TARGETS)" >> "$GITHUB_OUTPUT"
 
+      - name: Name the browsers' image
+        id: image
+        run: |
+          image=$(node scripts/playwright-image.mjs)
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
   session:
     needs: targets
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # In Playwright's own image of the release the lockfile pins: the three
+    # engines come with every library, font and display server they load, so
+    # no job waits on the system's package mirror, which at times sent them
+    # slower than the job may run. As the runner's user, who owns the
+    # workspace and HOME as Firefox requires, with the host's shared memory
+    # for Chromium and an init process that reaps what the servers leave.
+    # Its clock reads UTC, as the runner's does, whatever the image is set to.
+    container:
+      image: ${{ needs.targets.outputs.image }}
+      options: --user 1001 --ipc=host --init
+      env:
+        TZ: UTC
     strategy:
       fail-fast: false
       matrix:
@@ -70,10 +89,6 @@ jobs:
       # The versions install the packages packed from their builds
       - name: Build packages
         run: npm run build
-
-      # Each version is driven in Chrome's, Safari's and Firefox's engines
-      - name: Install the browsers
-        run: npx playwright install --with-deps chromium webkit firefox
 
       - name: The session in ${{ matrix.target }}
         env:

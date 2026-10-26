@@ -1,4 +1,4 @@
-export const metadata = { title: "MCP Server", description: "Offer your API's endpoints to AI agents as MCP tools — from the definition your typed client is built from, through the same middleware, schemas and Studio as your app.", mode: "both", updated: "2026-10-11" }
+export const metadata = { title: "MCP Server", description: "Offer your API's endpoints to AI agents as MCP tools — from the definition your typed client is built from, through the same middleware, schemas and Studio as your app.", mode: "both", updated: "2026-10-27" }
 
 ## One definition, one more client
 
@@ -137,7 +137,11 @@ What the agent is told:
 - **An answer** — as JSON text, and as structured data where the client takes it.
 - **Arguments its schema refuses** — which fields, and why, so the model corrects them: `- qty: Too big: expected number to be <=9`.
 - **An error status** — the status and the body, cut to 2 000 characters; never a response header, which may carry a credential.
+- **An API it could not reach** — why, as the system said it: the code, and the host and port — `UND_ERR_CONNECT_TIMEOUT: Connect Timeout Error (attempted address: api.example.com:443, timeout: 10000ms)`, `getaddrinfo ENOTFOUND api.example.com`, `CERT_HAS_EXPIRED: certificate has expired`. A call whose timeout ran out is told the API did not answer in time.
+- **A failure of your own code** — a middleware that threw, a request your `pathOptions` made: its message, and a line for each network failure that caused it — `Caused by: connect ECONNREFUSED 10.0.0.5:443`.
 - **An answer too long for a model** — more than 100 000 characters is refused rather than cut, with a request to ask for less: half a JSON document reads as a whole one.
+
+What the agent is told of an API it could not reach, or of your own code's failure, is cut short and cut the same way: an address shows no more than its scheme, host and port — not its path, its query or the credentials in it; a path written without a scheme keeps no query that sets a value, `/v4/user/42/hosts?[redacted]`; a header value or an argument the platform refused is not quoted; and no credential [Studio](/docs/studio/overview) cuts from an error's text before it leaves its page is told — a token after `Bearer`, a `password=`, a private key, a JWT, a provider's key. With Node's `fetch`, why a request got no answer is told in the words of Node, undici and OpenSSL, which name no header and no body of it. Your own code's message is told as you wrote it otherwise — a path, an e-mail address, an excerpt of an answer it quotes — so keep out of it what an agent may not read. A cause that is not a network failure — a driver's error, an SDK's — is left out, for nothing vouches for what its text holds.
 
 An agent's call carries no browser session: whatever a browser's cookies would give a user, an agent gets only what your middleware gives the principal it runs for.
 

@@ -1,4 +1,4 @@
-export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-10-18" }
+export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-10-27" }
 
 ## What Courier secures, and what it leaves to your API
 
@@ -98,7 +98,7 @@ An endpoint reaches an agent only when it is marked `.agent()` or the project's 
 - **Callers you authorize.** `createMcpHandler` cannot be created without `authorize`. A tool `allow` keeps from a caller is answered as an unknown one, and a request from a browser page is served only from your app's origin or one of `allowedOrigins`.
 - **A tool's limit.** `.agent({ limit })` bounds how often a caller may call a tool — counted per caller with `limitPer` — and a call beyond it is refused before anything runs or anyone is asked.
 - **A person confirms what cannot be undone.** A `destructive` tool runs once the person at the client confirmed that exact call — and so does every write where the policy says `confirm: "write"`; the question goes to the person, out of the model's reach. A confirmation counts for one tool with the same arguments for five minutes, signed with `confirmSecret`. `allowDestructive` stands in for the person only where the client cannot ask one.
-- **What reaches the model.** An error answer's status and body, cut short; never a response header. An answer longer than `maxResultChars` is refused.
+- **What reaches the model.** An error answer's status and body, cut short; never a response header. A request that got no answer is told by the system's code and text — its host and port; a failure of your own code by its message, with a line for each network failure that caused it, and a cause that is not a network failure is left out. Neither tells an address's path, query or credentials, a header value the platform refused, or a credential Studio cuts from an error's text; your own message keeps the rest of what you wrote in it, a path without a scheme or an e-mail address among it. An answer longer than `maxResultChars` is refused.
 - **What Studio keeps.** An agent's calls show with the tool and the client; the principal never leaves your server. Studio's own MCP endpoint answers only with Studio's token, and replaces every credential and every body field named like a secret in what it hands an agent. Its `replay_write`, which sends a recorded write again, runs only once the person confirms the call shown to them — see [Studio for Your Agent](/docs/agents/studio#replaying-after-a-fix).
 
 ## Webhooks

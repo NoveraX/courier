@@ -10,8 +10,9 @@ import { segmentKind } from "./segment-template";
  * - `lookup` — fixed segments, then one parameter naming a record by
  *   another field (`"by-email/:email"`)
  * - `other` — anything else: fixed sub-paths (`"stats"`), paths that go
- *   on past a parameter (`":id/orders"`), and a parameter beside text in
- *   its segment (`":name::cancel"`)
+ *   on past a parameter (`":id/orders"`), a parameter beside text in its
+ *   segment (`":name::cancel"`), and a `{+name}`, whose value spans
+ *   segments
  */
 export type PathShape = "collection" | "record" | "lookup" | "other";
 
@@ -50,7 +51,8 @@ export function pathShape(path: string): PathShape {
 export function recordParam(path: string): string | undefined {
   const segments = path.split("/").filter(Boolean);
   const [last, ...beside] = pathPieces(segments.at(-1) ?? "");
-  if (last?.kind !== "param" || beside.length > 0) return undefined;
+  /* A `{+name}` takes as many segments as its value has: it names no record. */
+  if (last?.kind !== "param" || last.keepsSlashes || beside.length > 0) return undefined;
   const fixedBefore = segments.slice(0, -1).every((segment) => segmentKind(segment) === "text");
   return fixedBefore ? last.name : undefined;
 }

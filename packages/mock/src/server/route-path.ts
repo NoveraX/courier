@@ -19,7 +19,9 @@ const SEGMENT = "courier-segment-";
  * range's `:from-:to` — or text that starts with a colon is routed by a
  * pattern that matches the segment whole, under a name no parameter takes;
  * its parameters are then split out of the value the request gave it. A
- * path whose segments are text or one parameter each is routed as written.
+ * `{+name}` alone in its segment is routed by a pattern that takes the
+ * segments its value spans. A path whose segments are text or one
+ * parameter each is routed as written.
  *
  * @param path - The path, prefix included: `v4/spreadsheets/:spreadsheetId::batchUpdate`
  * @returns The route and the reader of its parameters
@@ -38,6 +40,7 @@ export function routePath(path: string): RoutePath {
     .map((segment, at) => {
       const template = segmentTemplate(segment);
       if (template.kind === "param") return `:${template.name}`;
+      if (template.kind === "spans") return `:${template.name}{${template.pattern}}`;
       if (template.kind === "text" && !template.text.startsWith(":")) return template.text;
       const key = `${SEGMENT}${at}`;
       patterned.set(key, template);

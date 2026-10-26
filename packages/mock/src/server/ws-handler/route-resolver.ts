@@ -1,9 +1,16 @@
 import { logger } from "@noverax/courier";
 
-import { byFixedQuery, carriesFixedQuery } from "../fixed-query";
+import { carriesFixedQuery } from "../fixed-query";
 import { matchPath } from "../match-path";
-import type { PrefixMapping } from "../prefix-route-types";
+import type { MappedEndpoint, PrefixMapping } from "../prefix-route-types";
 import { parseQueryParams } from "../route-helpers";
+import { byRouteOrder } from "../route-order";
+
+/* A channel is matched at its path, or at its name when it declares none. */
+const routedAt = (ep: MappedEndpoint): string => ep.path || ep.name;
+const BY_ROUTE = byRouteOrder(routedAt);
+/* Each mapping's channels in the order they are tried, sorted once: a channel is matched on every connection. */
+const CHANNELS = new WeakMap<PrefixMapping, readonly MappedEndpoint[]>();
 
 /** Resolved (group, method) pair from a WS upgrade URL */
 export interface WSRoute {
@@ -23,7 +30,9 @@ export interface WSRoute {
  * `channel.connect("ws-room")` named `room` answers `/chat/ws-room`. A
  * query the path writes is matched as an HTTP endpoint's is: the path before
  * it routes, and the channel answers only a request that carries the
- * query's values. A mapping that lists only method names is matched by name.
+ * query's values. The channels are tried in the order an HTTP endpoint's
+ * routes are — `chat/:id` before `chat/{+name}` — whatever order declares
+ * them. A mapping that lists only method names is matched by name.
  * Returns null when no mapping matches the path.
  */
 export function resolveWSRoute(url: string, mappings: PrefixMapping[]): WSRoute | null {
@@ -43,15 +52,22 @@ export function resolveWSRoute(url: string, mappings: PrefixMapping[]): WSRoute 
 }
 
 function byDeclaredPath(mapping: PrefixMapping, tail: string, url: string): WSRoute | null {
-  /* At one path, the channel whose query is fixed comes first: the other takes what is left. */
-  for (const ep of [...(mapping.endpoints ?? [])].sort(byFixedQuery)) {
-    if (ep.transport !== "ws" || !carriesFixedQuery(url, ep.fixedQuery)) continue;
-    const params = matchPath(ep.path || ep.name, tail);
+  for (const ep of channelsOf(mapping)) {
+    if (!carriesFixedQuery(url, ep.fixedQuery)) continue;
+    const params = matchPath(routedAt(ep), tail);
     if (!params) continue;
     const { fixedQuery } = ep;
     return { group: mapping.group, method: ep.name, params, ...(fixedQuery && { fixedQuery }) };
   }
   return null;
+}
+
+function channelsOf(mapping: PrefixMapping): readonly MappedEndpoint[] {
+  const known = CHANNELS.get(mapping);
+  if (known) return known;
+  const channels = (mapping.endpoints ?? []).filter((ep) => ep.transport === "ws").sort(BY_ROUTE);
+  CHANNELS.set(mapping, channels);
+  return channels;
 }
 
 function byName(mapping: PrefixMapping, tail: string): WSRoute | null {

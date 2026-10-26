@@ -5,10 +5,15 @@
 
 import type { Hono } from "hono";
 
-import { byFixedQuery, carriesFixedQuery, withoutFixedQuery } from "./fixed-query";
+import { carriesFixedQuery, withoutFixedQuery } from "./fixed-query";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { parsePathParams, parseQueryParams } from "./route-helpers";
+import { byRouteOrder } from "./route-order";
 import { routePath } from "./route-path";
+
+/* A stream is routed at its path, or at its name when it declares none. */
+const routedAt = (ep: MappedEndpoint): string => ep.path || ep.name;
+const BY_ROUTE = byRouteOrder(routedAt);
 
 /**
  * Register SSE endpoints as GET routes at the path each declares.
@@ -20,6 +25,8 @@ import { routePath } from "./route-path";
  * forwarded to the stream function. A query the path writes is routed by
  * the path before it, as an HTTP endpoint's is: the stream answers only a
  * request that carries the query's values, which its variables leave out.
+ * The routes are tried in the order an HTTP endpoint's are — `rooms/stats`
+ * and `rooms/:id` before `rooms/{+name}` — whatever order declares them.
  *
  * Must be called before `/:id` to prevent the catch-all from matching first.
  *
@@ -42,9 +49,8 @@ export function registerSSERoutes(
   group: string,
   config: PrefixRouteConfig,
 ): void {
-  /* At one path, the stream whose query is fixed comes first: the other takes what is left. */
-  for (const ep of endpoints.filter((e) => e.transport === "sse").sort(byFixedQuery)) {
-    const { route, params } = routePath(`${prefix}/${ep.path || ep.name}`);
+  for (const ep of endpoints.filter((e) => e.transport === "sse").sort(BY_ROUTE)) {
+    const { route, params } = routePath(`${prefix}/${routedAt(ep)}`);
     app.get(route, (c, next) => {
       if (!carriesFixedQuery(c.req.url, ep.fixedQuery)) return next();
       const query = parseQueryParams(new URL(c.req.url).searchParams);

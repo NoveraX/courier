@@ -44,9 +44,35 @@ describe("segmentTemplate", () => {
   });
 });
 
+describe("a {+name} segment", () => {
+  it("is a parameter whose pattern takes slashes, matched whole", () => {
+    const template = segmentTemplate("{+name}");
+
+    expect(template).toMatchObject({ kind: "spans", name: "name", names: ["name"], pattern: ".+" });
+    expect(template.match("projects/p/operations/o")).toEqual(["projects/p/operations/o"]);
+  });
+
+  it("beside text, takes slashes in its own part only", () => {
+    const template = segmentTemplate("{+name}::cancel");
+
+    expect(template.kind).toBe("mixed");
+    expect(new RegExp(`^${template.pattern}$`).test("projects/p:cancel")).toBe(true);
+    expect(template.match("projects/p:cancel")).toEqual(["projects/p"]);
+  });
+});
+
 describe("segmentKind", () => {
   it("reads a segment as its template does, without the pattern", () => {
-    for (const segment of ["index::inspect", ":id", ":name::cancel", ":from-:to", "::batchGet"]) {
+    for (const segment of [
+      "index::inspect",
+      ":id",
+      ":name::cancel",
+      ":from-:to",
+      "::batchGet",
+      "{+name}",
+      "{id}abc",
+      "{+name}::cancel",
+    ]) {
       expect(segmentKind(segment)).toBe(segmentTemplate(segment).kind);
     }
   });
@@ -59,6 +85,27 @@ describe("specificity", () => {
     paths.sort((a, b) => specificity(a).localeCompare(specificity(b)));
 
     expect(paths).toEqual(["stats", ":id::cancel", ":id"]);
+  });
+
+  it("sorts a {+name} alone after a parameter alone, as it can take more segments", () => {
+    const paths = ["{+rest}", ":id", "stats", "{id}abc"];
+
+    paths.sort((a, b) => specificity(a).localeCompare(specificity(b)));
+
+    expect(paths).toEqual(["stats", "{id}abc", ":id", "{+rest}"]);
+  });
+
+  it("sorts a path that goes on past a {+name} before the one that ends with it", () => {
+    const sort = (paths: string[]) =>
+      paths.sort((a, b) => specificity(a).localeCompare(specificity(b)));
+
+    expect(sort(["{+name}", "{+parent}/services"])).toEqual(["{+parent}/services", "{+name}"]);
+    expect(sort(["{+parent}/services", "{+name}"])).toEqual(["{+parent}/services", "{+name}"]);
+    expect(sort(["v1/{+name}", "v1/{+name}/operations", "v1/{+name}/:id"])).toEqual([
+      "v1/{+name}/operations",
+      "v1/{+name}/:id",
+      "v1/{+name}",
+    ]);
   });
 
   it("reads a segment of text with a colon in it as text", () => {

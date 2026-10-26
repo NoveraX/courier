@@ -1,13 +1,13 @@
 import { sendsVariablesInQuery } from "@noverax/courier/internal";
 import type { Context, Hono } from "hono";
 
-import { byFixedQuery, carriesFixedQuery, withoutFixedQuery } from "./fixed-query";
+import { carriesFixedQuery, withoutFixedQuery } from "./fixed-query";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { RAW_BESIDE_PATH_VALUES } from "./raw-body-refusal";
 import { type BodyRefusal, bodyValue, type RequestBody } from "./read-request-body";
 import { parsePathParams, parseQueryParams, servedByCatchAll } from "./route-helpers";
+import { byRouteOrder } from "./route-order";
 import { routePath } from "./route-path";
-import { specificity } from "./segment-template";
 
 const METHODS = new Set<string>([
   "GET",
@@ -20,6 +20,9 @@ const METHODS = new Set<string>([
   "DELETE",
 ]);
 
+/* An HTTP endpoint is routed at its path, an empty one at its group's prefix. */
+const BY_ROUTE = byRouteOrder((ep) => ep.path);
+
 /**
  * Register a route at its declared path for every HTTP endpoint the prefix
  * catch-alls do not answer: fixed sub-paths (`stats`), lookups
@@ -29,7 +32,8 @@ const METHODS = new Set<string>([
  * or body as variables.
  *
  * Routes are registered most specific first — a fixed segment before a
- * parameter at the same position — and all of them before the catch-alls,
+ * parameter at the same position, and a path that goes on past a `{+name}`
+ * before the one that ends with it — and all of them before the catch-alls,
  * so `/users/stats` never reaches `/users/:id`.
  *
  * @param app       The mock server's Hono app
@@ -56,7 +60,7 @@ export function registerDeclaredRoutes(
 ): void {
   const own = endpoints
     .filter((ep) => (every ? isServedHttp(ep) : needsOwnRoute(ep)))
-    .sort((a, b) => bySpecificity(a, b) || headFirst(a, b));
+    .sort((a, b) => BY_ROUTE(a, b) || headFirst(a, b));
   for (const ep of own) {
     const method = (ep.httpMethod ?? "GET").toUpperCase();
     /* A route at the collection root is `/users`, not `/users/`, which a
@@ -103,12 +107,6 @@ function isServedHttp(ep: MappedEndpoint): boolean {
 function headFirst(a: MappedEndpoint, b: MappedEndpoint): number {
   const isHead = (ep: MappedEndpoint) => (ep.httpMethod ?? "").toUpperCase() === "HEAD";
   return Number(isHead(b)) - Number(isHead(a));
-}
-
-/** Fixed segments sort before parameters, position by position */
-function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
-  /* At one path, the endpoint whose query is fixed comes first: the other takes what is left. */
-  return specificity(a.path).localeCompare(specificity(b.path)) || byFixedQuery(a, b);
 }
 
 /**

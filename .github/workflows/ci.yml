@@ -269,7 +269,11 @@ jobs:
   # who owns the workspace and HOME as Firefox requires, with the host's
   # shared memory for Chromium and an init process that reaps what each
   # Studio leaves. Its clock reads UTC, as the runner's does, whatever the
-  # image is set to.
+  # image is set to. Node takes a name's IPv4 address first, as on the
+  # runner, whose hosts file gives localhost 127.0.0.1 alone: the
+  # container's gives it ::1 too, where a server listening on localhost
+  # would sit while Node's own requests, with no IPv6 network, look on
+  # 127.0.0.1.
   browser:
     needs: browser-image
     runs-on: ubuntu-latest
@@ -279,6 +283,7 @@ jobs:
       options: --user 1001 --ipc=host --init
       env:
         TZ: UTC
+        NODE_OPTIONS: --dns-result-order=ipv4first
     steps:
       - uses: actions/checkout@v7
 

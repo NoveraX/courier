@@ -42,9 +42,16 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      # Studio's pages are measured in Chrome's engine
+      # Studio's pages are measured in Chrome's engine. VS Code loads
+      # libraries Playwright's image does not carry, so this job stays on the
+      # runner, which already has every library Chromium loads and the
+      # display server: the browser alone is downloaded, and apt, whose
+      # mirror at times sends packages slower than the run may wait, is never
+      # asked. The fonts it would add are for scripts Studio's pages do not
+      # show.
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: npx playwright install chromium
 
       # VS Code, whose extension is measured, needs a display
       - name: Measure

@@ -1,4 +1,5 @@
 import type { AgentCall } from "../agent/types";
+import type { PathWriter } from "../define/path-tag";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { IncomingRequest } from "../session/incoming-request";
@@ -13,7 +14,7 @@ export type HttpMethods = {
   [TMethod in HttpMethod]: <TData = unknown>(
     ...arguments_: MethodParameters<TMethod>
   ) => Promise<HttpResponse<TData>>;
-};
+} & PathWriter;
 
 export type BoundMethodOptions = SimpleOptions & {
   variables?: unknown;

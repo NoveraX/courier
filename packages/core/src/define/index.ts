@@ -50,6 +50,7 @@ export type {
   InferVariablesOut,
 } from "./marker";
 export type { PathParamNames, PathParamsMissing } from "./path-params";
+export type { PathWriter } from "./path-tag";
 export type {
   ChannelProbe,
   ChannelWire,

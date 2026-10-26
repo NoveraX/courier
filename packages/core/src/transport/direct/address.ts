@@ -1,4 +1,5 @@
 import { endpointPath } from "../../define/address";
+import { pathWriter } from "../../define/path-tag";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
 import { RealtimeValidationError } from "../../realtime/errors";
 import { isRecord } from "../../utils/is-record";
@@ -17,6 +18,9 @@ export interface CallAddress {
   readonly variables: Record<string, unknown> | undefined;
 }
 
+/* A value the closure puts into its path is refused, where it would change the route, as a parameter is. */
+const callPath = pathWriter((message) => new RealtimeValidationError(message));
+
 /**
  * Work out where one call to a remote stream or channel goes.
  *
@@ -32,7 +36,7 @@ export interface CallAddress {
  * @param method - The endpoint's name in its group
  * @param variables - The call's variables
  * @returns The path and the variables left to send
- * @throws RealtimeValidationError when a `:param` has no value
+ * @throws RealtimeValidationError when a `:param` has no value, or a value would change the route
  *
  * @example
  * ```ts
@@ -45,7 +49,7 @@ export function addressCall(endpoint: unknown, method: string, variables: unknow
   const probe = remoteProbe(endpoint);
   if (!probe) return { path: endpointPath(endpoint, method), variables: asRecord(variables) };
 
-  const call = recordWireCall(probe, variables);
+  const call = recordWireCall(probe, variables, callPath);
   return fillParams(call.path || method, asRecord(call.variables));
 }
 

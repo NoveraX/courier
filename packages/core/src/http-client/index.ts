@@ -3,6 +3,7 @@ import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
 import type { RequestOptions } from "./call-transport";
+import { httpPath } from "./http-path";
 import { overlayHeaders, withoutConnectionHeaders } from "./request-headers";
 import { type PlatformFetch, platformFetchOf } from "./source-transport";
 import type {
@@ -174,6 +175,7 @@ export class HttpClient {
       head: bindMethod(deps, "head", options, groupOptions),
       options: bindMethod(deps, "options", options, groupOptions),
       query: bindMethod(deps, "query", options, groupOptions),
+      path: httpPath,
     };
   }
 }

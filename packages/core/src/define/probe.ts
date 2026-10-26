@@ -1,5 +1,7 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import type { HttpMethod, MethodOptions } from "../http-client/types";
+import { type PathWriter, probingPath } from "./path-tag";
+import { standIn } from "./stand-in";
 
 /**
  * Opaque result of a wire call.
@@ -19,9 +21,9 @@ export interface WireCall {
  *
  * Each method mirrors what the client carries out at request time, including
  * the per-call options that follow the variables — `head` takes none, since it
- * sends no body.
+ * sends no body. `path` writes a path with values put into it.
  */
-export interface HttpWire {
+export interface HttpWire extends PathWriter {
   get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
   post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall;
   put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall;
@@ -34,12 +36,12 @@ export interface HttpWire {
 }
 
 /** Wire surface offered to a server-sent-events endpoint's closure. */
-export interface StreamWire {
+export interface StreamWire extends PathWriter {
   get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
 }
 
 /** Wire surface offered to a channel endpoint's closure. */
-export interface ChannelWire {
+export interface ChannelWire extends PathWriter {
   connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
 }
 
@@ -57,33 +59,6 @@ export interface WireShape {
 }
 
 const CHANNEL_METHOD: HttpMethod = "get";
-
-/**
- * A stand-in for the variables a closure will receive at request time.
- *
- * Probing has no real ones, so this answers every read with another stand-in.
- * Each is callable, so a closure may walk into its variables or call methods
- * on them and still reach the call that addresses the endpoint; a call
- * answers with the stand-in it was made on. Read as text, a stand-in is the
- * placeholder of the variable it stands for, so a path written as
- * `items/${vars.id}/detail` is recorded as `items/:id/detail`; read as a
- * number it is 0. `then` is left absent so it is never taken for a promise.
- */
-function standIn(name = "", owner?: unknown): unknown {
-  const proxy: unknown = new Proxy(() => proxy, {
-    get: (_target, property) => {
-      if (property === Symbol.toPrimitive) {
-        return (hint: string) => (hint === "number" ? 0 : name && `:${name}`);
-      }
-      if (property === "then") return undefined;
-      if (property === Symbol.iterator) return function* (): Generator<unknown> {};
-      return typeof property === "string" ? standIn(property, proxy) : proxy;
-    },
-    has: () => true,
-    apply: () => owner ?? proxy,
-  });
-  return proxy;
-}
 
 type WireMethod = HttpMethod | "connect";
 
@@ -124,6 +99,8 @@ export interface WireCallRecord {
  *
  * @param probe - the wire closure supplied to a builder terminal
  * @param variables - what the closure is handed as its variables
+ * @param path - the `path` the wire offers: for a call that sends the path,
+ *   one that refuses a value as the call's parameters are refused
  * @returns the first call the closure made
  * @throws ConfigurationError when the closure records no call at all
  *
@@ -133,7 +110,11 @@ export interface WireCallRecord {
  * // → { name: "get", path: "lobby/feed", variables: undefined }
  * ```
  */
-export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRecord {
+export function recordWireCall(
+  probe: AnyProbe,
+  variables: unknown,
+  path: PathWriter["path"] = probingPath,
+): WireCallRecord {
   let recorded: WireCallRecord | undefined;
   let refused: ConfigurationError | undefined;
 
@@ -142,6 +123,7 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
     {
       get: (_target, property) => {
         if (typeof property !== "string") return undefined;
+        if (property === "path") return path;
         return (...args: unknown[]): unknown => {
           refused ??= refusalOf(property, recorded);
           if (refused) throw refused;

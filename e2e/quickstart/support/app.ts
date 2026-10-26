@@ -101,19 +101,21 @@ export async function startApp(
   const mockPort = existsSync(mocks)
     ? /port:\s*(\d+)/.exec(readFileSync(mocks, "utf8"))?.[1]
     : undefined;
-  if (mockPort && !(await answers(`http://127.0.0.1:${mockPort}/users`, 120_000))) {
+  const mock = mockPort ? await answers(`http://127.0.0.1:${mockPort}/users`, 120_000) : true;
+  if (mock !== true) {
     await stopStarted();
-    throw new Error(`The mock did not answer: see ${join(logs, "studio.log")}`);
+    throw new Error(`The mock did not answer (${mock}): see ${join(logs, "studio.log")}`);
   }
   const port = await freePort();
   const command = target.start.map((part) => part.replace("{port}", String(port)));
   track(startLogged(command, root, { ...env, PORT: String(port) }, join(logs, "app.log")), root);
   const url = `http://localhost:${port}`;
-  const steady =
-    (await answers(`${url}${target.page}`, 300_000)) && (await settled(`${url}${target.page}`));
-  if (!steady) {
+  const page = `${url}${target.page}`;
+  const first = await answers(page, 300_000);
+  const steady = first === true ? await settled(page) : first;
+  if (steady !== true) {
     await stopStarted();
-    throw new Error(`${url}${target.page} did not answer: see ${join(logs, "app.log")}`);
+    throw new Error(`${page} did not answer (${steady}): see ${join(logs, "app.log")}`);
   }
   return { url, stop: stopStarted };
 }

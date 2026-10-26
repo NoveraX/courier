@@ -120,3 +120,30 @@ describe("variables declared before the path", () => {
     expect(typeOnly).toBeTypeOf("function");
   });
 });
+
+describe("a parameter written in braces", () => {
+  it("is named where the brace ends its name, `+` before it or not", () => {
+    expectTypeOf<PathParamNames<"files/{id}abc">>().toEqualTypeOf<"id">();
+    expectTypeOf<PathParamNames<"v1/{+name}::cancel">>().toEqualTypeOf<"name">();
+    expectTypeOf<PathParamNames<"files/{name}.{ext}">>().toEqualTypeOf<"name" | "ext">();
+    expectTypeOf<PathParamNames<"orgs/{org}/users/:id">>().toEqualTypeOf<"org" | "id">();
+    expectTypeOf<PathParamNames<"a/{{id}}">>().toEqualTypeOf<"id">();
+    expectTypeOf<PathParamNames<"a/:{id}">>().toEqualTypeOf<"id">();
+  });
+
+  it("is text when the braces hold no name, or stand in a query or a fragment", () => {
+    expectTypeOf<PathParamNames<"a/{1}/{a-b}/{}/{++x}/{+}">>().toBeNever();
+    expectTypeOf<PathParamNames<"a/{x">>().toBeNever();
+    expectTypeOf<PathParamNames<"items?filter={id}">>().toBeNever();
+    expectTypeOf<PathParamNames<"items#{id}">>().toBeNever();
+  });
+
+  it("is asked of the variables as a parameter written :name is", () => {
+    const operation = endpoint.get("v1/{+name}").response<unknown>();
+    expectTypeOf<InferVariables<typeof operation>>().toEqualTypeOf<{ name: string | number }>();
+
+    endpoint.variables<{ id: string }>().get("files/{id}abc");
+    // @ts-expect-error — the variables do not name {id}
+    endpoint.variables<{ file: string }>().get("files/{id}abc");
+  });
+});

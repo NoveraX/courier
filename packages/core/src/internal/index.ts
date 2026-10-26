@@ -22,11 +22,7 @@ export { type ExposureDecision, exposureOf } from "../adapter/exposure";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
-export {
-  type FrameCredentials,
-  frameCredentials,
-  frameHeadersOver,
-} from "../adapter/ws-frame-credentials";
+export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";
 export {
   adoptListenOrigin,
   DEV_SERVER_ORIGIN_ENV,
@@ -146,6 +142,7 @@ export { isCredentialHeader } from "../utils/is-credential-header";
 export { isLoopbackHostname } from "../utils/loopback-host";
 export { parseUrl } from "../utils/parse-url";
 export {
+  encodePathValue,
   escapePathText,
   fillPathParams,
   type PathPiece,

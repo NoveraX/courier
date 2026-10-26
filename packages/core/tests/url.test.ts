@@ -102,6 +102,44 @@ describe("a path parameter's value", () => {
   });
 });
 
+describe("an endpoint's path written as an absolute URL", () => {
+  function client() {
+    const elsewhere = `${upstream.origin}/elsewhere`;
+    return createCaller(
+      defineApi({
+        baseURL: `${upstream.origin}/base`,
+        endpoints: {
+          braced: endpoint.get(`${elsewhere}/users/{id}`).variables<{ id: string }>(),
+          spanning: endpoint.get(`${elsewhere}/v1/{+name}`).variables<{ name: string }>(),
+          suffixed: endpoint.get(`${elsewhere}/files/{id}abc`).variables<{ id: string }>(),
+          colon: endpoint.get(`${elsewhere}/users/:id`).variables<{ id: string }>(),
+          queried: endpoint.get(`${elsewhere}/items?sort=asc`).variables<{ page: number }>(),
+        },
+      }),
+    );
+  }
+
+  it("fills its parameters as a relative path does, a parameter in braces too", async () => {
+    await client().braced({ id: "7" });
+    await client().spanning({ name: "projects/p/operations/o" });
+    await client().suffixed({ id: "x/7" });
+    await client().colon({ id: "7" });
+
+    expect(upstream.received.map((request) => request.url)).toEqual([
+      "/elsewhere/users/7",
+      "/elsewhere/v1/projects/p/operations/o",
+      "/elsewhere/files/x%2F7abc",
+      "/elsewhere/users/7",
+    ]);
+  });
+
+  it("sends the query it writes, with a read's variables after it", async () => {
+    await client().queried({ page: 2 });
+
+    expect(upstream.last().url).toBe("/elsewhere/items?sort=asc&page=2");
+  });
+});
+
 describe("a FormData that fills a path parameter", () => {
   const items = defineGroup({
     prefix: "items",

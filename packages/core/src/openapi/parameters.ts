@@ -1,7 +1,7 @@
 import { probeOptions } from "../define/probe";
 import { isFormData, sendsVariablesInQuery } from "../utils/helpers";
 import { parseUrl } from "../utils/parse-url";
-import { fillPathParams, pathParamNames } from "../utils/path-template";
+import { fillPathParams, type PathParam, pathPieces } from "../utils/path-template";
 import type { PlacedEndpoint } from "./endpoints";
 import type { JSONSchema } from "./types";
 
@@ -17,6 +17,9 @@ export interface OperationInput {
 
 /* Headers a session or the proxy writes itself, which an operation's parameters do not repeat. */
 const WRITTEN_FOR_IT = new Set(["authorization", "cookie", "content-type", "accept"]);
+
+/* OpenAPI has no form for a path parameter whose value spans segments, as `{+name}` does. */
+const KEEPS_SLASHES = "Sent with its slashes as written, each part between them encoded";
 
 /**
  * Where an endpoint's variables go, as Courier sends them: a path
@@ -38,14 +41,16 @@ export function inputOf(
   variables: JSONSchema | undefined,
 ): OperationInput {
   const { path, servers, fixed } = addressOf(endpoint.path);
-  const names = pathParamNames(path);
+  const params = pathPieces(path).filter((piece): piece is PathParam => piece.kind === "param");
+  const names = params.map(({ name }) => name);
   const properties = propertiesOf(variables);
   const parameters: JSONSchema[] = [
-    ...names.map((name) => ({
+    ...params.map(({ name, keepsSlashes }) => ({
       name,
       in: "path",
       required: true,
       schema: ownProperty(properties, name) ?? { type: "string" },
+      ...(keepsSlashes && { description: KEEPS_SLASHES }),
     })),
     ...[...fixed].map(([name, value]) => ({
       name,

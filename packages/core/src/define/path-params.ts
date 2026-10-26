@@ -85,23 +85,53 @@ type NamesIn<TPath extends string> = TPath extends `${string}:${infer TRest}`
     : NameAt<TRest> | NamesIn<TRest>
   : never;
 
+type AllNameChars<TRest extends string> = TRest extends `${infer C}${infer TTail}`
+  ? C extends NameChar
+    ? AllNameChars<TTail>
+    : false
+  : true;
+
+type WholeName<TName extends string> = TName extends `${infer C}${infer TTail}`
+  ? C extends NameStart
+    ? AllNameChars<TTail> extends true
+      ? TName
+      : never
+    : never
+  : never;
+
+/* What a pair of braces holds, when it is a name: `{id}`, or `{+name}` for a value with slashes. */
+type BracedName<TInner extends string> = TInner extends `+${infer TName}`
+  ? WholeName<TName>
+  : WholeName<TInner>;
+
+/* A brace starts a parameter when a name, `+` before it or not, runs to the closing brace. */
+type BracedIn<TPath extends string> = TPath extends `${string}{${infer TRest}`
+  ? TRest extends `${infer TInner}}${infer TAfter}`
+    ? [BracedName<TInner>] extends [never]
+      ? BracedIn<TRest>
+      : BracedName<TInner> | BracedIn<TAfter>
+    : never
+  : never;
+
 /**
- * The names of a path's `:name` parameters, read as the request is built: a
- * letter or `_`, then letters, digits and `_`. `::` is one colon the path
- * sends as written, and neither an absolute URL's scheme and host nor a
- * query or fragment the path writes holds a parameter. A path known only as
- * `string` names none.
+ * The names of a path's parameters, read as the request is built: `:name`,
+ * a letter or `_` then letters, digits and `_`; `{name}`, the same name with
+ * its end written; and `{+name}`, whose value keeps its slashes. `::` is one
+ * colon the path sends as written, and neither an absolute URL's scheme and
+ * host nor a query or fragment the path writes holds a parameter. A path
+ * known only as `string` names none.
  *
  * @example
  * ```ts
  * type Names = PathParamNames<"orgs/:orgId/users/:id.json">; // "orgId" | "id"
- * type Google = PathParamNames<"v1/:name::cancel">; // "name"
+ * type Google = PathParamNames<"v1/{+name}::cancel">; // "name"
+ * type Suffixed = PathParamNames<"files/{id}abc">; // "id"
  * type Query = PathParamNames<"users/:id?expand=:what">; // "id"
  * ```
  */
 export type PathParamNames<TPath extends string> = string extends TPath
   ? never
-  : NamesIn<LocalPart<BeforeQuery<TPath>>>;
+  : NamesIn<LocalPart<BeforeQuery<TPath>>> | BracedIn<LocalPart<BeforeQuery<TPath>>>;
 
 /** What a type error names when variables leave out a path's parameters. */
 export interface PathParamsMissing<TNames extends string> {

@@ -1,16 +1,20 @@
 /**
- * A path is read as its request is addressed: `:name` is a parameter, `::`
- * one colon the path sends as written — as a Google method's
+ * A path is read as its request is addressed: `:name` is a parameter, and
+ * so are `{name}`, whose end is written, and `{+name}`, whose value keeps
+ * its slashes; `::` is one colon the path sends as written — as a Google method's
  * `index:inspect` needs — and an absolute URL's scheme and host are never
  * read, so a port or an IPv6 address holds no parameter.
  */
 import { describe, expect, it } from "vitest";
 
 import {
+  encodePathValue,
   escapePathText,
   fillPathParams,
+  type PathParam,
   pathParamNames,
   pathPieces,
+  routeChangingPart,
 } from "../../src/utils/path-template";
 
 const marked = (name: string): string => `<${name}>`;
@@ -82,7 +86,7 @@ describe("pathPieces", () => {
   it("splits a path into its text and its parameters, a doubled colon read as one", () => {
     expect(pathPieces("v1/:name::cancel")).toEqual([
       { kind: "text", text: "v1/" },
-      { kind: "param", name: "name" },
+      { kind: "param", name: "name", keepsSlashes: false, written: ":name" },
       { kind: "text", text: ":cancel" },
     ]);
   });
@@ -92,8 +96,8 @@ describe("pathPieces", () => {
       { kind: "text", text: "https://[::1]/index:inspect" },
     ]);
     expect(pathPieces(":a:b")).toEqual([
-      { kind: "param", name: "a" },
-      { kind: "param", name: "b" },
+      { kind: "param", name: "a", keepsSlashes: false, written: ":a" },
+      { kind: "param", name: "b", keepsSlashes: false, written: ":b" },
     ]);
     expect(pathPieces("")).toEqual([]);
   });
@@ -112,7 +116,7 @@ describe("a path's query and fragment", () => {
   it("are text in the pieces, after the last parameter", () => {
     expect(pathPieces("items/:id?sort=:field")).toEqual([
       { kind: "text", text: "items/" },
-      { kind: "param", name: "id" },
+      { kind: "param", name: "id", keepsSlashes: false, written: ":id" },
       { kind: "text", text: "?sort=:field" },
     ]);
   });
@@ -125,5 +129,81 @@ describe("escapePathText", () => {
     expect(path).toBe("index::inspect");
     expect(pathParamNames(path)).toEqual([]);
     expect(fillPathParams(escapePathText("a:b::c"), marked)).toBe("a:b::c");
+  });
+});
+
+describe("a parameter written in braces", () => {
+  it("is named where the brace ends its name, whatever text follows", () => {
+    expect(pathParamNames("files/{id}abc")).toEqual(["id"]);
+    expect(pathParamNames("files/{name}.{ext}")).toEqual(["name", "ext"]);
+    expect(pathParamNames("v1/{+name}::cancel")).toEqual(["name"]);
+    expect(pathParamNames("orgs/{org}/users/:id")).toEqual(["org", "id"]);
+    expect(pathParamNames("a/:{id}")).toEqual(["id"]);
+  });
+
+  it("is text when the braces hold no name", () => {
+    expect(pathParamNames("a/{1}/{a-b}/{}/{++x}/{ x }/{+}")).toEqual([]);
+    expect(pathParamNames("a/{x/b}")).toEqual([]);
+    expect(pathParamNames("a/{x")).toEqual([]);
+    expect(pathParamNames("a/{{id}}")).toEqual(["id"]);
+  });
+
+  it("is not read in a query, a fragment, or an absolute URL's host", () => {
+    expect(pathParamNames("items?filter={id}")).toEqual([]);
+    expect(pathParamNames("items#{id}")).toEqual([]);
+    expect(pathParamNames("https://{host}.test/{id}")).toEqual(["id"]);
+  });
+
+  it("is filled, saying whether its value keeps its slashes and how the path writes it", () => {
+    const asked: PathParam[] = [];
+    const filled = fillPathParams("v1/{+name}::cancel/{id}x/:n", (name, param) => {
+      asked.push(param);
+      return `<${name}>`;
+    });
+
+    expect(filled).toBe("v1/<name>:cancel/<id>x/<n>");
+    expect(asked).toEqual([
+      { kind: "param", name: "name", keepsSlashes: true, written: "{+name}" },
+      { kind: "param", name: "id", keepsSlashes: false, written: "{id}" },
+      { kind: "param", name: "n", keepsSlashes: false, written: ":n" },
+    ]);
+  });
+
+  it("is a piece of its own, text on each side", () => {
+    expect(pathPieces("files/{id}abc")).toEqual([
+      { kind: "text", text: "files/" },
+      { kind: "param", name: "id", keepsSlashes: false, written: "{id}" },
+      { kind: "text", text: "abc" },
+    ]);
+  });
+});
+
+describe("text a path sends as written", () => {
+  it("has its braces encoded, so that none starts a parameter", () => {
+    const path = escapePathText("{draft}:v2");
+
+    expect(path).toBe("%7Bdraft%7D::v2");
+    expect(pathParamNames(path)).toEqual([]);
+    expect(fillPathParams(path, marked)).toBe("%7Bdraft%7D:v2");
+  });
+});
+
+describe("a parameter's value in the path", () => {
+  it("is encoded whole, or part by part with its slashes kept for {+name}", () => {
+    expect(encodePathValue("a/b c", false)).toBe("a%2Fb%20c");
+    expect(encodePathValue("a/b c", true)).toBe("a/b%20c");
+    expect(encodePathValue("projects/p/operations/o", true)).toBe("projects/p/operations/o");
+    expect(encodePathValue("a?b#c:d", true)).toBe("a%3Fb%23c%3Ad");
+  });
+
+  it("names the part that would make the path another route", () => {
+    expect(routeChangingPart("..", false)).toBe("..");
+    expect(routeChangingPart("", false)).toBe("");
+    expect(routeChangingPart("a/..", false)).toBeUndefined();
+    expect(routeChangingPart("projects/../admin", true)).toBe("..");
+    expect(routeChangingPart("a//b", true)).toBe("");
+    expect(routeChangingPart("a/b/", true)).toBe("");
+    expect(routeChangingPart("./a", true)).toBe(".");
+    expect(routeChangingPart("a..b/c.d", true)).toBeUndefined();
   });
 });

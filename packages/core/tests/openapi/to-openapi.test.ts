@@ -381,6 +381,33 @@ describe("an address written into the endpoint", () => {
     expect(document.paths["/status"]?.get?.servers).toEqual([{ url: "https://files.example.com" }]);
     expectValid(document);
   });
+
+  it("writes a parameter in braces as OpenAPI does, and says that a {+name} keeps its slashes", () => {
+    const google = defineApi({
+      name: "google",
+      baseURL: "https://g.example",
+      endpoints: {
+        cancel: endpoint.post("v1/{+name}::cancel"),
+        suffixed: endpoint.get("files/{id}abc"),
+      },
+    });
+
+    const document = toOpenAPI(google);
+
+    expect(document.paths["/v1/{name}:cancel"]?.post?.parameters).toEqual([
+      {
+        name: "name",
+        in: "path",
+        required: true,
+        schema: { type: "string" },
+        description: "Sent with its slashes as written, each part between them encoded",
+      },
+    ]);
+    expect(document.paths["/files/{id}abc"]?.get?.parameters).toEqual([
+      { name: "id", in: "path", required: true, schema: { type: "string" } },
+    ]);
+    expectValid(document);
+  });
 });
 
 describe("variables an endpoint defaults", () => {

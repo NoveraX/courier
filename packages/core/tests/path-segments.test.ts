@@ -110,3 +110,58 @@ describe("a path parameter with no value", () => {
     expect(upstream.received).toEqual([]);
   });
 });
+
+describe("a parameter written {+name}", () => {
+  function slashes() {
+    return defineApi({
+      expose: true,
+      name: "slashes",
+      baseURL: `${upstream.url}/echo`,
+      endpoints: {
+        operation: endpoint.get("v1/{+name}").variables<{ name: string }>(),
+        cancel: endpoint.post("v1/{+name}::cancel").variables<{ name: string }>(),
+      },
+    });
+  }
+
+  it("sends its value's slashes as written, each part encoded", async () => {
+    await createCaller(slashes()).operation({ name: "projects/p 1/operations/o" });
+    await createCaller(slashes()).cancel({ name: "projects/p/operations/o" });
+
+    expect(upstream.received.map((r) => r.url)).toEqual([
+      "/echo/v1/projects/p%201/operations/o",
+      "/echo/v1/projects/p/operations/o:cancel",
+    ]);
+  });
+
+  it.each(["projects/../admin", "projects//o", "./o", "projects/p/"])(
+    "refuses %j, a part of which would change the route, before any request is sent",
+    async (name) => {
+      const error = await createCaller(slashes())
+        .operation({ name })
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(HTTPError);
+      expect((error as HTTPError).status).toBe(400);
+      expect((error as HTTPError).message).toMatch(
+        /^Path parameter name cannot be ".*": its part ".*" would change the route$/,
+      );
+      expect(upstream.received).toEqual([]);
+    },
+  );
+});
+
+describe("a parameter written {name}", () => {
+  it("ends where its brace does, the text after it sent as written", async () => {
+    const files = defineApi({
+      expose: true,
+      name: "files",
+      baseURL: `${upstream.url}/echo`,
+      endpoints: { suffixed: endpoint.get("files/{id}abc").variables<{ id: string }>() },
+    });
+
+    await createCaller(files).suffixed({ id: "7/8" });
+
+    expect(upstream.received.map((r) => r.url)).toEqual(["/echo/files/7%2F8abc"]);
+  });
+});

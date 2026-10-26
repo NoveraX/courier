@@ -2,8 +2,12 @@ import { endpointPath } from "../../define/address";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
 import { RealtimeValidationError } from "../../realtime/errors";
 import { isRecord } from "../../utils/is-record";
-import { fillPathParams, pathParamNames } from "../../utils/path-template";
-import { changesRoute } from "../../utils/url";
+import {
+  encodePathValue,
+  fillPathParams,
+  pathParamNames,
+  routeChangingPart,
+} from "../../utils/path-template";
 
 /** Where one call to a remote stream or channel goes, relative to its group. */
 export interface CallAddress {
@@ -61,7 +65,9 @@ function isProbe(value: unknown): value is AnyProbe {
 }
 
 function fillParams(path: string, variables: Record<string, unknown> | undefined): CallAddress {
-  const filled = fillPathParams(path, (name) => segmentOf(name, variables?.[name]));
+  const filled = fillPathParams(path, (name, { keepsSlashes }) =>
+    segmentOf(name, variables?.[name], keepsSlashes),
+  );
   const names = pathParamNames(path);
   if (names.length === 0) return { path: filled, variables };
 
@@ -70,8 +76,8 @@ function fillParams(path: string, variables: Record<string, unknown> | undefined
   return { path: filled, variables: Object.keys(rest).length > 0 ? rest : undefined };
 }
 
-/* One parameter's segment of the path, from its value. */
-function segmentOf(name: string, value: unknown): string {
+/* One parameter's place in the path, from its value: a segment, or segments for `{+name}`. */
+function segmentOf(name: string, value: unknown, keepsSlashes: boolean): string {
   if (value === undefined || value === null) {
     throw new RealtimeValidationError(
       `Missing required path parameter "${name}": pass it in the variables`,
@@ -79,13 +85,15 @@ function segmentOf(name: string, value: unknown): string {
   }
   /* Relayed by a proxy, a `..` reached a route above the declared one with
      the server's credentials. */
-  const segment = String(value);
-  if (changesRoute(segment)) {
+  const text = String(value);
+  const part = routeChangingPart(text, keepsSlashes);
+  if (part !== undefined) {
+    const which = part === text ? "it" : `its part "${part}"`;
     throw new RealtimeValidationError(
-      `Path parameter "${name}" cannot be "${segment}": it would change the route`,
+      `Path parameter "${name}" cannot be "${text}": ${which} would change the route`,
     );
   }
-  return encodeURIComponent(segment);
+  return encodePathValue(text, keepsSlashes);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {

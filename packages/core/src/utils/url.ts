@@ -3,53 +3,50 @@ import type { SearchParamsSerializer } from "../http-client/types";
 import { isFieldRecord } from "./body-kind";
 import { defineOwn } from "./define-own";
 import { isFormData } from "./helpers";
-import { fillPathParams, pathParamNames } from "./path-template";
+import {
+  encodePathValue,
+  fillPathParams,
+  pathParamNames,
+  routeChangingPart,
+} from "./path-template";
 
 const MULTIPLE_SLASHES = /\/+/g;
 const ABSOLUTE_URL = /^https?:\/\//i;
+/* An absolute URL's scheme and host, which end where its path, its query or a fragment starts. */
+const ORIGIN = /^https?:\/\/[^/?#]*/i;
 
 /* A path is filled where it is used: a cache of one closure per path kept a
    closure per distinct path for good, and saved nothing a replace costs. */
 const fillPath = (path: string, params: Record<string, unknown>): string =>
-  fillPathParams(path, (name) => encodePathParam(name, params[name]));
+  fillPathParams(path, (name, { keepsSlashes }) =>
+    encodePathParam(name, params[name], keepsSlashes),
+  );
 
 /**
- * One path segment, from a parameter's own value.
+ * A parameter's place in the path, from its own value: one segment, or —
+ * for `{+name}` — segments its slashes divide.
  *
  * The value is read as given rather than as its string form, so `null` is
  * missing like `undefined` instead of the text "null", and the word
- * "undefined" is an ordinary value. `.` and `..` are refused: encoding does
- * not hide them, since URL parsing reads `%2E%2E` as `..` too, and the request
- * would reach a route above the one the endpoint declares — with whatever
- * credentials the server sends. An empty segment names another route as well.
+ * "undefined" is an ordinary value. `.` and `..` are refused, whole or as a
+ * part between slashes: encoding does not hide them, since URL parsing
+ * reads `%2E%2E` as `..` too, and the request would reach a route above the
+ * one the endpoint declares — with whatever credentials the server sends.
+ * An empty segment names another route as well.
  */
-function encodePathParam(name: string, value: unknown): string {
+function encodePathParam(name: string, value: unknown, keepsSlashes: boolean): string {
   if (value === undefined || value === null) {
     throw new Error(
       `Missing required path parameter "${name}": pass it in the variables, or return it from pathOptions`,
     );
   }
-  const segment = String(value);
-  if (changesRoute(segment)) {
-    throw new Error(`Path parameter ${name} cannot be "${segment}": it would change the route`);
+  const text = String(value);
+  const part = routeChangingPart(text, keepsSlashes);
+  if (part !== undefined) {
+    const which = part === text ? "it" : `its part "${part}"`;
+    throw new Error(`Path parameter ${name} cannot be "${text}": ${which} would change the route`);
   }
-  return encodeURIComponent(segment);
-}
-
-/**
- * Whether a path parameter's value would name another route than the one
- * its endpoint declares: empty, `.` or `..`, which encoding does not hide.
- *
- * @param segment - The value, as the path would hold it
- * @returns Whether it changes the route
- * @example
- * ```ts
- * changesRoute(".."); // → true
- * changesRoute("a..b"); // → false
- * ```
- */
-export function changesRoute(segment: string): boolean {
-  return segment === "" || segment === "." || segment === "..";
+  return encodePathValue(text, keepsSlashes);
 }
 
 export const pathJoin = (parts: string[]): string =>
@@ -64,10 +61,12 @@ export const resolveBasePath = (
   }
 
   /* Only a scheme makes a path absolute; `httpbin/…` or `https-proxies` is an
-     ordinary path segment. */
+     ordinary path segment. Only its origin is parsed: parsed whole, the path
+     came back with its braces encoded, so none was read as a parameter, and
+     without its query or a #, which the path's reader sends or refuses. */
   if (ABSOLUTE_URL.test(basePath)) {
-    const url = new URL(basePath);
-    return { path: pathJoin([url.pathname]), baseUrl: url.origin };
+    const origin = ORIGIN.exec(basePath)?.[0] ?? "";
+    return { path: pathJoin([basePath.slice(origin.length)]), baseUrl: new URL(origin).origin };
   }
 
   return { path: pathJoin([prefix, basePath]) };

@@ -1,10 +1,13 @@
 import type { RequestEntry } from "@/store/types";
+import { isNetworkCode } from "./network-failure";
 import { networkHint } from "./network-hint";
+import { ownRequestHint } from "./own-request-hint";
 
 /**
  * What usually fixes a request that failed this way, told from its kind
- * and status — for one that got no answer, and a stream that gave up
- * reconnecting, from the system's code — or nothing when they say too
+ * and status — for one that got no answer, a stream that gave up
+ * reconnecting, and a failure of the app's own code that a request it made
+ * on the way caused, from the system's code — or nothing when they say too
  * little to advise on.
  *
  * @param r - The request that failed
@@ -32,6 +35,10 @@ export function failureHint(
       : "The API's answer does not match the response schema the endpoint declares. Change the schema to what the API returns, or the API to what the schema promises.";
   }
   if (kind === "network") return networkHint(r.error?.cause);
+  const cause = r.error?.cause;
+  if (kind === "unknown" && cause?.code !== undefined && isNetworkCode(cause.code)) {
+    return ownRequestHint(cause.code);
+  }
   if (kind === "timeout" || status === 408 || status === 504) {
     return "The request ran out of time. Raise its timeout, or find out what makes the API slow to answer.";
   }

@@ -172,16 +172,24 @@ describe("the fix suggested for a request that got no answer", () => {
       "FailedToOpenSocket",
     ]) {
       expect(failureHint(unanswered(code))).toMatch(/connection to it failed/);
+      expect(failureHint(unanswered(code))).toMatch(/firewall, VPN or proxy/);
     }
     for (const code of [
       "DEPTH_ZERO_SELF_SIGNED_CERT",
       "SELF_SIGNED_CERT_IN_CHAIN",
       "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
       "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+      "UNABLE_TO_GET_ISSUER_CERT",
       "CERT_HAS_EXPIRED",
+      "CERT_NOT_YET_VALID",
+      "CERT_REVOKED",
+      "HOSTNAME_MISMATCH",
       "ERR_TLS_CERT_ALTNAME_INVALID",
     ]) {
       expect(failureHint(unanswered(code))).toMatch(/certificate was not trusted/);
+      expect(failureHint(unanswered(code))).toMatch(
+        /NODE_EXTRA_CA_CERTS — or, when this machine already trusts it, through NODE_USE_SYSTEM_CA=1, which Node\.js reads from 22\.19 and 24\.6 on;/,
+      );
     }
   });
 
@@ -207,6 +215,63 @@ describe("the fix suggested for a request that got no answer", () => {
     expect(failureHint(unanswered("TooManyRedirects", "fetch() failed"))).toMatch(
       /redirects that never reached/,
     );
+  });
+
+  describe("for a request the app's own code made on the way", () => {
+    const OWN =
+      "A request the app's own code made on the way, in a middleware or in pathOptions, got no answer.";
+    const own = (code: string) =>
+      failureHint(
+        requestEntry({
+          status: "error",
+          statusCode: undefined,
+          error: { type: "unknown", message: "fetch failed", cause: { code, message: "failed" } },
+        }),
+      );
+
+    it("is about the host that code called, by the system's code", () => {
+      expect(own("ENOTFOUND")).toBe(
+        `${OWN} The host name it called did not resolve (ENOTFOUND). Check the address your code calls for a typo, and that this machine's network can resolve it: a host only a VPN or an internal DNS knows needs that network.`,
+      );
+      expect(own("UND_ERR_CONNECT_TIMEOUT")).toBe(
+        `${OWN} The host your code called was found, but the connection to it failed (UND_ERR_CONNECT_TIMEOUT). Check that it runs and listens on the port your code calls, and that no firewall, VPN or proxy in between drops the connection.`,
+      );
+      expect(own("UND_ERR_HEADERS_TIMEOUT")).toBe(
+        `${OWN} The host your code called took the connection but sent no headers in time (UND_ERR_HEADERS_TIMEOUT): it is slow to answer, or hangs. Look at what it does for that request, or give the request your code makes a longer timeout.`,
+      );
+      expect(own("UND_ERR_BODY_TIMEOUT")).toBe(
+        `${OWN} An answer began to come back to it, but it broke before it was whole (UND_ERR_BODY_TIMEOUT): it was cut off, or its compression did not read. Check the server your code called, and any proxy in between that rewrites or compresses its answers.`,
+      );
+      expect(own("CERT_HAS_EXPIRED")).toBe(
+        `${OWN} The TLS certificate of the host your code called was not trusted (CERT_HAS_EXPIRED). A self-signed certificate, or one from a private authority — a company's, or that of a VPN or a proxy that inspects traffic — needs that authority given to Node.js through NODE_EXTRA_CA_CERTS — or, when this machine already trusts it, through NODE_USE_SYSTEM_CA=1, which Node.js reads from 22.19 and 24.6 on; an expired, revoked or not yet valid certificate, or one issued for another host name, needs fixing on that server.`,
+      );
+      expect(own("TooManyRedirects")).toBe(
+        `${OWN} The host your code called answered with redirects that never reached an answer: one points back to another, or each to the next. Check where its Location headers point, and the address your code calls.`,
+      );
+      expect(own("ERR_SSL_WRONG_VERSION_NUMBER")).toBe(
+        `${OWN} Check that the host your code called runs and that this machine can reach it. The system reported ERR_SSL_WRONG_VERSION_NUMBER.`,
+      );
+    });
+
+    it("never sends the user to the source's baseURL or the endpoint's timeout", () => {
+      for (const code of [
+        "ENOTFOUND",
+        "ECONNREFUSED",
+        "UND_ERR_HEADERS_TIMEOUT",
+        "UND_ERR_RES_CONTENT_LENGTH_MISMATCH",
+        "DEPTH_ZERO_SELF_SIGNED_CERT",
+        "TooManyRedirects",
+        "UND_ERR_SOCKET",
+      ]) {
+        expect(own(code)).not.toMatch(/baseURL|the endpoint|Courier could not reach/);
+      }
+    });
+
+    it("is none for a failure no request caused: a file, the app's own decompression or stream", () => {
+      for (const code of ["ENOENT", "Z_DATA_ERROR", "Z_BUF_ERROR", "ERR_STREAM_PREMATURE_CLOSE"]) {
+        expect(own(code)).toBeUndefined();
+      }
+    });
   });
 
   it("names a code it has no advice of its own for", () => {

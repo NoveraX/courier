@@ -69,11 +69,17 @@ jobs:
     # HOME, with the host's shared memory for Chromium and an init process
     # that reaps what the servers leave. Its clock reads UTC, as the runner's
     # does, whatever the image is set to.
+    #
+    # Node takes a name's IPv4 address first, as on the runner, whose hosts
+    # file gives localhost 127.0.0.1 alone. The container's gives it ::1 too:
+    # a dev server listening on localhost took ::1, while Node's own requests,
+    # on a machine with no IPv6 network, looked for it on 127.0.0.1 only.
     container:
       image: ${{ needs.targets.outputs.image }}
       options: --user 1001 --ipc=host --init
       env:
         TZ: UTC
+        NODE_OPTIONS: --dns-result-order=ipv4first
     strategy:
       fail-fast: false
       matrix:

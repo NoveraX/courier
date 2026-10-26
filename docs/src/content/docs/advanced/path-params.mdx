@@ -1,4 +1,4 @@
-export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with the :param syntax, filled from the variables or pathOptions, and a colon sent as written for Google-style methods.", mode: "both", updated: "2026-10-25" }
+export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with :param and {param}, a {+param} that keeps its slashes, filled from the variables or pathOptions, a colon sent as written for Google-style methods, and values a closure puts into its path.", mode: "both", updated: "2026-10-27" }
 
 ## Basic syntax
 
@@ -56,10 +56,14 @@ Variables that fill no parameter by name — a form, a raw body, a list — are 
 ## How a path is read
 
 - A parameter is a colon and a name: a letter or `_`, then letters, digits and `_`. The name ends at the first other character, so a parameter may share its segment with text or with another parameter: `:id.json`, `flights/:from-:to`.
+- A name in braces, `{name}`, is the same parameter with its end written, for one that text follows at once: `files/{id}abc` takes the id, and `abc` is text.
+- `{+name}` is a parameter whose value keeps its slashes: each part between them is encoded, and the slashes are sent as written. See [A value with slashes](#a-value-with-slashes).
+- Braces around anything but a name are sent as written, encoded as a URL encodes them.
 - A colon before anything else — a digit, a dash, the end of the path — is sent as written: `at/12:30`.
 - `::` is one colon sent as written, even before a name. See the next section.
 - The scheme and host of an absolute URL are never read: a port or an IPv6 address, as in `https://[2001:db8::1]:8443/users/:id`, holds no parameter.
 - A query written into the path is sent as written, a `:name` or a `::` in it too: `items?sort=:field` asks for no variable. A read's variables go to its query string themselves, beside the ones the path fixes.
+- A path that writes a fragment, `items#top`, is refused where the endpoint or the group declares it: a request sends its path up to the `#`, and the query a read's variables make would have gone after it. A literal path the endpoint itself is declared with, as in `endpoint.get("items#top")`, is refused by its type as well; a group's `prefix` and a closure's path are not. Write `%23` for a `#` the path sends.
 
 The types read a path the same way, so the variables an endpoint asks for are the parameters its requests fill.
 
@@ -109,6 +113,42 @@ const operations = defineGroup({
 ```
 
 Encoding the colon is no way around it: `index%3Ainspect` is another path, and Google's API does not answer it. Everything that reads the path reads `::` the same way: an [OpenAPI document](/docs/advanced/openapi) gives the path with one colon, `/v1/urlInspection/index:inspect`; [Studio's import](/docs/studio/import-api) doubles a colon a specification's path writes as text; and the mock server serves the endpoint where the client sends it.
+
+## A value with slashes
+
+Google's APIs name a resource by its whole path — `projects/p/locations/l/operations/o` — and write it into a method's path as `v1/{+name}`. A `:name` parameter would send that value as one segment, its slashes encoded as `%2F`. Write the parameter `{+name}` and its slashes are sent as written, each part between them encoded:
+
+```ts title="api/operations.ts"
+const operations = defineGroup({
+  prefix: "v1",
+  endpoints: {
+    // GET /v1/projects/p/locations/l/operations/o
+    get: endpoint.get("{+name}").variables<{ name: string }>().response<Operation>(),
+    // POST /v1/projects/p/locations/l/operations/o:cancel
+    cancel: endpoint.post("{+name}::cancel").variables<{ name: string }>().response<void>(),
+  },
+})
+```
+
+Each part is encoded as a whole segment's value is, `%` and `:` included, so `projects/a%2Fb/x:y` is sent as `projects/a%252Fb/x%3Ay`: this is not RFC 6570's reserved expansion of `{+var}`, which sends a part's reserved characters and percent-escapes as written. A part that is empty, `.` or `..` is refused, as such a whole value is for any parameter: `projects/../admin` would name another route. The [OpenAPI document](/docs/advanced/openapi) writes the parameter as `{name}` and says that it keeps its slashes; [Studio's import](/docs/studio/import-api) keeps a specification's `{+name}`; the mock server answers the endpoint at every path its value can make; and an agent calling it through [Courier MCP](/docs/agents/overview) is told that the value may hold slashes.
+
+## A value in a closure's path
+
+A closure that works its variables into its path writes them with `http.path`. Each value it puts in is text the request sends as it is, encoded, so that no value is read as a parameter, a colon, a query or a fragment; the text around the values is read as any path is, so `:id` and `{+name}` still name parameters there:
+
+```ts title="api/reports.ts"
+const reports = defineGroup({
+  prefix: "reports",
+  endpoints: {
+    // GET /reports/2026-10/summary
+    monthly: endpoint
+      .variables<{ year: number; month: number }>()
+      .via((http, { year, month }) => http.get(http.path`${year}-${month}/summary`, undefined)),
+  },
+})
+```
+
+A value interpolated into the path as plain text is read as part of the path: a name such as `report:draft` becomes a parameter named `draft`, filled from another variable when one has that name. A value put in with `http.path` is a segment's text, not one of the path's parameters, so the endpoint's variables are still sent unless the call says otherwise — `undefined` after the path sends none. A call refuses a value that is `undefined` or `null`, which would be sent as text, and one that makes its segment empty, `.` or `..` — alone, or with the text and the values beside it, as `${name}.${ext}` does with `"."` and `""` — as it refuses such a parameter's value. A stream's and a channel's closures have the same `path`, as `sse.path` and `ws.path`.
 
 ## Variables as path params
 
@@ -248,7 +288,7 @@ To let the caller choose a path parameter, leave it out of `pathOptions` and dec
 </Callout>
 
 <Callout variant="warning" title="Missing and unsafe path params">
-A path parameter that neither `pathOptions` nor the variables provide, or that is `undefined` or `null`, fails the call with an `HTTPError` 400 before any request is made. Its `message`, and `data.message` through the proxy too, name the parameter and where its value comes from: `Missing required path parameter "id": pass it in the variables, or return it from pathOptions`. So does a value of `""`, `"."` or `".."`: each would address a different route than the endpoint declares — `..` one level up, even when encoded — so it is refused rather than sent. Any other value, including the word `"undefined"`, is encoded into its segment as it is.
+A path parameter that neither `pathOptions` nor the variables provide, or that is `undefined` or `null`, fails the call with an `HTTPError` 400 before any request is made. Its `message`, and `data.message` through the proxy too, name the parameter and where its value comes from: `Missing required path parameter "id": pass it in the variables, or return it from pathOptions`. So does a value of `""`, `"."` or `".."`: each would address a different route than the endpoint declares — `..` one level up, even when encoded — so it is refused rather than sent, and for a `{+name}` so is any part between its slashes that is one of them. Any other value, including the word `"undefined"`, is encoded into its segment as it is. A closure's path that holds a `#` when a call is addressed is refused the same way.
 
 The check happens when the call is made, not when the endpoint is defined: the variables type may leave a parameter out on purpose, because `pathOptions` on the source or the group can fill it. A stream opened directly refuses a missing parameter the same way, with a `RealtimeValidationError`.
 </Callout>

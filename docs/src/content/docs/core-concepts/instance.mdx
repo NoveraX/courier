@@ -1,4 +1,4 @@
-export const metadata = { title: "HTTP Client & Methods", description: "How Courier wraps native fetch with typed methods, automatic serialization, and path parameter extraction.", mode: "both", updated: "2026-10-13" }
+export const metadata = { title: "HTTP Client & Methods", description: "How Courier wraps native fetch with typed methods, automatic serialization, and path parameter extraction.", mode: "both", updated: "2026-10-27" }
 
 ## Overview
 
@@ -64,7 +64,7 @@ const create = endpoint.post("").variables<{ name: string; email: string }>()
 // A closure, for a path the variables are worked into
 const archive = endpoint
   .variables<{ year: number; ids: string[] }>()
-  .via((http, vars) => http.post(`archive/${vars.year}`, { ids: vars.ids }))
+  .via((http, vars) => http.post(http.path`archive/${vars.year}`, { ids: vars.ids }))
 // → POST /users/archive/2025  body: { ids: [...] }
 ```
 

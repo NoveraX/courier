@@ -1,4 +1,4 @@
-export const metadata = { title: "OpenAPI Export", description: "Write an API's definition as an OpenAPI 3.1 or 3.2 document — for a documentation portal, an API gateway, another team's SDK generator or a contract test.", mode: "both", updated: "2026-10-19" }
+export const metadata = { title: "OpenAPI Export", description: "Write an API's definition as an OpenAPI 3.1 or 3.2 document — for a documentation portal, an API gateway, another team's SDK generator or a contract test.", mode: "both", updated: "2026-10-27" }
 
 ## One definition, one document
 
@@ -32,6 +32,8 @@ Studio itself writes the same document from its APIs page: **Export OpenAPI** pi
 | A group | A tag; a nested group's tag names its parent in OpenAPI 3.2 |
 | A path parameter, `:id` | A required path parameter, `{id}` |
 | A colon the path sends as written, `index::inspect` | The colon, once: `/index:inspect` |
+| A parameter in braces, `{id}` in `files/{id}abc` | A required path parameter, `{id}`, the text after it as written |
+| A parameter whose value keeps its slashes, `{+name}` | A required path parameter, `{name}`, described as sent with its slashes |
 | Variables of a GET, HEAD, OPTIONS or DELETE | Query parameters, required as the schema says |
 | Variables of the other verbs | The request body: JSON, or url-encoded or multipart where the endpoint's closure sends `formBody` or `FormData` |
 | A query written into the path, `models?beta=true` | A required query parameter with its one value |

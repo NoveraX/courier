@@ -1,3 +1,4 @@
+import { sliceWhole } from "../lib/slice-whole";
 import type { RequestFailureCause } from "./request";
 
 /* A system error code: `ECONNREFUSED`, `UND_ERR_SOCKET`, or Bun's `ConnectionRefused`. */
@@ -7,8 +8,9 @@ const MAX_MESSAGE_LENGTH = 300;
 /**
  * Why a request got no answer, in the shape the runtime gives it, wherever
  * it comes from — a runtime's event, a page, a saved session: a text, cut
- * to 300 characters, and a code only where it reads as a system error
- * code. Anything else is no cause.
+ * to 300 characters with no half of a character left at the cut, and a
+ * code only where it reads as a system error code. Anything else is no
+ * cause.
  *
  * @param value - What is held under `error.cause`
  * @returns The cause, or `undefined` for a failure that has none
@@ -24,7 +26,7 @@ export function readCause(value: unknown): RequestFailureCause | undefined {
   const message: unknown = Reflect.get(value, "message");
   if (typeof message !== "string" || message === "") return undefined;
   const code: unknown = Reflect.get(value, "code");
-  const text = message.slice(0, MAX_MESSAGE_LENGTH);
+  const text = sliceWhole(message, MAX_MESSAGE_LENGTH);
   return typeof code === "string" && CODE_PATTERN.test(code)
     ? { code, message: text }
     : { message: text };

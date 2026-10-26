@@ -1,3 +1,4 @@
+import { sliceWhole } from "../lib/slice-whole";
 import { REDACTED } from "./redacted";
 import { textWithoutSecrets } from "./text-without-secrets";
 import { urlsWithoutSecrets } from "./urls-without-secrets";
@@ -34,7 +35,8 @@ const WHITESPACE = /\s/;
 export function cutText(text: string, maxLength = 2000): string {
   const cut = textWithoutSecrets(urlsWithoutSecrets(printable(readable(text, maxLength))));
   const trimmed = cut.trim();
-  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${sliceWhole(trimmed, maxLength - 1)}…`;
 }
 
 /* The start of a long text, ending where a word ends: half a token is still a token. */

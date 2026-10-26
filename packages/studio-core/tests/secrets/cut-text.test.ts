@@ -9,6 +9,9 @@ import { describe, expect, it } from "vitest";
 import { cutText } from "../../src/secrets/cut-text";
 import { PROSE, SECRETS } from "./error-text-corpus";
 
+/* A character UTF-16 writes as two code units, built from its code point. */
+const TWO_UNITS = String.fromCodePoint(0x1f600);
+
 const stripeKey = ["sk", "live", "4eC39HqLyjWDarjtT1zdp7dc"].join("_");
 const githubToken = ["ghp", "16C7e42F292c6912E7710c838347Ae178B4a"].join("_");
 const jwt =
@@ -114,6 +117,10 @@ describe("what is kept", () => {
 
   it("a long text's start, cut to the length asked for", () => {
     expect(cutText("word ".repeat(20), 10)).toBe("word word…");
+  });
+
+  it("no half of a character the cut falls inside", () => {
+    expect(cutText(`${"x".repeat(8)}${TWO_UNITS} and more`, 10)).toBe(`${"x".repeat(8)}…`);
   });
 });
 

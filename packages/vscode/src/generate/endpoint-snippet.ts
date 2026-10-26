@@ -13,6 +13,19 @@ export interface NewEndpoint {
 const NAME = /^[A-Za-z_$][\w$]*$/;
 const READS = new Set<NewEndpoint["method"]>(["get", "del", "query"]);
 
+/* A path's parameters as Courier reads them: `:name`, `{name}` and `{+name}`, while `::` is a
+   colon of text — the extension carries no package of Courier's, so it reads them itself. */
+const PARAM = /::|\{\+?([A-Za-z_]\w*)\}|:([A-Za-z_]\w*)/g;
+const ORIGIN = /^[a-z][a-z\d+.-]*:\/\/[^/?#]*/i;
+
+/* Each parameter the path names, once; an absolute URL's scheme and host, and a query or a
+   fragment it writes, name none. */
+function paramNames(path: string): string[] {
+  const local = path.replace(ORIGIN, "").split(/[?#]/, 1)[0] ?? "";
+  const names = [...local.matchAll(PARAM)].flatMap((match) => match[1] ?? match[2] ?? []);
+  return [...new Set(names)];
+}
+
 /**
  * Why a name cannot be a new endpoint's, or `undefined` when it can: it is
  * a name the client's calls can use, and the group has none by it yet.
@@ -46,8 +59,7 @@ export function nameProblem(name: string, taken: readonly string[]): string | un
  * ```
  */
 export function endpointSnippet(builder: string, wanted: NewEndpoint): string {
-  const params = [...wanted.path.matchAll(/:([A-Za-z_$][\w$]*)/g)].map((match) => match[1]);
-  const fields = params.map((param) => `${param}: string`);
+  const fields = paramNames(wanted.path).map((param) => `${param}: string`);
   if (fields.length === 0 && !READS.has(wanted.method)) fields.push("name: string");
   let stop = 1;
   const variables =

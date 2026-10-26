@@ -39,6 +39,26 @@ describe("a new endpoint as typed in", () => {
     );
   });
 
+  it("names the parameters as Courier reads the path: in braces, once each, and no colon of text", () => {
+    const fields = (path: string) =>
+      /\.variables<\$\{1:\{ (.*) \\\}\}>/.exec(
+        endpointSnippet("endpoint", { name: "x", method: "get", path }),
+      )?.[1];
+
+    expect(fields("v1/{+name}::cancel")).toBe("name: string");
+    expect(fields("files/{id}abc")).toBe("id: string");
+    expect(fields(":id/copies/:id")).toBe("id: string");
+    expect(fields("index::inspect")).toBeUndefined();
+    expect(fields("items/:id?expand=:what")).toBe("id: string");
+    expect(fields("https://reader:x@api.example.com/items/:id")).toBe("id: string");
+  });
+
+  it("writes a path's braces as text, not as the snippet's own", () => {
+    expect(
+      endpointSnippet("endpoint", { name: "op", method: "get", path: "v1/{+name}" }),
+    ).toContain('endpoint.get("v1/{+name\\}")');
+  });
+
   it("writes a path's dollar and quote as text, not as the snippet's own", () => {
     expect(endpointSnippet("endpoint", { name: "odd", method: "get", path: 'a$"b' })).toContain(
       'endpoint.get("a\\$\\"b")',

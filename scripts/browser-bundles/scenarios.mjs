@@ -25,7 +25,7 @@ export const SCENARIOS = [
   {
     name: "direct caller",
     code: `${DEFINE}\nimport { createCaller } from "@noverax/courier";\ncreateCaller(api).users.getAll().then(console.log);`,
-    budget: [102, 35.6],
+    budget: [102, 35.9],
   },
   {
     name: "proxy caller with its routes",

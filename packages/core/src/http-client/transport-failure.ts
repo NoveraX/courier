@@ -97,11 +97,26 @@ export function transportFailure(error: Error): HTTPError {
  * ```
  */
 export function platformCause(error: Error): FailureCause {
-  const cause = error.cause instanceof Error ? error.cause : error;
+  return causeOf(error.cause instanceof Error ? error.cause : error);
+}
+
+/**
+ * What one error the platform raised says of a connection: the system's
+ * code, where it gave one, and its text — the addresses an AggregateError
+ * gathered, when it says nothing itself.
+ *
+ * @param error - The error that says why, read as it is
+ * @returns The code and the text
+ * @example
+ * ```ts
+ * causeOf(refused); // → { code: "ECONNREFUSED", message: "connect ECONNREFUSED 127.0.0.1:4010" }
+ * ```
+ */
+export function causeOf(error: Error): FailureCause {
   /* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
   const code =
-    "code" in cause && typeof cause.code === "string" && cause.code !== "" ? cause.code : undefined;
-  const message = describe(cause, code);
+    "code" in error && typeof error.code === "string" && error.code !== "" ? error.code : undefined;
+  const message = describe(error, code);
   return code === undefined ? { message } : { code, message };
 }
 
@@ -128,9 +143,10 @@ function timeoutFailure(error: unknown, timeout: number | undefined): HTTPError 
    whose own message is empty; its errors say which addresses refused. */
 function describe(cause: Error, code: string | undefined): string {
   if (cause.message) return cause.message;
-  if (typeof AggregateError === "function" && cause instanceof AggregateError) {
-    const reasons = cause.errors.map((e: unknown) => (e instanceof Error ? e.message : String(e)));
-    if (reasons.length > 0) return reasons.join("; ");
+  const gathered: unknown =
+    typeof AggregateError === "function" && cause instanceof AggregateError ? cause.errors : [];
+  if (Array.isArray(gathered) && gathered.length > 0) {
+    return gathered.map((e: unknown) => (e instanceof Error ? e.message : String(e))).join("; ");
   }
   return code ?? "Request failed";
 }

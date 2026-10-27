@@ -7,7 +7,10 @@ import { useRef } from "react"
 export interface ReturnFocus {
   /** For the content's `onOpenAutoFocus`: notes what has focus as the overlay opens. */
   remember: () => void
-  /** For the content's `onCloseAutoFocus`: gives focus back once the overlay has gone. */
+  /**
+   * For the content's `onCloseAutoFocus`: gives focus back once the overlay
+   * has gone, unless it is on another element by then.
+   */
   restore: (event: Event) => void
   /** For a link that closes the overlay: focus stays where the link takes the reader. */
   leave: () => void
@@ -25,7 +28,9 @@ interface ReturnFocusOptions {
  * back to wherever the reader was as it opened, and to `opener` when that
  * has gone; with no `opener`, focus goes back to what had it. An overlay
  * that closes because the reader followed a link in it leaves focus to
- * the page the link leads to.
+ * the page the link leads to. Radix asks for the focus a moment after the
+ * overlay has gone, and a focus on another element by then — a script's,
+ * or a test's typing straight on — stays where it went.
  *
  * @param opener - The control that opens the overlay
  * @param options - Whether a shortcut opens it too
@@ -52,7 +57,8 @@ export function useReturnFocus(
       /* Radix would focus a trigger of its own, and these overlays are not
          opened by one. Like Radix, it leaves the page where it is scrolled. */
       event.preventDefault()
-      if (followed.current) return
+      const active = document.activeElement
+      if (followed.current || (active !== null && active !== document.body)) return
       const before = focused.current?.isConnected ? focused.current : null
       const target = opener && !shortcut ? opener.current : (before ?? opener?.current)
       target?.focus({ preventScroll: true })

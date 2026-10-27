@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { FaultGroup } from "@/features/mocks/fault-catalogue";
 import { FAULT_CATALOGUE, FAULT_GROUP_LABEL } from "@/features/mocks/fault-catalogue";
@@ -50,6 +51,7 @@ export function AddFaultMenu({
           align="start"
           sideOffset={6}
           collisionPadding={8}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 max-h-[min(420px,var(--radix-dropdown-menu-content-available-height))] max-w-[calc(100vw-16px)] min-w-60 overflow-y-auto rounded-panel bg-panel p-1 shadow-overlay",
             POP_MOTION,

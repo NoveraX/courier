@@ -5,7 +5,8 @@
  * phone held sideways: the menu button opens it with everything the
  * sidebar holds, the theme and the whole status; it closes on a link
  * followed, Esc, its close button and once the window is wide enough for
- * the sidebar again, and gives the focus back to the menu button.
+ * the sidebar again, and gives the focus back to the menu button unless
+ * something else took it as the drawer went.
  */
 import type { AnyRouter } from "@tanstack/react-router";
 import {
@@ -88,6 +89,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("the navigation drawer", () => {
@@ -158,6 +160,24 @@ describe("the navigation drawer", () => {
 
     expect(noDrawer()).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(menuButton()));
+  });
+
+  it("leaves the focus where it went when something took it as the drawer closed", async () => {
+    fakeScreen(true);
+    await openShell("/timeline");
+    fireEvent.click(menuButton());
+    await waitFor(() => expect(drawer().contains(document.activeElement)).toBe(true));
+    /* The menu button takes the focus back once the timers run; held back, they leave the moment
+       a script or a test typing straight on moves it in. */
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    fireEvent.keyDown(drawer(), { key: "Escape" });
+    const search = screen.getByRole("button", { name: "Search or jump to…" });
+    search.focus();
+    act(() => vi.runOnlyPendingTimers());
+
+    expect(noDrawer()).toBeNull();
+    expect(document.activeElement).toBe(search);
   });
 
   it("closes once the window is wide enough for the sidebar", async () => {

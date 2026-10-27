@@ -1,6 +1,7 @@
 import { Info } from "lucide-react";
 import { Popover } from "radix-ui";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { HealthLevel } from "@/features/explorer/endpoint-metrics";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
@@ -37,6 +38,7 @@ export function GraphLegend({ folded = false }: { folded?: boolean }): React.Rea
           sideOffset={6}
           collisionPadding={8}
           aria-label="Legend"
+          onCloseAutoFocus={focusOnClose}
           className={cn("z-50 rounded-panel bg-panel p-3.5 shadow-overlay", POP_MOTION)}
         >
           <Items className="flex-col items-start gap-2.5" />

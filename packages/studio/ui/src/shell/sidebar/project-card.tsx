@@ -1,6 +1,7 @@
 import { ChevronsUpDown, Globe, Server } from "lucide-react";
 import { Popover } from "radix-ui";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { AttachedApp } from "@/features/runtimes/attached-apps";
 import { attachedApps } from "@/features/runtimes/attached-apps";
@@ -84,6 +85,7 @@ export function ProjectCard(): React.ReactNode {
         <Popover.Content
           align="start"
           sideOffset={6}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 w-(--radix-popover-trigger-width) min-w-56 rounded-card border border-line bg-panel p-1 shadow-overlay",
             POP_MOTION,

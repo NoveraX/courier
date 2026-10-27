@@ -1,5 +1,6 @@
 import { ChevronsUpDown, Play, RotateCw, Square } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { cn } from "@/lib/utils";
 import { manageMock } from "@/mocks/manage-mock";
@@ -56,6 +57,7 @@ export function ServerPill({
               align="end"
               sideOffset={6}
               collisionPadding={8}
+              onCloseAutoFocus={focusOnClose}
               className={cn(
                 "z-50 max-w-[calc(100vw-16px)] min-w-52 rounded-panel bg-panel p-1 shadow-overlay",
                 POP_MOTION,

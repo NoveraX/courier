@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Pin, PinOff, RotateCcw } from "lucide-react";
 import { ContextMenu } from "radix-ui";
 import { useState } from "react";
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { useTogglePin } from "@/hooks/use-toggle-pin";
 import { requestCopyActions } from "@/inspector/request-copy-actions";
@@ -50,6 +51,7 @@ export function RowMenu({ children }: RowMenuProps): React.ReactNode {
       <ContextMenu.Portal>
         <ContextMenu.Content
           collisionPadding={8}
+          onCloseAutoFocus={focusOnClose}
           className={cn("z-50 w-55 rounded-[9px] bg-panel p-1.25 shadow-overlay", POP_MOTION)}
         >
           {request && <Items request={request} />}

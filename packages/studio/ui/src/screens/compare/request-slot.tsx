@@ -2,6 +2,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { methodText } from "@/design/method-color";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { codeLabel, endpointParts, httpMethodOf } from "@/features/requests/request-parts";
@@ -108,6 +109,7 @@ export function RequestSlot({
         <Popover.Content
           align="start"
           sideOffset={6}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 max-h-85 w-(--radix-popover-trigger-width) overflow-auto rounded-dialog bg-panel p-1 shadow-overlay",
             POP_MOTION,

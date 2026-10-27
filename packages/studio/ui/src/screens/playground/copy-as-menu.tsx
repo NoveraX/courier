@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronDown, Code, Copy, Link, Terminal } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { CourierMark } from "@/design/courier-mark";
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { snippetLabels } from "@/features/requests/request-snippets";
@@ -50,6 +51,7 @@ export function CopyAsMenu({ transport, onCopy }: CopyAsMenuProps): React.ReactN
         <DropdownMenu.Content
           align="end"
           sideOffset={6}
+          onCloseAutoFocus={focusOnClose}
           className={cn("z-50 w-47.5 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
         >
           {choices.map((choice) => {

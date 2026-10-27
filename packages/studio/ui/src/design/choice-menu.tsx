@@ -3,6 +3,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { focusOnClose } from "./focus-on-close";
 import { POP_MOTION } from "./overlay-motion";
 
 /** One of the choices a choice menu offers. */
@@ -48,6 +49,7 @@ export function ChoiceMenu<TValue extends string>(props: ChoiceMenuProps<TValue>
           align="start"
           sideOffset={6}
           collisionPadding={8}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-45 max-w-[calc(100vw-16px)] overflow-y-auto rounded-panel bg-panel p-1 shadow-overlay",
             POP_MOTION,

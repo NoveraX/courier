@@ -2,6 +2,7 @@ import { ChevronDown, Lock, Server } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { PageMark } from "@/features/apis/types";
 import { pageMarkTitle } from "@/features/explorer/page-mark-title";
@@ -45,6 +46,7 @@ export function NotExposedChip({ mark, onRunAsServer }: NotExposedChipProps): Re
           sideOffset={6}
           collisionPadding={8}
           aria-label="Not exposed"
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 flex w-[min(320px,calc(100vw-16px))] flex-col gap-3 rounded-dialog bg-panel p-3.5 shadow-overlay",
             POP_MOTION,

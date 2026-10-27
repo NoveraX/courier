@@ -1,6 +1,7 @@
 import { Info } from "lucide-react";
 import { Popover } from "radix-ui";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ export function HeatmapLegend({ fills, traffic, folded }: HeatmapLegendProps): R
           sideOffset={6}
           collisionPadding={8}
           aria-label="Legend"
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 flex flex-col gap-3 rounded-panel bg-panel p-3.5 shadow-overlay",
             POP_MOTION,

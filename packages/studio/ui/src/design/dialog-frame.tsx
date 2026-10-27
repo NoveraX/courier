@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { focusOnClose } from "./focus-on-close";
 import { focusOnOpen } from "./focus-on-open";
 import { DIALOG_MOTION, SCRIM_MOTION } from "./overlay-motion";
 
@@ -64,6 +65,7 @@ export function DialogFrame({
         <Dialog.Content
           {...(description ? {} : { "aria-describedby": undefined })}
           onOpenAutoFocus={focusOnOpen}
+          onCloseAutoFocus={focusOnClose}
           onInteractOutside={(event) => keepOpen && event.preventDefault()}
           onEscapeKeyDown={(event) => keepOpen && event.preventDefault()}
           className={cn(

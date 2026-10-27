@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronDown, X } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { FilterOption } from "@/features/requests/filter-options";
 import { selectionSummary } from "@/features/requests/filter-options";
@@ -99,6 +100,7 @@ export function FilterMenu({
           align="start"
           sideOffset={6}
           collisionPadding={8}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 flex max-h-(--radix-popover-content-available-height) w-68 max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-[11px] bg-panel shadow-overlay",
             POP_MOTION,

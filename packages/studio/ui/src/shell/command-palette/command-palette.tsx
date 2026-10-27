@@ -1,6 +1,7 @@
 import { Command, useCommandState } from "cmdk";
 import { Search, X } from "lucide-react";
 import { Dialog } from "radix-ui";
+import { focusOnClose } from "@/design/focus-on-close";
 import { DIALOG_MOTION, SCRIM_MOTION } from "@/design/overlay-motion";
 import { Shortcut } from "@/design/shortcut";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
         />
         <Dialog.Content
           aria-describedby={undefined}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "fixed top-[13dvh] left-1/2 z-50 w-150 max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-dialog bg-panel shadow-overlay",
             FULL_SCREEN,

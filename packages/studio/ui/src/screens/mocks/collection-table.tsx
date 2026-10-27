@@ -1,5 +1,6 @@
 import { EllipsisVertical, Plus } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { collectionView } from "@/features/mocks/collection-view";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ export function CollectionTable({
               align="end"
               sideOffset={6}
               collisionPadding={8}
+              onCloseAutoFocus={focusOnClose}
               className={cn("z-50 w-48 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
             >
               <DropdownMenu.Item

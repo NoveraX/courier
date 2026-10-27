@@ -3,6 +3,7 @@ import { Dialog } from "radix-ui";
 import { useEffect } from "react";
 
 import { MEDIA } from "@/design/breakpoints";
+import { focusOnClose } from "@/design/focus-on-close";
 import { focusOnOpen } from "@/design/focus-on-open";
 import { SCRIM_MOTION } from "@/design/overlay-motion";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -31,8 +32,9 @@ function followsLink(event: React.MouseEvent): boolean {
  * of the status bar's status, sliding in from the left edge over a dimmed
  * view. It closes on a link followed, Esc, a tap beside it, its close
  * button, and once the window is wide enough for the sidebar again; the
- * focus goes back to the button that opened it. Opened with a tap, it holds
- * the focus itself rather than ringing its close button.
+ * focus goes back to the button that opened it, unless something else has
+ * taken it by then. Opened with a tap, it holds the focus itself rather
+ * than ringing its close button.
  *
  * @param props - Whether it is open, what opens and closes it, and the button to give the focus back to
  * @returns The drawer
@@ -55,10 +57,7 @@ export function NavDrawer({ open, onOpenChange, returnFocusTo }: NavDrawerProps)
         <Dialog.Content
           aria-describedby={undefined}
           onOpenAutoFocus={focusOnOpen}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            returnFocusTo.current?.focus();
-          }}
+          onCloseAutoFocus={(event) => focusOnClose(event, returnFocusTo)}
           onClick={(event) => {
             if (followsLink(event)) onOpenChange(false);
           }}

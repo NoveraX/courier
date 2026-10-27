@@ -2,6 +2,7 @@ import { History, Trash2 } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 
+import { focusOnClose } from "@/design/focus-on-close";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
           align="end"
           sideOffset={6}
           collisionPadding={8}
+          onCloseAutoFocus={focusOnClose}
           className={cn(
             "z-50 w-[min(360px,calc(100vw-16px))] overflow-hidden rounded-dialog bg-panel shadow-overlay",
             POP_MOTION,

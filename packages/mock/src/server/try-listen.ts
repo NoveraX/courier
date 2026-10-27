@@ -29,10 +29,25 @@ function addressInUse(host: string, port: number): NodeJS.ErrnoException {
   return Object.assign(new Error(message), { code: "EADDRINUSE", port });
 }
 
+/* Below this port, a bind needs privileges on Linux and the BSDs: EACCES
+   there holds for every port the search would try next, up to it. */
+const FIRST_UNPRIVILEGED_PORT = 1024;
+
+/* Whether the search moves on from a port: another process holds it, or the
+   system keeps it for itself. Windows reserves blocks of ports for Hyper-V,
+   WSL and Docker, low ones too, and refuses a bind there with EACCES. */
+function passedOver(err: NodeJS.ErrnoException, port: number): boolean {
+  if (err.code === "EADDRINUSE") return true;
+  return err.code === "EACCES" && port >= FIRST_UNPRIVILEGED_PORT;
+}
+
 /**
- * Try to start a Hono server on `port`, retrying on EADDRINUSE
- * by incrementing the port up to `retries` times — none for a port the
- * caller must have exactly.
+ * Try to start a Hono server on `port`, moving up a port at a time, up to
+ * `retries` times — none for a port the caller must have exactly — past a
+ * port another process holds (EADDRINUSE) and one the system keeps for
+ * itself (EACCES, as Windows refuses a port in a range it reserves). Below
+ * 1024, EACCES means the port needs privileges, as would every port up to
+ * 1024, so the search ends there.
  *
  * `localhost` listens on the loopback address only. A port another process
  * already answers on where the server's clients connect — either loopback,
@@ -46,10 +61,10 @@ function addressInUse(host: string, port: number): NodeJS.ErrnoException {
  * @param port - The port to try first; `0` lets the system pick one
  * @param hostname - Where to listen; `localhost` means loopback only
  * @param onServer - Receives the Node server once it listens
- * @param retries - How many ports above `port` to try when it is taken
+ * @param retries - How many ports above `port` to try when it is taken or reserved
  * @param avoid - Ports the search passes over without trying them: ones other servers were given
  * @returns The port listened on and the URL to reach it at
- * @throws The listen error, EADDRINUSE included once no retry is left
+ * @throws The listen error, EADDRINUSE and EACCES included once no retry is left
  *
  * @example
  * ```ts
@@ -73,7 +88,7 @@ export function tryListen(
 
   return new Promise<{ port: number; url: string }>((resolve, reject) => {
     const retryOrFail = (err: NodeJS.ErrnoException, currentPort: number): void => {
-      if (err.code === "EADDRINUSE" && attempt < retries) {
+      if (passedOver(err, currentPort) && attempt < retries) {
         attempt++;
         void tryPort(currentPort + 1);
       } else {
@@ -101,7 +116,7 @@ export function tryListen(
 
       // @hono/node-server returns a Node http.Server — listen for errors
       nodeServer.on("error", (err: NodeJS.ErrnoException) => {
-        if (err.code === "EADDRINUSE") nodeServer.close();
+        if (passedOver(err, currentPort)) nodeServer.close();
         retryOrFail(err, currentPort);
       });
     };

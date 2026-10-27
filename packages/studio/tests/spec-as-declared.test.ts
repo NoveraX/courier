@@ -8,6 +8,7 @@ import type { CourierImportEntry } from "@noverax/courier/config";
 import { describe, expect, it } from "vitest";
 
 import type { ParsedSchema, ParsedSpec } from "../src/apis/parser/types";
+import { jsonText } from "../src/apis/registry/json-text";
 import { specAsDeclared } from "../src/server/spec-as-declared";
 
 function deep(levels: number): ParsedSpec {
@@ -50,8 +51,11 @@ describe("specAsDeclared", () => {
     const declared = await specAsDeclared("deep", entry, spec);
 
     expect(seen).toHaveLength(1);
-    expect(seen[0]).not.toBe(spec);
-    expect(declared).toEqual(spec);
+    /* Compared without vitest's deep equality, which takes a stack frame per
+       level and runs out of stack this deep: toEqual runs it, and so does
+       toBe whenever the two values differ. */
+    expect(Object.is(seen[0], spec)).toBe(false);
+    expect(jsonText(declared)).toBe(jsonText(spec));
   });
 
   it("leaves the specification as parsed untouched by a transform that changes its copy", async () => {

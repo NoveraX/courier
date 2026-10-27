@@ -74,6 +74,9 @@ test("finds in a large answer what the part shown leaves out", async ({ page }) 
   page.on("worker", (worker) => workers.push(worker.url()));
   await sendUsersList(page);
   const main = page.locator("main");
+  /* Until the runtime reports the call, the answer the run received shows whole, drawn as its
+     pane scrolls: a row not drawn yet proves nothing. The report shows the part. */
+  await expect(main.getByText(/: this is a part of it,/)).toBeVisible();
   await expect(main.getByText("Grace Hopper")).toHaveCount(0);
 
   await main.getByRole("searchbox", { name: "Find in the answer" }).fill("grace hopper");
@@ -105,4 +108,38 @@ test("finds it in the inspector's answer too, in the raw text by its line", asyn
   const lines = JSON.stringify(USERS, null, 2).split("\n");
   const number = lines.findIndex((line) => line.includes('"Grace Hopper"')) + 1;
   await expect(page.locator(`[data-line="${number}"]`)).toContainText('"name": "Grace Hopper"');
+});
+
+test("draws the rows of a long answer its pane shows, and the others as it scrolls", async ({
+  page,
+}) => {
+  await page.goto(studio.link);
+  await page
+    .getByRole("link", { name: /Timeline/ })
+    .first()
+    .click();
+  await page.locator("main").getByText("shop.users.list").first().click();
+  await page.getByRole("tab", { name: "Response" }).click();
+  const field = page.getByRole("searchbox", { name: "Find in the answer" });
+  const pane = page.getByRole("tabpanel").filter({ has: field });
+  const bottom = () => pane.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+  /* The part holds 215 users of six rows each and the note of those left out, 1,293 rows in
+     all: a paneful is drawn. */
+  const rows = pane.locator("[data-path]");
+  await expect(pane.getByText('"User 0"')).toBeVisible();
+  expect(await rows.count()).toBeLessThan(200);
+
+  await bottom();
+
+  await expect(pane.getByText(/^"… [\d,]+ more items"$/)).toBeVisible();
+  await expect(pane.getByText('"User 0"')).toHaveCount(0);
+  expect(await rows.count()).toBeLessThan(200);
+
+  await pane.getByRole("button", { name: "Raw", exact: true }).click();
+  await bottom();
+
+  const lines = pane.locator("[data-line]");
+  await expect(lines.last()).toHaveText(/^\d+\]$/);
+  await expect(lines.last()).toBeVisible();
+  expect(await lines.count()).toBeLessThan(200);
 });

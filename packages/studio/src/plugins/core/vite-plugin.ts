@@ -4,7 +4,7 @@ import { courierClientDeps } from "./courier-client-deps";
 import { shareDevServerOrigin, shareFirstRequestOrigin } from "./dev-server-origin";
 import { isInjectionEnabled } from "./options";
 import { resolveSnippet } from "./resolve-snippet";
-import { RUNTIME_IMPORTER } from "./runtime-importer";
+import { runtimeEntryPath } from "./runtime-importer";
 import type { StudioPluginOptions } from "./types";
 
 /**
@@ -14,7 +14,12 @@ import type { StudioPluginOptions } from "./types";
  */
 const VITE_CLIENT = /\/vite\/dist\/client\/client\.mjs(?:\?|$)/;
 
-const PACKAGE_NAME = "@noverax/courier-studio";
+/**
+ * What the connect snippet imports the runtime as. No package exports it:
+ * the plugin aliases it to the runtime's browser file, and Vite pre-bundles
+ * that file under this name.
+ */
+const BROWSER_RUNTIME = `${RUNTIME_SPECIFIER}/browser`;
 
 /** The plugin applies to the dev server only, which serves a development build. */
 const DEV_SERVER = true;
@@ -38,25 +43,37 @@ export function createStudioVitePlugin(framework: string, options?: StudioPlugin
   let projectRoot: string | undefined;
   let pending: Promise<string | null> | null = null;
   const snippet = (): Promise<string | null> =>
-    (pending ??= resolveSnippet({ framework, options, development: DEV_SERVER, projectRoot }));
+    (pending ??= resolveSnippet({
+      framework,
+      options,
+      development: DEV_SERVER,
+      runtime: BROWSER_RUNTIME,
+      projectRoot,
+    }));
 
   return {
     name: "courier-studio",
     apply: "serve",
-    /* Ahead of Vite's resolver, which would look for the runtime from the app
-       root first and so behave differently under npm and pnpm. */
+    /* Ahead of the app's other plugins, so none takes the connect module's
+       name for a package's. */
     enforce: "pre",
     config(config) {
       if (!isInjectionEnabled(options, DEV_SERVER)) return undefined;
       /* The runtime reaches socket.io-client, whose development build imports
          `debug`, a CommonJS module a browser cannot run until Vite pre-bundles
-         it. Vite pre-bundles nothing that a package in node_modules imports,
-         so without this the page failed wherever the runtime was not hoisted
-         to the app root. The nested form finds it through this package.
+         it, and Vite pre-bundles nothing a package in node_modules imports:
+         so the runtime is pre-bundled itself. It goes by its browser file,
+         found from this package. By package name it followed the app's
+         client resolve conditions, and where they leave out `browser`, as
+         SolidStart's do, the page got the server's runtime; and the app root
+         found the package only where the package manager hoisted it.
          Courier's own browser modules go with it, so the first page that
          imports them is not reloaded. */
       const app = courierClientDeps(config.root ?? process.cwd());
-      return { optimizeDeps: { include: [`${PACKAGE_NAME} > ${RUNTIME_SPECIFIER}`, ...app] } };
+      return {
+        resolve: { alias: [{ find: BROWSER_RUNTIME, replacement: runtimeEntryPath() }] },
+        optimizeDeps: { include: [BROWSER_RUNTIME, ...app] },
+      };
     },
     /* The app's config is found from Vite's root, not from wherever Vite was
        started. */
@@ -74,12 +91,8 @@ export function createStudioVitePlugin(framework: string, options?: StudioPlugin
         shareDevServerOrigin(listener.address(), Boolean(server.config.server.https));
       });
     },
-    resolveId(source, importer) {
-      if (source === VIRTUAL_ID) return RESOLVED_ID;
-      if (importer === RESOLVED_ID && source === RUNTIME_SPECIFIER) {
-        return this.resolve(source, RUNTIME_IMPORTER, { skipSelf: true });
-      }
-      return undefined;
+    resolveId(source) {
+      return source === VIRTUAL_ID ? RESOLVED_ID : undefined;
     },
     async load(id) {
       if (id !== RESOLVED_ID) return undefined;

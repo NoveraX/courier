@@ -21,12 +21,14 @@ export const RUNTIME_IMPORTER_DIR: string = dirname(RUNTIME_IMPORTER);
  * The runtime's browser entry file, resolved from this package, with forward
  * slashes.
  *
- * For integrations whose snippet cannot say where to resolve from — a webpack
- * `data:` entry, a generated Nuxt client plugin — so the snippet imports the
- * file itself instead of the package name. Every one of them runs in the
- * browser, so the file is the one the package's `browser` condition names:
- * resolving the package as Node does gave the server entry, which reaches
- * the config loader and Node's own modules.
+ * For integrations that name the file instead of the package: a webpack
+ * `data:` entry and a generated Nuxt client plugin cannot say where to
+ * resolve from, and the Vite plugin must not leave the choice of build to the
+ * app's client resolve conditions, which SolidStart's leave without
+ * `browser`. Every one of them runs in the browser, so the file is the one
+ * the package's `browser` condition names: resolving the package as Node
+ * does gave the server entry, which reaches the config loader and Node's own
+ * modules.
  *
  * @returns The absolute path of the runtime's browser entry
  * @example

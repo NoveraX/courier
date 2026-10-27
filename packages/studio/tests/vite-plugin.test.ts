@@ -13,8 +13,14 @@
  * it tells the app that address, where the Playground sends its proxy calls;
  * in middleware mode, the address of the app's own server, as the socket of
  * the first request it hands Vite tells.
+ *
+ * The page gets the runtime's browser build whatever the app's resolve
+ * conditions are. SolidStart 2 names its own for every environment, the
+ * client's too, and leaves out `browser`: resolved through them, the runtime
+ * Vite pre-bundled for the page was the server's, which reaches Node's
+ * diagnostics channel and threw as the page attached.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, request } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -59,6 +65,49 @@ async function serve(root: string, enabled?: boolean): Promise<ViteDevServer> {
   return server;
 }
 
+/** A dev server that pre-bundles into the project's own cache, under the client resolve conditions given. */
+async function servePrebundling(
+  conditions?: string[],
+): Promise<{ server: ViteDevServer; deps: string }> {
+  const root = project();
+  const cacheDir = join(root, ".vite");
+  const server = await createServer({
+    root,
+    configFile: false,
+    logLevel: "silent",
+    cacheDir,
+    ...(conditions && { resolve: { conditions } }),
+    server: { middlewareMode: true, ws: false },
+    plugins: [courierStudio({})],
+  });
+  cleanups.push(() => server.close());
+  return { server, deps: join(cacheDir, "deps") };
+}
+
+/**
+ * Which builds of the runtime are among what Vite pre-bundled, once the one
+ * the connect module imports is written: the browser build watches Resource
+ * Timing, the server build Node's diagnostics channel.
+ */
+async function prebundledRuntimeBuilds(
+  server: ViteDevServer,
+  deps: string,
+): Promise<{ browser: boolean; server: boolean }> {
+  const snippet = await server.transformRequest("virtual:courier-studio-init");
+  const runtime = /from "([^"]+)"/.exec(snippet?.code ?? "")?.[1];
+  if (runtime === undefined) throw new Error("The connect module imports no runtime");
+  /* Serving a pre-bundled module waits until Vite has written the bundle. */
+  await server.transformRequest(runtime);
+  const code = readdirSync(deps)
+    .filter((file) => file.endsWith(".js"))
+    .map((file) => readFileSync(join(deps, file), "utf8"))
+    .join("\n");
+  return {
+    browser: code.includes("observeBrowserHttpVersions"),
+    server: code.includes("node:diagnostics_channel"),
+  };
+}
+
 /* The app's own server, handing every request to Vite first, as React Router's custom server does. */
 async function appServerFor(vite: ViteDevServer): Promise<number> {
   const app = createHttpServer((req, res) =>
@@ -100,6 +149,22 @@ describe("courierStudio() for Vite", () => {
     expect(snippet?.code).toContain('attachRuntime("vite-browser")');
     expect(snippet?.code).not.toContain('from "@noverax/courier-studio-core/runtime"');
     expect(snippet?.code).toMatch(/from "\/[^"]*courier-studio-core[^"]*"/);
+  });
+
+  it("pre-bundles the runtime's browser build for the page", async () => {
+    const { server, deps } = await servePrebundling();
+
+    const builds = await prebundledRuntimeBuilds(server, deps);
+
+    expect(builds).toEqual({ browser: true, server: false });
+  });
+
+  it("pre-bundles the runtime's browser build where the client's conditions leave out browser, as SolidStart's do", async () => {
+    const { server, deps } = await servePrebundling(["solid", "development", "generic"]);
+
+    const builds = await prebundledRuntimeBuilds(server, deps);
+
+    expect(builds).toEqual({ browser: true, server: false });
   });
 
   it("connects to the Studio the config in Vite's root names, wherever Vite was started", async () => {

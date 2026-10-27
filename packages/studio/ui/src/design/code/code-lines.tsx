@@ -73,7 +73,7 @@ export function CodeLines({
   const lines = code.split("\n");
   const numberOf = (index: number): number => numbers?.[index] ?? index + 1;
   /* A longer text's numbers run past four digits: the column widens to the longest. */
-  const digits = numbers === undefined ? 0 : String(Math.max(0, ...numbers)).length;
+  const digits = String(numbers === undefined ? lines.length : Math.max(0, ...numbers)).length;
   const column = digits > 4 ? { width: `calc(${digits}ch + 0.875rem)` } : undefined;
   const currentAt = current === undefined ? -1 : (numbers?.indexOf(current) ?? current - 1);
   const listRef = useRef<HTMLDivElement | null>(null);

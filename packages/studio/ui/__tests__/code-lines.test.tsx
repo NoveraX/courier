@@ -5,7 +5,8 @@
  * one — a large answer's raw text — draws the lines its pane shows and
  * twenty past either edge, each numbered and placed as in the whole text,
  * keeps the search's current line drawn wherever the pane is scrolled,
- * and is as wide as its longest line whichever lines are drawn.
+ * and is as wide as its longest line whichever lines are drawn; past
+ * 9,999 lines, the numbers' column widens to hold five digits.
  */
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -94,6 +95,18 @@ describe("lines of code", () => {
     expect(current?.getAttribute("data-line")).toBe("11998");
     expect(current?.textContent).toContain('"name": "Grace Hopper"');
     expect(current?.className).toContain("bg-brand-tint");
+  });
+
+  it("widens the numbers' column for a text that runs past 9,999 lines", () => {
+    const pane = layOutPane({ height: 400, rowHeight: ROW });
+    render(<CodeLines code={LONG} tokenize={tokenizeJsonLine} variant="panel" />, {
+      container: pane.element,
+    });
+    const short = render(<CodeLines code={usersText(80)} tokenize={tokenizeJsonLine} />);
+
+    const number = (root: ParentNode) => root.querySelector<HTMLElement>('[data-line="1"] > span');
+    expect(number(pane.element)?.style.width).toBe("calc(5ch + 0.875rem)");
+    expect(number(short.container)?.style.width).toBe("");
   });
 
   it("is as wide as its longest line, whichever lines are drawn", () => {

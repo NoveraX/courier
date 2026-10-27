@@ -107,6 +107,18 @@ function troubledTraffic(): RequestEntry[] {
   ];
 }
 
+/* The call each finding's fix turns on. */
+const RECOMMENDS: Readonly<Record<string, string>> = {
+  "err-high-error-rate": ".retry(",
+  "err-timeout": ".timeout(",
+  "err-sensitive-url": "authMiddleware(",
+  "sec-mutation-no-auth": "authMiddleware(",
+  "hint-no-caching": "cacheMiddleware(",
+  "hint-no-res-val": ".response(z.",
+  "hint-no-var-val": ".variables(z.",
+  "warn-unused-proxy": "createProxyCaller",
+};
+
 describe("the code Studio suggests for a fix", () => {
   it("compiles as it is copied", () => {
     const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
@@ -131,28 +143,7 @@ describe("the code Studio suggests for a fix", () => {
       });
     }
   }, 60_000);
-});
 
-describe("the fix for a retried write without an idempotency key", () => {
-  it("compiles as it is copied, and declares the key", () => {
-    expect(diagnosticsOf("courier-retry-mutation", IDEMPOTENCY_SUGGESTION)).toEqual([]);
-    expect(IDEMPOTENCY_SUGGESTION).toContain('idempotencyKey: "header:Idempotency-Key"');
-  }, 60_000);
-});
-
-/* The call each finding's fix turns on. */
-const RECOMMENDS: Readonly<Record<string, string>> = {
-  "err-high-error-rate": ".retry(",
-  "err-timeout": ".timeout(",
-  "err-sensitive-url": "authMiddleware(",
-  "sec-mutation-no-auth": "authMiddleware(",
-  "hint-no-caching": "cacheMiddleware(",
-  "hint-no-res-val": ".response(z.",
-  "hint-no-var-val": ".variables(z.",
-  "warn-unused-proxy": "createProxyCaller",
-};
-
-describe("the code Studio suggests for a fix", () => {
   it("shows the call its finding recommends, not only the imports", () => {
     const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
 
@@ -161,6 +152,13 @@ describe("the code Studio suggests for a fix", () => {
       expect({ id, shows: code?.includes(call) }).toEqual({ id, shows: true });
     }
   });
+});
+
+describe("the fix for a retried write without an idempotency key", () => {
+  it("compiles as it is copied, and declares the key", () => {
+    expect(diagnosticsOf("courier-retry-mutation", IDEMPOTENCY_SUGGESTION)).toEqual([]);
+    expect(IDEMPOTENCY_SUGGESTION).toContain('idempotencyKey: "header:Idempotency-Key"');
+  }, 60_000);
 });
 
 describe("the caching hint", () => {

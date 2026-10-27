@@ -50,6 +50,7 @@ export function apiRoute<TConnect extends ConnectResult = ConnectResult>(
      request rather than failing the build. */
   const announce = announceWhenRegistered({ transports: ["http"], framework: "next" });
 
+  // biome-ignore-start lint/correctness/noComponentHookFactories: Next.js calls the handlers a route exports by their HTTP methods' names; they are not components
   return {
     GET: (request: NextRequest) => {
       announce(ownOrigin(request));
@@ -62,4 +63,5 @@ export function apiRoute<TConnect extends ConnectResult = ConnectResult>(
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */
     OPTIONS: (request: NextRequest) => handle(publicRequest(request)),
   };
+  // biome-ignore-end lint/correctness/noComponentHookFactories: the route's handlers end here
 }

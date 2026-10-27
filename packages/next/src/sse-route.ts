@@ -43,6 +43,7 @@ export function sseRoute<TConnect extends ConnectResult = ConnectResult>(
      `next build` before the registry exists. */
   const announce = announceWhenRegistered({ transports: ["sse"], framework: "next" });
 
+  // biome-ignore-start lint/correctness/noComponentHookFactories: Next.js calls the handlers a route exports by their HTTP methods' names; they are not components
   return {
     GET: (request: NextRequest) => {
       announce(ownOrigin(request));
@@ -51,4 +52,5 @@ export function sseRoute<TConnect extends ConnectResult = ConnectResult>(
     /* A preflight from a page `allowedOrigins` lists; any other is refused. */
     OPTIONS: (request: NextRequest) => handle(publicRequest(request)),
   };
+  // biome-ignore-end lint/correctness/noComponentHookFactories: the route's handlers end here
 }

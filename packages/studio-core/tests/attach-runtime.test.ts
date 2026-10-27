@@ -2,6 +2,7 @@
  * @vitest-environment node
  */
 
+import diagnostics from "node:diagnostics_channel";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -48,6 +49,14 @@ describe("attachRuntime (server context)", () => {
     const handle = await attachRuntime("test-server-4");
     handle.detach();
     expect(() => handle.detach()).not.toThrow();
+  });
+
+  it("watches the requests undici writes on Node's diagnostics channel, for their HTTP version", async () => {
+    const subscribe = vi.spyOn(diagnostics, "subscribe");
+
+    await attachRuntime("test-server-5");
+
+    expect(subscribe).toHaveBeenCalledWith("undici:client:sendHeaders", expect.any(Function));
   });
 
   it("auto-derives a default runtime id when none is passed", async () => {

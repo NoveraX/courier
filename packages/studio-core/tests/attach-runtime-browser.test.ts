@@ -2,7 +2,8 @@
  * @vitest-environment jsdom
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import diagnostics from "node:diagnostics_channel";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { _resetRuntimeHandlesForTests, attachRuntime } from "../src/runtime/attach-runtime";
 
@@ -11,6 +12,7 @@ const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 afterEach(() => {
   _resetRuntimeHandlesForTests();
   resetAnnouncements();
+  vi.restoreAllMocks();
   delete (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];
 });
 
@@ -30,6 +32,14 @@ describe("attachRuntime (browser context)", () => {
     const handle = await attachRuntime();
     expect(handle.kind).toBe("browser");
     expect(handle.runtimeId).toBe("browser");
+  });
+
+  it("leaves Node's diagnostics channel alone, which a bundler gives a page only a stand-in for", async () => {
+    const subscribe = vi.spyOn(diagnostics, "subscribe");
+
+    await attachRuntime("test-browser-4");
+
+    expect(subscribe).not.toHaveBeenCalled();
   });
 
   it("honours the globalThis Studio URL slot for connection target", async () => {

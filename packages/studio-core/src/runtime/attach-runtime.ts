@@ -49,8 +49,11 @@
 
 import { attachRuntimeUsing } from "./attach-runtime-core";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
+import { observeBrowserHttpVersions } from "./http-versions/browser-http-versions";
+import type { HttpVersions } from "./http-versions/http-version";
 import { observeNodeHttpVersions } from "./http-versions/node-http-versions";
 import { type ConfigRegistration, registerFromConfig } from "./register-from-config";
+import { detectBrowser } from "./runtime-environment";
 
 /**
  * Connect this runtime to a Studio dev server.
@@ -71,7 +74,15 @@ export function attachRuntime(
   id?: string,
   registration: ConfigRegistration = {},
 ): Promise<RuntimeHandle> {
-  return attachRuntimeUsing(() => registerFromConfig(registration), id, observeNodeHttpVersions);
+  return attachRuntimeUsing(() => registerFromConfig(registration), id, observeHttpVersions);
+}
+
+/* A page runs this build where its bundler resolved the package without the
+   `browser` condition. A bundler gives a page only a stand-in for Node's
+   diagnostics channel, which has nothing to subscribe with, so the page reads
+   its Resource Timing, as the browser build does. */
+function observeHttpVersions(): HttpVersions {
+  return detectBrowser() ? observeBrowserHttpVersions() : observeNodeHttpVersions();
 }
 
 export { _resetRuntimeHandlesForTests } from "./attach-runtime-core";

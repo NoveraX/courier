@@ -108,6 +108,7 @@ describe("a config created after Studio started", () => {
 function connects(url: string, namespace: string, origin?: string): Promise<boolean> {
   const socket = connect(`${url}${namespace}`, {
     transports: ["websocket"],
+    forceNew: true,
     reconnection: false,
     ...(origin === undefined ? {} : { extraHeaders: { Origin: origin } }),
   });

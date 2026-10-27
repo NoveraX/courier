@@ -70,7 +70,10 @@
     "zod": "^4.6.5"
   },
   "overrides": {
-    "@semantic-release/npm": "$@semantic-release/npm"
+    "@semantic-release/npm": "$@semantic-release/npm",
+    "@azure/identity": {
+      "@azure/msal-node": "^7.1.0"
+    }
   },
   "scripts": {
     "build": "turbo run build",

@@ -99,7 +99,7 @@ describe("semantic-release's npm plugin, which a release leaves out", () => {
     expect(manifest.devDependencies["@semantic-release/npm"]).toBe(
       "file:./scripts/stubs/semantic-release-npm",
     );
-    expect(manifest.overrides).toEqual({ "@semantic-release/npm": "$@semantic-release/npm" });
+    expect(manifest.overrides).toHaveProperty(["@semantic-release/npm"], "$@semantic-release/npm");
     expect(stand).toMatchObject({ name: "@semantic-release/npm", private: true });
     expect(stand).not.toHaveProperty("dependencies");
     await expect(import("@semantic-release/npm")).rejects.toThrow(

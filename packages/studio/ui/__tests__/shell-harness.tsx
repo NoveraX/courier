@@ -57,7 +57,8 @@ Element.prototype.scrollIntoView ??= () => {};
    the motion itself turns it back on. */
 MotionGlobalConfig.skipAnimations = true;
 
-/* jsdom lays nothing out: the Timeline's list is given a window's height to draw its rows in. */
+/* jsdom lays nothing out: every element is given a window's size, both the box it takes up and the
+   room inside it, which is what the virtual lists measure to know how many rows to draw. */
 Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
   configurable: true,
   get: () => 800,
@@ -69,6 +70,10 @@ Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
 Object.defineProperty(HTMLElement.prototype, "clientWidth", {
   configurable: true,
   get: () => 1200,
+});
+Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+  configurable: true,
+  get: () => 800,
 });
 
 /**

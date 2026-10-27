@@ -11,23 +11,34 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # A release is proposed once it is a week old, so one its authors take
+    # back within days never reaches a pull request. Security updates do not
+    # wait.
+    cooldown:
+      default-days: 7
     # The packages are libraries: a range they declare, a peer's above all,
     # stays as wide as it is, and only the lockfile moves, unless a new
-    # version falls outside it.
+    # version falls outside it. Dependabot has raised the ranges only a
+    # package's own manifest declares, peers among them, so ws, an optional
+    # peer of five packages, is declared in the root manifest as well.
     versioning-strategy: increase-if-necessary
     commit-message:
       prefix: "fix(deps): 🐛 "
       prefix-development: "chore(deps): 🔧 "
     groups:
-      # Studio parses and transforms with oxc, whose packages move together.
+      # Studio parses and transforms with oxc, whose packages move together,
+      # in this group alone: the other two leave them out, or each would take
+      # one of the pair.
       oxc:
         patterns: [oxc-parser, oxc-transform-react]
       development:
         dependency-type: development
         update-types: [minor, patch]
+        exclude-patterns: [oxc-parser, oxc-transform-react]
       runtime:
         dependency-type: production
         update-types: [minor, patch]
+        exclude-patterns: [oxc-parser, oxc-transform-react]
     ignore:
       # TypeScript 7 ships no compiler API, which the docs site's build and
       # the repository's checks load.
@@ -40,11 +51,18 @@ updates:
       # which the preset refuses from version 10 on; the release tests say when it may move.
       - dependency-name: conventional-changelog-conventionalcommits
         update-types: [version-update:semver-major]
+      # tsdown 0.23.2 writes the packages' declarations with a prerelease of
+      # rolldown-plugin-dts, 0.29.0-beta.2, which changes how they are emitted;
+      # tsdown 0.23.3 goes back to its 0.28 line.
+      - dependency-name: tsdown
+        versions: ["0.23.2"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "ci(deps): 👷 "
 
@@ -53,6 +71,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(deps): 🔧 "
     groups:

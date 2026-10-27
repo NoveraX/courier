@@ -226,8 +226,9 @@ the description, the trailing period and the footer rule. CI checks the same
 on a pull request's commits, and on master on every commit since the last
 release; it also refuses `fixup!`, `squash!` and `amend!` commits that were
 never folded in. A pull request is checked for the header its squash merge
-will get: the title, or the subject of its only commit, followed by
-`(#<number>)`.
+will get: the title followed by `(#<number>)`, and the subject of its only
+commit the same way when the repository takes a squash merge's header from
+the commit.
 
 Breaking changes take a `!` after the type or scope, and a
 `BREAKING CHANGE:` footer explaining what a user has to do:

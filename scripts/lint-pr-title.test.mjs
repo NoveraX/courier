@@ -11,11 +11,20 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SCRIPT = join(ROOT, "scripts", "lint-pr-title.sh");
+const LONG_SUBJECT = `fix: 🐛 ${"a".repeat(65)}`;
 
-function lintTitle(title, number = "123", subject = "") {
+/**
+ * Runs the script as the workflow does: the repository's squash title
+ * setting arrives in SQUASH_MERGE_COMMIT_TITLE, and is unknown when left out.
+ */
+function lintTitle(title, { number = "123", subject = "", squashTitle } = {}) {
+  const env = { ...process.env };
+  delete env.SQUASH_MERGE_COMMIT_TITLE;
+  if (squashTitle !== undefined) env.SQUASH_MERGE_COMMIT_TITLE = squashTitle;
   const result = spawnSync("bash", [SCRIPT, title, number, subject], {
     cwd: ROOT,
     encoding: "utf8",
+    env,
   });
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
 }
@@ -55,11 +64,40 @@ describe("lint-pr-title.sh", { timeout: 30_000 }, () => {
     expect(lintTitle('Revert "feat: ✨ add retries"').status).toBe(0);
   });
 
-  it("checks the only commit's subject, which GitHub uses as the header", () => {
-    const subject = `fix: 🐛 ${"a".repeat(65)}`;
+  it("checks the only commit's subject when the squash title is taken from it", () => {
+    const result = lintTitle("fix: 🐛 keep the body", {
+      subject: LONG_SUBJECT,
+      squashTitle: "COMMIT_OR_PR_TITLE",
+    });
 
-    const result = lintTitle("fix: 🐛 keep the body", "123", subject);
+    expect(result.output).toContain("[header-max-characters]");
+    expect(result.status).toBe(1);
+  });
 
+  it("leaves the only commit's subject alone when the squash title is the pull request's", () => {
+    const result = lintTitle("fix: 🐛 keep the body", {
+      subject: LONG_SUBJECT,
+      squashTitle: "PR_TITLE",
+    });
+
+    expect(result.output).not.toContain("[header-max-characters]");
+    expect(result.status).toBe(0);
+  });
+
+  it("still checks the title when the squash title is the pull request's", () => {
+    const result = lintTitle(LONG_SUBJECT, {
+      subject: "fix: 🐛 keep the body",
+      squashTitle: "PR_TITLE",
+    });
+
+    expect(result.output).toContain("[header-max-characters]");
+    expect(result.status).toBe(1);
+  });
+
+  it("checks the only commit's subject when the squash title setting is not known", () => {
+    const result = lintTitle("fix: 🐛 keep the body", { subject: LONG_SUBJECT });
+
+    expect(result.output).toContain("squash title setting is not known");
     expect(result.output).toContain("[header-max-characters]");
     expect(result.status).toBe(1);
   });

@@ -35,6 +35,11 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
           NUMBER: ${{ github.event.pull_request.number }}
           COMMITS: ${{ github.event.pull_request.commits }}
+          # Repeats the repository's setting in Settings > General > Pull
+          # Requests: PR_TITLE heads a squash merge with the title,
+          # COMMIT_OR_PR_TITLE with a single commit's subject. Change it with the
+          # setting, which this workflow's read-only token cannot see.
+          SQUASH_MERGE_COMMIT_TITLE: PR_TITLE
         run: |
           subject=""
           if [ "$COMMITS" = 1 ]; then

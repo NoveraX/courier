@@ -2,7 +2,7 @@ import { HTTPError } from "../errors";
 import { abortReason } from "../utils/abort-reason";
 import { anySignal } from "../utils/any-signal";
 import { forgetCall, type Supersession, supersedeCall } from "../utils/cancel-previous";
-import { compileUrl, resolveBasePath } from "../utils/helpers";
+import { compileUrl, resolveBasePath } from "../utils/url";
 import { stripUndefined } from "./body-builder";
 import { type RequestOptions, withCallTransport } from "./call-transport";
 import { buildRequestOptions } from "./request-builder";

@@ -8,9 +8,11 @@
  * with those packages, with no semver guarantee for anyone else. An
  * application uses the root entry and the documented subpaths.
  *
- * Its stream and channel factories load their clients on the first stream
- * or channel: nothing here imports those clients, so a package built on
- * this entry carries them only when it opens one.
+ * Its streaming factories load their stream and channel clients on the
+ * first stream or channel. The transports' barrel it takes them from also
+ * re-exports the factories that import those clients, so under Node this
+ * entry loads them at once; a bundler drops what a page leaves unused, and
+ * a page carries the clients only when it opens a stream or channel.
  */
 
 export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/address-trust";

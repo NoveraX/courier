@@ -1,6 +1,6 @@
 import { TRANSPORT_KEYS, type TransportOptions } from "../http-client/transport-options";
 import type { GroupOptions, PathOptions } from "../http-client/types";
-import { pathJoin } from "../utils/url";
+import { pathJoin } from "../utils/path-join";
 import type { GroupNode } from "./group-tree";
 
 /**

@@ -3,7 +3,6 @@ export {
   type RequestPayload,
   type RequestPayloadInput,
 } from "./request-payload";
-export { compileUrl, pathJoin, resolveBasePath } from "./url";
 
 export const parseEndpointKey = (
   endpointKey: string,

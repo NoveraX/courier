@@ -30,7 +30,7 @@ export const SCENARIOS = [
   {
     name: "proxy caller with its routes",
     code: `import { createProxyCaller } from "@noverax/courier";\n${ROUTES}\ncreateProxyCaller(apiRoutes).users.getAll().then(console.log);`,
-    budget: [44.9, 16.3],
+    budget: [44.1, 16.0],
   },
   {
     name: "React Query hooks",

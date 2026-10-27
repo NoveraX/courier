@@ -3,6 +3,7 @@ import type { SearchParamsSerializer } from "../http-client/types";
 import { isFieldRecord } from "./body-kind";
 import { defineOwn } from "./define-own";
 import { isFormData } from "./helpers";
+import { pathJoin } from "./path-join";
 import {
   encodePathValue,
   fillPathParams,
@@ -10,7 +11,6 @@ import {
   routeChangingPart,
 } from "./path-template";
 
-const MULTIPLE_SLASHES = /\/+/g;
 const ABSOLUTE_URL = /^https?:\/\//i;
 /* An absolute URL's scheme and host, which end where its path, its query or a fragment starts. */
 const ORIGIN = /^https?:\/\/[^/?#]*/i;
@@ -48,9 +48,6 @@ function encodePathParam(name: string, value: unknown, keepsSlashes: boolean): s
   }
   return encodePathValue(text, keepsSlashes);
 }
-
-export const pathJoin = (parts: string[]): string =>
-  parts.join("/").replace(MULTIPLE_SLASHES, "/").replace(/^\//, "");
 
 export const resolveBasePath = (
   prefix: string,

@@ -1,5 +1,5 @@
 import type { CallOptions } from "@noverax/courier";
-import { anySignal } from "@noverax/courier/internal";
+import { anySignal } from "@noverax/courier/internal-client";
 
 /**
  * Per-request options that also carry the query's own abort signal.

@@ -6,7 +6,7 @@ import {
   proxyDefaultsOf,
   proxyStreamingFactories,
   shapeOfRoutes,
-} from "@noverax/courier/internal";
+} from "@noverax/courier/internal-client";
 
 import { createGroupHooks } from "./group-hooks";
 import { groupNodes } from "./group-nodes";

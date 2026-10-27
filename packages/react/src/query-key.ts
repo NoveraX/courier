@@ -1,4 +1,4 @@
-import { GROUP_PATH_SEPARATOR } from "@noverax/courier/internal";
+import { GROUP_PATH_SEPARATOR } from "@noverax/courier/internal-client";
 import type { QueryKey } from "@tanstack/react-query";
 
 /**

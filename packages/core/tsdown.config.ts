@@ -16,6 +16,7 @@ const entry = {
   "realtime/index": "src/realtime/index.ts",
   "internal-streams/index": "src/internal-streams/index.ts",
   "internal/index": "src/internal/index.ts",
+  "internal-client/index": "src/internal-client/index.ts",
   "announce/index": "src/announce/index.ts",
 };
 

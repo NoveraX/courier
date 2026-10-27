@@ -6,7 +6,7 @@ import {
   createDirectHTTPExecutor,
   directStreamingFactories,
   shapeOfSource,
-} from "@noverax/courier/internal";
+} from "@noverax/courier/internal-client";
 
 import { createGroupHooks } from "./group-hooks";
 import { groupNodes } from "./group-nodes";

@@ -108,6 +108,11 @@
       "import": "./lib/internal/index.js",
       "default": "./lib/internal/index.js"
     },
+    "./internal-client": {
+      "types": "./lib/internal-client/index.d.ts",
+      "import": "./lib/internal-client/index.js",
+      "default": "./lib/internal-client/index.js"
+    },
     "./announce": {
       "types": "./lib/announce/index.d.ts",
       "import": "./lib/announce/index.js",
@@ -158,6 +163,9 @@
       ],
       "internal": [
         "./lib/internal/index.d.ts"
+      ],
+      "internal-client": [
+        "./lib/internal-client/index.d.ts"
       ],
       "announce": [
         "./lib/announce/index.d.ts"

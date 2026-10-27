@@ -1,4 +1,8 @@
-import { type ClientShape, GROUP_PATH_SEPARATOR, RUNTIME_HOOKS } from "@noverax/courier/internal";
+import {
+  type ClientShape,
+  GROUP_PATH_SEPARATOR,
+  RUNTIME_HOOKS,
+} from "@noverax/courier/internal-client";
 
 import type { UntypedGroupHooks } from "./untyped-group-hooks";
 

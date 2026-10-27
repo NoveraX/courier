@@ -1,12 +1,14 @@
 /**
  * `@noverax/courier/internal` — what Courier's own packages build on.
  *
- * **Internal subpath.** The framework adapters, React, the mock server and
- * Studio reach the client proxy, the transports, the request executor and
+ * **Internal subpath.** The framework adapters, the mock server and Studio
+ * reach the client proxy, the transports, the request executor and
  * Studio's hooks through it, and the command-line tools the style of their
- * terminal output. It is not part of the public API: it changes
- * with those packages, with no semver guarantee for anyone else. An
- * application uses the root entry and the documented subpaths.
+ * terminal output. React's hooks, which run in a page, take the client's
+ * pieces from `@noverax/courier/internal-client` instead. It is not part of
+ * the public API: it changes with those packages, with no semver guarantee
+ * for anyone else. An application uses the root entry and the documented
+ * subpaths.
  *
  * Its streaming factories load their stream and channel clients on the
  * first stream or channel. The transports' barrel it takes them from also

@@ -52,23 +52,32 @@ export function createReadings(read: () => Promise<RoutesSnapshot>): Readings {
   let begun = 0;
   let running = false;
   let waiting: Waiter[] = [];
+  const readOnce = async (): Promise<void> => {
+    begun += 1;
+    const reading = begun;
+    const since = Date.now();
+    const outcome = await outcomeOf(read);
+    const inputs = inputsOf(outcome);
+    const fingerprint = inputs === undefined ? UNSETTLED : fingerprintOf(inputs, since);
+    if (outcome.ok) kept = { snapshot: outcome.snapshot, fingerprint };
+    /* One that read nothing tells nothing of changes: it is everyone's. */
+    const settled = fingerprint !== UNSETTLED || inputs === undefined;
+    const served = waiting.filter((waiter) => settled || waiter.seen < reading);
+    waiting = waiting.filter((waiter) => !served.includes(waiter));
+    for (const waiter of served) waiter.settle(outcome);
+  };
+  /* Whatever goes wrong between readings reaches every caller still waiting, so none waits for ever. */
   const run = async (): Promise<void> => {
     running = true;
-    while (waiting.length > 0) {
-      begun += 1;
-      const reading = begun;
-      const since = Date.now();
-      const outcome = await outcomeOf(read);
-      const inputs = inputsOf(outcome);
-      const fingerprint = inputs === undefined ? UNSETTLED : fingerprintOf(inputs, since);
-      if (outcome.ok) kept = { snapshot: outcome.snapshot, fingerprint };
-      /* One that read nothing tells nothing of changes: it is everyone's. */
-      const settled = fingerprint !== UNSETTLED || inputs === undefined;
-      const served = waiting.filter((waiter) => settled || waiter.seen < reading);
-      waiting = waiting.filter((waiter) => !served.includes(waiter));
-      for (const waiter of served) waiter.settle(outcome);
+    try {
+      while (waiting.length > 0) await readOnce();
+    } catch (error) {
+      const stranded = waiting;
+      waiting = [];
+      for (const waiter of stranded) waiter.settle({ ok: false, error });
+    } finally {
+      running = false;
     }
-    running = false;
   };
   return {
     next() {

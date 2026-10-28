@@ -3,6 +3,7 @@ import { sep } from "node:path";
 
 import type { RoutesInputs } from "../engine/routes-snapshot";
 import type { RoutesPluginState } from "./routes-plugin-state";
+import { watchOnce } from "./watch-once";
 
 /** What of Vite's plugin context watches a file for the module it loads. */
 export interface WatchContext {
@@ -40,7 +41,7 @@ export function followRoutesInputs(
   const listed = new Set((inputs.listed ?? []).filter((folder) => !isInstalled(folder)));
   state.followed = followed;
   state.listed = listed;
-  for (const server of state.servers) server.watcher.add([...followed, ...listed]);
+  for (const server of state.servers) watchOnce(server, [...followed, ...listed]);
 }
 
 function isInstalled(path: string): boolean {

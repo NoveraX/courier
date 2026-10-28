@@ -39,11 +39,12 @@ interface VitestContext {
  * The Vite plugin that hands every page, and every server rendering one,
  * the routes its proxy client may call: read from `courier.config.ts` by
  * the rules the proxy applies, in place of the module
- * `@noverax/courier/routes` ships. No routes file is written, and nothing
- * of the config but the routes reaches a bundle.
+ * `@noverax/courier/routes` ships. No routes file is written, and the
+ * routes carry no address, path or middleware; a page that imports the
+ * config itself fails the build.
  *
  * A build that cannot read the config fails with why; the dev server reads
- * it again whenever a file it came from changes, and Vitest, which runs
+ * it again whenever something it came from changes, and Vitest, which runs
  * tests through Vite, reruns the tests that import the routes.
  *
  * @param options - Where the config is, when it is not found from the root

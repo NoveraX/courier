@@ -63,7 +63,7 @@ export function trackEnvReads({
     },
     /* Written to the environment itself: through the watcher, assigning a variable
        already set would define it with a partial descriptor, which Node refuses. */
-    set: (target, key, value) => Reflect.set(target, key, value),
+    set: (target, key, value: unknown) => Reflect.set(target, key, value),
     defineProperty: (target, key, descriptor) => Reflect.defineProperty(target, key, descriptor),
   });
   return {

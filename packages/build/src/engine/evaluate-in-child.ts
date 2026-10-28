@@ -1,4 +1,4 @@
-import { fork } from "node:child_process";
+import { type ChildProcess, fork } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -54,20 +54,30 @@ export function evaluateInChild(
       settle(unread(`The config was still being read after ${limitMs / 1000} s, and was given up`));
     }, limitMs);
     settle.onSettled(() => clearTimeout(timer));
-    child.on("message", (message: unknown) => {
-      if (workerMessages.isReply(message)) settle(outcomeOf(message.reply), true);
-    });
-    child.once("error", (error) =>
-      settle(unread(`The process that reads the config did not start: ${error.message}`)),
-    );
-    /* After the channel and the output have closed, so an answer sent just before is in. */
-    child.once("close", (code, signal) =>
-      settle(
-        unread(`The process that reads the config ended (${signal ?? code}) before it answered`),
-      ),
-    );
-    child.once("spawn", () => child.send(workerMessages.request(request)));
+    ask(child, request, settle, unread);
   });
+}
+
+/* Send the request once the process runs, and settle on its answer, or on why it gave none. */
+function ask(
+  child: ChildProcess,
+  request: RoutesRequest,
+  settle: Settle,
+  unread: (message: string) => RoutesReadError,
+): void {
+  child.on("message", (message: unknown) => {
+    if (workerMessages.isReply(message)) settle(outcomeOf(message.reply), true);
+  });
+  child.once("error", (error) =>
+    settle(unread(`The process that reads the config did not start: ${error.message}`)),
+  );
+  /* After the channel and the output have closed, so an answer sent just before is in. */
+  child.once("close", (code, signal) =>
+    settle(
+      unread(`The process that reads the config ended (${signal ?? code}) before it answered`),
+    ),
+  );
+  child.once("spawn", () => child.send(workerMessages.request(request)));
 }
 
 /* The routes an answer carries, or the error it reports. */

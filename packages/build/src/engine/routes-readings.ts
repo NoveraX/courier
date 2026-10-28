@@ -48,51 +48,61 @@ interface Waiter {
  * ```
  */
 export function createReadings(read: () => Promise<RoutesSnapshot>): Readings {
-  let kept: KeptReading | undefined;
-  let begun = 0;
-  let running = false;
-  let waiting: Waiter[] = [];
-  const readOnce = async (): Promise<void> => {
-    begun += 1;
-    const reading = begun;
-    const since = Date.now();
-    const outcome = await outcomeOf(read);
-    const inputs = inputsOf(outcome);
-    const fingerprint = inputs === undefined ? UNSETTLED : fingerprintOf(inputs, since);
-    if (outcome.ok) kept = { snapshot: outcome.snapshot, fingerprint };
-    /* One that read nothing tells nothing of changes: it is everyone's. */
-    const settled = fingerprint !== UNSETTLED || inputs === undefined;
-    const served = waiting.filter((waiter) => settled || waiter.seen < reading);
-    waiting = waiting.filter((waiter) => !served.includes(waiter));
-    for (const waiter of served) waiter.settle(outcome);
-  };
-  /* Whatever goes wrong between readings reaches every caller still waiting, so none waits for ever. */
-  const run = async (): Promise<void> => {
-    running = true;
-    try {
-      while (waiting.length > 0) await readOnce();
-    } catch (error) {
-      const stranded = waiting;
-      waiting = [];
-      for (const waiter of stranded) waiter.settle({ ok: false, error });
-    } finally {
-      running = false;
-    }
-  };
+  const state: ReadingsState = { begun: 0, running: false, waiting: [] };
   return {
     next() {
+      const kept = state.kept;
       if (kept !== undefined && isCurrent(kept)) {
         return Promise.resolve({ ok: true, snapshot: kept.snapshot });
       }
       return new Promise((settle) => {
-        waiting.push({ seen: begun, settle });
-        if (!running) void run();
+        state.waiting.push({ seen: state.begun, settle });
+        if (!state.running) void run(state, read);
       });
     },
     get kept() {
-      return kept;
+      return state.kept;
     },
   };
+}
+
+/* The routes kept, how many readings have begun, whether one runs, and who waits for one. */
+interface ReadingsState {
+  kept?: KeptReading;
+  begun: number;
+  running: boolean;
+  waiting: Waiter[];
+}
+
+/* Read for as long as callers wait; whatever goes wrong between readings reaches every
+   caller still waiting, so none waits for ever. */
+async function run(state: ReadingsState, read: () => Promise<RoutesSnapshot>): Promise<void> {
+  state.running = true;
+  try {
+    while (state.waiting.length > 0) await readOnce(state, read);
+  } catch (error) {
+    const stranded = state.waiting;
+    state.waiting = [];
+    for (const waiter of stranded) waiter.settle({ ok: false, error });
+  } finally {
+    state.running = false;
+  }
+}
+
+/* One reading, handed to each caller that asked before it began, or to all when nothing it read changed. */
+async function readOnce(state: ReadingsState, read: () => Promise<RoutesSnapshot>): Promise<void> {
+  state.begun += 1;
+  const reading = state.begun;
+  const since = Date.now();
+  const outcome = await outcomeOf(read);
+  const inputs = inputsOf(outcome);
+  const fingerprint = inputs === undefined ? UNSETTLED : fingerprintOf(inputs, since);
+  if (outcome.ok) state.kept = { snapshot: outcome.snapshot, fingerprint };
+  /* One that read nothing tells nothing of changes: it is everyone's. */
+  const settled = fingerprint !== UNSETTLED || inputs === undefined;
+  const served = state.waiting.filter((waiter) => settled || waiter.seen < reading);
+  state.waiting = state.waiting.filter((waiter) => !served.includes(waiter));
+  for (const waiter of served) waiter.settle(outcome);
 }
 
 /* Whether nothing the kept routes depended on has changed since they were read. */

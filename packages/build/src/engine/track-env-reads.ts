@@ -41,31 +41,17 @@ export function trackEnvReads({
   let all = false;
   let waiting = startPaused;
   let paused = waiting ? 1 : 0;
-  const note = (key: string | symbol): void => {
-    if (paused === 0 && typeof key === "string") read.add(key);
-  };
-  process.env = new Proxy(process.env, {
-    get(target, key) {
-      note(key);
-      return Reflect.get(target, key);
-    },
-    has(target, key) {
-      note(key);
-      return Reflect.has(target, key);
-    },
-    getOwnPropertyDescriptor(target, key) {
-      note(key);
-      return Reflect.getOwnPropertyDescriptor(target, key);
-    },
-    ownKeys(target) {
-      if (paused === 0) all = true;
-      return Reflect.ownKeys(target);
-    },
-    /* Written to the environment itself: through the watcher, assigning a variable
-       already set would define it with a partial descriptor, which Node refuses. */
-    set: (target, key, value: unknown) => Reflect.set(target, key, value),
-    defineProperty: (target, key, descriptor) => Reflect.defineProperty(target, key, descriptor),
-  });
+  process.env = new Proxy(
+    process.env,
+    watcherOf({
+      read: (key) => {
+        if (paused === 0 && typeof key === "string") read.add(key);
+      },
+      listed: () => {
+        if (paused === 0) all = true;
+      },
+    }),
+  );
   return {
     names: () => (all ? "*" : [...read].sort()),
     untracked(run) {
@@ -80,5 +66,37 @@ export function trackEnvReads({
       if (waiting) paused -= 1;
       waiting = false;
     },
+  };
+}
+
+/* What the watcher in front of the environment is told: a name looked at, or the whole list. */
+interface EnvLooks {
+  read(key: string | symbol): void;
+  listed(): void;
+}
+
+/* The watcher: each look told, every write passed to the environment itself. */
+function watcherOf(looks: EnvLooks): ProxyHandler<NodeJS.ProcessEnv> {
+  return {
+    get(target, key) {
+      looks.read(key);
+      return Reflect.get(target, key);
+    },
+    has(target, key) {
+      looks.read(key);
+      return Reflect.has(target, key);
+    },
+    getOwnPropertyDescriptor(target, key) {
+      looks.read(key);
+      return Reflect.getOwnPropertyDescriptor(target, key);
+    },
+    ownKeys(target) {
+      looks.listed();
+      return Reflect.ownKeys(target);
+    },
+    /* Written to the environment itself: through the watcher, assigning a variable
+       already set would define it with a partial descriptor, which Node refuses. */
+    set: (target, key, value: unknown) => Reflect.set(target, key, value),
+    defineProperty: (target, key, descriptor) => Reflect.defineProperty(target, key, descriptor),
   };
 }

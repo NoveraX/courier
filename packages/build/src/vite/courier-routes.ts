@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Plugin, ResolvedConfig } from "vite";
+import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 
 import { configCandidates } from "../config/config-candidates";
 import { errnoCode } from "../config/errno-code";
@@ -73,27 +73,8 @@ export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
       resolve: { alias: [{ find: ROUTES_PATTERN, replacement: ROUTES_MODULE_ID }] },
       optimizeDeps: { exclude: [ROUTES_SPECIFIER] },
     }),
-    configResolved(config) {
-      state.config = config;
-      state.engine = sharedEngine({
-        root: config.root,
-        config: options.config,
-        envFiles: viteEnvFiles(config),
-        envValues: () => viteEnvValues(config),
-      });
-      state.configFile = configFileOf(config, options.config);
-    },
-    configureServer(server) {
-      state.servers.add(server);
-      const root = server.config.root;
-      watchRoutesInputs(server, state, {
-        candidates:
-          options.config === undefined ? configCandidates(root) : [resolve(root, options.config)],
-        onChange: () => {
-          state.configFile = configFileOf(server.config, options.config);
-        },
-      });
-    },
+    configResolved: (config) => resolveRoutes(state, config, options.config),
+    configureServer: (server) => serveRoutes(state, server, options.config),
     resolveId: (id) =>
       id === ROUTES_SPECIFIER || id === ROUTES_MODULE_ID ? ROUTES_MODULE_ID : undefined,
     load(id) {
@@ -113,6 +94,38 @@ export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
     },
   };
   return plugin;
+}
+
+/* What reads the routes for this Vite, and the config a page must not import. */
+function resolveRoutes(
+  state: RoutesPluginState,
+  config: ResolvedConfig,
+  named: string | undefined,
+): void {
+  state.config = config;
+  state.engine = sharedEngine({
+    root: config.root,
+    config: named,
+    envFiles: viteEnvFiles(config),
+    envValues: () => viteEnvValues(config),
+  });
+  state.configFile = configFileOf(config, named);
+}
+
+/* A dev server the routes are served by, which follows where a config may appear or go. */
+function serveRoutes(
+  state: RoutesPluginState,
+  server: ViteDevServer,
+  named: string | undefined,
+): void {
+  state.servers.add(server);
+  const root = server.config.root;
+  watchRoutesInputs(server, state, {
+    candidates: named === undefined ? configCandidates(root) : [resolve(root, named)],
+    onChange: () => {
+      state.configFile = configFileOf(server.config, named);
+    },
+  });
 }
 
 /* The config file the plugin reads, as Vite names a module: its real path. One that is

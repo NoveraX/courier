@@ -223,6 +223,14 @@ describe("an endpoint's own mark", () => {
     expect(schemaOf(endpoint.get("search").expose("yes" as never))?.expose).toBe(false);
   });
 
+  it("keeps it shut when handed undefined, as a flag left out of a caller's settings is", () => {
+    const settings: { searchPublic?: boolean } = {};
+
+    expect(schemaOf(endpoint.get("search").expose(undefined))?.expose).toBe(false);
+    expect(schemaOf(endpoint.get("search").expose(settings.searchPublic))?.expose).toBe(false);
+    expect(schemaOf(endpoint.get("search").expose())?.expose).toBe(true);
+  });
+
   it("decides before its group and its API, in both directions", () => {
     const closed = {
       options: { expose: false, groups: { posts: { options: { expose: false } } } },

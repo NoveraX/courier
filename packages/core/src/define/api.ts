@@ -5,12 +5,16 @@ import { studioHooks } from "../studio";
 import { isDevelopment } from "../utils/development";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
+import type { ExposeMark } from "./marker";
 import type {
   AnyDefinedApi,
   DefinedApi,
   DefinedFlatApi,
   DefinedMixedApi,
   EndpointRecord,
+  ExposeKept,
+  ExposeWritten,
+  FromArguments,
   GroupRecord,
   OwnEndpoints,
   OwnGroups,
@@ -125,7 +129,11 @@ export function setSourceName(source: unknown, name: string): void {
  *   groups: { chat: chatGroup },
  * })
  */
-export function defineApi<TGroups extends OwnGroups, TEndpoints extends OwnEndpoints>(
+export function defineApi<
+  TGroups extends OwnGroups,
+  TEndpoints extends OwnEndpoints,
+  const TExpose extends ExposeMark = undefined,
+>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -141,10 +149,10 @@ export function defineApi<TGroups extends OwnGroups, TEndpoints extends OwnEndpo
     groups: TGroups;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
-  },
-): DefinedMixedApi<TGroups, TEndpoints>;
+  } & ExposeWritten<TExpose>,
+): DefinedMixedApi<TGroups, TEndpoints, FromArguments<ExposeKept<TExpose>>>;
 
-export function defineApi<TGroups extends OwnGroups>(
+export function defineApi<TGroups extends OwnGroups, const TExpose extends ExposeMark = undefined>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -158,10 +166,13 @@ export function defineApi<TGroups extends OwnGroups>(
     name?: string | undefined;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
-  },
-): DefinedApi<TGroups>;
+  } & ExposeWritten<TExpose>,
+): DefinedApi<TGroups, FromArguments<ExposeKept<TExpose>>>;
 
-export function defineApi<TEndpoints extends OwnEndpoints>(
+export function defineApi<
+  TEndpoints extends OwnEndpoints,
+  const TExpose extends ExposeMark = undefined,
+>(
   config: BaseOptions & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
@@ -175,8 +186,8 @@ export function defineApi<TEndpoints extends OwnEndpoints>(
     name?: string | undefined;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
-  },
-): DefinedFlatApi<TEndpoints>;
+  } & ExposeWritten<TExpose>,
+): DefinedFlatApi<TEndpoints, FromArguments<ExposeKept<TExpose>>>;
 
 export function defineApi(
   config: BaseOptions & {

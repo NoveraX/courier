@@ -8,6 +8,7 @@
  */
 
 import type { ExposablePath, WireShapeAt } from "./endpoint-path-types";
+import type { ExposedPaths } from "./exposed-paths";
 
 /**
  * How the browser reaches one endpoint: a read, sent as GET when it may be
@@ -77,3 +78,35 @@ export interface CourierRoutes<
   /** Whether identical reads in flight together share one request, as the API's `coalesce` says. */
   readonly coalesce?: boolean;
 }
+
+/**
+ * Whether an API's type names its endpoints one by one, rather than holding
+ * any endpoint under any name — a source typed as `DefinedApi`, or `any`.
+ */
+export type NamesItsEndpoints<TApi> = 0 extends 1 & TApi
+  ? false
+  : string extends ExposablePath<TApi>
+    ? false
+    : `${string}.${string}` extends ExposablePath<TApi>
+      ? false
+      : true;
+
+/** The endpoints a page may call, each reached as a route says; any name for an API typed to hold any endpoint. */
+export type ExposedRouteMap<TApi> =
+  NamesItsEndpoints<TApi> extends true
+    ? { readonly [P in ExposedPaths<TApi>]: RouteShape }
+    : Readonly<Record<string, RouteShape>>;
+
+/**
+ * The routes of an API as Courier's bundler plugin builds them from its
+ * definition: every endpoint the marks open to a page, by the rule the
+ * proxy applies. A client given them is typed with those endpoints alone;
+ * for an API whose type names no endpoint in particular, with any.
+ *
+ * @example
+ * ```ts
+ * declare const shopRoutes: ExposedRoutes<typeof shop>;
+ * const storefront = createProxyCaller(shopRoutes); // storefront.cart.add(…)
+ * ```
+ */
+export type ExposedRoutes<TApi> = CourierRoutes<TApi, ExposedRouteMap<TApi>>;

@@ -18,6 +18,33 @@ export type EndpointMarker = typeof ENDPOINT;
 export type EndpointKind = "query" | "mutation" | "stream" | "channel";
 
 /**
+ * What an `expose` mark says: `true` opens to a page, `false` keeps from
+ * every page, `undefined` leaves it to the group or the API above. A flag
+ * known only at run time is `boolean`.
+ */
+export type ExposeMark = boolean | undefined;
+
+/** What `.expose()` is handed: nothing, which opens, or a flag. */
+export type ExposeArgs = [] | [open: ExposeMark];
+
+/**
+ * The mark an `.expose()` call leaves: named alone it opens; handed a flag,
+ * only `true` opens, and anything else — `undefined` too — keeps it shut.
+ * A flag that may be `true` leaves a mark that may open.
+ *
+ * @example
+ * ```ts
+ * type Shut = ExposeMarkFor<[false | undefined]>; // false
+ * type Maybe = ExposeMarkFor<[boolean]>; // boolean
+ * ```
+ */
+export type ExposeMarkFor<TArgs extends ExposeArgs> = TArgs extends [infer TOpen]
+  ? TOpen extends true
+    ? true
+    : false
+  : true;
+
+/**
  * Flat, precomputed type carrier.
  *
  * Every field is resolved at the terminal call, so a consumer reads one
@@ -31,6 +58,7 @@ export interface EndpointTypes<
   TVariablesOut,
   TSend,
   TKind extends EndpointKind,
+  TExpose extends ExposeMark = undefined,
 > {
   readonly response: TResponse;
   /** What the caller passes. */
@@ -40,6 +68,8 @@ export interface EndpointTypes<
   /** What the caller may send inside an open channel. */
   readonly send: TSend;
   readonly kind: TKind;
+  /** What the endpoint's own `.expose()` says, or `undefined` where it says nothing. */
+  readonly expose: TExpose;
 }
 
 /**
@@ -54,6 +84,7 @@ export interface AnyEndpointTypes {
   readonly variablesOut: unknown;
   readonly send: unknown;
   readonly kind: EndpointKind;
+  readonly expose: ExposeMark;
 }
 
 /**
@@ -93,3 +124,5 @@ export type InferVariables<E extends AnyEndpoint> = E[EndpointMarker]["variables
 export type InferVariablesOut<E extends AnyEndpoint> = E[EndpointMarker]["variablesOut"];
 export type InferSend<E extends AnyEndpoint> = E[EndpointMarker]["send"];
 export type InferKind<E extends AnyEndpoint> = E[EndpointMarker]["kind"];
+/** What the endpoint's own `.expose()` says: `true`, `false`, or `undefined` where it says nothing. */
+export type InferExpose<E extends AnyEndpoint> = E[EndpointMarker]["expose"];

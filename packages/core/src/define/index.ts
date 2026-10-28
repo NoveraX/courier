@@ -29,6 +29,7 @@ export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shape
 export { courier } from "./courier";
 export type { ExposablePath, KindAt, WireShapeAt } from "./endpoint-path-types";
 export type { ExposedApi, RoutedApi } from "./exposed-api";
+export type { ExposedPaths } from "./exposed-paths";
 export { type FormFieldEncoding, formBody } from "./form-body";
 export { formQuery } from "./form-query";
 export { defineGroup } from "./group";
@@ -43,6 +44,8 @@ export type {
 export type {
   AnyEndpoint,
   EndpointKind,
+  ExposeMark,
+  InferExpose,
   InferKind,
   InferResponse,
   InferSend,
@@ -60,7 +63,14 @@ export type {
   StreamWire,
   WireCall,
 } from "./probe";
-export type { CourierRoutes, RouteMap, RouteShape, RouteShapeAt } from "./routes";
+export type {
+  CourierRoutes,
+  ExposedRouteMap,
+  ExposedRoutes,
+  RouteMap,
+  RouteShape,
+  RouteShapeAt,
+} from "./routes";
 export { stampSourceKeys } from "./stamp-source-keys";
 export type {
   AnyDefinedApi,

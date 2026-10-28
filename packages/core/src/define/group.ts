@@ -3,11 +3,15 @@ import type { GroupOptions } from "../http-client/types";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoFragment } from "./assert-no-fragment";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
+import type { ExposeMark } from "./marker";
 import type {
   DefinedGroup,
   DefinedNestingGroup,
   DefineGroupConfig,
   DefineNestingGroupConfig,
+  ExposeKept,
+  ExposeWritten,
+  FromArguments,
   OwnEndpoints,
   OwnGroups,
 } from "./types";
@@ -60,11 +64,17 @@ import type {
 export function defineGroup<
   TGroups extends OwnGroups,
   TEndpoints extends OwnEndpoints = Record<never, never>,
->(config: DefineNestingGroupConfig<TEndpoints, TGroups>): DefinedNestingGroup<TEndpoints, TGroups>;
+  const TExpose extends ExposeMark = undefined,
+>(
+  config: DefineNestingGroupConfig<TEndpoints, TGroups> & ExposeWritten<TExpose>,
+): DefinedNestingGroup<TEndpoints, TGroups, FromArguments<ExposeKept<TExpose>>>;
 
-export function defineGroup<TEndpoints extends OwnEndpoints>(
-  config: DefineGroupConfig<TEndpoints>,
-): DefinedGroup<TEndpoints>;
+export function defineGroup<
+  TEndpoints extends OwnEndpoints,
+  const TExpose extends ExposeMark = undefined,
+>(
+  config: DefineGroupConfig<TEndpoints> & ExposeWritten<TExpose>,
+): DefinedGroup<TEndpoints, FromArguments<ExposeKept<TExpose>>>;
 
 export function defineGroup(
   config: GroupOptions & { endpoints?: OwnEndpoints | undefined; groups?: OwnGroups | undefined },

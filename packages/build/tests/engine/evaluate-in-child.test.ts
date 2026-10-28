@@ -178,6 +178,23 @@ describe("evaluateInChild", () => {
     );
   }, 30_000);
 
+  it("names the files the config reads and the folders it lists, besides the modules it imports", async () => {
+    const flags = join(dir, "flags.json");
+    const defs = join(dir, "defs");
+    project(`import { readdirSync, readFileSync } from "node:fs";
+${CONFIG}
+JSON.parse(readFileSync(${JSON.stringify(flags)}, "utf8"));
+readdirSync(${JSON.stringify(defs)});
+`);
+    writeFileSync(flags, "{}\n");
+    mkdirSync(defs);
+
+    const snapshot = await evaluateInChild({ root: dir, envFiles: [] });
+
+    expect(snapshot.files).toContain(flags);
+    expect(snapshot.listed).toEqual([defs]);
+  }, 30_000);
+
   it("fails CONFIG_NOT_FOUND where no config is in the root or a folder above it", async () => {
     const error = await failure(evaluateInChild({ root: dir, envFiles: [] }));
 

@@ -9,9 +9,17 @@ export interface RoutesInputs {
   readonly configFile?: string | undefined;
   /**
    * Every path the reading depended on, absolute and sorted: the config, the
-   * modules it reached and the env files that were or may be read.
+   * modules it reached, the env files that were or may be read, the files
+   * it read and the paths it looked at. A file counts by its contents; a
+   * path that is not there or is a folder, by whether it is there and what
+   * it is.
    */
   readonly files: readonly string[];
+  /**
+   * The folders whose entries the reading listed, absolute and sorted: an
+   * entry added or removed may change what it gives. None when omitted.
+   */
+  readonly listed?: readonly string[] | undefined;
   /**
    * The environment variables the reading looked at, sorted, or `"*"` when it
    * went through all of them.

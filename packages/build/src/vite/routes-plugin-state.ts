@@ -17,10 +17,11 @@ export interface RoutesPluginState {
   readonly servers: Set<ViteDevServer>;
   /**
    * The project's paths the latest reading depended on: a change to one,
-   * one appearing or going, or an entry of a folder among them, may change
-   * the routes.
+   * or one appearing or going, may change the routes.
    */
   followed: ReadonlySet<string>;
+  /** The project's folders the latest reading listed: an entry added or removed may change the routes. */
+  listed: ReadonlySet<string>;
   /** Whether Vitest runs the tests through this Vite: its pages are tests, which may import the config. */
   underVitest: boolean;
 }

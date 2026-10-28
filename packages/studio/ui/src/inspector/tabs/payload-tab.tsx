@@ -1,11 +1,13 @@
 import { Braces, Inbox, ListTree } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
 import type { SegmentedOption } from "@/design/segmented";
 import { containerPaths, jsonLines } from "@/features/requests/json-tree";
 import type { PayloadView } from "@/features/requests/payload-view";
+import { useFindShortcut } from "@/hooks/use-find-shortcut";
+import { EVERY_ROW_UP_TO } from "@/hooks/use-row-window";
 import { copyToClipboard } from "@/lib/clipboard";
 import { JsonTreeView } from "../json-tree-view";
 import { CodeEmpty, CodeToolbar } from "./code-toolbar";
@@ -43,7 +45,9 @@ interface PayloadTabProps {
  * and values: the tree keeps what matches and what holds it, the raw text
  * marks its lines, and Enter moves from one match to the next. Where the
  * view shows a part of the payload and the whole can be had, the search
- * runs over the whole of it.
+ * runs over the whole of it. A payload long enough to draw only the rows
+ * in sight takes ⌘F (Ctrl+F) to its search while the person works in it:
+ * the browser's find sees only the rows drawn.
  *
  * @param props - The payload's view, how it shows, and what changes that
  * @returns The tab
@@ -89,6 +93,12 @@ export function PayloadTab({
   );
   const searching = search.counted !== undefined;
   const shown = search.wholeShown;
+  const field = useRef<HTMLInputElement | null>(null);
+  useFindShortcut({
+    viewRef: search.container,
+    fieldRef: field,
+    enabled: hasValue && lines.length > EVERY_ROW_UP_TO,
+  });
   return (
     <div ref={search.container} className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
       <CodeToolbar
@@ -109,6 +119,7 @@ export function PayloadTab({
           onQuery={search.setQuery}
           found={search.counted}
           onStep={search.step}
+          fieldRef={field}
         />
       )}
       {hasValue && whole && cutFrom !== undefined && (

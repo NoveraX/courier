@@ -9,6 +9,8 @@ interface DetailSearchProps {
   found: { count: number; current: number } | undefined;
   /** Moves to the next match, or the previous one. */
   onStep: (step: 1 | -1) => void;
+  /** The field itself, for a shortcut that brings it to hand. */
+  fieldRef?: React.Ref<HTMLInputElement> | undefined;
 }
 
 /**
@@ -29,6 +31,7 @@ export function DetailSearch({
   onQuery,
   found,
   onStep,
+  fieldRef,
 }: DetailSearchProps): React.ReactNode {
   const button =
     "flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle transition-colors hover:bg-raised hover:text-fg disabled:cursor-default disabled:opacity-40 pointer-coarse:size-9";
@@ -37,6 +40,7 @@ export function DetailSearch({
     <div className="flex h-8 items-center gap-1.5 rounded-card border border-line bg-inset pr-1 pl-2.5 pointer-coarse:h-10">
       <Search aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
       <input
+        ref={fieldRef}
         type="search"
         value={query}
         onChange={(event) => onQuery(event.target.value)}

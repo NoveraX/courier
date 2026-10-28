@@ -142,4 +142,18 @@ test("draws the rows of a long answer its pane shows, and the others as it scrol
   await expect(lines.last()).toHaveText(/^\d+\]$/);
   await expect(lines.last()).toBeVisible();
   expect(await lines.count()).toBeLessThan(200);
+
+  /* The browser's find would see only the lines drawn: the answer's own search takes its keys,
+     those of the platform the page reports, which a project's device may set apart from the host. */
+  const apple = await page.evaluate(() => {
+    const hints: unknown = Reflect.get(navigator, "userAgentData");
+    const reported: unknown =
+      typeof hints === "object" && hints !== null ? Reflect.get(hints, "platform") : undefined;
+    const platform =
+      typeof reported === "string" && reported !== "" ? reported : navigator.platform;
+    return /mac|iphone|ipad|ipod/i.test(platform);
+  });
+  await lines.last().click();
+  await page.keyboard.press(apple ? "Meta+f" : "Control+f");
+  await expect(field).toBeFocused();
 });

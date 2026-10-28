@@ -1,3 +1,4 @@
+import { routes } from "@noverax/courier/routes";
 import { useQueryClient } from "@noverax/courier-react";
 import { useState } from "react";
 
@@ -14,6 +15,7 @@ export function App() {
   return (
     <main>
       <pre id="me">{me.data ? JSON.stringify(me.data) : ""}</pre>
+      <p id="client-routes">{Object.keys(routes.catalog?.endpoints ?? {}).join(",")}</p>
       <button id="sign-in" type="button" onClick={() => signIn.mutate({ user: "spa" })}>
         Sign in
       </button>

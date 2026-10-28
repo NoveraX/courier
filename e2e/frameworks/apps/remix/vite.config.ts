@@ -1,3 +1,4 @@
+import { courierRoutes } from "@noverax/courier-build/vite";
 import { vitePlugin as remix } from "@remix-run/dev";
 import { defineConfig } from "vite";
 
@@ -27,7 +28,9 @@ export default defineConfig({
           route("renew", "routes/renew.tsx");
           route("logout", "routes/logout.tsx");
           route("rename-route", "routes/rename-route.ts");
+          route("routes", "routes/routes-page.tsx");
         }),
     }),
+    courierRoutes(),
   ],
 });

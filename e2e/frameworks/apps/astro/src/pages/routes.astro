@@ -1,0 +1,15 @@
+---
+import { routes } from "@noverax/courier/routes";
+
+/* The routes as the server that renders the page has them. */
+const server = Object.keys(routes.catalog.endpoints).join(",");
+---
+
+<p id="server-routes">{server}</p>
+<p id="client-routes"></p>
+<script>
+  import { routes } from "@noverax/courier/routes";
+
+  const element = document.getElementById("client-routes");
+  if (element) element.textContent = Object.keys(routes.catalog.endpoints).join(",");
+</script>

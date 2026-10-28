@@ -21,7 +21,16 @@ export interface AppSettings {
    * carries no client address — `react-router-serve` does
    */
   readonly peerAddress?: false;
+  /**
+   * The page that shows the routes Courier's bundler plugin builds from the
+   * application's config, and whether its server renders them into it — a
+   * single-page application's do not; `routes.spec.ts` drives it
+   */
+  readonly routesPage?: { readonly path: string; readonly rendered: boolean };
 }
+
+/* The page a server renders the routes into, and the browser shows them on again. */
+const RENDERED_ROUTES = { path: "/routes", rendered: true } as const;
 
 const production = (port: number): Record<string, string> => ({
   NODE_ENV: "production",
@@ -52,6 +61,7 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     env: (port) => ({ ...production(port), ORIGIN: onLocalhost(port) }),
     ready: /Listening on/,
     address: onLocalhost,
+    routesPage: RENDERED_ROUTES,
   },
   nuxt: {
     spec: "nuxt.spec.ts",
@@ -61,6 +71,7 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     env: production,
     ready: /Listening on/,
     address: onLocalhost,
+    routesPage: RENDERED_ROUTES,
   },
   express: {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
@@ -98,6 +109,7 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     env: production,
     ready: /listening on/i,
     address: onLocalhost,
+    routesPage: RENDERED_ROUTES,
   },
   "react-router": {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
@@ -109,6 +121,7 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     ready: /react-router-serve/,
     address: onLocalhost,
     peerAddress: false,
+    routesPage: RENDERED_ROUTES,
   },
   remix: {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
@@ -119,6 +132,7 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     env: production,
     ready: /Listening on/,
     address: onLocalhost,
+    routesPage: RENDERED_ROUTES,
   },
   "solid-start": {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
@@ -129,6 +143,7 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     env: production,
     ready: /Listening on/i,
     address: onLocalhost,
+    routesPage: RENDERED_ROUTES,
   },
   nestjs: {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
@@ -158,5 +173,6 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     ready: /Local:/,
     /* The page and the API share a host, as an application and its API on one domain do. */
     address: (port) => `http://127.0.0.1:${port}`,
+    routesPage: { path: "/", rendered: false },
   },
 };

@@ -6,12 +6,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { courierRoutes } from "../src/plugin";
+import { courierRoutesIntegration } from "../src/plugin";
 
-describe("courierRoutes, the Astro integration", () => {
+describe("courierRoutesIntegration, the Astro integration", () => {
   it("adds the routes plugin to Astro's Vite config, under every command", () => {
     const updates: unknown[] = [];
-    const integration = courierRoutes({ config: "config/courier.config.ts" });
+    const integration = courierRoutesIntegration({ config: "config/courier.config.ts" });
 
     integration.hooks["astro:config:setup"]({ updateConfig: (config) => updates.push(config) });
 

@@ -172,10 +172,10 @@ Then add it:
 
 ```ts
 // astro.config.mjs
-import { courierRoutes } from "@noverax/courier-astro/plugin"
+import { courierRoutesIntegration } from "@noverax/courier-astro/plugin"
 import { defineConfig } from "astro/config"
 
-export default defineConfig({ integrations: [courierRoutes()] })
+export default defineConfig({ integrations: [courierRoutesIntegration()] })
 ```
 
 Register the config once, so `routes` is typed from it:
@@ -220,7 +220,7 @@ When the browser cancels a call — an aborted upload, a query it no longer need
 
 Creates an Astro API endpoint handler. Returns a function compatible with Astro's `GET`/`POST` exports.
 
-### `courierRoutes(options?)`
+### `courierRoutesIntegration(options?)`
 
 From `@noverax/courier-astro/plugin`: the integration that adds to Astro's Vite the plugin building the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. `config` names the config file when it is not the one found from the root.
 

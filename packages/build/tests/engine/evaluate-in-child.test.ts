@@ -91,6 +91,19 @@ describe("evaluateInChild", () => {
     expect(Object.keys(snapshot.routes.shop?.endpoints ?? {})).toEqual(["cart.add", "search"]);
   }, 30_000);
 
+  it("reads a config that assigns variables already set, one by one or many at once", async () => {
+    project(`import "./env-setup";\n${CONFIG}`);
+    writeFileSync(
+      join(dir, "env-setup.ts"),
+      'process.env.API_HOST = process.env.API_HOST ?? "localhost";\nObject.assign(process.env, { SHOP_SEARCH_PUBLIC: "1" });\n',
+    );
+    writeFileSync(join(dir, ".env"), "API_HOST=api.internal\nSHOP_SEARCH_PUBLIC=0\n");
+
+    const snapshot = await evaluateInChild({ root: dir, envFiles: [join(dir, ".env")] });
+
+    expect(Object.keys(snapshot.routes.shop?.endpoints ?? {})).toEqual(["cart.add", "search"]);
+  }, 30_000);
+
   it("names the config, the modules it reached, the env files and the variables it looked at", async () => {
     project();
 

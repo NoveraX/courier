@@ -38,6 +38,20 @@ describe("trackEnvReads", () => {
     expect(reads.names()).toBe("*");
   });
 
+  it("lets code assign a variable already set, alone or many at once, as the environment itself does", () => {
+    process.env.COURIER_TRACK_SET = "before";
+    trackEnvReads();
+
+    process.env.COURIER_TRACK_SET = "after";
+    Object.assign(process.env, { COURIER_TRACK_SET: "assigned", COURIER_TRACK_NEW: 1 });
+
+    expect(original.COURIER_TRACK_SET).toBe("assigned");
+    expect(original.COURIER_TRACK_NEW).toBe("1");
+    delete process.env.COURIER_TRACK_SET;
+    delete process.env.COURIER_TRACK_NEW;
+    expect("COURIER_TRACK_SET" in original).toBe(false);
+  });
+
   it("answers reads and writes as the environment itself does", () => {
     trackEnvReads();
 

@@ -70,14 +70,16 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
     address("get", path, options, "connect");
 
   /* An HTTP endpoint describes its answer only once a verb has said there is
-     one, so nothing but `.variables()` — which a closure has to be written
-     against — is offered before it. A stream or a channel has no verb to
+     one, so of its slots only `.variables()` — which a closure has to be
+     written against — is offered before it, beside the methods that leave
+     the answer alone: `.expose()` among them, so a head opened once opens
+     every endpoint made from it. A stream or a channel has no verb to
      choose, so it keeps every slot. */
   const all = refinements(state, next);
-  const { variables, use, headers, timeout, retry, meta } = all;
+  const { variables, use, headers, timeout, retry, meta, expose } = all;
   const available =
     state.kind === "query" || state.kind === "mutation"
-      ? { variables, use, headers, timeout, retry, meta }
+      ? { variables, use, headers, timeout, retry, meta, expose }
       : all;
   /* Only a channel has subscribers to share a topic. */
   const keyed =

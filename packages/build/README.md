@@ -11,7 +11,7 @@
 
   <p><strong>A page's routes, built from your config. No file to generate.</strong></p>
 
-  <p>The bundler plugin that hands every page — and every server rendering one — the routes its proxy client may call, read from <code>courier.config.ts</code> by the rules the proxy applies. Nothing else of the config reaches a bundle, and no <code>courier.routes.ts</code> is written or committed. It is also the one loader of the config every Courier tool shares.</p>
+  <p>The bundler plugin that hands every page — and every server rendering one — the routes its proxy client may call, read from <code>courier.config.ts</code> by the rules the proxy applies. The routes module carries no address, path or middleware, and no <code>courier.routes.ts</code> is written or committed. It is also the one loader of the config every Courier tool shares.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-build"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-build?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
@@ -47,7 +47,7 @@
     </td>
     <td width="33%" valign="top">
       <h4>Closed by default</h4>
-      A build that cannot read the config fails with why, and a page that imports the config itself fails the build: the browser gets the routes and nothing else.
+      A build that cannot read the config fails with why, and a page that imports the config itself fails the build, as it would ship every API's definition to the browser.
     </td>
   </tr>
 </table>
@@ -102,8 +102,9 @@ export const shop = createProxyCaller(routes.shop)
 
 - **The config** is the `courier.config.*` in Vite's root or the nearest folder above it, up to the top of the project: the folder that holds its repository (`.git`, `.hg`, `.jj`) or is the root of its workspace (`pnpm-workspace.yaml`, or a `package.json` with `workspaces`). One found above the root runs only when it belongs to you or to the owner of the root, and no user outside its group may write it; otherwise the routes are not read, and the error says why. Name another config with the `config` option.
 - **Env files** are those Vite reads for the mode — `.env.[mode].local`, `.env.[mode]`, `.env.local`, `.env`, the first to set a variable winning — with the values Vite gives them, a reference such as `${HOST}` or `${FLAG:-1}` filled in; a variable the process was started with wins over all. An endpoint opened by a variable is opened as the build sees it. The config reads them from `process.env`: `import.meta.env.MODE`, `DEV` and the other values Vite builds into a page are not set for it.
-- **A build** reads the routes once for every environment, and fails with what the config threw. **The dev server** reads them again whenever a file they came from changes; a config that breaks leaves the routes it read last in force, and says why in the terminal and over the page.
+- **A build** reads the routes once for every environment, and fails with what the config threw; a build that watches builds again once what failed it is mended. **The dev server** reads them again whenever something they came from changes: the config, a module it imports, a file it reads or a folder it lists, an env file, a variable it looked at, or a config saved where one is looked for, Vite's root or a folder above it. A change saved while the routes are read is read too. A config that breaks leaves the routes it read last in force, says why in the terminal and over the page, and is followed until it is mended.
 - **The config in a page** fails the build: imported as a value it would ship the server's settings and every API's definition to the browser. Import its type alone, with `import type`.
+- **Definitions in a page** are not refused: a module of definitions a page imports as a value goes to the browser whole, with each API's address, its paths and middleware, and its endpoints closed to pages. Keep them out of a page's modules, or import their types alone; the routes are all a page needs to call through the proxy.
 
 ### Options
 

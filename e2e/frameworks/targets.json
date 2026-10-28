@@ -163,7 +163,7 @@
   {
     "id": "remix-2",
     "app": "remix",
-    "packages": ["core", "build", "express"],
+    "packages": ["core", "build", "express", "remix"],
     "install": {
       "@remix-run/react": "2",
       "@remix-run/node": "2",
@@ -182,6 +182,7 @@
     "app": "solid-start",
     "overlays": ["solid-start-1"],
     "build": ["npx", "vinxi", "build"],
+    "dev": ["npx", "vinxi", "dev"],
     "packages": ["core", "build", "solid"],
     "install": {
       "@solidjs/start": "1",
@@ -286,5 +287,29 @@
       "react-dom": "19",
       "@tanstack/react-query": "5"
     }
+  },
+  {
+    "id": "react-spa-vite-5",
+    "app": "spa",
+    "packages": ["core", "build", "react"],
+    "install": {
+      "vite": "5",
+      "@vitejs/plugin-react": "4",
+      "react": "19",
+      "react-dom": "19",
+      "@tanstack/react-query": "5"
+    }
+  },
+  {
+    "id": "vitest-3",
+    "app": "vitest",
+    "packages": ["core", "build"],
+    "install": { "vitest": "3", "jsdom": "26" }
+  },
+  {
+    "id": "vitest-4",
+    "app": "vitest",
+    "packages": ["core", "build"],
+    "install": { "vitest": "4", "jsdom": "26" }
   }
 ]

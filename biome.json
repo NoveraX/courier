@@ -166,7 +166,9 @@
               "options": {
                 "allowedEnvVars": [
                   "COURIER_FRAMEWORK",
+                  "COURIER_FRAMEWORK_MODE",
                   "COURIER_APP_URL",
+                  "COURIER_APP_ROOT",
                   "COURIER_API_URL",
                   "COURIER_ATTACKER_URL",
                   "COURIER_BROWSERS",

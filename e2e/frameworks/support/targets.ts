@@ -14,7 +14,8 @@ export type AppKind =
   | "remix"
   | "solid-start"
   | "nestjs"
-  | "spa";
+  | "spa"
+  | "vitest";
 
 /** A framework version the session is checked against, as an application installs it. */
 export interface Target {
@@ -26,6 +27,11 @@ export interface Target {
   readonly overlays?: readonly string[];
   /** How it is built, where the version builds otherwise than its template does */
   readonly build?: readonly string[];
+  /**
+   * How its dev server is started, before the host and the port, where the
+   * version starts it otherwise than its template does
+   */
+  readonly dev?: readonly string[];
   /** Courier's packages it installs, packed as the registry would ship them */
   readonly packages: readonly string[];
   /** What it installs from npm, by name and range */
@@ -48,6 +54,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "solid-start",
   "nestjs",
   "spa",
+  "vitest",
 ]);
 
 /**
@@ -90,7 +97,7 @@ export function targetOf(id: string | undefined): Target {
 
 function isTarget(value: unknown): value is Target {
   if (typeof value !== "object" || value === null) return false;
-  const { id, app, packages, install, overlays, build } = value as Record<string, unknown>;
+  const { id, app, packages, install, overlays, build, dev } = value as Record<string, unknown>;
   return (
     typeof id === "string" &&
     typeof app === "string" &&
@@ -98,6 +105,7 @@ function isTarget(value: unknown): value is Target {
     isStrings(packages) &&
     (overlays === undefined || isStrings(overlays)) &&
     (build === undefined || isStrings(build)) &&
+    (dev === undefined || isStrings(dev)) &&
     typeof install === "object" &&
     install !== null &&
     Object.values(install).every((range) => typeof range === "string")

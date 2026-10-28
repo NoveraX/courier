@@ -10,15 +10,27 @@ import { targetOf } from "./support/targets";
  * its application, and the checks of its kind drive it in each browser
  * engine — Chromium, WebKit and Firefox, or the ones `COURIER_BROWSERS`
  * names — one after another. An application built with Courier's bundler
- * plugin is driven by the checks of its routes too.
+ * plugin is driven by the checks of its routes too; with
+ * `COURIER_FRAMEWORK_MODE=dev`, by those alone, under its dev server.
  */
 const target = targetOf(process.env.COURIER_FRAMEWORK);
 const app = APPS[target.app];
+const underDev = process.env.COURIER_FRAMEWORK_MODE === "dev";
+const runId = underDev ? `${target.id}-dev` : target.id;
+
+/* The checks that drive the application: under its dev server, the routes' alone. */
+function checks(): string[] {
+  if (underDev) return app.dev === undefined ? [] : ["routes.spec.ts"];
+  return app.routesPage === undefined ? [app.spec] : [app.spec, "routes.spec.ts"];
+}
+
+const testMatch = checks();
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: app.routesPage === undefined ? app.spec : [app.spec, "routes.spec.ts"],
-  globalSetup: "./support/global-setup.ts",
+  testMatch,
+  /* Nothing is built or served for a version with nothing to check. */
+  ...(testMatch.length > 0 && { globalSetup: "./support/global-setup.ts" }),
   /* The application is built once, before the checks, and they share it in order. */
   workers: 1,
   timeout: 60_000,
@@ -32,12 +44,12 @@ export default defineConfig({
           "html",
           {
             open: "never",
-            outputFolder: `../../node_modules/.cache/courier-frameworks/${target.id}/report`,
+            outputFolder: `../../node_modules/.cache/courier-frameworks/${runId}/report`,
           },
         ],
       ]
     : "list",
-  outputDir: `../../node_modules/.cache/courier-frameworks/${target.id}/results`,
+  outputDir: `../../node_modules/.cache/courier-frameworks/${runId}/results`,
   use: {
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

@@ -4,8 +4,10 @@ name: Frameworks
 # Courier supports, as e2e/frameworks/targets.json lists them: each version
 # is installed from npm beside Courier's packages, packed as the registry
 # would ship them, then built, served and driven in Chromium, WebKit and
-# Firefox against an API that records every request it receives. A failure
-# keeps its trace and screenshots.
+# Firefox against an API that records every request it receives; an
+# application built with Courier's bundler plugin has its routes checked
+# under the framework's dev server too. A failure keeps its trace and
+# screenshots.
 on:
   # Every push and pull request, called from CI
   workflow_call:
@@ -103,10 +105,19 @@ jobs:
           FRAMEWORK_TARGET: ${{ matrix.target }}
         run: npm run test:frameworks -- "$FRAMEWORK_TARGET"
 
+      # The routes Courier's bundler plugin builds, under the framework's dev
+      # server: a version whose application has none passes with nothing to check
+      - name: The routes in ${{ matrix.target }} under its dev server
+        env:
+          FRAMEWORK_TARGET: ${{ matrix.target }}
+        run: npm run test:frameworks -- --dev "$FRAMEWORK_TARGET"
+
       - name: Keep what a failure left
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: frameworks-${{ matrix.target }}
-          path: node_modules/.cache/courier-frameworks/${{ matrix.target }}/
+          path: |
+            node_modules/.cache/courier-frameworks/${{ matrix.target }}/
+            node_modules/.cache/courier-frameworks/${{ matrix.target }}-dev/
           retention-days: 7

@@ -1,3 +1,4 @@
+import { createProxyCaller } from "@noverax/courier";
 import { routes } from "@noverax/courier/routes";
 import { useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
@@ -12,11 +13,20 @@ export function loader() {
 export default function RoutesPage() {
   const { server } = useLoaderData<typeof loader>();
   const [client, setClient] = useState("");
-  useEffect(() => setClient(opened()), []);
+  const [call, setCall] = useState("");
+  useEffect(() => {
+    setClient(opened());
+    const catalog = createProxyCaller(routes.catalog, { proxyPath: { http: "/api/request" } });
+    catalog.profile().then(
+      (me) => setCall(JSON.stringify(me)),
+      (error: Error) => setCall(`failed: ${error.message}`),
+    );
+  }, []);
   return (
     <main>
       <p id="server-routes">{server}</p>
       <p id="client-routes">{client}</p>
+      <pre id="client-call">{call}</pre>
     </main>
   );
 }

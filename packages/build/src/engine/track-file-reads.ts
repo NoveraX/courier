@@ -2,6 +2,8 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { isAbsolute, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isRecord } from "../util/is-record";
+
 const require = createRequire(import.meta.url);
 
 /** The paths code read through `fs` since tracking began. */
@@ -47,12 +49,17 @@ const PROMISED_LISTS = ["readdir", "opendir"] as const;
 export function trackFileReads(): FileReads {
   const paths = new Set<string>();
   const folders = new Set<string>();
-  const fs: Record<string, unknown> = require("node:fs");
-  const promises: Record<string, unknown> = require("node:fs/promises");
-  noteCalls(fs, READS, paths);
-  noteCalls(fs, LISTS, folders);
-  noteCalls(promises, PROMISED_READS, paths);
-  noteCalls(promises, PROMISED_LISTS, folders);
+  /* The modules themselves, which hold the functions every importer of them calls. */
+  const fs: unknown = require("node:fs");
+  const promises: unknown = require("node:fs/promises");
+  if (isRecord(fs)) {
+    noteCalls(fs, READS, paths);
+    noteCalls(fs, LISTS, folders);
+  }
+  if (isRecord(promises)) {
+    noteCalls(promises, PROMISED_READS, paths);
+    noteCalls(promises, PROMISED_LISTS, folders);
+  }
   /* The named exports an ES module imports `fs` by follow the functions put in place here. */
   syncBuiltinESMExports();
   return { paths: () => [...paths], folders: () => [...folders] };

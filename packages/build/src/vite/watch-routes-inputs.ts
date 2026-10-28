@@ -3,6 +3,7 @@ import type { ViteDevServer } from "vite";
 
 import { ROUTES_MODULE_ID } from "./routes-module-id";
 import type { RoutesPluginState } from "./routes-plugin-state";
+import { watchOnce } from "./watch-once";
 
 /** Where the config may be, and what to do when one appears there or goes. */
 export interface ConfigWatch {
@@ -38,7 +39,7 @@ export function watchRoutesInputs(
   config: ConfigWatch,
 ): void {
   const candidates = new Set(config.candidates);
-  server.watcher.add([...candidates]);
+  watchOnce(server, candidates);
   const onPath = (path: string): void => {
     const isConfig = candidates.has(path);
     if (!isConfig && !state.followed.has(path) && !state.listed.has(dirname(path))) return;

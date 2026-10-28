@@ -27,6 +27,7 @@ function failure(error: unknown, request: RoutesRequest): WorkerReply {
       message: error.message,
       context: error.context,
       stack: error.stack,
+      inputs: error.inputs,
     };
   }
   return {

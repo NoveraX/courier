@@ -120,7 +120,7 @@ export const shop = createProxyCaller(routes.shop)
 | `courierRoutes(options?)` | `/vite` | The Vite plugin: the routes in place of `@noverax/courier/routes`, in every environment |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
 | `routesModuleCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes`, or one that fails with why |
-| `RoutesReadError` | root | Why the routes were not read: `CONFIG_NOT_FOUND`, `CONFIG_NOT_LOADED` or `ROUTES_NOT_READ` |
+| `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED` or `ROUTES_NOT_READ` — and, in `inputs`, what the reading had read, which may mend it |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |
 | `findConfigFile(startDir)` / `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in a directory or the nearest one above it up to the top of the project (one above only when it is yours: else `UntrustedConfigError`), in that directory alone, and the names it may have |

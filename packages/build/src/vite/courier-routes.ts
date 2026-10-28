@@ -2,6 +2,7 @@ import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 
+import { configCandidates } from "../config/config-candidates";
 import { errnoCode } from "../config/errno-code";
 import { findConfigFile } from "../config/load-config";
 import { UntrustedConfigError } from "../config/untrusted-config-error";
@@ -11,7 +12,7 @@ import { ROUTES_MODULE_ID, ROUTES_PATTERN, ROUTES_SPECIFIER } from "./routes-mod
 import type { RoutesPluginState } from "./routes-plugin-state";
 import { sharedEngine } from "./shared-engine";
 import { viteEnvFiles } from "./vite-env-files";
-import { watchForConfig } from "./watch-for-config";
+import { watchRoutesInputs } from "./watch-routes-inputs";
 
 /** Options of the routes plugin. */
 export interface CourierRoutesOptions {
@@ -55,7 +56,7 @@ interface VitestContext {
  * ```
  */
 export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
-  const state: RoutesPluginState = { underVitest: false };
+  const state: RoutesPluginState = { servers: new Set(), followed: new Set(), underVitest: false };
   const plugin: Plugin & { configureVitest(context: VitestContext): void } = {
     name: "courier-routes",
     enforce: "pre",
@@ -75,8 +76,15 @@ export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
       state.configFile = configFileOf(config, options.config);
     },
     configureServer(server) {
-      state.server = server;
-      watchForConfig(server, state);
+      state.servers.add(server);
+      const root = server.config.root;
+      watchRoutesInputs(server, state, {
+        candidates:
+          options.config === undefined ? configCandidates(root) : [resolve(root, options.config)],
+        onChange: () => {
+          state.configFile = configFileOf(server.config, options.config);
+        },
+      });
     },
     resolveId: (id) =>
       id === ROUTES_SPECIFIER || id === ROUTES_MODULE_ID ? ROUTES_MODULE_ID : undefined,

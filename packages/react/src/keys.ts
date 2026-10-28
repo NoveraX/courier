@@ -102,7 +102,7 @@ export function createQueryKeys<TApi extends DefinedApi>(api: TApi): QueryKeyFac
  */
 export function createProxyQueryKeys<
   TApi extends DefinedApi,
-  TEndpoints extends Readonly<Record<string, RouteShape>>,
+  TEndpoints extends Readonly<Record<string, RouteShape | undefined>>,
 >(routes: CourierRoutes<TApi, TEndpoints>): QueryKeyFactory<RoutedApi<TApi, TEndpoints>> {
   return buildKeyFactory<RoutedApi<TApi, TEndpoints>>(routes.source);
 }

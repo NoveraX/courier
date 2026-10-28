@@ -50,7 +50,7 @@ import type { QueryCallerClient } from "./types";
  */
 export function createProxyQueryCaller<
   TApi extends DefinedApi,
-  TEndpoints extends Readonly<Record<string, RouteShape>>,
+  TEndpoints extends Readonly<Record<string, RouteShape | undefined>>,
 >(
   routes: CourierRoutes<TApi, TEndpoints>,
   options?: ProxyCallerOptions,

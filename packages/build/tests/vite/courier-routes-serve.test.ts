@@ -8,6 +8,7 @@
  * with why until one is saved. Requires a build of this package and of the
  * core first.
  */
+import { rmSync, symlinkSync } from "node:fs";
 import { createLogger, createServer, type ViteDevServer } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -140,6 +141,37 @@ export default { sources: flags.payments || switches.includes("payments") ? { sh
     project.write("switches/payments", "");
 
     await expect.poll(sources, { timeout: 20_000 }).toEqual(["payments", "shop"]);
+  }, 90_000);
+
+  it("serves them anew once a folder the config lists gains an entry, in a project opened through a link", async () => {
+    project = tempProject({ "src/apis.ts": APIS, "src/entry.ts": ENTRY, "switches/.keep": "" });
+    const root = project.root;
+    project.write(
+      "courier.config.ts",
+      `import { readdirSync } from "node:fs";
+import { payments, shop } from "./src/apis";
+
+const switches = readdirSync(${JSON.stringify(`${root}/switches`)});
+export default { sources: switches.includes("payments") ? { shop, payments } : { shop } };
+`,
+    );
+    const link = `${root}-link`;
+    symlinkSync(root, link, "dir");
+    try {
+      server = await serve(link);
+      const dev = server;
+      const sources = async (): Promise<string[]> => {
+        const loaded: Record<string, unknown> = await dev.ssrLoadModule("/src/entry.ts");
+        return Object.keys((loaded.routes as object | undefined) ?? {});
+      };
+      expect(await sources()).toEqual(["shop"]);
+
+      project.write("switches/payments", "");
+
+      await expect.poll(sources, { timeout: 20_000 }).toEqual(["payments", "shop"]);
+    } finally {
+      rmSync(link);
+    }
   }, 90_000);
 
   it("serves a module that fails with why while there is no config, and the routes once one is saved", async () => {

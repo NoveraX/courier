@@ -77,7 +77,7 @@ async function loadConfig(
       "CONFIG_NOT_LOADED",
       `${basename(configFile)} did not load, so the routes a page takes were not read: ${messageOf(error)}`,
       { root: request.root, configFile },
-      error instanceof Error ? error.stack : undefined,
+      { stack: error instanceof Error ? error.stack : undefined },
     );
   }
 }

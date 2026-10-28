@@ -5,7 +5,15 @@
  * no file and no variable the reading looked at changes, moves when one
  * does, and matches nothing when a file changed after the reading began.
  */
-import { mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -79,4 +87,40 @@ describe("fingerprintOf", () => {
 
     expect(fingerprintOf(snapshot([]), since)).toBe(UNSETTLED);
   });
+
+  it("matches nothing when a clock of whole seconds dates a change during the reading before it began", () => {
+    const since = Date.now();
+    writeFileSync(api, "export const api = { during: true };\n");
+
+    const second = Math.floor(since / 1_000);
+    utimesSync(api, second, second);
+
+    expect(fingerprintOf(snapshot([]), since)).toBe(UNSETTLED);
+  });
+
+  it("takes a time kept below the millisecond as it is: a change just before the reading is before it", () => {
+    const since = Date.now();
+
+    const justBefore = (since - 500.25) / 1_000;
+    utimesSync(api, justBefore, justBefore);
+
+    expect(fingerprintOf(snapshot([]), since)).not.toBe(UNSETTLED);
+  });
+
+  /* A folder its owner may not search: Windows has no such mode, and root searches anyway. */
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "digests a path it may not look at by why, rather than failing",
+    () => {
+      const locked = join(dir, "locked");
+      mkdirSync(locked);
+      chmodSync(locked, 0o000);
+      const inside = join(locked, "api.ts");
+
+      try {
+        expect(fingerprintOf(snapshot([], [inside]))).toBe(fingerprintOf(snapshot([], [inside])));
+      } finally {
+        chmodSync(locked, 0o700);
+      }
+    },
+  );
 });

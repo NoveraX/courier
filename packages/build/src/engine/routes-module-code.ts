@@ -1,8 +1,11 @@
+import { isRecord } from "../util/is-record";
 import type { RoutesSnapshot } from "./routes-snapshot";
 
 /**
  * The module a page's bundle takes in place of `@noverax/courier/routes`:
- * the routes of every source of the config, as data alone.
+ * the routes of every source of the config, as data alone, written as an
+ * object literal that keeps every name its own — `__proto__` too, which a
+ * literal would otherwise take for the object's prototype.
  *
  * @param snapshot - The routes as the config gave them
  * @returns The module's code
@@ -12,7 +15,19 @@ import type { RoutesSnapshot } from "./routes-snapshot";
  * ```
  */
 export function routesModuleCode(snapshot: RoutesSnapshot): string {
-  return `export const routes = ${JSON.stringify(snapshot.routes)};\n`;
+  return `export const routes = ${literalOf(snapshot.routes)};\n`;
+}
+
+/* JSON, but for a key `__proto__`, which only a computed key keeps the object's own. */
+function literalOf(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(literalOf).join(",")}]`;
+  if (!isRecord(value)) return JSON.stringify(value) ?? "null";
+  const members = Object.entries(value).filter(([, member]) => member !== undefined);
+  return `{${members.map(([key, member]) => `${keyOf(key)}:${literalOf(member)}`).join(",")}}`;
+}
+
+function keyOf(key: string): string {
+  return key === "__proto__" ? '["__proto__"]' : JSON.stringify(key);
 }
 
 /**

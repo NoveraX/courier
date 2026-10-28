@@ -123,6 +123,20 @@ describe("evaluateInChild", () => {
     expect(snapshot.routes.shop?.endpoints).toEqual({ "cart.add": { type: "mutation" } });
   }, 30_000);
 
+  it("keeps a source named __proto__ among the routes, as the config names it", async () => {
+    project(
+      `import { payments, shop } from "./apis";\n\nexport default { sources: { shop, ["__proto__"]: payments } };\n`,
+    );
+
+    const snapshot = await evaluateInChild({ root: dir, envFiles: [] });
+
+    expect(Object.keys(snapshot.routes)).toEqual(["__proto__", "shop"]);
+    expect(Object.getOwnPropertyDescriptor(snapshot.routes, "__proto__")?.value).toEqual({
+      source: "__proto__",
+      endpoints: {},
+    });
+  }, 30_000);
+
   it("reads the project's env files before the config, the first that sets a variable winning", async () => {
     project();
     writeFileSync(join(dir, ".env.production"), "SHOP_SEARCH_PUBLIC=1\n");

@@ -32,6 +32,23 @@ describe("routesModuleCode", () => {
   });
 });
 
+describe("routesModuleCode, for a name a literal would take for its prototype", () => {
+  it("keeps a source named __proto__ the routes' own, and their prototype the plain one", async () => {
+    const routes = JSON.parse(
+      '{"__proto__":{"source":"__proto__","endpoints":{"list":{"type":"query"}}},"shop":{"source":"shop","endpoints":{}}}',
+    ) as RoutesSnapshot["routes"];
+
+    const module = await importCode(routesModuleCode({ ...snapshot, routes }));
+
+    expect(Object.keys(module.routes as object)).toEqual(["__proto__", "shop"]);
+    expect(Object.getPrototypeOf(module.routes)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(module.routes, "__proto__")?.value).toEqual({
+      source: "__proto__",
+      endpoints: { list: { type: "query" } },
+    });
+  });
+});
+
 describe("unreadRoutesModuleCode", () => {
   it("fails where it is imported, with the reason the routes were not read", async () => {
     const code = unreadRoutesModuleCode("courier.config.ts did not load: no such file ./apis");

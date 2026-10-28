@@ -13,7 +13,7 @@ export interface ReadingTracker {
    * Everything read so far: once the routes are read, what they depend on;
    * when the reading failed, what may mend it.
    */
-  inputs(): RoutesInputs;
+  inputs(): Promise<RoutesInputs>;
 }
 
 /**
@@ -27,7 +27,7 @@ export interface ReadingTracker {
  * ```ts
  * const reading = trackReading(request);
  * await loadProjectConfig(configFile, request, reading.loadOptions);
- * reading.inputs(); // { configFile, files: [...], env: ["API_URL"] }
+ * await reading.inputs(); // { configFile, files: [...], env: ["API_URL"] }
  * ```
  */
 export function trackReading(request: RoutesRequest): ReadingTracker {
@@ -42,9 +42,9 @@ export function trackReading(request: RoutesRequest): ReadingTracker {
       looked.add(file);
       for (const path of lookedFor) looked.add(path);
     },
-    inputs: () => ({
+    inputs: async () => ({
       configFile,
-      files: [...new Set([...looked, ...request.envFiles, ...modules.files()])].sort(),
+      files: [...new Set([...looked, ...request.envFiles, ...(await modules.files())])].sort(),
       env: env.names(),
     }),
   };

@@ -166,6 +166,18 @@ describe("evaluateInChild", () => {
     expect(snapshot.env).not.toContain("JITI_DEBUG");
   }, 30_000);
 
+  it("names the ES modules Node loads itself for the config, besides those its loader transforms", async () => {
+    project(`import "./flags.mjs";\nimport "./limits.js";\n${CONFIG}`);
+    writeFileSync(join(dir, "flags.mjs"), "export const open = true;\n");
+    writeFileSync(join(dir, "limits.js"), "export const max = 3;\n");
+
+    const snapshot = await evaluateInChild({ root: dir, envFiles: [] });
+
+    expect(snapshot.files).toEqual(
+      expect.arrayContaining([join(dir, "flags.mjs"), join(dir, "limits.js")]),
+    );
+  }, 30_000);
+
   it("fails CONFIG_NOT_FOUND where no config is in the root or a folder above it", async () => {
     const error = await failure(evaluateInChild({ root: dir, envFiles: [] }));
 

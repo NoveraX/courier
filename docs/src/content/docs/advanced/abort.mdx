@@ -1,11 +1,11 @@
-export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-10-18" }
+export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-10-28" }
 
 ## Overview
 
 Calls that overlap are handled in three ways:
 
 - **Identical reads in flight together reach the API once.** Two components that read the same thing at the same moment — a header and a page both asking for the current user — send one request, and each gets the answer. This is on by default, wherever the call runs.
-- **A newer read can cancel the one it replaces.** In a search box each keystroke makes the previous search pointless; an API names such endpoints in `cancelPrevious`.
+- **A newer read can cancel the one it replaces.** In a search box each keystroke makes the previous search pointless; turn `cancelPrevious` on for such a read — on the call, the endpoint, its group, the client or the API.
 - **Any call can be aborted** with an `AbortSignal` of your own.
 
 ## Identical reads share one request
@@ -61,29 +61,64 @@ const status = await caller.jobs.with({ coalesce: false }).status({ id })
 
 ## Cancelling the previous call
 
-A search as the user types makes every earlier search pointless the moment a new key is pressed. List such reads by their path in `cancelPrevious`, and a newer call to one of them cancels the call still in flight — whatever its variables were:
+A search as the user types makes every earlier search pointless the moment a new key is pressed. Turn `cancelPrevious` on for such a read, and a newer call of it cancels the older call still in flight — whatever its variables were:
 
-```ts title="api/index.ts"
-import { defineApi } from "@noverax/courier/define"
+```ts title="api/users.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
 
-export const api = defineApi({
-  name: "accounts",
-  baseURL: process.env.API_URL ?? "http://localhost:4000",
-  cancelPrevious: ["users.search", "geo.suggest"],
-  groups: { users, geo },
+const { endpoint } = courier()
+
+type User = { id: string; name: string }
+
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    search: endpoint.get("search").variables<{ q: string }>().response<User[]>().cancelPrevious(),
+  },
 })
 ```
 
-The cancelled call rejects with an `HTTPError` of status `499`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it.
+The cancelled call rejects with an `HTTPError` of status `499`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out while `coalesce` is on, as it is by default. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it.
+
+### Where to turn it on
+
+`cancelPrevious` is `true` or `false`. It can be set at five levels; the nearest that sets it decides, and where none does, it is off:
+
+| Where | How | What it covers |
+| --- | --- | --- |
+| A call | `.with({ cancelPrevious: true })` | the calls made through that `.with()` |
+| An endpoint | `.cancelPrevious()`, or `.cancelPrevious(false)` | every call of it |
+| A group | `defineGroup({ cancelPrevious: true })` | the reads of the group, and of the groups inside it that set nothing |
+| A client | `cancelPrevious: true` given to `createCaller`, `createProxyCaller`, `createQueryCaller` or `createProxyQueryCaller` | every read the client calls |
+| The API | `defineApi({ cancelPrevious: true })` | every read the API holds |
+
+```ts
+// The call itself says only its last answer matters
+const found = await caller.geo.with({ cancelPrevious: true }).suggest({ q })
+```
+
+`.with()` decides call by call even when given to a whole client: `caller.with({ cancelPrevious: true })` decides over an endpoint's `.cancelPrevious(false)`. To turn it on for a client beneath the endpoints' and groups' own, give it to the client's factory instead.
+
+Only calls for which it is on take part: of two such calls to one endpoint, the newer cancels the older while that one is still in flight. A call for which it is off — `false` at whichever level decides — neither cancels another nor is cancelled. The clients of one API share what is in flight: every direct client of the API, and every proxy client given the same routes, so a hook's call and a call made outside the hooks cancel each other too.
+
+Turned on for a whole API, a group or a client, it applies to any two overlapping calls of one endpoint: page 2 of a list cancels page 1, and a second card reading `users.get` cancels the first. Turn it on there when only the last answer of every read matters, and mark the exceptions with `.cancelPrevious(false)`.
+
+A proxy client reads the endpoint's and its groups' setting, and the API's own, from the [routes](/docs/proxy-mode/expose) Courier writes. Its own option decides over the API's alone — an endpoint's or a group's setting in the routes decides over it — and a call's `.with()` decides over all of them.
 
 <Callout variant="info" title="Only reads are cancelled">
-A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not. `cancelPrevious` names reads only: a path the API does not define, or one that writes, throws `ConfigurationError` `CANCEL_PREVIOUS_INVALID` where the API is defined.
+A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not. `.cancelPrevious()` on an endpoint that writes is a type error, and throws `ConfigurationError` `CANCEL_PREVIOUS_ON_WRITE` where it is written; a read sent as a POST says so with `.reads()` first. A call, a group, a client or an API that turns it on cancels reads alone.
+
+A value other than `true` or `false` given to an API, a group or a client throws `ConfigurationError` `CANCEL_PREVIOUS_INVALID` where it is given, and so do routes that carry one; a call given one rejects with it. `.cancelPrevious()` turns it on with no argument or `true`, and off with any other.
 </Callout>
 
 <Callout variant="info" title="Where it runs">
-A newer call cancels an older one where one user is: in the browser, or in a React Native app. A direct call made there uses the API's `cancelPrevious`, and so does a proxy client, from the routes Courier writes from the API; pass `cancelPrevious` to [`createProxyCaller`](/docs/api/create-proxy-caller) to name others.
+A newer call cancels an older one where one user is: in a browser page, or in a React Native app, for a direct call and a proxy client alike. A Web Worker has no page, and calls made in one are not cancelled.
 
-On a server the option has no effect, for direct calls and for requests arriving at the proxy alike: there, calls from different users reach the same endpoint, and one user's search would cancel another's.
+On a server the option has no effect — for direct calls, for a proxy client and for requests arriving at the proxy: there, calls from different users reach the same endpoint, and one user's search would cancel another's.
+</Callout>
+
+<Callout variant="info" title="In the query hooks">
+TanStack Query already cancels a query's request once its variables change and no component reads it any more, since the [query hooks](/docs/react-query/use-query) hand the request its signal. `cancelPrevious` serves the calls made outside the hooks. Turned on, it applies to the hooks' calls too: when two components read one endpoint with different variables at the same moment, the later call cancels the earlier, and the earlier query gets an `HTTPError` 499. Keep it off for an endpoint the hooks read that way, or pass `requestOptions: { cancelPrevious: false }` to the hook.
 </Callout>
 
 ### Handling the cancelled call
@@ -94,29 +129,29 @@ A cancelled call is no failure the user needs to hear about:
 "use client"
 
 import { isHTTPError } from "@noverax/courier"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
-import { q } from "@/lib/query"
+import { caller } from "@/lib/caller"
+
+type User = { id: string; name: string }
 
 export function SearchUsers() {
-  const [query, setQuery] = useState("")
+  const [users, setUsers] = useState<User[]>([])
 
-  // Each keystroke cancels the search still in flight
-  const { data, error } = q.users.useQuery("search", {
-    variables: { q: query },
-    enabled: query.length > 0,
-  })
-
-  useEffect(() => {
-    if (!error) return
-    if (isHTTPError(error) && error.status === 499) return // superseded by a newer search
-    console.error("Search failed:", error)
-  }, [error])
+  async function search(q: string) {
+    try {
+      // users.search is marked .cancelPrevious(): each keystroke cancels the search still in flight
+      setUsers(await caller.users.search({ q }))
+    } catch (error) {
+      if (isHTTPError(error) && error.status === 499) return // superseded by a newer search
+      console.error("Search failed:", error)
+    }
+  }
 
   return (
     <div>
-      <input value={query} onChange={(event) => setQuery(event.target.value)} />
-      {data?.map((user) => <p key={user.id}>{user.name}</p>)}
+      <input onChange={(event) => search(event.target.value)} />
+      {users.map((user) => <p key={user.id}>{user.name}</p>)}
     </div>
   )
 }
@@ -162,10 +197,10 @@ export function CancellableReport() {
 }
 ```
 
-A call aborted through your signal rejects with the reason you gave, as `fetch` does: a `DOMException` named `AbortError` unless you passed another. On an endpoint listed in `cancelPrevious`, the call stops at whichever comes first — your signal, or a newer call.
+A call aborted through your signal rejects with the reason you gave, as `fetch` does: a `DOMException` named `AbortError` unless you passed another. On a call whose `cancelPrevious` is on, the call stops at whichever comes first — your signal, or a newer call.
 
 ## Next steps
 
 - [Middleware](/docs/advanced/middleware) — keep cancelled calls out of error reporting
-- [Options](/docs/advanced/options) — `signal`, `timeout`, `coalesce` and the other per-call options
+- [Options](/docs/advanced/options) — `signal`, `timeout`, `coalesce`, `cancelPrevious` and the other per-call options
 - [Built-in middleware](/docs/middleware/built-in) — the cache that keeps an answer after it arrives

@@ -24,12 +24,13 @@ const [header, sidebar, page] = await Promise.all([
 const cancelPreviousCode = `import { createProxyCaller } from "@noverax/courier"
 import { apiRoutes } from "@/courier.routes"
 
-const searchCaller = createProxyCaller(apiRoutes, {
-  cancelPrevious: ["misc.slow"],
-})
+const caller = createProxyCaller(apiRoutes)
 
-// A newer call cancels the one still in flight: it rejects with status 499
-await searchCaller.misc.slow()`
+// A newer call made the same way cancels the one still in flight, which rejects with status 499
+await caller.misc.with({ cancelPrevious: true }).slow()
+
+// Or once for every call of the endpoint, where it is defined:
+// slow: endpoint.get("slow").cancelPrevious()`
 
 export const metadata = exampleMetadata("abort")
 

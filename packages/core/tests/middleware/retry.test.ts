@@ -247,9 +247,8 @@ describe("retryMiddleware and cancellation", () => {
       defineApi({
         name: "api",
         baseURL: upstream.url,
-        cancelPrevious: ["read"],
         middleware: [retryMiddleware({ limit: 3, delay: 1, retryOn: anyFailure })],
-        endpoints: { read: endpoint.get("slow").variables<{ q: string }>() },
+        endpoints: { read: endpoint.get("slow").variables<{ q: string }>().cancelPrevious() },
       }),
     );
 

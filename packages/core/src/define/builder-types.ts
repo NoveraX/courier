@@ -11,6 +11,7 @@ import type {
 import type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 import type {
   CacheArg,
+  CancelPreviousArgs,
   ChannelEndpointOptions,
   HttpEndpointOptions,
   RetryOptions,
@@ -237,6 +238,29 @@ export interface HttpAddressed<
    */
   cache(
     config: CacheArg<TKind>,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
+  /**
+   * Let a newer call of this read cancel its call still in flight — a
+   * search as the user types, where only the last answer matters — whatever
+   * variables each was called with; the older call rejects with an
+   * `HTTPError` of status 499. With `false`, every call completes whatever
+   * the endpoint's groups, the client or the API say. A call's own
+   * `.with({ cancelPrevious })` decides over it. It runs where one user is:
+   * in a browser or an app.
+   *
+   * Offered on a read alone: a write a newer call cancelled has usually been
+   * applied by the server while its caller is told it failed, so marking one
+   * fails where it was written. A read sent as a POST says so with
+   * `.reads()` first.
+   *
+   * @example
+   * ```ts
+   * search: endpoint.get("users/search").variables<{ q: string }>().cancelPrevious(),
+   * list: endpoint.get("users").variables<{ page: number }>().cancelPrevious(false),
+   * ```
+   */
+  cancelPrevious(
+    ...cancel: CancelPreviousArgs<TKind>
   ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
   /**
    * Declare a write-shaped call to be a read.

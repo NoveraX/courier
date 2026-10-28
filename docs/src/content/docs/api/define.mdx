@@ -1,4 +1,4 @@
-export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-10-13" }
+export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-10-28" }
 
 ## Import
 
@@ -33,7 +33,7 @@ type BaseOptions = {
   bodySerializer?: (data: Record<string, unknown>) => BodyInit
   searchParamsSerializer?: SearchParamsSerializer
   coalesce?: boolean
-  cancelPrevious?: readonly string[]
+  cancelPrevious?: boolean
   middleware?: Middleware[]
   pathOptions?: PathOptions
   timeout?: number
@@ -94,9 +94,6 @@ const api = defineApi({
     logMiddleware(),
     authMiddleware({ getToken: () => getAuthToken() }),
   ],
-
-  // A newer search cancels the one still in flight
-  cancelPrevious: ["users.search"],
 
   groups: { users, posts },
 })
@@ -193,7 +190,7 @@ Identical reads in flight together share one request — the same method, addres
 
 ### cancelPrevious
 
-The reads a newer call cancels while they are still in flight, by their paths, such as `["users.search"]` — a search as the user types. The older call rejects with an `HTTPError` of status 499, whatever its variables were. It runs in a browser or a React Native app, where one user is; on a server it has no effect. A path the API does not define, or one that writes, throws `ConfigurationError` `CANCEL_PREVIOUS_INVALID` where the API is defined. See [Deduplication & Abort](/docs/advanced/abort#cancelling-the-previous-call).
+Whether a newer call of one of the API's reads cancels the older call of that read still in flight — a search as the user types, where only the last answer matters. The older call rejects with an `HTTPError` of status 499, whatever its variables were. Off unless something turns it on. `true` turns it on for every read the API holds, so page 1 and page 2 of a list loaded together cancel each other too; it is usually set nearer — on an endpoint with `.cancelPrevious()`, on a group, on a client or on one call — and the nearest that sets it decides. A write is never cancelled. It runs in a browser or a React Native app, where one user is; on a server it has no effect. A value other than `true` or `false` throws `ConfigurationError` `CANCEL_PREVIOUS_INVALID` where the API is defined. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 
 ### allowedHeaders
 

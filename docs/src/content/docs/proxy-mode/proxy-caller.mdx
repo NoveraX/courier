@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyCaller", description: "The browser-side factory that sends typed requests through your server proxy endpoint.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "createProxyCaller", description: "The browser-side factory that sends typed requests through your server proxy endpoint.", mode: "proxy", updated: "2026-10-28" }
 
 ## Overview
 
@@ -49,8 +49,9 @@ type ProxyCallerOptions = {
   // Extra headers sent with every proxy request
   headers?: Record<string, string>
 
-  // The reads a newer call cancels while they are in flight — default: the API's own
-  cancelPrevious?: readonly string[]
+  // Whether a newer call of a read cancels the one in flight, where the endpoint
+  // and its groups say nothing — default: the API's own
+  cancelPrevious?: boolean
 
   // Whether identical reads in flight share one request — default: the API's own, or true
   coalesce?: boolean

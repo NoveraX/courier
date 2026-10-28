@@ -123,11 +123,52 @@ describe("routesOf", () => {
   it("carries the API's own say on cancelling and sharing reads, for its browser client", () => {
     const api = defineApi({
       baseURL: "https://api.example.com",
-      cancelPrevious: ["search"],
+      cancelPrevious: true,
       coalesce: false,
       endpoints: { search: endpoint.get("search").variables<{ q: string }>() },
     });
 
-    expect(routesOf(api, "api")).toMatchObject({ cancelPrevious: ["search"], coalesce: false });
+    expect(routesOf(api, "api")).toMatchObject({ cancelPrevious: true, coalesce: false });
+  });
+
+  it("writes on each read what its endpoint or nearest group says of cancelling it", () => {
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      expose: true,
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          cancelPrevious: true,
+          endpoints: {
+            search: endpoint.get("search").variables<{ q: string }>(),
+            page: endpoint.get("").variables<{ page: number }>().cancelPrevious(false),
+            create: endpoint.post("").variables<{ name: string }>(),
+          },
+          groups: {
+            tags: defineGroup({
+              prefix: "tags",
+              cancelPrevious: false,
+              endpoints: { suggest: endpoint.get("suggest").variables<{ q: string }>() },
+            }),
+          },
+        }),
+        geo: defineGroup({
+          prefix: "geo",
+          endpoints: {
+            suggest: endpoint.get("suggest").variables<{ q: string }>().cancelPrevious(),
+            countries: endpoint.get("countries"),
+          },
+        }),
+      },
+    });
+
+    expect(routesOf(api, "api").endpoints).toEqual({
+      "geo.countries": { type: "query" },
+      "geo.suggest": { type: "query", cancelPrevious: true },
+      "users.create": { type: "mutation" },
+      "users.page": { type: "query", cancelPrevious: false },
+      "users.search": { type: "query", cancelPrevious: true },
+      "users.tags.suggest": { type: "query", cancelPrevious: false },
+    });
   });
 });

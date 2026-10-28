@@ -11,11 +11,13 @@ import type { ExposablePath, WireShapeAt } from "./endpoint-path-types";
 
 /**
  * How the browser reaches one endpoint: a read, sent as GET when it may be
- * cached and as POST otherwise; a write; a stream of server-sent events; or
- * a socket, which the caller may also send on when it is bidirectional.
+ * cached and as POST otherwise, with whether a newer call of it cancels the
+ * one in flight where the endpoint or its groups say; a write; a stream of
+ * server-sent events; or a socket, which the caller may also send on when
+ * it is bidirectional.
  */
 export type RouteShape =
-  | { readonly type: "query"; readonly get?: true }
+  | { readonly type: "query"; readonly get?: true; readonly cancelPrevious?: boolean }
   | { readonly type: "mutation" }
   | { readonly transport: "sse" }
   | { readonly transport: "ws"; readonly bidirectional?: true };
@@ -23,7 +25,7 @@ export type RouteShape =
 /** The shape the routes may give one endpoint of the API, as its definition declares it. */
 export type RouteShapeAt<TApi, TPath extends string> =
   WireShapeAt<TApi, TPath> extends "query"
-    ? { readonly type: "query"; readonly get?: true }
+    ? { readonly type: "query"; readonly get?: true; readonly cancelPrevious?: boolean }
     : WireShapeAt<TApi, TPath> extends "mutation"
       ? { readonly type: "mutation" }
       : WireShapeAt<TApi, TPath> extends "stream"
@@ -70,8 +72,8 @@ export interface CourierRoutes<
   readonly source: string;
   /** Each endpoint a browser may call, by its path, and how it is reached. */
   readonly endpoints: TEndpoints;
-  /** The reads a newer call cancels while they are in flight, as the API's `cancelPrevious` names them. */
-  readonly cancelPrevious?: readonly string[];
+  /** Whether a newer call of a read cancels the one in flight, as the API's own `cancelPrevious` says. */
+  readonly cancelPrevious?: boolean;
   /** Whether identical reads in flight together share one request, as the API's `coalesce` says. */
   readonly coalesce?: boolean;
 }

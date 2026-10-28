@@ -24,9 +24,8 @@ const restores: Array<() => void> = [];
 function api(baseURL = "https://api.example") {
   return defineApi({
     baseURL,
-    cancelPrevious: ["slow"],
     endpoints: {
-      slow: endpoint.get("slow").response<unknown>(),
+      slow: endpoint.get("slow").response<unknown>().cancelPrevious(),
       order: endpoint
         .post("orders", { idempotencyKey: "header:Idempotency-Key" })
         .variables<{ item: string }>()

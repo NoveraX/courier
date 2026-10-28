@@ -122,16 +122,17 @@ function shapeText(shape: RouteShape): string {
     const both = shape.transport === "ws" && shape.bidirectional === true;
     return `{ transport: ${JSON.stringify(shape.transport)}${both ? ", bidirectional: true" : ""} }`;
   }
-  const get = shape.type === "query" && shape.get === true;
-  return `{ type: ${JSON.stringify(shape.type)}${get ? ", get: true" : ""} }`;
+  if (shape.type === "mutation") return `{ type: "mutation" }`;
+  const get = shape.get === true ? ", get: true" : "";
+  const cancels =
+    shape.cancelPrevious === undefined ? "" : `, cancelPrevious: ${String(shape.cancelPrevious)}`;
+  return `{ type: "query"${get}${cancels} }`;
 }
 
 /* The API's own say on cancelling and sharing reads, which its browser client follows too. */
 function followedLines({ cancelPrevious, coalesce }: CourierRoutes): string[] {
   return [
-    ...(cancelPrevious === undefined
-      ? []
-      : [`  cancelPrevious: [${cancelPrevious.map((name) => JSON.stringify(name)).join(", ")}],`]),
+    ...(cancelPrevious === undefined ? [] : [`  cancelPrevious: ${String(cancelPrevious)},`]),
     ...(coalesce === undefined ? [] : [`  coalesce: ${String(coalesce)},`]),
   ];
 }

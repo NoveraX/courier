@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-10-07" }
+export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-10-28" }
 
 ## Import
 
@@ -39,6 +39,7 @@ Optional default settings applied to every request.
 ```ts
 type CallerDefaults = {
   timeout?: number
+  cancelPrevious?: boolean
   headers?: Record<string, string>
   context?: Context
   onError?: (error: HTTPError) => void | Promise<void>
@@ -57,6 +58,8 @@ type CallerWSOptions = {
 
 type WSAuthParams = Record<string, unknown>
 ```
+
+`cancelPrevious` turns on, for every read this caller makes, a newer call cancelling the older call of the same read still in flight — where the endpoint and its groups say nothing; it decides over the API's own. It runs in a browser or a React Native app; on a server it has no effect. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 
 - `ws` — options of the sockets this caller's channels and push subscriptions open; see [Connection options](/docs/advanced/realtime#connection-options).
 

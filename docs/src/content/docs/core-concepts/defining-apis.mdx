@@ -1,4 +1,4 @@
-export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-10-27" }
+export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-10-28" }
 
 ## Overview
 
@@ -248,6 +248,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.meta(values)` | values for your own tooling; the runtime ignores them |
 | `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
 | `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()`. A write declared one loses what guards a write — see [User Sessions](/docs/server-side/session#writes-another-site-sets-off) |
+| `.cancelPrevious(cancel?)` | whether a newer call of this read cancels its call still in flight — a search as the user types; `false` keeps every call whatever its group, client or API says. Offered on a read alone — see [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on) |
 | `.defaults(values)` | what an HTTP endpoint sends for variables a call leaves out — see [Default variables](#default-variables) |
 | `.agent({ description, access })` | offers the endpoint to AI agents as a tool of your MCP server — named on an HTTP endpoint after its verb, and not passed on by a base; see [MCP Server](/docs/agents/overview) |
 
@@ -325,7 +326,6 @@ defineApi({
   timeout: 10000,
   headers: { "X-API-Version": "2" },
   responseType: "json",         // "json" | "text" | "blob" | "arrayBuffer" | "formData"
-  cancelPrevious: ["users.search"], // a newer search cancels the one in flight
   defaultBody: { lang: "en" },
   defaultQueryParams: { format: "json" },
 })

@@ -1,3 +1,4 @@
+import { assertCancelPrevious } from "../define/assert-cancel-previous";
 import type { CourierRoutes } from "../define/routes";
 import type { ProxyCallerDefaults, ProxyCallerOptions } from "./types";
 
@@ -10,6 +11,7 @@ import type { ProxyCallerDefaults, ProxyCallerOptions } from "./types";
  * @param routes - The routes of the API
  * @param options - The options the page gives its client
  * @returns The client's options, with what the routes say
+ * @throws ConfigurationError `CANCEL_PREVIOUS_INVALID` when the client's `cancelPrevious`, or the API's in its routes, is neither `true` nor `false`
  * @example
  * ```ts
  * createProxyHTTPExecutor(apiRoutes.source, proxyDefaultsOf(apiRoutes, { proxyPath }));
@@ -19,6 +21,12 @@ export function proxyDefaultsOf(
   routes: CourierRoutes,
   options: ProxyCallerOptions = {},
 ): ProxyCallerDefaults {
+  assertCancelPrevious(options.cancelPrevious, "A proxy client");
+  assertCancelPrevious(
+    routes.cancelPrevious,
+    `The routes of "${routes.source}"`,
+    "Write the routes module again with courier-cli routes.",
+  );
   return {
     ...options,
     cancelPrevious: options.cancelPrevious ?? routes.cancelPrevious,

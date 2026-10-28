@@ -1,5 +1,6 @@
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { GroupOptions } from "../http-client/types";
+import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoFragment } from "./assert-no-fragment";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type {
@@ -32,6 +33,8 @@ import type {
  * @throws ConfigurationError `SOURCE_TRANSPORT_INVALID` for a `fetch` or a
  *   `webSocket` that is not a function, or a `dispatcher` that is no undici
  *   `Dispatcher`
+ * @throws ConfigurationError `CANCEL_PREVIOUS_INVALID` for a `cancelPrevious`
+ *   that is neither `true` nor `false`
  *
  * @example
  * ```ts
@@ -76,5 +79,6 @@ export function defineGroup(
   assertNoReservedName(endpoints, "group");
   if (groupOptions.groups) assertNoReservedGroupName(groupOptions.groups);
   assertTransportOptions(groupOptions, "group");
+  assertCancelPrevious(groupOptions.cancelPrevious, "A group");
   return Object.assign({ options: groupOptions }, endpoints);
 }

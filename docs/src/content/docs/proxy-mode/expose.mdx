@@ -1,4 +1,4 @@
-export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-10-28" }
 
 ## Overview
 
@@ -183,6 +183,8 @@ Each entry says how the client reaches its endpoint:
 | `{ transport: "ws" }` | a socket the server pushes on |
 | `{ transport: "ws", bidirectional: true }` | a socket the caller may also send on — a channel with `.send()` |
 
+A read also carries `cancelPrevious: true` or `false` where its endpoint's `.cancelPrevious()` or the nearest of its groups says — `{ type: "query", cancelPrevious: true }` — and the routes carry the API's own beside `endpoints`; routes written by hand add them the same way. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
+
 A read that may be cached goes to the proxy as GET, its variables in the address, so a browser and a CDN may keep its answer. Every other call goes as POST: GET gains a read nothing when nothing on the way may keep the answer, and POST keeps the variables of a read nobody marked out of every log between the page and your server. A read whose definition declares `sensitiveVariables` goes as POST even with `.cache()`, and the proxy refuses it over GET.
 
 ## Routes without a config
@@ -238,7 +240,7 @@ The routes are plain data, and they are all the client gets:
 }
 ```
 
-No upstream host. No middleware. No endpoint you did not mark. An API's `cancelPrevious` and `coalesce` come with them where the API sets either, since the client honours both.
+No upstream host. No middleware. No endpoint you did not mark. An API's `cancelPrevious` and `coalesce` come with them where the API sets either, and a read carries `cancelPrevious` where its endpoint or a group of it says, since the client honours them.
 
 Studio shows the marks where you look at your endpoints. The Explorer tags each endpoint a page may call `exposed`, and its definition names the mark that decided: `expose: true on users`, `marked .expose(false)`, `nothing marks it .expose()`. In Proxy mode the Playground calls as a page would: it flags an endpoint no mark opens `not exposed`, and refuses to send it, saying where to open it — so what you try there is what a page may do.
 

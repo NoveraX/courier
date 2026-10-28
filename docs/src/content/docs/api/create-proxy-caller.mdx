@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-10-28" }
 
 ## Import
 
@@ -24,18 +24,18 @@ declare function createProxyCaller<TApi, TEndpoints extends Readonly<Record<stri
 
 ### routes
 
-The routes of one API, as the routes module exports them — `apiRoutes` for the source registered as `api`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Courier writes them, and how to write them by hand in a project without a `courier.config.ts`.
+The routes of one API, as the routes module exports them — `apiRoutes` for the source registered as `api`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Courier writes them, and how to write them by hand in a project without a `courier.config.ts`. Routes whose `cancelPrevious` is neither `true` nor `false` are refused with `ConfigurationError("CANCEL_PREVIOUS_INVALID")` when the client is made; `courier-cli routes` writes them again.
 
 ```ts
 interface CourierRoutes<TApi, TEndpoints> {
   source: string                    // the name the server registered the API under
   endpoints: TEndpoints             // each endpoint a page may call, by its path, and how it is reached
-  cancelPrevious?: readonly string[] // the API's own cancelPrevious
+  cancelPrevious?: boolean          // the API's own cancelPrevious
   coalesce?: boolean                // the API's own coalesce
 }
 
 type RouteShape =
-  | { type: "query"; get?: true }  // a read; GET when it may be cached
+  | { type: "query"; get?: true; cancelPrevious?: boolean } // a read; GET when it may be cached; its endpoint's or groups' cancelPrevious
   | { type: "mutation" }            // a write
   | { transport: "sse" }            // a server-sent event stream
   | { transport: "ws"; bidirectional?: true } // a socket; one the caller also sends on
@@ -55,7 +55,7 @@ type ProxyPath = {
 type ProxyCallerOptions = {
   proxyPath?: ProxyPath
   timeout?: number
-  cancelPrevious?: readonly string[]
+  cancelPrevious?: boolean
   coalesce?: boolean
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -77,7 +77,7 @@ type WSAuthParams = Record<string, unknown>
 ```
 
 - `proxyPath` — where the app serves its proxy routes, per transport. Each field accepts either a relative path, resolved against the page's origin, or an absolute URL; a missing one falls back to the built-in default. The routes do not say it: it depends on where the page is served.
-- `cancelPrevious` — the reads a newer call cancels while they are still in flight, by their paths, such as `["users.search"]`; the cancelled call rejects with an `HTTPError` of status 499. Only a read is ever cancelled: an endpoint the routes name a write is left to complete. Defaults to the API's own, which the routes carry — see [Deduplication & Abort](/docs/advanced/abort#cancelling-the-previous-call).
+- `cancelPrevious` — whether a newer call of one of the client's reads cancels its call still in flight to the same endpoint; the cancelled call rejects with an `HTTPError` of status 499. An endpoint's `.cancelPrevious()` and its groups' own, which the routes carry, and a call's `.with({ cancelPrevious })` decide over it. Defaults to the API's own, which the routes carry too. Only a read the routes name is ever cancelled, and only in a browser or a React Native app — see [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 - `coalesce` — whether identical reads in flight together reach the proxy once, each call with a copy of the answer. On by default; `false` sends every call alone. Defaults to the API's own, which the routes carry.
 - `timeout` — how long the browser waits for the proxy, in milliseconds. It is not sent to the server, so the endpoint's own `.timeout()` still bounds the upstream call; a timeout given with `.with()` for one call is sent.
 - `credentials` — whether the browser sends its cookies to the proxy route, with every call and stream. Defaults to `"include"`. The proxy forwards them to the backend only where the source or the endpoint names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).

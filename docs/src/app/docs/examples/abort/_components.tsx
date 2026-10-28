@@ -3,7 +3,7 @@
 import { isHTTPError } from "@noverax/courier"
 import { useRef, useState } from "react"
 
-import { caller, searchCaller } from "@/lib/caller"
+import { caller } from "@/lib/caller"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -113,7 +113,7 @@ export function CancelPreviousDemo() {
     setCalls((n) => n + 1)
     setPending((n) => n + 1)
     try {
-      setData(await searchCaller.misc.slow())
+      setData(await caller.misc.with({ cancelPrevious: true }).slow())
     } catch (failure: unknown) {
       /* A newer call cancelled this one: it answers instead. */
       if (isHTTPError(failure) && failure.status === 499) setCancelled((n) => n + 1)
@@ -129,7 +129,7 @@ export function CancelPreviousDemo() {
   }
   return (
     <Sandbox
-      label="searchCaller.misc.slow()"
+      label="caller.misc.with({ cancelPrevious: true }).slow()"
       controls={
         <>
           {/* Stays clickable while a call is in flight: the next click is what cancels it. */}

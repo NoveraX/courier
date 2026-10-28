@@ -1,4 +1,4 @@
-export const metadata = { title: "CallOptions", description: "The options one call takes with .with(): its timeout, headers and signal, upload and download progress, a stream instead of parsed data, and the verb sent to the proxy.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "CallOptions", description: "The options one call takes with .with(): its timeout, headers and signal, upload and download progress, a stream instead of parsed data, and the verb sent to the proxy.", mode: "both", updated: "2026-10-28" }
 
 ## Import
 
@@ -20,6 +20,8 @@ type CallOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
   responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData"
   onUploadProgress?: (progress: UploadProgress) => void
   onDownloadProgress?: (progress: DownloadProgress) => void
+  coalesce?: boolean
+  cancelPrevious?: boolean
   rawData?: boolean
 }
 
@@ -37,6 +39,8 @@ type WithOptions = Omit<CallOptions, "rawData">
 - `responseType` — how a successful answer is read, when not as the source reads every answer
 - `onUploadProgress` — called as the body is sent, with `percent` from 0 to 1, `transferredBytes` and `totalBytes`
 - `onDownloadProgress` — called as the answer is read, in the same terms
+- `coalesce` — `false` sends the call alone, never joining an identical read already in flight; see [Deduplication & Abort](/docs/advanced/abort#sending-a-call-alone)
+- `cancelPrevious` — whether this call cancels the older call of its read still in flight, and may be cancelled by a newer one, over what the endpoint, its groups, the client and the API say. `.with()` given to a whole client still decides call by call. A write is never cancelled, and a value other than `true` or `false` makes the call reject with `ConfigurationError("CANCEL_PREVIOUS_INVALID")`; see [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on)
 - `RequestInit` — the rest of `fetch`'s own options, `cache`, `credentials`, `keepalive`, `mode`, `priority`, `redirect`, `referrer`, `referrerPolicy` and `integrity`, passed to it as they are
 
 ## Basic Usage

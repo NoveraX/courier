@@ -82,7 +82,8 @@ export function setSourceName(source: unknown, name: string): void {
  *   named `options`, `raw` or `with`, or a group named `raw` or `with`;
  *   `SESSION_OPTIONS_INVALID`, `SESSION_INSECURE_TRANSPORT`,
  *   `SESSION_HEADER_CONFLICT` or `FORWARD_OPTIONS_INVALID` for a `session`
- *   or a `forward` that cannot work as written
+ *   or a `forward` that cannot work as written; `CANCEL_PREVIOUS_INVALID`
+ *   for a `cancelPrevious` that is neither `true` nor `false`
  *
  * @example
  * const { endpoint } = courier()
@@ -196,7 +197,7 @@ export function defineApi(
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
   assertSessionApi(result, rest, sourceName);
   assertTransportOptions(rest, "source");
-  assertCancelPrevious(result, rest.cancelPrevious, sourceName);
+  assertCancelPrevious(rest.cancelPrevious, `API "${sourceName}"`);
 
   // Dev-only: notify studio of source (re)creation for HMR hot reload
   if (isDevelopment()) {

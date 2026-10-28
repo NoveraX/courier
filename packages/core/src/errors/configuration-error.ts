@@ -104,6 +104,12 @@ export type ConfigurationErrorCode =
   | "SLOT_ALREADY_SET"
   | "CACHE_ON_WRITE"
   /**
+   * `.cancelPrevious()` was named on an endpoint that writes. A write a
+   * newer call cancelled has usually been applied by the server, while its
+   * caller is told it failed.
+   */
+  | "CANCEL_PREVIOUS_ON_WRITE"
+  /**
    * A channel named `.topic()` and was then addressed with `.connect()` or
    * `.via()`. The server that serves it decides its topics, so the key would
    * be kept and never read.
@@ -213,7 +219,7 @@ export type ConfigurationErrorCode =
   | "SESSION_HEADER_CONFLICT"
   /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
   | "FORWARD_OPTIONS_INVALID"
-  /** An API's `cancelPrevious` names a path that is not one of its reads. */
+  /** A `cancelPrevious` given to an API, a group, a client or a call, or carried by routes, is neither `true` nor `false`. */
   | "CANCEL_PREVIOUS_INVALID"
   /** An endpoint's `.defaults()` is no object of data a request can carry. */
   | "DEFAULTS_INVALID"

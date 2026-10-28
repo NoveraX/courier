@@ -27,14 +27,16 @@ export type ProxyCallerOptions = {
    */
   timeout?: number | undefined;
   /**
-   * The reads a newer call cancels while they are still in flight — a
-   * search as the user types — by their paths, such as `users.search`; the
-   * cancelled call rejects with an `HTTPError` of status 499. Only a read is
-   * ever cancelled — an endpoint the routes name a write is left to
-   * complete. Defaults to the API's own `cancelPrevious`, which the routes
-   * carry.
+   * Whether a newer call of one of this client's reads cancels the older
+   * call of that read still in flight — a search as the user types —
+   * through this client or any other given the same routes; the cancelled
+   * call rejects with an `HTTPError` of status 499. An endpoint's
+   * `.cancelPrevious()` and its groups' own, which the routes carry, and a
+   * call's `.with()` say otherwise. Defaults to the API's own, which the
+   * routes carry too. It runs in a browser page or a React Native app, and
+   * only a read the routes name is ever cancelled.
    */
-  cancelPrevious?: readonly string[] | undefined;
+  cancelPrevious?: boolean | undefined;
   /**
    * Whether identical reads in flight together reach the proxy once, each
    * call with a copy of the answer: the default. `false` sends every call
@@ -69,9 +71,15 @@ export type ProxyEndpointKind = "cached-read" | "read" | "mutation";
 
 /**
  * The proxy transport's call: a source and a call's options, as the transport
- * hands them on, then an endpoint's key, its variables and what it is.
+ * hands them on, then an endpoint's key, its variables, what it is, and
+ * whether a newer call cancels it where the endpoint or its groups say.
  */
 export type UntypedCallerFn = (
   source: string,
   options?: Readonly<Record<string, unknown>>,
-) => (endpoint: string, variables?: unknown, kind?: ProxyEndpointKind) => Promise<unknown>;
+) => (
+  endpoint: string,
+  variables?: unknown,
+  kind?: ProxyEndpointKind,
+  cancelPrevious?: boolean,
+) => Promise<unknown>;

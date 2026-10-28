@@ -25,7 +25,7 @@ export type BindMethodDeps = {
   context: Context | undefined;
   prefixUrl: string;
   pendingRequests: { [key: string]: AbortController };
-  /** The endpoint a newer call to cancels this one while it is in flight, when its API names it. */
+  /** The endpoint whose newer call cancels this one while it is in flight: set when the call's `cancelPrevious` is on. */
   cancelKey: string | undefined;
   pathOptions: PathOptions | undefined;
   searchParamsSerializer: SearchParamsSerializer | undefined;

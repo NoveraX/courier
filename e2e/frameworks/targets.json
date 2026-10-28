@@ -163,7 +163,7 @@
   {
     "id": "remix-2",
     "app": "remix",
-    "packages": ["core", "express"],
+    "packages": ["core", "build", "express"],
     "install": {
       "@remix-run/react": "2",
       "@remix-run/node": "2",
@@ -278,7 +278,7 @@
   {
     "id": "react-spa",
     "app": "spa",
-    "packages": ["core", "react"],
+    "packages": ["core", "build", "react"],
     "install": {
       "vite": "6",
       "@vitejs/plugin-react": "4",

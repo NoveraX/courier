@@ -9,13 +9,15 @@ import { targetOf } from "./support/targets";
  * `COURIER_FRAMEWORK` names the version, the global setup builds and serves
  * its application, and the checks of its kind drive it in each browser
  * engine — Chromium, WebKit and Firefox, or the ones `COURIER_BROWSERS`
- * names — one after another.
+ * names — one after another. An application built with Courier's bundler
+ * plugin is driven by the checks of its routes too.
  */
 const target = targetOf(process.env.COURIER_FRAMEWORK);
+const app = APPS[target.app];
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: APPS[target.app].spec,
+  testMatch: app.routesPage === undefined ? app.spec : [app.spec, "routes.spec.ts"],
   globalSetup: "./support/global-setup.ts",
   /* The application is built once, before the checks, and they share it in order. */
   workers: 1,

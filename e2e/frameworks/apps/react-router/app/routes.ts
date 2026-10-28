@@ -8,4 +8,5 @@ export default [
   route("renew", "routes/renew.tsx"),
   route("logout", "routes/logout.tsx"),
   route("rename-route", "routes/rename-route.ts"),
+  route("routes", "routes/routes-page.tsx"),
 ] satisfies RouteConfig;

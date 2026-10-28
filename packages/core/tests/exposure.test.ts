@@ -208,6 +208,14 @@ describe("an endpoint's own mark", () => {
     expect(schemaOf(endpoint.get("plain"))?.expose).toBeUndefined();
   });
 
+  it("is carried when named before the verb, by every endpoint a base with it builds", () => {
+    const open = endpoint.expose();
+
+    expect(schemaOf(open.get("search"))?.expose).toBe(true);
+    expect(schemaOf(open.post("orders"))?.expose).toBe(true);
+    expect(schemaOf(endpoint.expose(false).get("payouts"))?.expose).toBe(false);
+  });
+
   it("is carried by a stream served in this process, named before it is implemented", () => {
     const served = stream
       .response<number>()

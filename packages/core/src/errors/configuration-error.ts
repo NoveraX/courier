@@ -148,6 +148,17 @@ export type ConfigurationErrorCode =
   | "PROXY_VARIABLE_NOT_SERIALIZABLE"
   /** A client built from routes was asked for an endpoint they do not name, which the proxy refuses. */
   | "ENDPOINT_NOT_IN_ROUTES"
+  /**
+   * A page read `routes` from `@noverax/courier/routes`, but no bundler
+   * plugin built the routes into the bundle: the module there is the one the
+   * package ships, which holds none.
+   */
+  | "ROUTES_NOT_BUILT"
+  /**
+   * A page's proxy client was handed something other than the routes of one
+   * API — `undefined` for a source the routes do not hold, say.
+   */
+  | "ROUTES_INVALID"
   /** An endpoint declared as a stream or a channel was called by a client with no transport for it. */
   | "STREAM_TRANSPORT_NOT_CONFIGURED"
   /**

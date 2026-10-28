@@ -17,6 +17,7 @@ export { RUNTIME_HOOKS } from "../client/proxy-members";
 export { createClientRoot } from "../client/root";
 export { type ClientShape, shapeOfRoutes, shapeOfSource } from "../client/shape";
 export { GROUP_PATH_SEPARATOR } from "../define/group-tree";
+export { assertRoutes } from "../proxy-caller/assert-routes";
 export { proxyDefaultsOf } from "../proxy-caller/proxy-defaults";
 export { createConnectionState } from "../realtime/connection-state";
 export { createDirectHTTPExecutor } from "../transport/direct/http";

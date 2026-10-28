@@ -63,6 +63,11 @@
       "import": "./lib/define/index.js",
       "default": "./lib/define/index.js"
     },
+    "./routes": {
+      "types": "./lib/routes/index.d.ts",
+      "import": "./lib/routes/index.js",
+      "default": "./lib/routes/index.js"
+    },
     "./middleware": {
       "types": "./lib/middleware/index.d.ts",
       "import": "./lib/middleware/index.js",
@@ -136,6 +141,9 @@
       ],
       "define": [
         "./lib/define/index.d.ts"
+      ],
+      "routes": [
+        "./lib/routes/index.d.ts"
       ],
       "middleware": [
         "./lib/middleware/index.d.ts"

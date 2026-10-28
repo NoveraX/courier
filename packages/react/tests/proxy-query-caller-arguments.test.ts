@@ -95,3 +95,21 @@ describe("createProxyQueryCaller given routes", () => {
     expect(calls[1]?.[0]).not.toContain("ada");
   });
 });
+
+/**
+ * Handed anything but the routes of one API — `undefined` for a source the
+ * routes do not hold — the query client refuses with `ROUTES_INVALID` and
+ * says what it takes, rather than failing deeper in.
+ */
+describe("createProxyQueryCaller handed no routes", () => {
+  it("refuses, naming what it takes", () => {
+    const routes: Record<string, never> = {};
+
+    expect(() => createProxyQueryCaller(routes.shop as never)).toThrow(
+      expect.objectContaining({ code: "ROUTES_INVALID" }),
+    );
+    expect(() => createProxyQueryCaller(routes.shop as never)).toThrow(
+      "createProxyQueryCaller() takes the routes of one API",
+    );
+  });
+});

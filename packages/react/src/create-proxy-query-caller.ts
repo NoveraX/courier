@@ -1,6 +1,7 @@
 import type { ProxyCallerOptions } from "@noverax/courier";
 import type { CourierRoutes, DefinedApi, RoutedApi, RouteShape } from "@noverax/courier/define";
 import {
+  assertRoutes,
   createClientRoot,
   createProxyHTTPExecutor,
   proxyDefaultsOf,
@@ -26,6 +27,8 @@ import type { QueryCallerClient } from "./types";
  * @param routes - The routes of the API, as the routes module exports them
  * @param options - Where the proxy is, how long to wait, the credentials and headers to send
  * @returns A client with each group's hooks under its name
+ * @throws ConfigurationError `ROUTES_INVALID` when handed anything but the
+ *   routes of one API
  * @example
  * ```ts
  * import { apiRoutes } from "./courier.routes";
@@ -57,6 +60,7 @@ export function createProxyQueryCaller(
   routes: CourierRoutes,
   options: ProxyCallerOptions = {},
 ): unknown {
+  assertRoutes(routes, "createProxyQueryCaller");
   const { source } = routes;
   const httpExecutor = createProxyHTTPExecutor(source, proxyDefaultsOf(routes, options));
   /* Their client code is loaded on the first subscription or channel, so an

@@ -40,9 +40,9 @@ export async function readProjectRoutes(request: RoutesRequest): Promise<RoutesS
     const loaded = await loadProjectConfig(configFile, request, reading.loadOptions);
     reading.noteConfig(loaded.configFile, lookedFor);
     const routes = await routesOfSources(loaded, request.root);
-    return { ...reading.inputs(), configFile: loaded.configFile, routes };
+    return { ...(await reading.inputs()), configFile: loaded.configFile, routes };
   } catch (error) {
-    throw withInputs(error, reading.inputs(), request);
+    throw withInputs(error, await reading.inputs(), request);
   }
 }
 

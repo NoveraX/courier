@@ -1,24 +1,23 @@
-import { existsSync } from "node:fs";
-import { sep } from "node:path";
-
 import { routesModuleCode, unreadRoutesModuleCode } from "../engine/routes-module-code";
 import { RoutesReadError } from "../engine/routes-read-error";
+import { followRoutesInputs, type WatchContext } from "./follow-routes-inputs";
 import type { RoutesPluginState } from "./routes-plugin-state";
 
 /** What of Vite's plugin context the routes module is loaded with. */
-export interface LoadContext {
-  addWatchFile(file: string): void;
+export interface LoadContext extends WatchContext {
   error(error: Error): never;
 }
 
 /**
  * The routes module for a page: the routes read from the config, with every
- * project file they came from watched, so a change reloads the module.
+ * project path they came from followed, so a change loads the module again.
  *
- * A build that cannot read them fails with why. A dev server keeps the
- * routes it read last, reports why in its terminal and on the page, and
- * watches the config, so fixing it brings the routes back; with none read
- * yet, the module fails where it is imported, with the reason.
+ * When they cannot be read, what the failed reading read is followed
+ * instead, so mending the config or a module it imports brings the routes
+ * back, in a dev server and in a build that watches alike. A build then
+ * fails with why. A dev server keeps the routes it read last, and reports
+ * why in its terminal and on the page; with none read yet, the module fails
+ * where it is imported, with the reason.
  *
  * @param context - Vite's plugin context, which watches files and fails builds
  * @param state - What the plugin knows of the Vite it runs in
@@ -33,47 +32,33 @@ export async function loadRoutesModule(
   state: RoutesPluginState,
 ): Promise<string> {
   const engine = state.engine;
-  if (engine === undefined)
-    throw new Error("The routes were asked for before Vite resolved its config");
+  if (engine === undefined) {
+    const why = "The routes were asked for before Vite resolved its config";
+    throw new RoutesReadError("ROUTES_NOT_READ", why, { root: process.cwd() });
+  }
   try {
     const snapshot = await engine.read();
-    watch(context, snapshot.files);
+    followRoutesInputs(context, state, snapshot);
     return routesModuleCode(snapshot);
   } catch (error) {
     const failure = asError(error);
+    const read = failure instanceof RoutesReadError ? failure.inputs : undefined;
+    const followed = read ?? engine.last;
+    if (followed !== undefined) followRoutesInputs(context, state, followed);
     if (state.config?.command === "build") context.error(failure);
     report(state, failure);
     const last = engine.last;
-    if (last !== undefined) {
-      watch(context, last.files);
-      return routesModuleCode(last);
-    }
-    watch(context, filesToMendWith(failure));
-    return unreadRoutesModuleCode(failure.message);
+    return last === undefined ? unreadRoutesModuleCode(failure.message) : routesModuleCode(last);
   }
 }
 
-/* Every project file the routes came from, watched; installed packages are left to the
-   install. Vite takes a watched file for an import of the module, and one that is not there
-   would fail it: an env file made later restarts Vite, and the engine reads it then. */
-function watch(context: LoadContext, files: readonly string[]): void {
-  for (const file of files) {
-    if (!file.split(sep).includes("node_modules") && existsSync(file)) context.addWatchFile(file);
-  }
-}
-
-/* The config the error names, when there is one to mend; one made later is seen by `watchForConfig`. */
-function filesToMendWith(error: Error): string[] {
-  return error instanceof RoutesReadError && error.context.configFile !== undefined
-    ? [error.context.configFile]
-    : [];
-}
-
-/* Why the routes were not read, in the dev server's terminal and over the page. */
+/* Why the routes were not read, in the dev server's terminal and over the page of each server. */
 function report(state: RoutesPluginState, error: Error): void {
   const message = `[courier] ${error.message}`;
   state.config?.logger.error(message, { timestamp: true, error });
-  state.server?.ws.send({ type: "error", err: { message, stack: error.stack ?? "" } });
+  for (const server of state.servers) {
+    server.ws.send({ type: "error", err: { message, stack: error.stack ?? "" } });
+  }
 }
 
 function asError(error: unknown): Error {

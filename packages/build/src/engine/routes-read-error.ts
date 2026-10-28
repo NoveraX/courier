@@ -4,8 +4,13 @@ import type { RoutesInputs } from "./routes-snapshot";
 
 /** Why a project's routes were not read. */
 export type RoutesReadErrorCode =
-  /** No `courier.config.*` is in the project's root or a folder above it. */
+  /** No `courier.config.*` is in the project's root or a folder above it, up to the top of the project. */
   | "CONFIG_NOT_FOUND"
+  /**
+   * The nearest config lies in a folder above the root, and someone else
+   * could have put it there, so it was not run.
+   */
+  | "CONFIG_NOT_TRUSTED"
   /** The config did not load: an import it could not resolve, a throw, or no `sources` in it. */
   | "CONFIG_NOT_LOADED"
   /** The reading went past its time limit, or its process ended before it answered. */

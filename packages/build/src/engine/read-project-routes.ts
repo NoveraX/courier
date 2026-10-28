@@ -1,21 +1,15 @@
 import { createRequire } from "node:module";
-import { basename, dirname } from "node:path";
+import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { CourierRoutes } from "@noverax/courier/define";
 import type { routesOf } from "@noverax/courier/internal";
-import {
-  findConfigFile,
-  type LoadConfigFileOptions,
-  type LoadedCourierConfig,
-  loadCourierConfigFile,
-  projectTransformCache,
-} from "../config/load-config";
+import type { LoadedCourierConfig } from "../config/load-config";
 import { isRecord } from "../util/is-record";
+import { loadProjectConfig, projectConfigFile } from "./project-config";
 import { readEnvFiles } from "./read-env-files";
 import { RoutesReadError } from "./routes-read-error";
-import type { RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
-import { trackEnvReads } from "./track-env-reads";
-import { trackModuleFiles } from "./track-module-files";
+import type { RoutesInputs, RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
+import { trackReading } from "./track-reading";
 
 type RoutesOf = typeof routesOf;
 
@@ -28,8 +22,10 @@ type RoutesOf = typeof routesOf;
  *
  * @param request - Where the project is, and which env files it reads
  * @returns The routes, and every file and variable they depended on
- * @throws RoutesReadError `CONFIG_NOT_FOUND` with no config to read, and
- *   `CONFIG_NOT_LOADED` for one that would not load or holds no `sources`
+ * @throws RoutesReadError `CONFIG_NOT_FOUND` with no config to read,
+ *   `CONFIG_NOT_TRUSTED` for one someone else could have put above the root,
+ *   and `CONFIG_NOT_LOADED` for one that would not load or holds no
+ *   `sources`; each names what the reading had read, which may mend it
  * @example
  * ```ts
  * const { routes } = await readProjectRoutes({ root: "/app", envFiles: ["/app/.env"] });
@@ -37,49 +33,31 @@ type RoutesOf = typeof routesOf;
  */
 export async function readProjectRoutes(request: RoutesRequest): Promise<RoutesSnapshot> {
   readEnvFiles(request.envFiles);
-  const modules = trackModuleFiles();
-  /* Noted from the moment the config's code runs, transforms aside: what the loader reads
-     for itself, starting up or loading its transformer, is not the config's. */
-  const env = trackEnvReads({ paused: true });
-  const loaded = await loadConfig(request, {
-    onModule: modules.noteFile,
-    beforeRun: env.resume,
-    runTransform: env.untracked,
-  });
-  const sources = sourcesOf(loaded, request.root);
-  const read = await projectRoutesOf(loaded.configFile, request.root);
+  const reading = trackReading(request);
+  try {
+    const { configFile, lookedFor } = projectConfigFile(request);
+    reading.noteConfig(configFile, lookedFor);
+    const loaded = await loadProjectConfig(configFile, request, reading.loadOptions);
+    reading.noteConfig(loaded.configFile, lookedFor);
+    const routes = await routesOfSources(loaded, request.root);
+    return { ...reading.inputs(), configFile: loaded.configFile, routes };
+  } catch (error) {
+    throw withInputs(error, reading.inputs(), request);
+  }
+}
+
+/* Each source's routes, by name, read by the core the project's config was written with. */
+async function routesOfSources(
+  loaded: LoadedCourierConfig,
+  root: string,
+): Promise<Record<string, CourierRoutes>> {
+  const sources = sourcesOf(loaded, root);
+  const read = await projectRoutesOf(loaded.configFile, root);
   const routes: Record<string, CourierRoutes> = {};
   for (const name of Object.keys(sources).sort(byCodeUnits)) {
     routes[name] = read(sources[name] as object, name);
   }
-  const files = new Set([loaded.configFile, ...request.envFiles, ...modules.files()]);
-  return { configFile: loaded.configFile, routes, files: [...files].sort(), env: env.names() };
-}
-
-/* The config the request names, or the one found from its root, loaded with the project's transforms. */
-async function loadConfig(
-  request: RoutesRequest,
-  options: Omit<LoadConfigFileOptions, "transformCache">,
-): Promise<LoadedCourierConfig> {
-  const configFile = request.configFile ?? findConfigFile(request.root);
-  if (configFile === null) {
-    throw new RoutesReadError(
-      "CONFIG_NOT_FOUND",
-      `No courier.config.* in ${request.root} or a folder above it: the routes a page takes are read from it. Name another file with the plugin's \`config\` option.`,
-      { root: request.root },
-    );
-  }
-  try {
-    const transformCache = projectTransformCache(dirname(configFile));
-    return await loadCourierConfigFile(configFile, { ...options, transformCache });
-  } catch (error) {
-    throw new RoutesReadError(
-      "CONFIG_NOT_LOADED",
-      `${basename(configFile)} did not load, so the routes a page takes were not read: ${messageOf(error)}`,
-      { root: request.root, configFile },
-      { stack: error instanceof Error ? error.stack : undefined },
-    );
-  }
+  return routes;
 }
 
 /* The config's sources, held to being a record of APIs. */
@@ -105,10 +83,21 @@ async function projectRoutesOf(configFile: string, root: string): Promise<Routes
   );
 }
 
-function byCodeUnits(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+/* The failure, naming what the reading had read: a change to any of it may mend the config. */
+function withInputs(error: unknown, inputs: RoutesInputs, request: RoutesRequest): RoutesReadError {
+  const stack = error instanceof Error ? error.stack : undefined;
+  if (!(error instanceof RoutesReadError)) {
+    return new RoutesReadError(
+      "CONFIG_NOT_LOADED",
+      `The routes a page takes were not read: ${error instanceof Error ? error.message : String(error)}`,
+      { root: request.root, configFile: inputs.configFile },
+      { stack, inputs },
+    );
+  }
+  if (error.inputs !== undefined) return error;
+  return new RoutesReadError(error.code, error.message, error.context, { stack, inputs });
 }
 
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function byCodeUnits(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }

@@ -6,7 +6,15 @@
  * variables they depended on, and each way a reading fails. Requires a
  * build of this package first, whose worker the process runs.
  */
-import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -138,6 +146,46 @@ describe("evaluateInChild", () => {
     expect(error.context).toEqual({ root: dir, configFile: join(dir, "courier.config.ts") });
     expect(error.stack).toContain("courier.config.ts");
   }, 30_000);
+
+  it("names what a failing reading had read, as what may mend it", async () => {
+    project();
+    writeFileSync(join(dir, "apis.ts"), `${APIS}\nthrow new Error("apis is broken");\n`);
+
+    const error = await failure(evaluateInChild({ root: dir, envFiles: [join(dir, ".env")] }));
+
+    expect(error.code).toBe("CONFIG_NOT_LOADED");
+    expect(error.inputs?.configFile).toBe(join(dir, "courier.config.ts"));
+    expect(error.inputs?.files).toEqual(
+      expect.arrayContaining([
+        join(dir, "courier.config.ts"),
+        join(dir, "apis.ts"),
+        join(dir, ".env"),
+      ]),
+    );
+  }, 30_000);
+
+  it("names every path a config was looked for at, when none is there", async () => {
+    const error = await failure(evaluateInChild({ root: dir, envFiles: [] }));
+
+    expect(error.inputs?.files).toEqual(
+      expect.arrayContaining([join(dir, "courier.config.ts"), join(dir, "courier.config.cjs")]),
+    );
+  }, 30_000);
+
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "fails CONFIG_NOT_TRUSTED for a config above the root that any user may write, and runs none of it",
+    async () => {
+      project(`${CONFIG}\nprocess.exitCode = 3;\n`);
+      chmodSync(join(dir, "courier.config.ts"), 0o666);
+      mkdirSync(join(dir, "app"));
+
+      const error = await failure(evaluateInChild({ root: join(dir, "app"), envFiles: [] }));
+
+      expect(error.code).toBe("CONFIG_NOT_TRUSTED");
+      expect(error.message).toContain("any user may write it");
+    },
+    30_000,
+  );
 
   it("fails CONFIG_NOT_LOADED for a config that names no sources", async () => {
     project("export default { studio: { port: 6290 } };\n");

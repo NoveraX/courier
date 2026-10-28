@@ -13,10 +13,9 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { createTransformCache, type TransformCache } from "@noverax/courier-build/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadCourierMocksFile } from "../src/runtime/load-courier-mocks-file";
-import type { TransformCache } from "../src/runtime/transform-cache";
-import { createTransformCache } from "../src/runtime/transform-cache";
 
 let dir: string;
 

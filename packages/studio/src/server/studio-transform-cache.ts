@@ -1,8 +1,5 @@
-import type { TransformCache } from "@noverax/courier-studio-core/config";
-import {
-  createTransformCache,
-  findTransformCacheDirectory,
-} from "@noverax/courier-studio-core/config";
+import type { TransformCache } from "@noverax/courier-build/config";
+import { createTransformCache, findTransformCacheDirectory } from "@noverax/courier-build/config";
 
 /* Keyed by the directory, so every root that shares a node_modules shares
    one memory bound and one disk layer. The roots with no directory share the

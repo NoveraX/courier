@@ -9,7 +9,7 @@
  */
 
 import { runMockWorker } from "@noverax/courier-mock/managed";
-import { loadCourierMocksFile } from "@noverax/courier-studio-core/config";
+import { loadCourierMocksFile } from "@noverax/courier-studio-core/mocks";
 import { workerTransformCache } from "./worker-transform-cache";
 
 runMockWorker(async (mocksFile, mockKey, transformCacheDirectory) => {

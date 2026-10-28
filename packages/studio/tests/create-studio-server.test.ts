@@ -12,7 +12,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { request as httpRequest } from "node:http";
 import { createServer as createNetServer, type Server } from "node:net";
 import { join } from "node:path";
-import { createTransformCache, type TransformCache } from "@noverax/courier-studio-core/config";
+import { createTransformCache, type TransformCache } from "@noverax/courier-build/config";
 import { io as connect } from "socket.io-client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

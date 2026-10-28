@@ -1,6 +1,6 @@
 import { basename, relative, resolve, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { type LoadedCourierConfig, loadCourierConfig } from "@noverax/courier-studio-core/config";
+import { type LoadedCourierConfig, loadCourierConfig } from "@noverax/courier-build/config";
 import { type ArgsDef, defineCommand } from "citty";
 import { DOTENV_ARG, loadProjectEnv } from "../project-env";
 import { closeFormatProcesses } from "../project-format/formatter-host";

@@ -9,7 +9,7 @@ import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "no
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, normalize } from "node:path";
-import { createTransformCache } from "@noverax/courier-studio-core/config";
+import { createTransformCache } from "@noverax/courier-build/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type CourierModuleCache, loadCourierEntry } from "../src/server/load-courier-entry";
 

@@ -1,11 +1,13 @@
 import { dirname, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
+import {
+  createTransformCache,
+  findTransformCacheDirectory,
+  loadCourierConfigFile,
+} from "@noverax/courier-build/config";
 
 import { followConfigFiles } from "./follow-config-files";
-import { loadCourierConfigFile } from "./load-config";
-import { createTransformCache } from "./transform-cache";
-import { findTransformCacheDirectory } from "./transform-cache-directory";
 
 const log = createLogger("Runtime");
 

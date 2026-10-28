@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { CONFIG_BASENAMES, MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
+import { CONFIG_BASENAMES } from "@noverax/courier-build/config";
+import { MOCKS_BASENAMES } from "@noverax/courier-studio-core/mocks";
 import { contentHashOf } from "./file-content-hash";
 import type { ProjectInputs } from "./read-project-inputs";
 

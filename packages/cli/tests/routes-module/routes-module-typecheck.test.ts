@@ -8,7 +8,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { loadCourierConfig } from "@noverax/courier-studio-core/config";
+import { loadCourierConfig } from "@noverax/courier-build/config";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

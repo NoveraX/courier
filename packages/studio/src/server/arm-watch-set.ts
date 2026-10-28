@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { CONFIG_BASENAMES, MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
+import { CONFIG_BASENAMES } from "@noverax/courier-build/config";
+import { MOCKS_BASENAMES } from "@noverax/courier-studio-core/mocks";
 import type { LoadedCourierConfig } from "./config-loader";
 import { ConfigNotFoundError } from "./config-loader-errors";
 import { evaluatedOtherBytes } from "./evaluated-on-disk";

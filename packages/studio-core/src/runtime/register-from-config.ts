@@ -2,8 +2,8 @@ import { dirname } from "node:path";
 
 import { createLogger, detectAppOrigin, registerSources, setAppOrigin } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
+import type { LoadedCourierConfig } from "@noverax/courier-build/config";
 import type { ServerRuntimeSetup } from "./attach-runtime-core";
-import type { LoadedCourierConfig } from "./load-config";
 import { readStudioToken } from "./read-studio-token";
 
 const log = createLogger("Runtime");
@@ -38,7 +38,7 @@ export async function registerFromConfig(
   try {
     /* Loaded on demand, so the loader and the TypeScript loader behind it
        cost nothing until a server attaches. */
-    const { loadCourierConfig } = await import("./load-config");
+    const { loadCourierConfig } = await import("@noverax/courier-build/config");
     const modules = new Set<string>();
     const loaded: LoadedCourierConfig | null = await loadCourierConfig({
       /* A server in production writes nothing into its node_modules: they may be read-only. */

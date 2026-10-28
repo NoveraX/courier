@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { unknownConfigKeys } from "@noverax/courier-studio-core/config";
+import { unknownConfigKeys } from "@noverax/courier-build/config";
 import type { Namespace } from "socket.io";
 import { applyLoadedMocks, type MocksConsumers } from "../apply-loaded-mocks";
 import { buildBindingSnapshot } from "../binding-snapshot";

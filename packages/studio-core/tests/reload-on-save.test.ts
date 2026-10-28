@@ -9,9 +9,9 @@
 import { mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { loadCourierConfigFile } from "@noverax/courier-build/config";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadCourierConfigFile } from "../src/runtime/load-config";
 import { type ReloadOnSave, reloadOnSave } from "../src/runtime/reload-on-save";
 
 const projects: string[] = [];

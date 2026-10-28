@@ -1,5 +1,5 @@
-import type { TransformCache } from "@noverax/courier-studio-core/config";
-import { createTransformCache } from "@noverax/courier-studio-core/config";
+import type { TransformCache } from "@noverax/courier-build/config";
+import { createTransformCache } from "@noverax/courier-build/config";
 
 /**
  * The transform cache a mock worker loads `courier.mocks.*` through.

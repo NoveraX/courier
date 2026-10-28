@@ -1,7 +1,7 @@
 import { readFileSync, realpathSync } from "node:fs";
 import { dirname } from "node:path";
+import type { PathAliases } from "@noverax/courier-build/config";
 import { parseSource } from "@noverax/courier-cli/devkit";
-import type { PathAliases } from "@noverax/courier-studio-core/config";
 import type { Program } from "oxc-parser";
 import { resolveConfigImport } from "../resolve-config-import";
 import { insideProject } from "./inside-project";

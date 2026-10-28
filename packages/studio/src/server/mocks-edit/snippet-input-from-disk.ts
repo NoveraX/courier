@@ -1,8 +1,9 @@
 import { lstatSync } from "node:fs";
 import { basename } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { findConfigFileAt } from "@noverax/courier-build/config";
 import { writesExplicitExtensions } from "@noverax/courier-cli/devkit";
-import { findConfigFileAt, findMocksFile } from "@noverax/courier-studio-core/config";
+import { findMocksFile } from "@noverax/courier-studio-core/mocks";
 import { mocksFileNameFor } from "./mocks-file-name";
 import type { PlanInput } from "./plan/types";
 import { readMocksText } from "./read-mocks-text";

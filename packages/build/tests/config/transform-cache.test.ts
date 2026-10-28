@@ -4,7 +4,7 @@
 import type { TransformOptions, TransformResult } from "jiti";
 import { describe, expect, it, vi } from "vitest";
 
-import { createTransformCache } from "../src/runtime/transform-cache";
+import { createTransformCache } from "../../src/config/transform-cache";
 
 const FILE = "/project/courier.config.ts";
 

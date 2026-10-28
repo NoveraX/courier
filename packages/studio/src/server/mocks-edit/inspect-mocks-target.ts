@@ -1,6 +1,7 @@
 import { realpathSync } from "node:fs";
 import { basename } from "node:path";
-import { findConfigFileAt, findMocksFile } from "@noverax/courier-studio-core/config";
+import { findConfigFileAt } from "@noverax/courier-build/config";
+import { findMocksFile } from "@noverax/courier-studio-core/mocks";
 import { inspectCreatedMocks } from "./inspect-created-mocks";
 import { inspectExistingMocks } from "./inspect-existing-mocks";
 import { MocksEditRefusal } from "./mocks-edit-refusal";

@@ -15,12 +15,8 @@ import { join, resolve } from "node:path";
 import type * as JitiModule from "jiti";
 import { createJiti } from "jiti";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  createTransformCache,
-  loadCourierConfig,
-  loadCourierConfigFile,
-  type TransformCache,
-} from "../src/runtime/load-config";
+import { loadCourierConfig, loadCourierConfigFile } from "../../src/config/load-config";
+import { createTransformCache, type TransformCache } from "../../src/config/transform-cache";
 
 vi.mock("jiti", async (importOriginal) => {
   const actual = await importOriginal<typeof JitiModule>();
@@ -35,7 +31,7 @@ vi.mock("jiti", async (importOriginal) => {
  * pattern as studio's own config-loader test). Simple fixtures without bare
  * imports don't need the symlink.
  */
-const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
+const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../../node_modules");
 
 let dir: string;
 

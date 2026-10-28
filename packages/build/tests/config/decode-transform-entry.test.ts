@@ -3,8 +3,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { decodeTransformEntry } from "../src/runtime/decode-transform-entry";
-import { encodeTransformEntry } from "../src/runtime/encode-transform-entry";
+import { decodeTransformEntry } from "../../src/config/decode-transform-entry";
+import { encodeTransformEntry } from "../../src/config/encode-transform-entry";
 
 const DIGEST = "a".repeat(64);
 const OTHER_DIGEST = "b".repeat(64);

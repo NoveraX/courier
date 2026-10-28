@@ -1,6 +1,7 @@
 import { realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { type PathAliases, readPathAliases } from "@noverax/courier-build/config";
 import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import {
   assertOpenedInside,
@@ -11,7 +12,6 @@ import {
   type RegularFile,
   readRegularFile,
 } from "@noverax/courier-cli/devkit";
-import { type PathAliases, readPathAliases } from "@noverax/courier-studio-core/config";
 import { resolveConfigImport } from "../../resolve-config-import";
 
 const log = createLogger("Studio");

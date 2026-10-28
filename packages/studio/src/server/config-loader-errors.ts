@@ -1,5 +1,5 @@
 import { CourierError } from "@noverax/courier";
-import { CONFIG_BASENAMES } from "@noverax/courier-studio-core/config";
+import { CONFIG_BASENAMES } from "@noverax/courier-build/config";
 import type { ProjectInputs } from "./read-project-inputs";
 
 export type ConfigLoaderErrorCode =

@@ -1,4 +1,4 @@
-import type { TransformCache } from "@noverax/courier-studio-core/config";
+import type { TransformCache } from "@noverax/courier-build/config";
 import { sha256Hex } from "./sha256-hex";
 
 /** A transform cache that notes what each module a load evaluated held. */

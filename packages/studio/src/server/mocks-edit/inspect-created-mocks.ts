@@ -1,6 +1,6 @@
 import { lstatSync } from "node:fs";
 import { basename, join } from "node:path";
-import { MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
+import { MOCKS_BASENAMES } from "@noverax/courier-studio-core/mocks";
 import { checkWriteAccess } from "./check-write-access";
 import type { CreatedMocksTarget } from "./inspect-mocks-target";
 import { MocksEditRefusal } from "./mocks-edit-refusal";

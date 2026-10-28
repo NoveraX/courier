@@ -29,6 +29,6 @@ export type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 export { RUNTIME_EVENT_TYPES } from "./event-types";
 /* Reading the config file, and the tsconfig aliases needed to read it, are a
    server's job. This barrel is injected into client bundles, so both live at
-   `@noverax/courier-studio-core/config` instead — a browser build has no disk
+   `@noverax/courier-build/config` instead — a browser build has no disk
    and must not carry a TypeScript loader. */
 export { trackWSStream, untrackWSStream } from "./ws-tracking";

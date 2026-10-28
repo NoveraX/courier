@@ -2,7 +2,7 @@
 
 import { createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
-import { unknownConfigKeys } from "@noverax/courier-studio-core/config";
+import { unknownConfigKeys } from "@noverax/courier-build/config";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 import { listOption } from "./list-option";
 import { loadCliConfig } from "./load-cli-config";

@@ -1,4 +1,4 @@
-import { readMocksExport } from "@noverax/courier-studio-core/config";
+import { readMocksExport } from "@noverax/courier-studio-core/mocks";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { hashStillOnDisk } from "./hash-still-on-disk";
 import type { LocatedCourierMocks } from "./locate-courier-mocks";

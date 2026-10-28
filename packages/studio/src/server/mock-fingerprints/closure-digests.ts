@@ -1,5 +1,5 @@
 import { dirname } from "node:path";
-import { readPathAliases } from "@noverax/courier-studio-core/config";
+import { readPathAliases } from "@noverax/courier-build/config";
 
 import { extractConfigDeps } from "../extract-config-deps";
 import { resolveConfigImport } from "../resolve-config-import";

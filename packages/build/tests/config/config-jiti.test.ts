@@ -9,9 +9,9 @@ import type * as JitiModule from "jiti";
 import type { TransformOptions } from "jiti";
 import { createJiti } from "jiti";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { createConfigJiti } from "../src/runtime/config-jiti";
-import type { TransformCache } from "../src/runtime/transform-cache";
-import { createTransformCache } from "../src/runtime/transform-cache";
+import { createConfigJiti } from "../../src/config/config-jiti";
+import type { TransformCache } from "../../src/config/transform-cache";
+import { createTransformCache } from "../../src/config/transform-cache";
 
 vi.mock("jiti", async (importOriginal) => {
   const actual = await importOriginal<typeof JitiModule>();

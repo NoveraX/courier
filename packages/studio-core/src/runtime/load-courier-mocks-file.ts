@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
-import type { ConfigJitiOptions } from "./config-jiti";
-import { createConfigJiti } from "./config-jiti";
+import { type ConfigJitiOptions, createConfigJiti } from "@noverax/courier-build/config";
+
 import { readMocksExport } from "./read-mocks-export";
 
 /** A `courier.mocks.*` file that was loaded, and the mocks it declares. */

@@ -14,8 +14,9 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { loadCourierConfigFile } from "@noverax/courier-build/config";
 import { isRecord } from "@noverax/courier-cli/devkit";
-import { loadCourierConfigFile, loadCourierMocksFile } from "@noverax/courier-studio-core/config";
+import { loadCourierMocksFile } from "@noverax/courier-studio-core/mocks";
 import { afterEach, assert, beforeEach, describe, expect, it } from "vitest";
 import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
 

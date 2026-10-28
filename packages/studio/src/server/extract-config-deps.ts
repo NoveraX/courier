@@ -2,7 +2,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 
-import { type PathAliases, readPathAliases } from "@noverax/courier-studio-core/config";
+import { type PathAliases, readPathAliases } from "@noverax/courier-build/config";
 
 import { readModuleImports } from "./read-module-imports";
 import { resolveConfigImport } from "./resolve-config-import";

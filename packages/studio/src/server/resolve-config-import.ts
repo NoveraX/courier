@@ -17,7 +17,7 @@ import { createRequire } from "node:module";
 import { isAbsolute, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 
-import type { PathAliases } from "@noverax/courier-studio-core/config";
+import type { PathAliases } from "@noverax/courier-build/config";
 
 import { firstMissingPath } from "./first-missing-path";
 import { loaderCandidates } from "./loader-candidates";

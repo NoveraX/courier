@@ -17,7 +17,7 @@ COPY . .
 RUN npm ci
 RUN npx turbo run build --filter=demo-shop...
 RUN mkdir /packs \
- && for pkg in core cli mcp mock server studio-core studio; do \
+ && for pkg in core build cli mcp mock server studio-core studio; do \
       (cd "packages/$pkg" && npm pack --pack-destination /packs --ignore-scripts --silent); \
     done
 
@@ -36,7 +36,7 @@ COPY --from=build /repo/examples/demo-shop/src ./src
 # rest resolve as a project's install would. The demo's dev dependencies stay
 # out: the CLI among them comes in as a dependency of Studio's.
 RUN npm pkg delete devDependencies \
- && for pkg in courier courier-cli courier-mcp courier-mock courier-server courier-studio courier-studio-core; do \
+ && for pkg in courier courier-build courier-cli courier-mcp courier-mock courier-server courier-studio courier-studio-core; do \
       npm pkg set "dependencies.@noverax/$pkg=file:$(ls /packs/noverax-$pkg-[0-9]*.tgz)"; \
     done \
  && npm install --omit=dev --ignore-scripts --no-audit --no-fund \

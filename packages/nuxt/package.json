@@ -72,19 +72,21 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
-    "@noverax/courier-build": "0.3.1"
-  },
   "peerDependencies": {
     "@noverax/courier": "^0.3.1",
+    "@noverax/courier-build": "^0.3.1",
     "vite": ">=5.0.0"
   },
   "peerDependenciesMeta": {
+    "@noverax/courier-build": {
+      "optional": true
+    },
     "vite": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@noverax/courier": "*"
+    "@noverax/courier": "*",
+    "@noverax/courier-build": "*"
   }
 }

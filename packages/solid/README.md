@@ -136,7 +136,15 @@ The session cookies the API sets reach the browser on the response SolidStart pr
 
 ## With Frontend
 
-Add the routes plugin beside SolidStart's, so every page, the server that renders it and its server functions get the routes a proxy client may call, built from `courier.config.ts`. SolidStart 1 takes it in `app.config.ts`, as `defineConfig({ vite: { plugins: [courierRoutes()] } })`:
+Add the routes plugin beside SolidStart's, so every page, the server that renders it and its server functions get the routes a proxy client may call, built from `courier.config.ts`. SolidStart 1 takes it in `app.config.ts`, as `defineConfig({ vite: { plugins: [courierRoutes()] } })`.
+
+The plugin runs on `@noverax/courier-build`, which only the build needs, so install it as a dev dependency:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+Then add it:
 
 ```ts
 // vite.config.ts — SolidStart 2

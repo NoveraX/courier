@@ -160,7 +160,15 @@ The session cookies the API sets reach the browser through Astro's `cookies`. Na
 
 ## With Frontend
 
-Add the routes integration, so every page, its client scripts and the server that renders it get the routes a proxy client may call, built from `courier.config.ts`:
+Add the routes integration, so every page, its client scripts and the server that renders it get the routes a proxy client may call, built from `courier.config.ts`.
+
+The integration runs on `@noverax/courier-build`, which only the build needs, so install it as a dev dependency:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+Then add it:
 
 ```ts
 // astro.config.mjs

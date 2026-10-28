@@ -144,7 +144,15 @@ React Router 7 needs `future: { v8_middleware: true }`. The session cookies the 
 
 ## With Frontend
 
-Add the routes plugin beside React Router's, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`. A Remix app on Vite adds it beside `remix()` the same way:
+Add the routes plugin beside React Router's, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`. A Remix app on Vite adds it beside `remix()` the same way.
+
+The plugin runs on `@noverax/courier-build`, which only the build needs, so install it as a dev dependency:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+Then add it:
 
 ```ts
 // vite.config.ts

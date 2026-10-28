@@ -127,7 +127,15 @@ In `vite dev`, a chunked body larger than the limit resets the connection instea
 
 ## With Frontend
 
-Add the routes plugin beside SvelteKit's, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`:
+Add the routes plugin beside SvelteKit's, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`.
+
+The plugin runs on `@noverax/courier-build`, which only the build needs, so install it as a dev dependency:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+Then add it:
 
 ```ts
 // vite.config.ts

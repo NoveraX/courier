@@ -125,7 +125,15 @@ The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`mult
 
 ## Client-Side
 
-Add the routes module, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`:
+Add the routes module, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`.
+
+The module runs on `@noverax/courier-build`, which only the build needs, so install it as a dev dependency:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+Then add it:
 
 ```ts
 // nuxt.config.ts

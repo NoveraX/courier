@@ -6,6 +6,7 @@ import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
    a client-only hook such as useState among its imports. */
 import * as React from "react";
 
+import { QUERY_RETRIES, retryUnlessCancelled } from "../retry-unless-cancelled";
 import type { CourierComputedQueryOptions } from "../types";
 import { useLatest } from "./effect-event";
 import type { SubscribeFn } from "./use-subscription";
@@ -82,6 +83,13 @@ export function useComputedQuery<TQueryData, TStreamData>(
     },
     enabled,
     ...(staleTime !== undefined && { staleTime }),
+    retry: retryUnlessCancelled(
+      queryClient,
+      queryKey,
+      undefined,
+      options.requestOptions?.signal,
+      QUERY_RETRIES,
+    ),
   });
 
   const merge = (events: SSEEvent<TStreamData>[]) =>

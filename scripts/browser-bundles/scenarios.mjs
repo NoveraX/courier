@@ -25,17 +25,17 @@ export const SCENARIOS = [
   {
     name: "direct caller",
     code: `${DEFINE}\nimport { createCaller } from "@noverax/courier";\ncreateCaller(api).users.getAll().then(console.log);`,
-    budget: [102.2, 36.0],
+    budget: [102.5, 36.1],
   },
   {
     name: "proxy caller with its routes",
     code: `import { createProxyCaller } from "@noverax/courier";\n${ROUTES}\ncreateProxyCaller(apiRoutes).users.getAll().then(console.log);`,
-    budget: [44.7, 16.2],
+    budget: [45.1, 16.3],
   },
   {
     name: "React Query hooks",
     code: `import { createProxyQueryCaller } from "@noverax/courier-react";\n${ROUTES}\nexport const q = createProxyQueryCaller(apiRoutes);`,
-    budget: [48.5, 17.7],
+    budget: [48.9, 17.8],
   },
 ];
 

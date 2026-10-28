@@ -1,6 +1,7 @@
 import type { RetryOptions } from "../define/options";
 import { HTTPError } from "../errors";
 import { isAbortError } from "../utils/abort";
+import { abortReason } from "../utils/abort-reason";
 import { defineMiddleware } from "./define";
 import { pause } from "./pause";
 import type { Middleware, MiddlewareResponse, NextFn } from "./types";
@@ -23,9 +24,10 @@ const CLIENT_CLOSED_REQUEST = 499;
  * whatever the condition says.
  *
  * A cancellation is never retried: not the caller's, whatever reason it gave,
- * and not a request that a newer identical one replaced (status 499). A
- * caller that cancels while the middleware waits between attempts is answered
- * at once with its signal's reason.
+ * and not a call that a newer one replaced (status 499). A call cancelled
+ * while the middleware waits between attempts, or just after an attempt
+ * failed, is answered at once with its signal's reason rather than the
+ * failure it no longer waits on.
  *
  * An endpoint that writes is sent once, since a write whose answer was lost
  * may still have been carried out, and sending it again charges a card
@@ -67,7 +69,7 @@ export function retryMiddleware(options: RetryOptions = {}): Middleware {
         attempt < retries &&
         !isCancellation(outcome, ctx.signal) &&
         deservesRetry(outcome, retryOn);
-      if (!retry) return unwrap(outcome);
+      if (!retry) return unwrap(outcome, ctx.signal);
       await pause(waitFor(attempt), ctx.signal);
     }
   });
@@ -93,9 +95,10 @@ async function settle(next: NextFn): Promise<Attempt> {
   }
 }
 
-function unwrap(outcome: Attempt): MiddlewareResponse {
-  if ("error" in outcome) throw outcome.error;
-  return outcome.response;
+function unwrap(outcome: Attempt, signal: AbortSignal | undefined): MiddlewareResponse {
+  if (!("error" in outcome)) return outcome.response;
+  if (signal?.aborted) throw abortReason(signal);
+  throw outcome.error;
 }
 
 /**

@@ -91,6 +91,19 @@ describe("defineApi() type inference", () => {
   it("exposes baseURL on options", () => {
     expectTypeOf(api.options.baseURL).toEqualTypeOf<string | undefined>();
   });
+
+  it("keeps a group of groups written in place, as its client reaches it", () => {
+    const admin = defineApi({
+      groups: {
+        admin: defineGroup({
+          groups: { reports: defineGroup({ endpoints: { daily: endpoint.get("daily") } }) },
+        }),
+      },
+    });
+
+    expectTypeOf(admin.options.groups.admin).not.toBeNever();
+    expectTypeOf<InferClient<typeof admin>["admin"]["reports"]["daily"]>().toBeFunction();
+  });
 });
 
 describe("TypedClient type inference", () => {

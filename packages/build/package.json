@@ -1,0 +1,75 @@
+{
+  "name": "@noverax/courier-build",
+  "version": "0.3.1",
+  "description": "Courier at build time: loads courier.config the way every Courier tool does, and hands a page's bundle the routes its proxy client may call through a plugin for the app's bundler, with no routes file to generate",
+  "keywords": [
+    "courier",
+    "vite",
+    "vite-plugin",
+    "bundler",
+    "plugin",
+    "proxy",
+    "routes",
+    "typescript",
+    "type-safe",
+    "api"
+  ],
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/build"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/proxy-mode/expose",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "exports": {
+    "./package.json": "./package.json",
+    "./config": {
+      "types": "./lib/config/index.d.ts",
+      "import": "./lib/config/index.js",
+      "default": "./lib/config/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "config": [
+        "./lib/config/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "confbox": "^0.3.1",
+    "jiti": "^2.7.0"
+  },
+  "peerDependencies": {
+    "@noverax/courier": "^0.3.1"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
+  }
+}

@@ -1,6 +1,6 @@
 import { createLogger } from "@noverax/courier";
 
-import type { LoadedCourierConfig } from "@noverax/courier-studio-core/config";
+import type { LoadedCourierConfig } from "@noverax/courier-build/config";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { messageOf } from "../util/message-of";
 import { composeRoutesModule } from "./compose-routes-module";

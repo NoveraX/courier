@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, sep } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { readPathAliases } from "../src/runtime/path-aliases";
+import { readPathAliases } from "../../src/config/path-aliases";
 
 let root: string;
 

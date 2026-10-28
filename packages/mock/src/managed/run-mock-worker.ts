@@ -62,7 +62,7 @@ const STARTING = "The mock is still starting. Try again once it runs.";
  * ```ts
  * // mock-worker.ts — the entry Studio forks
  * import { runMockWorker } from "@noverax/courier-mock/managed";
- * import { loadCourierMocksFile } from "@noverax/courier-studio-core/config";
+ * import { loadCourierMocksFile } from "@noverax/courier-studio-core/mocks";
  *
  * runMockWorker(async (mocksFile, mockKey) => {
  *   const { mocks } = await loadCourierMocksFile(mocksFile);

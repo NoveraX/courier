@@ -6,7 +6,7 @@
 import { mkdtempSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createTransformCache, type TransformCache } from "@noverax/courier-studio-core/config";
+import { createTransformCache, type TransformCache } from "@noverax/courier-build/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { workerTransformCache } from "../src/server/mock-manager/worker-transform-cache";

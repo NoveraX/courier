@@ -1,7 +1,7 @@
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createTransformCache } from "@noverax/courier-studio-core/config";
+import { createTransformCache } from "@noverax/courier-build/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createModuleCache } from "../src/server/create-module-cache";

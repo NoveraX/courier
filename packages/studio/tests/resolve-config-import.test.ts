@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createConfigJiti, readPathAliases } from "@noverax/courier-build/config";
 import { errnoCode } from "@noverax/courier-cli/devkit";
-import { createConfigJiti, readPathAliases } from "@noverax/courier-studio-core/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resolveConfigImport } from "../src/server/resolve-config-import";
 

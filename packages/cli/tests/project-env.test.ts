@@ -10,7 +10,7 @@
 import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { loadCourierConfig } from "@noverax/courier-studio-core/config";
+import { loadCourierConfig } from "@noverax/courier-build/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createProjectEnv, loadProjectEnv } from "../src/project-env";
 

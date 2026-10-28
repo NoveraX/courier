@@ -2,7 +2,7 @@ import { realpathSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createLogger } from "@noverax/courier";
-import { createConfigJiti } from "@noverax/courier-studio-core/config";
+import { createConfigJiti } from "@noverax/courier-build/config";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
 
 const log = createLogger("Studio");

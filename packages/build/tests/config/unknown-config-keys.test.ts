@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { unknownConfigKeys } from "../src/runtime/unknown-config-keys";
+import { unknownConfigKeys } from "../../src/config/unknown-config-keys";
 
 describe("unknownConfigKeys", () => {
   it("names a key Courier does not read, at the top and in each block it reads", () => {

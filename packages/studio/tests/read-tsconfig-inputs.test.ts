@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { readPathAliases } from "@noverax/courier-studio-core/config";
+import { readPathAliases } from "@noverax/courier-build/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readTsconfigInputs } from "../src/server/read-tsconfig-inputs";
 

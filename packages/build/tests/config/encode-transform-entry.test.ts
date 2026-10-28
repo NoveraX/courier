@@ -4,8 +4,8 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
-import { encodeTransformEntry } from "../src/runtime/encode-transform-entry";
-import { TRANSFORM_ENTRY_FORMAT } from "../src/runtime/transform-entry-format";
+import { encodeTransformEntry } from "../../src/config/encode-transform-entry";
+import { TRANSFORM_ENTRY_FORMAT } from "../../src/config/transform-entry-format";
 
 const DIGEST = "a".repeat(64);
 const CODE = 'exports.greeting = "héllo, world";\n';

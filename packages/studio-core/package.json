@@ -46,10 +46,10 @@
       "import": "./lib/runtime/index.js",
       "default": "./lib/runtime/index.js"
     },
-    "./config": {
-      "types": "./lib/runtime/load-config.d.ts",
-      "import": "./lib/runtime/load-config.js",
-      "default": "./lib/runtime/load-config.js"
+    "./mocks": {
+      "types": "./lib/runtime/mocks.d.ts",
+      "import": "./lib/runtime/mocks.js",
+      "default": "./lib/runtime/mocks.js"
     }
   },
   "typesVersions": {
@@ -57,8 +57,8 @@
       "runtime": [
         "./lib/runtime/index.d.ts"
       ],
-      "config": [
-        "./lib/runtime/load-config.d.ts"
+      "mocks": [
+        "./lib/runtime/mocks.d.ts"
       ]
     }
   },
@@ -77,8 +77,7 @@
     "access": "public"
   },
   "dependencies": {
-    "confbox": "^0.3.1",
-    "jiti": "^2.7.0",
+    "@noverax/courier-build": "0.3.1",
     "socket.io-client": "^4.8.3"
   },
   "peerDependencies": {

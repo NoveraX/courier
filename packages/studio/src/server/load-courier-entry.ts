@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createLogger } from "@noverax/courier";
-import type { TransformCache } from "@noverax/courier-studio-core/config";
-import { createConfigJiti } from "@noverax/courier-studio-core/config";
+import type { TransformCache } from "@noverax/courier-build/config";
+import { createConfigJiti } from "@noverax/courier-build/config";
 import { isCommonJsEntry } from "./is-commonjs-entry";
 
 type ConfigJiti = Awaited<ReturnType<typeof createConfigJiti>>;

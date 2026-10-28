@@ -64,7 +64,7 @@ export function loadStudioUrl(from: string = process.cwd()): Promise<string> {
 
 async function readStudioUrl(from: string): Promise<string> {
   const { createTransformCache, findTransformCacheDirectory, loadCourierConfig } = await import(
-    "@noverax/courier-studio-core/config"
+    "@noverax/courier-build/config"
   );
   const transformCache = createTransformCache({ directory: findTransformCacheDirectory(from) });
   const loaded = await loadCourierConfig({ cwd: from, transformCache });

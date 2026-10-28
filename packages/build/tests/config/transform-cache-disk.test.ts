@@ -30,7 +30,7 @@ import { Worker } from "node:worker_threads";
 import type { TransformOptions, TransformResult } from "jiti";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTransformCache } from "../src/runtime/transform-cache";
+import { createTransformCache } from "../../src/config/transform-cache";
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof FsModule>();

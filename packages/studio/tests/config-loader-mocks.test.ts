@@ -24,7 +24,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isRecord } from "@noverax/courier-cli/devkit";
-import { loadCourierMocksFile } from "@noverax/courier-studio-core/config";
+import { loadCourierMocksFile } from "@noverax/courier-studio-core/mocks";
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigLoaderError, loadCourierConfig } from "../src/server/config-loader";
 

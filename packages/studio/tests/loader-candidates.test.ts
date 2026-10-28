@@ -1,7 +1,7 @@
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createConfigJiti } from "@noverax/courier-studio-core/config";
+import { createConfigJiti } from "@noverax/courier-build/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LOADER_EXTENSIONS, loaderCandidates } from "../src/server/loader-candidates";
 

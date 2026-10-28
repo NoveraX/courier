@@ -106,17 +106,14 @@ Browser bundlers pick a build of `./runtime` without the config loader (the `bro
 | `attachRuntime(id?)` | `/runtime` | Connect a server or browser runtime; idempotent per id |
 | `announceHosting(input)` | `/runtime` | Tell Studio which transports this runtime serves |
 | `trackWSStream()` / `untrackWSStream()` | `/runtime` | Report WebSocket subscriptions to Studio |
-| `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
-| `loadCourierMocksFile(file, options?)` | `/config` | Load a `courier.mocks.*` file with the config's loader, as a mock's worker does |
-| `findMocksFile(projectRoot)` | `/config` | The first of `MOCKS_BASENAMES` — `courier.mocks.{ts,mts,cts,js,mjs,cjs}` — in the project root |
-| `findTransformCacheDirectory(projectRoot)` | `/config` | Where transforms are kept across processes: `.cache/courier/transform` in the nearest `node_modules`, or `null` when there is no `node_modules`, the directory could hold files another user placed, or `COURIER_TRANSFORM_CACHE` is `0`, `false` or `off` |
-| `createTransformCache(options?)` | `/config` | Reuse each module's transform while its bytes are unchanged, in memory and in that directory |
-| `readPathAliases(projectRoot)` | `/config` | The tsconfig `paths` the loader resolves imports through |
+| `loadCourierMocksFile(file, options?)` | `/mocks` | Load a `courier.mocks.*` file with the config's loader, as a mock's worker does |
+| `findMocksFile(projectRoot)` | `/mocks` | The first of `MOCKS_BASENAMES` — `courier.mocks.{ts,mts,cts,js,mjs,cjs}` — in the project root |
+| `readMocksExport(namespace, file)` | `/mocks` | The mocks a loaded `courier.mocks.*` module declares, by key |
 | `EventBus` | root | In-process Studio telemetry bus |
 | `extractSourceMap(sources)` | root | Endpoint metadata for the Studio UI |
 | `isSafeHttpOrigin(value)` | root | Whether a value is a plain HTTP(S) origin |
 
-The app origin registry (`setAppOrigin`, `getAppOrigin`, `detectAppOrigin`) lives in `@noverax/courier`.
+The app origin registry (`setAppOrigin`, `getAppOrigin`, `detectAppOrigin`) lives in `@noverax/courier`, and the config loader `attachRuntime()` reads the config with in `@noverax/courier-build/config`.
 
 <br />
 

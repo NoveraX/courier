@@ -5,7 +5,7 @@ import {
   loadCourierConfig,
   loadCourierConfigFile,
   projectTransformCache,
-} from "@noverax/courier-studio-core/config";
+} from "@noverax/courier-build/config";
 
 /** The config the CLI serves, or why it has none. */
 export type CliConfig = LoadedCourierConfig | { problem: string };

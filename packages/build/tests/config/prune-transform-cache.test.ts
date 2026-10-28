@@ -18,8 +18,8 @@ import { join } from "node:path";
 import type { TransformOptions, TransformResult } from "jiti";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pruneTransformCache } from "../src/runtime/prune-transform-cache";
-import { createTransformCache } from "../src/runtime/transform-cache";
+import { pruneTransformCache } from "../../src/config/prune-transform-cache";
+import { createTransformCache } from "../../src/config/transform-cache";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;

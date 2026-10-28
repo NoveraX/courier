@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { findTransformCacheDirectory } from "../src/runtime/transform-cache-directory";
+import { findTransformCacheDirectory } from "../../src/config/transform-cache-directory";
 
 const POSIX = process.platform !== "win32";
 const NO_SETTING: Record<string, string | undefined> = {};

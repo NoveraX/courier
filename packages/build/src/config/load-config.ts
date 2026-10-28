@@ -11,17 +11,19 @@
  *     config transparently across Node / Next.js dev / tsx / bun / deno and
  *     resolving the project's `tsconfig` path aliases.
  *
- * This module lives in `@noverax/courier-studio-core` so BOTH consumers
- * resolve config through the same code path:
+ * Every consumer resolves the config through this one code path:
  *
- *  - The Studio dev server (`@noverax/courier-studio`) wraps this loader in
- *    `packages/studio/src/server/config-loader.ts` and adds dev-only
- *    concerns on top (validation, source-key stamping, dependency
- *    extraction for the fs watcher, rich error reporting).
+ *  - The Studio dev server (`@noverax/courier-studio`) wraps this loader and
+ *    adds dev-only concerns on top (validation, source-key stamping,
+ *    dependency extraction for the fs watcher, rich error reporting).
  *
- *  - The user-app runtime (`attachRuntime` on the server side) calls this
- *    loader directly to discover + register sources without requiring the
- *    user to import the config file manually.
+ *  - The user-app runtime (`attachRuntime` on the server side) calls it
+ *    directly to discover and register sources without requiring the user
+ *    to import the config file manually.
+ *
+ *  - `courier-cli`, the standalone server and the MCP server load the
+ *    project's config with it, and the bundler plugins read a page's routes
+ *    from the config it loads.
  *
  * A missing config is not an error: `null` lets the runtime caller fall back
  * to adapter auto-discovery. A config that exists and cannot be loaded is a
@@ -36,19 +38,6 @@ import type { ConfigJitiOptions } from "./config-jiti";
 import { createConfigJiti } from "./config-jiti";
 import { createTransformCache, type TransformCache } from "./transform-cache";
 import { findTransformCacheDirectory } from "./transform-cache-directory";
-
-export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
-export { findMocksFile, MOCKS_BASENAMES } from "./find-mocks-file";
-export { type LoadedCourierMocks, loadCourierMocksFile } from "./load-courier-mocks-file";
-export { type PathAliases, readPathAliases } from "./path-aliases";
-export { readMocksExport } from "./read-mocks-export";
-export {
-  createTransformCache,
-  type TransformCache,
-  type TransformCacheOptions,
-} from "./transform-cache";
-export { findTransformCacheDirectory } from "./transform-cache-directory";
-export { unknownConfigKeys } from "./unknown-config-keys";
 
 /** The file names a Courier config may have, in the order they are looked for */
 export const CONFIG_BASENAMES: ReadonlyArray<string> = [

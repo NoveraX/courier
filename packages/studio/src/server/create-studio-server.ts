@@ -3,8 +3,8 @@
  */
 
 import { createServer } from "node:http";
+import { findTransformCacheDirectory } from "@noverax/courier-build/config";
 import { resolvedRoot } from "@noverax/courier-cli/devkit";
-import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { closeStudio } from "./close-studio";

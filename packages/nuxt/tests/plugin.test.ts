@@ -8,7 +8,7 @@
 import type { PluginOption } from "vite";
 import { describe, expect, it } from "vitest";
 
-import { courierRoutesModule } from "../src/plugin";
+import { courierRoutesModule, UnsupportedBuilderError } from "../src/plugin";
 
 function nuxt(builder?: string): {
   options: { builder?: string; vite: { plugins?: PluginOption[] } };
@@ -34,9 +34,10 @@ describe("courierRoutesModule", () => {
   });
 
   it("refuses another builder, saying how its proxy clients get the routes", () => {
-    expect(() => courierRoutesModule({}, nuxt("@nuxt/webpack-builder"))).toThrow(
-      /builds with @nuxt\/webpack-builder.*courier-cli routes/,
-    );
+    const refuse = () => courierRoutesModule({}, nuxt("@nuxt/webpack-builder"));
+
+    expect(refuse).toThrow(UnsupportedBuilderError);
+    expect(refuse).toThrow(/builds with @nuxt\/webpack-builder.*courier-cli routes/);
   });
 
   it("names itself to Nuxt", async () => {

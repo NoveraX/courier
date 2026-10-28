@@ -1,7 +1,13 @@
 import { type CourierRoutesOptions, courierRoutes } from "@noverax/courier-build/vite";
 import type { PluginOption } from "vite";
 
+import { UnsupportedBuilderError } from "./unsupported-builder-error";
+
 export type { CourierRoutesOptions } from "@noverax/courier-build/vite";
+export {
+  type UnsupportedBuilderContext,
+  UnsupportedBuilderError,
+} from "./unsupported-builder-error";
 
 /** The builder Nuxt builds with by default, and the one the routes are built under. */
 const VITE_BUILDER = "@nuxt/vite-builder";
@@ -19,11 +25,7 @@ export interface NuxtRawModule {
 
 function addRoutesPlugin(options: CourierRoutesOptions, nuxt: NuxtLike): void {
   const builder = nuxt.options.builder ?? VITE_BUILDER;
-  if (builder !== VITE_BUILDER) {
-    throw new Error(
-      `[courier] courierRoutesModule builds the routes under Nuxt's Vite builder, and this app builds with ${String(builder)}: give its proxy clients the routes module \`npx @noverax/courier-cli routes\` writes instead.`,
-    );
-  }
+  if (builder !== VITE_BUILDER) throw new UnsupportedBuilderError(String(builder));
   nuxt.options.vite.plugins ??= [];
   nuxt.options.vite.plugins.push(courierRoutes(options));
 }

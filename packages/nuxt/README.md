@@ -171,7 +171,7 @@ export function useCaller() {
 }
 ```
 
-A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from `~/courier.routes` in place of `routes.api`. The module builds the routes under Nuxt's Vite builder.
+A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from `~/courier.routes` in place of `routes.api`. The module builds the routes under Nuxt's Vite builder; added to an app that builds with another, it throws `UnsupportedBuilderError` (`UNSUPPORTED_BUILDER`), which says to write the routes module instead.
 
 ```vue
 <script setup lang="ts">

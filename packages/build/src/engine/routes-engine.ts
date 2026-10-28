@@ -2,6 +2,7 @@ import { isAbsolute, resolve } from "node:path";
 
 import { evaluateInChild } from "./evaluate-in-child";
 import { fingerprintOf, UNSETTLED } from "./fingerprint";
+import { createReadings } from "./routes-readings";
 import type { RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
 
 /** Where a project is, for the engine that reads its routes. */
@@ -22,9 +23,11 @@ export interface RoutesEngineOptions {
 export interface RoutesEngine {
   /**
    * The routes as the config gives them now. Read in a process of its own
-   * the first time, and again only once a file the last reading read, or a
-   * variable it looked at, has changed; calls made while one reading runs
-   * share it.
+   * the first time, and again only once a path the last reading depended
+   * on, or a variable it looked at, has changed. Calls made while a reading
+   * runs share it, unless something it read changed meanwhile: a call made
+   * after it began then waits for the next reading, which begins after the
+   * change. A failure is not kept: the next call reads again.
    *
    * @throws RoutesReadError when the config cannot be found or read
    */
@@ -32,8 +35,10 @@ export interface RoutesEngine {
   /** The routes the last successful reading gave, if one has. */
   readonly last: RoutesSnapshot | undefined;
   /**
-   * A digest of what the last reading depended on, as it is now, or
-   * `undefined` before the first: equal digests mean the same routes.
+   * A digest of what the latest successful reading depended on, as it is
+   * now: equal digests mean the same routes. `undefined` before the first,
+   * and while that reading may have missed a change made as it ran, until
+   * `read()` reads again.
    */
   fingerprint(): string | undefined;
 }
@@ -58,38 +63,23 @@ export function createRoutesEngine(
   evaluate: RoutesEvaluator = evaluateInChild,
 ): RoutesEngine {
   const request = requestOf(options);
-  let last: Kept | undefined;
-  let pending: Promise<RoutesSnapshot> | undefined;
-  const readAgain = async (): Promise<RoutesSnapshot> => {
-    const since = Date.now();
-    const snapshot = await evaluate(request);
-    last = { snapshot, fingerprint: fingerprintOf(snapshot, since) };
-    return snapshot;
-  };
+  const readings = createReadings(() => evaluate(request));
   return {
-    read() {
-      if (last !== undefined && isCurrent(last)) return Promise.resolve(last.snapshot);
-      pending ??= readAgain().finally(() => {
-        pending = undefined;
-      });
-      return pending;
+    async read() {
+      const outcome = await readings.next();
+      if (outcome.ok) return outcome.snapshot;
+      throw outcome.error;
     },
     get last() {
-      return last?.snapshot;
+      return readings.kept?.snapshot;
     },
-    fingerprint: () => (last === undefined ? undefined : fingerprintOf(last.snapshot)),
+    fingerprint() {
+      const kept = readings.kept;
+      return kept === undefined || kept.fingerprint === UNSETTLED
+        ? undefined
+        : fingerprintOf(kept.snapshot);
+    },
   };
-}
-
-/** A reading, and the digest of what it depended on as it was when the reading ended. */
-interface Kept {
-  snapshot: RoutesSnapshot;
-  fingerprint: string;
-}
-
-/* Whether nothing a kept reading depended on has changed since. */
-function isCurrent(kept: Kept): boolean {
-  return kept.fingerprint !== UNSETTLED && fingerprintOf(kept.snapshot) === kept.fingerprint;
 }
 
 function requestOf(options: RoutesEngineOptions): RoutesRequest {

@@ -9,5 +9,6 @@ export {
   RoutesReadError,
   type RoutesReadErrorCode,
   type RoutesReadErrorContext,
+  type RoutesReadErrorDetails,
 } from "./engine/routes-read-error";
-export type { RoutesRequest, RoutesSnapshot } from "./engine/routes-snapshot";
+export type { RoutesInputs, RoutesRequest, RoutesSnapshot } from "./engine/routes-snapshot";

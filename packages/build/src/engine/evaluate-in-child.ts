@@ -64,7 +64,10 @@ export function evaluateInChild(
 /* The routes an answer carries, or the error it reports. */
 function outcomeOf(reply: WorkerReply): RoutesSnapshot | RoutesReadError {
   if (reply.ok) return reply.snapshot;
-  return new RoutesReadError(reply.code, reply.message, reply.context, reply.stack);
+  return new RoutesReadError(reply.code, reply.message, reply.context, {
+    stack: reply.stack,
+    inputs: reply.inputs,
+  });
 }
 
 type Settle = ((outcome: RoutesSnapshot | RoutesReadError) => void) & {

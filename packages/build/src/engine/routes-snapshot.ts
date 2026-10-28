@@ -1,21 +1,15 @@
 import type { CourierRoutes } from "@noverax/courier/define";
 
 /**
- * The routes of a project's config, as one reading of it gave them, and
- * what that reading depended on.
+ * What one reading of a project's routes depended on: a change to any of it
+ * may change what the next reading gives.
  */
-export interface RoutesSnapshot {
-  /** The config file the routes were read from, absolute. */
-  readonly configFile: string;
+export interface RoutesInputs {
+  /** The config file read, absolute, once one was found. */
+  readonly configFile?: string | undefined;
   /**
-   * Each source's routes, by its name in the config's `sources`: every
-   * source, one that opens nothing to a page with no endpoints.
-   */
-  readonly routes: Readonly<Record<string, CourierRoutes>>;
-  /**
-   * Every file the reading depended on, absolute and sorted: the config, the
-   * modules it reached and the env files that were or may be read. A change
-   * to any of them may change the routes.
+   * Every path the reading depended on, absolute and sorted: the config, the
+   * modules it reached and the env files that were or may be read.
    */
   readonly files: readonly string[];
   /**
@@ -23,6 +17,20 @@ export interface RoutesSnapshot {
    * went through all of them.
    */
   readonly env: readonly string[] | "*";
+}
+
+/**
+ * The routes of a project's config, as one reading of it gave them, and
+ * what that reading depended on.
+ */
+export interface RoutesSnapshot extends RoutesInputs {
+  /** The config file the routes were read from, absolute. */
+  readonly configFile: string;
+  /**
+   * Each source's routes, by its name in the config's `sources`: every
+   * source, one that opens nothing to a page with no endpoints.
+   */
+  readonly routes: Readonly<Record<string, CourierRoutes>>;
 }
 
 /** What reading a project's routes is told: where the project is, and how it reads its variables. */

@@ -10,8 +10,8 @@ import { mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { createRoutesEngine, type RoutesEvaluator } from "../../src/engine/routes-engine";
+import { RoutesReadError } from "../../src/engine/routes-read-error";
 import type { RoutesRequest, RoutesSnapshot } from "../../src/engine/routes-snapshot";
 
 let dir: string;
@@ -52,6 +52,43 @@ function evaluator(
     };
   };
   return { evaluate, requests };
+}
+
+/* An evaluator whose readings wait to be let go, each answering with its own number as the source's name. */
+function heldEvaluator(): {
+  evaluate: RoutesEvaluator;
+  started: () => number;
+  release: (outcome?: Error) => void;
+} {
+  const held: Array<(outcome?: Error) => void> = [];
+  const evaluate = (): Promise<RoutesSnapshot> => {
+    const reading = held.length + 1;
+    return new Promise((resolve, reject) => {
+      held.push((outcome) => {
+        if (outcome === undefined) resolve(numbered(reading));
+        else reject(outcome);
+      });
+    });
+  };
+  return {
+    evaluate,
+    started: () => held.length,
+    release: (outcome) => held.at(-1)?.(outcome),
+  };
+}
+
+function numbered(reading: number): RoutesSnapshot {
+  return {
+    configFile: config,
+    routes: { [`reading${reading}`]: { source: `reading${reading}`, endpoints: {} } },
+    files: [config, api],
+    env: [],
+  };
+}
+
+/* Until the readings begun so far reach a number: a reading begins on a later turn of the loop. */
+async function begun(started: () => number, count: number): Promise<void> {
+  await vi.waitFor(() => expect(started()).toBe(count));
 }
 
 describe("createRoutesEngine", () => {
@@ -122,6 +159,61 @@ describe("createRoutesEngine", () => {
     expect(requests).toHaveLength(1);
   });
 
+  it("hands a call made while a reading ran the next reading, when a file changed meanwhile", async () => {
+    const { evaluate, started, release } = heldEvaluator();
+    const engine = createRoutesEngine({ root: dir }, evaluate);
+    const first = engine.read();
+    await begun(started, 1);
+
+    writeFileSync(api, "export const api = { edited: true };\n");
+    const second = engine.read();
+    release();
+    await begun(started, 2);
+    release();
+
+    expect(Object.keys((await first).routes)).toEqual(["reading1"]);
+    expect(Object.keys((await second).routes)).toEqual(["reading2"]);
+  });
+
+  it("hands a call made while a failing reading ran the next one, when a file it had read changed meanwhile", async () => {
+    const { evaluate, started, release } = heldEvaluator();
+    const engine = createRoutesEngine({ root: dir }, evaluate);
+    const first = engine.read().catch((error: unknown) => error);
+    await begun(started, 1);
+
+    writeFileSync(config, "export default { sources: { mended: {} } };\n");
+    const second = engine.read();
+    release(
+      new RoutesReadError(
+        "CONFIG_NOT_LOADED",
+        "courier.config.ts did not load",
+        { root: dir },
+        {
+          inputs: { configFile: config, files: [config], env: [] },
+        },
+      ),
+    );
+    await begun(started, 2);
+    release();
+
+    expect(await first).toBeInstanceOf(RoutesReadError);
+    expect(Object.keys((await second).routes)).toEqual(["reading2"]);
+  });
+
+  it("shares a failing reading that names nothing it read with every call made while it ran", async () => {
+    const { evaluate, started, release } = heldEvaluator();
+    const engine = createRoutesEngine({ root: dir }, evaluate);
+    const first = engine.read().catch((error: unknown) => error);
+    await begun(started, 1);
+
+    writeFileSync(api, "export const api = { edited: true };\n");
+    const second = engine.read().catch((error: unknown) => error);
+    release(new Error("the process ended before it answered"));
+
+    expect(await first).toBe(await second);
+    expect(started()).toBe(1);
+  });
+
   it("keeps no failure: the next read tries again", async () => {
     let calls = 0;
     const { evaluate } = evaluator();
@@ -149,6 +241,17 @@ describe("createRoutesEngine", () => {
       configFile: join(dir, "config/courier.config.ts"),
       envFiles: [join(dir, ".env.local"), "/etc/app.env"],
     });
+  });
+
+  it("gives no fingerprint while the latest reading may have missed a change made as it ran", async () => {
+    const { evaluate } = evaluator(undefined, () => {
+      writeFileSync(api, `export const api = ${Date.now()};\n`);
+    });
+    const engine = createRoutesEngine({ root: dir }, evaluate);
+
+    await engine.read();
+
+    expect(engine.fingerprint()).toBeUndefined();
   });
 
   it("gives a fingerprint that holds while nothing changes, and moves when a file does", async () => {

@@ -78,7 +78,7 @@ export const users = defineGroup({
 })
 ```
 
-The cancelled call rejects with an `HTTPError` of status `499`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out while `coalesce` is on, as it is by default. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it.
+The cancelled call rejects with an `HTTPError` of status `499`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out while `coalesce` is on, as it is by default. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it. A call holds its endpoint from the moment it starts until it settles, its retries and the waits between them included: a newer call cancels an older one still getting ready to send, or waiting to try again, at once, and that call never sends.
 
 ### Where to turn it on
 

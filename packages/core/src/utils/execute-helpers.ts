@@ -1,26 +1,41 @@
 import { assertCancelPrevious } from "../define/assert-cancel-previous";
 import { HttpClient } from "../http-client/index";
 import type { BaseOptions, Context } from "../http-client/types";
+import {
+  type EndpointHold,
+  type EndpointHolds,
+  holdEndpoint,
+  supportsAbortController,
+} from "./cancel-previous";
 import type { CallTarget } from "./execute-target";
 import { servesOneUser } from "./serves-one-user";
 
-const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
+/* The calls holding each endpoint of a source, which every client of it shares. */
+const holdsBySource = new WeakMap<object, EndpointHolds>();
 
 /**
- * Whether a newer call cancels this one while it is in flight: the nearest
- * say of the call's own `.with()`, its endpoint's `.cancelPrevious()`, its
- * groups', its caller's and its API's.
+ * The hold a call takes on its endpoint when a newer call is to cancel it:
+ * a read whose `cancelPrevious` is on — the nearest say of the call's own
+ * `.with()`, its endpoint's `.cancelPrevious()`, its groups', its caller's
+ * and its API's — made in a browser or a React Native app, and not one that
+ * came off the wire. On a server, requests from different users reach the
+ * same endpoint, and one user's request would cancel another's. A write is
+ * never held: a write that a newer one superseded has usually been applied
+ * by the server, and cancelling it would tell its caller it had not.
+ *
+ * Every client of one source shares its holds, so a newer call through one
+ * cancels an older call through another.
  *
  * @param target - The call, with the endpoint and the source it resolved to
  * @param context - The call's context, which carries its caller's default
- * @returns `true` when the nearest that says anything turns it on
+ * @returns The call's hold, or `undefined` when no newer call is to cancel it
  * @throws ConfigurationError `CANCEL_PREVIOUS_INVALID` when the call's own is neither `true` nor `false`
  * @example
  * ```ts
- * const instance = clientForCall(dataSource, context, kind, path, cancelPreviousOf(target, context));
+ * const hold = holdOf(target, context);
  * ```
  */
-export function cancelPreviousOf(target: CallTarget, context?: Context): boolean {
+export function holdOf(target: CallTarget, context?: Context): EndpointHold | undefined {
   const own = target.options?.cancelPrevious;
   assertCancelPrevious(own, "A call");
   const nearest =
@@ -29,60 +44,48 @@ export function cancelPreviousOf(target: CallTarget, context?: Context): boolean
     target.endpointGroup?.options.cancelPrevious ??
     context?.defaultCancelPrevious ??
     target.dataSource.options?.cancelPrevious;
-  return nearest === true;
+  const held =
+    nearest === true &&
+    supportsAbortController &&
+    servesOneUser() &&
+    context?.proxyMethod === undefined &&
+    target.schema?.type === "query";
+  if (!held) return undefined;
+  const path = [target.group, target.method].filter((part) => part !== undefined && part !== "");
+  return holdEndpoint(holdsOf(target.dataSource), path.join("."));
+}
+
+function holdsOf(dataSource: object): EndpointHolds {
+  let holds = holdsBySource.get(dataSource);
+  if (!holds) {
+    holds = new Map();
+    holdsBySource.set(dataSource, holds);
+  }
+  return holds;
 }
 
 /**
  * The HTTP client one call runs on.
  *
  * It is built per call, because a call's context decides its headers and
- * path options, while its in-flight table lives as long as the source: a
- * fresh, empty table per call would let `cancelPrevious` cancel nothing.
- *
- * Of two calls to one endpoint whose `cancelPrevious` is on, the newer
- * cancels the older while it is still in flight — only in a browser or a
- * React Native app, and for a call that did not come off the wire. On a
- * server, requests from different users reach the same endpoint, and one
- * user's request would cancel another's. It only cancels a read: a write
- * that a newer one superseded has usually been applied by the server, and
- * cancelling it would tell its caller it had not.
+ * path options, and the hold it carries is the call's own.
  *
  * @param dataSource - The source the call belongs to
  * @param context - The call's context, when it has one
  * @param kind - Whether the endpoint reads or writes, from its schema
- * @param path - The endpoint's path in its API, such as `users.search`
- * @param cancelPrevious - Whether a newer call cancels this one, from `cancelPreviousOf`
+ * @param hold - The call's hold on its endpoint, from `holdOf`
  * @returns A client for this call
  */
 export function clientForCall(
   dataSource: { options?: BaseOptions },
   context?: Context,
   kind?: "query" | "mutation",
-  path?: string,
-  cancelPrevious = false,
+  hold?: EndpointHold,
 ): HttpClient {
   const client = new HttpClient(dataSource.options, context);
   client.kind = kind;
-  const cancels =
-    cancelPrevious &&
-    servesOneUser() &&
-    context?.proxyMethod === undefined &&
-    kind === "query" &&
-    path !== undefined;
-  if (cancels) {
-    client.pendingRequests = pendingRequestsOf(dataSource);
-    client.cancelKey = path;
-  }
+  client.hold = hold;
   return client;
-}
-
-function pendingRequestsOf(dataSource: object): Record<string, AbortController> {
-  let pending = pendingBySource.get(dataSource);
-  if (!pending) {
-    pending = {};
-    pendingBySource.set(dataSource, pending);
-  }
-  return pending;
 }
 
 /** An endpoint as a group or a source holds it: a descriptor carrying its wire closure. */

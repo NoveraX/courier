@@ -1,4 +1,4 @@
-import { supportsAbortController } from "../utils/cancel-previous";
+import type { EndpointHold } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
@@ -27,11 +27,10 @@ export class HttpClient {
   private bodySerializer: ((data: Record<string, unknown>) => WebBody) | undefined;
   private searchParamsSerializer: SearchParamsSerializer | undefined;
   /**
-   * The endpoint whose newer call cancels this client's call while it is in
-   * flight: set for a read whose `cancelPrevious` is on, made where one user
-   * is.
+   * The call's hold on its endpoint, which a newer call takes: set for a read
+   * whose `cancelPrevious` is on, made where one user is.
    */
-  cancelKey: string | undefined;
+  hold: EndpointHold | undefined;
   /**
    * Whether the endpoint this client calls reads or writes, as its API
    * declares: an identical declared read in flight is joined whatever verb
@@ -45,7 +44,6 @@ export class HttpClient {
   private sourceFetch: PlatformFetch | undefined;
 
   context: Context | undefined;
-  pendingRequests: { [key: string]: AbortController } = {};
   /** Hook called with resolved (method, fullUrl) right before fetch */
   onBeforeFetch?: (method: string, url: string) => void;
 
@@ -67,7 +65,7 @@ export class HttpClient {
       pathOptions,
       bodySerializer,
       searchParamsSerializer,
-      /* Decided per endpoint where the call is made, which sets `cancelKey`. */
+      /* Decided where the call is made, which gives it its `hold`. */
       cancelPrevious: _cancelPrevious,
       middleware: _middleware,
       /* Read by the executor, which builds what they send from the request
@@ -154,8 +152,7 @@ export class HttpClient {
     const deps = {
       context: this.context,
       prefixUrl: this.prefixUrl,
-      pendingRequests: this.pendingRequests,
-      cancelKey: supportsAbortController ? this.cancelKey : undefined,
+      hold: this.hold,
       pathOptions: this.pathOptions,
       searchParamsSerializer: this.searchParamsSerializer,
       defaultQueryParams: this.defaultQueryParams,

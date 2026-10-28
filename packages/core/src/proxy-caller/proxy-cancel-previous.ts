@@ -5,7 +5,7 @@
  */
 
 import { anySignal } from "../utils/any-signal";
-import { forgetCall, supersedeCall } from "../utils/cancel-previous";
+import { type EndpointHolds, holdEndpoint } from "../utils/cancel-previous";
 
 export interface ProxyCancelPrevious {
   /**
@@ -60,16 +60,18 @@ export function proxyCancelPreviousOf(routes: object | undefined): ProxyCancelPr
  * ```
  */
 export function createProxyCancelPrevious(): ProxyCancelPrevious {
-  const host = { pendingRequests: {} as Record<string, AbortController> };
+  const holds: EndpointHolds = new Map();
   return {
     async run(key, signal, send) {
-      const { controller, cancelSuperseded } = supersedeCall(host, key);
+      const hold = holdEndpoint(holds, key);
       try {
-        const sending = send(signal ? anySignal([signal, controller.signal]) : controller.signal);
-        cancelSuperseded();
+        hold.sending();
+        const sending = send(signal ? anySignal([signal, hold.signal]) : hold.signal);
+        hold.sent();
         return await sending;
       } finally {
-        forgetCall(host, key, controller);
+        hold.returned();
+        hold.release();
       }
     },
   };

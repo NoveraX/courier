@@ -1,7 +1,6 @@
 import { HTTPError } from "../errors";
 import { abortReason } from "../utils/abort-reason";
-import { anySignal } from "../utils/any-signal";
-import { forgetCall, type Supersession, supersedeCall } from "../utils/cancel-previous";
+import type { EndpointHold } from "../utils/cancel-previous";
 import { compileUrl, resolveBasePath } from "../utils/url";
 import { stripUndefined } from "./body-builder";
 import { type RequestOptions, withCallTransport } from "./call-transport";
@@ -10,7 +9,6 @@ import { getResponse } from "./response";
 import type {
   BoundMethodOptions,
   Context,
-  FetchOptions,
   GroupOptions,
   HttpMethod,
   HttpResponse,
@@ -24,9 +22,8 @@ import type { WebBody } from "./web-types";
 export type BindMethodDeps = {
   context: Context | undefined;
   prefixUrl: string;
-  pendingRequests: { [key: string]: AbortController };
-  /** The endpoint whose newer call cancels this one while it is in flight: set when the call's `cancelPrevious` is on. */
-  cancelKey: string | undefined;
+  /** The call's hold on its endpoint, which a newer call takes: set when its `cancelPrevious` is on. */
+  hold: EndpointHold | undefined;
   pathOptions: PathOptions | undefined;
   searchParamsSerializer: SearchParamsSerializer | undefined;
   defaultQueryParams: Record<string, unknown> | undefined;
@@ -84,19 +81,16 @@ export function bindMethod(
     const { responseType: readAs, ...options } = requested;
     /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
     if (stream) options.coalesce = false;
-    const cancelKey = deps.cancelKey;
-    const supersession = cancelKey ? supersede(deps, cancelKey, options) : undefined;
-    const forget = (): void => {
-      if (cancelKey && supersession) {
-        forgetCall({ pendingRequests: deps.pendingRequests }, cancelKey, supersession.controller);
-      }
-    };
+    const { hold } = deps;
 
     try {
+      /* The call's signal carries its hold's, through which a newer call cancels it; each
+         attempt first asks whether one has superseded it meanwhile. */
+      hold?.sending();
       const sending = deps.fetchRequest(method, url, options);
-      supersession?.cancelSuperseded();
+      hold?.sent();
       const response = await sending;
-      forget();
+      hold?.returned();
 
       if (!response.ok) {
         const errorResponse = await getResponse(
@@ -122,20 +116,9 @@ export function bindMethod(
          that lands while the answer is read stops the read with the
          caller's reason, and the reader reports that as a body it could
          not parse; it is rethrown as the cancellation it is. */
-      forget();
+      hold?.returned();
       if (options.signal?.aborted) throw abortReason(options.signal);
       throw error;
     }
   };
-}
-
-function supersede(
-  deps: BindMethodDeps,
-  key: string,
-  options: Partial<FetchOptions>,
-): Supersession {
-  const supersession = supersedeCall({ pendingRequests: deps.pendingRequests }, key);
-  const { signal } = supersession.controller;
-  options.signal = options.signal ? anySignal([signal, options.signal]) : signal;
-  return supersession;
 }

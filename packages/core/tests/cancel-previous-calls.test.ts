@@ -17,6 +17,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { HTTPError } from "../src/errors";
+import { defineMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { isUpstream } from "./helpers/is-upstream";
@@ -110,6 +111,83 @@ describe("a direct call in a browser", () => {
     const third = client.search({ q: "abc" });
 
     expect(await second).toBe(499);
+    await expect(third).resolves.toEqual({ url: `${UPSTREAM}/search?q=abc` });
+  });
+});
+
+/**
+ * A call holds its endpoint from the moment it starts, not from the moment
+ * it sends: an older call still getting ready to send when a newer one
+ * starts is cancelled then, and never sends, so it cannot cancel the newer
+ * call by sending after it.
+ */
+describe("a direct call slow to send", () => {
+  /** A client whose first calls wait at a gate before they send, until the test opens each. */
+  function gatedClient(gated: number) {
+    const gates: Array<() => void> = [];
+    const opened = Array.from(
+      { length: gated },
+      () => new Promise<void>((open) => gates.push(open)),
+    );
+    let calls = 0;
+    const gate = defineMiddleware("gate", "wrap", async (_ctx, next) => {
+      const waits = opened[calls++];
+      if (waits) await waits;
+      return next();
+    });
+    const client = createCaller(
+      defineApi({
+        baseURL: UPSTREAM,
+        middleware: [gate],
+        endpoints: {
+          search: endpoint
+            .get("search")
+            .variables<{ q: string }>()
+            .response<unknown>()
+            .cancelPrevious(),
+        },
+      }),
+    ) as unknown as Client;
+    return { client, open: (index: number) => gates[index]?.() };
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal("document", {});
+  });
+
+  it("is cancelled by a newer call that sends first, and never sends", async () => {
+    let sentNewer: () => void = () => {};
+    const newerSent = new Promise<void>((resolve) => {
+      sentNewer = resolve;
+    });
+    const sent = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes("q=ab")) sentNewer();
+      return slowUpstream(input, init);
+    });
+    vi.stubGlobal("fetch", sent);
+    const { client, open } = gatedClient(1);
+
+    const first = client.search({ q: "a" }).catch(status);
+    const second = client.search({ q: "ab" });
+    await newerSent;
+    open(0);
+
+    expect(await first).toBe(499);
+    await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
+    expect(sent).toHaveBeenCalledTimes(1);
+  });
+
+  it("is cancelled with every call between it and the newest, once the newest sends", async () => {
+    vi.stubGlobal("fetch", slowUpstream);
+    const { client, open } = gatedClient(2);
+
+    const first = client.search({ q: "a" }).catch(status);
+    const second = client.search({ q: "ab" }).catch(status);
+    const third = client.search({ q: "abc" });
+    open(0);
+    open(1);
+
+    expect([await first, await second]).toEqual([499, 499]);
     await expect(third).resolves.toEqual({ url: `${UPSTREAM}/search?q=abc` });
   });
 });

@@ -142,10 +142,10 @@ import { courierRoutesModule } from "@noverax/courier-nuxt/plugin"
 export default defineNuxtConfig({ modules: [courierRoutesModule] })
 ```
 
-Register the config once, so `routes` is typed from it — in Nuxt 3, beside the config, in `courier-env.d.ts` importing `./courier.config`:
+Register the config once, so `routes` is typed from it. In Nuxt 4 the file goes in `app/`, beside the pages, and imports the config from the folder above; in Nuxt 3, whose app has no `app/` folder, `courier-env.d.ts` sits beside the config and imports `./courier.config`:
 
 ```ts
-// app/courier-env.d.ts
+// app/courier-env.d.ts — Nuxt 4
 import type config from "../courier.config"
 
 declare module "@noverax/courier/routes" {

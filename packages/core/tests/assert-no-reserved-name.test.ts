@@ -124,6 +124,40 @@ describe("an endpoint named like a client accessor", () => {
   });
 });
 
+describe("an endpoint named __proto__", () => {
+  it.each([
+    ["among a source's own endpoints", "source"],
+    ["in a group", "group"],
+  ] as const)("is refused %s, where it would be lost", (_where, owner) => {
+    const endpoints = { ["__proto__"]: endpoint.get("proto"), list: endpoint.get("") };
+
+    const error = refusal(() =>
+      owner === "source"
+        ? defineApi({ baseURL: "https://api.example.com", endpoints })
+        : defineGroup({ prefix: "items", endpoints }),
+    );
+
+    expectRefused(error, "__proto__");
+    expect((error as ConfigurationError).message).toContain(`lost from its ${owner}`);
+  });
+
+  it("is refused when a literal written without brackets made it the record's prototype", () => {
+    const error = refusal(() =>
+      defineGroup({ prefix: "items", endpoints: { __proto__: endpoint.get("proto") } }),
+    );
+
+    expectRefused(error, "__proto__");
+  });
+
+  it("leaves a group of that name, which a client reaches like any other", () => {
+    const items = defineGroup({ prefix: "items", endpoints: { list: endpoint.get("") } });
+
+    const api = defineApi({ baseURL: "https://api.example.com", groups: { ["__proto__"]: items } });
+
+    expect(Object.keys(api.options.groups)).toEqual(["__proto__"]);
+  });
+});
+
 describe("a group named like a client accessor", () => {
   const files = defineGroup({ prefix: "files", endpoints: { list: endpoint.get("") } });
 

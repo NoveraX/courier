@@ -1,10 +1,19 @@
 import { ConfigurationError } from "../errors/configuration-error";
+import { ENDPOINT_SCHEMA } from "../validation";
 
 /**
  * The key a group or a source keeps its own settings under, beside its
  * endpoints. An endpoint of that name would replace them.
  */
 const SETTINGS_KEY = "options";
+
+/**
+ * The name every object gives its prototype. Copied onto a group or a
+ * source, an endpoint of that name replaced its prototype instead of
+ * becoming its own: it was lost, and the group took on the endpoint's
+ * members.
+ */
+const PROTOTYPE_KEY = "__proto__";
 
 /**
  * Names every client answers to itself, at its root, on each group and on
@@ -25,10 +34,13 @@ const CLIENT_ACCESSORS: ReadonlyMap<string, string> = new Map([
  * `with` could not be called: a client reads those names as its own
  * accessors wherever the endpoint would sit.
  *
+ * One named `__proto__` was lost, whether its record holds the name as its
+ * own or a literal written without brackets made it the record's prototype.
+ *
  * @param endpoints - The endpoints a group or a source is defined with
  * @param owner - What holds them, for the message: "group" or "source"
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` when one is named
- *   `options`, `raw` or `with`
+ *   `options`, `raw`, `with` or `__proto__`
  * @throws ConfigurationError `DOTTED_NAME` when a name holds a dot
  *
  * @example
@@ -47,6 +59,7 @@ export function assertNoReservedName(endpoints: object, owner: "group" | "source
     );
   }
   refuseClientAccessor(endpoints, "an endpoint", (name) => `get${capitalize(name)}`);
+  refusePrototypeName(endpoints, owner);
 }
 
 /**
@@ -93,6 +106,18 @@ function refuseClientAccessor(
       `[courier] ${what} cannot be named "${name}": a client answers that name with ${accessor}, so it could never be reached. Give it another name, for example "${rename(name)}".`,
     );
   }
+}
+
+/* A record holding the name as its own, or one whose prototype a literal set to the endpoint. */
+function refusePrototypeName(endpoints: object, owner: "group" | "source"): void {
+  const prototype: unknown = Object.getPrototypeOf(endpoints);
+  const isEndpoint =
+    typeof prototype === "object" && prototype !== null && ENDPOINT_SCHEMA in prototype;
+  if (!Object.hasOwn(endpoints, PROTOTYPE_KEY) && !isEndpoint) return;
+  throw new ConfigurationError(
+    "RESERVED_ENDPOINT_NAME",
+    `[courier] an endpoint cannot be named "${PROTOTYPE_KEY}": it is the name every object gives its prototype, so the endpoint would be lost from its ${owner}. Give it another name, for example "getProto".`,
+  );
 }
 
 function capitalize(name: string): string {

@@ -14,7 +14,7 @@ declare function defineApi<G extends OwnGroups>(
 ): DefinedApi<G>
 ```
 
-`groups` takes any name but `raw` or `with`, and the flat `endpoints` any name but `options`, `raw` or `with`: see [Reserved names](/docs/core-concepts/defining-apis#reserved-names). A reserved name is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")` when the source is defined.
+`groups` takes any name but `raw` or `with`, and the flat `endpoints` any name but `options`, `raw`, `with` or `__proto__`: see [Reserved names](/docs/core-concepts/defining-apis#reserved-names). A reserved name is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")` when the source is defined.
 
 ## Parameters
 

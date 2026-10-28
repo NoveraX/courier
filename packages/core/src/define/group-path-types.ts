@@ -9,10 +9,10 @@
  * depth; the compiler needs a bound to stop at, and ten levels of groups
  * inside groups is beyond any API's need.
  */
-type MaxDepth = 10;
+export type MaxDepth = 10;
 
 /** One level deeper. */
-type Deeper<TDepth extends unknown[]> = [...TDepth, unknown];
+export type Deeper<TDepth extends unknown[]> = [...TDepth, unknown];
 
 /** The groups a source or a group holds, by name; none for one that holds none. */
 export type GroupsAt<THolder> = THolder extends { options: { groups: infer TGroups } }

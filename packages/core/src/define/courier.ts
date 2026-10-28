@@ -1,12 +1,6 @@
 import type { BuilderState } from "./builder";
 import { initialState } from "./builder";
-import type {
-  ChannelBuilder,
-  Courier,
-  CourierBaseConfig,
-  HttpBuilder,
-  StreamBuilder,
-} from "./builder-types";
+import type { Courier, CourierBaseConfig } from "./builder-types";
 import { makeBuilder } from "./make-builder";
 import type { EndpointKind } from "./marker";
 import type { AnyBuilder } from "./refinements";
@@ -32,9 +26,9 @@ function inheritedFrom(
 
 function makeBase(inherited: Partial<BuilderState>): Courier {
   return {
-    endpoint: head("query", inherited) as unknown as HttpBuilder<void, void>,
-    stream: head("stream", inherited) as unknown as StreamBuilder<void, void, void>,
-    channel: head("channel", inherited) as unknown as ChannelBuilder<void, void, void, never>,
+    endpoint: head("query", inherited) as unknown as Courier["endpoint"],
+    stream: head("stream", inherited) as unknown as Courier["stream"],
+    channel: head("channel", inherited) as unknown as Courier["channel"],
     extend: (config: CourierBaseConfig): Courier => makeBase(inheritedFrom(config, inherited)),
   };
 }

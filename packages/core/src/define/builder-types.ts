@@ -9,6 +9,7 @@ import type {
   WSPushHandler,
 } from "../realtime/types";
 import type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
+import type { ExposeArgs, ExposeMark, ExposeMarkFor } from "./marker";
 import type {
   CacheArg,
   CancelPreviousArgs,
@@ -80,19 +81,6 @@ export interface NeutralMethods<TSelf> {
   retry(options: RetryOptions): TSelf;
   /** Arbitrary values for tooling; ignored by the runtime. */
   meta(values: Record<string, unknown>): TSelf;
-  /**
-   * Let a browser call the endpoint through the application's proxy — or,
-   * with `false`, refuse it there whatever its group or API says. An
-   * endpoint that says neither is open as the nearest group that says is,
-   * then as its API is. Server code calling the API itself is not affected.
-   *
-   * @example
-   * ```ts
-   * search: endpoint.get("search").expose(),
-   * payouts: endpoint.post("payouts").expose(false),
-   * ```
-   */
-  expose(open?: boolean): TSelf;
 }
 
 /**
@@ -117,8 +105,8 @@ export interface NeutralMethods<TSelf> {
  * endpoint.variables<{ slug: string }>().get("users/:id");
  * ```
  */
-export interface HttpBuilder<TVariables, TVariablesOut>
-  extends NeutralMethods<HttpBuilder<TVariables, TVariablesOut>> {
+export interface HttpBuilder<TVariables, TVariablesOut, TExpose extends ExposeMark = ExposeMark>
+  extends NeutralMethods<HttpBuilder<TVariables, TVariablesOut, TExpose>> {
   /**
    * What the caller passes, for a closure that has to work it into the call.
    *
@@ -126,23 +114,23 @@ export interface HttpBuilder<TVariables, TVariablesOut>
    * it coerces — so the caller satisfies its input while the endpoint receives
    * its output.
    */
-  variables<TIn, TOut = TIn>(schema?: StandardSchemaV1<TIn, TOut>): HttpBuilder<TIn, TOut>;
+  variables<TIn, TOut = TIn>(schema?: StandardSchemaV1<TIn, TOut>): HttpBuilder<TIn, TOut, TExpose>;
 
   /** Read it. */
   get<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query", TExpose>;
   /** Read its headers alone. */
   head<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query", TExpose>;
   /** Ask what it allows. */
   options<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query", TExpose>;
   /**
    * Ask it a question too long or too structured for an address: HTTP QUERY,
    * which sends the variables as a body and reads like GET — retried, cached
@@ -151,27 +139,27 @@ export interface HttpBuilder<TVariables, TVariablesOut>
   query<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query", TExpose>;
   /** Create it. */
   post<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation", TExpose>;
   /** Replace it. */
   put<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation", TExpose>;
   /** Change part of it. */
   patch<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation", TExpose>;
   /** Remove it. */
   del<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation", TExpose>;
 
   /**
    * Address it with a closure, for a path or a body the variables have to be
@@ -184,7 +172,24 @@ export interface HttpBuilder<TVariables, TVariablesOut>
   via(
     probe: HttpProbe<TVariablesOut>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation", never, TExpose>;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   * The mark is kept in the endpoint's type, so the routes a page's client
+   * is typed from name the endpoint exactly when the proxy serves it.
+   *
+   * @example
+   * ```ts
+   * search: endpoint.get("search").expose(),
+   * payouts: endpoint.post("payouts").expose(false),
+   * ```
+   */
+  expose<const TOpen extends ExposeArgs = []>(
+    ...open: TOpen
+  ): HttpBuilder<TVariables, TVariablesOut, ExposeMarkFor<TOpen>>;
 }
 
 /**
@@ -199,18 +204,19 @@ export interface HttpAddressed<
   TVariablesOut,
   TKind extends "query" | "mutation",
   TParams extends string = never,
-> extends HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut>,
-    NeutralMethods<HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>> {
+  TExpose extends ExposeMark = ExposeMark,
+> extends HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut, TExpose>,
+    NeutralMethods<HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>> {
   response<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): HttpAddressed<T, TVariables, TVariablesOut, TKind, TParams>;
+  ): HttpAddressed<T, TVariables, TVariablesOut, TKind, TParams, TExpose>;
   /**
    * What the caller passes. Each of the path's `:name` parameters is taken
    * from it, so variables that leave one out are refused here.
    */
   variables<TIn, TOut = TIn>(
     ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
-  ): HttpAddressed<TResponse, TIn, TOut, TKind, TParams>;
+  ): HttpAddressed<TResponse, TIn, TOut, TKind, TParams, TExpose>;
   /**
    * What the endpoint sends for variables a call leaves out — a page size, a
    * grouping the API asks for — so a call may leave them out. The call's own
@@ -229,7 +235,14 @@ export interface HttpAddressed<
    */
   defaults<const TDefaults extends DefaultsOf<TVariables>>(
     values: TDefaults & Record<Exclude<keyof TDefaults, keyof TVariables>, never>,
-  ): HttpAddressed<TResponse, WithDefaults<TVariables, TDefaults>, TVariablesOut, TKind, TParams>;
+  ): HttpAddressed<
+    TResponse,
+    WithDefaults<TVariables, TDefaults>,
+    TVariablesOut,
+    TKind,
+    TParams,
+    TExpose
+  >;
   /**
    * How long the answer keeps.
    *
@@ -238,7 +251,7 @@ export interface HttpAddressed<
    */
   cache(
     config: CacheArg<TKind>,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>;
   /**
    * Let a newer call of this read cancel its call still in flight — a
    * search as the user types, where only the last answer matters — whatever
@@ -261,7 +274,7 @@ export interface HttpAddressed<
    */
   cancelPrevious(
     ...cancel: CancelPreviousArgs<TKind>
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>;
   /**
    * Declare a write-shaped call to be a read.
    *
@@ -271,7 +284,7 @@ export interface HttpAddressed<
    * `.patch()` or `.del()` changes what it addresses and is refused with
    * `READS_ON_CHANGING_VERB`.
    */
-  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams>;
+  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams, TExpose>;
   /**
    * Offer the endpoint to AI agents, as a tool of the application's MCP
    * server — or, with `false`, keep it from every agent whatever the
@@ -297,7 +310,24 @@ export interface HttpAddressed<
     options:
       | AgentOptions<TKind extends "query" ? AgentAccess : Exclude<AgentAccess, "read">>
       | false,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   * The mark is kept in the endpoint's type, so the routes a page's client
+   * is typed from name the endpoint exactly when the proxy serves it.
+   *
+   * @example
+   * ```ts
+   * search: endpoint.get("search").expose(),
+   * payouts: endpoint.post("payouts").expose(false),
+   * ```
+   */
+  expose<const TOpen extends ExposeArgs = []>(
+    ...open: TOpen
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, ExposeMarkFor<TOpen>>;
 }
 
 /** The variables `.defaults()` may fill in: any of those a call passes. */
@@ -322,21 +352,29 @@ export type HttpAddressedAt<
   TVariablesOut,
   TPath extends string,
   TKind extends "query" | "mutation",
+  TExpose extends ExposeMark = ExposeMark,
 > = HttpAddressed<
   void,
   VariablesForPath<TVariables, TPath>,
   VariablesForPath<TVariablesOut, TPath>,
   TKind,
-  PathParamNames<TPath>
+  PathParamNames<TPath>,
+  TExpose
 >;
 
 /** Builder for an endpoint delivering server-sent events. */
-export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
-  extends NeutralMethods<StreamBuilder<TResponse, TVariables, TVariablesOut>> {
-  response<T>(schema?: StandardSchemaV1<unknown, T>): StreamBuilder<T, TVariables, TVariablesOut>;
+export interface StreamBuilder<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TExpose extends ExposeMark = ExposeMark,
+> extends NeutralMethods<StreamBuilder<TResponse, TVariables, TVariablesOut, TExpose>> {
+  response<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): StreamBuilder<T, TVariables, TVariablesOut, TExpose>;
   variables<TIn, TOut = TIn>(
     schema?: StandardSchemaV1<TIn, TOut>,
-  ): StreamBuilder<TResponse, TIn, TOut>;
+  ): StreamBuilder<TResponse, TIn, TOut, TExpose>;
   /** Where the stream is, when another process serves it; see `HttpBuilder` for its path's parameters. */
   get<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
@@ -345,13 +383,14 @@ export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
     TResponse,
     VariablesForPath<TVariables, TPath>,
     VariablesForPath<TVariablesOut, TPath>,
-    PathParamNames<TPath>
+    PathParamNames<TPath>,
+    TExpose
   >;
   /** Address it with a closure, for a path the variables have to be worked into. */
   via(
     probe: StreamProbe<TVariablesOut>,
     options?: StreamEndpointOptions,
-  ): StreamAddressed<TResponse, TVariables, TVariablesOut>;
+  ): StreamAddressed<TResponse, TVariables, TVariablesOut, never, TExpose>;
   /**
    * Serve this stream from the process that defines it.
    *
@@ -376,7 +415,23 @@ export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
   implement(
     handler: StreamHandler<TResponse, TVariablesOut>,
     options?: StreamEndpointOptions,
-  ): StreamEndpoint<TResponse, TVariables, TVariablesOut>;
+  ): StreamEndpoint<TResponse, TVariables, TVariablesOut, TExpose>;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   * The mark is kept in the endpoint's type, so the routes a page's client
+   * is typed from name the endpoint exactly when the proxy serves it.
+   *
+   * @example
+   * ```ts
+   * ticks: stream.response<Tick>().expose().get("ticks"),
+   * ```
+   */
+  expose<const TOpen extends ExposeArgs = []>(
+    ...open: TOpen
+  ): StreamBuilder<TResponse, TVariables, TVariablesOut, ExposeMarkFor<TOpen>>;
 }
 
 /**
@@ -385,19 +440,24 @@ export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
  * Leaving `.send()` unused keeps `TSend` as `never`, which makes the resulting
  * channel receive-only without needing a separate kind.
  */
-export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
-  extends NeutralMethods<ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>> {
+export interface ChannelBuilder<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TSend,
+  TExpose extends ExposeMark = ExposeMark,
+> extends NeutralMethods<ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend, TExpose>> {
   /** What the caller receives on the channel. */
   response<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): ChannelBuilder<T, TVariables, TVariablesOut, TSend>;
+  ): ChannelBuilder<T, TVariables, TVariablesOut, TSend, TExpose>;
   variables<TIn, TOut = TIn>(
     schema?: StandardSchemaV1<TIn, TOut>,
-  ): ChannelBuilder<TResponse, TIn, TOut, TSend>;
+  ): ChannelBuilder<TResponse, TIn, TOut, TSend, TExpose>;
   /** What the caller may send on the channel. */
   send<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, T>;
+  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, T, TExpose>;
   /**
    * What the channel's subscribers share a topic by, when it is not all of
    * their variables.
@@ -428,7 +488,7 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
    */
   topic(
     key: (variables: TVariablesOut) => TopicKey,
-  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>;
+  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend, TExpose>;
   /** Where the channel is, when another process serves it; see `HttpBuilder` for its path's parameters. */
   connect<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,
@@ -438,13 +498,14 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
     VariablesForPath<TVariables, TPath>,
     VariablesForPath<TVariablesOut, TPath>,
     TSend,
-    PathParamNames<TPath>
+    PathParamNames<TPath>,
+    TExpose
   >;
   /** Address it with a closure, for a path the variables have to be worked into. */
   via(
     probe: ChannelProbe<TVariablesOut>,
     options?: ChannelEndpointOptions,
-  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>;
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend, never, TExpose>;
   /**
    * Serve this channel from the process that defines it.
    *
@@ -460,7 +521,23 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
   implement(
     handler: ChannelImplementation<TResponse, TVariablesOut, TSend>,
     options?: ChannelEndpointOptions,
-  ): ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>;
+  ): ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut, TExpose>;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   * The mark is kept in the endpoint's type, so the routes a page's client
+   * is typed from name the endpoint exactly when the proxy serves it.
+   *
+   * @example
+   * ```ts
+   * chat: channel.response<Message>().send<Message>().expose().connect("chat"),
+   * ```
+   */
+  expose<const TOpen extends ExposeArgs = []>(
+    ...open: TOpen
+  ): ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend, ExposeMarkFor<TOpen>>;
 }
 
 /** A stream that has said where it is, and may still be refined. */
@@ -469,15 +546,32 @@ export interface StreamAddressed<
   TVariables,
   TVariablesOut,
   TParams extends string = never,
-> extends StreamEndpoint<TResponse, TVariables, TVariablesOut>,
-    NeutralMethods<StreamAddressed<TResponse, TVariables, TVariablesOut, TParams>> {
+  TExpose extends ExposeMark = ExposeMark,
+> extends StreamEndpoint<TResponse, TVariables, TVariablesOut, TExpose>,
+    NeutralMethods<StreamAddressed<TResponse, TVariables, TVariablesOut, TParams, TExpose>> {
   response<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): StreamAddressed<T, TVariables, TVariablesOut, TParams>;
+  ): StreamAddressed<T, TVariables, TVariablesOut, TParams, TExpose>;
   /** What the caller passes; it names each of the path's `:name` parameters. */
   variables<TIn, TOut = TIn>(
     ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
-  ): StreamAddressed<TResponse, TIn, TOut, TParams>;
+  ): StreamAddressed<TResponse, TIn, TOut, TParams, TExpose>;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   * The mark is kept in the endpoint's type, so the routes a page's client
+   * is typed from name the endpoint exactly when the proxy serves it.
+   *
+   * @example
+   * ```ts
+   * ticks: stream.get("ticks").response<Tick>().expose(),
+   * ```
+   */
+  expose<const TOpen extends ExposeArgs = []>(
+    ...open: TOpen
+  ): StreamAddressed<TResponse, TVariables, TVariablesOut, TParams, ExposeMarkFor<TOpen>>;
 }
 
 /** A channel that has said where it is, and may still be refined. */
@@ -487,18 +581,37 @@ export interface ChannelAddressed<
   TVariablesOut,
   TSend,
   TParams extends string = never,
-> extends ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>,
-    NeutralMethods<ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend, TParams>> {
+  TExpose extends ExposeMark = ExposeMark,
+> extends ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut, TExpose>,
+    NeutralMethods<
+      ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend, TParams, TExpose>
+    > {
   response<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): ChannelAddressed<T, TVariables, TVariablesOut, TSend, TParams>;
+  ): ChannelAddressed<T, TVariables, TVariablesOut, TSend, TParams, TExpose>;
   /** What the caller passes; it names each of the path's `:name` parameters. */
   variables<TIn, TOut = TIn>(
     ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
-  ): ChannelAddressed<TResponse, TIn, TOut, TSend, TParams>;
+  ): ChannelAddressed<TResponse, TIn, TOut, TSend, TParams, TExpose>;
   send<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, T, TParams>;
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, T, TParams, TExpose>;
+  /**
+   * Let a browser call the endpoint through the application's proxy — or,
+   * with `false`, refuse it there whatever its group or API says. An
+   * endpoint that says neither is open as the nearest group that says is,
+   * then as its API is. Server code calling the API itself is not affected.
+   * The mark is kept in the endpoint's type, so the routes a page's client
+   * is typed from name the endpoint exactly when the proxy serves it.
+   *
+   * @example
+   * ```ts
+   * chat: channel.connect("chat").response<Message>().send<Message>().expose(),
+   * ```
+   */
+  expose<const TOpen extends ExposeArgs = []>(
+    ...open: TOpen
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend, TParams, ExposeMarkFor<TOpen>>;
 }
 
 /** Configuration shared by every endpoint built from a base. */
@@ -522,11 +635,11 @@ export interface Courier {
    * An endpoint reached over HTTP. The verb that finishes the chain decides
    * whether it reads or writes.
    */
-  readonly endpoint: HttpBuilder<void, void>;
+  readonly endpoint: HttpBuilder<void, void, undefined>;
   /** A one-way stream of server-sent events. */
-  readonly stream: StreamBuilder<void, void, void>;
+  readonly stream: StreamBuilder<void, void, void, undefined>;
   /** A socket the caller can also send on. */
-  readonly channel: ChannelBuilder<void, void, void, never>;
+  readonly channel: ChannelBuilder<void, void, void, never, undefined>;
   /**
    * Derive a base from this one.
    *

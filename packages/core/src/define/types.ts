@@ -1,5 +1,5 @@
 import type { BaseOptions, GroupOptions } from "../http-client/types";
-import type { AnyEndpoint } from "./marker";
+import type { AnyEndpoint, ExposeMark } from "./marker";
 
 /** Any endpoint a source or group may hold. */
 export type AnyEndpointFn = AnyEndpoint;
@@ -44,16 +44,58 @@ export type DefineNestingGroupConfig<
   groups: TGroups;
 };
 
+/**
+ * The `expose` a group or an API was defined with, kept as written — `true`,
+ * `false`, or `undefined` where it says nothing; a flag that may be unset is
+ * kept as one that may be anything, as it may leave the decision to the
+ * level above — so the routes a page's client is typed from name exactly
+ * the endpoints the proxy serves.
+ */
+type ExposeAsWritten<TExpose extends ExposeMark> = { expose?: TExpose };
+
+/**
+ * The mark a group or an API keeps of the `expose` it was written with: one
+ * that may be unset may also leave the decision to the level above, so it
+ * is kept as a mark that may be anything.
+ *
+ * @example
+ * ```ts
+ * type Kept = ExposeKept<false | undefined>; // boolean | undefined
+ * ```
+ */
+export type ExposeKept<TExpose extends ExposeMark> = [TExpose] extends [undefined]
+  ? undefined
+  : undefined extends TExpose
+    ? ExposeMark
+    : TExpose;
+
+/**
+ * How a call writes its `expose`: with the key, whatever value it holds —
+ * which keeps an `undefined` the value may be — or without it.
+ */
+export type ExposeWritten<TExpose extends ExposeMark> = { expose: TExpose } | { expose?: never };
+
+/**
+ * A type the call's own arguments decide, never the place the call is
+ * written in: an `expose` a call leaves out stays unset, whatever a
+ * surrounding `groups:` would accept.
+ */
+export type FromArguments<T> = [T][T extends unknown ? 0 : never];
+
 /** Result of defineGroup() — endpoint functions merged with group options */
-export type DefinedGroup<TEndpoints extends EndpointRecord = EndpointRecord> = TEndpoints & {
-  options: GroupOptions;
+export type DefinedGroup<
+  TEndpoints extends EndpointRecord = EndpointRecord,
+  TExpose extends ExposeMark = ExposeMark,
+> = TEndpoints & {
+  options: GroupOptions & ExposeAsWritten<TExpose>;
 };
 
 /** Result of defineGroup() with groups inside it, kept under `options.groups` as a source keeps its own */
 export type DefinedNestingGroup<
   TEndpoints extends EndpointRecord = EndpointRecord,
   TGroups extends GroupRecord = GroupRecord,
-> = TEndpoints & { options: GroupOptions & { groups: TGroups } };
+  TExpose extends ExposeMark = ExposeMark,
+> = TEndpoints & { options: GroupOptions & { groups: TGroups } & ExposeAsWritten<TExpose> };
 
 /** Constraint for groups parameter in defineApi() */
 export type GroupRecord = Record<
@@ -62,21 +104,28 @@ export type GroupRecord = Record<
 >;
 
 /** Result of defineApi() with groups */
-export type DefinedApi<TGroups extends GroupRecord = GroupRecord> = {
-  options: BaseOptions & { groups: TGroups };
+export type DefinedApi<
+  TGroups extends GroupRecord = GroupRecord,
+  TExpose extends ExposeMark = ExposeMark,
+> = {
+  options: BaseOptions & { groups: TGroups } & ExposeAsWritten<TExpose>;
 };
 
 /** Result of defineApi() with flat endpoints (no groups) */
-export type DefinedFlatApi<TEndpoints extends EndpointRecord = EndpointRecord> = {
-  options: BaseOptions;
+export type DefinedFlatApi<
+  TEndpoints extends EndpointRecord = EndpointRecord,
+  TExpose extends ExposeMark = ExposeMark,
+> = {
+  options: BaseOptions & ExposeAsWritten<TExpose>;
 } & TEndpoints;
 
 /** Result of defineApi() with groups + flat endpoints */
 export type DefinedMixedApi<
   TGroups extends GroupRecord = GroupRecord,
   TEndpoints extends EndpointRecord = EndpointRecord,
+  TExpose extends ExposeMark = ExposeMark,
 > = {
-  options: BaseOptions & { groups: TGroups };
+  options: BaseOptions & { groups: TGroups } & ExposeAsWritten<TExpose>;
 } & TEndpoints;
 
 /**

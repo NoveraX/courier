@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import type { CourierRoutes } from "@noverax/courier/define";
 import type { routesOf } from "@noverax/courier/internal";
 import type { LoadedCourierConfig } from "../config/load-config";
+import { defineOwn } from "../util/define-own";
 import { isRecord } from "../util/is-record";
 import { loadProjectConfig, projectConfigFile } from "./project-config";
 import { readEnvFiles } from "./read-env-files";
@@ -55,7 +56,7 @@ async function routesOfSources(
   const read = await projectRoutesOf(loaded.configFile, root);
   const routes: Record<string, CourierRoutes> = {};
   for (const name of Object.keys(sources).sort(byCodeUnits)) {
-    routes[name] = read(sources[name] as object, name);
+    defineOwn(routes, name, read(sources[name] as object, name));
   }
   return routes;
 }

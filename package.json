@@ -74,6 +74,9 @@
     "@semantic-release/npm": "$@semantic-release/npm",
     "@azure/identity": {
       "@azure/msal-node": "^7.1.0"
+    },
+    "@vitejs/plugin-react": {
+      "oxc-transform-react": "$oxc-transform-react"
     }
   },
   "scripts": {

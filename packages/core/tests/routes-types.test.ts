@@ -60,4 +60,16 @@ describe("routes written for an API", () => {
     // @ts-expect-error — the routes do not name orders.purge, and the proxy refuses it
     expect(() => client.orders.purge()).toThrow(/routes/);
   });
+
+  it("give a client the routes a helper over any API's routes module was handed", () => {
+    /* Written for routes of an API it does not know, whose map names each endpoint as
+       one the module may hold: under exactOptionalPropertyTypes, as a project sets it. */
+    function pageClient<TApi>(routes: CourierRoutes<TApi, RouteMap<TApi>>) {
+      return createProxyCaller(routes, { proxyPath: { http: "/api/request" } });
+    }
+
+    const client = pageClient(apiRoutes);
+
+    expectTypeOf(client.orders.list).returns.resolves.toEqualTypeOf<{ id: number }[]>();
+  });
 });

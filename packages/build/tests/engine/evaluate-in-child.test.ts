@@ -117,7 +117,8 @@ describe("evaluateInChild", () => {
         join(dir, ".env.local"),
       ]),
     );
-    expect(snapshot.env === "*" || snapshot.env.includes("SHOP_SEARCH_PUBLIC")).toBe(true);
+    expect(snapshot.env).toContain("SHOP_SEARCH_PUBLIC");
+    expect(snapshot.env).not.toContain("JITI_DEBUG");
   }, 30_000);
 
   it("fails CONFIG_NOT_FOUND where no config is in the root or a folder above it", async () => {

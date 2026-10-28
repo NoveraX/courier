@@ -3,6 +3,7 @@ export {
   CONFIG_BASENAMES,
   findConfigFile,
   findConfigFileAt,
+  type LoadConfigFileOptions,
   type LoadCourierConfigOptions,
   type LoadedCourierConfig,
   loadCourierConfig,

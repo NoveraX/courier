@@ -319,3 +319,45 @@ describe("loadCourierConfigFile — native imports", () => {
     expect(Object.keys(second.config.sources ?? {})).toEqual(["second"]);
   });
 });
+
+describe("loadCourierConfigFile — around the config's code", () => {
+  const ran = "__courierConfigRan";
+
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, ran);
+  });
+
+  it("calls beforeRun once the loader is made, before the config's code runs", async () => {
+    writeConfig(
+      "courier.config.ts",
+      `(globalThis as Record<string, unknown>).${ran} = true;\nexport default { sources: {} };\n`,
+    );
+    const seenBefore: unknown[] = [];
+
+    await loadCourierConfigFile(join(dir, "courier.config.ts"), {
+      beforeRun: () => seenBefore.push(Reflect.get(globalThis, ran)),
+    });
+
+    expect(seenBefore).toEqual([undefined]);
+    expect(Reflect.get(globalThis, ran)).toBe(true);
+  });
+
+  it("runs each transform the load makes through runTransform, and keeps what it returns", async () => {
+    writeConfig("sources.ts", "export const sources: Record<string, object> = { first: {} };\n");
+    writeConfig(
+      "courier.config.ts",
+      'import { sources } from "./sources";\nexport default { sources };\n',
+    );
+    let runs = 0;
+
+    const { config } = await loadCourierConfigFile(join(dir, "courier.config.ts"), {
+      runTransform: (transform) => {
+        runs += 1;
+        return transform();
+      },
+    });
+
+    expect(runs).toBe(2);
+    expect(Object.keys(config.sources ?? {})).toEqual(["first"]);
+  });
+});

@@ -5,6 +5,7 @@ import type { CourierRoutes } from "@noverax/courier/define";
 import type { routesOf } from "@noverax/courier/internal";
 import {
   findConfigFile,
+  type LoadConfigFileOptions,
   type LoadedCourierConfig,
   loadCourierConfigFile,
   projectTransformCache,
@@ -36,9 +37,15 @@ type RoutesOf = typeof routesOf;
  */
 export async function readProjectRoutes(request: RoutesRequest): Promise<RoutesSnapshot> {
   readEnvFiles(request.envFiles);
-  const env = trackEnvReads();
   const modules = trackModuleFiles();
-  const loaded = await loadConfig(request, modules.noteFile);
+  /* Noted from the moment the config's code runs, transforms aside: what the loader reads
+     for itself, starting up or loading its transformer, is not the config's. */
+  const env = trackEnvReads({ paused: true });
+  const loaded = await loadConfig(request, {
+    onModule: modules.noteFile,
+    beforeRun: env.resume,
+    runTransform: env.untracked,
+  });
   const sources = sourcesOf(loaded, request.root);
   const read = await projectRoutesOf(loaded.configFile, request.root);
   const routes: Record<string, CourierRoutes> = {};
@@ -52,7 +59,7 @@ export async function readProjectRoutes(request: RoutesRequest): Promise<RoutesS
 /* The config the request names, or the one found from its root, loaded with the project's transforms. */
 async function loadConfig(
   request: RoutesRequest,
-  onModule: (file: string) => void,
+  options: Omit<LoadConfigFileOptions, "transformCache">,
 ): Promise<LoadedCourierConfig> {
   const configFile = request.configFile ?? findConfigFile(request.root);
   if (configFile === null) {
@@ -64,7 +71,7 @@ async function loadConfig(
   }
   try {
     const transformCache = projectTransformCache(dirname(configFile));
-    return await loadCourierConfigFile(configFile, { transformCache, onModule });
+    return await loadCourierConfigFile(configFile, { ...options, transformCache });
   } catch (error) {
     throw new RoutesReadError(
       "CONFIG_NOT_LOADED",

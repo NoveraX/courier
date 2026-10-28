@@ -38,6 +38,22 @@ describe("trackEnvReads", () => {
     expect(reads.names()).toBe("*");
   });
 
+  it("notes nothing that runs untracked, nor anything before it resumes when made paused", () => {
+    const reads = trackEnvReads({ paused: true });
+    void process.env.LOADER_STARTING;
+    void Object.keys(process.env);
+
+    reads.resume();
+    void process.env.SHOP_PUBLIC;
+    const loaded = reads.untracked(() => {
+      void Object.keys(process.env);
+      return process.env.LOADER_TRANSFORMING ?? "loaded";
+    });
+
+    expect(loaded).toBe("loaded");
+    expect(reads.names()).toEqual(["SHOP_PUBLIC"]);
+  });
+
   it("lets code assign a variable already set, alone or many at once, as the environment itself does", () => {
     process.env.COURIER_TRACK_SET = "before";
     trackEnvReads();

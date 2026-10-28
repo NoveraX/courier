@@ -188,13 +188,23 @@ export function projectTransformCache(projectRoot: string): TransformCache | und
   return directory === null ? undefined : createTransformCache({ directory, maxMemoryChars: 0 });
 }
 
+/** How one config file is loaded: the loader's options, and when its code is about to run. */
+export interface LoadConfigFileOptions extends ConfigJitiOptions {
+  /**
+   * Called once the loader is made, just before the config's code runs. A
+   * caller noting what that code reads starts here, so the loader's own
+   * start-up is not taken for the config's.
+   */
+  beforeRun?: (() => void) | undefined;
+}
+
 /**
  * Load one config file, found by whatever means the caller chose — the
  * standalone server takes it from `--config`.
  *
  * @param file - Absolute path of an existing config file
  * @param options - How the loader resolves imports and where it reuses
- *   transforms; see {@link ConfigJitiOptions}
+ *   transforms, see {@link ConfigJitiOptions}, and what runs before the config
  * @returns The config and the canonical path it was loaded from
  * @throws What the loader reported when the file will not load — for a
  *   TypeScript config, usually an unresolvable import
@@ -207,13 +217,14 @@ export function projectTransformCache(projectRoot: string): TransformCache | und
  */
 export async function loadCourierConfigFile(
   file: string,
-  options: ConfigJitiOptions = {},
+  { beforeRun, ...options }: LoadConfigFileOptions = {},
 ): Promise<LoadedCourierConfig> {
   /* Resolve symlinks so downstream consumers — the dev server's dependency
      watcher above all — observe the canonical path. */
   const configFile = realpathSync(file);
 
   const jiti = await createConfigJiti(configFile, options);
+  beforeRun?.();
 
   /* A throw here is jiti reporting why a config it found will not load —
      usually an import it could not resolve. It carries the only useful

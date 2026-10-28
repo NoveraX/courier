@@ -49,12 +49,20 @@
       "types": "./lib/handle.d.ts",
       "import": "./lib/handle.js",
       "default": "./lib/handle.js"
+    },
+    "./plugin": {
+      "types": "./lib/plugin.d.ts",
+      "import": "./lib/plugin.js",
+      "default": "./lib/plugin.js"
     }
   },
   "typesVersions": {
     "*": {
       "handle": [
         "./lib/handle.d.ts"
+      ],
+      "plugin": [
+        "./lib/plugin.d.ts"
       ]
     }
   },
@@ -71,8 +79,17 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@noverax/courier-build": "0.3.1"
+  },
   "peerDependencies": {
-    "@noverax/courier": "^0.3.1"
+    "@noverax/courier": "^0.3.1",
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@noverax/courier": "*"

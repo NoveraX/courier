@@ -44,6 +44,18 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
       "default": "./lib/index.js"
+    },
+    "./plugin": {
+      "types": "./lib/plugin.d.ts",
+      "import": "./lib/plugin.js",
+      "default": "./lib/plugin.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "plugin": [
+        "./lib/plugin.d.ts"
+      ]
     }
   },
   "files": [
@@ -60,8 +72,17 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@noverax/courier-build": "0.3.1"
+  },
   "peerDependencies": {
-    "@noverax/courier": "^0.3.1"
+    "@noverax/courier": "^0.3.1",
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@noverax/courier": "*"

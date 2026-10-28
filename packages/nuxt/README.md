@@ -125,22 +125,45 @@ The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`mult
 
 ## Client-Side
 
-Use `createProxyCaller` in a composable:
+Add the routes module, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`:
+
+```ts
+// nuxt.config.ts
+import { courierRoutesModule } from "@noverax/courier-nuxt/plugin"
+
+export default defineNuxtConfig({ modules: [courierRoutesModule] })
+```
+
+Register the config once, so `routes` is typed from it — in Nuxt 3, beside the config, in `courier-env.d.ts` importing `./courier.config`:
+
+```ts
+// app/courier-env.d.ts
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+Then use `createProxyCaller` in a composable:
 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "~/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-// The routes Courier writes from the endpoints you mark .expose():
-// what a page may call, and how. The API definition — upstream URL, endpoint
-// paths, middleware — stays on the server.
+// What a page may call of the source registered as `api`, and how. The API
+// definition — upstream URL, endpoint paths, middleware — stays on the server.
 export function useCaller() {
   // `useAsyncData` runs on the server first, where the call reaches the proxy
   // in the same process; in the browser the path goes to the route over HTTP.
-  return createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
+  return createProxyCaller(routes.api, { proxyPath: { http: "/api/request" } })
 }
 ```
+
+A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from `~/courier.routes` in place of `routes.api`. The module builds the routes under Nuxt's Vite builder.
 
 ```vue
 <script setup lang="ts">

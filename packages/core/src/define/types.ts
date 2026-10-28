@@ -39,6 +39,16 @@ export type OwnEndpoints = EndpointRecord & {
 /** Groups a source or a group may be defined with: any name but `raw` or `with`, which a client answers itself. */
 export type OwnGroups = GroupRecord & ClientAccessorNames;
 
+/* Where an overload of a source takes no endpoints, or no groups: none fits, so a name
+   written there fails where it is written, a kept one among them, as it does in the
+   overload that takes them — and TypeScript, which marks the call when its overloads
+   fail in different places, marks the name. */
+/** No endpoints at all: what a source's overload for groups alone takes under `endpoints`. */
+export type NoEndpoints = OwnEndpoints & Record<string, never>;
+
+/** No groups at all: what a source's overload for endpoints alone takes under `groups`. */
+export type NoGroups = OwnGroups & Record<string, never>;
+
 /** Configuration for defineGroup() */
 export type DefineGroupConfig<TEndpoints extends EndpointRecord> = GroupOptions & {
   /** Map of named endpoint functions belonging to this group */

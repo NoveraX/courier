@@ -56,9 +56,9 @@ describe("an endpoint named options", () => {
 
   it("is refused among a source's own endpoints, which keep its baseURL under that name", () => {
     const error = refusal(() =>
-      // @ts-expect-error the name holds the source's settings
       defineApi({
         baseURL: "https://api.example.com",
+        // @ts-expect-error the name holds the source's settings
         endpoints: { options: endpoint.get("options") },
       }),
     );
@@ -140,9 +140,9 @@ describe("a group named like a client accessor", () => {
     const typeOnly = () => {
       // @ts-expect-error a client answers raw itself
       defineApi({ baseURL: "https://api.example.com", groups: { raw: files } });
-      // @ts-expect-error a client answers with itself
       defineApi({
         baseURL: "https://api.example.com",
+        // @ts-expect-error a client answers with itself
         groups: { with: files },
         endpoints: { ping: endpoint.get("ping") },
       });

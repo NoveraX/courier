@@ -16,6 +16,8 @@ import type {
   ExposeWritten,
   FromArguments,
   GroupRecord,
+  NoEndpoints,
+  NoGroups,
   OwnEndpoints,
   OwnGroups,
 } from "./types";
@@ -166,6 +168,8 @@ export function defineApi<TGroups extends OwnGroups, const TExpose extends Expos
     name?: string | undefined;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
+    /** None here: a source with endpoints beside its groups is the overload above. */
+    endpoints?: NoEndpoints | undefined;
   } & ExposeWritten<TExpose>,
 ): DefinedApi<TGroups, FromArguments<ExposeKept<TExpose>>>;
 
@@ -186,6 +190,8 @@ export function defineApi<
     name?: string | undefined;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
+    /** None here: a source with groups beside its endpoints is the first overload. */
+    groups?: NoGroups | undefined;
   } & ExposeWritten<TExpose>,
 ): DefinedFlatApi<TEndpoints, FromArguments<ExposeKept<TExpose>>>;
 

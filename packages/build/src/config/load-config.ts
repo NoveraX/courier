@@ -4,8 +4,8 @@
  *
  * Two-stage design:
  *
- *  1. **File discovery** — walk up from `cwd` looking for a
- *     `courier.config.*` file, using nothing but Node builtins.
+ *  1. **File discovery** — walk up from `cwd` to the top of the project
+ *     looking for a `courier.config.*` file, using nothing but Node builtins.
  *
  *  2. **File loading** — `jiti` imports the file, transpiling a TypeScript
  *     config transparently across Node / Next.js dev / tsx / bun / deno and
@@ -34,20 +34,12 @@
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
+import { assertOwnConfig } from "./assert-own-config";
+import { CONFIG_BASENAMES, configCandidates } from "./config-candidates";
 import type { ConfigJitiOptions } from "./config-jiti";
 import { createConfigJiti } from "./config-jiti";
 import { createTransformCache, type TransformCache } from "./transform-cache";
 import { findTransformCacheDirectory } from "./transform-cache-directory";
-
-/** The file names a Courier config may have, in the order they are looked for */
-export const CONFIG_BASENAMES: ReadonlyArray<string> = [
-  "courier.config.ts",
-  "courier.config.mts",
-  "courier.config.cts",
-  "courier.config.js",
-  "courier.config.mjs",
-  "courier.config.cjs",
-];
 
 /**
  * Result of a successful `loadCourierConfig` call.
@@ -103,27 +95,29 @@ export interface LoadCourierConfigOptions {
 }
 
 /**
- * Walk up from `startDir` looking for a `courier.config.*` file.
+ * Walk up from `startDir` looking for a `courier.config.*` file, up to the
+ * top of the project: the folder that holds its repository or is the root
+ * of its workspace (see {@link configCandidates}). A config found in a folder
+ * above `startDir` is taken only when it belongs to this user or to the
+ * owner of `startDir`, and no user outside its group may write it: a folder
+ * many users share, such as `/tmp`, would otherwise run anyone's config.
  *
  * @param startDir - The directory to look in first
  * @returns The absolute path of the first match, or `null` when no directory
- *   up to the filesystem root holds one
+ *   up to the top of the project holds one
+ * @throws UntrustedConfigError when the nearest config lies above `startDir`
+ *   and someone else could have put it there
  * @example
  * ```ts
  * findConfigFile("/app/src"); // → "/app/courier.config.ts", or null
  * ```
  */
 export function findConfigFile(startDir: string): string | null {
-  let dir = resolve(startDir);
-  while (true) {
-    for (const basename of CONFIG_BASENAMES) {
-      const candidate = resolve(dir, basename);
-      if (existsSync(candidate)) return candidate;
-    }
-    const parent = dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
-  }
+  const folder = resolve(startDir);
+  const found = configCandidates(folder).find((candidate) => existsSync(candidate));
+  if (found === undefined) return null;
+  if (dirname(found) !== folder) assertOwnConfig(found, folder);
+  return found;
 }
 
 /**

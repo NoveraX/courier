@@ -100,7 +100,7 @@ export const shop = createProxyCaller(routes.shop)
 
 ### How the routes are read
 
-- **The config** is the `courier.config.*` in Vite's root or the nearest folder above it; name another with the `config` option.
+- **The config** is the `courier.config.*` in Vite's root or the nearest folder above it, up to the top of the project: the folder that holds its repository (`.git`, `.hg`, `.jj`) or is the root of its workspace (`pnpm-workspace.yaml`, or a `package.json` with `workspaces`). One found above the root runs only when it belongs to you or to the owner of the root, and no user outside its group may write it; otherwise the routes are not read, and the error says why. Name another config with the `config` option.
 - **Env files** are those Vite reads for the mode — `.env.[mode].local`, `.env.[mode]`, `.env.local`, `.env`, the first to set a variable winning — and a variable the process was started with wins over all. An endpoint opened by a variable is opened as the build sees it.
 - **A build** reads the routes once for every environment, and fails with what the config threw. **The dev server** reads them again whenever a file they came from changes; a config that breaks leaves the routes it read last in force, and says why in the terminal and over the page.
 - **The config in a page** fails the build: imported as a value it would ship the server's settings and every API's definition to the browser. Import its type alone, with `import type`.
@@ -123,7 +123,8 @@ export const shop = createProxyCaller(routes.shop)
 | `RoutesReadError` | root | Why the routes were not read: `CONFIG_NOT_FOUND`, `CONFIG_NOT_LOADED` or `ROUTES_NOT_READ` |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |
-| `findConfigFile(startDir)` / `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in a directory or the nearest one above it, in that directory alone, and the names it may have |
+| `findConfigFile(startDir)` / `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in a directory or the nearest one above it up to the top of the project (one above only when it is yours: else `UntrustedConfigError`), in that directory alone, and the names it may have |
+| `configCandidates(startDir)` | `/config` | Every path a config is looked for at from a directory, in order, up to the top of the project |
 | `createConfigJiti(file, options?)` | `/config` | The loader the config is read with, for another of the project's files |
 | `findTransformCacheDirectory(projectRoot)` | `/config` | Where transforms are kept across processes: `.cache/courier/transform` in the nearest `node_modules`, or `null` when there is no `node_modules`, the directory could hold files another user placed, or `COURIER_TRANSFORM_CACHE` is `0`, `false` or `off` |
 | `createTransformCache(options?)` | `/config` | Reuse each module's transform while its bytes are unchanged, in memory and in that directory |

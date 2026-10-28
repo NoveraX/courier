@@ -29,6 +29,7 @@ export default defineConfig({
           route("logout", "routes/logout.tsx");
           route("rename-route", "routes/rename-route.ts");
           route("routes", "routes/routes-page.tsx");
+          route("api/request", "routes/api.request.ts");
         }),
     }),
     courierRoutes(),

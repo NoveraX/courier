@@ -2,6 +2,8 @@ import type { Received } from "./api";
 
 /** The addresses the global setup serves the checks on. */
 export const APP = process.env.COURIER_APP_URL ?? "";
+/** The application's folder, where a check under its dev server edits a file. */
+export const APP_ROOT = process.env.COURIER_APP_ROOT ?? "";
 export const API = process.env.COURIER_API_URL ?? "";
 export const ATTACKER = process.env.COURIER_ATTACKER_URL ?? "";
 

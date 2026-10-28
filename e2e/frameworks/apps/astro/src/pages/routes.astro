@@ -7,9 +7,21 @@ const server = Object.keys(routes.catalog.endpoints).join(",");
 
 <p id="server-routes">{server}</p>
 <p id="client-routes"></p>
+<pre id="client-call"></pre>
 <script>
+  import { createProxyCaller } from "@noverax/courier";
   import { routes } from "@noverax/courier/routes";
 
   const element = document.getElementById("client-routes");
   if (element) element.textContent = Object.keys(routes.catalog.endpoints).join(",");
+  const catalog = createProxyCaller(routes.catalog, { proxyPath: { http: "/api/request" } });
+  const call = document.getElementById("client-call");
+  catalog.profile().then(
+    (me: unknown) => {
+      if (call) call.textContent = JSON.stringify(me);
+    },
+    (error: Error) => {
+      if (call) call.textContent = `failed: ${error.message}`;
+    },
+  );
 </script>

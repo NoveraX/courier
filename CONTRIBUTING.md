@@ -171,17 +171,22 @@ with each framework version Courier supports: Next.js 14, 15 and 16 (16 also
 with `cacheComponents`), SvelteKit 2.19 and the newest 2.x, Nuxt 3 and 4,
 Express 4 and 5, Fastify 4 and 5, Hono 4, Astro 5, React Router 7 and 8,
 Remix 2, SolidStart 1 and 2, NestJS 10, 11 and 12 (10 and 12 on Fastify too),
-and a React single-page application. Each version
-`e2e/frameworks/targets.json` lists is installed from npm, in the system's
-temporary folder, beside the packages packed as the registry would ship
-them; then the application is built, served and driven in Chromium, WebKit
-and Firefox against an API that records every request it receives:
+a React single-page application on Vite 5 and on a newer Vite, and a
+project's own Vitest 3 and 4. Each version `e2e/frameworks/targets.json`
+lists is installed from npm, in the system's temporary folder, beside the
+packages packed as the registry would ship them; then the application is
+built, served and driven in Chromium, WebKit and Firefox against an API
+that records every request it receives. An application built with
+Courier's bundler plugin is checked under its framework's dev server too,
+unbuilt, where an edit to a definition must reach the page without a
+restart:
 
 ```bash
 npm run build
 npx playwright install chromium webkit firefox
 npm run test:frameworks
 npm run test:frameworks -- next-15 nuxt-4
+npm run test:frameworks -- --dev nuxt-4
 ```
 
 `COURIER_BROWSERS` picks the engines either check runs in, such as

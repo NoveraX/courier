@@ -10,7 +10,12 @@
  *
  *   npm run test:frameworks                     every version
  *   npm run test:frameworks -- next-14 nuxt-4   those two
+ *   npm run test:frameworks -- --dev nuxt-4     the routes under its dev server
  *   node scripts/test-frameworks.mjs --list     the versions a run would check, as JSON
+ *
+ * With `--dev`, each application built with Courier's bundler plugin is
+ * served by its dev server, unbuilt, and only the checks of its routes run:
+ * a version whose application has none passes with nothing to check.
  *
  * Exits 1 when a version fails, once every one named has run.
  */
@@ -63,15 +68,16 @@ function main() {
   const args = argv.slice(2);
   const ids = idsOf(JSON.parse(readFileSync(join(ROOT, TARGETS), "utf8")));
   const list = args.includes("--list");
+  const dev = args.includes("--dev");
   const run = selected(
     ids,
-    args.filter((arg) => arg !== "--list"),
+    args.filter((arg) => arg !== "--list" && arg !== "--dev"),
   );
   if (list) {
     console.log(JSON.stringify(run));
     return;
   }
-  const failed = run.filter((id) => !passes(id));
+  const failed = run.filter((id) => !passes(id, dev));
   const passed = run.length - failed.length;
   console.log(`\nFramework versions: ${passed} of ${run.length} passed`);
   if (failed.length === 0) return;
@@ -79,12 +85,13 @@ function main() {
   exit(1);
 }
 
-function passes(id) {
-  console.log(`\n${id}`);
-  const result = spawnSync("npx", ["playwright", "test", "-c", CONFIG], {
+function passes(id, dev) {
+  console.log(`\n${id}${dev ? " under its dev server" : ""}`);
+  const args = ["playwright", "test", "-c", CONFIG, ...(dev ? ["--pass-with-no-tests"] : [])];
+  const result = spawnSync("npx", args, {
     cwd: ROOT,
     stdio: "inherit",
-    env: { ...env, COURIER_FRAMEWORK: id },
+    env: { ...env, COURIER_FRAMEWORK: id, ...(dev && { COURIER_FRAMEWORK_MODE: "dev" }) },
   });
   return result.status === 0;
 }

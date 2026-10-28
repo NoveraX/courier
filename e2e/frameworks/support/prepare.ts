@@ -14,17 +14,23 @@ export const BUILDS = join(tmpdir(), "courier-frameworks");
  * Build a target's application as an application gets Courier: the
  * template and its overlays copied, Courier's packages packed and
  * installed from the tarballs with the framework from npm, the API's
- * address written in, and the application built.
+ * address written in, and the application built — unless its dev server
+ * is to serve it, which builds as it serves.
  *
  * @param target - The framework version
  * @param apiUrl - Where the API is
+ * @param options - Whether to build it (default: yes)
  * @returns The application's folder
  * @example
  * ```ts
  * const root = await prepare(targetOf("next-15"), api.url);
  * ```
  */
-export async function prepare(target: Target, apiUrl: string): Promise<string> {
+export async function prepare(
+  target: Target,
+  apiUrl: string,
+  { build: built = true }: { build?: boolean } = {},
+): Promise<string> {
   const root = join(BUILDS, target.id);
   rmSync(root, { recursive: true, force: true });
   mkdirSync(root, { recursive: true });
@@ -46,11 +52,12 @@ export async function prepare(target: Target, apiUrl: string): Promise<string> {
     { cwd: root },
   );
   const build = target.build ?? settings.build;
-  if (build) await run(build, { cwd: root, env: TELEMETRY_OFF });
+  if (built && build) await run(build, { cwd: root, env: TELEMETRY_OFF });
   return root;
 }
 
-const TELEMETRY_OFF = {
+/** What the frameworks would otherwise send home, turned off for every command a check runs. */
+export const TELEMETRY_OFF = {
   NEXT_TELEMETRY_DISABLED: "1",
   NUXT_TELEMETRY_DISABLED: "1",
   ASTRO_TELEMETRY_DISABLED: "1",

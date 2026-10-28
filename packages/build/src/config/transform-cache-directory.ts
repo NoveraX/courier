@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type TrustOptions, whyUntrusted } from "./why-untrusted";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 /** Values of `COURIER_TRANSFORM_CACHE` that turn the directory off. */
 const OFF_VALUES: ReadonlySet<string> = new Set(["0", "false", "off"]);

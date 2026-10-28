@@ -9,7 +9,7 @@ import { readTransformEntry } from "./read-transform-entry";
 import { whyUntrusted } from "./why-untrusted";
 import { writeTransformEntry } from "./write-transform-entry";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 /* Shared by every cache in this process, so two caches on one directory,
    such as Studio's and a build plugin's, neither prune it twice nor touch

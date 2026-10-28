@@ -22,7 +22,7 @@ import { createLogger } from "@noverax/courier";
 
 import { readTsconfigFile } from "./read-tsconfig-file";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 /** A tsconfig's path mapping, with its targets' base already resolved. */
 export interface TsconfigPaths {

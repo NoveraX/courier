@@ -1,8 +1,9 @@
 import { readFileSync, statSync } from "node:fs";
 import { createLogger } from "@noverax/courier";
 import { parseJSON5 } from "confbox";
+import { isRecord } from "../util/is-record";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 /** What a tsconfig declares that its path mapping depends on. */
 export interface TsconfigFile {
@@ -10,10 +11,6 @@ export interface TsconfigFile {
   extends: string[];
   baseUrl?: string;
   paths?: Record<string, string[]>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isTextList(value: unknown): value is string[] {

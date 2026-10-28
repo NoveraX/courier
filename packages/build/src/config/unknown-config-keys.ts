@@ -5,6 +5,7 @@ import type {
   CourierServerConfig,
   CourierStudioConfig,
 } from "@noverax/courier/config";
+import { isRecord } from "../util/is-record";
 
 /* The keys Courier reads, by block; `satisfies` holds each list to its type. */
 const TOP_LEVEL = {
@@ -52,10 +53,6 @@ const BLOCKS = new Map<string, Readonly<Record<string, true>>>([
   ["runtime", RUNTIME],
   ["agents", AGENTS],
 ]);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * The keys of a courier.config that Courier does not read, at the top and

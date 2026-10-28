@@ -37,8 +37,10 @@ export function refinements(
     timeout: (ms: number) => next(withValue(state, "timeout", ms)),
     retry: (options: RetryOptions) => next(withValue(state, "retry", options)),
     meta: (values: Record<string, unknown>) => next(withMeta(state, values)),
-    /* Only `true` opens it, as with the group's and the API's flags: anything else a
-       plain-JavaScript caller passes keeps it closed. */
-    expose: (open: unknown = true) => next({ ...state, expose: open === true }),
+    /* Named alone it opens; handed a value, only `true` opens it, as with the group's
+       and the API's flags. Anything else keeps it closed — `undefined` too, so a flag
+       left out of a caller's settings never opens an endpoint to every page. */
+    expose: (...open: unknown[]) =>
+      next({ ...state, expose: open.length === 0 || open[0] === true }),
   };
 }

@@ -3,7 +3,7 @@ import { closeSync, lstatSync, openSync, renameSync, unlinkSync, writeFileSync }
 import { createLogger } from "@noverax/courier";
 import { errnoCode } from "./errno-code";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 /* On Windows, renaming over an entry that another process is reading, or
    that a scanner holds open, fails only while it is open; a later write of

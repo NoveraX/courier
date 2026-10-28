@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { TRANSFORM_ENTRY_FORMAT } from "./transform-entry-format";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 const HOUR_MS = 60 * 60 * 1000;
 /* Each process that reads an entry touches it once, so one this old belongs

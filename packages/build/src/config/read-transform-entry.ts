@@ -12,7 +12,7 @@ import { decodeTransformEntry } from "./decode-transform-entry";
 import { errnoCode } from "./errno-code";
 import { whyUntrusted } from "./why-untrusted";
 
-const log = createLogger("Studio");
+const log = createLogger("Config");
 
 /* Not following a link, so an entry replaced by a link is refused at the
    open; not blocking, so a FIFO put in its place opens at once and is then

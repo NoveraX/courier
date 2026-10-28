@@ -160,19 +160,43 @@ The session cookies the API sets reach the browser through Astro's `cookies`. Na
 
 ## With Frontend
 
-Pair with `createProxyCaller` on the client:
+Add the routes integration, so every page, its client scripts and the server that renders it get the routes a proxy client may call, built from `courier.config.ts`:
+
+```ts
+// astro.config.mjs
+import { courierRoutes } from "@noverax/courier-astro/plugin"
+import { defineConfig } from "astro/config"
+
+export default defineConfig({ integrations: [courierRoutes()] })
+```
+
+Register the config once, so `routes` is typed from it:
+
+```ts
+// src/courier-env.d.ts
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+Then pair with `createProxyCaller` on the client:
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "./courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-// The routes Courier writes from the endpoints you mark .expose():
-// what a page may call, under the key the source has in your `sources` map.
-const caller = createProxyCaller(apiRoutes, {
+// What a page may call of the source registered as `api` in your `sources` map:
+// the endpoints you mark .expose(), and how each is reached.
+const caller = createProxyCaller(routes.api, {
   proxyPath: { http: "/api/request" },
 })
-const users = await caller.users.getAll()
 ```
+
+A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from `./courier.routes` in place of `routes.api`.
 
 <br />
 
@@ -187,6 +211,10 @@ When the browser cancels a call — an aborted upload, a query it no longer need
 ### `courierHandler()`
 
 Creates an Astro API endpoint handler. Returns a function compatible with Astro's `GET`/`POST` exports.
+
+### `courierRoutes(options?)`
+
+From `@noverax/courier-astro/plugin`: the integration that adds to Astro's Vite the plugin building the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. `config` names the config file when it is not the one found from the root.
 
 <br />
 

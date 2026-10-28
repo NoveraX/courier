@@ -59,7 +59,7 @@
     "id": "sveltekit-2.19",
     "app": "sveltekit",
     "overlays": ["sveltekit-handle"],
-    "packages": ["core", "sveltekit"],
+    "packages": ["core", "build", "sveltekit"],
     "install": {
       "@sveltejs/kit": "2.19",
       "@sveltejs/adapter-node": "5",
@@ -72,7 +72,7 @@
     "id": "sveltekit-2",
     "app": "sveltekit",
     "overlays": ["sveltekit-request-event"],
-    "packages": ["core", "sveltekit"],
+    "packages": ["core", "build", "sveltekit"],
     "install": {
       "@sveltejs/kit": "2",
       "@sveltejs/adapter-node": "5",
@@ -84,13 +84,13 @@
   {
     "id": "nuxt-3",
     "app": "nuxt",
-    "packages": ["core", "nuxt"],
+    "packages": ["core", "build", "nuxt"],
     "install": { "nuxt": "3", "vue": "3" }
   },
   {
     "id": "nuxt-4",
     "app": "nuxt",
-    "packages": ["core", "nuxt"],
+    "packages": ["core", "build", "nuxt"],
     "install": { "nuxt": "4", "vue": "3" }
   },
   {
@@ -126,14 +126,14 @@
   {
     "id": "astro-5",
     "app": "astro",
-    "packages": ["core", "astro"],
+    "packages": ["core", "build", "astro"],
     "install": { "astro": "5", "@astrojs/node": "9" }
   },
   {
     "id": "react-router-7",
     "app": "react-router",
     "overlays": ["react-router-7"],
-    "packages": ["core", "remix"],
+    "packages": ["core", "build", "remix"],
     "install": {
       "react-router": "7",
       "@react-router/node": "7",
@@ -148,7 +148,7 @@
   {
     "id": "react-router-8",
     "app": "react-router",
-    "packages": ["core", "remix"],
+    "packages": ["core", "build", "remix"],
     "install": {
       "react-router": "8",
       "@react-router/node": "8",
@@ -182,7 +182,7 @@
     "app": "solid-start",
     "overlays": ["solid-start-1"],
     "build": ["npx", "vinxi", "build"],
-    "packages": ["core", "solid"],
+    "packages": ["core", "build", "solid"],
     "install": {
       "@solidjs/start": "1",
       "@solidjs/router": "0.15",
@@ -194,7 +194,7 @@
     "id": "solid-start-2",
     "app": "solid-start",
     "overlays": ["solid-start-2"],
-    "packages": ["core", "solid"],
+    "packages": ["core", "build", "solid"],
     "install": {
       "@solidjs/start": "2",
       "@solidjs/router": "1",

@@ -127,19 +127,44 @@ In `vite dev`, a chunked body larger than the limit resets the connection instea
 
 ## With Frontend
 
-Pair with `createProxyCaller` on the client:
+Add the routes plugin beside SvelteKit's, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`:
+
+```ts
+// vite.config.ts
+import { sveltekit } from "@sveltejs/kit/vite"
+import { courierRoutes } from "@noverax/courier-sveltekit/plugin"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [sveltekit(), courierRoutes()] })
+```
+
+Register the config once, so `routes` is typed from it:
+
+```ts
+// src/courier-env.d.ts
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+Then pair with `createProxyCaller` on the client:
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "./courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-// The routes Courier writes from the endpoints you mark .expose():
-// what a page may call, under the key the source has in your `sources` map.
-const caller = createProxyCaller(apiRoutes, {
+// What a page may call of the source registered as `api` in your `sources` map:
+// the endpoints you mark .expose(), and how each is reached.
+const caller = createProxyCaller(routes.api, {
   proxyPath: { http: "/api/request" },
 })
-const users = await caller.users.getAll()
 ```
+
+A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from `./courier.routes` in place of `routes.api`.
 
 <br />
 
@@ -186,6 +211,10 @@ The request SvelteKit 2.20 and later is serving, for `registerRequestContext`.
 ### `requestContextHandle()`
 
 From `@noverax/courier-sveltekit/handle`: a `handle` hook that serves every request with its session at hand.
+
+### `courierRoutes(options?)`
+
+From `@noverax/courier-sveltekit/plugin`: the Vite plugin that builds the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. `config` names the config file when it is not the one found from the root.
 
 <br />
 

@@ -144,19 +144,44 @@ React Router 7 needs `future: { v8_middleware: true }`. The session cookies the 
 
 ## With Frontend
 
-Pair with `createProxyCaller` on the client:
+Add the routes plugin beside React Router's, so every page — and the server that renders it — gets the routes its proxy client may call, built from `courier.config.ts`. A Remix app on Vite adds it beside `remix()` the same way:
+
+```ts
+// vite.config.ts
+import { reactRouter } from "@react-router/dev/vite"
+import { courierRoutes } from "@noverax/courier-remix/plugin"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [reactRouter(), courierRoutes()] })
+```
+
+Register the config once, so `routes` is typed from it:
+
+```ts
+// app/courier-env.d.ts
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+Then pair with `createProxyCaller` on the client:
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "./courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-// The routes Courier writes from the endpoints you mark .expose():
-// what a page may call, under the key the source has in your `sources` map.
-const caller = createProxyCaller(apiRoutes, {
+// What a page may call of the source registered as `api` in your `sources` map:
+// the endpoints you mark .expose(), and how each is reached.
+const caller = createProxyCaller(routes.api, {
   proxyPath: { http: "/api/request" },
 })
-const users = await caller.users.getAll()
 ```
+
+A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from `./courier.routes` in place of `routes.api`.
 
 <br />
 
@@ -178,6 +203,10 @@ export default {
 ### `courierHandler()`
 
 Creates a resource route handler. Returns a function compatible with the `loader`/`action` exports of React Router 7 and Remix v2.
+
+### `courierRoutes(options?)`
+
+From `@noverax/courier-remix/plugin`: the Vite plugin that builds the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. `config` names the config file when it is not the one found from the root.
 
 <br />
 

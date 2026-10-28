@@ -118,7 +118,7 @@ On a server the option has no effect — for direct calls, for a proxy client an
 </Callout>
 
 <Callout variant="info" title="In the query hooks">
-TanStack Query already cancels a query's request once its variables change and no component reads it any more, since the [query hooks](/docs/react-query/use-query) hand the request its signal. `cancelPrevious` serves the calls made outside the hooks. Turned on, it applies to the hooks' calls too: when two components read one endpoint with different variables at the same moment, the later call cancels the earlier, and the earlier query gets an `HTTPError` 499. Keep it off for an endpoint the hooks read that way, or pass `requestOptions: { cancelPrevious: false }` to the hook.
+TanStack Query already cancels a query's request once its variables change and no component reads it any more, since the [query hooks](/docs/react-query/use-query) hand the request its signal. `cancelPrevious` serves the calls made outside the hooks. Turned on, it applies to the hooks' calls too: when two components read one endpoint with different variables at the same moment, the later call cancels the earlier, and the earlier query gets an `HTTPError` 499. Keep it off for an endpoint the hooks read that way, or pass `requestOptions: { cancelPrevious: false }` to the hook. The hooks never retry a query whose call a newer one cancelled, so the two cannot go on cancelling each other; any other failure is retried as the hook or its client says.
 </Callout>
 
 ### Handling the cancelled call

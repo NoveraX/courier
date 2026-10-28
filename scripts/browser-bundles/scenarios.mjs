@@ -35,7 +35,7 @@ export const SCENARIOS = [
   {
     name: "React Query hooks",
     code: `import { createProxyQueryCaller } from "@noverax/courier-react";\n${ROUTES}\nexport const q = createProxyQueryCaller(apiRoutes);`,
-    budget: [48.9, 17.8],
+    budget: [49.4, 18.0],
   },
 ];
 

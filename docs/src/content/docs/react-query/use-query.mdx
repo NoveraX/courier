@@ -1,4 +1,4 @@
-export const metadata = { title: "useQuery", description: "Fetch data with automatic caching, refetching, and full type inference from your API definitions.", mode: "proxy", updated: "2026-10-06" }
+export const metadata = { title: "useQuery", description: "Fetch data with automatic caching, refetching, and full type inference from your API definitions.", mode: "proxy", updated: "2026-10-28" }
 
 ## Signature
 
@@ -114,6 +114,8 @@ const { data } = q.users.useQuery("getAll", {
   },
 })
 ```
+
+`retry` is taken as React Query takes it — the hook's own, then the client's defaults, then React Query's three retries in a browser — but a cancellation is never retried: not a read a newer call of its endpoint cancelled through `cancelPrevious`, which fails with an `HTTPError` 499, and not one whose `requestOptions.signal` aborted. Retrying either would send a read nobody waits for, and the first would cancel the newer call in turn. The same holds for `useSuspenseQuery`, `useInfiniteQuery`, `useComputedQuery` and `prefetchQuery`, which is still sent once unless the client says otherwise.
 
 ## Auto-generated query keys
 

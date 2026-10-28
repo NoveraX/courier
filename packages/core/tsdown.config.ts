@@ -18,6 +18,7 @@ const entry = {
   "internal/index": "src/internal/index.ts",
   "internal-client/index": "src/internal-client/index.ts",
   "announce/index": "src/announce/index.ts",
+  "routes/index": "src/routes/index.ts",
 };
 
 export default defineConfig([

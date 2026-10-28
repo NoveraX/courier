@@ -6,6 +6,7 @@ import type { CourierRoutes, RouteShape } from "../define/routes";
 import { composeBackend } from "../transport/compose-backend";
 import { createProxyHTTPExecutor } from "../transport/proxy/http";
 import { proxyStreamingFactories } from "../transport/proxy-streaming";
+import { assertRoutes } from "./assert-routes";
 import { sourceFromRoutes } from "./from-routes";
 import { proxyDefaultsOf } from "./proxy-defaults";
 import type { ProxyCallerOptions } from "./types";
@@ -21,6 +22,8 @@ import type { ProxyCallerOptions } from "./types";
  * @param routes - The routes of the API, as the routes module exports them
  * @param options - Where the proxy is, how long to wait, the credentials and headers to send
  * @returns A client whose groups and endpoints are those the routes name
+ * @throws ConfigurationError `ROUTES_INVALID` when handed anything but the
+ *   routes of one API
  * @example
  * ```ts
  * import { apiRoutes } from "./courier.routes";
@@ -48,6 +51,7 @@ export function createProxyCaller(
   routes: CourierRoutes,
   options: ProxyCallerOptions = {},
 ): unknown {
+  assertRoutes(routes, "createProxyCaller");
   const { source } = routes;
   const standIn = sourceFromRoutes(routes);
   const http = createProxyHTTPExecutor(source, proxyDefaultsOf(routes, options));

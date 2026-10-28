@@ -9,7 +9,11 @@
     "examples/demo-shop/courier.mocks.ts",
     "e2e/**/*"
   ],
-  "exclude": ["examples/expo", "e2e/frameworks/apps"],
+  "exclude": [
+    "examples/expo",
+    "e2e/frameworks/apps",
+    "packages/core/tests/fixtures/routes-register"
+  ],
   "compilerOptions": {
     "paths": {
       "@noverax/courier": ["./packages/core/src/index.ts"],
@@ -25,6 +29,7 @@
       "@noverax/courier/openapi": ["./packages/core/src/openapi/index.ts"],
       "@noverax/courier/webhooks": ["./packages/core/src/webhooks/index.ts"],
       "@noverax/courier/realtime": ["./packages/core/src/realtime/index.ts"],
+      "@noverax/courier/routes": ["./packages/core/src/routes/index.ts"],
       "@noverax/courier/testing": ["./packages/core/src/testing/index.ts"],
       "@noverax/courier-cli/devkit": ["./packages/cli/src/devkit.ts"],
       "@noverax/courier-mcp/internal": ["./packages/mcp/src/internal.ts"],

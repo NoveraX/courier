@@ -8,17 +8,33 @@ export type AnyEndpointFn = AnyEndpoint;
 export type EndpointRecord = Record<string, AnyEndpointFn>;
 
 /**
+ * What a name no endpoint or group may take is kept for. No endpoint and no
+ * group is one, so taking the name does not compile, and the error says what
+ * the name is kept for; yet a type built on such a name — what a generic
+ * factory of groups returns — keeps its shape, where `never` in its place
+ * would reduce the whole type to `never` in a declaration file.
+ */
+interface NameKeptFor<TWhat extends string> {
+  readonly "this name is kept for": TWhat;
+}
+
+/**
  * Names a client answers to itself — its `.raw` and `.with()` accessors —
  * so no group or endpoint may take them.
  */
-type ClientAccessorNames = { readonly raw?: never; readonly with?: never };
+type ClientAccessorNames = {
+  readonly raw?: NameKeptFor<"the client's .raw accessor">;
+  readonly with?: NameKeptFor<"the client's .with() accessor">;
+};
 
 /**
  * Endpoints a group or a source may be defined with: any name but `options`,
  * which holds the group's or the source's own settings beside them, and
  * `raw` or `with`, which a client answers itself.
  */
-export type OwnEndpoints = EndpointRecord & { readonly options?: never } & ClientAccessorNames;
+export type OwnEndpoints = EndpointRecord & {
+  readonly options?: NameKeptFor<"the settings of the group or the source">;
+} & ClientAccessorNames;
 
 /** Groups a source or a group may be defined with: any name but `raw` or `with`, which a client answers itself. */
 export type OwnGroups = GroupRecord & ClientAccessorNames;

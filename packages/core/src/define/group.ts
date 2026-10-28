@@ -67,7 +67,7 @@ export function defineGroup<
   const TExpose extends ExposeMark = undefined,
 >(
   config: DefineNestingGroupConfig<TEndpoints, TGroups> & ExposeWritten<TExpose>,
-): DefinedNestingGroup<TEndpoints, TGroups, FromArguments<ExposeKept<TExpose>>>;
+): DefinedNestingGroup<FromArguments<TEndpoints>, TGroups, FromArguments<ExposeKept<TExpose>>>;
 
 export function defineGroup<
   TEndpoints extends OwnEndpoints,

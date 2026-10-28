@@ -132,7 +132,8 @@ export type ConfigurationErrorCode =
    * An endpoint was named `options` in a group or among a source's own
    * endpoints, where that name holds the group's or the source's settings;
    * or an endpoint or a group was named `raw` or `with`, which a client
-   * answers with its own accessors.
+   * answers with its own accessors; or an endpoint was named `__proto__`,
+   * the name every object gives its prototype, where it would be lost.
    */
   | "RESERVED_ENDPOINT_NAME"
   /**

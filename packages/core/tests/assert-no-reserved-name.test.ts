@@ -41,6 +41,19 @@ describe("an endpoint named options", () => {
     expectRefused(error, "options");
   });
 
+  it("is marked at the name itself in a group declared on its own", () => {
+    const typeOnly = () => {
+      const settings = defineGroup({
+        prefix: "settings",
+        // @ts-expect-error the name holds the group's settings
+        endpoints: { options: endpoint.get("options") },
+      });
+      return settings;
+    };
+
+    expect(typeOnly).toBeTypeOf("function");
+  });
+
   it("is refused among a source's own endpoints, which keep its baseURL under that name", () => {
     const error = refusal(() =>
       // @ts-expect-error the name holds the source's settings

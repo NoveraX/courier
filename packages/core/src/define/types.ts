@@ -34,8 +34,12 @@ export type DefineNestingGroupConfig<
   TEndpoints extends EndpointRecord,
   TGroups extends GroupRecord,
 > = GroupOptions & {
+  /* Held to the reserved names here as well as by the overload's constraint:
+     TypeScript first reads an endpoint built in place as nothing to infer from,
+     so `TEndpoints` takes its default, and an endpoint named `options` would be
+     reported on the whole call rather than on its name. */
   /** The group's own endpoints, beside its groups */
-  endpoints?: TEndpoints | undefined;
+  endpoints?: (TEndpoints & OwnEndpoints) | undefined;
   /** Groups inside this one, each reached under its name and its prefix after this one's */
   groups: TGroups;
 };

@@ -25,6 +25,12 @@ export interface ConfigJitiOptions {
    * the project knows which files its config depends on.
    */
   onModule?: ((filename: string) => void) | undefined;
+  /**
+   * Runs each transform the load makes, the first of which loads the
+   * transformer itself. A caller noting what the config's code reads runs it
+   * unnoted: what the transformer reads is its own, not the config's.
+   */
+  runTransform?: (<TResult>(transform: () => TResult) => TResult) | undefined;
 }
 
 type CreateJiti = (id: string, options?: JitiOptions) => Jiti;
@@ -94,7 +100,7 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
  */
 export async function createConfigJiti(
   file: string,
-  { aliases = true, transformCache, onModule }: ConfigJitiOptions = {},
+  { aliases = true, transformCache, onModule, runTransform }: ConfigJitiOptions = {},
 ): Promise<Jiti> {
   const { createJiti } = await import("jiti");
   const options: JitiOptions = {
@@ -104,7 +110,7 @@ export async function createConfigJiti(
     fsCache: false,
     tryNative: false,
   };
-  if (!transformCache && !onModule) return createJiti(file, options);
+  if (!transformCache && !onModule && !runTransform) return createJiti(file, options);
   const compute = jitiOwnTransform(createJiti);
   const cached: Transform = transformCache
     ? (transformOptions) => transformCache.transform(transformOptions, compute)
@@ -115,7 +121,7 @@ export async function createConfigJiti(
     const transformOptions =
       given.filename === undefined ? given : { ...given, filename: normalize(given.filename) };
     if (onModule && transformOptions.filename !== undefined) onModule(transformOptions.filename);
-    return cached(transformOptions);
+    return runTransform ? runTransform(() => cached(transformOptions)) : cached(transformOptions);
   };
   return createJiti(file, { ...options, transform });
 }

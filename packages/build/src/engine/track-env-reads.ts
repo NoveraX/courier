@@ -2,6 +2,22 @@
 export interface EnvReads {
   /** Their names, sorted, or `"*"` once code went through them all. */
   names(): readonly string[] | "*";
+  /**
+   * Run code whose reads are not noted: a loader's own work, such as
+   * transforming a module, which reads the environment for itself.
+   */
+  untracked<TResult>(run: () => TResult): TResult;
+  /** Begin noting, for a tracker made paused. */
+  resume(): void;
+}
+
+/** How tracking begins. */
+export interface TrackEnvReadsOptions {
+  /**
+   * Note nothing until `resume()`: the watcher is in place before code whose
+   * reads are not to be noted runs, such as a loader starting up.
+   */
+  paused?: boolean | undefined;
 }
 
 /**
@@ -9,6 +25,7 @@ export interface EnvReads {
  * putting a watcher in front of `process.env`: a name read, tested for or
  * described is noted, and listing them all notes them all.
  *
+ * @param options - Whether to begin paused
  * @returns What was looked at, asked once the code has run
  * @example
  * ```ts
@@ -17,11 +34,15 @@ export interface EnvReads {
  * reads.names(); // ["API_URL"]
  * ```
  */
-export function trackEnvReads(): EnvReads {
+export function trackEnvReads({
+  paused: startPaused = false,
+}: TrackEnvReadsOptions = {}): EnvReads {
   const read = new Set<string>();
   let all = false;
+  let waiting = startPaused;
+  let paused = waiting ? 1 : 0;
   const note = (key: string | symbol): void => {
-    if (typeof key === "string") read.add(key);
+    if (paused === 0 && typeof key === "string") read.add(key);
   };
   process.env = new Proxy(process.env, {
     get(target, key) {
@@ -37,7 +58,7 @@ export function trackEnvReads(): EnvReads {
       return Reflect.getOwnPropertyDescriptor(target, key);
     },
     ownKeys(target) {
-      all = true;
+      if (paused === 0) all = true;
       return Reflect.ownKeys(target);
     },
     /* Written to the environment itself: through the watcher, assigning a variable
@@ -45,5 +66,19 @@ export function trackEnvReads(): EnvReads {
     set: (target, key, value) => Reflect.set(target, key, value),
     defineProperty: (target, key, descriptor) => Reflect.defineProperty(target, key, descriptor),
   });
-  return { names: () => (all ? "*" : [...read].sort()) };
+  return {
+    names: () => (all ? "*" : [...read].sort()),
+    untracked(run) {
+      paused += 1;
+      try {
+        return run();
+      } finally {
+        paused -= 1;
+      }
+    },
+    resume() {
+      if (waiting) paused -= 1;
+      waiting = false;
+    },
+  };
 }

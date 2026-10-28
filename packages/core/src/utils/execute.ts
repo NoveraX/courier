@@ -1,7 +1,7 @@
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
-import { clientForCall } from "./execute-helpers";
+import { cancelPreviousOf, clientForCall } from "./execute-helpers";
 import type { InnerExecuteDeps } from "./execute-inner";
 import { buildMiddlewareContext } from "./execute-middleware-context";
 import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
@@ -85,13 +85,15 @@ export async function prepareAndRun(
   timing: TimingState,
   context: Context | undefined,
 ): Promise<unknown> {
+  /* Checked before a session starts, so an option the call cannot take leaves nothing waiting. */
+  const cancels = cancelPreviousOf(target, context);
   /* Before anything waits: a framework may know the request being served
      only until then. What a provider fails with — a render a framework
      stops — is the call's failure, as it came. */
   const pendingSession = startCallSession(target, context);
   const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
   const path = [group, method].filter((part) => part !== undefined && part !== "").join(".");
-  const instance = clientForCall(dataSource, context, schema?.type, path);
+  const instance = clientForCall(dataSource, context, schema?.type, path, cancels);
   if (studio.hasStudio) attachFetchHook(instance, studio);
 
   const {
@@ -99,6 +101,8 @@ export async function prepareAndRun(
     forwardVariables = true,
     headers: baseHeaders,
     stream = false,
+    /* Read where the call's client was chosen; nothing `fetch` is given. */
+    cancelPrevious: _cancelPrevious,
     ...baseOptions
   } = target.options ?? {};
   let callOptions = withStudioUploads(

@@ -21,21 +21,21 @@ const ROUTES = `const apiRoutes = { source: "api", endpoints: {
 
 /** Each scenario a page builds, and its budget at start: minified and gzipped, in KiB. */
 export const SCENARIOS = [
-  { name: "definitions", code: `${DEFINE}\nconsole.log(api);`, budget: [22.5, 8.7] },
+  { name: "definitions", code: `${DEFINE}\nconsole.log(api);`, budget: [20.8, 8.1] },
   {
     name: "direct caller",
     code: `${DEFINE}\nimport { createCaller } from "@noverax/courier";\ncreateCaller(api).users.getAll().then(console.log);`,
-    budget: [102, 35.9],
+    budget: [102.2, 36.0],
   },
   {
     name: "proxy caller with its routes",
     code: `import { createProxyCaller } from "@noverax/courier";\n${ROUTES}\ncreateProxyCaller(apiRoutes).users.getAll().then(console.log);`,
-    budget: [44.1, 16.0],
+    budget: [44.7, 16.2],
   },
   {
     name: "React Query hooks",
     code: `import { createProxyQueryCaller } from "@noverax/courier-react";\n${ROUTES}\nexport const q = createProxyQueryCaller(apiRoutes);`,
-    budget: [47.8, 17.5],
+    budget: [48.5, 17.7],
   },
 ];
 

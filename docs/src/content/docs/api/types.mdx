@@ -1,4 +1,4 @@
-export const metadata = { title: "Types", description: "Complete reference for all TypeScript types exported by @noverax/courier.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Types", description: "Complete reference for all TypeScript types exported by @noverax/courier.", mode: "both", updated: "2026-10-28" }
 
 ## Overview
 
@@ -46,6 +46,7 @@ Options for `createCaller`.
 ```ts
 type CallerDefaults = {
   timeout?: number
+  cancelPrevious?: boolean
   headers?: Record<string, string>
   context?: Context
   onError?: (error: HTTPError) => void | Promise<void>
@@ -67,7 +68,7 @@ type ProxyPath = {
 type ProxyCallerOptions = {
   proxyPath?: ProxyPath
   timeout?: number
-  cancelPrevious?: readonly string[]
+  cancelPrevious?: boolean
   coalesce?: boolean
   credentials?: RequestCredentials
   headers?: Record<string, string>
@@ -84,7 +85,7 @@ The routes of one API that a page's proxy client takes: the source the server re
 ```ts
 import type { CourierRoutes, RouteMap, RouteShape } from "@noverax/courier/define"
 
-// RouteShape: { type: "query"; get?: true } | { type: "mutation" }
+// RouteShape: { type: "query"; get?: true; cancelPrevious?: boolean } | { type: "mutation" }
 //           | { transport: "sse" } | { transport: "ws"; bidirectional?: true }
 // RouteMap<TApi>: the paths of TApi, each in the shape the API declares it
 // CourierRoutes<TApi, TEndpoints>: { source, endpoints, cancelPrevious?, coalesce? }
@@ -188,10 +189,12 @@ type CallOptions<R extends boolean = false> = Omit<RequestInit, "method" | "body
   forwardVariables?: boolean
   stream?: boolean
   method?: "GET" | "POST"
+  coalesce?: boolean
+  cancelPrevious?: boolean
 }
 ```
 
-`headers`, `signal`, `credentials` and the rest of `RequestInit` are passed to `fetch`; `method` is the verb a call goes to the proxy with, not the endpoint's own.
+`headers`, `signal`, `credentials` and the rest of `RequestInit` are passed to `fetch`; `method` is the verb a call goes to the proxy with, not the endpoint's own. `coalesce` and `cancelPrevious` say for this call alone whether it joins an identical read in flight, and whether it cancels the older call of its read in flight and may be cancelled by a newer one — see [Deduplication & Abort](/docs/advanced/abort).
 
 ### UploadProgress
 
@@ -227,7 +230,7 @@ type BaseOptions = MergeOptions & FetchOptions & {
   allowedHeaders?: string[]
   bodySerializer?: (data: Record<string, unknown>) => BodyInit
   searchParamsSerializer?: SearchParamsSerializer
-  cancelPrevious?: readonly string[]
+  cancelPrevious?: boolean
   middleware?: Middleware[]
   expose?: boolean
   proxyPath?: ProxyPath
@@ -239,6 +242,8 @@ type BaseOptions = MergeOptions & FetchOptions & {
 ```ts
 type GroupOptions = MergeOptions & {
   prefix?: string
+  expose?: boolean
+  cancelPrevious?: boolean
 }
 ```
 

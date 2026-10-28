@@ -1,6 +1,7 @@
 import { agentOptions } from "../agent/agent-options";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
+import { isReadingMethod } from "../utils/helpers";
 import type { CacheConfig } from "../validation";
 import type { BuilderState } from "./builder";
 import { withValue } from "./builder";
@@ -63,6 +64,13 @@ export function makeAddressed(
       }
       return next(withValue(state, "cache", config));
     },
+    /* Only `true` turns it on, as `.expose()` opens only for `true`. */
+    cancelPrevious: (cancel: unknown = true) => {
+      if (state.kind !== "query") {
+        throw new ConfigurationError("CANCEL_PREVIOUS_ON_WRITE", notARead(state, wire));
+      }
+      return next({ ...state, cancelPrevious: cancel === true });
+    },
     reads: () => {
       if (CHANGING_VERBS.has(wire.method)) {
         throw new ConfigurationError(
@@ -86,4 +94,18 @@ export function makeAddressed(
     Object.defineProperty(endpoint, name, { value: method, enumerable: false });
   }
   return endpoint;
+}
+
+/* Why `.cancelPrevious()` cannot be named on an endpoint that is no read. */
+function notARead(state: BuilderState, wire: Wire): string {
+  const named = "[courier] .cancelPrevious() was named on";
+  if (state.kind !== "mutation") {
+    return `${named} a stream or a channel, which no newer call cancels.`;
+  }
+  /* A closure's verb, even a reading one, leaves the endpoint taken to write. */
+  const how = isReadingMethod(wire.method) ? ".via()" : `.${wire.method}()`;
+  return (
+    `${named} an endpoint addressed with ${how}, which writes: a cancelled write has ` +
+    "usually been applied. Declare a read with .reads() first."
+  );
 }

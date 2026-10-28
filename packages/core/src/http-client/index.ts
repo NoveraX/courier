@@ -28,8 +28,8 @@ export class HttpClient {
   private searchParamsSerializer: SearchParamsSerializer | undefined;
   /**
    * The endpoint whose newer call cancels this client's call while it is in
-   * flight: set for a read its API lists in `cancelPrevious`, made where one
-   * user is.
+   * flight: set for a read whose `cancelPrevious` is on, made where one user
+   * is.
    */
   cancelKey: string | undefined;
   /**

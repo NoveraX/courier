@@ -1,13 +1,14 @@
 /**
- * `cancelPrevious`, as a caller meets it: a newer call to an endpoint it
- * names cancels the one still in flight, whatever its variables — a search
+ * `cancelPrevious`, as a caller meets it: a newer call of a read it is on
+ * for cancels the one still in flight, whatever its variables — a search
  * as the user types — while every other endpoint's calls all complete, page
  * one and page two of a list together among them.
  *
  * The calls of a client share one in-flight table; a fresh one per call
  * would cancel nothing. Where the option runs: a browser, for a direct call
  * and for a proxy client. Where it must not: a server, where requests from
- * different users reach one endpoint and would cancel each other.
+ * different users reach one endpoint and would cancel each other — whether
+ * they come to its proxy or a proxy client there makes them.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -26,9 +27,8 @@ const UPSTREAM = "https://upstream.example";
 const api = defineApi({
   expose: true,
   baseURL: UPSTREAM,
-  cancelPrevious: ["search"],
   endpoints: {
-    search: endpoint.get("search").variables<{ q: string }>().response<unknown>(),
+    search: endpoint.get("search").variables<{ q: string }>().response<unknown>().cancelPrevious(),
     page: endpoint.get("items").variables<{ page: number }>().response<unknown>(),
   },
 });
@@ -114,14 +114,30 @@ describe("a direct call in a browser", () => {
   });
 });
 
-describe("a direct call on a server", () => {
-  it("never cancels another caller's request", async () => {
+describe("a call on a server", () => {
+  it("never cancels another caller's request when made directly", async () => {
     vi.stubGlobal("fetch", slowUpstream);
     const client = createCaller(api) as unknown as Client;
 
     const answers = await Promise.all([client.search({ q: "a" }), client.search({ q: "b" })]);
 
     expect(answers).toHaveLength(2);
+  });
+
+  it("never cancels another caller's request when a proxy client makes it", async () => {
+    const handler = createHandler();
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (isUpstream(url, UPSTREAM)) return slowUpstream(input, init);
+      return handler.handle(new Request(new URL(url, "http://app.localhost"), init));
+    });
+    const client = createProxyCaller(routesOf(api, "api"), {
+      cancelPrevious: true,
+    }) as unknown as Client;
+
+    const answers = await Promise.all([client.search({ q: "a" }), client.search({ q: "b" })]);
+
+    expect(answers).toEqual([{ url: `${UPSTREAM}/search?q=a` }, { url: `${UPSTREAM}/search?q=b` }]);
   });
 });
 
@@ -171,7 +187,7 @@ describe("the proxy", () => {
     expect(proxied.mock.calls.filter(([input]) => !isUpstream(input, UPSTREAM))).toHaveLength(1);
   });
 
-  it("cancels in the browser client, which takes the source's list", async () => {
+  it("cancels in the browser client, which takes the endpoint's say from its routes", async () => {
     const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     const first = client.search({ q: "a" }).catch(status);
     const second = client.search({ q: "ab" });

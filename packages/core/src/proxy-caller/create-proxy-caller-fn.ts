@@ -1,10 +1,12 @@
+import { assertCancelPrevious } from "../define/assert-cancel-previous";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
+import { servesOneUser } from "../utils/serves-one-user";
 import { assertCarriable } from "./assert-carriable";
 import { assertJsonVariables } from "./assert-json-variables";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
 import { inProcessRoute } from "./in-process";
 import { buildPostPayload } from "./post-payload";
-import { createProxyCancelPrevious } from "./proxy-cancel-previous";
+import { proxyCancelPreviousOf } from "./proxy-cancel-previous";
 import { proxyRouting } from "./proxy-routing";
 import { resolveProxyPath } from "./resolve-path";
 import { sendFetch } from "./send-fetch";
@@ -21,8 +23,8 @@ import type { ProxyCallerDefaults, ProxyEndpointKind, UntypedCallerFn } from "./
  * an API's types live, and nothing here casts a typed chain away.
  *
  * @param defaults - The caller's proxy path, headers, credentials, timeout,
- *   callbacks, the reads a newer call cancels, and whether identical reads
- *   in flight share one request
+ *   callbacks, whether a newer call of a read cancels the one in flight, and
+ *   whether identical reads in flight share one request
  * @returns The call function
  * @example
  * ```ts
@@ -39,11 +41,11 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
     onError: globalOnError,
     onSuccess: globalOnSuccess,
     coalesce,
+    cancelPrevious: clientCancelPrevious,
   } = defaults;
 
   const fetchCtx = { onSuccess: globalOnSuccess, onError: globalOnError };
-  const cancelling = new Set(defaults.cancelPrevious ?? []);
-  const cancels = cancelling.size > 0 ? createProxyCancelPrevious() : undefined;
+  const calls = proxyCancelPreviousOf(defaults.routes);
 
   return (source, options) => {
     const callSignal = options?.signal instanceof AbortSignal ? options.signal : undefined;
@@ -121,13 +123,17 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         { ...fetchCtx, stream: call.stream, raw: call.server.rawData === true },
       );
     }
-    /* A newer call cancels an older one only for a read, or one the client knows nothing of: a
-       cancelled write has usually been applied by the server while its caller is told it was not. */
-    return (endpoint, variables, kind) => {
-      if (!cancels || kind === "mutation" || !cancelling.has(pathOf(endpoint))) {
+    /* A newer call cancels an older one only for a read the routes name, and only where one
+       user is: a cancelled write has usually been applied by the server while its caller is
+       told it was not, and a server's calls for different users would cancel each other. */
+    return async (endpoint, variables, kind, routeCancelPrevious) => {
+      const own = options?.cancelPrevious;
+      assertCancelPrevious(own, "A call");
+      const cancels = (own ?? routeCancelPrevious ?? clientCancelPrevious) === true;
+      if (!cancels || !isRead(kind) || !servesOneUser()) {
         return send(endpoint, variables, callSignal, kind);
       }
-      return cancels.run(`${source}:${endpoint}`, callSignal, (signal) =>
+      return calls.run(`${source}:${endpoint}`, callSignal, (signal) =>
         send(endpoint, variables, signal, kind),
       );
     };
@@ -162,8 +168,6 @@ function goesAsGet(
   return fitsInAddress(target.url, getProxyQuery({ ...target, serverOptions: call.server }));
 }
 
-/* An endpoint as the API names it in `cancelPrevious`: `users.search` for the proxy's `users:search`. */
-function pathOf(endpoint: string): string {
-  const { group, method } = parseEndpointKey(endpoint);
-  return group ? `${group}.${method}` : method;
+function isRead(kind: ProxyEndpointKind | undefined): boolean {
+  return kind === "read" || kind === "cached-read";
 }

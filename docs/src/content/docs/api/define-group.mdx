@@ -1,4 +1,4 @@
-export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions.", mode: "both", updated: "2026-10-28" }
 
 ## Import
 
@@ -36,6 +36,7 @@ type GroupOptions = {
   prefix?: string
   pathOptions?: (request?: Request) => Record<string, unknown> | Promise<Record<string, unknown>>
   expose?: boolean
+  cancelPrevious?: boolean
   fetch?: SourceFetch
   webSocket?: SourceWebSocket
   dispatcher?: SourceDispatcher
@@ -48,6 +49,7 @@ type GroupOptions = {
 - `prefix` — URL path segment prepended to all endpoint URLs in this group.
 - `pathOptions` — async function that returns dynamic key-value pairs (headers, cookies) to inject per request.
 - `expose` — whether the browser may call the group through the proxy; it overrides the source's, and a group inside another overrides its outer group's.
+- `cancelPrevious` — whether a newer call of one of the group's reads cancels the older call of that read still in flight. It overrides the client's and the source's, a group inside another overrides its outer group's, and an endpoint's `.cancelPrevious()` and a call's `.with()` override it. A value other than `true` or `false` throws `ConfigurationError("CANCEL_PREVIOUS_INVALID")`. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 - `fetch`, `webSocket`, `dispatcher` — how the group's calls, streams and channels reach their server, over the source's: an undici `Agent` holding a client certificate for this group alone, a `ProxyAgent`. A group inside another takes each from the nearest group that sets it, and a call's `.with()` sets its own over both. Bun's `proxy` and `tls` and Deno's `client` are taken the same way. One that cannot send — a `fetch` or a `webSocket` that is not a function, a `dispatcher` with no `dispatch` method — throws `ConfigurationError("SOURCE_TRANSPORT_INVALID")`. See [One group](/docs/advanced/proxies-and-certificates#one-group).
 - `groups` — groups inside this one, created with `defineGroup`, to any depth: see [Groups inside groups](#groups-inside-groups). A group made only of groups needs no `endpoints`.
 - `endpoints` — record of typed endpoint functions. Any name but `options`, which holds the group's own settings, and `raw` or `with`, which every client answers with its own `.raw` and `.with()`; an endpoint of one of those names is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")`. The same holds for the endpoints given to `defineApi`, whose groups cannot be named `raw` or `with` either. A path called `options` or `raw` is fine: name the endpoint `getOptions` or `getRaw`. See [Reserved names](/docs/core-concepts/defining-apis#reserved-names).
@@ -141,7 +143,7 @@ await client.billing.invoices.list() // GET https://api.example.com/billing/invo
 ```
 
 - A group inside another is named by its **path**, its names joined with dots: `billing.invoices`. The path is what the proxy carries in `_g`, what Studio, mocks and query keys name the group by — `mock("billing.invoices", "list")` — and what a page's [routes](/docs/proxy-mode/expose) name an endpoint by: `"billing.invoices.list"`. A name with a dot in it would read as two, so a group or an endpoint named with one throws `ConfigurationError("DOTTED_NAME")`.
-- Each group's `pathOptions` is resolved in turn, from the source's down, a lower group's values replacing a higher one's. `expose` is decided by the nearest group that sets it.
+- Each group's `pathOptions` is resolved in turn, from the source's down, a lower group's values replacing a higher one's. `expose` and `cancelPrevious` are each decided by the nearest group that sets them.
 - A group may hold an endpoint and a group of the same name: the client's member is both callable, as the endpoint, and readable, as the group.
 
 ## Describing an Endpoint

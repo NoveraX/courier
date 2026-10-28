@@ -46,29 +46,60 @@ export function sourceFromRoutes(routes: CourierRoutes): Record<string, unknown>
 }
 
 /**
- * What the routes say of an HTTP endpoint: a read that may be cached, any
- * other read, or a write — or nothing, for a path they do not name or one
- * reached by a stream or a socket.
+ * The shape the routes give an endpoint, or nothing for a path they do not name.
  *
  * @param routes - The routes of the API
  * @param group - The endpoint's group path, `""` for one at the top
  * @param method - The endpoint's name in its group
- * @returns Its kind, or `undefined`
+ * @returns Its shape, or `undefined`
  * @example
  * ```ts
- * routeKindOf(apiRoutes, "users", "list"); // → "cached-read" for { type: "query", get: true }
+ * routeOf(apiRoutes, "users", "list"); // → { type: "query", get: true }
  * ```
  */
-export function routeKindOf(
+export function routeOf(
   routes: CourierRoutes,
   group: string,
   method: string,
-): ProxyEndpointKind | undefined {
+): RouteShape | undefined {
   const path = group ? `${group}.${method}` : method;
-  const shape = Object.hasOwn(routes.endpoints, path) ? routes.endpoints[path] : undefined;
-  if (shape === undefined || !("type" in shape)) return undefined;
-  if (shape.type === "mutation") return "mutation";
-  return "get" in shape && shape.get === true ? "cached-read" : "read";
+  return Object.hasOwn(routes.endpoints, path) ? routes.endpoints[path] : undefined;
+}
+
+/**
+ * What a route says of an HTTP endpoint: a read that may be cached, any
+ * other read, or a write — or nothing, for a path the routes do not name or
+ * one reached by a stream or a socket.
+ *
+ * @param route - The endpoint's shape in the routes, if they name it
+ * @returns Its kind, or `undefined`
+ * @example
+ * ```ts
+ * routeKindOf({ type: "query", get: true }); // → "cached-read"
+ * ```
+ */
+export function routeKindOf(route: RouteShape | undefined): ProxyEndpointKind | undefined {
+  if (route === undefined || !("type" in route)) return undefined;
+  if (route.type === "mutation") return "mutation";
+  return route.get === true ? "cached-read" : "read";
+}
+
+/**
+ * Whether a newer call of a read cancels the one in flight, where its
+ * endpoint or a group of it says so: the routes carry it on the read's
+ * own shape.
+ *
+ * @param route - The endpoint's shape in the routes, if they name it
+ * @returns What the endpoint or its groups say, or `undefined` when neither says
+ * @example
+ * ```ts
+ * routeCancelPreviousOf({ type: "query", cancelPrevious: true }); // → true
+ * ```
+ */
+export function routeCancelPreviousOf(route: RouteShape | undefined): boolean | undefined {
+  return route !== undefined && "type" in route && route.type === "query"
+    ? route.cancelPrevious
+    : undefined;
 }
 
 /* What the transport picker reads of an endpoint: its kind of call, or the transport it opens. */

@@ -101,6 +101,15 @@ export type CacheArg<TKind extends "query" | "mutation"> = TKind extends "query"
   : never;
 
 /**
+ * What `.cancelPrevious()` takes: on a read, whether a newer call cancels
+ * the one in flight. Once the verb writes it takes nothing that could be
+ * given, so marking a write fails at the call site that wrote it.
+ */
+export type CancelPreviousArgs<TKind extends "query" | "mutation"> = TKind extends "query"
+  ? [cancel?: boolean]
+  : [cancel: never];
+
+/**
  * A retry policy: on an endpoint, inherited from its base, or given to
  * `retryMiddleware` — one vocabulary for all three.
  *
@@ -162,6 +171,8 @@ export interface ResolvedEndpointOptions {
    * policy decides; `false`, no agent reaches it whatever the policy says.
    */
   readonly agent?: AgentOptions | false;
+  /** Whether a newer call cancels its call in flight, from `.cancelPrevious()`. */
+  readonly cancelPrevious?: boolean;
 }
 
 /** Reads a topic key from a subscriber's validated variables. */

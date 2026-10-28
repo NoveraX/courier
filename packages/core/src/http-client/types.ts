@@ -57,6 +57,14 @@ export type CallOptions<TRaw extends boolean = false> = Omit<
      */
     method?: "GET" | "POST" | undefined;
     onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
+    /**
+     * Whether a newer call of this read cancels this one while it is still
+     * in flight, as this one cancels the call before it — over whatever the
+     * endpoint, its groups, the client and the API say. Only calls it is on
+     * for take part: one made with `false` always completes. A write is
+     * never cancelled.
+     */
+    cancelPrevious?: boolean | undefined;
   };
 
 export type HttpResponse<TData = unknown> = {
@@ -171,12 +179,16 @@ export type BaseOptions = MergeOptions &
     /** Custom search params serializer with stringify/parse methods */
     searchParamsSerializer?: SearchParamsSerializer | undefined;
     /**
-     * The reads a newer call cancels while they are still in flight — a
-     * search as the user types — by their paths, such as `users.search`.
-     * Whatever variables the older call had, it rejects with an `HTTPError`
-     * of status 499. It runs where one user is: in a browser or an app.
+     * Whether a newer call of one of this source's reads cancels its call
+     * still in flight to the same endpoint — a search as the user types —
+     * whatever variables each was called with. The older call rejects with
+     * an `HTTPError` of status 499. A call's `.with()`, an endpoint's
+     * `.cancelPrevious()`, a group's own `cancelPrevious` and the client's
+     * option say otherwise for what they hold, the nearest deciding. It
+     * runs where one user is: in a browser or an app. A write is never
+     * cancelled.
      */
-    cancelPrevious?: readonly string[] | undefined;
+    cancelPrevious?: boolean | undefined;
     /** Middleware pipeline applied to every request in order */
     middleware?: Middleware[] | undefined;
     /**
@@ -224,6 +236,13 @@ export type GroupOptions = MergeOptions &
      * source's own setting; unset means the source decides.
      */
     expose?: boolean | undefined;
+    /**
+     * Whether a newer call of one of this group's reads, or of a group's
+     * inside it, cancels its call still in flight. Overrides the client's
+     * and the source's own; an endpoint's `.cancelPrevious()`, a group
+     * inside it that sets its own and a call's `.with()` say otherwise.
+     */
+    cancelPrevious?: boolean | undefined;
   };
 
 export type PathOptions = (request?: Request) => PathOptionsResult | Promise<PathOptionsResult>;
@@ -262,6 +281,8 @@ export type Context = RequestContext & {
   studioRequestId?: string | undefined;
   /** A direct caller's default timeout, for a call and an endpoint that name none */
   defaultTimeout?: number | undefined;
+  /** A direct caller's own `cancelPrevious`, for a call, an endpoint and groups that say nothing */
+  defaultCancelPrevious?: boolean | undefined;
   /**
    * The request being served, as an adapter describes it for the session —
    * where it can hand the browser a cookie, and what its framework asks of

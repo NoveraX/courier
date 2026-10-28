@@ -35,6 +35,8 @@ export interface BuilderState {
   readonly agent?: AgentOptions | false | undefined;
   /** Whether a browser may call it through the proxy, from `.expose()`; unset, its group or API says. */
   readonly expose?: boolean | undefined;
+  /** Whether a newer call cancels its call in flight, from `.cancelPrevious()`; unset, its groups, client or API say. */
+  readonly cancelPrevious?: boolean | undefined;
   /** What the endpoint sends for variables a call leaves out, from `.defaults()`. */
   readonly defaults?: Readonly<Record<string, unknown>> | undefined;
 }
@@ -132,6 +134,7 @@ export function resolveOptions(
     ...(state.cache !== undefined && { cache: state.cache }),
     ...(state.topicKey !== undefined && { topicKey: state.topicKey }),
     ...(state.agent !== undefined && { agent: state.agent }),
+    ...(state.cancelPrevious !== undefined && { cancelPrevious: state.cancelPrevious }),
     meta: state.meta,
     tags,
     inherit,

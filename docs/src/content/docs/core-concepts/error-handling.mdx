@@ -1,4 +1,4 @@
-export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-10-13" }
+export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-10-28" }
 
 ## The HTTPError Class
 
@@ -217,8 +217,8 @@ if (isHTTPError(error)) {
 // A call cancelled through your own signal rejects with the reason you
 // gave, as fetch does: a DOMException named "AbortError" by default.
 // This holds while the answer's body is still being read, too.
-// A read that a newer call cancelled — its endpoint listed in the API's
-// cancelPrevious — rejects with HTTPError status 499.
+// A read cancelled by a newer call of its endpoint — cancelPrevious on
+// for both — rejects with HTTPError status 499.
 if (isHTTPError(error) && error.status === 499) {
   // Superseded by a newer read of the same endpoint
 }

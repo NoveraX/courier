@@ -1,4 +1,4 @@
-export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both", updated: "2026-10-28" }
 
 ## Overview
 
@@ -22,7 +22,7 @@ type BaseOptions = {
 
   // Behavior
   coalesce?: boolean                             // Identical reads in flight share one request (default: true)
-  cancelPrevious?: readonly string[]             // Reads a newer call cancels, such as ["users.search"]
+  cancelPrevious?: boolean                       // A newer call of a read cancels the older one in flight, where nothing nearer says (default: off)
   timeout?: number                               // Request timeout in ms
   headers?: HeadersInit                          // Static headers for all requests
   credentials?: RequestCredentials               // Cookie handling mode
@@ -55,6 +55,7 @@ type GroupOptions = {
   prefix?: string                  // Prepended to every endpoint path in the group
   pathOptions?: (request?: Request) => Record<string, string | number | undefined> // Path parameters filled in at request time
   expose?: boolean                 // Whether a page may call its endpoints through the proxy, where nothing nearer says
+  cancelPrevious?: boolean         // A newer call of a read cancels the older one in flight, where nothing nearer says
   groups?: Record<string, DefinedGroup> // The groups inside this one
 
   // Transport, over the source's — see Proxies & Certificates
@@ -80,6 +81,7 @@ type CallOptions = {
   method?: "GET" | "POST"       // Verb sent to the proxy (default: GET for a read that may be cached, POST for every other call)
   signal?: AbortSignal           // Manual abort signal
   coalesce?: boolean             // false: never join an identical read in flight
+  cancelPrevious?: boolean       // This call cancels the older one of its read in flight, and a newer one may cancel it
   timeout?: number               // Per-request timeout override
   headers?: HeadersInit          // Per-request header overrides
   cache?: RequestCache           // Fetch cache mode

@@ -1,6 +1,7 @@
 export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
 export {
   CONFIG_BASENAMES,
+  findConfigFile,
   findConfigFileAt,
   type LoadCourierConfigOptions,
   type LoadedCourierConfig,

@@ -103,11 +103,17 @@ export interface LoadCourierConfigOptions {
 }
 
 /**
- * Walk up from `startDir` looking for a `courier.config.*` file. Returns the
- * absolute path of the first match, or `null` when no directory up to the
- * filesystem root holds one.
+ * Walk up from `startDir` looking for a `courier.config.*` file.
+ *
+ * @param startDir - The directory to look in first
+ * @returns The absolute path of the first match, or `null` when no directory
+ *   up to the filesystem root holds one
+ * @example
+ * ```ts
+ * findConfigFile("/app/src"); // → "/app/courier.config.ts", or null
+ * ```
  */
-function findConfigFile(startDir: string): string | null {
+export function findConfigFile(startDir: string): string | null {
   let dir = resolve(startDir);
   while (true) {
     for (const basename of CONFIG_BASENAMES) {

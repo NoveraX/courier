@@ -33,18 +33,34 @@
     "node": ">=22"
   },
   "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "exports": {
     "./package.json": "./package.json",
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
     "./config": {
       "types": "./lib/config/index.d.ts",
       "import": "./lib/config/index.js",
       "default": "./lib/config/index.js"
+    },
+    "./vite": {
+      "types": "./lib/vite/index.d.ts",
+      "import": "./lib/vite/index.js",
+      "default": "./lib/vite/index.js"
     }
   },
   "typesVersions": {
     "*": {
       "config": [
         "./lib/config/index.d.ts"
+      ],
+      "vite": [
+        "./lib/vite/index.d.ts"
       ]
     }
   },
@@ -67,7 +83,13 @@
     "jiti": "^2.7.0"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.3.1"
+    "@noverax/courier": "^0.3.1",
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@noverax/courier": "*"

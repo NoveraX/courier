@@ -46,6 +46,7 @@ export const ENTRIES = [
   "@noverax/courier/node",
   "@noverax/courier/config",
   "@noverax/courier/fetch",
+  "@noverax/courier/routes",
   "@noverax/courier",
   "@noverax/courier-react",
   "@noverax/courier-next",
@@ -62,6 +63,8 @@ export const ENTRIES = [
   "@noverax/courier-solid",
   "@noverax/courier-sveltekit",
   "@noverax/courier-astro",
+  "@noverax/courier-build/vite",
+  "@noverax/courier-build",
 ];
 
 export const OPTIONS = {

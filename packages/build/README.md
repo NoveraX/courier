@@ -9,9 +9,9 @@
 
   <h1>Courier Build</h1>
 
-  <p><strong>Your config, read the way every Courier tool reads it.</strong></p>
+  <p><strong>A page's routes, built from your config. No file to generate.</strong></p>
 
-  <p>The one loader of <code>courier.config.ts</code> that Courier Studio, <code>courier-cli</code>, the standalone server, the MCP server and the runtime share: it finds the file, transpiles it, resolves your tsconfig path aliases, and reuses each module's transform across processes.</p>
+  <p>The bundler plugin that hands every page — and every server rendering one — the routes its proxy client may call, read from <code>courier.config.ts</code> by the rules the proxy applies. Nothing else of the config reaches a bundle, and no <code>courier.routes.ts</code> is written or committed. It is also the one loader of the config every Courier tool shares.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-build"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-build?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
@@ -35,21 +35,19 @@
 
 ## Overview
 
-Every Courier tool that reads your project reads it through this package, so a config that loads for one loads for all of them, with the same aliases and the same errors.
-
 <table>
   <tr>
     <td width="33%" valign="top">
-      <h4>Found where you keep it</h4>
-      <code>courier.config.{ts,mts,cts,js,mjs,cjs}</code>, in that order of names, in the directory you name or the nearest one above it.
+      <h4>Read from your marks</h4>
+      Each endpoint you mark <code>.expose()</code>, by the rules the proxy applies — read from the config in a process of its own, so a build sees your files as they are.
     </td>
     <td width="33%" valign="top">
-      <h4>Your aliases</h4>
-      The tsconfig <code>paths</code> your project resolves imports through, the ones its <code>extends</code> chain brings in among them.
+      <h4>Live as you work</h4>
+      Edit a definition and the dev server serves the new routes without a restart; Vitest reruns the tests that import them.
     </td>
     <td width="33%" valign="top">
-      <h4>Transformed once</h4>
-      Each module's transform is kept in <code>node_modules/.cache/courier/transform</code>, so the next process that loads an unchanged module reuses it.
+      <h4>Closed by default</h4>
+      A build that cannot read the config fails with why, and a page that imports the config itself fails the build: the browser gets the routes and nothing else.
     </td>
   </tr>
 </table>
@@ -59,23 +57,59 @@ Every Courier tool that reads your project reads it through this package, so a c
 ## Install
 
 ```bash
-npm install @noverax/courier-build
+npm install --save-dev @noverax/courier-build
 ```
-
-Courier's own tools bring it in as their dependency: install it yourself only when your code loads a project's config.
 
 <br />
 
 ## Usage
 
-```ts
-import { loadCourierConfig } from "@noverax/courier-build/config"
+Add the plugin to the app's Vite config:
 
-const loaded = await loadCourierConfig({ cwd: process.cwd() })
-if (loaded !== null) console.log(Object.keys(loaded.config.sources), loaded.configFile)
+```ts
+// vite.config.ts
+import { courierRoutes } from "@noverax/courier-build/vite"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [courierRoutes()] })
 ```
 
-`loadCourierConfig()` returns `null` when no config file is there to load, and throws what the loader reported when a file is there and will not load — for a TypeScript config, usually an import it could not resolve.
+Register the config once, in a module of the project, so `routes` is typed from it — a `courier-env.d.ts` beside the config keeps it out of every bundle:
+
+```ts
+// courier-env.d.ts
+import type config from "./courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+A page then takes the routes of the API it calls, and its client reaches exactly the endpoints that API opens to a page:
+
+```ts
+import { createProxyCaller } from "@noverax/courier"
+import { routes } from "@noverax/courier/routes"
+
+export const shop = createProxyCaller(routes.shop)
+```
+
+`routes` holds every source of the config; one that opens nothing to a page has no endpoints. Without the plugin, reading a route throws `ConfigurationError` `ROUTES_NOT_BUILT`, so a page never runs on routes nobody built.
+
+### How the routes are read
+
+- **The config** is the `courier.config.*` in Vite's root or the nearest folder above it; name another with the `config` option.
+- **Env files** are those Vite reads for the mode — `.env.[mode].local`, `.env.[mode]`, `.env.local`, `.env`, the first to set a variable winning — and a variable the process was started with wins over all. An endpoint opened by a variable is opened as the build sees it.
+- **A build** reads the routes once for every environment, and fails with what the config threw. **The dev server** reads them again whenever a file they came from changes; a config that breaks leaves the routes it read last in force, and says why in the terminal and over the page.
+- **The config in a page** fails the build: imported as a value it would ship the server's settings and every API's definition to the browser. Import its type alone, with `import type`.
+
+### Options
+
+| Option | Default | |
+|---|---|---|
+| `config` | the `courier.config.*` found from the root | The config file, from Vite's root or absolute |
 
 <br />
 
@@ -83,9 +117,13 @@ if (loaded !== null) console.log(Object.keys(loaded.config.sources), loaded.conf
 
 | Export | From | Purpose |
 |---|---|---|
+| `courierRoutes(options?)` | `/vite` | The Vite plugin: the routes in place of `@noverax/courier/routes`, in every environment |
+| `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
+| `routesModuleCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes`, or one that fails with why |
+| `RoutesReadError` | root | Why the routes were not read: `CONFIG_NOT_FOUND`, `CONFIG_NOT_LOADED` or `ROUTES_NOT_READ` |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |
-| `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in one directory, without walking up, and the names it may have |
+| `findConfigFile(startDir)` / `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in a directory or the nearest one above it, in that directory alone, and the names it may have |
 | `createConfigJiti(file, options?)` | `/config` | The loader the config is read with, for another of the project's files |
 | `findTransformCacheDirectory(projectRoot)` | `/config` | Where transforms are kept across processes: `.cache/courier/transform` in the nearest `node_modules`, or `null` when there is no `node_modules`, the directory could hold files another user placed, or `COURIER_TRANSFORM_CACHE` is `0`, `false` or `off` |
 | `createTransformCache(options?)` | `/config` | Reuse each module's transform while its bytes are unchanged, in memory and in that directory |

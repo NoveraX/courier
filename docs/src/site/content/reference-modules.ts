@@ -22,6 +22,10 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     module: "@noverax/courier/define",
     note: "courier, defineApi, defineGroup, formBody, formQuery, CourierRoutes, RouteMap",
   },
+  {
+    module: "@noverax/courier/routes",
+    note: "routes — every API's routes a page may call, built from courier.config.ts by the bundler plugin",
+  },
   { module: "@noverax/courier/config", note: "defineConfig — the shape of courier.config.ts" },
   { module: "@noverax/courier/middleware", note: "defineMiddleware, composeMiddleware" },
   {
@@ -51,6 +55,10 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     note: "courierHandler()",
   },
   { module: "@noverax/courier-fastify · -nestjs", note: "courierPlugin, courierMiddleware()" },
+  {
+    module: "@noverax/courier-build/vite",
+    note: "courierRoutes() — the Vite plugin that builds the routes, no file to generate",
+  },
   { module: "@noverax/courier-server", note: "createCourierServer — the standalone server" },
   {
     module: "@noverax/courier-redis",

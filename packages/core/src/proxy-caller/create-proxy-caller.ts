@@ -42,7 +42,10 @@ import type { ProxyCallerOptions } from "./types";
  * await client.getFinances.with({ timeout: 5000 })();
  * ```
  */
-export function createProxyCaller<TApi, TEndpoints extends Readonly<Record<string, RouteShape>>>(
+export function createProxyCaller<
+  TApi,
+  TEndpoints extends Readonly<Record<string, RouteShape | undefined>>,
+>(
   routes: CourierRoutes<TApi, TEndpoints>,
   options?: ProxyCallerOptions,
 ): InferClient<RoutedApi<TApi, TEndpoints>>;

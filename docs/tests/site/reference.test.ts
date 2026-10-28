@@ -96,6 +96,7 @@ describe("a reference entry", () => {
       "prefix",
       "pathOptions",
       "expose",
+      "cancelPrevious",
       "groups",
       "endpoints",
     ])

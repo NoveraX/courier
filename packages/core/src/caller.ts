@@ -18,6 +18,15 @@ import { directStreamingFactories } from "./transport/direct-streaming";
 
 export type CallerDefaults = {
   timeout?: number | undefined;
+  /**
+   * Whether a newer call of one of this caller's reads cancels the older
+   * call of that read still in flight — a search as the user types —
+   * through this caller or any other client of the same API. An endpoint's
+   * `.cancelPrevious()`, its groups' own and a call's `.with()` say
+   * otherwise; unset, the API's own decides. It runs where one user is: in
+   * a browser page or a React Native app. A write is never cancelled.
+   */
+  cancelPrevious?: boolean | undefined;
   headers?: Record<string, string> | undefined;
   context?: RequestContext | undefined;
   onError?: ((error: HTTPError) => void | Promise<void>) | undefined;

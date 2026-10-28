@@ -1,6 +1,11 @@
 import type { CallOptions } from "@noverax/courier";
 import type { QueryClient } from "@tanstack/react-query";
-import { useInfiniteQuery, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 
 import type { GroupCall, HookOptions } from "./group-call";
 import {
@@ -9,6 +14,7 @@ import {
 } from "./hooks/use-computed-query";
 import type { SubscribeFn } from "./hooks/use-subscription";
 import { buildInfiniteQueryKey, buildQueryKey } from "./query-key";
+import { QUERY_RETRIES, retryUnlessCancelled } from "./retry-unless-cancelled";
 import type { UntypedGroupHooks } from "./untyped-group-hooks";
 
 type PageParamFn = (
@@ -55,40 +61,81 @@ export function createQueryHooks(
   return {
     useQuery(method: string, options?: HookOptions) {
       const { variables, requestOptions, ...queryOptions } = options ?? {};
+      const queryKey = keyOf(method, variables);
+      const queryClient = useQueryClient();
       return useQuery({
-        queryKey: keyOf(method, variables),
+        queryKey,
         queryFn: ({ signal }) => call.fetch(method, variables, requestOptions, signal),
         ...queryOptions,
+        retry: retryUnlessCancelled(
+          queryClient,
+          queryKey,
+          queryOptions.retry,
+          requestOptions?.signal,
+          QUERY_RETRIES,
+        ),
       });
     },
 
     useSuspenseQuery(method: string, options?: HookOptions) {
       const { variables, requestOptions, ...queryOptions } = options ?? {};
+      const queryKey = keyOf(method, variables);
+      const queryClient = useQueryClient();
       return useSuspenseQuery({
-        queryKey: keyOf(method, variables),
+        queryKey,
         queryFn: ({ signal }) => call.fetch(method, variables, requestOptions, signal),
         ...queryOptions,
+        retry: retryUnlessCancelled(
+          queryClient,
+          queryKey,
+          queryOptions.retry,
+          requestOptions?.signal,
+          QUERY_RETRIES,
+        ),
       });
     },
 
     useInfiniteQuery(method: string, options: InfiniteHookOptions) {
       const { variables, requestOptions, initialPageParam, ...infiniteOptions } = options;
       const variablesFor = (pageParam: unknown) => variables?.(pageParam);
+      const queryKey = buildInfiniteQueryKey(
+        source,
+        groupName,
+        method,
+        variablesFor(initialPageParam),
+      );
+      const queryClient = useQueryClient();
       return useInfiniteQuery({
-        queryKey: buildInfiniteQueryKey(source, groupName, method, variablesFor(initialPageParam)),
+        queryKey,
         queryFn: ({ pageParam, signal }) =>
           call.fetch(method, variablesFor(pageParam), requestOptions, signal),
         initialPageParam,
         ...infiniteOptions,
+        retry: retryUnlessCancelled(
+          queryClient,
+          queryKey,
+          infiniteOptions.retry,
+          requestOptions?.signal,
+          QUERY_RETRIES,
+        ),
       });
     },
 
     async prefetchQuery(queryClient: QueryClient, method: string, options?: HookOptions) {
       const { variables, requestOptions, staleTime } = options ?? {};
+      const queryKey = keyOf(method, variables);
       await queryClient.prefetchQuery({
-        queryKey: keyOf(method, variables),
+        queryKey,
         queryFn: ({ signal }) => call.fetch(method, variables, requestOptions, signal),
         ...(typeof staleTime === "number" && { staleTime }),
+        /* A prefetch, unlike a query, is sent once unless the client says otherwise. */
+        retry: retryUnlessCancelled(
+          queryClient,
+          queryKey,
+          undefined,
+          requestOptions?.signal,
+          false,
+        ),
       });
     },
 

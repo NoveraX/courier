@@ -1,4 +1,4 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-10-13" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-10-28" }
 
 Courier ships six production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
@@ -86,7 +86,7 @@ A `retry` policy on a `courier()` base or an endpoint's `.retry()` follows the s
 
 ### Cancellations
 
-A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a read that a newer call to its endpoint cancelled through `cancelPrevious` (status 499). A caller that aborts while the middleware waits between attempts is answered at once with its signal's reason.
+A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a read that a newer call of its endpoint cancelled because its `cancelPrevious` was on (status 499). A call cancelled while the middleware waits between attempts, or just after an attempt failed, is answered at once with its signal's reason, not with the failure it no longer waits on — so a read a newer call superseded never sends again.
 
 ---
 

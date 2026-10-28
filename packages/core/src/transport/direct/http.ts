@@ -1,4 +1,5 @@
 import { getSourceName } from "../../define/api";
+import { assertCancelPrevious } from "../../define/assert-cancel-previous";
 import type { AnyDefinedApi } from "../../define/types";
 import { HTTPError } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
@@ -8,6 +9,7 @@ import type { HTTPExecutor } from "../types";
 
 export interface DirectHTTPDefaults {
   timeout?: number | undefined;
+  cancelPrevious?: boolean | undefined;
   headers?: Record<string, string> | undefined;
   context?: RequestContext | undefined;
   onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
@@ -34,12 +36,21 @@ export function createDirectHTTPExecutor(
     context: defaultContext,
     onError: globalOnError,
     onSuccess: globalOnSuccess,
+    cancelPrevious: defaultCancelPrevious,
   } = defaults;
+  assertCancelPrevious(defaultCancelPrevious, "A caller");
 
-  /* The default is the least specific timeout: carried beside the call's
-     options, it gives way to the endpoint's own `.timeout()`. */
+  /* The defaults are the least specific of their kind: carried beside the
+     call's options, they give way to the endpoint's own `.timeout()` and
+     `.cancelPrevious()`, and the latter to its groups' too. */
   const context =
-    defaultTimeout === undefined ? defaultContext : { ...defaultContext, defaultTimeout };
+    defaultTimeout === undefined && defaultCancelPrevious === undefined
+      ? defaultContext
+      : {
+          ...defaultContext,
+          ...(defaultTimeout !== undefined && { defaultTimeout }),
+          ...(defaultCancelPrevious !== undefined && { defaultCancelPrevious }),
+        };
 
   return async function executeHTTP(group, method, variables, options, raw) {
     const mergedOptions = mergeOptions(options, raw, defaultHeaders);

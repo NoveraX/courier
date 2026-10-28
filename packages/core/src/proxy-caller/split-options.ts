@@ -70,6 +70,8 @@ export function splitProxyOptions(
     method,
     next,
     signal: _signal,
+    /* Decided before the call is sent, by whether a newer one cancels it. */
+    cancelPrevious: _cancelPrevious,
     onUploadProgress,
     onDownloadProgress,
     prefixUrl,

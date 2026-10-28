@@ -5,7 +5,7 @@ import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { HTTPError } from "../../src/errors";
-import { retryMiddleware } from "../../src/middleware/index";
+import { defineMiddleware, retryMiddleware } from "../../src/middleware/index";
 import type { Middleware, MiddlewareResponse } from "../../src/middleware/types";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
@@ -247,9 +247,8 @@ describe("retryMiddleware and cancellation", () => {
       defineApi({
         name: "api",
         baseURL: upstream.url,
-        cancelPrevious: ["read"],
         middleware: [retryMiddleware({ limit: 3, delay: 1, retryOn: anyFailure })],
-        endpoints: { read: endpoint.get("slow").variables<{ q: string }>() },
+        endpoints: { read: endpoint.get("slow").variables<{ q: string }>().cancelPrevious() },
       }),
     );
 
@@ -261,6 +260,47 @@ describe("retryMiddleware and cancellation", () => {
     await expect(first).rejects.toMatchObject({ status: 499 });
     await expect(second).resolves.toEqual({ ok: true });
     expect(upstream.seen).toHaveLength(2);
+  });
+
+  it("lets a newer call cancel a read that waits between attempts", async () => {
+    /* A newer call supersedes an older one only in a browser. */
+    vi.stubGlobal("document", {});
+    upstream = await startUpstream((req, res, index) => {
+      const q = new URL(req.url ?? "", "http://upstream").searchParams.get("q");
+      if (index === 0) return sendJson(res, 503, { message: "failed" });
+      setTimeout(() => sendJson(res, 200, { q }), q === "ab" ? 300 : 0);
+    });
+    let attemptEnded: () => void = () => {};
+    const firstAttemptEnded = new Promise<void>((resolve) => {
+      attemptEnded = resolve;
+    });
+    /* Inside the retry policy, so it sees each attempt end. */
+    const attempts = defineMiddleware("attempts", "wrap", async (_ctx, next) => {
+      try {
+        return await next();
+      } finally {
+        attemptEnded();
+      }
+    });
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        middleware: [retryMiddleware({ limit: 2, delay: 200, backoff: "fixed" })],
+        endpoints: {
+          read: endpoint.get("slow").variables<{ q: string }>().use(attempts).cancelPrevious(),
+        },
+      }),
+    );
+
+    /* The older search fails once and waits to be sent again when the newer one starts. */
+    const first = client.read({ q: "a" }).catch((error: unknown) => error);
+    await firstAttemptEnded;
+    const second = client.read({ q: "ab" });
+
+    await expect(second).resolves.toEqual({ q: "ab" });
+    expect(await first).toMatchObject({ status: 499 });
+    expect(upstream.seen.map((request) => request.url)).toEqual(["/slow?q=a", "/slow?q=ab"]);
   });
 });
 

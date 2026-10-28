@@ -5,8 +5,8 @@ import { csrfSource } from "../session/csrf-source";
 import { captureIncomingRequest } from "../session/request-context";
 import { cookieJarFor } from "../session/request-state";
 import { askForToken, askOnce, tokenCall } from "./csrf-prime";
-import { prepareAndRun } from "./execute";
 import { callInstruments } from "./execute-studio";
+import { prepareAndRun } from "./prepare-and-run";
 
 /**
  * Ask the API for the user's double-submit token now, while a request is

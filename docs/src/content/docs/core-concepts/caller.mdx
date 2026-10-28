@@ -1,4 +1,4 @@
-export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface.", mode: "both", updated: "2026-10-28" }
 
 ## Overview
 
@@ -67,7 +67,7 @@ Pass the routes, never the `api` object: a page that imports the definition as a
 |--------|------|---------|-------------|
 | `proxyPath` | `ProxyPath` | per-transport defaults | Per-transport proxy endpoint paths (`http` / `sse` / `ws`) |
 | `timeout` | `number` | — | Request timeout in ms |
-| `cancelPrevious` | `readonly string[]` | the API's own | The reads a newer call cancels while in flight |
+| `cancelPrevious` | `boolean` | the API's own | Whether a newer call of a read cancels its call in flight, where the endpoint and its groups say nothing |
 | `coalesce` | `boolean` | the API's own, or `true` | Whether identical reads in flight share one request |
 | `credentials` | `RequestCredentials` | `"include"` | Whether the browser sends its cookies to the proxy route; the proxy forwards them where the source or endpoint names `cookie` |
 | `headers` | `Record<string, string>` | — | Default headers |
@@ -115,6 +115,9 @@ await caller.files
 // Abort signal
 const controller = new AbortController()
 await caller.users.with({ signal: controller.signal }).getAll()
+
+// A newer search made the same way cancels this one while it is still in flight
+const found = await caller.users.with({ cancelPrevious: true }).search({ q: "ann" })
 ```
 
 ## Using Both Modes Together

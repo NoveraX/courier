@@ -1,4 +1,4 @@
-export const metadata = { title: "HTTP Client & Methods", description: "How Courier wraps native fetch with typed methods, automatic serialization, and path parameter extraction.", mode: "both", updated: "2026-10-27" }
+export const metadata = { title: "HTTP Client & Methods", description: "How Courier wraps native fetch with typed methods, automatic serialization, and path parameter extraction.", mode: "both", updated: "2026-10-28" }
 
 ## Overview
 
@@ -159,9 +159,6 @@ const api = defineApi({
 
   // Default headers for all requests
   headers: { "X-Client": "courier" },
-
-  // A newer search cancels the one still in flight
-  cancelPrevious: ["users.search"],
 
   // Middleware chain — retry, auth, logging, etc.
   middleware: [

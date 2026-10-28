@@ -1,5 +1,5 @@
 import { createUntypedProxyCallerFn } from "../../proxy-caller/create-proxy-caller-fn";
-import { routeKindOf } from "../../proxy-caller/from-routes";
+import { routeCancelPreviousOf, routeKindOf, routeOf } from "../../proxy-caller/from-routes";
 import type { ProxyCallerDefaults } from "../../proxy-caller/types";
 import type { HTTPExecutor } from "../types";
 
@@ -29,9 +29,14 @@ export function createProxyHTTPExecutor(
 
   return function executeHTTP(group, method, variables, options, raw) {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
-    const kind = routes ? routeKindOf(routes, group, method) : undefined;
+    const route = routes ? routeOf(routes, group, method) : undefined;
     const endpointKey = group ? `${group}:${method}` : method;
 
-    return fn(source, callOptions)(endpointKey, variables, kind);
+    return fn(source, callOptions)(
+      endpointKey,
+      variables,
+      routeKindOf(route),
+      routeCancelPreviousOf(route),
+    );
   };
 }

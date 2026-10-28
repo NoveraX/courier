@@ -1,11 +1,11 @@
 /**
  * The calls a proxy client cancels when a newer call to the same endpoint
- * starts — the endpoints its `cancelPrevious` names, a search as the user
+ * starts — the reads `cancelPrevious` is on for, a search as the user
  * types — whatever variables each was called with.
  */
 
 import { anySignal } from "../utils/any-signal";
-import { forgetCall, supersedeCall } from "../utils/cancel-previous";
+import { type EndpointHolds, holdEndpoint } from "../utils/cancel-previous";
 
 export interface ProxyCancelPrevious {
   /**
@@ -23,8 +23,34 @@ export interface ProxyCancelPrevious {
   ): Promise<TResult>;
 }
 
+/* The calls in flight of every proxy client given the same routes, as a
+   direct call's are those of every client of its API. */
+const callsByRoutes = new WeakMap<object, ProxyCancelPrevious>();
+
 /**
- * Calls a newer one to the same endpoint cancels, kept for one proxy client.
+ * The calls in flight a proxy client shares with every other client given
+ * the same routes: a newer call through one cancels an older call through
+ * another, as two direct clients of one API cancel each other's.
+ *
+ * @param routes - The routes the client was given, if it has them
+ * @returns Their table, or a table of the client's own when it has none
+ * @example
+ * ```ts
+ * const calls = proxyCancelPreviousOf(apiRoutes);
+ * ```
+ */
+export function proxyCancelPreviousOf(routes: object | undefined): ProxyCancelPrevious {
+  if (routes === undefined) return createProxyCancelPrevious();
+  let calls = callsByRoutes.get(routes);
+  if (calls === undefined) {
+    calls = createProxyCancelPrevious();
+    callsByRoutes.set(routes, calls);
+  }
+  return calls;
+}
+
+/**
+ * Calls a newer one to the same endpoint cancels.
  *
  * @returns The table of calls in flight, and how to send through it
  * @example
@@ -34,16 +60,18 @@ export interface ProxyCancelPrevious {
  * ```
  */
 export function createProxyCancelPrevious(): ProxyCancelPrevious {
-  const host = { pendingRequests: {} as Record<string, AbortController> };
+  const holds: EndpointHolds = new Map();
   return {
     async run(key, signal, send) {
-      const { controller, cancelSuperseded } = supersedeCall(host, key);
+      const hold = holdEndpoint(holds, key);
       try {
-        const sending = send(signal ? anySignal([signal, controller.signal]) : controller.signal);
-        cancelSuperseded();
+        hold.sending();
+        const sending = send(signal ? anySignal([signal, hold.signal]) : hold.signal);
+        hold.sent();
         return await sending;
       } finally {
-        forgetCall(host, key, controller);
+        hold.returned();
+        hold.release();
       }
     },
   };

@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-10-14" }
+export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-10-28" }
 
 ## API signature
 
@@ -19,6 +19,9 @@ The optional second argument configures defaults applied to every request made t
 type CallerDefaults = {
   // Request timeout in milliseconds
   timeout?: number
+  // Whether a newer call of a read cancels the older one in flight — in a
+  // browser or an app alone: on a server it has no effect
+  cancelPrevious?: boolean
   // Headers sent with every request
   headers?: Record<string, string>
   // Request context passed to every endpoint: headers to forward, the request

@@ -17,6 +17,13 @@ export interface RoutesEngineOptions {
    * wins over all. None by default.
    */
   envFiles?: readonly string[] | undefined;
+  /**
+   * The variables those files give, as the bundler reads them, asked anew
+   * for every reading: the config then sees the values the app does, `${VAR}`
+   * expanded as the bundler expands it. Without it the files are read as
+   * they are.
+   */
+  envValues?: (() => Readonly<Record<string, string>>) | undefined;
 }
 
 /** Reads a project's routes, again only when what they depend on changed. */
@@ -63,7 +70,7 @@ export function createRoutesEngine(
   evaluate: RoutesEvaluator = evaluateInChild,
 ): RoutesEngine {
   const request = requestOf(options);
-  const readings = createReadings(() => evaluate(request));
+  const readings = createReadings(() => evaluate({ ...request, env: options.envValues?.() }));
   return {
     async read() {
       const outcome = await readings.next();

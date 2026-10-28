@@ -227,6 +227,30 @@ describe("createRoutesEngine", () => {
     expect(engine.last?.configFile).toBe(config);
   });
 
+  it("asks the bundler for the variables of the env files anew for every reading", async () => {
+    const { evaluate, requests } = evaluator();
+    let asked = 0;
+    const engine = createRoutesEngine(
+      {
+        root: dir,
+        envValues: () => {
+          asked += 1;
+          return { SHOP_PUBLIC: String(asked) };
+        },
+      },
+      evaluate,
+    );
+    await engine.read();
+
+    writeFileSync(api, "export const api = { shop: true };\n");
+    await engine.read();
+
+    expect(requests.map((request) => request.env)).toEqual([
+      { SHOP_PUBLIC: "1" },
+      { SHOP_PUBLIC: "2" },
+    ]);
+  });
+
   it("names the config and the env files from the root, as absolute paths", async () => {
     const { evaluate, requests } = evaluator();
     const engine = createRoutesEngine(
@@ -240,6 +264,7 @@ describe("createRoutesEngine", () => {
       root: dir,
       configFile: join(dir, "config/courier.config.ts"),
       envFiles: [join(dir, ".env.local"), "/etc/app.env"],
+      env: undefined,
     });
   });
 

@@ -52,4 +52,10 @@ export interface RoutesRequest {
    * variable winning; a variable the process was started with wins over all.
    */
   readonly envFiles: readonly string[];
+  /**
+   * The variables those files give, as the bundler reads them — with its own
+   * expansion of `${VAR}` — in place of reading them here. A variable the
+   * process was started with still wins.
+   */
+  readonly env?: Readonly<Record<string, string>> | undefined;
 }

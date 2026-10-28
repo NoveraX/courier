@@ -45,6 +45,17 @@ describe("readEnvFiles", () => {
     expect(process.env.API_URL).toBe("https://api.example.com");
   });
 
+  it("takes the variables the bundler read from the files in place of reading them, the process's still winning", () => {
+    vi.stubEnv("API_URL", "https://api.example.com");
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: an env file's reference, which the bundler fills in
+    writeFileSync(join(dir, ".env"), "SHOP_PUBLIC=${ON}\n");
+
+    readEnvFiles([join(dir, ".env")], { SHOP_PUBLIC: "1", API_URL: "http://localhost:4000" });
+
+    expect(process.env.SHOP_PUBLIC).toBe("1");
+    expect(process.env.API_URL).toBe("https://api.example.com");
+  });
+
   it("passes over a file that is not there, reading the rest", () => {
     writeFileSync(join(dir, ".env"), "SHOP_PUBLIC=1\n");
 

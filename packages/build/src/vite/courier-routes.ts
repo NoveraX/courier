@@ -12,6 +12,7 @@ import { ROUTES_MODULE_ID, ROUTES_PATTERN, ROUTES_SPECIFIER } from "./routes-mod
 import type { RoutesPluginState } from "./routes-plugin-state";
 import { sharedEngine } from "./shared-engine";
 import { viteEnvFiles } from "./vite-env-files";
+import { viteEnvValues } from "./vite-env-values";
 import { watchRoutesInputs } from "./watch-routes-inputs";
 
 /** Options of the routes plugin. */
@@ -77,6 +78,7 @@ export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
         root: config.root,
         config: options.config,
         envFiles: viteEnvFiles(config),
+        envValues: () => viteEnvValues(config),
       });
       state.configFile = configFileOf(config, options.config);
     },

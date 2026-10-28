@@ -32,7 +32,7 @@ type RoutesOf = typeof routesOf;
  * ```
  */
 export async function readProjectRoutes(request: RoutesRequest): Promise<RoutesSnapshot> {
-  readEnvFiles(request.envFiles);
+  readEnvFiles(request.envFiles, request.env);
   const reading = trackReading(request);
   try {
     const { configFile, lookedFor } = projectConfigFile(request);

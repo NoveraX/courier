@@ -116,6 +116,20 @@ describe("courierRoutes in a build", () => {
     expect(page).toContain("search");
   }, 60_000);
 
+  it("reads the env files' variables with the values Vite gives them, references filled in", async () => {
+    project = tempProject({
+      "courier.config.ts": CONFIG,
+      "src/apis.ts": APIS,
+      "src/page.ts": PAGE,
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: an env file's reference, which Vite fills in
+      ".env": "SEARCH_FLAG=1\nSHOP_SEARCH_PUBLIC=${SEARCH_FLAG}\n",
+    });
+
+    const page = await buildPage(project.root);
+
+    expect(page).toContain("search");
+  }, 60_000);
+
   it("fails the build with what the config threw", async () => {
     project = tempProject({
       "courier.config.ts": `${CONFIG}\nthrow new Error("SHOP_API_KEY is not set");\n`,

@@ -2,7 +2,9 @@ import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin, ResolvedConfig } from "vite";
 
+import { errnoCode } from "../config/errno-code";
 import { findConfigFile } from "../config/load-config";
+import { UntrustedConfigError } from "../config/untrusted-config-error";
 import { refuseConfigInPage } from "./config-in-page";
 import { loadRoutesModule } from "./load-routes-module";
 import { ROUTES_MODULE_ID, ROUTES_PATTERN, ROUTES_SPECIFIER } from "./routes-module-id";
@@ -97,14 +99,14 @@ export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
   return plugin;
 }
 
-/* The config file the plugin reads, as Vite names a module: its real path. */
+/* The config file the plugin reads, as Vite names a module: its real path. One that is
+   not there yet, or that is not run, the engine reports when the routes are read. */
 function configFileOf(config: ResolvedConfig, named: string | undefined): string | undefined {
-  const file = named === undefined ? findConfigFile(config.root) : resolve(config.root, named);
-  if (file === null) return undefined;
   try {
-    return realpathSync(file);
-  } catch {
-    /* Not there yet: the engine says so when the routes are read. */
-    return undefined;
+    const file = named === undefined ? findConfigFile(config.root) : resolve(config.root, named);
+    return file === null ? undefined : realpathSync(file);
+  } catch (error) {
+    if (error instanceof UntrustedConfigError || errnoCode(error) === "ENOENT") return undefined;
+    throw error;
   }
 }

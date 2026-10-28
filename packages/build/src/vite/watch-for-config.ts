@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import type { ViteDevServer } from "vite";
 
-import { CONFIG_BASENAMES } from "../config/load-config";
+import { CONFIG_BASENAMES } from "../config/config-candidates";
 import { ROUTES_MODULE_ID } from "./routes-module-id";
 import type { RoutesPluginState } from "./routes-plugin-state";
 

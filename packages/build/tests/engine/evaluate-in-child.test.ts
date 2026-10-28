@@ -6,10 +6,13 @@
  * variables they depended on, and each way a reading fails. Requires a
  * build of this package first, whose worker the process runs.
  */
+import { spawn } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -17,13 +20,16 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { evaluateInChild } from "../../src/engine/evaluate-in-child";
 import { RoutesReadError } from "../../src/engine/routes-read-error";
 
 /* The repository's packages, where a config's `@noverax/courier` resolves from. */
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../../node_modules");
+
+/* The built package, as a bundler's process imports it. */
+const BUILT = resolve(import.meta.dirname, "../../lib/index.js");
 
 const APIS = `import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 
@@ -49,6 +55,8 @@ export default { sources: { shop, payments } };
 `;
 
 let dir: string;
+/* Processes a test started, killed after it whatever it found. */
+const started: number[] = [];
 
 beforeEach(() => {
   dir = realpathSync(mkdtempSync(join(tmpdir(), "courier-evaluate-in-child-")));
@@ -57,8 +65,37 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  for (const pid of started.splice(0)) if (isAlive(pid)) process.kill(pid, "SIGKILL");
   rmSync(dir, { recursive: true, force: true });
 });
+
+/* Whether a process is still running: signal 0 asks the system without signalling it. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* A config that writes the pid of the process reading it, then never finishes loading. */
+function configThatHangs(pidFile: string, before = ""): string {
+  return `import { writeFileSync } from "node:fs";
+${CONFIG}
+${before}
+writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));
+setInterval(() => {}, 1_000);
+await new Promise(() => {});
+`;
+}
+
+async function pidIn(file: string): Promise<number> {
+  await vi.waitFor(() => expect(existsSync(file)).toBe(true), { timeout: 20_000 });
+  const pid = Number(readFileSync(file, "utf8"));
+  started.push(pid);
+  return pid;
+}
 
 function project(config: string = CONFIG): void {
   writeFileSync(join(dir, "apis.ts"), APIS);
@@ -204,6 +241,43 @@ describe("evaluateInChild", () => {
 
     expect(error.code).toBe("ROUTES_NOT_READ");
     expect(error.message).toContain("given up");
+  }, 30_000);
+
+  it("reads the routes of a config that sends the process running it a message of its own", async () => {
+    project(`${CONFIG}\nprocess.send?.("ready");\n`);
+
+    const snapshot = await evaluateInChild({ root: dir, envFiles: [] });
+
+    expect(Object.keys(snapshot.routes)).toEqual(["payments", "shop"]);
+  }, 30_000);
+
+  it("ends a process the config keeps running and deaf to SIGTERM, once it gives it up", async () => {
+    const pidFile = join(dir, "reader.pid");
+    project(configThatHangs(pidFile, 'process.on("SIGTERM", () => {});'));
+
+    const error = await failure(evaluateInChild({ root: dir, envFiles: [] }, 1_500));
+    const pid = await pidIn(pidFile);
+
+    expect(error.code).toBe("ROUTES_NOT_READ");
+    await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 10_000 });
+  }, 30_000);
+
+  it("ends the process reading the config once the process that asked is gone", async () => {
+    const pidFile = join(dir, "reader.pid");
+    project(configThatHangs(pidFile));
+    const asker = spawn(process.execPath, [
+      "--input-type=module",
+      "-e",
+      `import { createRoutesEngine } from ${JSON.stringify(BUILT)};
+createRoutesEngine({ root: ${JSON.stringify(dir)} }).read().catch(() => {});
+setInterval(() => {}, 1_000);`,
+    ]);
+    if (asker.pid !== undefined) started.push(asker.pid);
+    const pid = await pidIn(pidFile);
+
+    asker.kill("SIGKILL");
+
+    await vi.waitFor(() => expect(isAlive(pid)).toBe(false), { timeout: 10_000 });
   }, 30_000);
 
   it("answers whatever the config leaves running, and ends its process", async () => {

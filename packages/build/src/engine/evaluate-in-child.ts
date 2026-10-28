@@ -1,10 +1,12 @@
-import { type ChildProcess, fork } from "node:child_process";
+import { fork } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { RoutesReadError } from "./routes-read-error";
 import type { RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
+import { superviseChild } from "./supervise-child";
+import { workerMessages } from "./worker-messages";
 import type { WorkerReply } from "./worker-reply";
 
 /** How long a reading may take before it is given up: a config that waits on the network never ends. */
@@ -33,20 +35,28 @@ export function evaluateInChild(
   limitMs: number = READ_LIMIT_MS,
 ): Promise<RoutesSnapshot> {
   return new Promise((resolve, reject) => {
-    const child = fork(workerFile(), [], {
-      execArgv: [],
-      stdio: ["ignore", "inherit", "inherit", "ipc"],
-    });
-    const settle = settleOnce(child, resolve, reject);
     const unread = (message: string): RoutesReadError =>
       new RoutesReadError("ROUTES_NOT_READ", message, {
         root: request.root,
         configFile: request.configFile,
       });
+    const worker = workerFile();
+    if (worker === undefined) {
+      reject(unread(`${PACKAGE_NAME} cannot find the folder it is installed in: install it again`));
+      return;
+    }
+    const child = fork(worker, [], {
+      execArgv: [],
+      stdio: ["ignore", "inherit", "inherit", "ipc"],
+    });
+    const settle = settleOnce(superviseChild(child), resolve, reject);
     const timer = setTimeout(() => {
       settle(unread(`The config was still being read after ${limitMs / 1000} s, and was given up`));
     }, limitMs);
-    child.once("message", (reply: WorkerReply) => settle(outcomeOf(reply)));
+    settle.onSettled(() => clearTimeout(timer));
+    child.on("message", (message: unknown) => {
+      if (workerMessages.isReply(message)) settle(outcomeOf(message.reply), true);
+    });
     child.once("error", (error) =>
       settle(unread(`The process that reads the config did not start: ${error.message}`)),
     );
@@ -56,8 +66,7 @@ export function evaluateInChild(
         unread(`The process that reads the config ended (${signal ?? code}) before it answered`),
       ),
     );
-    child.once("spawn", () => child.send(request));
-    settle.onSettled(() => clearTimeout(timer));
+    child.once("spawn", () => child.send(workerMessages.request(request)));
   });
 }
 
@@ -70,23 +79,23 @@ function outcomeOf(reply: WorkerReply): RoutesSnapshot | RoutesReadError {
   });
 }
 
-type Settle = ((outcome: RoutesSnapshot | RoutesReadError) => void) & {
+type Settle = ((outcome: RoutesSnapshot | RoutesReadError, answered?: boolean) => void) & {
   onSettled(then: () => void): void;
 };
 
-/* The first outcome settles the reading; the process is stopped if it is still running. */
+/* The first outcome settles the reading, and lets its process go. */
 function settleOnce(
-  child: ChildProcess,
+  release: (answered: boolean) => void,
   resolve: (snapshot: RoutesSnapshot) => void,
   reject: (error: RoutesReadError) => void,
 ): Settle {
   let settled = false;
   const after: Array<() => void> = [];
-  const settle = (outcome: RoutesSnapshot | RoutesReadError): void => {
+  const settle = (outcome: RoutesSnapshot | RoutesReadError, answered = false): void => {
     if (settled) return;
     settled = true;
     for (const then of after) then();
-    if (child.exitCode === null && child.signalCode === null) child.kill();
+    release(answered);
     if (outcome instanceof RoutesReadError) reject(outcome);
     else resolve(outcome);
   };
@@ -96,13 +105,13 @@ function settleOnce(
 let found: string | undefined;
 
 /* The worker this package ships: under the package's own root, which holds the manifest
-   with its name, wherever this module was bundled into. */
-function workerFile(): string {
+   with its name, wherever this module was bundled into; none when no folder above does. */
+function workerFile(): string | undefined {
   if (found !== undefined) return found;
   let dir = dirname(fileURLToPath(import.meta.url));
   while (!isPackageRoot(dir)) {
     const parent = dirname(dir);
-    if (parent === dir) throw new Error(`${PACKAGE_NAME} cannot find its own folder`);
+    if (parent === dir) return undefined;
     dir = parent;
   }
   found = join(dir, "lib/engine/worker.js");

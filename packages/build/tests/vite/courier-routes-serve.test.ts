@@ -111,6 +111,37 @@ describe("courierRoutes under the dev server", () => {
     await expect.poll(() => shopPaths(dev), { timeout: 20_000 }).toEqual(["cart.add", "cart.view"]);
   }, 60_000);
 
+  it("serves them anew once a file the config reads changes, or a folder it lists gains an entry", async () => {
+    project = tempProject({ "src/apis.ts": APIS, "src/entry.ts": ENTRY, "flags.json": "{}\n" });
+    const root = project.root;
+    project.write(
+      "courier.config.ts",
+      `import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { payments, shop } from "./src/apis";
+
+const flags = JSON.parse(readFileSync(${JSON.stringify(`${root}/flags.json`)}, "utf8"));
+const switches = existsSync(${JSON.stringify(`${root}/switches`)}) ? readdirSync(${JSON.stringify(`${root}/switches`)}) : [];
+export default { sources: flags.payments || switches.includes("payments") ? { shop, payments } : { shop } };
+`,
+    );
+    project.write("switches/.keep", "");
+    server = await serve(root);
+    const dev = server;
+    const sources = async (): Promise<string[]> => {
+      const loaded: Record<string, unknown> = await dev.ssrLoadModule("/src/entry.ts");
+      return Object.keys((loaded.routes as object | undefined) ?? {});
+    };
+    expect(await sources()).toEqual(["shop"]);
+
+    project.edit("flags.json", () => '{ "payments": true }\n');
+    await expect.poll(sources, { timeout: 20_000 }).toEqual(["payments", "shop"]);
+    project.edit("flags.json", () => "{}\n");
+    await expect.poll(sources, { timeout: 20_000 }).toEqual(["shop"]);
+    project.write("switches/payments", "");
+
+    await expect.poll(sources, { timeout: 20_000 }).toEqual(["payments", "shop"]);
+  }, 90_000);
+
   it("serves a module that fails with why while there is no config, and the routes once one is saved", async () => {
     project = tempProject({ "src/apis.ts": APIS, "src/entry.ts": ENTRY });
     server = await serve(project.root);

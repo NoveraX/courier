@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { type Stats, statSync } from "node:fs";
+import { readdirSync, type Stats, statSync } from "node:fs";
 
 import { errnoCode } from "../config/errno-code";
 import type { RoutesInputs } from "./routes-snapshot";
@@ -16,9 +16,10 @@ const COARSE_CLOCK_MS = 2_000;
 
 /**
  * A digest of what a reading of the routes depended on, as it is now: the
- * size and the time of the last change of every path it read, whether a
- * path it looked for is there, and the value of every variable it looked at.
- * Equal digests mean the same routes.
+ * size and the time of the last change of every file it read, whether a
+ * path it looked at is there and is a folder, the entries of every folder
+ * it listed, and the value of every variable it looked at. Equal digests
+ * mean the same routes.
  *
  * A file changed after the reading began may have been read before or after
  * the change, so the digest is then {@link UNSETTLED}, which nothing equals,
@@ -36,19 +37,36 @@ const COARSE_CLOCK_MS = 2_000;
  */
 export function fingerprintOf(inputs: RoutesInputs, since?: number): string {
   const hash = createHash("sha256").update(inputs.configFile ?? "\0none");
-  for (const file of inputs.files) {
-    const stats = statOf(file);
-    if (typeof stats === "string") {
-      hash.update(`\n${file}\0${stats}`);
-      continue;
-    }
-    if (since !== undefined && changedSince(stats.mtimeMs, since)) return UNSETTLED;
-    hash.update(`\n${file}\0${stats.size}\0${stats.mtimeMs}`);
+  const parts = [
+    ...inputs.files.map((file) => filePart(file, since)),
+    ...(inputs.listed ?? []).map((folder) => folderPart(folder, since)),
+  ];
+  for (const part of parts) {
+    if (part === UNSETTLED) return UNSETTLED;
+    hash.update(part);
   }
   for (const [name, value] of variablesOf(inputs.env)) {
     hash.update(`\n${name}=${value ?? "\0unset"}`);
   }
   return hash.digest("hex");
+}
+
+/* A file by its size and time; a folder, or a path not there, by what it is. */
+function filePart(file: string, since: number | undefined): string {
+  const stats = statOf(file);
+  if (typeof stats === "string") return `\n${file}\0${stats}`;
+  if (stats.isDirectory()) return `\n${file}\0folder`;
+  if (since !== undefined && changedSince(stats.mtimeMs, since)) return UNSETTLED;
+  return `\n${file}\0${stats.size}\0${stats.mtimeMs}`;
+}
+
+/* A folder by its entries; one whose entries changed while it was read matches nothing. */
+function folderPart(folder: string, since: number | undefined): string {
+  const stats = statOf(folder);
+  if (since !== undefined && typeof stats !== "string" && changedSince(stats.mtimeMs, since)) {
+    return UNSETTLED;
+  }
+  return `\n${folder}/\0${entriesOf(folder)}`;
 }
 
 /* A time with a part below the millisecond comes from a clock that keeps finer ones. */
@@ -62,6 +80,15 @@ function statOf(path: string): Stats | string {
     return statSync(path, { throwIfNoEntry: false }) ?? "absent";
   } catch (error) {
     return errnoCode(error) ?? "unreadable";
+  }
+}
+
+/* A folder's entries by name, sorted, or why there are none. */
+function entriesOf(folder: string): string {
+  try {
+    return readdirSync(folder).sort().join("\0");
+  } catch (error) {
+    return `\0${errnoCode(error) ?? "unreadable"}`;
   }
 }
 

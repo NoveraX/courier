@@ -56,7 +56,12 @@ interface VitestContext {
  * ```
  */
 export function courierRoutes(options: CourierRoutesOptions = {}): Plugin {
-  const state: RoutesPluginState = { servers: new Set(), followed: new Set(), underVitest: false };
+  const state: RoutesPluginState = {
+    servers: new Set(),
+    followed: new Set(),
+    listed: new Set(),
+    underVitest: false,
+  };
   const plugin: Plugin & { configureVitest(context: VitestContext): void } = {
     name: "courier-routes",
     enforce: "pre",

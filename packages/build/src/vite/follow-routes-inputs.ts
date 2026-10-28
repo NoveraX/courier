@@ -12,10 +12,10 @@ export interface WatchContext {
 /**
  * Follow what a reading of the routes read, so that a change to it loads
  * the routes module again. Each file is watched for the module, and Vite
- * loads it again once one changes; every path, there or not, a folder too,
- * is followed by each dev server's watcher, which loads it again once one
- * appears or goes, or a folder's entries change. Installed packages are
- * left to the install.
+ * loads it again once one changes; every path, there or not, is followed by
+ * each dev server's watcher, which loads it again once one appears or goes,
+ * and so is every entry of a folder the reading listed. Installed packages
+ * are left to the install.
  *
  * @param context - Vite's plugin context, loading the routes module
  * @param state - What the plugin knows, whose followed paths this replaces
@@ -32,13 +32,19 @@ export function followRoutesInputs(
 ): void {
   const followed = new Set<string>();
   for (const path of inputs.files) {
-    if (path.split(sep).includes("node_modules")) continue;
+    if (isInstalled(path)) continue;
     followed.add(path);
     /* Vite takes a watched file for an import of the module: only a file that is there. */
     if (isFile(path)) context.addWatchFile(path);
   }
+  const listed = new Set((inputs.listed ?? []).filter((folder) => !isInstalled(folder)));
   state.followed = followed;
-  for (const server of state.servers) server.watcher.add([...followed]);
+  state.listed = listed;
+  for (const server of state.servers) server.watcher.add([...followed, ...listed]);
+}
+
+function isInstalled(path: string): boolean {
+  return path.split(sep).includes("node_modules");
 }
 
 /* A path it may not look at is no file it can watch; the watcher follows it all the same. */

@@ -1,13 +1,17 @@
 import type { LoadConfigFileOptions } from "../config/load-config";
 import type { RoutesInputs, RoutesRequest } from "./routes-snapshot";
 import { trackEnvReads } from "./track-env-reads";
+import { type FileReads, trackFileReads } from "./track-file-reads";
 import { trackModuleFiles } from "./track-module-files";
 
 /** What one reading of the routes has read so far, noted as it runs. */
 export interface ReadingTracker {
   /** What the config's loader is told: each module it loads, and when the config's own code runs. */
   readonly loadOptions: Pick<LoadConfigFileOptions, "onModule" | "beforeRun" | "runTransform">;
-  /** Note the config the reading reads, and where one was looked for before it. */
+  /**
+   * Note the config the reading reads, and where one was looked for before
+   * it; from the first, every file read and folder listed is noted too.
+   */
   noteConfig(configFile: string, lookedFor: readonly string[]): void;
   /**
    * Everything read so far: once the routes are read, what they depend on;
@@ -18,8 +22,9 @@ export interface ReadingTracker {
 
 /**
  * Note what one reading of the routes reads, from now on: the modules Node
- * and the config's loader load, and the environment variables the config's
- * code looks at once it runs, besides the config and the env files.
+ * and the config's loader load, the files read and folders listed once the
+ * config is found, and the environment variables the config's code looks at
+ * once it runs, besides the config and the env files.
  *
  * @param request - The reading's request, whose env files are read before it
  * @returns The tracker
@@ -34,18 +39,24 @@ export function trackReading(request: RoutesRequest): ReadingTracker {
   const modules = trackModuleFiles();
   const env = trackEnvReads({ paused: true });
   let configFile: string | undefined;
+  let reads: FileReads | undefined;
   const looked = new Set<string>();
   return {
     loadOptions: { onModule: modules.noteFile, beforeRun: env.resume, runTransform: env.untracked },
     noteConfig(file, lookedFor) {
       configFile = file;
+      reads ??= trackFileReads();
       looked.add(file);
       for (const path of lookedFor) looked.add(path);
     },
-    inputs: async () => ({
-      configFile,
-      files: [...new Set([...looked, ...request.envFiles, ...(await modules.files())])].sort(),
-      env: env.names(),
-    }),
+    inputs: async () => {
+      const files = [...looked, ...request.envFiles, ...(await modules.files())];
+      return {
+        configFile,
+        files: [...new Set([...files, ...(reads?.paths() ?? [])])].sort(),
+        listed: [...(reads?.folders() ?? [])].sort(),
+        env: env.names(),
+      };
+    },
   };
 }

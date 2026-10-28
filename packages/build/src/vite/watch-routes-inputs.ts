@@ -20,7 +20,7 @@ const PATH_EVENTS = ["add", "unlink", "addDir", "unlinkDir"] as const;
  * goes, which no change of a watched file reports: a config saved where one
  * is looked for, inside Vite's root or above it, or the config removed; an
  * env file or a module made where the latest reading looked for one; an
- * entry added to or removed from a folder it read.
+ * entry added to or removed from a folder it listed.
  *
  * @param server - A dev server the plugin serves
  * @param state - What the plugin knows: the paths the latest reading followed
@@ -41,7 +41,7 @@ export function watchRoutesInputs(
   server.watcher.add([...candidates]);
   const onPath = (path: string): void => {
     const isConfig = candidates.has(path);
-    if (!isConfig && !state.followed.has(path) && !state.followed.has(dirname(path))) return;
+    if (!isConfig && !state.followed.has(path) && !state.listed.has(dirname(path))) return;
     if (isConfig) config.onChange();
     reloadRoutes(server);
   };

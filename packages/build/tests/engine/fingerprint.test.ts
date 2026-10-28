@@ -80,6 +80,19 @@ describe("fingerprintOf", () => {
     expect(fingerprintOf(snapshot("*"))).not.toBe(before);
   });
 
+  it("takes a folder looked at by whether it is there, and a folder listed by its entries", () => {
+    const folder = join(dir, "defs");
+    mkdirSync(folder);
+    const looked = { configFile: api, files: [folder], env: [] };
+    const listed = { configFile: api, files: [], listed: [folder], env: [] };
+    const before = [fingerprintOf(looked), fingerprintOf(listed)];
+
+    writeFileSync(join(folder, "billing.ts"), "export const billing = {};\n");
+
+    expect(fingerprintOf(looked)).toBe(before[0]);
+    expect(fingerprintOf(listed)).not.toBe(before[1]);
+  });
+
   it("matches nothing when a file changed after the reading began", () => {
     const since = Date.now();
 

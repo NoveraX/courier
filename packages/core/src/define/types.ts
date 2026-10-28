@@ -13,6 +13,12 @@ export type EndpointRecord = Record<string, AnyEndpointFn>;
  * the name is kept for; yet a type built on such a name — what a generic
  * factory of groups returns — keeps its shape, where `never` in its place
  * would reduce the whole type to `never` in a declaration file.
+ *
+ * A value typed `any` goes into this type as into every type but `never`,
+ * so an endpoint or a group typed `any` under such a name compiles; it is
+ * refused where it is defined, with `RESERVED_ENDPOINT_NAME`. Refusing it in
+ * the types too would take a check generic over the record, which a factory
+ * of groups over its own type parameter could no longer satisfy.
  */
 interface NameKeptFor<TWhat extends string> {
   readonly "this name is kept for": TWhat;

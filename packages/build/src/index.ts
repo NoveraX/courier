@@ -4,7 +4,11 @@ export {
   type RoutesEngineOptions,
   type RoutesEvaluator,
 } from "./engine/routes-engine";
-export { routesModuleCode, unreadRoutesModuleCode } from "./engine/routes-module-code";
+export {
+  routesCommonJsCode,
+  routesModuleCode,
+  unreadRoutesModuleCode,
+} from "./engine/routes-module-code";
 export {
   RoutesReadError,
   type RoutesReadErrorCode,

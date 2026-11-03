@@ -18,15 +18,19 @@ export default defineConfig([
       "engine/worker": "src/engine/worker.ts",
       /* Imported by the routes loader, which finds it beside itself. */
       "webpack/run-routes-loader": "src/webpack/run-routes-loader.ts",
+      /* Started as a thread by the Jest transformer, which finds it beside itself. */
+      "jest/routes-thread": "src/jest/routes-thread.ts",
     },
   },
   {
     ...sharedBuild,
-    /* webpack, Rspack and Turbopack load a loader as CommonJS. */
-    entry: { "webpack/loader": "src/webpack/loader.ts" },
+    /* webpack, Rspack and Turbopack load a loader as CommonJS, and Jest a transformer. */
+    entry: {
+      "webpack/loader": "src/webpack/loader.ts",
+      "jest/transformer": "src/jest/routes-transformer.ts",
+    },
     format: ["cjs"],
-    outExtensions: () => ({ js: ".cjs" }),
-    dts: false,
+    outExtensions: () => ({ js: ".cjs", dts: ".d.cts" }),
     clean: false,
   },
 ]);

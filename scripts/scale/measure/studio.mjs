@@ -16,8 +16,10 @@ import { editorFigures } from "./editor.mjs";
 import { cpuSeconds, measured, residentMb, treeOf } from "./metrics.mjs";
 
 const IDLE_SECONDS = 20;
-/* What Studio and its mocks hold once their start is over: V8 gives back what loading took a few seconds later. */
-const SETTLE_SECONDS = 15;
+/* What Studio and its mocks hold once their start is over. V8 gives back what loading took
+   once a heap has gone quiet: 8 s after in Node 24, but only 30 s after in Node 26, whose
+   V8 waits longer to start reducing it. Read sooner, Node 26 counts the start's garbage. */
+const SETTLE_SECONDS = 35;
 
 /**
  * Start Studio for the project, measure it, and stop it.

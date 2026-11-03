@@ -11,9 +11,8 @@
 import { rmSync, symlinkSync } from "node:fs";
 import { createLogger, createServer, type ViteDevServer } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
-
+import { ROUTES_MODULE_ID } from "../../src/util/routes-module-id";
 import { courierRoutes } from "../../src/vite/courier-routes";
-import { ROUTES_MODULE_ID } from "../../src/vite/routes-module-id";
 import { APIS, CONFIG, type TempProject, tempProject } from "./temp-project";
 
 const ENTRY = `export { routes } from "@noverax/courier/routes";\n`;

@@ -1,4 +1,4 @@
-export type { CourierRoutesOptions } from "../webpack/courier-routes-options";
+export type { CourierRoutesOptions } from "../util/courier-routes-options";
 export {
   courierRoutes,
   type RoutesRsbuildApi,

@@ -1,5 +1,5 @@
+export type { CourierRoutesOptions } from "../util/courier-routes-options";
 export { configInPageRule } from "./config-in-page-rule";
-export type { CourierRoutesOptions } from "./courier-routes-options";
 export { CourierRoutesPlugin, type RoutesCompiler } from "./courier-routes-plugin";
 export type { RoutesLoaderContext } from "./routes-loader-context";
 export { routesLoaderFile } from "./routes-loader-file";

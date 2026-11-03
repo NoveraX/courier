@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 
 import { RoutesReadError } from "../engine/routes-read-error";
 import { configFileOf } from "../util/config-file-of";
-import type { CourierRoutesOptions } from "./courier-routes-options";
+import type { CourierRoutesOptions } from "../util/courier-routes-options";
 
 /** What the routes rules of a project are made from. */
 export interface RoutesProject {

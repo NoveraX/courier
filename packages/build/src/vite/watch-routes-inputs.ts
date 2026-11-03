@@ -1,7 +1,7 @@
 import { dirname } from "node:path";
 import type { ViteDevServer } from "vite";
 
-import { ROUTES_MODULE_ID } from "./routes-module-id";
+import { ROUTES_MODULE_ID } from "../util/routes-module-id";
 import type { RoutesPluginState } from "./routes-plugin-state";
 import { watchOnce } from "./watch-once";
 

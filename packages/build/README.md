@@ -144,6 +144,23 @@ Next.js takes `withCourier()` from `@noverax/courier-next/plugin`, under Turbopa
 
 <br />
 
+## esbuild
+
+The same routes, under esbuild: the plugin from `@noverax/courier-build/esbuild` builds them in place of `@noverax/courier/routes`, and a bundle for any `platform` but `node` — a page's — fails where it takes the config itself.
+
+```ts
+import { build } from "esbuild"
+import { courierRoutes } from "@noverax/courier-build/esbuild"
+
+await build({ entryPoints: ["src/main.ts"], bundle: true, outdir: "dist", plugins: [courierRoutes()] })
+```
+
+- **The config** is found from `absWorkingDir`, or the folder esbuild runs in, and the `config` option names another.
+- **Variables** are the process's: esbuild reads no env file of its own.
+- **A context that builds again**, under `watch()` or `serve()`, follows every file the routes came from, each path the config looked for that is not there yet, and each folder it listed. A config that breaks on a later build leaves the routes read last in force, with a warning; a first build fails with it.
+
+<br />
+
 ## API
 
 | Export | From | Purpose |
@@ -151,6 +168,7 @@ Next.js takes `withCourier()` from `@noverax/courier-next/plugin`, under Turbopa
 | `courierRoutes(options?)` | `/vite` | The Vite plugin: the routes in place of `@noverax/courier/routes`, in every environment |
 | `CourierRoutesPlugin` | `/webpack`, `/rspack` | The webpack and Rspack plugin: the routes in every bundle, and the config refused in a page's |
 | `courierRoutes(options?)` | `/rsbuild` | The Rsbuild plugin, for every environment |
+| `courierRoutes(options?)` | `/esbuild` | The esbuild plugin: the routes in every bundle, and the config refused in a page's — any `platform` but `node` |
 | `routesProject(root, options?)` / `routesRule(project)` / `configInPageRule(project)` / `routesLoaderFile()` | `/webpack` | The rules the plugins add, for a framework that writes its bundler's config itself |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
 | `routesModuleCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes`, or one that fails with why |

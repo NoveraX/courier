@@ -73,6 +73,26 @@ export function node10Errors(errors) {
   );
 }
 
+/**
+ * Whether an entry of an `exports` map declares its types: for every module
+ * system, or for each apart under its `import` and `require`, as an entry
+ * built as CommonJS beside its ES module does.
+ *
+ * @param {unknown} target - The entry's value in the map
+ * @returns {boolean} Whether a consumer finds its types there
+ * @example
+ * declaresTypes({ import: { types: "./lib/a.d.ts", default: "./lib/a.js" } }); // → true
+ */
+export function declaresTypes(target) {
+  if (typeof target !== "object" || target === null) return false;
+  return (
+    "types" in target ||
+    Object.values(target).some(
+      (each) => typeof each === "object" && each !== null && "types" in each,
+    )
+  );
+}
+
 /** Every public entry point, as the specifier a consumer would import. */
 function collectEntries() {
   const specifiers = [];
@@ -87,7 +107,7 @@ function collectEntries() {
     if (!manifest.name || manifest.private) continue;
 
     for (const [subpath, target] of Object.entries(manifest.exports ?? {})) {
-      if (typeof target !== "object" || target === null || !("types" in target)) continue;
+      if (!declaresTypes(target)) continue;
       specifiers.push(subpath === "." ? manifest.name : `${manifest.name}/${subpath.slice(2)}`);
     }
   }

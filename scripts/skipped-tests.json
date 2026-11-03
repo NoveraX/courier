@@ -47,6 +47,7 @@
     "packages/build/tests/config/transform-cache-disk.test.ts > createTransformCache with a directory it cannot use > writes nothing through a directory that is already a symbolic link, and says why once",
     "packages/build/tests/engine/evaluate-in-child.test.ts > evaluateInChild > fails CONFIG_NOT_TRUSTED for a config above the root that any user may write, and runs none of it",
     "packages/build/tests/engine/fingerprint.test.ts > fingerprintOf > digests a path it may not look at by why, rather than failing",
+    "packages/build/tests/metro/with-courier.test.ts > withCourier for Metro > fails with why where the module's folder cannot be written",
     "packages/cli/tests/project-fs/assert-named-inside.test.ts > every check of the project's folder > refuses a link outside by its name, before it asks whether the path is a link",
     "packages/cli/tests/project-fs/assert-opened-inside.test.ts > assertOpenedInside > lets a file through in a project named through the platform's own links, and still refuses one outside",
     "packages/cli/tests/project-fs/assert-opened-inside.test.ts > assertOpenedInside > lets a file through in a project reached through a link of its own",

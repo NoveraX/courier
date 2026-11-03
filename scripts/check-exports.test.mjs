@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { node10Errors, ourErrors } from "./check-exports.mjs";
+import { declaresTypes, node10Errors, ourErrors } from "./check-exports.mjs";
 
 describe("ourErrors", () => {
   it("keeps an error in a package's published declarations, or in the probe", () => {
@@ -45,5 +45,23 @@ describe("node10Errors", () => {
     ];
 
     expect(node10Errors(errors)).toEqual([]);
+  });
+});
+
+describe("declaresTypes", () => {
+  it("takes an entry typed for every module system, and one typed for each apart", () => {
+    const apart = {
+      import: { types: "./lib/a/index.d.ts", default: "./lib/a/index.js" },
+      require: { types: "./lib/a/index.d.cts", default: "./lib/a/index.cjs" },
+      default: "./lib/a/index.js",
+    };
+
+    expect(declaresTypes({ types: "./lib/index.d.ts", import: "./lib/index.js" })).toBe(true);
+    expect(declaresTypes(apart)).toBe(true);
+  });
+
+  it("leaves out a path alone, and an entry that names no types", () => {
+    expect(declaresTypes("./package.json")).toBe(false);
+    expect(declaresTypes({ default: "./lib/index.js" })).toBe(false);
   });
 });

@@ -14,7 +14,12 @@ export type RoutesReadErrorCode =
   /** The config did not load: an import it could not resolve, a throw, or no `sources` in it. */
   | "CONFIG_NOT_LOADED"
   /** The reading went past its time limit, or its process ended before it answered. */
-  | "ROUTES_NOT_READ";
+  | "ROUTES_NOT_READ"
+  /**
+   * `@noverax/courier` does not resolve from the project's root, so there is
+   * no routes module of the package's to build the routes in place of.
+   */
+  | "CORE_NOT_FOUND";
 
 /** Where a reading of the routes failed. */
 export interface RoutesReadErrorContext extends Record<string, unknown> {

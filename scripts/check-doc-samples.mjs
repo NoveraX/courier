@@ -69,6 +69,7 @@ export const ENTRIES = [
   "@noverax/courier-build/rspack",
   "@noverax/courier-build/rsbuild",
   "@noverax/courier-build/esbuild",
+  "@noverax/courier-build/rollup",
   "@noverax/courier-build",
 ];
 

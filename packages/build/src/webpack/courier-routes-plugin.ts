@@ -1,5 +1,5 @@
+import type { CourierRoutesOptions } from "../util/courier-routes-options";
 import { configInPageRule } from "./config-in-page-rule";
-import type { CourierRoutesOptions } from "./courier-routes-options";
 import { routesProject } from "./routes-project";
 import { routesRule } from "./routes-rule";
 

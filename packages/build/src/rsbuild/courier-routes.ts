@@ -1,5 +1,5 @@
+import type { CourierRoutesOptions } from "../util/courier-routes-options";
 import { configInPageRule } from "../webpack/config-in-page-rule";
-import type { CourierRoutesOptions } from "../webpack/courier-routes-options";
 import { routesProject } from "../webpack/routes-project";
 import { routesRule } from "../webpack/routes-rule";
 

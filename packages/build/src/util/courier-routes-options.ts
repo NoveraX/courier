@@ -1,4 +1,8 @@
-/** Options of the routes plugin of webpack, Rspack, Rsbuild and the frameworks built on them. */
+/**
+ * Options of the routes plugins that need to know only where the config is:
+ * those of webpack, Rspack, Rsbuild, esbuild, Rollup and Jest, and of the
+ * frameworks built on them.
+ */
 export interface CourierRoutesOptions {
   /**
    * The config file, from the project's root or absolute, when it is not

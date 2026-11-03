@@ -7,12 +7,13 @@ export interface UnsupportedBuilderContext extends Record<string, unknown> {
 }
 
 /**
- * The routes module was added to an app that builds with another builder
- * than Nuxt's Vite one, under which alone it builds a page's routes.
+ * The routes module was added to an app that builds with a builder other
+ * than Nuxt's Vite, webpack and Rspack ones, under which alone it builds a
+ * page's routes.
  *
  * @example
  * ```ts
- * throw new UnsupportedBuilderError("@nuxt/webpack-builder");
+ * throw new UnsupportedBuilderError("@acme/nuxt-builder");
  * ```
  */
 export class UnsupportedBuilderError extends CourierError<"UNSUPPORTED_BUILDER"> {
@@ -23,7 +24,7 @@ export class UnsupportedBuilderError extends CourierError<"UNSUPPORTED_BUILDER">
    */
   constructor(builder: string) {
     super(
-      `[courier] courierRoutesModule builds the routes under Nuxt's Vite builder, and this app builds with ${builder}: give its proxy clients the routes module \`npx @noverax/courier-cli routes\` writes instead.`,
+      `[courier] courierRoutesModule builds the routes under Nuxt's Vite, webpack and Rspack builders, and this app builds with ${builder}: give its proxy clients the routes module \`npx @noverax/courier-cli routes\` writes instead.`,
       { code: "UNSUPPORTED_BUILDER", context: { builder } },
     );
   }

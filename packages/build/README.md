@@ -180,6 +180,28 @@ export default [
 
 <br />
 
+## Jest
+
+Jest runs the transformer from `@noverax/courier-build/jest` on the module `@noverax/courier/routes` ships. Jest transforms nothing under `node_modules` unless told, and the core is an ES module it transforms in any case:
+
+```js
+// jest.config.js
+export default {
+  transform: {
+    "/node_modules/@noverax/courier/lib/routes/index\\.js$": "@noverax/courier-build/jest",
+    "\\.[jt]sx?$": "babel-jest",
+  },
+  transformIgnorePatterns: ["/node_modules/(?!@noverax/courier/)"],
+}
+```
+
+- **The routes** are CommonJS for a test that requires them, and an ES module under `--experimental-vm-modules`.
+- **The config** is found from Jest's `rootDir`, and read once in each worker while nothing it read changes; `["@noverax/courier-build/jest", { config: "…" }]` names another.
+- **Jest's cache** is keyed by the routes themselves: a run after an edit, or under another value of a variable the config reads, never takes the routes of the last.
+- **Under `--watch`**, a test that takes only the routes is not run again when a definition changes: Jest follows the module the package ships, which imports none. Run them all with `a`.
+
+<br />
+
 ## API
 
 | Export | From | Purpose |
@@ -189,9 +211,10 @@ export default [
 | `courierRoutes(options?)` | `/rsbuild` | The Rsbuild plugin, for every environment |
 | `courierRoutes(options?)` | `/esbuild` | The esbuild plugin: the routes in every bundle, and the config refused in a page's — any `platform` but `node` |
 | `courierRoutes(options?)` | `/rollup` | The Rollup and Rolldown plugin: the routes in every bundle, and the config refused unless `server: true` says the bundle is a server's |
+| `createTransformer(options?)` | `/jest` | The Jest transformer: the routes as CommonJS or an ES module, as the test runs, cached by the routes themselves |
 | `routesProject(root, options?)` / `routesRule(project)` / `configInPageRule(project)` / `routesLoaderFile()` | `/webpack` | The rules the plugins add, for a framework that writes its bundler's config itself |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
-| `routesModuleCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes`, or one that fails with why |
+| `routesModuleCode(snapshot)` / `routesCommonJsCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes` — as an ES module or as CommonJS — or one that fails with why |
 | `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED`, `ROUTES_NOT_READ` or `CORE_NOT_FOUND` — and, in `inputs`, what the reading had read, which may mend it |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |

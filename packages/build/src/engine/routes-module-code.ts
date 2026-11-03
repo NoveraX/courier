@@ -18,6 +18,23 @@ export function routesModuleCode(snapshot: RoutesSnapshot): string {
   return `export const routes = ${literalOf(snapshot.routes)};\n`;
 }
 
+/**
+ * The same module, as CommonJS, for a host that requires it and transforms
+ * nothing it takes: Jest, outside its ES module mode. It exports `routes`
+ * as an ES module would, so an import compiled to a `require` takes it by
+ * name.
+ *
+ * @param snapshot - The routes as the config gave them
+ * @returns The module's code
+ * @example
+ * ```ts
+ * routesCommonJsCode(snapshot); // '"use strict";\nObject.defineProperty(exports, "__esModule", …);\nexports.routes = {…};\n'
+ * ```
+ */
+export function routesCommonJsCode(snapshot: RoutesSnapshot): string {
+  return `"use strict";\nObject.defineProperty(exports, "__esModule", { value: true });\nexports.routes = ${literalOf(snapshot.routes)};\n`;
+}
+
 /* JSON, but for a key `__proto__`, which only a computed key keeps the object's own. */
 function literalOf(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(literalOf).join(",")}]`;

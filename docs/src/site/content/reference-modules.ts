@@ -64,8 +64,8 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     note: "courierRoutes() — the Vite plugin that builds the routes, no file to generate",
   },
   {
-    module: "@noverax/courier-build/webpack · /rspack · /rsbuild",
-    note: "CourierRoutesPlugin, courierRoutes() — the same routes under webpack, Rspack and Rsbuild",
+    module: "@noverax/courier-build/webpack · /rspack · /rsbuild · /esbuild",
+    note: "CourierRoutesPlugin, courierRoutes() — the same routes under webpack, Rspack, Rsbuild and esbuild",
   },
   { module: "@noverax/courier-server", note: "createCourierServer — the standalone server" },
   {

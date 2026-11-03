@@ -1,12 +1,14 @@
 /**
  * @vitest-environment node
  *
- * Parcel with the transformer: a page's bundle carries the routes of every
- * source and nothing of the module the package ships, a bundle a browser
- * runs fails where it takes the config, and a build after an edit carries
- * the edited routes, whatever Parcel's cache kept. Requires a build of this
- * package, of `@noverax/courier-build` and of the core first.
+ * Parcel with the transformer, run in the app's folder as `parcel build`
+ * is: a page's bundle carries the routes of every source and nothing of the
+ * module the package ships, a bundle a browser runs fails where it takes the
+ * config, and a build after an edit carries the edited routes, whatever
+ * Parcel's cache kept. Requires a build of this package, of
+ * `@noverax/courier-build` and of the core first.
  */
+import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -19,11 +21,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { Parcel } from "@parcel/core";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 /* The repository's packages, where a project's Parcel and Courier resolve from. */
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
+
+/* What builds a project, in its own folder: Parcel finds what changed by that folder. */
+const BUILD_PAGE = resolve(import.meta.dirname, "fixtures/build-page.mjs");
 
 /* Where the projects are made. Parcel reads what changed between two builds from the
    file system's journal of changes, which macOS keeps of /tmp but not of its per-user
@@ -56,8 +60,6 @@ const PARCELRC = `{
 let root: string | undefined;
 
 afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
   if (root !== undefined) rmSync(root, { recursive: true, force: true });
   root = undefined;
 });
@@ -95,23 +97,11 @@ function parcelProject(files: Record<string, string>): string {
   return made;
 }
 
-/* The script Parcel built from the page, as its bundle graph names it, its cache kept in the project between builds. Its
-   transformers run in this process, which runs in the project's folder, as Parcel's CLI does. */
-async function build(project: string, page: string): Promise<string> {
-  vi.stubEnv("PARCEL_WORKERS", "0");
-  vi.spyOn(process, "cwd").mockReturnValue(project);
-  const parcel = new Parcel({
-    entries: join(project, page),
-    config: join(project, ".parcelrc"),
-    cacheDir: join(project, ".parcel-cache"),
-    mode: "production",
-    defaultTargetOptions: { distDir: join(project, "dist"), shouldOptimize: false },
-    shouldPatchConsole: false,
-    logLevel: "error",
-  });
-  const { bundleGraph } = await parcel.run();
-  const script = bundleGraph.getBundles().find((bundle) => bundle.type === "js");
-  return script === undefined ? "" : readFileSync(script.filePath, "utf8");
+/* The script Parcel built from the project's page, its cache kept in the project between builds. */
+function build(project: string): string {
+  const run = spawnSync(process.execPath, [BUILD_PAGE], { cwd: project, encoding: "utf8" });
+  if (run.status !== 0) throw new Error(run.stderr);
+  return run.stdout;
 }
 
 /* A page that takes the shop's routes, through the script its HTML loads. */
@@ -123,10 +113,10 @@ const PAGE = {
 };
 
 describe("the Parcel transformer", () => {
-  it("builds the routes of every source into a page, and nothing of the module the package ships", async () => {
+  it("builds the routes of every source into a page, and nothing of the module the package ships", () => {
     root = parcelProject(PAGE);
 
-    const code = (await build(root, "index.html")).replace(/\s/g, "");
+    const code = build(root).replace(/\s/g, "");
 
     expect(code).toContain('"cart.add":{"type":"mutation"}');
     expect(code).not.toContain("ROUTES_NOT_BUILT");
@@ -136,7 +126,7 @@ describe("the Parcel transformer", () => {
   it("builds the edited routes after an edit, whatever Parcel's cache kept", async () => {
     root = parcelProject(PAGE);
     const project = root;
-    await build(project, "index.html");
+    build(project);
     const apis = join(project, "src/apis.mjs");
     writeFileSync(
       apis,
@@ -150,14 +140,14 @@ describe("the Parcel transformer", () => {
        edit a moment after it is saved: built again until it has, which a transformer that told
        Parcel nothing would never be. */
     await expect
-      .poll(async () => (await build(project, "index.html")).replace(/\s/g, ""), {
+      .poll(() => build(project).replace(/\s/g, ""), {
         timeout: 60_000,
         interval: 500,
       })
       .toContain('"cart.view":{"type":"query"}');
   }, 120_000);
 
-  it("reads the config the app's package.json names, under the transformer's key", async () => {
+  it("reads the config the app's package.json names, under the transformer's key", () => {
     root = parcelProject({
       ...PAGE,
       "package.json": manifest({ config: "config/routes.config.mjs" }),
@@ -166,20 +156,20 @@ describe("the Parcel transformer", () => {
       "courier.config.mjs": "export default { sources: {} };\n",
     });
 
-    const code = (await build(root, "index.html")).replace(/\s/g, "");
+    const code = build(root).replace(/\s/g, "");
 
     expect(code).toContain('"cart.add":{"type":"mutation"}');
   }, 120_000);
 
-  it("fails a browser's bundle that takes the config itself", async () => {
+  it("fails a browser's bundle that takes the config itself", () => {
     root = parcelProject({
       "index.html": PAGE["index.html"],
       "src/page.mjs":
         'import config from "../courier.config.mjs";\n\nglobalThis.sources = config.sources;\n',
     });
 
-    await expect(build(root, "index.html")).rejects.toThrow(
-      "courier.config.mjs is imported into a page as a value",
-    );
+    const project = root;
+
+    expect(() => build(project)).toThrow("courier.config.mjs is imported into a page as a value");
   }, 120_000);
 });

@@ -406,6 +406,60 @@
     }
   },
   {
+    "id": "angular-20",
+    "app": "angular",
+    "packages": ["core", "build", "angular"],
+    "install": {
+      "@angular/build": "20",
+      "@angular/cli": "20",
+      "@angular/core": "20",
+      "@angular/common": "20",
+      "@angular/compiler": "20",
+      "@angular/compiler-cli": "20",
+      "@angular/platform-browser": "20",
+      "rxjs": "7",
+      "tslib": "2",
+      "typescript": "5",
+      "vite": "7"
+    }
+  },
+  {
+    "id": "angular-21",
+    "app": "angular",
+    "packages": ["core", "build", "angular"],
+    "install": {
+      "@angular/build": "21",
+      "@angular/cli": "21",
+      "@angular/core": "21",
+      "@angular/common": "21",
+      "@angular/compiler": "21",
+      "@angular/compiler-cli": "21",
+      "@angular/platform-browser": "21",
+      "rxjs": "7",
+      "tslib": "2",
+      "typescript": "5",
+      "vite": "7"
+    }
+  },
+  {
+    "id": "angular-22",
+    "app": "angular",
+    "packages": ["core", "build", "angular"],
+    "install": {
+      "@angular/build": "22",
+      "@angular/cli": "22",
+      "@angular/core": "22",
+      "@angular/common": "22",
+      "@angular/compiler": "22",
+      "@angular/compiler-cli": "22",
+      "@angular/platform-browser": "22",
+      "rxjs": "7",
+      "tslib": "2",
+      "typescript": "~6.0",
+      "vite": "7"
+    }
+  },
+  {
     "id": "vitest-3",
     "app": "vitest",
     "packages": ["core", "build"],

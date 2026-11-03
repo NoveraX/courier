@@ -15,6 +15,7 @@ export type AppKind =
   | "solid-start"
   | "nestjs"
   | "spa"
+  | "angular"
   | "vitest";
 
 /** A framework version the session is checked against, as an application installs it. */
@@ -54,6 +55,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "solid-start",
   "nestjs",
   "spa",
+  "angular",
   "vitest",
 ]);
 

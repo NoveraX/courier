@@ -64,6 +64,9 @@ export const ENTRIES = [
   "@noverax/courier-sveltekit",
   "@noverax/courier-astro",
   "@noverax/courier-build/vite",
+  "@noverax/courier-build/webpack",
+  "@noverax/courier-build/rspack",
+  "@noverax/courier-build/rsbuild",
   "@noverax/courier-build",
 ];
 

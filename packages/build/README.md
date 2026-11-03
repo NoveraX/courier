@@ -115,14 +115,46 @@ export const shop = createProxyCaller(routes.shop)
 
 <br />
 
+## webpack, Rspack and Rsbuild
+
+The same routes, under the webpack family: a plugin adds a rule that builds them in place of `@noverax/courier/routes`, in every bundle the compiler builds, and a rule that fails a page's bundle where it takes the config itself.
+
+```ts
+// webpack.config.ts
+import { CourierRoutesPlugin } from "@noverax/courier-build/webpack"
+
+export default { plugins: [new CourierRoutesPlugin()] }
+```
+
+Rspack runs the same plugin, from `@noverax/courier-build/rspack`. Rsbuild takes its own, which builds every environment — a page's and a server's:
+
+```ts
+// rsbuild.config.ts
+import { courierRoutes } from "@noverax/courier-build/rsbuild"
+import { defineConfig } from "@rsbuild/core"
+
+export default defineConfig({ plugins: [courierRoutes()] })
+```
+
+Next.js takes `withCourier()` from `@noverax/courier-next/plugin`, under Turbopack and webpack alike; Nuxt's `courierRoutesModule` builds the routes under its webpack and Rspack builders as under Vite.
+
+- **The config** is found from the compiler's context — Rsbuild's root — as Vite's plugin finds it from Vite's root, and the `config` option names another.
+- **Variables** are the process's: the bundler's own env files, which Next.js and Rsbuild load before they build, reach the config, and webpack reads none of its own.
+- **A watching build or a dev server** builds the routes module again when a file the config read changes or a path it looked for appears. Its result is never kept for the same inputs, as no bundler sees the variables a config reads; the engine reads the routes again only when what they came from has changed. A config that breaks under a dev server leaves the routes it read last in force and reports why with the compilation's errors; a build fails with it.
+
+<br />
+
 ## API
 
 | Export | From | Purpose |
 |---|---|---|
 | `courierRoutes(options?)` | `/vite` | The Vite plugin: the routes in place of `@noverax/courier/routes`, in every environment |
+| `CourierRoutesPlugin` | `/webpack`, `/rspack` | The webpack and Rspack plugin: the routes in every bundle, and the config refused in a page's |
+| `courierRoutes(options?)` | `/rsbuild` | The Rsbuild plugin, for every environment |
+| `routesProject(root, options?)` / `routesRule(project)` / `configInPageRule(project)` / `routesLoaderFile()` | `/webpack` | The rules the plugins add, for a framework that writes its bundler's config itself |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
 | `routesModuleCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes`, or one that fails with why |
-| `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED` or `ROUTES_NOT_READ` — and, in `inputs`, what the reading had read, which may mend it |
+| `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED`, `ROUTES_NOT_READ` or `CORE_NOT_FOUND` — and, in `inputs`, what the reading had read, which may mend it |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |
 | `findConfigFile(startDir)` / `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in a directory or the nearest one above it up to the top of the project (one above only when it is yours: else `UntrustedConfigError`), in that directory alone, and the names it may have |

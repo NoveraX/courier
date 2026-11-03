@@ -8,7 +8,8 @@
  * while the config is broken. Requires a build of this package and of the
  * core first.
  */
-import { build } from "esbuild";
+import { readFileSync } from "node:fs";
+import { build, type Plugin } from "esbuild";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { courierRoutes } from "../../src/esbuild/courier-routes";
@@ -27,6 +28,7 @@ async function bundle(
   root: string,
   entry: string,
   platform: "browser" | "node",
+  before: Plugin[] = [],
 ): Promise<{ code: string; errors: string[] }> {
   try {
     const result = await build({
@@ -37,7 +39,7 @@ async function bundle(
       platform,
       format: "esm",
       logLevel: "silent",
-      plugins: [courierRoutes()],
+      plugins: [...before, courierRoutes()],
     });
     return { code: result.outputFiles[0]?.text ?? "", errors: [] };
   } catch (error) {
@@ -68,6 +70,24 @@ describe("courierRoutes under esbuild", () => {
     project = jsProject({ "src/page.mjs": CONFIG_PAGE_JS });
 
     const { errors } = await bundle(project.root, "src/page.mjs", "browser");
+
+    expect(errors.join("\n")).toContain("courier.config.mjs is imported into a page as a value");
+  }, 60_000);
+
+  it("fails a page that takes the config even where another plugin loads every module first", async () => {
+    project = jsProject({ "src/page.mjs": CONFIG_PAGE_JS });
+    /* As Angular's compiler loads every TypeScript module itself. */
+    const loadsAll: Plugin = {
+      name: "loads-all",
+      setup(each) {
+        each.onLoad({ filter: /\.mjs$/ }, (args) => ({
+          contents: readFileSync(args.path, "utf8"),
+          loader: "js",
+        }));
+      },
+    };
+
+    const { errors } = await bundle(project.root, "src/page.mjs", "browser", [loadsAll]);
 
     expect(errors.join("\n")).toContain("courier.config.mjs is imported into a page as a value");
   }, 60_000);

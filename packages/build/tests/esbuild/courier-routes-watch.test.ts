@@ -23,35 +23,40 @@ afterEach(async () => {
   project = undefined;
 });
 
-/* Each build the context ends, in turn: the next one that passes a check is waited for. */
+/* Each build the context ends, in turn: the first one after the last waited for that passes a check. */
 function builds(): {
   plugin: Plugin;
   next(check: (result: BuildResult) => boolean): Promise<BuildResult>;
 } {
   const ended: BuildResult[] = [];
-  const waiting: Array<{
-    check: (result: BuildResult) => boolean;
-    settle: (result: BuildResult) => void;
-  }> = [];
+  let taken = 0;
+  let waiting: (() => void) | undefined;
+  const take = (check: (result: BuildResult) => boolean): BuildResult | undefined => {
+    const at = ended.findIndex((result, index) => index >= taken && check(result));
+    if (at === -1) return undefined;
+    taken = at + 1;
+    return ended[at];
+  };
   return {
     plugin: {
       name: "builds",
       setup(build) {
         build.onEnd((result) => {
           ended.push(result);
-          for (const wait of [...waiting]) {
-            if (!wait.check(result)) continue;
-            waiting.splice(waiting.indexOf(wait), 1);
-            wait.settle(result);
-          }
+          waiting?.();
         });
       },
     },
     next: (check) =>
       new Promise((settle) => {
-        const done = ended.find(check);
-        if (done !== undefined) settle(done);
-        else waiting.push({ check, settle });
+        const look = (): void => {
+          const found = take(check);
+          if (found === undefined) return;
+          waiting = undefined;
+          settle(found);
+        };
+        waiting = look;
+        look();
       }),
   };
 }
@@ -84,9 +89,11 @@ describe("courierRoutes under esbuild's watch", () => {
     project.edit("src/apis.mjs", (code) =>
       code
         .replace("defineApi({ broken", "defineApi({")
-        .replace('.post("charge")', '.post("charge").expose()'),
+        .replace('view: endpoint.get("cart").expose()', 'view: endpoint.get("cart")'),
     );
-    const mended = await watched.next((result) => codeOf(result).includes('"charge"'));
+    const mended = await watched.next(
+      (result) => codeOf(result).includes('"cart.add"') && !codeOf(result).includes('"cart.view"'),
+    );
 
     expect(opened.errors).toEqual([]);
     expect(broken.errors).toEqual([]);

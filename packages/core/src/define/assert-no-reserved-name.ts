@@ -1,4 +1,4 @@
-import { ConfigurationError } from "../errors/configuration-error";
+import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
 import { ENDPOINT_SCHEMA } from "../validation";
 
 /**
@@ -53,13 +53,22 @@ const CLIENT_ACCESSORS: ReadonlyMap<string, string> = new Map([
 export function assertNoReservedName(endpoints: object, owner: "group" | "source"): void {
   refuseDottedName(endpoints, "an endpoint");
   if (Object.hasOwn(endpoints, SETTINGS_KEY)) {
-    throw new ConfigurationError(
-      "RESERVED_ENDPOINT_NAME",
-      `[courier] an endpoint cannot be named "${SETTINGS_KEY}": the name holds the ${owner}'s settings. Give it another name, for example "getOptions".`,
-    );
+    refuse("an endpoint", SETTINGS_KEY, `the name holds the ${owner}'s settings`, "getOptions");
   }
   refuseClientAccessor(endpoints, "an endpoint", (name) => `get${capitalize(name)}`);
-  refusePrototypeName(endpoints, owner);
+  /* A record holding the name as its own, or one whose prototype a literal set to the endpoint. */
+  const prototype: unknown = Object.getPrototypeOf(endpoints);
+  if (
+    Object.hasOwn(endpoints, PROTOTYPE_KEY) ||
+    (typeof prototype === "object" && prototype !== null && ENDPOINT_SCHEMA in prototype)
+  ) {
+    refuse(
+      "an endpoint",
+      PROTOTYPE_KEY,
+      `it is the name every object gives its prototype, so the endpoint would be lost from its ${owner}`,
+      "getProto",
+    );
+  }
 }
 
 /**
@@ -88,9 +97,13 @@ export function assertNoReservedGroupName(groups: object): void {
 function refuseDottedName(record: object, what: string): void {
   const dotted = Object.keys(record).find((name) => name.includes("."));
   if (dotted === undefined) return;
-  throw new ConfigurationError(
+  refuse(
+    what,
+    dotted,
+    `a dot separates the groups of a path, so the name would be read as "${dotted.split(".").join('" then "')}"`,
+    dotted.replaceAll(".", "_"),
+    "a name without one",
     "DOTTED_NAME",
-    `[courier] ${what} cannot be named "${dotted}": a dot separates the groups of a path, so the name would be read as "${dotted.split(".").join('" then "')}". Give it a name without one, for example "${dotted.replaceAll(".", "_")}".`,
   );
 }
 
@@ -101,22 +114,27 @@ function refuseClientAccessor(
 ): void {
   for (const [name, accessor] of CLIENT_ACCESSORS) {
     if (!Object.hasOwn(record, name)) continue;
-    throw new ConfigurationError(
-      "RESERVED_ENDPOINT_NAME",
-      `[courier] ${what} cannot be named "${name}": a client answers that name with ${accessor}, so it could never be reached. Give it another name, for example "${rename(name)}".`,
+    refuse(
+      what,
+      name,
+      `a client answers that name with ${accessor}, so it could never be reached`,
+      rename(name),
     );
   }
 }
 
-/* A record holding the name as its own, or one whose prototype a literal set to the endpoint. */
-function refusePrototypeName(endpoints: object, owner: "group" | "source"): void {
-  const prototype: unknown = Object.getPrototypeOf(endpoints);
-  const isEndpoint =
-    typeof prototype === "object" && prototype !== null && ENDPOINT_SCHEMA in prototype;
-  if (!Object.hasOwn(endpoints, PROTOTYPE_KEY) && !isEndpoint) return;
+/* Every refusal reads alike: the name, why it cannot be one, and a name it could be instead. */
+function refuse(
+  what: string,
+  name: string,
+  why: string,
+  example: string,
+  instead = "another name",
+  code: ConfigurationErrorCode = "RESERVED_ENDPOINT_NAME",
+): never {
   throw new ConfigurationError(
-    "RESERVED_ENDPOINT_NAME",
-    `[courier] an endpoint cannot be named "${PROTOTYPE_KEY}": it is the name every object gives its prototype, so the endpoint would be lost from its ${owner}. Give it another name, for example "getProto".`,
+    code,
+    `[courier] ${what} cannot be named "${name}": ${why}. Give it ${instead}, for example "${example}".`,
   );
 }
 

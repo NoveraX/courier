@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/@angular-devkit/architect/src/builders-schema.json",
+  "builders": {
+    "application": {
+      "implementation": "./lib/builders/application.cjs",
+      "schema": "./lib/schemas/application.json",
+      "description": "Build an application as Angular's application builder does, with the routes a page's proxy client may call, built from courier.config.ts."
+    },
+    "dev-server": {
+      "implementation": "./lib/builders/dev-server.cjs",
+      "schema": "./lib/schemas/dev-server.json",
+      "description": "Serve an application as Angular's dev-server builder does, with the routes Courier builds, kept current."
+    },
+    "unit-test": {
+      "implementation": "./lib/builders/unit-test.cjs",
+      "schema": "./lib/schemas/unit-test.json",
+      "description": "Run an application's tests as Angular's unit-test builder does, with the routes Courier builds."
+    }
+  }
+}

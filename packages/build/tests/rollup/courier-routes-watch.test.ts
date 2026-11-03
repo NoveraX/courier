@@ -57,6 +57,22 @@ function watched(root: string): {
   };
 }
 
+/* Rollup's watcher begins to see a file a moment after a build adds it, and an edit saved in
+   that moment goes unseen: the edit is saved again, as it is, until the build it should start. */
+async function editUntil<T>(
+  edit: (change: (code: string) => string) => void,
+  change: (code: string) => string,
+  built: Promise<T>,
+): Promise<T> {
+  edit(change);
+  const again = setInterval(() => edit((code) => code), 500);
+  try {
+    return await built;
+  } finally {
+    clearInterval(again);
+  }
+}
+
 describe("courierRoutes under Rollup's watch", () => {
   it("builds the routes again after an edit, keeps the last ones while the config is broken, and takes the mended ones", async () => {
     project = jsProject({ "src/page.mjs": PAGE_JS });
@@ -64,23 +80,27 @@ describe("courierRoutes under Rollup's watch", () => {
     const builds = watched(project.root);
     await builds.next((code) => code.includes('"cart.add"'));
 
-    const opened = builds.next((code) => code.includes('"cart.view"'));
-    project.edit("src/apis.mjs", (code) =>
-      code.replace('view: endpoint.get("cart")', 'view: endpoint.get("cart").expose()'),
+    const editing = project;
+    const edit = (change: (code: string) => string): void => editing.edit("src/apis.mjs", change);
+
+    await editUntil(
+      edit,
+      (code) => code.replace('view: endpoint.get("cart")', 'view: endpoint.get("cart").expose()'),
+      builds.next((code) => code.includes('"cart.view"')),
     );
-    await opened;
-    const broken = builds.next(() => builds.warnings.length > 0);
-    project.edit("src/apis.mjs", (code) => code.replace("defineApi({", "defineApi({ broken"));
-    const kept = await broken;
-    const mended = builds.next(
-      (code) => code.includes('"cart.add"') && !code.includes('"cart.view"'),
+    const kept = await editUntil(
+      edit,
+      (code) => code.replace("defineApi({", "defineApi({ broken"),
+      builds.next(() => builds.warnings.length > 0),
     );
-    project.edit("src/apis.mjs", (code) =>
-      code
-        .replace("defineApi({ broken", "defineApi({")
-        .replace('view: endpoint.get("cart").expose()', 'view: endpoint.get("cart")'),
+    await editUntil(
+      edit,
+      (code) =>
+        code
+          .replace("defineApi({ broken", "defineApi({")
+          .replace('view: endpoint.get("cart").expose()', 'view: endpoint.get("cart")'),
+      builds.next((code) => code.includes('"cart.add"') && !code.includes('"cart.view"')),
     );
-    await mended;
 
     expect(kept).toContain('"cart.view"');
     expect(builds.warnings.join("\n")).toContain("[courier]");

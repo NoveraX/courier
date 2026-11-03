@@ -236,6 +236,7 @@ export default {
 | `routesProject(root, options?)` / `routesRule(project)` / `configInPageRule(project)` / `routesLoaderFile()` | `/webpack` | The rules the plugins add, for a framework that writes its bundler's config itself |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
 | `routesModuleCode(snapshot)` / `routesCommonJsCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes` — as an ES module or as CommonJS — or one that fails with why |
+| `configInPageMessage(configFile)` | root | Why a page's bundle that takes the config itself fails, and what to write instead, as every plugin says it — for a plugin of another bundler |
 | `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED`, `ROUTES_NOT_READ`, `CORE_NOT_FOUND` or `ROUTES_NOT_WRITTEN` — and, in `inputs`, what the reading had read, which may mend it |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |

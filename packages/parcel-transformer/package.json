@@ -1,0 +1,73 @@
+{
+  "name": "@noverax/parcel-transformer-courier",
+  "version": "0.3.1",
+  "description": "Courier for Parcel: hands a page's bundle the routes its proxy client may call, built from courier.config, with no routes file to generate",
+  "keywords": [
+    "courier",
+    "parcel",
+    "parcel-transformer",
+    "parcel-plugin",
+    "bundler",
+    "plugin",
+    "proxy",
+    "routes",
+    "typescript",
+    "type-safe",
+    "api"
+  ],
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/parcel-transformer"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/proxy-mode/expose",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22",
+    "parcel": "^2.9.0"
+  },
+  "sideEffects": false,
+  "main": "./lib/index.cjs",
+  "types": "./lib/index.d.cts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./lib/index.d.cts",
+      "default": "./lib/index.cjs"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch"
+  },
+  "dependencies": {
+    "@noverax/courier-build": "0.3.1",
+    "@parcel/plugin": "^2.9.0"
+  },
+  "peerDependencies": {
+    "@noverax/courier": "^0.3.1"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*",
+    "@parcel/config-default": "^2.16.4",
+    "@parcel/core": "^2.16.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

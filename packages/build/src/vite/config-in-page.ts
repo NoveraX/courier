@@ -1,4 +1,4 @@
-import { basename } from "node:path";
+import { configInPageMessage } from "../util/config-in-page-message";
 
 /** What of Vite's plugin context tells a page's modules from a server's, and fails a build. */
 export interface TransformContext {
@@ -30,9 +30,7 @@ export function refuseConfigInPage(
 ): void {
   if (configFile === undefined || !isPageModule(context, options)) return;
   if (withSlashes(id.split("?")[0] ?? id) !== withSlashes(configFile)) return;
-  context.error(
-    `[courier] ${basename(configFile)} is imported into a page as a value, which would ship the server's settings and every API's definition to the browser. Import its type alone: write \`import type config from\` where the page writes \`import config from\`.`,
-  );
+  context.error(configInPageMessage(configFile));
 }
 
 /* A module of a page: the client environment's, or, before Vite 6, one not built for the server. */

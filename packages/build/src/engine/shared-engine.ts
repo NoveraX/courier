@@ -1,8 +1,4 @@
-import {
-  createRoutesEngine,
-  type RoutesEngine,
-  type RoutesEngineOptions,
-} from "../engine/routes-engine";
+import { createRoutesEngine, type RoutesEngine, type RoutesEngineOptions } from "./routes-engine";
 
 /* One engine per project and config in a process: a build that runs Vite once
    per environment, each with its own plugin, reads the routes once for all. */

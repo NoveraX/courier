@@ -51,6 +51,10 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   },
   { module: "@noverax/courier-next", note: "apiRoute(), sseRoute(), createAction()" },
   {
+    module: "@noverax/courier-next/plugin",
+    note: "withCourier() — the routes under Turbopack and webpack, no file to generate",
+  },
+  {
     module: "@noverax/courier-nuxt · -hono · -express · -astro · -remix · -solid · -sveltekit",
     note: "courierHandler()",
   },

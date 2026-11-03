@@ -134,6 +134,51 @@ The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`mult
 
 <br />
 
+## The routes a page calls
+
+A page's proxy client takes the routes of the API it calls, which `withCourier()` has Next.js build from `courier.config.ts` — under Turbopack and webpack alike, for the pages and the server that renders them. No routes file is written:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+```ts
+// next.config.ts
+import { withCourier } from "@noverax/courier-next/plugin"
+
+export default withCourier({ reactStrictMode: true })
+```
+
+Register the config once, in a module of the app, so `routes` is typed from it:
+
+```ts
+// courier-env.d.ts
+import type config from "./courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+```tsx
+"use client"
+import { createProxyCaller } from "@noverax/courier"
+import { routes } from "@noverax/courier/routes"
+
+const shop = createProxyCaller(routes.shop)
+```
+
+- **Next.js 14 to 16**: the rules go under `turbopack` from 15.3 and `experimental.turbo` before it, beside the app's own; the app's `webpack` function runs first. A config written as a function passes `withCourier` the object it returns.
+- **The Pages Router** renders the routes too: `withCourier` adds `@noverax/courier` to `transpilePackages`, so its server takes the package into its bundle. An app that lists it in `serverExternalPackages` gets `ExternalCoreError` (`CORE_EXTERNAL`).
+- **A config outside `turbopack.root`**, which Turbopack follows no file outside of, gets `ConfigOutsideRootError` (`CONFIG_OUTSIDE_ROOT`).
+- **The dev server** builds the routes again when the config or a module it imports changes; a page that imports the config as a value fails to build.
+
+A project that would rather keep the routes in its tree writes them with `npx @noverax/courier-cli routes` and leaves the plugin out.
+
+<br />
+
 ## The user's session
 
 An API that keeps the user's session describes it in `defineApi` — the cookies it is kept in, a bearer cookie, the double-submit token writes repeat — and server code calls it through `createServerCaller`:
@@ -260,6 +305,11 @@ import { withRequestContext } from "@noverax/courier-next/pages"
 ```ts
 // Middleware: hand the double-submit token to the browser with the page
 import { csrfTokenMiddleware, handCsrfTokens } from "@noverax/courier-next/middleware"
+```
+
+```ts
+// The plugin that builds the routes a page's proxy client calls, in next.config.ts
+import { withCourier } from "@noverax/courier-next/plugin"
 ```
 
 <br />

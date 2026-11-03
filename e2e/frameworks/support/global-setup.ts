@@ -69,8 +69,10 @@ function devServing(target: Target, settings: AppSettings): Serving {
   if (command === undefined || settings.dev === undefined) {
     throw new Error(`${target.id} has no dev server to check`);
   }
+  const address =
+    settings.dev.address ?? ((port) => ["--host", "127.0.0.1", "--port", String(port)]);
   return {
-    start: (port) => [...command, "--host", "127.0.0.1", "--port", String(port)],
+    start: (port) => [...command, ...address(port)],
     env: () => ({ ...TELEMETRY_OFF, NODE_ENV: "development" }),
     ready: settings.dev.ready,
   };

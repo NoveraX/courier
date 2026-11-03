@@ -167,6 +167,12 @@ test("a Pages Router page served by withRequestContext carries the session", asy
   expect((await json("#legacy")).sid).toBe("s%3Aada.sig");
 });
 
+test("a Pages Router page renders the routes Courier's plugin builds into its server", async () => {
+  await page.goto(`${APP}/legacy-routes`);
+
+  await expect(page.locator("#legacy-routes")).toHaveText("profile");
+});
+
 test("a render's later call sends the session its first call renewed, under one request id", async () => {
   /* Planted as the browser holds the session's cookie: WebKit lets no plain cookie replace a Secure one. */
   const held = await cookie("sid");

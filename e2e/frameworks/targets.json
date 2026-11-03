@@ -3,7 +3,22 @@
     "id": "next-14",
     "app": "next",
     "overlays": ["next-middleware"],
-    "packages": ["core", "next"],
+    "packages": ["core", "build", "next"],
+    "install": {
+      "next": "14",
+      "react": "18",
+      "react-dom": "18",
+      "@types/react": "18",
+      "@types/node": "24",
+      "typescript": "5"
+    }
+  },
+  {
+    "id": "next-14-turbo",
+    "app": "next",
+    "overlays": ["next-middleware"],
+    "dev": ["npx", "next", "dev", "--turbo"],
+    "packages": ["core", "build", "next"],
     "install": {
       "next": "14",
       "react": "18",
@@ -17,7 +32,23 @@
     "id": "next-15",
     "app": "next",
     "overlays": ["next-middleware"],
-    "packages": ["core", "next"],
+    "packages": ["core", "build", "next"],
+    "install": {
+      "next": "15",
+      "react": "19",
+      "react-dom": "19",
+      "@types/react": "19",
+      "@types/node": "24",
+      "typescript": "6"
+    }
+  },
+  {
+    "id": "next-15-turbopack",
+    "app": "next",
+    "overlays": ["next-middleware"],
+    "build": ["npx", "next", "build", "--turbopack"],
+    "dev": ["npx", "next", "dev", "--turbopack"],
+    "packages": ["core", "build", "next"],
     "install": {
       "next": "15",
       "react": "19",
@@ -31,7 +62,23 @@
     "id": "next-16",
     "app": "next",
     "overlays": ["next-proxy"],
-    "packages": ["core", "next"],
+    "packages": ["core", "build", "next"],
+    "install": {
+      "next": "16",
+      "react": "19",
+      "react-dom": "19",
+      "@types/react": "19",
+      "@types/node": "24",
+      "typescript": "6"
+    }
+  },
+  {
+    "id": "next-16-webpack",
+    "app": "next",
+    "overlays": ["next-proxy"],
+    "build": ["npx", "next", "build", "--webpack"],
+    "dev": ["npx", "next", "dev", "--webpack"],
+    "packages": ["core", "build", "next"],
     "install": {
       "next": "16",
       "react": "19",
@@ -45,7 +92,7 @@
     "id": "next-16-cache-components",
     "app": "next",
     "overlays": ["next-cache-components", "next-proxy"],
-    "packages": ["core", "next"],
+    "packages": ["core", "build", "next"],
     "install": {
       "next": "16",
       "react": "19",
@@ -85,49 +132,91 @@
     "id": "nuxt-3",
     "app": "nuxt",
     "packages": ["core", "build", "nuxt"],
-    "install": { "nuxt": "3", "vue": "3" }
+    "install": {
+      "nuxt": "3",
+      "vue": "3"
+    }
   },
   {
     "id": "nuxt-4",
     "app": "nuxt",
     "packages": ["core", "build", "nuxt"],
-    "install": { "nuxt": "4", "vue": "3" }
+    "install": {
+      "nuxt": "4",
+      "vue": "3"
+    }
+  },
+  {
+    "id": "nuxt-4-webpack",
+    "app": "nuxt",
+    "overlays": ["nuxt-webpack"],
+    "packages": ["core", "build", "nuxt"],
+    "install": {
+      "nuxt": "4",
+      "vue": "3",
+      "@nuxt/webpack-builder": "4"
+    }
+  },
+  {
+    "id": "nuxt-4-rspack",
+    "app": "nuxt",
+    "overlays": ["nuxt-rspack"],
+    "packages": ["core", "build", "nuxt"],
+    "install": {
+      "nuxt": "4",
+      "vue": "3",
+      "@nuxt/rspack-builder": "4"
+    }
   },
   {
     "id": "express-4",
     "app": "express",
     "packages": ["core", "express"],
-    "install": { "express": "4" }
+    "install": {
+      "express": "4"
+    }
   },
   {
     "id": "express-5",
     "app": "express",
     "packages": ["core", "express"],
-    "install": { "express": "5" }
+    "install": {
+      "express": "5"
+    }
   },
   {
     "id": "fastify-4",
     "app": "fastify",
     "packages": ["core", "fastify"],
-    "install": { "fastify": "4" }
+    "install": {
+      "fastify": "4"
+    }
   },
   {
     "id": "fastify-5",
     "app": "fastify",
     "packages": ["core", "fastify"],
-    "install": { "fastify": "5" }
+    "install": {
+      "fastify": "5"
+    }
   },
   {
     "id": "hono-4",
     "app": "hono",
     "packages": ["core", "hono"],
-    "install": { "hono": "4", "@hono/node-server": "1" }
+    "install": {
+      "hono": "4",
+      "@hono/node-server": "1"
+    }
   },
   {
     "id": "astro-5",
     "app": "astro",
     "packages": ["core", "build", "astro"],
-    "install": { "astro": "5", "@astrojs/node": "9" }
+    "install": {
+      "astro": "5",
+      "@astrojs/node": "9"
+    }
   },
   {
     "id": "react-router-7",
@@ -301,15 +390,37 @@
     }
   },
   {
+    "id": "react-spa-rsbuild",
+    "app": "spa",
+    "overlays": ["spa-rsbuild"],
+    "build": ["npx", "rsbuild", "build"],
+    "dev": ["npx", "rsbuild", "dev"],
+    "packages": ["core", "build", "react"],
+    "install": {
+      "@rsbuild/core": "2",
+      "@rsbuild/plugin-react": "2",
+      "vite": "6",
+      "react": "19",
+      "react-dom": "19",
+      "@tanstack/react-query": "5"
+    }
+  },
+  {
     "id": "vitest-3",
     "app": "vitest",
     "packages": ["core", "build"],
-    "install": { "vitest": "3", "jsdom": "26" }
+    "install": {
+      "vitest": "3",
+      "jsdom": "26"
+    }
   },
   {
     "id": "vitest-4",
     "app": "vitest",
     "packages": ["core", "build"],
-    "install": { "vitest": "4", "jsdom": "26" }
+    "install": {
+      "vitest": "4",
+      "jsdom": "26"
+    }
   }
 ]

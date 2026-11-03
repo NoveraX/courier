@@ -19,7 +19,13 @@ export type RoutesReadErrorCode =
    * `@noverax/courier` does not resolve from the project's root, so there is
    * no routes module of the package's to build the routes in place of.
    */
-  | "CORE_NOT_FOUND";
+  | "CORE_NOT_FOUND"
+  /**
+   * The routes were read, but the module a bundler takes them from on disk —
+   * Metro's — could not be written where it was to be: a folder that cannot
+   * be written, or a path that is not a folder.
+   */
+  | "ROUTES_NOT_WRITTEN";
 
 /** Where a reading of the routes failed. */
 export interface RoutesReadErrorContext extends Record<string, unknown> {

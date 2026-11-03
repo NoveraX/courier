@@ -180,6 +180,26 @@ export default [
 
 <br />
 
+## Metro and Expo
+
+Metro bundles only files on disk, so `withCourier()` from `@noverax/courier-build/metro` reads the routes before Metro starts and writes them to a module of the app's own, `node_modules/.cache/@noverax/courier/routes.js`, which `@noverax/courier/routes` resolves to:
+
+```js
+// metro.config.js
+const { getDefaultConfig } = require("expo/metro-config")
+const { withCourier } = require("@noverax/courier-build/metro")
+
+module.exports = withCourier(getDefaultConfig(__dirname))
+```
+
+- **The config** is found from Metro's `projectRoot`, and the `config` option names another.
+- **A dev server** keeps the module current: a change to a file the routes came from — an edit saved by replacing the file, as editors save, too — reads them again, and Metro bundles the module anew. A config that breaks leaves the routes read last in force, and says why in Metro's terminal; with none read yet, the module fails where it is imported, saying why.
+- **A build** — `expo export`, a release bundle — fails while the routes cannot be read, with why.
+- **The config in the app's bundle** fails it: the app's bundle would carry the server's settings and every API's definition. A server's bundle under Expo — its API routes, React Server Components — may take it.
+- **`outDir`** names another folder for the module, where `node_modules` cannot be written; one outside the project is added to `watchFolders`. The app's own `resolveRequest` runs for every other module, Expo's as well.
+
+<br />
+
 ## Jest
 
 Jest runs the transformer from `@noverax/courier-build/jest` on the module `@noverax/courier/routes` ships. Jest transforms nothing under `node_modules` unless told, and the core is an ES module it transforms in any case:
@@ -211,11 +231,12 @@ export default {
 | `courierRoutes(options?)` | `/rsbuild` | The Rsbuild plugin, for every environment |
 | `courierRoutes(options?)` | `/esbuild` | The esbuild plugin: the routes in every bundle, and the config refused in a page's — any `platform` but `node` |
 | `courierRoutes(options?)` | `/rollup` | The Rollup and Rolldown plugin: the routes in every bundle, and the config refused unless `server: true` says the bundle is a server's |
+| `withCourier(config, options?)` | `/metro` | Metro's and Expo's: the routes written to a module of the app's own, kept current under a dev server, and the config refused in the app's bundle |
 | `createTransformer(options?)` | `/jest` | The Jest transformer: the routes as CommonJS or an ES module, as the test runs, cached by the routes themselves |
 | `routesProject(root, options?)` / `routesRule(project)` / `configInPageRule(project)` / `routesLoaderFile()` | `/webpack` | The rules the plugins add, for a framework that writes its bundler's config itself |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
 | `routesModuleCode(snapshot)` / `routesCommonJsCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes` — as an ES module or as CommonJS — or one that fails with why |
-| `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED`, `ROUTES_NOT_READ` or `CORE_NOT_FOUND` — and, in `inputs`, what the reading had read, which may mend it |
+| `RoutesReadError` | root | Why the routes were not read — `CONFIG_NOT_FOUND`, `CONFIG_NOT_TRUSTED`, `CONFIG_NOT_LOADED`, `ROUTES_NOT_READ`, `CORE_NOT_FOUND` or `ROUTES_NOT_WRITTEN` — and, in `inputs`, what the reading had read, which may mend it |
 | `loadCourierConfig(options?)` | `/config` | Find and load `courier.config.{ts,mts,cts,js,mjs,cjs}`, in that order of names |
 | `loadCourierConfigFile(file, options?)` | `/config` | Load one config file, found by whatever means the caller chose |
 | `findConfigFile(startDir)` / `findConfigFileAt(cwd)` / `CONFIG_BASENAMES` | `/config` | The config file in a directory or the nearest one above it up to the top of the project (one above only when it is yours: else `UntrustedConfigError`), in that directory alone, and the names it may have |

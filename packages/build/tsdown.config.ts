@@ -14,6 +14,7 @@ export default defineConfig([
       "rsbuild/index": "src/rsbuild/index.ts",
       "esbuild/index": "src/esbuild/index.ts",
       "rollup/index": "src/rollup/index.ts",
+      "metro/index": "src/metro/index.ts",
       /* Started as a process of its own by the engine, which finds it at this path. */
       "engine/worker": "src/engine/worker.ts",
       /* Imported by the routes loader, which finds it beside itself. */
@@ -24,10 +25,12 @@ export default defineConfig([
   },
   {
     ...sharedBuild,
-    /* webpack, Rspack and Turbopack load a loader as CommonJS, and Jest a transformer. */
+    /* webpack, Rspack and Turbopack load a loader as CommonJS, Jest a transformer, and
+       most Metro configs require() what they take. */
     entry: {
       "webpack/loader": "src/webpack/loader.ts",
       "jest/transformer": "src/jest/routes-transformer.ts",
+      "metro/index": "src/metro/require-entry.ts",
     },
     format: ["cjs"],
     outExtensions: () => ({ js: ".cjs", dts: ".d.cts" }),

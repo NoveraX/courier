@@ -246,6 +246,35 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     routesPage: { path: "/", rendered: false, proxied: false, catalogModule: "src/catalog.ts" },
     dev: { command: ["npx", "vite", "dev"], ready: SERVING },
   },
+  angular: {
+    spec: "angular.spec.ts",
+    apiUrlModule: "src/api-url.ts",
+    build: ["npx", "ng", "build"],
+    serve: {
+      /* Vite, which Angular's builders take, serves the build as it would any page's. */
+      start: (port) => [
+        "npx",
+        "vite",
+        "preview",
+        "--outDir",
+        "dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        String(port),
+        "--strictPort",
+      ],
+      env: production,
+      ready: /Local:/,
+    },
+    address: (port) => `http://127.0.0.1:${port}`,
+    routesPage: { path: "/", rendered: false, proxied: false, catalogModule: "src/catalog.ts" },
+    dev: {
+      command: ["npx", "ng", "serve"],
+      ready: /Local:/,
+      address: (port) => ["--host", "127.0.0.1", "--port", String(port)],
+    },
+  },
   vitest: {
     /* A project's own tests, run by the Vitest the version installs: it serves nothing. */
     spec: "vitest.spec.ts",

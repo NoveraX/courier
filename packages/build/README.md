@@ -230,6 +230,7 @@ export default {
 | `CourierRoutesPlugin` | `/webpack`, `/rspack` | The webpack and Rspack plugin: the routes in every bundle, and the config refused in a page's |
 | `courierRoutes(options?)` | `/rsbuild` | The Rsbuild plugin, for every environment |
 | `courierRoutes(options?)` | `/esbuild` | The esbuild plugin: the routes in every bundle, and the config refused in a page's — any `platform` but `node` |
+| `writtenRoutesPlugin(options)` | `/esbuild` | The esbuild plugin for a host that follows only the files a build read from disk, as Angular's builders do: the routes written to a module there, kept current while the host watches |
 | `courierRoutes(options?)` | `/rollup` | The Rollup and Rolldown plugin: the routes in every bundle, and the config refused unless `server: true` says the bundle is a server's |
 | `withCourier(config, options?)` | `/metro` | Metro's and Expo's: the routes written to a module of the app's own, kept current under a dev server, and the config refused in the app's bundle |
 | `createTransformer(options?)` | `/jest` | The Jest transformer: the routes as CommonJS or an ES module, as the test runs, cached by the routes themselves |

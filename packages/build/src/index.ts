@@ -16,3 +16,4 @@ export {
   type RoutesReadErrorDetails,
 } from "./engine/routes-read-error";
 export type { RoutesInputs, RoutesRequest, RoutesSnapshot } from "./engine/routes-snapshot";
+export { configInPageMessage } from "./util/config-in-page-message";

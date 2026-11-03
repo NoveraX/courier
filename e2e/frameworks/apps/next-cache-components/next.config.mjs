@@ -1,1 +1,3 @@
-export default { cacheComponents: true };
+import { withCourier } from "@noverax/courier-next/plugin";
+
+export default withCourier({ cacheComponents: true });

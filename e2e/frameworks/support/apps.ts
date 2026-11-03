@@ -46,9 +46,15 @@ export interface AppSettings {
   /**
    * How its dev server is started, before the host and the port it is
    * given, and what it prints once it serves: the routes are checked under
-   * it too, an edit to a definition among them
+   * it too, an edit to a definition among them. `address` gives the host and
+   * the port as the server takes them, where it takes no `--host` and
+   * `--port`.
    */
-  readonly dev?: { readonly command: readonly string[]; readonly ready: RegExp };
+  readonly dev?: {
+    readonly command: readonly string[];
+    readonly ready: RegExp;
+    readonly address?: (port: number) => readonly string[];
+  };
 }
 
 /* The page a server renders the routes into, the browser shows them on again, and calls through the proxy from. */
@@ -80,6 +86,13 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
       ready: /Ready in/,
     },
     address: onLocalhost,
+    /* Not lib/catalog.ts, which the cacheComponents overlay holds for an API of its own. */
+    routesPage: renderedRoutes("lib/routes-api.ts"),
+    dev: {
+      command: ["npx", "next", "dev"],
+      ready: /Ready in/,
+      address: (port) => ["-H", "127.0.0.1", "-p", String(port)],
+    },
   },
   sveltekit: {
     spec: "forms.spec.ts",

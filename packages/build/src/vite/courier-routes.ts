@@ -1,16 +1,13 @@
-import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 
 import { configCandidates } from "../config/config-candidates";
-import { errnoCode } from "../config/errno-code";
-import { findConfigFile } from "../config/load-config";
-import { UntrustedConfigError } from "../config/untrusted-config-error";
+import { sharedEngine } from "../engine/shared-engine";
+import { configFileOf } from "../util/config-file-of";
 import { refuseConfigInPage } from "./config-in-page";
 import { loadRoutesModule } from "./load-routes-module";
 import { ROUTES_MODULE_ID, ROUTES_PATTERN, ROUTES_SPECIFIER } from "./routes-module-id";
 import type { RoutesPluginState } from "./routes-plugin-state";
-import { sharedEngine } from "./shared-engine";
 import { viteEnvFiles } from "./vite-env-files";
 import { viteEnvValues } from "./vite-env-values";
 import { watchRoutesInputs } from "./watch-routes-inputs";
@@ -109,7 +106,7 @@ function resolveRoutes(
     envFiles: viteEnvFiles(config),
     envValues: () => viteEnvValues(config),
   });
-  state.configFile = configFileOf(config, named);
+  state.configFile = configFileOf(config.root, named);
 }
 
 /* A dev server the routes are served by, which follows where a config may appear or go. */
@@ -123,19 +120,7 @@ function serveRoutes(
   watchRoutesInputs(server, state, {
     candidates: named === undefined ? configCandidates(root) : [resolve(root, named)],
     onChange: () => {
-      state.configFile = configFileOf(server.config, named);
+      state.configFile = configFileOf(server.config.root, named);
     },
   });
-}
-
-/* The config file the plugin reads, as Vite names a module: its real path. One that is
-   not there yet, or that is not run, the engine reports when the routes are read. */
-function configFileOf(config: ResolvedConfig, named: string | undefined): string | undefined {
-  try {
-    const file = named === undefined ? findConfigFile(config.root) : resolve(config.root, named);
-    return file === null ? undefined : realpathSync(file);
-  } catch (error) {
-    if (error instanceof UntrustedConfigError || errnoCode(error) === "ENOENT") return undefined;
-    throw error;
-  }
 }

@@ -1,8 +1,6 @@
 import { type ChildProcess, fork } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
+import { packageFile } from "../util/package-file";
 import { RoutesReadError } from "./routes-read-error";
 import type { RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
 import { superviseChild } from "./supervise-child";
@@ -40,7 +38,7 @@ export function evaluateInChild(
         root: request.root,
         configFile: request.configFile,
       });
-    const worker = workerFile();
+    const worker = packageFile("lib/engine/worker.js");
     if (worker === undefined) {
       reject(unread(`${PACKAGE_NAME} cannot find the folder it is installed in: install it again`));
       return;
@@ -110,29 +108,4 @@ function settleOnce(
     else resolve(outcome);
   };
   return Object.assign(settle, { onSettled: (then: () => void) => after.push(then) });
-}
-
-let found: string | undefined;
-
-/* The worker this package ships: under the package's own root, which holds the manifest
-   with its name, wherever this module was bundled into; none when no folder above does. */
-function workerFile(): string | undefined {
-  if (found !== undefined) return found;
-  let dir = dirname(fileURLToPath(import.meta.url));
-  while (!isPackageRoot(dir)) {
-    const parent = dirname(dir);
-    if (parent === dir) return undefined;
-    dir = parent;
-  }
-  found = join(dir, "lib/engine/worker.js");
-  return found;
-}
-
-function isPackageRoot(dir: string): boolean {
-  const manifest = join(dir, "package.json");
-  if (!existsSync(manifest)) return false;
-  const parsed: unknown = JSON.parse(readFileSync(manifest, "utf8"));
-  return (
-    typeof parsed === "object" && parsed !== null && Reflect.get(parsed, "name") === PACKAGE_NAME
-  );
 }

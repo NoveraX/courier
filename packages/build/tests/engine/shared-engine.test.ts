@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { sharedEngine } from "../../src/vite/shared-engine";
+import { sharedEngine } from "../../src/engine/shared-engine";
 
 describe("sharedEngine", () => {
   it("hands the plugins made for one project the same engine", () => {

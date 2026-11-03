@@ -9,5 +9,6 @@ export default defineConfig({
     actions: "src/actions.ts",
     pages: "src/pages.ts",
     middleware: "src/middleware.ts",
+    plugin: "src/plugin.ts",
   },
 });

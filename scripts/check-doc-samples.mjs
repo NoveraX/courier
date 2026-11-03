@@ -49,6 +49,7 @@ export const ENTRIES = [
   "@noverax/courier/routes",
   "@noverax/courier",
   "@noverax/courier-react",
+  "@noverax/courier-next/plugin",
   "@noverax/courier-next",
   "@noverax/courier-server",
   "@noverax/courier-redis",

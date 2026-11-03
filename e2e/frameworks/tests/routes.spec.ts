@@ -25,6 +25,14 @@ const underDev = process.env.COURIER_FRAMEWORK_MODE === "dev";
 test.describe.configure({ timeout: underDev ? 180_000 : 60_000 });
 
 /**
+ * How long one attempt of a check waits for its answer. Nuxt's dev server
+ * leaves a request unanswered when it arrives as Nitro reloads after an edit
+ * to a module the server imports, and a navigation waits for ever unless told
+ * otherwise: the attempt gives up, and the check is made anew.
+ */
+const ATTEMPT_MS = 30_000;
+
+/**
  * Hold a check until it passes: at once for a built application, and under
  * its dev server for as long as the first loads take, each check made anew;
  * one that never passes fails with what it last found.
@@ -45,7 +53,7 @@ async function settled(check: () => Promise<void>): Promise<void> {
 /* The routes page as the browser shows it once it is up, opened anew for each attempt. */
 async function showing(page: Page, id: string, text: string | RegExp): Promise<void> {
   await settled(async () => {
-    await page.goto(`${APP}${path}`);
+    await page.goto(`${APP}${path}`, { timeout: ATTEMPT_MS });
     await expect(page.locator(`#${id}`)).toContainText(text, { timeout: 15_000 });
   });
 }
@@ -54,7 +62,7 @@ test("the server renders the page with the routes the config opens to it", async
   test.skip(routesPage?.rendered !== true, "the server of this application renders no page");
 
   await settled(async () => {
-    const html = await (await request.get(`${APP}${path}`)).text();
+    const html = await (await request.get(`${APP}${path}`, { timeout: ATTEMPT_MS })).text();
     expect(html).toMatch(/id="server-routes"[^>]*>profile</);
   });
 });
@@ -107,7 +115,7 @@ test("an edit that opens an endpoint reaches the page without a restart, under t
     await showing(page, "client-routes", /audit/);
     if (routesPage?.rendered === true) {
       await settled(async () => {
-        const html = await (await request.get(`${APP}${path}`)).text();
+        const html = await (await request.get(`${APP}${path}`, { timeout: ATTEMPT_MS })).text();
         expect(html).toMatch(/id="server-routes"[^>]*>[^<]*audit/);
       });
     }

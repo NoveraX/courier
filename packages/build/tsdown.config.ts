@@ -13,6 +13,7 @@ export default defineConfig([
       "rspack/index": "src/rspack/index.ts",
       "rsbuild/index": "src/rsbuild/index.ts",
       "esbuild/index": "src/esbuild/index.ts",
+      "rollup/index": "src/rollup/index.ts",
       /* Started as a process of its own by the engine, which finds it at this path. */
       "engine/worker": "src/engine/worker.ts",
       /* Imported by the routes loader, which finds it beside itself. */

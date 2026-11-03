@@ -161,6 +161,25 @@ await build({ entryPoints: ["src/main.ts"], bundle: true, outdir: "dist", plugin
 
 <br />
 
+## Rollup and Rolldown
+
+Rollup and Rolldown take the same plugin, from `@noverax/courier-build/rollup`. Neither tells a page's bundle from a server's, so a bundle is taken for a page's, which fails where it takes the config itself; a server's, which may import it, says so:
+
+```js
+// rollup.config.js
+import { courierRoutes } from "@noverax/courier-build/rollup"
+
+export default [
+  { input: "src/main.js", output: { dir: "dist" }, plugins: [courierRoutes()] },
+  { input: "src/server.js", output: { dir: "server" }, plugins: [courierRoutes({ server: true })] },
+]
+```
+
+- **The config** is found from the folder the bundler runs in, and the `config` option names another.
+- **Under `watch`**, every file the routes came from is watched, each path the config looked for that is not there yet, and each folder it listed. A config that breaks on a rebuild leaves the routes read last in force, with a warning; a build fails with it.
+
+<br />
+
 ## API
 
 | Export | From | Purpose |
@@ -169,6 +188,7 @@ await build({ entryPoints: ["src/main.ts"], bundle: true, outdir: "dist", plugin
 | `CourierRoutesPlugin` | `/webpack`, `/rspack` | The webpack and Rspack plugin: the routes in every bundle, and the config refused in a page's |
 | `courierRoutes(options?)` | `/rsbuild` | The Rsbuild plugin, for every environment |
 | `courierRoutes(options?)` | `/esbuild` | The esbuild plugin: the routes in every bundle, and the config refused in a page's — any `platform` but `node` |
+| `courierRoutes(options?)` | `/rollup` | The Rollup and Rolldown plugin: the routes in every bundle, and the config refused unless `server: true` says the bundle is a server's |
 | `routesProject(root, options?)` / `routesRule(project)` / `configInPageRule(project)` / `routesLoaderFile()` | `/webpack` | The rules the plugins add, for a framework that writes its bundler's config itself |
 | `createRoutesEngine(options)` | root | Read a project's routes in a process of their own, again only when a file or variable they came from changed — for a plugin of another bundler |
 | `routesModuleCode(snapshot)` / `unreadRoutesModuleCode(message)` | root | The module a bundle takes in place of `@noverax/courier/routes`, or one that fails with why |

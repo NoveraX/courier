@@ -502,6 +502,10 @@ jobs:
         id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A token for the first version of a package new to npm, which can
+          # name no trusted publisher yet; empty unless the environment holds
+          # one. The release hands it to npm for such a package alone.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           HUSKY: "0"
         run: |
           before=$(git tag --list 'v*' | sort)

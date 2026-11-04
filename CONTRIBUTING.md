@@ -265,7 +265,8 @@ no release to approve; Re-run failed jobs runs those jobs again and, once
 they pass, brings the release job back with them. A newer push to `master`
 cancels the older runs that have not started releasing, and the release
 refuses a commit that is no longer the newest on `master`. The environment
-holds the Open VSX token and the Marketplace publisher's identity.
+holds the Open VSX token and the Marketplace publisher's identity, and an
+npm token only while a package new to npm waits for its first version.
 The release publishes every package to npm, and the editor extensions, at
 the same version, to the Visual Studio Marketplace and Open VSX, each the
 environment gives it a way in to. The Extensions workflow publishes the
@@ -291,25 +292,38 @@ artifact. They are uploaded by hand on the publisher's page at
 marketplace.visualstudio.com/manage, Courier File Icons first, since Courier
 installs it.
 
-npm takes the packages through trusted publishing, with no token: each
-package names this repository's `ci.yml` and its `release` environment as
-its trusted publisher, and npm exchanges the release job's own short-lived
-identity for the right to publish it, with provenance. A package is set up
-once by a maintainer signed in to npm, who also has it refuse tokens
-altogether, so a token that leaks publishes nothing:
+npm takes the packages through trusted publishing: each package names this
+repository's `ci.yml` and its `release` environment as its trusted
+publisher, and npm exchanges the release job's own short-lived identity for
+the right to publish it, with provenance. A package is set up once by a
+maintainer signed in to npm, who also has it refuse tokens altogether, so a
+token that leaks publishes nothing:
 
 ```bash
 npm trust github @noverax/courier --file ci.yml --repo NoveraX/courier --env release --allow-publish
 npm access set mfa=publish @noverax/courier
 ```
 
-`npm trust list @noverax/courier` shows what a package trusts. Before it tags
-anything, the release asks npm, for every package, to make that exchange.
-The `release` environment holds no npm token to fall back on, so a package
-npm will not let the run publish stops the release there, and the run names
-the command that sets it up. npm sets up only a package it already has: a
-new package's first version is published by hand, by a maintainer signed in
-to npm, and the package is set up after it.
+`npm trust list @noverax/courier` shows what a package trusts. A trusted
+publisher that has published nothing two days after it was set up expires:
+`npm trust revoke` deletes it, and the package is set up again, no more
+than two days before the next release. Before it tags anything, the release
+asks npm, for every package, to make that exchange; a package npm will not
+let the run publish stops the release there, and the run names the
+commands that set it up.
+
+npm sets up only a package it already has, so a package new to npm takes
+its first version from a token. While the `release` environment holds one
+as the secret `NPM_TOKEN`, the release hands it to npm for a package npm
+does not have yet, and for no other; before the tag, it checks that npm
+takes the token, and the run names the new packages and the commands that
+set them up. The token is a granular access token that reads and writes the
+`@noverax` scope and bypasses two-factor authentication, for no more days
+than the release needs; once the release is out, it is deleted from the
+environment and on npm, and the new packages are set up. Without one, a new
+package's first version is published by hand, by a maintainer signed in to
+npm. npm has announced that from January 2027 a token only stages a version,
+for a maintainer to publish.
 
 The packages are published by `scripts/release.ts` with the npm that comes
 with Node, never by semantic-release's own npm plugin, which `.releaserc.json`

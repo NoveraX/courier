@@ -12,7 +12,7 @@ import {
   type OtherRelease,
   otherReleases,
 } from "./planned-packages";
-import { keptStep, plannedEdit, plannedFile, typescriptOf } from "./planned-parts";
+import { keptStep, plannedEdits, plannedFile, typescriptOf } from "./planned-parts";
 import { typescriptSixStep } from "./typescript-six";
 
 /** A file of the setup, and what the project already has there. */
@@ -85,9 +85,10 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
   const files = recipe.files
     .filter((file, at) => recipe.files.findIndex((each) => each.path === file.path) === at)
     .map((file) => plannedFile(project, file));
-  const edits = [...recipe.edits, ...scriptsEdit(recipe.scripts, recipe.rewrites ?? [])].map(
-    (edit) => plannedEdit(project, edit),
-  );
+  const edits = plannedEdits(project, [
+    ...recipe.edits,
+    ...scriptsEdit(recipe.scripts, recipe.rewrites ?? []),
+  ]);
   return {
     files,
     edits: edits.filter((edit): edit is PlannedEdit => "after" in edit),

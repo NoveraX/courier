@@ -92,22 +92,42 @@ export function typescriptOf(
 }
 
 /**
- * An edit worked out against its file as it is now.
+ * The edits worked out against their files as they are now — those of one
+ * file one after another, each on the file as the ones before it leave it,
+ * so a config that gets two plugins gets both.
  *
  * @param project - The project
- * @param edit - The edit
- * @returns The edit planned, or its step for the person where the file is not there or not in a shape the edit knows
+ * @param edits - The edits, in the order they are made
+ * @returns Each file's edit planned, and the step left to the person for each edit that cannot be made: its file is not there, or not in a shape the edit knows
  * @example
  * ```ts
- * plannedEdit(project, edit); // { path: "vite.config.ts", state: "edit", before, after, … }
+ * plannedEdits(project, [studioEdit, routesEdit]); // [{ path: "vite.config.ts", state: "edit", before, after, … }]
  * ```
  */
-export function plannedEdit(project: Project, edit: RecipeEdit): PlannedEdit | ManualStep {
-  const before = project.read(edit.path);
-  const after = before === undefined ? undefined : changeKeepingLineEnds(before, edit.change);
-  if (before === undefined || after === undefined) return edit.manual;
-  const { path, purpose } = edit;
-  return { path, purpose, state: after === before ? "same" : "edit", before, after };
+export function plannedEdits(
+  project: Project,
+  edits: readonly RecipeEdit[],
+): Array<PlannedEdit | ManualStep> {
+  const paths = [...new Set(edits.map((edit) => edit.path))];
+  return paths.flatMap((path) => {
+    const before = project.read(path);
+    const ofFile = edits.filter((edit) => edit.path === path);
+    if (before === undefined) return ofFile.map((edit) => edit.manual);
+    let after = before;
+    const made: string[] = [];
+    const left: ManualStep[] = [];
+    for (const edit of ofFile) {
+      const changed = changeKeepingLineEnds(after, edit.change);
+      if (changed === undefined) left.push(edit.manual);
+      else {
+        after = changed;
+        made.push(edit.purpose);
+      }
+    }
+    if (made.length === 0) return left;
+    const purpose = made.join("; ");
+    return [{ path, purpose, state: after === before ? "same" : "edit", before, after }, ...left];
+  });
 }
 
 /*

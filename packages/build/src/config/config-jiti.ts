@@ -1,7 +1,11 @@
 import { dirname, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Jiti, JitiOptions } from "jiti";
+import { projectFramework } from "./frameworks";
 import { readPathAliases } from "./path-aliases";
+import { profileModules } from "./profiles/profile-modules";
+import { profileOf } from "./profiles/profile-of";
+import type { ResolutionProfile } from "./profiles/resolution-profile";
 import type { TransformCache } from "./transform-cache";
 
 /** How a project-file loader resolves imports and transforms modules. */
@@ -31,6 +35,13 @@ export interface ConfigJitiOptions {
    * unnoted: what the transformer reads is its own, not the config's.
    */
   runTransform?: (<TResult>(transform: () => TResult) => TResult) | undefined;
+  /**
+   * How the project's framework answers the imports its server answers
+   * itself — Next's `server-only`, SvelteKit's `$env/static/private`; see
+   * `ResolutionProfile`. Left out, the framework the nearest package.json to
+   * the file lists.
+   */
+  profile?: ResolutionProfile | undefined;
 }
 
 type CreateJiti = (id: string, options?: JitiOptions) => Jiti;
@@ -54,8 +65,18 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
 /**
  * The module loader for Courier's project files — `courier.config.*` and
  * `courier.mocks.*` — with the options both need: the project's tsconfig path
- * aliases, default-export interop, no module cache, and no native import
- * tried before the loader's own.
+ * aliases, the imports its framework's server answers itself, default-export
+ * interop, no module cache, and no native import tried before the loader's
+ * own.
+ *
+ * A framework resolves some imports where it builds the server, never
+ * through Node: Next makes `server-only` an empty module on its server
+ * layers, SvelteKit and Astro write their env modules from the environment.
+ * The loader answers them as that server does, by the framework the
+ * project's package.json lists (see `profileOf`), in every module it
+ * transforms; one the project's own path aliases name is theirs. A package
+ * the loader hands to Node — an installed library — resolves its own imports
+ * as Node does.
  *
  * The module cache is off because this is also the reload path: the dev
  * server loads the files again on every edit, and a cached module would hand
@@ -89,7 +110,8 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
  * @param file - Absolute, symlink-resolved path of the file to load; modules
  *   and aliases resolve from its directory
  * @param options - Whether to resolve through the project's path aliases
- *   (default: yes), and where to reuse transforms (default: nowhere)
+ *   (default: yes), where to reuse transforms (default: nowhere), and how the
+ *   framework answers its own imports (default: as package.json tells it)
  * @returns A jiti instance for that file
  * @example
  * ```ts
@@ -100,11 +122,14 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
  */
 export async function createConfigJiti(
   file: string,
-  { aliases = true, transformCache, onModule, runTransform }: ConfigJitiOptions = {},
+  { aliases = true, transformCache, onModule, runTransform, profile }: ConfigJitiOptions = {},
 ): Promise<Jiti> {
   const { createJiti } = await import("jiti");
+  const alias = aliases ? readPathAliases(dirname(file)).loader : {};
+  const answered = profile ?? profileOf(projectFramework(dirname(file)).framework);
   const options: JitiOptions = {
-    alias: aliases ? readPathAliases(dirname(file)).loader : {},
+    alias,
+    virtualModules: profileModules(answered, alias),
     interopDefault: true,
     moduleCache: false,
     fsCache: false,

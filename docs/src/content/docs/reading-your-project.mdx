@@ -1,0 +1,38 @@
+export const metadata = { title: "How Courier Reads Your Project", description: "What runs when the CLI, Studio, a bundler plugin or a mock server reads courier.config, which variables it has, and how the modules a framework's server answers itself — server-only, $env, astro:env — are answered outside that framework's build.", updated: "2026-11-05" }
+
+## What runs
+
+`courier.config.ts` is a module like any other. To read your sources, Courier runs it and every module it imports, their top-level code included — the API modules, and whatever those import: an env module that checks your variables, a database client, an auth library. Several tools read it, each in a process of its own:
+
+| Who reads it | When | The variables it has |
+| --- | --- | --- |
+| `courier-cli routes` | Once per run | The process's, then `.env.development.local`, `.env.local`, `.env.development` and `.env` — those there are — or the files `--dotenv` names |
+| Studio | As it starts, and on every save | The same files, read again when one is saved |
+| A bundler plugin — `withCourier()`, the Vite plugins, the others | On every build and dev server start, and again when a file the config read changes | Under Vite, the env files Vite reads for the mode; under Next.js, webpack and the rest, the variables the framework's own process has |
+| A mock server's worker | As it starts | Studio's |
+| `courier-server` | As it starts | The process's |
+| `attachRuntime()` | As your app starts | Your app's |
+
+A variable the process was started with wins over every file, and the first file to set a variable wins over the later ones.
+
+Every reading runs your modules as your server would, and outside it. Keep the modules `courier.config.ts` imports to what defines your APIs: a module that connects to a database or calls a service when it is imported does so on every reading.
+
+## Modules your framework answers itself
+
+A framework resolves some imports where it builds the server, never through Node: Next.js makes `server-only` an empty module on its server layers, SvelteKit and Astro write their env modules from the environment. A plain Node loader finds none of them, so Courier answers them as that framework's server does. It tells the framework from the `package.json` nearest the config, by the package it lists — `next`, `@sveltejs/kit`, `astro` — and answers in every module of your project it runs:
+
+| Framework | Import | What it is when Courier reads the project |
+| --- | --- | --- |
+| Next.js | `server-only` | An empty module, as on Next's server layers: your definitions run on the server |
+| Next.js | `client-only` | Refused: the config's modules reached code for the browser, which Next refuses on the server. The load fails, naming the import |
+| SvelteKit | `$env/static/private`, `$env/dynamic/private` | The variables without the `PUBLIC_` prefix |
+| SvelteKit | `$env/static/public`, `$env/dynamic/public` | The variables with the `PUBLIC_` prefix |
+| SvelteKit | `$app/environment` | `browser: false` and `building: true`, as SvelteKit has them while it analyses the server during a build; `dev` unless `NODE_ENV` is `production`; `version: ""` |
+| Astro | `astro:env/server` | The variables, and `getSecret()` |
+| Astro | `astro:env/client` | The variables |
+
+- Each variable is read from `process.env` when your code reads it, after the variables above are in place. A bundler plugin's reading depends on the variables your code named, so a change to another does not read the config again.
+- SvelteKit's prefix is its default, `PUBLIC_`; one `svelte.config.js` sets is not read, as that would run another of your files.
+- Astro coerces each variable to the type its `env.schema` declares and fills in its default. The schema lives in `astro.config`, which Courier does not run, so here every variable is the string the environment holds, and one it does not hold is `undefined`.
+- An import your tsconfig `paths` name is yours: Courier follows your alias, not the framework's rule.
+- An installed package resolves its own imports as Node does, since Node loads it: a library that imports `server-only` itself fails outside Next. Import such a library inside the function that uses it — a middleware, say — rather than at the top of a module the config imports.

@@ -1,6 +1,15 @@
 export { CONFIG_BASENAMES, configCandidates } from "./config-candidates";
 export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
 export {
+  detectFramework,
+  FRAMEWORK_MARKERS,
+  type FrameworkId,
+  type FrameworkMarker,
+  type ListedPackages,
+  type ProjectFramework,
+  projectFramework,
+} from "./frameworks";
+export {
   findConfigFile,
   findConfigFileAt,
   type LoadConfigFileOptions,
@@ -11,6 +20,9 @@ export {
   projectTransformCache,
 } from "./load-config";
 export { type PathAliases, readPathAliases } from "./path-aliases";
+export { profileOf } from "./profiles/profile-of";
+export { type RefusedModuleContext, RefusedModuleError } from "./profiles/refused-module-error";
+export type { ModuleRule, ResolutionProfile } from "./profiles/resolution-profile";
 export {
   createTransformCache,
   type TransformCache,

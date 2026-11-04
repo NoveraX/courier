@@ -28,6 +28,19 @@ afterEach(() => {
 });
 
 describe("loadCourierMocksFile", () => {
+  it("loads a mocks file of a Next.js project whose modules import server-only", async () => {
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies: { next: "16.4.3" } }));
+    writeFileSync(join(dir, "port.ts"), `import "server-only";\nexport const port = 7001;\n`);
+    writeFileSync(
+      join(dir, "courier.mocks.ts"),
+      `import { port } from "./port";\nexport default { api: { port } };\n`,
+    );
+
+    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
+
+    expect(loaded.mocks).toEqual({ api: { port: 7001 } });
+  });
+
   it("loads a TypeScript mocks file with a top-level await, through a link", async () => {
     writeFileSync(
       join(dir, "mocks.ts"),

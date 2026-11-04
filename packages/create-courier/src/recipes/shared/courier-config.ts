@@ -47,11 +47,18 @@ export function configPathOf(ctx: RecipeContext): string {
   return configFile(ctx.project) ?? "courier.config.ts";
 }
 
-/* Studio's port, where the default was taken when the project was set up. */
+/* Studio's port, where the default was taken when the project was set up; no routes module where Courier's plugin builds the routes in. */
 function studioBlock(ctx: RecipeContext): string {
-  return ctx.ports.studio === STUDIO_DEFAULT_PORT
-    ? ""
-    : `\n  studio: { port: ${ctx.ports.studio} },`;
+  const plugin = ctx.routes === "plugin";
+  const settings = [
+    ...(ctx.ports.studio === STUDIO_DEFAULT_PORT ? [] : [`port: ${ctx.ports.studio}`]),
+    ...(plugin ? ["routes: false"] : []),
+  ];
+  if (settings.length === 0) return "";
+  const note = plugin
+    ? "\n  // Courier's plugin builds the pages' routes in: Studio writes no courier.routes.ts"
+    : "";
+  return `${note}\n  studio: { ${settings.join(", ")} },`;
 }
 
 /* What agents may call, where they were asked for: every read, and a write once it is marked `.agent()`. */

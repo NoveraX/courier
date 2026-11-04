@@ -29,7 +29,9 @@ describe("astroRecipe", () => {
     );
     expect(recipe.prepare).toEqual([{ bin: "astro", args: ["sync"] }]);
     expect(recipe.manual[0]?.lines).toEqual(["npm exec -- astro add node"]);
-    expect(buildPlan(ctx, recipe).edits[0]?.after).toContain("integrations: [courierStudio()],");
+    expect(buildPlan(ctx, recipe).edits[0]?.after).toContain(
+      "integrations: [courierRoutesIntegration(), courierStudio()],",
+    );
   });
 
   it("asks for no adapter where the config has one", () => {

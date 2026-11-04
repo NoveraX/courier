@@ -14,7 +14,16 @@ export interface SetupChoices {
   readonly openapi?: string | undefined;
   /** The imported API's name, when it is not to be taken from its specification. */
   readonly name?: string | undefined;
+  /** Where pages take their routes from, where the person said: `--routes plugin` or `--routes file`. */
+  readonly routes?: RoutesMode | undefined;
 }
+
+/**
+ * Where the pages' proxy clients take their routes from: `plugin` — Courier's
+ * plugin for the app's build gives them `@noverax/courier/routes` — or
+ * `file`, `courier.routes.ts`, which Courier's CLI and Studio write.
+ */
+export type RoutesMode = "plugin" | "file";
 
 /** What a recipe reads to say what setting Courier up takes. */
 export interface RecipeContext {
@@ -35,6 +44,8 @@ export interface RecipeContext {
    * and only the parts the project still lacks.
    */
   readonly configured: ConfiguredSources | undefined;
+  /** Where the pages' proxy clients take their routes from: `file` for a framework Courier has no plugin for. */
+  readonly routes: RoutesMode;
 }
 
 /** A file the setup adds. */

@@ -31,13 +31,14 @@ export interface ExampleReach {
  * each call checked by its Zod schema. Its address comes from the
  * environment the framework gives code, and falls back to the mock Studio
  * runs. Where the browser calls it through the app's route, it marks every
- * endpoint for a page to call, and the routes module the browser's client
- * takes is written beside the config, as Courier writes it from the marks.
+ * endpoint for a page to call; where the pages take their routes from
+ * courier.routes.ts rather than Courier's plugin, that module is written
+ * beside the config, as Courier writes it from the marks.
  *
  * @param ctx - The project, and what is set up in it
  * @param dir - The folder Courier's own modules go in
  * @param reach - How it is reached
- * @returns `api.ts`, and `courier.routes.ts` where it is proxied
+ * @returns `api.ts`, and `courier.routes.ts` where it is proxied without the plugin
  * @example
  * ```ts
  * exampleApi(ctx, "src/courier", { baseUrl: 'process.env.API_URL ?? "http://localhost:7001"', variable: "API_URL", proxied: true });
@@ -74,7 +75,7 @@ const users = defineGroup({
 
 ${reach.prelude ?? ""}${reach.factory ? factoryTail(ctx) : apiTail(ctx, reach)}`;
   const files = [{ path: api, content, purpose: "your API, typed, with an example to start from" }];
-  if (!reach.proxied) return files;
+  if (!reach.proxied || ctx.routes === "plugin") return files;
   return [...files, exampleRoutes(ctx)];
 }
 

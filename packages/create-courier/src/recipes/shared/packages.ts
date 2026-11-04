@@ -35,18 +35,26 @@ export interface PackageNeeds {
   /** Whether a server of the app's connects to Studio, which needs Studio's runtime at run time. */
   readonly runtime?: boolean;
   /**
-   * Whether pages call the API through the app's proxy route, so the
-   * project keeps `courier.routes.ts`, which Courier's CLI writes and checks.
+   * Whether pages call the API through the app's proxy route, so they need
+   * their routes: Courier's plugin for the build gives them, or the CLI
+   * writes and checks `courier.routes.ts`.
    */
   readonly proxy?: boolean;
+  /**
+   * Whether the app's server loads the build's config as it starts —
+   * `next start` reads next.config — so the plugin is a dependency the app
+   * runs with, rather than a dev one.
+   */
+  readonly configAtStart?: boolean;
 }
 
 /**
  * The packages Courier's setup installs: the core and Zod for the API, the
  * framework's adapter, the React bindings for a React app, Studio and the
- * runtime a server connects to it with, the CLI that writes the routes
- * module where pages call through the proxy, the mock and what it runs on,
- * and the MCP server.
+ * runtime a server connects to it with, what gives the routes where pages
+ * call through the proxy — Courier's plugin for the build, or the CLI that
+ * writes the routes module — the mock and what it runs on, and the MCP
+ * server.
  *
  * @param ctx - The project, and what is set up in it
  * @param needs - What the framework's setup needs
@@ -58,14 +66,18 @@ export interface PackageNeeds {
  */
 export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): RecipePackages {
   const { studio, mocks, mcp, openapi } = ctx.choices;
-  const { adapter, react = false, runtime = true, proxy = false } = needs;
+  const { adapter, react = false, runtime = true, proxy = false, configAtStart = false } = needs;
   const example = addsExample(ctx);
   /* A project set up already has the API it calls, and its own way of calling it from React. */
   const fresh = ctx.configured === undefined;
+  const routes = proxy && wantsRoutes(ctx);
+  const plugin = routes && ctx.routes === "plugin";
+  const build = courierPackage("@noverax/courier-build");
   return {
     dependencies: [
       courierPackage("@noverax/courier"),
       ...(adapter ? [courierPackage(adapter)] : []),
+      ...(plugin && configAtStart ? [build] : []),
       ...(react && fresh
         ? [courierPackage("@noverax/courier-react"), "@tanstack/react-query"]
         : []),
@@ -74,7 +86,8 @@ export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): Recipe
     ],
     devDependencies: [
       ...(studio ? [courierPackage("@noverax/courier-studio")] : []),
-      ...(proxy && wantsRoutes(ctx) ? [courierPackage("@noverax/courier-cli")] : []),
+      ...(plugin && !configAtStart ? [build] : []),
+      ...(routes && !plugin ? [courierPackage("@noverax/courier-cli")] : []),
       ...(mocks && example
         ? [courierPackage("@noverax/courier-mock"), "hono", "@hono/node-server"]
         : []),

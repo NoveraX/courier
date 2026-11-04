@@ -1,15 +1,9 @@
 import { majorOf } from "../project/read-project";
 import { attachesStudio } from "../project/wiring";
-import { firstExisting } from "./edits/config-integration";
 import { registerInside } from "./edits/next-register";
+import { nextRoutesEdit } from "./edits/next-routes";
 import { importSpecifier } from "./import-specifier";
-import {
-  devOnlyConfig,
-  NEXT_CONFIGS,
-  nextStudioEnvEdit,
-  phaseHint,
-  studioWrapper,
-} from "./next-config-edit";
+import { nextStudioEnvEdit, studioWrapperStep } from "./next-config-edit";
 import type { ManualStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { configPathOf, courierConfig, courierMocks } from "./shared/courier-config";
 import { exampleApi } from "./shared/example-api";
@@ -17,6 +11,7 @@ import { devStep, routesStep, serverReach, studioStep } from "./shared/next-step
 import { courierPackages } from "./shared/packages";
 import { reactDemo, reactQuery } from "./shared/react-demo";
 import { proxyScripts } from "./shared/recipe-parts";
+import { routesPluginParts } from "./shared/routes-register";
 import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
 
 /* `src/` when the app router lives there, as create-next-app sets it up by default. */
@@ -91,28 +86,7 @@ function browserPart(ctx: RecipeContext, file: RecipeFile): RecipeFile | ManualS
   };
 }
 
-/*
- * Next.js 14 and 15 develop under webpack, which bundles the server's Studio
- * connection unless the config's wrapper keeps it out. `next start` loads the
- * config too, where Studio, a dev dependency, may not be installed: the
- * wrapper is imported by `next dev` alone.
- */
-function wrapperStep(ctx: RecipeContext): ManualStep[] {
-  const file = firstExisting(ctx.project, NEXT_CONFIGS);
-  const text = ctx.project.read(file);
-  const wrapped = studioWrapper(text);
-  if (wrapped === "dev-only") return [];
-  if (wrapped === "always") return [phaseHint(file, text)];
-  return [
-    {
-      file,
-      what: "Connect the browser to Studio while you develop, and keep its server connection out of webpack's bundle; `next dev` alone imports Studio, so `next start` runs without the dev dependency",
-      lines: devOnlyConfig(file, text),
-    },
-  ];
-}
-
-/* The server's start, and Studio's connections where it is set up — each where the app lacks it. */
+/* The server's start, Courier's plugin, and Studio's connections where it is set up — each where the app lacks it. */
 function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep | RecipeEdit> {
   const path = `${base}instrumentation.ts`;
   const server = startFile(ctx, {
@@ -121,9 +95,12 @@ function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep
     others: namesOf(path).slice(1),
     inside: (needs, text) => registerInside(ctx, path, needs, text),
   });
-  const parts = server === undefined ? [] : [server];
+  const parts = [
+    ...(server === undefined ? [] : [server]),
+    ...routesPluginParts(ctx, nextRoutesEdit(ctx.project)),
+  ];
   if (!ctx.choices.studio) return parts;
-  if ((majorOf(ctx.version) ?? 16) < 16) return [...parts, ...wrapperStep(ctx)];
+  if ((majorOf(ctx.version) ?? 16) < 16) return [...parts, ...studioWrapperStep(ctx)];
   const browser = browserPart(ctx, {
     path: `${base}instrumentation-client.ts`,
     content: BROWSER_STUDIO,
@@ -135,9 +112,10 @@ function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep
 /**
  * Courier in a Next.js app: its API, registered from `instrumentation.ts`
  * as the server starts, the route the browser calls it through, a page
- * that shows it at work, and Studio connected from `instrumentation.ts`
- * and `instrumentation-client.ts` — or the lines to add where the app has
- * those files already.
+ * that shows it at work, the config passed to `withCourier()`, which
+ * builds the page's routes in, and Studio connected from
+ * `instrumentation.ts` and `instrumentation-client.ts` — or the lines to
+ * add where the app has those files already.
  *
  * @param ctx - The project, and what is set up in it
  * @returns What setting Courier up takes
@@ -168,7 +146,13 @@ export function nextRecipe(ctx: RecipeContext): Recipe {
       ...parts.filter((part): part is RecipeFile => "content" in part),
     ],
     edits: parts.filter((part): part is RecipeEdit => "change" in part),
-    ...courierPackages(ctx, { adapter: "@noverax/courier-next", react: true, proxy: true }),
+    /* `next start` loads next.config, which loads Courier's plugin. */
+    ...courierPackages(ctx, {
+      adapter: "@noverax/courier-next",
+      react: true,
+      proxy: true,
+      configAtStart: true,
+    }),
     scripts: proxyScripts(ctx),
     manual: parts.filter((part): part is ManualStep => "what" in part),
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],

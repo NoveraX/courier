@@ -58,6 +58,7 @@ const NEXT_WITH_PACKAGES = {
         "@noverax/courier-studio-core",
         "@noverax/courier-studio",
         "@noverax/courier-cli",
+        "@noverax/courier-build",
         "@noverax/courier-mock",
         "hono",
         "@hono/node-server",
@@ -90,21 +91,23 @@ describe("create-courier", () => {
     expect(existsSync(join(root, "courier.config.ts"))).toBe(false);
   }, 60_000);
 
-  it("writes the files and the script with --yes, names the installs with --no-install, and has nothing left to do the second time", () => {
+  it("writes the files, the script and Courier's plugin with --yes, names the installs with --no-install, and has nothing left to do the second time", () => {
     const root = projectWith(NEXT_WITH_PACKAGES);
 
     const first = run([root, "--yes", "--no-install", "--no-mcp"]);
     const again = run([root, "--yes", "--no-install", "--no-mcp"]);
 
     expect(first.status).toBe(0);
-    /* With 6280 held by another Studio, next.config.ts is changed too. */
-    expect(first.out).toMatch(/Wrote 9 files, and changed (next\.config\.ts, )?package\.json\./);
+    expect(first.out).toContain("Wrote 8 files, and changed next.config.ts, package.json.");
     expect(readFileSync(join(root, "src/instrumentation.ts"), "utf8")).toContain(
       "registerSources(config.sources);",
     );
+    expect(readFileSync(join(root, "next.config.ts"), "utf8")).toContain(
+      "export default withCourier(nextConfig);",
+    );
+    expect(existsSync(join(root, "courier.routes.ts"))).toBe(false);
     expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts).toEqual({
       studio: "courier-studio",
-      routes: "courier-cli routes",
     });
     expect(again.status).toBe(0);
     expect(again.out).toContain(
@@ -112,6 +115,44 @@ describe("create-courier", () => {
     );
     expect(again.out).toContain("Nothing is missing.");
     expect(again.out).not.toContain("Left to you");
+  }, 60_000);
+
+  it("writes courier.routes.ts and the script that writes it again with --routes file, and has nothing left to do the second time", () => {
+    const root = projectWith(NEXT_WITH_PACKAGES);
+
+    const first = run([root, "--yes", "--no-install", "--no-mcp", "--routes", "file"]);
+    const again = run([root, "--yes", "--no-install", "--no-mcp"]);
+
+    expect(first.status).toBe(0);
+    /* With 6280 held by another Studio, next.config.ts is changed too. */
+    expect(first.out).toMatch(/Wrote 9 files, and changed (next\.config\.ts, )?package\.json\./);
+    expect(readFileSync(join(root, "courier.routes.ts"), "utf8")).toContain(
+      "export const apiRoutes",
+    );
+    expect(readFileSync(join(root, "next.config.ts"), "utf8")).not.toContain("withCourier");
+    expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts).toEqual({
+      studio: "courier-studio",
+      routes: "courier-cli routes",
+    });
+    expect(again.out).toContain("Nothing is missing.");
+  }, 60_000);
+
+  it("refuses --routes with a value it does not take, and --routes plugin for a framework Courier has no plugin for", () => {
+    const bogus = run([projectWith(NEXT), "--dry-run", "--no-mcp", "--routes", "vite"]);
+    const express = run([
+      projectWith({ "package.json": manifest({ express: "^5.1.0" }), "tsconfig.json": "{}" }),
+      "--dry-run",
+      "--no-mcp",
+      "--routes",
+      "plugin",
+    ]);
+
+    expect(bogus.status).toBe(1);
+    expect(bogus.out).toContain('--routes takes plugin or file, not "vite"');
+    expect(express.status).toBe(1);
+    expect(express.out).toContain(
+      "--routes plugin: Courier builds the routes in with a plugin for",
+    );
   }, 60_000);
 
   it("names the install commands with --no-install, and does not call Courier set up before they run", () => {

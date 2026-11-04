@@ -57,7 +57,9 @@ describe("nuxtRecipe", () => {
     );
 
     expect(edits.get("app/app.vue")).toBe(APP_VUE.replace("<NuxtWelcome />", "<NuxtPage />"));
-    expect(edits.get("nuxt.config.ts")).toContain("modules: [courierStudioModule]");
+    expect(edits.get("nuxt.config.ts")).toContain(
+      "modules: [courierRoutesModule, courierStudioModule]",
+    );
     expect(edits.get("nuxt.config.ts")).toContain(
       "import { courierStudioModule } from '@noverax/courier-studio/nuxt'",
     );
@@ -67,7 +69,7 @@ describe("nuxtRecipe", () => {
     const recipe = nuxtRecipe(contextOf(app({ "app/pages/index.vue": "<template />\n" }), "nuxt"));
 
     expect(recipe.files.map((file) => file.path)).not.toContain("app/pages/index.vue");
-    expect(recipe.edits.map((edit) => edit.path)).toEqual(["nuxt.config.ts"]);
+    expect(recipe.edits.map((edit) => edit.path)).toEqual(["nuxt.config.ts", "nuxt.config.ts"]);
   });
 
   it("keeps the API in lib/ in an app laid out as Nuxt 3 lays it out", () => {

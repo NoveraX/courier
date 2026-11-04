@@ -4,6 +4,7 @@ import { defaultExportLiteral } from "../edit/literal";
 import { addNamedImport } from "../edit/named-import";
 import { scanSource } from "../edit/source-scan";
 import { routeList, routeModule } from "../project/route-list";
+import { viteRoutesEdit } from "./edits/routes-plugin";
 import { viteStudioEdit } from "./edits/studio-browser";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
@@ -13,6 +14,7 @@ import { courierPackages } from "./shared/packages";
 import { proxyStart } from "./shared/proxy-start";
 import { reactDemo, reactQuery } from "./shared/react-demo";
 import { proxyScripts, registerModule, sortParts, studioAttach } from "./shared/recipe-parts";
+import { routesPluginParts } from "./shared/routes-register";
 import { addsExample, type ServerNeeds } from "./shared/wired";
 
 const DIR = "app/courier";
@@ -87,8 +89,9 @@ function routesEdit(example: boolean, proxy: string | undefined): RecipeEdit {
 /**
  * Courier in a React Router app — or a Remix one, whose file routes need
  * no list: its API, registered by the route the browser calls it through,
- * a page that shows it at work, and Studio connected from the route and
- * Vite's config.
+ * a page that shows it at work, Courier's plugin in Vite's config, which
+ * builds the page's routes in, and Studio connected from the route and the
+ * config.
  *
  * @param ctx - The project, and what is set up in it
  * @returns What setting Courier up takes
@@ -112,6 +115,9 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
     studioAttach("import.meta.env.DEV", ""),
   );
   const { files, edits, manual } = sortParts(parts);
+  const plugin = sortParts(
+    routesPluginParts(ctx, viteRoutesEdit(ctx.project, "@noverax/courier-remix/plugin")),
+  );
   /* The routes file gets one edit: the one that lists a file of the project's that serves, or Courier's own. */
   const listed = edits.length === 0 && ctx.project.exists(ROUTES) && (example || mount);
   const page = {
@@ -131,11 +137,12 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
     edits: [
       ...edits,
       ...(listed ? [routesEdit(example, mount ? "routes/api.request.ts" : undefined)] : []),
+      ...plugin.edits,
       ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "remix")] : []),
     ],
     ...courierPackages(ctx, { adapter: "@noverax/courier-remix", react: true, proxy: true }),
     scripts: proxyScripts(ctx),
-    manual,
+    manual: [...manual, ...plugin.manual],
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

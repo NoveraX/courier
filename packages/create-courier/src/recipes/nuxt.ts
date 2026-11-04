@@ -1,3 +1,4 @@
+import { nuxtRoutesEdit } from "./edits/routes-plugin";
 import { nuxtStudioEdit } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
@@ -6,7 +7,8 @@ import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
 import { devStep, portableServerReach, routesStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
-import { proxyScripts } from "./shared/recipe-parts";
+import { proxyScripts, sortParts } from "./shared/recipe-parts";
+import { routesPluginParts } from "./shared/routes-register";
 import { vueDemo } from "./shared/vue-demo";
 import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
 
@@ -91,7 +93,8 @@ function pages(ctx: RecipeContext, app: string): { files: RecipeFile[]; edits: R
 /**
  * Courier in a Nuxt app: its API, registered from a Nitro plugin as the
  * server starts, the route the browser calls it through, a page that
- * shows it at work, and Studio connected from the plugin and Nuxt's config.
+ * shows it at work, Courier's module in Nuxt's config, which builds the
+ * page's routes in, and Studio connected from the plugin and the config.
  *
  * @param ctx - The project, and what is set up in it
  * @returns What setting Courier up takes
@@ -115,6 +118,12 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
     "courierHandler",
   );
   const routing = example ? pages(ctx, app) : { files: [], edits: [] };
+  const { edits, manual } = sortParts([
+    ...routing.edits,
+    ...routesPluginParts(ctx, nuxtRoutesEdit(ctx.project)),
+    ...(ctx.choices.studio ? [nuxtStudioEdit(ctx.project)] : []),
+    ...(plugin && "what" in plugin ? [plugin] : []),
+  ]);
   return {
     files: [
       ...(example ? exampleApi(ctx, dir, portableServerReach(ctx)) : []),
@@ -125,10 +134,10 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
       ...(example ? [proxyCaller(ctx, dir), vueDemo(ctx, `${app}pages/courier.vue`, caller)] : []),
       ...routing.files,
     ],
-    edits: [...routing.edits, ...(ctx.choices.studio ? [nuxtStudioEdit(ctx.project)] : [])],
+    edits,
     ...courierPackages(ctx, { adapter: "@noverax/courier-nuxt", proxy: true }),
     scripts: proxyScripts(ctx),
-    manual: plugin && "what" in plugin ? [plugin] : [],
+    manual,
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { frameworkById } from "../../src/frameworks";
 import { buildPlan, changesAnything, type Plan } from "../../src/plan/build-plan";
+import type { SetupChoices } from "../../src/recipes/recipe-types";
 import { contextOf, projectWith, removeProjects } from "./project-fixture";
 
 afterAll(removeProjects);
@@ -59,9 +60,14 @@ const ATTACH = `const { attachRuntime } = await import(${RUNTIME});\n  await att
 const ATTACH_COMMENTED = `// const { attachRuntime } = await import(${RUNTIME});\n  // await attachRuntime();`;
 const ATTACH_LATER = `import(${RUNTIME}).then(({ attachRuntime }) => attachRuntime());`;
 
-function planOf(id: string, marker: string, files: Record<string, string>): Plan {
+function planOf(
+  id: string,
+  marker: string,
+  files: Record<string, string>,
+  choices: Partial<SetupChoices> = {},
+): Plan {
   const framework = frameworkById(id);
-  const ctx = contextOf(projectWith(files), marker);
+  const ctx = contextOf(projectWith(files), marker, choices);
   if (framework.recipe === undefined) throw new Error(`${id} has no recipe`);
   return buildPlan(ctx, framework.recipe(ctx));
 }
@@ -154,7 +160,7 @@ describe("Courier's scripts in a project set up already", () => {
     );
   });
 
-  it("adds routes and its CLI where an endpoint is marked with .expose()", () => {
+  it("builds the routes in with Courier's plugin where an endpoint is marked with .expose(), and leaves registering the config to the person", () => {
     const plan = planOf(
       "next",
       "next",
@@ -164,12 +170,79 @@ describe("Courier's scripts in a project set up already", () => {
       }),
     );
 
+    expect(scriptsAfter(plan)).toBeUndefined();
+    expect(plan.edits.find((edit) => edit.path === "next.config.ts")?.after).toBe(
+      'import { withCourier } from "@noverax/courier-next/plugin";\n\nexport default withCourier({});\n',
+    );
+    expect(plan.dependencies.some((name) => name.startsWith("@noverax/courier-build"))).toBe(true);
+    expect(plan.devDependencies.some((name) => name.startsWith("@noverax/courier-cli"))).toBe(
+      false,
+    );
+    expect(stepLines(plan, "the module that creates your proxy clients")).toContain(
+      'declare module "@noverax/courier/routes" {',
+    );
+    expect(plan.edits.find((edit) => edit.path === "courier.config.ts")?.after).toContain(
+      "studio: { routes: false }",
+    );
+  });
+
+  it("keeps Studio from writing courier.routes.ts beside the port a config gives it, and leaves a config that names its routes as it is", () => {
+    const opened = {
+      "api/shop.ts":
+        'export const shop = defineApi({ expose: true, endpoints: { items: endpoint.get("items") } });\n',
+    };
+    const withPort = planOf("next", "next", {
+      ...nextAppWith({ dev: "next dev", studio: "courier-studio" }, false, opened),
+      "courier.config.ts":
+        "export default defineConfig({\n  sources: { shop },\n  studio: { port: 6281 },\n});\n",
+    });
+    const named = planOf("next", "next", {
+      ...nextAppWith({ dev: "next dev", studio: "courier-studio" }, false, opened),
+      "courier.config.ts":
+        'export default defineConfig({\n  sources: { shop },\n  studio: { routes: "src/shop-routes.ts" },\n});\n',
+    });
+
+    expect(withPort.edits.find((edit) => edit.path === "courier.config.ts")?.after).toContain(
+      "studio: { port: 6281, routes: false }",
+    );
+    expect(named.edits.find((edit) => edit.path === "courier.config.ts")?.state).toBe("same");
+  });
+
+  it("leaves registering the config out where the project registers it already", () => {
+    const plan = planOf(
+      "next",
+      "next",
+      nextAppWith({ dev: "next dev", studio: "courier-studio" }, false, {
+        "api/shop.ts":
+          'export const shop = defineApi({ endpoints: { items: endpoint.get("items").expose() } });\n',
+        "courier-env.d.ts":
+          'import type config from "./courier.config";\n\ndeclare module "@noverax/courier/routes" {\n  interface Register {\n    config: typeof config;\n  }\n}\n',
+      }),
+    );
+
+    expect(plan.manual.map((step) => step.file)).not.toContain(
+      "the module that creates your proxy clients",
+    );
+  });
+
+  it("adds routes and its CLI where an endpoint is marked with .expose() and --routes file asks for the file", () => {
+    const plan = planOf(
+      "next",
+      "next",
+      nextAppWith({ dev: "next dev", studio: "courier-studio" }, false, {
+        "api/shop.ts":
+          'export const shop = defineApi({ endpoints: { items: endpoint.get("items").expose() } });\n',
+      }),
+      { routes: "file" },
+    );
+
     expect(scriptsAfter(plan)).toEqual({
       dev: "next dev",
       studio: "courier-studio",
       routes: "courier-cli routes",
     });
     expect(plan.devDependencies.some((name) => name.startsWith("@noverax/courier-cli"))).toBe(true);
+    expect(plan.edits.map((edit) => edit.path)).not.toContain("next.config.ts");
   });
 
   it("keeps a studio script of the project's own, and starts Studio by its own command", () => {

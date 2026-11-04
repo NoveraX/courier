@@ -121,12 +121,12 @@ bun create @noverax/courier
 
 | Framework | Where your API is served | What it changes in your files |
 |---|---|---|
-| Next.js | `app/api/request/route.ts`, registered from `instrumentation.ts` | `next.config` only when Studio's default port is taken |
-| Nuxt | `server/api/request.ts`, registered from a Nitro plugin | Studio's module in `nuxt.config`; `app.vue` renders pages where it showed the welcome |
-| SvelteKit | `src/routes/api/request/+server.ts`, registered from `hooks.server.ts` | Studio's plugin in `vite.config` |
-| Astro | `src/pages/api/request.ts`, on demand, registered from the middleware | Studio's integration in `astro.config` |
-| React Router, Remix | `app/routes/api.request.ts` | the routes in `app/routes.ts`; Studio's plugin in `vite.config` |
-| SolidStart | `src/routes/api/request.ts` | Studio's plugin in `vite.config` |
+| Next.js | `app/api/request/route.ts`, registered from `instrumentation.ts` | `next.config` passed to Courier's `withCourier()`, and Studio's port in it when the default is taken |
+| Nuxt | `server/api/request.ts`, registered from a Nitro plugin | Courier's module and Studio's in `nuxt.config`; `app.vue` renders pages where it showed the welcome |
+| SvelteKit | `src/routes/api/request/+server.ts`, registered from `hooks.server.ts` | Courier's plugin and Studio's in `vite.config` |
+| Astro | `src/pages/api/request.ts`, on demand, registered from the middleware | Courier's integration and Studio's in `astro.config` |
+| React Router, Remix | `app/routes/api.request.ts` | the routes in `app/routes.ts`; Courier's plugin and Studio's in `vite.config` |
+| SolidStart | `src/routes/api/request.ts` | Courier's plugin and Studio's in `vite.config` |
 | React with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
 | Vue with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
 | Expo | no server: the app calls your API directly | a Courier tab in the template's tabs |
@@ -135,7 +135,19 @@ bun create @noverax/courier
 | Fastify | a plugin on `/api/request` and `/courier` | `.courier/` kept out of `fastify start -w` |
 | NestJS | a module on `/api/request` and `/courier` | the module imported into your root module |
 
-Every setup adds `courier.config.ts` — the list of your APIs, which your server, Studio and the MCP server read — `courier.mocks.ts`, your API's definition with its Zod schemas and the `.expose()` marks that open its endpoints to a page, and, where a page calls it through your server, `courier.routes.ts`: the routes the page's client takes, as Courier writes them from the marks — with `@noverax/courier-cli` and a `routes` script, which writes them again without Studio and, with `--check`, fails a CI job when they are out of date.
+Every setup adds `courier.config.ts` — the list of your APIs, which your server, Studio and the MCP server read — `courier.mocks.ts`, and your API's definition with its Zod schemas and the `.expose()` marks that open its endpoints to a page.
+
+Where a page calls your API through your server, its client takes the routes the marks give from `@noverax/courier/routes`, which Courier's plugin for the app's build — `@noverax/courier-build`, installed with it — builds in as you mark an endpoint, and fails a page's bundle that would take the config itself. The client registers the config, for its type alone, so the routes are typed from it. On Express, Hono, Fastify and NestJS, whose pages no bundler builds, the client takes `courier.routes.ts`, as the file mode below writes it.
+
+<br />
+
+## The routes as a file
+
+```bash
+npx @noverax/create-courier --routes file
+```
+
+Writes `courier.routes.ts` in place of the plugin: the routes the page's client takes, as Courier writes them from the marks — with `@noverax/courier-cli` and a `routes` script, which writes them again without Studio and, with `--check`, fails a CI job when they are out of date. Studio writes the module again as it runs. A project that keeps the module already, or a script that writes it, keeps it without the option.
 
 <br />
 
@@ -170,6 +182,7 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 | `--no-studio` | Leave Studio out |
 | `--no-mocks` | Leave the example's mock out |
 | `--mcp` | Offer the API's reads to AI agents in your editor |
+| `--routes <mode>` | `plugin`: pages take their routes from Courier's plugin for the app's build; `file`: from `courier.routes.ts` (default: `plugin`, or `file` where the project keeps one) |
 | `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |
 | `--no-install` | Write the files and name the install commands |
 | `--yes`, `-y` | Set Courier up without asking |

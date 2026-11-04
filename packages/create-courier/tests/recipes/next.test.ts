@@ -33,7 +33,6 @@ describe("nextRecipe", () => {
 
     expect([...byPath.keys()]).toEqual([
       "src/courier/api.ts",
-      "courier.routes.ts",
       "courier.config.ts",
       "courier.mocks.ts",
       "src/app/api/request/route.ts",
@@ -48,11 +47,50 @@ describe("nextRecipe", () => {
     expect(byPath.get("src/app/api/request/route.ts")).not.toContain("registerSources");
     expect(byPath.get("src/app/courier/page.tsx")?.startsWith('"use client";')).toBe(true);
     expect(byPath.get("src/courier/api.ts")).toContain("  expose: true,");
+  });
+
+  it("builds the page's routes in with withCourier(), and registers the config where the hooks are made", () => {
+    const ctx = contextOf(app(), "next");
+    const recipe = nextRecipe(ctx);
+    const query = recipe.files.find((file) => file.path === "src/courier/query.ts")?.content;
+
+    expect(query).toContain('import { routes } from "@noverax/courier/routes";');
+    expect(query).toContain('import type config from "../../courier.config";');
+    expect(query).toContain(
+      'declare module "@noverax/courier/routes" {\n  interface Register {\n    config: typeof config;\n  }\n}',
+    );
+    expect(query).toContain("createProxyQueryCaller(routes.api)");
+    expect(buildPlan(ctx, recipe).edits.find((edit) => edit.path === "next.config.ts")?.after).toBe(
+      NEXT_CONFIG.replace(
+        'import type { NextConfig } from "next";\n',
+        'import type { NextConfig } from "next";\nimport { withCourier } from "@noverax/courier-next/plugin";\n',
+      ).replace("export default nextConfig;", "export default withCourier(nextConfig);"),
+    );
+    expect(recipe.scripts).toEqual({ studio: "courier-studio" });
+    expect(recipe.next.map((step) => step.command)).toEqual(["npm run studio", "npm run dev"]);
+  });
+
+  it("installs Courier's plugin as a dependency the app runs with: next start loads next.config", () => {
+    const recipe = nextRecipe(contextOf(app(), "next"));
+
+    expect(
+      recipe.dependencies.filter((name) => name.startsWith("@noverax/courier-build")),
+    ).toHaveLength(1);
+    expect(recipe.devDependencies.filter((name) => name.includes("courier-build"))).toEqual([]);
+    expect(recipe.devDependencies.filter((name) => name.includes("courier-cli"))).toEqual([]);
+  });
+
+  it("writes courier.routes.ts for the page's client in place of the plugin with --routes file", () => {
+    const recipe = nextRecipe(contextOf(app(), "next", { routes: "file" }));
+    const byPath = new Map(recipe.files.map((file) => [file.path, file.content]));
+
+    expect([...byPath.keys()]).toContain("courier.routes.ts");
     expect(byPath.get("src/courier/query.ts")).toContain(
       'import { apiRoutes } from "../../courier.routes";',
     );
     expect(byPath.get("src/courier/query.ts")).toContain("createProxyQueryCaller(apiRoutes)");
     expect(recipe.edits).toEqual([]);
+    expect(recipe.dependencies.filter((name) => name.includes("courier-build"))).toEqual([]);
   });
 
   it("leaves the lines to the person where the app has an instrumentation file of its own", () => {
@@ -86,11 +124,19 @@ describe("nextRecipe", () => {
     expect(step?.lines).toEqual([
       "export default async function config(phase: string): Promise<NextConfig> {",
       "  // PHASE_DEVELOPMENT_SERVER: next dev alone loads Studio, a dev dependency",
-      '  if (phase !== "phase-development-server") return nextConfig;',
+      '  if (phase !== "phase-development-server") return withCourier(nextConfig);',
       '  const { withCourierStudio } = await import("@noverax/courier-studio/next");',
-      "  return withCourierStudio()(nextConfig);",
+      "  return withCourierStudio()(withCourier(nextConfig));",
       "}",
     ]);
+  });
+
+  it("returns the config itself from the wrapper where the page's routes come from courier.routes.ts", () => {
+    const recipe = nextRecipe(contextOf(app({}, "15.5.0"), "next", { routes: "file" }));
+    const step = recipe.manual.find((each) => each.file === "next.config.ts");
+
+    expect(step?.lines).toContain('  if (phase !== "phase-development-server") return nextConfig;');
+    expect(step?.lines).toContain("  return withCourierStudio()(nextConfig);");
   });
 
   it("writes the wrapper for a CommonJS next.config.js as CommonJS", () => {
@@ -116,13 +162,13 @@ describe("nextRecipe", () => {
     expect(
       recipe.files.find((file) => file.path === "src/instrumentation.ts")?.content,
     ).not.toContain("attachRuntime");
-    expect(recipe.scripts).toEqual({ routes: "courier-cli routes" });
+    expect(recipe.scripts).toEqual({});
     expect(recipe.devDependencies.filter((name) => name.includes("courier-studio"))).toEqual([]);
   });
 
   it("adds the CLI that writes courier.routes.ts and its script, and the step that runs it where no Studio does", () => {
-    const withStudio = nextRecipe(contextOf(app(), "next"));
-    const without = nextRecipe(contextOf(app(), "next", { studio: false }));
+    const withStudio = nextRecipe(contextOf(app(), "next", { routes: "file" }));
+    const without = nextRecipe(contextOf(app(), "next", { studio: false, routes: "file" }));
 
     for (const recipe of [withStudio, without])
       expect(
@@ -143,7 +189,7 @@ describe("nextRecipe", () => {
       "next.config.ts": NEXT_CONFIG,
     });
 
-    const recipe = nextRecipe(contextOf(root, "next", { studio: false }));
+    const recipe = nextRecipe(contextOf(root, "next", { studio: false, routes: "file" }));
 
     expect(recipe.next.map((step) => step.command)).toContain("npm exec -- courier-cli routes");
   });

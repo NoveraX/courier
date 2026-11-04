@@ -22,10 +22,10 @@ describe("solidStartRecipe", () => {
 
     expect(byPath.get("src/routes/api/request.ts")).toContain("registerSources(config.sources);");
     expect(byPath.get("src/routes/courier.tsx")).toContain("<Title>Courier is set up</Title>");
-    expect(recipe.edits.map((edit) => edit.path)).toEqual(["vite.config.ts"]);
+    expect(recipe.edits.map((edit) => edit.path)).toEqual(["vite.config.ts", "vite.config.ts"]);
   });
 
-  it("leaves Studio's plugin to the person in SolidStart 1's app.config.ts", () => {
+  it("leaves Courier's plugin and Studio's to the person in SolidStart 1's app.config.ts", () => {
     const root = projectWith({
       "package.json": manifest({ "@solidjs/start": "^1.1.0", "solid-js": "^1.9.0" }),
       "tsconfig.json": "{}",
@@ -35,7 +35,13 @@ describe("solidStartRecipe", () => {
     const recipe = solidStartRecipe(contextOf(root, "@solidjs/start"));
 
     expect(recipe.edits).toEqual([]);
-    expect(recipe.manual[0]?.file).toBe("app.config.ts");
+    expect(recipe.manual.map((step) => [step.file, step.what])).toEqual([
+      ["app.config.ts", "Build the pages' routes in: add the plugin to the config's vite.plugins"],
+      [
+        "app.config.ts",
+        "Connect the browser to Studio: add the plugin to the config's vite.plugins",
+      ],
+    ]);
     expect(
       recipe.files.find((file) => file.path === "src/routes/courier.tsx")?.content,
     ).not.toContain("@solidjs/meta");

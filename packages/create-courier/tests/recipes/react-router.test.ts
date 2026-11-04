@@ -45,6 +45,6 @@ describe("reactRouterRecipe", () => {
   it("needs no list in a Remix app, whose file routes serve themselves", () => {
     const recipe = reactRouterRecipe(contextOf(app(undefined), "@react-router/dev"));
 
-    expect(recipe.edits.map((edit) => edit.path)).toEqual(["vite.config.ts"]);
+    expect(recipe.edits.map((edit) => edit.path)).toEqual(["vite.config.ts", "vite.config.ts"]);
   });
 });

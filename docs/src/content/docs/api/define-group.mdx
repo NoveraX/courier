@@ -1,4 +1,4 @@
-export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions.", mode: "both", updated: "2026-11-04" }
 
 ## Import
 
@@ -183,11 +183,13 @@ An endpoint is an inert descriptor, not a callable. Three types name one:
 
 ```ts
 import type {
-  ChannelEndpoint,  // ChannelEndpoint<Response, Variables, Send>
-  HttpEndpoint,     // HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
-  StreamEndpoint,   // StreamEndpoint<Response, Variables>
+  ChannelEndpoint,  // ChannelEndpoint<Response, Variables, Send, VariablesOut?, Expose?>
+  HttpEndpoint,     // HttpEndpoint<Response, Variables, Kind extends "query" | "mutation", VariablesOut?, Expose?>
+  StreamEndpoint,   // StreamEndpoint<Response, Variables, VariablesOut?, Expose?>
 } from "@noverax/courier/define"
 ```
+
+`VariablesOut` is what the variables are once their schema has parsed them: the variables themselves, where it is left out. `Expose` is the endpoint's own `.expose()` mark — `true`, `false`, or `undefined` where the group or the API above decides; left out, it may be any of them, so a type written without it reads as an endpoint a page may call, and the routes Courier's plugin builds offer it.
 
 Read the types back off an endpoint with the inference helpers, which is how a
 caller knows what a method takes and returns:

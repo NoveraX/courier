@@ -64,7 +64,7 @@ export const orders = defineGroup({
 })
 ```
 
-Returning ends the stream: the client stops reading and does not reconnect. Throwing fails it. A `RealtimeError` — `ForbiddenError`, `AuthError`, `RateLimitError`, `TimeoutError`, or one built with its own code — reaches the client with its code and message; any other error reaches it as code `5000`, "Stream failed", and in full only the server's log.
+Returning ends the stream: the client stops reading and does not reconnect. Throwing fails it. A `RealtimeError` — `ForbiddenError`, `AuthError`, `RateLimitError`, `RealtimeTimeoutError`, or one built with its own code — reaches the client with its code and message; any other error reaches it as code `5000`, "Stream failed", and in full only the server's log.
 
 ## Reaching a stream or a channel
 

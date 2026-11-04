@@ -7,8 +7,8 @@ import {
   isRealtimeError,
   RateLimitError,
   RealtimeError,
+  RealtimeTimeoutError,
   RealtimeValidationError,
-  TimeoutError,
 } from "../src/realtime/errors";
 
 describe("RealtimeError hierarchy", () => {
@@ -46,8 +46,8 @@ describe("RealtimeError hierarchy", () => {
     expect(err.message).toBe("Not allowed");
   });
 
-  it("TimeoutError has code 4408", () => {
-    const err = new TimeoutError();
+  it("RealtimeTimeoutError has code 4408", () => {
+    const err = new RealtimeTimeoutError();
     expect(err.code).toBe(4408);
   });
 
@@ -88,8 +88,8 @@ describe("fromErrorCode", () => {
     expect(err).toBeInstanceOf(ForbiddenError);
   });
 
-  it("maps 4408 to TimeoutError", () => {
-    expect(fromErrorCode(4408, "Timeout")).toBeInstanceOf(TimeoutError);
+  it("maps 4408 to RealtimeTimeoutError", () => {
+    expect(fromErrorCode(4408, "Timeout")).toBeInstanceOf(RealtimeTimeoutError);
   });
 
   it("maps 4422 to RealtimeValidationError", () => {

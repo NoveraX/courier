@@ -50,11 +50,18 @@ export class ForbiddenError extends RealtimeError {
   }
 }
 
-/** Request timeout (middleware, auth callback, request-response) */
-export class TimeoutError extends RealtimeError {
+/**
+ * A live connection's step that ran out of time: its middleware, its auth
+ * callback, a request awaiting its answer.
+ *
+ * Named apart from the `TimeoutError` on the package root, which a call's
+ * request throws when its own time runs out, as `RealtimeValidationError`
+ * is from the root's `ValidationError`: catching one never catches the other.
+ */
+export class RealtimeTimeoutError extends RealtimeError {
   constructor(message = "Request timeout") {
     super(4408, message);
-    this.name = "TimeoutError";
+    this.name = "RealtimeTimeoutError";
   }
 }
 
@@ -113,7 +120,7 @@ export function fromErrorCode(
     case 4403:
       return new ForbiddenError(message);
     case 4408:
-      return new TimeoutError(message);
+      return new RealtimeTimeoutError(message);
     case 4422:
       return new RealtimeValidationError(message, issues);
     case 4429:

@@ -117,7 +117,7 @@ export {
   isRealtimeError,
   RateLimitError,
   RealtimeError,
-  TimeoutError,
+  RealtimeTimeoutError,
 } from "./realtime/errors";
 export type { CallerWSOptions } from "./realtime/ws/ws-types";
 export type {

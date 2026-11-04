@@ -17,8 +17,8 @@ export {
   isRealtimeError,
   RateLimitError,
   RealtimeError,
+  RealtimeTimeoutError,
   RealtimeValidationError,
-  TimeoutError,
 } from "./errors";
 export { createMemoryPresence } from "./memory-presence";
 export { createMemoryPubSub } from "./memory-pubsub";

@@ -1,11 +1,8 @@
-import { createLogger } from "../logger";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import { decodeMessage } from "../realtime/ws/ws-protocol";
 import type { WSSocketContext } from "./ws-context";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
 import type { WSInbox } from "./ws-inbox";
-
-const log = createLogger("WS");
 
 /** What a connection is admitted with: the client's `ws.auth`, or an `auth` frame no client sends. */
 export type Admission = { readonly auth: WSAuthParams | undefined } | { readonly invalid: true };
@@ -60,7 +57,11 @@ export function applyFrameCredentials(ctx: WSSocketContext, payload: unknown): v
   const credentials = frameCredentials(payload);
   const request = credentials && withFrameHeaders(ctx.handshake, credentials);
   if (request === undefined) {
-    log.warn(`An auth frame no client sends was ignored (conn=${ctx.connectionId})`);
+    ctx.refusals.warn({
+      event: "auth frame refused",
+      code: 4400,
+      fields: { conn: ctx.connectionId },
+    });
     ctx.sendMessage({ type: "error", error: { code: 4400, message: "Invalid auth frame" } });
     return;
   }

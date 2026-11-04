@@ -1,4 +1,6 @@
 import { createLogger } from "../logger";
+import { addressTag } from "../logger/address-tag";
+import { createRefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { prepareSources } from "../sources";
@@ -23,6 +25,11 @@ import type { WSHandler, WSHandlerConfig } from "./ws-types";
 export type { WSSocketContext } from "./ws-context";
 
 const log = createLogger("WS");
+
+/** What names a connection in a refusal's line: its id, and a tag of its address. */
+function whoIs(ctx: WSSocketContext): { conn: string; addr: string } {
+  return { conn: ctx.connectionId, addr: addressTag(ctx.clientIP) };
+}
 
 /**
  * Create a server-side WebSocket handler for Courier endpoints.
@@ -51,6 +58,9 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }
   const registry = createConnectionRegistry();
+  /* One log of refusals for every connection of the handler, so a client
+     that keeps being refused takes up one line an interval, not one each. */
+  const refusals = createRefusalLog("WS");
   const maxPerIP = config.maxConnectionsPerIP ?? LIMITS.MAX_CONNECTIONS_PER_IP;
   const ipTracker = createIPTracker(maxPerIP);
   const bridge = config.pubsub ? createPubSubBridge(config.pubsub, registry) : undefined;
@@ -69,11 +79,13 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     const ip = admitSocket(ws, request, config, ipTracker);
     if (ip === undefined) return;
 
-    const ctx = buildContext(ws, config, topicManager, registry, bridge, request);
+    const ctx = buildContext(ws, config, topicManager, registry, bridge, request, refusals);
     ctx.clientIP = ip;
     /* What the client sends before its connection is admitted — who it is,
        the subscriptions it makes as its socket opens — waits for it, in order. */
-    const inbox = holdFrames(ws, ctx.maxControlPerSecond);
+    const inbox = holdFrames(ws, ctx.maxControlPerSecond, (held) =>
+      refusals.warn({ event: "frames refused", code: 4429, fields: { ...whoIs(ctx), held } }),
+    );
 
     if (config.onConnect) {
       /* What fails while a connection is admitted ends that connection, never the process. */
@@ -115,7 +127,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
         ctx.meta = connectionMetaOf(result, "onConnect");
       }
     } catch (err) {
-      log.warn("Connection rejected by onConnect", err);
+      refusals.warn({ event: "connection refused", code: 4401, fields: whoIs(ctx) }, err);
       ipTracker.release(ctx.clientIP);
       ws.close(4401, "Connection rejected");
       return;

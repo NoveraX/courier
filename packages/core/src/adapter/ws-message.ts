@@ -1,14 +1,13 @@
-import { createLogger } from "../logger";
 import { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 import { isChannelSchema } from "../realtime/is-channel-schema";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { ValidationError, validateSchema } from "../validation";
+import { endpointName } from "./endpoint-name";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
 import { parseTopic } from "./ws-resolve";
 
-const log = createLogger("WS");
 const MESSAGE_REJECTED = { code: 4403, message: "Message rejected" };
 
 /**
@@ -111,8 +110,10 @@ async function authorizeIncomingMessage(
     }
     return true;
   } catch (error) {
-    log.warn("Message authorization failed", error);
-    refuseMessage(ctx, msg, describeFailure(error, MESSAGE_REJECTED.message, 4403));
+    const failure = describeFailure(error, MESSAGE_REJECTED.message, 4403);
+    const fields = { conn: ctx.connectionId, endpoint: endpointName(parseTopic(topic)) };
+    ctx.refusals.warn({ event: "message refused", code: failure.code, fields }, error);
+    refuseMessage(ctx, msg, failure);
     return false;
   }
 }

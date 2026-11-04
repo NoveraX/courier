@@ -102,7 +102,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -137,7 +137,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -167,7 +167,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -193,7 +193,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -218,7 +218,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -248,7 +248,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -296,7 +296,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -329,7 +329,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -360,7 +360,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -386,7 +386,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -433,7 +433,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -457,7 +457,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10),
+      holdFrames(ws, 10, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,

@@ -1,8 +1,11 @@
+import { format } from "node:util";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { handleReauth } from "../src/adapter/ws-reauth";
+import { createRefusalLog } from "../src/logger/refusal-log";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
@@ -93,8 +96,8 @@ describe("a connection whose onConnect returns something other than an object", 
     await settle(300);
 
     expect(served.handler.connections.count).toBe(0);
-    const causes = warn.mock.calls.map((call) => String(call[2]));
-    expect(causes.some((cause) => cause.includes("onConnect returned a string"))).toBe(true);
+    const said = warn.mock.calls.map((call) => format(...call));
+    expect(said.some((line) => line.includes("onConnect returned a string"))).toBe(true);
   });
 });
 
@@ -110,6 +113,7 @@ describe("credentials sent again whose onReauth returns something other than an 
       sendMessage: (message: WSMessage) => sent.push(message),
       onReauth: async () => "user-2",
       registry,
+      refusals: createRefusalLog("WS"),
     } as unknown as WSSocketContext;
 
     await handleReauth(ctx, { type: "auth", id: "1", payload: { auth: { token: "fresh" } } });
@@ -119,7 +123,7 @@ describe("credentials sent again whose onReauth returns something other than an 
     expect(sent).toEqual([
       { type: "error", id: "1", error: { code: 4401, message: "Credentials rejected" } },
     ]);
-    expect(String(warn.mock.calls[0]?.[2])).toContain("onReauth returned a string");
+    expect(format(...(warn.mock.calls[0] ?? []))).toContain("onReauth returned a string");
     warn.mockRestore();
   });
 });

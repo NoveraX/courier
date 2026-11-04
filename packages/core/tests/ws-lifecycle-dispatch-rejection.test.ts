@@ -115,7 +115,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10),
+      holdFrames(ws as never, 10, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -138,7 +138,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10),
+      holdFrames(ws as never, 10, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -161,7 +161,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10),
+      holdFrames(ws as never, 10, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -185,7 +185,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10),
+      holdFrames(ws as never, 10, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,

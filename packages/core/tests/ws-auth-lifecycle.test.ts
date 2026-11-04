@@ -3,6 +3,7 @@ import type { WSSocketContext } from "../src/adapter/ws-context";
 import { handleMessage } from "../src/adapter/ws-dispatch";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
 import type { RegistryEntry } from "../src/adapter/ws-registry-types";
+import { createRefusalLog } from "../src/logger/refusal-log";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
@@ -146,6 +147,7 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
     maxMessageSize: 65536,
     middlewareTimeoutMs: 30000,
     authorizeMessage: undefined,
+    refusals: createRefusalLog("WS"),
     ...overrides,
   } as unknown as WSSocketContext;
 
@@ -199,6 +201,7 @@ describe("per-message authorization", () => {
   });
 
   it("rejects message when authorizeMessage throws", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     const authorizeMessage = vi.fn().mockRejectedValue(new Error("forbidden"));
     const { ctx, sent } = createMsgCtx({ authorizeMessage });
 

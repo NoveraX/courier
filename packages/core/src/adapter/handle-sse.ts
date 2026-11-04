@@ -1,4 +1,4 @@
-import { createLogger } from "../logger";
+import { createRefusalLog } from "../logger/refusal-log";
 import { eventsOf } from "../realtime/implementation";
 import { streamLabel } from "../realtime/stream-label";
 import type { SSEContext } from "../realtime/types";
@@ -14,6 +14,7 @@ import type { StatusTeller } from "../transport/instrument/watch-connection";
 import { randomId } from "../utils/random-id";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
+import { endpointName } from "./endpoint-name";
 import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
 import { errorResponse } from "./parse";
@@ -23,8 +24,6 @@ import { relayStream } from "./sse-relay";
 import { resolveSSEEndpoint, resolveSSEVariables } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
 import { createLifetimeSignal } from "./sse-utils";
-
-const log = createLogger("SSE");
 
 function headersToRecord(h: Headers): Record<string, string> {
   const rec: Record<string, string> = {};
@@ -66,6 +65,9 @@ export function createSSEHandler(
   registry: InternalSSERegistry,
 ): (request: Request) => Promise<Response> {
   const responseHeaders = { ...SSE_HEADERS, ...config?.sseHeaders };
+  /* One log of refusals for every stream of the handler: a client refused
+     over and over takes up one line an interval. */
+  const refusals = createRefusalLog("SSE");
 
   return async (request: Request): Promise<Response> => {
     if (registry.isShuttingDown) return unavailable("Service shutting down", "3");
@@ -88,6 +90,7 @@ export function createSSEHandler(
     if (variables instanceof Response) return variables;
 
     const connectionId = randomId();
+    const endpoint = endpointName({ source, group, method });
     // Studio Playground proxy mode forwards its own pre-allocated requestId
     // via the `x-courier-playground-rid` header so the events emitted by this
     // handler correlate back to the playground tab that initiated the
@@ -111,7 +114,8 @@ export function createSSEHandler(
         requestId,
       });
     } catch (err) {
-      log.warn(`Middleware refused the SSE stream for [${source}][${method}]`, err);
+      const fields = { conn: connectionId, endpoint };
+      refusals.warn({ event: "stream refused", code: 500, fields }, err);
       return errorResponse(500, "Middleware error");
     }
 
@@ -121,8 +125,9 @@ export function createSSEHandler(
         const result = await config.onSSEConnect({ connectionId, request, source, group, method });
         meta = connectionMetaOf(result, "onSSEConnect");
       } catch (err) {
-        /* What was thrown may carry a secret: it goes to the log only. */
-        log.warn(`onSSEConnect rejected the SSE stream for [${source}][${method}]`, err);
+        /* What was thrown is the log's alone, never the client's. */
+        const fields = { conn: connectionId, endpoint };
+        refusals.warn({ event: "stream refused", code: 403, fields }, err);
         return errorResponse(403, "Connection rejected");
       }
     }

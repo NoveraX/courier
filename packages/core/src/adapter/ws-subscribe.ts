@@ -1,8 +1,8 @@
-import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
 import { isChannelSchema } from "../realtime/is-channel-schema";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { runTransportMiddleware } from "../utils/transport-middleware";
+import { endpointName } from "./endpoint-name";
 import { authorizeSubscription } from "./ws-authorize-subscription";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry, openSubscriptionEntry } from "./ws-dispatch-helpers";
@@ -11,8 +11,6 @@ import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
 import { subscriptionTopic } from "./ws-subscribe-topic";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
-
-const log = createLogger("WS");
 
 /**
  * Handle a "subscribe" message from a WS client.
@@ -94,8 +92,10 @@ async function openSubscription(
       timeoutMs: ctx.middlewareTimeoutMs,
     });
   } catch (error) {
-    log.warn("Subscription middleware failed", error);
-    sendSubscriptionEnd(ctx, topic, msg.id, describeFailure(error, "Subscription failed"));
+    const failure = describeFailure(error, "Subscription failed");
+    const fields = { conn: ctx.connectionId, endpoint: endpointName(resolved) };
+    ctx.refusals.warn({ event: "subscription refused", code: failure.code, fields }, error);
+    sendSubscriptionEnd(ctx, topic, msg.id, failure);
     return;
   }
   if (ctx.closed) return;

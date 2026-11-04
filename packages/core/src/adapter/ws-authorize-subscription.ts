@@ -1,10 +1,9 @@
-import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
+import { endpointName } from "./endpoint-name";
 import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
-const log = createLogger("WS");
 const REJECTED = { code: 4403, message: "Subscription rejected" };
 
 /**
@@ -47,8 +46,9 @@ export async function authorizeSubscription(
     }
     return true;
   } catch (error) {
-    log.warn("Subscription authorization failed", error);
     const failure = describeFailure(error, REJECTED.message, REJECTED.code);
+    const fields = { conn: ctx.connectionId, endpoint: endpointName(resolved) };
+    ctx.refusals.warn({ event: "subscription refused", code: failure.code, fields }, error);
     sendSubscriptionEnd(ctx, msg.topic ?? topic, msg.id, failure);
     return false;
   } finally {

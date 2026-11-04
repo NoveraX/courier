@@ -1,5 +1,6 @@
 import type { Sources } from "../define/types";
 import { createLogger } from "../logger";
+import type { RefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
@@ -97,6 +98,8 @@ export interface WSSocketContext {
   onReauth: WSHandlerConfig["onReauth"];
   authRequiredTimeoutMs: number;
   clientIP: string;
+  /** The handler's log of refusals, which every connection of it shares */
+  refusals: RefusalLog;
 }
 
 /**
@@ -110,6 +113,7 @@ export interface WSSocketContext {
  * @param registry - Connection registry for broadcast/send
  * @param bridge - Optional PubSub bridge for cross-replica messaging
  * @param request - Original HTTP upgrade request
+ * @param refusals - The handler's log of refusals
  * @returns Fully initialized per-connection context
  */
 export function buildContext(
@@ -119,6 +123,7 @@ export function buildContext(
   registry: InternalConnectionRegistry,
   bridge: PubSubBridge | undefined,
   request: Request,
+  refusals: RefusalLog,
 ): WSSocketContext {
   const dt = studioHooks;
   const maxBuf = config.maxBufferedAmount ?? LIMITS.MAX_BUFFERED_AMOUNT;
@@ -199,5 +204,6 @@ export function buildContext(
     onReauth: config.onReauth,
     authRequiredTimeoutMs: config.authRequiredTimeoutMs ?? 30_000,
     clientIP: "",
+    refusals,
   };
 }

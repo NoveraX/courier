@@ -315,6 +315,8 @@ import { redact } from "@noverax/courier"
 Sentry.captureException(redact(error)) // the copy carries no token, password or secret header
 ```
 
+A refusal the application meant — `onConnect`, `onReauth`, `authorize`, `authorizeMessage`, `onSSEConnect` or a middleware refusing — is one `warn` line with its code and the thrown error's name and message, at most once every 10 seconds for each kind, the rest counted; its stack is printed at `debug`. Keep secrets out of the messages of the errors these hooks throw.
+
 <br />
 
 ## Building Server Adapters

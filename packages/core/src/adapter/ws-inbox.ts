@@ -1,7 +1,4 @@
-import { createLogger } from "../logger";
 import type { WebSocketLike } from "../realtime/adapters";
-
-const log = createLogger("WS");
 
 /** The frames a socket sends, held until its connection is admitted. */
 export interface WSInbox {
@@ -24,19 +21,25 @@ export interface WSInbox {
  * until its connection is: a client proves who it is and subscribes as soon
  * as its socket opens, and a subscription sent while `onConnect` ran was
  * lost, leaving the client connected to nothing. A socket that sends more
- * than `maxHeld` frames before then is closed with 4429.
+ * than `maxHeld` frames before then is closed with 4429, and `onOverflow`
+ * is told how many it held.
  *
  * @param ws - The admitted socket
  * @param maxHeld - How many frames it may send before its connection is admitted
+ * @param onOverflow - Told of a socket closed for sending more
  * @returns The inbox, opened once the connection is
  * @example
  * ```ts
- * const inbox = holdFrames(ws, 200);
+ * const inbox = holdFrames(ws, 200, (held) => refusals.warn({ event: "frames refused", code: 4429, fields: { held } }));
  * const first = await inbox.first(3000);
  * inbox.open((raw) => routeMessage(ctx, raw, heartbeat));
  * ```
  */
-export function holdFrames(ws: WebSocketLike, maxHeld: number): WSInbox {
+export function holdFrames(
+  ws: WebSocketLike,
+  maxHeld: number,
+  onOverflow: (held: number) => void,
+): WSInbox {
   let held: string[] | undefined = [];
   let route: ((raw: string) => void) | undefined;
   let awaitingFirst: ((raw: string | undefined) => void) | undefined;
@@ -50,7 +53,7 @@ export function holdFrames(ws: WebSocketLike, maxHeld: number): WSInbox {
   function hold(raw: string): void {
     if (held === undefined) return;
     if (held.length >= maxHeld) {
-      log.warn(`A socket sent more than ${maxHeld} frames before its connection was admitted`);
+      onOverflow(held.length);
       held = undefined;
       ws.close(4429, "Too many messages before the connection was accepted");
       return;

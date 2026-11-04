@@ -4,6 +4,7 @@ import { buildContext } from "../src/adapter/ws-context";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
 import { createServerTopicManager } from "../src/adapter/ws-topics";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
+import { createRefusalLog } from "../src/logger/refusal-log";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -56,7 +57,15 @@ function buildTestContext(
 describe("buildContext", () => {
   it("returns a context with a UUID connectionId", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.connectionId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
@@ -65,7 +74,15 @@ describe("buildContext", () => {
 
   it("uses default LIMITS when config omits values", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.maxSubscriptions).toBe(LIMITS.MAX_SUBSCRIPTIONS_PER_CONNECTION);
     expect(ctx.maxMessageSize).toBe(LIMITS.MAX_MESSAGE_SIZE);
@@ -79,7 +96,15 @@ describe("buildContext", () => {
       maxMessageSize: 1024,
       middlewareTimeoutMs: 500,
     });
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.maxSubscriptions).toBe(5);
     expect(ctx.maxMessageSize).toBe(1024);
@@ -96,13 +121,29 @@ describe("buildContext", () => {
     registry.setTopicManager(topicManager);
     const request = new Request("http://localhost/ws?_playground_rid=playground-rid-xyz-789");
 
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
     expect(ctx.playgroundRequestId).toBe("playground-rid-xyz-789");
   });
 
   it("playgroundRequestId is undefined when the query param is absent (production browser path)", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
     expect(ctx.playgroundRequestId).toBeUndefined();
   });
 
@@ -116,7 +157,15 @@ describe("buildContext", () => {
     // connection's streams get generated ones.
     const request = new Request("http://localhost/ws?_playground_rid=");
 
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
     expect(ctx.playgroundRequestId).toBeUndefined();
   });
 
@@ -128,14 +177,30 @@ describe("buildContext", () => {
     registry.setTopicManager(topicManager);
     const request = new Request("http://localhost/ws?token=abc&_playground_rid=rid-mixed&other=1");
 
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
     expect(ctx.playgroundRequestId).toBe("rid-mixed");
   });
 
   it("initializes seq at 0 and t0 near current time", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
     const before = performance.now();
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.seq.value).toBe(0);
     expect(ctx.t0).toBeGreaterThanOrEqual(before);
@@ -144,7 +209,15 @@ describe("buildContext", () => {
 
   it("initializes empty meta object", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.meta).toEqual({});
   });
@@ -165,7 +238,15 @@ describe("buildContext", () => {
       destroy: vi.fn(),
     };
 
-    const ctx = buildContext(ws, config, topicManager, registry, bridge, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      bridge,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.sources).toBe(sources);
     expect(ctx.registry).toBe(registry);
@@ -175,7 +256,15 @@ describe("buildContext", () => {
 
   it("passes the request object through", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     expect(ctx.request).toBe(request);
   });
@@ -184,7 +273,15 @@ describe("buildContext", () => {
     const send = vi.fn();
     const { config, topicManager, registry, request } = buildTestContext();
     const ws = createMockWs({ readyState: 3, send });
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     ctx.sendMessage({ type: "data", payload: "test" });
     expect(send).not.toHaveBeenCalled();
@@ -195,7 +292,15 @@ describe("buildContext", () => {
     const { topicManager, registry, request } = buildTestContext();
     const ws = createMockWs({ readyState: 1, bufferedAmount: 2_000_000, send });
     const config = createConfig({ maxBufferedAmount: 1_000_000 });
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     ctx.sendMessage({ type: "data", payload: "test" });
     expect(send).not.toHaveBeenCalled();
@@ -205,7 +310,15 @@ describe("buildContext", () => {
     const send = vi.fn();
     const { config, topicManager, registry, request } = buildTestContext();
     const ws = createMockWs({ readyState: 1, bufferedAmount: 0, send });
-    const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
+    const ctx = buildContext(
+      ws,
+      config,
+      topicManager,
+      registry,
+      undefined,
+      request,
+      createRefusalLog("WS"),
+    );
 
     const msg: WSMessage = { type: "data", payload: "hello" };
     ctx.sendMessage(msg);

@@ -1,3 +1,5 @@
+import { format } from "node:util";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
@@ -668,6 +670,58 @@ describe("handleSSE — lifecycle hooks", () => {
 
     expect(onSSEError).toHaveBeenCalledOnce();
     expect(onSSEError.mock.calls[0]![0].error).toBeInstanceOf(Error);
+  });
+});
+
+describe("handleSSE — refusals in the log", () => {
+  /** What the handler warned of, each call as the console prints it. */
+  function warnings(): string[] {
+    const warn = vi.mocked(console.warn);
+    return warn.mock.calls.map((call) => format(...call));
+  }
+
+  it("logs a stream onSSEConnect refuses on one line, without a stack", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("NO_COLOR", "1");
+    const onSSEConnect = vi.fn().mockRejectedValue(new Error("forbidden"));
+    const sources = createSSESource(async function* () {
+      yield { data: "x" };
+    });
+
+    const handler = setupHandler(sources, { onSSEConnect });
+    const res = await handler.handleSSE(sseRequest("_s=testSource&_g=notifications&_m=feed"));
+
+    expect(res.status).toBe(403);
+    expect(warnings()).toEqual([
+      expect.stringMatching(
+        /stream refused code=403 reason="Error: forbidden" conn=\S+ endpoint=\[testSource\]\[notifications\]\[feed\]$/,
+      ),
+    ]);
+    vi.unstubAllEnvs();
+  });
+
+  it("logs a stream its middleware refuses on one line, without a stack", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("NO_COLOR", "1");
+    const gate = defineMiddleware("gate", "before", async () => {
+      throw new Error("no session");
+    });
+    const feed = stream.response<unknown>().implement(async function* () {
+      yield { data: "x" };
+    });
+    const { handleSSE } = setupHandler({
+      api: { options: { expose: true, middleware: [gate], groups: {} }, feed },
+    });
+
+    const res = await handleSSE(sseRequest("_s=api&_m=feed"));
+
+    expect(res.status).toBe(500);
+    expect(warnings()).toEqual([
+      expect.stringMatching(
+        /stream refused code=500 reason="Error: no session" conn=\S+ endpoint=\[api\]\[\]\[feed\]$/,
+      ),
+    ]);
+    vi.unstubAllEnvs();
   });
 });
 

@@ -10,6 +10,7 @@ import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
 import { emitChannelMessage } from "./emit-channel-message";
+import { reportHandlerFailure } from "./report-handler-failure";
 
 const log = createLogger("WS");
 
@@ -95,7 +96,10 @@ export async function startChannel(
       try {
         await handlers.onMessage(channelCtx, payload);
       } catch (error) {
-        log.warn("onMessage handler failed", error);
+        reportHandlerFailure(ctx, topic, error, {
+          refusal: "message refused",
+          fault: "onMessage failed",
+        });
         ctx.sendMessage({ type: "error", topic, error: describeFailure(error, "Handler error") });
       }
     },
@@ -104,7 +108,10 @@ export async function startChannel(
   try {
     await handlers.onJoin?.(channelCtx);
   } catch (error) {
-    log.warn("onJoin handler failed", error);
+    reportHandlerFailure(ctx, topic, error, {
+      refusal: "subscription refused",
+      fault: "onJoin failed",
+    });
     await ctx.topicManager.unsubscribe(ctx.connectionId, topic);
     // Rethrow so handleSubscribe's outer catch runs closeSubscriptionEntry
     // and sends the error to the client. Sending here would either leak the

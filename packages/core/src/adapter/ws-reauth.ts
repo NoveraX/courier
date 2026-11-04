@@ -1,11 +1,8 @@
-import { createLogger } from "../logger";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { connectionMetaOf } from "./connection-meta-of";
 import type { WSSocketContext } from "./ws-context";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
 import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry-types";
-
-const log = createLogger("WS");
 
 const REFUSED = { code: 4401, message: "Credentials rejected" } as const;
 
@@ -39,7 +36,10 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
   if (!ctx.onReauth) {
     /* Nothing checks the credentials, so they prove nothing: taken as they
        came, any frame lifted the deadline `sendAuthRequired` set. */
-    log.warn(`Credentials refused (conn=${ctx.connectionId}): no onReauth checks them`);
+    ctx.refusals.warn(
+      { event: "credentials refused", code: 4401, fields: { conn: ctx.connectionId } },
+      "no onReauth checks them",
+    );
     ctx.sendMessage({ type: "error", id: msg.id, error: REFUSED });
     return;
   }
@@ -58,7 +58,10 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
     ctx.sendMessage({ type: "auth", id: msg.id });
   } catch (err) {
     if (ctx.closed) return;
-    log.warn(`Credentials rejected (conn=${ctx.connectionId})`, err);
+    ctx.refusals.warn(
+      { event: "credentials refused", code: 4401, fields: { conn: ctx.connectionId } },
+      err,
+    );
     ctx.sendMessage({ type: "error", id: msg.id, error: REFUSED });
   }
 }

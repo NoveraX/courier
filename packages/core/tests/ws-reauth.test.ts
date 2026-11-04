@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { handleReauth, sendAuthRequired } from "../src/adapter/ws-reauth";
 import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry-types";
+import { createRefusalLog } from "../src/logger/refusal-log";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSCredentials } from "../src/realtime/ws/ws-credentials";
@@ -26,6 +27,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     sendMessage: (msg: WSMessage) => sent.push(msg),
     onReauth: undefined,
     registry: { updateMeta: vi.fn(), getEntry: vi.fn(() => undefined) },
+    refusals: createRefusalLog("WS"),
     ...overrides,
   } as unknown as WSSocketContext;
 

@@ -11,6 +11,7 @@ import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
 import { emitChannelMessage } from "./emit-channel-message";
+import { reportHandlerFailure } from "./report-handler-failure";
 
 const log = createLogger("WS");
 
@@ -70,7 +71,10 @@ export function startPush(
       sendSubscriptionEnd(ctx, topic, subscribeId);
       closeSubscriptionEntry(ctx, topic, "complete");
     } catch (error) {
-      log.warn("Push generator failed", error);
+      reportHandlerFailure(ctx, topic, error, {
+        refusal: "subscription ended",
+        fault: "Push generator failed",
+      });
       if (ended.signal.aborted) return;
       sendSubscriptionEnd(ctx, topic, subscribeId, describeFailure(error, "Subscription failed"));
       closeSubscriptionEntry(ctx, topic, "error");

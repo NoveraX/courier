@@ -1,3 +1,5 @@
+import { format } from "node:util";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
@@ -71,7 +73,7 @@ describe("the metadata the SSE hooks receive", () => {
     const response = await handler.handleSSE(new Request(STREAM_URL));
 
     expect(response.status).toBe(403);
-    const causes = warn.mock.calls.map((call) => String(call[2]));
-    expect(causes.some((cause) => cause.includes("onSSEConnect returned a string"))).toBe(true);
+    const said = warn.mock.calls.map((call) => format(...call));
+    expect(said.some((line) => line.includes("onSSEConnect returned a string"))).toBe(true);
   });
 });

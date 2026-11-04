@@ -60,6 +60,14 @@ No credential reaches the log: before a line is written, it and the error under 
 
 A browser that cancels a call is not a failure, and is logged at `debug`: an upload it stopped sending, a query it stopped waiting for, a stream it stopped reading. The proxy stops its upstream request and answers such a call with status `499`, which only an access log ever sees.
 
+A refusal the application meant is not a failure either: a WebSocket connection `onConnect` refuses, credentials `onReauth` turns down, a subscription `authorize` or a middleware refuses, a message `authorizeMessage` refuses, an SSE stream `onSSEConnect` or a middleware turns away, a `RealtimeError` a channel throws. Each is one `warn` line with what was refused, its code, the thrown error's name and message, and the connection and endpoint, never the variables. The client's address is named by a tag that is the same all through the process but does not give the address back:
+
+```text
+16:04:02 WARN  courier:ws  connection refused code=4401 reason="Error: invalid token" conn=2c0f… addr=9c1b2e4a
+```
+
+Any client can provoke a refusal, so each kind — event and code — is printed once every 10 seconds, and how many more came is said once the 10 seconds are over (`connection refused code=4401: 37 more in the last 10s`). The error's stack goes on a line of its own at `debug`. What a hook's error says goes into the line, so keep tokens and other secrets out of the messages of the errors your hooks throw.
+
 ## Behind a Reverse Proxy
 
 The proxy route refuses a request another site's page made — the check that stops another site's page from calling your API with your users' cookies. A current browser says where a request comes from in `Sec-Fetch-Site`, and where it does, that decides, whatever name the app thinks it has. Where it does not — an older browser, or a site served over plain HTTP — the page's `Origin` is compared with the origin the request was sent to. Behind nginx, a cloud load balancer or a CDN that terminates TLS, the app itself sees plain HTTP, and often the upstream's name in `Host`, so it needs the proxy to say what the browser used.

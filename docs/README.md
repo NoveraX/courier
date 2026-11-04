@@ -78,7 +78,9 @@ docker build -f docs/Dockerfile -t courier-site .
 
 It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
 it is up, and the container stops, to be started again, when either server
-does.
+does. Asked to stop, the backend takes no new call and lets the answers on
+their way finish, for 5 seconds at most; it waits 30 seconds at most for a
+call to arrive, and 10 for its headers.
 
 Visits are counted with Yandex Metrica on courier.noverax.cloud's production
 build only, and only once the reader accepts in the bar at the foot of the

@@ -38,6 +38,11 @@ export interface DemoLimits extends SandboxLimits {
   readonly uploadBytes: number
   readonly uploadFields: number
   readonly uploadFieldBytes: number
+  /** How long a call may take to arrive whole, and its headers alone. */
+  readonly requestMs: number
+  readonly headersMs: number
+  /** How long the backend, asked to stop, lets the calls it is answering finish. */
+  readonly shutdownMs: number
 }
 
 /** The limits the examples' backend runs with. */
@@ -61,6 +66,9 @@ export const DEMO_LIMITS: DemoLimits = {
   uploadBytes: 1024 * 1024,
   uploadFields: 10,
   uploadFieldBytes: 1024,
+  requestMs: 30_000,
+  headersMs: 10_000,
+  shutdownMs: 5_000,
 }
 
 /* What a form adds around its file and fields: a boundary and headers for each part. */

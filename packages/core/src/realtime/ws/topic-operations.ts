@@ -1,39 +1,38 @@
 import type { ScopedLogger } from "../../logger";
-import type { ConnectionState } from "../connection-state";
-import { fromErrorCode, type RealtimeError } from "../errors";
-import type { createMessageQueue } from "./message-queue";
+import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
+import type { ConnectionRuntime } from "./connection-runtime";
+import type { MessageQueue } from "./message-queue";
 import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
+import type { Subscription } from "./topic-subscription";
 import { encodeMessage } from "./ws-protocol";
 import type { TopicHandler, TopicSubscriber } from "./ws-types";
 
-/**
- * Shared context for the topic-level operations of a WS connection.
- *
- * Carries the mutable connection state plus the helpers needed to
- * actually send a frame, so the topic operations can run as plain
- * functions while preserving the closure-based ergonomics of the
- * original `createWSConnection` implementation.
- */
+/** What the topic operations of a connection work with. */
 export interface TopicOpsContext {
-  state: ConnectionState;
-  topics: TopicRegistry;
-  queue: ReturnType<typeof createMessageQueue>;
-  log: ScopedLogger;
+  readonly runtime: ConnectionRuntime;
+  readonly topics: TopicRegistry;
+  readonly queue: MessageQueue<Subscription>;
+  readonly log: ScopedLogger;
   /** Largest encoded message the server accepts */
-  maxMessageSize: number;
-  /** Hand a frame to the open socket; `false`, with a warning, when it could not */
-  sendRaw(data: string): boolean;
+  readonly maxMessageSize: number;
+  /** Most the socket may hold unsent before a message is dropped */
+  readonly maxBufferedAmount: number;
+  /** Warn of a message the queue had no room for, once in a row of them */
+  overflowed(topic: string): void;
 }
 
 /**
  * Subscribe to a topic. The server hears of it when the topic gains its
- * first subscriber and of its end when the last one leaves; a topic added
- * while not connected is subscribed when the connection opens.
+ * first subscriber and of its end when the last one leaves. A topic added
+ * while there is no socket is subscribed when the next one opens, as every
+ * subscription is: the registry is what the connection should be subscribed
+ * to, made again on each socket, so nothing about subscriptions is queued.
  *
  * One `subscribe` and one `unsubscribe` go for all of a topic's
  * subscribers, so of two components on the same feed, the first to unmount
- * does not silence the other.
+ * does not silence the other. A connection that has ended ends the
+ * subscription at once, with why.
  */
 export function subscribeToTopic(
   ctx: TopicOpsContext,
@@ -41,95 +40,97 @@ export function subscribeToTopic(
   subscriber: TopicHandler | TopicSubscriber,
   variables?: unknown,
 ): () => void {
-  const { baseTopic } = unqualifyTopic(topic);
   const normalized = typeof subscriber === "function" ? { data: subscriber } : subscriber;
-  const membership = ctx.topics.add(topic, normalized, variables, baseTopic);
-  if (membership.created && ctx.state.current === "connected") {
-    requestSubscription(ctx, topic, variables);
+  const ended = endedWith(ctx);
+  if (ended !== undefined) {
+    queueMicrotask(() => normalized.end?.(ended));
+    return () => undefined;
   }
+  const membership = ctx.topics.add(topic, normalized, variables, unqualifyTopic(topic).baseTopic);
+  if (membership.created && writable(ctx)) requestSubscription(ctx, topic, variables);
   return () => {
     const serverTopic = membership.leave();
-    if (serverTopic) sendControl(ctx, encodeMessage({ type: "unsubscribe", topic: serverTopic }));
+    if (serverTopic && writable(ctx))
+      ctx.runtime.send(encodeMessage({ type: "unsubscribe", topic: serverTopic }));
   };
 }
 
-/**
- * Send the subscribe for a topic, with an id the server answers it by. The
- * topic's messages are held until the server confirms it.
- *
- * @param ctx - The topic registry and the raw sender of an open socket
- * @param topic - The topic to subscribe to
- * @param variables - The subscription's variables
- */
+/** Send the subscribe for a topic, with the id the server answers it by. */
 export function requestSubscription(
-  ctx: Pick<TopicOpsContext, "topics" | "sendRaw">,
+  ctx: Pick<TopicOpsContext, "runtime" | "topics">,
   topic: string,
   variables: unknown,
 ): void {
   const id = ctx.topics.expect(topic);
-  ctx.sendRaw(encodeMessage({ type: "subscribe", id, topic, payload: variables }));
+  ctx.runtime.send(encodeMessage({ type: "subscribe", id, topic, payload: variables }));
 }
 
 /**
- * Send a fire-and-forget message to a topic. Until the server confirms the
- * topic's subscription the message is held: sent at once, it would reach a
- * server still validating and authorizing the subscribe, and be refused as
- * "Not subscribed". Otherwise it is queued while (re)connecting.
+ * Send a fire-and-forget message to a topic. It goes out at once on a
+ * subscription the server has confirmed, or with no subscription on an open
+ * connection; otherwise it is kept until it can — sent before the server
+ * confirms the subscription, it would reach a server still checking the
+ * subscribe, and be refused as not subscribed.
  *
  * @returns Whether the message went out or waits to; a message dropped —
- *   too large, no room left to hold it, the socket's buffer full, or the
- *   connection closed — is warned of, and one too large also fails the topic
+ *   too large, no room left to keep it, the socket's buffer full, or the
+ *   connection ended — is warned of, and one too large also fails the topic
  */
 export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknown): boolean {
-  const serverTopic = ctx.topics.serverTopic(topic) ?? topic;
-  const msg = encodeMessage({ type: "message", topic: serverTopic, payload });
-  const refusal = oversized(ctx, msg);
-  if (refusal) {
+  const subscription = ctx.topics.subscriptionOf(topic);
+  const frame = messageFrame(subscription?.topic ?? topic, payload);
+  if (frame.length > ctx.maxMessageSize) {
+    const refusal = fromErrorCode(
+      4413,
+      `Message too large: ${frame.length} characters, the limit is ${ctx.maxMessageSize}`,
+    );
     ctx.log.warn(`Message not sent on ${topic}: ${refusal.message}`);
     ctx.topics.fail(topic, refusal);
     return false;
   }
-  const outcome = ctx.topics.hold(topic, { payload });
-  if (outcome === "held") return true;
-  if (outcome === "dropped") return kept(ctx, false, `Message queue full for ${topic} — dropped`);
-  if (ctx.state.current === "connected") return ctx.sendRaw(msg);
-  if (ctx.state.current === "reconnecting" || ctx.state.current === "connecting") {
-    return kept(ctx, ctx.queue.enqueue(msg), "Message queue full — dropped");
+  if (endedWith(ctx) !== undefined)
+    return dropped(ctx, `Message not sent on ${topic}: the connection is closed`);
+  const now = subscription
+    ? subscription.confirmed
+    : ctx.runtime.state.phase === "open" || ctx.runtime.state.phase === "reauthenticating";
+  if (!now) {
+    if (ctx.queue.push({ owner: subscription, topic, payload, bytes: frame.length })) return true;
+    ctx.overflowed(topic);
+    return false;
   }
-  /* The connection gave up or was closed: nothing will ever send it. */
-  return kept(ctx, false, `Message not sent on ${topic}: the connection is closed`);
-}
-
-/**
- * Why a message may not go out: larger than the server accepts. Sent, it
- * would reach a server whose frame limit closes the whole socket over it, or
- * be refused there after crossing the network.
- */
-function oversized(ctx: TopicOpsContext, frame: string): RealtimeError | undefined {
-  if (frame.length <= ctx.maxMessageSize) return undefined;
-  return fromErrorCode(
-    4413,
-    `Message too large: ${frame.length} characters, the limit is ${ctx.maxMessageSize}`,
+  if (ctx.runtime.buffered > ctx.maxBufferedAmount)
+    return dropped(ctx, `Message not sent on ${topic}: the socket's buffer is full`);
+  return (
+    ctx.runtime.send(frame) || dropped(ctx, `Message not sent on ${topic}: the socket is not open`)
   );
 }
 
-/* Whether a message was kept to go out; one that was not is warned of. */
-function kept(ctx: TopicOpsContext, isKept: boolean, warning: string): boolean {
-  if (!isKept) ctx.log.warn(warning);
-  return isKept;
+/**
+ * The `message` frame for a topic, by the name the server knows it by now.
+ *
+ * @param topic - The topic, as the server knows its subscription
+ * @param payload - What is sent
+ * @returns The encoded frame
+ */
+export function messageFrame(topic: string, payload: unknown): string {
+  return encodeMessage({ type: "message", topic, payload });
 }
 
-/**
- * Force-enqueue a control message even under backpressure. Used for
- * subscribe/unsubscribe/auth which the server needs even if the user
- * payload queue is saturated.
- */
-export function sendControl(ctx: TopicOpsContext, msg: string): void {
-  if (ctx.state.current === "connected") {
-    ctx.sendRaw(msg);
-    return;
-  }
-  if (ctx.state.current === "reconnecting" || ctx.state.current === "connecting") {
-    if (!ctx.queue.enqueue(msg)) ctx.log.warn("Control message queue full — dropped");
-  }
+/* Why a connection that has ended takes nothing more: refused for good, or closed. */
+function endedWith(ctx: Pick<TopicOpsContext, "runtime">): RealtimeError | undefined {
+  const { state } = ctx.runtime;
+  if (state.phase === "failed") return state.error;
+  if (state.phase === "closed") return new ConnectionError("The connection is closed");
+  return undefined;
+}
+
+/* Whether a frame handed over now goes on the socket: it is open, admitted or not. */
+function writable(ctx: Pick<TopicOpsContext, "runtime">): boolean {
+  const { phase } = ctx.runtime.state;
+  return phase === "authenticating" || phase === "open" || phase === "reauthenticating";
+}
+
+function dropped(ctx: TopicOpsContext, warning: string): false {
+  ctx.log.warn(warning);
+  return false;
 }

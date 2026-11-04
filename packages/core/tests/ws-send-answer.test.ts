@@ -2,7 +2,8 @@
  * What a message sent on a WebSocket connection answers: whether it went out
  * or waits to. One that can do neither — the connection closed, its queue or
  * the socket's buffer full — answers false with a warning, so a lost message
- * never passes for a sent one.
+ * never passes for a sent one. A message goes out once the server has
+ * admitted the socket, not as soon as it opens.
  */
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 
@@ -34,6 +35,11 @@ class Socket implements WSClientSocket {
   open(): void {
     this.readyState = 1;
     this.onopen?.(new Event("open"));
+  }
+
+  /** The server admits the socket: its first frame, here the answer to the client's ping. */
+  admit(): void {
+    this.onmessage?.(new MessageEvent("message", { data: '{"type":"pong"}' }));
   }
 }
 
@@ -71,6 +77,7 @@ describe("a message sent on a connection", () => {
   it("answers true once handed to the open socket", () => {
     const conn = connect();
     socket().open();
+    socket().admit();
 
     expect(conn.send("chat:room", { text: "now" })).toBe(true);
     expect(socket().sent.some((frame) => frame.includes('"now"'))).toBe(true);
@@ -81,6 +88,18 @@ describe("a message sent on a connection", () => {
     const conn = connect();
 
     expect(conn.send("chat:room", { text: "soon" })).toBe(true);
+    conn.close();
+  });
+
+  it("waits until the server admits the socket, then goes out", () => {
+    const conn = connect();
+    socket().open();
+
+    expect(conn.send("chat:room", { text: "admitted" })).toBe(true);
+    expect(socket().sent.some((frame) => frame.includes('"admitted"'))).toBe(false);
+    socket().admit();
+
+    expect(socket().sent.some((frame) => frame.includes('"admitted"'))).toBe(true);
     conn.close();
   });
 
@@ -98,17 +117,18 @@ describe("a message sent on a connection", () => {
 
     expect(conn.send("chat:room", { n: 1 })).toBe(true);
     expect(conn.send("chat:room", { n: 2 })).toBe(false);
-    expect(warnings()).toContain("Message queue full — dropped");
+    expect(warnings()).toContain("The outbound queue is full: a message on chat:room was not kept");
     conn.close();
   });
 
   it("answers false, with a warning, when the socket's buffer is full", () => {
     const conn = connect({ maxBufferedAmount: 100 });
     socket().open();
+    socket().admit();
     socket().bufferedAmount = 200;
 
     expect(conn.send("chat:room", { big: true })).toBe(false);
-    expect(warnings()).toContain("Backpressure — dropped");
+    expect(warnings()).toContain("Message not sent on chat:room: the socket's buffer is full");
     conn.close();
   });
 });

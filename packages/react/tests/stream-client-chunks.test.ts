@@ -9,9 +9,9 @@ import { describe, expect, it } from "vitest";
 
 const SRC = resolve(import.meta.dirname, "../src");
 /* Code only the SSE client and the WebSocket client run: the header a stream resumes
-   with, and the reason a socket is dropped when its server falls silent. */
+   with, and the reason a socket is dropped when its server does not admit it in time. */
 const SSE_CLIENT = '"Last-Event-ID"';
-const WS_CLIENT = '"Server silence"';
+const WS_CLIENT = '"Admission timed out"';
 
 /* The chunks a page loads with the entry: it and what it imports statically. */
 function loadedWith(entry: string, outputs: Metafile["outputs"]): Set<string> {

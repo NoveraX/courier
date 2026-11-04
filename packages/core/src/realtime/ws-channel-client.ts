@@ -95,6 +95,9 @@ export function executeWSChannel<TSend, TReceive>(
         error: (error) => {
           for (const handler of errorHandlers) handler(error);
         },
+        wait: (error) => {
+          if (error) for (const handler of errorHandlers) handler(error);
+        },
         end: (error) => finish(error),
       },
       variables,

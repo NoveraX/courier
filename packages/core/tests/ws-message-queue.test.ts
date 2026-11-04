@@ -1,77 +1,102 @@
-import { describe, expect, it } from "vitest";
-import { createMessageQueue } from "../src/realtime/ws/message-queue";
+import { describe, expect, it, vi } from "vitest";
+
+import { ConfigurationError } from "../src/errors/configuration-error";
+import { createMessageQueue, type QueuedMessage } from "../src/realtime/ws/message-queue";
+
+const room = { name: "room" };
+const feed = { name: "feed" };
+
+function message(
+  payload: unknown,
+  owner?: { name: string },
+  bytes = 10,
+): QueuedMessage<{ name: string }> {
+  return { owner, topic: owner?.name ?? "none", payload, bytes };
+}
+
+const payloads = (messages: QueuedMessage<unknown>[]) => messages.map((m) => m.payload);
 
 describe("createMessageQueue", () => {
-  it("enqueue and drain returns messages in order", () => {
-    const q = createMessageQueue();
-    q.enqueue("a");
-    q.enqueue("b");
-    q.enqueue("c");
-    expect(q.drain()).toEqual(["a", "b", "c"]);
+  it("hands each subscription what waits for it, oldest first, and keeps the rest", () => {
+    const queue = createMessageQueue<{ name: string }>();
+    queue.push(message(1, room));
+    queue.push(message(2, feed));
+    queue.push(message(3, room));
+    queue.push(message(4));
+
+    expect(payloads(queue.take(room))).toEqual([1, 3]);
+    expect(payloads(queue.take(undefined))).toEqual([4]);
+    expect(queue.size).toBe(1);
+    expect(queue.bytes).toBe(10);
   });
 
-  it("drain clears the queue", () => {
-    const q = createMessageQueue();
-    q.enqueue("x");
-    q.drain();
-    expect(q.drain()).toEqual([]);
+  it("holds the connection's subscriptions to one budget together", () => {
+    const queue = createMessageQueue<{ name: string }>({ maxCount: 2 });
+
+    expect(queue.push(message(1, room))).toBe(true);
+    expect(queue.push(message(2, feed))).toBe(true);
+    expect(queue.push(message(3, room))).toBe(false);
+    expect(queue.size).toBe(2);
   });
 
-  it("clear empties the queue", () => {
-    const q = createMessageQueue();
-    q.enqueue("a");
-    q.enqueue("b");
-    q.clear();
-    expect(q.size).toBe(0);
-    expect(q.bytes).toBe(0);
-    expect(q.drain()).toEqual([]);
+  it("refuses a message past its bytes, and one larger than all of it", () => {
+    const queue = createMessageQueue<{ name: string }>({ maxBytes: 25 });
+
+    expect(queue.push(message(1, room, 20))).toBe(true);
+    expect(queue.push(message(2, room, 10))).toBe(false);
+    expect(
+      createMessageQueue({ maxBytes: 25, overflow: "drop-oldest" }).push(message(3, room, 30)),
+    ).toBe(false);
   });
 
-  it("size reflects current count", () => {
-    const q = createMessageQueue();
-    expect(q.size).toBe(0);
-    q.enqueue("a");
-    expect(q.size).toBe(1);
-    q.enqueue("bb");
-    expect(q.size).toBe(2);
+  it("drops the oldest for a newer message with drop-oldest, telling of each", () => {
+    const onDrop = vi.fn();
+    const queue = createMessageQueue<{ name: string }>(
+      { maxCount: 2, overflow: "drop-oldest" },
+      onDrop,
+    );
+    queue.push(message(1, room));
+    queue.push(message(2, feed));
+
+    expect(queue.push(message(3, room))).toBe(true);
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onDrop.mock.calls[0]?.[0]).toMatchObject({ payload: 1, owner: room });
+    expect(payloads(queue.take(room))).toEqual([3]);
   });
 
-  it("bytes tracks total string length", () => {
-    const q = createMessageQueue();
-    q.enqueue("abc"); // 3
-    q.enqueue("de"); // 2
-    expect(q.bytes).toBe(5);
+  it("moves what waited for one subscription to the one the server took it for", () => {
+    const queue = createMessageQueue<{ name: string }>();
+    queue.push(message(1, room));
+    queue.push(message(2, feed));
+
+    queue.retarget(room, feed);
+
+    expect(payloads(queue.take(feed))).toEqual([1, 2]);
   });
 
-  it("enqueue returns false when maxCount exceeded", () => {
-    const q = createMessageQueue({ maxCount: 2 });
-    expect(q.enqueue("a")).toBe(true);
-    expect(q.enqueue("b")).toBe(true);
-    expect(q.enqueue("c")).toBe(false);
-    expect(q.size).toBe(2);
+  it("lets go of what an ended subscription kept, saying how much", () => {
+    const queue = createMessageQueue<{ name: string }>();
+    queue.push(message(1, room));
+    queue.push(message(2, room));
+    queue.push(message(3, feed));
+
+    expect(queue.forget(room)).toBe(2);
+    expect(queue.clear()).toBe(1);
+    expect(queue.size).toBe(0);
+    expect(queue.bytes).toBe(0);
   });
 
-  it("enqueue returns false when maxBytes exceeded", () => {
-    const q = createMessageQueue({ maxBytes: 5 });
-    expect(q.enqueue("abc")).toBe(true); // 3 bytes
-    expect(q.enqueue("xyz")).toBe(false); // 3 + 3 = 6 > 5
-    expect(q.size).toBe(1);
-    expect(q.bytes).toBe(3);
+  it("keeps nothing with a count of 0", () => {
+    expect(createMessageQueue({ maxCount: 0 }).push(message(1))).toBe(false);
   });
 
-  it("drain resets size and bytes to 0", () => {
-    const q = createMessageQueue();
-    q.enqueue("hello");
-    q.enqueue("world");
-    expect(q.size).toBe(2);
-    expect(q.bytes).toBe(10);
-    q.drain();
-    expect(q.size).toBe(0);
-    expect(q.bytes).toBe(0);
-  });
-
-  it("empty drain returns empty array", () => {
-    const q = createMessageQueue();
-    expect(q.drain()).toEqual([]);
+  it.each([
+    [{ maxCount: -1 }, "messageQueue.maxCount is -1"],
+    [{ maxCount: 1.5 }, "messageQueue.maxCount is 1.5"],
+    [{ maxBytes: Number.POSITIVE_INFINITY }, "messageQueue.maxBytes is Infinity"],
+    [{ overflow: "drop-newest" as "reject" }, "messageQueue.overflow is drop-newest"],
+  ])("refuses %o, saying which setting", (config, said) => {
+    expect(() => createMessageQueue(config)).toThrow(ConfigurationError);
+    expect(() => createMessageQueue(config)).toThrow(said);
   });
 });

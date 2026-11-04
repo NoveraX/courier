@@ -3,41 +3,101 @@ import { WebSocket } from "ws";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
-import { AuthError, ForbiddenError, RateLimitError } from "../src/realtime/errors";
-import { shouldReconnect } from "../src/realtime/ws/reconnect-classifier";
+import {
+  AuthError,
+  ConnectionError,
+  ForbiddenError,
+  RateLimitError,
+  RealtimeError,
+} from "../src/realtime/errors";
+import { classifyClose } from "../src/realtime/ws/reconnect-classifier";
 import type { WSClientSocket } from "../src/realtime/ws/ws-types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
-describe("shouldReconnect", () => {
+describe("classifyClose", () => {
   it.each([
-    [1000, false, "normal close"],
-    [1001, true, "going away (server restart)"],
-    [1002, false, "protocol error"],
-    [1003, false, "unsupported data"],
-    [1005, true, "no status received"],
-    [1006, true, "abnormal closure"],
-    [1007, false, "invalid frame payload"],
-    [1008, false, "policy violation"],
-    [1009, true, "message too big: that message is gone, the rest go on"],
-    [1011, true, "unexpected condition"],
-    [1012, true, "service restart"],
-    [1013, true, "try again later"],
-    [1014, true, "bad gateway"],
-    [1015, true, "TLS handshake"],
-    [4000, false, "custom fatal lower bound"],
-    [4050, false, "custom fatal mid"],
-    [4099, false, "custom fatal upper bound"],
-    [4100, true, "custom retriable lower bound"],
-    [4200, true, "custom retriable"],
-    [4401, false, "connection rejected"],
-    [4403, false, "origin not allowed"],
-    [4421, false, "host not allowed"],
-    [4408, true, "heartbeat timeout"],
-    [4429, false, "too many connections"],
-    [9999, true, "unknown defaults to retry"],
-  ])("code %i → %s (%s)", (code, expected) => {
-    expect(shouldReconnect(code)).toBe(expected);
+    [1001, "going away"],
+    [1005, "no status received"],
+    [1006, "abnormal closure"],
+    [1009, "message too big: that message is gone, the rest go on"],
+    [1011, "unexpected condition"],
+    [1012, "service restart"],
+    [1013, "try again later, as a slow consumer is told"],
+    [1014, "bad gateway"],
+    [1015, "TLS handshake"],
+    [4100, "the client gave the socket up for silent"],
+    [4200, "a code nothing names"],
+    [4408, "a heartbeat or admission timeout"],
+    [9999, "a code no range names"],
+  ])("reconnects after %i (%s)", (code) => {
+    expect(classifyClose({ code, reason: "" })).toEqual({ action: "retry" });
+  });
+
+  it.each([
+    [1002, "protocol error", ConnectionError],
+    [1003, "unsupported data", ConnectionError],
+    [1007, "invalid frame payload", ConnectionError],
+    [1008, "policy violation", ConnectionError],
+    [4000, "an application code", RealtimeError],
+    [4099, "an application code", RealtimeError],
+    [4400, "the client broke the protocol", RealtimeError],
+    [4403, "origin not allowed", ForbiddenError],
+    [4409, "replaced by a newer connection", RealtimeError],
+    [4421, "host not allowed", RealtimeError],
+    [4429, "too many connections, with no wait to come back after", RateLimitError],
+  ])("gives up after %i (%s)", (code, _why, kind) => {
+    const disposition = classifyClose({ code, reason: "Refused" });
+
+    expect(disposition.action).toBe("stop");
+    if (disposition.action !== "stop") return;
+    expect(disposition.error).toBeInstanceOf(kind);
+    expect(disposition.error.code).toBe(code);
+    expect(disposition.error.message).toBe("Refused");
+  });
+
+  it("ends the connection as the server ended it after 1000", () => {
+    expect(classifyClose({ code: 1000, reason: "" })).toEqual({ action: "finish" });
+  });
+
+  it("asks for the credentials anew after 4401, with the server's reason", () => {
+    const disposition = classifyClose({ code: 4401, reason: "Token expired" });
+
+    expect(disposition.action).toBe("reauthenticate");
+    if (disposition.action !== "reauthenticate") return;
+    expect(disposition.error).toBeInstanceOf(AuthError);
+    expect(disposition.error.message).toBe("Token expired");
+  });
+
+  it("comes back after the wait the server asked for", () => {
+    expect(classifyClose({ code: 4429, reason: "", retryAfterMs: 2000 })).toEqual({
+      action: "retry",
+      afterMs: 2000,
+    });
+    expect(classifyClose({ code: 1001, reason: "", retryAfterMs: 500 })).toEqual({
+      action: "retry",
+      afterMs: 500,
+    });
+  });
+
+  it("waits no longer than a client ever waits, whatever the server asked for", () => {
+    expect(classifyClose({ code: 1013, reason: "", retryAfterMs: 86_400_000 })).toEqual({
+      action: "retry",
+      afterMs: 300_000,
+    });
+  });
+
+  it("ignores a wait that is no number of ms", () => {
+    expect(classifyClose({ code: 1001, reason: "", retryAfterMs: -1 })).toEqual({
+      action: "retry",
+    });
+    expect(classifyClose({ code: 4429, reason: "", retryAfterMs: Number.NaN }).action).toBe("stop");
+  });
+
+  it("names a close the server gave no reason for", () => {
+    const disposition = classifyClose({ code: 4403, reason: "" });
+
+    expect(disposition.action === "stop" && disposition.error.message).toBe("Connection closed");
   });
 });
 

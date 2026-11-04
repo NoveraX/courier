@@ -47,6 +47,11 @@ class MockWebSocket implements WSClientSocket {
     this.onmessage?.(new MessageEvent("message", { data }));
   }
 
+  /** The server admits the socket: its first frame, here the answer to the client's ping. */
+  simulateAdmission(): void {
+    this.simulateMessage(encodeMessage({ type: "pong" }));
+  }
+
   simulateError(): void {
     this.onerror?.(new Event("error"));
   }
@@ -92,7 +97,7 @@ describe("createWSConnection", () => {
     vi.useRealTimers();
   });
 
-  it("connects and transitions to connected on open", () => {
+  it("is connecting until the server admits the socket, then connected", () => {
     const statuses: string[] = [];
     const conn = createWSConnection(
       createConfig({
@@ -102,8 +107,12 @@ describe("createWSConnection", () => {
 
     expect(conn.status).toBe("connecting");
     lastWs().simulateOpen();
+    expect(conn.status).toBe("connecting");
+    expect(conn.state).toEqual({ phase: "authenticating", attempt: 1 });
+    lastWs().simulateAdmission();
     expect(conn.status).toBe("connected");
-    expect(statuses).toContain("connected");
+    expect(conn.state).toEqual({ phase: "open", protocol: 1 });
+    expect(statuses).toEqual(["connecting", "connected"]);
     conn.close();
   });
 
@@ -152,17 +161,17 @@ describe("createWSConnection", () => {
     conn.close();
   });
 
-  it("queues messages while connecting and drains on open", () => {
+  it("queues messages while connecting and sends them once the server admits the socket", () => {
     const conn = createWSConnection(createConfig());
 
     conn.send("chat:room", { text: "buffered" });
     expect(lastWs().sent).toHaveLength(0);
 
     lastWs().simulateOpen();
+    expect(lastWs().sent.some((s) => s.includes('"buffered"'))).toBe(false);
+    lastWs().simulateAdmission();
 
-    // After open: subscribe messages + buffered message
-    const msgSent = lastWs().sent.find((s) => s.includes('"buffered"'));
-    expect(msgSent).toBeDefined();
+    expect(lastWs().sent.some((s) => s.includes('"buffered"'))).toBe(true);
     conn.close();
   });
 
@@ -209,6 +218,7 @@ describe("createWSConnection", () => {
   it("leaves an open socket's error to the close that follows it", () => {
     const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
     lastWs().simulateOpen();
+    lastWs().simulateAdmission();
 
     lastWs().simulateError();
     vi.advanceTimersByTime(0);
@@ -233,14 +243,33 @@ describe("createWSConnection", () => {
     conn.close();
   });
 
-  it("backs off afresh once the server has answered on the socket", () => {
+  it("keeps backing off while the server admits each socket and drops it at once", () => {
+    const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
+    lastWs().simulateOpen();
+    lastWs().simulateAdmission();
+    lastWs().simulateClose(1011);
+    vi.advanceTimersByTime(100);
+
+    lastWs().simulateOpen();
+    lastWs().simulateAdmission();
+    lastWs().simulateClose(1011);
+    vi.advanceTimersByTime(100);
+
+    expect(MockWebSocket.instances).toHaveLength(2);
+    vi.advanceTimersByTime(100);
+    expect(MockWebSocket.instances).toHaveLength(3);
+    conn.close();
+  });
+
+  it("backs off afresh once a connection has stayed open for its stable period", () => {
     const conn = createWSConnection(createConfig({ backoff: { initialMs: 100, jitter: false } }));
     lastWs().simulateOpen();
     lastWs().simulateClose(1011);
     vi.advanceTimersByTime(100);
 
     lastWs().simulateOpen();
-    lastWs().simulateMessage(encodeMessage({ type: "ping" }));
+    lastWs().simulateAdmission();
+    vi.advanceTimersByTime(10_000);
     lastWs().simulateClose(1011);
     vi.advanceTimersByTime(100);
 
@@ -296,6 +325,7 @@ describe("createWSConnection", () => {
   it("drops messages when backpressure is high", () => {
     const conn = createWSConnection(createConfig({ maxBufferedAmount: 100 }));
     lastWs().simulateOpen();
+    lastWs().simulateAdmission();
 
     (lastWs() as MockWebSocket).bufferedAmount = 200;
     conn.send("chat:room", { big: true });
@@ -325,6 +355,7 @@ describe("createWSConnection", () => {
     expect(lastWs().headers).toEqual({ authorization: "Bearer secret123" });
     expect(JSON.parse(lastWs().sent[0]!)).toEqual({
       type: "auth",
+      id: "a1",
       payload: { auth: { tenant: "t1" } },
     });
     expect(JSON.parse(lastWs().sent[1]!)).toMatchObject({ type: "subscribe", topic: "chat:room" });
@@ -334,16 +365,20 @@ describe("createWSConnection", () => {
   it("asks for its credentials anew before it reconnects", async () => {
     let issued = 0;
     const conn = createWSConnection(
-      createConfig({ credentials: () => ({ frame: { auth: { token: `t${++issued}` } } }) }),
+      createConfig({
+        backoff: { initialMs: 100, jitter: false },
+        credentials: () => ({ frame: { auth: { token: `t${++issued}` } } }),
+      }),
     );
     lastWs().simulateOpen();
     lastWs().simulateClose(1006);
 
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(100);
     lastWs().simulateOpen();
 
     expect(JSON.parse(lastWs().sent[0]!)).toEqual({
       type: "auth",
+      id: "a2",
       payload: { auth: { token: "t2" } },
     });
     conn.close();
@@ -354,6 +389,7 @@ describe("createWSConnection", () => {
     let attempts = 0;
     const conn = createWSConnection(
       createConfig({
+        backoff: { initialMs: 100, jitter: false },
         credentials: () => {
           attempts += 1;
           if (attempts === 1) return Promise.reject(new Error("token service down"));
@@ -362,7 +398,7 @@ describe("createWSConnection", () => {
       }),
     );
 
-    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(100);
 
     expect(attempts).toBe(2);
     expect(MockWebSocket.instances).toHaveLength(1);
@@ -373,7 +409,7 @@ describe("createWSConnection", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
 
-    expect(JSON.parse(lastWs().sent[0]!)).toEqual({ type: "auth", payload: {} });
+    expect(JSON.parse(lastWs().sent[0]!)).toEqual({ type: "auth", id: "a1", payload: {} });
     conn.close();
   });
 });

@@ -1,5 +1,4 @@
 import type { RealtimeError } from "../errors";
-import type { MessageQueueConfig } from "./message-queue";
 import type { TopicRegistry } from "./topic-registry-types";
 import {
   createSubscription,
@@ -7,10 +6,10 @@ import {
   mergeSubscription,
   type Subscription,
 } from "./topic-subscription";
+import type { TopicSubscriber } from "./ws-types";
 
 export type {
   Confirmation,
-  HoldOutcome,
   TopicEntry,
   TopicMembership,
   TopicRegistry,
@@ -18,18 +17,19 @@ export type {
 
 /** Options for a topic registry. */
 export interface TopicRegistryOptions {
-  /** Limits on what is held for each unconfirmed subscription */
-  messageQueue?: MessageQueueConfig | undefined;
-  /** Told of messages that were held and will never go out */
-  onDrop?: (topic: string, count: number) => void;
+  /** A subscription ended or was let go: what it kept to send is dropped */
+  onForget?: ((subscription: Subscription) => void) | undefined;
+  /** The server took two subscriptions for one: what `from` kept to send goes with `into` */
+  onMerge?: ((from: Subscription, into: Subscription) => void) | undefined;
 }
 
 /**
  * Create a topic subscription registry for WS message routing: subscribers
- * per topic for fan-out, the name the server knows each subscription by, and
- * what is held for it until the server confirms it.
+ * per topic for fan-out, and the name the server knows each subscription by.
+ * It is the connection's desired state: every subscription in it is made
+ * again on each socket the connection opens.
  *
- * @param options - Limits on held messages, and who hears of dropped ones
+ * @param options - Who hears of subscriptions let go and merged
  * @returns TopicRegistry instance
  *
  * @example
@@ -53,15 +53,11 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
     if (id !== undefined) byId.set(id, s);
   }
 
-  function dropped(topic: string, count: number): void {
-    if (count > 0) options.onDrop?.(topic, count);
-  }
-
   function forget(s: Subscription): void {
     byTopic.delete(s.topic);
     for (const label of s.labels) byLabel.delete(label);
     if (s.awaiting !== undefined) byId.delete(s.awaiting);
-    dropped(s.topic, s.held.take().length);
+    options.onForget?.(s);
   }
 
   function end(topic: string, error: RealtimeError | undefined): void {
@@ -81,16 +77,21 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
       into.labels.add(label);
       byLabel.set(label, into);
     }
-    dropped(into.topic, mergeSubscription(from, into));
+    mergeSubscription(from, into);
+    options.onMerge?.(from, into);
     wait(into, from.awaiting);
   }
+
+  const each = (topic: string, tell: (subscriber: TopicSubscriber) => void): void => {
+    for (const subscriber of [...(resolve(topic)?.subscribers ?? [])]) tell(subscriber);
+  };
 
   return {
     add(topic, subscriber, variables?, baseTopic?) {
       let own = resolve(topic);
       const created = !own;
       if (!own) {
-        own = createSubscription(topic, variables, baseTopic, options.messageQueue);
+        own = createSubscription(topic, variables, baseTopic);
         byTopic.set(topic, own);
       }
       own.subscribers.add(subscriber);
@@ -108,8 +109,7 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
         },
       };
     },
-    has: (topic) => resolve(topic) !== undefined,
-    serverTopic: (topic) => resolve(topic)?.topic,
+    subscriptionOf: resolve,
     expect(topic) {
       const id = `sub-${++lastId}`;
       const s = resolve(topic);
@@ -134,25 +134,19 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
       const s = (id === undefined ? undefined : byId.get(id)) ?? resolve(topic);
       if (!s) return undefined;
       /* The answer to a subscribe another one has since replaced. */
-      if (id !== undefined && s.awaiting !== id) return { topic: s.topic, held: [] };
+      if (id !== undefined && s.awaiting !== id) return "stale";
       wait(s, undefined);
       s.confirmed = true;
-      return { topic: s.topic, held: s.held.take() };
+      return s;
     },
-    unconfirmAll() {
-      for (const s of byTopic.values()) wait(s, undefined);
+    unconfirmAll(error) {
+      for (const s of byTopic.values()) {
+        wait(s, undefined);
+        for (const subscriber of [...s.subscribers]) subscriber.wait?.(error);
+      }
     },
-    hold(topic, message) {
-      const s = resolve(topic);
-      if (!s || s.confirmed) return "open";
-      return s.held.hold(message) ? "held" : "dropped";
-    },
-    dispatch(topic, payload) {
-      for (const subscriber of resolve(topic)?.subscribers ?? []) subscriber.data(payload);
-    },
-    fail(topic, error) {
-      for (const subscriber of resolve(topic)?.subscribers ?? []) subscriber.error?.(error);
-    },
+    dispatch: (topic, payload) => each(topic, (subscriber) => subscriber.data(payload)),
+    fail: (topic, error) => each(topic, (subscriber) => subscriber.error?.(error)),
     end,
     endAll(error) {
       for (const topic of [...byTopic.keys()]) end(topic, error);

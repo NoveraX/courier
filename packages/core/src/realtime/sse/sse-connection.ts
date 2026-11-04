@@ -1,5 +1,5 @@
 import { createLogger } from "../../logger";
-import { calculateBackoff } from "../backoff";
+import { backoffDelay, resolveBackoff } from "../backoff";
 import type { ConnectionState } from "../connection-state";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import type { ConnectionRetry } from "../retry-of";
@@ -94,7 +94,7 @@ function noteRetry<TData>(
   failed: unknown,
 ): number {
   const step = Math.max(0, failures - 1);
-  const delay = ctx.serverRetryMs ?? calculateBackoff(step, ctx.config.backoff);
+  const delay = ctx.serverRetryMs ?? backoffDelay(step, resolveBackoff(ctx.config.backoff));
   ctx.serverRetryMs = undefined;
   ctx.retry = {
     failures,

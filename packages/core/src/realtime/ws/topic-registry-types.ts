@@ -1,5 +1,5 @@
 import type { RealtimeError } from "../errors";
-import type { HeldMessage } from "./held-messages";
+import type { Subscription } from "./topic-subscription";
 import type { TopicSubscriber } from "./ws-types";
 
 /** Entry returned by `entries()` for re-subscribing after a reconnect */
@@ -22,18 +22,11 @@ export interface TopicMembership {
 }
 
 /**
- * What became of a message sent on a topic: held until the server confirms
- * the subscription, dropped because too much is held already, or free to go
- * out — the subscription is confirmed, or there is none.
+ * What the server's confirmation of a subscribe answers to: the
+ * subscription it confirmed, or `"stale"` for the answer to a subscribe a
+ * newer one has replaced.
  */
-export type HoldOutcome = "held" | "dropped" | "open";
-
-/** A subscription the server confirmed, with what was held until it did. */
-export interface Confirmation {
-  /** The topic the server knows the subscription by */
-  topic: string;
-  held: HeldMessage[];
-}
+export type Confirmation = Subscription | "stale";
 
 /**
  * Internal topic subscription registry with message routing.
@@ -51,13 +44,11 @@ export interface TopicRegistry {
     variables?: unknown,
     baseTopic?: string,
   ): TopicMembership;
-  /** Whether anyone is subscribed to a topic. */
-  has(topic: string): boolean;
-  /** The topic the server knows a subscription by. */
-  serverTopic(topic: string): string | undefined;
+  /** The subscription a topic names, either of its names. */
+  subscriptionOf(topic: string): Subscription | undefined;
   /**
-   * Record that a subscribe is on its way for the topic, which holds its
-   * messages until the server confirms it. Returns the id the subscribe carries.
+   * Record that a subscribe is on its way for the topic. Returns the id the
+   * subscribe carries.
    */
   expect(topic: string): string;
   /** The server subscribed `topic` under `serverTopic`. */
@@ -67,10 +58,8 @@ export interface TopicRegistry {
    * when no subscription answers to it — the client left before it was confirmed.
    */
   confirm(topic: string, id: string | undefined): Confirmation | undefined;
-  /** Every subscription waits for the server again: the socket closed. */
-  unconfirmAll(): void;
-  /** Hold a message for a topic whose subscription the server has not confirmed. */
-  hold(topic: string, message: HeldMessage): HoldOutcome;
+  /** Every subscription waits for the server again: the socket closed. Each subscriber hears `error`, when there is one. */
+  unconfirmAll(error?: RealtimeError): void;
   /** Route an incoming message payload to all subscribers of a topic. */
   dispatch(topic: string, payload: unknown): void;
   /** Tell a topic's subscribers of an error on it; the subscription goes on. */

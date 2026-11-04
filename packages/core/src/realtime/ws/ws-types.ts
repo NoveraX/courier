@@ -1,6 +1,7 @@
 import type { SourceWebSocket } from "../../http-client/source-transport";
 import type { RealtimeError } from "../errors";
 import type { BackoffConfig, ConnectionStatus } from "../types";
+import type { WSConnectionState } from "./connection-machine-types";
 import type { HeartbeatConfig } from "./heartbeat";
 import type { MessageQueueConfig } from "./message-queue";
 import type { WSAuth, WSCredentials } from "./ws-credentials";
@@ -64,12 +65,23 @@ export interface WSConnectionConfig {
   url: string;
   /** Sub-protocols for the WS handshake */
   protocols?: string[] | undefined;
-  /** Heartbeat (ping/pong) configuration */
+  /**
+   * The server's ping interval and pong timeout: a socket nothing has come
+   * on for both together is taken for gone, even while it reads as open
+   */
   heartbeat?: HeartbeatConfig | undefined;
   /** Reconnection backoff configuration */
   backoff?: BackoffConfig | undefined;
-  /** Outbound message queue configuration */
+  /** What the connection keeps to send while it cannot, and what overflowing it does */
   messageQueue?: MessageQueueConfig | undefined;
+  /**
+   * Whether the page's resume signals act on the connection (default
+   * `true`): one waiting to reconnect does so at once when the network comes
+   * back, the page is shown again or its window gets focus, and an open one
+   * is checked with a ping. Where there is no page — Node, React Native —
+   * there are no signals, and `reconnect()` serves.
+   */
+  reconnectOnResume?: boolean | undefined;
   /**
    * What each socket opens with — headers for its handshake, where the
    * platform lets a script set them, and the frame it proves who it is with
@@ -122,7 +134,7 @@ export interface WSConnectionConfig {
  */
 export type CallerWSOptions = Pick<
   WSConnectionConfig,
-  "backoff" | "heartbeat" | "messageQueue" | "protocols" | "maxMessageSize"
+  "backoff" | "heartbeat" | "messageQueue" | "protocols" | "maxMessageSize" | "reconnectOnResume"
 > & {
   /**
    * What the client tells the server about itself — a token, a tenant —
@@ -141,12 +153,25 @@ export type CallerWSOptions = Pick<
 /** Callback for incoming messages on a topic */
 export type TopicHandler = (payload: unknown) => void;
 
+/** What a subscription's confirmation says about what the client may have missed. */
+export interface TopicOpenInfo {
+  /** Whether the server sent everything since the client's last position: nothing was missed */
+  readonly resumed: boolean;
+}
+
 /** Receives everything the server says about one topic */
 export interface TopicSubscriber {
   /** A payload the server sent on the topic */
   data(payload: unknown): void;
   /** A message on the topic was refused, or its handler failed; the subscription goes on */
   error?(error: RealtimeError): void;
+  /** The server confirmed the subscription: it is running */
+  open?(info: TopicOpenInfo): void;
+  /**
+   * The socket under the subscription went away; it is made again on the
+   * next. `error` tells what was lost with it, when something was.
+   */
+  wait?(error: RealtimeError | undefined): void;
   /**
    * The subscription ended — the server finished or refused it, or the
    * connection closed for good. `error` says why when it failed.
@@ -180,13 +205,26 @@ export interface WSConnection {
   /**
    * Send the socket's credentials again, asked for anew, without
    * reconnecting — as the server asks with `sendAuthRequired`, or once the
-   * application has renewed its token.
+   * application has renewed its token. On a connection that is not open it
+   * does nothing: the next socket asks for them anyway.
    */
   authenticate(): void;
+  /**
+   * Connect again now, with credentials asked for anew: a connection waiting
+   * out its backoff stops waiting, an open one drops its socket for a new
+   * one, and one that was refused tries again. Calls while an attempt is
+   * under way are that attempt. A connection the application closed stays
+   * closed.
+   */
+  reconnect(): void;
   /** Close the connection gracefully. */
   close(): void;
   /** Current connection status. */
   readonly status: ConnectionStatus;
+  /** Where the connection stands, and why: more than `status` says. */
+  readonly state: WSConnectionState;
   /** Subscribe to status changes. Returns unsubscribe. */
   onStatusChange(handler: (status: ConnectionStatus) => void): () => void;
+  /** Subscribe to changes of `state`. Returns unsubscribe. */
+  onStateChange(handler: (state: WSConnectionState) => void): () => void;
 }

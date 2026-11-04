@@ -1,40 +1,87 @@
-/** RFC 6455 close codes that should NOT trigger reconnection */
-const FATAL_CODES: ReadonlySet<number> = new Set([
-  1000, // normal close
-  1002, // protocol error
-  1003, // unsupported data
-  1007, // invalid frame payload
-  1008, // policy violation
-]);
+import { CLIENT_LIMITS } from "../client-limits";
+import { AuthError, fromErrorCode, type RealtimeError } from "../errors";
+
+/** The close code of a socket closed over a frame larger than the server reads. */
+export const MESSAGE_TOO_BIG = 1009;
 
 /**
- * A Courier server's refusals of the connection itself. It opens the socket
- * before it closes it, so reconnecting only met the same answer again,
- * roughly once a second, and the subscriptions never heard why.
+ * How a socket closed, as the client read it: from the frame a server sent
+ * to announce the close, where one came — a balancer can lose a close frame,
+ * and the frame before it gets through — or from the socket's close event.
  */
-const REFUSAL_CODES: ReadonlySet<number> = new Set([
-  4401, // onConnect rejected it, or a requested token refresh never came
-  4403, // origin not allowed
-  4421, // host not allowed
-  4429, // too many connections from the address
-]);
+export interface SocketClosure {
+  readonly code: number;
+  readonly reason: string;
+  /** How long the server asked the client to wait before connecting again */
+  readonly retryAfterMs?: number | undefined;
+}
+
+/** What a closed socket means for its connection. */
+export type CloseDisposition =
+  /** Reconnect after the backoff, or not sooner than the server asked */
+  | { readonly action: "retry"; readonly afterMs?: number | undefined }
+  /** The server refused the credentials: they are asked for anew, once */
+  | { readonly action: "reauthenticate"; readonly error: AuthError }
+  /** Refused for good: reconnecting would only meet the same answer */
+  | { readonly action: "stop"; readonly error: RealtimeError }
+  /** The server ended the connection, and nothing went wrong */
+  | { readonly action: "finish" };
+
+/*
+ * Codes a reconnect cannot change: a protocol the two ends do not share, a
+ * policy, an origin or host the server refuses, a connection replaced by a
+ * newer one of the same user — reconnecting would replace that one in turn.
+ */
+const FINAL: ReadonlySet<number> = new Set([1002, 1003, 1007, 1008, 4400, 4403, 4409, 4421]);
 
 /**
- * Determine whether a WebSocket close code warrants automatic reconnection.
+ * Read a socket's close against the protocol's table of codes.
  *
- * @param code - WebSocket close code (RFC 6455)
- * @returns true if the connection should be retried
+ * - 1000: the server ended the connection; it is not reopened.
+ * - 4401: credentials refused, expired or not renewed in time — asked for
+ *   anew once, and sent only if they changed.
+ * - 4429: a limit; with the server's `retryAfterMs`, tried again after it,
+ *   and without one, given up.
+ * - 4000–4099, and the codes above that no reconnect changes: given up.
+ * - Anything else — a dropped network, a server going away (1001, 1012), a
+ *   slow consumer (1013), a timeout (4408) — reconnects, after the server's
+ *   `retryAfterMs` when it gave one.
  *
+ * @param closure - How the socket closed
+ * @returns What the connection does next
  * @example
- * shouldReconnect(1006) // true — abnormal closure
- * shouldReconnect(1000) // false — normal close
- * shouldReconnect(4401) // false — the server rejected the connection
+ * ```ts
+ * classifyClose({ code: 1006, reason: "" }); // → { action: "retry" }
+ * classifyClose({ code: 4409, reason: "Replaced by a newer connection" }).action; // → "stop"
+ * ```
  */
-export function shouldReconnect(code: number): boolean {
-  if (FATAL_CODES.has(code) || REFUSAL_CODES.has(code)) return false;
+export function classifyClose(closure: SocketClosure): CloseDisposition {
+  const { code } = closure;
+  if (code === 1000) return { action: "finish" };
+  if (code === 4401) {
+    return {
+      action: "reauthenticate",
+      error: new AuthError(closure.reason || "Credentials rejected"),
+    };
+  }
+  const afterMs = hintOf(closure.retryAfterMs);
+  if (code === 4429 && afterMs === undefined) return stop(closure);
+  if (FINAL.has(code) || (code >= 4000 && code <= 4099)) return stop(closure);
+  return afterMs === undefined ? { action: "retry" } : { action: "retry", afterMs };
+}
 
-  // 4000-4099: custom fatal range (application-defined)
-  if (code >= 4000 && code <= 4099) return false;
+function stop(closure: SocketClosure): CloseDisposition {
+  return {
+    action: "stop",
+    error: fromErrorCode(closure.code, closure.reason || "Connection closed"),
+  };
+}
 
-  return true;
+/* A wait the server asked for, held to what a client waits at most: a
+   server cannot park a client for good by asking for too long a wait. */
+function hintOf(retryAfterMs: number | undefined): number | undefined {
+  if (retryAfterMs === undefined || !Number.isFinite(retryAfterMs) || retryAfterMs < 0) {
+    return undefined;
+  }
+  return Math.min(retryAfterMs, CLIENT_LIMITS.RECONNECT_MAX_HINT_MS);
 }

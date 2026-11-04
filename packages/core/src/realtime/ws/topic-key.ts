@@ -24,8 +24,15 @@ function wireForm(value: unknown): unknown {
  * Canonical JSON: object keys sorted so the same variables always read the
  * same, and strings quoted so that no value can pass for a key and another
  * value — `{ a: "x,b:y" }` never reads like `{ a: "x", b: "y" }`.
+ *
+ * @param value - A value as JSON carries it
+ * @returns Its canonical JSON
+ * @example
+ * ```ts
+ * stableStringify({ b: 1, a: [true, null] }); // → '{"a":[true,null],"b":1}'
+ * ```
  */
-function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
   if (!isRecord(value)) return JSON.stringify(value);
   const fields = Object.keys(value)

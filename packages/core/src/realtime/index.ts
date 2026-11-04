@@ -61,10 +61,12 @@ export type {
   Heartbeat,
   HeartbeatConfig,
   MessageQueueConfig,
+  ReconnectCause,
   TopicHandler,
   WSClientSocket,
   WSConnection,
   WSConnectionConfig,
+  WSConnectionState,
   WSSocketFactory,
 } from "./ws";
 export { createWSConnection, qualifyTopic, unqualifyTopic } from "./ws";

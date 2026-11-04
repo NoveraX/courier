@@ -8,6 +8,7 @@ function subscriber() {
   return {
     data: vi.fn<(payload: unknown) => void>(),
     error: vi.fn<(error: RealtimeError) => void>(),
+    wait: vi.fn<(error: RealtimeError | undefined) => void>(),
     end: vi.fn<(error: RealtimeError | undefined) => void>(),
   } satisfies TopicSubscriber;
 }
@@ -67,7 +68,7 @@ describe("createTopicRegistry", () => {
     const second = registry.add("a", subscriber());
 
     expect(first.leave()).toBeUndefined();
-    expect(registry.has("a")).toBe(true);
+    expect(registry.subscriptionOf("a")).toBeDefined();
     expect(second.leave()).toBe("a");
     expect(registry.topics()).toEqual([]);
   });
@@ -105,7 +106,7 @@ describe("createTopicRegistry", () => {
     registry.add("room", subscriber());
 
     expect(old.leave()).toBeUndefined();
-    expect(registry.has("room")).toBe(true);
+    expect(registry.subscriptionOf("room")).toBeDefined();
   });
 
   it("ends every topic at once", () => {
@@ -133,7 +134,7 @@ describe("a subscription the server renamed", () => {
     registry.dispatch("room#served", "hello");
 
     expect(s.data).toHaveBeenCalledWith("hello");
-    expect(registry.serverTopic("room#asked")).toBe("room#served");
+    expect(registry.subscriptionOf("room#asked")?.topic).toBe("room#served");
     expect(registry.topics()).toEqual(["room#served"]);
     expect(registry.entries()).toEqual([
       { qualifiedTopic: "room#served", baseTopic: "room#asked", variables: undefined },
@@ -150,7 +151,7 @@ describe("a subscription the server renamed", () => {
     expect(second.created).toBe(false);
     expect(first.leave()).toBeUndefined();
     expect(second.leave()).toBe("room#served");
-    expect(registry.has("room#asked")).toBe(false);
+    expect(registry.subscriptionOf("room#asked")).toBeUndefined();
   });
 
   it("merges into a subscription already on the server's topic", () => {
@@ -179,85 +180,90 @@ describe("a subscription the server renamed", () => {
     registry.end("room#asked", error);
 
     expect(s.end).toHaveBeenCalledWith(error);
-    expect(registry.has("room#served")).toBe(false);
+    expect(registry.subscriptionOf("room#served")).toBeUndefined();
   });
 });
 
-describe("messages held for an unconfirmed subscription", () => {
-  it("are held until the subscribe is confirmed, then handed over in order", () => {
+describe("the confirmation of a subscription", () => {
+  it("answers with the subscription the subscribe was for, which is confirmed from then on", () => {
     const registry = createTopicRegistry();
     registry.add("room", subscriber());
     const id = registry.expect("room");
 
-    expect(registry.hold("room", { payload: 1 })).toBe("held");
-    expect(registry.hold("room", { payload: 2 })).toBe("held");
-    expect(registry.confirm("room", id)).toEqual({
-      topic: "room",
-      held: [{ payload: 1 }, { payload: 2 }],
-    });
-    expect(registry.hold("room", { payload: 3 })).toBe("open");
+    const confirmed = registry.confirm("room", id);
+
+    expect(confirmed).toBe(registry.subscriptionOf("room"));
+    expect(registry.subscriptionOf("room")?.confirmed).toBe(true);
   });
 
-  it("are handed over under the topic the server renamed the subscription to", () => {
+  it("answers under the topic the server renamed the subscription to", () => {
     const registry = createTopicRegistry();
     registry.add("room#asked", subscriber());
     const id = registry.expect("room#asked");
-    registry.hold("room#asked", { payload: "early" });
 
     registry.rename("room#asked", "room#served");
 
-    expect(registry.confirm("room#served", id)).toEqual({
+    expect(registry.confirm("room#served", id)).toMatchObject({
       topic: "room#served",
-      held: [{ payload: "early" }],
+      confirmed: true,
     });
   });
 
-  it("wait again once the socket closes", () => {
+  it("is let go of once the socket closes, each subscriber hearing what was lost with it", () => {
     const registry = createTopicRegistry();
-    registry.add("room", subscriber());
+    const s = subscriber();
+    registry.add("room", s);
     registry.confirm("room", registry.expect("room"));
+    const lost = new RealtimeError(1009, "A message was too large for the server");
 
-    registry.unconfirmAll();
+    registry.unconfirmAll(lost);
 
-    expect(registry.hold("room", { payload: "while away" })).toBe("held");
+    expect(registry.subscriptionOf("room")?.confirmed).toBe(false);
+    expect(s.wait).toHaveBeenCalledWith(lost);
   });
 
-  it("are not released by the answer to a subscribe that another replaced", () => {
+  it("is stale when it answers a subscribe that another replaced", () => {
     const registry = createTopicRegistry();
     registry.add("room", subscriber());
     const stale = registry.expect("room");
     const current = registry.expect("room");
-    registry.hold("room", { payload: "early" });
 
-    expect(registry.confirm("room", stale)).toEqual({ topic: "room", held: [] });
-    expect(registry.confirm("room", current)?.held).toEqual([{ payload: "early" }]);
+    expect(registry.confirm("room", stale)).toBe("stale");
+    expect(registry.confirm("room", current)).toBe(registry.subscriptionOf("room"));
   });
 
-  it("are dropped beyond the queue's limit and reported when the subscription ends", () => {
-    const onDrop = vi.fn<(topic: string, count: number) => void>();
-    const registry = createTopicRegistry({ messageQueue: { maxCount: 1 }, onDrop });
-    const membership = registry.add("room", subscriber());
-    registry.expect("room");
-
-    expect(registry.hold("room", { payload: 1 })).toBe("held");
-    expect(registry.hold("room", { payload: 2 })).toBe("dropped");
-    membership.leave();
-
-    expect(onDrop).toHaveBeenCalledWith("room", 1);
-  });
-
-  it("go out at once on a topic nobody subscribed to", () => {
-    const registry = createTopicRegistry();
-
-    expect(registry.hold("room", { payload: 1 })).toBe("open");
-  });
-
-  it("answer a confirmation for a subscription that is gone with nothing", () => {
+  it("answers nothing for a subscription that is gone", () => {
     const registry = createTopicRegistry();
     const membership = registry.add("room", subscriber());
     const id = registry.expect("room");
     membership.leave();
 
     expect(registry.confirm("room", id)).toBeUndefined();
+  });
+});
+
+describe("a subscription let go of or merged", () => {
+  it("is told to whoever keeps what it was to send, when it ends or its last subscriber leaves", () => {
+    const onForget = vi.fn<(subscription: { topic: string }) => void>();
+    const registry = createTopicRegistry({ onForget });
+    const membership = registry.add("room", subscriber());
+    registry.add("feed", subscriber());
+
+    membership.leave();
+    registry.end("feed", undefined);
+
+    expect(onForget.mock.calls.map(([s]) => s.topic)).toEqual(["room", "feed"]);
+  });
+
+  it("hands what it was to send to the subscription the server took it for", () => {
+    const onMerge = vi.fn();
+    const registry = createTopicRegistry({ onMerge });
+    registry.add("room#served", subscriber());
+    registry.add("room#asked", subscriber());
+    const asked = registry.subscriptionOf("room#asked");
+
+    registry.rename("room#asked", "room#served");
+
+    expect(onMerge).toHaveBeenCalledWith(asked, registry.subscriptionOf("room#served"));
   });
 });

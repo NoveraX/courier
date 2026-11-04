@@ -7,6 +7,10 @@ import { CourierError } from "./courier-error";
 export type ConfigurationErrorCode =
   /** A WebSocket endpoint was invoked but `proxyPath.ws` was not configured. */
   | "WS_PATH_NOT_CONFIGURED"
+  /** A realtime connection's `backoff` names a delay that is not a finite number of ms from 0, or a factor below 1. */
+  | "INVALID_BACKOFF"
+  /** A realtime connection's `messageQueue` names a limit that is not a whole number from 0, or an unknown `overflow`. */
+  | "INVALID_MESSAGE_QUEUE"
   /** A relative `proxyPath` value was given but no origin is available (SSR without explicit origin injection). */
   | "PROXY_PATH_NO_ORIGIN"
   /** A `proxyPath` value is malformed (empty string, protocol-relative `//host`, wrong scheme, etc.). */

@@ -1,8 +1,9 @@
+export type { ReconnectCause, WSConnectionState } from "./connection-machine-types";
 export type { Heartbeat, HeartbeatConfig } from "./heartbeat";
 export { createHeartbeat } from "./heartbeat";
 export type { MessageQueue, MessageQueueConfig } from "./message-queue";
 export { createMessageQueue } from "./message-queue";
-export { shouldReconnect } from "./reconnect-classifier";
+export { classifyClose } from "./reconnect-classifier";
 export { qualifyTopic, unqualifyTopic } from "./topic-key";
 export { createWSConnection } from "./ws-connection";
 export type { WSMessage, WSMessageType } from "./ws-protocol";

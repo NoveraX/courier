@@ -343,7 +343,7 @@ describe("a channel whose socket opens", () => {
       .toEqual(["connecting", "open"]);
   });
 
-  it("says why its credentials could not be had, counting from the socket that delivered", async () => {
+  it("says why its credentials could not be had, counting from the socket that dropped", async () => {
     served = await serveWS({
       room: channel
         .variables(z.object({ room: z.string() }))
@@ -375,9 +375,10 @@ describe("a channel whose socket opens", () => {
     }
     await expect.poll(() => reconnects().length, { timeout: 4_000 }).toBeGreaterThanOrEqual(2);
 
+    /* The socket was open for less than the stable period, so its drop counts as a failure. */
     expect(reconnects().slice(0, 2)).toEqual([
-      expect.objectContaining({ failures: 0, openedBefore: true }),
-      expect.objectContaining({ failures: 1, cause: { message: "The session has expired" } }),
+      expect.objectContaining({ failures: 1, openedBefore: true }),
+      expect.objectContaining({ failures: 2, cause: { message: "The session has expired" } }),
     ]);
   });
 
@@ -415,7 +416,7 @@ describe("a channel whose socket opens", () => {
 
     expect(reconnects()[0]).toMatchObject({
       openedBefore: true,
-      failures: 0,
+      failures: 1,
       cause: { message: "The socket closed with code 1012: Service restart" },
     });
   });

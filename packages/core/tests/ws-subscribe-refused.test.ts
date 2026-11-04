@@ -49,11 +49,14 @@ describe("a subscribe the server refuses for its rate", () => {
       channels.push(ch);
     }
 
-    await vi.waitFor(() => expect(channels.map((ch) => ch.status)).not.toContain("connecting"));
+    const refused = () => channels.filter((ch) => (errors.get(ch) ?? []).length > 0);
+    await vi.waitFor(() => expect(refused().length).toBeGreaterThan(0));
 
-    const ended = channels.filter((ch) => ch.status === "disconnected");
-    expect(ended.length).toBeGreaterThan(0);
-    for (const ch of ended) expect(errors.get(ch)).toEqual([expect.any(RateLimitError)]);
+    await vi.waitFor(() => expect(refused().map((ch) => ch.status)).not.toContain("connected"));
+    for (const ch of refused()) {
+      expect(ch.status).toBe("disconnected");
+      expect(errors.get(ch)).toEqual([expect.any(RateLimitError)]);
+    }
     for (const ch of channels) ch.close();
   });
 });

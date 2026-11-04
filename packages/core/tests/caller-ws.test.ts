@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
@@ -57,41 +57,40 @@ describe("the pooled socket", () => {
   it("closes once its last channel has closed", async () => {
     const url = await serveRoom();
     const { ch, data } = open(url, "a");
-    await settle(100);
+    await vi.waitFor(() => expect(data).toEqual(["welcome"]));
 
     ch.close();
-    await settle(IDLE);
 
-    expect(data).toEqual(["welcome"]);
-    expect(served?.handler.connections.count).toBe(0);
+    await vi.waitFor(() => expect(served?.handler.connections.count).toBe(0), {
+      timeout: IDLE * 2,
+    });
   });
 
   it("stays open while another channel still uses it", async () => {
     const url = await serveRoom();
     const first = open(url, "a");
     const second = open(url, "b");
-    await settle(100);
+    await vi.waitFor(() => expect([first.data, second.data]).toEqual([["welcome"], ["welcome"]]));
 
     first.ch.close();
     await settle(IDLE);
     second.ch.send({ text: "still here" });
-    await settle(100);
 
+    await vi.waitFor(() => expect(second.data).toEqual(["welcome", "echo still here"]));
     expect(served?.handler.connections.count).toBe(1);
-    expect(second.data).toEqual(["welcome", "echo still here"]);
     second.ch.close();
   });
 
   it("is kept for a channel opened right after the last one closed", async () => {
     const url = await serveRoom();
     const first = open(url, "a");
-    await settle(100);
+    await vi.waitFor(() => expect(first.data).toEqual(["welcome"]));
 
     first.ch.close();
     const next = open(url, "b");
     await settle(IDLE);
 
-    expect(next.data).toEqual(["welcome"]);
+    await vi.waitFor(() => expect(next.data).toEqual(["welcome"]));
     expect(upgrades).toBe(1);
     expect(served?.handler.connections.count).toBe(1);
     next.ch.close();
@@ -101,8 +100,9 @@ describe("the pooled socket", () => {
     const url = await serveRoom();
 
     for await (const _tick of executeWSPush<number>(url, "api.live.ticks")) break;
-    await settle(IDLE);
 
-    expect(served?.handler.connections.count).toBe(0);
+    await vi.waitFor(() => expect(served?.handler.connections.count).toBe(0), {
+      timeout: IDLE * 2,
+    });
   });
 });

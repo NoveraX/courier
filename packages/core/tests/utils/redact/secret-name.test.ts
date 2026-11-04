@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { secretName } from "../../src/secrets/secret-name";
+import { secretName } from "../../../src/utils/redact/secret-name";
 
 describe("a name", () => {
   it("is strong when its last word names a credential, in any case and joined any way", () => {

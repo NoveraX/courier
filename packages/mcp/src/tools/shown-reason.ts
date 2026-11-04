@@ -1,4 +1,4 @@
-import { cutText, REDACTED, splitUrlsWithoutSecrets } from "@noverax/courier-studio-core";
+import { cutText, REDACTED, splitUrlsWithoutSecrets } from "@noverax/courier/internal";
 
 /* An address is shown as its scheme, host and port: its path, query and
    fragment may carry a token, its userinfo a password. A scheme is read

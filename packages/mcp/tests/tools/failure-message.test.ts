@@ -23,7 +23,7 @@ import { Agent, fetch as undiciFetch } from "undici";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { testCertificates } from "../../../core/tests/helpers/test-certificates";
-import { PROSE, SECRETS } from "../../../studio-core/tests/secrets/error-text-corpus";
+import { PROSE, SECRETS } from "../../../core/tests/utils/redact/error-text-corpus";
 import { failureMessage } from "../../src/tools/failure-message";
 
 /* A character UTF-16 writes as two code units, built from its code point. */

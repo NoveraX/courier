@@ -1,4 +1,4 @@
-import { REDACTED } from "@noverax/courier-studio-core";
+import { REDACTED } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
 import { isSecretName } from "../mcp/without-secrets";

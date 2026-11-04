@@ -1,5 +1,5 @@
+import { cutText } from "@noverax/courier/internal";
 import type { ToolOutcome } from "@noverax/courier-mcp/internal";
-import { cutText } from "@noverax/courier-studio-core";
 
 import type { PlaygroundRunOutcome } from "../playground-run";
 import { withoutCredentials } from "../storage/without-credentials";

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { textWithoutSecrets } from "../../src/secrets/text-without-secrets";
+import { textWithoutSecrets } from "../../../src/utils/redact/text-without-secrets";
 
 describe("a text's credentials", () => {
   it("are cut where the platform quoted a header value", () => {

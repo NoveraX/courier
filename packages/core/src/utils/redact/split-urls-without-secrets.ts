@@ -1,3 +1,4 @@
+import { parseUrl } from "../parse-url";
 import { REDACTED } from "./redacted";
 
 /*
@@ -57,8 +58,9 @@ function quotedAddressShown(_match: string, said: string, input: string): string
 }
 
 function originOf(address: string): string | undefined {
-  if (!URL.canParse(address)) return undefined;
-  const { protocol, host } = new URL(address);
+  const url = parseUrl(address);
+  if (url === undefined) return undefined;
+  const { protocol, host } = url;
   return host === "" ? undefined : `${protocol}//${host}`;
 }
 

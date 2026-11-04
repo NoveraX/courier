@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { splitUrlsWithoutSecrets } from "../../src/secrets/split-urls-without-secrets";
+import { splitUrlsWithoutSecrets } from "../../../src/utils/redact/split-urls-without-secrets";
 
 const REFUSED = "Request cannot be constructed from a URL that includes credentials: ";
 const UNPARSED = "Failed to parse URL from ";

@@ -1,6 +1,6 @@
 /**
  * Error texts as platforms, databases and APIs write them, for the rules
- * that cut credentials out of what leaves Studio's token page. A prose
+ * that cut credentials out of a text before it is shown or kept. A prose
  * text holds no credential, and must come out unchanged; a secret text
  * holds one, which must not. Every value is made up, and a key-shaped one
  * is joined at run time, so no literal sits in the source for a secret

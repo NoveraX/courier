@@ -1,12 +1,12 @@
 /**
- * An error's text as it leaves Studio's token page: every credential in a
- * corpus of real error texts cut, and every one of the texts that holds
- * none left as it was — line breaks, addresses and anchors included — and
- * a hostile text read in the time its start takes, whatever its size.
+ * An error's text as it leaves the process that holds it: every credential
+ * in a corpus of real error texts cut, and every one of the texts that
+ * holds none left as it was — line breaks, addresses and anchors included —
+ * and a hostile text read in the time its start takes, whatever its size.
  */
 import { describe, expect, it } from "vitest";
 
-import { cutText } from "../../src/secrets/cut-text";
+import { cutText } from "../../../src/utils/redact/cut-text";
 import { PROSE, SECRETS } from "./error-text-corpus";
 
 /* A character UTF-16 writes as two code units, built from its code point. */

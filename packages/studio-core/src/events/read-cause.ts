@@ -1,4 +1,5 @@
-import { sliceWhole } from "../lib/slice-whole";
+import { sliceWhole } from "@noverax/courier/internal";
+
 import type { RequestFailureCause } from "./request";
 
 /* A system error code: `ECONNREFUSED`, `UND_ERR_SOCKET`, or Bun's `ConnectionRefused`. */

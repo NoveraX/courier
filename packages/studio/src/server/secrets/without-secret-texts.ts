@@ -1,4 +1,4 @@
-import { cutText, urlWithoutSecrets } from "@noverax/courier-studio-core";
+import { cutText, urlWithoutSecrets } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
 import { cutCause } from "./cut-cause";

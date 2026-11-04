@@ -155,11 +155,13 @@ export {
   pathPieces,
 } from "../utils/path-template";
 export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
+export { cutText, REDACTED, splitUrlsWithoutSecrets, urlWithoutSecrets } from "../utils/redact";
 export {
   type RenderMemo,
   type RenderMemoProvider,
   registerRenderMemo,
 } from "../utils/render-memo";
+export { sliceWhole } from "../utils/slice-whole";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 export {
   type KnownWebhook,

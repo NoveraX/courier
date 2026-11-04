@@ -1,5 +1,4 @@
-import { isCredentialHeader } from "@noverax/courier/internal";
-import { REDACTED } from "@noverax/courier-studio-core";
+import { isCredentialHeader, REDACTED } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
 

@@ -8,7 +8,7 @@
  * project's requests sent — an address without its password or its secret
  * parameters, and an error's text and its cause with their credentials cut.
  */
-import { REDACTED } from "@noverax/courier-studio-core";
+import { REDACTED } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
 import { buildSession } from "../../src/server/session-builder";

@@ -1,4 +1,5 @@
-import { cutText, readShared, urlWithoutSecrets } from "@noverax/courier-studio-core";
+import { cutText, urlWithoutSecrets } from "@noverax/courier/internal";
+import { readShared } from "@noverax/courier-studio-core";
 
 import { cutCause } from "./secrets/cut-cause";
 import type { SavedRequest } from "./session-types";

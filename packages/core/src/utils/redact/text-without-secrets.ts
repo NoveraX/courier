@@ -1,4 +1,4 @@
-import { isCredentialHeader } from "@noverax/courier/internal";
+import { isCredentialHeader } from "../is-credential-header";
 
 import { isSecretLike } from "./is-secret-like";
 import { REDACTED } from "./redacted";

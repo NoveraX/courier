@@ -74,8 +74,4 @@ export { playgroundRequestId } from "./lib/playground-request-id";
 export { applyStoreReport, readStoreReport } from "./mock-store";
 export { type AnswerShape, answerShapeOf, type ShapeType } from "./runtime/answer-shape";
 export type { SchemaField } from "./schema-fields";
-export { cutText } from "./secrets/cut-text";
-export { REDACTED } from "./secrets/redacted";
-export { splitUrlsWithoutSecrets } from "./secrets/split-urls-without-secrets";
-export { urlWithoutSecrets } from "./secrets/url-without-secrets";
 export { extractSourceMap } from "./source-map";

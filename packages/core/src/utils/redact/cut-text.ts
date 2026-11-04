@@ -1,4 +1,4 @@
-import { sliceWhole } from "../lib/slice-whole";
+import { sliceWhole } from "../slice-whole";
 import { REDACTED } from "./redacted";
 import { textWithoutSecrets } from "./text-without-secrets";
 import { urlsWithoutSecrets } from "./urls-without-secrets";
@@ -8,20 +8,18 @@ const READ_FACTOR = 4;
 const WHITESPACE = /\s/;
 
 /**
- * An error's text as it leaves the page that holds Studio's token — for
- * Studio's database, an export, an agent, a page without the token — with
- * what could be a credential cut out: in every address its user, password,
- * secret parameters and any path segment that reads as a token; a private
- * key; a header value the platform refused and quoted; a JWT or a key in a
- * known provider's format; a credential after an authorization scheme;
- * the value of a pair whose name says it is secret. Line breaks stay;
- * other control characters become spaces. The text is then cut to
- * `maxLength` characters.
+ * An error's text as it leaves the process that holds it — for a log, a
+ * database, an export, an agent, a page — with what could be a credential
+ * cut out: in every address its user, password, secret parameters and any
+ * path segment that reads as a token; a private key; a header value the
+ * platform refused and quoted; a JWT or a key in a known provider's
+ * format; a credential after an authorization scheme; the value of a pair
+ * whose name says it is secret. Line breaks stay; other control characters
+ * become spaces. The text is then cut to `maxLength` characters.
  *
  * Only the start of a long text is read, four times `maxLength`, so a text
  * of any size costs the same; a word the cut falls inside is dropped
- * rather than shown in part. The page with the token is shown the text
- * whole.
+ * rather than shown in part.
  *
  * @param text - The error's text
  * @param maxLength - The longest text kept; longer text ends with "…"

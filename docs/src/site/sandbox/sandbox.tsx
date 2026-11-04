@@ -16,7 +16,9 @@ interface SandboxProps {
  * it on the left, what it answered on the right — stacked wherever the
  * sandbox itself is narrower than 560 px, on a phone or in a narrow column,
  * so the answer always has the width to be read. A name too long for the
- * header wraps between its members rather than being cut.
+ * header wraps between its members rather than being cut. It is a region
+ * named for the call, so a reader can move from one sandbox to the next,
+ * and a test can find each by its call.
  *
  * @param props - The call's name, its controls and its result
  * @returns The sandbox
@@ -27,7 +29,10 @@ interface SandboxProps {
  */
 export function Sandbox({ label, controls, result }: SandboxProps) {
   return (
-    <div className="overflow-hidden rounded-panel border border-line bg-panel shadow-panel">
+    <section
+      aria-label={label}
+      className="overflow-hidden rounded-panel border border-line bg-panel shadow-panel"
+    >
       <div className="flex min-h-9.5 items-center gap-2.5 border-b border-line bg-bg-subtle px-3.5 py-1.5">
         <span className="min-w-0 font-mono text-label wrap-break-word text-fg-muted">
           <BreakableText text={label} after="." />
@@ -44,6 +49,6 @@ export function Sandbox({ label, controls, result }: SandboxProps) {
           <div className="min-w-0 p-4.5">{result}</div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

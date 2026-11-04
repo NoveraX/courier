@@ -11,7 +11,8 @@
     "build": "next build && node server/assemble.mjs",
     "start": "next start",
     "lint": "biome check --write .",
-    "check": "biome check . && tsc --noEmit"
+    "check": "biome check . && tsc --noEmit",
+    "test:examples": "playwright test -c tests/e2e/playwright.config.ts"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",

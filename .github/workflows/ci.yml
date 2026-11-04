@@ -419,6 +419,18 @@ jobs:
         run: npm run build
         working-directory: docs
 
+      # Every live example, driven in Chrome's engine on the production
+      # server the build put together, opened over HTTPS by a name that is
+      # not localhost, as the deployed site is. The runner already has every
+      # library Chromium loads: the browser alone is downloaded.
+      - name: Install Chromium
+        timeout-minutes: 5
+        run: npx playwright install chromium
+
+      - name: Run the live examples
+        run: npm run test:examples
+        working-directory: docs
+
   # A newer commit on master leaves an older run nothing to release, since a
   # release is cut from master's newest commit: each run of master cancels the
   # older ones still checking or waiting for their release to be approved. One

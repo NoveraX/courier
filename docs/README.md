@@ -225,10 +225,32 @@ the backend has no route for (`tests/site/endpoint-contract.test.ts`).
 ## Checks
 
 ```bash
-npm run check   # biome and TypeScript
+npm run check          # biome and TypeScript
+npm run build          # the production server, in .next/standalone
+npm run test:examples  # every live example on it, in a browser
 ```
 
 The site's tests run from the repository root in the `docs` Vitest project.
+
+`npm run test:examples` drives every live example on the production server
+`npm run build` put together, as its container runs it, in Chromium or the
+engines `COURIER_BROWSERS` names. The browser opens the site as
+`https://courier.test`, through a front with a certificate made for the
+run, which stands where the CDN stands before the site: each page's calls
+carry an origin that is neither localhost nor plain HTTP, as the deployed
+site's do. Each Playwright worker is a visitor of its own, at an address of
+its own. The browsers come from the repository's root:
+`npx playwright install chromium` there.
+
+After a deploy, the same examples run against the site itself:
+
+```bash
+SITE_URL=https://courier.noverax.cloud COURIER_BROWSERS=chromium npm run test:examples
+```
+
+Every page's calls then come from the address the run is made from, and the
+test of the proxy route's limit, which would spend that address's writes,
+is skipped; one engine keeps the run within a minute's writes.
 
 <br />
 

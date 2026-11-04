@@ -108,7 +108,7 @@ export function checkSamples(samples) {
     writeFileSync(file, sample.code + module);
   }
   const roots = [...files.keys(), app];
-  const shifts = addMissingImports(roots, exportedNames());
+  const { shifts, routed } = addMissingImports(roots, exportedNames());
   const problems = [];
   const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS));
   const leavingOut = samplesLeavingOut(diagnostics);
@@ -117,7 +117,10 @@ export function checkSamples(samples) {
     const sample = diagnostic.file && files.get(normalize(diagnostic.file.fileName));
     if (!sample) continue;
     const text = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ");
-    const standIn = sample.unresolved || leavingOut.has(diagnostic.file.fileName);
+    const standIn =
+      sample.unresolved ||
+      leavingOut.has(diagnostic.file.fileName) ||
+      routed.has(diagnostic.file.fileName);
     if (isOmission(diagnostic.code, text, { ...sample, standIn })) continue;
     const { line } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
     const shift = shifts.get(diagnostic.file.fileName) ?? 0;
@@ -159,13 +162,16 @@ function addMissingImports(roots, exported) {
       ]);
   }
   const shifts = new Map();
+  /* A fragment the routes are imported for builds on the reader's config, as one that imports them itself does. */
+  const routed = new Set();
   for (const [file, names] of missing) {
     const header = importHeader(names, exported);
     if (header.length === 0) continue;
     writeFileSync(file, `${header.join("\n")}\n${readFileSync(file, "utf8")}`);
     shifts.set(file, header.length);
+    if (header.some((line) => line.includes(' from "@noverax/courier/routes"'))) routed.add(file);
   }
-  return shifts;
+  return { shifts, routed };
 }
 
 function main() {

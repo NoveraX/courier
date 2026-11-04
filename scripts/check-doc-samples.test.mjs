@@ -220,6 +220,12 @@ describe("checkSamples", () => {
           "",
         ].join("\n"),
       },
+      {
+        page: "plugin-routes.mdx",
+        line: 140,
+        jsx: false,
+        code: "const caller = createProxyCaller(routes.api)\nconst user = await caller.users.getById({ id: 5 })\n",
+      },
     ]);
   }, 60_000);
 

@@ -55,6 +55,8 @@ export function appPath(specifier, from) {
   return joined.startsWith("..") ? undefined : joined;
 }
 
+const ROUTES_ENTRY = /\bfrom\s*["']@noverax\/courier\/routes["']/;
+
 /**
  * Point a sample's imports of its page's files at where they are written.
  *
@@ -72,7 +74,9 @@ export function appPath(specifier, from) {
  * @returns {{ code: string, unresolved: boolean }} Its code, and whether an import of the reader's code is left typed as anything
  */
 export function pointImports(sample, index, files, written, complete = () => true) {
-  let unresolved = false;
+  /* The routes Courier's plugin builds are typed from the config the reader registers in their
+     app, which no sample shows: a sample that reads them builds on the reader's code. */
+  let unresolved = ROUTES_ENTRY.test(sample.code);
   const code = sample.code.replace(SPECIFIER, (match, head, quote, specifier, offset) => {
     const path = appPath(specifier, sample.file);
     if (path === undefined) return match;

@@ -192,8 +192,40 @@ describe("checkSamples", () => {
         jsx: false,
         code: "export const proxy = import.meta.env.VITE_PROXY_URL\n",
       },
+      {
+        page: "plugin-routes.mdx",
+        line: 120,
+        jsx: false,
+        code: [
+          'import type config from "../courier.config"',
+          "",
+          'declare module "@noverax/courier/routes" {',
+          "  interface Register {",
+          "    config: typeof config",
+          "  }",
+          "}",
+          "",
+        ].join("\n"),
+      },
+      {
+        page: "plugin-routes.mdx",
+        line: 130,
+        jsx: false,
+        code: [
+          'import { createProxyQueryCaller } from "@noverax/courier-react"',
+          'import { routes } from "@noverax/courier/routes"',
+          "",
+          "const q = createProxyQueryCaller(routes.api)",
+          'q.users.useMutation("create", { onSuccess: (user) => console.log(user.name) })',
+          "",
+        ].join("\n"),
+      },
     ]);
   }, 60_000);
+
+  it("takes the routes Courier's plugin builds as the reader's config types them, which no sample shows", () => {
+    expect(problems.filter((problem) => problem.startsWith("plugin-routes.mdx"))).toEqual([]);
+  });
 
   it("leaves out a Vite variable the reader declares, though a sample loaded Next.js's types", () => {
     expect(problems.filter((problem) => problem.startsWith("vite-env.mdx"))).toEqual([]);

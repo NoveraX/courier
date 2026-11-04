@@ -55,11 +55,11 @@ export function isOmission(code, text, sample) {
   /* An API or routes from the reader's app, or ones built on a name the
      sample does not declare, are anything here, and the callers read
      anything as an API with nothing to call: a proxy client given such
-     routes is a client of no API. */
+     routes is a client of no API, and what its calls give is unknown. */
   if (!sample.standIn) return false;
   if (/'never'|<any\b|Omit<any|Omit<unknown|unknown\[\]/.test(text)) return true;
   if (code === 2554 && /createProxy/.test(sample.code)) return true;
-  return code === 2698 || code === 2709;
+  return code === 2698 || code === 2709 || code === 18046;
 }
 
 /**

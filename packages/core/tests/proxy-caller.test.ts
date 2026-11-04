@@ -118,8 +118,9 @@ describe("createProxyCaller", () => {
       expect(url.pathname).toBe("/api/request");
       expect(sent()).toMatchObject({ source: "api", group: "files", method: "upload" });
 
-      const body = sent().body as FormData;
-      expect(body).toBeInstanceOf(FormData);
+      const init = fetchSpy.mock.calls[0]![1] as RequestInit;
+      /* Under Node the form goes out as the stream of its encoding. */
+      const body = await new Response(init.body, { headers: new Headers(init.headers) }).formData();
       expect([...body.keys()]).toEqual(["_options", "file"]);
       expect(body.get("_options")).toBe("{}");
     });

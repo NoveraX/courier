@@ -10,6 +10,7 @@ import { flightKey, isRead } from "./flight-key";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
+import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
 import { timeoutSignal } from "./timeout-signal";
 
@@ -126,6 +127,17 @@ export async function coreFetch(
         { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
       );
     }
+    /* Handed over as it is, a form or a Blob is copied whole by Node's fetch for as long as
+       it is sent; sent as the stream of its bytes, it is read as it goes out. */
+    const streamed =
+      requestBody == null
+        ? undefined
+        : sendStreamed(
+            fullUrl,
+            { ...sent, body: requestBody },
+            { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
+          );
+    if (streamed) return streamed;
     return withinOrigin && rest.redirect === undefined
       ? fetchWithinOrigin(fullUrl, sent, send)
       : send(fullUrl, sent);

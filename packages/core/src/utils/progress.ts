@@ -9,9 +9,7 @@
 import type { PlatformFetch } from "../http-client/source-transport";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
-import { countedStream } from "./counted-stream";
-import { sendUpload } from "./upload-redirects";
-import { toUploadSource } from "./upload-source";
+import { sendStreamed } from "./send-streamed";
 import { type XhrRequestInit, xhrRequest } from "./xhr-request";
 
 /**
@@ -39,21 +37,11 @@ export async function sendWithUploadProgress(
 ): Promise<Response> {
   if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);
 
-  const source = toUploadSource(init.body);
-  const headers = new Headers(init.headers);
-  /* A multipart body's type carries the boundary its encoding chose. */
-  if (source.contentType && (init.body instanceof FormData || !headers.has("content-type"))) {
-    headers.set("content-type", source.contentType);
-  }
-  if (source.replayable) headers.set("content-length", String(source.size));
-
-  const request = { ...(init as RequestInit), method: init.method, headers };
-  return sendUpload(
-    url,
-    request,
-    source,
-    (stream) => countedStream(stream, source.size, onProgress, init.signal),
-    { withinOrigin, fetch: send },
+  const request = { ...(init as RequestInit), method: init.method, body: init.body };
+  /* A page's service worker has no XMLHttpRequest either, and sends the body uncounted. */
+  return (
+    sendStreamed(url, request, { onProgress, withinOrigin, fetch: send }) ??
+    (send ?? fetch)(url, request)
   );
 }
 

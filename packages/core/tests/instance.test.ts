@@ -26,6 +26,12 @@ function getFetchCall(index = 0) {
   return { url: url as string, options: options as RequestInit & Record<string, unknown> };
 }
 
+/* The form a request carried: under Node the body goes out as the stream of its encoding. */
+async function sentForm(index = 0): Promise<FormData> {
+  const { options } = getFetchCall(index);
+  return new Response(options.body, { headers: new Headers(options.headers) }).formData();
+}
+
 describe("HttpClient", () => {
   describe("constructor", () => {
     it("stores baseURL and prefixes requests", async () => {
@@ -109,11 +115,14 @@ describe("HttpClient", () => {
       const fd = new FormData();
       fd.append("file", new Blob(["content"]), "test.txt");
 
-      const instance = new HttpClient();
+      const instance = new HttpClient({ baseURL: "https://api.example.com" });
       const { post } = instance.createMethods();
       await post("upload", fd as unknown as Record<string, unknown>);
 
-      expect(getFetchCall().options.body).toBeInstanceOf(FormData);
+      expect(new Headers(getFetchCall().options.headers).get("content-type")).toMatch(
+        /^multipart\/form-data; boundary=/,
+      );
+      expect((await sentForm()).get("file")).toBeInstanceOf(File);
     });
   });
 
@@ -417,11 +426,11 @@ describe("HttpClient", () => {
       fd.append("avatar", new File([], ""));
       fd.append("doc", new File(["content"], "doc.pdf"));
 
-      const instance = new HttpClient();
+      const instance = new HttpClient({ baseURL: "https://api.example.com" });
       const { post } = instance.createMethods();
       await post("upload", fd as unknown as Record<string, unknown>);
 
-      const body = getFetchCall().options.body as FormData;
+      const body = await sentForm();
       expect(body.has("name")).toBe(true);
       expect(body.has("avatar")).toBe(false);
       expect(body.has("doc")).toBe(true);

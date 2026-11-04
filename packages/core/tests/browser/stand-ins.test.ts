@@ -36,6 +36,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/errors/http-error-inspect": "src/browser/errors/http-error-inspect.ts",
       "utils/answered-message": "src/utils/answered-message.ts",
       "browser/utils/answered-message": "src/browser/utils/answered-message.ts",
+      "utils/send-streamed": "src/utils/send-streamed.ts",
+      "browser/utils/send-streamed": "src/browser/utils/send-streamed.ts",
     });
   });
 });

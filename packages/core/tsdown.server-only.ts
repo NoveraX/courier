@@ -4,8 +4,9 @@ import type { TsdownPlugin } from "tsdown";
 /**
  * The modules only a server runs whose place in a page's bundle a module
  * of the same name under `src/browser/` takes: the terminal logger, the
- * chain of addresses a request came through, the check of `forward`, and
- * the hook Node prints an `HTTPError` through.
+ * chain of addresses a request came through, the check of `forward`, the
+ * hook Node prints an `HTTPError` through, the words a failure is answered
+ * with, and the sending of an upload as a stream.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -16,6 +17,7 @@ export const SERVER_ONLY_MODULES = [
   "session/validate-forward",
   "errors/http-error-inspect",
   "utils/answered-message",
+  "utils/send-streamed",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

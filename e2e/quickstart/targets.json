@@ -3,16 +3,37 @@
     "id": "next",
     "start": ["npx", "next", "dev", "-p", "{port}"],
     "build": ["npm", "run", "build"],
+    "page": "/courier",
+    "routes": "plugin"
+  },
+  {
+    "id": "next-file",
+    "framework": "next",
+    "args": ["--routes", "file"],
+    "routes": "file",
+    "start": ["npx", "next", "dev", "-p", "{port}"],
+    "build": ["npm", "run", "build"],
     "page": "/courier"
   },
   {
     "id": "nuxt",
     "start": ["npx", "nuxt", "dev", "--port", "{port}"],
     "build": ["npm", "run", "build"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "plugin"
   },
   {
     "id": "sveltekit",
+    "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
+    "build": ["npm", "run", "build"],
+    "page": "/courier",
+    "routes": "plugin"
+  },
+  {
+    "id": "sveltekit-file",
+    "framework": "sveltekit",
+    "args": ["--routes", "file"],
+    "routes": "file",
     "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
     "build": ["npm", "run", "build"],
     "page": "/courier"
@@ -21,19 +42,22 @@
     "id": "astro",
     "start": ["npx", "astro", "dev", "--port", "{port}"],
     "build": ["npm", "run", "build"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "plugin"
   },
   {
     "id": "react-router",
     "start": ["npx", "react-router", "dev", "--port", "{port}", "--strictPort"],
     "build": ["npm", "run", "build"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "plugin"
   },
   {
     "id": "solid-start",
     "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
     "build": ["npm", "run", "build"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "plugin"
   },
   {
     "id": "react",
@@ -57,7 +81,8 @@
     "id": "express",
     "start": ["npm", "run", "dev"],
     "build": ["npm", "run", "build"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "file"
   },
   {
     "id": "hono",
@@ -68,18 +93,21 @@
       "file": "src/index.ts",
       "from": "port: 3000",
       "to": "port: Number(process.env.PORT)"
-    }
+    },
+    "routes": "file"
   },
   {
     "id": "fastify",
     "start": ["npm", "run", "dev"],
     "build": ["npm", "run", "build:ts"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "file"
   },
   {
     "id": "nestjs",
     "start": ["npm", "run", "start:dev"],
     "build": ["npm", "run", "build"],
-    "page": "/courier"
+    "page": "/courier",
+    "routes": "file"
   }
 ]

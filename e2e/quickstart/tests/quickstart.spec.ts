@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
@@ -31,7 +31,8 @@ test.beforeAll(async () => {
       "@noverax/create-courier",
       name,
       "--framework",
-      target.id,
+      target.framework ?? target.id,
+      ...(target.args ?? []),
       "--yes",
       "--no-mcp",
     ],
@@ -49,6 +50,18 @@ test.afterAll(stopStarted);
 test(`${target.id}: the setup type-checks what it added`, () => {
   expect(created).toContain("Courier is set up.");
   expect(created).toContain("The files Courier added type-check against the project's tsconfig.");
+});
+
+test(`${target.id}: the page takes its routes as the setup was asked to give them`, () => {
+  test.skip(target.routes === undefined, "the page calls the API directly");
+  const root = join(workDir(), name);
+
+  if (target.routes === "file") {
+    expect(existsSync(join(root, "courier.routes.ts"))).toBe(true);
+  } else {
+    expect(existsSync(join(root, "courier.routes.ts"))).toBe(false);
+    expect(readFileSync(join(root, "courier.config.ts"), "utf8")).toContain("routes: false");
+  }
 });
 
 test(`${target.id}: the project builds for production with Courier in it`, async () => {

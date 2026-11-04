@@ -9,10 +9,13 @@
  * package, to exchange the run's identity for a publish token — as
  * `npm publish` itself does first — and throws away what it gets.
  *
- * No token stands in for a trusted publisher: the `release` environment
- * holds none, and the packages refuse tokens. A package npm does not trust
- * the run for stops the release here, before the tag, rather than halfway
- * through publishing, and the run says which ones and how to set them up.
+ * npm sets a trusted publisher up only for a package it has, so a package
+ * new to npm takes its first version from a token: the one the `release`
+ * environment holds as `NPM_TOKEN` while it holds one, which the release
+ * hands npm for such a package alone. A package npm does not trust the run
+ * for stops the release here, before the tag, rather than halfway through
+ * publishing — unless npm does not have it yet and takes that token — and
+ * the run says which ones and how to set them up.
  *
  * Usage: tsx scripts/check-npm-publishing.ts
  */
@@ -48,7 +51,8 @@ export interface CheckDeps {
 }
 
 /**
- * Check that npm trusts the run to publish every package.
+ * Check that npm trusts the run to publish every package, or takes the
+ * environment's token for the first version of one it does not have yet.
  *
  * @param names - The packages the release publishes
  * @param deps - The run's environment, fetch and npm's version
@@ -84,19 +88,35 @@ export async function checkPublishing(
       lines: [`npm: all ${names.length} packages publish through trusted publishing.`],
     };
   }
-  const setUp = setUpCommands(
-    [...reasons.keys()],
-    identity.ok ? identity.value : undefined,
-    deps.env,
-  );
+  /* A package npm does not have yet can name no trusted publisher: its first
+     version goes with the environment's token, if npm takes that. */
+  const newPackages = identity.ok ? await notOnNpm([...reasons.keys()], deps) : [];
+  const tokenRefusal = newPackages.length > 0 ? await tokenRefused(deps) : undefined;
+  for (const name of newPackages) {
+    if (tokenRefusal === undefined) reasons.delete(name);
+    else reasons.set(name, `not on npm yet, ${tokenRefusal}`);
+  }
+  const run = identity.ok ? identity.value : undefined;
+  if (reasons.size === 0) {
+    return {
+      ok: true,
+      lines: [
+        `::warning::npm: ${newPackages.length} of ${names.length} packages are new to npm and publish their first version with the release environment's token.`,
+        ...newPackages.map((name) => `  ${name}`),
+        "Then delete the token, from the environment and on npm, and set them up no more than two days before the next release:",
+        ...setUpCommands(newPackages, run, deps.env),
+      ],
+    };
+  }
+  /* Only a package npm has can be set up: a new one waits for its first version. */
+  const settable = [...reasons.keys()].filter((name) => !newPackages.includes(name));
   const list = [...reasons].map(([name, reason]) => `  ${name}: ${reason}`);
   return {
     ok: false,
     lines: [
       `::error::npm: ${reasons.size} of ${names.length} packages cannot be published through trusted publishing.`,
       ...list,
-      "Set them up:",
-      ...setUp,
+      ...(settable.length > 0 ? ["Set them up:", ...setUpCommands(settable, run, deps.env)] : []),
     ],
   };
 }
@@ -162,7 +182,34 @@ async function exchangeRefused(
     : `npm answered ${response.status}`;
 }
 
-/* The command that names this run's workflow and environment as a package's trusted publisher. */
+/* The packages npm has never seen: it answers 404 for their metadata. */
+async function notOnNpm(names: readonly string[], { fetch }: CheckDeps): Promise<string[]> {
+  const absent: string[] = [];
+  for (const name of names) {
+    const response = await fetch(new URL(name.replaceAll("/", "%2f"), REGISTRY), {
+      headers: { Accept: "application/vnd.npm.install-v1+json" },
+    });
+    await response.body?.cancel();
+    if (response.status === 404) absent.push(name);
+  }
+  return absent;
+}
+
+/* Why npm will not take the token the environment holds, if it will not: `npm whoami` with it. */
+async function tokenRefused({ env, fetch }: CheckDeps): Promise<string | undefined> {
+  const token = env.NPM_TOKEN;
+  if (!token) return "and the `release` environment holds no npm token for its first version";
+  const response = await fetch(new URL("-/whoami", REGISTRY), {
+    headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+  });
+  await response.body?.cancel();
+  return response.ok
+    ? undefined
+    : `and npm refuses the token the \`release\` environment holds (${response.status})`;
+}
+
+/* The commands that name this run's workflow and environment as a package's
+   trusted publisher, and have the package refuse tokens from then on. */
 function setUpCommands(
   names: readonly string[],
   identity: RunIdentity | undefined,
@@ -171,10 +218,10 @@ function setUpCommands(
   const repository = identity?.repository || env.GITHUB_REPOSITORY || "<owner>/<repository>";
   const file = identity?.workflowFile || "ci.yml";
   const environment = identity?.environment ?? "release";
-  return names.map(
-    (name) =>
-      `  npm trust github ${name} --file ${file} --repo ${repository} --env ${environment} --allow-publish --yes`,
-  );
+  return names.flatMap((name) => [
+    `  npm trust github ${name} --file ${file} --repo ${repository} --env ${environment} --allow-publish --yes`,
+    `  npm access set mfa=publish ${name}`,
+  ]);
 }
 
 function atLeast(version: string, least: readonly number[]): boolean {

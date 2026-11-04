@@ -53,6 +53,44 @@ export function isPublished(name: string, ver: string): boolean {
   }
 }
 
+/** Whether npm has the package at all, at any version: only npm's own "not found" says it has not. */
+export function isOnNpm(name: string): boolean {
+  try {
+    execFileSync("npm", ["view", name, "name"], { stdio: ["ignore", "ignore", "pipe"] });
+    return true;
+  } catch (error) {
+    /* The registry not answering says nothing: such a package counts as one
+       npm has, and is given no token. */
+    return !(error instanceof Error && "stderr" in error && String(error.stderr).includes("E404"));
+  }
+}
+
+/**
+ * The environment npm publishes a package in. npm sets a trusted publisher
+ * up only for a package it has, so a package new to npm takes its first
+ * version from the token the `release` environment holds as `NPM_TOKEN`,
+ * while it holds one, as the `NODE_AUTH_TOKEN` that setup-node's `.npmrc`
+ * reads. Every other package is given no token: it publishes through
+ * trusted publishing alone.
+ *
+ * @param env - The release's environment
+ * @param onNpm - Whether npm has the package already, asked only while there is a token to give
+ * @returns The environment to run `npm publish` in, and whether it holds the token
+ * @example
+ * ```ts
+ * publishEnv({ NPM_TOKEN: "token" }, () => false); // → { env: { NODE_AUTH_TOKEN: "token" }, withToken: true }
+ * publishEnv({ NPM_TOKEN: "token" }, () => true); // → { env: {}, withToken: false }
+ * ```
+ */
+export function publishEnv(
+  env: NodeJS.ProcessEnv,
+  onNpm: () => boolean,
+): { env: NodeJS.ProcessEnv; withToken: boolean } {
+  const { NPM_TOKEN: token, ...rest } = env;
+  if (!token || onNpm()) return { env: rest, withToken: false };
+  return { env: { ...rest, NODE_AUTH_TOKEN: token }, withToken: true };
+}
+
 /**
  * The command that brings the lockfile to the versions `prepare` writes. The
  * release commit carries those versions; a lockfile left at the old ones did
@@ -154,7 +192,9 @@ function publish(version: string, tag: string, dirs: readonly string[], dryRun: 
 
     try {
       const { args, cwd } = publishCommand(dir, tag, options);
-      execFileSync("npm", args, { cwd, stdio: "inherit" });
+      const { env, withToken } = publishEnv(process.env, () => isOnNpm(name));
+      if (withToken) console.log(`- ${name} is new to npm: its first version goes with the token`);
+      execFileSync("npm", args, { cwd, env, stdio: "inherit" });
       published.push(name);
     } catch (error) {
       failed.push(name);

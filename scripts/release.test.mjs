@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import commitRules from "./commit-rules.cjs";
-import { LOCKFILE_SYNC, publishCommand, versionedDirs } from "./release.ts";
+import { LOCKFILE_SYNC, publishCommand, publishEnv, versionedDirs } from "./release.ts";
 
 const { bodyNoLabelLines } = commitRules;
 
@@ -32,6 +32,39 @@ describe("publishCommand", () => {
     expect(
       publishCommand("packages/core", "beta", { provenance: false, dryRun: true }).args,
     ).toContain("--dry-run");
+  });
+});
+
+describe("the npm token a release may hold", () => {
+  /* setup-node, given no token, leaves a placeholder that its `.npmrc` reads. */
+  const RELEASE = { PATH: "/usr/bin", NODE_AUTH_TOKEN: "XXXXX-XXXXX-XXXXX-XXXXX" };
+
+  it("goes to npm for a package npm does not have yet, where setup-node's .npmrc reads it", () => {
+    expect(publishEnv({ ...RELEASE, NPM_TOKEN: "npm-token" }, () => false)).toEqual({
+      env: { PATH: "/usr/bin", NODE_AUTH_TOKEN: "npm-token" },
+      withToken: true,
+    });
+  });
+
+  it("goes to no package npm has, which publishes through trusted publishing alone", () => {
+    expect(publishEnv({ ...RELEASE, NPM_TOKEN: "npm-token" }, () => true)).toEqual({
+      env: RELEASE,
+      withToken: false,
+    });
+  });
+
+  it("is none while the environment holds none, and npm is not asked", () => {
+    let asked = 0;
+    const onNpm = () => {
+      asked += 1;
+      return false;
+    };
+
+    expect(publishEnv({ ...RELEASE, NPM_TOKEN: "" }, onNpm)).toEqual({
+      env: RELEASE,
+      withToken: false,
+    });
+    expect(asked).toBe(0);
   });
 });
 

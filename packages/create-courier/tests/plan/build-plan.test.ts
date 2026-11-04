@@ -220,7 +220,11 @@ describe("a plan", () => {
       "tsconfig.json": "{}",
       "vite.config.ts": "plugins: [a()]\n",
     });
-    const add = (item: string) => (text: string) => text.replace("]", `, ${item}]`);
+    /* An item put after the list's last one, before its closing bracket. */
+    const add = (item: string) => (text: string) => {
+      const end = text.lastIndexOf("]");
+      return `${text.slice(0, end)}, ${item}${text.slice(end)}`;
+    };
     const manual = (what: string) => ({ file: "vite.config.ts", what, lines: [] });
     const plan = buildPlan(contextOf(root, "typescript"), {
       ...RECIPE,

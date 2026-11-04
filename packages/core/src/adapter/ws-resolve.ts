@@ -4,6 +4,7 @@ import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { parseWSTopic } from "../realtime/ws-address";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { SchemaMetadata } from "../validation";
+import { endpointName } from "./endpoint-name";
 import { isExposedToWire } from "./exposure";
 import { warnNotExposed } from "./not-exposed";
 import type { WSSocketContext } from "./ws-context";
@@ -73,7 +74,7 @@ export function resolveSubscribeTopic(
   }
   /* Ended as a channel that is not there is, for the same reason as a call's refusal. */
   if (!isExposedToWire(dataSource, group, schema)) {
-    warnNotExposed(`[${source}][${group ?? ""}][${method}]`);
+    warnNotExposed(endpointName({ source, group, method }), "ws");
     sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;
   }

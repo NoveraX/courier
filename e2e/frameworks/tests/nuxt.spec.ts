@@ -87,10 +87,6 @@ test("a rendered page sends the session's cookies alone, with the request's id, 
 });
 
 test("a proxy caller in a rendering page calls in process, with the user's session", async () => {
-  test.fixme(
-    /-(webpack|rspack)$/.test(process.env.COURIER_FRAMEWORK ?? ""),
-    "under Nuxt's webpack and Rspack builders the in-process call carries no session, with Courier's routes module or without it",
-  );
   await clearReceived();
 
   await page.goto(`${APP}/proxy`);

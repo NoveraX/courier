@@ -1,15 +1,6 @@
 import type { HttpResponse } from "../http-client/types";
-import { headersWithoutSecrets } from "../utils/redact/headers";
 import { CourierError } from "./courier-error";
-
-/* Node's console, its loggers and its report of an uncaught error print an object through this. */
-const INSPECT = Symbol.for("nodejs.util.inspect.custom");
-
-interface InspectOptions {
-  readonly depth?: number | null | undefined;
-}
-
-type Inspect = (value: unknown, options: InspectOptions) => string;
+import { defineNodePrinting } from "./http-error-inspect";
 
 /**
  * Thrown when an HTTP response has a non-2xx status, or when the underlying
@@ -50,31 +41,7 @@ export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
   }
 }
 
-/* Defined on the prototype, beside the class: what prints an error is no part of its type. */
-Object.defineProperty(HTTPError.prototype, INSPECT, {
-  value: printed,
-  writable: true,
-  configurable: true,
-});
-
-function printed(
-  this: HTTPError,
-  depth: number,
-  options: InspectOptions,
-  inspect: Inspect,
-): string {
-  if (depth < 0) return `[${this.name}: ${this.message}]`;
-  const fields = {
-    code: this.code,
-    ...(this.context !== undefined && { context: this.context }),
-    status: this.status,
-    headers: headersWithoutSecrets(this.headers),
-    data: this.data,
-    ...(this.cause !== undefined && { cause: this.cause }),
-  };
-  /* The fields sit where Node prints an error's own, at the depth the error is printed at. */
-  return `${this.stack ?? `${this.name}: ${this.message}`} ${inspect(fields, { ...options, depth })}`;
-}
+defineNodePrinting(HTTPError.prototype);
 
 export function isHTTPError<TData = unknown>(error: unknown): error is HTTPError<TData> {
   return error instanceof HTTPError;

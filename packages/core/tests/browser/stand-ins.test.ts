@@ -32,6 +32,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/forwarded-for": "src/browser/utils/forwarded-for.ts",
       "session/validate-forward": "src/session/validate-forward.ts",
       "browser/session/validate-forward": "src/browser/session/validate-forward.ts",
+      "errors/http-error-inspect": "src/errors/http-error-inspect.ts",
+      "browser/errors/http-error-inspect": "src/browser/errors/http-error-inspect.ts",
     });
   });
 });

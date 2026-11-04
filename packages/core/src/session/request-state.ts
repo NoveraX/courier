@@ -10,7 +10,13 @@ interface RequestState {
   requestId?: string;
 }
 
-const states = new WeakMap<object, RequestState>();
+/* Kept on the global object: a bundler may load this module twice — Nuxt's
+   webpack and Rspack builders bundle a page's own copy of Courier beside the
+   server's — and the calls each copy makes for a request must share it. */
+const STATES_KEY = Symbol.for("courier.session.request-states");
+const g = globalThis as Record<symbol, unknown>;
+g[STATES_KEY] ??= new WeakMap<object, RequestState>();
+const states = g[STATES_KEY] as WeakMap<object, RequestState>;
 
 function stateOf(incoming: IncomingRequest): RequestState {
   let state = states.get(incoming.key);

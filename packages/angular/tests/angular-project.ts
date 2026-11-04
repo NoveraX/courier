@@ -121,6 +121,7 @@ export function angularProject(files: Record<string, string> = {}): AngularProje
       const file = join(root, path);
       writeFileSync(file, change(readFileSync(file, "utf8")));
     },
-    remove: () => rmSync(root, { recursive: true, force: true }),
+    /* Windows keeps a folder a process has just let go of a while longer, as it closes its handles. */
+    remove: () => rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }),
   };
 }

@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-10-28" }
+export const metadata = { title: "createProxyCaller", description: "Factory function that creates a typed client with dot-notation access for proxy-mode HTTP calls from the browser.", mode: "proxy", updated: "2026-11-04" }
 
 ## Import
 
@@ -8,7 +8,7 @@ import { createProxyCaller } from "@noverax/courier"
 
 ## Signature
 
-`createProxyCaller` takes the routes of an API — the endpoints a page may call and how it reaches each, as Courier writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and options, and returns a typed client. The routes carry the type of the API they were written from, so the client has its groups, methods, variables and response types, for the endpoints the routes name alone.
+`createProxyCaller` takes the routes of an API — the endpoints a page may call and how it reaches each, as Courier's plugin for your build gives them to the page from the endpoints marked `.expose()` — and options, and returns a typed client. The routes carry the type of the API they were read from, so the client has its groups, methods, variables and response types, for the endpoints the routes name alone.
 
 ```ts
 import type { InferClient, ProxyCallerOptions } from "@noverax/courier"
@@ -24,7 +24,7 @@ declare function createProxyCaller<TApi, TEndpoints extends Readonly<Record<stri
 
 ### routes
 
-The routes of one API, as the routes module exports them — `apiRoutes` for the source registered as `api`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Courier writes them, and how to write them by hand in a project without a `courier.config.ts`. Routes whose `cancelPrevious` is neither `true` nor `false` are refused with `ConfigurationError("CANCEL_PREVIOUS_INVALID")` when the client is made; `courier-cli routes` writes them again.
+The routes of one API — `routes.api` from `@noverax/courier/routes` for the source registered as `api`, or `apiRoutes` from `courier.routes.ts`. See [Exposing Endpoints](/docs/proxy-mode/expose) for how Courier gives them, and how to write them by hand in a project without a `courier.config.ts`. Routes whose `cancelPrevious` is neither `true` nor `false` are refused with `ConfigurationError("CANCEL_PREVIOUS_INVALID")` when the client is made; the plugin, or `courier-cli routes`, gives them again.
 
 ```ts
 interface CourierRoutes<TApi, TEndpoints> {
@@ -104,9 +104,9 @@ An endpoint the routes do not name is not on the type. Called anyway — from Ja
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-const caller = createProxyCaller(apiRoutes, {
+const caller = createProxyCaller(routes.api, {
   timeout: 10000,
   credentials: "include",
 })
@@ -120,9 +120,9 @@ const user = await caller.users.getById({ id: "123" })
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-const caller = createProxyCaller(apiRoutes, {
+const caller = createProxyCaller(routes.api, {
   // Per-transport proxy endpoint paths.
   // A missing transport falls back to its built-in default.
   proxyPath: {
@@ -216,7 +216,7 @@ A call can still ask for either verb with `.with({ method: "GET" })` or `.with({
 
 ## Related
 
-- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Courier writes from them
+- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Courier gives the page from them
 - [Proxy Mode](/docs/proxy-mode/overview) — architecture and security model
 - [Server Handler](/docs/proxy-mode/api-route) — the server-side handler that processes proxy requests
 - [createProxyQueryCaller](/docs/api/create-proxy-query-caller) — React Query wrapper built on top of createProxyCaller

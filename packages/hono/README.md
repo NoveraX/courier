@@ -184,14 +184,16 @@ Hono uses Web Standard `Request`/`Response` natively, so the adapter simply pass
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "./courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-// The routes Courier writes from the endpoints you mark .expose():
+// The routes Courier's plugin builds from the endpoints you mark .expose():
 // what a page may call, and how. The API definition — upstream URL, endpoint
 // paths, middleware — stays on the server.
-const caller = createProxyCaller(apiRoutes, { proxyPath: { http: "/api/request" } })
+const caller = createProxyCaller(routes.api, { proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
 ```
+
+The routes come from Courier's plugin in the build that makes the page — [the plugin for each build](https://courier.noverax.cloud/docs/proxy-mode/expose#the-plugin-for-your-build). Pages no bundler builds, as `create-courier` sets them up on this server, take `apiRoutes` from `courier.routes.ts` in place of `routes.api`, which `npx @noverax/courier-cli routes` writes from the same marks.
 
 <br />
 

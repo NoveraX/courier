@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-10-28" }
+export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-11-04" }
 
 ## API signature
 
@@ -190,7 +190,7 @@ The difference is where the call is made. A proxy caller sends the call to your 
 
 ```ts
 // Proxy mode (client components): the proxy route makes the call
-const browserCaller = createProxyCaller(apiRoutes)
+const browserCaller = createProxyCaller(routes.api)
 await browserCaller.users.getAll({ page: 1 })
 
 // Direct mode (server components): the server makes it, with the user's session

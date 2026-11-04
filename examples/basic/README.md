@@ -40,7 +40,11 @@ Go — is defined once in [`src/api.ts`](src/api.ts) and called three ways:
   Its one value from the API is the routes module,
   [`courier.routes.ts`](courier.routes.ts), which Courier writes from the
   endpoints marked `.expose()`, so the backend's address and paths never ship
-  with the page.
+  with the page. The page here is a script that `tsx` runs, which no bundler
+  builds, so it takes the routes as a file; an app whose bundler builds its
+  pages takes them from Courier's plugin instead, as
+  [Exposing Endpoints](https://courier.noverax.cloud/docs/proxy-mode/expose)
+  shows.
 - **Your server** runs Courier's proxy ([`src/server.ts`](src/server.ts)) and
   answers only the endpoints marked `.expose()` in [`src/api.ts`](src/api.ts);
   any other name is answered as one it does not know.

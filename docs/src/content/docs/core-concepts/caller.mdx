@@ -1,4 +1,4 @@
-export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface.", mode: "both", updated: "2026-11-04" }
 
 ## Overview
 
@@ -7,7 +7,7 @@ Courier provides two ways to call your API endpoints. Both share the same `Typed
 | Factory | Mode | Use Case |
 |---------|------|----------|
 | `createCaller(api)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
-| `createProxyCaller(apiRoutes)` | Proxy | Browser → your server → backend |
+| `createProxyCaller(routes.api)` | Proxy | Browser → your server → backend |
 
 ## createCaller (Direct Mode) <ModeBadge mode="direct" />
 
@@ -35,13 +35,13 @@ Use direct mode for server-side code where you have access to the `api` object: 
 
 ## createProxyCaller (Proxy Mode) <ModeBadge mode="proxy" />
 
-Sends requests through your server's proxy route. The browser never sees your backend URL. The caller takes the routes Courier writes into `courier.routes.ts` from the endpoints you marked `.expose()`: what a page may call, and how it reaches each — see [Exposing Endpoints](/docs/proxy-mode/expose).
+Sends requests through your server's proxy route. The browser never sees your backend URL. The caller takes the routes Courier's plugin for your build gives the page from the endpoints you marked `.expose()`: what a page may call, and how it reaches each — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes, {
+export const caller = createProxyCaller(routes.api, {
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
   credentials: "include",               // send the browser's cookies to the proxy route
@@ -134,10 +134,10 @@ export const serverCaller = createCaller(api)
 
 ```ts title="lib/client-caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-// Client-side (React components): the routes Courier writes, never the API itself
-export const clientCaller = createProxyCaller(apiRoutes)
+// Client-side (React components): the routes Courier gives the page, never the API itself
+export const clientCaller = createProxyCaller(routes.api)
 ```
 
 See [Exposing Endpoints](/docs/proxy-mode/expose) for what the routes name and why they keep the definition out of the bundle.

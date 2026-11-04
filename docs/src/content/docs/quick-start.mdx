@@ -1,4 +1,4 @@
-export const metadata = { title: "Quick Start", description: "Set Courier up in one command, or by hand in three steps: define your API, set up a caller, make your first typed request.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Quick Start", description: "Set Courier up in one command, or by hand in three steps: define your API, set up a caller, make your first typed request.", mode: "both", updated: "2026-11-04" }
 
 ## In one command
 
@@ -82,13 +82,21 @@ import { api } from "./api/sources"
 export default defineConfig({ sources: { api } })
 ```
 
-From the marks, Courier writes the routes a page's caller takes — each endpoint a page may call, and how it reaches it — into `courier.routes.ts` beside the config. Studio writes them while it runs; `npx @noverax/courier-cli routes` writes them now, and with `--check` fails a CI job when they are out of date. The browser's caller takes them in place of the API:
+From the marks, Courier's plugin for your build gives a page's caller its routes — each endpoint a page may call, and how it reaches it — as `routes` from `@noverax/courier/routes`, built again as you change a mark; see [the plugin for your build](/docs/proxy-mode/expose#the-plugin-for-your-build). The browser's caller takes them in place of the API, and the module that makes it registers the config, so they are typed from it:
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes)
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+
+export const caller = createProxyCaller(routes.api)
 ```
 
 The caller sends each call to `/api/request` on your server, which runs it with the sources registered there — your [framework guide](/docs/frameworks/nextjs) sets up that route and the registration. See [Exposing Endpoints](/docs/proxy-mode/expose) for what the browser learns and what it never does.
@@ -97,9 +105,9 @@ The caller sends each call to `/api/request` on your server, which runs it with 
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 ```
 
 <Callout variant="tip" title="Use both modes together">

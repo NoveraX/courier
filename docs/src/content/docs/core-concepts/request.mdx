@@ -1,4 +1,4 @@
-export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes.", mode: "both", updated: "2026-11-04" }
 
 ## Overview
 
@@ -9,14 +9,14 @@ Every API call in Courier follows a well-defined lifecycle. There are two transp
 | Factory | Mode | Runtime | Use Case |
 |---------|------|---------|----------|
 | `createCaller(api)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
-| `createProxyCaller(apiRoutes)` | Proxy | Browser | Client Components — hides backend URL, handles CORS, carries the cookies you name |
+| `createProxyCaller(routes.api)` | Proxy | Browser | Client Components — hides backend URL, handles CORS, carries the cookies you name |
 
 ## Request Flow
 
 ```
 Direct:  createCaller(api) → caller.users.getAll() → executeRequest → middleware → HttpClient → fetch → backend
 
-Proxy:   createProxyCaller(apiRoutes) → caller.users.getAll() → GET or POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
+Proxy:   createProxyCaller(routes.api) → caller.users.getAll() → GET or POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
 ```
 
 In direct mode, the caller invokes `executeRequest` directly with the `api` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.
@@ -49,9 +49,9 @@ Use direct mode whenever you have access to the `api` object: Server Components,
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes)
+export const caller = createProxyCaller(routes.api)
 ```
 
 ```ts
@@ -60,7 +60,7 @@ export const caller = createProxyCaller(apiRoutes)
 const users = await caller.users.getAll()
 ```
 
-The caller takes the routes Courier writes from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
+The caller takes the routes Courier gives the page from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
 <Callout variant="tip" title="Type-only import">
 Proxy mode imports `type { api }` — only the type information crosses to the client. The actual `api` object (with your backend URL and secrets) stays on the server.

@@ -1,4 +1,4 @@
-export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-10-28" }
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-04" }
 
 ## Overview
 
@@ -6,7 +6,7 @@ The proxy addresses endpoints by name. A page's call carries `?_s=api&_g=users&_
 
 So the proxy serves only what you mark. An endpoint, a group or a whole API says `expose` where it is defined, and a call to an endpoint no mark opens is refused as if the endpoint did not exist. A new endpoint is the server's until someone marks it, so one written for a cron job or an admin tool never becomes a page's to call by accident — and with it the server's credentials, which the proxy lends every call it serves.
 
-The page learns the same answer from a module Courier writes from your marks: the routes. They name each endpoint a page may call and how the page reaches it, and nothing else — not the upstream host, not your middleware, not an endpoint you kept back.
+The page learns the same answer from your marks: the routes, which Courier's plugin for your build gives it. They name each endpoint a page may call and how the page reaches it, and nothing else — not the upstream host, not your middleware, not an endpoint you kept back.
 
 ## Marking endpoints
 
@@ -77,11 +77,11 @@ In production it says nothing. The marks gate every route of the proxy — HTTP 
 The marks gate the calls that arrive over the proxy. Code running in your own process holds the API object and never addresses anything by name, so `createCaller(api)` reaches every endpoint, marked or not.
 </Callout>
 
-## The routes module
+## The routes
 
-A page needs to know, as it runs, which endpoints it may call and how to reach each — a read it may cache, a stream, a socket. Types are gone once the page is built, and importing the API would ship its definition with them, so the routes travel as a module of their own: data alone, written for you, and short enough to read in a review.
+A page needs to know, as it runs, which endpoints it may call and how to reach each — a read it may cache, a stream, a socket. Types are gone once the page is built, and importing the API would ship its definition with them, so the routes travel as data alone: the endpoints' names and shapes, nothing of their definitions.
 
-Courier writes them into `courier.routes.ts`, beside your `courier.config.ts`, from the endpoints marked in every source the config declares. For the API above:
+Courier's plugin for your build gives them to the page. The page imports `routes` from `@noverax/courier/routes`, and in its place the plugin builds in the routes of every source `courier.config.ts` declares, read from their marks. Change a mark and the dev server builds them again; a production build whose config does not load fails, saying why.
 
 ```ts title="courier.config.ts"
 import { defineConfig } from "@noverax/courier/config"
@@ -89,6 +89,57 @@ import { api } from "./api"
 
 export default defineConfig({ sources: { api } })
 ```
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import { routes } from "@noverax/courier/routes"
+
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+
+export const client = createProxyCaller(routes.api)
+```
+
+`routes.api` holds what the marks open of the source the config names `api` — for the API above, `notifications.feed`, `users.create`, `users.getAll` and `users.getById` — and how a page reaches each. Without the plugin, `@noverax/courier/routes` is a module that throws a `ConfigurationError` with the code `ROUTES_NOT_BUILT` where a page first takes its routes, naming the plugin your build needs: it never falls back to the definition.
+
+### The plugin for your build
+
+| Your build | The plugin |
+| --- | --- |
+| Next.js, under Turbopack or webpack | `withCourier(nextConfig)` from `@noverax/courier-next/plugin`, in `next.config` |
+| Nuxt | `courierRoutesModule` from `@noverax/courier-nuxt/plugin`, in `modules` |
+| SvelteKit, React Router, Remix, SolidStart | `courierRoutes()` from the framework package's `/plugin`, in `vite.config`'s `plugins` |
+| Astro | `courierRoutesIntegration()` from `@noverax/courier-astro/plugin`, in `integrations` |
+| Vite and Vitest | `courierRoutes()` from `@noverax/courier-build/vite` |
+| webpack, Rspack, Rsbuild | `@noverax/courier-build/webpack`, `/rspack` and `/rsbuild` |
+| esbuild, Rollup, Rolldown | `@noverax/courier-build/esbuild` and `/rollup` |
+| Metro and Expo | `withCourier(config)` from `@noverax/courier-build/metro`, in `metro.config.js` |
+| Jest | the transformer `@noverax/courier-build/jest` |
+| Angular | the builders of [`@noverax/courier-angular`](https://github.com/NoveraX/courier/tree/master/packages/angular#readme), in `angular.json` |
+| Parcel | [`@noverax/parcel-transformer-courier`](https://github.com/NoveraX/courier/tree/master/packages/parcel-transformer#readme), in `.parcelrc` |
+
+Each needs `@noverax/courier-build` installed beside it: a dev dependency, or a dependency in a Next.js app, whose `next start` loads `next.config`. The [framework guides](/docs/frameworks/overview) show the line for each, and [the engine's README](https://github.com/NoveraX/courier/tree/master/packages/build#readme) its options. `npx @noverax/create-courier` sets the plugin up in a new project, and `npx @noverax/courier-cli setup` moves a project that takes `courier.routes.ts` to it.
+
+The plugin reads the config in a process of its own each time one of its inputs changes, never in your bundler's, and it fails a page's bundle that would import `courier.config.ts` itself, so no definition of yours ships with a page by accident.
+
+### Typing them
+
+`routes` is typed from the config you register once, as the caller above does:
+
+- Register it in the module that creates your proxy clients: every tsconfig that compiles that module sees it. A `courier-env.d.ts` that the app's tsconfig includes works as well.
+- Import the config **as a type**. A value import would put `courier.config.ts`, and your definitions with it, into the page's bundle — the plugin fails that build.
+- Register one config in each TypeScript program. Two registered in one program clash; in a monorepo, give each app a tsconfig of its own.
+- The page's tsconfig compiles your definitions through the config's type: a definition that reads `process.env` needs Node's types there, `@types/node`, or a way to its address that needs none.
+- Let TypeScript infer your groups and APIs. Annotated `DefinedGroup<E>` or `DefinedApi<G>` without their marks, they lose them, and `routes` offers every endpoint as one a page may call — the proxy still refuses those no mark opens.
+
+## The routes as a file
+
+Where no plugin fits your build — a server whose pages no bundler builds, a bundler Courier has no plugin for — or where you would keep the routes in your tree, Courier writes them into `courier.routes.ts`, beside your `courier.config.ts`. For the API above:
 
 ```ts title="courier.routes.ts"
 // Written by Courier from courier.config.ts. Do not edit it:
@@ -114,12 +165,21 @@ export const apiRoutes: CourierRoutes<Sources["api"], typeof apiEndpoints> = {
 };
 ```
 
+The client takes the module's export in place of `routes.api`, and needs no registration: the module is typed from the config itself.
+
+```ts title="lib/caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import { apiRoutes } from "@/courier.routes"
+
+export const client = createProxyCaller(apiRoutes)
+```
+
 Two tools write it, with the same code and to the same bytes, and each only when the module would change:
 
 - **Studio**, each time it loads the config — when it starts, and when you save a file the config reads.
 - **`courier-cli routes`**, from [`@noverax/courier-cli`](https://github.com/NoveraX/courier/tree/master/packages/cli#readme), without Studio — in a project that does not run it, in a script, in CI.
 
-The module holds data and types alone: it imports the config as a type, so a page that imports it bundles the endpoints' names and shapes and nothing of their definitions. It is formatted as the rest of your project is, by the formatter the project uses.
+The module holds data and types alone: it imports the config as a type, so a page that imports it bundles the endpoints' names and shapes and nothing of their definitions. It is formatted as the rest of your project is, by the formatter the project uses. `npx @noverax/create-courier --routes file` sets a new project up this way, and Express, Hono, Fastify and NestJS servers take it as they are set up.
 
 ### Review it as a permission
 
@@ -137,35 +197,37 @@ A line in `CODEOWNERS` gives the module to the people who own the API, so no end
 /courier.routes.ts @your-org/api-owners
 ```
 
-`studio.routes` in `courier.config.ts` puts the module somewhere else, by its path from the project root, or `false` keeps the project without one — see [defineConfig](/docs/api/config). Neither tool writes over a file Courier did not write: the module's first line says it is Courier's. With no endpoint marked, the module exports nothing.
+With the plugin there is no module to review: the marks are, where each endpoint is defined, and the same line can give the API's own files to its owners.
+
+`studio.routes` in `courier.config.ts` puts the module somewhere else, by its path from the project root, or `false` keeps the project without one, as a project on the plugin does — see [defineConfig](/docs/api/config). Neither tool writes over a file Courier did not write: the module's first line says it is Courier's. With no endpoint marked, the module exports nothing.
 
 ## Wiring the client
 
-Give the client the routes:
+Give the client the routes of the API it calls:
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const client = createProxyCaller(apiRoutes)
+export const client = createProxyCaller(routes.api)
 ```
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 ```
 
-The client is typed from the API the routes were written from, with the endpoints they name alone: `client.admin.exportPayouts()` does not compile, and the hooks of `q` offer no endpoint the proxy would refuse. Called anyway — from JavaScript, or past a cast — the client throws a `ConfigurationError` with the code `ENDPOINT_NOT_IN_ROUTES` before anything is sent.
+The client is typed from the API the routes were read from, with the endpoints they name alone: `client.admin.exportPayouts()` does not compile, and the hooks of `q` offer no endpoint the proxy would refuse. Called anyway — from JavaScript, or past a cast — the client throws a `ConfigurationError` with the code `ENDPOINT_NOT_IN_ROUTES` before anything is sent.
 
 The routes do not say where the proxy is, since that depends on where the page is served. The client sends to `/api/request` and `/api/sse` on the page's own origin, and opens a socket only where its `proxyPath` names one — see [createProxyCaller](/docs/proxy-mode/proxy-caller#realtime-sse-and-ws-proxy-paths):
 
 ```ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const client = createProxyCaller(apiRoutes, {
+export const client = createProxyCaller(routes.api, {
   proxyPath: { ws: "wss://realtime.example.com" },
 })
 ```
@@ -222,7 +284,7 @@ const aWrite = { "users.create": { type: "query" } } as const satisfies RouteMap
 
 The API is imported **as a type**. That is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint, the ones you held back included. The module Courier writes imports the config the same way.
 
-The marks still decide what the proxy serves. Routes that name an endpoint no mark opens give the page a client that offers it and a proxy that refuses it. `courier-cli routes --check` keeps the module Courier writes in step with the marks; one written by hand is yours to keep in step.
+The marks still decide what the proxy serves. Routes that name an endpoint no mark opens give the page a client that offers it and a proxy that refuses it. The plugin, and `courier-cli routes --check` for the module, keep the routes Courier gives in step with the marks; routes written by hand are yours to keep in step.
 
 ## What the browser learns
 

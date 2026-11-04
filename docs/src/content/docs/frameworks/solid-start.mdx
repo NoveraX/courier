@@ -1,4 +1,4 @@
-export const metadata = { title: "SolidStart", description: "Serve Courier's proxy from a SolidStart API route and carry the user's session in server code, with @noverax/courier-solid.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "SolidStart", description: "Serve Courier's proxy from a SolidStart API route and carry the user's session in server code, with @noverax/courier-solid.", mode: "proxy", updated: "2026-11-04" }
 
 `@noverax/courier-solid` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -43,19 +43,44 @@ Solid Start renders the page for a method the route does not export, so `PUT`, `
 
 ## The client
 
-Pair with `createProxyCaller` on the client, given the routes Courier writes into `courier.routes.ts` from the endpoints you mark `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose):
+Courier's plugin gives the page its routes, built from the endpoints you mark `.expose()`. It runs on `@noverax/courier-build`, which only the build needs:
 
-```ts
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+```ts title="vite.config.ts"
+import { solidStart } from "@solidjs/start/config"
+import { courierRoutes } from "@noverax/courier-solid/plugin"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [solidStart(), courierRoutes()] })
+```
+
+SolidStart 1 takes it in `app.config.ts`, as `defineConfig({ vite: { plugins: [courierRoutes()] } })`.
+
+Pair with `createProxyCaller` on the client, given those routes, in a module that registers the config, so they are typed from it — see [Exposing Endpoints](/docs/proxy-mode/expose):
+
+```ts title="src/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "./courier.routes"
+import { routes } from "@noverax/courier/routes"
+
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
 
 // The routes name the key this source has in your `sources` map —
 // it is what the proxy addresses, and it travels as `?_s=<name>`.
-const caller = createProxyCaller(apiRoutes, {
+export const caller = createProxyCaller(routes.api, {
   proxyPath: { http: "/api/request" },
 })
-const users = await caller.users.getAll()
 ```
+
+A project that takes `courier.routes.ts` moves to the plugin with `npx @noverax/courier-cli setup`; one that would keep the file writes it with `npx @noverax/courier-cli routes`, and gives the caller `apiRoutes` from it in place of `routes.api`.
 
 ## The user's session
 

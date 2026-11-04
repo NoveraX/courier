@@ -197,9 +197,14 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
     if (dropped !== undefined) release(dropped, code, reason);
   }
 
-  /* Let a socket go: nothing it does is heard any more. */
+  /*
+   * Let a socket go: nothing it does is heard any more. One still opening
+   * reports the abort of its handshake as an error, which is the close
+   * working — and a `ws` socket with no listener for it would throw it.
+   */
   function release(dropped: WSClientSocket, code?: number, reason?: string): void {
-    dropped.onopen = dropped.onmessage = dropped.onclose = dropped.onerror = null;
+    dropped.onopen = dropped.onmessage = dropped.onclose = null;
+    dropped.onerror = (event) => log.debug("A socket let go of reported an error", event);
     if (dropped.readyState >= 2) return;
     try {
       dropped.close(code, reason);

@@ -25,19 +25,19 @@ const OPTIONS_FIELD = "_options";
  * a call nobody could see had been misread. A key that reaches
  * `Object.prototype` never makes it into the variables.
  *
- * @param bytes - The body, already bounded
+ * @param text - The body, already bounded and decoded
  * @returns The envelope, or why it is refused
  *
  * @example
  * ```ts
- * parseJsonEnvelope(new TextEncoder().encode('{"variables":{"id":1}}'));
+ * parseJsonEnvelope('{"variables":{"id":1}}');
  * // → { ok: true, envelope: { variables: { id: 1 }, options: undefined } }
  * ```
  */
-export function parseJsonEnvelope(bytes: Uint8Array<ArrayBuffer>): ParsedEnvelope {
+export function parseJsonEnvelope(text: string): ParsedEnvelope {
   let body: unknown;
   try {
-    body = JSON.parse(new TextDecoder().decode(bytes), reviveWithoutPrototypeKeys);
+    body = JSON.parse(text, reviveWithoutPrototypeKeys);
   } catch {
     return { ok: false, reason: "Invalid JSON body" };
   }

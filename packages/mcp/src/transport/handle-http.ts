@@ -1,4 +1,9 @@
-import { discardBody, isOriginAllowed, readBoundedBody } from "@noverax/courier/internal";
+import {
+  type BodyError,
+  discardBody,
+  isOriginAllowed,
+  readBodyText,
+} from "@noverax/courier/internal";
 
 import { isRecord } from "../is-record";
 import { ERROR_CODE } from "../protocol/json-rpc";
@@ -65,11 +70,11 @@ async function answered(
   endpoint: HttpEndpoint,
   cors: HeadersInit,
 ): Promise<Response> {
-  const body = await readBoundedBody(request, endpoint.maxBodyBytes);
-  if (!body.ok) return refusal(413, `A request is at most ${body.limit} bytes`, cors);
+  const body = await readBodyText(request, { maxBytes: endpoint.maxBodyBytes });
+  if (!body.ok) return unread(body.error, endpoint, cors);
   let value: unknown;
   try {
-    value = JSON.parse(new TextDecoder().decode(body.bytes));
+    value = JSON.parse(body.text);
   } catch {
     return refusal(400, "Parse error: the body is one JSON-RPC message", cors, ERROR_CODE.parse);
   }
@@ -97,6 +102,17 @@ async function answered(
   const response = await endpoint.server.request(message, connection, request.signal);
   if (response === undefined) return new Response(null, { status: 204, headers: cors });
   return rpcResponse(response, modern, cors);
+}
+
+/* A body that was not read whole is answered as its reader refused it; one that is not UTF-8 is not JSON either. */
+function unread(error: BodyError, endpoint: HttpEndpoint, cors: HeadersInit): Response {
+  if (error.code === "BODY_TOO_LARGE") {
+    return refusal(413, `A request is at most ${endpoint.maxBodyBytes} bytes`, cors);
+  }
+  if (error.code === "BODY_MALFORMED") {
+    return refusal(400, "Parse error: the body is one JSON-RPC message", cors, ERROR_CODE.parse);
+  }
+  return refusal(error.status, error.message, cors);
 }
 
 /* A body that is not JSON, or a client that takes no JSON back, is refused before anything runs. */

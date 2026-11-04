@@ -19,13 +19,15 @@
 
 export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/address-trust";
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
+export { BodyError, type BodyErrorCode } from "../adapter/body-error";
 export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
 export { BROWSERS_ONLY_REFUSAL } from "../adapter/entry-gate";
 export { type ExposureDecision, exposureOf } from "../adapter/exposure";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
-export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
+export { type BodyLimits, requestBodyStream } from "../adapter/read-body";
+export { type BodyText, readBodyText } from "../adapter/read-body-text";
 export { readAllowedHosts, readAllowedOrigins } from "../adapter/runtime-policy";
 export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";
 export {

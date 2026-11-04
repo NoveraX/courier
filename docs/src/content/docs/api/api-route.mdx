@@ -1,4 +1,4 @@
-export const metadata = { title: "createHandler", description: "Universal adapter factory that creates Web Standard handlers for proxy-mode requests from any framework.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "createHandler", description: "Universal adapter factory that creates Web Standard handlers for proxy-mode requests from any framework.", mode: "proxy", updated: "2026-11-05" }
 
 ## Import
 
@@ -40,6 +40,20 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `onSSEConnect`, `onSSEDisconnect`, `onSSEError` | — | SSE lifecycle hooks |
 
 Every option is optional, so `createHandler()` is a complete call.
+
+### Request bodies
+
+The handler reads a body as it arrives and refuses it, with the status and `code` below, as soon as it can tell; what the client still sends is taken off the connection, so a browser reads the answer once its upload is done.
+
+| The body | Answer | `code` |
+| --- | --- | --- |
+| Declares, or sends, more than its limit | `413` | `BODY_TOO_LARGE` |
+| Ends before the length its `Content-Length` declares — something in front of the route cut it short, as [a Next.js proxy](/docs/frameworks/nextjs#uploads-and-proxyts) does | `413` | `BODY_INCOMPLETE` |
+| Runs past its `Content-Length`, or names one that is not a length | `400` | `BODY_MALFORMED` |
+| Is compressed (`Content-Encoding`) | `415` | `BODY_ENCODING_UNSUPPORTED` |
+| Sends nothing for 30 seconds, or is still arriving 5 minutes after it began | `408` | `BODY_TIMEOUT` |
+
+A JSON envelope must be UTF-8; one that is not is answered `400`.
 
 ## Return Type
 

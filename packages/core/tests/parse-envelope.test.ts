@@ -7,11 +7,9 @@ import { describe, expect, it } from "vitest";
 
 import { parseFormEnvelope, parseJsonEnvelope } from "../src/adapter/parse-envelope";
 
-const encode = (value: string) => new TextEncoder().encode(value);
-
 describe("parseJsonEnvelope", () => {
   it("reads the variables and the options", () => {
-    const parsed = parseJsonEnvelope(encode('{"variables":{"id":1},"options":{"rawData":true}}'));
+    const parsed = parseJsonEnvelope('{"variables":{"id":1},"options":{"rawData":true}}');
 
     expect(parsed).toEqual({
       ok: true,
@@ -20,21 +18,21 @@ describe("parseJsonEnvelope", () => {
   });
 
   it("reads an empty object as a call without variables or options", () => {
-    expect(parseJsonEnvelope(encode("{}"))).toEqual({
+    expect(parseJsonEnvelope("{}")).toEqual({
       ok: true,
       envelope: { variables: undefined, options: undefined },
     });
   });
 
   it("refuses a body that names its endpoint", () => {
-    const parsed = parseJsonEnvelope(encode('{"source":"api","method":"list"}'));
+    const parsed = parseJsonEnvelope('{"source":"api","method":"list"}');
 
     expect(parsed.ok).toBe(false);
     expect(!parsed.ok && parsed.reason).toContain("method, source");
   });
 
   it("refuses options a proxy client may not set", () => {
-    const parsed = parseJsonEnvelope(encode('{"options":{"prefixUrl":"http://x"}}'));
+    const parsed = parseJsonEnvelope('{"options":{"prefixUrl":"http://x"}}');
 
     expect(parsed.ok).toBe(false);
   });

@@ -47,4 +47,10 @@ export const LIMITS = {
 
   /** Largest multipart upload the proxy will read from a caller (10 MB) */
   MAX_PROXY_UPLOAD_BYTES: 10_485_760,
+
+  /** Longest pause between two chunks of a request body before it is refused with 408 (30 s) */
+  BODY_IDLE_TIMEOUT_MS: 30_000,
+
+  /** Longest a request body may take to arrive before it is refused with 408 (5 minutes, as Node's `requestTimeout`) */
+  BODY_TIMEOUT_MS: 300_000,
 } as const;

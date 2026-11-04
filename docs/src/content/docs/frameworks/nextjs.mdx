@@ -146,6 +146,26 @@ Read a server variable there, not a `NEXT_PUBLIC_` one: Next.js writes those int
 
 Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. `register()` runs once in each runtime the app uses, and each runtime has its own registry: a route with `export const runtime = "edge"` reads the Edge runtime's, so the sources are registered in both. If your sources module imports Node-only code, register an Edge-safe one when `process.env.NEXT_RUNTIME === "edge"`. `sseRoute()` streams in the Edge Runtime as well as in Node.js. The route handles all Courier proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
 
+### Uploads and `proxy.ts`
+
+The route reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload up to its `maxUploadBytes`, 10 MB; pass others to raise them: `apiRoute({ maxUploadBytes: 50 * 1024 * 1024 })`.
+
+A proxy (`proxy.ts`, or `middleware.ts` before Next.js 16) that runs on the route sets a limit of its own. Next.js copies the request's body for the proxy and hands the route only its first `experimental.proxyClientMaxBodySize` bytes, 10 MB unless configured — `experimental.middlewareClientMaxBodySize` in Next.js 15 — while the request keeps the length the browser declared. The route checks the body against that length, so a larger upload is answered `413` with the code `BODY_INCOMPLETE` and a message that names the setting, rather than reaching your backend cut short. A matcher such as the one Next.js suggests, every path but its own assets, covers the route. Leave the route out of the proxy's matcher:
+
+```ts title="proxy.ts"
+export const config = { matcher: ["/((?!api/request|_next/static|_next/image|favicon.ico).*)"] }
+```
+
+Or raise the proxy's limit above the route's `maxUploadBytes`, which keeps a copy of each body that large in memory while the proxy runs:
+
+```ts title="next.config.ts"
+import { withCourier } from "@noverax/courier-next/plugin"
+
+export default withCourier({ experimental: { proxyClientMaxBodySize: "60mb" } })
+```
+
+Next.js 14 copies the whole body for its middleware, whatever its size, and cuts nothing short.
+
 ## Step 2: Client-side caller (React Query)
 
 List your sources in `courier.config.ts`, and pass your Next.js config to `withCourier()`: from the endpoints the sources mark `.expose()`, Courier's plugin builds in the routes a page's caller takes, under Turbopack and webpack alike — see [Exposing Endpoints](/docs/proxy-mode/expose). It runs on `@noverax/courier-build`, which `next start` loads with `next.config`, so install it as a dependency:

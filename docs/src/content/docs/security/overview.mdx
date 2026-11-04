@@ -131,6 +131,8 @@ Studio can have a delivery sent to your app — **Deliver again** in a delivery'
 | Requests no browser sent, Studio's Playground in development aside | Served | `browsersOnly` |
 | A JSON body to the proxy | 1 MB | `maxBodyBytes` |
 | An upload to the proxy | 10 MB | `maxUploadBytes` |
+| A pause between two pieces of a request body | 30 seconds, then `408` | — |
+| A request body's whole arrival | 5 minutes, then `408` | — |
 | A stream's lifetime | 30 minutes | `sseMaxLifetimeMs` |
 | A WebSocket message | 64 KB | `maxMessageSize` |
 | Connections from one address | 50 | `maxConnectionsPerIP` |

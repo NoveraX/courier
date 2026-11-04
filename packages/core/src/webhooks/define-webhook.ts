@@ -1,7 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { discardBody } from "../adapter/discard-body";
-import { readBoundedBody } from "../adapter/read-body";
+import { readBodyText } from "../adapter/read-body-text";
 import { ConfigurationError } from "../errors/configuration-error";
 import { createLogger } from "../logger";
 import type { WebhookDelivery, WebhookSignature } from "./types";
@@ -12,7 +11,6 @@ const log = createLogger("Webhook");
 
 /* Providers send kilobytes; a larger body is refused at the chunk that crosses this, not after it is held whole. */
 const DEFAULT_MAX_BODY_BYTES = 1024 * 1024;
-const decoder = new TextDecoder();
 
 /** What a webhook is declared with. */
 export interface WebhookOptions<TBody> {
@@ -111,12 +109,14 @@ async function readSigned<TBody>(
   limit: number,
   studio: WebhookStudio,
 ): Promise<string | Response> {
-  const body = await readBoundedBody(request, limit);
+  const body = await readBodyText(request, { maxBytes: limit });
   if (!body.ok) {
-    discardBody(request);
-    return studio.refuse(413, "The delivery is larger than this webhook takes");
+    const { code, status, message } = body.error;
+    return code === "BODY_TOO_LARGE"
+      ? studio.refuse(413, "The delivery is larger than this webhook takes")
+      : studio.refuse(status, message);
   }
-  const raw = decoder.decode(body.bytes);
+  const raw = body.text;
   try {
     const verified = await options.signature.verify(raw, request.headers, Date.now());
     return verified ? raw : studio.refuse(401, "The delivery's signature does not match");

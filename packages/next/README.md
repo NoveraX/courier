@@ -142,6 +142,8 @@ export const { GET, POST } = apiRoute({
 
 The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `apiRoute({ maxUploadBytes: 50 * 1024 * 1024 })`.
 
+A proxy (`proxy.ts`, `middleware.ts` before Next.js 16) whose matcher covers the route hands it only the first `experimental.proxyClientMaxBodySize` bytes of a body, 10 MB unless configured (`experimental.middlewareClientMaxBodySize` in Next.js 15). The route answers such an upload `413` with the code `BODY_INCOMPLETE` rather than forward it cut short. Leave the route out of the proxy's matcher — `matcher: ["/((?!api/request|_next/static|_next/image|favicon.ico).*)"]` — or raise the limit above `maxUploadBytes`.
+
 <br />
 
 ## The routes a page calls

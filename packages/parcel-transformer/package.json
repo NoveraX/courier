@@ -1,6 +1,6 @@
 {
   "name": "@noverax/parcel-transformer-courier",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Courier for Parcel: hands a page's bundle the routes its proxy client may call, built from courier.config, with no routes file to generate",
   "keywords": [
     "courier",
@@ -56,11 +56,11 @@
     "dev": "tsdown --watch"
   },
   "dependencies": {
-    "@noverax/courier-build": "0.3.1",
+    "@noverax/courier-build": "0.4.0",
     "@parcel/plugin": "^2.9.0"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.3.1"
+    "@noverax/courier": "^0.4.0"
   },
   "devDependencies": {
     "@noverax/courier": "*",

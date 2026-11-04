@@ -65,7 +65,11 @@ Browser ──► Next.js :3000 ──► Express :4000
 ## In production
 
 The site runs as one container: the Next.js server, and beside it the
-Express backend, which only the pages reach. The image is built from the
+Express backend the live examples call. Only the site's own server calls the
+backend — the proxy route passes on the pages' calls, and the pages and
+Server Actions in direct mode make their own — so it listens inside the
+container alone and sends no CORS headers: no browser calls it, and the
+proxy route decides which pages may. The image is built from the
 repository's root, as the site takes Courier's packages from it:
 
 ```bash

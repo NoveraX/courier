@@ -3,8 +3,8 @@
 # Courier's website — the landing page, the documentation with its live
 # examples, the API reference and Studio's page — as one container: the
 # Next.js server, and beside it the Express backend the live examples call,
-# which only the pages reach. Built from the repository's root, as the site
-# takes Courier's packages from it:
+# which only the site's own server reaches. Built from the repository's
+# root, as the site takes Courier's packages from it:
 #   docker build -f docs/Dockerfile -t courier-site .
 # Point a domain at port 3000 with HTTPS.
 

@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getNextUserId, users } from "../data.js"
+import { getNextUserId, users } from "../data"
 
 const router = Router()
 

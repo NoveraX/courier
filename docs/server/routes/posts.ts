@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getNextPostId, posts } from "../data.js"
+import { getNextPostId, posts } from "../data"
 
 const router = Router()
 

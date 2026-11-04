@@ -24,7 +24,6 @@
     "@types/mdx": "^2.0.13",
     "algoliasearch": "^5.60.0",
     "clsx": "^2.1.1",
-    "cors": "^2.8.5",
     "express": "^5.3.0",
     "geist": "^1.8.2",
     "lucide-react": "^1.61.0",
@@ -44,7 +43,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.6.3",
     "@tailwindcss/postcss": "^4.1.0",
-    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.2",
     "@types/multer": "^2.3.0",
     "@types/node": "^26.6.4",

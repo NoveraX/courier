@@ -1,4 +1,5 @@
 import type { LoadConfigFileOptions } from "../config/load-config";
+import { localPath } from "../util/local-path";
 import type { RoutesInputs, RoutesRequest } from "./routes-snapshot";
 import { trackEnvReads } from "./track-env-reads";
 import { type FileReads, trackFileReads } from "./track-file-reads";
@@ -15,7 +16,9 @@ export interface ReadingTracker {
   noteConfig(configFile: string, lookedFor: readonly string[]): void;
   /**
    * Everything read so far: once the routes are read, what they depend on;
-   * when the reading failed, what may mend it.
+   * when the reading failed, what may mend it. Each path is named as the
+   * system names it, once: the config's loader may write a module's path
+   * another way than Node does.
    */
   inputs(): Promise<RoutesInputs>;
 }
@@ -53,7 +56,7 @@ export function trackReading(request: RoutesRequest): ReadingTracker {
       const files = [...looked, ...request.envFiles, ...(await modules.files())];
       return {
         configFile,
-        files: [...new Set([...files, ...(reads?.paths() ?? [])])].sort(),
+        files: [...new Set([...files, ...(reads?.paths() ?? [])].map(localPath))].sort(),
         listed: [...(reads?.folders() ?? [])].sort(),
         env: env.names(),
       };

@@ -1,8 +1,9 @@
 import { createRequire, syncBuiltinESMExports } from "node:module";
-import { isAbsolute, resolve, sep } from "node:path";
+import { sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isRecord } from "../util/is-record";
+import { localPath } from "../util/local-path";
 
 const require = createRequire(import.meta.url);
 
@@ -35,7 +36,8 @@ const PROMISED_LISTS = ["readdir", "opendir"] as const;
  * Note every path the code that runs next reads or looks at through `fs`,
  * and every folder it lists: a config that reads an OpenAPI document, or
  * builds its sources from a folder's entries, depends on them as on the
- * modules it imports. Installed packages are left out, as the install
+ * modules it imports. Each path is noted as the system names it, however
+ * the code wrote it. Installed packages are left out, as the install
  * changes them, and so is anything `fs` is handed that names no path.
  *
  * @returns What was read, asked once the code has run
@@ -82,9 +84,9 @@ function noteCalls(
   }
 }
 
-/* The absolute path an argument names: a string, a `file:` URL or a buffer of one; a descriptor names none. */
+/* The path an argument names, as the system names it: a string, a `file:` URL or a buffer of one; a descriptor names none. */
 function pathOf(value: unknown): string | undefined {
-  if (typeof value === "string") return isAbsolute(value) ? value : resolve(value);
+  if (typeof value === "string") return localPath(value);
   if (value instanceof URL) return value.protocol === "file:" ? fileURLToPath(value) : undefined;
   if (Buffer.isBuffer(value)) return pathOf(value.toString());
   return undefined;

@@ -2,7 +2,7 @@ export const metadata = {
   title: "Singleton Pattern",
   description: "Build each client once, in a module of its own, and import it wherever a call is made.",
   mode: "both",
-  updated: "2026-10-14",
+  updated: "2026-11-04",
 }
 
 ## The pattern
@@ -12,9 +12,9 @@ Every Courier factory learns your API's type in one place: from the API object y
 ```ts
 // Without it, every file builds its own client and repeats its options:
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-const users = await createProxyCaller(apiRoutes, { timeout: 10_000 }).users.getAll()
+const users = await createProxyCaller(routes.api, { timeout: 10_000 }).users.getAll()
 ```
 
 ```ts
@@ -61,20 +61,20 @@ export const api = defineApi({
 
 ### Step 2: Build each client once
 
-Give each client a module that builds it and exports it. In the browser, pass the routes Courier writes into `courier.routes.ts` from your marks — see [Exposing Endpoints](/docs/proxy-mode/expose). They carry every group, endpoint, variable and response type a page may use, and how each endpoint is reached, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
+Give each client a module that builds it and exports it. In the browser, pass the routes Courier's plugin gives the page from your marks — see [Exposing Endpoints](/docs/proxy-mode/expose). They carry every group, endpoint, variable and response type a page may use, and how each endpoint is reached, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes)
+export const caller = createProxyCaller(routes.api)
 ```
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 ```
 
 The proxy serves only what the marks open, whichever client calls it.
@@ -140,10 +140,10 @@ If your app connects to several backends, build one client per source, each name
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { mainApiRoutes, paymentApiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const mainQ = createProxyQueryCaller(mainApiRoutes)
-export const paymentQ = createProxyQueryCaller(paymentApiRoutes)
+export const mainQ = createProxyQueryCaller(routes.mainApi)
+export const paymentQ = createProxyQueryCaller(routes.paymentApi)
 
 // mainQ.users.useQuery("getAll")      ← knows mainApi's groups
 // paymentQ.products.useQuery("list")  ← knows paymentApi's groups

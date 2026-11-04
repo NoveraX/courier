@@ -1,4 +1,4 @@
-export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-10-16" }
+export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-04" }
 
 ## Overview
 
@@ -142,9 +142,9 @@ Every channel and push subscription of one caller on one URL shares a socket. Th
 
 ```ts title="lib/client.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const client = createProxyCaller(apiRoutes, {
+export const client = createProxyCaller(routes.api, {
   ws: {
     auth: async () => ({ token: await session.accessToken() }),
     backoff: { initialMs: 500, maxMs: 10_000 },

@@ -39,7 +39,7 @@ export default function SingletonExamplesPage() {
       >
         <p className="m-0 text-body text-fg-muted">
           Each endpoint declares its response and variables types. These flow through the chain:
-          courier → defineGroup → defineApi → courier.routes.ts → createProxyQueryCaller →
+          courier → defineGroup → defineApi → courier.config.ts → routes → createProxyQueryCaller →
           q.group.useQuery.
         </p>
       </ExampleSection>

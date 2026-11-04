@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-04" }
 
 ## Import
 
@@ -12,7 +12,7 @@ import { createProxyQueryCaller } from "@noverax/courier-react"
 
 ## Signature
 
-Accepts the routes of an API — the endpoints a page may call and how it reaches each, as Courier writes them into `courier.routes.ts` from the endpoints marked `.expose()` — and `ProxyCallerOptions`, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group, typed from the API the routes were written from, for the endpoints they name alone.
+Accepts the routes of an API — the endpoints a page may call and how it reaches each, as Courier's plugin for your build gives them to the page from the endpoints marked `.expose()` — and `ProxyCallerOptions`, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group, typed from the API the routes were read from, for the endpoints they name alone.
 
 ```ts
 import type { ProxyCallerOptions } from "@noverax/courier"
@@ -48,9 +48,9 @@ A hook's error is typed `Error`, as TanStack Query types it, because not every f
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes, {
+export const q = createProxyQueryCaller(routes.api, {
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
   credentials: "include",
@@ -224,4 +224,4 @@ export default async function UsersPage() {
 - [useQuery Guide](/docs/react-query/use-query) — in-depth usage patterns
 - [useMutation Guide](/docs/react-query/use-mutation) — mutations with optimistic updates
 - [createProxyCaller](/docs/api/create-proxy-caller) — the underlying proxy caller
-- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Courier writes from them
+- [Exposing Endpoints](/docs/proxy-mode/expose) — the marks, and the routes Courier gives the page from them

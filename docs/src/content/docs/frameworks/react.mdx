@@ -1,4 +1,4 @@
-export const metadata = { title: "React (Vite / CRA)", description: "Use Courier with React and Vite or Create React App via createProxyQueryCaller and a separate backend proxy.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "React (Vite / CRA)", description: "Use Courier with React and Vite or Create React App via createProxyQueryCaller and a separate backend proxy.", mode: "proxy", updated: "2026-11-04" }
 
 For React apps built with Vite or Create React App, Courier provides `createProxyQueryCaller` for type-safe data fetching with React Query. Since these apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
 
@@ -18,7 +18,7 @@ npm install @noverax/courier @noverax/courier-react @tanstack/react-query
 
 ## Define your API sources
 
-Create the API definition the backend proxy and Studio share. The React app never imports it: it takes the routes Courier writes from it, so the definition stays out of the browser bundle.
+Create the API definition the backend proxy and Studio share. The React app never imports it: it takes the routes Courier's plugin builds from it, so the definition stays out of the browser bundle.
 
 ```ts title="shared/sources.ts"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
@@ -80,7 +80,11 @@ You can use any supported adapter: [Express](/docs/frameworks/express), [Hono](/
 
 ## Step 2: Create the query caller
 
-List your sources in `courier.config.ts`. From the endpoints they mark `.expose()`, Courier writes the routes the app's caller takes into `courier.routes.ts` beside it — Studio whenever it loads the config, or `npx @noverax/courier-cli routes` now; see [Exposing Endpoints](/docs/proxy-mode/expose):
+List your sources in `courier.config.ts`, and add Courier's plugin to `vite.config.ts`: from the endpoints the sources mark `.expose()`, it builds in the routes the app's caller takes — see [Exposing Endpoints](/docs/proxy-mode/expose). It runs on `@noverax/courier-build`, which only the build needs:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
 
 ```ts title="courier.config.ts"
 import { defineConfig } from "@noverax/courier/config"
@@ -89,11 +93,29 @@ import { sources } from "./shared/sources"
 export default defineConfig({ sources })
 ```
 
+```ts title="vite.config.ts"
+import react from "@vitejs/plugin-react"
+import { courierRoutes } from "@noverax/courier-build/vite"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [react(), courierRoutes()] })
+```
+
+The module that makes the caller registers the config, so the routes are typed from it. The app's tsconfig then compiles your definitions through the config's type: where they read `process.env`, add `"node"` to its `types`, with `@types/node` installed.
+
 ```ts title="src/lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { myApiRoutes } from "../../courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(myApiRoutes, {
+import type config from "../../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+
+export const q = createProxyQueryCaller(routes.myApi, {
   proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```
@@ -201,13 +223,13 @@ Make sure your proxy backend has CORS configured to allow requests from your Rea
 
 ```text title="Project structure"
 courier.config.ts           # defineConfig({ sources })
-courier.routes.ts           # written by Studio from the .expose() marks
+vite.config.ts              # courierRoutes(): the routes from the .expose() marks
 shared/
   sources.ts                # courier + defineGroup + defineApi
 server/
   index.ts                  # Express/Hono/Fastify with courierHandler
 src/
-  lib/query.ts              # createProxyQueryCaller(myApiRoutes)
+  lib/query.ts              # createProxyQueryCaller(routes.myApi)
   components/
     ProductList.tsx         # q.products.useQuery usage
     CreateProduct.tsx       # q.products.useMutation usage
@@ -224,9 +246,9 @@ VITE_PROXY_URL=http://localhost:3001/api/request
 
 ```ts title="src/lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { myApiRoutes } from "../../courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(myApiRoutes, {
+export const q = createProxyQueryCaller(routes.myApi, {
   proxyPath: { http: import.meta.env.VITE_PROXY_URL },
 })
 ```

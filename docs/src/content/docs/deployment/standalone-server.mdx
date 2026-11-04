@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Standalone Server",
   description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
-  updated: "2026-10-14",
+  updated: "2026-11-04",
 }
 
 ## Installation
@@ -44,9 +44,9 @@ For runtimes in the bottom half of the table, run `@noverax/courier-server` alon
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes, {
+export const caller = createProxyCaller(routes.api, {
   proxyPath: {
     http: "/api/request",                // hosted by your Next.js / Cloudflare app
     sse: "/api/sse",                     // hosted by your app

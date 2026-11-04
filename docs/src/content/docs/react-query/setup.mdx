@@ -1,4 +1,4 @@
-export const metadata = { title: "React Query Setup", description: "Integrate Courier with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.", mode: "proxy", updated: "2026-10-14" }
+export const metadata = { title: "React Query Setup", description: "Integrate Courier with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.", mode: "proxy", updated: "2026-11-04" }
 
 ## Overview
 
@@ -61,14 +61,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ### Step 3: Create the Courier query caller
 
-Call `createProxyQueryCaller` with your API's routes: the endpoints a page may call and how it reaches each, which Courier writes into `courier.routes.ts` from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose). Export the query client from a single file so every component imports from the same place:
+Call `createProxyQueryCaller` with your API's routes: the endpoints a page may call and how it reaches each, which Courier's plugin for your build gives the page from the endpoints you marked `.expose()` — see [Exposing Endpoints](/docs/proxy-mode/expose). Export the query client from a single file so every component imports from the same place:
 
 ```ts title="lib/query.ts"
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 ```
 
 Then use it in your components with dot-notation:
@@ -95,9 +95,9 @@ Keep the query caller in one file. This ensures all components share the same cl
 ```ts title="lib/query.ts"
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes, {
+export const q = createProxyQueryCaller(routes.api, {
   // Custom proxy route URL (default: "/api/request")
   proxyPath: { http: "/api/my-proxy" },
 

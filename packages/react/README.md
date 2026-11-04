@@ -96,12 +96,12 @@ Two query callers are available — pick the one that matches your transport mod
 ```ts
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
 // The routes Courier writes from the endpoints you mark .expose():
 // what a page may call, and how — streams and channels included. The API
 // definition stays on the server.
-export const q = createProxyQueryCaller(apiRoutes, {
+export const q = createProxyQueryCaller(routes.api, {
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,                       // optional default timeout
 })

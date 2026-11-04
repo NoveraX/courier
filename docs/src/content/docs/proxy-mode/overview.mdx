@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy", updated: "2026-10-16" }
+export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy", updated: "2026-11-04" }
 
 ## What is proxy mode?
 
@@ -13,7 +13,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
 │                                                              │
-│  createProxyCaller(apiRoutes)                                │
+│  createProxyCaller(routes.api)                               │
 │       │                                                      │
 │       ▼                                                      │
 │  fetch GET  "/api/request?_s=…&_g=…&_m=…&_v=…" (cached read) │
@@ -58,7 +58,7 @@ Here is the complete flow from a browser call to the backend response:
 
 ```ts title="Request lifecycle"
 // 1. Browser — call a typed endpoint
-const caller = createProxyCaller(apiRoutes)
+const caller = createProxyCaller(routes.api)
 const user = await caller.users.getById({ id: 5 })
 
 // 2. Under the hood, Courier sends a read that declares .cache() as GET,
@@ -220,7 +220,7 @@ Use **proxy mode** for client components where the browser initiates the request
 ```ts title="Comparison"
 // Proxy mode — browser cannot see API_URL or secrets
 // Browser → GET /api/request → Server → GET https://internal-api.company.com/users
-const caller = createProxyCaller(apiRoutes)
+const caller = createProxyCaller(routes.api)
 const users = await caller.users.getAll()
 
 // Direct mode — server calls backend directly, no proxy hop

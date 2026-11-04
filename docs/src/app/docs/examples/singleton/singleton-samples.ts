@@ -7,9 +7,9 @@
 export const SINGLETON_SAMPLES = {
   singleton: `// lib/query.ts — Single typed instance for the entire app
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 
 // The routes Courier writes from your .expose() marks carry the API's types:
 // - The group and endpoint names a page may call
@@ -50,7 +50,7 @@ const users = defineGroup({
 })
 
 // These types flow through the entire chain:
-// endpoint → defineGroup → defineApi → courier.routes.ts → createProxyQueryCaller
+// endpoint → defineGroup → defineApi → courier.config.ts → routes → createProxyQueryCaller
 // → q.group.useQuery("endpoint") → call site`,
   inference: `// Full type inference at call site — no manual types needed
 
@@ -71,16 +71,16 @@ const user = await caller.users.getById({ id: 1 })
 //    ^? User`,
   multiInstance: `// Multiple instances for different backends
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { externalApiRoutes, internalApiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
 // Internal API
-export const internalQ = createProxyQueryCaller(internalApiRoutes, {
+export const internalQ = createProxyQueryCaller(routes.internalApi, {
   timeout: 5000,
   headers: { "X-Internal": "true" },
 })
 
 // External API
-export const externalQ = createProxyQueryCaller(externalApiRoutes, {
+export const externalQ = createProxyQueryCaller(routes.externalApi, {
   timeout: 15000,
   onError: (error) => Sentry.captureException(error),
 })

@@ -1,4 +1,4 @@
-export const metadata = { title: "Type Safety", description: "How Courier achieves end-to-end type safety from API definitions to components — types inferred, never generated.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Type Safety", description: "How Courier achieves end-to-end type safety from API definitions to components — types inferred, never generated.", mode: "both", updated: "2026-11-04" }
 
 ## Overview
 
@@ -44,8 +44,8 @@ Courier uses TypeScript's type inference to propagate types through dot-notation
 // 1. You define the API
 export const api = defineApi({ baseURL: "...", groups: { users } })
 
-// 2. You create a typed query caller, from the routes Courier writes from it
-const q = createProxyQueryCaller(apiRoutes)
+// 2. You create a typed query caller, from the routes Courier gives the page from it
+const q = createProxyQueryCaller(routes.api)
 
 // 3. TypeScript infers everything at the call site
 const { data: list } = q.users.useQuery("getAll")

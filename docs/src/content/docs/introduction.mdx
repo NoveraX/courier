@@ -1,4 +1,4 @@
-export const metadata = { title: "What is Courier?", description: "A type-safe, framework-agnostic HTTP client with middleware, runtime validation, and adapters for Next.js, Nuxt, Hono, Express, Fastify, and NestJS.", updated: "2026-10-14" }
+export const metadata = { title: "What is Courier?", description: "A type-safe, framework-agnostic HTTP client with middleware, runtime validation, and adapters for Next.js, Nuxt, Hono, Express, Fastify, and NestJS.", updated: "2026-11-04" }
 
 **@noverax/courier** is a type-safe HTTP client that works with any JavaScript framework and any REST backend. Define your API once as plain TypeScript functions — get autocomplete, type inference, runtime validation, and middleware out of the box.
 
@@ -52,7 +52,7 @@ const user = await caller.users.getById({ id: "1" })
 Both modes share the same API definition and the same type inference:
 
 - **Direct** — `createCaller(api)` — call backends directly from any runtime (Node.js, Bun, Deno, Cloudflare Workers, server components).
-- **Proxy** — `createProxyCaller(apiRoutes)` — browser sends requests through your server, which serves the endpoints you mark `.expose()`, hides API keys, bypasses CORS, and carries the session cookies you name.
+- **Proxy** — `createProxyCaller(routes.api)` — browser sends requests through your server, which serves the endpoints you mark `.expose()`, hides API keys, bypasses CORS, and carries the session cookies you name.
 
 <Callout variant="tip" title="Same definitions, two modes">
 You define your API once. Both `createCaller` (direct) and `createProxyCaller` (proxy) consume the same sources with identical type inference.
@@ -77,7 +77,7 @@ On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller
 
 ## Core Philosophy
 
-- **Types inferred, never generated** — your TypeScript definitions are the source of truth: rename a method and every call to it fails to compile, with no step to run first. Proxy mode keeps one file written for you, `courier.routes.ts` — the list of what a page may call, which a review reads and CI checks.
+- **Types inferred, never generated** — your TypeScript definitions are the source of truth: rename a method and every call to it fails to compile, with no step to run first. Proxy mode reads what a page may call from the marks themselves: Courier's plugin for your build gives the page its routes, or Courier writes them into `courier.routes.ts`, a file a review reads and CI checks.
 - **Zero boilerplate** — define a method signature and Courier handles serialization, path parameters, headers, and error wrapping.
 - **Any backend** — works with Express, FastAPI, Rails, Go, Laravel, Django — anything that speaks HTTP.
 - **Composable middleware** — retry, auth, logging, rate-limiting, caching — or write your own.

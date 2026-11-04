@@ -1,4 +1,4 @@
-export const metadata = { title: "Express", description: "Express server adapter using courierHandler for hosting the Courier proxy route.", mode: "proxy", updated: "2026-10-16" }
+export const metadata = { title: "Express", description: "Express server adapter using courierHandler for hosting the Courier proxy route.", mode: "proxy", updated: "2026-11-04" }
 
 The `@noverax/courier-express` adapter provides a handler for Express that serves as the Courier proxy route.
 
@@ -199,13 +199,13 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 - [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
 - [Nuxt](/docs/frameworks/nuxt) — full-stack with `courierHandler` and `createProxyCaller`
 
-The caller takes the routes Courier writes into `courier.routes.ts` from the endpoints your sources mark `.expose()`, never the definition itself — see [Exposing Endpoints](/docs/proxy-mode/expose):
+The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it — the guide for your frontend shows the line, and a frontend in a folder of its own names the server's config, `courierRoutes({ config: "../server/courier.config.ts" })` — or from `courier.routes.ts`, which `npx @noverax/courier-cli routes` writes for a frontend without one. See [Exposing Endpoints](/docs/proxy-mode/expose):
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
-import { myApiRoutes } from "../courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(myApiRoutes, {
+export const caller = createProxyCaller(routes.myApi, {
   proxyPath: { http: "http://localhost:3001/api/request" },
 })
 ```

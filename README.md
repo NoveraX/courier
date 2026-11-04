@@ -199,7 +199,7 @@ const user = await caller.users.getById({ id: "1" })
 
 **3 — Call it from the browser,** through one route on your server.
 
-Server code imports `api` and calls every endpoint. Browser code never imports it: from the endpoints you mark `.expose()`, Courier writes `courier.routes.ts` — what a page may call, and how it reaches each — and the browser's caller takes those routes instead. Your backend's address, its paths and your middleware never ship with the page, and the proxy refuses every endpoint no mark opens. Studio writes the module as you work; `npx @noverax/courier-cli routes` writes it without Studio, and with `--check` fails a CI step when it is out of date. The [framework guides](#frameworks) below show the route and the caller for each framework.
+Server code imports `api` and calls every endpoint. Browser code never imports it: from the endpoints you mark `.expose()`, Courier's plugin for your build gives the page its routes — what a page may call, and how it reaches each — as `routes` from `@noverax/courier/routes`, and the browser's caller takes those routes instead. Your backend's address, its paths and your middleware never ship with the page, and the proxy refuses every endpoint no mark opens. `npx @noverax/create-courier` sets the plugin up, and `npx @noverax/courier-cli setup` adds it to a project you have; a build without one takes the routes from `courier.routes.ts`, which Studio writes as you work and `npx @noverax/courier-cli routes` writes without it. The [framework guides](#frameworks) below show the route and the caller for each framework, and [Exposing Endpoints](https://courier.noverax.cloud/docs/proxy-mode/expose) the plugin each build takes.
 
 A runnable version — a backend, the proxy in front of it, a page's caller and server code — is in [`examples/basic`](examples/basic): `npm run demo --workspace examples/basic` from the repository root.
 
@@ -281,14 +281,28 @@ export const { GET, POST } = apiRoute()
 
 With [Courier Studio](https://courier.noverax.cloud/docs/frameworks/nextjs#studio-app-origin), the same `register()` also attaches the Studio runtime in development.
 
-**2. Client caller** — React Query hooks with full type inference:
+**2. Client caller** — React Query hooks with full type inference, from the routes `withCourier()` builds in (`npm install @noverax/courier-build`):
 
 ```ts
+// next.config.ts
+import { withCourier } from "@noverax/courier-next/plugin"
+
+export default withCourier({})
+
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+import type config from "../courier.config"
+
+// The config registered once, so the routes are typed from it
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+
+export const q = createProxyQueryCaller(routes.api)
 ```
 
 **3. Client Components:**
@@ -403,17 +417,17 @@ import { sources } from "~/api/sources"
 export default courierHandler({ sources })
 ```
 
-**2. Composable** — use with any state management:
+**2. Composable** — use with any state management, with the routes Courier's module builds in — `modules: [courierRoutesModule]` from `@noverax/courier-nuxt/plugin` in `nuxt.config.ts` — and the config registered in the module, as in the Next.js section:
 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "~/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
 export function useCaller() {
   // useAsyncData runs on the server first, where a relative path has no page to resolve against
   const { origin } = useRequestURL()
-  return createProxyCaller(apiRoutes, { proxyPath: { http: `${origin}/api/request` } })
+  return createProxyCaller(routes.api, { proxyPath: { http: `${origin}/api/request` } })
 }
 ```
 
@@ -481,14 +495,14 @@ export const GET = handler
 export const POST = handler
 ```
 
-**2. A component** — the core caller, typed from the routes Courier writes:
+**2. A component** — the core caller, typed from the routes Courier's plugin builds — `courierRoutes()` from `@noverax/courier-sveltekit/plugin` in `vite.config.ts` — with the config registered in the module, as in the Next.js section:
 
 ```ts
 // lib/caller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "../courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes)
+export const caller = createProxyCaller(routes.api)
 ```
 
 ```svelte
@@ -607,14 +621,14 @@ See [`@noverax/courier-solid`](./packages/solid) for the session and cancelled c
 
 Works with any React setup. Pair with Express, Hono, or Fastify on the server side.
 
-**1. Caller with React Query:**
+**1. Caller with React Query** — from the routes `courierRoutes()` from `@noverax/courier-build/vite` builds in, in `vite.config.ts`, with the config registered in the module, as in the Next.js section:
 
 ```ts
 // lib/query.ts — calls /api/request on your server (see Server Adapters)
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "../courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 ```
 
 **2. Components:**
@@ -654,14 +668,14 @@ export default function App() {
 
 <br />
 
-The core caller is framework-agnostic — use it with `ref`, `reactive`, or any Vue composable.
+The core caller is framework-agnostic — use it with `ref`, `reactive`, or any Vue composable. It takes the routes `courierRoutes()` from `@noverax/courier-build/vite` builds in, in `vite.config.ts`, with the config registered in the module, as in the Next.js section.
 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "../courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes)
+export const caller = createProxyCaller(routes.api)
 ```
 
 ```vue
@@ -1107,7 +1121,7 @@ mock("users", "getAll").resolves([]).once()          // the next call only
 | --- | --- | --- |
 | [`@noverax/create-courier`](./packages/create-courier) | Courier in your project, or a new one, in one command | [![npm](https://img.shields.io/npm/v/@noverax/create-courier?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/create-courier) |
 | [`@noverax/courier-studio`](./packages/studio) | Studio — request inspector, playground, OpenAPI import, audit, mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio) |
-| [`@noverax/courier-cli`](./packages/cli) | `courier-cli routes` — writes `courier.routes.ts` from the `.expose()` marks, and checks it in CI | [![npm](https://img.shields.io/npm/v/@noverax/courier-cli?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-cli) |
+| [`@noverax/courier-cli`](./packages/cli) | `courier-cli setup` — moves a project to Courier's routes plugin; `courier-cli routes` — writes `courier.routes.ts` from the `.expose()` marks, and checks it in CI | [![npm](https://img.shields.io/npm/v/@noverax/courier-cli?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-cli) |
 | [`@noverax/courier-build`](./packages/build) | The plugins that build a page's routes from your config, no file to generate — Vite, webpack, Rspack, Rsbuild, esbuild, Rollup, Metro and Jest — and the config loader Courier's tools share | [![npm](https://img.shields.io/npm/v/@noverax/courier-build?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-build) |
 | [`@noverax/parcel-transformer-courier`](./packages/parcel-transformer) | The same routes under Parcel | [![npm](https://img.shields.io/npm/v/@noverax/parcel-transformer-courier?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/parcel-transformer-courier) |
 | [`@noverax/courier-angular`](./packages/angular) | Angular's builders, with the same routes | [![npm](https://img.shields.io/npm/v/@noverax/courier-angular?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-angular) |

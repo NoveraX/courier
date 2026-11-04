@@ -142,7 +142,7 @@ import { courierRoutesModule } from "@noverax/courier-nuxt/plugin"
 export default defineNuxtConfig({ modules: [courierRoutesModule] })
 ```
 
-Register the config once, so `routes` is typed from it. In Nuxt 4 the file goes in `app/`, beside the pages, and imports the config from the folder above; in Nuxt 3, whose app has no `app/` folder, `courier-env.d.ts` sits beside the config and imports `./courier.config`:
+Register the config once, so `routes` is typed from it. In Nuxt 4 the file goes in `app/`, beside the pages, and imports the config from the folder above; in Nuxt 3, whose app has no `app/` folder, `courier-env.d.ts` sits beside the config and imports `./courier.config`. A client made in `shared/`, which Nuxt 4 compiles apart from `app/`, registers the config in its own module instead: every tsconfig that compiles the module sees it there.
 
 ```ts
 // app/courier-env.d.ts — Nuxt 4

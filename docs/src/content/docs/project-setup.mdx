@@ -1,4 +1,4 @@
-export const metadata = { title: "Project Setup", description: "Recommended file structure, patterns, and configuration for production apps.", updated: "2026-10-14" }
+export const metadata = { title: "Project Setup", description: "Recommended file structure, patterns, and configuration for production apps.", updated: "2026-11-04" }
 
 ## Recommended file structure
 
@@ -6,7 +6,6 @@ Keep your API definitions separate from your UI code. The structure is the same 
 
 ```text title="Project structure"
 courier.config.ts         # your APIs, for your server, Studio and the MCP server
-courier.routes.ts         # what a page may call: Courier writes it from the .expose() marks
 src/
 ├── api/
 │   ├── index.ts          # defineApi + sources export
@@ -14,7 +13,7 @@ src/
 │   ├── posts.ts          # posts group
 │   └── files.ts          # files group
 ├── lib/
-│   ├── caller.ts         # createProxyCaller, built once
+│   ├── caller.ts         # createProxyCaller, built once; registers the config
 │   ├── query.ts          # createProxyQueryCaller, built once (React)
 │   └── server-caller.ts  # createCaller for server code
 ├── app/                  # (Next.js) or pages/ (Nuxt) or routes/ (SvelteKit)
@@ -77,20 +76,32 @@ Create the appropriate caller for your use case, once, in a module of its own, a
 
 ```ts title="lib/query.ts (React Query)"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const q = createProxyQueryCaller(apiRoutes)
+export const q = createProxyQueryCaller(routes.api)
 // In components: q.users.useQuery("getAll"), q.users.useMutation("create")
 ```
 
 ```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
 import { createProxyCaller } from "@noverax/courier"
-import { apiRoutes } from "@/courier.routes"
+import { routes } from "@noverax/courier/routes"
 
-export const caller = createProxyCaller(apiRoutes)
+export const caller = createProxyCaller(routes.api)
 ```
 
-The browser's callers take the routes Courier writes from your marks, never the API itself — see [Exposing Endpoints](/docs/proxy-mode/expose).
+The browser's callers take the routes Courier's plugin gives them from your marks, never the API itself, and the module that makes them registers the config once, so they are typed from it:
+
+```ts title="lib/caller.ts"
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+```
+
+See [Exposing Endpoints](/docs/proxy-mode/expose) for the plugin your build takes.
 
 ```ts title="lib/server-caller.ts (Server-side)"
 import { createCaller } from "@noverax/courier"

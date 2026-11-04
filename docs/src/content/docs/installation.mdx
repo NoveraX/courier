@@ -1,4 +1,4 @@
-export const metadata = { title: "Installation", description: "Add @noverax/courier to your project — works with any JavaScript framework.", updated: "2026-10-14" }
+export const metadata = { title: "Installation", description: "Add @noverax/courier to your project — works with any JavaScript framework.", updated: "2026-11-04" }
 
 <Callout variant="tip" title="In one command">
 `npx @noverax/create-courier` installs what your framework needs and sets it up: the route, the config, Studio and a mock. See [Create Courier](/docs/create-courier). This page installs each package by hand.
@@ -143,13 +143,27 @@ never declared there: `courier.config.ts` has no `mocks` key.
 All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.
 </Callout>
 
-## Routes CLI
+## The routes plugin
 
 A page that calls your API through your server's proxy takes its routes from
-`courier.routes.ts`, which Courier writes from the endpoints you mark
-`.expose()` — Studio as it runs, and `courier-cli routes` without it. Add the
-CLI for development, so your CI checks the module with the version your
-lockfile pins:
+`@noverax/courier/routes`, which Courier's plugin for your build builds in
+from the endpoints you mark `.expose()`. The plugin runs on
+`@noverax/courier-build`, which the build alone needs — and `next start` too,
+which loads `next.config`, so a Next.js app lists it as a dependency:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+The [framework guides](/docs/frameworks/overview) show the line each build
+takes, and [Exposing Endpoints](/docs/proxy-mode/expose#the-plugin-for-your-build)
+lists them all. `npx @noverax/courier-cli setup` adds the plugin to a project
+set up already.
+
+A build Courier has no plugin for, or a project that would keep its routes in
+its tree, takes them from `courier.routes.ts`, which Courier writes — Studio as
+it runs, and `courier-cli routes` without it. Add the CLI for development, so
+your CI checks the module with the version your lockfile pins:
 
 ```bash
 npm install --save-dev @noverax/courier-cli
@@ -157,7 +171,7 @@ npm install --save-dev @noverax/courier-cli
 
 `npx @noverax/courier-cli routes` writes the module; with `--check`, it writes
 nothing and fails when the module is out of date. See
-[Exposing Endpoints](/docs/proxy-mode/expose).
+[the routes as a file](/docs/proxy-mode/expose#the-routes-as-a-file).
 
 ## Requirements
 

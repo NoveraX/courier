@@ -1,4 +1,4 @@
-export const metadata = { title: "Why Courier?", description: "The problems Courier solves: boilerplate, type safety, proxy complexity, and scattered API logic — across any framework.", updated: "2026-10-14" }
+export const metadata = { title: "Why Courier?", description: "The problems Courier solves: boilerplate, type safety, proxy complexity, and scattered API logic — across any framework.", updated: "2026-11-04" }
 
 Building a web app that talks to a REST API sounds simple — until you need type safety, a proxy layer, cookie forwarding, error handling, upload progress, middleware, validation, and framework integration. Each of these adds boilerplate, and without a unified approach, your API logic scatters across dozens of files.
 
@@ -44,8 +44,8 @@ export const { GET, POST } = apiRoute() // or courierHandler()
 You define your API structure **once** using `courier`, `defineGroup`, and `defineApi`. Each endpoint declares its response and variables types. From that single definition, Courier gives you:
 
 - **Direct mode** — server calls via `createCaller(api)`
-- **Proxy mode** — browser calls via `createProxyCaller(apiRoutes)`, the endpoints you marked `.expose()`
-- **React Query** — hooks via `createProxyQueryCaller(apiRoutes)`
+- **Proxy mode** — browser calls via `createProxyCaller(routes.api)`, the endpoints you marked `.expose()`
+- **React Query** — hooks via `createProxyQueryCaller(routes.api)`
 - **Server Actions** — server-action calls via `createAction(sources, "api")`
 
 All share the same types and autocomplete:
@@ -72,7 +72,7 @@ const { data } = q.users.useQuery("getById", { variables: { id: "5" } })
 ```
 
 <Callout variant="tip" title="Types inferred, never generated">
-Unlike GraphQL codegen or a client generated from an OpenAPI document, Courier takes its types from plain TypeScript definitions: no type files to regenerate, no step to run before you compile. Rename a method and TypeScript catches every broken call site instantly. Proxy mode keeps one file written for you — `courier.routes.ts`, the list of what a page may call — which a review reads and CI checks; see [Exposing Endpoints](/docs/proxy-mode/expose).
+Unlike GraphQL codegen or a client generated from an OpenAPI document, Courier takes its types from plain TypeScript definitions: no type files to regenerate, no step to run before you compile. Rename a method and TypeScript catches every broken call site instantly. Proxy mode reads what a page may call from the marks, with Courier's plugin for your build, or from `courier.routes.ts`, a file Courier writes for a review to read and CI to check; see [Exposing Endpoints](/docs/proxy-mode/expose).
 </Callout>
 
 ## One Proxy Route for Everything

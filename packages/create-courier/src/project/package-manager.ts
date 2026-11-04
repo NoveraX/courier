@@ -136,3 +136,25 @@ export function packageManager(name: PackageManagerName): PackageManager {
       };
   }
 }
+
+/**
+ * The package manager a setup installs with: the one `--package-manager`
+ * names, else the project's — by its lockfile or `packageManager` — else
+ * the one the command was run with, else npm.
+ *
+ * @param root - The project's folder
+ * @param asked - What `--package-manager` names, if anything
+ * @returns The package manager
+ * @throws {Error} When `--package-manager` names one the command does not know
+ * @example
+ * ```ts
+ * managerFor("/work/shop", undefined).name; // "pnpm" in a project with pnpm-lock.yaml
+ * ```
+ */
+export function managerFor(root: string, asked: string | undefined): PackageManager {
+  if (asked === undefined)
+    return packageManager(projectManager(root) ?? invokingManager() ?? "npm");
+  if (asked === "npm" || asked === "pnpm" || asked === "yarn" || asked === "bun")
+    return packageManager(asked);
+  throw new Error(`--package-manager takes npm, pnpm, yarn or bun, not "${asked}"`);
+}

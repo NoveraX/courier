@@ -3,10 +3,7 @@ import { projectCode } from "./project/project-code";
 import type { Project } from "./project/read-project";
 import { isRoutesFramework } from "./recipes/edits/framework-routes";
 import type { RoutesMode } from "./recipes/recipe-types";
-
-/* What a routes module Courier writes says at its top, within its first characters. */
-const ROUTES_MARK = "Written by Courier from";
-const MARK_WITHIN = 512;
+import { isRoutesModule } from "./routes-setup/routes-modules";
 
 /*
  * A project that writes its routes module already: it has one — beside
@@ -17,9 +14,7 @@ function keepsRoutesFile(project: Project): boolean {
   if (project.exists("courier.routes.ts") || project.exists("courier.routes.js")) return true;
   const scripts = Object.values(project.manifest.scripts);
   if (scripts.some((command) => /\bcourier-cli\s+routes\b/.test(command))) return true;
-  return projectCode(project).some((file) =>
-    file.scan.text.slice(0, MARK_WITHIN).includes(ROUTES_MARK),
-  );
+  return projectCode(project).some((file) => isRoutesModule(file.scan.text));
 }
 
 /**

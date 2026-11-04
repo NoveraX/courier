@@ -74,6 +74,7 @@ async function installAndCheck(
  * @param plan - The plan the person agreed to
  * @param run - What the command line asked for
  * @param terminal - Where to write
+ * @param done - What it says once the packages are in and the types check
  * @returns The exit status: 0 once set up, 1 when what it added does not type-check
  * @example
  * ```ts
@@ -85,6 +86,7 @@ export async function applyPlan(
   plan: Plan,
   run: CreateRun,
   terminal: Terminal,
+  done = "Courier is set up.",
 ): Promise<number> {
   const { root } = ctx.project;
   checkEditsCurrent(root, plan.edits);
@@ -96,7 +98,7 @@ export async function applyPlan(
   const touched: Touched = { added: written, changed: changedByEdits(plan.edits) };
   const status = await installAndCheck(ctx, plan, run, touched, terminal);
   if (status !== 0) return status;
-  const done = run.install === false ? [] : ["", terminal.style.green("Courier is set up.")];
-  terminal.print([...done, ...closingLines(plan, terminal)]);
+  const said = run.install === false ? [] : ["", terminal.style.green(done)];
+  terminal.print([...said, ...closingLines(plan, terminal)]);
   return 0;
 }

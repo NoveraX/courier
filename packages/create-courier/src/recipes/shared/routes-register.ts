@@ -12,6 +12,37 @@ const REGISTERED = /declare\s+module\s+["']@noverax\/courier\/routes["']/g;
 /* Where a registration of its own is likeliest, as Courier's guides name the file: the project's code leaves declaration files out. */
 const ENV_FILES = ["courier-env.d.ts", "src/courier-env.d.ts", "app/courier-env.d.ts"];
 
+/** The two parts of a registration: the config's type imported, and the module's `Register` given it. */
+export interface RegisterParts {
+  readonly importLine: string;
+  readonly declaration: string;
+}
+
+/**
+ * The parts of the lines that type `routes` from the config, for a module
+ * that has imports of its own: the import goes among them.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @param path - The module, relative to the root
+ * @param name - The name the config's type is imported under: `config`, unless the module binds it
+ * @returns The import, and the declaration
+ * @example
+ * ```ts
+ * registerParts(ctx, "src/lib/courier/caller.ts", "config").importLine; // 'import type config from "../../../courier.config";'
+ * ```
+ */
+export function registerParts(ctx: RecipeContext, path: string, name: string): RegisterParts {
+  return {
+    importLine: `import type ${name} from "${importSpecifier(path, configPathOf(ctx), ctx.extension)}";`,
+    declaration: `/* Types \`routes\` from the config: one registration for the app. */
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof ${name};
+  }
+}`,
+  };
+}
+
 /**
  * The lines that type `routes` from the config, for the module that creates
  * the pages' proxy clients: every tsconfig that compiles the module sees
@@ -27,19 +58,22 @@ const ENV_FILES = ["courier-env.d.ts", "src/courier-env.d.ts", "app/courier-env.
  * ```
  */
 export function routesRegister(ctx: RecipeContext, path: string): string {
-  return `import type config from "${importSpecifier(path, configPathOf(ctx), ctx.extension)}";
-
-/* Types \`routes\` from the config: one registration for the app. */
-declare module "@noverax/courier/routes" {
-  interface Register {
-    config: typeof config;
-  }
-}
-`;
+  const { importLine, declaration } = registerParts(ctx, path, "config");
+  return `${importLine}\n\n${declaration}\n`;
 }
 
-/* Whether the project registers its config already: in its code, or in a declaration file of the name the guides give it. */
-function registersRoutes(ctx: RecipeContext): boolean {
+/**
+ * Whether the project registers its config already: in its code, or in a
+ * declaration file of the name Courier's guides give it.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns Whether it does
+ * @example
+ * ```ts
+ * registersRoutes(ctx); // true where courier-env.d.ts declares the module's Register
+ * ```
+ */
+export function registersRoutes(ctx: RecipeContext): boolean {
   const { project } = ctx;
   const declared = ENV_FILES.some((path) => {
     const text = project.read(path);
@@ -50,8 +84,18 @@ function registersRoutes(ctx: RecipeContext): boolean {
   );
 }
 
-/* Where the setup writes no client of its own, the step that registers the config in the project's. */
-function registerStep(ctx: RecipeContext): ManualStep[] {
+/**
+ * Where the setup writes no client of its own, the step that registers
+ * the config in the project's — unless the project registers it already.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns The step, or none
+ * @example
+ * ```ts
+ * registerStep(ctx)[0]?.file; // "the module that creates your proxy clients"
+ * ```
+ */
+export function registerStep(ctx: RecipeContext): ManualStep[] {
   if (addsExample(ctx) || registersRoutes(ctx)) return [];
   return [
     {

@@ -204,6 +204,12 @@ refuses as `{ "success": false, "message": "…", "code": "…" }`:
 A failure of its own is answered 500 `INTERNAL`, its details kept to the
 log; a refusal is logged as one line, at most once a minute for each code.
 
+The pages and the backend are held to each other. A page's call to an
+endpoint the sources do not describe fails to compile, in `npm run check`
+and in `next build` (`tests/site/unknown-endpoints.ts`), and a test calls
+every endpoint `src/lib/routes.ts` lists through the proxy, failing on one
+the backend has no route for (`tests/site/endpoint-contract.test.ts`).
+
 ## Checks
 
 ```bash

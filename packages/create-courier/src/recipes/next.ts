@@ -1,7 +1,7 @@
 import { majorOf } from "../project/read-project";
 import { attachesStudio } from "../project/wiring";
+import { firstExisting } from "./edits/config-integration";
 import { registerInside } from "./edits/next-register";
-import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import {
   devOnlyConfig,

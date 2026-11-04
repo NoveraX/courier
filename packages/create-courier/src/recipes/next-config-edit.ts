@@ -4,7 +4,7 @@ import { appendItem } from "../edit/insert";
 import { defaultExportLiteral, propertyLiteral } from "../edit/literal";
 import { codeMatches, type SourceScan, scanSource } from "../edit/source-scan";
 import { STUDIO_DEFAULT_PORT } from "../project/ports";
-import { firstExisting } from "./edits/studio-browser";
+import { firstExisting } from "./edits/config-integration";
 import type { ManualStep, RecipeContext, RecipeEdit } from "./recipe-types";
 
 /** The names a Next.js config may have, in the order Next.js looks for them. */

@@ -1,81 +1,24 @@
-import { type CodeStyle, namedImport } from "../../edit/code-style";
-import { addToConfigList } from "../../edit/config-list";
-import { importsOf, usesExport } from "../../edit/imports";
-import { scanSource } from "../../edit/source-scan";
 import type { Project } from "../../project/read-project";
 import type { RecipeEdit } from "../recipe-types";
+import {
+  ASTRO_CONFIGS,
+  firstExisting,
+  type Integration,
+  integrationEdit,
+  NUXT_CONFIGS,
+  VITE_CONFIGS,
+} from "./config-integration";
 
-/**
- * The first of some files the project has.
- *
- * @param project - The project
- * @param paths - The candidates, in order
- * @returns The first that exists; the first candidate when none does
- * @example
- * ```ts
- * firstExisting(project, ["vite.config.ts", "vite.config.js"]); // "vite.config.js" in a JavaScript config
- * ```
- */
-export function firstExisting(project: Project, paths: readonly string[]): string {
-  return paths.find((path) => project.exists(path)) ?? paths[0] ?? "";
-}
-
-/** A Studio integration that a config file lists: where, and under what name. */
-interface Integration {
-  readonly path: string;
-  readonly purpose: string;
-  readonly callees: readonly string[];
-  readonly property: string;
-  readonly name: string;
-  /** The item in the list: the integration called, or the module named. */
-  readonly item: string;
-  readonly from: string;
-  /** Other entries of Studio's whose integration connects the browser too: Vite's own, for an app Vite serves. */
-  readonly also?: readonly string[];
-}
-
-/* The config with the integration in its list — unless its code uses it already — and imported where it is not. */
-function withIntegration(text: string, integration: Integration): string | undefined {
-  const { callees, property, name, item, from, also = [] } = integration;
-  const scan = scanSource(text);
-  if (scan === undefined) return undefined;
-  const imports = importsOf(scan);
-  const studio = (specifier: string) => specifier === from || also.includes(specifier);
-  if (usesExport(scan, imports, studio, name, item.endsWith(")"))) return text;
-  const imported = imports.some(
-    (each) =>
-      studio(each.specifier) &&
-      each.bindings.some((binding) => binding.imported === name && binding.local === name),
-  );
-  return addToConfigList(text, {
-    callees,
-    property,
-    item: () => item,
-    ...(imported
-      ? {}
-      : { importLine: (fileStyle: CodeStyle) => namedImport(fileStyle, [name], from) }),
+/* Studio's integration in a config's list, and the step that names it where the command cannot add it. */
+function studioEdit(integration: Omit<Integration, "what">): RecipeEdit {
+  return integrationEdit({
+    ...integration,
+    what: `Connect the browser to Studio: add ${integration.item} to the config's ${integration.property}`,
   });
-}
-
-function integrationEdit(integration: Integration): RecipeEdit {
-  const { path, purpose, property, name, item, from } = integration;
-  const style = { quote: '"', semi: true } as const;
-  return {
-    path,
-    purpose,
-    change: (text) => withIntegration(text, integration),
-    manual: {
-      file: path,
-      what: `Connect the browser to Studio: add ${item} to the config's ${property}`,
-      lines: [namedImport(style, [name], from), `${property}: [${item}],`],
-    },
-  };
 }
 
 /* Studio's entries whose `courierStudio()` is Vite's plugin. */
 const VITE_ENTRIES = ["vite", "react", "vue", "sveltekit", "remix", "solid"];
-
-const VITE_CONFIGS = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vite.config.mjs"];
 
 /**
  * The edit that connects the browser to Studio in an app Vite serves:
@@ -91,7 +34,7 @@ const VITE_CONFIGS = ["vite.config.ts", "vite.config.mts", "vite.config.js", "vi
  * ```
  */
 export function viteStudioEdit(project: Project, entry: string): RecipeEdit {
-  return integrationEdit({
+  return studioEdit({
     path: firstExisting(project, VITE_CONFIGS),
     purpose: "connects the browser to Studio while you develop",
     callees: ["defineConfig"],
@@ -115,9 +58,8 @@ export function viteStudioEdit(project: Project, entry: string): RecipeEdit {
  * ```
  */
 export function astroStudioEdit(project: Project): RecipeEdit {
-  const configs = ["astro.config.mjs", "astro.config.ts", "astro.config.mts", "astro.config.js"];
-  return integrationEdit({
-    path: firstExisting(project, configs),
+  return studioEdit({
+    path: firstExisting(project, ASTRO_CONFIGS),
     purpose: "connects the pages to Studio while you develop",
     callees: ["defineConfig"],
     property: "integrations",
@@ -139,8 +81,8 @@ export function astroStudioEdit(project: Project): RecipeEdit {
  * ```
  */
 export function nuxtStudioEdit(project: Project): RecipeEdit {
-  return integrationEdit({
-    path: firstExisting(project, ["nuxt.config.ts", "nuxt.config.mts", "nuxt.config.js"]),
+  return studioEdit({
+    path: firstExisting(project, NUXT_CONFIGS),
     purpose: "connects the pages to Studio while you develop",
     callees: ["defineNuxtConfig"],
     property: "modules",

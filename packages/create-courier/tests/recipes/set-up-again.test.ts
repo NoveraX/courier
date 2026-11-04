@@ -127,10 +127,8 @@ describe("a file of the project's that serves the proxy where nothing loads it",
         'import { courierStudio } from "@noverax/courier-studio/remix";\n\nexport default defineConfig({ plugins: [courierStudio()] });\n',
       "app/routes.ts":
         'import { index, route } from "@react-router/dev/routes";\n\nexport default [index("routes/home.tsx")];\n',
-      "app/routes/api.courier.ts": ROUTER.replace(
-        "@noverax/courier-express",
-        "@noverax/courier-remix",
-      ).replace("../courier.config", "../../courier.config"),
+      "app/routes/api.courier.ts":
+        'import { registerSources } from "@noverax/courier";\nimport { courierHandler } from "@noverax/courier-remix";\nimport config from "../../courier.config";\n\nfunction servingHandler() {\n  registerSources(config.sources);\n  return courierHandler();\n}\n\nconst handler = servingHandler();\nimport("@noverax/courier-studio-core/runtime").then(({ attachRuntime }) => attachRuntime());\n\nexport const loader = handler;\nexport const action = handler;\n',
     });
     const plan = planAt(root, "react-router", "@react-router/dev");
 

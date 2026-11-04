@@ -43,6 +43,14 @@
   "bin": {
     "create-courier": "lib/cli.js"
   },
+  "exports": {
+    "./package.json": "./package.json",
+    "./setup": {
+      "types": "./lib/set-up-routes.d.ts",
+      "import": "./lib/set-up-routes.js",
+      "default": "./lib/set-up-routes.js"
+    }
+  },
   "files": [
     "lib",
     "README.md",

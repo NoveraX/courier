@@ -8,12 +8,7 @@ import { buildPlan, changesAnything, type Plan } from "./plan/build-plan";
 import { nextLines, planLines } from "./plan/plan-lines";
 import { type ConfiguredSources, configuredSources } from "./project/configured-sources";
 import { importExtension } from "./project/module-style";
-import {
-  invokingManager,
-  type PackageManager,
-  packageManager,
-  projectManager,
-} from "./project/package-manager";
+import { managerFor } from "./project/package-manager";
 import { portsOf } from "./project/ports";
 import { readProject } from "./project/read-project";
 import { askYesNo } from "./prompt";
@@ -26,14 +21,6 @@ export interface Terminal {
   readonly interactive: boolean;
   readonly style: TerminalStyle;
   print(lines: readonly string[]): void;
-}
-
-function managerOf(root: string, asked: string | undefined): PackageManager {
-  if (asked === undefined)
-    return packageManager(projectManager(root) ?? invokingManager() ?? "npm");
-  if (asked === "npm" || asked === "pnpm" || asked === "yarn" || asked === "bun")
-    return packageManager(asked);
-  throw new Error(`--package-manager takes npm, pnpm, yarn or bun, not "${asked}"`);
 }
 
 /* What the config declares, and what the plan does about it. */
@@ -91,7 +78,7 @@ export async function addCourier(
     );
   }
   const framework = frameworkOf(project, run.framework);
-  const manager = managerOf(root, run["package-manager"]);
+  const manager = managerFor(root, run["package-manager"]);
   const version = project.version(framework.marker);
   const choices = await choicesOf(run, terminal);
   const configured = configuredSources(project);

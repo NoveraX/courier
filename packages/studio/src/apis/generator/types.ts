@@ -31,6 +31,15 @@ export type GenerateOptions = CourierImportBase & {
    * config, never persisted to the import's declaration.
    */
   routesModule?: string;
+  /**
+   * Where courier.config keeps no routes module — `studio.routes: false`, as
+   * a project whose build gives the pages their routes with Courier's plugin
+   * does — the config's path from the project root: the proxy caller then
+   * takes the source's routes from `@noverax/courier/routes` and registers
+   * the config there. Decided by the config, never persisted to the
+   * import's declaration.
+   */
+  routesConfig?: string;
 };
 
 /**
@@ -71,6 +80,8 @@ export interface ResolvedGenerateOptions {
   importExtension: "" | ".js";
   /** The routes module, by its path from the project root. */
   routesModule: string;
+  /** Where the plugin gives the routes, the config's path from the project root; none where the routes module does. */
+  routesConfig: string | undefined;
   include?: CourierImportBase["include"];
   exclude?: CourierImportBase["exclude"];
   transform?: CourierImportBase["transform"];
@@ -84,6 +95,7 @@ export type GenerationDefaults = Omit<
   | "selectedEndpoints"
   | "importExtension"
   | "routesModule"
+  | "routesConfig"
   | "include"
   | "exclude"
   | "transform"
@@ -128,6 +140,7 @@ export function applyImportDefaults(
     selectedEndpoints: options.selectedEndpoints ?? null,
     importExtension: options.importExtension ?? "",
     routesModule: options.routesModule ?? "courier.routes.ts",
+    routesConfig: options.routesConfig,
     include: options.include,
     exclude: options.exclude,
     transform: options.transform,

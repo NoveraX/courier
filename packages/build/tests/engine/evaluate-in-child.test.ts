@@ -20,6 +20,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { evaluateInChild } from "../../src/engine/evaluate-in-child";
@@ -335,7 +336,7 @@ readdirSync(${JSON.stringify(`${dir}/./defs/`)});
     const asker = spawn(process.execPath, [
       "--input-type=module",
       "-e",
-      `import { createRoutesEngine } from ${JSON.stringify(BUILT)};
+      `import { createRoutesEngine } from ${JSON.stringify(pathToFileURL(BUILT).href)};
 createRoutesEngine({ root: ${JSON.stringify(dir)} }).read().catch(() => {});
 setInterval(() => {}, 1_000);`,
     ]);

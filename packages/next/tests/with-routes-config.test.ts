@@ -55,7 +55,7 @@ describe("withRoutesConfig", () => {
       "config-in-page",
     ]);
     expect(server).toHaveLength(1);
-    expect(server[0]?.test).toMatch(/core\/lib\/routes\/index\.js$/);
+    expect(server[0]?.test).toMatch(/core[\\/]lib[\\/]routes[\\/]index\.js$/);
     expect(server[0]?.use?.[0]?.loader).toBe(routesLoaderFile());
   });
 

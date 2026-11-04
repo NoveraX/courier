@@ -64,6 +64,7 @@
   },
   "dependencies": {
     "@noverax/courier-build": "0.3.1",
+    "@noverax/create-courier": "0.3.1",
     "citty": "^0.2.2",
     "oxc-parser": "0.155.0"
   },

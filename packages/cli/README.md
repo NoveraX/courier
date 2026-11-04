@@ -37,6 +37,8 @@
 
 The proxy serves only the endpoints you mark `.expose()`. A page's proxy client takes them from `courier.routes.ts` — data alone, with no URL, header or schema of the upstream — so the browser bundle never carries your API's definition. `courier-cli routes` writes that file without Studio: in a project that does not run Studio, in a script, in CI.
 
+Where a bundler builds the pages, Courier's plugin for it gives them the routes from `@noverax/courier/routes`, with no file at all: `courier-cli setup` moves a project there.
+
 <table>
   <tr>
     <td width="33%" valign="top">
@@ -123,6 +125,33 @@ It type-checks against the config it was written from: a path the API no longer 
 | `--dotenv <files>` | The env files to read before the config, comma-separated (default: `.env.development.local`, `.env.local`, `.env.development` and `.env`, those there are) |
 
 The command exits with status 1 when the module is out of date under `--check`, when the file there holds code Courier did not write, or when the config does not load — each with one line naming the problem. `courier-cli --help` lists the commands; `--version` prints the installed version.
+
+<br />
+
+## Setup: the routes from Courier's plugin
+
+```bash
+npx @noverax/courier-cli setup --dry-run  # show what it changes
+npx @noverax/courier-cli setup            # make the changes, once you say yes
+```
+
+In a Next.js, Nuxt, SvelteKit, Astro, React Router, Remix or SolidStart app Courier is set up in, it moves the pages from `courier.routes.ts` to the routes Courier's plugin builds in:
+
+- the plugin in the build's config: `withCourier()` around `next.config`, Courier's module in `nuxt.config`, its integration in `astro.config`, its plugin in `vite.config`;
+- each module that imports `courier.routes.ts` reads `routes.<source>` from `@noverax/courier/routes` instead, and registers the config there, so the routes are typed from it;
+- `studio.routes` set to `false` in `courier.config.ts`, so Studio writes the file no more;
+- `@noverax/courier-build` installed: a dev dependency, or a dependency in a Next.js app, whose `next start` loads its config.
+
+Where a file is not in a shape it knows, it shows the lines to add instead. It deletes nothing: once the pages run on the plugin, `courier.routes.ts` and the `routes` script that writes it are yours to remove. These are the changes `create-courier` makes in a new project, so a project set up either way ends the same.
+
+| Option | Description |
+|---|---|
+| `--dry-run` | Show the plan, and change nothing |
+| `--yes`, `-y` | Make the changes without asking |
+| `--no-install` | Make the changes, and name the install command |
+| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix` or `solid-start` (default: found in `package.json`) |
+| `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |
+| `--cwd <dir>` | The project's root (default: the working directory) |
 
 <br />
 

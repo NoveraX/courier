@@ -1,6 +1,13 @@
 import type { IncomingRequest } from "./incoming-request";
 
-const served = new WeakMap<Request, IncomingRequest>();
+/* Kept on the global object, as the sources are: a bundler may load this
+   module twice — Nuxt's webpack and Rspack builders bundle a page's own copy
+   of Courier beside the server's — and the proxy one copy serves must find
+   the mark the other's caller made. */
+const SERVED_KEY = Symbol.for("courier.session.on-behalf");
+const g = globalThis as Record<symbol, unknown>;
+g[SERVED_KEY] ??= new WeakMap<Request, IncomingRequest>();
+const served = g[SERVED_KEY] as WeakMap<Request, IncomingRequest>;
 
 /**
  * Mark a proxy request made in the server's own process as made for the

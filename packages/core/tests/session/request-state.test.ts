@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { IncomingRequest } from "../../src/session/incoming-request";
-import { cookieJarFor, keepCookie } from "../../src/session/request-state";
+import { cookieJarFor, keepCookie, requestIdFor } from "../../src/session/request-state";
 
 function incoming(cookie: string): IncomingRequest {
   return { key: {}, method: "GET", headers: new Headers({ cookie }) };
@@ -40,5 +40,20 @@ describe("cookieJarFor", () => {
     keepCookie(alice, { name: "sid", value: "alice-2" });
 
     expect(cookieJarFor(bob).get("sid")).toBe("bob");
+  });
+});
+
+describe("the state of a request being served", () => {
+  it("is shared with another copy of Courier, as a page's own bundle may carry one", async () => {
+    vi.resetModules();
+    const other = await import("../../src/session/request-state");
+    const request = incoming("sid=old");
+
+    keepCookie(request, { name: "sid", value: "new" });
+    const id = requestIdFor(request, () => "first");
+
+    expect(other.cookieJarFor).not.toBe(cookieJarFor);
+    expect(other.cookieJarFor(request).get("sid")).toBe("new");
+    expect(other.requestIdFor(request, () => "second")).toBe(id);
   });
 });

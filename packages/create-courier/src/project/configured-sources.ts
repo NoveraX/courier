@@ -24,9 +24,19 @@ function assignedObject(scan: SourceScan): Literal | undefined {
   return scan.text[open] === "{" && close !== undefined ? { open, close } : undefined;
 }
 
-/* The object the config exports: `export default defineConfig({…})`, `export default {…}`,
-   `module.exports = {…}`, or the one `defineConfig` is called with. */
-function configObject(scan: SourceScan): Literal | undefined {
+/**
+ * The object a config exports: `export default defineConfig({…})`,
+ * `export default {…}`, `module.exports = {…}`, or the one `defineConfig`
+ * is called with.
+ *
+ * @param scan - The scanned config
+ * @returns The object, or `undefined` where the config exports none of these
+ * @example
+ * ```ts
+ * configObject(scanSource("export default defineConfig({ sources })")); // the `{…}`
+ * ```
+ */
+export function configObject(scan: SourceScan): Literal | undefined {
   const exported = defaultExportLiteral(scan, ["defineConfig"]);
   if (exported !== undefined) return scan.text[exported.open] === "{" ? exported : undefined;
   const assigned = assignedObject(scan);

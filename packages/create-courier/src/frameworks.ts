@@ -47,23 +47,48 @@ export interface Framework {
    * listed, as for a worker a bundler builds.
    */
   readonly runsWith?: boolean;
+  /**
+   * Whether Courier has a plugin for the framework's build, which gives its
+   * pages their routes: the setup adds it, unless the project keeps
+   * `courier.routes.ts` or `--routes file` asks for the file.
+   */
+  readonly routesPlugin?: boolean;
   readonly recipe?: (ctx: RecipeContext) => Recipe;
 }
 
 /** The frameworks, the ones built on others first: a Next.js app lists React too. */
 export const FRAMEWORKS: readonly Framework[] = [
-  { id: "next", label: "Next.js", marker: "next", recipe: nextRecipe },
-  { id: "nuxt", label: "Nuxt", marker: "nuxt", recipe: nuxtRecipe },
-  { id: "sveltekit", label: "SvelteKit", marker: "@sveltejs/kit", recipe: svelteKitRecipe },
-  { id: "astro", label: "Astro", marker: "astro", recipe: astroRecipe },
+  { id: "next", label: "Next.js", marker: "next", routesPlugin: true, recipe: nextRecipe },
+  { id: "nuxt", label: "Nuxt", marker: "nuxt", routesPlugin: true, recipe: nuxtRecipe },
+  {
+    id: "sveltekit",
+    label: "SvelteKit",
+    marker: "@sveltejs/kit",
+    routesPlugin: true,
+    recipe: svelteKitRecipe,
+  },
+  { id: "astro", label: "Astro", marker: "astro", routesPlugin: true, recipe: astroRecipe },
   {
     id: "react-router",
     label: "React Router",
     marker: "@react-router/dev",
+    routesPlugin: true,
     recipe: reactRouterRecipe,
   },
-  { id: "remix", label: "Remix", marker: "@remix-run/dev", recipe: reactRouterRecipe },
-  { id: "solid-start", label: "SolidStart", marker: "@solidjs/start", recipe: solidStartRecipe },
+  {
+    id: "remix",
+    label: "Remix",
+    marker: "@remix-run/dev",
+    routesPlugin: true,
+    recipe: reactRouterRecipe,
+  },
+  {
+    id: "solid-start",
+    label: "SolidStart",
+    marker: "@solidjs/start",
+    routesPlugin: true,
+    recipe: solidStartRecipe,
+  },
   { id: "expo", label: "Expo", marker: "expo", recipe: expoRecipe },
   { id: "nestjs", label: "NestJS", marker: "@nestjs/core", recipe: nestRecipe },
   { id: "fastify", label: "Fastify", marker: "fastify", recipe: fastifyRecipe },

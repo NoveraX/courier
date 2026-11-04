@@ -4,12 +4,14 @@ import type { RecipeContext, RecipeFile } from "../recipe-types";
 import { DEMO_TEXT } from "./demo-parts";
 import { DEMO_CSS, unreachableHint } from "./demo-style";
 import { ROUTES_MODULE } from "./example-routes";
+import { routesRegister } from "./routes-register";
 
 /**
  * `query.ts`: React Query hooks for the example API, typed from it. Through
- * the app's `/api/request` route with the routes Courier writes from the
- * API's marks, so the API's definition stays out of the browser's bundle —
- * or, in an app without a server, straight to the API.
+ * the app's `/api/request` route with the routes the API's marks give —
+ * built in by Courier's plugin for the app's build, or from the routes
+ * module Courier writes — so the API's definition stays out of the
+ * browser's bundle; or, in an app without a server, straight to the API.
  *
  * @param ctx - The project, and what is set up in it
  * @param dir - The folder Courier's own modules go in
@@ -27,16 +29,24 @@ export function reactQuery(
 ): RecipeFile {
   const path = `${dir}/query.ts`;
   const api = importSpecifier(path, `${dir}/api.ts`, ctx.extension);
+  const proxied = `/** React Query hooks for your API, called through the app's /api/request route. */
+export const q = createProxyQueryCaller(`;
   const content =
-    through === "proxy"
+    through === "proxy" && ctx.routes === "plugin"
       ? `import { createProxyQueryCaller } from "@noverax/courier-react";
+import { routes } from "@noverax/courier/routes";
+
+${routesRegister(ctx, path)}
+${proxied}routes.api);
+`
+      : through === "proxy"
+        ? `import { createProxyQueryCaller } from "@noverax/courier-react";
 
 import { apiRoutes } from "${importSpecifier(path, ROUTES_MODULE, ctx.extension)}";
 
-/** React Query hooks for your API, called through the app's /api/request route. */
-export const q = createProxyQueryCaller(apiRoutes);
+${proxied}apiRoutes);
 `
-      : `import { createQueryCaller } from "@noverax/courier-react";
+        : `import { createQueryCaller } from "@noverax/courier-react";
 
 import { api } from "${api}";
 

@@ -42,7 +42,7 @@ describe("svelteKitRecipe", () => {
     );
     expect(recipe.prepare).toEqual([{ bin: "svelte-kit", args: ["sync"] }]);
     expect(buildPlan(ctx, recipe).edits[0]?.after).toContain(
-      "plugins: [sveltekit(), courierStudio()]",
+      "plugins: [sveltekit(), courierRoutes(), courierStudio()]",
     );
   });
 

@@ -1,3 +1,4 @@
+import { viteRoutesEdit } from "./edits/routes-plugin";
 import { viteStudioEdit } from "./edits/studio-browser";
 import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
@@ -6,6 +7,7 @@ import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { proxyScripts, type RecipePart, registerModule, sortParts } from "./shared/recipe-parts";
+import { routesPluginParts } from "./shared/routes-register";
 import { svelteDemo } from "./shared/svelte-demo";
 import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
 
@@ -30,6 +32,7 @@ export const POST = handler;
 /**
  * Courier in a SvelteKit app: its API, registered from `hooks.server.ts`,
  * the route the browser calls it through, a page that shows it at work,
+ * Courier's plugin in Vite's config, which builds the page's routes in,
  * and Studio connected from the hooks and Vite's config.
  *
  * @param ctx - The project, and what is set up in it
@@ -58,6 +61,7 @@ export function svelteKitRecipe(ctx: RecipeContext): Recipe {
   );
   const parts: RecipePart[] = [
     ...(start ? [start] : []),
+    ...routesPluginParts(ctx, viteRoutesEdit(ctx.project, "@noverax/courier-sveltekit/plugin")),
     ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "sveltekit")] : []),
   ];
   const { files, edits, manual } = sortParts(parts);

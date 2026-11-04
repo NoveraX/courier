@@ -67,6 +67,12 @@ const ARGS = {
     type: "boolean",
     description: "Offer the API's reads to AI agents in your editor, over MCP",
   },
+  routes: {
+    type: "string",
+    valueHint: "plugin|file",
+    description:
+      "Give pages their routes from Courier's plugin for the app's build, or from courier.routes.ts (default: plugin; file where the project keeps one)",
+  },
   "package-manager": {
     type: "string",
     valueHint: "npm|pnpm|yarn|bun",

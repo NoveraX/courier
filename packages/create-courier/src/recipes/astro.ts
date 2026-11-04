@@ -1,4 +1,5 @@
 import { codeMatches, scanSource } from "../edit/source-scan";
+import { astroRoutesEdit } from "./edits/routes-plugin";
 import { astroStudioEdit } from "./edits/studio-browser";
 import type { ManualStep, Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { astroDemo } from "./shared/astro-demo";
@@ -8,6 +9,7 @@ import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { proxyScripts, type RecipePart, registerModule, sortParts } from "./shared/recipe-parts";
+import { routesPluginParts } from "./shared/routes-register";
 import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
 
 const DIR = "src/courier";
@@ -59,7 +61,8 @@ function adapterStep(ctx: RecipeContext, config: string | undefined): ManualStep
 /**
  * Courier in an Astro site: its API, registered from the middleware, the
  * route the browser calls it through — rendered on demand — a page that
- * shows it at work, and Studio connected from the middleware and Astro's
+ * shows it at work, Courier's integration in Astro's config, which builds
+ * the page's routes in, and Studio connected from the middleware and the
  * config.
  *
  * @param ctx - The project, and what is set up in it
@@ -91,6 +94,7 @@ export function astroRecipe(ctx: RecipeContext): Recipe {
   );
   const parts: RecipePart[] = [
     ...(start ? [start] : []),
+    ...routesPluginParts(ctx, astroRoutesEdit(ctx.project)),
     ...(ctx.choices.studio ? [studioEdit] : []),
     ...adapterStep(ctx, ctx.project.read(studioEdit.path)),
   ];

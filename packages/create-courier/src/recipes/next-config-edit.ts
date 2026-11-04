@@ -16,7 +16,7 @@ const STUDIO_NEXT = (specifier: string) => specifier === "@noverax/courier-studi
 function withStudioUrl(text: string, url: string): string | undefined {
   const scan = scanSource(text);
   if (scan && codeMatches(scan, /\bCOURIER_STUDIO_URL\b/g).length > 0) return text;
-  const config = scan === undefined ? undefined : defaultExportLiteral(scan, []);
+  const config = scan === undefined ? undefined : defaultExportLiteral(scan, ["withCourier"]);
   if (scan === undefined || config === undefined || text[config.open] !== "{") return undefined;
   const value = quoted(codeStyleOf(text), url);
   const env = propertyLiteral(scan, config, "env");
@@ -104,6 +104,7 @@ const WRAPPED = /\bwithCourierStudio\s*\([^)]*\)\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/
  * @param file - The config
  * @param text - Its text, where it has one
  * @param config - The name of the config's object
+ * @param routed - The object as the function returns it: passed to `withCourier()`, where Courier's plugin builds the routes in
  * @returns The lines
  * @example
  * ```ts
@@ -114,10 +115,12 @@ export function devOnlyConfig(
   file: string,
   text: string | undefined,
   config = "nextConfig",
+  routed: (name: string) => string = (name) => name,
 ): string[] {
   const commonJs = text?.includes("module.exports") === true;
   /* A function named as the config's object would declare its name twice. */
   const name = config === "config" ? "configFor" : "config";
+  const returned = routed(config);
   const head = file.endsWith(".ts")
     ? `export default async function ${name}(phase: string): Promise<NextConfig> {`
     : commonJs
@@ -127,9 +130,9 @@ export function devOnlyConfig(
     head,
     /* Written out: an ES module config of Next.js 14 cannot import `next/constants`. */
     "  // PHASE_DEVELOPMENT_SERVER: next dev alone loads Studio, a dev dependency",
-    `  if (phase !== "phase-development-server") return ${config};`,
+    `  if (phase !== "phase-development-server") return ${returned};`,
     '  const { withCourierStudio } = await import("@noverax/courier-studio/next");',
-    `  return withCourierStudio()(${config});`,
+    `  return withCourierStudio()(${returned});`,
     commonJs ? "};" : "}",
   ];
 }
@@ -141,19 +144,55 @@ export function devOnlyConfig(
  *
  * @param file - The config
  * @param text - Its text
+ * @param routed - The config's object as the function returns it: passed to `withCourier()`, where Courier's plugin builds the routes in
  * @returns The step
  * @example
  * ```ts
  * phaseHint("next.config.js", text).lines.at(-2); // "  return withCourierStudio()(nextConfig);"
  * ```
  */
-export function phaseHint(file: string, text: string | undefined): ManualStep {
+export function phaseHint(
+  file: string,
+  text: string | undefined,
+  routed: (config: string) => string = (config) => config,
+): ManualStep {
   const named = text === undefined ? undefined : WRAPPED.exec(text)?.[1];
   const config = named ?? "nextConfig";
   const which = named === undefined ? `, with ${config} the object it wraps now` : "";
   return {
     file,
     what: `Studio is connected here, but loaded whatever the command, so \`next start\` needs Studio, a dev dependency: export this function in place of the wrapped config${which}, and drop the import of @noverax/courier-studio/next at the top`,
-    lines: devOnlyConfig(file, text, config),
+    lines: devOnlyConfig(file, text, config, routed),
   };
+}
+
+/**
+ * Before Next.js 16, which develops under webpack — it bundles the
+ * server's Studio connection unless the config's wrapper keeps it out — the
+ * step that connects Studio through the wrapper. `next start` loads the
+ * config too, where Studio, a dev dependency, may not be installed: the
+ * wrapper is imported by `next dev` alone, and the config it returns keeps
+ * Courier's plugin, where the plugin builds the routes in.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns The step, or none where the config connects Studio so already
+ * @example
+ * ```ts
+ * studioWrapperStep(ctx)[0]?.lines[0]; // "export default async function config(phase: string): Promise<NextConfig> {"
+ * ```
+ */
+export function studioWrapperStep(ctx: RecipeContext): ManualStep[] {
+  const file = firstExisting(ctx.project, NEXT_CONFIGS);
+  const text = ctx.project.read(file);
+  const wrapped = studioWrapper(text);
+  const routed = (config: string) => (ctx.routes === "plugin" ? `withCourier(${config})` : config);
+  if (wrapped === "dev-only") return [];
+  if (wrapped === "always") return [phaseHint(file, text, routed)];
+  return [
+    {
+      file,
+      what: "Connect the browser to Studio while you develop, and keep its server connection out of webpack's bundle; `next dev` alone imports Studio, so `next start` runs without the dev dependency",
+      lines: devOnlyConfig(file, text, "nextConfig", routed),
+    },
+  ];
 }

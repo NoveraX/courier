@@ -6,12 +6,12 @@ import type { RecipeContext } from "../recipe-types";
 const EXPOSE = /\.expose\s*\(|\bexpose\s*:\s*true\b/g;
 
 /**
- * Whether a setup adds the `routes` script and the CLI that runs it: in a
- * project it sets up from nothing, whose example marks its endpoints and
- * writes courier.routes.ts, or in one that has a routes module already or
- * opens an endpoint — `.expose()`, or `expose: true` on a group or an API.
- * A project set up already with none of them would only get a dev
- * dependency it does not use.
+ * Whether a setup gives the pages their routes — Courier's plugin, or the
+ * `routes` script and the CLI that runs it: in a project it sets up from
+ * nothing, whose example opens its endpoints to a page, or in one that has
+ * a routes module already or opens an endpoint — `.expose()`, or
+ * `expose: true` on a group or an API. A project set up already with none
+ * of them would only get a dev dependency it does not use.
  *
  * @param ctx - The project, and what is set up in it
  * @returns Whether it does

@@ -24,10 +24,20 @@ function constLiteral(scan: SourceScan, name: string): Literal | undefined {
   return equals === -1 ? undefined : literalAt(scan, nextCode(scan, equals + 1));
 }
 
+/* The literal a call's first argument gives: one written there, or a top-level `const` named there. */
+function argumentLiteral(scan: SourceScan, at: number): Literal | undefined {
+  const direct = literalAt(scan, at);
+  if (direct) return direct;
+  const name = /^[A-Za-z_$][\w$]*/.exec(scan.text.slice(at))?.[0];
+  if (name === undefined) return undefined;
+  return scan.text[nextCode(scan, at + name.length)] === ")" ? constLiteral(scan, name) : undefined;
+}
+
 /**
  * The literal a file's `export default` gives: one written there, the first
- * argument of a call to one of `callees` — `defineConfig({…})` — or the one
- * a top-level `const` of the name it exports is set to.
+ * argument of a call to one of `callees` — `defineConfig({…})`, or a
+ * `const` passed to it, `withCourier(nextConfig)` — or the one a
+ * top-level `const` of the name it exports is set to.
  *
  * @param scan - The scanned file
  * @param callees - The functions whose first argument counts
@@ -50,7 +60,7 @@ export function defaultExportLiteral(
   if (name === undefined) return undefined;
   const after = nextCode(scan, at + name.length);
   if (scan.text[after] !== "(") return constLiteral(scan, name);
-  return callees.includes(name) ? literalAt(scan, nextCode(scan, after + 1)) : undefined;
+  return callees.includes(name) ? argumentLiteral(scan, nextCode(scan, after + 1)) : undefined;
 }
 
 /**

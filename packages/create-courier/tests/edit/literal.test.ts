@@ -30,6 +30,18 @@ describe("defaultExportLiteral", () => {
       defaultExportLiteral(scanned("export default other({})"), ["defineConfig"]),
     ).toBeUndefined();
   });
+
+  it("follows a const a known function is passed: the config withCourier() wraps", () => {
+    const wrapped = scanned(
+      "const nextConfig = { a: 1 };\nexport default withCourier(nextConfig);",
+    );
+    const more = scanned(
+      "const nextConfig = { a: 1 };\nexport default withCourier(nextConfig, {});",
+    );
+
+    expect(defaultExportLiteral(wrapped, ["withCourier"])?.open).toBe(wrapped.text.indexOf("{"));
+    expect(defaultExportLiteral(more, ["withCourier"])).toBeUndefined();
+  });
 });
 
 describe("properties", () => {

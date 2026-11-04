@@ -51,9 +51,9 @@ export const ROUTES_COMMAND = "courier-cli routes";
 /**
  * The scripts of a setup whose pages call the API through the proxy:
  * Studio's, where it is set up, and — where the project has routes to
- * write — `routes`, which writes `courier.routes.ts` again from the
- * `.expose()` marks and, given `--check`, fails a CI job where the file is
- * not what they give.
+ * write and Courier's plugin does not build them in — `routes`, which
+ * writes `courier.routes.ts` again from the `.expose()` marks and, given
+ * `--check`, fails a CI job where the file is not what they give.
  *
  * @param ctx - The project, and what is set up in it
  * @returns The scripts, by name
@@ -63,7 +63,8 @@ export const ROUTES_COMMAND = "courier-cli routes";
  * ```
  */
 export function proxyScripts(ctx: RecipeContext): Record<string, string> {
-  return { ...studioScripts(ctx), ...(wantsRoutes(ctx) ? { routes: ROUTES_COMMAND } : {}) };
+  const writes = ctx.routes === "file" && wantsRoutes(ctx);
+  return { ...studioScripts(ctx), ...(writes ? { routes: ROUTES_COMMAND } : {}) };
 }
 
 /**

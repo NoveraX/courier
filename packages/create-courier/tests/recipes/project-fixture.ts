@@ -2,11 +2,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { FRAMEWORKS } from "../../src/frameworks";
 import { configuredSources } from "../../src/project/configured-sources";
 import { importExtension } from "../../src/project/module-style";
 import { packageManager } from "../../src/project/package-manager";
 import { readProject } from "../../src/project/read-project";
 import type { RecipeContext, SetupChoices } from "../../src/recipes/recipe-types";
+import { routesModeOf } from "../../src/routes-mode";
 
 const made: string[] = [];
 
@@ -26,7 +28,7 @@ export function removeProjects(): void {
   for (const root of made.splice(0)) rmSync(root, { recursive: true, force: true });
 }
 
-/** What a recipe reads, for a project made with `projectWith`. */
+/** What a recipe reads, for a project made with `projectWith`: its routes as the command would take them for the framework of the marker. */
 export function contextOf(
   root: string,
   marker: string,
@@ -34,6 +36,7 @@ export function contextOf(
   ports = { studio: 6280, mock: 7001 },
 ): RecipeContext {
   const project = readProject(root);
+  const framework = FRAMEWORKS.find((each) => each.marker === marker);
   return {
     project,
     manager: packageManager("npm"),
@@ -43,6 +46,7 @@ export function contextOf(
     ports,
     fresh: false,
     configured: configuredSources(project),
+    routes: framework === undefined ? "file" : routesModeOf(project, framework, choices.routes),
   };
 }
 

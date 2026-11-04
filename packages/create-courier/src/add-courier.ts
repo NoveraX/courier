@@ -18,6 +18,7 @@ import { portsOf } from "./project/ports";
 import { readProject } from "./project/read-project";
 import { askYesNo } from "./prompt";
 import type { RecipeContext, SetupChoices } from "./recipes/recipe-types";
+import { routesAsked, routesModeOf } from "./routes-mode";
 import { wantsMcp } from "./wants-mcp";
 
 /** Where the command writes, and whether a person can answer its questions. */
@@ -59,6 +60,7 @@ async function choicesOf(run: CreateRun, terminal: Terminal): Promise<SetupChoic
     mcp,
     openapi: run.openapi,
     name: run.name,
+    routes: routesAsked(run.routes),
   };
 }
 
@@ -103,6 +105,7 @@ export async function addCourier(
     ports,
     fresh: run.fresh === true,
     configured,
+    routes: routesModeOf(project, framework, choices.routes),
   };
   const plan = buildPlan(ctx, withAgents(ctx, framework.recipe(ctx)));
   const name = project.manifest.name ?? basename(root);

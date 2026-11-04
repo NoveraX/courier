@@ -8,6 +8,8 @@ export interface CreateRun {
   studio?: boolean | undefined;
   mocks?: boolean | undefined;
   mcp?: boolean | undefined;
+  /** Where pages take their routes from: `plugin` or `file`. */
+  routes?: string | undefined;
   "package-manager"?: string | undefined;
   install?: boolean | undefined;
   yes?: boolean | undefined;

@@ -28,19 +28,20 @@ export function studioStep(ctx: RecipeContext): NextStep[] {
 
 /**
  * The step that writes `courier.routes.ts` again, where pages call through
- * the proxy and no Studio writes it as you work: the `routes` script the
+ * the proxy, take their routes from that file rather than Courier's
+ * plugin, and no Studio writes it as you work: the `routes` script the
  * setup adds, or the CLI itself where a script of the project's own has
  * that name.
  *
  * @param ctx - The project, and what is set up in it
- * @returns The step, or none where Studio is set up
+ * @returns The step, or none where Studio or the plugin writes the routes
  * @example
  * ```ts
  * routesStep(ctx); // [{ command: "npm run routes", what: "writes courier.routes.ts again from the .expose() marks: run it after you change one" }]
  * ```
  */
 export function routesStep(ctx: RecipeContext): NextStep[] {
-  if (ctx.choices.studio || !wantsRoutes(ctx)) return [];
+  if (ctx.choices.studio || ctx.routes === "plugin" || !wantsRoutes(ctx)) return [];
   const own = ctx.project.manifest.scripts.routes;
   const kept = own !== undefined && own !== ROUTES_COMMAND;
   const command = kept

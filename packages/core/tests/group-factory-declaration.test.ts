@@ -11,9 +11,12 @@ import { join, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+/* The repository, which holds the sources, the standard library and the fixture. */
+const REPOSITORY = resolve(import.meta.dirname, "../../..");
 const SOURCES = resolve(import.meta.dirname, "../src");
-const STANDARD_LIBRARY = resolve(import.meta.dirname, "../../../types/standard-library.d.ts");
-const FACTORY = join(import.meta.dirname, "group-factory.fixture.ts");
+const STANDARD_LIBRARY = join(REPOSITORY, "types/standard-library.d.ts");
+/* As TypeScript hands it to its host: with forward slashes, on Windows too. */
+const FACTORY = join(import.meta.dirname, "group-factory.fixture.ts").replaceAll("\\", "/");
 
 const FACTORY_SOURCE = `import { defineGroup, type OwnEndpoints } from "@noverax/courier/define";
 
@@ -38,7 +41,8 @@ function declarationOfFactory(): { declared: string; problems: string[] } {
     target: ts.ScriptTarget.ESNext,
     skipLibCheck: true,
     types: [],
-    rootDir: "/",
+    /* Not `/`, which holds no file on a Windows drive. */
+    rootDir: REPOSITORY,
     outDir: "/declarations",
     paths: { "@noverax/courier/define": [join(SOURCES, "define/index.ts")] },
   };

@@ -4,6 +4,7 @@
  * The env files the routes are read with: those Vite reads for the mode,
  * in the order the first to set a variable wins.
  */
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { viteEnvFiles } from "../../src/vite/vite-env-files";
@@ -11,16 +12,16 @@ import { viteEnvFiles } from "../../src/vite/vite-env-files";
 describe("viteEnvFiles", () => {
   it("lists the mode's local file, the mode's, the local one and .env, the first winning", () => {
     expect(viteEnvFiles({ root: "/app", mode: "production" })).toEqual([
-      "/app/.env.production.local",
-      "/app/.env.production",
-      "/app/.env.local",
-      "/app/.env",
+      join("/app", ".env.production.local"),
+      join("/app", ".env.production"),
+      join("/app", ".env.local"),
+      join("/app", ".env"),
     ]);
   });
 
   it("reads them from the folder Vite's envDir names", () => {
     expect(viteEnvFiles({ root: "/app", mode: "development", envDir: "/app/env" })[3]).toBe(
-      "/app/env/.env",
+      join("/app/env", ".env"),
     );
   });
 

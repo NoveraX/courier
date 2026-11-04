@@ -6,7 +6,10 @@ export type BodyErrorCode =
   | "BODY_TIMEOUT"
   | "BODY_ENCODING_UNSUPPORTED"
   | "BODY_ABORTED"
-  | "BODY_UNREADABLE";
+  | "BODY_UNREADABLE"
+  | "UPLOAD_TOO_MANY_PARTS"
+  | "UPLOAD_PART_HEADERS_TOO_LARGE"
+  | "UPLOAD_FIELDS_TOO_LARGE";
 
 /* An incomplete body is answered 413, as a body over the limit is: what cut
    it short was, in every case seen, a framework's own limit on its size. */
@@ -18,6 +21,9 @@ const STATUS: Readonly<Record<BodyErrorCode, number>> = {
   BODY_ENCODING_UNSUPPORTED: 415,
   BODY_ABORTED: 400,
   BODY_UNREADABLE: 400,
+  UPLOAD_TOO_MANY_PARTS: 413,
+  UPLOAD_PART_HEADERS_TOO_LARGE: 413,
+  UPLOAD_FIELDS_TOO_LARGE: 413,
 };
 
 /**

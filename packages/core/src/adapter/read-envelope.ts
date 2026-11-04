@@ -1,18 +1,12 @@
-import { createLogger } from "../logger";
-import { BodyError } from "./body-error";
 import { discardBody } from "./discard-body";
+import { type EnvelopeResult, refusedBody } from "./envelope-result";
 import type { HandlerConfig } from "./handler-config";
 import { LIMITS } from "./limits";
-import { type Envelope, parseFormEnvelope, parseJsonEnvelope } from "./parse-envelope";
-import { type BodyLimits, requestBodyStream } from "./read-body";
+import { parseJsonEnvelope } from "./parse-envelope";
 import { readBodyText } from "./read-body-text";
+import { readUpload } from "./read-upload";
 
-const log = createLogger("Proxy");
-
-/** A proxy POST's envelope, or the status, message and code that refuse it. */
-export type EnvelopeResult =
-  | { ok: true; envelope: Envelope }
-  | { ok: false; status: number; message: string; code?: string | undefined };
+export type { EnvelopeResult } from "./envelope-result";
 
 /**
  * Read a proxy POST's envelope, spending a bounded amount of memory and time
@@ -43,58 +37,16 @@ export async function readEnvelope(
   /* Media types are case-insensitive (RFC 9110). */
   const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
 
-  const isUpload = mediaType === "multipart/form-data";
-  if (!isUpload && mediaType !== "application/json") {
+  if (mediaType === "multipart/form-data") return readUpload(request, contentType, config);
+  if (mediaType !== "application/json") {
     discardBody(request);
     return { ok: false, status: 415, message: "Unsupported Content-Type" };
   }
 
-  if (isUpload) {
-    return readForm(request, contentType, {
-      maxBytes: config?.maxUploadBytes ?? LIMITS.MAX_PROXY_UPLOAD_BYTES,
-    });
-  }
   const body = await readBodyText(request, {
     maxBytes: config?.maxBodyBytes ?? LIMITS.MAX_PROXY_BODY_BYTES,
   });
-  if (!body.ok) return refused(body.error);
+  if (!body.ok) return refusedBody(body.error);
   const parsed = parseJsonEnvelope(body.text);
   return parsed.ok ? parsed : { ok: false, status: 400, message: parsed.reason };
-}
-
-/** Read a multipart body into its envelope. */
-async function readForm(
-  request: Request,
-  contentType: string,
-  limits: BodyLimits,
-): Promise<EnvelopeResult> {
-  let form: FormData;
-  try {
-    /* The content type carries the boundary the platform's parser needs. */
-    form = await new Response(requestBodyStream(request, limits), {
-      headers: { "content-type": contentType },
-    }).formData();
-  } catch (error) {
-    if (error instanceof BodyError) return refused(error);
-    log.debug("A multipart body did not parse", error);
-    return { ok: false, status: 400, message: "Invalid multipart body" };
-  }
-  const parsed = parseFormEnvelope(form);
-  return parsed.ok ? parsed : { ok: false, status: 400, message: parsed.reason };
-}
-
-/**
- * The answer to a body that was not taken, told once in the log.
- *
- * A browser that cancels an upload closes the connection mid-body. That is
- * the client's decision, not the server's failure, and stays at debug level;
- * so do refusals of what the client sent. A read that fails while the
- * client is still there, and a body something cut short, say little in the
- * answer alone and are warned of.
- */
-function refused(error: BodyError): EnvelopeResult {
-  if (error.code === "BODY_UNREADABLE") log.warn(error.message, error.cause);
-  else if (error.code === "BODY_INCOMPLETE") log.warn(`${error.code}: ${error.message}`);
-  else log.debug(`${error.code}: ${error.message}`);
-  return { ok: false, status: error.status, message: error.message, code: error.code };
 }

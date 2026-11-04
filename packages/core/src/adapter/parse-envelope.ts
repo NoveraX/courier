@@ -1,5 +1,5 @@
 import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
-import { parseWireOptions, parseWireOptionsJson, type WireOptions } from "./wire-options";
+import { parseWireOptions, type WireOptions } from "./wire-options";
 
 /** What a proxy POST's body carries: the call's variables and its options. */
 export interface Envelope {
@@ -13,9 +13,6 @@ export type ParsedEnvelope = { ok: true; envelope: Envelope } | { ok: false; rea
 
 /** The fields a JSON envelope may have; the endpoint's names travel in the URL. */
 const ENVELOPE_KEYS: ReadonlySet<string> = new Set(["variables", "options"]);
-
-/** The multipart field the client writes first, holding the call's options. */
-const OPTIONS_FIELD = "_options";
 
 /**
  * Read a JSON envelope, `{ variables, options }`.
@@ -57,36 +54,4 @@ export function parseJsonEnvelope(text: string): ParsedEnvelope {
   const accepted = parseWireOptions(fields.get("options"));
   if (!accepted.ok) return accepted;
   return { ok: true, envelope: { variables: fields.get("variables"), options: accepted.options } };
-}
-
-/**
- * Read a multipart envelope: the caller's form, and the options field the
- * client writes before it.
- *
- * Only the first `_options` field is the call's; a caller's own field of that
- * name, later in the form, reaches the upstream as the caller wrote it.
- *
- * @param form - The parsed form
- * @returns The envelope, with the caller's fields as its variables, or why
- *   it is refused
- *
- * @example
- * ```ts
- * parseFormEnvelope(form); // → { ok: true, envelope: { variables: FormData, options } }
- * ```
- */
-export function parseFormEnvelope(form: FormData): ParsedEnvelope {
-  const variables = new FormData();
-  let options: FormDataEntryValue | undefined;
-  for (const [key, value] of form.entries()) {
-    if (key === OPTIONS_FIELD && options === undefined) options = value;
-    else variables.append(key, value);
-  }
-
-  if (options !== undefined && typeof options !== "string") {
-    return { ok: false, reason: "options must be a JSON string" };
-  }
-  const accepted = parseWireOptionsJson(options ?? null);
-  if (!accepted.ok) return accepted;
-  return { ok: true, envelope: { variables, options: accepted.options } };
 }

@@ -52,6 +52,10 @@ The handler reads a body as it arrives and refuses it, with the status and `code
 | Runs past its `Content-Length`, or names one that is not a length | `400` | `BODY_MALFORMED` |
 | Is compressed (`Content-Encoding`) | `415` | `BODY_ENCODING_UNSUPPORTED` |
 | Sends nothing for 30 seconds, or is still arriving 5 minutes after it began | `408` | `BODY_TIMEOUT` |
+| An upload of more than 1000 parts, fields and files together | `413` | `UPLOAD_TOO_MANY_PARTS` |
+| An upload whose text fields together take more than `maxBodyBytes` | `413` | `UPLOAD_FIELDS_TOO_LARGE` |
+| An upload with a part whose headers take more than 8 KB | `413` | `UPLOAD_PART_HEADERS_TOO_LARGE` |
+| An upload that does not parse as `multipart/form-data` — see [what the proxy takes](/docs/advanced/upload#what-the-proxy-takes) | `400` | `BODY_MALFORMED` |
 
 A JSON envelope must be UTF-8; one that is not is answered `400`.
 

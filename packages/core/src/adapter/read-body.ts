@@ -60,10 +60,10 @@ const CONNECTION_GONE: ReadonlySet<unknown> = new Set(["ECONNRESET", "ECONNABORT
 export function requestBodyStream(
   request: Request,
   limits: BodyLimits,
-): ReadableStream<Uint8Array> {
+): ReadableStream<Uint8Array<ArrayBuffer>> {
   const idleMs = limits.idleTimeoutMs ?? LIMITS.BODY_IDLE_TIMEOUT_MS;
   const timeoutMs = limits.timeoutMs ?? LIMITS.BODY_TIMEOUT_MS;
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  let reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined;
   let declared: number | undefined;
   let deadline: number | undefined;
   let received = 0;
@@ -88,7 +88,7 @@ export function requestBodyStream(
     throw refusal;
   };
 
-  return new ReadableStream<Uint8Array>(
+  return new ReadableStream<Uint8Array<ArrayBuffer>>(
     {
       /* What the headers alone refuse fails the stream before a byte is read;
          thrown from here, it would fail the stream's constructor instead. */
@@ -113,7 +113,7 @@ export function requestBodyStream(
         }
         reader ??= body.getReader();
         deadline ??= performance.now() + timeoutMs;
-        let next: ReadableStreamReadResult<Uint8Array>;
+        let next: ReadableStreamReadResult<Uint8Array<ArrayBuffer>>;
         try {
           next = await readChunk(reader, { idleMs, deadline, timeoutMs, signal: request.signal });
         } catch (error) {

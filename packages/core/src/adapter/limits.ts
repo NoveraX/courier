@@ -53,4 +53,13 @@ export const LIMITS = {
 
   /** Longest a request body may take to arrive before it is refused with 408 (5 minutes, as Node's `requestTimeout`) */
   BODY_TIMEOUT_MS: 300_000,
+
+  /** Most parts — fields and files — one upload may hold */
+  MAX_UPLOAD_PARTS: 1000,
+
+  /** Most bytes the header lines of one part of an upload may take (8 KB) */
+  MAX_PART_HEADER_BYTES: 8192,
+
+  /** Size of the pieces an upload's file is gathered in, in memory (64 KB) */
+  UPLOAD_SLAB_BYTES: 65_536,
 } as const;

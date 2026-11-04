@@ -37,9 +37,9 @@ export interface ChunkWait {
  * ```
  */
 export function readChunk(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
+  reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>,
   wait: ChunkWait,
-): Promise<ReadableStreamReadResult<Uint8Array>> {
+): Promise<ReadableStreamReadResult<Uint8Array<ArrayBuffer>>> {
   const { signal } = wait;
   if (signal.aborted) return Promise.reject(clientLeft(signal.reason));
   const remaining = wait.deadline - performance.now();

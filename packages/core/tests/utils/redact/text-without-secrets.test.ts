@@ -42,6 +42,23 @@ describe("a text's credentials", () => {
     expect(textWithoutSecrets("refused key=Zq9x7Kp2")).toBe("refused key=[redacted]");
   });
 
+  it("are cut in a pair that the value of a pair named for nothing holds", () => {
+    expect(textWithoutSecrets("Error: password=hunter2")).toBe("Error: password=[redacted]");
+    expect(textWithoutSecrets('"message": "token=Zq9x7Kp2 refused"')).toBe(
+      '"message": "token=[redacted] refused"',
+    );
+    expect(textWithoutSecrets("at: line: secret=Zq9x7Kp2")).toBe("at: line: secret=[redacted]");
+  });
+
+  it("are cut after a JSON key in quotes, whatever stands before it", () => {
+    expect(textWithoutSecrets('sent = "api_key": "Zq9x7Kp2"')).toBe(
+      'sent = "api_key": "[redacted]"',
+    );
+    expect(textWithoutSecrets(`body={'password': 'hunter2'}`)).toBe(
+      `body={'password': '[redacted]'}`,
+    );
+  });
+
   it("are the values Postgres quoted for a secret column", () => {
     expect(textWithoutSecrets("Key (api_key)=(Zq9x7Kp2Lm) already exists.")).toBe(
       "Key (api_key)=([redacted]) already exists.",

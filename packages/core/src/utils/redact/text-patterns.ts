@@ -46,6 +46,12 @@ const DIGEST_RESPONSE = /(\b(?:response|cnonce)=)"[0-9a-f]{16,128}"/gi;
 /** Postgres names the columns and the values of a key it refused: `Key (api_key)=(…)`. */
 const POSTGRES_KEY = new RegExp(`(Key \\()([^)]{1,256})(\\)=\\()([^)]{0,${LONG}})(\\))`, "g");
 
+/** A JSON key and its value: a name in quotes, `:` and a value, whatever stands before the key. */
+const JSON_PAIR = new RegExp(
+  `(["'])([A-Za-z][\\w.-]{0,63})\\1([ \\t]{0,3}:[ \\t]{0,3})("[^"]{0,${LONG}}"?|'[^']{0,${LONG}}'?|[^\\s&,;"'<>(){}[\\]]{1,${LONG}})`,
+  "g",
+);
+
 /** A pair: a name, `=` or `:`, and a value, quoted or not; a quote left open runs to the end. */
 const PAIR = new RegExp(
   `(^|[^\\w.-])([A-Za-z][\\w.-]{0,63})(["']?)([ \\t]{0,3})([=:])([ \\t]{0,3})("[^"]{0,${LONG}}"?|'[^']{0,${LONG}}'?|[^\\s&,;"'<>(){}[\\]]{1,${LONG}})`,
@@ -82,6 +88,7 @@ export const TEXT_PATTERNS = {
   AUTH_VALUE,
   DIGEST_RESPONSE,
   POSTGRES_KEY,
+  JSON_PAIR,
   PAIR,
   SPACED,
   BARE_CREDENTIAL,

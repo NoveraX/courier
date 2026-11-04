@@ -38,7 +38,8 @@ export function textWithoutSecrets(text: string): string {
     .replace(P.AUTH_VALUE, cutAuthValue)
     .replace(P.DIGEST_RESPONSE, `$1"${REDACTED}"`)
     .replace(P.POSTGRES_KEY, cutPostgresKey)
-    .replace(P.PAIR, cutPair)
+    .replace(P.JSON_PAIR, cutJsonPair)
+    .replace(P.PAIR, (match: string, ...pair: string[]) => cutPair(match, pair, 0))
     .replace(P.SPACED, cutSpaced);
   return P.AUTH_CONTEXT.test(cut) ? cut.replace(P.BARE_CREDENTIAL, cutBareCredential) : cut;
 }
@@ -71,39 +72,63 @@ function cutPostgresKey(
   return secret ? `${open}${columns}${between}${REDACTED}${close}` : match;
 }
 
-function cutPair(
+/* A JSON key in quotes is a key wherever it stands: `fetch = "token": "…"` names no pair `fetch`. */
+function cutJsonPair(
   match: string,
-  before: string,
-  name: string,
   quote: string,
-  spaceBefore: string,
-  separator: string,
-  spaceAfter: string,
+  name: string,
+  between: string,
   value: string,
 ): string {
   const strength = secretName(name);
-  if (strength === undefined || value === REDACTED || P.ALREADY_URL.test(value)) return match;
+  if (strength === undefined || value === REDACTED) return match;
+  return cutValue(`${quote}${name}${quote}${between}`, value, strength, ":", " ") ?? match;
+}
+
+/* A pair a value is read for, how deep: `Error: password=…` holds its secret one level down. */
+const INNER_PAIRS = 8;
+
+/* A pair, its secret value cut; or, when its name says nothing secret, the pair its value may
+   hold — `Error: password=…`, `"message": "token=…"` — read the same way, a few levels deep. */
+function cutPair(match: string, pair: string[], depth: number): string {
+  const [before = "", name = "", quote = "", spaceBefore = "", separator = "", spaceAfter = ""] =
+    pair;
+  const value = pair[6] ?? "";
+  if (value === REDACTED || P.ALREADY_URL.test(value)) return match;
   const head = `${before}${name}${quote}${spaceBefore}${separator}${spaceAfter}`;
+  const strength = secretName(name);
+  const cut = strength && cutValue(head, value, strength, separator, spaceBefore + spaceAfter);
+  if (cut) return cut;
+  if (depth >= INNER_PAIRS) return match;
+  return `${head}${value.replace(P.PAIR, (inner: string, ...held: string[]) => cutPair(inner, held, depth + 1))}`;
+}
+
+function cutValue(
+  head: string,
+  value: string,
+  strength: SecretName,
+  separator: string,
+  spaces: string,
+): string | undefined {
   const opening = value[0];
-  if (opening === '"' || opening === "'") return cutQuoted(match, head, value, opening, strength);
+  if (opening === '"' || opening === "'") return cutQuoted(head, value, opening, strength);
   /* `name=value` is a query or a setting; after `:` the next word may be prose. */
-  const assigned = separator === "=" && spaceBefore === "" && spaceAfter === "";
+  const assigned = separator === "=" && spaces === "";
   const cut = strength === "strong" ? assigned || isSecretLike(value) : isSecretLike(value);
-  return cut ? `${head}${REDACTED}` : match;
+  return cut ? `${head}${REDACTED}` : undefined;
 }
 
 /* A quoted value, and one whose quote was left open and runs to the end. */
 function cutQuoted(
-  match: string,
   head: string,
   value: string,
   quote: string,
   strength: SecretName,
-): string {
+): string | undefined {
   const closed = value.length > 1 && value.endsWith(quote);
   const inner = closed ? value.slice(1, -1) : value.slice(1);
-  if (inner === "") return match;
-  if (strength === "weak" && (/\s/.test(inner) || !isSecretLike(inner))) return match;
+  if (inner === "") return undefined;
+  if (strength === "weak" && (/\s/.test(inner) || !isSecretLike(inner))) return undefined;
   return `${head}${quote}${REDACTED}${closed ? quote : ""}`;
 }
 

@@ -141,6 +141,9 @@ describe("a text of any size", () => {
     /* Joined at run time, as the corpus's keys are, so no scanner takes the source for one. */
     "private keys never ended": ["-----BEGIN PRIVATE", " KEY-----"].join("").repeat(MEGABYTE / 27),
     "sign-in words with pairs": "auth a:bbbbbbbb ".repeat(MEGABYTE / 16),
+    "labels inside labels": "a:".repeat(MEGABYTE / 2),
+    "pairs inside pairs": "a=".repeat(MEGABYTE / 2),
+    "quoted labels inside labels": 'a:"'.repeat(MEGABYTE / 3),
     "one word": "x".repeat(MEGABYTE),
   };
 

@@ -11,13 +11,19 @@
  *
  * Loopback names and IP literals are always served: a page on one of them is
  * on the user's own machine or at an address nobody can point elsewhere.
- * Anything else is served when `allowedHosts` names it. Left unconfigured,
+ * Anything else is served when `allowedHosts` names it — as the config lists
+ * it, as its function answers when the first request comes in, or as
+ * `COURIER_ALLOWED_HOSTS` does; see `readAllowedHosts`. Left unconfigured,
  * development serves nothing else — a rebound name reaches a developer's
  * server as easily as any — while production keeps serving every name, since
- * a production host is reached through names its operator set up.
+ * a production host is reached through names its operator set up. While the
+ * setting cannot be read, nothing is served: a mistake in it closes the
+ * application rather than opening it.
  */
 
 import { parseUrl } from "../utils/parse-url";
+import { type HostNames, isHostNamed } from "./host-names";
+import { type AllowedHostsSetting, readAllowedHosts, reportUnreadSetting } from "./runtime-policy";
 
 /**
  * Decide whether a request was addressed to a host this app serves.
@@ -30,22 +36,25 @@ import { parseUrl } from "../utils/parse-url";
  * @example
  * ```ts
  * isHostAllowed(request, ["app.example.com", "*.example.com"]);
+ * isHostAllowed(request, () => [new URL(process.env.APP_URL ?? "").host]);
  * ```
  */
-export function isHostAllowed(request: Request, allowedHosts?: readonly string[]): boolean {
+export function isHostAllowed(request: Request, allowedHosts?: AllowedHostsSetting): boolean {
   return isHostAccepted(new URL(request.url).host, allowedHosts);
 }
 
 /**
  * The same rule, for a server that speaks in parts rather than in `Request`.
  *
- * An entry is a host name without a port — `app.example.com` — or
- * `*.example.com` for the sub-domains of one, not the name itself. Names
- * match in any case, and on any port.
+ * An entry is a host name — `app.example.com`, a port after it read past —
+ * or `*.example.com` for the sub-domains of one, not the name itself. Names
+ * match in any case, and on any port. A setting that cannot be read admits
+ * no request at all, and says why in the log, once.
  *
  * @param host - The host the request was addressed to, with or without a
  *   port; absent from a client that is not a browser
- * @param allowedHosts - The app's own host names
+ * @param allowedHosts - The app's own host names: a list, a function, or
+ *   none, which leaves them to `COURIER_ALLOWED_HOSTS`
  * @returns Whether the request may proceed
  *
  * @example
@@ -57,14 +66,38 @@ export function isHostAllowed(request: Request, allowedHosts?: readonly string[]
  */
 export function isHostAccepted(
   host: string | null | undefined,
-  allowedHosts?: readonly string[],
+  allowedHosts?: AllowedHostsSetting,
+): boolean {
+  const hosts = readAllowedHosts(allowedHosts);
+  if (hosts.ok) return isHostServed(host, hosts.value);
+  reportUnreadSetting(hosts.error);
+  return false;
+}
+
+/**
+ * The same rule, for names already read: what an entry point that tells a
+ * setting it cannot read from a host it does not serve decides with.
+ *
+ * @param host - The host the request was addressed to, with or without a port
+ * @param hosts - The names `readAllowedHosts` read, or none when nothing sets them
+ * @returns Whether the request may proceed
+ *
+ * @example
+ * ```ts
+ * const hosts = readAllowedHosts(config.allowedHosts);
+ * if (hosts.ok && !isHostServed(new URL(request.url).host, hosts.value)) return refuseHost(request);
+ * ```
+ */
+export function isHostServed(
+  host: string | null | undefined,
+  hosts: HostNames | undefined,
 ): boolean {
   /* Every browser sends a host; a caller without one is not a page. */
   if (!host) return true;
   const name = hostnameOf(host);
   if (name === undefined) return false;
   if (isAlwaysServed(name)) return true;
-  if (allowedHosts !== undefined) return allowedHosts.some((entry) => matchesHost(name, entry));
+  if (hosts !== undefined) return isHostNamed(name, hosts);
   return process.env.NODE_ENV === "production";
 }
 
@@ -81,11 +114,4 @@ function hostnameOf(host: string): string | undefined {
 function isAlwaysServed(name: string): boolean {
   if (name === "localhost" || name.endsWith(".localhost")) return true;
   return name.startsWith("[") || /^\d+\.\d+\.\d+\.\d+$/.test(name);
-}
-
-/** Case-insensitive; a wildcard covers sub-domains but not the name itself. */
-function matchesHost(name: string, entry: string): boolean {
-  const allowed = entry.trim().toLowerCase();
-  if (allowed.startsWith("*.")) return name.endsWith(allowed.slice(1));
-  return name === allowed;
 }

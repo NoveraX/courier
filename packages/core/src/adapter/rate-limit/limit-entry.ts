@@ -19,7 +19,7 @@ type Serve = (request: Request) => Promise<Response>;
  * @returns The entry point, limited
  * @example
  * ```ts
- * const handlePost = gateEntry(limitEntry(post, limiter, studioHooks), config);
+ * const handlePost = gateEntry(limitEntry(post, limiter, studioHooks), config, studioHooks);
  * ```
  */
 export function limitEntry(

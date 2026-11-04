@@ -1,4 +1,4 @@
-export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-11-05" }
 
 ## What Courier secures, and what it leaves to your API
 
@@ -74,6 +74,8 @@ Every call the proxy serves — GET, POST, a stream and a channel — is checked
 `allowedOrigins` takes exact origins, `https://*.example.com` for the subdomains of a host on one scheme and port, or `*.example.com` for them on any scheme. Any scheme includes plain HTTP, and anyone on a visitor's network can answer for an HTTP name with a page of their own, which then calls with the visitor's cookies — so write the scheme unless a page served over HTTP must call the application. A pattern admits every host under it, whoever runs it: `https://*.vercel.app` admits every app any Vercel user deploys, and `*.com` every site, each reading what your users are answered — list the origins of your own deployments, or a pattern under a domain only you control. With none configured, development also admits a page on another port of the local machine, while the app itself is served from that machine, so Studio can drive it. An app on any other address never admits one: a server started without `NODE_ENV` counts as in development, and a page on a visitor's own machine — a local tool, another dev server — is not the application's.
 
 `allowedHosts` names the hosts your application answers to. Without it, development answers only the local machine's names and IP addresses, so a name an attacker points at `127.0.0.1` — DNS rebinding — cannot reach a developer's server; production answers every name its operator set up. A request for any other host is answered `421` on every transport.
+
+Both lists can be known only where the application runs: a function in place of either is read with the first request, and `COURIER_ALLOWED_HOSTS` and `COURIER_ALLOWED_ORIGINS` name them where the code does not. A list that cannot be read closes the application rather than opening it: every request is answered `500`, and the log says why. So does a variable that is set and empty, which a template writes when its value was missing — read as unset, it would serve every name. See [Names known where the app runs](/docs/proxy-mode/overview#names-known-where-the-app-runs).
 
 A GET to the proxy reaches only an endpoint that reads, and the variables of an endpoint marked `sensitiveVariables` are refused in an address: such a call goes as POST.
 
@@ -154,7 +156,7 @@ Courier counts as in development wherever `NODE_ENV` is not `production`, so set
 - Set `NODE_ENV=production`.
 - Reach your APIs over HTTPS, and leave `allowHttp` unset. Trust an internal certificate authority with `NODE_EXTRA_CA_CERTS` or an API's own `dispatcher`, never by turning the certificate check off — see [Proxies & Certificates](/docs/advanced/proxies-and-certificates).
 - Name the session's cookies exactly, and a prefix only where every cookie under it belongs to the session.
-- List in `allowedOrigins` only pages you serve, and in `allowedHosts` the names your application answers to.
+- List in `allowedOrigins` only pages you serve, and in `allowedHosts` the names your application answers to — in the code, or in `COURIER_ALLOWED_ORIGINS` and `COURIER_ALLOWED_HOSTS` where it runs.
 - Mark `session: "unguarded"` only on writes that do no harm when a stranger sets them off, and never declare a write `.reads()`.
 - Forward the client's address only behind a proxy on the local machine or a private network.
 - Print the log as JSON wherever it leaves the machine, with `COURIER_LOG_FORMAT=json`.

@@ -3,7 +3,6 @@ import { studioRequestIdOf } from "../studio/studio-request-id";
 import { discardBody } from "./discard-body";
 import type { ExecuteFn } from "./execute-fn";
 import type { HandlerConfig } from "./handler-config";
-import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { announceProxyCall } from "./proxy-call-events";
 import { readEnvelope } from "./read-envelope";
@@ -18,7 +17,7 @@ import { readRouting } from "./read-routing";
  *
  * @param execute - Runs the call once its envelope is read
  * @param dt - The Studio hooks
- * @param config - The handler's origins and body limits
+ * @param config - The handler's body limits
  * @returns The entry point
  *
  * @example
@@ -33,15 +32,6 @@ export function createPostHandler(
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     const proxyReceiveAt = performance.now();
-
-    if (!isOriginAllowed(request, config?.allowedOrigins)) {
-      dt.onProxyOriginReject?.({
-        origin: request.headers.get("origin") ?? "",
-        timestamp: Date.now(),
-      });
-      discardBody(request);
-      return errorResponse(403, "Origin not allowed");
-    }
 
     const routing = readRouting(new URL(request.url));
     if (!routing) {

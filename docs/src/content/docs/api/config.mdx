@@ -1,4 +1,4 @@
-export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both", updated: "2026-11-05" }
 
 ## Overview
 
@@ -69,8 +69,8 @@ What the [standalone server](/docs/deployment/standalone-server) reads when its 
 | --- | --- | --- |
 | `port` | `3001` | `--port` overrides it |
 | `host` | `"127.0.0.1"` | `--host` overrides it; `"0.0.0.0"` or `"::"` to accept other machines |
-| `allowedOrigins` | — | The origins of the browser apps that call the server, written as a browser sends them. Left out, only the server's own origin; outside production a page on another port of the local machine is let through as well, so Studio can drive the app, but never reads the answers — list the origin of a dev server whose page calls this one. `--allowed-origins` overrides it |
-| `allowedHosts` | — | The host names the server is reached by; a request to another is refused with `421`. `--allowed-hosts` overrides it |
+| `allowedOrigins` | `COURIER_ALLOWED_ORIGINS` | The origins of the browser apps that call the server, written as a browser sends them: a list, or a function the server calls as it starts. Left out, and with no variable, only the server's own origin; outside production a page on another port of the local machine is let through as well, so Studio can drive the app, but never reads the answers — list the origin of a dev server whose page calls this one. `--allowed-origins` overrides it |
+| `allowedHosts` | `COURIER_ALLOWED_HOSTS` | The host names the server is reached by, a list or a function it calls as it starts; a request to another is refused with `421`. `--allowed-hosts` overrides it, and the server does not start while either list cannot be read |
 | `maxBodyBytes` | 1 MB | The largest JSON envelope the proxy reads; a larger one is refused with `413` |
 | `maxUploadBytes` | 10 MB | The largest `multipart/form-data` upload the proxy reads |
 

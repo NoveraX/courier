@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { gateEntry } from "../src/adapter/entry-gate";
 import { createPostHandler } from "../src/adapter/handle-post";
 import type { StudioHooks } from "../src/studio/hooks";
 
@@ -44,10 +45,15 @@ afterEach(() => {
 });
 
 describe("createPostHandler", () => {
+  /* Made in front of every entry point, where the handler gates them. */
   describe("origin check", () => {
+    function gated(execute: ReturnType<typeof createMockExecute>, hooks: StudioHooks) {
+      return gateEntry(createPostHandler(execute, hooks), undefined, hooks);
+    }
+
     it("serves a caller that sends no Origin, which no hostile page can be", async () => {
       const execute = createMockExecute();
-      const handler = createPostHandler(execute, createHooks());
+      const handler = gated(execute, createHooks());
       const req = new Request(CALL_URL, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -61,7 +67,7 @@ describe("createPostHandler", () => {
     });
 
     it("returns 403 when origin does not match request URL", async () => {
-      const handler = createPostHandler(createMockExecute(), createHooks());
+      const handler = gated(createMockExecute(), createHooks());
 
       const res = await handler(postRequest("{}", { origin: "http://evil.com" }));
 
@@ -70,7 +76,7 @@ describe("createPostHandler", () => {
 
     it("emits onProxyOriginReject with mismatched origin, and nothing about the call", async () => {
       const hooks = createHooks();
-      const handler = createPostHandler(createMockExecute(), hooks);
+      const handler = gated(createMockExecute(), hooks);
 
       await handler(postRequest("{}", { origin: "http://evil.com" }));
 

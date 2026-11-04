@@ -1,12 +1,17 @@
+import type { RuntimeSetting } from "@noverax/courier";
+
 /**
  * A list the command takes as a comma-separated flag, or from the config.
  *
  * The flag wins when it is given, as every flag does over the config's
- * `server` block; blank entries — a trailing comma — are dropped.
+ * `server` block; blank entries — a trailing comma — are dropped. The
+ * config's setting is passed on as it is, a list or a function the server
+ * calls as it starts; neither given, the server reads the setting's
+ * environment variable.
  *
  * @param flag - The flag's value, when given.
- * @param configured - The config's list, when it has one.
- * @returns The list, or `undefined` when neither names one.
+ * @param configured - The config's setting, when it has one.
+ * @returns The setting, or `undefined` when neither names one.
  *
  * @example
  * ```ts
@@ -16,9 +21,9 @@
  */
 export function listOption(
   flag: string | undefined,
-  configured: readonly string[] | undefined,
-): string[] | undefined {
-  if (flag === undefined) return configured === undefined ? undefined : [...configured];
+  configured: RuntimeSetting<readonly string[]> | undefined,
+): RuntimeSetting<readonly string[]> | undefined {
+  if (flag === undefined) return configured;
   return flag
     .split(",")
     .map((entry) => entry.trim())

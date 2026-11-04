@@ -213,6 +213,8 @@ Pages on other origins are served when `allowedOrigins` lists them. An entry is 
 
 A DNS-rebinding page points its own name at the machine the app runs on, and its calls then look same-origin to the browser. Every entry point therefore answers only for the host names the app is reached by: a request for another host gets `421` with the code `HOST_NOT_ALLOWED`, and a socket is closed with `4421`. `localhost`, `*.localhost` names and IP addresses are always served; list the rest in `allowedHosts` — `createHandler({ allowedHosts: ["app.example.com", "*.preview.example.com"] })`, and the same option on `createWSHandler` and every adapter. Left out, development serves nothing else and production every name.
 
+Either list may be a function, which the handler calls when the first request comes in — `allowedHosts: () => [new URL(process.env.APP_URL!).host]` reads the running app's variable, where a list would read it while a framework builds the route. Left out, they are `COURIER_ALLOWED_HOSTS` and `COURIER_ALLOWED_ORIGINS`, comma-separated. While a list cannot be read, every request is answered `500` with the code `SERVER_MISCONFIGURED`, and the log says why, once. `createWSHandler` reads `allowedHosts` the same way, closing every socket with `4421` while it cannot be read, and takes `allowedOrigins` as a list.
+
 ```ts
 createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example.com"] })
 ```

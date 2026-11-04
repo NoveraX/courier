@@ -9,7 +9,12 @@ import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type * as Ws from "ws";
 import type { WebSocketServer } from "ws";
 
-import { httpHandlerOptions, wsFrameLimit, wsHandlerOptions } from "./handler-options";
+import {
+  httpHandlerOptions,
+  readServerSettings,
+  wsFrameLimit,
+  wsHandlerOptions,
+} from "./handler-options";
 import { createRequestListener } from "./http-handlers";
 import { listenUrl } from "./listen-url";
 import { createReadiness } from "./readiness";
@@ -49,7 +54,6 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     sources,
     port = DEFAULT_PORT,
     host = DEFAULT_HOST,
-    allowedOrigins,
     signals = true,
     onReady,
     onServerError,
@@ -66,8 +70,9 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
       "[courier] createCourierServer() needs the sources it serves: createCourierServer({ sources: { api } }).",
     );
   }
-  const handler = createHandler(httpHandlerOptions(config));
-  const wsHandler = createWSHandler(wsHandlerOptions(config));
+  const settings = readServerSettings(config);
+  const handler = createHandler(httpHandlerOptions(config, settings));
+  const wsHandler = createWSHandler(wsHandlerOptions(config, settings));
 
   let wss: WebSocketServer | undefined;
   let shuttingDown = false;
@@ -83,7 +88,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   };
 
   const httpServer = createServer(
-    createRequestListener(handler, allowedOrigins, () => shuttingDown),
+    createRequestListener(handler, settings.allowedOrigins, () => shuttingDown),
   );
 
   attachWebSocketUpgrade(httpServer, {

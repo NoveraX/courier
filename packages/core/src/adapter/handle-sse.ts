@@ -16,7 +16,6 @@ import { runTransportMiddleware } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
 import { SSE_HEADERS } from "./format-sse";
 import type { HandlerConfig } from "./handler-config";
-import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { servedSources } from "./served-sources";
 import type { InternalSSERegistry } from "./sse-registry";
@@ -48,15 +47,17 @@ function unavailable(message: string, retrySec: string): Response {
  * Routing: `GET /api/sse?_s=source&_g=group&_m=method&_v={"var1":"val1"}`
  * Client sends `Accept: text/event-stream` or uses `_transport=sse` query param.
  *
- * Includes: origin validation, middleware execution (with timeout), lifecycle hooks,
- * TTL-based stream lifetime, graceful shutdown support, variable schema validation.
+ * Includes: middleware execution (with timeout), lifecycle hooks, TTL-based
+ * stream lifetime, graceful shutdown support, variable schema validation. The
+ * host and the page a request comes from are checked in front of it, as in
+ * front of every entry point (see `gateEntry`).
  *
  * Unless the config names its own `sources`, they are read lazily from the
  * core global registry at request time, so a single `courierHandler()`
  * expression in user code works regardless of which framework owns the
  * listen socket.
  *
- * @param config - Optional handler config (origins, headers, TTL, lifecycle hooks)
+ * @param config - Optional handler config (headers, TTL, lifecycle hooks)
  * @param registry - SSE connection registry for tracking/limiting active streams
  * @returns Async request handler `(request: Request) => Promise<Response>`
  */
@@ -67,9 +68,6 @@ export function createSSEHandler(
   const responseHeaders = { ...SSE_HEADERS, ...config?.sseHeaders };
 
   return async (request: Request): Promise<Response> => {
-    if (!isOriginAllowed(request, config?.allowedOrigins)) {
-      return errorResponse(403, "Origin not allowed");
-    }
     if (registry.isShuttingDown) return unavailable("Service shutting down", "3");
     if (config?.maxSSEConnections && registry.count >= config.maxSSEConnections) {
       return unavailable("Too many SSE connections", "5");

@@ -1,5 +1,5 @@
-import type { HandlerConfig, WSHandlerConfig } from "@noverax/courier";
-
+import { ConfigurationError, type HandlerConfig, type WSHandlerConfig } from "@noverax/courier";
+import { readAllowedHosts, readAllowedOrigins } from "@noverax/courier/internal";
 import { wsFrameLimit as frameLimitFor } from "@noverax/courier/node";
 import type { CourierServerOptions } from "./types";
 
@@ -11,22 +11,68 @@ import type { CourierServerOptions } from "./types";
  */
 type Forwarded<TConfig> = { [TKey in keyof Required<TConfig>]: TConfig[TKey] };
 
+/** The server's hosts and origins, as it read them when it started. */
+export interface ServerSettings {
+  /** As given: the handlers read them by the reading the start made, which is remembered. */
+  readonly allowedHosts: CourierServerOptions["allowedHosts"];
+  /** The list the handlers and the server's own CORS check against; none when nothing sets it. */
+  readonly allowedOrigins: string[] | undefined;
+}
+
+/**
+ * Read the server's hosts and origins as it starts: a function in its
+ * options is called now, and `COURIER_ALLOWED_HOSTS` or
+ * `COURIER_ALLOWED_ORIGINS` read where they name none. A server process is
+ * started where it runs, never while an application is built, so nothing is
+ * gained by waiting for the first request — and a mistake is better found
+ * before the server listens than by its first caller.
+ *
+ * @param config - The server's options
+ * @returns The hosts, and the origins as the list they come to
+ * @throws ConfigurationError naming the setting, where it came from and what is wrong with it
+ * @example
+ * ```ts
+ * const settings = readServerSettings(config);
+ * const handler = createHandler(httpHandlerOptions(config, settings));
+ * ```
+ */
+export function readServerSettings(config: CourierServerOptions): ServerSettings {
+  const hosts = readAllowedHosts(config.allowedHosts);
+  if (!hosts.ok) throw notStarted(hosts.error);
+  const origins = readAllowedOrigins(config.allowedOrigins);
+  if (!origins.ok) throw notStarted(origins.error);
+  return {
+    allowedHosts: config.allowedHosts,
+    allowedOrigins: origins.value === undefined ? undefined : [...origins.value],
+  };
+}
+
+function notStarted(error: ConfigurationError): ConfigurationError {
+  return new ConfigurationError(error.code, `createCourierServer: ${error.message}`, {
+    cause: error.cause,
+  });
+}
+
 /**
  * The options the server's HTTP handler takes, out of the server's own.
  *
  * @param config - The server's options
+ * @param settings - Its hosts and origins, as it read them when it started
  * @returns The core HTTP handler's options
  *
  * @example
  * ```ts
- * const handler = createHandler(httpHandlerOptions(config));
+ * const handler = createHandler(httpHandlerOptions(config, readServerSettings(config)));
  * ```
  */
-export function httpHandlerOptions(config: CourierServerOptions): HandlerConfig {
+export function httpHandlerOptions(
+  config: CourierServerOptions,
+  settings: ServerSettings,
+): HandlerConfig {
   const options: Forwarded<HandlerConfig> = {
     sources: config.sources,
-    allowedOrigins: config.allowedOrigins,
-    allowedHosts: config.allowedHosts,
+    allowedOrigins: settings.allowedOrigins,
+    allowedHosts: settings.allowedHosts,
     sseHeaders: config.sseHeaders,
     sseMaxLifetimeMs: config.sseMaxLifetimeMs,
     maxBodyBytes: config.maxBodyBytes,
@@ -45,18 +91,22 @@ export function httpHandlerOptions(config: CourierServerOptions): HandlerConfig 
  * The options the server's WebSocket handler takes, out of the server's own.
  *
  * @param config - The server's options
+ * @param settings - Its hosts and origins, as it read them when it started
  * @returns The core WebSocket handler's options
  *
  * @example
  * ```ts
- * const wsHandler = createWSHandler(wsHandlerOptions(config));
+ * const wsHandler = createWSHandler(wsHandlerOptions(config, readServerSettings(config)));
  * ```
  */
-export function wsHandlerOptions(config: CourierServerOptions): WSHandlerConfig {
+export function wsHandlerOptions(
+  config: CourierServerOptions,
+  settings: ServerSettings,
+): WSHandlerConfig {
   const options: Forwarded<WSHandlerConfig> = {
     sources: config.sources,
-    allowedOrigins: config.allowedOrigins,
-    allowedHosts: config.allowedHosts,
+    allowedOrigins: settings.allowedOrigins,
+    allowedHosts: settings.allowedHosts,
     pubsub: config.pubsub,
     heartbeatIntervalMs: config.heartbeatIntervalMs,
     heartbeatTimeoutMs: config.heartbeatTimeoutMs,

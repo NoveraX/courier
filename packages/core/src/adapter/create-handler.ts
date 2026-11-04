@@ -1,7 +1,6 @@
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { executeRequest } from "../utils/execute";
-import { assertAllowedOrigins } from "./assert-allowed-origins";
 import type { ConnectResult } from "./connection-meta";
 import { discardBody } from "./discard-body";
 import { gateEntry } from "./entry-gate";
@@ -14,6 +13,7 @@ import { errorResponse } from "./parse";
 import { assertRateLimit } from "./rate-limit/assert-rate-limit";
 import { limitEntry } from "./rate-limit/limit-entry";
 import { createProxyLimiter } from "./rate-limit/proxy-limiter";
+import { assertListedSettings } from "./runtime-policy";
 import { servedSources } from "./served-sources";
 import { createSSEConnectionRegistry } from "./sse-registry";
 import type { SSEConnectionRegistry } from "./sse-types";
@@ -40,9 +40,11 @@ export type AdapterHandler = {
  * `courierHandler()` expression in user code works regardless of which
  * framework owns the listen socket.
  *
- * @param config - Origins, limits, SSE lifecycle and, optionally, the sources
+ * @param config - Hosts, origins, limits, SSE lifecycle and, optionally, the sources
  * @returns The handler, its SSE registry and its shutdown
- * @throws ConfigurationError when `config.sources` is not a dictionary of sources
+ * @throws ConfigurationError when `config.sources` is not a dictionary of
+ *   sources, or `allowedHosts` or `allowedOrigins` is a list holding an entry
+ *   no request can match; one given as a function is read with the first request
  *
  * @example
  * ```ts
@@ -54,7 +56,7 @@ export function createHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: HandlerConfig<TConnect>,
 ): AdapterHandler;
 export function createHandler(config?: HandlerConfig): AdapterHandler {
-  assertAllowedOrigins(config?.allowedOrigins, "createHandler");
+  assertListedSettings(config ?? {}, "createHandler");
   assertRateLimit(config?.rateLimit, "createHandler");
   if (config?.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
@@ -70,7 +72,7 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     });
 
   const dt = studioHooks;
-  const get = createGetHandler(execute, dt, config);
+  const get = createGetHandler(execute, dt);
   const post = createPostHandler(execute, dt, config);
   const sseRegistry = createSSEConnectionRegistry();
   const sse = createSSEHandler(config, sseRegistry);
@@ -86,7 +88,7 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
   /* One limiter for every entry point, so a caller has one budget however an adapter mounts them. */
   const limiter = createProxyLimiter(config);
   const entry = (serve: (request: Request) => Promise<Response>) =>
-    gateEntry(limitEntry(serve, limiter, dt), config);
+    gateEntry(limitEntry(serve, limiter, dt), config, dt);
 
   return {
     handle: entry(route),

@@ -115,3 +115,75 @@ describe("a host allowedHosts names", () => {
     expect((await get(port, `localhost:${port}`)).status).not.toBe(421);
   });
 });
+
+describe("hosts and origins the server reads as it starts", () => {
+  it("serves the names a function in its options returns, calling it once", async () => {
+    const names = vi.fn(() => ["app.example.com"]);
+    const port = await serve({ allowedHosts: names });
+
+    expect((await get(port, "app.example.com")).status).not.toBe(421);
+    expect((await get(port, "rebound.example")).status).toBe(421);
+    expect(await socketOutcome(port, "rebound.example")).toBe(4421);
+    expect(names).toHaveBeenCalledTimes(1);
+  });
+
+  it("serves the names COURIER_ALLOWED_HOSTS lists when its options name none", async () => {
+    vi.stubEnv("COURIER_ALLOWED_HOSTS", "app.example.com");
+    const port = await serve();
+
+    expect((await get(port, "app.example.com")).status).not.toBe(421);
+    expect((await get(port, "rebound.example")).status).toBe(421);
+    expect(await socketOutcome(port, "rebound.example")).toBe(4421);
+  });
+
+  it("does not start while its hosts cannot be read, saying why", () => {
+    const { endpoint } = courier();
+    const api = defineApi({
+      baseURL: "http://127.0.0.1:1",
+      endpoints: { ping: endpoint.get("ping") },
+    });
+
+    expect(() =>
+      createCourierServer({
+        sources: { api },
+        port: 0,
+        signals: false,
+        allowedHosts: () => {
+          throw new Error("APP_URL is not set");
+        },
+      }),
+    ).toThrow(
+      "createCourierServer: allowedHosts, as the config's function gives it: the function threw Error: APP_URL is not set",
+    );
+  });
+
+  it("does not start while COURIER_ALLOWED_ORIGINS names an origin no browser sends", () => {
+    vi.stubEnv("COURIER_ALLOWED_ORIGINS", "https://app.example.com/");
+    const { endpoint } = courier();
+    const api = defineApi({
+      baseURL: "http://127.0.0.1:1",
+      endpoints: { ping: endpoint.get("ping") },
+    });
+
+    expect(() => createCourierServer({ sources: { api }, port: 0, signals: false })).toThrow(
+      'createCourierServer: allowedOrigins, as COURIER_ALLOWED_ORIGINS gives it: the entry "https://app.example.com/"',
+    );
+  });
+
+  it("answers a preflight from a page COURIER_ALLOWED_ORIGINS lists, and refuses any other", async () => {
+    vi.stubEnv("COURIER_ALLOWED_ORIGINS", "https://shop.example.com");
+    const port = await serve();
+    const preflight = (origin: string) =>
+      fetch(`http://127.0.0.1:${port}/api/request?_s=api&_m=ping`, {
+        method: "OPTIONS",
+        headers: { Origin: origin, "Access-Control-Request-Method": "POST" },
+      });
+
+    const listed = await preflight("https://shop.example.com");
+    const foreign = await preflight("https://evil.example");
+
+    expect(listed.status).toBe(204);
+    expect(listed.headers.get("access-control-allow-origin")).toBe("https://shop.example.com");
+    expect(foreign.status).toBe(403);
+  });
+});

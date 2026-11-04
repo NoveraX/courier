@@ -14,6 +14,11 @@ export type {
 } from "./rate-limit/types";
 export { requireSources } from "./require-sources";
 export type {
+  AllowedHostsSetting,
+  AllowedOriginsSetting,
+  RuntimeSetting,
+} from "./runtime-policy";
+export type {
   SSEBroadcastEvent,
   SSEBroadcastResult,
   SSECloseReason,

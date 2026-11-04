@@ -1,4 +1,4 @@
-export const metadata = { title: "Next.js", description: "Full Next.js integration with apiRoute, createProxyQueryCaller, createCaller for RSC, and createAction for Server Actions.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "Next.js", description: "Full Next.js integration with apiRoute, createProxyQueryCaller, createCaller for RSC, and createAction for Server Actions.", mode: "both", updated: "2026-11-05" }
 
 Courier has first-class Next.js support through the `@noverax/courier-next` package. It covers every Next.js pattern: API routes, client components with React Query, server components, and server actions.
 
@@ -129,6 +129,20 @@ import { apiRoute } from "@noverax/courier-next"
 
 export const { GET, POST } = apiRoute()
 ```
+
+### The names your app is reached by
+
+`next build` runs the route module while it collects page data, where your deployment's variables are not set yet. Name the hosts the app is reached by with a function, which the route calls when the first request comes in, or with `COURIER_ALLOWED_HOSTS` on the deployment:
+
+```ts title="app/api/request/route.ts"
+import { apiRoute } from "@noverax/courier-next"
+
+export const { GET, POST } = apiRoute({
+  allowedHosts: () => [new URL(process.env.APP_URL!).host],
+})
+```
+
+Read a server variable there, not a `NEXT_PUBLIC_` one: Next.js writes those into the code as it builds, so the function would return the build's host. `allowedOrigins` takes a function too, and `COURIER_ALLOWED_ORIGINS`. See [Names known where the app runs](/docs/proxy-mode/overview#names-known-where-the-app-runs).
 
 Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. `register()` runs once in each runtime the app uses, and each runtime has its own registry: a route with `export const runtime = "edge"` reads the Edge runtime's, so the sources are registered in both. If your sources module imports Node-only code, register an Edge-safe one when `process.env.NEXT_RUNTIME === "edge"`. `sseRoute()` streams in the Edge Runtime as well as in Node.js. The route handles all Courier proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
 

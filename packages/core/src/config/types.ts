@@ -1,4 +1,5 @@
 import type { ProxyRateLimit } from "../adapter/rate-limit/types";
+import type { AllowedHostsSetting, AllowedOriginsSetting } from "../adapter/runtime-policy";
 import type { AgentPolicy } from "../agent/agent-policy";
 import type { AnySource } from "../define/types";
 
@@ -182,19 +183,24 @@ export interface CourierServerConfig {
   /** Host to bind — default "127.0.0.1"; `--host` overrides it */
   host?: string | undefined;
   /**
-   * Origins of the browser apps that call the server. Left out, the server
-   * answers only its own origin, and loopback ones outside production;
-   * `--allowed-origins` overrides it.
+   * Origins of the browser apps that call the server: a list, or a function
+   * called when the first request comes in. Left out — or the function
+   * answering `undefined` — the server reads `COURIER_ALLOWED_ORIGINS`,
+   * comma-separated, and without it answers only its own origin, and
+   * loopback ones outside production. `--allowed-origins` overrides both.
    */
-  allowedOrigins?: readonly string[] | undefined;
+  allowedOrigins?: AllowedOriginsSetting | undefined;
   /**
-   * Host names the server is reached by. A request or a socket addressed to
-   * any other host is refused with 421 — or closed with 4421 — as a
-   * DNS-rebinding page's would be. Loopback names and IP literals are always
-   * served; left out, production serves every name and development nothing
-   * else. `--allowed-hosts` overrides it.
+   * Host names the server is reached by: a list, or a function called when
+   * the first request comes in. A request or a socket addressed to any other
+   * host is refused with 421 — or closed with 4421 — as a DNS-rebinding
+   * page's would be. Loopback names and IP literals are always served. Left
+   * out — or the function answering `undefined` — the server reads
+   * `COURIER_ALLOWED_HOSTS`, comma-separated, and without it production
+   * serves every name and development nothing else. `--allowed-hosts`
+   * overrides both.
    */
-  allowedHosts?: readonly string[] | undefined;
+  allowedHosts?: AllowedHostsSetting | undefined;
   /**
    * Largest JSON envelope the proxy reads, in bytes — default 1 MB. A larger
    * one is refused with 413 before it is read.

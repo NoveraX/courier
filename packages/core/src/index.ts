@@ -1,5 +1,7 @@
 export {
   type AdapterHandler,
+  type AllowedHostsSetting,
+  type AllowedOriginsSetting,
   type ClientConnection,
   type ConnectionInfo,
   type ConnectionMeta,
@@ -16,6 +18,7 @@ export {
   type RateLimitDecision,
   type RateLimitStore,
   type RateLimitWindow,
+  type RuntimeSetting,
   type SSEBroadcastEvent,
   type SSEBroadcastResult,
   type SSECloseReason,

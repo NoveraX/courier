@@ -1,4 +1,5 @@
 import type {
+  AllowedOriginsSetting,
   ConnectionRegistry,
   ConnectResult,
   HandlerConfig,
@@ -44,10 +45,13 @@ export interface CourierServerOptions<
   host?: string | undefined;
   /**
    * Origins of the browser apps that may call the server, for CORS and the
-   * WebSocket origin check. Left out, the server answers its own origin only,
-   * and loopback origins outside production.
+   * WebSocket origin check: a list, or a function the server calls as it
+   * starts. Left out — or the function answering `undefined` — they are
+   * `COURIER_ALLOWED_ORIGINS`, comma-separated, and without it the server
+   * answers its own origin only, and loopback origins outside production.
+   * The server does not start while they cannot be read.
    */
-  allowedOrigins?: string[] | undefined;
+  allowedOrigins?: AllowedOriginsSetting | undefined;
   /**
    * Largest WebSocket frame read at all, in bytes; a bigger one closes the
    * connection with 1009 before it is buffered. Default 1 MB, or twice

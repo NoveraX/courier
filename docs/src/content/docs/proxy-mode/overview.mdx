@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "Proxy Mode", description: "Framework-agnostic reverse proxy that hides secrets, bypasses CORS, and carries the cookies you name from any frontend to any backend.", mode: "proxy", updated: "2026-11-05" }
 
 ## What is proxy mode?
 
@@ -101,6 +101,30 @@ courierHandler({
 })
 ```
 
+An entry is a host name, and a port after it is read past, since a name is served on every port: `new URL(appUrl).host` is an entry. One with a scheme, a path or a user is refused when the route is created, as it could never match.
+
+#### Names known where the app runs
+
+The module that creates the route also runs where the app is built: Next.js runs it while it collects page data during `next build`, and SvelteKit while it analyses the server. A list computed there from a variable only the running app has fails the build, or names the build's host. Give a function instead: the route calls it when the first request comes in, and keeps its answer.
+
+```ts
+courierHandler({
+  // Read where the app runs, not where it is built
+  allowedHosts: () => [new URL(process.env.APP_URL!).host],
+})
+```
+
+Or leave the names out of the code and set `COURIER_ALLOWED_HOSTS` where the app runs, comma-separated: `COURIER_ALLOWED_HOSTS=app.example.com,*.preview.example.com`. The option wins over the variable, and a function that returns `undefined` leaves the names to it.
+
+While the setting cannot be read, the route admits nothing:
+
+- the function threw, or returned something other than a list of strings;
+- an entry names no host;
+- the variable is set and names none — a template whose value was empty;
+- the list holds more than 1,000 entries, or the variable is longer than 64 KiB.
+
+Every request is then answered `500` with the code `SERVER_MISCONFIGURED`, localhost's included, and every socket is closed with `4421`. The answer says nothing of why; the server's log names the setting, where it came from and what is wrong, once.
+
 The WebSocket handlers take the same option. Behind a reverse proxy the host is the one the browser used, read from `X-Forwarded-Host` where the adapter trusts it — see [Behind a Reverse Proxy](/docs/deployment/overview#behind-a-reverse-proxy).
 
 ### Origin validation
@@ -117,6 +141,8 @@ courierHandler({
   allowedOrigins: ["https://admin.example.com", "https://*.example.com"],
 })
 ```
+
+The proxy route and `courier-server` read `allowedOrigins` as they read `allowedHosts`: a function in its place is called with the first request — by `courier-server` as it starts — and with neither, `COURIER_ALLOWED_ORIGINS` names the origins, comma-separated. While it cannot be read — an entry no browser sends among them — every request is answered `500`; see [Names known where the app runs](#names-known-where-the-app-runs). A WebSocket handler created on its own with `createWSHandler` takes the origins as a list.
 
 `https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme on its default port; name the port to cover another, as in `*.example.com:8443`. Any scheme includes plain HTTP, and anyone on a visitor's network can answer for an HTTP name with a page of their own, which then calls the proxy with the visitor's cookies — so prefer `https://*.example.com` unless a page served over HTTP must call it.
 

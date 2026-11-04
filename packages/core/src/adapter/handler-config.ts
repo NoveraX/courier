@@ -1,6 +1,7 @@
 import type { Sources } from "../define/types";
 import type { ConnectResult } from "./connection-meta";
 import type { ProxyRateLimit } from "./rate-limit/types";
+import type { AllowedHostsSetting, AllowedOriginsSetting } from "./runtime-policy";
 import type { SSELifecycleConfig } from "./sse-types";
 
 /**
@@ -28,17 +29,34 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * and in development other local ports are too. An entry is an exact
    * origin, `https://*.example.com` for the sub-domains of a host over one
    * scheme and port, or `*.example.com` for them over any.
+   *
+   * A function in place of the list is called when the first request comes
+   * in, not when the module creating the handler runs — which a framework
+   * also does while it builds — and its answer is kept. Neither given, nor
+   * an answer from the function, the list is `COURIER_ALLOWED_ORIGINS`,
+   * comma-separated. A list that cannot be read — the function threw, an
+   * entry no browser sends — has every request answered 500 and logged once.
    */
-  allowedOrigins?: string[] | undefined;
+  allowedOrigins?: AllowedOriginsSetting | undefined;
   /**
    * The host names the application is reached by. A request addressed to any
    * other host — a page that pointed its own name at this machine, as a
    * DNS-rebinding attack does — is answered 421 on every transport. Loopback
    * names (`localhost`, `*.localhost`) and IP literals are always served. An
-   * entry is a name without a port, or `*.example.com` for its sub-domains.
-   * Unset, development serves nothing else, and production every name.
+   * entry is a name — a port after it is read past, as a name is served on
+   * every port — or `*.example.com` for its sub-domains. Unset, development
+   * serves nothing else, and production every name.
+   *
+   * A function in place of the list is called when the first request comes
+   * in and its answer kept: `() => [new URL(process.env.APP_URL!).host]`
+   * reads the variable the running application has, where a list would read
+   * it while the framework builds the route. Neither given, nor an answer
+   * from the function, the names are `COURIER_ALLOWED_HOSTS`,
+   * comma-separated. A setting that cannot be read — the function threw, an
+   * entry names no host, the variable is set and empty — has every request
+   * answered 500 and logged once.
    */
-  allowedHosts?: string[] | undefined;
+  allowedHosts?: AllowedHostsSetting | undefined;
   /**
    * Largest JSON envelope the proxy will read, in bytes. Defaults to 1 MB —
    * an envelope carries a name and its variables, so this is already

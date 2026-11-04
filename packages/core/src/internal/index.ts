@@ -26,6 +26,7 @@ export { type ExposureDecision, exposureOf } from "../adapter/exposure";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
+export { readAllowedHosts, readAllowedOrigins } from "../adapter/runtime-policy";
 export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";
 export {
   adoptListenOrigin,

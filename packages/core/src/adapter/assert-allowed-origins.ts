@@ -29,7 +29,7 @@ export function assertAllowedOrigins(
   where: string,
 ): void {
   for (const entry of allowedOrigins ?? []) {
-    const problem = entryProblem(entry);
+    const problem = originEntryProblem(entry);
     if (problem !== undefined) {
       throw new ConfigurationError(
         "INVALID_ALLOWED_ORIGIN",
@@ -39,8 +39,18 @@ export function assertAllowedOrigins(
   }
 }
 
-/* What is wrong with an entry, or nothing when a page can send it. */
-function entryProblem(entry: string): string | undefined {
+/**
+ * What is wrong with an `allowedOrigins` entry, or nothing when a page can
+ * send it — the rule every source of the setting is held to.
+ *
+ * @param entry - The entry, as written
+ * @returns The problem, worded to follow the entry, or `undefined`
+ * @example
+ * ```ts
+ * originEntryProblem("https://app.example.com/"); // → "has a path; an origin ends after its host"
+ * ```
+ */
+export function originEntryProblem(entry: string): string | undefined {
   if (entry === "null") {
     return "admits every sandboxed frame and data: page, whatever its site; list the page's own origin";
   }

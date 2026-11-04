@@ -247,7 +247,20 @@ export type ConfigurationErrorCode =
    * not a function, or its `fetch` answered with something other than a
    * `Response`.
    */
-  | "SOURCE_TRANSPORT_INVALID";
+  | "SOURCE_TRANSPORT_INVALID"
+  /**
+   * An `allowedHosts` entry names no host a request can be addressed to: a
+   * URL with its scheme, path or user, an empty entry, or a wildcard
+   * anywhere but in front of a name.
+   */
+  | "INVALID_ALLOWED_HOST"
+  /**
+   * A deployment setting given as a function or read from the environment
+   * cannot be used: the function threw or returned something other than a
+   * list, the variable is set and names nothing, or the setting is larger
+   * than it may be.
+   */
+  | "RUNTIME_SETTING_FAILED";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and
@@ -258,8 +271,13 @@ export type ConfigurationErrorCode =
  * human-readable explanation that may include remediation hints.
  */
 export class ConfigurationError extends CourierError<ConfigurationErrorCode> {
-  constructor(code: ConfigurationErrorCode, message: string) {
-    super(message, { code });
+  /**
+   * @param code - What is misconfigured
+   * @param message - What is wrong, and how to put it right
+   * @param options - What was thrown that made the configuration fail, when something was
+   */
+  constructor(code: ConfigurationErrorCode, message: string, options?: { cause?: unknown }) {
+    super(message, { code, cause: options?.cause });
     this.name = "ConfigurationError";
   }
 }

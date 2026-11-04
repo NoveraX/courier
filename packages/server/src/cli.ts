@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createLogger } from "@noverax/courier";
+import { ConfigurationError, createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { unknownConfigKeys } from "@noverax/courier-build/config";
 import { type ArgsDef, defineCommand, runMain } from "citty";
@@ -11,6 +11,7 @@ import { parsePort } from "./parse-port";
 import { printReady } from "./print-ready";
 import { serverVersion } from "./server-version";
 import { stopOnFatal } from "./stop-on-fatal";
+import type { CourierServer } from "./types";
 
 const log = createLogger("CLI");
 
@@ -21,6 +22,16 @@ const DEFAULT_HOST = "127.0.0.1";
 function fail(message: string, cause?: unknown): never {
   log.error(message, cause);
   process.exit(1);
+}
+
+/* The server, or a line naming what in its settings kept it from starting. */
+function startServer(start: () => CourierServer): CourierServer {
+  try {
+    return start();
+  } catch (error) {
+    if (error instanceof ConfigurationError) fail(error.message);
+    throw error;
+  }
 }
 
 const SUMMARY = "Standalone HTTP, SSE and WebSocket server for Courier";
@@ -107,23 +118,25 @@ const main = defineCommand({
     if (maxUploadBytes instanceof Error) fail(maxUploadBytes.message);
 
     const { createCourierServer } = await import("./create-server");
-    const server = createCourierServer({
-      sources: config.sources,
-      port,
-      host: args.host ?? block.host ?? DEFAULT_HOST,
-      maxBodyBytes,
-      maxUploadBytes,
-      allowedOrigins,
-      allowedHosts,
-      rateLimit: block.rateLimit,
-      browsersOnly: block.browsersOnly,
-      onReady: (url) => printReady({ url, configFile, sources: Object.keys(config.sources) }),
-      /* The server has logged why; the exit status is what a supervisor or a
+    const server = startServer(() =>
+      createCourierServer({
+        sources: config.sources,
+        port,
+        host: args.host ?? block.host ?? DEFAULT_HOST,
+        maxBodyBytes,
+        maxUploadBytes,
+        allowedOrigins,
+        allowedHosts,
+        rateLimit: block.rateLimit,
+        browsersOnly: block.browsersOnly,
+        onReady: (url) => printReady({ url, configFile, sources: Object.keys(config.sources) }),
+        /* The server has logged why; the exit status is what a supervisor or a
          deploy script reads, so it must not say 0. */
-      onServerError: () => {
-        process.exitCode = 1;
-      },
-    });
+        onServerError: () => {
+          process.exitCode = 1;
+        },
+      }),
+    );
     stopOnFatal(() => server.stop());
   },
 });

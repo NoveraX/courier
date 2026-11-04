@@ -189,6 +189,39 @@ describe("courier-server", () => {
     expect(await statusFor(configured, "app.example")).toBe(421);
   }, 30_000);
 
+  it("calls a function the config's server block gives for its host names", async () => {
+    const statusFor = (url: string, host: string) =>
+      new Promise<number>((resolve, reject) => {
+        httpRequest(
+          {
+            host: "127.0.0.1",
+            port: new URL(url).port,
+            path: "/api/request?_s=api&_m=ping",
+            headers: { host },
+          },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          },
+        )
+          .on("error", reject)
+          .end();
+      });
+    const url = await serve(project('{ allowedHosts: () => ["cfg.example"] }'));
+
+    expect(await statusFor(url, "cfg.example")).not.toBe(421);
+    expect(await statusFor(url, "rebound.example")).toBe(421);
+  }, 30_000);
+
+  it("exits 1, saying why, when the config's host names cannot be read", () => {
+    const result = run(project('{ allowedHosts: ["https://app.example"] }'));
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain(
+      'allowedHosts, as the config gives it: the entry "https://app.example" has a scheme',
+    );
+  });
+
   it("applies the body limits the config's server block sets", async () => {
     const root = project("{ maxBodyBytes: 64, maxUploadBytes: 512 }");
     const url = await serve(root);

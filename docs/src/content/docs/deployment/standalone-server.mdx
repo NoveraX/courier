@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Standalone Server",
   description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
-  updated: "2026-11-04",
+  updated: "2026-11-05",
 }
 
 ## Installation
@@ -128,6 +128,8 @@ const server = await createCourierServer({
 ```
 
 `localhost`, `*.localhost` names and IP addresses are always served. Any other host name — the attacker's own, in a DNS-rebinding attack — is refused until `allowedHosts` lists it: always in development, and in production once the list is set. A server reached by another name in development, such as a Docker Compose service name (`http://courier:3001`), lists that name. See [Host validation](/docs/proxy-mode/overview#host-validation).
+
+The server reads both lists as it starts: a function in place of either is called then, and where its options name none, `COURIER_ALLOWED_HOSTS` and `COURIER_ALLOWED_ORIGINS` do, comma-separated. A list that cannot be read — an entry with a scheme, a variable set and empty, a function that throws — stops the server before it listens, naming the setting and what is wrong.
 
 ## Lifecycle Hooks
 
@@ -290,8 +292,8 @@ resolves modules as Node does (`node16` or `nodenext`), the config import is
 | `--config` | `courier.config.*` in the working directory | Path to config file, relative to the working directory |
 | `--port` | `server.port` from the config, then `3001` | Server port |
 | `--host` | `server.host` from the config, then `127.0.0.1` | Address to listen on |
-| `--allowed-origins` | `server.allowedOrigins` from the config | Comma-separated origins browser apps may call from |
-| `--allowed-hosts` | `server.allowedHosts` from the config | Comma-separated host names the server is reached by |
+| `--allowed-origins` | `server.allowedOrigins` from the config, then `COURIER_ALLOWED_ORIGINS` | Comma-separated origins browser apps may call from |
+| `--allowed-hosts` | `server.allowedHosts` from the config, then `COURIER_ALLOWED_HOSTS` | Comma-separated host names the server is reached by |
 
 The request body limits come from the config's `server` block, `maxBodyBytes` for a JSON envelope (1 MB by default) and `maxUploadBytes` for an upload (10 MB by default). A value that is not a whole number of bytes above 0 stops the command with a message naming the key.
 

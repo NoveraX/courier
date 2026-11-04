@@ -2,6 +2,7 @@ import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
+import type { AllowedHostsSetting } from "./runtime-policy";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
 
@@ -40,10 +41,12 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   allowedOrigins?: string[] | undefined;
   /**
    * The host names this server is reached by, as `HandlerConfig`'s
-   * `allowedHosts` rules them. A socket opened on any other host is closed
-   * with 4421.
+   * `allowedHosts` rules them — a list, a function read when the first
+   * socket opens, or `COURIER_ALLOWED_HOSTS`. A socket opened on any other
+   * host is closed with 4421, and so is every socket while the setting
+   * cannot be read.
    */
-  allowedHosts?: string[] | undefined;
+  allowedHosts?: AllowedHostsSetting | undefined;
   /**
    * Max subscriptions per connection (default 100). Its subscribe,
    * unsubscribe and auth frames are counted apart from other messages, up to

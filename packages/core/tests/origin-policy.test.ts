@@ -3,11 +3,15 @@ import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
+import { gateEntry } from "../src/adapter/entry-gate";
+import type { ExecuteFn } from "../src/adapter/execute-fn";
 import { createGetHandler } from "../src/adapter/handle-get";
+import type { HandlerConfig } from "../src/adapter/handler-config";
 import { isOriginAccepted, isOriginAllowed } from "../src/adapter/origin-policy";
 import { courier, defineApi, defineGroup } from "../src/define";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import type { StudioHooks } from "../src/studio/hooks";
 
 const APP = "https://app.example.com";
 
@@ -162,8 +166,9 @@ describe("isOriginAllowed — the playground sigil is not a credential", () => {
 });
 
 /**
- * GET is checked as POST, SSE and WebSocket are: unchecked, it would let a
- * third-party page drive every readable endpoint with the user's cookies.
+ * GET is checked as POST, SSE and WebSocket are — in front of it, where every
+ * entry point is checked: unchecked, it would let a third-party page drive
+ * every readable endpoint with the user's cookies.
  */
 describe("the GET proxy applies the same rule", () => {
   const hooks = () => ({ onProxyOriginReject: vi.fn(), onProxyReceive: vi.fn() });
@@ -174,10 +179,16 @@ describe("the GET proxy applies the same rule", () => {
     });
   }
 
+  /* The application's own name is listed, so the host rule in front lets every request through. */
+  function gated(execute: ExecuteFn, dt: StudioHooks, config: HandlerConfig = {}) {
+    const hosts = { allowedHosts: [new URL(APP).hostname] };
+    return gateEntry(createGetHandler(execute, dt), { ...hosts, ...config }, dt);
+  }
+
   it("refuses a page on another origin", async () => {
     const execute = vi.fn();
     const dt = hooks();
-    const handler = createGetHandler(execute, dt as never, { allowedOrigins: [APP] });
+    const handler = gated(execute, dt as never, { allowedOrigins: [APP] });
 
     const response = await handler(get("https://evil.example"));
 
@@ -188,7 +199,7 @@ describe("the GET proxy applies the same rule", () => {
 
   it("serves the application's own pages", async () => {
     const execute = vi.fn().mockResolvedValue(new Response("{}"));
-    const handler = createGetHandler(execute, hooks() as never);
+    const handler = gated(execute, hooks() as never);
 
     const response = await handler(get(APP));
 
@@ -199,7 +210,7 @@ describe("the GET proxy applies the same rule", () => {
   /** A CDN or a server-to-server caller sends none, and this route exists for them. */
   it("serves a caller that sends no Origin at all", async () => {
     const execute = vi.fn().mockResolvedValue(new Response("{}"));
-    const handler = createGetHandler(execute, hooks() as never, { allowedOrigins: [APP] });
+    const handler = gated(execute, hooks() as never, { allowedOrigins: [APP] });
 
     const response = await handler(get());
 

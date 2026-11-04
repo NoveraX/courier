@@ -1,7 +1,7 @@
 import { majorOf } from "../project/read-project";
 import { attachesStudio } from "../project/wiring";
+import { routesPluginOf } from "./edits/framework-routes";
 import { registerInside } from "./edits/next-register";
-import { nextRoutesEdit } from "./edits/next-routes";
 import { importSpecifier } from "./import-specifier";
 import { nextStudioEnvEdit, studioWrapperStep } from "./next-config-edit";
 import type { ManualStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
@@ -97,7 +97,7 @@ function wiring(ctx: RecipeContext, base: string): Array<RecipeFile | ManualStep
   });
   const parts = [
     ...(server === undefined ? [] : [server]),
-    ...routesPluginParts(ctx, nextRoutesEdit(ctx.project)),
+    ...routesPluginParts(ctx, routesPluginOf(ctx.project, "next")),
   ];
   if (!ctx.choices.studio) return parts;
   if ((majorOf(ctx.version) ?? 16) < 16) return [...parts, ...studioWrapperStep(ctx)];

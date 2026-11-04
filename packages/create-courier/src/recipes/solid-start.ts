@@ -1,6 +1,6 @@
-import { viteRoutesEdit } from "./edits/routes-plugin";
+import { routesPluginOf, solidStartPlugin } from "./edits/framework-routes";
 import { viteStudioEdit } from "./edits/studio-browser";
-import type { ManualStep, Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
+import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
 import { proxyCaller } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
@@ -31,22 +31,6 @@ export const POST = handler;
   return { path, content, purpose: "the route the browser calls your API through" };
 }
 
-/*
- * A plugin for Vite's config: SolidStart 1 keeps Vite's plugins in
- * app.config.ts, under `vite`, which the command does not change, so the
- * step names it there — unless the config lists it already.
- */
-function vitePlugin(
-  ctx: RecipeContext,
-  edit: RecipeEdit,
-  config: string | undefined,
-  what: string,
-): RecipeEdit | ManualStep | undefined {
-  if (config === undefined) return edit;
-  const text = ctx.project.read(config) ?? "";
-  return edit.change(text) === text ? undefined : { ...edit.manual, file: config, what };
-}
-
 /**
  * Courier in a SolidStart app: its API, registered by the route the
  * browser calls it through, a page that shows it at work, Courier's plugin
@@ -62,31 +46,22 @@ function vitePlugin(
  */
 export function solidStartRecipe(ctx: RecipeContext): Recipe {
   const example = addsExample(ctx);
-  const config = ctx.project.exists("app.config.ts") ? "app.config.ts" : undefined;
-  const studioEdit = viteStudioEdit(ctx.project, "solid");
   const { parts } = proxyStart(
     ctx,
     (needs) => route(ctx, needs),
     { module: "@noverax/courier-solid", exported: "courierHandler" },
     studioAttach("import.meta.env.DEV", ""),
   );
-  const routes = vitePlugin(
-    ctx,
-    viteRoutesEdit(ctx.project, "@noverax/courier-solid/plugin"),
-    config,
-    "Build the pages' routes in: add the plugin to the config's vite.plugins",
-  );
   const studio = ctx.choices.studio
-    ? vitePlugin(
-        ctx,
-        studioEdit,
-        config,
+    ? solidStartPlugin(
+        ctx.project,
+        viteStudioEdit(ctx.project, "solid"),
         "Connect the browser to Studio: add the plugin to the config's vite.plugins",
       )
     : undefined;
   const { files, edits, manual } = sortParts([
     ...parts,
-    ...(routes ? routesPluginParts(ctx, routes) : []),
+    ...routesPluginParts(ctx, routesPluginOf(ctx.project, "solid-start")),
     ...(studio ? [studio] : []),
   ]);
   return {

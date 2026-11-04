@@ -1,4 +1,4 @@
-import { nuxtRoutesEdit } from "./edits/routes-plugin";
+import { routesPluginOf } from "./edits/framework-routes";
 import { nuxtStudioEdit } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
@@ -120,7 +120,7 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
   const routing = example ? pages(ctx, app) : { files: [], edits: [] };
   const { edits, manual } = sortParts([
     ...routing.edits,
-    ...routesPluginParts(ctx, nuxtRoutesEdit(ctx.project)),
+    ...routesPluginParts(ctx, routesPluginOf(ctx.project, "nuxt")),
     ...(ctx.choices.studio ? [nuxtStudioEdit(ctx.project)] : []),
     ...(plugin && "what" in plugin ? [plugin] : []),
   ]);

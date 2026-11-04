@@ -4,7 +4,7 @@ import { defaultExportLiteral } from "../edit/literal";
 import { addNamedImport } from "../edit/named-import";
 import { scanSource } from "../edit/source-scan";
 import { routeList, routeModule } from "../project/route-list";
-import { viteRoutesEdit } from "./edits/routes-plugin";
+import { routesPluginOf } from "./edits/framework-routes";
 import { viteStudioEdit } from "./edits/studio-browser";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
@@ -115,9 +115,7 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
     studioAttach("import.meta.env.DEV", ""),
   );
   const { files, edits, manual } = sortParts(parts);
-  const plugin = sortParts(
-    routesPluginParts(ctx, viteRoutesEdit(ctx.project, "@noverax/courier-remix/plugin")),
-  );
+  const plugin = sortParts(routesPluginParts(ctx, routesPluginOf(ctx.project, "react-router")));
   /* The routes file gets one edit: the one that lists a file of the project's that serves, or Courier's own. */
   const listed = edits.length === 0 && ctx.project.exists(ROUTES) && (example || mount);
   const page = {

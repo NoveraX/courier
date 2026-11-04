@@ -84,6 +84,17 @@ describe("a proxy caller's routes", () => {
 
     expect(proxy).toContain('createProxyCaller(routes["pet-store"]);');
   });
+
+  it("write the quoted name as the generator writes a value, with what would end a page's script escaped", () => {
+    const proxy = fileOf(
+      { generateClient: "proxy", routesConfig: "courier.config.ts" },
+      "/proxy.ts",
+      "pets</script>",
+    );
+
+    expect(proxy).toContain("createProxyCaller(routes[");
+    expect(proxy).not.toContain("</script>");
+  });
 });
 
 describe("the source a proxy caller calls", () => {

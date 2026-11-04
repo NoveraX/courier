@@ -202,6 +202,51 @@ describe("the cause", () => {
   });
 });
 
+describe("a credential in the line or its cause", () => {
+  /* Made up, and joined at run time so no literal sits in the source for a secret scanner. */
+  const SECRET = ["Zq9x7", "Kp2Lm", "4Nw8"].join("");
+
+  it("is cut from the line", () => {
+    createLogger("Proxy").error(
+      `Request failed: Headers.set: "Bearer ${SECRET}\r\nX-Injected: 1" is an invalid header value.`,
+    );
+
+    expect(String(firstCall("error")[1])).toContain(
+      'Request failed: Headers.set: "[redacted]" is an invalid header value.',
+    );
+  });
+
+  it("is cut from a cause handed over as a copy, its chain kept", () => {
+    const cause = new Error(`refused password=${SECRET}`, {
+      cause: new TypeError(`fetch failed for https://ana:${SECRET}@db.internal/app`),
+    });
+
+    createLogger("Proxy").warn("Upstream request failed", cause);
+
+    const [, , copy] = firstCall("warn");
+    expect(copy).not.toBe(cause);
+    expect(inspect(copy)).not.toContain(SECRET);
+    expect(copy).toMatchObject({ message: "refused password=[redacted]" });
+    expect((copy as Error).cause).toMatchObject({
+      name: "TypeError",
+      message: "fetch failed for https://db.internal/app",
+    });
+  });
+
+  it("is cut from a JSON line too", () => {
+    vi.stubEnv("COURIER_LOG_FORMAT", "json");
+
+    createLogger("Proxy").warn(`token=${SECRET}`, new Error(`api_key=${SECRET}`));
+
+    const line = String(firstCall("warn")[1]);
+    expect(line).not.toContain(SECRET);
+    expect(JSON.parse(line)).toMatchObject({
+      message: "token=[redacted]",
+      error: { message: "api_key=[redacted]" },
+    });
+  });
+});
+
 describe("the message", () => {
   it("keeps a percent sign literal: it is an argument, not the format", () => {
     const cause = new SyntaxError("Unexpected token");

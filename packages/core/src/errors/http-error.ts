@@ -1,6 +1,6 @@
 import type { HttpResponse } from "../http-client/types";
+import { headersWithoutSecrets } from "../utils/redact/headers";
 import { CourierError } from "./courier-error";
-import { shownHeaders } from "./shown-headers";
 
 /* Node's console, its loggers and its report of an uncaught error print an object through this. */
 const INSPECT = Symbol.for("nodejs.util.inspect.custom");
@@ -68,7 +68,7 @@ function printed(
     code: this.code,
     ...(this.context !== undefined && { context: this.context }),
     status: this.status,
-    headers: shownHeaders(this.headers),
+    headers: headersWithoutSecrets(this.headers),
     data: this.data,
     ...(this.cause !== undefined && { cause: this.cause }),
   };

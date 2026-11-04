@@ -4,7 +4,8 @@
  *
  * The thrown error stays on the server, where it is logged — `onSSEConnect`'s
  * as well as `onConnect`'s: it may carry a connection string or a token, so
- * the client reads a fixed reason instead.
+ * the client reads a fixed reason instead, and the log names it without its
+ * password.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -20,7 +21,9 @@ import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 const { stream, channel } = courier();
-const SECRET = "postgres://app:hunter2@10.0.0.5/app";
+const CONNECTION = "postgres://app:hunter2@10.0.0.5/app";
+/* How the server's log names it: by its host, without the password. */
+const LOGGED = "could not reach postgres://10.0.0.5/app";
 
 let served: ServedWS | undefined;
 let server: Server | undefined;
@@ -44,7 +47,7 @@ describe("an onConnect that throws", () => {
   it("closes the socket with 4401, which the client reads as an AuthError and does not retry", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const onConnect = vi.fn(() => {
-      throw new Error(`could not reach ${SECRET}`);
+      throw new Error(`could not reach ${CONNECTION}`);
     });
     served = await serveWS(
       {
@@ -65,7 +68,8 @@ describe("an onConnect that throws", () => {
     expect(errors[0]).toMatchObject({ code: 4401, message: "Connection rejected" });
     expect(ch.status).toBe("disconnected");
     expect(onConnect).toHaveBeenCalledOnce();
-    expect(logged(warn)).toContain(SECRET);
+    expect(logged(warn)).toContain(LOGGED);
+    expect(logged(warn)).not.toContain("hunter2");
   });
 });
 
@@ -105,7 +109,7 @@ describe("an onSSEConnect that throws", () => {
     registerSources({ api: { options: { expose: true, groups: {} }, feed } } as never);
     const handler = createHandler({
       onSSEConnect: () => {
-        throw new Error(`could not reach ${SECRET}`);
+        throw new Error(`could not reach ${CONNECTION}`);
       },
     });
     server = createServer(async (request, response) => {
@@ -121,6 +125,7 @@ describe("an onSSEConnect that throws", () => {
 
     expect(failure).toBeInstanceOf(ForbiddenError);
     expect(failure).toMatchObject({ code: 4403, message: "Connection rejected" });
-    expect(logged(warn)).toContain(SECRET);
+    expect(logged(warn)).toContain(LOGGED);
+    expect(logged(warn)).not.toContain("hunter2");
   });
 });

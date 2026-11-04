@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Deployment Overview",
   description: "Choose the right deployment strategy for your Courier application — standalone server, framework adapter, single or multi-replica.",
-  updated: "2026-10-13",
+  updated: "2026-11-05",
 }
 
 ## Deployment Models
@@ -55,6 +55,8 @@ Use these with Kubernetes, Docker health checks, or load balancer configuration.
 ## Logs
 
 Courier writes `info` and `debug` lines to stdout and `warn` and `error` lines to stderr, so a log router that tells the two streams apart sees Courier's failures as errors. A failure carries the error's stack and `cause` chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (the default), `warn`, `error` or `silent` — and a container's log gets plain text with the level as a word, since colour is written only to a terminal (`FORCE_COLOR=1` keeps it, `NO_COLOR` removes it everywhere). For a log pipeline — Datadog, Loki, Elasticsearch, Cloud Logging — set `COURIER_LOG_FORMAT=json`: each line is then one JSON object with `time`, `level`, `scope`, `pid`, `message` and, for a failure, `error` with its stack and cause chain.
+
+No credential reaches the log: before a line is written, it and the error under it lose every token, password, secret header value and secret part of an address they carry — in text and in JSON alike. [`redact()`](/docs/api/redact) cuts the same way for what your own code sends to an error tracker.
 
 A browser that cancels a call is not a failure, and is logged at `debug`: an upload it stopped sending, a query it stopped waiting for, a stream it stopped reading. The proxy stops its upstream request and answers such a call with status `499`, which only an access log ever sees.
 

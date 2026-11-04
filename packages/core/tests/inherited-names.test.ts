@@ -18,7 +18,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, formQuery } from "../src/define";
 import { withVariableDefaults } from "../src/define/variable-defaults";
-import { shownHeaders } from "../src/errors/shown-headers";
 import { createFetch } from "../src/fetch";
 import { headerVariablesMiddleware } from "../src/middleware";
 import { sendWebResponse } from "../src/node";
@@ -26,6 +25,7 @@ import { appendSetCookie } from "../src/node-set-cookie";
 import { toOpenAPI } from "../src/openapi";
 import { withDefaultsShown } from "../src/openapi/variable-defaults";
 import { carriedBody } from "../src/studio/carried-body";
+import { headersWithoutSecrets } from "../src/utils/redact/headers";
 import { compileUrl } from "../src/utils/url";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 
@@ -148,7 +148,7 @@ describe("a key named __proto__", () => {
     await createFetch({ baseURL: "https://api.test" }).get("x", {
       headers: own('{ "__proto__": "r" }') as Record<string, string>,
     });
-    const shown = shownHeaders(new Headers([["__proto__", "p"]]));
+    const shown = headersWithoutSecrets(new Headers([["__proto__", "p"]]));
     vi.unstubAllGlobals();
     const written = await headersFrom((res) => {
       void sendWebResponse(new Response("ok", { headers: new Headers([["__proto__", "w"]]) }), res);

@@ -307,6 +307,14 @@ On a terminal the level is a symbol in its colour — `●` info, `▲` warn, `�
 
 `COURIER_LOG_LEVEL` and `COURIER_LOG_FORMAT` are read on every line, so setting them in your entry module takes effect. In a browser the lines go to the devtools console, whose own level filter applies.
 
+Before a server writes a line down, the line and the error under it lose every credential they carry: a token after `Bearer`, a `password=` pair, the password in a connection string, a header value the platform repeated as it refused it. An error that carries none prints as the error it is; one that does prints as a copy without it. `redact()` cuts the same way, for what your own code sends elsewhere:
+
+```ts
+import { redact } from "@noverax/courier"
+
+Sentry.captureException(redact(error)) // the copy carries no token, password or secret header
+```
+
 <br />
 
 ## Building Server Adapters

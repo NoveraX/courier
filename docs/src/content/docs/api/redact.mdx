@@ -1,0 +1,46 @@
+export const metadata = { title: "redact", description: "Cut every credential out of a text, headers, an error or data before it is logged or sent elsewhere — the rules Courier's own log and Studio use.", mode: "both", updated: "2026-11-05" }
+
+## Import
+
+```ts
+import { redact } from "@noverax/courier"
+```
+
+## Signature
+
+```ts
+declare function redact(value: string): string
+declare function redact(value: Headers): Record<string, string | string[]>
+declare function redact(value: Error): Error
+declare function redact(value: unknown): unknown
+```
+
+`redact` returns what it was given with every credential cut out, and never changes the value itself. Courier's server log passes each line and the error under it through it before writing them down, and Studio cuts by the same rules whatever leaves the page that holds its token. Use it for what your own code sends elsewhere: an error tracker, an audit record, a support ticket.
+
+## What it cuts
+
+| Given | Comes back |
+|---|---|
+| A text | Without a private key, a JWT, a key in a known provider's format, the value after an authorization scheme, the value of a pair whose name says it is secret — `password=`, `"token":`, `api_key` — and a header value the platform repeated as it refused it. In every address, the user and password, secret query parameters and a path segment that reads as a token are cut. |
+| `Headers` | A record by name. A credential header's value is hidden — `Authorization` keeps its scheme, `Set-Cookie` its name and attributes; the rest are kept. |
+| An error | The error itself when it carries nothing to cut. Otherwise a copy that prints as it does: its name, its message and the message its stack starts with cut, the stack's frames kept, its own fields and every error in its `cause` chain read the same way. |
+| A list or a record | Read entry by entry: an entry whose name says it is secret — `password`, `token`, `apiKey`, `credentials` — is hidden whole, a weak name such as `key` or `session` only when its value reads as a credential. |
+
+```ts
+import { redact } from "@noverax/courier"
+
+redact('Headers.set: "Bearer t0k3n\r\nX-Injected: 1" is an invalid header value.')
+// → 'Headers.set: "[redacted]" is an invalid header value.'
+
+redact("connect failed for postgres://app:hunter2@db.internal:5432/app")
+// → "connect failed for postgres://db.internal:5432/app"
+
+redact({ user: "ana", password: "hunter2", key: "id" })
+// → { user: "ana", password: "[redacted]", key: "id" }
+```
+
+## Limits
+
+Redacting costs a bounded amount whatever it is handed: a text past 8,192 characters is cut short where a word ends, a value is read sixteen levels deep, and a list or a record keeps its first thousand entries and counts the rest. Where a value holds itself, or lies deeper than that, `[…]` stands in its place. A part that cannot be read — a getter that throws, a proxy whose trap does — is `[unreadable]`, and the rest of the value is read as it is: `redact` never throws, and neither does the server's log that calls it.
+
+The rules read credentials by their shape and their names. A secret written as ordinary prose — a password in a sentence with nothing to mark it — reads as prose; keep such text out of errors.

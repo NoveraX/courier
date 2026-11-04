@@ -1,7 +1,6 @@
-import { defineOwn } from "../utils/define-own";
-import { isCredentialHeader } from "../utils/is-credential-header";
-
-const HIDDEN = "[redacted]";
+import { defineOwn } from "../define-own";
+import { isCredentialHeader } from "../is-credential-header";
+import { REDACTED } from "./redacted";
 
 /**
  * A response's headers as an error prints them: every one, with what a
@@ -13,11 +12,11 @@ const HIDDEN = "[redacted]";
  * @returns Them by name, a `Set-Cookie` repeated as a list
  * @example
  * ```ts
- * shownHeaders(new Headers({ "set-cookie": "sid=a1; Path=/; HttpOnly" }));
+ * headersWithoutSecrets(new Headers({ "set-cookie": "sid=a1; Path=/; HttpOnly" }));
  * // { "set-cookie": ["sid=[redacted]; Path=/; HttpOnly"] }
  * ```
  */
-export function shownHeaders(headers: Headers): Record<string, string | string[]> {
+export function headersWithoutSecrets(headers: Headers): Record<string, string | string[]> {
   const shown: Record<string, string | string[]> = {};
   headers.forEach((value, name) => {
     if (name !== "set-cookie")
@@ -34,13 +33,13 @@ function setCookiesShown(headers: Headers): string[] | undefined {
     return listed.length > 0 ? listed.map(cookieShown) : undefined;
   }
   /* React Native's Headers has no getSetCookie and joins the cookies into one value, hidden whole. */
-  return headers.has("set-cookie") ? [HIDDEN] : undefined;
+  return headers.has("set-cookie") ? [REDACTED] : undefined;
 }
 
 function hidden(name: string, value: string): string {
-  if (name !== "authorization" && name !== "proxy-authorization") return HIDDEN;
+  if (name !== "authorization" && name !== "proxy-authorization") return REDACTED;
   const scheme = value.trim().split(/\s+/, 1)[0];
-  return scheme && scheme !== value.trim() ? `${scheme} ${HIDDEN}` : HIDDEN;
+  return scheme && scheme !== value.trim() ? `${scheme} ${REDACTED}` : REDACTED;
 }
 
 /* `sid=a1; Path=/` → `sid=[redacted]; Path=/`: which cookie, and how, without its value. */
@@ -48,5 +47,7 @@ function cookieShown(header: string): string {
   const [pair = "", ...attributes] = header.split(";");
   const at = pair.indexOf("=");
   const name = at > 0 ? pair.slice(0, at).trim() : "";
-  return [name ? `${name}=${HIDDEN}` : HIDDEN, ...attributes.map((part) => part.trim())].join("; ");
+  return [name ? `${name}=${REDACTED}` : REDACTED, ...attributes.map((part) => part.trim())].join(
+    "; ",
+  );
 }

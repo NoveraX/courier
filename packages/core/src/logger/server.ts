@@ -16,6 +16,8 @@
  */
 
 import { styleFor } from "../terminal/style-for";
+import { redact } from "../utils/redact/redact";
+import { UNREADABLE } from "../utils/redact/unreadable";
 import { formatLine } from "./format-line";
 import { jsonLine } from "./json-line";
 import { readLogFormat } from "./log-format";
@@ -68,10 +70,29 @@ function hiddenRootCause(cause: unknown): Error | undefined {
   return hidden ? current : undefined;
 }
 
+/* What the process writes down is what leaves it: the line and its cause lose every credential
+   first, in text and in JSON alike, whoever logged them. */
 function emit(
   level: LogLevel,
   context: string,
+  said: string,
+  behind: unknown,
+  json: boolean,
+): void {
+  const message = redact(said);
+  const cause = behind == null ? behind : redact(behind);
+  /* A cause no printer can read in full — a toJSON that throws — is named, and nothing is thrown. */
+  try {
+    print(level, message, context, cause, json);
+  } catch {
+    print(level, message, context, UNREADABLE, json);
+  }
+}
+
+function print(
+  level: LogLevel,
   message: string,
+  context: string,
   cause: unknown,
   json: boolean,
 ): void {

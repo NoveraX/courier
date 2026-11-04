@@ -1,9 +1,20 @@
+import type { SandboxLimits } from "./data/sandbox-store"
+
 /**
  * Every limit the examples' backend keeps, in one place. The site's proxy
  * route takes its body limits from here too, so what a page may send is
  * the same on both hops.
+ *
+ * At its fullest the store holds `visitors` copies of the data, each with
+ * `usersPerVisitor` users and `postsPerVisitor` posts whose every field is
+ * as long as it may be: some 26 MiB, which a test measures and holds to
+ * 40 MiB.
  */
-export interface DemoLimits {
+export interface DemoLimits extends SandboxLimits {
+  /** Users one visitor keeps, the first data's own among them. */
+  readonly usersPerVisitor: number
+  /** Posts one visitor keeps, the first data's own among them. */
+  readonly postsPerVisitor: number
   /** Characters in a user's name. */
   readonly nameLength: number
   /** Characters in an e-mail address: as many as SMTP carries. */
@@ -31,6 +42,11 @@ export interface DemoLimits {
 
 /** The limits the examples' backend runs with. */
 export const DEMO_LIMITS: DemoLimits = {
+  visitors: 500,
+  idleMs: 30 * 60_000,
+  lifetimeMs: 2 * 60 * 60_000,
+  usersPerVisitor: 30,
+  postsPerVisitor: 20,
   nameLength: 80,
   emailLength: 254,
   titleLength: 120,

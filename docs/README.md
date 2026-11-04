@@ -119,11 +119,31 @@ page whose text changed under an older date; from the repository's root,
 | Request options | `/docs/examples/options` |
 | Typed singleton | `/docs/examples/singleton` |
 
+### Each visitor's data
+
+The examples' users and posts are each visitor's own. A visitor who has
+changed nothing reads the examples' first data — three users, four posts —
+which no call changes. Their first change that goes through makes them a
+copy of it, kept under the `__Host-courier-demo` cookie the backend sets
+with that change: 128 random bits the backend makes, never an id a call
+names itself. The site's sources name the cookie as their `session`
+(`src/api/index.ts`), so Courier carries it between the browser and the
+backend — through the proxy route, and from the pages and Server Actions —
+and no other cookie of the site reaches the backend.
+
+A visitor's data is kept in memory, for 30 minutes unused and for 2 hours
+at most; the backend keeps 500 visitors' data at once, the one unused the
+longest going first, and each visitor up to 30 users and 20 posts. The
+limits are in `server/limits.ts`, with the most memory they let the data
+take, which a test measures. The cookie's `__Host-` prefix needs HTTPS, or
+the local machine: a visitor served over plain HTTP from another machine
+keeps no changes, and the log says why.
+
 ## Project structure
 
 ```
 docs/
-├── server/              # the Express backend the examples call
+├── server/              # the Express backend the examples call, and each visitor's data
 └── src/
     ├── app/             # routes: the pages above, /api/request (the examples' proxy route)
     ├── content/docs/    # the documentation, one MDX file per page

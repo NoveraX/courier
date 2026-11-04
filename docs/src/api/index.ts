@@ -1,5 +1,7 @@
 import { defineApi } from "@noverax/courier/define"
 import { logMiddleware } from "@noverax/courier/middleware"
+
+import { VISITOR_COOKIE } from "../../server/visitor-cookie"
 import { echo } from "./echo"
 import { files } from "./files"
 import { misc } from "./misc"
@@ -8,10 +10,16 @@ import { users } from "./users"
 
 const API_URL = process.env.API_URL ?? "http://localhost:4000"
 
+/* The backend keeps each visitor's users and posts under this cookie: Courier carries it between
+   the browser and the backend — through the proxy route, and from the pages and Server Actions —
+   and no other cookie of the site reaches the backend. */
+const visitorSession = { cookies: [VISITOR_COOKIE] }
+
 /* Each source's every endpoint is one an example calls from its page. */
 export const api = defineApi({
   baseURL: API_URL,
   expose: true,
+  session: visitorSession,
   groups: { users, posts, files, misc, echo },
 })
 
@@ -46,6 +54,7 @@ export const encodedApi = defineApi({
 export const middlewareApi = defineApi({
   baseURL: API_URL,
   expose: true,
+  session: visitorSession,
   middleware: [logMiddleware()],
   groups: { users, misc },
 })

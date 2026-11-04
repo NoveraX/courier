@@ -15,6 +15,14 @@ export const UNSETTLED = "unsettled";
 const COARSE_CLOCK_MS = 2_000;
 
 /**
+ * How far before a reading began a file system that keeps finer times may
+ * date a change made after it: Linux and Windows date a change by a clock
+ * that moves once a tick, every 1 to 10 milliseconds on Linux and about 16
+ * on Windows, while the reading's start is taken from a precise one.
+ */
+const TICK_MS = 100;
+
+/**
  * A digest of what a reading of the routes depended on, as it is now: the
  * size and the time of the last change of every file it read, whether a
  * path it looked at is there and is a folder, the entries of every folder
@@ -23,9 +31,10 @@ const COARSE_CLOCK_MS = 2_000;
  *
  * A file changed after the reading began may have been read before or after
  * the change, so the digest is then {@link UNSETTLED}, which nothing equals,
- * and the next reading reads the routes again. A time kept to the whole
- * millisecond or coarser may date such a change before the reading began, so
- * one within two seconds of its start counts as changed after it.
+ * and the next reading reads the routes again. The system may date such a
+ * change before the reading began: by up to a tick of the clock it dates
+ * changes by, and by up to two seconds where it keeps whole milliseconds or
+ * coarser. A change that close to the start counts as made after it.
  *
  * @param inputs - What the reading depended on
  * @param since - When the reading began, in milliseconds since the epoch; omitted, every change counts as before it
@@ -69,9 +78,9 @@ function folderPart(folder: string, since: number | undefined): string {
   return `\n${folder}/\0${entriesOf(folder)}`;
 }
 
-/* A time with a part below the millisecond comes from a clock that keeps finer ones. */
+/* A time with no part below the millisecond may come from a file system that keeps whole seconds. */
 function changedSince(mtimeMs: number, since: number): boolean {
-  return mtimeMs >= (mtimeMs % 1 === 0 ? since - COARSE_CLOCK_MS : since);
+  return mtimeMs >= since - (mtimeMs % 1 === 0 ? COARSE_CLOCK_MS : TICK_MS);
 }
 
 /* The path's stats, or why there are none: absent, or a code the system gave. */

@@ -111,11 +111,21 @@ describe("fingerprintOf", () => {
     expect(fingerprintOf(snapshot([]), since)).toBe(UNSETTLED);
   });
 
-  it("takes a time kept below the millisecond as it is: a change just before the reading is before it", () => {
+  it("matches nothing when a clock that moves once a tick dates a change during the reading before it began", () => {
+    const since = Date.now();
+    writeFileSync(api, "export const api = { during: true };\n");
+
+    const lastTick = (since - 4.25) / 1_000;
+    utimesSync(api, lastTick, lastTick);
+
+    expect(fingerprintOf(snapshot([]), since)).toBe(UNSETTLED);
+  });
+
+  it("takes a time kept below the millisecond, half a second before the reading, as before it", () => {
     const since = Date.now();
 
-    const justBefore = (since - 500.25) / 1_000;
-    utimesSync(api, justBefore, justBefore);
+    const before = (since - 500.25) / 1_000;
+    utimesSync(api, before, before);
 
     expect(fingerprintOf(snapshot([]), since)).not.toBe(UNSETTLED);
   });

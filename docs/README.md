@@ -153,6 +153,24 @@ docs/
 | GET | `/error/:code` | Answer with the given HTTP error |
 | GET | `/health` | Health check |
 
+Every answer is JSON, and none is one a cache may keep (`Cache-Control:
+no-store`). The backend checks each field against its limit before it
+keeps anything — the limits are in `server/limits.ts`, a body at most
+16 KiB, an upload one file of at most 1 MiB — and answers whatever it
+refuses as `{ "success": false, "message": "…", "code": "…" }`:
+
+| Code | Status | When |
+|------|--------|------|
+| `INVALID_FIELD` | 400 | A field outside its limit, or one a call needs and left out |
+| `INVALID_BODY` | 400 | A body that is not JSON, not an object of fields, or not the form it says it is |
+| `BODY_TOO_LARGE` | 413 | A body or a file larger than the backend reads |
+| `UPLOAD_REFUSED` | 400, 413 | A second file, a file in another field, more fields or longer ones than it reads |
+| `NOT_FOUND` | 404 | A user or a post it does not have |
+| `ROUTE_NOT_FOUND` | 404 | A route it does not have |
+
+A failure of its own is answered 500 `INTERNAL`, its details kept to the
+log; a refusal is logged as one line, at most once a minute for each code.
+
 ## Checks
 
 ```bash

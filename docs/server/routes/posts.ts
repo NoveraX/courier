@@ -1,40 +1,65 @@
 import { Router } from "express"
-import { getNextPostId, posts } from "../data"
 
-const router = Router()
+import { getNextPostId, type Post, posts, users } from "../data"
+import { fieldsOf, text, wholeNumber } from "../fields"
+import type { DemoLimits } from "../limits"
+import { invalidField, Refusal } from "../refusal"
 
-router.get("/", (req, res) => {
-  const userId = req.query.userId ? Number(req.query.userId) : undefined
+const ID = { min: 1, max: Number.MAX_SAFE_INTEGER }
 
-  let items = [...posts.values()]
+/**
+ * The posts the examples list and read, and create for a user that
+ * exists, every field checked against its limit.
+ *
+ * @param limits - The backend's limits
+ * @returns The router, mounted at `/posts`
+ * @example
+ * ```ts
+ * app.use("/posts", postsRouter(DEMO_LIMITS))
+ * ```
+ */
+export function postsRouter(limits: DemoLimits): Router {
+  const router = Router()
 
-  if (userId) {
-    items = items.filter((p) => p.userId === userId)
+  router.get("/", (req, res) => {
+    const userId =
+      req.query.userId === undefined ? undefined : wholeNumber(req.query.userId, "userId", ID)
+    const items = [...posts.values()].filter(
+      (post) => userId === undefined || post.userId === userId
+    )
+    res.json({ data: items, total: items.length })
+  })
+
+  router.get("/:id", (req, res) => {
+    const id = wholeNumber(req.params.id, "id", ID)
+    const post = posts.get(id)
+    if (post === undefined) throw new Refusal(404, "NOT_FOUND", `No post #${id}`)
+    res.json(post)
+  })
+
+  router.post("/", (req, res) => {
+    const fields = fieldsOf(req.body)
+    const userId = fields.userId === undefined ? 1 : wholeNumber(fields.userId, "userId", ID)
+    if (!users.has(userId)) throw new Refusal(404, "NOT_FOUND", `No user #${userId}`)
+    const post: Post = {
+      id: getNextPostId(),
+      userId,
+      title: text(fields.title, "title", limits.titleLength),
+      body: text(fields.body, "body", limits.bodyLength),
+      tags: tagsOf(fields.tags, limits),
+      createdAt: new Date().toISOString(),
+    }
+    posts.set(post.id, post)
+    res.status(201).json(post)
+  })
+
+  return router
+}
+
+function tagsOf(value: unknown, limits: DemoLimits): string[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.length > limits.tags) {
+    throw invalidField("tags", `a list of at most ${limits.tags} tags`)
   }
-
-  res.json({ data: items, total: items.length })
-})
-
-router.get("/:id", (req, res) => {
-  const post = posts.get(Number(req.params.id))
-  if (!post) {
-    res.status(404).json({ success: false, message: "Post not found" })
-    return
-  }
-  res.json(post)
-})
-
-router.post("/", (req, res) => {
-  const { userId, title, body, tags = [] } = req.body
-  if (!title || !body) {
-    res.status(400).json({ success: false, message: "title and body are required" })
-    return
-  }
-
-  const id = getNextPostId()
-  const post = { id, userId: userId || 1, title, body, tags, createdAt: new Date().toISOString() }
-  posts.set(id, post)
-  res.status(201).json(post)
-})
-
-export default router
+  return value.map((tag) => text(tag, "a tag", limits.tagLength))
+}

@@ -10,6 +10,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
 import { dirname, join } from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ADD_OPEN, type AngularProject, angularProject, VIEW_OPEN } from "./angular-project";
@@ -22,12 +23,20 @@ const NG = join(
 let project: AngularProject | undefined;
 let server: ChildProcess | undefined;
 
-afterEach(() => {
-  server?.kill();
+afterEach(async () => {
+  await stop(server);
   server = undefined;
   project?.remove();
   project = undefined;
 });
+
+/* Until the dev server has ended: Windows removes no folder a running process holds files in. */
+async function stop(child: ChildProcess | undefined): Promise<void> {
+  if (child === undefined || child.exitCode !== null || child.signalCode !== null) return;
+  const ended = new Promise((settle) => child.once("exit", settle));
+  child.kill();
+  await ended;
+}
 
 /* A port no one listens on. */
 function freePort(): Promise<number> {
@@ -62,7 +71,8 @@ async function serve(root: string): Promise<string> {
     const timer = setTimeout(() => fail(new Error(`ng serve did not start:\n${output}`)), 120_000);
     const take = (chunk: Buffer): void => {
       output += chunk.toString();
-      if (!/Local:/.test(output)) return;
+      /* Coloured where CI says it shows colours: `Local` and its colon apart. */
+      if (!/Local:/.test(stripVTControlCharacters(output))) return;
       clearTimeout(timer);
       settle();
     };

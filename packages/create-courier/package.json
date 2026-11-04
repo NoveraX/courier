@@ -51,6 +51,13 @@
       "default": "./lib/set-up-routes.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "setup": [
+        "./lib/set-up-routes.d.ts"
+      ]
+    }
+  },
   "files": [
     "lib",
     "README.md",

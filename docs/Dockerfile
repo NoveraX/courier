@@ -21,14 +21,10 @@ RUN npx turbo run build \
       --filter=@noverax/courier-react...
 WORKDIR /repo/docs
 RUN npm ci
-RUN npm run build
 # The server Next.js traced, its assets beside it, and the backend as one
-# file with its dependencies, run by Node alone.
-RUN npx esbuild server/index.ts --bundle --platform=node --format=cjs --log-level=warning \
-      --outfile=.next/standalone/backend.cjs \
- && cp server/launch.mjs .next/standalone/launch.mjs \
- && cp -R .next/static .next/standalone/docs/.next/static \
- && cp -R public .next/standalone/docs/public
+# file with its dependencies, run by Node alone: the same server the live
+# examples' end-to-end tests run (server/assemble.mjs).
+RUN npm run build
 
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production \

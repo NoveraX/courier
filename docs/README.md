@@ -76,6 +76,16 @@ repository's root, as the site takes Courier's packages from it:
 docker build -f docs/Dockerfile -t courier-site .
 ```
 
+The image runs what `npm run build` puts together in `.next/standalone`:
+Next's server and the files it traced, its assets, the backend bundled
+into `backend.cjs`, and `launch.mjs`, which starts both
+(`server/assemble.mjs`). The same server runs without Docker:
+
+```bash
+cd .next/standalone
+PORT=3000 HOSTNAME=127.0.0.1 API_URL=http://127.0.0.1:4000 EXPRESS_HOST=127.0.0.1 EXPRESS_PORT=4000 node launch.mjs
+```
+
 It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
 it is up, and the container stops, to be started again, when either server
 does. Asked to stop, the backend takes no new call and lets the answers on

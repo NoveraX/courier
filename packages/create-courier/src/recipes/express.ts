@@ -1,9 +1,9 @@
 import { codeStyleOf, namedImport } from "../edit/code-style";
 import { addImportLine } from "../edit/insert";
 import { scanSource } from "../edit/source-scan";
+import { firstExisting } from "./edits/config-integration";
 import { type ImportState, importGuard } from "./edits/import-guard";
 import { mountStep } from "./edits/mount-step";
-import { firstExisting } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
 import { devStep, routesStep, studioStep } from "./shared/next-steps";

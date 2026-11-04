@@ -1,8 +1,9 @@
 /**
  * An import's proxy caller takes the source's routes from the project's
  * routes module, wherever the config puts it, by the name the module exports
- * them under — and the source it calls marks every endpoint for a page to
- * call, which a direct caller alone does not.
+ * them under — or, where the config keeps none, from Courier's plugin — and
+ * the source it calls marks every endpoint for a page to call, which a
+ * direct caller alone does not.
  */
 import { describe, expect, it } from "vitest";
 
@@ -57,6 +58,31 @@ describe("a proxy caller's routes", () => {
     const proxy = fileOf({ generateClient: "proxy" }, "/proxy.ts", "pet-store");
 
     expect(proxy).toContain("import { petStoreRoutes } from");
+  });
+
+  it("come from Courier's plugin where the config keeps no routes module, with the config registered there", () => {
+    const proxy = fileOf(
+      { generateClient: "proxy", routesConfig: "courier.config.ts" },
+      "/proxy.ts",
+    );
+
+    expect(proxy).toContain('import { routes } from "@noverax/courier/routes";');
+    expect(proxy).toContain('import type config from "../../../courier.config";');
+    expect(proxy).toContain(
+      'declare module "@noverax/courier/routes" {\n  interface Register {\n    config: typeof config;\n  }\n}',
+    );
+    expect(proxy).toContain("export const petStoreProxyApi = createProxyCaller(routes.petStore);");
+    expect(proxy).not.toContain("courier.routes");
+  });
+
+  it("read a source whose name a dot cannot follow by its quoted name, from Courier's plugin", () => {
+    const proxy = fileOf(
+      { generateClient: "proxy", routesConfig: "courier.config.ts" },
+      "/proxy.ts",
+      "pet-store",
+    );
+
+    expect(proxy).toContain('createProxyCaller(routes["pet-store"]);');
   });
 });
 

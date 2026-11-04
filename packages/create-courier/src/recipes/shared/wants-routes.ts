@@ -2,14 +2,16 @@ import { codeMatches } from "../../edit/source-scan";
 import { projectCode } from "../../project/project-code";
 import type { RecipeContext } from "../recipe-types";
 
-const EXPOSE = /\.expose\s*\(/g;
+/* An endpoint marked with `.expose()`, or a group or an API that opens its endpoints with `expose: true`. */
+const EXPOSE = /\.expose\s*\(|\bexpose\s*:\s*true\b/g;
 
 /**
  * Whether a setup adds the `routes` script and the CLI that runs it: in a
  * project it sets up from nothing, whose example marks its endpoints and
  * writes courier.routes.ts, or in one that has a routes module already or
- * marks an endpoint with `.expose()`. A project set up already with none
- * of them would only get a dev dependency it does not use.
+ * opens an endpoint — `.expose()`, or `expose: true` on a group or an API.
+ * A project set up already with none of them would only get a dev
+ * dependency it does not use.
  *
  * @param ctx - The project, and what is set up in it
  * @returns Whether it does

@@ -100,9 +100,14 @@ import { registerSources } from "@noverax/courier"
 import { courierHandler } from "@noverax/courier-remix"
 import { sources } from "~/api"
 
-registerSources(sources)
+// In the code the loader and action alone use, which React Router leaves
+// out of a page's bundle, and the APIs' definitions with it
+function servingHandler() {
+  registerSources(sources)
+  return courierHandler()
+}
 
-const handler = courierHandler()
+const handler = servingHandler()
 export const loader = handler
 export const action = handler
 ```
@@ -121,7 +126,7 @@ export default [
 
 On Remix v2, whose file-system routes serve `app/routes/api.request.ts` at `/api/request` without a config, the route file alone is enough.
 
-`courierHandler()` is zero-arg — sources are read at request time from the core global registry that `registerSources()` fills when the route module loads. The handler uses Web Standard `Request`/`Response` natively — no conversion needed. `loader` answers `GET` requests, routed to query-type endpoints, and `action` answers `POST`, for mutations.
+`courierHandler()` is zero-arg — sources are read at request time from the core global registry that `registerSources()` fills as the route module loads on the server. The registration sits in the code the route's loader and action alone use: React Router builds a route's module for the browser too, and leaves out of it the loader, the action and what only they use, so a registration at the route's top level would ship your APIs' definitions with the page. The handler uses Web Standard `Request`/`Response` natively — no conversion needed. `loader` answers `GET` requests, routed to query-type endpoints, and `action` answers `POST`, for mutations.
 
 The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `courierHandler({ maxUploadBytes: 50 * 1024 * 1024 })`. In development, a client that declares an oversized upload can see the connection close before it has sent it all, rather than read the 413.
 

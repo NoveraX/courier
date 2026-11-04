@@ -575,9 +575,14 @@ import { registerSources } from "@noverax/courier"
 import { courierHandler } from "@noverax/courier-remix"
 import { sources } from "~/api"
 
-registerSources(sources)
+// In the code the loader and action alone use, which React Router leaves
+// out of a page's bundle, and the APIs' definitions with it
+function servingHandler() {
+  registerSources(sources)
+  return courierHandler()
+}
 
-const handler = courierHandler()
+const handler = servingHandler()
 export const loader = handler
 export const action = handler
 ```

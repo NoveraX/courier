@@ -51,6 +51,26 @@ describe("placeSamples", () => {
     expect(third).toBe('import { q } from "./s1"\n');
   });
 
+  it("takes a sample that reads the plugin's routes, and one built on it, as built on the reader's code", () => {
+    const placed = [
+      ...placeSamples(
+        [
+          {
+            page: "p",
+            jsx: false,
+            file: "lib/caller.ts",
+            code: 'import { routes } from "@noverax/courier/routes"\n\nexport const caller = createProxyCaller(routes.api)\n',
+          },
+          { page: "p", jsx: false, code: 'import { caller } from "@/lib/caller"\n' },
+          { page: "p", jsx: false, code: 'import { defineApi } from "@noverax/courier/define"\n' },
+        ],
+        "/out",
+      ).values(),
+    ];
+
+    expect(placed.map((sample) => sample.unresolved)).toEqual([true, true, false]);
+  });
+
   it("does not reach into another page's files", () => {
     const [, second] = code([
       { page: "p", jsx: false, file: "api.ts", code: "export const api = 1\n" },

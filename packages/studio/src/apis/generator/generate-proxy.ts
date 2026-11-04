@@ -6,6 +6,7 @@ import { posix } from "node:path";
 import { routesExportName } from "@noverax/courier-cli/devkit";
 import type { ParsedSpec } from "../parser/types";
 import { callerDoc } from "./caller-doc";
+import { jsLiteral } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
 /* The extension a module runs as, which an import that names it carries under Node's resolution. */
@@ -65,7 +66,7 @@ export function generateProxyFile(
     /* The routes of the source courier.config keys by the import's name. */
     const read = /^[A-Za-z_$][\w$]*$/.test(importName)
       ? `routes.${importName}`
-      : `routes[${JSON.stringify(importName)}]`;
+      : `routes[${jsLiteral(importName)}]`;
     const content = [
       ...pluginHead(options, options.routesConfig),
       ...callerDoc(spec, "PROXY"),

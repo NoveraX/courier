@@ -56,13 +56,17 @@ afterEach(async () => {
 /* The errors the dev servers logged, the plugin's among them. */
 const logged: string[] = [];
 
-async function serve(root: string, plugin: Plugin = courierRoutes()): Promise<ViteDevServer> {
+async function serve(
+  root: string,
+  plugin: Plugin = courierRoutes(),
+  watch?: { useFsEvents: boolean; usePolling: boolean },
+): Promise<ViteDevServer> {
   const logger = createLogger("silent");
   const server = await createServer({
     root,
     configFile: false,
     customLogger: { ...logger, error: (message) => logged.push(message) },
-    server: { middlewareMode: true, ws: false },
+    server: { middlewareMode: true, ws: false, ...(watch === undefined ? {} : { watch }) },
     plugins: [plugin],
   });
   servers.push(server);
@@ -123,6 +127,25 @@ describe("courierRoutes once what broke the routes is mended", () => {
 
     await expect.poll(() => sources(dev, "/entry.ts"), { timeout: 20_000 }).toBe("payments,shop");
   }, 60_000);
+
+  /* Vite's chokidar reads a folder it was handed missing files in for the first of them
+     alone, whether the system tells it of a change, as Linux and Windows do, or it polls. */
+  it.each([
+    ["as Linux and Windows tell of it", { useFsEvents: false, usePolling: false }],
+    ["as a watcher that polls finds it", { useFsEvents: false, usePolling: true }],
+  ])(
+    "reads them once a config is saved above Vite's root under a later name, %s",
+    async (_how, watch) => {
+      project = tempProject({ "src/apis.ts": APIS, "app/entry.ts": ENTRY });
+      const dev = await serve(join(project.root, "app"), courierRoutes(), watch);
+      expect(await sources(dev, "/entry.ts")).toMatch(/failed: .*No courier\.config\.\* in/);
+
+      project.write("courier.config.mts", CONFIG);
+
+      await expect.poll(() => sources(dev, "/entry.ts"), { timeout: 20_000 }).toBe("payments,shop");
+    },
+    60_000,
+  );
 
   it("reads them again in a build that watches, once the config that failed it is mended", async () => {
     project = tempProject({

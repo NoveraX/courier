@@ -1,6 +1,8 @@
-import { dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, isAbsolute, resolve } from "node:path";
 import type { ViteDevServer } from "vite";
 
+import { isRecord } from "../util/is-record";
 import { ROUTES_MODULE_ID } from "../util/routes-module-id";
 import type { RoutesPluginState } from "./routes-plugin-state";
 import { watchOnce } from "./watch-once";
@@ -23,6 +25,13 @@ const PATH_EVENTS = ["add", "unlink", "addDir", "unlinkDir"] as const;
  * env file or a module made where the latest reading looked for one; an
  * entry added to or removed from a folder it listed.
  *
+ * Vite watches with chokidar 3, which reads a folder it was handed missing
+ * files in no more than once a second, and then for the first of them
+ * alone: a config saved there under another of its names was never
+ * reported. Each raw event of a folder a config may be in looks at every
+ * place there a config is looked for, and a config that appears or goes is
+ * told once, however many events report it.
+ *
  * @param server - A dev server the plugin serves
  * @param state - What the plugin knows: the paths the latest reading followed
  * @param config - Where the config may be, and what to do when it moves
@@ -40,13 +49,34 @@ export function watchRoutesInputs(
 ): void {
   const candidates = new Set(config.candidates);
   watchOnce(server, candidates);
+  /* Whether a config is at each place one is looked for, as last told. */
+  const there = new Map([...candidates].map((path) => [path, existsSync(path)]));
   const onPath = (path: string): void => {
     const isConfig = candidates.has(path);
     if (!isConfig && !state.followed.has(path) && !state.listed.has(dirname(path))) return;
-    if (isConfig) config.onChange();
+    if (isConfig) {
+      const now = existsSync(path);
+      if (there.get(path) === now) return;
+      there.set(path, now);
+      config.onChange();
+    }
     reloadRoutes(server);
   };
   for (const event of PATH_EVENTS) server.watcher.on(event, onPath);
+  const folders = new Set([...candidates].map((path) => dirname(path)));
+  server.watcher.on("raw", (_event: string, path: string, details: unknown) => {
+    const folder = eventFolder(path, details);
+    if (folder === undefined || !folders.has(folder)) return;
+    for (const candidate of candidates) if (dirname(candidate) === folder) onPath(candidate);
+  });
+}
+
+/* The folder a raw event is of, as the system names it: the one a watcher of it names
+   beside the entry it reports, or the path a poll of it gives. */
+function eventFolder(path: string, details: unknown): string | undefined {
+  const watched = isRecord(details) ? details.watchedPath : undefined;
+  const folder = typeof watched === "string" ? watched : path;
+  return isAbsolute(folder) ? resolve(folder) : undefined;
 }
 
 /* Forget the routes module in every graph, and reload the page that took it. */

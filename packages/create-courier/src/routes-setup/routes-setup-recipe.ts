@@ -1,4 +1,5 @@
 import { type RoutesFramework, routesPluginOf } from "../recipes/edits/framework-routes";
+import { routeConfigSteps } from "../recipes/edits/route-config";
 import { studioRoutesOffEdit } from "../recipes/edits/studio-routes-off";
 import type { ManualStep, Recipe, RecipeContext } from "../recipes/recipe-types";
 import { devStep } from "../recipes/shared/next-steps";
@@ -55,6 +56,7 @@ export function routesSetupRecipe(ctx: RecipeContext, id: RoutesFramework): Reci
     ...clients,
     studioRoutesOffEdit(ctx, true),
     ...(clients.length === 0 ? registerStep(ctx) : []),
+    ...(id === "react-router" || id === "remix" ? routeConfigSteps(ctx) : []),
     ...modules.map(unusedStep),
   ];
   const { files, edits, manual } = sortParts(parts);

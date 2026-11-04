@@ -24,11 +24,25 @@ describe("reactRouterRecipe", () => {
     const route = recipe.files.find((file) => file.path === "app/routes/api.request.ts");
     const routes = buildPlan(ctx, recipe).edits.find((edit) => edit.path === "app/routes.ts");
 
-    expect(route?.content).toContain("registerSources(config.sources);");
+    expect(route?.content).toContain(
+      "function servingHandler() {\n  registerSources(config.sources);\n  return courierHandler();\n}",
+    );
+    expect(route?.content).toContain("const handler = servingHandler();");
     expect(route?.content).toContain("export const action = handler;");
     expect(routes?.after).toBe(
       'import { type RouteConfig, index, route } from "@react-router/dev/routes";\n\nexport default [index("routes/home.tsx"), route("courier", "routes/courier.tsx"), route("api/request", "routes/api.request.ts")] satisfies RouteConfig;\n',
     );
+  });
+
+  it("reads the config in the route's server code alone, which React Router leaves out of a page's bundle", () => {
+    const route = reactRouterRecipe(contextOf(app(ROUTES), "@react-router/dev")).files.find(
+      (file) => file.path === "app/routes/api.request.ts",
+    );
+    const topLevel = (route?.content ?? "")
+      .split("\n")
+      .filter((line) => /\bconfig\b/.test(line) && !/^[ \t/*]/.test(line));
+
+    expect(topLevel).toEqual(['import config from "../../courier.config";']);
   });
 
   it("lists nothing where the routes come from the file system", () => {

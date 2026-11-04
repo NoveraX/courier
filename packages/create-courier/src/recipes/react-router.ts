@@ -5,32 +5,60 @@ import { addNamedImport } from "../edit/named-import";
 import { scanSource } from "../edit/source-scan";
 import { routeList, routeModule } from "../project/route-list";
 import { routesPluginOf } from "./edits/framework-routes";
+import { routeConfigSteps } from "./edits/route-config";
 import { viteStudioEdit } from "./edits/studio-browser";
+import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeEdit, RecipeFile } from "./recipe-types";
-import { courierConfig, courierMocks } from "./shared/courier-config";
+import { configPathOf, courierConfig, courierMocks } from "./shared/courier-config";
 import { exampleApi } from "./shared/example-api";
 import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { proxyStart } from "./shared/proxy-start";
 import { reactDemo, reactQuery } from "./shared/react-demo";
-import { proxyScripts, registerModule, sortParts, studioAttach } from "./shared/recipe-parts";
+import { proxyScripts, sortParts, studioAttach } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
 import { addsExample, type ServerNeeds } from "./shared/wired";
 
 const DIR = "app/courier";
 const ROUTES = "app/routes.ts";
 
+/*
+ * The route that serves the proxy. The config is read inside the code the
+ * route's loader and action alone use: React Router leaves that code out of
+ * a page's bundle, and with it the config, which the route's top level
+ * would ship with the page.
+ */
 function route(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   const path = "app/routes/api.request.ts";
-  const start = registerModule(ctx, path, needs, "this route serves");
-  const handler = 'import { courierHandler } from "@noverax/courier-remix";\n';
-  const head = needs.register
-    ? start.replace(/^import[^\n]*\n/, (line) => `${line}${handler}`)
-    : `${handler}${needs.studio ? `\n${start}` : ""}`;
-  const content = `${head}
-/* Courier's proxy route: the browser calls your API through it. */
-const handler = courierHandler();
+  const config = importSpecifier(path, configPathOf(ctx), ctx.extension);
+  const imports = needs.register
+    ? `import { registerSources } from "@noverax/courier";
+import { courierHandler } from "@noverax/courier-remix";
 
+import config from "${config}";
+`
+    : 'import { courierHandler } from "@noverax/courier-remix";\n';
+  const studio = needs.studio
+    ? `\n/* While you develop, the server's calls show in Courier Studio. */\n${studioAttach("import.meta.env.DEV", "")}\n`
+    : "";
+  const handler = needs.register
+    ? `/*
+ * The handler, with the APIs courier.config.ts lists registered for it. The
+ * route's loader and action alone use it, so React Router leaves it out of
+ * a page's bundle with them, and the config with it.
+ */
+function servingHandler() {
+  registerSources(config.sources);
+  return courierHandler();
+}
+
+/* Courier's proxy route: the browser calls your API through it. */
+const handler = servingHandler();`
+    : `/* Courier's proxy route: the browser calls your API through it. */
+const handler = courierHandler();`;
+  const content = `${imports}
+${handler}
+${studio}
 export const loader = handler;
 export const action = handler;
 `;
@@ -140,7 +168,7 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
     ],
     ...courierPackages(ctx, { adapter: "@noverax/courier-remix", react: true, proxy: true }),
     scripts: proxyScripts(ctx),
-    manual: [...manual, ...plugin.manual],
+    manual: [...manual, ...plugin.manual, ...routeConfigSteps(ctx)],
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
   };
 }

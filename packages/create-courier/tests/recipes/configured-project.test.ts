@@ -508,13 +508,17 @@ const RR_ROUTE = `import { registerSources } from "@noverax/courier";
 import { courierHandler } from "@noverax/courier-remix";
 import config from "../../courier.config";
 
-registerSources(config.sources);
+function servingHandler() {
+  registerSources(config.sources);
+  return courierHandler();
+}
+
+const handler = servingHandler();
 
 if (import.meta.env.DEV) {
   ${ATTACH}
 }
 
-const handler = courierHandler();
 export const loader = handler;
 export const action = handler;
 `;

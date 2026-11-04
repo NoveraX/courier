@@ -6,6 +6,7 @@ import { runMain } from "citty";
 
 import { cliVersion } from "./cli-version";
 import { ROUTES_ARGS, routesCommand } from "./commands/routes-command";
+import { SETUP_ARGS, setupCommand } from "./commands/setup-command";
 
 const log = createLogger("CLI");
 
@@ -33,6 +34,14 @@ const COMMANDS: readonly Command[] = [
     args: ROUTES_ARGS,
     run: (rawArgs, showUsage) => void runMain(routesCommand, { rawArgs, showUsage }),
   },
+  {
+    name: "setup",
+    description: "Build the pages' routes in with Courier's plugin",
+    summary:
+      "Move the project to the routes Courier's plugin for its build gives the pages: the plugin in the build's config, each module that takes courier.routes.ts moved to @noverax/courier/routes, with the config registered there, and the plugin installed",
+    args: SETUP_ARGS,
+    run: (rawArgs, showUsage) => void runMain(setupCommand, { rawArgs, showUsage }),
+  },
 ];
 
 /* Help in Courier's own layout and colours, which follow the terminal, as Courier's other commands do. */
@@ -47,6 +56,7 @@ function printHelp(): void {
     examples: [
       { command: "courier-cli routes", description: "Write courier.routes.ts from the marks" },
       { command: "courier-cli routes --check", description: "Fail when it is out of date, in CI" },
+      { command: "courier-cli setup", description: "Move the pages to Courier's routes plugin" },
     ],
   };
   console.log(formatHelp(help, styleFor(process.stdout)));

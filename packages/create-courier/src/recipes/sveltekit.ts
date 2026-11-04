@@ -1,4 +1,4 @@
-import { viteRoutesEdit } from "./edits/routes-plugin";
+import { routesPluginOf } from "./edits/framework-routes";
 import { viteStudioEdit } from "./edits/studio-browser";
 import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
@@ -61,7 +61,7 @@ export function svelteKitRecipe(ctx: RecipeContext): Recipe {
   );
   const parts: RecipePart[] = [
     ...(start ? [start] : []),
-    ...routesPluginParts(ctx, viteRoutesEdit(ctx.project, "@noverax/courier-sveltekit/plugin")),
+    ...routesPluginParts(ctx, routesPluginOf(ctx.project, "sveltekit")),
     ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "sveltekit")] : []),
   ];
   const { files, edits, manual } = sortParts(parts);

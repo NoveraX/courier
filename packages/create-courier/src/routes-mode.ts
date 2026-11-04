@@ -1,6 +1,7 @@
 import { FRAMEWORKS, type Framework } from "./frameworks";
 import { projectCode } from "./project/project-code";
 import type { Project } from "./project/read-project";
+import { isRoutesFramework } from "./recipes/edits/framework-routes";
 import type { RoutesMode } from "./recipes/recipe-types";
 
 /* What a routes module Courier writes says at its top, within its first characters. */
@@ -59,9 +60,9 @@ export function routesModeOf(
   framework: Framework,
   asked: RoutesMode | undefined,
 ): RoutesMode {
-  if (framework.routesPlugin !== true) {
+  if (!isRoutesFramework(framework.id)) {
     if (asked !== "plugin") return "file";
-    const built = FRAMEWORKS.filter((each) => each.routesPlugin === true).map((each) => each.label);
+    const built = FRAMEWORKS.filter((each) => isRoutesFramework(each.id)).map((each) => each.label);
     throw new Error(
       `--routes plugin: Courier builds the routes in with a plugin for ${built.join(", ")}, not for ${framework.label}`,
     );

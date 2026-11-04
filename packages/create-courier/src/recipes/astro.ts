@@ -1,5 +1,5 @@
 import { codeMatches, scanSource } from "../edit/source-scan";
-import { astroRoutesEdit } from "./edits/routes-plugin";
+import { routesPluginOf } from "./edits/framework-routes";
 import { astroStudioEdit } from "./edits/studio-browser";
 import type { ManualStep, Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { astroDemo } from "./shared/astro-demo";
@@ -94,7 +94,7 @@ export function astroRecipe(ctx: RecipeContext): Recipe {
   );
   const parts: RecipePart[] = [
     ...(start ? [start] : []),
-    ...routesPluginParts(ctx, astroRoutesEdit(ctx.project)),
+    ...routesPluginParts(ctx, routesPluginOf(ctx.project, "astro")),
     ...(ctx.choices.studio ? [studioEdit] : []),
     ...adapterStep(ctx, ctx.project.read(studioEdit.path)),
   ];

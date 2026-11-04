@@ -70,20 +70,20 @@ function registerStep(ctx: RecipeContext): ManualStep[] {
  * writing courier.routes.ts, as the config the setup writes does.
  *
  * @param ctx - The project, and what is set up in it
- * @param plugin - The edit that adds the plugin to the build's config, or the step that names it
+ * @param plugin - The edit that adds the plugin to the build's config, the step that names it, or nothing where the config lists it
  * @returns The parts, or none where the routes come from courier.routes.ts
  * @example
  * ```ts
- * routesPluginParts(ctx, viteRoutesEdit(ctx.project, "@noverax/courier-sveltekit/plugin"));
+ * routesPluginParts(ctx, routesPluginOf(ctx.project, "sveltekit"));
  * ```
  */
 export function routesPluginParts(
   ctx: RecipeContext,
-  plugin: RecipeEdit | ManualStep,
+  plugin: RecipeEdit | ManualStep | undefined,
 ): RecipePart[] {
   if (ctx.routes !== "plugin" || !wantsRoutes(ctx)) return [];
   return [
-    plugin,
+    ...(plugin === undefined ? [] : [plugin]),
     ...registerStep(ctx),
     ...(ctx.configured === undefined ? [] : [studioRoutesOffEdit(ctx)]),
   ];

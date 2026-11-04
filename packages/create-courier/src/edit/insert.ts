@@ -22,19 +22,24 @@ export function indentUnit(text: string): string {
   return /^([ \t]+)\S/m.exec(text)?.[1] ?? "  ";
 }
 
-/* The last character of code inside a literal that is neither white space nor a trailing comma. */
+/* Whether a character belongs to an item: code, or a string's — `'@nuxt/ui'` is an item as a call is — and not a comment. */
+function inItem(scan: SourceScan, at: number): boolean {
+  return scan.code[at] === 1 || scan.literal[at] === 1;
+}
+
+/* The last character of an item inside a literal that is neither white space nor a trailing comma. */
 function lastItemEnd(scan: SourceScan, literal: Literal): number {
   for (let at = literal.close - 1; at > literal.open; at--) {
     const char = scan.text[at] ?? "";
-    if (scan.code[at] === 1 && !/[\s,]/.test(char)) return at;
+    if (inItem(scan, at) && !(scan.code[at] === 1 && /[\s,]/.test(char))) return at;
   }
   return -1;
 }
 
-/* The first character of code inside a literal, white space aside. */
+/* The first character of an item inside a literal, white space aside. */
 function firstItemStart(scan: SourceScan, literal: Literal): number {
   for (let at = literal.open + 1; at < literal.close; at++) {
-    if (scan.code[at] === 1 && !/\s/.test(scan.text[at] ?? "")) return at;
+    if (inItem(scan, at) && !(scan.code[at] === 1 && /\s/.test(scan.text[at] ?? ""))) return at;
   }
   return -1;
 }

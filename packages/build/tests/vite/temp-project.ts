@@ -79,6 +79,7 @@ export function tempProject(files: Record<string, string>): TempProject {
       const file = join(root, path);
       writeFileSync(file, change(readFileSync(file, "utf8")));
     },
-    remove: () => rmSync(root, { recursive: true, force: true }),
+    /* A dev server's dependency optimizer may still be writing node_modules/.vite as the server closes. */
+    remove: () => rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }),
   };
 }

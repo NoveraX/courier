@@ -214,6 +214,35 @@ describe("a plan", () => {
     ]);
   });
 
+  it("makes the edits of one file one after another, so the file gets each, and leaves the one it cannot make to the person", () => {
+    const root = projectWith({
+      "package.json": manifest({ typescript: "^6.0.0" }),
+      "tsconfig.json": "{}",
+      "vite.config.ts": "plugins: [a()]\n",
+    });
+    const add = (item: string) => (text: string) => text.replace("]", `, ${item}]`);
+    const manual = (what: string) => ({ file: "vite.config.ts", what, lines: [] });
+    const plan = buildPlan(contextOf(root, "typescript"), {
+      ...RECIPE,
+      scripts: {},
+      edits: [
+        { path: "vite.config.ts", purpose: "adds b", change: add("b()"), manual: manual("add b") },
+        {
+          path: "vite.config.ts",
+          purpose: "adds c",
+          change: () => undefined,
+          manual: manual("add c"),
+        },
+        { path: "vite.config.ts", purpose: "adds d", change: add("d()"), manual: manual("add d") },
+      ],
+    });
+
+    expect(plan.edits.map(({ path, purpose, after }) => ({ path, purpose, after }))).toEqual([
+      { path: "vite.config.ts", purpose: "adds b; adds d", after: "plugins: [a(), b(), d()]\n" },
+    ]);
+    expect(plan.manual.map((step) => step.what)).toEqual(["add c"]);
+  });
+
   it("says nothing of files where it adds none", () => {
     const root = projectWith({
       "package.json": manifest({ typescript: "^6.0.0" }),

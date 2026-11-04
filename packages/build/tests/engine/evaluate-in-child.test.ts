@@ -209,6 +209,30 @@ readdirSync(${JSON.stringify(defs)});
     expect(snapshot.listed).toEqual([defs]);
   }, 30_000);
 
+  it("names a file the config reads and a folder it lists as the system does, however the config writes them", async () => {
+    const flags = join(dir, "flags.json");
+    const limits = join(dir, "limits.json");
+    const defs = join(dir, "defs");
+    project(`import { readdirSync, readFileSync } from "node:fs";
+import { toNamespacedPath } from "node:path";
+${CONFIG}
+readFileSync(${JSON.stringify(`${dir}/sub/../flags.json`)}, "utf8");
+readFileSync(toNamespacedPath(${JSON.stringify(limits)}), "utf8");
+readdirSync(${JSON.stringify(`${dir}/./defs/`)});
+`);
+    mkdirSync(join(dir, "sub"));
+    writeFileSync(flags, "{}\n");
+    writeFileSync(limits, "{}\n");
+    mkdirSync(defs);
+
+    const snapshot = await evaluateInChild({ root: dir, envFiles: [] });
+
+    expect(snapshot.files).toEqual(expect.arrayContaining([flags, limits]));
+    expect(snapshot.files.filter((file) => file.endsWith("flags.json"))).toEqual([flags]);
+    expect(snapshot.files.filter((file) => file.endsWith("limits.json"))).toEqual([limits]);
+    expect(snapshot.listed).toEqual([defs]);
+  }, 30_000);
+
   it("fails CONFIG_NOT_FOUND where no config is in the root or a folder above it", async () => {
     const error = await failure(evaluateInChild({ root: dir, envFiles: [] }));
 

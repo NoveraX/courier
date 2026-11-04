@@ -17,12 +17,24 @@ export interface WebSocketLike {
 // Adapter lifecycle — shared by all infrastructure adapters
 // ---------------------------------------------------------------------------
 
+/** How long a step of an adapter's life may take. */
+export interface AdapterDeadline {
+  /** Milliseconds; the step settles by then, whatever the server does */
+  timeoutMs?: number | undefined;
+}
+
 /** Base lifecycle for adapters that manage external connections (Redis, NATS, etc.) */
 export interface AdapterLifecycle {
-  /** Initialize the adapter connection (e.g. connect to Redis) */
-  connect(): Promise<void>;
-  /** Gracefully close the adapter connection */
-  disconnect(): Promise<void>;
+  /**
+   * Resolve once the adapter can reach its server. An adapter works without
+   * this call, and keeps trying to connect whatever it answers: a server
+   * that is not there at start is reached once it comes, rather than never.
+   *
+   * @throws Error when it is not connected within `timeoutMs`
+   */
+  connect(options?: AdapterDeadline): Promise<void>;
+  /** Stop for good, letting go of what it holds on the server, within `timeoutMs` */
+  disconnect(options?: AdapterDeadline): Promise<void>;
   /** Synchronous health check — returns cached connection status */
   isHealthy(): boolean;
   /** Register an error listener; returns unsubscribe function */
@@ -41,19 +53,62 @@ export interface PubSubEnvelope<TPayload = unknown> {
   timestamp: number;
 }
 
-/** Adapter for horizontal scaling via pub/sub (e.g. Redis Pub/Sub, NATS) */
+/**
+ * Where a pub/sub adapter stands: `connecting` until it first reaches its
+ * server, `ready` while it does, `degraded` once it lost it and is getting
+ * it back, `stopped` for good after `disconnect()`.
+ */
+export type AdapterState = "connecting" | "ready" | "degraded" | "stopped";
+
+/** What a pub/sub adapter reports of its work, for health checks and metrics. */
+export interface PubSubStats {
+  readonly state: AdapterState;
+  /** Channels a handler asked for, and those the server confirmed */
+  readonly channels: { readonly wanted: number; readonly confirmed: number };
+  /** Messages published while it was not ready, waiting to be sent */
+  readonly queued: { readonly messages: number; readonly bytes: number };
+  /** Messages it let go of unsent: its queue was full, or they waited too long */
+  readonly dropped: number;
+  /** Messages it sent, and messages of other replicas it delivered */
+  readonly published: number;
+  readonly delivered: number;
+}
+
+/**
+ * Adapter for horizontal scaling via pub/sub (e.g. Redis Pub/Sub, NATS).
+ *
+ * What an implementation owes the handlers that use it:
+ * - it listens from the moment it is made; `connect()` checks it, it is not
+ *   what makes it work;
+ * - a subscription is a wish it keeps: made while its server is away, or
+ *   refused, it is made again once the server answers, and every one is
+ *   made again after each reconnect;
+ * - a message published while it is not ready waits in a queue bounded by
+ *   count, bytes and age; past them the oldest are dropped, counted and
+ *   reported, never silently;
+ * - `disconnect()` settles within its deadline, whatever the server does.
+ */
 export interface PubSubAdapter extends AdapterLifecycle {
+  readonly state: AdapterState;
+  /** Hear each change of state; returns the function that stops hearing it */
+  onStateChange(listener: (state: AdapterState) => void): () => void;
   /**
-   * Publish a message to all subscribers across replicas.
-   * Implementations must wrap payload in {@link PubSubEnvelope} with origin ID.
+   * Publish a message to all subscribers across replicas, or queue it while
+   * the adapter is not ready. Implementations wrap the payload in
+   * {@link PubSubEnvelope} with their origin. It never rejects because the
+   * server is away; it rejects once the adapter is stopped.
    */
   publish(topic: string, message: unknown): Promise<void>;
   /**
-   * Subscribe to a topic. Handler receives raw payload (envelope is unwrapped).
-   * Implementations must skip messages where `envelope.origin === localId`.
+   * Subscribe to a topic: resolves at once, the adapter making the
+   * subscription as soon as and as often as its server needs it. The
+   * handler receives the payload of other replicas' messages; the
+   * adapter's own are skipped.
    * @returns Unsubscribe function
    */
   subscribe(topic: string, handler: (message: unknown) => void): Promise<() => void>;
+  /** What it is doing now */
+  stats(): PubSubStats;
 }
 
 // ---------------------------------------------------------------------------

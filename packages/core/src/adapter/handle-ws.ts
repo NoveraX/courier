@@ -63,7 +63,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   const refusals = createRefusalLog("WS");
   const maxPerIP = config.maxConnectionsPerIP ?? LIMITS.MAX_CONNECTIONS_PER_IP;
   const ipTracker = createIPTracker(maxPerIP);
-  const bridge = config.pubsub ? createPubSubBridge(config.pubsub, registry) : undefined;
+  const bridge = config.pubsub ? createPubSubBridge(config.pubsub, registry, refusals) : undefined;
   const topicManager = createServerTopicManager(
     bridge
       ? {
@@ -168,7 +168,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       },
     );
     hb.start();
-    void bridge?.onConnectionOpen();
+    bridge?.onConnectionOpen();
     wireEvents(ws, inbox, ctx, hb, topicManager, config, registry, ipTracker);
   }
 
@@ -181,7 +181,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
 
   async function destroy(): Promise<void> {
     studioHooks.sendWSMessage = undefined;
-    await bridge?.destroy();
+    bridge?.destroy();
   }
 
   /* With a pub/sub adapter, what the application broadcasts through the

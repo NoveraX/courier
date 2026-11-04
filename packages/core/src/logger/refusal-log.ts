@@ -7,8 +7,8 @@ export type RefusalFields = Readonly<Record<string, string | number | undefined>
 export interface Refusal {
   /** What was refused, the line's subject: `"connection refused"` */
   readonly event: string;
-  /** The code it was refused with: a close code, a realtime error code, an HTTP status */
-  readonly code: number;
+  /** The code it was refused with: a close code, a realtime error code, an HTTP status, a system error's */
+  readonly code: number | string;
   /** The connection, the endpoint, a tag of the address — never a credential */
   readonly fields?: RefusalFields | undefined;
 }

@@ -82,8 +82,10 @@ const pubsub = createRedisPubSub({
   prefix: "courier:",
 })
 
-await pubsub.connect()
+await pubsub.connect().catch((error) => console.warn(error.message))
 ```
+
+It works from the moment it is made, Redis there or not. What is published while Redis is away waits — at most 1000 messages, 1 MiB, 5 seconds, the oldest dropped and counted past them (`queue` sets them) — and goes out in order once Redis is back; every subscription is made again after each reconnect, and tried again after a growing pause when Redis refuses it. `connect()` waits for both connections and rejects at its deadline while the adapter goes on; `disconnect()` settles within its own. `state`, `onStateChange()` and `stats()` say how it stands.
 
 Pass it to `createCourierServer` or `createWSHandler`:
 
@@ -155,7 +157,7 @@ setInterval(() => presence.sweep("room:general", 30_000), 10_000)
 
 ### `createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter`
 
-Creates a Pub/Sub adapter using two ioredis connections (one for publish, one for subscribe). Includes echo prevention via origin IDs and health tracking.
+Creates a Pub/Sub adapter using two ioredis connections (one for publish, one for subscribe), with echo prevention via origin IDs. It queues what is published while Redis is away within `queue: { maxMessages, maxBytes, maxAgeMs }`, makes every subscription again after a reconnect or a refusal, and reports where it stands through `state`, `onStateChange()` and `stats()`; `connect({ timeoutMs })` and `disconnect({ timeoutMs })` settle within their deadlines.
 
 ### `createRedisStream(config: RedisStreamConfig): StreamAdapter`
 

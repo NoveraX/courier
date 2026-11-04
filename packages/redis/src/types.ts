@@ -1,5 +1,7 @@
 import type { Redis } from "ioredis";
 
+import type { OutboundLimits } from "./outbound-queue";
+
 /** Configuration for {@link createRedisPresence} */
 export interface RedisPresenceConfig {
   /**
@@ -59,6 +61,13 @@ export interface RedisPubSubConfig {
    * @default ""
    */
   prefix?: string | undefined;
+  /**
+   * How much it holds while Redis is away. What is published then waits,
+   * in order, and is sent once Redis is back; past any of these bounds the
+   * oldest messages are dropped, counted in `stats().dropped` and logged.
+   * @default { maxMessages: 1000, maxBytes: 1048576, maxAgeMs: 5000 }
+   */
+  queue?: Partial<OutboundLimits> | undefined;
 }
 
 /** Configuration for {@link createRedisStream} */

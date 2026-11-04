@@ -60,6 +60,7 @@ export {
 export { routesOf } from "../define/routes-of";
 export { discoverAppOrigin, type ServerOrigin } from "../discover-app-origin";
 export { readLogFormat } from "../logger/log-format";
+export { createRefusalLog, type RefusalLog } from "../logger/refusal-log";
 export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
 export { standardJsonSchema } from "../openapi/json-schema";
 export { withDefaultsShown } from "../openapi/variable-defaults";

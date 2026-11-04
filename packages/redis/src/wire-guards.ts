@@ -33,6 +33,28 @@ export function isPubSubEnvelope(value: unknown): value is PubSubEnvelope {
 }
 
 /**
+ * The envelope a message on a pub/sub channel carries, when it is one.
+ *
+ * @param raw - The message as Redis delivered it
+ * @returns The envelope; `undefined` for a message that is not JSON, or no envelope
+ * @example
+ * ```ts
+ * envelopeOf('{"origin":"a1","payload":"hi","timestamp":1}'); // { origin: "a1", payload: "hi", timestamp: 1 }
+ * envelopeOf("hi"); // undefined
+ * ```
+ */
+export function envelopeOf(raw: string): PubSubEnvelope | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    /* Not JSON, so no envelope: the caller reports it as any stranger's message. */
+    return undefined;
+  }
+  return isPubSubEnvelope(parsed) ? parsed : undefined;
+}
+
+/**
  * Whether a message is a presence change a replica published.
  *
  * @param value - The message, parsed

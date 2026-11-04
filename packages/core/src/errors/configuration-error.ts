@@ -169,6 +169,11 @@ export type ConfigurationErrorCode =
    * `{ data }`; a channel's returns its handlers, `{ onMessage }`.
    */
   | "STREAM_IMPLEMENTATION_INVALID"
+  /**
+   * A pub/sub adapter was given a bound it cannot keep — a queue limit that
+   * is no number, or less than it can hold.
+   */
+  | "PUBSUB_OPTIONS_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
   /**

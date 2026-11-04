@@ -1,3 +1,4 @@
+export type { OutboundLimits } from "./outbound-queue";
 export { createRedisPresence } from "./redis-presence";
 export { createRedisPubSub } from "./redis-pubsub";
 export { createRedisRateLimitStore } from "./redis-rate-limit";

@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Replication Guide",
   description: "Production-ready multi-replica setup for every supported framework — Next.js, Express, Fastify, Hono, NestJS, and Standalone Server.",
-  updated: "2026-10-05",
+  updated: "2026-11-05",
 }
 
 This guide shows a complete, production-ready realtime setup with Redis adapters for each supported framework.
@@ -47,6 +47,8 @@ export async function disconnectAdapters(): Promise<void> {
   await Promise.all([pubsub.disconnect(), history.disconnect(), presence.disconnect()])
 }
 ```
+
+Awaiting `connectAdapters()` at startup checks that Redis is there; it is not what makes the Pub/Sub adapter work. The adapter keeps every subscription it was asked for and makes it once Redis answers, and holds what is published until then within its queue's bounds. A replica that started while Redis was down, or lost it on the way, hears the other replicas once Redis is back, and `connect()` rejecting at its deadline leaves the adapter connecting. See [Redis Adapters](/docs/deployment/redis#pubsub-adapter).
 
 ## Standalone Server
 

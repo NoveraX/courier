@@ -1,9 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+/**
+ * How a replica's handler holds its pub/sub subscriptions: one per channel
+ * while a local connection needs it, the adapter keeping each one it was
+ * given, and nothing waiting on the adapter — a subscription it has not
+ * taken yet is let go of once it does, and stopping waits on none.
+ */
+import { format } from "node:util";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createPubSubBridge } from "../src/adapter/ws-pubsub-bridge";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
 import { createServerTopicManager } from "../src/adapter/ws-topics";
-import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
+import { createRefusalLog } from "../src/logger/refusal-log";
+import type { PubSubAdapter } from "../src/realtime/adapters";
+import { createMemoryBus } from "../src/realtime/memory-bus";
 
 function createEntry(id: string) {
   return {
@@ -16,299 +26,210 @@ function createEntry(id: string) {
   };
 }
 
-/** The channels subscribed to for topics, leaving out those for broadcasts to a whole endpoint. */
-function topicChannels(spy: { mock: { calls: unknown[][] } }): unknown[] {
-  return spy.mock.calls.map(([channel]) => channel).filter((c) => !String(c).endsWith("#*"));
-}
-
-function setupReplica(pubsub: ReturnType<typeof createMemoryPubSub>) {
+function replica(pubsub: PubSubAdapter) {
   const registry = createConnectionRegistry();
-  const bridge = createPubSubBridge(pubsub, registry);
-  const topicManager = createServerTopicManager({
+  const bridge = createPubSubBridge(pubsub, registry, createRefusalLog("WS"));
+  const topics = createServerTopicManager({
     onFirstSubscriber: (topic) => bridge.onTopicSubscribe(topic),
     onLastUnsubscriber: (topic) => bridge.onTopicUnsubscribe(topic),
   });
-  registry.setTopicManager(topicManager);
-  return { registry, bridge, topicManager };
+  registry.setTopicManager(topics);
+  return { registry, bridge, topics };
 }
 
-describe("createPubSubBridge", () => {
-  it("subscribes to pubsub on first local subscriber", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const subscribeSpy = vi.spyOn(pubsub, "subscribe");
-    const { bridge } = setupReplica(pubsub);
-
-    await bridge.onTopicSubscribe("chat.room1");
-
-    expect(topicChannels(subscribeSpy)).toEqual(["chat.room1"]);
-    expect(subscribeSpy).toHaveBeenCalledWith("chat.room1", expect.any(Function));
-    expect(subscribeSpy).toHaveBeenCalledWith("chat.room1#*", expect.any(Function));
-  });
-
-  it("does not re-subscribe on second local subscriber (ref counting)", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const subscribeSpy = vi.spyOn(pubsub, "subscribe");
-    const { bridge } = setupReplica(pubsub);
-
-    await bridge.onTopicSubscribe("chat.room1");
-    await bridge.onTopicSubscribe("chat.room1");
-
-    expect(subscribeSpy).toHaveBeenCalledTimes(2);
-    expect(topicChannels(subscribeSpy)).toEqual(["chat.room1"]);
-  });
-
-  it("unsubscribes from pubsub when last local subscriber leaves", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const { bridge } = setupReplica(pubsub);
-
-    await bridge.onTopicSubscribe("room");
-    await bridge.onTopicSubscribe("room");
-
-    // First leave — still has one subscriber
-    await bridge.onTopicUnsubscribe("room");
-    // Second leave — no more subscribers
-    await bridge.onTopicUnsubscribe("room");
-    // Third leave — no-op (already cleaned up)
-    await bridge.onTopicUnsubscribe("room");
-  });
-
-  it("destroy cleans up all pubsub subscriptions", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const subscribeSpy = vi.spyOn(pubsub, "subscribe");
-    const { bridge } = setupReplica(pubsub);
-
-    await bridge.onTopicSubscribe("topic-a");
-    await bridge.onTopicSubscribe("topic-b");
-    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b"]);
-
-    await bridge.destroy();
-
-    // After destroy, new subscribes are rejected (bridge is dead)
-    await bridge.onTopicSubscribe("topic-a");
-    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b"]);
-  });
-});
-
-describe("cross-replica WS broadcast", () => {
-  it("delivers messages from remote replica to local connections", async () => {
-    // Mock pubsub that captures subscribe handlers (simulates shared Redis bus)
-    const handlers = new Map<string, (message: unknown) => void>();
-    const mockPubsub = {
-      connect: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-      isHealthy: () => true,
-      onError: () => () => {},
-      publish: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn(async (topic: string, handler: (message: unknown) => void) => {
-        handlers.set(topic, handler);
-        return () => {
-          handlers.delete(topic);
-        };
+/** An adapter whose subscriptions settle when the test says, and that records what it let go of. */
+function slowAdapter() {
+  const bus = createMemoryBus().replica("slow");
+  const settles: Array<() => void> = [];
+  const letGo: string[] = [];
+  const adapter: PubSubAdapter = {
+    ...bus,
+    get state() {
+      return bus.state;
+    },
+    subscribe: (channel) =>
+      new Promise<() => void>((resolve) => {
+        settles.push(() => resolve(() => letGo.push(channel)));
       }),
-    };
+  };
+  return { adapter, settles, letGo };
+}
 
-    const registry = createConnectionRegistry();
-    const bridge = createPubSubBridge(mockPubsub, registry);
-    const tm = createServerTopicManager({
-      onFirstSubscriber: (topic) => bridge.onTopicSubscribe(topic),
-      onLastUnsubscriber: (topic) => bridge.onTopicUnsubscribe(topic),
-    });
-    registry.setTopicManager(tm);
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-    // Local connection subscribes
-    const entry = createEntry("b-conn-1");
-    registry.add(entry);
-    tm.subscribe("b-conn-1", { topic: "chat.room1", cleanup: vi.fn() });
+describe("createPubSubBridge", () => {
+  it("subscribes a topic and its endpoint's channel once, for its first local subscriber", () => {
+    const pubsub = createMemoryBus().replica("a");
+    const subscribe = vi.spyOn(pubsub, "subscribe");
+    const { bridge } = replica(pubsub);
 
-    // Simulate remote replica publishing (pubsub handler invoked directly)
-    const remoteHandler = handlers.get("chat.room1");
-    expect(remoteHandler).toBeDefined();
-    remoteHandler!({ text: "hello from A" });
-    // Allow async broadcast to complete (fire-and-forget in bridge)
-    await new Promise((r) => setTimeout(r, 0));
+    bridge.onTopicSubscribe('api.chat.room#{"room":"a"}');
+    bridge.onTopicSubscribe('api.chat.room#{"room":"a"}');
 
-    // broadcastToTopic uses sendEncoded (pre-serialized JSON)
-    expect(entry.sendEncoded).toHaveBeenCalledOnce();
-    const parsed = JSON.parse(entry.sendEncoded.mock.calls[0]![0] as string);
-    expect(parsed).toMatchObject({
-      type: "data",
-      topic: "chat.room1",
-      payload: { text: "hello from A" },
-    });
-  });
-
-  it("echo prevention: self-published messages skip pubsub handler", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const registry = createConnectionRegistry();
-    const bridge = createPubSubBridge(pubsub, registry);
-    const tm = createServerTopicManager({
-      onFirstSubscriber: (topic) => bridge.onTopicSubscribe(topic),
-      onLastUnsubscriber: (topic) => bridge.onTopicUnsubscribe(topic),
-    });
-    registry.setTopicManager(tm);
-
-    const entry = createEntry("a-conn-1");
-    registry.add(entry);
-    tm.subscribe("a-conn-1", { topic: "room", cleanup: vi.fn() });
-
-    // Self-publish — echo prevention in MemoryPubSub skips own origin
-    await pubsub.publish("room", { text: "self" });
-
-    // Should NOT be delivered via pubsub handler (echo prevention)
-    expect(entry.sendRaw).not.toHaveBeenCalled();
-  });
-
-  it("ref counting survives multiple subscribe/unsubscribe cycles", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const subscribeSpy = vi.spyOn(pubsub, "subscribe");
-    const { bridge } = setupReplica(pubsub);
-
-    // Cycle 1
-    await bridge.onTopicSubscribe("t");
-    await bridge.onTopicUnsubscribe("t");
-
-    // Cycle 2
-    await bridge.onTopicSubscribe("t");
-    await bridge.onTopicUnsubscribe("t");
-
-    expect(topicChannels(subscribeSpy)).toEqual(["t", "t"]);
-  });
-
-  it("handles multiple topics independently", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const subscribeSpy = vi.spyOn(pubsub, "subscribe");
-    const { bridge } = setupReplica(pubsub);
-
-    await bridge.onTopicSubscribe("topic-a");
-    await bridge.onTopicSubscribe("topic-b");
-
-    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b"]);
-
-    // Unsubscribe topic-a, topic-b still active
-    await bridge.onTopicUnsubscribe("topic-a");
-
-    // New subscribe to topic-a should create fresh pubsub subscription
-    await bridge.onTopicSubscribe("topic-a");
-    expect(topicChannels(subscribeSpy)).toEqual(["topic-a", "topic-b", "topic-a"]);
-  });
-
-  it("gracefully handles pubsub.subscribe failure", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    // NOT connected — subscribe will silently fail
-    const { bridge } = setupReplica(pubsub);
-
-    // Should not throw
-    await bridge.onTopicSubscribe("room");
-  });
-
-  it("serializes concurrent subscribe calls to prevent duplicate pubsub subscriptions", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
-
-    const subscribeSpy = vi.spyOn(pubsub, "subscribe");
-    const { bridge } = setupReplica(pubsub);
-
-    // Fire two subscribes concurrently — without pending guard, both would call pubsub.subscribe
-    await Promise.all([
-      bridge.onTopicSubscribe("chat.room1"),
-      bridge.onTopicSubscribe("chat.room1"),
+    expect(subscribe.mock.calls.map(([channel]) => channel)).toEqual([
+      'api.chat.room#{"room":"a"}',
+      "api.chat.room#*",
     ]);
-
-    // Only one pubsub.subscribe call — second one waits and increments refCount
-    expect(topicChannels(subscribeSpy)).toEqual(["chat.room1"]);
   });
 
-  it("serializes concurrent unsubscribe after in-flight subscribe", async () => {
-    const pubsub = createMemoryPubSub("server-A");
-    await pubsub.connect();
+  it("unsubscribes once its last local subscriber leaves", async () => {
+    const pubsub = createMemoryBus().replica("a");
+    const { bridge } = replica(pubsub);
+    bridge.onTopicSubscribe("api.chat.room");
+    bridge.onTopicSubscribe("api.chat.room");
+    await expect.poll(() => pubsub.stats().channels.wanted).toBe(2);
 
-    const { bridge } = setupReplica(pubsub);
+    bridge.onTopicUnsubscribe("api.chat.room");
+    expect(pubsub.stats().channels.wanted).toBe(2);
+    bridge.onTopicUnsubscribe("api.chat.room");
+    bridge.onTopicUnsubscribe("api.chat.room");
 
-    // Subscribe then immediately unsubscribe concurrently
-    const sub = bridge.onTopicSubscribe("room");
-    const unsub = bridge.onTopicUnsubscribe("room");
+    expect(pubsub.stats().channels.wanted).toBe(0);
+  });
 
-    await Promise.all([sub, unsub]);
-    // Should not throw — unsubscribe waits for subscribe to finish
+  it("lets go of every subscription when destroyed, and takes none after", async () => {
+    const pubsub = createMemoryBus().replica("a");
+    const { bridge } = replica(pubsub);
+    bridge.onTopicSubscribe("api.chat.a");
+    bridge.onTopicSubscribe("api.chat.b");
+    bridge.onConnectionOpen();
+    await expect.poll(() => pubsub.stats().channels.wanted).toBe(5);
+
+    bridge.destroy();
+    bridge.onTopicSubscribe("api.chat.a");
+
+    expect(pubsub.stats().channels.wanted).toBe(0);
+  });
+
+  it("does not wait on a subscription the adapter has not taken yet, and lets go of it once it does", () => {
+    const { adapter, settles, letGo } = slowAdapter();
+    const { bridge } = replica(adapter);
+    bridge.onTopicSubscribe("api.chat.a");
+
+    bridge.destroy();
+    for (const settle of settles) settle();
+
+    return expect.poll(() => letGo.sort()).toEqual(["api.chat.a", "api.chat.a#*"]);
+  });
+
+  it("lets go of a channel released before the adapter took it", async () => {
+    const { adapter, settles, letGo } = slowAdapter();
+    const { bridge } = replica(adapter);
+    bridge.onTopicSubscribe("api.chat.a");
+    bridge.onTopicUnsubscribe("api.chat.a");
+
+    for (const settle of settles) settle();
+
+    await expect.poll(() => letGo.sort()).toEqual(["api.chat.a", "api.chat.a#*"]);
+  });
+
+  it("logs, as a fault, an adapter that would not take a subscription", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const pubsub = createMemoryBus().replica("a");
+    await pubsub.disconnect();
+    const { bridge } = replica(pubsub);
+
+    bridge.onTopicSubscribe("api.chat.a");
+
+    await expect
+      .poll(() => error.mock.calls.map((call) => format(...call)).join("\n"))
+      .toContain("The pub/sub adapter did not take channel api.chat.a");
+  });
+
+  it("logs a publish a stopped adapter refused on one line, and still delivers locally", async () => {
+    vi.stubEnv("NO_COLOR", "1");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const pubsub = createMemoryBus().replica("a");
+    const { bridge } = replica(pubsub);
+    await pubsub.disconnect();
+
+    await bridge.publishToTopic("api.chat.a", { text: "late" });
+
+    const said = warn.mock.calls.map((call) => format(...call));
+    expect(said).toEqual([
+      expect.stringMatching(/publish refused code=PUBSUB_STOPPED reason="Error: /),
+    ]);
+    vi.unstubAllEnvs();
   });
 });
 
-describe("topic manager hooks integration", () => {
-  it("fires onFirstSubscriber when first connection subscribes", async () => {
+describe("a broadcast between two replicas on one bus", () => {
+  it("reaches the other replica's local subscribers, and not the replica that sent it", async () => {
+    const bus = createMemoryBus();
+    const a = replica(bus.replica("a"));
+    const b = replica(bus.replica("b"));
+    const onA = createEntry("a-1");
+    const onB = createEntry("b-1");
+    a.registry.add(onA);
+    b.registry.add(onB);
+    a.topics.subscribe("a-1", { topic: "api.chat.room", cleanup: vi.fn() });
+    b.topics.subscribe("b-1", { topic: "api.chat.room", cleanup: vi.fn() });
+
+    await a.bridge.publishToTopic("api.chat.room", { text: "from a" });
+
+    await expect.poll(() => onB.sendEncoded.mock.calls.length).toBe(1);
+    expect(JSON.parse(String(onB.sendEncoded.mock.calls[0]?.[0]))).toMatchObject({
+      type: "data",
+      topic: "api.chat.room",
+      payload: { text: "from a" },
+    });
+    expect(onA.sendEncoded).not.toHaveBeenCalled();
+  });
+
+  it("reaches every qualified topic of the endpoint on the other replica", async () => {
+    const bus = createMemoryBus();
+    const a = replica(bus.replica("a"));
+    const b = replica(bus.replica("b"));
+    const inRoomA = createEntry("b-1");
+    const inRoomB = createEntry("b-2");
+    b.registry.add(inRoomA);
+    b.registry.add(inRoomB);
+    b.topics.subscribe("b-1", { topic: 'api.chat.room#{"room":"a"}', cleanup: vi.fn() });
+    b.topics.subscribe("b-2", { topic: 'api.chat.room#{"room":"b"}', cleanup: vi.fn() });
+
+    await a.bridge.publishToBaseTopic("api.chat.room", "to every room");
+
+    await expect
+      .poll(() => [inRoomA, inRoomB].map((entry) => entry.sendEncoded.mock.calls.length))
+      .toEqual([1, 1]);
+  });
+});
+
+describe("topic manager hooks", () => {
+  it("fires onFirstSubscriber for a topic's first connection only", () => {
     const onFirst = vi.fn();
-    const onLast = vi.fn();
-    const tm = createServerTopicManager({ onFirstSubscriber: onFirst, onLastUnsubscriber: onLast });
+    const topics = createServerTopicManager({ onFirstSubscriber: onFirst });
 
-    tm.subscribe("c1", { topic: "room", cleanup: vi.fn() });
-    expect(onFirst).toHaveBeenCalledWith("room");
-    expect(onFirst).toHaveBeenCalledOnce();
+    topics.subscribe("c1", { topic: "room", cleanup: vi.fn() });
+    topics.subscribe("c2", { topic: "room", cleanup: vi.fn() });
 
-    // Second subscriber — should NOT fire onFirstSubscriber again
-    tm.subscribe("c2", { topic: "room", cleanup: vi.fn() });
-    expect(onFirst).toHaveBeenCalledOnce();
+    expect(onFirst.mock.calls).toEqual([["room"]]);
   });
 
-  it("fires onLastUnsubscriber when last connection leaves", async () => {
-    const onFirst = vi.fn();
+  it("fires onLastUnsubscriber once its last connection has left", async () => {
     const onLast = vi.fn();
-    const tm = createServerTopicManager({ onFirstSubscriber: onFirst, onLastUnsubscriber: onLast });
+    const topics = createServerTopicManager({ onLastUnsubscriber: onLast });
+    topics.subscribe("c1", { topic: "room", cleanup: vi.fn() });
+    topics.subscribe("c2", { topic: "room", cleanup: vi.fn() });
 
-    tm.subscribe("c1", { topic: "room", cleanup: vi.fn() });
-    tm.subscribe("c2", { topic: "room", cleanup: vi.fn() });
-
-    await tm.unsubscribe("c1", "room");
+    await topics.unsubscribe("c1", "room");
     expect(onLast).not.toHaveBeenCalled();
+    await topics.unsubscribe("c2", "room");
 
-    await tm.unsubscribe("c2", "room");
-    expect(onLast).toHaveBeenCalledWith("room");
-    expect(onLast).toHaveBeenCalledOnce();
+    expect(onLast.mock.calls).toEqual([["room"]]);
   });
 
-  it("fires onLastUnsubscriber on disconnectAll", async () => {
+  it("fires onLastUnsubscriber for each topic a closing connection held alone", async () => {
     const onLast = vi.fn();
-    const tm = createServerTopicManager({ onLastUnsubscriber: onLast });
+    const topics = createServerTopicManager({ onLastUnsubscriber: onLast });
+    topics.subscribe("c1", { topic: "room-a", cleanup: vi.fn() });
+    topics.subscribe("c1", { topic: "room-b", cleanup: vi.fn() });
+    topics.subscribe("c2", { topic: "room-b", cleanup: vi.fn() });
 
-    tm.subscribe("c1", { topic: "room-a", cleanup: vi.fn() });
-    tm.subscribe("c1", { topic: "room-b", cleanup: vi.fn() });
+    await topics.disconnectAll("c1");
 
-    await tm.disconnectAll("c1");
-
-    expect(onLast).toHaveBeenCalledWith("room-a");
-    expect(onLast).toHaveBeenCalledWith("room-b");
-    expect(onLast).toHaveBeenCalledTimes(2);
-  });
-
-  it("does not fire onLastUnsubscriber if other connections remain", async () => {
-    const onLast = vi.fn();
-    const tm = createServerTopicManager({ onLastUnsubscriber: onLast });
-
-    tm.subscribe("c1", { topic: "room", cleanup: vi.fn() });
-    tm.subscribe("c2", { topic: "room", cleanup: vi.fn() });
-
-    await tm.disconnectAll("c1");
-
-    // c2 still subscribed to "room"
-    expect(onLast).not.toHaveBeenCalled();
-  });
-
-  it("works without hooks (backward compatible)", () => {
-    const tm = createServerTopicManager();
-    tm.subscribe("c1", { topic: "room", cleanup: vi.fn() });
-    expect(tm.subscribers("room").has("c1")).toBe(true);
-    expect(tm.subscribers("room").size).toBe(1);
+    expect(onLast.mock.calls).toEqual([["room-a"]]);
   });
 });

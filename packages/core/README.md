@@ -429,6 +429,7 @@ import {
 import {
   subscribeSSE,          // Read a server-sent event stream, resuming from its last event id
   createMemoryPubSub,    // In-process broadcasts, for one server
+  createMemoryBus,       // One bus several handlers in a process share, as replicas share Redis
   createMemoryStream,    // In-process event history a stream resumes from
   createMemoryPresence,  // In-process presence: who is on a topic
   RealtimeError,         // A stream's or a channel's error, with its code

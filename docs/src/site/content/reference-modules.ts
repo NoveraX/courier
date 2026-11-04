@@ -30,7 +30,7 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   { module: "@noverax/courier/middleware", note: "defineMiddleware, composeMiddleware" },
   {
     module: "@noverax/courier/realtime",
-    note: "createMemoryPubSub, createMemoryStream, createMemoryPresence, subscribeSSE, tracked",
+    note: "createMemoryPubSub, createMemoryBus, createMemoryStream, createMemoryPresence, subscribeSSE, tracked",
   },
   { module: "@noverax/courier/openapi", note: "toOpenAPI — the definition as an OpenAPI document" },
   {

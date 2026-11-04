@@ -9,7 +9,7 @@ import { createRefusalLog } from "../src/logger/refusal-log";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 /**
  * The metadata a WebSocket connection carries is what the handler's
@@ -93,11 +93,11 @@ describe("a connection whose onConnect returns something other than an object", 
     );
 
     client = createWSConnection({ url: served.url });
-    await settle(300);
 
+    await expect
+      .poll(() => warn.mock.calls.map((call) => format(...call)).join("\n"), { timeout: 5000 })
+      .toContain("onConnect returned a string");
     expect(served.handler.connections.count).toBe(0);
-    const said = warn.mock.calls.map((call) => format(...call));
-    expect(said.some((line) => line.includes("onConnect returned a string"))).toBe(true);
   });
 });
 

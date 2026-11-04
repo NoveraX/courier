@@ -1,10 +1,13 @@
 export type {
+  AdapterDeadline,
   AdapterLifecycle,
+  AdapterState,
   PresenceAdapter,
   PresenceDiff,
   PresenceEntry,
   PubSubAdapter,
   PubSubEnvelope,
+  PubSubStats,
   StoredEvent,
   StreamAdapter,
   WebSocketLike,
@@ -20,6 +23,7 @@ export {
   RealtimeTimeoutError,
   RealtimeValidationError,
 } from "./errors";
+export { createMemoryBus, type MemoryBus } from "./memory-bus";
 export { createMemoryPresence } from "./memory-presence";
 export { createMemoryPubSub } from "./memory-pubsub";
 export { createMemoryStream } from "./memory-stream";

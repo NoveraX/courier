@@ -1,10 +1,8 @@
-import { createLogger } from "../logger";
+import type { RefusalLog } from "../logger/refusal-log";
 import type { PubSubAdapter } from "../realtime/adapters";
 import { unqualifyTopic } from "../realtime/ws/topic-key";
 import { createPubSubChannels } from "./pubsub-channels";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
-
-const log = createLogger("WS");
 
 /**
  * The channel a broadcast to every connection travels on. No topic can take
@@ -26,22 +24,22 @@ function baseChannel(baseTopic: string): string {
  * - Remote messages → delivered to the local connections they concern
  */
 export interface PubSubBridge {
-  /** Called when a connection subscribes to a topic locally */
-  onTopicSubscribe(topic: string): Promise<void>;
-  /** Called when a connection unsubscribes from a topic locally */
-  onTopicUnsubscribe(topic: string): Promise<void>;
+  /** Called when a topic gains its first local subscriber */
+  onTopicSubscribe(topic: string): void;
+  /** Called when a topic loses its last local subscriber */
+  onTopicUnsubscribe(topic: string): void;
   /** Called when a connection opens locally */
-  onConnectionOpen(): Promise<void>;
+  onConnectionOpen(): void;
   /** Called when a connection closes locally */
-  onConnectionClose(): Promise<void>;
+  onConnectionClose(): void;
   /** Tell the other replicas' subscribers of a topic */
   publishToTopic(topic: string, data: unknown): Promise<void>;
   /** Tell the other replicas' subscribers of every qualified topic of an endpoint */
   publishToBaseTopic(baseTopic: string, data: unknown): Promise<void>;
   /** Tell every connection of the other replicas */
   publishToAll(data: unknown): Promise<void>;
-  /** Unsubscribe all pubsub subscriptions, await pending operations (shutdown) */
-  destroy(): Promise<void>;
+  /** Unsubscribe from every channel at once (shutdown) */
+  destroy(): void;
 }
 
 /**
@@ -52,42 +50,44 @@ export interface PubSubBridge {
  *
  * @param pubsub - PubSub adapter for cross-replica messaging
  * @param registry - Local connection registry for message delivery
+ * @param refusals - The handler's log of refusals, for a publish the adapter refused
  * @returns The bridge
  *
  * @example
- * const bridge = createPubSubBridge(pubsub, registry);
- * await bridge.onTopicSubscribe('api.chat.room#{"room":"a"}');
+ * const bridge = createPubSubBridge(pubsub, registry, refusals);
+ * bridge.onTopicSubscribe('api.chat.room#{"room":"a"}');
  * await bridge.publishToTopic('api.chat.room#{"room":"a"}', { text: "hi" });
  */
 export function createPubSubBridge(
   pubsub: PubSubAdapter,
   registry: InternalConnectionRegistry,
+  refusals: RefusalLog,
 ): PubSubBridge {
   const channels = createPubSubChannels(pubsub);
 
-  /* A failed publish is logged rather than left to reject with no one
-     awaiting it, and the local delivery it went with stands. */
+  /* The adapter queues what it cannot send yet and rejects only once it is
+     stopped; that is logged rather than left to reject with no one awaiting
+     it, and the local delivery it went with stands. */
   async function publish(channel: string, data: unknown): Promise<void> {
     try {
       await pubsub.publish(channel, data);
-    } catch (err) {
-      log.warn(`Failed to publish pubsub topic: ${channel}`, err);
+    } catch (error) {
+      refusals.warn({ event: "publish refused", code: "PUBSUB_STOPPED" }, error);
     }
   }
 
   return {
-    async onTopicSubscribe(topic) {
+    onTopicSubscribe(topic) {
       const { baseTopic } = unqualifyTopic(topic);
-      await Promise.all([
-        channels.retain(topic, (message) => void registry.broadcastToTopic(topic, message)),
-        channels.retain(baseChannel(baseTopic), (message) => {
-          void registry.broadcastToBaseTopic(baseTopic, message);
-        }),
-      ]);
+      channels.retain(topic, (message) => void registry.broadcastToTopic(topic, message));
+      channels.retain(baseChannel(baseTopic), (message) => {
+        void registry.broadcastToBaseTopic(baseTopic, message);
+      });
     },
-    async onTopicUnsubscribe(topic) {
+    onTopicUnsubscribe(topic) {
       const { baseTopic } = unqualifyTopic(topic);
-      await Promise.all([channels.release(topic), channels.release(baseChannel(baseTopic))]);
+      channels.release(topic);
+      channels.release(baseChannel(baseTopic));
     },
     onConnectionOpen: () =>
       channels.retain(EVERY_CONNECTION, (message) => void registry.broadcast(message)),

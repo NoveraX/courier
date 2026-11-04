@@ -4,9 +4,9 @@ import type { WSSubscriptionEntry } from "./ws-types";
 /** Optional lifecycle hooks for pub/sub bridge integration */
 export interface TopicManagerHooks {
   /** Called when a topic gains its first local subscriber */
-  onFirstSubscriber?: (topic: string) => Promise<void>;
+  onFirstSubscriber?: (topic: string) => void;
   /** Called when a topic loses its last local subscriber */
-  onLastUnsubscriber?: (topic: string) => Promise<void>;
+  onLastUnsubscriber?: (topic: string) => void;
 }
 
 /** Server-side topic manager — tracks subscriptions per connection */
@@ -90,7 +90,7 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     }
     topics.set(entry.topic, entry);
     addToIndex(entry.topic, connectionId);
-    if (isFirst) void hooks?.onFirstSubscriber?.(entry.topic);
+    if (isFirst) hooks?.onFirstSubscriber?.(entry.topic);
   }
 
   async function unsubscribe(connectionId: string, topic: string): Promise<void> {
@@ -102,7 +102,7 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     topics.delete(topic);
     removeFromIndex(topic, connectionId);
     if (topics.size === 0) connections.delete(connectionId);
-    if (!topicIndex.has(topic)) await hooks?.onLastUnsubscriber?.(topic);
+    if (!topicIndex.has(topic)) hooks?.onLastUnsubscriber?.(topic);
   }
 
   async function disconnectAll(connectionId: string): Promise<void> {
@@ -114,15 +114,9 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     await Promise.allSettled(cleanups);
     connections.delete(connectionId);
 
-    // Collect topics that lost their last subscriber, then run hooks in parallel
-    const lastUnsubscribed: string[] = [];
     for (const topic of topicNames) {
       removeFromIndex(topic, connectionId);
-      if (!topicIndex.has(topic)) lastUnsubscribed.push(topic);
-    }
-    const onLast = hooks?.onLastUnsubscriber;
-    if (onLast && lastUnsubscribed.length > 0) {
-      await Promise.allSettled(lastUnsubscribed.map((t) => onLast(t)));
+      if (!topicIndex.has(topic)) hooks?.onLastUnsubscriber?.(topic);
     }
   }
 

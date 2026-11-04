@@ -3,7 +3,8 @@
   "compilerOptions": {
     "paths": {
       "@noverax/courier": ["../core/src/index.ts"],
-      "@noverax/courier/realtime": ["../core/src/realtime/index.ts"]
+      "@noverax/courier/realtime": ["../core/src/realtime/index.ts"],
+      "@noverax/courier/internal": ["../core/src/internal/index.ts"]
     }
   },
   "include": ["src/**/*", "tests/**/*", "tsdown.config.ts"]

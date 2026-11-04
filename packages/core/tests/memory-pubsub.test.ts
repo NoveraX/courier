@@ -1,144 +1,144 @@
-import { describe, expect, it } from "vitest";
+/**
+ * The in-process pub/sub adapters: a bus several handlers of one process
+ * share, as replicas share Redis, and the adapter of a server that runs
+ * alone. Both keep the contract a handler relies on: ready from the start,
+ * stopped for good by `disconnect()`.
+ */
+import { describe, expect, it, vi } from "vitest";
+
+import type { AdapterState } from "../src/realtime/adapters";
+import { createMemoryBus } from "../src/realtime/memory-bus";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 
-describe("createMemoryPubSub", () => {
-  it("starts disconnected and connects", async () => {
-    const ps = createMemoryPubSub();
-    expect(ps.isHealthy()).toBe(false);
-    await ps.connect();
-    expect(ps.isHealthy()).toBe(true);
+describe("createMemoryBus", () => {
+  it("brings what one replica publishes to every other replica subscribed, and not to itself", async () => {
+    const bus = createMemoryBus();
+    const a = bus.replica("a");
+    const b = bus.replica("b");
+    const c = bus.replica("c");
+    const heard = { a: [] as unknown[], b: [] as unknown[], c: [] as unknown[] };
+    await a.subscribe("room", (message) => heard.a.push(message));
+    await b.subscribe("room", (message) => heard.b.push(message));
+    await c.subscribe("other", (message) => heard.c.push(message));
+
+    await a.publish("room", { text: "hi" });
+
+    await expect.poll(() => heard.b).toEqual([{ text: "hi" }]);
+    expect(heard.a).toEqual([]);
+    expect(heard.c).toEqual([]);
   });
 
-  it("skips self-published messages via echo prevention", async () => {
-    const ps = createMemoryPubSub("server-a");
-    await ps.connect();
+  it("delivers after the call that published returns, in the order published", async () => {
+    const bus = createMemoryBus();
+    const a = bus.replica("a");
+    const heard: unknown[] = [];
+    await bus.replica("b").subscribe("room", (message) => heard.push(message));
 
-    const received: unknown[] = [];
-    await ps.subscribe("chat.room1", (msg) => received.push(msg));
+    void a.publish("room", 1);
+    void a.publish("room", 2);
+    expect(heard).toEqual([]);
 
-    await ps.publish("chat.room1", { text: "hello" });
-    // Same origin — echo prevention skips delivery
-    expect(received).toEqual([]);
+    await expect.poll(() => heard).toEqual([1, 2]);
   });
 
-  it("delivers messages from different origins (cross-replica simulation)", async () => {
-    // Two adapters with different origins simulating two replicas
-    const psA = createMemoryPubSub("server-a");
-    const psB = createMemoryPubSub("server-b");
-    await psA.connect();
-    await psB.connect();
+  it("delivers to every handler of a channel, and a handler leaving keeps the others", async () => {
+    const bus = createMemoryBus();
+    const b = bus.replica("b");
+    const first: unknown[] = [];
+    const second: unknown[] = [];
+    const leave = await b.subscribe("room", (message) => first.push(message));
+    await b.subscribe("room", (message) => second.push(message));
 
-    // Subscribe on A, have B publish to A's topic map via shared handler
-    const received: unknown[] = [];
-    // In real Redis, both subscribe to same channel. For memory adapter,
-    // echo prevention is the key behavior: self-publish is skipped.
-    await psA.subscribe("topic", (msg) => received.push(msg));
-    await psA.publish("topic", "from-self");
-    expect(received).toHaveLength(0);
+    leave();
+    await bus.replica("a").publish("room", "after");
 
-    // B's self-publish also skipped on B
-    const receivedB: unknown[] = [];
-    await psB.subscribe("topic", (msg) => receivedB.push(msg));
-    await psB.publish("topic", "from-self-b");
-    expect(receivedB).toHaveLength(0);
+    await expect.poll(() => second).toEqual(["after"]);
+    expect(first).toEqual([]);
   });
 
-  it("supports multiple subscribers on same topic", async () => {
-    const ps = createMemoryPubSub("a");
-    await ps.connect();
-
-    const r1: unknown[] = [];
-    const r2: unknown[] = [];
-    await ps.subscribe("t", (m) => r1.push(m));
-    await ps.subscribe("t", (m) => r2.push(m));
-
-    // Both skipped due to echo prevention (same origin)
-    await ps.publish("t", "msg");
-    expect(r1).toHaveLength(0);
-    expect(r2).toHaveLength(0);
-  });
-
-  it("unsubscribes correctly", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.connect();
-
-    const received: unknown[] = [];
-    const unsub = await ps.subscribe("t", (m) => received.push(m));
-    unsub();
-
-    await ps.publish("t", "after-unsub");
-    expect(received).toHaveLength(0);
-  });
-
-  it("cleans up topic when last subscriber leaves", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.connect();
-
-    const unsub = await ps.subscribe("t", () => {});
-    unsub();
-
-    // No error on publish to empty topic
-    await ps.publish("t", "orphan");
-  });
-
-  it("silently drops publish when disconnected", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.publish("t", "dropped");
-  });
-
-  it("clears all state on disconnect", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.connect();
-    await ps.subscribe("t", () => {});
-    await ps.disconnect();
-    expect(ps.isHealthy()).toBe(false);
-  });
-
-  it("reports handler errors via onError", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.connect();
-
+  it("reports a handler that throws to the replica's error handlers, and goes on delivering", async () => {
+    const bus = createMemoryBus();
+    const b = bus.replica("b");
     const errors: Error[] = [];
-    ps.onError((err) => errors.push(err));
-
-    // Register a throwing handler directly via subscribe
-    // The handler runs on the envelope, so it will throw before echo check
-    await ps.subscribe("t", () => {
-      throw new Error("boom");
+    const heard: unknown[] = [];
+    b.onError((error) => errors.push(error));
+    await b.subscribe("room", () => {
+      throw new Error("handler broke");
     });
+    await b.subscribe("room", (message) => heard.push(message));
 
-    // Self-publish: echo prevention skips the wrapped handler,
-    // so error handler won't fire. This is correct — errors only
-    // surface when cross-replica messages arrive (via Redis).
-    await ps.publish("t", "trigger");
-    expect(errors).toHaveLength(0);
+    await bus.replica("a").publish("room", "x");
+
+    await expect.poll(() => heard).toEqual(["x"]);
+    expect(errors.map((error) => error.message)).toEqual(["handler broke"]);
   });
 
-  it("onError unsubscribe removes handler", async () => {
-    const ps = createMemoryPubSub("x");
-    const unsub = ps.onError(() => {});
-    expect(typeof unsub).toBe("function");
-    unsub();
+  it("counts what a replica published and delivered", async () => {
+    const bus = createMemoryBus();
+    const a = bus.replica("a");
+    const b = bus.replica("b");
+    await b.subscribe("room", () => undefined);
+
+    await a.publish("room", "x");
+
+    await expect.poll(() => b.stats().delivered).toBe(1);
+    expect(a.stats()).toMatchObject({ state: "ready", published: 1, dropped: 0 });
+    expect(b.stats().channels).toEqual({ wanted: 1, confirmed: 1 });
   });
 
-  it("supports multiple independent topics", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.connect();
+  it("is ready from the start, and stopped for good by disconnect()", async () => {
+    const a = createMemoryBus().replica("a");
+    const states: AdapterState[] = [];
+    a.onStateChange((state) => states.push(state));
+    expect(a.state).toBe("ready");
+    expect(a.isHealthy()).toBe(true);
+    await a.connect();
 
-    const r1: unknown[] = [];
-    const r2: unknown[] = [];
-    await ps.subscribe("topic-a", (m) => r1.push(m));
-    await ps.subscribe("topic-b", (m) => r2.push(m));
+    await a.disconnect();
+    await a.disconnect();
 
-    await ps.publish("topic-a", "a");
-    await ps.publish("topic-b", "b");
-    expect(r1).toHaveLength(0);
-    expect(r2).toHaveLength(0);
+    expect(states).toEqual(["stopped"]);
+    expect(a.isHealthy()).toBe(false);
+    await expect(a.publish("room", "x")).rejects.toThrow(/stopped/);
+    await expect(a.subscribe("room", () => undefined)).rejects.toThrow(/stopped/);
+    await expect(a.connect()).rejects.toThrow(/stopped/);
   });
 
-  it("publish to non-existent topic is no-op", async () => {
-    const ps = createMemoryPubSub("x");
-    await ps.connect();
-    await ps.publish("no-such-topic", "data");
+  it("stops hearing the bus once it is stopped", async () => {
+    const bus = createMemoryBus();
+    const b = bus.replica("b");
+    const handler = vi.fn();
+    await b.subscribe("room", handler);
+
+    await b.disconnect();
+    await bus.replica("a").publish("room", "x");
+
+    await Promise.resolve();
+    expect(handler).not.toHaveBeenCalled();
+    expect(b.stats().channels).toEqual({ wanted: 0, confirmed: 0 });
+  });
+});
+
+describe("createMemoryPubSub", () => {
+  it("is a replica alone on its own bus: nothing it publishes comes back", async () => {
+    const pubsub = createMemoryPubSub("solo");
+    const heard: unknown[] = [];
+    await pubsub.subscribe("room", (message) => heard.push(message));
+
+    await pubsub.publish("room", "x");
+    await Promise.resolve();
+
+    expect(heard).toEqual([]);
+    expect(pubsub.state).toBe("ready");
+  });
+
+  it("does not share a bus with another adapter made the same way", async () => {
+    const heard: unknown[] = [];
+    await createMemoryPubSub("b").subscribe("room", (message) => heard.push(message));
+
+    await createMemoryPubSub("a").publish("room", "x");
+    await Promise.resolve();
+
+    expect(heard).toEqual([]);
   });
 });

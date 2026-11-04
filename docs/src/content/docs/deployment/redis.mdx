@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Redis Adapters",
   description: "Scale Courier realtime across multiple replicas with Redis Pub/Sub, Streams, and Presence adapters.",
-  updated: "2026-10-13",
+  updated: "2026-11-05",
 }
 
 ## When You Need Redis
@@ -37,12 +37,21 @@ const pubsub = createRedisPubSub({
   prefix: "courier:",                                // channel key prefix (default: "")
 })
 
-await pubsub.connect()
+await pubsub.connect().catch((error) => console.warn(error.message))
 ```
 
 <Callout variant="warning" title="Two connections required">
   Redis enters subscriber mode on `SUBSCRIBE`, blocking other commands. You **must** provide separate `publisher` and `subscriber` connections.
 </Callout>
+
+The adapter works from the moment it is made, whether Redis is there or not:
+
+- **Before Redis answers, and while it is away**, what is published waits in a queue and goes out, in order, once Redis is back. The queue holds at most 1000 messages, 1 MiB of them, none older than 5 seconds — past those the oldest are dropped, counted in `stats().dropped` and logged. Set them with `queue: { maxMessages, maxBytes, maxAgeMs }`. A broadcast that waited longer than a few seconds is usually no longer worth sending, so the age is kept short.
+- **Every subscription** is made as soon as Redis answers, made again after each reconnect, and tried again after a pause — growing from a quarter of a second to 30 seconds — when Redis refuses it, an ACL that does not allow the channel yet for instance. A replica that started while Redis was down hears the others once it is up.
+- `connect({ timeoutMs })` waits until both connections are ready — 10 seconds by default — and rejects past it, while the adapter goes on connecting: awaiting it at startup is a check, not what makes the adapter work.
+- `disconnect({ timeoutMs })` lets go of the subscriptions within its deadline — 2 seconds by default — whatever Redis does, and leaves the two ioredis clients open: they are yours to `quit()`.
+
+`state` says where it stands — `connecting` until it first reaches Redis, `ready`, `degraded` while it lost it and is getting it back, `stopped` after `disconnect()` — and `onStateChange(listener)` hears each change. `stats()` gives the channels wanted and those Redis confirmed, what is queued, and how many messages were published, delivered and dropped. Losing Redis is logged once on one line, and so is getting it back.
 
 ### Echo Prevention
 
@@ -313,7 +322,7 @@ process.on("SIGTERM", async () => {
 
 ## Health Monitoring
 
-Each adapter exposes `isHealthy()`:
+Each adapter exposes `isHealthy()`; the Pub/Sub adapter's is `state === "ready"`, and its `stats()` carries the rest:
 
 ```ts title="health-check.ts"
 import { history, presence, pubsub } from "./lib/adapters"
@@ -329,6 +338,13 @@ app.get("/health/redis", (req, res) => {
 ```
 
 Health is tracked automatically via Redis connection events (`ready`, `close`, `end`).
+
+```ts title="metrics.ts"
+import { pubsub } from "./lib/adapters"
+
+const { state, channels, queued, dropped } = pubsub.stats()
+// state: "ready", channels: { wanted: 42, confirmed: 42 }, queued: { messages: 0, bytes: 0 }, dropped: 0
+```
 
 ## Error Handling
 
@@ -356,9 +372,11 @@ Redis adapters degrade gracefully — they never kill active client connections:
 
 | Scenario | Behavior |
 |----------|----------|
-| Redis temporarily down | PubSub messages are lost (ephemeral). `append` rejects and `getHistory` returns no events, and `onError` hears both. Presence calls do nothing — `list` returns no entries — and `onError` hears why. |
-| Redis reconnects | Adapters resume automatically (ioredis handles reconnection) |
-| Subscriber connection lost | New subscriptions re-established on reconnect |
+| Redis down at start | The Pub/Sub adapter is `connecting`: what is published waits in its queue, subscriptions are made once Redis answers. `connect()` rejects at its deadline; the adapter goes on. |
+| Redis temporarily down | PubSub messages wait in the queue, within its bounds, and go out once Redis is back; past the bounds the oldest are dropped and counted. `append` rejects and `getHistory` returns no events, and `onError` hears both. Presence calls do nothing — `list` returns no entries — and `onError` hears why. |
+| Redis reconnects | The Pub/Sub adapter makes every subscription again and sends what waited |
+| Redis refuses a `SUBSCRIBE` | Tried again after a growing pause until Redis takes it; `onError` hears each refusal |
+| Redis hangs | `disconnect()` and a WebSocket handler's `destroy()` settle within their deadlines all the same |
 | `isHealthy()` returns false | Your load balancer should stop sending new connections |
 
 <Callout variant="tip" title="ioredis reconnection">

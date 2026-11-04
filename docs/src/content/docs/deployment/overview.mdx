@@ -21,7 +21,7 @@ Courier supports two deployment models for realtime features (SSE and WebSocket)
 
 | | Single Replica | Multi-Replica |
 |---|---|---|
-| **WS broadcast** | Nothing to add — the handler delivers to its own connections | `createRedisPubSub()`, passed to the server as `pubsub` |
+| **WS broadcast** | Nothing to add — the handler delivers to its own connections; handlers that share one process share `createMemoryBus()` | `createRedisPubSub()`, passed to the server as `pubsub` |
 | **Stream history** | `createMemoryStream()`, read by your stream handlers | `createRedisStream()`, read by your stream handlers |
 | **Presence** | `createMemoryPresence()`, used by your channel handlers | `createRedisPresence()`, used by your channel handlers |
 | **Use case** | Development, single-process prod | K8s, Docker Swarm, any horizontal scaling |

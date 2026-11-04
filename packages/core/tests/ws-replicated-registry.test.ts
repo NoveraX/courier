@@ -8,9 +8,9 @@ import { WebSocket } from "ws";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
+import { createMemoryBus } from "../src/realtime/memory-bus";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
-import { createSharedBus } from "./helpers/shared-pubsub";
 import { type ServedWS, serveWS, settle, stopWS, subscribers } from "./helpers/ws-server";
 
 const { channel } = courier();
@@ -30,9 +30,9 @@ afterEach(async () => {
 });
 
 async function twoReplicas(): Promise<[ServedWS, ServedWS]> {
-  const bus = createSharedBus();
-  const a = await serveWS(endpoints, { pubsub: bus("replica-a") });
-  const b = await serveWS(endpoints, { pubsub: bus("replica-b") });
+  const bus = createMemoryBus();
+  const a = await serveWS(endpoints, { pubsub: bus.replica("replica-a") });
+  const b = await serveWS(endpoints, { pubsub: bus.replica("replica-b") });
   replicas = [a, b];
   return [a, b];
 }

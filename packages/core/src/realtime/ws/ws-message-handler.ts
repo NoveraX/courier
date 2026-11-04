@@ -122,6 +122,8 @@ function routeError(
     }
     return;
   }
+  /* A subscribe refused outright — too many control frames in a second — will never be confirmed. */
+  if (frame.id !== undefined && ctx.topics.refuse(frame.id, error)) return;
   if (frame.topic !== undefined && ctx.topics.subscriptionOf(frame.topic)) {
     ctx.topics.fail(frame.topic, error);
     return;

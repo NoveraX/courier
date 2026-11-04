@@ -139,6 +139,12 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
       s.confirmed = true;
       return s;
     },
+    refuse(id, error) {
+      const s = byId.get(id);
+      if (!s) return false;
+      end(s.topic, error);
+      return true;
+    },
     unconfirmAll(error) {
       for (const s of byTopic.values()) {
         wait(s, undefined);

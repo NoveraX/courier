@@ -60,6 +60,12 @@ export interface TopicRegistry {
   confirm(topic: string, id: string | undefined): Confirmation | undefined;
   /** Every subscription waits for the server again: the socket closed. Each subscriber hears `error`, when there is one. */
   unconfirmAll(error?: RealtimeError): void;
+  /**
+   * The server refused the subscribe with `id` — too many control frames in
+   * a second — so the subscription will not start: it ends with `error`.
+   * Returns whether a subscribe waited on that id.
+   */
+  refuse(id: string, error: RealtimeError): boolean;
   /** Route an incoming message payload to all subscribers of a topic. */
   dispatch(topic: string, payload: unknown): void;
   /** Tell a topic's subscribers of an error on it; the subscription goes on. */

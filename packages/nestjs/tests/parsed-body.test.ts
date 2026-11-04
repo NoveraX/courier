@@ -54,13 +54,20 @@ function keepRawBody(req: IncomingMessage, _res: unknown, buffer: Buffer): void 
   Object.assign(req, { rawBody: buffer });
 }
 
-/** An application wired the way `NestFactory.create` wires its Express adapter. */
-async function nestLikeApp(options: { rawBody?: boolean } = {}): Promise<string> {
+/**
+ * An application wired the way `NestFactory.create` wires its Express adapter:
+ * its parsers mounted as `init()` runs, ahead of the module middleware a
+ * `configure()` applies — and behind what `app.use` mounted before it.
+ */
+async function nestLikeApp(
+  options: { rawBody?: boolean; mounted?: "before parsers" } = {},
+): Promise<string> {
   const kept = options.rawBody ? { verify: keepRawBody } : {};
   const app = express();
+  if (options.mounted === "before parsers") app.use("/api/request", courierMiddleware());
   app.use(bodyParser.json(kept));
   app.use(bodyParser.urlencoded({ extended: true, ...kept }));
-  app.use("/api/request", courierMiddleware());
+  if (options.mounted === undefined) app.use("/api/request", courierMiddleware());
   return listen(createServer(app));
 }
 
@@ -106,6 +113,21 @@ describe("a JSON call through NestJS's default body parser", () => {
   });
 });
 
+describe("a proxy mounted with app.use before Nest's parsers", () => {
+  it("reads the body as it streams in, past the 100 KB Nest's parser takes", async () => {
+    const parsedFirst = await nestLikeApp();
+    const streamedFirst = await nestLikeApp({ mounted: "before parsers" });
+    const name = "n".repeat(200_000);
+
+    await expect(callerAt(parsedFirst).echo.create({ name })).rejects.toMatchObject({
+      status: 413,
+    });
+    const answer = await callerAt(streamedFirst).echo.create({ name });
+
+    expect(JSON.parse(answer.body)).toEqual({ name });
+  });
+});
+
 describe("a call the parser leaves alone", () => {
   it("still reads a multipart body from the stream", async () => {
     const origin = await nestLikeApp();
@@ -136,5 +158,12 @@ describe("bodyNestParsed", () => {
 
   it("has nothing to give when the parser left no body", () => {
     expect(bodyNestParsed(parsed("application/json", undefined))).toBeUndefined();
+  });
+
+  it("hands on the raw bytes Nest kept as they are, uncopied", () => {
+    const rawBody = Buffer.from('{"a":1}');
+    const req = Object.assign(parsed("application/json", { a: 1 }), { rawBody });
+
+    expect(bodyNestParsed(req)).toBe(rawBody);
   });
 });

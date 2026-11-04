@@ -22,7 +22,9 @@ const H3_RAW_BODY = Symbol.for("h3RawBody");
  * const request = toWebRequest(event.node.req, event.node.res, () => kept);
  * ```
  */
-export async function keptBodyOf(req: IncomingMessage): Promise<BodyInit | null | undefined> {
+export async function keptBodyOf(
+  req: IncomingMessage,
+): Promise<BodyInit | Uint8Array | null | undefined> {
   if (H3_RAW_BODY in req) return asBody(await req[H3_RAW_BODY]);
   if ("rawBody" in req) return asBody(req.rawBody);
   if ("body" in req) return asBody(req.body);
@@ -33,11 +35,12 @@ export async function keptBodyOf(req: IncomingMessage): Promise<BodyInit | null 
 
 /**
  * A kept value as a request body, the way h3 1.x reads it back: bytes and
- * text as they are, a parsed JSON object serialized again.
+ * text as they are — the bytes uncopied, read by the request where h3 keeps
+ * them — a parsed JSON object serialized again.
  */
-function asBody(value: unknown): BodyInit | null | undefined {
+function asBody(value: unknown): BodyInit | Uint8Array | null | undefined {
   if (value === undefined || value === null) return null;
-  if (value instanceof Uint8Array) return Uint8Array.from(value);
+  if (value instanceof Uint8Array) return value;
   if (isBodyInit(value)) return value;
   if (isPlainObject(value)) return JSON.stringify(value);
   return undefined;

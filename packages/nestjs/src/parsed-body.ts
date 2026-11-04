@@ -9,7 +9,8 @@ import type { IncomingMessage } from "node:http";
  * out; turning them off empties every `@Body()` in the app. So the proxy
  * takes the body from where the parser left it:
  *
- * - the exact bytes, when the app is created with `{ rawBody: true }`;
+ * - the exact bytes, when the app is created with `{ rawBody: true }`, as
+ *   Nest holds them: the request reads them where they are, uncopied;
  * - otherwise the parsed JSON, serialized again. A Courier client's body is
  *   itself `JSON.stringify` output, so this yields the same value.
  *
@@ -24,8 +25,8 @@ import type { IncomingMessage } from "node:http";
  * const request = toWebRequest(req, res, () => bodyNestParsed(req));
  * ```
  */
-export function bodyNestParsed(req: IncomingMessage): BodyInit | undefined {
-  if ("rawBody" in req && req.rawBody instanceof Uint8Array) return Uint8Array.from(req.rawBody);
+export function bodyNestParsed(req: IncomingMessage): Uint8Array | string | undefined {
+  if ("rawBody" in req && req.rawBody instanceof Uint8Array) return req.rawBody;
   if (!isJson(req.headers["content-type"])) return undefined;
   if (!("body" in req) || req.body === undefined) return undefined;
   return JSON.stringify(req.body);

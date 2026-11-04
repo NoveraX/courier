@@ -118,6 +118,8 @@ export class AppModule implements NestModule {
 
 `NestFactory.create` parses JSON bodies for the whole application before any middleware runs, so a proxied JSON call reaches the middleware already parsed. The middleware takes the body from Nest's parser — keep that parser on, since your own controllers' `@Body()` needs it. Create the app with `rawBody: true` and the proxy forwards the exact bytes the client sent; without it, the parsed JSON is serialized again, which gives the same value.
 
+Nest mounts those parsers as the application starts, behind what `app.use` mounted before it: `app.use("/api/request", courierMiddleware())` in `main.ts`, before `listen()`, puts the proxy ahead of them, and no parser reads its bodies — a JSON call reaches it as a stream, held to the proxy's own limits rather than Nest's.
+
 Nest's JSON parser accepts 100 KB by default, less than the proxy's own 1 MB `maxBodyBytes`, and answers a larger call with its own 413 before Courier sees it. Raise it to match:
 
 ```ts

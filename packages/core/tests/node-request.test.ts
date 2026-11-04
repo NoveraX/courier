@@ -108,6 +108,16 @@ describe("a request whose body the host read and kept", () => {
     expect(asked).toBe(false);
   });
 
+  it("reads kept bytes where the host keeps them, never a copy of them", async () => {
+    const kept = Buffer.from('{"a":3}');
+
+    const request = toWebRequest(incoming("POST", '{"a":3}', true), undefined, () => kept);
+    const { value } = await (request.body as ReadableStream<Uint8Array>).getReader().read();
+
+    expect(value?.buffer).toBe(kept.buffer);
+    expect(Buffer.from(value ?? new Uint8Array()).toString()).toBe('{"a":3}');
+  });
+
   it("takes an empty kept body as an empty body", async () => {
     const request = toWebRequest(incoming("POST", "", true), undefined, () => null);
 

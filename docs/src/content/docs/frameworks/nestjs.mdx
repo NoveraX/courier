@@ -1,4 +1,4 @@
-export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy", updated: "2026-11-05" }
 
 The `@noverax/courier-nestjs` adapter provides a middleware that integrates Courier into your NestJS application using the standard `MiddlewareConsumer`.
 
@@ -94,6 +94,22 @@ bootstrap()
 ```
 
 Uploads (`multipart/form-data`) are not parsed by Nest and reach the proxy as a stream, up to its `maxUploadBytes` — 10 MB unless you pass another to `courierMiddleware`.
+
+Nest mounts its parsers as the application starts, behind what `app.use` mounted before it. Mount the proxy there, in `main.ts` before `listen()`, and no parser reads its bodies: a JSON call too reaches the proxy as it streams in, held to the proxy's own limits rather than to Nest's:
+
+```ts title="src/main.ts"
+import { NestFactory } from "@nestjs/core"
+import { courierMiddleware } from "@noverax/courier-nestjs"
+import { AppModule } from "./app.module"
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule)
+  app.use("/api/request", courierMiddleware())
+  await app.listen(3001)
+}
+
+bootstrap()
+```
 
 ## With CORS
 

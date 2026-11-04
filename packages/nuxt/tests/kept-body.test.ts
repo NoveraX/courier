@@ -9,8 +9,8 @@ function streaming(body: string): IncomingMessage {
   return Readable.from([Buffer.from(body)]) as unknown as IncomingMessage;
 }
 
-async function text(body: BodyInit | null | undefined): Promise<string> {
-  return new Response(body).text();
+async function text(body: BodyInit | Uint8Array | null | undefined): Promise<string> {
+  return body instanceof Uint8Array ? Buffer.from(body).toString() : new Response(body).text();
 }
 
 describe("keptBodyOf", () => {
@@ -24,6 +24,13 @@ describe("keptBodyOf", () => {
     });
 
     expect(await text(await keptBodyOf(req))).toBe('{"a":1}');
+  });
+
+  it("hands on the bytes h3 kept as they are, uncopied", async () => {
+    const kept = Buffer.from('{"a":1}');
+    const req = Object.assign(streaming(""), { [Symbol.for("h3RawBody")]: Promise.resolve(kept) });
+
+    expect(await keptBodyOf(req)).toBe(kept);
   });
 
   it("takes the text Nitro hung on an in-process request", async () => {

@@ -40,7 +40,7 @@ import { nodeRequestBody } from "./node-request-body";
 export function toWebRequest(
   nodeReq: IncomingMessage,
   nodeRes?: ServerResponse,
-  keptBody?: () => WebBody | null | undefined,
+  keptBody?: () => WebBody | Uint8Array | null | undefined,
 ): Request {
   const { protocol, host = "localhost" } = addressedTo(nodeReq);
   const url = new URL(nodeReq.url ?? "/", `${protocol}://${host}`);
@@ -91,7 +91,7 @@ export function toWebRequest(
          body serialized again — so the length the client declared no longer
          describes it. */
       headers.delete("content-length");
-      init.body = kept;
+      init.body = uncopied(kept);
     }
     init.duplex = "half";
   }
@@ -100,6 +100,21 @@ export function toWebRequest(
   rememberPeerAddress(request, nodeReq.socket.remoteAddress);
   if (nodeRes) HELD_UNTIL_ANSWERED.set(nodeRes, request);
   return request;
+}
+
+/* Bytes a host kept, as a stream over the same memory: given the bytes themselves, `new Request`
+   takes a copy, and the body sat in memory twice for as long as the request lived. */
+function uncopied(kept: WebBody | Uint8Array | null): WebBody | null {
+  if (!(kept instanceof ArrayBuffer) && !ArrayBuffer.isView(kept)) return kept;
+  const bytes = ArrayBuffer.isView(kept)
+    ? new Uint8Array(kept.buffer, kept.byteOffset, kept.byteLength)
+    : new Uint8Array(kept);
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
 }
 
 /*

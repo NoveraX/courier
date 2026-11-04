@@ -3,8 +3,14 @@ import { join } from "node:path";
 
 /** Where the quick start is checked: a framework, how its dev server starts, and the page that shows Courier. */
 export interface QuickstartTarget {
-  /** The framework, as `--framework` names it. */
+  /** The check's name: the framework, as `--framework` names it, unless `framework` does. */
   readonly id: string;
+  /** The framework, where the check sets it up otherwise than by default: `next` for `next-file`. */
+  readonly framework?: string;
+  /** What the setup is run with besides: `["--routes", "file"]`. */
+  readonly args?: readonly string[];
+  /** Where the page takes its routes: Courier's plugin, or courier.routes.ts; left out where it calls the API directly. */
+  readonly routes?: "plugin" | "file";
   /** The command that starts the app while you develop; `{port}` stands for its port, which PORT carries too. */
   readonly start: readonly string[];
   /** The command that builds it for production, as its user ships it. */
@@ -26,7 +32,11 @@ function isTarget(value: unknown): value is QuickstartTarget {
     "build" in value &&
     Array.isArray(value.build) &&
     "page" in value &&
-    typeof value.page === "string"
+    typeof value.page === "string" &&
+    (!("framework" in value) || typeof value.framework === "string") &&
+    (!("args" in value) ||
+      (Array.isArray(value.args) && value.args.every((arg) => typeof arg === "string"))) &&
+    (!("routes" in value) || value.routes === "plugin" || value.routes === "file")
   );
 }
 

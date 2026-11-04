@@ -62,3 +62,22 @@ export const DEMO_LIMITS: DemoLimits = {
   uploadFields: 10,
   uploadFieldBytes: 1024,
 }
+
+/* What a form adds around its file and fields: a boundary and headers for each part. */
+const FORM_PARTS_BYTES = 16 * 1024
+
+/**
+ * The most an upload's whole body may be, as the site's proxy route reads
+ * it before passing it on: the largest file, every field at its longest,
+ * and the form's own parts around them.
+ *
+ * @param limits - The backend's limits
+ * @returns The bytes
+ * @example
+ * ```ts
+ * apiRoute({ maxUploadBytes: uploadRequestBytes(DEMO_LIMITS) })
+ * ```
+ */
+export function uploadRequestBytes(limits: DemoLimits): number {
+  return limits.uploadBytes + limits.uploadFields * limits.uploadFieldBytes + FORM_PARTS_BYTES
+}

@@ -139,6 +139,19 @@ take, which a test measures. The cookie's `__Host-` prefix needs HTTPS, or
 the local machine: a visitor served over plain HTTP from another machine
 keeps no changes, and the log says why.
 
+### The proxy route's limits
+
+The examples' proxy route (`src/app/api/request`) holds each caller — the
+user's address, as the deployment's proxies report it — to 300 calls a
+minute, 20 of them writes, and answers a call past either with 429 and
+`Retry-After`. It reads a call's body only as large as the backend takes
+it. Behind a CDN or a DDoS filter on public addresses, name the filter's
+ranges in `COURIER_TRUSTED_PROXIES` and the header it names the user in in
+`COURIER_CLIENT_ADDRESS_HEADER` (see the docs' Deployment page): otherwise
+every user it passes on counts as one of the filter's own addresses.
+Server Actions and the pages in direct mode call the backend without the
+proxy route; what they can make it keep is held by the limits above.
+
 ## Project structure
 
 ```

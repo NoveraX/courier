@@ -4,6 +4,7 @@ import { Upload } from "lucide-react"
 import { useRef, useState } from "react"
 
 import { cn } from "@/site/cn"
+import { DEMO_LIMITS } from "../../../../../server/limits"
 
 function sizeOf(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
@@ -63,7 +64,9 @@ export function FileDrop({ file, onFile }: { file: File | null; onFile: (file: F
           </span>
         </>
       ) : (
-        <span className="text-control text-fg-subtle">Drop a file, or pick one</span>
+        <span className="text-control text-fg-subtle">
+          Drop a file, or pick one — up to {sizeOf(DEMO_LIMITS.uploadBytes)}
+        </span>
       )}
     </button>
   )

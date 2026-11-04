@@ -191,7 +191,7 @@ docs/
 | GET | `/users/:id/posts/:postId` | Nested path parameters |
 | GET | `/posts`, `/posts/:id` | List posts, get a post |
 | POST | `/posts` | Create a post |
-| POST | `/upload` | File upload |
+| POST | `/upload` | File upload: counted as it streams in, none of it kept |
 | ALL | `/echo` | Echo the request back |
 | GET | `/stream` | A streamed response |
 | GET | `/slow` | A response delayed by 3 s |

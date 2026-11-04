@@ -3,11 +3,12 @@ import multer from "multer"
 
 import type { DemoLimits } from "../limits"
 import { invalidField, Refusal } from "../refusal"
+import { countedUpload } from "./counted-upload"
 
 /**
  * The upload example's endpoint: one file in the form's `file` field,
  * beside a few short fields, each held to its limit, answered with what
- * arrived.
+ * arrived. The file is counted as it streams in, and none of it is kept.
  *
  * @param limits - The backend's limits
  * @returns The router, mounted at `/upload`
@@ -19,7 +20,7 @@ import { invalidField, Refusal } from "../refusal"
 export function uploadRouter(limits: DemoLimits): Router {
   const router = Router()
   const single = multer({
-    storage: multer.memoryStorage(),
+    storage: countedUpload(),
     limits: {
       fileSize: limits.uploadBytes,
       files: 1,

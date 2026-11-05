@@ -16,7 +16,7 @@ export type UseSubscriptionOptions<TData> = CourierSubscriptionOptions<TData, un
 /** How many of a stream's latest events are kept when nothing else is said. */
 const DEFAULT_MAX_EVENTS = 100;
 
-/** Internal factory type — creates Subscription from group+method+variables */
+/** Internal factory type — creates a Subscription from group+method+variables */
 export type SubscribeFn = (
   group: string,
   method: string,
@@ -41,8 +41,10 @@ interface StreamState<TData> {
  * default: kept whole, a long-lived stream grew the list, and the copying of
  * it, without end. A stream that cannot be opened at all, such as one whose
  * proxy path is misconfigured, reports that through `error` and `onError`.
+ * `reconnect` opens the stream's connection again at once — or the stream,
+ * once its server ended it — and clears `error`.
  *
- * @param subscribe - Factory that creates an Subscription (injected by createGroupHooks)
+ * @param subscribe - Factory that creates a Subscription (injected by createGroupHooks)
  * @param group - API group name
  * @param method - Endpoint method name
  * @param options - Subscription configuration
@@ -82,10 +84,23 @@ export function useSubscription<TData>(
   const windowOf = useEffectEvent(() => maxEvents);
 
   const subRef = React.useRef<Subscription<unknown> | null>(null);
+  /** Reads the subscription anew: its loop ends with each life, and a reconnect may open another. */
+  const readRef = React.useRef<(() => void) | null>(null);
 
   const close = React.useCallback(() => {
     subRef.current?.close();
     subRef.current = null;
+    readRef.current = null;
+  }, []);
+
+  const reconnect = React.useCallback(() => {
+    const sub = subRef.current;
+    if (!sub) return;
+    /* A stream its server ended is opened again, and read again: its loop is over. */
+    const ended = sub.status === "disconnected";
+    setStream((prev) => (prev.error === undefined ? prev : { ...prev, error: undefined }));
+    sub.reconnect();
+    if (ended) readRef.current?.();
   }, []);
 
   React.useEffect(() => {
@@ -95,6 +110,8 @@ export function useSubscription<TData>(
     let active = true;
     let sub: Subscription<unknown> | null = null;
     let unsubStatus: (() => void) | undefined;
+    /* What a loop over a life before the last says is no longer the stream's. */
+    let life = 0;
 
     const fail = (error: Error) => {
       if (!active) return;
@@ -121,6 +138,18 @@ export function useSubscription<TData>(
       reportStatus({ key, status: next });
       handleStatus(next);
     };
+    const read = (opened: Subscription<unknown>) => {
+      const mine = ++life;
+      void consumeStream<TData>(
+        opened,
+        (event) => {
+          if (mine === life) receive(event);
+        },
+        (error) => {
+          if (mine === life) fail(error);
+        },
+      );
+    };
 
     // Defer the actual subscribe to a microtask so React 19 StrictMode
     // (dev-mode mount → cleanup → mount) tears down the first effect before
@@ -128,19 +157,22 @@ export function useSubscription<TData>(
     // subscriptions and two duplicate Studio Timeline entries.
     queueMicrotask(() => {
       if (!active) return;
+      let opened: Subscription<unknown>;
       try {
-        sub = subscribe(group, method, vars);
+        opened = subscribe(group, method, vars);
       } catch (error) {
         fail(toError(error));
         report("disconnected");
         return;
       }
-      subRef.current = sub;
+      sub = opened;
+      subRef.current = opened;
+      readRef.current = () => read(opened);
       /* The subscription is already opening by the time it is returned, so
          its first status came and went before anyone listened. */
-      report(sub.status);
-      unsubStatus = sub.on("status", report);
-      void consumeStream(sub, receive, fail);
+      report(opened.status);
+      unsubStatus = opened.on("status", report);
+      read(opened);
     });
 
     return () => {
@@ -149,13 +181,14 @@ export function useSubscription<TData>(
       sub?.close();
       if (subRef.current === sub) {
         subRef.current = null;
+        readRef.current = null;
       }
       reportStatus(undefined);
     };
   }, [enabled, group, method, key, variablesKey, subscribe, reportStatus]);
 
   const events = latestOf(current.events, maxEvents);
-  return { data: current.data, events, status, error: current.error, close };
+  return { data: current.data, events, status, error: current.error, close, reconnect };
 }
 
 /* The latest `max` of a stream's events: the same list when it holds no more. */

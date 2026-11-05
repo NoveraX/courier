@@ -54,6 +54,12 @@ export interface SubscriptionResult<TData> {
   error: Error | undefined;
   /** Manually close the subscription */
   close: () => void;
+  /**
+   * Reconnect at once: the stream's connection now, rather than after the
+   * wait it is in; a stream its server ended or refused is opened again —
+   * after the user signed in anew, say. Clears `error`.
+   */
+  reconnect: () => void;
 }
 
 /**
@@ -104,4 +110,10 @@ export interface ChannelResult<TSend, TReceive> {
   send: (data: TSend) => boolean;
   /** Manually close the channel */
   close: () => void;
+  /**
+   * Reconnect at once: the channel's socket now, rather than after the wait
+   * it is in; a channel its server ended or refused is joined again — after
+   * the user signed in anew, say. Clears `error`.
+   */
+  reconnect: () => void;
 }

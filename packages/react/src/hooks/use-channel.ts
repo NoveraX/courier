@@ -12,6 +12,9 @@ import { streamKeyOf } from "./stream-key";
 
 const log = createLogger("React");
 
+/** Messages kept while the channel is on its way: as many as its socket's queue keeps. */
+const MAX_PENDING = 100;
+
 /** A group hook's options, as `useChannel` takes them untyped. */
 export type UseChannelOptions<TReceive> = CourierChannelOptions<TReceive, unknown>;
 
@@ -35,8 +38,10 @@ interface ChannelState<TReceive> {
  * A change of method or variables joins another channel, and `lastMessage`,
  * `error` and the status — `connecting` — start over with it in the same
  * render. Messages sent before the channel exists — from a mount effect, say —
- * wait for it and go out once it does; one sent while no channel is on its
- * way is dropped with a warning, and `send` answers `false`.
+ * wait for it and go out once it does, 100 at most; one past them, or sent
+ * while no channel is on its way, is dropped with a warning, and `send`
+ * answers `false`. `reconnect` joins the channel again at once — or anew,
+ * once its server ended it — and clears `error`.
  *
  * @param channel - Factory that creates a WSChannel (injected by createGroupHooks)
  * @param group - API group name
@@ -73,8 +78,9 @@ export function useChannel<TSend, TReceive>(
   const send = React.useCallback(
     (data: TSend): boolean => {
       if (channelRef.current) return channelRef.current.send(data);
-      if (pendingRef.current) {
-        pendingRef.current.push(data);
+      const pending = pendingRef.current;
+      if (pending && pending.length < MAX_PENDING) {
+        pending.push(data);
         return true;
       }
       log.warn(`useChannel("${group}.${method}") is not open; the message was dropped`);
@@ -87,6 +93,14 @@ export function useChannel<TSend, TReceive>(
     pendingRef.current = null;
     channelRef.current?.close();
     channelRef.current = null;
+  }, []);
+
+  /* Its listeners stay on it: a channel its server ended is read again as it opens anew. */
+  const reconnect = React.useCallback(() => {
+    const ch = channelRef.current;
+    if (!ch) return;
+    setState((prev) => (prev.error === undefined ? prev : { ...prev, error: undefined }));
+    ch.reconnect();
   }, []);
 
   React.useEffect(() => {
@@ -157,7 +171,7 @@ export function useChannel<TSend, TReceive>(
     };
   }, [enabled, group, method, key, variablesKey, channel, reportStatus]);
 
-  return { lastMessage: current.lastMessage, status, error: current.error, send, close };
+  return { lastMessage: current.lastMessage, status, error: current.error, send, close, reconnect };
 }
 
 function emptyChannel<TReceive>(key: string): ChannelState<TReceive> {

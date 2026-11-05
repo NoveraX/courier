@@ -1,4 +1,4 @@
-export const metadata = { title: "Streams & Channels", description: "Follow a server-sent event stream, keep a query up to date from one, and send on a WebSocket channel from React components.", mode: "both", updated: "2026-10-11" }
+export const metadata = { title: "Streams & Channels", description: "Follow a server-sent event stream, keep a query up to date from one, and send on a WebSocket channel from React components.", mode: "both", updated: "2026-11-05" }
 
 ## Following a stream
 
@@ -23,6 +23,16 @@ export function Ticker({ symbol }: { symbol: string }) {
 - `status` — `connecting` from the first render until the stream reports otherwise, then `connected`, `reconnecting` or `disconnected`. It is `disconnected` while `enabled` is `false`, and once the stream could not be opened.
 - `error` — why the stream failed or could not be opened; the stream's next event clears it.
 - `close()` — closes the stream before the component unmounts.
+- `reconnect()` — reconnects at once rather than after the wait the stream is in, and opens again a stream its server ended or refused: the same stream, read as before. It clears `error`. A component calls it once its user signed in anew:
+
+```tsx
+const { error, reconnect } = q.prices.useSubscription("ticks", { variables: { symbol } })
+
+async function signInAgain() {
+  await session.refresh()
+  reconnect()
+}
+```
 
 A change of method or variables opens another stream. `data`, `events`, `error` and `status` start over with it in the same render, so nothing of the previous stream is ever shown as the new one's. `onData`, `onError` and `onStatusChange` are called as the stream delivers an event, fails and changes status — the ones the component last rendered with, so a new handler, or a new `maxEvents`, applies without reopening the stream. The hooks write nothing as a component renders, which keeps them right under the React Compiler: from React 19.2 they hand their handlers to React's `useEffectEvent`.
 
@@ -73,13 +83,13 @@ export function Room({ room }: { room: string }) {
 }
 ```
 
-`send` answers whether the message went out or waits to go out. A message sent before the channel has opened — from a mount effect, say — waits for it, and one sent while the connection comes back waits in the socket's queue. `send` answers `false`, with a warning, for a message it dropped: the channel is disabled or closed, the server ended it, the queue has no room left, or the message is larger than the socket accepts, which `onError` also reports with code `4413`.
+`send` answers whether the message went out or waits to go out. A message sent before the channel has opened — from a mount effect, say — waits for it, 100 at most, and one sent while the connection comes back waits in the socket's queue. `send` answers `false`, with a warning, for a message it dropped: the channel is disabled or closed, the server ended it, the queue has no room left, or the message is larger than the socket accepts, which `onError` also reports with code `4413`.
 
 <Callout variant="info" title="send in an effect">
 `send` returns a value, and an effect may only return its cleanup, so call it in a block: `useEffect(() => { send(message) }, [send, message])`.
 </Callout>
 
-`error` holds the last error on the channel: a `RealtimeError` whose `code` tells a refused message, a failed handler and a channel ended with a reason apart, or the `ConfigurationError` that kept the channel from opening. It is cleared when the channel connects again. Like a stream, a channel starts over — `lastMessage`, `error`, and `status` as `connecting` — when its method or variables change.
+`error` holds the last error on the channel: a `RealtimeError` whose `code` tells a refused message, a failed handler and a channel ended with a reason apart, or the `ConfigurationError` that kept the channel from opening. It is cleared when the channel connects again. `reconnect()` joins the channel again at once, as it does a stream: one its server ended — `4401` once a token expired — is joined anew, its messages read as before. Like a stream, a channel starts over — `lastMessage`, `error`, and `status` as `connecting` — when its method or variables change.
 
 A proxy caller opens its channels at `proxyPath.ws`, which has no default: see [createProxyQueryCaller](/docs/api/create-proxy-query-caller).
 
@@ -93,7 +103,7 @@ import { useConnectionStatus } from "@noverax/courier-react"
 const { status, isConnected, isReconnecting } = useConnectionStatus(feed)
 ```
 
-It takes an `SSESubscription` or a `WSChannel` a caller returned, or a `WSConnection`; `null` reads as `disconnected`.
+It takes a `Subscription` or a `WSChannel` a caller returned, or a `WSConnection`; `null` reads as `disconnected`.
 
 ## Next steps
 

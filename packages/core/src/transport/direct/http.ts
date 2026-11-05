@@ -1,7 +1,7 @@
 import { getSourceName } from "../../define/api";
 import { assertCancelPrevious } from "../../define/assert-cancel-previous";
 import type { AnyDefinedApi } from "../../define/types";
-import { HTTPError } from "../../errors";
+import { isRequestFailure, type RequestFailure } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
 import { executeRequest } from "../../utils/execute";
 import { layerHeaders } from "../../utils/layer-headers";
@@ -12,7 +12,7 @@ export interface DirectHTTPDefaults {
   cancelPrevious?: boolean | undefined;
   headers?: Record<string, string> | undefined;
   context?: RequestContext | undefined;
-  onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+  onError?: ((error: RequestFailure) => void | Promise<void>) | undefined;
   onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
 }
 
@@ -67,9 +67,7 @@ export function createDirectHTTPExecutor(
       await globalOnSuccess?.(result);
       return result;
     } catch (error) {
-      if (error instanceof HTTPError) {
-        await globalOnError?.(error);
-      }
+      if (isRequestFailure(error)) await globalOnError?.(error);
       throw error;
     }
   };

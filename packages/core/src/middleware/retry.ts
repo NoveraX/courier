@@ -4,10 +4,9 @@ import { isAbortError } from "../utils/abort";
 import { abortReason } from "../utils/abort-reason";
 import { defineMiddleware } from "./define";
 import { pause } from "./pause";
-import type { Middleware, MiddlewareResponse, NextFn } from "./types";
-
-/** How one attempt ended: with an answer, or with the error it was rejected with. */
-type Attempt = { readonly response: MiddlewareResponse } | { readonly error: unknown };
+import { type Attempt, failureOf } from "./retry-failure";
+import { assertRetryOptions } from "./retry-options";
+import type { Middleware, MiddlewareResponse, NextFn, RetryFailure } from "./types";
 
 /** What a request a newer identical one replaced is rejected with. */
 const CLIENT_CLOSED_REQUEST = 499;
@@ -15,13 +14,15 @@ const CLIENT_CLOSED_REQUEST = 499;
 /**
  * Retry middleware with exponential backoff.
  *
- * A failed attempt is judged by its answer, whether the chain returned it or
- * rejected with it as an `HTTPError`. By default the answers worth another
- * attempt are a 5xx and no answer at all — a network failure or a timeout,
- * which `retryOn` sees as status 0. A 4xx is the caller's to fix and is never
- * retried by default. An error that is not an HTTP failure, such as a
- * response that fails its schema or a middleware that throws, is not retried
- * whatever the condition says.
+ * A failed attempt is judged by why it failed: an answer that was not a
+ * success, whether the chain returned it or rejected with it as an
+ * `HTTPError`, by its status; a request that got no answer — a
+ * `NetworkError` — as `"network"`; one whose time ran out — a
+ * `TimeoutError` — as `"timeout"`. By default a 5xx, `"network"` and
+ * `"timeout"` are worth another attempt. A 4xx is the caller's to fix and is
+ * never retried by default. An error that is none of these, such as a
+ * response that fails its schema or a middleware that throws, is not
+ * retried whatever the condition says.
  *
  * A cancellation is never retried: not the caller's, whatever reason it gave,
  * and not a call that a newer one replaced (status 499). A call cancelled
@@ -48,13 +49,14 @@ const CLIENT_CLOSED_REQUEST = 499;
  * });
  *
  * // Also retry a rate-limited request
- * retryMiddleware({ retryOn: [0, 429, 500, 502, 503, 504] });
+ * retryMiddleware({ retryOn: ["network", "timeout", 429, 500, 502, 503, 504] });
  *
  * // Every write too: the upstream recognises a repeated one by its own means
  * retryMiddleware({ mutations: true });
  * ```
  */
 export function retryMiddleware(options: RetryOptions = {}): Middleware {
+  assertRetryOptions(options);
   const { limit = 3, delay = 300, backoff = "exponential", mutations } = options;
   const retryOn = conditionOf(options.retryOn);
   const waitFor = (attempt: number): number => (backoff === "fixed" ? delay : delay * 2 ** attempt);
@@ -65,26 +67,29 @@ export function retryMiddleware(options: RetryOptions = {}): Middleware {
     const retries = ctx.kind === "mutation" && !writes ? 0 : limit;
     for (let attempt = 0; ; attempt++) {
       const outcome = await settle(next);
+      const failure = failureOf(outcome);
       const retry =
         attempt < retries &&
         !isCancellation(outcome, ctx.signal) &&
-        deservesRetry(outcome, retryOn);
+        failure !== undefined &&
+        retryOn(failure);
       if (!retry) return unwrap(outcome, ctx.signal);
       await pause(waitFor(attempt), ctx.signal);
     }
   });
 }
 
-/** The default condition: the upstream failed, or never answered. */
-function isServerFailure(response: MiddlewareResponse): boolean {
-  return response.status === 0 || response.status >= 500;
+/** The default condition: the upstream failed, never answered, or ran out of time. */
+function isServerFailure(failure: RetryFailure): boolean {
+  return failure.kind !== "status" || failure.status >= 500;
 }
 
-/** The test an answer is put to, from the statuses or the test a policy names. */
-function conditionOf(retryOn: RetryOptions["retryOn"]): (response: MiddlewareResponse) => boolean {
+/** The test a failure is put to, from what a policy lists or the test it names. */
+function conditionOf(retryOn: RetryOptions["retryOn"]): (failure: RetryFailure) => boolean {
   if (retryOn === undefined) return isServerFailure;
   if (typeof retryOn === "function") return retryOn;
-  return (response) => retryOn.includes(response.status);
+  const listed = new Set(retryOn);
+  return (failure) => listed.has(failure.kind === "status" ? failure.status : failure.kind);
 }
 
 async function settle(next: NextFn): Promise<Attempt> {
@@ -114,21 +119,4 @@ function isCancellation(outcome: Attempt, signal: AbortSignal | undefined): bool
   return (
     isAbortError(error) || (error instanceof HTTPError && error.status === CLIENT_CLOSED_REQUEST)
   );
-}
-
-/**
- * Should this attempt be made again?
- *
- * A non-2xx answer rejects the call as an `HTTPError`, so the condition is
- * shown the answer it carries. Any other error was not an answer, and the
- * condition cannot speak to it.
- */
-function deservesRetry(
-  outcome: Attempt,
-  retryOn: (response: MiddlewareResponse) => boolean,
-): boolean {
-  if ("response" in outcome) return retryOn(outcome.response);
-  const { error } = outcome;
-  if (!(error instanceof HTTPError)) return false;
-  return retryOn({ status: error.status, data: error.data, headers: error.headers });
 }

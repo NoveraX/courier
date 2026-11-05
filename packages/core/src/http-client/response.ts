@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { ConfigurationError } from "../errors/configuration-error";
 import { fetchFailure } from "./transport-failure";
 import type { ResponseType } from "./types";
 
@@ -18,6 +19,23 @@ const BODILESS = new Set([204, 205, 304]);
  */
 export function isBodilessStatus(status: number): boolean {
   return BODILESS.has(status);
+}
+
+/**
+ * Refuse an answer the platform hides: one to a request sent with
+ * `mode: "no-cors"`, or a redirect a browser was told not to follow. Its
+ * status reads 0 and its body as empty, and neither says what the server
+ * answered, so it is no `HTTPError` and no network failure.
+ *
+ * @param response - The answer
+ * @throws {ConfigurationError} `RESPONSE_OPAQUE`, for an answer nobody can read
+ */
+export function assertReadable(response: Response): void {
+  if (response.type !== "opaque" && response.type !== "opaqueredirect") return;
+  throw new ConfigurationError(
+    "RESPONSE_OPAQUE",
+    `The answer is opaque: mode "no-cors" or redirect "manual" hide its status and body`,
+  );
 }
 
 /**

@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 
+import { NetworkError } from "@noverax/courier";
 import type { CourierRoutes, HttpEndpoint, RouteMap } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -196,8 +197,8 @@ describe("useQuery", () => {
     const { result } = renderHook(() => (q as any).users.useQuery("getAll"), { wrapper });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    /* A failure to reach the proxy is an HTTPError with status 0, the original as its cause. */
-    expect(result.current.error?.status).toBe(0);
+    /* A failure to reach the proxy is a NetworkError, the original as its cause. */
+    expect(result.current.error).toBeInstanceOf(NetworkError);
     expect(result.current.error?.cause).toMatchObject({ message: "Network error" });
   });
 
@@ -413,7 +414,7 @@ describe("useMutation", () => {
     result.current.mutate({ name: "Alice" });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error?.status).toBe(0);
+    expect(result.current.error).toBeInstanceOf(NetworkError);
     expect(result.current.error?.cause).toMatchObject({ message: "Server error" });
   });
 

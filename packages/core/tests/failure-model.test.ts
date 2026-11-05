@@ -1,18 +1,17 @@
 /**
  * How a call fails when there is no answer, as the documentation describes
- * it: a network failure or timeout is an HTTPError with status 0, and a
- * cancellation the caller asked for is rethrown as fetch rejected it.
+ * it: a network failure is a NetworkError with fetch's error as its cause,
+ * and a cancellation the caller asked for is rethrown as fetch rejected it.
  *
  * Direct mode and the proxy client fail alike: never a 502 from a gateway
- * that is not there, and never a bare TypeError that `isHTTPError` rejects
- * and `onError` does not see.
+ * that is not there, and never a bare TypeError that `onError` does not see.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { HTTPError, isHTTPError } from "../src/errors";
+import { isNetworkError, NetworkError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 
 const { endpoint } = courier();
@@ -46,7 +45,7 @@ describe.each([
   ["direct", () => createCaller(api) as unknown as Client],
   ["proxy", () => createProxyCaller(routesOf(api, "api")) as unknown as Client],
 ])("%s mode", (_mode, makeClient) => {
-  it("reports a network failure as an HTTPError with status 0 and its cause", async () => {
+  it("reports a network failure as a NetworkError with its cause", async () => {
     const cause = new TypeError("fetch failed");
     vi.stubGlobal("fetch", async () => {
       throw cause;
@@ -56,9 +55,8 @@ describe.each([
       .list()
       .catch((e: unknown) => e);
 
-    expect(isHTTPError(error)).toBe(true);
-    expect((error as HTTPError).status).toBe(0);
-    expect((error as HTTPError).cause).toBe(cause);
+    expect(isNetworkError(error)).toBe(true);
+    expect((error as NetworkError).cause).toBe(cause);
   });
 
   it("rethrows a cancellation the caller asked for as an AbortError", async () => {
@@ -85,6 +83,6 @@ describe("the proxy client's onError", () => {
       .list()
       .catch(() => undefined);
 
-    expect(onError).toHaveBeenCalledWith(expect.any(HTTPError));
+    expect(onError).toHaveBeenCalledWith(expect.any(NetworkError));
   });
 });

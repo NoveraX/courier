@@ -57,7 +57,7 @@ export function createRecorder<TSource extends AnyDefinedApi>(
     }
     const call = { group, method, variables };
     const response = await callAndCapture(transport, call, options);
-    if (mode !== "passthrough" && response.status > 0) {
+    if (mode !== "passthrough") {
       const fixture = fixtureOf(transport, call, response);
       fixtures.push(config.sanitize ? sanitizeFixture(fixture, config.sanitize) : fixture);
     }

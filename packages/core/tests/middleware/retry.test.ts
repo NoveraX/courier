@@ -4,9 +4,9 @@ import { z } from "zod";
 import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
-import { HTTPError } from "../../src/errors";
+import { HTTPError, NetworkError } from "../../src/errors";
 import { defineMiddleware, retryMiddleware } from "../../src/middleware/index";
-import type { Middleware, MiddlewareResponse } from "../../src/middleware/types";
+import type { Middleware, RetryFailure } from "../../src/middleware/types";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 const { endpoint } = courier();
@@ -35,9 +35,9 @@ function clientFor(url: string, retry: Middleware) {
   );
 }
 
-/** A condition accepting every answer that is not a success. */
-function anyFailure(response: MiddlewareResponse): boolean {
-  return response.status < 200 || response.status >= 300;
+/** A condition accepting every failure: whatever failed is worth another attempt. */
+function anyFailure(_failure: RetryFailure): boolean {
+  return true;
 }
 
 /** An upstream answering the scripted statuses in turn, then 200. */
@@ -106,17 +106,18 @@ describe("retryMiddleware with retryOn", () => {
       else if (index === 1) sendJson(res, 429, { retryable: false });
       else sendJson(res, 200, { ok: true });
     });
-    const judged: MiddlewareResponse[] = [];
+    const judged: RetryFailure[] = [];
     const client = clientFor(
       upstream.url,
       retryMiddleware({
         limit: 3,
         delay: 1,
-        retryOn: (response) => {
-          judged.push(response);
-          const { data } = response;
+        retryOn: (failure) => {
+          judged.push(failure);
+          if (failure.kind !== "status") return false;
+          const { data } = failure;
           return (
-            response.status === 429 &&
+            failure.status === 429 &&
             typeof data === "object" &&
             data !== null &&
             "retryable" in data &&
@@ -131,31 +132,39 @@ describe("retryMiddleware with retryOn", () => {
     await expect(call).rejects.toBeInstanceOf(HTTPError);
     await expect(call).rejects.toMatchObject({ status: 429, data: { retryable: false } });
     expect(upstream.seen).toHaveLength(2);
-    expect(judged.map((r) => r.headers.get("content-type"))).toEqual([
-      "application/json",
-      "application/json",
-    ]);
+    expect(
+      judged.map((failure) => failure.kind === "status" && failure.headers.get("content-type")),
+    ).toEqual(["application/json", "application/json"]);
   });
 
-  it("presents a request that got no answer as status 0", async () => {
+  it("presents a request that got no answer as a network failure", async () => {
     upstream = await startUpstream((req) => req.socket.destroy());
-    const judged: number[] = [];
+    const judged: RetryFailure[] = [];
     const client = clientFor(
       upstream.url,
       retryMiddleware({
         limit: 3,
         delay: 1,
-        retryOn: (response) => {
-          judged.push(response.status);
+        retryOn: (failure) => {
+          judged.push(failure);
           return false;
         },
       }),
     );
 
-    await expect(client.read({ code: 0 })).rejects.toMatchObject({ status: 0 });
+    await expect(client.read({ code: 0 })).rejects.toBeInstanceOf(NetworkError);
 
-    expect(judged).toEqual([0]);
+    expect(judged).toEqual([{ kind: "network", error: expect.any(NetworkError) }]);
     expect(upstream.seen).toHaveLength(1);
+  });
+
+  it("refuses the 0 that once stood for a request that got no answer, naming what replaces it", () => {
+    expect(() => retryMiddleware({ retryOn: [0, 503] })).toThrow(
+      expect.objectContaining({
+        code: "RETRY_OPTIONS_INVALID",
+        message: expect.stringContaining('"network"'),
+      }),
+    );
   });
 
   it("does not retry an answer that fails its response schema, whatever the condition", async () => {

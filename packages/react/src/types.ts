@@ -73,12 +73,13 @@ export type {
  * Hooks and utilities exposed per API group.
  *
  * A query's or a mutation's error is typed `Error`, as TanStack Query types
- * it: an `HTTPError` for an error answer or a call that got none, a
+ * it: an `HTTPError` for an error answer, a `NetworkError` for a call that
+ * got none, a `TimeoutError` for one whose time ran out, a
  * `ValidationError` for variables or an answer that fail their schema, a
  * `ConfigurationError` for a client set up wrongly, the reason a call was
  * cancelled with through the caller's own signal, or what a `select` threw.
- * `isHTTPError`, `isValidationError` and `isConfigurationError` from
- * `@noverax/courier` narrow it.
+ * `isHTTPError`, `isNetworkError`, `isTimeoutError`, `isValidationError` and
+ * `isConfigurationError` from `@noverax/courier` narrow it.
  */
 export type QueryGroupClient<TGroup> = {
   useQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TData = Res<TGroup[TMethod]>>(

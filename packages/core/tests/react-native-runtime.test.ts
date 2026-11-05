@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
-import { ConfigurationError, HTTPError } from "../src/errors";
+import { ConfigurationError, TimeoutError } from "../src/errors";
 import { cacheMiddleware } from "../src/middleware/cache";
 import type { MiddlewareContext, WrapHandler } from "../src/middleware/types";
 import { subscribeSSE } from "../src/realtime/sse";
@@ -127,10 +127,8 @@ describe("a call that times out in React Native", () => {
 
     const error = await rejection(createCaller(api()).slow.with({ timeout: 20 })());
 
-    expect(error).toBeInstanceOf(HTTPError);
-    expect(error).toMatchObject({ status: 0, message: "Request timed out" });
-    expect((error as HTTPError).data).toMatchObject({ code: "TIMEOUT" });
-    expect(((error as HTTPError).cause as Error).name).toBe("TimeoutError");
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect(error).toMatchObject({ scope: "attempt", message: "Request timed out after 20 ms" });
   });
 
   it("is a timeout where AbortSignal.timeout is missing", async () => {
@@ -139,7 +137,8 @@ describe("a call that times out in React Native", () => {
 
     const error = await rejection(createCaller(api()).slow.with({ timeout: 20 })());
 
-    expect(error).toMatchObject({ status: 0, message: "Request timed out" });
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect(error).toMatchObject({ scope: "attempt", timeout: 20 });
   });
 });
 

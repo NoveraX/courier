@@ -1,4 +1,4 @@
-export const metadata = { title: "HttpClient", description: "Internal HTTP client that wraps native fetch with typed methods, automatic serialization, and path parameter resolution.", mode: "both", updated: "2026-10-06" }
+export const metadata = { title: "HttpClient", description: "Internal HTTP client that wraps native fetch with typed methods, automatic serialization, and path parameter resolution.", mode: "both", updated: "2026-11-05" }
 
 ## Overview
 
@@ -94,7 +94,7 @@ type Context = {
 
 ## Error Handling
 
-`HttpClient` converts HTTP error responses (status >= 400) into `HTTPError` objects with `status`, `headers`, and parsed `data`. Network errors produce `HTTPError` with `status: 0`.
+`HttpClient` converts HTTP error responses (status >= 400) into `HTTPError` objects with `status`, `headers`, and parsed `data`. A request that got no answer rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError` — see [NetworkError & TimeoutError](/docs/api/call-errors).
 
 ## Related
 

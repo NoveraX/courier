@@ -1,4 +1,4 @@
-import { isHTTPError } from "@noverax/courier";
+import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier";
 
 import { isNetworkReason } from "./network-reason";
 import { reasonLine } from "./reason-line";
@@ -20,8 +20,8 @@ export const FETCH_FAILED = "fetch failed";
  * A cause of any other origin — a driver's error, an SDK's, the
  * application's own — is left out, for nothing vouches for what its text
  * holds: an address with its query, a header, a body. So is a failure that
- * says only that a request failed — fetch's `fetch failed`, a call's status
- * 0 — when a cause beneath it says why. A call's error status is told as
+ * says only that a request failed — fetch's `fetch failed`, a call's
+ * `NetworkError` — when a cause beneath it says why. A call's error status is told as
  * the status alone.
  *
  * @param error - The failure
@@ -56,8 +56,8 @@ function causesOf(error: unknown): Error[] {
 }
 
 function lineOf(cause: Error, explained: boolean): string | undefined {
-  if (isHTTPError(cause)) {
-    if (cause.status > 0) return `HTTP ${cause.status}`;
+  if (isHTTPError(cause)) return `HTTP ${cause.status}`;
+  if (isNetworkError(cause) || isTimeoutError(cause)) {
     return explained ? undefined : recordedReason(cause, CAUSE_LENGTH);
   }
   if (cause instanceof TypeError && cause.message === FETCH_FAILED) {

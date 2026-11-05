@@ -94,6 +94,7 @@ Keep the query caller in one file. This ensures all components share the same cl
 
 ```ts title="lib/query.ts"
 // lib/query.ts
+import { isHTTPError } from "@noverax/courier"
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import { routes } from "@noverax/courier/routes"
 
@@ -114,7 +115,7 @@ export const q = createProxyQueryCaller(routes.api, {
 
   // Global error handler
   onError: async (error) => {
-    if (error.status === 401) {
+    if (isHTTPError(error) && error.status === 401) {
       window.location.href = "/login"
     }
   },

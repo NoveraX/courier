@@ -12,7 +12,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { HTTPError } from "../src/errors";
+import { HTTPError, TimeoutError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { startUpstream, type Upstream } from "./helpers/upstream";
@@ -46,8 +46,9 @@ function slowApi() {
   });
 }
 
-function status(error: unknown): number | undefined {
-  return error instanceof HTTPError ? error.status : undefined;
+/** Which time ran out, for a call that failed by running out of it. */
+function status(error: unknown): string | undefined {
+  return error instanceof TimeoutError ? error.scope : undefined;
 }
 
 describe("a direct caller's default timeout", () => {
@@ -60,13 +61,13 @@ describe("a direct caller's default timeout", () => {
   it("applies to an endpoint without one", async () => {
     const client = createCaller(slowApi(), { timeout: 100 });
 
-    expect(await client.plain().catch(status)).toBe(0);
+    expect(await client.plain().catch(status)).toBe("attempt");
   });
 
   it("gives way to a timeout given for the call", async () => {
     const client = createCaller(slowApi(), { timeout: 5000 });
 
-    expect(await client.patient.with({ timeout: 100 })().catch(status)).toBe(0);
+    expect(await client.patient.with({ timeout: 100 })().catch(status)).toBe("attempt");
   });
 });
 

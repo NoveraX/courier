@@ -1,21 +1,19 @@
 import {
-  type HTTPError,
   isHTTPError,
+  isNetworkError,
+  isTimeoutError,
   isValidationError,
+  type NetworkError,
   type ValidationIssue,
 } from "@noverax/courier";
 
-import { isRecord } from "../is-record";
 import { causeLines, FETCH_FAILED } from "./cause-lines";
-import { errorCode } from "./error-code";
 import { reasonLine } from "./reason-line";
 import { recordedReason } from "./recorded-reason";
 import { shownReason } from "./shown-reason";
 
 /** How much of an error answer a model is shown: enough to act on, not a page of HTML. */
 const EXCERPT = 2_000;
-/* The code a call's failure carries when its time ran out. */
-const TIMEOUT = "TIMEOUT";
 
 /**
  * What a failed call tells the model, so it can correct its arguments, try
@@ -48,8 +46,12 @@ export function failureMessage(error: unknown): string {
         : "The API answered with what the endpoint's response schema does not allow";
     return `${what}:\n${error.issues.map(issueLine).join("\n")}`;
   }
+  /* A call whose time ran out is told apart from a host that could not be
+     reached: the API may be up, and slow. */
+  if (isTimeoutError(error))
+    return `The API did not answer in time: ${recordedReason(error, EXCERPT)}`;
+  if (isNetworkError(error)) return noAnswer(error);
   if (isHTTPError(error)) {
-    if (error.status === 0) return noAnswer(error);
     return `The call failed with status ${error.status}: ${excerpt(error.data)}`;
   }
   const failure =
@@ -59,13 +61,8 @@ export function failureMessage(error: unknown): string {
   return withCauses(`The call failed: ${failure}`, causeLines(error));
 }
 
-/* A call whose time ran out is told apart from a host that could not be
-   reached: the API may be up, and slow. */
-function noAnswer(error: HTTPError): string {
+function noAnswer(error: NetworkError): string {
   const recorded = recordedReason(error, EXCERPT);
-  if (isRecord(error.data) && error.data.code === TIMEOUT) {
-    return `The API did not answer in time: ${recorded}`;
-  }
   const [first, ...beneath] = causeLines(error);
   const reason =
     first !== undefined && first !== FETCH_FAILED ? first : unexplained(error, recorded);
@@ -77,8 +74,8 @@ function noAnswer(error: HTTPError): string {
    what it would not do — `bad port`, `redirect count exceeded` — and the
    code alone where it named one whose text is not told, as a socket's
    path is not. */
-function unexplained(error: HTTPError, recorded: string): string {
-  return errorCode(error.data) ?? recorded;
+function unexplained(error: NetworkError, recorded: string): string {
+  return error.systemCode ?? recorded;
 }
 
 function withCauses(sentence: string, causes: readonly string[]): string {

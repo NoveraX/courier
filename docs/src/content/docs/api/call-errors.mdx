@@ -1,0 +1,91 @@
+export const metadata = { title: "NetworkError & TimeoutError", description: "The errors a call rejects with when no answer came, or its time ran out — with the platform's code, the scope of the time, and the guards that tell them apart.", mode: "both", updated: "2026-11-05" }
+
+A call that got no successful answer rejects with one of three errors, each telling what happened: an `HTTPError` holds an answer, a `NetworkError` says none came, a `TimeoutError` that the time ran out. None of them is ever the other dressed up: there is no `HTTPError` with status 0.
+
+## Import
+
+```ts
+import {
+  isNetworkError,
+  isRequestFailure,
+  isTimeoutError,
+  NetworkError,
+  type RequestFailure,
+  TimeoutError,
+} from "@noverax/courier"
+```
+
+## NetworkError
+
+```ts
+import { CourierError } from "@noverax/courier"
+
+declare class NetworkError extends CourierError<"NETWORK_ERROR"> {
+  readonly systemCode: string | undefined // "ECONNREFUSED", "ENOTFOUND", "UND_ERR_SOCKET", "CERT_HAS_EXPIRED", …
+}
+```
+
+Thrown when a request got no answer: its host could not be resolved or reached, the connection was refused, reset or closed before the answer was whole, or the server's certificate was refused. `cause` is what the platform rejected with — on Node, `TypeError: fetch failed` with the system's error under it, which Courier's log prints whole on the server.
+
+- `systemCode` — the platform's code, where it gave one. A browser gives none: its `fetch` says only that it failed.
+- `message` — `"Network request failed (ECONNREFUSED)"`, or `"Network request failed"` without a code. It names no host and no address, so it is safe to show on a page.
+
+## TimeoutError
+
+```ts
+import { CourierError } from "@noverax/courier"
+
+declare class TimeoutError extends CourierError<"TIMEOUT"> {
+  readonly scope: "attempt" | "deadline"
+  readonly timeout: number | undefined // ms
+}
+```
+
+Thrown when the time ran out before the answer was whole — while waiting for it, or while its body was read.
+
+- `scope` — `"attempt"` for the request's own `timeout`, which each attempt has to itself; `"deadline"` for a retry policy's `deadline`, which its attempts and the waits between them share.
+- `timeout` — how long it was, in ms, where it is known.
+- `message` — `"Request timed out after 5000 ms"`, or `"Call deadline exceeded after 10000 ms"`.
+
+An attempt that ran out of time may have reached the server, which may still be working on it.
+
+## Telling Them Apart
+
+```ts
+import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
+
+try {
+  await caller.users.getAll()
+} catch (error) {
+  if (isTimeoutError(error)) showSlow(error.timeout)
+  else if (isNetworkError(error)) showOffline(error.systemCode)
+  else if (isHTTPError(error)) showRefused(error.status)
+  else throw error
+}
+```
+
+`isRequestFailure(error)` is true for all three, and `RequestFailure` names them together: it is what a caller's `onError` receives — `createCaller(api, { onError })`, `createProxyCaller(routes, { onError })`.
+
+## Through the Proxy
+
+The browser's side and the server's side of a proxied call each fail by these rules. A browser that could not reach the proxy — offline, the server down — rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError`. When the server's side got no answer from the API, the proxy itself answers the browser, without naming the API's host: an `HTTPError` `502` with `data.code` `"UPSTREAM_UNREACHABLE"`, or `504` with `"UPSTREAM_TIMEOUT"` when the server's side ran out of time. The reason stays in the server's log.
+
+## From Status 0
+
+Earlier versions threw an `HTTPError` with status 0 for both a request that got no answer and one that ran out of time. Each now has its own class:
+
+| Before | Now |
+|---|---|
+| `isHTTPError(error) && error.status === 0` | `isNetworkError(error) \|\| isTimeoutError(error)` |
+| `error.data.code === "TIMEOUT"` | `isTimeoutError(error)` |
+| `error.data.code` — the system's code | `error.systemCode` |
+| `retryOn: [0, 503]` | `retryOn: ["network", "timeout", 503]` |
+| `new HTTPError({ status: 0, … })` in a mock or a test | `new NetworkError({ cause })` |
+
+`new HTTPError()` refuses a status outside 100 to 599 with a `RangeError`, so a stand-in still built the old way says so at once.
+
+## Related
+
+- [HTTPError](/docs/api/http-error) — an answer with an error status
+- [Error Handling Guide](/docs/core-concepts/error-handling) — patterns for handling them
+- [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) — which failures a retry policy repeats

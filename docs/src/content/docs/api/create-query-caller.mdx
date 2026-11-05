@@ -45,7 +45,7 @@ type QueryCallerDefaults = {
   cancelPrevious?: boolean  // as createCaller's
   headers?: Record<string, string>
   context?: RequestContext
-  onError?: (error: HTTPError) => void | Promise<void>
+  onError?: (error: RequestFailure) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
   ws?: CallerWSOptions  // as createCaller's
 }

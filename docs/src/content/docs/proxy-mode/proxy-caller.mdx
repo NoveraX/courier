@@ -57,7 +57,7 @@ type ProxyCallerOptions = {
   coalesce?: boolean
 
   // Called on every failed request
-  onError?: (error: HTTPError) => void | Promise<void>
+  onError?: (error: RequestFailure) => void | Promise<void>
 
   // Called on every successful request
   onSuccess?: (data: unknown) => void | Promise<void>
@@ -72,7 +72,7 @@ type ProxyCallerOptions = {
 A typical setup creates a single caller instance and exports it for use across all client components:
 
 ```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller, isHTTPError } from "@noverax/courier"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api, {
@@ -82,7 +82,7 @@ export const caller = createProxyCaller(routes.api, {
     "x-app-version": "1.0.0",
   },
   onError: (error) => {
-    if (error.status === 401) {
+    if (isHTTPError(error) && error.status === 401) {
       window.location.href = "/login"
     }
   },
@@ -165,7 +165,7 @@ const user = await caller.users
 The `onError` and `onSuccess` callbacks run for every request made by this factory. Use them for cross-cutting concerns like authentication redirects or logging:
 
 ```ts title="Global error handling"
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller, isHTTPError } from "@noverax/courier"
 import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api, {
@@ -174,16 +174,16 @@ const caller = createProxyCaller(routes.api, {
     console.log("Response:", data)
   },
   onError: (error) => {
-    // Called after every failed response
-    // error.status  — HTTP status code
-    // error.data    — parsed response body
-    // error.headers — response headers
+    // Called after every call that got no successful answer: an HTTPError
+    // for an error status — error.status, error.data, error.headers — a
+    // NetworkError when the proxy could not be reached, a TimeoutError when
+    // the call's time ran out
 
-    if (error.status === 401) {
+    if (isHTTPError(error) && error.status === 401) {
       window.location.href = "/login"
     }
 
-    if (error.status === 429) {
+    if (isHTTPError(error) && error.status === 429) {
       toast.error("Too many requests. Please wait.")
     }
   },

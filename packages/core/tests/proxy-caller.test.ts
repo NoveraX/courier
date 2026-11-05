@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourierRoutes } from "../src/define/index";
-import { HTTPError } from "../src/errors";
+import { HTTPError, NetworkError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 
 /* The endpoints these tests call, each a write, as a page's routes name them: sent as POST, alone. */
@@ -302,15 +302,14 @@ describe("createProxyCaller", () => {
       }
     });
 
-    it("reports a failure to reach the proxy as an HTTPError with status 0", async () => {
+    it("reports a failure to reach the proxy as a NetworkError", async () => {
       const cause = new TypeError("network error");
       fetchSpy.mockRejectedValue(cause);
 
       const client = createProxyCaller(ROUTES) as any;
       const error = await client.users.fail().catch((e: unknown) => e);
 
-      expect(error).toBeInstanceOf(HTTPError);
-      expect(error.status).toBe(0);
+      expect(error).toBeInstanceOf(NetworkError);
       expect(error.cause).toBe(cause);
     });
   });

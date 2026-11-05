@@ -20,6 +20,7 @@ export type {
   MiddlewarePhase,
   MiddlewareResponse,
   NextFn,
+  RetryFailure,
   WrapHandler,
   WrapMiddleware,
 } from "./types";

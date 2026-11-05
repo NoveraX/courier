@@ -71,9 +71,8 @@ export function createElsewhere(config: ElsewhereConfig): Elsewhere | undefined 
     },
     async ask({ group, method, variables, headers, record }) {
       const call = { group: wire(group), method, variables };
+      /* A call the server never answered rejects here: nothing to answer with, or to record. */
       const captured = await callAndCapture(transport, call, { headers });
-      /* A call the server never answered fails with no status: nothing to answer with, or to record. */
-      if (captured.status === 0) throw captured.error ?? new Error("the server did not answer");
       if (record && file) {
         known.push(fixtureOf(transport, call, captured));
         writeFixtureFile(file, known);

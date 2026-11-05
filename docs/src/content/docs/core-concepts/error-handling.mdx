@@ -1,19 +1,31 @@
-export const metadata = { title: "Error Handling", description: "Handle HTTP errors with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "Error Handling", description: "Tell an error answer, a request that got no answer and one that ran out of time apart, with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-11-05" }
+
+## What a Failed Call Rejects With
+
+A call that got no successful answer rejects with one of three errors, told apart by what happened rather than by a status:
+
+| Error | When | What it carries |
+|---|---|---|
+| `HTTPError` | The upstream answered with an error status, 400 or above | `status`, `headers`, the parsed `data` |
+| `NetworkError` | No answer came: a host that does not resolve, a connection refused or dropped, a certificate refused | `systemCode` — `ECONNREFUSED`, `ENOTFOUND`, … where the platform gave one — and the platform's error as `cause` |
+| `TimeoutError` | The time ran out: the request's `timeout`, or a retry policy's `deadline` | `scope` — `"attempt"` or `"deadline"` — and `timeout` in ms |
+
+Each extends Courier's `CourierError`, itself an `Error`, with a stable `code`: `"HTTP_ERROR"`, `"NETWORK_ERROR"` or `"TIMEOUT"`. `isRequestFailure()` is true for all three, and the type `RequestFailure` names them together — what a caller's `onError` receives. See [NetworkError & TimeoutError](/docs/api/call-errors).
 
 ## The HTTPError Class
 
-When a request fails with an HTTP error status (400 or above), or gets no answer at all, Courier throws an `HTTPError`. This class extends Courier's `CourierError`, itself an `Error`, and adds `status`, `headers`, and a typed `data` property containing the parsed response body:
+When a request gets an answer with an HTTP error status (400 or above), Courier throws an `HTTPError`. It adds `status`, `headers`, and a typed `data` property containing the parsed response body:
 
 ```typescript
 import { CourierError } from "@noverax/courier"
 
 declare class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
-  readonly status: number    // HTTP status code (400, 404, 500, ...); 0 when there was no answer
+  readonly status: number    // The answer's HTTP status code (400, 404, 500, ...): always 100 to 599
   readonly headers: Headers  // Response headers
   readonly data: TData       // Parsed response body — typed with the TData generic
 }
 
-// error.message → "HTTP 404", or "Network request failed" / "Request timed out" with no answer
+// error.message → "HTTP 404"
 // error.name → "HTTPError"
 ```
 
@@ -202,16 +214,22 @@ if (isHTTPError(error)) {
 }
 
 // 2. Network errors — no response received
-// Thrown as HTTPError with status 0 and message "Network request failed";
-// error.data.code carries the system's code (ECONNREFUSED, ENOTFOUND, ...)
-// and error.cause the error fetch rejected with.
+// Thrown as NetworkError, message "Network request failed (ECONNREFUSED)";
+// error.systemCode carries the system's code (ECONNREFUSED, ENOTFOUND, ...)
+// where it gave one, and error.cause the error fetch rejected with.
+if (isNetworkError(error)) {
+  error.systemCode // "ECONNREFUSED", or undefined in a browser
+}
 
-// 3. Timeouts — the request's timeout ran out
-// Thrown as HTTPError with status 0 and message "Request timed out";
-// error.data.code is "TIMEOUT" and error.cause is the TimeoutError.
+// 3. Timeouts — the request's timeout, or a retry policy's deadline, ran out
+// Thrown as TimeoutError, message "Request timed out after 5000 ms".
 // Through the proxy, a timeout on the server's side of the call arrives
 // as HTTPError 504 with error.data.code "UPSTREAM_TIMEOUT"; a host the
 // server could not reach arrives as 502 with "UPSTREAM_UNREACHABLE".
+if (isTimeoutError(error)) {
+  error.scope   // "attempt" or "deadline"
+  error.timeout // 5000
+}
 
 // 4. Cancellation
 // A call cancelled through your own signal rejects with the reason you

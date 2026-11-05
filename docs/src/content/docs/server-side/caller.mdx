@@ -26,10 +26,10 @@ type CallerDefaults = {
   headers?: Record<string, string>
   // Request context passed to every endpoint: headers to forward, the request
   context?: RequestContext
-  // Called when a request fails with an HTTPError — an answer with an
-  // error status, or a network failure. A ValidationError or a
-  // cancellation the caller asked for is thrown without it.
-  onError?: (error: HTTPError) => void | Promise<void>
+  // Called when a request gets no successful answer: an HTTPError for an
+  // error status, a NetworkError for no answer, a TimeoutError for a time
+  // that ran out. A ValidationError or a cancellation is thrown without it.
+  onError?: (error: RequestFailure) => void | Promise<void>
   // Called when any request succeeds
   onSuccess?: (data: unknown) => void | Promise<void>
   // The sockets of this caller's channels and push subscriptions: token,
@@ -50,7 +50,7 @@ export const caller = createCaller(api, {
     "X-Service": "my-app",
   },
   onError: (error) => {
-    console.error(`[API] ${error.status}: ${error.message}`)
+    console.error(`[API] ${error.code}: ${error.message}`)
   },
 })
 ```

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { NetworkError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { studioHooks } from "../src/studio";
@@ -108,7 +109,8 @@ describe("a request that got no answer", () => {
       .catch((error: unknown) => error);
 
     expect(reportedError()?.cause).toEqual({ message: thrown });
-    expect((caught as { data: { message: string } }).data.message).toBe(thrown);
+    expect(caught).toBeInstanceOf(NetworkError);
+    expect((caught as NetworkError).cause).toMatchObject({ message: thrown });
   });
 
   it("is reported with why a middleware's own connection was refused", async () => {

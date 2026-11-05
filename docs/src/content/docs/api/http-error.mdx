@@ -1,4 +1,4 @@
-export const metadata = { title: "HTTPError", description: "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard.", mode: "both", updated: "2026-09-28" }
+export const metadata = { title: "HTTPError", description: "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard.", mode: "both", updated: "2026-11-05" }
 
 ## Import
 
@@ -31,11 +31,11 @@ error.headers    // Response headers (Headers object)
 error.data       // Parsed response body (typed as R)
 ```
 
-- `status` — the HTTP status code. `0` for network errors (DNS failure, connection refused).
-- `headers` — the response `Headers` object. Empty `Headers` for network errors.
+- `status` — the answer's HTTP status code, from 100 to 599. An `HTTPError` always holds an answer: a request that got none is a [`NetworkError`](/docs/api/call-errors), one whose time ran out a [`TimeoutError`](/docs/api/call-errors), and `new HTTPError()` refuses any other status with a `RangeError`.
+- `headers` — the answer's `Headers` object.
 - `data` — the parsed response body. Typed as `TData` (defaults to `unknown`).
 - `name` — always `"HTTPError"`; `code` — always `"HTTP_ERROR"`.
-- `message` — `"HTTP {status}"` (e.g., `"HTTP 404"`), or, when there was no answer, `"Network request failed"` or `"Request timed out"`.
+- `message` — `"HTTP {status}"` (e.g., `"HTTP 404"`).
 
 ## isHTTPError
 
@@ -130,24 +130,25 @@ const errorMiddleware = defineMiddleware("errors", "wrap", async (ctx, next) => 
 })
 ```
 
-## Network Errors
+## Network Errors and Timeouts
 
-Network-level errors (DNS failures, connection refused, timeouts) are converted to `HTTPError` with `status: 0`. A timeout says so: its message is `"Request timed out"` and `error.data.code` is `"TIMEOUT"`. Through the proxy, a timeout on the server's side arrives as a `504` with `code: "UPSTREAM_TIMEOUT"`:
+A request that got no answer — a host that does not resolve, a connection refused or dropped — rejects with a `NetworkError`, and one whose time ran out with a `TimeoutError`, never with an `HTTPError`: see [NetworkError & TimeoutError](/docs/api/call-errors). Through the proxy, the server's side of the call answers the browser, so a browser gets an `HTTPError` `502` with `code: "UPSTREAM_UNREACHABLE"` or `504` with `code: "UPSTREAM_TIMEOUT"`:
 
 ```ts
-import { isHTTPError } from "@noverax/courier"
+import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
 
 try {
   await caller.users.getAll()
 } catch (error) {
-  if (isHTTPError(error) && error.status === 0) {
-    console.error("Network error:", error.data)
-  }
+  if (isNetworkError(error)) console.error("No answer:", error.systemCode)
+  else if (isTimeoutError(error)) console.error("Too slow:", error.timeout, "ms")
+  else if (isHTTPError(error)) console.error("Refused:", error.status)
 }
 ```
 
 ## Related
 
+- [NetworkError & TimeoutError](/docs/api/call-errors) — a request that got no answer, or ran out of time
 - [Error Handling Guide](/docs/core-concepts/error-handling) — in-depth error handling patterns
 - [Middleware](/docs/middleware/overview) — middleware chain for error interception
 - [HttpClient](/docs/api/instance) — where HTTPError is thrown

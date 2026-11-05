@@ -1,5 +1,4 @@
-import { HTTPError } from "../errors";
-import { isTimeoutFailure } from "../http-client/transport-failure";
+import { HTTPError, NetworkError, TimeoutError } from "../errors";
 import type { Context } from "../http-client/types";
 import type { RequestFailureKind, StudioHooks } from "../studio";
 import { failureCause } from "../studio/failure-cause";
@@ -48,9 +47,9 @@ export function failureKind(
   if (error instanceof ValidationError) return "validation";
   if (isAbortError(error) || callerLeft(context)) return "aborted";
   if (signal?.aborted === true && error === signal.reason) return "aborted";
-  if (!(error instanceof HTTPError)) return "unknown";
-  if (error.status > 0) return "http";
-  return isTimeoutFailure(error) ? "timeout" : "network";
+  if (error instanceof HTTPError) return "http";
+  if (error instanceof TimeoutError) return "timeout";
+  return error instanceof NetworkError ? "network" : "unknown";
 }
 
 /**
@@ -77,7 +76,7 @@ export function reportRequestError(
 ): void {
   const { dt, timing } = report;
   if (!dt.onRequestError) return;
-  const answered = error instanceof HTTPError && error.status > 0 ? error : undefined;
+  const answered = error instanceof HTTPError ? error : undefined;
   const total = timing && timing.t0 > 0 ? performance.now() - timing.t0 : undefined;
   const proxyTiming =
     timing && total !== undefined ? proxyTimingOf(report.context, timing, total) : undefined;

@@ -1,9 +1,9 @@
-import { HTTPError } from "../errors";
-import { ConfigurationError } from "../errors/configuration-error";
+import { CourierError } from "../errors/courier-error";
+import { NetworkError } from "../errors/network-error";
+import { TimeoutError } from "../errors/timeout-error";
 import type { FailureCause } from "../studio/failure-cause";
 import { isAbortError } from "../utils/abort";
 import { abortReason } from "../utils/abort-reason";
-import { platformError } from "../utils/platform-error";
 
 const TIMEOUT_ERROR = "TimeoutError";
 
@@ -16,15 +16,19 @@ export interface RequestExpiry {
 }
 
 /**
- * What a request that fetch rejected is thrown as.
+ * What a request that fetch rejected is thrown as — the one place a failure
+ * is told apart by what happened, so nothing downstream guesses from a
+ * status.
  *
  * Only fetch's own rejection is classified here, so a mistake made before
  * the request — a body that would not serialize — is never taken for a
  * network failure. A cancellation the caller asked for is thrown as one:
  * as fetch rejected it when that says so, as why the signal aborted when
  * not — expo/fetch rejects a cancelled request as a plain `FetchError`. A
- * timeout says it is one, also where fetch only reports an abort, as React
- * Native's does.
+ * Courier error stays what it is: a misconfiguration found as the request
+ * was sent, or a deadline that ran out. The request's own timeout is a
+ * `TimeoutError`, also where fetch only reports an abort, as React
+ * Native's does; anything else fetch rejected with is a `NetworkError`.
  *
  * @param error - What fetch rejected with
  * @param signal - The signal the caller gave, if any
@@ -44,43 +48,24 @@ export function fetchFailure(
   if (signal?.aborted) {
     return error === signal.reason || isAbortError(error) ? error : abortReason(signal);
   }
+  if (error instanceof CourierError) return error;
   if (expiry.timedOut || (error instanceof Error && error.name === TIMEOUT_ERROR)) {
-    return timeoutFailure(error, expiry.timeout);
+    return new TimeoutError({ scope: "attempt", timeout: expiry.timeout, cause: error });
   }
-  /* A misconfiguration found as the request was sent is the application's to fix, not the network's. */
-  if (error instanceof HTTPError || error instanceof ConfigurationError || isAbortError(error)) {
-    return error;
-  }
+  if (isAbortError(error)) return error;
   return error instanceof Error ? transportFailure(error) : error;
 }
 
 /**
- * Did the request fail because its timeout ran out?
+ * The error a request that never got an answer is thrown as: a
+ * `NetworkError` with the system's code, where it gave one, and fetch's
+ * error as its cause.
  *
- * @param error - A failure from {@link fetchFailure}
- * @returns `true` for a timeout
+ * @param error - What fetch, or the answer's body as it was read, failed with
+ * @returns The NetworkError to throw
  */
-export function isTimeoutFailure(error: HTTPError): boolean {
-  return error.status === 0 && error.cause instanceof Error && error.cause.name === TIMEOUT_ERROR;
-}
-
-/**
- * The error a request that never got an answer is thrown as: status 0, with
- * the system's reason and code, and fetch's error as its cause.
- *
- * @param error - What fetch rejected with
- * @returns The HTTPError to throw
- */
-export function transportFailure(error: Error): HTTPError {
-  const { code, message } = platformCause(error);
-  return new HTTPError(
-    {
-      status: 0,
-      headers: new Headers(),
-      data: { success: false, message, ...(code && { code }) },
-    },
-    { cause: error },
-  );
+export function transportFailure(error: Error): NetworkError {
+  return new NetworkError({ cause: error, systemCode: codeOf(rootOf(error)) });
 }
 
 /**
@@ -97,7 +82,7 @@ export function transportFailure(error: Error): HTTPError {
  * ```
  */
 export function platformCause(error: Error): FailureCause {
-  return causeOf(error.cause instanceof Error ? error.cause : error);
+  return causeOf(rootOf(error));
 }
 
 /**
@@ -113,30 +98,21 @@ export function platformCause(error: Error): FailureCause {
  * ```
  */
 export function causeOf(error: Error): FailureCause {
-  /* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
-  const code =
-    "code" in error && typeof error.code === "string" && error.code !== "" ? error.code : undefined;
+  const code = codeOf(error);
   const message = describe(error, code);
   return code === undefined ? { message } : { code, message };
 }
 
-/* Status 0 like any request that got no answer, but named for what it was,
-   not "Network request failed" with the DOMException's legacy code "23". Its
-   cause is a TimeoutError even where fetch reported only an abort. */
-function timeoutFailure(error: unknown, timeout: number | undefined): HTTPError {
-  const after = timeout === undefined ? "" : ` after ${timeout} ms`;
-  const cause =
-    error instanceof Error && error.name === TIMEOUT_ERROR
-      ? error
-      : platformError(`The request timed out${after}`, TIMEOUT_ERROR);
-  return new HTTPError(
-    {
-      status: 0,
-      headers: new Headers(),
-      data: { success: false, message: `Request timed out${after}`, code: "TIMEOUT" },
-    },
-    { cause, message: "Request timed out" },
-  );
+/* undici's `fetch failed` says why in its cause; an error with none says it itself. */
+function rootOf(error: Error): Error {
+  return error.cause instanceof Error ? error.cause : error;
+}
+
+/* A code is a name, as the system gives it; undici's parser errors give none, as `undefined`. */
+function codeOf(error: Error): string | undefined {
+  return "code" in error && typeof error.code === "string" && error.code !== ""
+    ? error.code
+    : undefined;
 }
 
 /* A host that resolves to several addresses fails with an AggregateError

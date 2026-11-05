@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 const SRC = resolve(import.meta.dirname, "../src");
 
 const ENTRY = `
-import { ConfigurationError, CourierError, HTTPError } from "./errors/index.ts";
+import { ConfigurationError, CourierError, HTTPError, NetworkError, TimeoutError } from "./errors/index.ts";
 import { ValidationError } from "./validation/index.ts";
 import { AuthError, RealtimeError } from "./realtime/errors.ts";
 
@@ -27,6 +27,8 @@ export const names = [
   new CourierError("bad", { code: "X" }).name,
   new RealtimeError(4000, "bad").name,
   new AuthError("bad").name,
+  new NetworkError().name,
+  new TimeoutError({ scope: "attempt" }).name,
 ];
 `;
 
@@ -59,6 +61,8 @@ describe("error names after minification", () => {
       "CourierError",
       "RealtimeError",
       "AuthError",
+      "NetworkError",
+      "TimeoutError",
     ]);
   });
 });

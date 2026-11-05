@@ -71,7 +71,7 @@ Pass the routes, never the `api` object: a page that imports the definition as a
 | `coalesce` | `boolean` | the API's own, or `true` | Whether identical reads in flight share one request |
 | `credentials` | `RequestCredentials` | `"include"` | Whether the browser sends its cookies to the proxy route; the proxy forwards them where the source or endpoint names `cookie` |
 | `headers` | `Record<string, string>` | — | Default headers |
-| `onError` | `(error: HTTPError) => void` | — | Global error callback |
+| `onError` | `(error: RequestFailure) => void` | — | Global error callback: an `HTTPError`, `NetworkError` or `TimeoutError` |
 | `onSuccess` | `(data: unknown) => void` | — | Global success callback |
 
 `ProxyPath` shape:

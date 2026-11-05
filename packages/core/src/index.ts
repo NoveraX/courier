@@ -61,6 +61,13 @@ export {
   isConfigurationError,
   isCourierError,
   isHTTPError,
+  isNetworkError,
+  isRequestFailure,
+  isTimeoutError,
+  NetworkError,
+  type RequestFailure,
+  TimeoutError,
+  type TimeoutScope,
 } from "./errors";
 export {
   createFetch,
@@ -105,6 +112,7 @@ export type {
   MiddlewarePhase,
   MiddlewareResponse,
   NextFn,
+  RetryFailure,
   WrapHandler,
   WrapMiddleware,
 } from "./middleware/types";

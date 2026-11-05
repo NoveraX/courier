@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-10-28" }
+export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-11-05" }
 
 ## Import
 
@@ -42,7 +42,7 @@ type CallerDefaults = {
   cancelPrevious?: boolean
   headers?: Record<string, string>
   context?: Context
-  onError?: (error: HTTPError) => void | Promise<void>
+  onError?: (error: RequestFailure) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
   ws?: CallerWSOptions
 }
@@ -170,7 +170,8 @@ const caller = createCaller(api, {
     "X-Internal-Service": "courier-app",
   },
   onError: (error) => {
-    console.error(`[Direct] HTTP ${error.status}:`, error.data)
+    if (isHTTPError(error)) console.error(`[Direct] HTTP ${error.status}:`, error.data)
+    else console.error(`[Direct] ${error.message}`) // a NetworkError or a TimeoutError
   },
 })
 ```

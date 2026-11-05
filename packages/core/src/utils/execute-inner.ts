@@ -62,7 +62,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
     deps.dt.onHttpFetchError?.({
       requestId: deps.requestId,
       message: fetchError instanceof Error ? fetchError.message : String(fetchError),
-      ...(isHTTPError(fetchError) && fetchError.status > 0 && { status: fetchError.status }),
+      ...(isHTTPError(fetchError) && { status: fetchError.status }),
       timestamp: Date.now(),
     });
     throw fetchError;

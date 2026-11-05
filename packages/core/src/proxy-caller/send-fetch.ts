@@ -1,4 +1,4 @@
-import { HTTPError } from "../errors";
+import { isRequestFailure, type RequestFailure } from "../errors";
 import { studioHooks } from "../studio";
 import { reportingUploads, uploadProgressOf } from "../studio/report-upload";
 import {
@@ -20,7 +20,7 @@ export async function sendFetch(
     /** Whether the call asked for `.raw`. */
     raw: boolean;
     onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
-    onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+    onError?: ((error: RequestFailure) => void | Promise<void>) | undefined;
   },
 ): Promise<unknown> {
   const instrumented = withUploadInstrumentation(options);
@@ -39,7 +39,7 @@ export async function sendFetch(
     return data;
   } catch (error) {
     const failure = asProxyFailure(error, signalOf(options));
-    if (failure instanceof HTTPError) await ctx.onError?.(failure);
+    if (isRequestFailure(failure)) await ctx.onError?.(failure);
     throw failure;
   } finally {
     if (response) emitClientTiming(response, t0, tHeaders);

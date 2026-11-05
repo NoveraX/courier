@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { HTTPError } from "../src/errors";
+import { HTTPError, NetworkError } from "../src/errors";
 import { HttpClient } from "../src/http-client/index";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
@@ -345,7 +345,7 @@ describe("HttpClient", () => {
       }
     });
 
-    it("converts network error to HTTPError with status 0", async () => {
+    it("converts a network failure to a NetworkError with the system's code", async () => {
       const networkError = new Error("fetch failed");
       const cause = new Error("ECONNREFUSED");
       (cause as Error & { code: string }).code = "ECONNREFUSED";
@@ -360,13 +360,9 @@ describe("HttpClient", () => {
         await get("users");
         expect.fail("should have thrown");
       } catch (error) {
-        expect(error).toBeInstanceOf(HTTPError);
-        expect((error as HTTPError).status).toBe(0);
-        expect((error as HTTPError).data).toEqual({
-          success: false,
-          message: "ECONNREFUSED",
-          code: "ECONNREFUSED",
-        });
+        expect(error).toBeInstanceOf(NetworkError);
+        expect(error).toMatchObject({ systemCode: "ECONNREFUSED" });
+        expect((error as NetworkError).cause).toBe(networkError);
       }
     });
 

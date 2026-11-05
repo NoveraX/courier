@@ -1,4 +1,4 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-05" }
 
 Courier ships six production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
@@ -29,11 +29,17 @@ interface RetryOptions {
   delay?: number
   /** How the wait grows between retries (default: "exponential") */
   backoff?: "fixed" | "exponential"
-  /** Which answers deserve another attempt: statuses, or a test (default: 0 and >= 500) */
-  retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean)
+  /** Which failures deserve another attempt: statuses and "network" or "timeout", or a test (default: "network", "timeout" and >= 500) */
+  retryOn?: readonly (number | "network" | "timeout")[] | ((failure: RetryFailure) => boolean)
   /** Retry endpoints that write as well as those that read (default: only a write with an idempotency key) */
   mutations?: boolean
 }
+
+/** Why an attempt failed, as retryOn is shown it */
+type RetryFailure =
+  | { kind: "status"; status: number; data: unknown; headers: Headers } // an answer that was not a success
+  | { kind: "network"; error: NetworkError } // no answer came
+  | { kind: "timeout"; error: TimeoutError } // the attempt's time ran out
 ```
 
 With `backoff: "exponential"` the wait doubles from `delay` — with the default 300 ms, the waits are 300 ms, 600 ms, 1200 ms; with `"fixed"` every wait is `delay`. An endpoint's `.retry()` and a `courier()` base's `retry` take the same `RetryOptions`.
@@ -50,18 +56,19 @@ const api = defineApi({
 
 ### Custom retry condition
 
-Give `retryOn` the statuses to retry, 0 standing for a request that got no answer, or a test of the answer:
+Give `retryOn` what to retry — the statuses of answers, `"network"` for a request that got no answer, `"timeout"` for one whose time ran out — or a test of why the attempt failed:
 
 ```ts title="lib/sources.ts"
-retryMiddleware({ limit: 2, delay: 500, retryOn: [0, 429, 502, 503, 504] })
+retryMiddleware({ limit: 2, delay: 500, retryOn: ["network", 429, 502, 503, 504] })
 
 retryMiddleware({
-  retryOn: (response) => response.status === 429 && response.headers.has("retry-after"),
+  retryOn: (failure) =>
+    failure.kind === "status" && failure.status === 429 && failure.headers.has("retry-after"),
 })
 ```
 
 <Callout variant="tip" title="What the condition sees">
-A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer is shown as status 0, so a condition that should also retry network failures has to accept it. Errors that are not HTTP failures — a response that fails its schema, a middleware that throws — are never retried. After the last attempt, its error is re-thrown.
+A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer rejects with a `NetworkError`, shown as `kind: "network"`, and one whose time ran out with a `TimeoutError`, shown as `kind: "timeout"`, each with the error. A success is never shown to it. Errors that are none of these — a response that fails its schema, a middleware that throws — are never retried. After the last attempt, its error is re-thrown. A list that names `0`, which once stood for a request that got no answer, is refused where it is written.
 </Callout>
 
 ### Writes are sent once — unless they carry a key

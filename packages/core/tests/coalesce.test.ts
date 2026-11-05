@@ -236,9 +236,9 @@ describe("a call that stops waiting", () => {
 
     expect(patient.status).toBe("fulfilled");
     expect(hasty.status === "rejected" && hasty.reason).toMatchObject({
-      status: 0,
-      message: "Request timed out",
-      cause: expect.objectContaining({ name: "TimeoutError" }),
+      name: "TimeoutError",
+      scope: "attempt",
+      timeout: 30,
     });
   });
 });

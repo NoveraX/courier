@@ -17,7 +17,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { HTTPError } from "../src/errors";
+import { type HTTPError, NetworkError, TimeoutError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
@@ -77,13 +77,17 @@ async function rejection(call: Promise<unknown>): Promise<unknown> {
 }
 
 describe("a timeout on a direct call", () => {
-  it("is an HTTPError that says it timed out", async () => {
+  it("is a TimeoutError of the attempt, with how long it was", async () => {
     const error = await rejection(createCaller(api()).slow.with({ timeout: 100 })());
 
-    expect(error).toBeInstanceOf(HTTPError);
-    expect(error).toMatchObject({ status: 0, message: "Request timed out" });
-    expect((error as HTTPError).data).toMatchObject({ code: "TIMEOUT" });
-    expect(((error as HTTPError).cause as Error).name).toBe("TimeoutError");
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect(error).toMatchObject({
+      code: "TIMEOUT",
+      scope: "attempt",
+      timeout: 100,
+      message: "Request timed out after 100 ms",
+    });
+    expect(((error as TimeoutError).cause as Error).name).toBe("TimeoutError");
   });
 });
 
@@ -93,29 +97,31 @@ describe("an answer that stops arriving", () => {
       createCaller(api()).partial.with({ timeout: 150 })({ status: 200 }),
     );
 
-    expect(error).toBeInstanceOf(HTTPError);
-    expect(error).toMatchObject({ status: 0, message: "Request timed out" });
-    expect((error as HTTPError).data).toMatchObject({ code: "TIMEOUT" });
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect(error).toMatchObject({ scope: "attempt", message: "Request timed out" });
   });
 
   it("is a network failure when the connection drops while the body is read", async () => {
     const error = await rejection(createCaller(api()).dropped());
 
-    expect(error).toBeInstanceOf(HTTPError);
-    expect(error).toMatchObject({ status: 0 });
-    expect((error as HTTPError).message).not.toContain("parse");
+    expect(error).toBeInstanceOf(NetworkError);
+    expect((error as NetworkError).message).not.toContain("parse");
   });
 });
 
 describe("a host that cannot be reached", () => {
-  it("is still a network failure with the system's code", async () => {
+  it("is a network failure with the system's code", async () => {
     const closed = await startUpstream(() => undefined);
     await closed.close();
 
     const error = await rejection(createCaller(api(closed.url)).slow());
 
-    expect(error).toMatchObject({ status: 0, message: "Network request failed" });
-    expect((error as HTTPError).data).toMatchObject({ code: "ECONNREFUSED" });
+    expect(error).toBeInstanceOf(NetworkError);
+    expect(error).toMatchObject({
+      code: "NETWORK_ERROR",
+      systemCode: "ECONNREFUSED",
+      message: "Network request failed (ECONNREFUSED)",
+    });
   });
 });
 

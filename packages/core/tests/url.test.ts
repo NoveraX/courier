@@ -7,6 +7,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
+import { defineMiddleware } from "../src/middleware/define";
 import { retryMiddleware } from "../src/middleware/retry";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { compileUrl, resolveBasePath } from "../src/utils/url";
@@ -179,10 +180,20 @@ describe("a FormData that fills a path parameter", () => {
   });
 
   it("is sent again whole when the call is retried", async () => {
+    /* The first answer is taken for a 503 once it came, so the upload went out before it is sent again. */
+    let answered = 0;
+    const failingFirst = defineMiddleware("fail-first", "wrap", async (_ctx, next) => {
+      const answer = await next();
+      answered++;
+      return answered === 1 ? { ...answer, status: 503 } : answer;
+    });
     /* An upload is a write, sent again only when the policy allows repeats. */
     const api = defineApi({
       baseURL: upstream.origin,
-      middleware: [retryMiddleware({ limit: 1, delay: 0, retryOn: () => true, mutations: true })],
+      middleware: [
+        retryMiddleware({ limit: 1, delay: 0, retryOn: [503], mutations: true }),
+        failingFirst,
+      ],
       groups: { items },
     });
 

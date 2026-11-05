@@ -9,7 +9,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { courier, defineApi } from "../src/define/index";
-import { HTTPError } from "../src/errors";
+import { NetworkError } from "../src/errors";
+import { platformCause } from "../src/http-client/transport-failure";
 import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 
@@ -144,9 +145,11 @@ describe("a direct caller still gets the reason", () => {
     await executeRequest(sources, { source: "api", method: "items" } as never).then(
       () => expect.fail("the call should have failed"),
       (error: unknown) => {
-        expect(error).toBeInstanceOf(HTTPError);
-        const payload = (error as HTTPError).data as { message?: string };
-        expect(payload.message).toContain(UPSTREAM_HOST);
+        expect(error).toBeInstanceOf(NetworkError);
+        expect(error).toMatchObject({ systemCode: "ENOTFOUND" });
+        expect(platformCause((error as NetworkError).cause as Error).message).toContain(
+          UPSTREAM_HOST,
+        );
       },
     );
   });
@@ -187,7 +190,7 @@ describe("what the server's log keeps", () => {
     await executeRequest(sources, { source: "api", method: "items" } as never).then(
       () => expect.fail("the call should have failed"),
       (error: unknown) => {
-        expect(((error as HTTPError).data as { message?: string }).message).toBe(
+        expect(platformCause((error as NetworkError).cause as Error).message).toBe(
           "connect ECONNREFUSED ::1:4000",
         );
       },

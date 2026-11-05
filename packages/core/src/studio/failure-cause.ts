@@ -1,7 +1,6 @@
-import { HTTPError } from "../errors";
+import { isRequestFailure, NetworkError, TimeoutError } from "../errors";
 import { CourierError } from "../errors/courier-error";
-import { causeOf } from "../http-client/transport-failure";
-import { isRecord } from "../utils/is-record";
+import { causeOf, platformCause } from "../http-client/transport-failure";
 import { isNetworkFailure } from "./network-failure";
 
 /* Deeper than any chain a program builds on purpose; a deeper one is cut, as the log cuts it. */
@@ -16,9 +15,10 @@ export interface FailureCause {
 }
 
 /**
- * Why a request that got no answer failed, as the platform said it: an
- * `HTTPError` with status 0, whose body holds the platform's text and
- * code; or a connection the app's own code made on the way — a
+ * Why a request that got no answer failed, as the platform said it: a
+ * `NetworkError`, by the code and the text of the platform's error under
+ * it, or a `TimeoutError`, by Courier's own code `TIMEOUT`; or a
+ * connection the app's own code made on the way — a
  * middleware's `fetch` — that the system refused, with the code it gave,
  * however deep under the app's own errors it lies: the deepest network
  * failure in the chain says why, or the error directly under the failure
@@ -37,20 +37,19 @@ export interface FailureCause {
  * ```
  */
 export function failureCause(error: unknown): FailureCause | undefined {
-  if (error instanceof HTTPError) return error.status === 0 ? unanswered(error.data) : undefined;
+  if (error instanceof NetworkError || error instanceof TimeoutError) return unanswered(error);
   if (!(error instanceof Error) || error instanceof CourierError) return undefined;
   const coded = codedCause(error);
-  if (coded instanceof HTTPError) return coded.status === 0 ? unanswered(coded.data) : undefined;
-  return coded === undefined ? undefined : causeOf(coded);
+  if (coded instanceof NetworkError || coded instanceof TimeoutError) return unanswered(coded);
+  return coded === undefined || coded instanceof CourierError ? undefined : causeOf(coded);
 }
 
-function unanswered(data: unknown): FailureCause | undefined {
-  if (!isRecord(data) || typeof data.message !== "string" || data.message.trim() === "") {
-    return undefined;
-  }
-  return typeof data.code === "string" && data.code !== ""
-    ? { code: data.code, message: data.message }
-    : { message: data.message };
+/* A connection by the platform's code and words, or the error's own where it said none; a time
+   that ran out by Courier's `TIMEOUT`. */
+function unanswered(error: NetworkError | TimeoutError): FailureCause {
+  if (error instanceof TimeoutError) return { code: "TIMEOUT", message: error.message };
+  const said = error.cause instanceof Error ? platformCause(error.cause) : undefined;
+  return said && said.message.trim() !== "" ? said : { ...said, message: error.message };
 }
 
 /* The deepest error under a failure that says why — the failure itself
@@ -68,7 +67,7 @@ function codedCause(error: Error): Error | undefined {
   let found: Error | undefined;
   let link: unknown = error.cause instanceof Error ? error.cause : error;
   while (link instanceof Error && !seen.has(link) && seen.size < DEEPEST) {
-    if (link instanceof CourierError) return link instanceof HTTPError ? link : found;
+    if (link instanceof CourierError) return isRequestFailure(link) ? link : found;
     const says = seen.size === 0 ? systemCode(link) : isNetworkFailure(link);
     seen.add(link);
     if (says) found = link;

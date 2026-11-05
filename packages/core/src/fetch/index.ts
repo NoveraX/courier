@@ -13,7 +13,7 @@
  */
 
 import { HTTPError } from "../errors";
-import { getResponseData } from "../http-client/response";
+import { assertReadable, getResponseData } from "../http-client/response";
 import type { ResponseType } from "../http-client/types";
 import { defineOwn } from "../utils/define-own";
 import { coreFetch } from "../utils/fetch";
@@ -71,6 +71,7 @@ async function request<TResponse>(
   });
 
   const type = options?.responseType ?? "json";
+  assertReadable(response);
   /* Checked before HEAD returns, so a HEAD answered 404 or 401 does not
      resolve as though the resource were there. */
   if (!response.ok) {

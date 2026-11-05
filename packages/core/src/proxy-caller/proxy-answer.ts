@@ -6,11 +6,10 @@
  * carried it.
  */
 
-import { HTTPError } from "../errors";
+import { CourierError, HTTPError, NetworkError } from "../errors";
 import { isBodilessStatus } from "../http-client/response";
 import { isAbortError } from "../utils/abort";
 import { isWireBody, readWireBody } from "../utils/wire-body";
-import { ValidationError } from "../validation";
 import { validationFailure } from "./validation-failure";
 
 /**
@@ -88,10 +87,11 @@ export async function readProxyAnswer(
  * A failure to reach the proxy, as the error a caller can recognise.
  *
  * Offline, a server that is not up, a DNS failure — the commonest failure a
- * browser sees — is an HTTPError with status 0 and the original as its cause,
- * as in direct mode, rather than a bare TypeError that `isHTTPError` rejects
- * and `onError` never sees. A cancellation stays as it was, whatever reason
- * the caller gave for it.
+ * browser sees — is a `NetworkError` with the original as its cause, as in
+ * direct mode, rather than a bare TypeError that `onError` never sees; a
+ * timeout is already a `TimeoutError`. Courier's own errors stay what they
+ * are, and a cancellation stays as it was, whatever reason the caller gave
+ * for it.
  *
  * @param error - Whatever the request rejected with
  * @param signal - The call's signal, whose reason a cancellation rejects with
@@ -99,12 +99,9 @@ export async function readProxyAnswer(
  */
 export function asProxyFailure(error: unknown, signal?: AbortSignal | null): unknown {
   if (signal?.aborted && error === signal.reason) return error;
-  if (error instanceof HTTPError || error instanceof ValidationError) return error;
+  if (error instanceof CourierError) return error;
   if (isAbortError(error) || !(error instanceof Error)) return error;
-  return new HTTPError(
-    { status: 0, headers: new Headers(), data: { success: false, message: error.message } },
-    { cause: error },
-  );
+  return new NetworkError({ cause: error });
 }
 
 /** `.raw` promises `Headers`; over the wire they travel as a plain object. */

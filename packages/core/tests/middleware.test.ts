@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import { HTTPError } from "../src/errors";
+import { HTTPError, NetworkError } from "../src/errors";
 import {
   authMiddleware,
   cacheMiddleware,
@@ -63,12 +63,8 @@ const ok = (data: unknown = []) => MiddlewareResponseHelper(200, data);
 const serverError = (data: unknown = { error: "fail" }) => MiddlewareResponseHelper(500, data);
 
 /** What a request that never got an answer is rejected with. */
-function networkFailure(): HTTPError {
-  return new HTTPError({
-    status: 0,
-    headers: new Headers(),
-    data: { success: false, message: "socket hang up" },
-  });
+function networkFailure(): NetworkError {
+  return new NetworkError({ cause: new Error("socket hang up"), systemCode: "ECONNRESET" });
 }
 
 function MiddlewareResponseHelper(status: number, data: unknown): MiddlewareResponse {
@@ -357,7 +353,7 @@ describe("retryMiddleware", () => {
     const handler = retryMiddleware({
       limit: 2,
       delay: 0,
-      retryOn: (res) => res.status === 429,
+      retryOn: (failure) => failure.kind === "status" && failure.status === 429,
     }).handler as WrapHandler;
 
     const result = await handler({ source: "api", method: "test", headers: new Headers() }, () => {
@@ -394,7 +390,7 @@ describe("retryMiddleware", () => {
         calls++;
         throw networkFailure();
       }),
-    ).rejects.toMatchObject({ status: 0 });
+    ).rejects.toBeInstanceOf(NetworkError);
     expect(calls).toBe(2);
   });
 
@@ -517,9 +513,7 @@ describe("logMiddleware", () => {
       Promise.reject(new HTTPError({ status: 503, headers: new Headers(), data: null })),
     ).catch(() => undefined);
     await handler({ source: "api", method: "b", headers: new Headers() }, () =>
-      Promise.reject(
-        new HTTPError({ status: 0, headers: new Headers(), data: null }, { cause: refused }),
-      ),
+      Promise.reject(new NetworkError({ cause: refused })),
     ).catch(() => undefined);
 
     const lines = warn.mock.calls.map((call) => String(call[1]));

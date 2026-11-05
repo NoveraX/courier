@@ -6,7 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HTTPError } from "../src/errors";
+import { HTTPError, TimeoutError } from "../src/errors";
 import { createFetch } from "../src/fetch";
 
 interface Sent {
@@ -126,7 +126,7 @@ describe("the answer", () => {
     expect(error).toMatchObject({ status: 502, data: "Bad gateway: upstream down" });
   });
 
-  it("rejects a request that ran out of time as one that got no answer", async () => {
+  it("rejects a request that ran out of time as a TimeoutError of its attempt", async () => {
     vi.stubGlobal(
       "fetch",
       (_input: unknown, init?: RequestInit) =>
@@ -139,7 +139,7 @@ describe("the answer", () => {
       .get("/slow")
       .catch((e: unknown) => e);
 
-    expect(error).toBeInstanceOf(HTTPError);
-    expect(error).toMatchObject({ status: 0, data: { code: "TIMEOUT" } });
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect(error).toMatchObject({ scope: "attempt", timeout: 20 });
   });
 });

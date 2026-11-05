@@ -2,10 +2,16 @@ import type { HttpResponse } from "../http-client/types";
 import { CourierError } from "./courier-error";
 import { defineNodePrinting } from "./http-error-inspect";
 
+/* An answer's status, as RFC 9110 numbers them. */
+const FIRST_STATUS = 100;
+const LAST_STATUS = 599;
+
 /**
- * Thrown when an HTTP response has a non-2xx status, or when the underlying
- * fetch fails entirely (network error, status === 0). Carries the full
- * response so callers can inspect headers and body without re-fetching.
+ * Thrown when a request got an answer whose status is not a success: a 4xx
+ * or a 5xx from the upstream, a 3xx it was not to follow. Carries the full
+ * answer, so callers can read its headers and body without asking again. A
+ * request that got no answer is a `NetworkError`, and one whose time ran out
+ * a `TimeoutError`: an `HTTPError` always has an answer's status.
  *
  * Printed — by `console.error`, a logger, Node's report of an uncaught
  * error — it shows the response's headers with every credential's value
@@ -18,9 +24,10 @@ export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
   readonly data: TData;
 
   /**
-   * @param response - The answer, or status 0 with a description when there was none
-   * @param options - `cause`: the error the request failed with, for a network failure;
-   *   `message`: what went wrong, when the status alone does not say — a timeout
+   * @param response - The answer: its status, 100 to 599, its headers and its body
+   * @param options - `cause`: the error behind it, such as a body that would not parse;
+   *   `message`: what went wrong, when the status alone does not say
+   * @throws {RangeError} For a status no answer has, such as the 0 of a request that got none
    *
    * @example
    * ```ts
@@ -28,8 +35,12 @@ export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
    * ```
    */
   constructor(response: HttpResponse<TData>, options?: { cause?: unknown; message?: string }) {
-    const fallback = response.status > 0 ? `HTTP ${response.status}` : "Network request failed";
-    super(options?.message ?? fallback, {
+    const { status } = response;
+    /* NaN fails both comparisons, as a status outside the range fails one. */
+    if (!(status >= FIRST_STATUS && status <= LAST_STATUS)) {
+      throw new RangeError(`HTTPError status ${status} is no answer's: 100 to 599`);
+    }
+    super(options?.message ?? `HTTP ${status}`, {
       code: "HTTP_ERROR",
       context: { status: response.status },
       cause: options?.cause,

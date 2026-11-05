@@ -1,4 +1,4 @@
-import type { HTTPError } from "../errors";
+import type { RequestFailure } from "../errors";
 import type { WebCredentials } from "../http-client/web-types";
 import { encodeWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import { proxyRouting } from "./proxy-routing";
@@ -20,7 +20,7 @@ export type GetProxyCtx = {
   stream: boolean;
   fetchCtx: {
     onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
-    onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+    onError?: ((error: RequestFailure) => void | Promise<void>) | undefined;
   };
 };
 

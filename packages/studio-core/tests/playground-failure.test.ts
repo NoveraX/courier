@@ -1,13 +1,14 @@
 /**
  * What the Playground is shown of a call that failed — on the page that
  * holds Studio's token, as the app was told it: its error's text, the
- * cause and no more of a request that got no answer, and an upstream's
- * answer whole. Through the proxy, a call `browsersOnly` refused is told
- * why, and one stopped at a redirect is told whose it was: the route's
- * names where it pointed; the API's, which the proxy answers with its
- * status alone, says what to change in the source. A 304 is no redirect.
+ * cause and no more of a request that got no answer or ran out of time,
+ * and an upstream's answer whole. Through the proxy, a call `browsersOnly`
+ * refused is told why, and one stopped at a redirect is told whose it was:
+ * the route's names where it pointed; the API's, which the proxy answers
+ * with its status alone, says what to change in the source. A 304 is no
+ * redirect.
  */
-import { HTTPError } from "@noverax/courier";
+import { HTTPError, NetworkError, TimeoutError } from "@noverax/courier";
 import { describe, expect, it } from "vitest";
 
 import { BROWSERS_ONLY_ADVICE } from "../src/runtime/browsers-only-refusal";
@@ -27,31 +28,48 @@ describe("playgroundFailure", () => {
     });
   });
 
-  it("keeps the cause of a request with no answer, and no more of its body", () => {
-    const failure = playgroundFailure(
-      new HTTPError({
-        status: 0,
-        headers: new Headers(),
-        data: { success: false, message: "upstream refused x-api-key=s3cret", extra: 1 },
-      }),
-    );
+  it("shows a request with no answer by its cause and no more, as status 0", () => {
+    const refused = new TypeError("fetch failed", {
+      cause: new Error("upstream refused x-api-key=s3cret"),
+    });
 
-    expect(failure.data).toEqual({ success: false, message: "upstream refused x-api-key=s3cret" });
+    const failure = playgroundFailure(new NetworkError({ cause: refused }));
+
+    expect(failure).toEqual({
+      kind: "http-result",
+      status: 0,
+      error: "Network request failed",
+      data: { success: false, message: "upstream refused x-api-key=s3cret" },
+      headers: {},
+    });
   });
 
   it("keeps the platform's reason and code for a request with no answer", () => {
+    const unresolved = Object.assign(new Error("getaddrinfo ENOTFOUND api.test"), {
+      code: "ENOTFOUND",
+    });
     const failure = playgroundFailure(
-      new HTTPError({
-        status: 0,
-        headers: new Headers(),
-        data: { success: false, message: "getaddrinfo ENOTFOUND api.test", code: "ENOTFOUND" },
+      new NetworkError({
+        cause: new TypeError("fetch failed", { cause: unresolved }),
+        systemCode: "ENOTFOUND",
       }),
     );
 
+    expect(failure.error).toBe("Network request failed (ENOTFOUND)");
     expect(failure.data).toEqual({
       success: false,
       code: "ENOTFOUND",
       message: "getaddrinfo ENOTFOUND api.test",
+    });
+  });
+
+  it("shows a request whose time ran out by Courier's own code", () => {
+    const failure = playgroundFailure(new TimeoutError({ scope: "attempt", timeout: 50 }));
+
+    expect(failure).toMatchObject({
+      status: 0,
+      error: "Request timed out after 50 ms",
+      data: { success: false, code: "TIMEOUT", message: "Request timed out after 50 ms" },
     });
   });
 

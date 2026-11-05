@@ -18,7 +18,7 @@ import { createServer as createHttpsServer } from "node:https";
 import { type AddressInfo, connect, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { HTTPError } from "@noverax/courier";
+import { HTTPError, NetworkError } from "@noverax/courier";
 import { Agent, fetch as undiciFetch } from "undici";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -324,9 +324,9 @@ describe("what an agent is never told", () => {
 });
 
 describe("what Studio keeps from its own texts", () => {
-  /* An answer that never came, as the client keeps why: the system's words under `data`. */
+  /* An answer that never came, as the client keeps why: the system's words as its cause. */
   const unanswered = (message: string) =>
-    new HTTPError({ status: 0, headers: new Headers(), data: { success: false, message } });
+    new NetworkError({ cause: new TypeError("fetch failed", { cause: new Error(message) }) });
 
   it.each(SECRETS)("is never told from %j", (text, secret) => {
     expect(failureMessage(new Error(text))).not.toContain(secret);

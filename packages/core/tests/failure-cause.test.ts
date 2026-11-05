@@ -6,18 +6,20 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { HTTPError } from "../src/errors";
+import { HTTPError, NetworkError, TimeoutError } from "../src/errors";
 import { ConfigurationError } from "../src/errors/configuration-error";
 import { failureCause } from "../src/studio/failure-cause";
 
-function unanswered(data: unknown): HTTPError {
-  return new HTTPError({ status: 0, headers: new Headers(), data });
+/** A request that got no answer, as fetch rejects it: `fetch failed`, the platform's error as its cause. */
+function unanswered(platform: { message: string; code?: unknown }): NetworkError {
+  const { message, ...rest } = platform;
+  const cause = Object.assign(new Error(message), rest);
+  return new NetworkError({ cause: new TypeError("fetch failed", { cause }) });
 }
 
 describe("failureCause", () => {
   it("reads the system's code and text from a request that got no answer", () => {
     const error = unanswered({
-      success: false,
       message: "getaddrinfo ENOTFOUND no-such-host.invalid",
       code: "ENOTFOUND",
     });
@@ -177,9 +179,18 @@ describe("failureCause", () => {
     });
   });
 
-  it("has none when the failure carries no text", () => {
-    expect(failureCause(unanswered(undefined))).toBeUndefined();
-    expect(failureCause(unanswered({ code: "ENOTFOUND" }))).toBeUndefined();
-    expect(failureCause(unanswered({ message: "   " }))).toBeUndefined();
+  it("says the error's own words when the platform said none", () => {
+    expect(failureCause(new NetworkError())).toEqual({ message: "Network request failed" });
+    expect(failureCause(unanswered({ message: "   ", code: "ENOTFOUND" }))).toEqual({
+      code: "ENOTFOUND",
+      message: "Network request failed",
+    });
+  });
+
+  it("names a request whose time ran out by Courier's own code", () => {
+    expect(failureCause(new TimeoutError({ scope: "attempt", timeout: 60_000 }))).toEqual({
+      code: "TIMEOUT",
+      message: "Request timed out after 60000 ms",
+    });
   });
 });

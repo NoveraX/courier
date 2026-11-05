@@ -9,7 +9,7 @@ import type {
   EndpointRecord,
   GroupRecord,
 } from "./define";
-import type { HTTPError } from "./errors";
+import type { RequestFailure } from "./errors";
 import type { RequestContext } from "./http-client/types";
 import type { CallerWSOptions } from "./realtime/ws/ws-types";
 import { composeBackend } from "./transport/compose-backend";
@@ -29,7 +29,8 @@ export type CallerDefaults = {
   cancelPrevious?: boolean | undefined;
   headers?: Record<string, string> | undefined;
   context?: RequestContext | undefined;
-  onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+  /** Told of each call that got no successful answer: refused by its upstream, unanswered, or out of time. */
+  onError?: ((error: RequestFailure) => void | Promise<void>) | undefined;
   onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
   /**
    * How the sockets of this caller's channels and push subscriptions behave:

@@ -1,4 +1,5 @@
 import type { AgentCall } from "../agent/types";
+import type { NetworkError, TimeoutError } from "../errors";
 
 /** A request the session makes for an endpoint: the double-submit token asked for before a write. */
 export type CallPurpose = "csrf-token";
@@ -79,6 +80,22 @@ export type MiddlewareResponse = {
   data: unknown;
   headers: Headers;
 };
+
+/**
+ * Why an attempt failed, as a retry policy's `retryOn` is shown it: an
+ * answer that was not a success — rejected as an `HTTPError` or returned by
+ * a middleware — with its status, body and headers; a request that got no
+ * answer; or one whose time ran out.
+ */
+export type RetryFailure =
+  | {
+      readonly kind: "status";
+      readonly status: number;
+      readonly data: unknown;
+      readonly headers: Headers;
+    }
+  | { readonly kind: "network"; readonly error: NetworkError }
+  | { readonly kind: "timeout"; readonly error: TimeoutError };
 
 /** Calls the next middleware in the chain, or the endpoint handler */
 export type NextFn = () => Promise<MiddlewareResponse>;

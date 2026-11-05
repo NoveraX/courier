@@ -1,5 +1,5 @@
 import type { AgentOptions } from "../agent/types";
-import type { Middleware, MiddlewareResponse } from "../middleware/types";
+import type { Middleware, RetryFailure } from "../middleware/types";
 import type { EndpointSession } from "../session/types";
 import type { CacheConfig } from "../validation";
 
@@ -110,18 +110,25 @@ export type CancelPreviousArgs<TKind extends "query" | "mutation"> = TKind exten
   : [cancel: never];
 
 /**
+ * What `retryOn` lists: an answer's status, or a failure that had none —
+ * `"network"`, a request that got no answer; `"timeout"`, one whose time ran
+ * out.
+ */
+export type RetryTrigger = number | "network" | "timeout";
+
+/**
  * A retry policy: on an endpoint, inherited from its base, or given to
  * `retryMiddleware` — one vocabulary for all three.
  *
- * Without `retryOn`, a 5xx and a request that got no answer are retried. An
- * endpoint that writes is sent once, since a write whose answer was lost may
- * already have been carried out — unless it declares an `idempotencyKey`,
- * whose one key on every attempt lets the upstream apply it once, or
- * `mutations` is set.
+ * Without `retryOn`, a 5xx, a request that got no answer and one whose time
+ * ran out are retried. An endpoint that writes is sent once, since a write
+ * whose answer was lost may already have been carried out — unless it
+ * declares an `idempotencyKey`, whose one key on every attempt lets the
+ * upstream apply it once, or `mutations` is set.
  *
  * @example
  * ```ts
- * endpoint.get("report").retry({ limit: 5, delay: 1_000, backoff: "fixed", retryOn: [429, 503] });
+ * endpoint.get("report").retry({ limit: 5, delay: 1_000, backoff: "fixed", retryOn: ["network", 503] });
  * ```
  */
 export interface RetryOptions {
@@ -132,10 +139,12 @@ export interface RetryOptions {
   /** How the wait grows between retries (default: "exponential", doubling it) */
   backoff?: "fixed" | "exponential" | undefined;
   /**
-   * Which answers deserve another attempt: their statuses, 0 standing for a
-   * request that got no answer, or a test of the answer (default: 0 and 5xx).
+   * Which failures deserve another attempt: answers' statuses, `"network"`
+   * for a request that got no answer and `"timeout"` for one whose time ran
+   * out, or a test of why the attempt failed (default: `"network"`,
+   * `"timeout"` and 5xx).
    */
-  retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean) | undefined;
+  retryOn?: readonly RetryTrigger[] | ((failure: RetryFailure) => boolean) | undefined;
   /**
    * Retry an endpoint that writes as well as one that reads (default: only
    * a write whose endpoint declares an `idempotencyKey`, which the upstream

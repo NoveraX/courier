@@ -1,4 +1,4 @@
-import { HTTPError } from "../errors";
+import { HTTPError, NetworkError, TimeoutError } from "../errors";
 import { createLogger } from "../logger";
 import { defineMiddleware } from "./define";
 import type { Middleware } from "./types";
@@ -14,13 +14,14 @@ interface Failure {
 
 /* An HTTPError carries the upstream's answer — its headers, cookies
    included, and its body — so the default log states its status and never
-   prints the error itself; a request with no answer keeps the network
-   error behind it. */
+   prints the error itself; a request with no answer, or out of time, keeps
+   the platform's error behind it. */
 function describeFailure(error: unknown): Failure {
-  if (error instanceof HTTPError && error.status > 0) {
+  if (error instanceof HTTPError) {
     return { outcome: String(error.status), level: error.status >= 500 ? "warn" : "info" };
   }
-  const cause = error instanceof HTTPError ? error.cause : error;
+  const unanswered = error instanceof NetworkError || error instanceof TimeoutError;
+  const cause = unanswered ? (error.cause ?? error) : error;
   return { outcome: "ERROR", level: "warn", ...(cause === undefined ? {} : { cause }) };
 }
 

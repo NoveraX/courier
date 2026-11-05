@@ -5,7 +5,7 @@ import { compileUrl, resolveBasePath } from "../utils/url";
 import { stripUndefined } from "./body-builder";
 import { type RequestOptions, withCallTransport } from "./call-transport";
 import { buildRequestOptions } from "./request-builder";
-import { getResponse } from "./response";
+import { assertReadable, getResponse } from "./response";
 import type {
   BoundMethodOptions,
   Context,
@@ -91,6 +91,7 @@ export function bindMethod(
       hold?.sent();
       const response = await sending;
       hold?.returned();
+      assertReadable(response);
 
       if (!response.ok) {
         const errorResponse = await getResponse(

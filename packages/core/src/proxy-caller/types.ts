@@ -1,5 +1,5 @@
 import type { CourierRoutes } from "../define/routes";
-import type { HTTPError } from "../errors";
+import type { RequestFailure } from "../errors";
 import type { WebCredentials } from "../http-client/web-types";
 import type { CallerWSOptions } from "../realtime/ws/ws-types";
 import type { ProxyPath } from "./proxy-path";
@@ -45,7 +45,8 @@ export type ProxyCallerOptions = {
   coalesce?: boolean | undefined;
   credentials?: WebCredentials | undefined;
   headers?: Record<string, string> | undefined;
-  onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+  /** Told of each call that got no successful answer: refused by its upstream, unanswered, or out of time. */
+  onError?: ((error: RequestFailure) => void | Promise<void>) | undefined;
   onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
   /**
    * How the sockets of this client's channels and push subscriptions behave:

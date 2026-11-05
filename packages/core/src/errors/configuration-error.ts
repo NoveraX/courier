@@ -260,7 +260,20 @@ export type ConfigurationErrorCode =
    * list, the variable is set and names nothing, or the setting is larger
    * than it may be.
    */
-  | "RUNTIME_SETTING_FAILED";
+  | "RUNTIME_SETTING_FAILED"
+  /**
+   * An answer the platform hides: a request sent with `mode: "no-cors"`, or
+   * a redirect a browser was told not to follow, gets one whose status
+   * reads 0 and whose body reads empty, which say nothing of the server's.
+   */
+  | "RESPONSE_OPAQUE"
+  /**
+   * A retry policy cannot work as written: an option it does not have, a
+   * limit past what it takes, a wait that is not a number of milliseconds,
+   * or a `retryOn` that names what no failure is — the 0 that once stood
+   * for a request that got no answer among them.
+   */
+  | "RETRY_OPTIONS_INVALID";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

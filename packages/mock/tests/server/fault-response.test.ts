@@ -1,4 +1,4 @@
-import { createCaller, HTTPError } from "@noverax/courier";
+import { createCaller, NetworkError, TimeoutError } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { MockServer } from "../../src/server/create-mock-server";
@@ -77,11 +77,8 @@ describe("a timeout fault on the mock server", () => {
       error = await proxyRouteClient(150)().catch((caught: unknown) => caught);
     });
 
-    expect(error).toBeInstanceOf(HTTPError);
-    expect(error instanceof HTTPError && error.status).toBe(0);
-    expect(error instanceof HTTPError && error.cause instanceof Error && error.cause.name).toBe(
-      "TimeoutError",
-    );
+    expect(error).toBeInstanceOf(TimeoutError);
+    expect(error).toMatchObject({ scope: "attempt", timeout: 150 });
   });
 
   it("stops holding a request whose client went away", async () => {
@@ -113,6 +110,6 @@ describe("a reset fault on the mock server", () => {
 
     const error = await proxyRouteClient()().catch((caught: unknown) => caught);
 
-    expect(error instanceof HTTPError && error.status).toBe(0);
+    expect(error).toBeInstanceOf(NetworkError);
   });
 });

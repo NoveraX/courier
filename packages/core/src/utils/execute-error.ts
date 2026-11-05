@@ -1,5 +1,5 @@
-import { HTTPError } from "../errors";
-import { isTimeoutFailure } from "../http-client/transport-failure";
+import { HTTPError, isRequestFailure, NetworkError, TimeoutError } from "../errors";
+import { platformCause } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import { ValidationError } from "../validation";
@@ -8,13 +8,12 @@ import { answerCallerLeft, callerLeft } from "./caller-left";
 import { type FailureReport, reportRequestError } from "./execute-error-report";
 import { buildResponse, type InternalResponse } from "./execute-response";
 import { injectTimingHeaders } from "./execute-studio";
-import { isRecord } from "./is-record";
 
 const log = createLogger("Proxy");
 
 /**
- * A transport-level failure carries the operating system's own words, and
- * those name the host the server was dialling — `getaddrinfo ENOTFOUND
+ * A request that got no answer carries the operating system's own words,
+ * and those name the host the server was dialling — `getaddrinfo ENOTFOUND
  * internal-api.corp.example`. Answering a browser with them discloses the
  * upstream the proxy exists to keep behind it, so the caller is told that the
  * request failed and the reason stays in the server's log.
@@ -25,30 +24,32 @@ const log = createLogger("Proxy");
  * An upstream that answered for itself is a different thing: its status and
  * body are its own message to the client, and the proxy forwards them.
  */
-function withoutUpstreamDetail(
-  result: { status: number; headers: Headers; data: unknown },
-  error: HTTPError,
-  context: Context | undefined,
-): { status: number; headers: Headers; data: unknown } {
-  const fromWire = context?.proxyMethod !== undefined;
-  if (!fromWire || error.status !== 0) return result;
-
+function unansweredUpstream(error: NetworkError | TimeoutError): {
+  status: number;
+  headers: Headers;
+  data: unknown;
+} {
   /* The log may name the upstream: it is the server's own record. */
-  const { data } = error;
-  const message = isRecord(data) && typeof data.message === "string" ? data.message : undefined;
-  log.warn(`Upstream request failed${message ? `: ${message}` : ""}`, error.cause ?? error);
-
-  if (isTimeoutFailure(error)) {
+  const reason = error instanceof NetworkError ? noAnswerReason(error) : error.message;
+  log.warn(`Upstream request failed: ${reason}`, error.cause ?? error);
+  const headers = new Headers();
+  if (error instanceof TimeoutError) {
     return {
-      ...result,
       status: 504,
+      headers,
       data: { success: false, message: "Upstream request timed out", code: "UPSTREAM_TIMEOUT" },
     };
   }
   return {
-    ...result,
+    status: 502,
+    headers,
     data: { success: false, message: "Upstream request failed", code: "UPSTREAM_UNREACHABLE" },
   };
+}
+
+/* What the platform said of the connection, or the error's own words where it said nothing. */
+function noAnswerReason(error: NetworkError): string {
+  return error.cause instanceof Error ? platformCause(error.cause).message : error.message;
 }
 
 /**
@@ -70,6 +71,17 @@ function serverFailure(
 
   log.error(`Request failed: ${message}`, error);
   return { ...result, data: { success: false, message: "Request failed" } };
+}
+
+/* A 2xx error is an upstream answer the proxy could not use — a body that
+   would not parse. Passed on as it was, a failure reached the browser as a
+   success carrying `{ success: false }` where the endpoint's data should be. */
+function upstreamAnswer(error: HTTPError): { status: number; headers: Headers; data: unknown } {
+  return {
+    status: error.status >= 300 ? error.status : 502,
+    headers: error.headers,
+    data: error.data,
+  };
 }
 
 export type ErrorHandlerCtx = FailureReport & {
@@ -98,17 +110,13 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
 
   const fromWire = ctx.context?.proxyMethod !== undefined;
   /* A direct caller gets its failure as it happened: a cancellation with the
-     reason it gave, a network failure with status 0 and its cause, the
-     upstream's own answer — a 2xx whose body would not parse keeps its 200 —
-     or what its own middleware threw — not a 502 from a gateway that is not
-     there, nor an HTTP 500 with no cause. A caller that asked for a Response
-     is answered with one, unless it cancelled. */
-  if (!fromWire && (!answersWithResponse || isAbortError(error) || error instanceof HTTPError)) {
-    reportRequestError(
-      error,
-      ctx,
-      error instanceof HTTPError ? error.status || undefined : undefined,
-    );
+     reason it gave, a request that got no answer or ran out of time as such,
+     with its cause, the upstream's own answer — a 2xx whose body would not
+     parse keeps its 200 — or what its own middleware threw — not a 502 from
+     a gateway that is not there, nor an HTTP 500 with no cause. A caller
+     that asked for a Response is answered with one, unless it cancelled. */
+  if (!fromWire && (!answersWithResponse || isAbortError(error) || isRequestFailure(error))) {
+    reportRequestError(error, ctx, error instanceof HTTPError ? error.status : undefined);
     throw error;
   }
   if (callerLeft(ctx.context)) {
@@ -116,20 +124,12 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     return answerCallerLeft(error, ctx.context, ctx.rawData);
   }
 
-  /* A 2xx error is an upstream answer the proxy could not use — a body that
-     would not parse. Passed on as it was, a failure reached the browser as a
-     success carrying `{ success: false }` where the endpoint's data should be. */
-  const httpStatus =
-    error instanceof HTTPError && error.status >= 300 && error.status <= 599 ? error.status : 502;
-
   const responseResult =
     error instanceof HTTPError
-      ? withoutUpstreamDetail(
-          { status: httpStatus, headers: error.headers, data: error.data },
-          error,
-          ctx.context,
-        )
-      : serverFailure(error, ctx.context);
+      ? upstreamAnswer(error)
+      : error instanceof NetworkError || error instanceof TimeoutError
+        ? unansweredUpstream(error)
+        : serverFailure(error, ctx.context);
 
   reportRequestError(error, ctx, responseResult.status);
   return timed(ctx, {

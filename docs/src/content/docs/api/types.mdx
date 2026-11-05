@@ -49,7 +49,7 @@ type CallerDefaults = {
   cancelPrevious?: boolean
   headers?: Record<string, string>
   context?: Context
-  onError?: (error: HTTPError) => void | Promise<void>
+  onError?: (error: RequestFailure) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
 }
 ```
@@ -72,7 +72,7 @@ type ProxyCallerOptions = {
   coalesce?: boolean
   credentials?: RequestCredentials
   headers?: Record<string, string>
-  onError?: (error: HTTPError) => void | Promise<void>
+  onError?: (error: RequestFailure) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
   ws?: CallerWSOptions
 }

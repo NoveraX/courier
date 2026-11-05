@@ -74,17 +74,3 @@ async function whole(part: MultipartPart): Promise<ReadPart> {
   for await (const piece of part.body) pieces.push(piece);
   return { name: part.name, filename: part.filename, type: part.type, bytes: concat(...pieces) };
 }
-
-/**
- * A small, seeded random source (mulberry32), so a failing case can be run
- * again from the seed its test prints.
- */
-export function seededRandom(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
-    mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
-    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
-  };
-}

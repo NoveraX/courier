@@ -17,7 +17,8 @@ import {
   randomCuts,
   randomForm,
 } from "../helpers/multipart-corpus";
-import { chunked, concat, seededRandom } from "../helpers/multipart-fixtures";
+import { chunked, concat } from "../helpers/multipart-fixtures";
+import { seededRandom } from "../helpers/seeded-random";
 
 const LIMITS = { maxParts: 100, maxHeaderBytes: 8192, maxFieldBytes: 4096 };
 const B = "----courier-streamed";

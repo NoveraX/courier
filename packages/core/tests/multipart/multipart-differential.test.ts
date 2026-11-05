@@ -25,8 +25,9 @@ import {
   randomForm,
   remixParts,
 } from "../helpers/multipart-corpus";
-import { chunked, type ReadPart, readParts, seededRandom } from "../helpers/multipart-fixtures";
+import { chunked, type ReadPart, readParts } from "../helpers/multipart-fixtures";
 import { modelParts } from "../helpers/multipart-model";
+import { seededRandom } from "../helpers/seeded-random";
 
 const SEED = 0x5eed_c0de;
 /* Thousands of bodies take a second alone and several beside the rest of the suite, slower on a busy runner. */
@@ -169,4 +170,44 @@ describe("the multipart parser against its rules over the whole body", () => {
       }
     },
   );
+});
+
+/* A text's 32-bit FNV-1a digest, which a corpus is pinned by. */
+function fnv1a(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let at = 0; at < text.length; at++) {
+    hash ^= text.charCodeAt(at);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+describe("the corpus a seed names", () => {
+  it("is drawn the same on every run, so the seed a failure prints brings its bodies back", async () => {
+    const runs: unknown[] = [];
+    for (let run = 0; run < 20; run++) {
+      const random = seededRandom(SEED + run);
+      const entries = await Promise.all(
+        [...randomForm(random)].map(async ([name, value]) =>
+          typeof value === "string"
+            ? [name, value]
+            : [
+                name,
+                {
+                  name: value.name,
+                  type: value.type,
+                  bytes: latin1(new Uint8Array(await value.arrayBuffer())),
+                },
+              ],
+        ),
+      );
+      runs.push({ entries, cuts: randomCuts(random, 2000) });
+    }
+    const first = seededRandom(SEED);
+
+    expect(Array.from({ length: 4 }, () => first())).toEqual([
+      0.6209077404346317, 0.5718873245641589, 0.29364756983704865, 0.6569558416958898,
+    ]);
+    expect(fnv1a(JSON.stringify(runs))).toBe("6fdec897");
+  });
 });

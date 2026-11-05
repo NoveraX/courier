@@ -27,7 +27,9 @@ export interface RequestExpiry {
  * its signal aborted as the cause, however fetch rejected it — expo/fetch
  * rejects one as a plain `FetchError`. A Courier error stays what it is: a
  * misconfiguration found as the request was sent, a deadline that ran out,
- * a newer call that superseded this one. The request's own timeout is a
+ * a newer call that superseded this one — and so does one fetch failed with
+ * as its cause, a request body refused on its way: a `BodyError` is the
+ * client's upload, not the network. The request's own timeout is a
  * `TimeoutError`, also where fetch only reports an abort, as React
  * Native's does; anything else fetch rejected with is a `NetworkError`.
  *
@@ -50,6 +52,7 @@ export function fetchFailure(
   /* Before Courier's own: a request it shared, or its upload, was cancelled for the timeout. */
   if (expiry.timedOut) return attemptTimeout(error, expiry.timeout);
   if (error instanceof CourierError) return error;
+  if (error instanceof Error && error.cause instanceof CourierError) return error.cause;
   if (error instanceof Error && error.name === TIMEOUT_ERROR) {
     return attemptTimeout(error, expiry.timeout);
   }

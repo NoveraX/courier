@@ -13,9 +13,12 @@ import {
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 
+import { BodyError } from "../src/adapter/body-error";
 import { createHandler } from "../src/adapter/create-handler";
 import type { HandlerConfig } from "../src/adapter/handler-config";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { NetworkError } from "../src/errors";
+import { defineMiddleware } from "../src/middleware/define";
 import { chunked, concat } from "./helpers/multipart-fixtures";
 
 const { endpoint } = courier();
@@ -58,11 +61,13 @@ afterEach(async () => {
 /**
  * Start an upstream that answers with `answer`, and the proxy in front of it.
  *
+ * @param upload - The endpoint the upload is sent to, with what it adds
  * @returns The proxy's POST entry point, and each request's arrival once the upstream is done with it
  */
 async function proxyTo(
   answer: (req: IncomingMessage, res: ServerResponse) => void,
   config: HandlerConfig = {},
+  upload = endpoint.post("upload"),
 ): Promise<{ handlePost: (request: Request) => Promise<Response>; arrivals: Promise<Arrival>[] }> {
   const arrivals: Promise<Arrival>[] = [];
   upstream = createServer((req, res) => {
@@ -85,7 +90,7 @@ async function proxyTo(
       files: defineGroup({
         prefix: "files",
         expose: true,
-        endpoints: { upload: endpoint.post("upload") },
+        endpoints: { upload },
       }),
     },
   });
@@ -260,6 +265,46 @@ describe("an upload sent on as it arrives", () => {
     expect(response.status).toBe(499);
     expect(arrival?.complete).toBe(false);
     expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("fails the endpoint's call with the body's refusal, not as a network failure", async () => {
+    const seen: unknown[] = [];
+    const watching = defineMiddleware("watching", "wrap", async (_ctx, next) => {
+      try {
+        return await next();
+      } catch (error) {
+        seen.push(error);
+        throw error;
+      }
+    });
+    const { handlePost } = await proxyTo(
+      readsAll,
+      { maxUploadBytes: 64 * 1024 },
+      endpoint.post("upload").use(watching),
+    );
+    const whole = concat(
+      field("_options", "{}"),
+      fileHead("file", "a.zip"),
+      "z".repeat(200_000),
+      "\r\n",
+      close,
+    );
+    /* Sent chunked, so the limit is broken partway, once the call is under way. */
+    const request = new Request("http://localhost/api/request?_s=api&_g=files&_m=upload", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": `multipart/form-data; boundary=${B}` },
+      body: chunked(whole, [0, 16_384, 32_768, 65_536, 131_072]).stream,
+      // @ts-expect-error -- required by the platform for a streaming body
+      duplex: "half",
+    });
+
+    const response = await handlePost(request);
+
+    expect(response.status).toBe(413);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(BodyError);
+    expect(seen[0]).toMatchObject({ code: "BODY_TOO_LARGE" });
+    expect(seen[0]).not.toBeInstanceOf(NetworkError);
   });
 
   it("is refused before the call runs when its options do not parse, its body taken off", async () => {

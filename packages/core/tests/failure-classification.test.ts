@@ -15,10 +15,12 @@ import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
+import { BodyError } from "../src/adapter/body-error";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { AbortError, type HTTPError, NetworkError, TimeoutError } from "../src/errors";
+import { fetchFailure } from "../src/http-client/transport-failure";
 import { defineMiddleware } from "../src/middleware";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
@@ -249,5 +251,15 @@ describe("a timeout through the proxy", () => {
 
     expect(error).toMatchObject({ status: 504 });
     expect((error as HTTPError).data).toMatchObject({ code: "UPSTREAM_TIMEOUT" });
+  });
+});
+
+describe("a Courier error fetch failed with, as a request body refused on its way", () => {
+  it("is that error itself, not a network failure", () => {
+    const refusal = new BodyError("BODY_TOO_LARGE", "Request body exceeds 10 bytes");
+
+    expect(fetchFailure(new TypeError("fetch failed", { cause: refusal }), undefined)).toBe(
+      refusal,
+    );
   });
 });

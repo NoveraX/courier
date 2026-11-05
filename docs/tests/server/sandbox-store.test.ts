@@ -171,3 +171,24 @@ describe("any run of visitors' calls", () => {
     expect(JSON.stringify([...SEED.users.values(), ...SEED.posts.values()])).toBe(first)
   })
 })
+
+describe("the work of a call", () => {
+  it("stays the same however many visitors' data the store keeps", () => {
+    const visitors = 20_000
+    const clock = { now: 0 }
+    const store = storeOn(clock, { visitors, idleMs: 60_000, lifetimeMs: 600_000 })
+    const ids = Array.from({ length: visitors }, () => store.change(undefined, () => 0).visitor)
+    const started = performance.now()
+    for (let call = 0; call < 100_000; call += 1) {
+      clock.now += 1
+      const visitor = ids[(call * 7919) % visitors]
+      if (call % 2 === 0) store.read(visitor)
+      else store.change(visitor, (data) => data.nextUserId)
+    }
+    const took = performance.now() - started
+    expect(store.size).toBe(visitors)
+    /* A store that went through every visitor's data on each call would take minutes here; one
+       whose work for a call is the same for any number of visitors takes milliseconds. */
+    expect(took).toBeLessThan(5_000)
+  })
+})

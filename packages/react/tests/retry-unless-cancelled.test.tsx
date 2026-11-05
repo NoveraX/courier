@@ -7,8 +7,10 @@
  * endpoint cancelled (`cancelPrevious`), or one whose own signal aborted.
  * TanStack Query takes both for failures and would send the read again,
  * which cancels the newer call in turn. Every other failure is retried as
- * the hook says, then as the client's defaults say, then as TanStack Query
- * does by itself — and a prefetch is still sent once unless asked.
+ * the hook says, then as the client's defaults say; where neither says,
+ * the hooks retry nothing of their own, so a call is repeated by its
+ * API's retry policy alone, never by two layers at once — and a prefetch
+ * is sent once unless asked.
  */
 
 import { createCaller } from "@noverax/courier";
@@ -39,6 +41,7 @@ function makeApi() {
         .response<{ q: string }>()
         .cancelPrevious(),
       failing: endpoint.get("failing").response<{ ok: boolean }>(),
+      retried: endpoint.get("failing").response<{ ok: boolean }>().retry({ limit: 2, delay: 1 }),
       slow: endpoint.get("slow").response<{ ok: boolean }>(),
     },
   });
@@ -118,13 +121,23 @@ describe("a query hook", () => {
     expect(sent("/users/failing")).toBe(2);
   });
 
-  it("retries as TanStack Query does where nothing says", async () => {
+  it("retries nothing of its own where nothing says", async () => {
     const q = createQueryCaller(makeApi());
 
     const { result } = renderHook(() => q.users.useQuery("failing"), { wrapper });
 
     await waitFor(() => expect(result.current.status).toBe("error"));
-    expect(sent("/users/failing")).toBe(4);
+    expect(result.current.failureCount).toBe(1);
+    expect(sent("/users/failing")).toBe(1);
+  });
+
+  it("leaves a failure to the endpoint's own retry policy, one layer and not two", async () => {
+    const q = createQueryCaller(makeApi());
+
+    const { result } = renderHook(() => q.users.useQuery("retried"), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(sent("/users/failing")).toBe(3);
   });
 });
 

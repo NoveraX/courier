@@ -30,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
-            retry: 1,
+            // No retry here: the API's retry policy repeats a call that failed
           },
         },
       })

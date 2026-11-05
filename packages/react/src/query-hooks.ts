@@ -14,7 +14,7 @@ import {
 } from "./hooks/use-computed-query";
 import type { SubscribeFn } from "./hooks/use-subscription";
 import { buildInfiniteQueryKey, buildQueryKey } from "./query-key";
-import { QUERY_RETRIES, retryUnlessCancelled } from "./retry-unless-cancelled";
+import { retryUnlessCancelled } from "./retry-unless-cancelled";
 import type { UntypedGroupHooks } from "./untyped-group-hooks";
 
 type PageParamFn = (
@@ -72,7 +72,6 @@ export function createQueryHooks(
           queryKey,
           queryOptions.retry,
           requestOptions?.signal,
-          QUERY_RETRIES,
         ),
       });
     },
@@ -90,7 +89,6 @@ export function createQueryHooks(
           queryKey,
           queryOptions.retry,
           requestOptions?.signal,
-          QUERY_RETRIES,
         ),
       });
     },
@@ -116,7 +114,6 @@ export function createQueryHooks(
           queryKey,
           infiniteOptions.retry,
           requestOptions?.signal,
-          QUERY_RETRIES,
         ),
       });
     },
@@ -128,14 +125,7 @@ export function createQueryHooks(
         queryKey,
         queryFn: ({ signal }) => call.fetch(method, variables, requestOptions, signal),
         ...(typeof staleTime === "number" && { staleTime }),
-        /* A prefetch, unlike a query, is sent once unless the client says otherwise. */
-        retry: retryUnlessCancelled(
-          queryClient,
-          queryKey,
-          undefined,
-          requestOptions?.signal,
-          false,
-        ),
+        retry: retryUnlessCancelled(queryClient, queryKey, undefined, requestOptions?.signal),
       });
     },
 

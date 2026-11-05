@@ -125,6 +125,13 @@ const main = defineCommand({
         host: args.host ?? block.host ?? DEFAULT_HOST,
         maxBodyBytes,
         maxUploadBytes,
+        /* Refused, if they could not work, by the handler, naming the option. */
+        uploadMode: block.uploadMode,
+        uploadMemoryBytes: block.uploadMemoryBytes,
+        uploadDirectory: block.uploadDirectory,
+        maxUploadParts: block.maxUploadParts,
+        bodyIdleTimeoutMs: block.bodyIdleTimeoutMs,
+        bodyTimeoutMs: block.bodyTimeoutMs,
         allowedOrigins,
         allowedHosts,
         rateLimit: block.rateLimit,

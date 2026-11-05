@@ -212,6 +212,22 @@ export interface CourierServerConfig {
    */
   maxUploadBytes?: number | undefined;
   /**
+   * How the server keeps an upload while its call runs: `"auto"` — the
+   * default — holds up to `uploadMemoryBytes` of its files in memory and
+   * writes the rest to `uploadDirectory`; `"memory"` never writes one to disk.
+   */
+  uploadMode?: "auto" | "memory" | undefined;
+  /** How many bytes of one upload's files stay in memory before the rest go to disk — default 1 MB. */
+  uploadMemoryBytes?: number | undefined;
+  /** Where each upload's own folder is made, removed once its call is done — `os.tmpdir()` unless set. */
+  uploadDirectory?: string | undefined;
+  /** The most fields and files one upload may hold — default 1000. */
+  maxUploadParts?: number | undefined;
+  /** The longest pause between two pieces of a request body, in milliseconds — default 30 seconds. */
+  bodyIdleTimeoutMs?: number | undefined;
+  /** The longest a request body may take to arrive, in milliseconds — default 5 minutes. */
+  bodyTimeoutMs?: number | undefined;
+  /**
    * How many calls one caller may make through the server: every call takes
    * from `requests` in each `window`, a write from `writes` as well, and a
    * call past either is answered 429. Left out, nobody is limited.

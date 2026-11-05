@@ -33,6 +33,12 @@ const SERVER = {
   allowedHosts: true,
   maxBodyBytes: true,
   maxUploadBytes: true,
+  uploadMode: true,
+  uploadMemoryBytes: true,
+  uploadDirectory: true,
+  maxUploadParts: true,
+  bodyIdleTimeoutMs: true,
+  bodyTimeoutMs: true,
   rateLimit: true,
   browsersOnly: true,
 } satisfies Record<keyof CourierServerConfig, true>;

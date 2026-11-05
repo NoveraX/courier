@@ -128,7 +128,7 @@ export default defineConfig({
 })
 ```
 
-The `server` block also sets the request body limits: `maxBodyBytes` for a JSON envelope (1 MB by default) and `maxUploadBytes` for an upload (10 MB by default). A value that is not a whole number of bytes above 0 stops the command with a message naming the key.
+The `server` block also sets the request body limits: `maxBodyBytes` for a JSON envelope (1 MB by default) and `maxUploadBytes` for an upload (10 MB by default). A value that is not a whole number of bytes above 0 stops the command with a message naming the key. The upload options below go in it too.
 
 The command exits with status 1 when the server cannot start — the port is taken, the config will not load — so a supervisor or a deploy script sees the failure. `--version` prints the installed version.
 
@@ -145,6 +145,12 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `allowedHosts` | `COURIER_ALLOWED_HOSTS` | Host names the server is reached by, a list or a function it calls as it starts. A request addressed to any other host gets 421, and a socket is closed with 4421, as a DNS-rebinding page's would be. `localhost`, `*.localhost` and IP addresses are always served; left out, and with no variable, production serves every name and development nothing else |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |
+| `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"` holds up to `uploadMemoryBytes` of its files in memory and writes the rest to `uploadDirectory`, removed once the call is done; `"memory"` never writes one to disk |
+| `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory |
+| `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made; point it at a disk where `/tmp` is a `tmpfs` |
+| `maxUploadParts` | 1000 | Most fields and files one upload may hold |
+| `bodyIdleTimeoutMs` | 30 seconds | Longest pause between two pieces of a request body; then 408 |
+| `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive; then 408 |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
 | `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |
 | `clientIp` | the socket's address | Names the address a WebSocket connection is counted against |

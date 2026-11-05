@@ -266,6 +266,25 @@ describe("courier-server", () => {
     expect(await upload.json()).toMatchObject({ message: "Request body exceeds 512 bytes" });
   }, 30_000);
 
+  it("applies the upload options the config's server block sets", async () => {
+    const root = project("{ maxUploadParts: 2 }");
+    const url = await serve(root);
+    const form = new FormData();
+    for (const name of ["a", "b", "c"]) form.append(name, "x");
+
+    const upload = await fetch(`${url}/api/request?_s=api&_m=ping`, { method: "POST", body: form });
+
+    expect(upload.status).toBe(413);
+    expect(await upload.json()).toMatchObject({ code: "UPLOAD_TOO_MANY_PARTS" });
+  }, 30_000);
+
+  it("names an upload option in the config that could not work", () => {
+    const result = run(project('{ uploadMode: "disk" }'));
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout + result.stderr).toContain("uploadMode");
+  });
+
   it("names a body limit in the config that is not a byte count", () => {
     const result = run(project('{ maxUploadBytes: "10mb" }'));
 

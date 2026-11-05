@@ -151,6 +151,30 @@ describe("courier-cli routes", () => {
     vi.unstubAllEnvs();
   });
 
+  it("reads a Next.js project whose API module imports server-only, as Next's server does", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    writeFileSync(join(dir, "package.json"), JSON.stringify({ dependencies: { next: "16.4.3" } }));
+    writeFileSync(
+      join(dir, "shop.ts"),
+      `import "server-only";
+import { courier, defineApi } from "@noverax/courier/define";
+const { endpoint } = courier();
+export const shop = defineApi({ baseURL: "https://api.example.com", endpoints: { list: endpoint.get("").expose() } });
+`,
+    );
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `import { shop } from "./shop";\nexport default { sources: { shop } };\n`,
+    );
+
+    await run();
+
+    expect(process.exitCode).toBe(0);
+    expect(readFileSync(join(dir, "courier.routes.ts"), "utf8")).toContain(
+      '"list": { type: "query" }',
+    );
+  });
+
   it("tells the project's code it reads definitions, so a check of the environment can be skipped", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     writeFileSync(

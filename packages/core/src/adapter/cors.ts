@@ -10,17 +10,38 @@
  */
 
 import { isOriginListed } from "./origin-policy";
-import { errorResponse } from "./parse";
 
 /** How long a browser may reuse a preflight's answer, in seconds. */
 const PREFLIGHT_MAX_AGE = "600";
 
 /**
- * Answer a CORS preflight.
+ * Whether a request is a CORS preflight: an OPTIONS request from a page,
+ * naming the method its call is to be sent with.
+ *
+ * @param request - The incoming request
+ * @returns `true` for a preflight
+ *
+ * @example
+ * ```ts
+ * if (isPreflight(request) && !answerPreflight(request, allowedOrigins)) refuse(request);
+ * ```
+ */
+export function isPreflight(request: Request): boolean {
+  return (
+    request.method === "OPTIONS" &&
+    !!request.headers.get("Origin") &&
+    request.headers.has("Access-Control-Request-Method")
+  );
+}
+
+/**
+ * Answer a CORS preflight from a listed origin. A preflight from any other
+ * is the caller's to refuse, as it refuses that page's calls.
  *
  * @param request - The incoming request
  * @param allowedOrigins - The configured origins
  * @returns The answer, or `undefined` when the request is not a preflight
+ * from an origin `allowedOrigins` lists
  *
  * @example
  * ```ts
@@ -33,9 +54,7 @@ export function answerPreflight(
   allowedOrigins?: readonly string[],
 ): Response | undefined {
   const origin = request.headers.get("Origin");
-  if (request.method !== "OPTIONS" || !origin) return undefined;
-  if (!request.headers.has("Access-Control-Request-Method")) return undefined;
-  if (!isOriginListed(origin, allowedOrigins)) return errorResponse(403, "Origin not allowed");
+  if (!origin || !isPreflight(request) || !isOriginListed(origin, allowedOrigins)) return undefined;
 
   /* A listed origin is trusted with the proxy, so it may send whatever the
      proxy's own allowlists then decide to carry upstream. */

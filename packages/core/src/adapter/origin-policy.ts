@@ -173,8 +173,18 @@ function matchesOrigin(origin: string, pattern: string): boolean {
 /**
  * An origin as a browser writes one — its scheme, its host and a port other
  * than the scheme's default, nothing more — or nothing for any other value.
+ * What it accepts is the URL parser's own writing, so it holds no space and
+ * no control character.
+ *
+ * @param value - An `Origin` header, or a value in its place
+ * @returns The origin, parsed, or `undefined` for a value no browser sends
+ * @example
+ * ```ts
+ * sentOrigin("https://shop.example.com"); // URL
+ * sentOrigin("https://shop.example.com/"); // undefined: a browser writes no path
+ * ```
  */
-function sentOrigin(value: string): URL | undefined {
+export function sentOrigin(value: string): URL | undefined {
   const url = parseOrigin(value);
   return url && `${url.protocol}//${url.host}` === value ? url : undefined;
 }

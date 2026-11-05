@@ -94,8 +94,10 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
 
   /* One limiter for every entry point, so a caller has one budget however an adapter mounts them. */
   const limiter = createProxyLimiter(config);
+  /* One log of refusals for them too: a page refused on each is one line an interval. */
+  const refusals = createRefusalLog("Proxy");
   const entry = (serve: (request: Request) => Promise<Response>) =>
-    gateEntry(limitEntry(serve, limiter, dt), config, dt);
+    gateEntry(limitEntry(serve, limiter, dt), config, dt, refusals);
 
   return {
     handle: entry(route),

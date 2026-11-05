@@ -20,7 +20,7 @@ import { parseWireOptionsJson } from "./wire-options";
  *
  * @example
  * ```ts
- * const handleGet = gateEntry(createGetHandler(execute, studioHooks), config, studioHooks);
+ * const handleGet = gateEntry(createGetHandler(execute, studioHooks), config, studioHooks, refusals);
  * ```
  */
 export function createGetHandler(

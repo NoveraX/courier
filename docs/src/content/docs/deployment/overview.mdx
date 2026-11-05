@@ -66,6 +66,12 @@ A refusal the application meant is not a failure either: a WebSocket connection 
 16:04:02 WARN  courier:ws  connection refused code=4401 reason="Error: invalid token" conn=2c0f… addr=9c1b2e4a
 ```
 
+A request the proxy turns away at its door is a `warn` line too: one addressed to a host `allowedHosts` does not name, one from a page on an origin `allowedOrigins` does not list — its preflight included — and, with `browsersOnly`, one no browser sent. The line names the setting, the status and the host or origin it refused, and nothing else of the request:
+
+```text
+16:04:05 WARN  courier:proxy  request refused by allowedOrigins code=403 origin=https://shop.example.com
+```
+
 Any client can provoke a refusal, so each kind — event and code — is printed once every 10 seconds, and how many more came is said once the 10 seconds are over (`connection refused code=4401: 37 more in the last 10s`). The error's stack goes on a line of its own at `debug`. What a hook's error says goes into the line, so keep tokens and other secrets out of the messages of the errors your hooks throw.
 
 ## Behind a Reverse Proxy

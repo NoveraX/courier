@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { gateEntry } from "../src/adapter/entry-gate";
 import { createPostHandler } from "../src/adapter/handle-post";
+import { createRefusalLog } from "../src/logger/refusal-log";
 import type { StudioHooks } from "../src/studio/hooks";
 
 /** The URL of a proxy call to `api.users.list`, as the client writes it. */
@@ -48,7 +49,12 @@ describe("createPostHandler", () => {
   /* Made in front of every entry point, where the handler gates them. */
   describe("origin check", () => {
     function gated(execute: ReturnType<typeof createMockExecute>, hooks: StudioHooks) {
-      return gateEntry(createPostHandler(execute, hooks), undefined, hooks);
+      return gateEntry(
+        createPostHandler(execute, hooks),
+        undefined,
+        hooks,
+        createRefusalLog("Proxy"),
+      );
     }
 
     it("serves a caller that sends no Origin, which no hostile page can be", async () => {

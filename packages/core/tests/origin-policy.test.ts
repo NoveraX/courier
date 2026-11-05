@@ -9,6 +9,7 @@ import { createGetHandler } from "../src/adapter/handle-get";
 import type { HandlerConfig } from "../src/adapter/handler-config";
 import { isOriginAccepted, isOriginAllowed } from "../src/adapter/origin-policy";
 import { courier, defineApi, defineGroup } from "../src/define";
+import { createRefusalLog } from "../src/logger/refusal-log";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import type { StudioHooks } from "../src/studio/hooks";
@@ -182,7 +183,12 @@ describe("the GET proxy applies the same rule", () => {
   /* The application's own name is listed, so the host rule in front lets every request through. */
   function gated(execute: ExecuteFn, dt: StudioHooks, config: HandlerConfig = {}) {
     const hosts = { allowedHosts: [new URL(APP).hostname] };
-    return gateEntry(createGetHandler(execute, dt), { ...hosts, ...config }, dt);
+    return gateEntry(
+      createGetHandler(execute, dt),
+      { ...hosts, ...config },
+      dt,
+      createRefusalLog("Proxy"),
+    );
   }
 
   it("refuses a page on another origin", async () => {

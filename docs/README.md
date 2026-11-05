@@ -242,10 +242,16 @@ A call past a budget is answered 429 `RATE_LIMITED`, with `Retry-After`;
 every answer tells what is left of the tightest budget it took from in
 `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`, which
 the proxy route passes on to the page. A page rendered on the server, and
-a Server Action, show the refusal where their data would be. The proxy
-route reads a call's body, only as large as the backend takes it, before
-the backend counts the call; the backend counts a call before it reads
-any of its body.
+a Server Action, show the refusal where their data would be.
+
+The backend counts a call before it reads any of its body. The proxy
+route reads a call's JSON, only as large as the backend takes it, before
+it passes the call on; of an upload it holds none
+(`uploadMode: "stream"` in `src/app/api/request/examples-proxy.ts`). Past
+its options, an upload goes on to the backend as it arrives: the backend
+counts it before its file comes, refusing one past a budget at once, and
+an upload still being sent holds only its pieces in flight, however large
+its file.
 
 ## Project structure
 

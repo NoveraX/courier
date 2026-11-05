@@ -86,9 +86,9 @@ export const DEMO_LIMITS: DemoLimits = {
 const FORM_PARTS_BYTES = 16 * 1024
 
 /**
- * The most an upload's whole body may be, as the site's proxy route reads
- * it before passing it on: the largest file, every field at its longest,
- * and the form's own parts around them.
+ * The most an upload's whole body may be, as the site's proxy route sends
+ * it on: the largest file, every field at its longest, and the form's own
+ * parts around them.
  *
  * @param limits - The backend's limits
  * @returns The bytes

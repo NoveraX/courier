@@ -4,8 +4,9 @@
  * backend. The route sends the backend each caller's address, which the
  * backend keeps their budgets by: the page is told what is left, and a
  * call past a budget is answered 429 with when to try again, without
- * holding back another caller. A body is read only as large as the
- * backend takes it.
+ * holding back another caller. A call's JSON is read only as large as
+ * the backend takes it; an upload is sent on as it arrives, and refused
+ * once it is larger than the example takes.
  */
 import { createHandler, registerSources } from "@noverax/courier"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -97,10 +98,23 @@ describe("a body", () => {
     expect(await response.json()).toMatchObject({ file: { size: DEMO_LIMITS.uploadBytes } })
   })
 
-  it("refuses an upload past what the example takes, before the backend reads it", async () => {
+  it("refuses an upload past what the example takes, the route itself once it outgrows the form", async () => {
     const form = new FormData()
     const past = DEMO_LIMITS.uploadBytes + DEMO_LIMITS.uploadFields * DEMO_LIMITS.uploadFieldBytes
     form.append("file", new File([new Uint8Array(past + 32 * 1024)], "large.bin"))
-    expect((await pageCall("198.51.100.6", "files.upload", form, "")).status).toBe(413)
+    const refused = await pageCall("198.51.100.6", "files.upload", form, "")
+    expect(refused.status).toBe(413)
+    expect(await refused.json()).toMatchObject({ code: "BODY_TOO_LARGE" })
+  })
+
+  it("refuses a file a byte larger than the example takes, as the backend counts it", async () => {
+    const form = new FormData()
+    form.append("file", new File([new Uint8Array(DEMO_LIMITS.uploadBytes + 1)], "large.bin"))
+    const refused = await pageCall("198.51.100.7", "files.upload", form, "")
+    expect(refused.status).toBe(413)
+    expect(await refused.json()).toMatchObject({
+      code: "BODY_TOO_LARGE",
+      message: "The file is larger than the 1 MiB the backend takes",
+    })
   })
 })

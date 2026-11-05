@@ -4,26 +4,9 @@ import {
   RESPONSE_HEADERS,
   STREAMED_RESPONSE_HEADERS,
 } from "./allowed-headers";
+import { sendableHeaders } from "./header-value";
 
 type HeadersInput = HeadersInit | Record<string, string | undefined>;
-
-const toHeaders = (input: HeadersInput): Headers => {
-  if (input instanceof Headers) {
-    return new Headers(input);
-  }
-
-  if (Array.isArray(input)) {
-    return new Headers(input);
-  }
-
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) {
-      headers.set(key, value);
-    }
-  }
-  return headers;
-};
 
 export const filterHeaders = (
   incomingHeaders?: HeadersInput,
@@ -34,7 +17,7 @@ export const filterHeaders = (
     ...ALLOWED_HEADERS,
     ...validHeaders.map((name) => name.toLowerCase()),
   ]);
-  const source = incomingHeaders ? toHeaders(incomingHeaders) : new Headers();
+  const source = sendableHeaders(incomingHeaders);
   const result = new Headers();
 
   source.forEach((value, key) => {
@@ -51,7 +34,7 @@ export const mergeHeaders = (
   requestHeaders?: HeadersInput,
   validHeaders?: string[],
 ): Headers => {
-  const merged = toHeaders(baseHeaders);
+  const merged = sendableHeaders(baseHeaders);
 
   if (!requestHeaders) return merged;
 
@@ -91,7 +74,7 @@ export const filterResponseHeaders = (
     ...(options?.streamed ? STREAMED_RESPONSE_HEADERS : []),
     ...named,
   ]);
-  const source = headers ? toHeaders(headers) : new Headers();
+  const source = sendableHeaders(headers);
   const result = new Headers();
 
   source.forEach((value, key) => {

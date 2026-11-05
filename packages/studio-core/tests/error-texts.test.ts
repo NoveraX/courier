@@ -53,7 +53,9 @@ describe("an error's text, as Studio is told it", () => {
 
     const failure = events.find((event) => event.type === "request:error");
     expect(failure).toMatchObject({ error: { message: (caught as Error).message } });
-    expect(String((caught as Error).message)).toContain("B34rer");
+    /* The caller is told which header, never its value: there is no credential to cut. */
+    expect(caught).toMatchObject({ code: "HEADER_VALUE_INVALID" });
+    expect(String((caught as Error).message)).not.toContain("B34rer");
   });
 
   it("is a fetch's failure as it was, cut to the length an event carries", () => {

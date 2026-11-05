@@ -8,6 +8,7 @@ import {
 } from "../studio/studio-request-id";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
+import { sendableHeaders } from "../utils/header-value";
 import { isRecord } from "../utils/is-record";
 import { asProxyFailure, readProxyAnswer } from "./proxy-answer";
 
@@ -85,7 +86,7 @@ function withUploadInstrumentation(options: Record<string, unknown>): Record<str
   const onUploadProgress = uploadProgressOf(options);
   if (!onUploadProgress || !studioHooks.onUploadProgress) return options;
 
-  const headers = headersOf(options.headers);
+  const headers = sendableHeaders(options.headers);
   const requestId = studioRequestIdOf(headers) ?? newStudioRequestId();
   headers.set(STUDIO_REQUEST_HEADER, requestId);
   const routing = options.searchParams;
@@ -103,16 +104,6 @@ function withUploadInstrumentation(options: Record<string, unknown>): Record<str
       method: named("_m"),
     }),
   };
-}
-
-function headersOf(value: unknown): Headers {
-  if (value instanceof Headers) return new Headers(value);
-  const headers = new Headers();
-  if (!isRecord(value)) return headers;
-  for (const [name, content] of Object.entries(value)) {
-    if (typeof content === "string") headers.set(name, content);
-  }
-  return headers;
 }
 
 function signalOf(options: Record<string, unknown>): AbortSignal | undefined {

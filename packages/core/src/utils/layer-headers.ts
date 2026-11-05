@@ -1,3 +1,5 @@
+import { sendableHeaders } from "./header-value";
+
 /**
  * Lay sets of headers over one another, a later set winning name by name.
  *
@@ -20,27 +22,9 @@
 export function layerHeaders(...layers: readonly unknown[]): Record<string, string> {
   const headers = new Headers();
   for (const layer of layers) {
-    headersOf(layer).forEach((value, name) => {
+    sendableHeaders(layer).forEach((value, name) => {
       headers.set(name, value);
     });
   }
   return Object.fromEntries(headers);
-}
-
-function headersOf(value: unknown): Headers {
-  if (value instanceof Headers) return value;
-  const headers = new Headers();
-  const entries = Array.isArray(value)
-    ? value
-    : typeof value === "object" && value !== null
-      ? Object.entries(value)
-      : [];
-  for (const entry of entries) {
-    if (!Array.isArray(entry)) continue;
-    const [name, headerValue] = entry;
-    if (typeof name === "string" && typeof headerValue === "string") {
-      headers.append(name, headerValue);
-    }
-  }
-  return headers;
 }

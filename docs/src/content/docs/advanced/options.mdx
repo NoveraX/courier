@@ -225,6 +225,8 @@ const api = defineApi({
 const report = await caller.reports.with({ timeout: 30_000 }).generate({ type: "annual" })
 ```
 
+A header value no request can carry — a control character other than a tab, a NUL and a line break inside it among them, or a character past U+00FF, which no header's bytes hold — is refused before anything is sent, wherever it was set: on the API, a caller, a `.with()`, a proxy client or the standalone fetch client. The `ConfigurationError` of code `HEADER_VALUE_INVALID` names the header and never repeats its value, as the platform's own refusal can, and a header's value is often a credential. A control character that `Headers` takes, such as a vertical tab, is refused too: the dispatcher that sends the request on Node refuses it, a failure no retry mends. Tabs, spaces and line breaks at either end, as a value read whole from a file keeps, are trimmed as `fetch` trims them, and nothing else is: a line break followed by a no-break space at the end is still inside the value.
+
 `.with()` can be called at several levels — the client, a group, an endpoint. The later call wins for each option it sets, and headers are merged name by name, whatever their case, so a token set on the client stays when a group adds a header of its own. Headers may be given as a record, a `Headers` or a list of pairs, and they reach a stream opened with `.with()` the same way they reach a request:
 
 ```ts

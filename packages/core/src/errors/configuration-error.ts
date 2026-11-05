@@ -300,9 +300,11 @@ export type ConfigurationErrorCode =
   | "RETRY_OPTIONS_INVALID"
   /**
    * A header value Courier was given to send — a call's, an API's, a
-   * token's — holds what no request can carry: a NUL or a line break inside
-   * it. The platform's own refusal repeats the value, often a credential,
-   * so this one names the header alone.
+   * token's — holds what no request can carry once its ends are trimmed as
+   * `fetch` trims them: a control character other than a tab, a line break
+   * inside it among them, or a character past U+00FF. The platform's own
+   * refusal can repeat the value, often a credential, and its dispatcher's
+   * is a network failure no retry mends, so this one names the header alone.
    */
   | "HEADER_VALUE_INVALID"
   /**

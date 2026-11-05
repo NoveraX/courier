@@ -1,3 +1,5 @@
+import { sendableHeaders } from "../utils/header-value";
+
 /**
  * Lay one set of request headers over another.
  *
@@ -16,19 +18,11 @@
  * ```
  */
 export function overlayHeaders(base?: HeadersInit, over?: HeadersInit): Headers {
-  const merged = headersFrom(base);
-  headersFrom(over).forEach((value, name) => {
+  const merged = sendableHeaders(base);
+  sendableHeaders(over).forEach((value, name) => {
     merged.set(name, value);
   });
   return merged;
-}
-
-/* A new `Headers` of any form a caller gives them: a record as its own entries, since Node's
-   conversion of a whole record drops a key `__proto__`. */
-function headersFrom(init: HeadersInit | undefined): Headers {
-  const whole = init === undefined || typeof init !== "object" || init instanceof Headers;
-  if (whole || Symbol.iterator in init) return new Headers(init);
-  return new Headers(Object.entries(init));
 }
 
 /**

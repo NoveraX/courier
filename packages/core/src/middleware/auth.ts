@@ -1,6 +1,6 @@
 import { HTTPError } from "../errors";
 import { MissingTokenError } from "../errors/missing-token-error";
-import { assertHeaderValue } from "../utils/header-value";
+import { sendableValue } from "../utils/header-value";
 import { isReplayableBody } from "../utils/replayable-body";
 import { type AuthOptions, assertAuthOptions } from "./auth-options";
 import { defineMiddleware } from "./define";
@@ -61,8 +61,10 @@ export function authMiddleware(options: AuthOptions): Middleware {
       return;
     }
     const value = scheme ? `${scheme} ${token}` : token;
-    assertHeaderValue(header, value, `The token ${from} gave for the ${header} header`);
-    ctx.headers.set(header, value);
+    ctx.headers.set(
+      header,
+      sendableValue(header, value, `The token ${from} gave for the ${header} header`),
+    );
   };
 
   // Wraps because it may send the request again (needs response access)

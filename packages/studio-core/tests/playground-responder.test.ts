@@ -185,7 +185,8 @@ async function startProxy(): Promise<{ url: string; proxied: string[] }> {
 }
 
 describe("a call from the Playground whose header the platform refuses", () => {
-  /* A header value read from a file or the environment with its line break: the error quotes it. */
+  /* A header value read from a file or the environment with its line break: the error names the
+     header and never its value. */
   async function registerLeaky(): Promise<void> {
     const { getSources } = await import("@noverax/courier");
     const api = Reflect.get(getSources() ?? {}, "api");
@@ -221,7 +222,9 @@ describe("a call from the Playground whose header the platform refuses", () => {
     });
     await until(() => framesOf("leaky-http").length > 0, "the failure");
 
-    expect(JSON.stringify(framesOf("leaky-http"))).toContain("B34rer");
+    const said = JSON.stringify(framesOf("leaky-http"));
+    expect(said).toContain('\\"authorization\\" header');
+    expect(said).not.toContain("B34rer");
   });
 
   it("ends a stream with the error as the app was told it", async () => {
@@ -240,7 +243,9 @@ describe("a call from the Playground whose header the platform refuses", () => {
       "the failure",
     );
 
-    expect(JSON.stringify(framesOf("leaky-sse"))).toContain("B34rer");
+    const said = JSON.stringify(framesOf("leaky-sse"));
+    expect(said).toContain('\\"authorization\\" header');
+    expect(said).not.toContain("B34rer");
   });
 });
 

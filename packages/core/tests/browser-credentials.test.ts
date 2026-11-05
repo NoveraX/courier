@@ -136,11 +136,14 @@ describe("a proxied call", () => {
       headers: { accept: "text/event-stream" },
       signal: controller.signal,
     });
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    /* The upstream ends each stream after its event and the relay opens it
+       again, as often as its wait allows: no attempt carries the credentials. */
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
     controller.abort();
     await response.body?.cancel().catch(() => undefined);
 
-    expect(seen[0]?.authorization).toBeUndefined();
+    const attempts = seen.map((headers) => headers.authorization);
+    expect(attempts).toEqual(attempts.map(() => undefined));
   });
 });
 

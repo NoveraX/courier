@@ -143,7 +143,8 @@ describe("a connection waiting out its backoff", () => {
   });
 
   it("waits its backoff out when told not to act on the page's signals", async () => {
-    const conn = open({ reconnectOnResume: false });
+    /* A wait it knows, 30 s: one drawn at random may end within the second the test waits. */
+    const conn = open({ reconnectOnResume: false, backoff: { jitter: false } });
     await failUntilTheLongestWait(conn);
     const before = sockets.length;
 

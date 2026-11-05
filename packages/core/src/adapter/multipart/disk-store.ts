@@ -4,6 +4,7 @@ import { GatheredFile } from "./gathered-file";
 import type { MultipartPart } from "./multipart-parts";
 import type { NodeDisk } from "./node-disk";
 import { Spool, type SpoolFile } from "./spool";
+import { UploadHold } from "./upload-hold";
 
 /** Where and how much of an upload is kept. */
 export interface DiskStoreOptions {
@@ -17,7 +18,12 @@ export interface DiskStoreOptions {
   slabBytes: number;
   /** How old a folder a gone process left must be for it to be removed; the body's timeout unless given */
   staleAfterMs?: number | undefined;
+  /** The upload's part of what every upload of the process keeps; nothing bounds it unless given */
+  hold?: UploadHold | undefined;
 }
+
+/* What a store given no hold keeps beside every other upload: as much as it takes. */
+const UNBOUNDED = { memoryBytes: Number.POSITIVE_INFINITY, diskBytes: Number.POSITIVE_INFINITY };
 
 /**
  * Keep an upload's files in memory up to `memoryBytes` for the whole of
@@ -29,10 +35,14 @@ export interface DiskStoreOptions {
  * piece is written before the next is read, so a slow disk slows the upload
  * rather than filling memory, and the call gets a `File` read from disk as
  * it is read. Where no folder can be made the upload stays in memory, as it
- * would without a disk.
+ * would without a disk. Each piece is taken from the room every upload of
+ * the process shares, given the upload's hold: a file goes to disk once that
+ * room in memory is taken too, and an upload with room left neither there
+ * nor on disk is refused.
  *
- * @param options - The file system, the folder, and the share kept in memory
- * @returns The store; its `release` removes the upload's folder
+ * @param options - The file system, the folder, the share kept in memory, and the upload's hold
+ * @returns The store; its `release` removes the upload's folder and gives its room back
+ * @throws BodyError `UPLOAD_CAPACITY_REACHED`, from `file`, when there is no room left
  *
  * @example
  * ```ts
@@ -46,17 +56,30 @@ export function diskStore(options: DiskStoreOptions): FileStore {
     options.directory,
     options.staleAfterMs ?? LIMITS.BODY_TIMEOUT_MS,
   );
+  const hold = options.hold ?? new UploadHold(UNBOUNDED);
   let inMemory = 0;
   let toDisk = true;
 
-  /* The file the upload's share runs out in, written to disk from its start; undefined without one. */
+  /* Whether a piece stays in memory: within the upload's share, and the room every upload shares. */
+  const staysInMemory = (gathered: GatheredFile, bytes: number): boolean =>
+    inMemory + gathered.size + bytes <= options.memoryBytes && hold.tryMemory(bytes);
+
+  /* The file the room in memory runs out in, written to disk from its start; undefined without one. */
   const spill = async (gathered: GatheredFile): Promise<SpoolFile | undefined> => {
     const file = await spool.create();
     if (file === undefined) {
       toDisk = false;
       return undefined;
     }
-    for (const blob of gathered.blobs()) await file.write(new Uint8Array(await blob.arrayBuffer()));
+    try {
+      hold.disk(gathered.size);
+      for (const blob of gathered.blobs())
+        await file.write(new Uint8Array(await blob.arrayBuffer()));
+    } catch (error) {
+      await file.abandon();
+      throw error;
+    }
+    hold.freeMemory(gathered.size);
     return file;
   };
 
@@ -66,17 +89,17 @@ export function diskStore(options: DiskStoreOptions): FileStore {
       let onDisk: SpoolFile | undefined;
       try {
         for await (const piece of part.body) {
+          const bytes = piece.byteLength;
+          if (onDisk === undefined && toDisk && !staysInMemory(gathered, bytes)) {
+            onDisk = await spill(gathered);
+          }
           if (onDisk !== undefined) {
+            hold.disk(bytes);
             await onDisk.write(piece);
             continue;
           }
-          if (toDisk && inMemory + gathered.size + piece.byteLength > options.memoryBytes) {
-            onDisk = await spill(gathered);
-            if (onDisk !== undefined) {
-              await onDisk.write(piece);
-              continue;
-            }
-          }
+          /* No disk to go to: memory, where there is room, or the upload is refused. */
+          if (!toDisk) hold.memory(bytes);
           gathered.add(piece);
         }
       } catch (error) {
@@ -87,6 +110,9 @@ export function diskStore(options: DiskStoreOptions): FileStore {
       inMemory += gathered.size;
       return gathered.file(part.filename ?? "", part.type);
     },
-    release: () => spool.remove(),
+    release: async () => {
+      await spool.remove();
+      hold.release();
+    },
   };
 }

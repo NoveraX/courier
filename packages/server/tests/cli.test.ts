@@ -278,6 +278,19 @@ describe("courier-server", () => {
     expect(await upload.json()).toMatchObject({ code: "UPLOAD_TOO_MANY_PARTS" });
   }, 30_000);
 
+  it("applies the room every upload shares that the config's server block sets", async () => {
+    const root = project('{ uploadMode: "memory", totalUploadMemoryBytes: 0 }');
+    const url = await serve(root);
+    const form = new FormData();
+    form.append("a", "x");
+
+    const upload = await fetch(`${url}/api/request?_s=api&_m=ping`, { method: "POST", body: form });
+
+    expect(upload.status).toBe(503);
+    expect(upload.headers.get("retry-after")).toBe("5");
+    expect(await upload.json()).toMatchObject({ code: "UPLOAD_CAPACITY_REACHED" });
+  }, 30_000);
+
   it("names an upload option in the config that could not work", () => {
     const result = run(project('{ uploadMode: "disk" }'));
 

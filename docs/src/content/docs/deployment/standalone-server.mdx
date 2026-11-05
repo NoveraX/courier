@@ -104,6 +104,8 @@ const server = await createCourierServer({
   maxBodyBytes: 1_048_576,           // JSON envelope (default: 1 MB)
   maxUploadBytes: 67_108_864,        // multipart upload (default: 10 MB)
   uploadMemoryBytes: 1_048_576,      // an upload's files kept in memory, the rest on disk (default: 1 MB)
+  totalUploadMemoryBytes: 67_108_864, // every upload's together in memory at once (default: 64 MB)
+  totalUploadDiskBytes: 1_073_741_824, // every upload's together on disk at once (default: 1 GB)
   uploadDirectory: "/var/courier/uploads", // where they go on disk (default: os.tmpdir())
 
   // SSE

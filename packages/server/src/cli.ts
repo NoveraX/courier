@@ -128,6 +128,8 @@ const main = defineCommand({
         /* Refused, if they could not work, by the handler, naming the option. */
         uploadMode: block.uploadMode,
         uploadMemoryBytes: block.uploadMemoryBytes,
+        totalUploadMemoryBytes: block.totalUploadMemoryBytes,
+        totalUploadDiskBytes: block.totalUploadDiskBytes,
         uploadDirectory: block.uploadDirectory,
         maxUploadParts: block.maxUploadParts,
         bodyIdleTimeoutMs: block.bodyIdleTimeoutMs,

@@ -99,6 +99,22 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    */
   uploadMemoryBytes?: number | undefined;
   /**
+   * How many bytes every upload the process keeps holds in memory at once:
+   * the shares of their files `"auto"` keeps there, and their text fields.
+   * Defaults to 64 MB. Past it, `"auto"` writes a file to disk from its
+   * first byte; an upload that must stay in memory — under `"memory"`, on a
+   * runtime without a disk, its text fields — is refused with `503` and
+   * `Retry-After`. It holds a crowd of clients uploading slowly at once to
+   * what the process can spare; one upload is held to `maxUploadBytes`.
+   */
+  totalUploadMemoryBytes?: number | undefined;
+  /**
+   * How many bytes every upload the process keeps holds on disk at once.
+   * Defaults to 1 GB; past it, an upload is refused with `503` and
+   * `Retry-After`.
+   */
+  totalUploadDiskBytes?: number | undefined;
+  /**
    * The folder `"auto"` makes each upload's own folder in, readable by this
    * process's user alone and removed once the call is done. Defaults to
    * `os.tmpdir()`, which `TMPDIR` sets; where that is a memory-backed

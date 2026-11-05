@@ -154,9 +154,11 @@ On an edge runtime, which has no disk, the proxy keeps the upload in memory, up 
 | --- | --- | --- |
 | `uploadMode` | `"auto"` | `"auto"`: memory up to `uploadMemoryBytes`, then disk where there is one; `"memory"`: never disk; `"stream"`: nothing kept, [sent on as it arrives](#sending-an-upload-on-as-it-arrives) |
 | `uploadMemoryBytes` | 1 MB | how much of one upload's files stays in memory; `0` writes every file to disk |
+| `totalUploadMemoryBytes` | 64 MB | how much every upload together keeps in memory at once, files and text fields |
+| `totalUploadDiskBytes` | 1 GB | how much every upload together keeps on disk at once |
 | `uploadDirectory` | `os.tmpdir()` | where each upload's folder is made |
 
-Where `/tmp` is a `tmpfs`, as on many Linux systems and containers, it is memory: point `uploadDirectory` at a disk. A disk with no room left refuses the upload with `507` and the code `UPLOAD_STORAGE_FULL`. Where the folder cannot be made at all — a read-only file system, no such folder — the proxy says so once in its log and keeps uploads in memory, as `uploadMode: "memory"` would.
+Every upload the process keeps shares 64 MB in memory (`totalUploadMemoryBytes`) and 1 GB on disk (`totalUploadDiskBytes`): one upload is held to `maxUploadBytes`, and these hold a crowd of clients uploading at once. Past the room in memory a file goes to disk from its first byte; an upload left no room at all — on disk, or in memory where it must stay there: under `"memory"`, on an edge runtime, its text fields — is refused with `503`, `Retry-After: 5` and the code `UPLOAD_CAPACITY_REACHED`, and the log says so once every ten seconds. Where `/tmp` is a `tmpfs`, as on many Linux systems and containers, it is memory: point `uploadDirectory` at a disk. A disk with no room left refuses the upload with `507` and the code `UPLOAD_STORAGE_FULL`. Where the folder cannot be made at all — a read-only file system, no such folder — the proxy says so once in its log and keeps uploads in memory, as `uploadMode: "memory"` would.
 
 ### Sending an upload on as it arrives
 

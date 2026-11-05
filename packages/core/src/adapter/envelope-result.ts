@@ -1,8 +1,16 @@
 import { createLogger } from "../logger";
+import { createRefusalLog } from "../logger/refusal-log";
 import type { BodyError } from "./body-error";
+import { UPLOAD_ROOM } from "./multipart/upload-hold";
 import type { Envelope } from "./parse-envelope";
 
 const log = createLogger("Proxy");
+/* A crowd of clients meets this refusal at once: one line an interval says so, the rest counted. */
+const atCapacity = createRefusalLog("Proxy");
+const CAPACITY = {
+  event: "upload refused, no room left for it",
+  code: "UPLOAD_CAPACITY_REACHED",
+} as const;
 
 /** The status, message and code a proxy POST's body is refused with. */
 export interface EnvelopeRefusal {
@@ -10,6 +18,8 @@ export interface EnvelopeRefusal {
   status: number;
   message: string;
   code?: string | undefined;
+  /** Seconds the client is told to wait before it tries again, for a refusal that passes */
+  retryAfter?: number | undefined;
 }
 
 /**
@@ -42,6 +52,15 @@ export type EnvelopeResult =
 export function refusedBody(error: BodyError): EnvelopeRefusal {
   if (error.code === "BODY_UNREADABLE") log.warn(error.message, error.cause);
   else if (error.code === "BODY_INCOMPLETE") log.warn(`${error.code}: ${error.message}`);
+  else if (error.code === "UPLOAD_CAPACITY_REACHED") atCapacity.warn(CAPACITY);
   else log.debug(`${error.code}: ${error.message}`);
-  return { ok: false, status: error.status, message: error.message, code: error.code };
+  const refusal = {
+    ok: false,
+    status: error.status,
+    message: error.message,
+    code: error.code,
+  } as const;
+  return error.code === "UPLOAD_CAPACITY_REACHED"
+    ? { ...refusal, retryAfter: UPLOAD_ROOM.RETRY_AFTER_S }
+    : refusal;
 }

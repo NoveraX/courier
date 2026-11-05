@@ -133,6 +133,8 @@ Studio can have a delivery sent to your app — **Deliver again** in a delivery'
 | A JSON body to the proxy | 1 MB | `maxBodyBytes` |
 | An upload to the proxy | 10 MB | `maxUploadBytes` |
 | Fields and files in one upload | 1000 | `maxUploadParts` |
+| What every upload keeps in memory at once — past it a file goes to disk, or the upload is refused with `503` | 64 MB | `totalUploadMemoryBytes` |
+| What every upload keeps on disk at once — past it an upload is refused with `503` | 1 GB | `totalUploadDiskBytes` |
 | An upload's text fields, together | 1 MB | `maxBodyBytes` |
 | A pause between two pieces of a request body | 30 seconds, then `408` | `bodyIdleTimeoutMs` |
 | A request body's whole arrival | 5 minutes, then `408` | `bodyTimeoutMs` |

@@ -13,6 +13,8 @@ describe("createHandler's options for request bodies", () => {
       createHandler({
         uploadMode: "memory",
         uploadMemoryBytes: 0,
+        totalUploadMemoryBytes: 0,
+        totalUploadDiskBytes: 1,
         uploadDirectory: "/var/uploads",
         maxUploadParts: 1,
         bodyIdleTimeoutMs: 1,
@@ -29,6 +31,8 @@ describe("createHandler's options for request bodies", () => {
     ],
     ["a share of memory below 0", { uploadMemoryBytes: -1 }, "uploadMemoryBytes"],
     ["a share of memory that is not whole", { uploadMemoryBytes: 1.5 }, "uploadMemoryBytes"],
+    ["room in memory below 0", { totalUploadMemoryBytes: -1 }, "totalUploadMemoryBytes"],
+    ["room on disk that is not whole", { totalUploadDiskBytes: 0.5 }, "totalUploadDiskBytes"],
     ["an empty upload folder", { uploadDirectory: "" }, "uploadDirectory names a folder"],
     ["no parts at all", { maxUploadParts: 0 }, "maxUploadParts"],
     ["a pause of no time", { bodyIdleTimeoutMs: 0 }, "bodyIdleTimeoutMs"],

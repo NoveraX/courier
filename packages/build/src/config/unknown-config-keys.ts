@@ -35,6 +35,8 @@ const SERVER = {
   maxUploadBytes: true,
   uploadMode: true,
   uploadMemoryBytes: true,
+  totalUploadMemoryBytes: true,
+  totalUploadDiskBytes: true,
   uploadDirectory: true,
   maxUploadParts: true,
   bodyIdleTimeoutMs: true,

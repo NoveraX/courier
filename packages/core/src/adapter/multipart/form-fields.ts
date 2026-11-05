@@ -1,5 +1,6 @@
 import { BodyError } from "../body-error";
 import type { MultipartPart } from "./multipart-parts";
+import type { UploadHold } from "./upload-hold";
 
 /** The field the proxy client writes before the caller's, holding the call's options. */
 const OPTIONS_FIELD = "_options";
@@ -38,11 +39,16 @@ export function isOptionsPart(part: MultipartPart): boolean {
  */
 export class TextFields {
   readonly #limit: number;
+  readonly #hold: UploadHold | undefined;
   #bytes = 0;
 
-  /** @param limit - The most bytes the upload's text fields may take together */
-  constructor(limit: number) {
+  /**
+   * @param limit - The most bytes the upload's text fields may take together
+   * @param hold - The upload's part of what every upload keeps, which its text is taken from
+   */
+  constructor(limit: number, hold?: UploadHold) {
     this.#limit = limit;
+    this.#hold = hold;
   }
 
   /**
@@ -65,6 +71,7 @@ export class TextFields {
           `An upload's text fields exceed ${this.#limit} bytes`,
         );
       }
+      this.#hold?.memory(piece.byteLength);
       text += decoder.decode(piece, { stream: true });
     }
     return text + decoder.decode();

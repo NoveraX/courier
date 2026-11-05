@@ -44,6 +44,8 @@ describe("unknownConfigKeys", () => {
         maxUploadBytes: 1,
         uploadMode: "auto",
         uploadMemoryBytes: 0,
+        totalUploadMemoryBytes: 67_108_864,
+        totalUploadDiskBytes: 1_073_741_824,
         uploadDirectory: "/var/uploads",
         maxUploadParts: 1,
         bodyIdleTimeoutMs: 1,

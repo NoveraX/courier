@@ -11,6 +11,7 @@ import { memoryStore } from "./multipart/memory-store";
 import { nodeDisk } from "./multipart/node-disk";
 import { type FormLimits, readForm } from "./multipart/read-form";
 import { streamedForm } from "./multipart/streamed-form";
+import { UPLOAD_ROOM, UploadHold } from "./multipart/upload-hold";
 import { requestBodyStream } from "./read-body";
 import { parseWireOptionsJson } from "./wire-options";
 
@@ -34,7 +35,9 @@ interface HeldUpload {
  * it does, its files let go and the rest of it taken off the connection
  * unread; one that does so as it is sent on fails the call with its refusal.
  * The upload as a whole is held to `maxUploadBytes`, its text fields
- * together to `maxBodyBytes`, the limit a JSON call is held to.
+ * together to `maxBodyBytes`, the limit a JSON call is held to; kept, it is
+ * held besides to the room every upload of the process shares in memory and
+ * on disk, and refused with 503 where it finds none left.
  *
  * @param request - The proxy request
  * @param contentType - Its `Content-Type`, which names the boundary
@@ -76,7 +79,7 @@ export async function readUpload(
     upload =
       config?.uploadMode === "stream"
         ? await sentOn(body, boundary, limits)
-        : await kept(body, boundary, limits, storeFor(config));
+        : await kept(body, boundary, limits, config);
   } catch (error) {
     if (error instanceof BodyError) return refusedBody(error);
     throw error;
@@ -94,15 +97,20 @@ export async function readUpload(
   };
 }
 
-/* Every file kept by `store`, for the call to read as often as it needs. */
+/* Every file kept, for the call to read as often as it needs, out of the room every upload shares. */
 async function kept(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
-  store: FileStore,
+  config: HandlerConfig | undefined,
 ): Promise<HeldUpload> {
+  const hold = new UploadHold({
+    memoryBytes: config?.totalUploadMemoryBytes ?? UPLOAD_ROOM.MEMORY_BYTES,
+    diskBytes: config?.totalUploadDiskBytes ?? UPLOAD_ROOM.DISK_BYTES,
+  });
+  const store = storeFor(config, hold);
   try {
-    const { options, form } = await readForm(body, boundary, limits, store);
+    const { options, form } = await readForm(body, boundary, limits, store, hold);
     return { options, variables: form, release: () => store.release() };
   } catch (error) {
     await store.release();
@@ -130,10 +138,11 @@ async function sentOn(
 }
 
 /* On disk past its share of memory where the runtime has a disk and the handler allows it. */
-function storeFor(config: HandlerConfig | undefined): FileStore {
+function storeFor(config: HandlerConfig | undefined, hold: UploadHold): FileStore {
   const disk = config?.uploadMode === "memory" ? undefined : nodeDisk();
-  if (disk === undefined) return memoryStore(LIMITS.UPLOAD_SLAB_BYTES);
+  if (disk === undefined) return memoryStore(LIMITS.UPLOAD_SLAB_BYTES, hold);
   return diskStore({
+    hold,
     disk,
     directory: config?.uploadDirectory ?? disk.os.tmpdir(),
     memoryBytes: config?.uploadMemoryBytes ?? LIMITS.UPLOAD_MEMORY_BYTES,

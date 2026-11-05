@@ -75,6 +75,8 @@ What the [standalone server](/docs/deployment/standalone-server) reads when its 
 | `maxUploadBytes` | 10 MB | The largest `multipart/form-data` upload the proxy reads |
 | `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"`, memory up to `uploadMemoryBytes` and disk past it; `"memory"`, never disk; `"stream"`, nowhere — [sent on as it arrives](/docs/advanced/upload#sending-an-upload-on-as-it-arrives) — see [where the proxy keeps an upload](/docs/advanced/upload#where-the-proxy-keeps-an-upload) |
 | `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory |
+| `totalUploadMemoryBytes` | 64 MB | How much every upload together keeps in memory at once |
+| `totalUploadDiskBytes` | 1 GB | How much every upload together keeps on disk at once |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made, removed once its call is done |
 | `maxUploadParts` | 1000 | The most fields and files one upload may hold |
 | `bodyIdleTimeoutMs` | 30 seconds | The longest pause between two pieces of a request body, then `408` |

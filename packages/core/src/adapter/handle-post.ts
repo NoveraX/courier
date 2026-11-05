@@ -43,7 +43,7 @@ export function createPostHandler(
     const read = await readEnvelope(request, config);
     if (!read.ok) {
       call.refused(read.status, read.message);
-      return errorResponse(read.status, read.message, read.code);
+      return errorResponse(read.status, read.message, read.code, read.retryAfter);
     }
     call.parsed(read.envelope.variables);
 

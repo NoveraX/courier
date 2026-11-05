@@ -27,12 +27,19 @@ export function assertBodyOptions(config: HandlerConfig | undefined, where: stri
 }
 
 function bodyOptionsProblem(config: HandlerConfig): string | undefined {
-  const { uploadMode, uploadMemoryBytes, uploadDirectory, maxUploadParts } = config;
+  const { uploadMode, uploadDirectory, maxUploadParts } = config;
   if (uploadMode !== undefined && !UPLOAD_MODES.has(uploadMode)) {
     return `uploadMode is "auto", "memory" or "stream"; got ${String(uploadMode)}`;
   }
-  if (uploadMemoryBytes !== undefined && !wholeNumber(uploadMemoryBytes, 0)) {
-    return `uploadMemoryBytes is a whole number of bytes, 0 or more; got ${String(uploadMemoryBytes)}`;
+  for (const key of [
+    "uploadMemoryBytes",
+    "totalUploadMemoryBytes",
+    "totalUploadDiskBytes",
+  ] as const) {
+    const bytes = config[key];
+    if (bytes !== undefined && !wholeNumber(bytes, 0)) {
+      return `${key} is a whole number of bytes, 0 or more; got ${String(bytes)}`;
+    }
   }
   if (
     uploadDirectory !== undefined &&

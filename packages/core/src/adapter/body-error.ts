@@ -12,10 +12,11 @@ export type BodyErrorCode =
   | "UPLOAD_TOO_MANY_PARTS"
   | "UPLOAD_PART_HEADERS_TOO_LARGE"
   | "UPLOAD_FIELDS_TOO_LARGE"
-  | "UPLOAD_STORAGE_FULL";
+  | "UPLOAD_STORAGE_FULL"
+  | "UPLOAD_CAPACITY_REACHED";
 
 /** The statuses a refused request body is answered with. */
-export type BodyErrorStatus = 400 | 408 | 413 | 415 | 507;
+export type BodyErrorStatus = 400 | 408 | 413 | 415 | 503 | 507;
 
 /* An incomplete body is answered 413, as a body over the limit is: what cut
    it short was, in every case seen, a framework's own limit on its size. */
@@ -31,6 +32,7 @@ const STATUS: Readonly<Record<BodyErrorCode, BodyErrorStatus>> = {
   UPLOAD_PART_HEADERS_TOO_LARGE: 413,
   UPLOAD_FIELDS_TOO_LARGE: 413,
   UPLOAD_STORAGE_FULL: 507,
+  UPLOAD_CAPACITY_REACHED: 503,
 };
 
 /**

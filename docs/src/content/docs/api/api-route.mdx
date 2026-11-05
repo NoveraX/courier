@@ -36,6 +36,8 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload the handler reads; a larger one is refused with 413 |
 | `uploadMode` | `"auto"` | Where an upload is kept while the call runs: memory up to `uploadMemoryBytes`, then disk where there is one; `"memory"` never writes one to disk; `"stream"` keeps none of it and [sends it on as it arrives](/docs/advanced/upload#sending-an-upload-on-as-it-arrives) — see [where the proxy keeps an upload](/docs/advanced/upload#where-the-proxy-keeps-an-upload) |
 | `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory before the rest goes to disk |
+| `totalUploadMemoryBytes` | 64 MB | How much every upload together keeps in memory at once, files and text fields: past it a file goes to disk, or an upload that must stay in memory is refused |
+| `totalUploadDiskBytes` | 1 GB | How much every upload together keeps on disk at once: past it an upload is refused |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made, removed once its call is done |
 | `maxUploadParts` | 1000 | Most fields and files one upload may hold |
 | `bodyIdleTimeoutMs` | 30 seconds | Longest pause between two pieces of a request body |
@@ -63,6 +65,7 @@ The handler reads a body as it arrives and refuses it, with the status and `code
 | An upload with a part whose headers take more than 8 KB | `413` | `UPLOAD_PART_HEADERS_TOO_LARGE` |
 | An upload that does not parse as `multipart/form-data` — see [what the proxy takes](/docs/advanced/upload#what-the-proxy-takes) | `400` | `BODY_MALFORMED` |
 | An upload the disk has no room left for | `507` | `UPLOAD_STORAGE_FULL` |
+| An upload left no room by the others the process keeps, with `Retry-After: 5` | `503` | `UPLOAD_CAPACITY_REACHED` |
 
 A JSON envelope must be UTF-8; one that is not is answered `400`.
 

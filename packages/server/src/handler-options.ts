@@ -81,6 +81,8 @@ export function httpHandlerOptions(
     maxUploadBytes: config.maxUploadBytes,
     uploadMode: config.uploadMode,
     uploadMemoryBytes: config.uploadMemoryBytes,
+    totalUploadMemoryBytes: config.totalUploadMemoryBytes,
+    totalUploadDiskBytes: config.totalUploadDiskBytes,
     uploadDirectory: config.uploadDirectory,
     maxUploadParts: config.maxUploadParts,
     bodyIdleTimeoutMs: config.bodyIdleTimeoutMs,

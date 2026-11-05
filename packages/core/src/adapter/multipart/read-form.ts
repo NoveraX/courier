@@ -4,6 +4,7 @@ import type { FileStore } from "./file-store";
 import { isOptionsPart, TextFields } from "./form-fields";
 import { memoryStore } from "./memory-store";
 import { type MultipartLimits, type MultipartPart, multipartParts } from "./multipart-parts";
+import type { UploadHold } from "./upload-hold";
 
 /** What an upload is held to beyond its size. */
 export interface FormLimits extends MultipartLimits {
@@ -32,6 +33,7 @@ export interface ReadForm {
  * @param boundary - Its boundary
  * @param limits - The most parts, header bytes and text it may hold
  * @param store - Where its files are kept
+ * @param hold - The upload's part of what every upload keeps, its text fields taken from it
  * @returns The options and the form
  * @throws BodyError for a body that does not parse, one past a limit, or
  *   one whose read failed; `BODY_MALFORMED` for options sent as a file
@@ -46,9 +48,10 @@ export async function readForm(
   boundary: string,
   limits: FormLimits,
   store: FileStore,
+  hold?: UploadHold,
 ): Promise<ReadForm> {
   const form = new FormData();
-  const fields = new TextFields(limits.maxFieldBytes);
+  const fields = new TextFields(limits.maxFieldBytes, hold);
   let options: string | undefined;
   let first = true;
   for await (const part of multipartParts(body, boundary, limits)) {

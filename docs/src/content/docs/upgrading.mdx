@@ -128,6 +128,7 @@ The proxy reads a request body as it arrives, holds it to the limits `createHand
 | A form parsed by the platform's `formData()`, a bare line feed, a header named twice or a part in base64 taken | `400` `BODY_MALFORMED` |
 | A JSON body that is not UTF-8, its bytes replaced | `400` `BODY_MALFORMED` |
 | An upload kept in memory under Node | its files past `uploadMemoryBytes`, 1 MB, written to `uploadDirectory`, and a disk with no room answered `507` `UPLOAD_STORAGE_FULL`; `uploadMode: "memory"` keeps them in memory |
+| Any number of uploads kept at once | they share one room, 64 MB in memory (`totalUploadMemoryBytes`) and 1 GB on disk (`totalUploadDiskBytes`); past it an upload is answered `503` with `Retry-After` and `UPLOAD_CAPACITY_REACHED` |
 | A redirect from the upstream followed by an upload or a stream body under Node 22 and 24 | the call fails as a network error: they are sent with `redirect: "error"`, so fetch keeps no copy of them; a `redirect` the caller sets is kept |
 | The mock reading a body by itself | the server's own stream and parser, to the same limits |
 

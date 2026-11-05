@@ -221,6 +221,10 @@ export interface CourierServerConfig {
   uploadMode?: "auto" | "memory" | "stream" | undefined;
   /** How many bytes of one upload's files stay in memory before the rest go to disk — default 1 MB. */
   uploadMemoryBytes?: number | undefined;
+  /** How many bytes every upload holds in memory at once — default 64 MB; past it a file goes to disk, or the upload is refused with 503. */
+  totalUploadMemoryBytes?: number | undefined;
+  /** How many bytes every upload holds on disk at once — default 1 GB; past it an upload is refused with 503. */
+  totalUploadDiskBytes?: number | undefined;
   /** Where each upload's own folder is made, removed once its call is done — `os.tmpdir()` unless set. */
   uploadDirectory?: string | undefined;
   /** The most fields and files one upload may hold — default 1000. */

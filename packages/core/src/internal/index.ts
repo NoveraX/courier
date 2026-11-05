@@ -77,6 +77,7 @@ export { describeFailure, type StreamFailure } from "../realtime/describe-failur
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 export type { Heartbeat, HeartbeatConfig } from "../realtime/ws/heartbeat";
 export { createHeartbeat } from "../realtime/ws/heartbeat";
+export { WS_CODE } from "../realtime/ws/ws-codes";
 export type { WSMessage } from "../realtime/ws/ws-protocol";
 export { decodeMessage, encodeMessage, PROTOCOL_VERSION } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";

@@ -21,6 +21,8 @@ export class ConnectionError extends RealtimeError {
     message: string,
     readonly statusCode?: number,
   ) {
+    /* 1006: the socket closed with no close frame (RFC 6455). A number here,
+       as a page's first chunk carries this module and not the protocol's table. */
     super(statusCode ?? 1006, message);
     this.name = "ConnectionError";
   }

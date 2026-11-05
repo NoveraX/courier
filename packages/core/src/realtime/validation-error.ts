@@ -23,6 +23,8 @@ export class RealtimeValidationError extends RealtimeError {
     message = "Validation failed",
     readonly issues: readonly unknown[] = [],
   ) {
+    /* WS_CODE.VALIDATION_FAILED, written as its number: a page's first chunk
+       carries this module, and the protocol's table stays out of it. */
     super(4422, message);
     this.name = "RealtimeValidationError";
   }

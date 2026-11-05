@@ -16,6 +16,7 @@ import { createMessageQueue } from "./message-queue";
 import { platformSocketFactory } from "./platform-socket";
 import { sendToTopic, subscribeToTopic, type TopicOpsContext } from "./topic-operations";
 import type { Subscription } from "./topic-subscription";
+import { WS_CODE } from "./ws-codes";
 import { encodeMessage } from "./ws-protocol";
 import { createTopicRegistry } from "./ws-topics";
 import type { WSConnection, WSConnectionConfig } from "./ws-types";
@@ -53,7 +54,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
       "The outbound queue was full: its oldest messages make room for newer ones",
     );
     const error = fromErrorCode(
-      4429,
+      WS_CODE.TOO_MANY,
       "A message was dropped from the outbound queue for a newer one",
     );
     if (oldest.owner) topics.fail(oldest.topic, error);

@@ -124,6 +124,32 @@ describe("@noverax/courier/internal", () => {
     });
   });
 
+  it("hands them the protocol's codes by name, each the number the wire carries", () => {
+    expect(internal.WS_CODE).toEqual({
+      NORMAL: 1000,
+      GOING_AWAY: 1001,
+      PROTOCOL_MISMATCH: 1002,
+      UNSUPPORTED_DATA: 1003,
+      INVALID_PAYLOAD: 1007,
+      POLICY_VIOLATION: 1008,
+      MESSAGE_TOO_BIG: 1009,
+      INTERNAL_ERROR: 1011,
+      TRY_AGAIN_LATER: 1013,
+      APPLICATION_FIRST: 4000,
+      APPLICATION_LAST: 4099,
+      BAD_REQUEST: 4400,
+      UNAUTHORIZED: 4401,
+      FORBIDDEN: 4403,
+      NOT_FOUND: 4404,
+      TIMEOUT: 4408,
+      REPLACED: 4409,
+      TOO_LARGE: 4413,
+      HOST_NOT_ALLOWED: 4421,
+      VALIDATION_FAILED: 4422,
+      TOO_MANY: 4429,
+    });
+  });
+
   it("hands them the defaults auth_ok tells a client, the handler's own", () => {
     expect(internal.WS_DEFAULTS).toEqual({
       heartbeatIntervalMs: 25_000,

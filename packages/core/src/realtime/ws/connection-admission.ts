@@ -1,5 +1,6 @@
 import type { MachineContext, MachineEvent, Phase, Step } from "./connection-machine-types";
 import { fail, onClosed, schedule, stay } from "./connection-steps";
+import { WS_CODE } from "./ws-codes";
 
 /*
  * How a connection is admitted: its credentials, a socket opened with
@@ -91,7 +92,7 @@ export function fromAuthenticating(
       };
     case "mismatch":
       return schedule(state, ctx, { kind: "mismatch", frame: event.frame }, [
-        { type: "drop-socket", code: 1002, reason: "Protocol mismatch" },
+        { type: "drop-socket", code: WS_CODE.PROTOCOL_MISMATCH, reason: "Protocol mismatch" },
         { type: "subscriptions-wait" },
       ]);
     case "closed":

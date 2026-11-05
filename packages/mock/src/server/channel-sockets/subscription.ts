@@ -5,7 +5,7 @@
  */
 
 import { logger } from "@noverax/courier";
-import { describeFailure, type StreamFailure } from "@noverax/courier/internal";
+import { describeFailure, type StreamFailure, WS_CODE } from "@noverax/courier/internal";
 import type { WSChannelContext } from "@noverax/courier/realtime";
 import type { MockChannelFn, MockHistoryEntry } from "../../types";
 import type { ChannelShape } from "../prefix-route-types";
@@ -184,7 +184,7 @@ function channelContext(
       socket.config.connections.broadcast(target, data, socket.ws);
     },
     close(code, reason) {
-      const failed = code !== undefined && code !== 1000;
+      const failed = code !== undefined && code !== WS_CODE.NORMAL;
       void endSubscription(
         socket,
         topic,

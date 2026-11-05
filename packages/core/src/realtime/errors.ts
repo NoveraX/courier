@@ -15,13 +15,14 @@
 
 import { ConnectionError, RealtimeError } from "./realtime-error";
 import { RealtimeValidationError } from "./validation-error";
+import { WS_CODE } from "./ws/ws-codes";
 
 export { ConnectionError, RealtimeError, RealtimeValidationError };
 
 /** Authentication/authorization error (token expired, forbidden) */
 export class AuthError extends RealtimeError {
   constructor(message = "Authentication required") {
-    super(4401, message);
+    super(WS_CODE.UNAUTHORIZED, message);
     this.name = "AuthError";
   }
 }
@@ -29,7 +30,7 @@ export class AuthError extends RealtimeError {
 /** Authorization denied for subscribe or message */
 export class ForbiddenError extends RealtimeError {
   constructor(message = "Forbidden") {
-    super(4403, message);
+    super(WS_CODE.FORBIDDEN, message);
     this.name = "ForbiddenError";
   }
 }
@@ -44,7 +45,7 @@ export class ForbiddenError extends RealtimeError {
  */
 export class RealtimeTimeoutError extends RealtimeError {
   constructor(message = "Request timeout") {
-    super(4408, message);
+    super(WS_CODE.TIMEOUT, message);
     this.name = "RealtimeTimeoutError";
   }
 }
@@ -52,7 +53,7 @@ export class RealtimeTimeoutError extends RealtimeError {
 /** Rate limit exceeded */
 export class RateLimitError extends RealtimeError {
   constructor(message = "Rate limited") {
-    super(4429, message);
+    super(WS_CODE.TOO_MANY, message);
     this.name = "RateLimitError";
   }
 }
@@ -77,15 +78,15 @@ export function fromErrorCode(
   issues?: readonly unknown[],
 ): RealtimeError {
   switch (code) {
-    case 4401:
+    case WS_CODE.UNAUTHORIZED:
       return new AuthError(message);
-    case 4403:
+    case WS_CODE.FORBIDDEN:
       return new ForbiddenError(message);
-    case 4408:
+    case WS_CODE.TIMEOUT:
       return new RealtimeTimeoutError(message);
-    case 4422:
+    case WS_CODE.VALIDATION_FAILED:
       return new RealtimeValidationError(message, issues);
-    case 4429:
+    case WS_CODE.TOO_MANY:
       return new RateLimitError(message);
     default:
       if (code >= 1000 && code < 2000) return new ConnectionError(message, code);

@@ -1,10 +1,11 @@
 import { describeFailure } from "../realtime/describe-failure";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { endpointName } from "./endpoint-name";
 import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
-const REJECTED = { code: 4403, message: "Subscription rejected" };
+const REJECTED = { code: WS_CODE.FORBIDDEN, message: "Subscription rejected" };
 
 /**
  * Run authorization check for a subscription.

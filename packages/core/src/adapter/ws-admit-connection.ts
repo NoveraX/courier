@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import { connectionMetaOf } from "./connection-meta-of";
 import { awaitCredentials } from "./ws-admit";
 import { closeOf, type SessionClose } from "./ws-close";
@@ -92,7 +93,7 @@ export async function admitConnection(
       }
       ctx.meta = connectionMetaOf(result, "onConnect");
     } catch (error) {
-      const failure = describeFailure(error, "Connection rejected", 4401);
+      const failure = describeFailure(error, "Connection rejected", WS_CODE.UNAUTHORIZED);
       refuse(ctx, { kind: "auth-refused", failure, id }, error);
       return REFUSED;
     } finally {

@@ -1,5 +1,6 @@
 import { describeFailure } from "../realtime/describe-failure";
 import { isChannelSchema } from "../realtime/is-channel-schema";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { endpointName } from "./endpoint-name";
@@ -12,6 +13,10 @@ import { resolveSubscribeTopic } from "./ws-resolve";
 import { resumeSubscription } from "./ws-resume";
 import { subscriptionTopic } from "./ws-subscribe-topic";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
+
+/* What a client hears of a subscribe that names no topic, or one past its connection's limit. */
+const MISSING_TOPIC = { code: WS_CODE.BAD_REQUEST, message: "Missing topic" };
+const TOO_MANY_SUBSCRIPTIONS = { code: WS_CODE.TOO_MANY, message: "Too many subscriptions" };
 
 /**
  * Handle a "subscribe" message from a WS client.
@@ -30,7 +35,7 @@ import { sendSubscriptionEnd } from "./ws-subscription-end";
 export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
   const topic = msg.topic;
   if (!topic) {
-    ctx.sendMessage({ type: "error", id: msg.id, error: { code: 4400, message: "Missing topic" } });
+    ctx.sendMessage({ type: "error", id: msg.id, error: MISSING_TOPIC });
     return;
   }
 
@@ -39,7 +44,7 @@ export async function handleSubscribe(ctx: WSSocketContext, msg: WSMessage): Pro
      awaits and updated after them, so every frame of a burst saw it as it
      was before the burst. */
   if (!hasPlace(ctx, topic)) {
-    sendSubscriptionEnd(ctx, topic, msg.id, { code: 4429, message: "Too many subscriptions" });
+    sendSubscriptionEnd(ctx, topic, msg.id, TOO_MANY_SUBSCRIPTIONS);
     return;
   }
   const opening = openSubscription(ctx, msg, topic);

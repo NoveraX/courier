@@ -1,6 +1,7 @@
 import { createLogger } from "../logger";
 import type { RefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import { rememberPeerAddress } from "./peer-address";
 import { activateConnection } from "./ws-activate";
 import { admitSocket } from "./ws-admission";
@@ -159,7 +160,7 @@ export function openSockets(
     const inbox = holdFrames(ws, ctx.maxControlPerSecond, (held) => {
       refusals.warn({
         event: "frames refused",
-        code: 4429,
+        code: WS_CODE.TOO_MANY,
         fields: { ...connectionFields(ctx), held },
       });
       ctx.session.close({ kind: "flood" });

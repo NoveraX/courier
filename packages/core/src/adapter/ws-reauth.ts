@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { describeFailure, type StreamFailure } from "../realtime/describe-failure";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { connectionMetaOf } from "./connection-meta-of";
 import { closeOf, type SessionClose } from "./ws-close";
@@ -37,7 +38,7 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
     ctx.sendMessage({
       type: "error",
       id: msg.id,
-      error: { code: 4400, message: "Invalid auth frame" },
+      error: { code: WS_CODE.BAD_REQUEST, message: "Invalid auth frame" },
     });
     return;
   }
@@ -46,7 +47,7 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
     refuse(
       ctx,
       msg,
-      { code: 4401, message: "Credentials cannot be renewed on this connection" },
+      { code: WS_CODE.UNAUTHORIZED, message: "Credentials cannot be renewed on this connection" },
       "no onReauth checks them",
     );
     return;
@@ -68,14 +69,18 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
       );
       ctx.session.close({
         kind: "reauth-refused",
-        failure: { code: 4401, message: "Credentials could not be checked in time" },
+        failure: {
+          code: WS_CODE.UNAUTHORIZED,
+          message: "Credentials could not be checked in time",
+        },
         id: msg.id,
       });
       return;
     }
     next = connectionMetaOf(result, "onReauth");
   } catch (error) {
-    if (!ctx.closed) refuse(ctx, msg, describeFailure(error, "Credentials rejected", 4401), error);
+    if (!ctx.closed)
+      refuse(ctx, msg, describeFailure(error, "Credentials rejected", WS_CODE.UNAUTHORIZED), error);
     return;
   } finally {
     clearTimeout(timer);

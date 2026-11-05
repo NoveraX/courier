@@ -1,6 +1,7 @@
 import { createLogger } from "../logger";
 import type { WebSocketLike } from "../realtime/adapters";
 import type { createHeartbeat } from "../realtime/ws/heartbeat";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import { registerPlaygroundAbort } from "../studio";
 import { socketError } from "../utils/socket-error";
 import type { WSSocketContext } from "./ws-context";
@@ -35,7 +36,7 @@ export function wireEvents(
     ? registerPlaygroundAbort(ctx.playgroundRequestId, () => {
         ctx.session.close({
           kind: "application",
-          code: 1000,
+          code: WS_CODE.NORMAL,
           reason: "Cancelled by Studio Playground",
         });
       })

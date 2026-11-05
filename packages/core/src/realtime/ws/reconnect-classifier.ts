@@ -1,9 +1,7 @@
 import { CLIENT_LIMITS } from "../client-limits";
 import { AuthError, fromErrorCode, type RealtimeError } from "../errors";
+import { WS_CODE } from "./ws-codes";
 import { PROTOCOL_VERSION } from "./ws-protocol";
-
-/** The close code of a socket closed over a frame larger than the server reads. */
-export const MESSAGE_TOO_BIG = 1009;
 
 /**
  * How a socket closed, as the client read it: from the frame a server sent
@@ -35,7 +33,15 @@ export type CloseDisposition =
  * take, an origin or host it refuses, a connection replaced by a newer one
  * of the same user — reconnecting would replace that one in turn.
  */
-const FINAL: ReadonlySet<number> = new Set([1003, 1007, 1008, 4400, 4403, 4409, 4421]);
+const FINAL: ReadonlySet<number> = new Set([
+  WS_CODE.UNSUPPORTED_DATA,
+  WS_CODE.INVALID_PAYLOAD,
+  WS_CODE.POLICY_VIOLATION,
+  WS_CODE.BAD_REQUEST,
+  WS_CODE.FORBIDDEN,
+  WS_CODE.REPLACED,
+  WS_CODE.HOST_NOT_ALLOWED,
+]);
 
 /**
  * Read a socket's close against the protocol's table of codes.
@@ -64,8 +70,8 @@ const FINAL: ReadonlySet<number> = new Set([1003, 1007, 1008, 4400, 4403, 4409, 
  */
 export function classifyClose(closure: SocketClosure): CloseDisposition {
   const { code } = closure;
-  if (code === 1000) return { action: "finish" };
-  if (code === 4401) {
+  if (code === WS_CODE.NORMAL) return { action: "finish" };
+  if (code === WS_CODE.UNAUTHORIZED) {
     return {
       action: "reauthenticate",
       error: new AuthError(closure.reason || "Credentials rejected"),
@@ -73,9 +79,10 @@ export function classifyClose(closure: SocketClosure): CloseDisposition {
   }
   const afterMs = hintOf(closure.retryAfterMs);
   const olderServer = closure.version !== undefined && closure.version < PROTOCOL_VERSION;
-  if (code === 1002 && !olderServer) return stop(closure);
-  if (code === 4429 && afterMs === undefined) return stop(closure);
-  if (FINAL.has(code) || (code >= 4000 && code <= 4099)) return stop(closure);
+  if (code === WS_CODE.PROTOCOL_MISMATCH && !olderServer) return stop(closure);
+  if (code === WS_CODE.TOO_MANY && afterMs === undefined) return stop(closure);
+  const application = code >= WS_CODE.APPLICATION_FIRST && code <= WS_CODE.APPLICATION_LAST;
+  if (FINAL.has(code) || application) return stop(closure);
   return afterMs === undefined ? { action: "retry" } : { action: "retry", afterMs };
 }
 

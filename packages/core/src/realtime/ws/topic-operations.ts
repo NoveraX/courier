@@ -5,6 +5,7 @@ import type { MessageQueue } from "./message-queue";
 import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
 import type { Subscription } from "./topic-subscription";
+import { WS_CODE } from "./ws-codes";
 import { encodeMessage } from "./ws-protocol";
 import type { TopicHandler, TopicSubscriber } from "./ws-types";
 
@@ -87,7 +88,7 @@ export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknow
   const frame = messageFrame(subscription?.topic ?? topic, payload);
   if (frame.length > ctx.maxMessageSize) {
     const refusal = fromErrorCode(
-      4413,
+      WS_CODE.TOO_LARGE,
       `Message too large: ${frame.length} characters, the limit is ${ctx.maxMessageSize}`,
     );
     ctx.log.warn(`Message not sent on ${topic}: ${refusal.message}`);

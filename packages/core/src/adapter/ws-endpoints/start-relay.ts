@@ -7,6 +7,7 @@
 
 import { describeFailure } from "../../realtime/describe-failure";
 import type { RealtimeError } from "../../realtime/errors";
+import { WS_CODE } from "../../realtime/ws/ws-codes";
 import { credentialsFor } from "../../realtime/ws/ws-credentials";
 import type { WSConnectionConfig } from "../../realtime/ws/ws-types";
 import { channelAddress } from "../../transport/direct/channel-address";
@@ -28,7 +29,10 @@ import type { AuthorizedSubscription } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 
 /** What a client hears of a message the upstream had no room to take. */
-const NOT_RELAYED = { code: 4429, message: "Message not relayed: the upstream has no room for it" };
+const NOT_RELAYED = {
+  code: WS_CODE.TOO_MANY,
+  message: "Message not relayed: the upstream has no room for it",
+};
 
 /** The channel relayed: the source it belongs to, its group, and its name */
 export interface RelayTarget {

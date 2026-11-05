@@ -1,5 +1,5 @@
 import { logger } from "@noverax/courier";
-import { decodeMessage, type WSMessage } from "@noverax/courier/internal";
+import { decodeMessage, WS_CODE, type WSMessage } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import { sendError } from "./protocol";
@@ -21,7 +21,7 @@ export function parseMessage(ws: NodeWebSocket, raw: Buffer | string): WSMessage
     return decodeMessage(raw.toString());
   } catch (error) {
     logger.warn("MockWS", "Undecodable frame", error);
-    sendError(ws, { code: 4400, message: "Invalid message" });
+    sendError(ws, { code: WS_CODE.BAD_REQUEST, message: "Invalid message" });
     return null;
   }
 }

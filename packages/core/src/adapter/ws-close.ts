@@ -1,5 +1,6 @@
 import type { WebSocketLike } from "../realtime/adapters";
 import type { StreamFailure } from "../realtime/describe-failure";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import { encodeMessage, PROTOCOL_VERSION, type WSMessage } from "../realtime/ws/ws-protocol";
 import { closeReason } from "./close-reason";
 
@@ -76,7 +77,9 @@ export function isSendableCloseCode(code: number): boolean {
    hook threw on purpose, `ForbiddenError` (4403) — and 4401 otherwise. */
 function refused(failure: StreamFailure, fallback: string): CloseFrame {
   const own = failure.code >= 4000 && failure.code <= 4999;
-  return own ? { code: failure.code, reason: failure.message } : { code: 4401, reason: fallback };
+  return own
+    ? { code: failure.code, reason: failure.message }
+    : { code: WS_CODE.UNAUTHORIZED, reason: fallback };
 }
 
 /**
@@ -94,37 +97,40 @@ function refused(failure: StreamFailure, fallback: string): CloseFrame {
 export function closeOf(why: SessionClose): CloseFrame {
   switch (why.kind) {
     case "host":
-      return { code: 4421, reason: "Host not allowed" };
+      return { code: WS_CODE.HOST_NOT_ALLOWED, reason: "Host not allowed" };
     case "origin":
-      return { code: 4403, reason: "Origin not allowed" };
+      return { code: WS_CODE.FORBIDDEN, reason: "Origin not allowed" };
     case "limit":
-      return { code: 4429, reason: "Too many connections" };
+      return { code: WS_CODE.TOO_MANY, reason: "Too many connections" };
     case "evicted":
-      return { code: 4409, reason: "Replaced by a newer connection" };
+      return { code: WS_CODE.REPLACED, reason: "Replaced by a newer connection" };
     case "flood":
-      return { code: 4429, reason: "Too many messages before the connection was accepted" };
+      return {
+        code: WS_CODE.TOO_MANY,
+        reason: "Too many messages before the connection was accepted",
+      };
     case "version":
-      return { code: 1002, reason: why.reason };
+      return { code: WS_CODE.PROTOCOL_MISMATCH, reason: why.reason };
     case "no-auth-frame":
-      return { code: 4408, reason: `No auth frame within ${why.timeoutMs} ms` };
+      return { code: WS_CODE.TIMEOUT, reason: `No auth frame within ${why.timeoutMs} ms` };
     case "bad-auth-frame":
-      return { code: 4401, reason: "Invalid auth frame" };
+      return { code: WS_CODE.UNAUTHORIZED, reason: "Invalid auth frame" };
     case "auth-refused":
       return refused(why.failure, "Connection rejected");
     case "admission-timeout":
-      return { code: 1011, reason: "Connection could not be admitted in time" };
+      return { code: WS_CODE.INTERNAL_ERROR, reason: "Connection could not be admitted in time" };
     case "reauth-refused":
       return refused(why.failure, "Credentials rejected");
     case "reauth-timeout":
-      return { code: 4401, reason: "Credentials not renewed in time" };
+      return { code: WS_CODE.UNAUTHORIZED, reason: "Credentials not renewed in time" };
     case "heartbeat-timeout":
-      return { code: 4408, reason: "Heartbeat timeout" };
+      return { code: WS_CODE.TIMEOUT, reason: "Heartbeat timeout" };
     case "slow-consumer":
-      return { code: 1013, reason: "Slow consumer" };
+      return { code: WS_CODE.TRY_AGAIN_LATER, reason: "Slow consumer" };
     case "internal":
-      return { code: 1011, reason: "Internal error" };
+      return { code: WS_CODE.INTERNAL_ERROR, reason: "Internal error" };
     case "shutdown":
-      return { code: 1001, reason: "Server shutting down" };
+      return { code: WS_CODE.GOING_AWAY, reason: "Server shutting down" };
     case "application":
       return { code: why.code, reason: why.reason };
   }

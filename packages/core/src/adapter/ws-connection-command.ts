@@ -1,3 +1,4 @@
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import { isRecord } from "../utils/is-record";
 import { closeReason } from "./close-reason";
 import { readSelector, type Selection } from "./connection-selector";
@@ -93,7 +94,7 @@ export function disconnectCommand(
   options: DisconnectOptions | undefined,
 ): CheckedCommand {
   const reason = closeReason(options?.reason ?? "Disconnected by server");
-  return checked({ kind: "disconnect", selector, code: options?.code ?? 1000, reason });
+  return checked({ kind: "disconnect", selector, code: options?.code ?? WS_CODE.NORMAL, reason });
 }
 
 /**

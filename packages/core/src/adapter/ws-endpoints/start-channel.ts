@@ -6,6 +6,7 @@ import { describeFailure } from "../../realtime/describe-failure";
 import { channelHandlersOf } from "../../realtime/implementation";
 import type { ChannelHandlers, WSChannelContext } from "../../realtime/types";
 import { unqualifyTopic } from "../../realtime/ws/topic-key";
+import { WS_CODE } from "../../realtime/ws/ws-codes";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
@@ -83,7 +84,7 @@ export async function startChannel(
       /* The subscription ends as well: an error frame alone would leave it
          running, and the client would only log "closed". */
       if (ended.signal.aborted) return;
-      const failed = code !== undefined && code !== 1000;
+      const failed = code !== undefined && code !== WS_CODE.NORMAL;
       const failure = failed ? { code, message: reason ?? "Channel closed" } : undefined;
       sendSubscriptionEnd(ctx, topic, subscribeId, failure);
       closeSubscriptionEntry(ctx, topic, failed ? "error" : "complete");

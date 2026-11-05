@@ -1,5 +1,6 @@
 import type { TopicKeyReader } from "../define/options";
 import { unqualifyTopic } from "../realtime/ws/topic-key";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { parseWSTopic } from "../realtime/ws-address";
 import { resolveEndpoint } from "../utils/execute-resolve";
@@ -26,7 +27,7 @@ export function parseTopic(topic: string): {
   return { source: named.source, group: named.group || undefined, method: named.method };
 }
 
-const REJECTED = { code: 4403, message: "Subscription rejected" };
+const REJECTED = { code: WS_CODE.FORBIDDEN, message: "Subscription rejected" };
 
 /** Resolve topic → source + endpoint, ending the subscription on failure */
 export function resolveSubscribeTopic(
@@ -50,7 +51,7 @@ export function resolveSubscribeTopic(
   const { source, group, method } = parseTopic(topic);
   if (!source) {
     sendSubscriptionEnd(ctx, topic, msg.id, {
-      code: 4400,
+      code: WS_CODE.BAD_REQUEST,
       message: "Topic must include source name",
     });
     return undefined;

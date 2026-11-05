@@ -4,7 +4,7 @@
  */
 
 import { logger } from "@noverax/courier";
-import { describeFailure, type WSMessage } from "@noverax/courier/internal";
+import { describeFailure, WS_CODE, type WSMessage } from "@noverax/courier/internal";
 import { checkAgainst } from "./check-schema";
 import { sendFrame, sendRefusal } from "./frames";
 import { leaveSubscription } from "./subscription";
@@ -29,17 +29,21 @@ export async function handleMessage(socket: ChannelSocket, message: WSMessage): 
   if (opening) await Promise.allSettled([opening]);
   const subscription = topic === undefined ? undefined : socket.subscriptions.get(topic);
   if (!subscription)
-    return sendRefusal(socket.ws, message, { code: 4404, message: "Not subscribed" });
+    return sendRefusal(socket.ws, message, { code: WS_CODE.NOT_FOUND, message: "Not subscribed" });
   const { shape } = subscription;
   if (shape && !shape.acceptsMessages) {
     return sendRefusal(socket.ws, message, {
-      code: 4400,
+      code: WS_CODE.BAD_REQUEST,
       message: "Endpoint does not accept messages",
     });
   }
   const checked = await checkAgainst(shape?.receive, message.payload);
   if ("issues" in checked) {
-    const failure = { code: 4422, message: "Invalid message payload", issues: checked.issues };
+    const failure = {
+      code: WS_CODE.VALIDATION_FAILED,
+      message: "Invalid message payload",
+      issues: checked.issues,
+    };
     return sendRefusal(socket.ws, message, failure);
   }
   try {

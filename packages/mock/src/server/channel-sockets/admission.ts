@@ -5,6 +5,7 @@ import {
   type HeartbeatConfig,
   readFirstFrame,
   type SessionClose,
+  WS_CODE,
   WS_DEFAULTS,
   type WSMessage,
 } from "@noverax/courier/internal";
@@ -81,7 +82,7 @@ export function renewCredentials(
   const headers = frameHeaders(socket, message);
   if (headers === undefined) {
     logger.warn("MockWS", `An auth frame no client sends was ignored (${socket.id})`);
-    sendRefusal(socket.ws, message, { code: 4400, message: "Invalid auth frame" });
+    sendRefusal(socket.ws, message, { code: WS_CODE.BAD_REQUEST, message: "Invalid auth frame" });
     return;
   }
   socket.headers = headers;

@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import type { createHeartbeat } from "../realtime/ws/heartbeat";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import { decodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
 import type { WSSocketContext } from "./ws-context";
 import { handleMessage, handleSubscribe, handleUnsubscribe } from "./ws-dispatch";
@@ -23,7 +24,10 @@ export function routeMessage(
   heartbeat: ReturnType<typeof createHeartbeat>,
 ): void {
   if (raw.length > ctx.maxMessageSize) {
-    ctx.sendMessage({ type: "error", error: { code: 4413, message: "Message too large" } });
+    ctx.sendMessage({
+      type: "error",
+      error: { code: WS_CODE.TOO_LARGE, message: "Message too large" },
+    });
     return;
   }
 
@@ -31,7 +35,10 @@ export function routeMessage(
   try {
     msg = decodeMessage(raw);
   } catch {
-    ctx.sendMessage({ type: "error", error: { code: 4400, message: "Invalid message format" } });
+    ctx.sendMessage({
+      type: "error",
+      error: { code: WS_CODE.BAD_REQUEST, message: "Invalid message format" },
+    });
     return;
   }
 
@@ -85,6 +92,6 @@ function refuse(ctx: WSSocketContext, msg: WSMessage): void {
     type: "error",
     ...(msg.id !== undefined && { id: msg.id }),
     ...(msg.topic !== undefined && { topic: msg.topic }),
-    error: { code: 4429, message: "Rate limited" },
+    error: { code: WS_CODE.TOO_MANY, message: "Rate limited" },
   });
 }

@@ -8,6 +8,7 @@ import type {
   Step,
 } from "./connection-machine-types";
 import { connect, stay } from "./connection-steps";
+import { WS_CODE } from "./ws-codes";
 
 /**
  * A WebSocket connection's state machine: given where the connection stands
@@ -72,7 +73,9 @@ function closeByClient(state: MachineState): Step {
   return {
     state: { phase: "closed", by: "client", failures: 0, authSeq: state.authSeq },
     effects: [
-      ...(socket ? [{ type: "drop-socket", code: 1000, reason: "Client closed" } as const] : []),
+      ...(socket
+        ? [{ type: "drop-socket", code: WS_CODE.NORMAL, reason: "Client closed" } as const]
+        : []),
       ...(live ? [{ type: "unwatch" } as const] : []),
       ...(ended ? [] : [{ type: "subscriptions-end" } as const]),
     ],

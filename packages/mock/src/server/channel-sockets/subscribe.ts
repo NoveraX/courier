@@ -10,7 +10,12 @@
 import { randomBytes } from "node:crypto";
 
 import { logger } from "@noverax/courier";
-import { describeFailure, type StreamFailure, type WSMessage } from "@noverax/courier/internal";
+import {
+  describeFailure,
+  type StreamFailure,
+  WS_CODE,
+  type WSMessage,
+} from "@noverax/courier/internal";
 import { unqualifyTopic } from "@noverax/courier/realtime";
 import type { MockChannelFn } from "../../types";
 import type { ChannelShape } from "../prefix-route-types";
@@ -47,7 +52,11 @@ export async function handleSubscribe(socket: ChannelSocket, message: WSMessage)
   const topic = message.topic;
   if (!topic) {
     const id = message.id !== undefined ? { id: message.id } : {};
-    sendFrame(socket.ws, { type: "error", ...id, error: { code: 4400, message: "Missing topic" } });
+    sendFrame(socket.ws, {
+      type: "error",
+      ...id,
+      error: { code: WS_CODE.BAD_REQUEST, message: "Missing topic" },
+    });
     return;
   }
   const opening = subscribe(socket, message, topic);
@@ -64,7 +73,11 @@ async function subscribe(socket: ChannelSocket, message: WSMessage, topic: strin
   if (!("channelFn" in channel)) return sendEnd(socket.ws, topic, message.id, channel);
   const checked = await checkAgainst(channel.shape?.variables, message.payload);
   if ("issues" in checked) {
-    const failure = { code: 4422, message: "Invalid variables", issues: checked.issues };
+    const failure = {
+      code: WS_CODE.VALIDATION_FAILED,
+      message: "Invalid variables",
+      issues: checked.issues,
+    };
     return sendEnd(socket.ws, topic, message.id, failure);
   }
   const served = keyedTopic(channel, checked.value);
@@ -78,12 +91,15 @@ async function subscribe(socket: ChannelSocket, message: WSMessage, topic: strin
    topic is called; on the proxy's route the topic names the channel. */
 function resolveChannel(socket: ChannelSocket, topic: string): ResolvedChannel | StreamFailure {
   const route = socket.route ? ownChannel(socket.route, topic) : parseProxyTopic(topic);
-  if (!route) return { code: 4400, message: "Topic must include source name" };
+  if (!route) return { code: WS_CODE.BAD_REQUEST, message: "Topic must include source name" };
   const state = socket.config.getScenarioState();
   const handler = socket.config.registry.get(route.group, route.method, state);
   if (handler?.transport !== "ws" || !handler.channelFn) {
     const name = route.group ? `${route.group}.${route.method}` : route.method;
-    return { code: 4404, message: `No channel mock for "${name}" in state "${state}"` };
+    return {
+      code: WS_CODE.NOT_FOUND,
+      message: `No channel mock for "${name}" in state "${state}"`,
+    };
   }
   const shape = findMappedEndpoint(socket.config.mappings, route.group, route.method)?.channel;
   return { ...route, channelFn: handler.channelFn, shape };

@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { ValidationError, validateSchema } from "../validation";
 import type { WSSocketContext } from "./ws-context";
@@ -29,7 +30,11 @@ export async function validateVariablesSafe(
        caller's variables. */
     const topic = msg.topic ?? "";
     if (error instanceof ValidationError) {
-      const failure = { code: 4422, message: "Invalid variables", issues: error.issues };
+      const failure = {
+        code: WS_CODE.VALIDATION_FAILED,
+        message: "Invalid variables",
+        issues: error.issues,
+      };
       sendSubscriptionEnd(ctx, topic, msg.id, failure);
     } else {
       log.warn("Variables schema failed", error);

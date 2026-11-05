@@ -1,5 +1,6 @@
 import { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 import { isChannelSchema } from "../realtime/is-channel-schema";
+import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { ValidationError, validateSchema } from "../validation";
@@ -8,7 +9,7 @@ import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
 import { parseTopic } from "./ws-resolve";
 
-const MESSAGE_REJECTED = { code: 4403, message: "Message rejected" };
+const MESSAGE_REJECTED = { code: WS_CODE.FORBIDDEN, message: "Message rejected" };
 
 /**
  * Inbound WS message + unsubscribe handlers.
@@ -30,7 +31,7 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
     if (ctx.closed) return;
   }
   if (!topic || !ctx.topicManager.has(ctx.connectionId, topic)) {
-    refuseMessage(ctx, msg, { code: 4404, message: "Not subscribed" });
+    refuseMessage(ctx, msg, { code: WS_CODE.NOT_FOUND, message: "Not subscribed" });
     return;
   }
 
@@ -45,7 +46,10 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
      schema meant a channel typed with `.send<T>()` alone dropped every message
      in silence — no handler, no error, nothing to see. */
   if (!schema || !isChannelSchema(schema)) {
-    refuseMessage(ctx, msg, { code: 4400, message: "Endpoint does not accept messages" });
+    refuseMessage(ctx, msg, {
+      code: WS_CODE.BAD_REQUEST,
+      message: "Endpoint does not accept messages",
+    });
     return;
   }
 
@@ -58,7 +62,11 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
       payload = await validateSchema(schema.receive, msg.payload, "receive");
     } catch (error) {
       if (!(error instanceof ValidationError)) throw error;
-      const failure = { code: 4422, message: "Invalid message payload", issues: error.issues };
+      const failure = {
+        code: WS_CODE.VALIDATION_FAILED,
+        message: "Invalid message payload",
+        issues: error.issues,
+      };
       refuseMessage(ctx, msg, failure);
       return;
     }
@@ -110,7 +118,7 @@ async function authorizeIncomingMessage(
     }
     return true;
   } catch (error) {
-    const failure = describeFailure(error, MESSAGE_REJECTED.message, 4403);
+    const failure = describeFailure(error, MESSAGE_REJECTED.message, MESSAGE_REJECTED.code);
     const fields = { conn: ctx.connectionId, endpoint: endpointName(parseTopic(topic)) };
     ctx.refusals.warn({ event: "message refused", code: failure.code, fields }, error);
     refuseMessage(ctx, msg, failure);

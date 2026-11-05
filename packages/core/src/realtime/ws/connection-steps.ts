@@ -7,7 +7,8 @@ import type {
   Refusal,
   Step,
 } from "./connection-machine-types";
-import { classifyClose, MESSAGE_TOO_BIG, type SocketClosure } from "./reconnect-classifier";
+import { classifyClose, type SocketClosure } from "./reconnect-classifier";
+import { WS_CODE } from "./ws-codes";
 
 /** The same state, nothing to do. */
 export function stay(state: MachineState): Step {
@@ -102,7 +103,7 @@ export function onClosed(
 ): Step {
   const live = state.phase === "open" || state.phase === "reauthenticating";
   const before: MachineEffect[] = [
-    ...(announced ? [{ type: "drop-socket", code: 1000, reason: "" } as const] : []),
+    ...(announced ? [{ type: "drop-socket", code: WS_CODE.NORMAL, reason: "" } as const] : []),
     ...(live ? [{ type: "unwatch" } as const] : []),
   ];
   const disposition = classifyClose(closure);
@@ -134,7 +135,7 @@ export function onClosed(
         opened,
         ...(error !== undefined && { error }),
       };
-      const told = closure.code === MESSAGE_TOO_BIG ? tooBig(closure) : undefined;
+      const told = closure.code === WS_CODE.MESSAGE_TOO_BIG ? tooBig(closure) : undefined;
       return schedule(
         state,
         ctx,
@@ -148,5 +149,8 @@ export function onClosed(
 
 /* A socket closed over one message larger than the server reads: that one is lost, and each subscription hears so. */
 function tooBig(closure: SocketClosure): RealtimeError {
-  return fromErrorCode(MESSAGE_TOO_BIG, closure.reason || "A message was too large for the server");
+  return fromErrorCode(
+    WS_CODE.MESSAGE_TOO_BIG,
+    closure.reason || "A message was too large for the server",
+  );
 }

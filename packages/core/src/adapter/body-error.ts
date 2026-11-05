@@ -1,3 +1,5 @@
+import { CourierError } from "../errors/courier-error";
+
 /** The stable names of the ways a request body is refused. */
 export type BodyErrorCode =
   | "BODY_TOO_LARGE"
@@ -32,28 +34,28 @@ const STATUS: Readonly<Record<BodyErrorCode, BodyErrorStatus>> = {
 };
 
 /**
- * Why a request body was not taken, and the status it is answered with.
+ * Why a request body was not taken, and the status it is answered with:
+ * one of Courier's own errors, its code the refusal's stable name.
  *
  * A body stream errors with it, so whatever reads the body — a JSON decoder,
  * the multipart parser, `Response.formData()` — fails with the reason the
- * body was refused for rather than one of its own. The message is written
- * for the developer reading the answer, and holds nothing the client sent.
+ * body was refused for rather than one of its own; a fetch that sends the
+ * body on fails with it too, and is passed on as it is, as every Courier
+ * error is. The message is written for the developer reading the answer,
+ * and holds nothing the client sent.
  *
  * @example
  * ```ts
  * throw new BodyError("BODY_TOO_LARGE", "Request body exceeds 1048576 bytes");
  * ```
  */
-export class BodyError extends Error {
-  /** The refusal's stable name. */
-  readonly code: BodyErrorCode;
+export class BodyError extends CourierError<BodyErrorCode> {
   /** The HTTP status the refusal is answered with. */
   readonly status: BodyErrorStatus;
 
   constructor(code: BodyErrorCode, message: string, options?: ErrorOptions) {
-    super(message, options);
+    super(message, { code, cause: options?.cause });
     this.name = "BodyError";
-    this.code = code;
     this.status = STATUS[code];
   }
 }

@@ -40,6 +40,16 @@ const AUTH_VALUE = new RegExp(
   "gi",
 );
 
+/**
+ * A word that says a credential follows, and a word after it: `bad credentials Zq9x…`. Its own
+ * pass, as the rule for a header's name read after a space takes `bad` for the name and this
+ * word for its value. A token after `token` is its scheme's to cut.
+ */
+const SPOKEN = new RegExp(
+  `(^|[^\\w-])(secrets?|passwords?|passwd|passphrase|credentials?|jwt|api[ _-]key)([ \\t]{1,3})([^\\s"'<>,;]{6,${LONG}})`,
+  "gi",
+);
+
 /** What a Digest client proves it knows the password with. */
 const DIGEST_RESPONSE = /(\b(?:response|cnonce)=)"[0-9a-f]{16,128}"/gi;
 
@@ -86,6 +96,7 @@ export const TEXT_PATTERNS = {
   KNOWN_KEY,
   AUTHORIZATION_VALUE,
   AUTH_VALUE,
+  SPOKEN,
   DIGEST_RESPONSE,
   POSTGRES_KEY,
   JSON_PAIR,

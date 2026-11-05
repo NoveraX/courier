@@ -9,7 +9,8 @@ import { TEXT_PATTERNS as P } from "./text-patterns";
  * A text with what could be a credential cut out, the rest as it was: a
  * private key, a header value the platform refused and quoted, a JWT, a
  * key in a known provider's format, the value after `Authorization:`, a
- * word after an authorization scheme that reads as one, a Digest proof,
+ * word after an authorization scheme that reads as one, and after a word
+ * that says one follows — `bad credentials Zq9x…` — a Digest proof,
  * the values of a key Postgres refused for a secret column, the value of a
  * pair whose name says it is secret, a credential header's value written
  * after a space, and — where the text speaks of signing in — a
@@ -36,6 +37,7 @@ export function textWithoutSecrets(text: string): string {
     .replace(P.KNOWN_KEY, `$1${REDACTED}`)
     .replace(P.AUTHORIZATION_VALUE, cutAuthorization)
     .replace(P.AUTH_VALUE, cutAuthValue)
+    .replace(P.SPOKEN, cutAuthValue)
     .replace(P.DIGEST_RESPONSE, `$1"${REDACTED}"`)
     .replace(P.POSTGRES_KEY, cutPostgresKey)
     .replace(P.JSON_PAIR, cutJsonPair)

@@ -65,6 +65,30 @@ describe("a text's credentials", () => {
     );
   });
 
+  it("are cut after a word that says a credential follows, when the next reads as one", () => {
+    expect(textWithoutSecrets("Error: bad credentials Zq9x7Kp2Lm4Nw8")).toBe(
+      "Error: bad credentials [redacted]",
+    );
+    expect(textWithoutSecrets("refused: secret 4bf92f3577b34da6a3ce929d0e0e4736")).toBe(
+      "refused: secret [redacted]",
+    );
+    expect(textWithoutSecrets("unknown api key Zq9x7Kp2Lm")).toBe("unknown api key [redacted]");
+    expect(textWithoutSecrets("Password Zq9x7Kp2 refused")).toBe("Password [redacted] refused");
+  });
+
+  it("leave the word after one that only speaks of a credential, and an id no such word names", () => {
+    for (const said of [
+      "password reset link sent",
+      "passwords do not match",
+      "Secrets Manager unavailable",
+      "credentials provider chain failed",
+      "jwt malformed",
+      "trace 4bf92f3577b34da6a3ce929d0e0e4736 failed",
+    ]) {
+      expect(textWithoutSecrets(said)).toBe(said);
+    }
+  });
+
   it("leave a text that only speaks of a credential as it was", () => {
     for (const said of ["Token expired", "tokens: 3 of 5 used", "keyFile: /etc/ssl/key.pem"]) {
       expect(textWithoutSecrets(said)).toBe(said);

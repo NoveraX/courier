@@ -264,6 +264,13 @@ visitor makes one copy, and keeps it while they use it; a script that
 makes copy after copy to crowd the others out of the store is refused
 past them.
 
+The budgets live in the backend's memory alone, in one of Courier's
+stores, which forgets an address within its shortest window, a minute,
+of its budget being whole again: 2 minutes after a visitor's last call
+at most, and 11 after their last first change. The privacy notice says
+the longest, and `tests/server/address-memory.test.ts` holds the two to
+each other.
+
 A call past a budget is answered 429 `RATE_LIMITED`, with `Retry-After`;
 every answer tells what is left of the tightest budget it took from in
 `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`, which

@@ -8,7 +8,7 @@
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
@@ -17,6 +17,10 @@ import { withIncomingRequest } from "../src/node-request-context";
 import type { IncomingRequest } from "../src/session/incoming-request";
 import { countedStream } from "../src/utils/counted-stream";
 import { startUpstream, type Upstream } from "./helpers/upstream";
+
+/* Redirects followed as a fetch that keeps no copy of a stream, Node 26's, follows them;
+   where one would, an upload follows none (upload-redirects-refused.test.ts). */
+vi.mock("../src/utils/fetch-copies", () => ({ FETCH_COPIES: { forms: true, streams: false } }));
 
 const { endpoint } = courier();
 let upstream: Upstream | undefined;

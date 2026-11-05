@@ -7,8 +7,14 @@
  * followed by hand, applying the steps of the Fetch standard's redirect
  * handling: at most 20 hops, a POST that a 301, 302 or 303 turns into a GET
  * without its body, and no credentials carried to another origin.
+ *
+ * Node 22's and 24's fetch keeps a copy of the whole stream while it sends
+ * it, for a redirect it may have to follow, unless it is told to follow
+ * none (see `fetchCopies`). There an upload follows no redirect: one fails
+ * it, as a network error does, unless the caller set `redirect` itself.
  */
 
+import { FETCH_COPIES } from "./fetch-copies";
 import type { UploadSource } from "./upload-source";
 
 const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
@@ -54,9 +60,12 @@ export async function sendUpload(
     fetch?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
   } = {},
 ): Promise<Response> {
-  const follows = source.replayable && (init.redirect ?? "follow") === "follow";
+  /* A fetch that would keep a copy of the whole stream for a redirect it might follow
+     is told to follow none: a redirect then fails the upload, as a network error does. */
+  const refuses = FETCH_COPIES.streams && init.redirect === undefined;
+  const follows = !refuses && source.replayable && (init.redirect ?? "follow") === "follow";
   /* Followed by hand, or not at all: fetch's own following goes to any origin. */
-  const manual = follows || withinOrigin;
+  const manual = follows || (withinOrigin && !refuses);
   const origin = new URL(url).origin;
   let hop: Hop = { url, method: init.method, headers: new Headers(init.headers), withBody: true };
 
@@ -66,7 +75,7 @@ export async function sendUpload(
       method: hop.method,
       headers: hop.headers,
       body: hop.withBody ? wrap(source.open()) : null,
-      redirect: manual ? "manual" : init.redirect,
+      redirect: refuses ? "error" : manual ? "manual" : init.redirect,
       duplex: "half",
     } as RequestInit);
     const location = follows && REDIRECTS.has(response.status) && response.headers.get("location");

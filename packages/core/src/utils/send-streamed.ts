@@ -2,7 +2,7 @@ import type { PlatformFetch } from "../http-client/source-transport";
 import type { UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { countedStream } from "./counted-stream";
-import { FETCH_KEEPS_FORMS } from "./fetch-keeps-forms";
+import { FETCH_COPIES } from "./fetch-copies";
 import { sendAsStream } from "./send-as-stream";
 
 /** How a body sent as a stream is sent. */
@@ -49,7 +49,7 @@ export function sendStreamed(
       options,
     );
   }
-  if (FETCH_KEEPS_FORMS && (init.body instanceof FormData || init.body instanceof Blob)) {
+  if (FETCH_COPIES.forms && (init.body instanceof FormData || init.body instanceof Blob)) {
     return sendAsStream(url, init, (stream) => stream, options);
   }
   return undefined;

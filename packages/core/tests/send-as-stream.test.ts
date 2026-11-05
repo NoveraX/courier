@@ -3,13 +3,16 @@
  * its bytes, which fetch keeps no copy of, rather than as itself, which
  * fetch copied whole for as long as it sent it.
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { coreFetch } from "../src/utils/fetch";
-import { FETCH_KEEPS_FORMS } from "../src/utils/fetch-keeps-forms";
 import { startUpstream, type Upstream } from "./helpers/upstream";
+
+/* Redirects followed as a fetch that keeps no copy of a stream, Node 26's, follows them;
+   where one would, an upload follows none (upload-redirects-refused.test.ts). */
+vi.mock("../src/utils/fetch-copies", () => ({ FETCH_COPIES: { forms: true, streams: false } }));
 
 const { endpoint } = courier();
 let upstream: Upstream | undefined;
@@ -31,10 +34,6 @@ function recordingFetch() {
 }
 
 describe("a form a server sends", () => {
-  it("is Node's fetch: undici", () => {
-    expect(FETCH_KEEPS_FORMS).toBe(true);
-  });
-
   it("goes to fetch as the stream of its bytes, with its length and its boundary", async () => {
     const { calls, send } = recordingFetch();
     const form = new FormData();

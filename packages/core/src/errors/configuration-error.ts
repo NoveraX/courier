@@ -273,7 +273,20 @@ export type ConfigurationErrorCode =
    * or a `retryOn` that names what no failure is — the 0 that once stood
    * for a request that got no answer among them.
    */
-  | "RETRY_OPTIONS_INVALID";
+  | "RETRY_OPTIONS_INVALID"
+  /**
+   * A header value Courier was given to send — a call's, an API's, a
+   * token's — holds what no request can carry: a NUL or a line break inside
+   * it. The platform's own refusal repeats the value, often a credential,
+   * so this one names the header alone.
+   */
+  | "HEADER_VALUE_INVALID"
+  /**
+   * `authMiddleware` was given what it cannot work with: a header name that
+   * is no token, a scheme with a character no scheme has, an option it does
+   * not have, or no `getToken`.
+   */
+  | "AUTH_OPTIONS_INVALID";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

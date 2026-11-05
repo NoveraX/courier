@@ -102,14 +102,18 @@ A cancellation is never retried, whatever `retryOn` says: not a call whose signa
 JWT/OAuth token injection with automatic refresh on 401.
 
 ```ts title="signature"
+type GivenToken = string | null | undefined
+
 declare function authMiddleware(options: {
-  /** Function to get the current auth token */
-  getToken: () => string | Promise<string>
-  /** Optional function to refresh the token on 401 */
-  refreshToken?: () => string | Promise<string>
+  /** Gives the current token before each attempt: null, undefined or "" when there is none */
+  getToken: () => GivenToken | Promise<GivenToken>
+  /** Gives a new token when the upstream answers 401: null or undefined when it cannot */
+  refreshToken?: () => GivenToken | Promise<GivenToken>
+  /** Refuse a call with no token before it is sent, with a MissingTokenError (default: false) */
+  required?: boolean
   /** Header name (default: "Authorization") */
   header?: string
-  /** Auth scheme prefix (default: "Bearer") */
+  /** Auth scheme the token follows (default: "Bearer"; "" sends the token alone) */
   scheme?: string
 }): Middleware
 ```
@@ -121,16 +125,34 @@ const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
     authMiddleware({
-      getToken: () => localStorage.getItem("access_token")!,
+      getToken: () => localStorage.getItem("access_token"),
     }),
   ],
   groups: { /* ... */ },
 })
 ```
 
+### Before there is a token
+
+A call made while there is no token — `getToken` gives `null`, `undefined` or `""` — goes without the header, so a page signs in through the very API whose middleware sends the token; a header the call set itself is left as it is. With `required: true`, such a call is refused before it is sent, with a `MissingTokenError` whose `header` names the header it needed:
+
+```ts title="lib/sources.ts"
+import { isMissingTokenError } from "@noverax/courier"
+
+const account = authMiddleware({ getToken: () => session.accessToken, required: true })
+
+try {
+  await caller.account.get()
+} catch (error) {
+  if (isMissingTokenError(error)) redirect("/sign-in")
+}
+```
+
+A token holding a NUL or a line break inside it, which no header can carry, is refused before the request leaves with a `ConfigurationError` of code `HEADER_VALUE_INVALID`, and the error never repeats the token; a line break at its end, as a file read whole leaves one, is trimmed as `fetch` trims it. A `header` that is no header name, a `scheme` that is no auth scheme, or an option the middleware does not have is refused where the middleware is made, with code `AUTH_OPTIONS_INVALID`.
+
 ### With token refresh
 
-When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401. Requests refused while a refresh is running wait for it instead of starting their own, so `refreshToken()` runs once for all of them:
+When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401, and so it does with the first when `refreshToken()` gives no token or the request's body is a stream that cannot be sent twice. One refresh serves every call its 401s came from: a call refused while a refresh runs waits for it, and one sent before a refresh that has since ended takes that refresh's token, so `refreshToken()` runs once however the refusals fall — a hundred calls sent with an expired token cost one refresh. A refresh that fails rejects the calls waiting on it with its error, and the next 401 tries again:
 
 ```ts title="lib/sources.ts"
 authMiddleware({
@@ -149,9 +171,10 @@ Set `scheme` to an empty string and use a custom header for non-Bearer auth:
 
 ```ts title="lib/sources.ts"
 authMiddleware({
-  getToken: () => process.env.API_KEY!,
+  getToken: () => process.env.API_KEY,
   header: "X-API-Key",
   scheme: "",
+  required: true, // a missing key is a mistake of the deployment, refused before anything is sent
 })
 ```
 

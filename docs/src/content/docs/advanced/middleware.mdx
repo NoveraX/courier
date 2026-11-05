@@ -110,7 +110,7 @@ Attaches an auth token to every request. Optionally refreshes the token on 401:
 import { authMiddleware } from "@noverax/courier/middleware"
 
 authMiddleware({
-  getToken: () => localStorage.getItem("token")!,
+  getToken: () => localStorage.getItem("token"), // null before sign-in: no header
   refreshToken: () => refreshAccessToken(),  // Optional: renew and resend once on 401
   header: "Authorization",                   // Default
   scheme: "Bearer",                          // Default

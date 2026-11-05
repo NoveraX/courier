@@ -52,23 +52,19 @@ export type {
   TypedClient,
   WithOptions,
 } from "./client";
-export {
-  ConfigurationError,
-  type ConfigurationErrorCode,
-  CourierError,
-  type CourierErrorOptions,
-  HTTPError,
-  isConfigurationError,
-  isCourierError,
-  isHTTPError,
-  isNetworkError,
-  isRequestFailure,
-  isTimeoutError,
-  NetworkError,
-  type RequestFailure,
-  TimeoutError,
-  type TimeoutScope,
+export type {
+  ConfigurationErrorCode,
+  CourierErrorOptions,
+  RequestFailure,
+  TimeoutScope,
 } from "./errors";
+export { ConfigurationError, isConfigurationError } from "./errors/configuration-error";
+export { CourierError, isCourierError } from "./errors/courier-error";
+export { HTTPError, isHTTPError } from "./errors/http-error";
+export { isMissingTokenError, MissingTokenError } from "./errors/missing-token-error";
+export { isNetworkError, NetworkError } from "./errors/network-error";
+export { isRequestFailure } from "./errors/request-failure";
+export { isTimeoutError, TimeoutError } from "./errors/timeout-error";
 export {
   createFetch,
   type FetchClient,

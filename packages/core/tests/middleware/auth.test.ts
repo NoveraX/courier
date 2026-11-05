@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
-import { HTTPError } from "../../src/errors";
+import { ConfigurationError, HTTPError, MissingTokenError } from "../../src/errors";
 import { authMiddleware } from "../../src/middleware/index";
 import type { WrapHandler } from "../../src/middleware/types";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
@@ -129,8 +129,8 @@ describe("authMiddleware against a real upstream", () => {
     const calls = Promise.all(
       [1, 2, 3].map((n) => client.with({ headers: { "x-call": String(n) } }).me()),
     );
-    await vi.waitFor(() => expect(refreshToken).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    /* All three refused before the one refresh they share ends. */
+    await vi.waitFor(() => expect(seen).toHaveLength(3));
     release("fresh");
 
     await expect(calls).resolves.toEqual([{ user: "ada" }, { user: "ada" }, { user: "ada" }]);
@@ -176,5 +176,195 @@ describe("authMiddleware inside a chain", () => {
 
     expect(result.status).toBe(200);
     expect(calls).toBe(2);
+  });
+});
+
+/* Made up, and joined at run time so no literal sits in the source for a secret scanner. */
+const SECRET = ["Zq9x7", "Kp2Lm", "4Nw8"].join("");
+
+/** An upstream that answers every request, recording what it saw. */
+async function answeringAll(): Promise<Upstream> {
+  upstream = await startUpstream((_req, res) => sendJson(res, 200, { ok: true }));
+  return upstream;
+}
+
+describe("authMiddleware without a token", () => {
+  it.each([
+    ["undefined", undefined],
+    ["null", null],
+    ["an empty string", ""],
+  ])("sends no Authorization header when the token is %s", async (_said, token) => {
+    const { url, seen } = await answeringAll();
+    const client = clientFor(url, authMiddleware({ getToken: () => token }));
+
+    await expect(client.me()).resolves.toEqual({ ok: true });
+
+    expect(seen[0]?.headers.authorization).toBeUndefined();
+  });
+
+  it("leaves the header a call set itself where there is no token", async () => {
+    const { url, seen } = await answeringAll();
+    const client = clientFor(url, authMiddleware({ getToken: async () => undefined }));
+
+    await client.with({ headers: { authorization: "Basic YW5hOnB3" } }).me();
+
+    expect(seen[0]?.headers.authorization).toBe("Basic YW5hOnB3");
+  });
+
+  it("still sends the token once there is one", async () => {
+    const { url, seen } = await answeringAll();
+    const client = clientFor(url, authMiddleware({ getToken: () => "t0k3n" }));
+
+    await client.me();
+
+    expect(seen[0]?.headers.authorization).toBe("Bearer t0k3n");
+  });
+
+  it("refuses a call that requires a token before sending it, with a MissingTokenError", async () => {
+    const { url, seen } = await answeringAll();
+    const client = clientFor(url, authMiddleware({ getToken: () => null, required: true }));
+
+    const error: unknown = await client.me().catch((thrown: unknown) => thrown);
+
+    expect(error).toBeInstanceOf(MissingTokenError);
+    expect(error).toMatchObject({ code: "TOKEN_MISSING", header: "Authorization" });
+    expect(seen).toHaveLength(0);
+  });
+
+  it("signs in through an API that sends the token, before there is one, and refreshes on its 401", async () => {
+    let session: string | undefined;
+    upstream = await startUpstream((req, res) => {
+      if (req.url === "/login") return sendJson(res, 200, { token: "fresh" });
+      if (req.headers.authorization === "Bearer fresh") return sendJson(res, 200, { user: "ada" });
+      sendJson(res, 401, { message: "sign in first" });
+    });
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        middleware: [authMiddleware({ getToken: () => session, refreshToken: () => session })],
+        endpoints: {
+          login: endpoint.post("login").response<{ token: string }>(),
+          me: endpoint.get("me"),
+        },
+      }),
+    );
+
+    const { token } = await client.login();
+    session = token;
+
+    await expect(client.me()).resolves.toEqual({ user: "ada" });
+    expect(upstream.seen[0]?.headers.authorization).toBeUndefined();
+  });
+});
+
+describe("a token no header can carry", () => {
+  it("is refused before anything is sent, without repeating it", async () => {
+    const { url, seen } = await answeringAll();
+    const client = clientFor(url, authMiddleware({ getToken: () => `${SECRET}\r\nX-Injected: 1` }));
+
+    const error: unknown = await client.me().catch((thrown: unknown) => thrown);
+
+    expect(error).toBeInstanceOf(ConfigurationError);
+    expect(error).toMatchObject({ code: "HEADER_VALUE_INVALID" });
+    expect(String((error as Error).message)).not.toContain(SECRET);
+    expect(seen).toHaveLength(0);
+  });
+
+  it("is sent as fetch sends it when the line break is only at its end, which fetch trims", async () => {
+    const { url, seen } = await answeringAll();
+    const client = clientFor(url, authMiddleware({ getToken: () => "t0k3n\n" }));
+
+    await client.me();
+
+    expect(seen[0]?.headers.authorization).toBe("Bearer t0k3n");
+  });
+
+  it.each([
+    ["a header name with a space", { header: "X Api Key" }],
+    ["a scheme with a colon", { scheme: "Bearer:" }],
+    ["an option it does not have", { tokenHeader: "x" }],
+  ])("refuses %s where the middleware is made", (_said, extra) => {
+    expect(() => authMiddleware({ getToken: () => "t", ...extra })).toThrow(
+      expect.objectContaining({ code: "AUTH_OPTIONS_INVALID" }),
+    );
+  });
+});
+
+describe("one refresh for many calls", () => {
+  it("refreshes once for a hundred calls refused together, however late each refusal comes", async () => {
+    /* Half the stale calls are refused at once, the other half only once the refresh is over. */
+    let refreshed: () => void = () => {};
+    const over = new Promise<void>((resolve) => {
+      refreshed = resolve;
+    });
+    upstream = await startUpstream((req, res, index) => {
+      if (req.headers.authorization === "Bearer fresh") return sendJson(res, 200, { user: "ada" });
+      if (index < 50) return sendJson(res, 401, { message: "token expired" });
+      void over.then(() => sendJson(res, 401, { message: "token expired" }));
+    });
+    const refreshToken = vi.fn(async () => {
+      await Promise.resolve();
+      return "fresh";
+    });
+    const middleware = authMiddleware({ getToken: () => "stale", refreshToken });
+    const client = clientFor(upstream.url, middleware);
+
+    const calls = Promise.all(
+      Array.from({ length: 100 }, (_, n) => client.with({ headers: { "x-call": String(n) } }).me()),
+    );
+    await vi.waitFor(() => expect(refreshToken).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(
+        upstream?.seen.filter((r) => r.headers.authorization === "Bearer fresh").length,
+      ).toBeGreaterThan(0),
+    );
+    refreshed();
+
+    await expect(calls).resolves.toHaveLength(100);
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects every call waiting on a refresh that fails with its error, and tries again next time", async () => {
+    const { url } = await acceptingOnlyFresh();
+    const refreshToken = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new Error("refresh token revoked"))
+      .mockResolvedValueOnce("fresh");
+    const client = clientFor(url, authMiddleware({ getToken: () => "stale", refreshToken }));
+
+    await expect(client.me()).rejects.toThrow("refresh token revoked");
+    await expect(client.me()).resolves.toEqual({ user: "ada" });
+    expect(refreshToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects with the 401 when the refresh finds no token to give", async () => {
+    const { url, seen } = await acceptingOnlyFresh();
+    const client = clientFor(
+      url,
+      authMiddleware({ getToken: () => "stale", refreshToken: () => undefined }),
+    );
+
+    await expect(client.me()).rejects.toMatchObject({ status: 401 });
+    expect(seen).toHaveLength(1);
+  });
+
+  it("does not refresh for a call whose body cannot be sent again", async () => {
+    const { url, seen } = await acceptingOnlyFresh();
+    const refreshToken = vi.fn(() => "fresh");
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: url,
+        middleware: [authMiddleware({ getToken: () => "stale", refreshToken })],
+        endpoints: { upload: endpoint.post("upload").variables<ReadableStream<Uint8Array>>() },
+      }),
+    );
+
+    await expect(client.upload(new Blob(["chunk"]).stream())).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(refreshToken).not.toHaveBeenCalled();
+    expect(seen).toHaveLength(1);
   });
 });

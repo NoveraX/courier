@@ -90,7 +90,9 @@ It serves port 3000; put HTTPS in front of it. `/api/health` answers whether
 it is up, and the container stops, to be started again, when either server
 does. Asked to stop, the backend takes no new call and lets the answers on
 their way finish, for 5 seconds at most; it waits 30 seconds at most for a
-call to arrive, and 10 for its headers.
+call to arrive, and 10 for its headers. The proxy route gives up on a
+call's body sooner, after 25 seconds, or 10 with no piece of it, and
+answers 408 `BODY_TIMEOUT` in JSON, as Courier answers a body it refuses.
 
 Visits are counted with Yandex Metrica on courier.noverax.cloud's production
 build only, and only once the reader accepts in the bar at the foot of the
@@ -275,7 +277,9 @@ it passes the call on; of an upload it holds none
 its options, an upload goes on to the backend as it arrives: the backend
 counts it before its file comes, refusing one past a budget at once, and
 an upload still being sent holds only its pieces in flight, however large
-its file.
+its file. It has to arrive within the route's 25 seconds — 1 MiB at some
+42 KB a second — or the route refuses it, before the backend's own 30
+seconds would cut it off with nothing said.
 
 ## Project structure
 

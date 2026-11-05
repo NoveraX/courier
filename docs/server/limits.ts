@@ -64,6 +64,14 @@ export interface DemoLimits extends SandboxLimits {
   /** How long a call may take to arrive whole, and its headers alone. */
   readonly requestMs: number
   readonly headersMs: number
+  /**
+   * How long the site's proxy route waits for a call's body to arrive
+   * whole, and for its next piece: within `requestMs`, so that a body too
+   * slow to reach the backend in time is refused by the route, in JSON,
+   * before the backend cuts the call off with nothing said.
+   */
+  readonly bodyMs: number
+  readonly bodyIdleMs: number
   /** How long the backend, asked to stop, lets the calls it is answering finish. */
   readonly shutdownMs: number
 }
@@ -99,6 +107,8 @@ export const DEMO_LIMITS: DemoLimits = {
   uploadFieldBytes: 1024,
   requestMs: 30_000,
   headersMs: 10_000,
+  bodyMs: 25_000,
+  bodyIdleMs: 10_000,
   shutdownMs: 5_000,
 }
 

@@ -11,6 +11,8 @@ export type ConfigurationErrorCode =
   | "INVALID_BACKOFF"
   /** A realtime connection's `messageQueue` names a limit that is not a whole number from 0, or an unknown `overflow`. */
   | "INVALID_MESSAGE_QUEUE"
+  /** A subscription was asked to tell an event it does not have: it has `data`, `error`, `status`, `open` and `close`. */
+  | "UNKNOWN_EVENT"
   /** A relative `proxyPath` value was given but no origin is available (SSR without explicit origin injection). */
   | "PROXY_PATH_NO_ORIGIN"
   /** A `proxyPath` value is malformed (empty string, protocol-relative `//host`, wrong scheme, etc.). */

@@ -130,6 +130,9 @@ export function useChannel<TSend, TReceive>(
       channelRef.current = ch;
       pendingRef.current = null;
 
+      /* The channel is already opening by the time it is returned, and says
+         only what changes after: where it stands is read. */
+      report(ch.status);
       unsubscribe.push(
         ch.on("status", report),
         ch.on("data", (message: unknown) => {

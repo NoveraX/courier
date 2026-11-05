@@ -13,7 +13,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
-import type { SSESubscription } from "../src/realtime/types";
+import type { Subscription } from "../src/realtime/subscription-types";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint, stream } = courier();
@@ -61,7 +61,7 @@ function proxyClient() {
 }
 
 /** The headers the upstream saw once the stream opened. */
-async function openedWith(subscription: SSESubscription<unknown>) {
+async function openedWith(subscription: Subscription<unknown>) {
   try {
     await vi.waitFor(() => expect(upstream.received).toHaveLength(1));
     return upstream.received[0]?.headers;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { courier, defineApi, defineGroup } from "../src/define";
-import type { WSChannel } from "../src/realtime/types";
+import type { WSChannel } from "../src/realtime/subscription-types";
 import { createTestClient } from "../src/testing/create-test-client";
 
 const { endpoint } = courier();
@@ -117,12 +117,10 @@ describe("createTestClient — WS channel", () => {
     mock("chat", "room").channel({ onMessage: noop });
 
     const ch = client.chat.room() as unknown as WSChannel<unknown, unknown>;
+    expect(ch.status).toBe("connecting");
     ch.on("status", (s) => statuses.push(s));
 
-    await new Promise((r) => setTimeout(r, 20));
-
-    expect(statuses).toContain("connecting");
-    expect(statuses).toContain("connected");
+    await expect.poll(() => statuses).toEqual(["connected"]);
 
     ch.close();
     expect(ch.status).toBe("disconnected");

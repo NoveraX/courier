@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ChannelHandle } from "../src/realtime/channel-handle";
 import { ForbiddenError, fromErrorCode, type RealtimeError } from "../src/realtime/errors";
-import type { ConnectionStatus, WSChannel, WSChannelContext } from "../src/realtime/types";
+import type { SubscriptionSink } from "../src/realtime/subscription-driver";
+import type { ConnectionStatus, WSChannelContext } from "../src/realtime/types";
 import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import { createMockSSESubscription } from "../src/testing/mock-sse";
@@ -242,49 +244,34 @@ describe("instrumentSSE — lifecycle events", () => {
 // ---------------------------------------------------------------------------
 
 describe("instrumentWSChannel", () => {
-  function createMockChannel(initial: ConnectionStatus = "connecting"): {
-    channel: WSChannel<unknown, unknown>;
-    emitData: (data: unknown) => void;
-    emitStatus: (status: ConnectionStatus) => void;
-    emitError: (error: RealtimeError) => void;
-  } {
-    const dataHandlers = new Set<(data: unknown) => void>();
-    const statusHandlers = new Set<(s: ConnectionStatus) => void>();
-    const errorHandlers = new Set<(error: RealtimeError) => void>();
-    let status: ConnectionStatus = initial;
-
-    const channel: WSChannel<unknown, unknown> = {
-      send: vi.fn(),
-      close: vi.fn(),
-      get status() {
-        return status;
+  /* A channel the test runs by hand: the statuses, data and errors it is told, the test tells it. */
+  function createMockChannel(initial: ConnectionStatus = "connecting") {
+    let sink: SubscriptionSink<unknown> | undefined;
+    const send = vi.fn<(data: unknown) => unknown>(() => true);
+    const close = vi.fn();
+    const channel = new ChannelHandle<unknown, unknown, unknown>(
+      {
+        open: (to) => {
+          sink = to;
+        },
+        reconnect: () => undefined,
+        close,
       },
-      on(event: "data" | "status" | "error", handler: never) {
-        if (event === "error") {
-          errorHandlers.add(handler as never);
-          return () => errorHandlers.delete(handler as never);
-        }
-        if (event === "data") {
-          dataHandlers.add(handler as never);
-          return () => dataHandlers.delete(handler as never);
-        }
-        statusHandlers.add(handler as never);
-        return () => statusHandlers.delete(handler as never);
-      },
-    } as WSChannel<unknown, unknown>;
-
+      (data) => send(data),
+    );
+    const told = (): SubscriptionSink<unknown> => {
+      if (!sink) throw new Error("not opened");
+      return sink;
+    };
+    if (initial === "connected") told().open({ resumed: false });
+    if (initial === "disconnected") told().end();
     return {
       channel,
-      emitData: (data) => {
-        for (const h of dataHandlers) h(data);
-      },
-      emitStatus: (s) => {
-        status = s;
-        for (const h of statusHandlers) h(s);
-      },
-      emitError: (error) => {
-        for (const h of errorHandlers) h(error);
-      },
+      send,
+      close,
+      emitData: (data: unknown) => told().data({ data }),
+      emitOpen: () => told().open({ resumed: false }),
+      emitEnd: (error?: RealtimeError) => told().end(error),
     };
   }
 
@@ -324,16 +311,16 @@ describe("instrumentWSChannel", () => {
     expect(onStreamMessage.mock.calls[1]?.[0].seq).toBe(2);
   });
 
-  it("fires onStreamClose with reason 'complete' when status becomes disconnected", async () => {
+  it("fires onStreamClose with reason 'complete' when the server finishes it", async () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamClose = vi.fn();
     studioHooks.onStreamClose = onStreamClose;
 
-    const { channel, emitStatus } = createMockChannel();
+    const { channel, emitOpen, emitEnd } = createMockChannel();
     instrumentWSChannel(channel, { ...META, transport: "ws" });
 
-    emitStatus("connected");
-    emitStatus("disconnected");
+    emitOpen();
+    emitEnd();
     await Promise.resolve();
 
     expect(onStreamClose).toHaveBeenCalledTimes(1);
@@ -345,21 +332,21 @@ describe("instrumentWSChannel", () => {
     const onStreamClose = vi.fn();
     studioHooks.onStreamClose = onStreamClose;
 
-    const { channel } = createMockChannel();
+    const { channel, close } = createMockChannel();
     const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
 
     wrapped.close();
 
     expect(onStreamClose).toHaveBeenCalledTimes(1);
     expect(onStreamClose.mock.calls[0]?.[0].reason).toBe("disconnect");
-    expect(channel.close).toHaveBeenCalled();
+    expect(close).toHaveBeenCalled();
   });
 
   it("send() hands back what the underlying channel's send returned", async () => {
     studioHooks.onStreamOpen = vi.fn();
-    const { channel } = createMockChannel();
+    const { channel, send } = createMockChannel();
     const refused = Promise.reject(new Error("refused"));
-    vi.mocked(channel.send).mockReturnValue(refused as never);
+    send.mockReturnValue(refused);
     const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
 
     const returned = wrapped.send({ text: "outgoing" }) as unknown;
@@ -372,12 +359,12 @@ describe("instrumentWSChannel", () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamMessage = vi.fn();
     studioHooks.onStreamMessage = onStreamMessage;
-    const { channel } = createMockChannel();
+    const { channel, send } = createMockChannel();
     const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
 
     wrapped.send({ text: "outgoing" });
 
-    expect(channel.send).toHaveBeenCalledWith({ text: "outgoing" });
+    expect(send).toHaveBeenCalledWith({ text: "outgoing" });
     // Outbound frames are tagged "message" so the Stream tab can render
     // an upward arrow distinct from inbound "data" frames.
     expect(onStreamMessage).toHaveBeenCalledTimes(1);
@@ -392,8 +379,8 @@ describe("instrumentWSChannel", () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamMessage = vi.fn();
     studioHooks.onStreamMessage = onStreamMessage;
-    const { channel } = createMockChannel("connected");
-    vi.mocked(channel.send).mockReturnValue(false);
+    const { channel, send } = createMockChannel("connected");
+    send.mockReturnValue(false);
     const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
 
     expect(wrapped.send({ text: "too large" })).toBe(false);
@@ -405,9 +392,9 @@ describe("instrumentWSChannel", () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamMessage = vi.fn();
     studioHooks.onStreamMessage = onStreamMessage;
-    /* A network channel is disconnected until the turn after it is made. */
-    const { channel } = createMockChannel("disconnected");
-    vi.mocked(channel.send).mockReturnValue(true);
+    /* A channel is connecting until the server confirms it, and what it is sent meanwhile waits. */
+    const { channel, send } = createMockChannel();
+    send.mockReturnValue(true);
     const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
 
     wrapped.send({ text: "first" });
@@ -415,17 +402,16 @@ describe("instrumentWSChannel", () => {
     expect(onStreamMessage.mock.calls.map((call) => call[0].eventType)).toEqual(["message"]);
   });
 
-  it("records a channel as failed when its end error comes just after disconnected", async () => {
+  it("records a channel as failed with the error it ended with", async () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamClose = vi.fn();
     const onStreamError = vi.fn();
     studioHooks.onStreamClose = onStreamClose;
     studioHooks.onStreamError = onStreamError;
-    const { channel, emitStatus, emitError } = createMockChannel();
+    const { channel, emitEnd } = createMockChannel();
     instrumentWSChannel(channel, { ...META, transport: "ws" });
 
-    emitStatus("disconnected");
-    emitError(fromErrorCode(4401, "Token expired"));
+    emitEnd(fromErrorCode(4401, "Token expired"));
     await Promise.resolve();
 
     expect(onStreamClose.mock.calls.map((call) => call[0].reason)).toEqual(["error"]);
@@ -525,7 +511,7 @@ describe("instrumentWSChannel — a channel that ends with an error", () => {
 });
 
 // ---------------------------------------------------------------------------
-// instrumentWSPush — uses SSESubscription shape
+// instrumentWSPush — uses Subscription shape
 // ---------------------------------------------------------------------------
 
 describe("instrumentWSPush", () => {

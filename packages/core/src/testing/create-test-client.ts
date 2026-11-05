@@ -29,12 +29,12 @@ export function createTestClient<T extends DefinedApi = DefinedApi>(): TestClien
   const history: HistoryEntry[] = [];
   const mockKey = (group: string, method: string) => `${group}/${method}`;
 
-  // Backend returns synchronously for SSE (SSESubscription) or async for HTTP
+  // Backend returns synchronously for SSE (Subscription) or async for HTTP
   const backend: ExecuteBackend = (group, method, variables, _options, raw) => {
     const key = mockKey(group, method);
     const handler = getMock(mocks, key);
 
-    // SSE stream mock — return SSESubscription synchronously
+    // SSE stream mock — return Subscription synchronously
     if (handler?.streamFn) {
       return handleStream(handler, group, method, variables, history);
     }

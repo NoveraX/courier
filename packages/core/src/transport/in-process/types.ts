@@ -10,7 +10,7 @@
  * request through this path so that what it shows is what production does.
  */
 
-import type { WSChannel } from "../../realtime/types";
+import type { WSChannel } from "../../realtime/subscription-types";
 import type { PlaygroundWSRegistry } from "./ws-registry";
 
 /** Payload for direct in-process SSE execution */

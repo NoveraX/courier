@@ -17,7 +17,7 @@ import {
 } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
-import type { SSESubscription } from "../src/realtime/types";
+import type { Subscription } from "../src/realtime/subscription-types";
 
 const { endpoint, stream } = courier();
 
@@ -41,8 +41,8 @@ describe("a proxy client of an API with a stream", () => {
       const bare = createProxyCaller(routesOf(live, "live"));
       const tuned = createProxyCaller(routesOf(live, "live"), { timeout: 1000 });
 
-      expectTypeOf(bare.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
-      expectTypeOf(tuned.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
+      expectTypeOf(bare.ticks.feed).returns.toEqualTypeOf<Subscription<number>>();
+      expectTypeOf(tuned.ticks.feed).returns.toEqualTypeOf<Subscription<number>>();
     };
     expect(typeOnly).toBeTypeOf("function");
   });
@@ -57,7 +57,7 @@ describe("a proxy client of an API with a stream", () => {
       const asRead = { "ticks.feed": { type: "query" } } as const satisfies RouteMap<typeof live>;
 
       expectTypeOf(createProxyCaller(routes).ticks.feed).returns.toEqualTypeOf<
-        SSESubscription<number>
+        Subscription<number>
       >();
       expect(asRead).toBeDefined();
     };

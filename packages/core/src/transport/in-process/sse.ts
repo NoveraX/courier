@@ -1,12 +1,15 @@
 import type { Sources } from "../../define/types";
 import { eventsOf, sseEventOf } from "../../realtime/implementation";
 import { streamLabel } from "../../realtime/stream-label";
-import type { SSEContext, SSEEvent, SSESubscription } from "../../realtime/types";
+import { SubscriptionHandle } from "../../realtime/subscription-handle";
+import type { Subscription } from "../../realtime/subscription-types";
+import type { SSEContext, SSEEvent } from "../../realtime/types";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
 import { anySignal } from "../../utils/any-signal";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
+import { eventsDriver } from "./events-driver";
 import {
   buildSyntheticRequest,
   checkedEvents,
@@ -23,7 +26,7 @@ const EXECUTOR = "executeDirectSSE";
  *
  * Resolves the endpoint, validates variables, runs middleware (with timeout),
  * builds a real `SSEContext` with merged headers, and returns a fully
- * Studio-instrumented `SSESubscription`. The result is wire-equivalent to a
+ * Studio-instrumented `Subscription`. The result is wire-equivalent to a
  * direct production call — no fake headers, no skipped middleware, no fake
  * validation.
  *
@@ -54,7 +57,7 @@ export async function executeDirectSSE(
   sources: Sources,
   payload: ExecuteDirectSSEPayload,
   options: ExecuteDirectStreamOptions = {},
-): Promise<SSESubscription> {
+): Promise<Subscription> {
   const { endpoint, schema } = resolveStreamEndpoint(sources, payload, "sse", EXECUTOR);
   // Validate variables up front so the caller observes ValidationError before
   // any stream lifecycle begins (no half-opened Studio entries).
@@ -111,37 +114,10 @@ export async function executeDirectSSE(
     sseEvents(eventsOf(endpoint, sseCtx, label), label),
     composedSignal,
   );
-  const subscription = wrapEventsAsSubscription(
-    schema.response ? checkedEvents(events, schema.response) : events,
-    ownAC,
+  const subscription = new SubscriptionHandle(
+    eventsDriver(schema.response ? checkedEvents(events, schema.response) : events, ownAC),
   );
   return instrumentSSE(subscription, meta, instr);
-}
-
-/**
- * Wrap a handler's events as the minimal SSESubscription contract for
- * in-process use.
- *
- * Closing ends a reader waiting on the next event at once, even while the
- * handler is parked on an await; the handler hears it through `ctx.signal`.
- */
-function wrapEventsAsSubscription(
-  events: AsyncGenerator<SSEEvent<unknown>, void, unknown>,
-  ownAC: AbortController,
-): SSESubscription {
-  return {
-    [Symbol.asyncIterator]() {
-      return events;
-    },
-    close() {
-      ownAC.abort();
-    },
-    status: "connected",
-    dropped: 0,
-    on() {
-      return () => {};
-    },
-  };
 }
 
 async function* sseEvents(

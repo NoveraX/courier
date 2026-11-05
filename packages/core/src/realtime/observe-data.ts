@@ -1,30 +1,31 @@
-import type { WSChannel } from "./types";
+import type { StreamEvent, Subscription } from "./subscription-types";
 
 /**
- * The method by which a channel that holds what it sent before its first
- * data listener lets that data be watched without being taken: the
- * in-process channel holds what `onJoin` sent for its caller, who can only
- * listen once the channel is returned.
+ * The method by which a subscription that holds what came before its first
+ * reader lets it be watched without being taken: an in-process channel holds
+ * what `onJoin` sent for its caller, who can only listen once the channel is
+ * returned.
  */
 export const OBSERVE_DATA = Symbol.for("courier.channel.observe-data");
 
-/** A channel whose data can be watched without being taken from its caller. */
+/** A subscription whose data can be watched without being taken from its reader. */
 export interface ObservableChannel {
   /**
-   * Hear every message the channel delivers, those it holds already first.
+   * Hear everything the subscription delivers, what it holds already first,
+   * with the event each came in.
    *
    * @returns Stops hearing them
    */
-  [OBSERVE_DATA](handler: (data: unknown) => void): () => void;
+  [OBSERVE_DATA](handler: (data: unknown, event: StreamEvent<unknown>) => void): () => void;
 }
 
 /**
- * Hear each message a channel delivers, as Studio's instrumentation does,
- * without becoming the listener a holding channel releases its first messages
- * to: those stay for the caller's own first listener.
+ * Hear everything a subscription delivers, as Studio's instrumentation does,
+ * without becoming the reader a holding subscription releases what came
+ * first to: that stays for the caller's own first reader.
  *
- * @param channel - The channel
- * @param handler - Hears each message
+ * @param subscription - The subscription or channel
+ * @param handler - Hears each delivery, with the event it came in
  * @returns Stops hearing them
  * @example
  * ```ts
@@ -32,10 +33,12 @@ export interface ObservableChannel {
  * ```
  */
 export function observeData(
-  channel: WSChannel<unknown, unknown>,
-  handler: (data: unknown) => void,
+  subscription: Subscription<unknown>,
+  handler: (data: unknown, event: StreamEvent<unknown>) => void,
 ): () => void {
-  return isObservable(channel) ? channel[OBSERVE_DATA](handler) : channel.on("data", handler);
+  return isObservable(subscription)
+    ? subscription[OBSERVE_DATA](handler)
+    : subscription.on("data", handler);
 }
 
 function isObservable(channel: object): channel is ObservableChannel {

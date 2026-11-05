@@ -95,6 +95,8 @@ export function createTopicRegistry(options: TopicRegistryOptions = {}): TopicRe
         byTopic.set(topic, own);
       }
       own.subscribers.add(subscriber);
+      /* Joining a subscription the server runs already: no confirmation will come for this subscriber. */
+      if (own.confirmed) subscriber.open?.({ resumed: false });
       const first = own;
       return {
         created,

@@ -1,8 +1,8 @@
 import { createLogger } from "../logger";
-import { createConnectionState } from "../realtime/connection-state";
 import { RealtimeError } from "../realtime/errors";
-import { createEventQueue } from "../realtime/sse/event-queue";
-import type { ConnectionStatus, SSESubscription } from "../realtime/types";
+import type { SubscriptionSink } from "../realtime/subscription-driver";
+import { SubscriptionHandle } from "../realtime/subscription-handle";
+import type { Subscription } from "../realtime/subscription-types";
 import { abortableEvents } from "../utils/abortable-events";
 import type { StreamGenerator } from "./types";
 
@@ -10,7 +10,7 @@ const log = createLogger("Testing");
 const INTERNAL_ERROR = 5000;
 
 /**
- * Create an in-memory SSESubscription from an async generator factory.
+ * Create an in-memory subscription from an async generator factory.
  * No real HTTP — the generator yields events directly.
  *
  * It ends as a real subscription does: iteration ends when the generator
@@ -18,11 +18,12 @@ const INTERNAL_ERROR = 5000;
  * `RealtimeError`, or with code 5000 for any other error, as a client of a
  * real server reads it — never with nobody listening, which would fail the
  * test run with an unhandled rejection. Leaving the loop early closes the
- * subscription, and events are buffered as a real one buffers them.
+ * subscription, events are buffered as a real one buffers them, and
+ * `reconnect()` after it ended runs the generator again.
  *
  * @param generatorFn - Factory that creates the async generator
  * @param delayMs - Optional delay before the stream starts producing events
- * @returns SSESubscription with full lifecycle support
+ * @returns The subscription, read with `on("data")` or `for await`
  *
  * @example
  * ```ts
@@ -35,58 +36,36 @@ const INTERNAL_ERROR = 5000;
 export function createMockSSESubscription<TData>(
   generatorFn: StreamGenerator<TData>,
   delayMs?: number,
-): SSESubscription<TData> {
-  const state = createConnectionState();
-  const controller = new AbortController();
-  const queue = createEventQueue<TData>();
+): Subscription<TData> {
+  let controller = new AbortController();
+  return new SubscriptionHandle<TData>({
+    open: (sink) => void run(sink),
+    reopen: (sink) => {
+      controller = new AbortController();
+      void run(sink);
+    },
+    reconnect: () => undefined,
+    close: () => controller.abort(),
+  });
 
-  function finish(error: RealtimeError | undefined): void {
-    state.set("disconnected");
-    if (error) queue.fail(error);
-    else queue.finish();
-  }
-
-  void run();
-
-  async function run(): Promise<void> {
-    // Defer to next microtask so callers can attach listeners first
+  async function run(sink: SubscriptionSink<TData>): Promise<void> {
+    const { signal } = controller;
+    /* A stream over the network opens after it is made, never as it is made. */
     await Promise.resolve();
-    state.set("connecting");
-    if (delayMs) await sleep(delayMs, controller.signal);
-    if (controller.signal.aborted) return finish(undefined);
-
-    state.set("connected");
+    if (delayMs) await sleep(delayMs, signal);
+    if (signal.aborted) return;
+    sink.open({ resumed: false });
     try {
-      for await (const event of abortableEvents(generatorFn(), controller.signal)) {
-        queue.push(event);
-      }
-      finish(undefined);
+      for await (const event of abortableEvents(generatorFn(), signal)) sink.data(event);
+      if (!signal.aborted) sink.end();
     } catch (error) {
+      if (signal.aborted) return;
       log.warn("Stream handler failed", error);
-      const failure =
-        error instanceof RealtimeError ? error : new RealtimeError(INTERNAL_ERROR, "Stream failed");
-      finish(failure);
+      sink.end(
+        error instanceof RealtimeError ? error : new RealtimeError(INTERNAL_ERROR, "Stream failed"),
+      );
     }
   }
-
-  const close = () => controller.abort();
-  const iter = queue.iterator(close);
-
-  return {
-    [Symbol.asyncIterator]() {
-      return iter;
-    },
-    close,
-    get status() {
-      return state.current;
-    },
-    get dropped() {
-      return queue.dropped;
-    },
-    on(_event: "status", handler: (status: ConnectionStatus) => void) {
-      return state.subscribe(handler);
-    },
-  };
 }
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {

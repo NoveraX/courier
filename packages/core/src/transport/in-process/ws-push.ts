@@ -1,13 +1,16 @@
 import type { Sources } from "../../define/types";
 import { eventsOf } from "../../realtime/implementation";
 import { streamLabel } from "../../realtime/stream-label";
-import type { SSEEvent, SSESubscription, WSContext } from "../../realtime/types";
+import { SubscriptionHandle } from "../../realtime/subscription-handle";
+import type { Subscription } from "../../realtime/subscription-types";
+import type { SSEEvent, WSContext } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
 import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
+import { eventsDriver } from "./events-driver";
 import {
   buildSyntheticRequest,
   checkedEvents,
@@ -23,7 +26,7 @@ const EXECUTOR = "executeDirectWSPush";
  * Execute a WS push (server→client async generator) endpoint in-process.
  *
  * Reuses the canonical pipeline (resolve → validate variables → middleware
- * → handler → instrument). Returns an `SSESubscription`-shaped wrapper:
+ * → handler → instrument). Returns a `Subscription`, as every kind returns:
  * push endpoints are semantically equivalent to SSE on the client side and
  * Studio instrumentation goes through `instrumentSSE`.
  *
@@ -34,7 +37,7 @@ export async function executeDirectWSPush(
   sources: Sources,
   payload: ExecuteDirectWSPushPayload,
   options: ExecuteDirectStreamOptions = {},
-): Promise<SSESubscription> {
+): Promise<Subscription> {
   const { endpoint, schema, topicKey } = resolveStreamEndpoint(sources, payload, "push", EXECUTOR);
   const variables = await validateStreamVariables(payload.variables, schema);
 
@@ -78,39 +81,12 @@ export async function executeDirectWSPush(
   instr?.updateMeta({ responseHeaders: headersToRecord(headers) });
 
   const events = liftToEvents(abortableEvents(eventsOf(endpoint, wsCtx, baseTopic), ownAC.signal));
-  const subscription = wrapPushAsSubscription(
-    schema.response ? checkedEvents(events, schema.response) : events,
-    ownAC,
+  const subscription = new SubscriptionHandle(
+    eventsDriver(schema.response ? checkedEvents(events, schema.response) : events, ownAC),
   );
   // Pass through `instrumentSSE` directly (push uses the same client shape).
   // The existing instr handle prevents double stream:open emission.
   return instrumentSSE(subscription, meta, instr);
-}
-
-/**
- * Wrap a push handler's values, lifted to events, as the minimal
- * SSESubscription contract.
- *
- * Closing ends a reader waiting on the next value at once, even while the
- * handler is parked on an await; the handler hears it through `ctx.signal`.
- */
-function wrapPushAsSubscription(
-  events: AsyncGenerator<SSEEvent<unknown>, void, unknown>,
-  ownAC: AbortController,
-): SSESubscription {
-  return {
-    [Symbol.asyncIterator]() {
-      return events;
-    },
-    close() {
-      ownAC.abort();
-    },
-    status: "connected",
-    dropped: 0,
-    on() {
-      return () => {};
-    },
-  };
 }
 
 /** Push handlers yield bare values; the client reads `{ data }` as it does from SSE. */

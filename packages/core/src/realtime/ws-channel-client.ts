@@ -1,31 +1,33 @@
-import { createLogger } from "../logger";
-import { acquireConnection, type ConnectionLease, leaseWhenFound } from "./caller-ws";
-import { createConnectionState } from "./connection-state";
-import { RealtimeError } from "./errors";
-import { forwardConnectionStatus } from "./forward-status";
-import { retryOf, shareRetry } from "./retry-of";
-import type { ConnectionStatus, WSChannel } from "./types";
-import { qualifyTopic } from "./ws/topic-key";
+import { ChannelHandle } from "./channel-handle";
+import type { WSChannel } from "./subscription-types";
 import type { WSConnectionConfig } from "./ws/ws-types";
-
-const log = createLogger("WS");
+import { topicDriver } from "./ws-topic-driver";
 
 /**
- * Execute a WS bidirectional channel — returns WSChannel.
- * Used for a channel the caller can send on.
+ * Execute a WS bidirectional channel: what calling a channel the caller can
+ * send on returns — a subscription, and `send`.
  *
  * What the server says about the channel reaches it: a refused message or a
  * failed handler as an `error` event, and the end of the subscription —
  * finished, or refused with a `RealtimeError` — as an `error` event where
- * there is one, then `disconnected`. A channel whose join was rejected used
- * to stay `connected`, with the reason only in the console.
+ * there is one, then `disconnected` and `close`. It is `connected` once the
+ * server has confirmed the subscription, not as soon as the socket opens.
  *
  * What is sent before the server has confirmed the subscription — right
  * after opening the channel, or while it rejoins after a reconnect — waits
  * for the confirmation, in order, instead of being refused as not subscribed.
  *
- * The socket's options may still be being found — whose session it opens
- * with, on a server — and the channel takes its socket once they are.
+ * @param url - The WebSocket URL
+ * @param topic - The endpoint's topic
+ * @param variables - The subscription's variables
+ * @param config - The socket's options, or a promise of them
+ * @returns The channel
+ * @example
+ * ```ts
+ * const room = executeWSChannel<{ text: string }, string>(url, "api.chat.room", { room: "a" });
+ * room.on("data", (line) => console.log(line));
+ * room.send({ text: "hello" });
+ * ```
  */
 export function executeWSChannel<TSend, TReceive>(
   url: string,
@@ -33,114 +35,6 @@ export function executeWSChannel<TSend, TReceive>(
   variables?: unknown,
   config?: Partial<WSConnectionConfig> | Promise<Partial<WSConnectionConfig> | undefined>,
 ): WSChannel<TSend, TReceive> {
-  const qTopic = qualifyTopic(topic, variables);
-  let lease: ConnectionLease | undefined =
-    config instanceof Promise ? undefined : acquireConnection(url, config);
-  const state = createConnectionState();
-  const dataHandlers = new Set<(data: TReceive) => void>();
-  const errorHandlers = new Set<(error: RealtimeError) => void>();
-  const early: TSend[] = [];
-  let stop: (() => void) | undefined;
-  let ended = false;
-
-  function finish(error: RealtimeError | undefined): void {
-    if (ended) return;
-    ended = true;
-    stop?.();
-    stop = undefined;
-    lease?.release();
-    if (early.length > 0) {
-      log.warn(`${early.length} message(s) not sent: the channel ${qTopic} closed first`);
-      early.length = 0;
-    }
-    if (error) for (const handler of errorHandlers) handler(error);
-    dataHandlers.clear();
-    errorHandlers.clear();
-    state.set("disconnected");
-  }
-
-  void start();
-
-  async function start(): Promise<void> {
-    await Promise.resolve();
-    if (ended) return;
-    state.set("connecting");
-    if (lease === undefined) {
-      const taken = await leaseWhenFound(url, Promise.resolve(config));
-      if (taken instanceof RealtimeError) return finish(taken);
-      if (ended) return taken.release();
-      lease = taken;
-    }
-    const conn = lease.connection;
-
-    const forward = (s: ConnectionStatus): void => {
-      if (!ended) forwardConnectionStatus(state, s);
-    };
-    /* A connection refused for good reports itself disconnected before it
-       ends each channel with why. Waiting out the turn lets the channel end
-       as a channel does — its error, then disconnected — or the relay and
-       Studio took it for a clean end. */
-    const unsubStatus = conn.onStatusChange((s) => {
-      if (s === "disconnected") queueMicrotask(() => forward(s));
-      else forward(s);
-    });
-    if (conn.status === "connected") state.set("connected");
-
-    const unsubscribe = conn.subscribe(
-      qTopic,
-      {
-        data: (payload) => {
-          for (const handler of dataHandlers) handler(payload as TReceive);
-        },
-        error: (error) => {
-          for (const handler of errorHandlers) handler(error);
-        },
-        wait: (error) => {
-          if (error) for (const handler of errorHandlers) handler(error);
-        },
-        end: (error) => finish(error),
-      },
-      variables,
-    );
-    stop = () => {
-      unsubscribe();
-      unsubStatus();
-    };
-    for (const data of early.splice(0)) conn.send(qTopic, data);
-  }
-
-  const channel = {
-    send(data: TSend) {
-      if (ended) {
-        log.warn(`Message not sent: the channel ${qTopic} has ended`);
-        return false;
-      }
-      /* The subscribe goes out a microtask after the channel is made; sent
-         before it, a message would reach the server first and be refused. */
-      if (!stop || !lease) {
-        early.push(data);
-        return true;
-      }
-      return lease.connection.send(qTopic, data);
-    },
-    on(event: "data" | "status" | "error", handler: (arg: never) => void): () => void {
-      if (event === "data") return addTo(dataHandlers, handler as (data: TReceive) => void);
-      if (event === "error") return addTo(errorHandlers, handler as (error: RealtimeError) => void);
-      return state.subscribe(handler as (status: ConnectionStatus) => void);
-    },
-    close() {
-      finish(undefined);
-    },
-    get status() {
-      return state.current;
-    },
-  } as WSChannel<TSend, TReceive>;
-  /* The connection's, which it shares with every channel on its socket. */
-  shareRetry(channel, () => lease && retryOf(lease.connection));
-  return channel;
-}
-
-function addTo<THandler>(handlers: Set<THandler>, handler: THandler): () => void {
-  handlers.add(handler);
-  return () => handlers.delete(handler);
+  const driver = topicDriver<TReceive>(url, topic, variables, config);
+  return new ChannelHandle<TSend, TReceive>(driver, (data) => driver.send(data));
 }

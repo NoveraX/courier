@@ -6,7 +6,7 @@ import type {
   InferVariables,
 } from "../define/marker";
 import type { CallOptions, HttpResponse } from "../http-client/types";
-import type { SSESubscription, WSChannel } from "../realtime/types";
+import type { Subscription, WSChannel } from "../realtime/subscription-types";
 
 /** Options for .with() — all CallOptions except rawData (controlled via .raw) */
 export type WithOptions = Omit<CallOptions, "rawData">;
@@ -68,8 +68,8 @@ export type EndpointMethod<
   TStream extends boolean = false,
 > = Callable<TVariables, Promise<EndpointResult<TResponse, TRaw, TStream>>>;
 
-/** SSE subscription method — returns SSESubscription (not Promise) */
-export type SSEMethod<TResponse, TVariables> = Callable<TVariables, SSESubscription<TResponse>>;
+/** Stream or push channel method — returns a Subscription (not a Promise) */
+export type SSEMethod<TResponse, TVariables> = Callable<TVariables, Subscription<TResponse>>;
 
 /** WS channel method — returns WSChannel (not Promise) */
 export type WSChannelMethod<TResponse, TReceive, TVariables> = Callable<

@@ -1,33 +1,25 @@
 import { createLogger } from "../../logger";
+import { ChannelHandle } from "../../realtime/channel-handle";
 import { checkResponseNow } from "../../realtime/check-response-now";
-import { OBSERVE_DATA } from "../../realtime/observe-data";
-import type { ChannelHandlers, ConnectionStatus, WSChannelContext } from "../../realtime/types";
-import { holdMessages } from "./held-messages";
-import { notifyListeners } from "./notify-listeners";
+import { fromErrorCode, type RealtimeError } from "../../realtime/errors";
+import type { SubscriptionSink } from "../../realtime/subscription-driver";
+import type { ChannelHandlers, WSChannelContext } from "../../realtime/types";
 import { receiveClientMessage } from "./receive-client-message";
 import type { InProcessStreamSchema } from "./shared";
 import type { InProcessWSChannel } from "./types";
 
 const log = createLogger("WS");
 
-/**
- * Per-channel runtime state machine for an in-process WS channel.
- *
- * Owns: listener pools, status, close idempotency, fan-out helpers.
- * Decoupled from resolution/middleware so the executor stays focused on
- * orchestration.
- */
+/** An in-process channel: the context its handlers get, and the channel its caller holds. */
 export interface ChannelState {
-  /** Build the WSChannelContext object the server handlers receive. */
+  /** The WSChannelContext the server handlers receive. */
   channelCtx: WSChannelContext;
-  /** Build the WSChannel object exposed to the playground client. */
+  /** The channel the in-process caller holds. */
   client: InProcessWSChannel;
   /** Hand this channel's client what a peer broadcast, already held to the schema. */
   deliver: (data: unknown) => void;
-  /** Mark the channel as connected (fires status listeners). */
-  markConnected: () => void;
-  /** Close the channel idempotently — runs onLeave + status disconnected. */
-  close: () => Promise<void>;
+  /** `onJoin` ran: the channel is open. */
+  markOpen: () => void;
 }
 
 export interface ChannelStateInit {
@@ -40,46 +32,28 @@ export interface ChannelStateInit {
   unsubscribeFromRegistry: () => void;
 }
 
-/** Construct a fresh channel state machine. */
+/**
+ * An in-process channel, as one served over a socket behaves for its
+ * caller: what the handlers send reaches the caller's channel — what `onJoin`
+ * sent kept for its first reader, who listens once the channel is returned —
+ * a message the caller sends reaches `onMessage`, and `ctx.close()` ends the
+ * caller's channel, with the error a code other than 1000 names. Closing it
+ * from either side runs `onLeave` once.
+ *
+ * @param init - The channel's topic, handlers and broadcast registry
+ * @returns The handlers' context and the caller's channel
+ */
 export function createChannelState(init: ChannelStateInit): ChannelState {
   const { topic, variables, connectionId, schema, handlers, broadcast, unsubscribeFromRegistry } =
     init;
-
-  const dataListeners = new Set<(data: unknown) => void>();
-  const observers = new Set<(data: unknown) => void>();
-  const statusListeners = new Set<(s: ConnectionStatus) => void>();
-  let status: ConnectionStatus = "connecting";
+  let sink: SubscriptionSink<unknown> | undefined;
   let closed = false;
-  const early = holdMessages(topic);
-
-  const emitData = (data: unknown): void => {
-    notifyListeners(observers, data, "data");
-    if (!early.hold(data)) notifyListeners(dataListeners, data, "data");
-  };
-
-  /* The first listener takes what was sent before it, in order. */
-  function addDataListener(fn: (data: unknown) => void): void {
-    dataListeners.add(fn);
-    for (const data of early.release()) notifyListeners([fn], data, "data");
-  }
-
-  /* An observer hears what is held too, and leaves it held for that listener. */
-  function addObserver(fn: (data: unknown) => void): () => void {
-    observers.add(fn);
-    for (const data of early.peek()) notifyListeners([fn], data, "data");
-    return () => observers.delete(fn);
-  }
-
-  const setStatus = (next: ConnectionStatus): void => {
-    status = next;
-    notifyListeners(statusListeners, next, "status");
-  };
+  const ended = new AbortController();
 
   /* Held to the response schema as the server holds what it sends. */
   const outbound = (data: unknown): unknown =>
     schema.response ? checkResponseNow(schema.response, data) : data;
 
-  const ended = new AbortController();
   const channelCtx: WSChannelContext = {
     topic,
     variables: variables ?? {},
@@ -87,60 +61,45 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     meta: {},
     signal: ended.signal,
     recovered: false,
-    send: (data) => emitData(outbound(data)),
+    send: (data) => sink?.data({ data: outbound(data) }),
     broadcast: (t, data) => broadcast(t, outbound(data), connectionId),
-    close: () => {
-      void close();
+    close: (code, reason) => {
+      const failed = code !== undefined && code !== 1000;
+      void shut(failed ? fromErrorCode(code, reason ?? "Channel closed") : undefined, true);
     },
   };
 
-  async function close(): Promise<void> {
+  async function shut(error: RealtimeError | undefined, byServer: boolean): Promise<void> {
     if (closed) return;
     closed = true;
-    early.release();
     ended.abort();
     unsubscribeFromRegistry();
     try {
       await handlers.onLeave?.(channelCtx);
-    } catch (error) {
-      /* Isolated so it cannot block the status change, but not hidden. */
-      log.warn("onLeave handler failed", error);
+    } catch (failure) {
+      /* Isolated so it cannot keep the channel from ending, but not hidden. */
+      log.warn("onLeave handler failed", failure);
     }
-    setStatus("disconnected");
+    if (byServer) sink?.end(error);
   }
 
-  const client: InProcessWSChannel = {
-    send: (data) =>
+  const client = new ChannelHandle<unknown, unknown, Promise<void>>(
+    {
+      open: (to) => {
+        sink = to;
+      },
+      /* Served in process: there is no connection to make again. */
+      reconnect: () => undefined,
+      close: () => void shut(undefined, false),
+    },
+    (data) =>
       receiveClientMessage({ topic, schema, handlers, channelCtx, isClosed: () => closed }, data),
-    on(event: "data" | "status" | "error", handler: (arg: never) => void) {
-      /* Refusals reach an in-process caller as the rejection of its `send`,
-         so there is nothing to hear here. */
-      if (event === "error") return () => false;
-      if (event === "data") {
-        addDataListener(handler as (data: unknown) => void);
-        return () => dataListeners.delete(handler as (data: unknown) => void);
-      }
-      statusListeners.add(handler as (s: ConnectionStatus) => void);
-      // Emit current status immediately so late subscribers see "connected".
-      notifyListeners([handler as (s: ConnectionStatus) => void], status, "status");
-      return () => statusListeners.delete(handler as (s: ConnectionStatus) => void);
-    },
-    close() {
-      void close();
-    },
-    [OBSERVE_DATA]: addObserver,
-    /* Ended for its caller once closed: `disconnected` is heard after
-       `onLeave` has run, but nothing sent meanwhile reaches the handler. */
-    get status() {
-      return closed ? "disconnected" : status;
-    },
-  } as InProcessWSChannel;
+  );
 
   return {
     channelCtx,
     client,
-    deliver: emitData,
-    markConnected: () => setStatus("connected"),
-    close,
+    deliver: (data) => sink?.data({ data }),
+    markOpen: () => sink?.open({ resumed: false }),
   };
 }

@@ -1,81 +1,61 @@
-import type { SSEEvent, SSESubscription } from "../../realtime/types";
+import { observeData } from "../../realtime/observe-data";
+import type { StreamEvent, Subscription } from "../../realtime/subscription-types";
 import { beginStream, type StreamInstrumentation, type StreamMeta } from "./core";
 import { watchConnection } from "./watch-connection";
 
 /**
- * Wrap an SSESubscription with browser-side studio instrumentation.
- * Returns the original subscription unchanged when studio hooks are not
- * installed — true zero-cost when studio is disconnected.
+ * Show a subscription in Studio: each event it delivers, how its connection
+ * stands as it changes — being opened, open, being opened again with why the
+ * last one ended — and how it ended. It is watched, not wrapped: the caller
+ * holds the subscription it was given, and when Studio's hooks are not
+ * installed nothing is done at all.
  *
  * Lifecycle reasons:
- * - `complete` — iterator finished naturally (server closed stream cleanly)
- * - `disconnect` — consumer called `.close()` or broke out of the iterator
- * - `error` — iterator threw or .next() rejected
+ * - `complete` — the server finished it
+ * - `disconnect` — the caller closed it, or left its loop early
+ * - `error` — the server failed or refused it
  *
- * How its connection stands is told as it changes — being opened, open,
- * being opened again with why the last one ended — for a subscription that
- * opens one; one served in process stands connected and tells nothing.
+ * @param subscription - The subscription
+ * @param meta - What Studio shows it as
+ * @param existingInstr - The entry Studio already opened for it, when there is one
+ * @returns The same subscription
  */
-export function instrumentSSE<TData>(
-  subscription: SSESubscription<TData>,
+export function instrumentSSE<TSubscription extends Subscription<unknown>>(
+  subscription: TSubscription,
   meta: StreamMeta,
   existingInstr?: StreamInstrumentation | null,
-): SSESubscription<TData> {
+): TSubscription {
   const instr = existingInstr ?? beginStream(meta);
-  if (!instr) return subscription;
+  if (instr) {
+    watchSubscription(subscription, instr, (data, event) => instr.emitMessage(data, event.event));
+  }
+  return subscription;
+}
 
-  const originalIterator = subscription[Symbol.asyncIterator].bind(subscription);
-  const originalClose = subscription.close.bind(subscription);
-  watchConnection(subscription, instr.emitStatus);
-
-  return {
-    [Symbol.asyncIterator](): AsyncIterableIterator<SSEEvent<TData>> {
-      const iter = originalIterator();
-      return {
-        [Symbol.asyncIterator]() {
-          return this;
-        },
-        async next() {
-          try {
-            const result = await iter.next();
-            if (result.done) {
-              instr.emitClose("complete");
-            } else {
-              // Preserve the user-set SSE `event:` field if present;
-              // otherwise default to `"data"` (server→client).
-              instr.emitMessage(result.value.data, result.value.event);
-            }
-            return result;
-          } catch (error) {
-            instr.emitError(error);
-            throw error;
-          }
-        },
-        async return(value?: unknown) {
-          instr.emitClose("disconnect");
-          return iter.return
-            ? iter.return(value as SSEEvent<TData> | undefined)
-            : { value: undefined, done: true };
-        },
-        async throw(error?: unknown) {
-          instr.emitError(error);
-          if (iter.throw) return iter.throw(error);
-          throw error;
-        },
-      };
-    },
-    close() {
-      instr.emitClose("disconnect");
-      originalClose();
-    },
-    get status() {
-      return subscription.status;
-    },
-    get dropped() {
-      return subscription.dropped;
-    },
-    on(event, handler) {
-      return subscription.on(event, handler);
-    },
+/**
+ * Tell Studio what a subscription delivers, how its connection stands, and
+ * how it ended; stop watching once it has.
+ *
+ * @param subscription - The subscription or channel
+ * @param instr - Its Studio entry
+ * @param onData - Records one delivery
+ */
+export function watchSubscription(
+  subscription: Subscription<unknown>,
+  instr: StreamInstrumentation,
+  onData: (data: unknown, event: StreamEvent<unknown>) => void,
+): () => void {
+  const unwatch = watchConnection(subscription, instr.emitStatus);
+  const unobserve = observeData(subscription, onData);
+  const stop = (): void => {
+    unwatch();
+    unobserve();
+    stopClose();
   };
+  const stopClose = subscription.on("close", (info) => {
+    stop();
+    if (info.reason === "failed") instr.emitError(info.error);
+    else instr.emitClose(info.reason === "closed" ? "disconnect" : "complete");
+  });
+  return stop;
 }

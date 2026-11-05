@@ -1,5 +1,3 @@
-import type { RealtimeError } from "./errors";
-
 // ---------------------------------------------------------------------------
 // Connection
 // ---------------------------------------------------------------------------
@@ -59,28 +57,6 @@ export interface SSEContext<TVariables = unknown> {
 export type SSEHandler<TResponse, TVariables = undefined> = (
   ctx: SSEContext<TVariables>,
 ) => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
-
-/**
- * Client-side SSE subscription — async iterable with lifecycle control.
- *
- * Iteration ends when the server finished the stream, when `close()` is
- * called, or when the loop is left early (`break` closes the subscription).
- * It rejects with a `RealtimeError` when the server failed the stream or
- * refused the request (`AuthError`, `ForbiddenError`, …), and with a
- * `ConnectionError` once `maxAttempts` reconnections in a row came to
- * nothing. A dropped connection is reconnected without ending it.
- */
-export interface SSESubscription<TData = unknown> {
-  [Symbol.asyncIterator](): AsyncIterableIterator<SSEEvent<TData>>;
-  /** Terminate the subscription and close the connection */
-  close(): void;
-  /** Current connection status */
-  readonly status: ConnectionStatus;
-  /** Number of events dropped due to client-side buffer overflow */
-  readonly dropped: number;
-  /** Subscribe to status changes */
-  on(event: "status", handler: (status: ConnectionStatus) => void): () => void;
-}
 
 /**
  * Wrap data with a tracked ID for resumable SSE streams.
@@ -187,31 +163,3 @@ export interface ChannelHandlers<TReceive = unknown, TResponse = unknown, TVaria
 export type WSPushHandler<TResponse, TVariables = undefined> = (
   ctx: WSContext<TVariables>,
 ) => AsyncGenerator<TResponse, void, unknown>;
-
-/** Client-side WS channel — bidirectional typed communication */
-export interface WSChannel<TSend = unknown, TReceive = unknown> {
-  /**
-   * Send a typed message to the server.
-   *
-   * @returns Whether it went out, or waits for the channel to open or the
-   *   connection to come back; `false`, with a warning, when it was dropped:
-   *   the channel has ended, the connection is closed, no room is left to
-   *   hold it, the socket's buffer is full, or it is larger than the server
-   *   accepts — which the channel's `error` event also reports, as `4413`
-   */
-  send(data: TSend): boolean;
-  /** Subscribe to incoming messages or status changes */
-  on(event: "data", handler: (data: TReceive) => void): () => void;
-  on(event: "status", handler: (status: ConnectionStatus) => void): () => void;
-  /**
-   * Hear what the server refused or failed: a message it would not take, or
-   * a handler that threw — the channel goes on — or the end of the channel
-   * itself (join rejected, closed by the server with a reason), which is
-   * followed by the `disconnected` status.
-   */
-  on(event: "error", handler: (error: RealtimeError) => void): () => void;
-  /** Close the channel */
-  close(): void;
-  /** Current connection status */
-  readonly status: ConnectionStatus;
-}

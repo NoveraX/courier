@@ -23,6 +23,10 @@ export type NoSuccessResponse = courier.SuccessResponse;
 // @ts-expect-error not exported
 export type NoUntypedCallerFn = courier.UntypedCallerFn;
 
+/* Every kind of stream and channel is a Subscription: no second name for it. */
+// @ts-expect-error not exported
+export type NoSSESubscription = realtime.SSESubscription;
+
 describe("the root entry", () => {
   it("keeps the proxy transport's call function to itself", () => {
     expect(Object.keys(courier)).not.toContain("createProxyCallerFn");

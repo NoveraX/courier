@@ -1,16 +1,16 @@
-import type { SSEEvent, SSESubscription } from "@noverax/courier/realtime";
+import type { SSEEvent, Subscription } from "@noverax/courier/realtime";
 import { describe, expect, it } from "vitest";
 import { createMockClient } from "../src/create-mock-client";
 
 /** Collect all events from an SSE subscription */
-async function collect<T>(sub: SSESubscription<T>): Promise<SSEEvent<T>[]> {
+async function collect<T>(sub: Subscription<T>): Promise<SSEEvent<T>[]> {
   const events: SSEEvent<T>[] = [];
   for await (const event of sub) events.push(event);
   return events;
 }
 
 describe("mock client — SSE .stream()", () => {
-  it("returns SSESubscription from async generator", async () => {
+  it("returns Subscription from async generator", async () => {
     const { client, mock } = createMockClient();
 
     mock("notifications", "feed").stream(async function* () {
@@ -18,7 +18,7 @@ describe("mock client — SSE .stream()", () => {
       yield { data: { text: "world" }, id: "2" };
     });
 
-    const sub = (client as any).notifications.feed() as SSESubscription<{ text: string }>;
+    const sub = (client as any).notifications.feed() as Subscription<{ text: string }>;
     const events = await collect(sub);
 
     expect(events).toHaveLength(2);
@@ -34,7 +34,7 @@ describe("mock client — SSE .stream()", () => {
       yield { data: { user: "alice" }, event: "join" };
     });
 
-    const sub = (client as any).chat.messages() as SSESubscription<unknown>;
+    const sub = (client as any).chat.messages() as Subscription<unknown>;
     const events = await collect(sub);
 
     expect(events[0]?.event).toBe("message");
@@ -48,7 +48,7 @@ describe("mock client — SSE .stream()", () => {
       yield { data: "event1" };
     });
 
-    const sub = (client as any).notifications.feed() as SSESubscription<string>;
+    const sub = (client as any).notifications.feed() as Subscription<string>;
     await collect(sub);
 
     expect(history).toHaveLength(1);
@@ -66,7 +66,7 @@ describe("mock client — SSE .stream()", () => {
       yield { data: "ok" };
     });
 
-    const sub = (client as any).chat.room({ roomId: "42" }) as SSESubscription<string>;
+    const sub = (client as any).chat.room({ roomId: "42" }) as Subscription<string>;
     await collect(sub);
 
     expect(receivedVars).toEqual({ roomId: "42" });
@@ -82,7 +82,7 @@ describe("mock client — SSE .stream()", () => {
       .delay(50);
 
     const start = Date.now();
-    const sub = (client as any).notifications.feed() as SSESubscription<string>;
+    const sub = (client as any).notifications.feed() as Subscription<string>;
     await collect(sub);
     const elapsed = Date.now() - start;
 
@@ -96,7 +96,7 @@ describe("mock client — SSE .stream()", () => {
       // empty
     });
 
-    const sub = (client as any).notifications.feed() as SSESubscription<string>;
+    const sub = (client as any).notifications.feed() as Subscription<string>;
     const events = await collect(sub);
 
     expect(events).toHaveLength(0);
@@ -113,7 +113,7 @@ describe("mock client — SSE .emits()", () => {
       { data: "third", id: "3" },
     ]);
 
-    const sub = (client as any).alerts.stream() as SSESubscription<string>;
+    const sub = (client as any).alerts.stream() as Subscription<string>;
     const events = await collect(sub);
 
     expect(events).toHaveLength(3);
@@ -129,7 +129,7 @@ describe("mock client — SSE .emits()", () => {
       { data: { mem: 80 }, event: "memory" },
     ]);
 
-    const sub = (client as any).metrics.live() as SSESubscription<unknown>;
+    const sub = (client as any).metrics.live() as Subscription<unknown>;
     const events = await collect(sub);
 
     expect(events[0]).toEqual({ data: { cpu: 42 }, event: "cpu" });
@@ -146,14 +146,15 @@ describe("mock client — SSE lifecycle", () => {
       yield { data: "event" };
     });
 
-    const sub = (client as any).feed.live() as SSESubscription<string>;
+    const sub = (client as any).feed.live() as Subscription<string>;
+    /* Where it starts is read; its events tell each change after. */
+    const first = sub.status;
     sub.on("status", (s) => statuses.push(s));
 
     await collect(sub);
 
-    expect(statuses).toContain("connecting");
-    expect(statuses).toContain("connected");
-    expect(statuses).toContain("disconnected");
+    expect(first).toBe("connecting");
+    expect(statuses).toEqual(["connected", "disconnected"]);
   });
 
   it("close() terminates the stream early", async () => {
@@ -169,7 +170,7 @@ describe("mock client — SSE lifecycle", () => {
       }
     });
 
-    const sub = (client as any).feed.live() as SSESubscription<number>;
+    const sub = (client as any).feed.live() as Subscription<number>;
     const events: SSEEvent<number>[] = [];
 
     for await (const event of sub) {

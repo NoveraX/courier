@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import type { SSESubscription } from "@noverax/courier/realtime";
+import type { Subscription } from "@noverax/courier/realtime";
 import { createMockSSESubscription } from "@noverax/courier/testing";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -24,9 +24,9 @@ function wrapper({ children }: { children: ReactNode }) {
 
 function createSubscribeSpy(): {
   subscribeFn: SubscribeFn;
-  lastSub: () => SSESubscription<unknown> | undefined;
+  lastSub: () => Subscription<unknown> | undefined;
 } {
-  let last: SSESubscription<unknown> | undefined;
+  let last: Subscription<unknown> | undefined;
   const subscribeFn: SubscribeFn = vi.fn((_group, _method, _vars?) => {
     const sub = createMockSSESubscription(async function* () {
       yield { data: { msg: "hello" }, id: "1" };

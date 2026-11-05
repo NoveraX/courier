@@ -171,9 +171,11 @@ describe("executeDirectWSPush", () => {
     cleanup();
   });
 
-  it("close() aborts the source generator", async () => {
+  it("close() aborts the source generator: its signal at once, its cleanup once it resumes", async () => {
     let observed = false;
-    const sources = makePushSources(async function* () {
+    let signal: AbortSignal | undefined;
+    const sources = makePushSources(async function* (ctx: { signal: AbortSignal }) {
+      signal = ctx.signal;
       try {
         yield 1;
         await new Promise((r) => setTimeout(r, 100));
@@ -190,8 +192,9 @@ describe("executeDirectWSPush", () => {
     const it = sub[Symbol.asyncIterator]();
     await it.next();
     sub.close();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(observed).toBe(true);
+
+    expect(signal?.aborted).toBe(true);
+    await expect.poll(() => observed).toBe(true);
   });
 
   it("close() ends a read waiting on a handler parked on an await", async () => {

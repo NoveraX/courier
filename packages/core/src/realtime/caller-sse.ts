@@ -1,7 +1,7 @@
 import type { WebCredentials } from "../http-client/web-types";
 import { fetchWithinOrigin } from "../utils/fetch-within-origin";
 import { subscribeSSE } from "./sse/sse-client";
-import type { SSESubscription } from "./types";
+import type { Subscription } from "./subscription-types";
 
 /** What a proxied stream is opened with. */
 export interface ProxiedStreamOptions {
@@ -31,7 +31,7 @@ export interface ProxiedStreamOptions {
 export function executeSSE<TData = unknown>(
   url: string,
   options: ProxiedStreamOptions = {},
-): SSESubscription<TData> {
+): Subscription<TData> {
   const { headers, credentials, connectHeaders, withinOrigin } = options;
   const send = withinOrigin ? { fetch: sendWithinOrigin } : {};
   if (!credentials && !connectHeaders) return subscribeSSE<TData>(url, { headers, ...send });

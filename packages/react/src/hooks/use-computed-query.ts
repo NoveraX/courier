@@ -37,7 +37,7 @@ interface HeldEvents<TStreamData> {
  * is, and says so through `onStreamError`.
  *
  * @param queryFn - Executes the HTTP endpoint; aborts when the signal does
- * @param subscribeFn - Factory that creates an SSESubscription
+ * @param subscribeFn - Factory that creates a Subscription
  * @param queryKey - Cache key for react-query
  * @param groupName - API group name
  * @param options - Query + subscription + mapper configuration

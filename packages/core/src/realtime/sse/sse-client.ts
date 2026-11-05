@@ -1,9 +1,8 @@
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
-import { createConnectionState } from "../connection-state";
-import { shareRetry } from "../retry-of";
-import type { ConnectionStatus, SSESubscription } from "../types";
-import { createEventQueue } from "./event-queue";
-import { runConnectionLoop, type SSEConnectionCtx } from "./sse-connection";
+import type { SubscriptionDriver, SubscriptionSink } from "../subscription-driver";
+import { SubscriptionHandle } from "../subscription-handle";
+import type { Subscription } from "../subscription-types";
+import { reconnectNow, runConnectionLoop, type SSEConnectionCtx } from "./sse-connection";
 import type { SubscribeSSEOptions } from "./sse-types";
 
 /**
@@ -13,7 +12,7 @@ import type { SubscribeSSEOptions } from "./sse-types";
  *
  * @param url - SSE endpoint URL
  * @param options - Connection and parsing options
- * @returns SSESubscription — async iterable with lifecycle control
+ * @returns The subscription — read with `on("data")` or `for await`
  * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it
  *
  * @example
@@ -25,69 +24,48 @@ import type { SubscribeSSEOptions } from "./sse-types";
 export function subscribeSSE<TData = unknown>(
   url: string,
   options: SubscribeSSEOptions = {},
-): SSESubscription<TData> {
+): Subscription<TData> {
   assertAbsoluteUrl(url);
-  const state = createConnectionState();
-  const controller = new AbortController();
-  const queue = createEventQueue<TData>(options.maxBufferSize);
-
-  linkSignal(options.signal, controller);
-
-  const ctx: SSEConnectionCtx<TData> = {
-    url,
-    controller,
-    state,
-    queue,
-    config: {
-      headers: options.headers,
-      backoff: options.backoff,
-      heartbeatTimeout: options.heartbeatTimeout ?? 45_000,
-      maxAttempts: options.maxAttempts ?? Infinity,
-      parse: options.parse ?? JSON.parse,
-      ...(options.onResponse && { onResponse: options.onResponse }),
-      ...(options.beforeConnect && { beforeConnect: options.beforeConnect }),
-      ...(options.fetch && { fetch: options.fetch }),
-    },
-    lastEventId: options.lastEventId,
-    serverRetryMs: undefined,
-  };
-  void runConnectionLoop(ctx);
-
-  /* Ended by its reader — close(), or a loop left early — the stream is
-     disconnected; it went on reporting the status it had before. */
-  const iter = queue.iterator(() => {
-    controller.abort();
-    state.set("disconnected");
-  });
-
-  const subscription: SSESubscription<TData> = {
-    [Symbol.asyncIterator]() {
-      return iter;
-    },
-    close() {
-      /* Closed, the stream hands over nothing more: events it had buffered
-         reached the reader after close(), into a state that had moved on. */
-      void iter.return?.();
-    },
-    get status() {
-      return state.current;
-    },
-    get dropped() {
-      return queue.dropped;
-    },
-    on(_event: "status", handler: (status: ConnectionStatus) => void) {
-      return state.subscribe(handler);
-    },
-  };
-  shareRetry(subscription, () => ctx.retry);
+  const subscription = new SubscriptionHandle<TData>(
+    sseDriver<TData>(url, options),
+    options.maxBufferSize,
+  );
+  const { signal } = options;
+  if (signal?.aborted) subscription.close();
+  else signal?.addEventListener("abort", () => subscription.close(), { once: true });
   return subscription;
 }
 
-function linkSignal(external: AbortSignal | undefined, controller: AbortController): void {
-  if (!external) return;
-  if (external.aborted) {
-    controller.abort();
-  } else {
-    external.addEventListener("abort", () => controller.abort(), { once: true });
-  }
+/* Each life of the subscription is one run of its connection loop, its Last-Event-ID carried over. */
+function sseDriver<TData>(url: string, options: SubscribeSSEOptions): SubscriptionDriver<TData> {
+  let ctx: SSEConnectionCtx<TData> | undefined;
+  let lastEventId = options.lastEventId;
+  const start = (sink: SubscriptionSink<TData>): void => {
+    ctx = {
+      url,
+      controller: new AbortController(),
+      sink,
+      config: {
+        headers: options.headers,
+        backoff: options.backoff,
+        heartbeatTimeout: options.heartbeatTimeout ?? 45_000,
+        maxAttempts: options.maxAttempts ?? Infinity,
+        parse: options.parse ?? JSON.parse,
+        ...(options.onResponse && { onResponse: options.onResponse }),
+        ...(options.beforeConnect && { beforeConnect: options.beforeConnect }),
+        ...(options.fetch && { fetch: options.fetch }),
+      },
+      lastEventId: ctx?.lastEventId ?? lastEventId,
+      serverRetryMs: undefined,
+    };
+    lastEventId = ctx.lastEventId;
+    void runConnectionLoop(ctx);
+  };
+  return {
+    open: start,
+    reopen: start,
+    reconnect: () => ctx && reconnectNow(ctx),
+    close: () => ctx?.controller.abort(),
+    retry: () => ctx?.retry,
+  };
 }

@@ -25,7 +25,7 @@ export interface ConnectionStatusSource {
 
 /**
  * A transport that reports its status as a `"status"` event, as the
- * `SSESubscription` and the `WSChannel` a caller returns both do
+ * `Subscription` and the `WSChannel` a caller returns both do
  */
 export interface StatusEventSource {
   /** Current connection status */
@@ -38,7 +38,7 @@ export interface StatusEventSource {
  * Observe the connection status of an SSE or WS transport.
  * Uses `useSyncExternalStore` for tear-free concurrent-safe reads.
  *
- * @param source - A `WSConnection`, or an `SSESubscription` or `WSChannel` a caller returned; `null` reads as disconnected
+ * @param source - A `WSConnection`, or a `Subscription` or `WSChannel` a caller returned; `null` reads as disconnected
  * @returns Reactive connection status with derived booleans
  *
  * @example

@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { courier } from "../src/define/courier";
 import { RateLimitError } from "../src/realtime/errors";
-import type { WSChannel } from "../src/realtime/types";
+import type { WSChannel } from "../src/realtime/subscription-types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 

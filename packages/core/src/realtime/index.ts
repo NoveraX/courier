@@ -42,15 +42,22 @@ export type { PresenceConfig } from "./presence-types";
 export type { SubscribeSSEOptions } from "./sse";
 export { subscribeSSE } from "./sse";
 export type {
+  CloseInfo,
+  OpenInfo,
+  StreamEvent,
+  Subscription,
+  SubscriptionEvent,
+  SubscriptionEvents,
+  WSChannel,
+} from "./subscription-types";
+export type {
   BackoffConfig,
   ChannelHandlers,
   ConnectionStatus,
   SSEContext,
   SSEEvent,
   SSEHandler,
-  SSESubscription,
   TopicKey,
-  WSChannel,
   WSChannelContext,
   WSContext,
   WSPushHandler,

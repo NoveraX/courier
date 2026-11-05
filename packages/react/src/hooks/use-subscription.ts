@@ -1,4 +1,4 @@
-import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/courier/realtime";
+import type { ConnectionStatus, SSEEvent, Subscription } from "@noverax/courier/realtime";
 /* A namespace import, not named hooks: the package entry is reachable from
    Server Components, and Next.js refuses to build a server module that names
    a client-only hook such as useState among its imports. */
@@ -16,12 +16,12 @@ export type UseSubscriptionOptions<TData> = CourierSubscriptionOptions<TData, un
 /** How many of a stream's latest events are kept when nothing else is said. */
 const DEFAULT_MAX_EVENTS = 100;
 
-/** Internal factory type — creates SSESubscription from group+method+variables */
+/** Internal factory type — creates Subscription from group+method+variables */
 export type SubscribeFn = (
   group: string,
   method: string,
   variables?: unknown,
-) => SSESubscription<unknown>;
+) => Subscription<unknown>;
 
 /** What one stream has delivered; `key` names the stream it belongs to. */
 interface StreamState<TData> {
@@ -42,7 +42,7 @@ interface StreamState<TData> {
  * it, without end. A stream that cannot be opened at all, such as one whose
  * proxy path is misconfigured, reports that through `error` and `onError`.
  *
- * @param subscribe - Factory that creates an SSESubscription (injected by createGroupHooks)
+ * @param subscribe - Factory that creates an Subscription (injected by createGroupHooks)
  * @param group - API group name
  * @param method - Endpoint method name
  * @param options - Subscription configuration
@@ -81,7 +81,7 @@ export function useSubscription<TData>(
   const handleStatus = useEffectEvent((next: ConnectionStatus) => onStatusChange?.(next));
   const windowOf = useEffectEvent(() => maxEvents);
 
-  const subRef = React.useRef<SSESubscription<unknown> | null>(null);
+  const subRef = React.useRef<Subscription<unknown> | null>(null);
 
   const close = React.useCallback(() => {
     subRef.current?.close();
@@ -93,7 +93,7 @@ export function useSubscription<TData>(
 
     const vars = variablesKey ? (JSON.parse(variablesKey) as unknown) : undefined;
     let active = true;
-    let sub: SSESubscription<unknown> | null = null;
+    let sub: Subscription<unknown> | null = null;
     let unsubStatus: (() => void) | undefined;
 
     const fail = (error: Error) => {

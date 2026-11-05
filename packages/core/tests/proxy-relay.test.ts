@@ -28,7 +28,7 @@ import {
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { RealtimeError } from "../src/realtime/errors";
-import type { SSESubscription } from "../src/realtime/types";
+import type { Subscription } from "../src/realtime/subscription-types";
 import { studioHooks } from "../src/studio";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
 import { refusedSocketCause } from "./helpers/refused-socket-cause";
@@ -135,7 +135,7 @@ async function proxyOf(sources: Record<string, object>, { deaf = false } = {}): 
  * Should fewer come, it is closed two seconds on, so a test fails on what
  * did come rather than on its own time running out.
  */
-async function firstEvents(subscription: SSESubscription, count: number): Promise<unknown[]> {
+async function firstEvents(subscription: Subscription, count: number): Promise<unknown[]> {
   const events: unknown[] = [];
   const deadline = setTimeout(() => subscription.close(), 2_000);
   try {

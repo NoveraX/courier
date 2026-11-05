@@ -57,7 +57,7 @@ export function createDirectWSChannelFactory(
  * URL pattern: same as the channel factory.
  * Topic pattern: same as the channel factory.
  *
- * Returns an `SSESubscription`-shaped iterable so push WS endpoints have
+ * Returns a `Subscription`-shaped iterable so push WS endpoints have
  * uniform consumer ergonomics with SSE endpoints. A push channel this
  * process serves throws `DIRECT_CALL_TO_SERVED_ENDPOINT`, as a channel does.
  */

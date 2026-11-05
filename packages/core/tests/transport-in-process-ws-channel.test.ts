@@ -150,10 +150,12 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
     const received: unknown[] = [];
     channel.on("data", (d) => received.push(d));
 
-    expect(received).toHaveLength(1024);
-    expect(received[0]).toBe(76);
+    expect(received).toHaveLength(1000);
+    expect(received[0]).toBe(100);
     expect(received.at(-1)).toBe(1099);
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(channel.dropped).toBe(100);
+    /* One line as the oldest start to go, one with how many went once they were read. */
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 
   it("validates client→server messages against receive schema", async () => {
@@ -221,7 +223,7 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
 
     expect(received).toEqual([{ from: "server" }]);
     const failure = output.mock.calls.find((call) =>
-      String(call[1]).includes("A channel data listener failed"),
+      String(call[1]).includes("A subscription's data listener failed"),
     );
     expect(failure?.[2]).toEqual(new Error("listener bug"));
     output.mockRestore();
@@ -237,11 +239,10 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
     expect(channel.status).toBe("connected");
     const seen: string[] = [];
     channel.on("status", (s) => seen.push(s));
-    expect(seen).toEqual(["connected"]); // late subscriber gets current
     channel.close();
-    await new Promise((r) => setTimeout(r, 0));
+
     expect(channel.status).toBe("disconnected");
-    expect(seen).toContain("disconnected");
+    expect(seen).toEqual(["disconnected"]);
   });
 
   it("calls onLeave on close", async () => {

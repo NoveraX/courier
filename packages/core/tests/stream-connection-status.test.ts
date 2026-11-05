@@ -17,7 +17,9 @@ import { courier, defineApi, defineGroup } from "../src/define";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import { subscribeSSE } from "../src/realtime/sse";
-import type { ConnectionStatus, SSESubscription } from "../src/realtime/types";
+import type { SubscriptionSink } from "../src/realtime/subscription-driver";
+import { SubscriptionHandle } from "../src/realtime/subscription-handle";
+import type { Subscription } from "../src/realtime/subscription-types";
 import type { WSClientSocket } from "../src/realtime/ws/ws-types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
@@ -80,7 +82,7 @@ async function serveEvents(answer: (res: ServerResponse, count: number) => void)
   return `http://127.0.0.1:${port}/feed`;
 }
 
-function watched(subscription: SSESubscription): SSESubscription {
+function watched(subscription: Subscription): Subscription {
   const instrumented = instrumentSSE(subscription, META);
   closers.push(() => instrumented.close());
   return instrumented;
@@ -217,24 +219,28 @@ describe("a stream a Courier server serves", () => {
   });
 });
 
+/* A subscription the test runs by hand: what it is told, the test tells it. */
+function scripted(open?: (sink: SubscriptionSink<unknown>) => void) {
+  let sink: SubscriptionSink<unknown> | undefined;
+  const subscription = new SubscriptionHandle<unknown>({
+    open: (to) => {
+      sink = to;
+      open?.(to);
+    },
+    reconnect: () => undefined,
+    close: () => undefined,
+  });
+  return { subscription, told: () => sink };
+}
+
 describe("a stream that has closed", () => {
   it("tells nothing more of a connection its source goes on reporting", () => {
-    let report: (status: ConnectionStatus) => void = () => {};
-    const source: SSESubscription = {
-      async *[Symbol.asyncIterator]() {},
-      close() {},
-      status: "connecting",
-      dropped: 0,
-      on: (_event, handler) => {
-        report = handler;
-        return () => {};
-      },
-    };
-    const instrumented = instrumentSSE(source, META);
+    const { subscription, told } = scripted();
+    const instrumented = instrumentSSE(subscription, META);
 
     instrumented.close();
-    report("reconnecting");
-    report("connected");
+    told()?.reconnecting();
+    told()?.open({ resumed: false });
 
     expect(statuses.map((event) => event.status)).toEqual(["connecting"]);
   });
@@ -242,16 +248,11 @@ describe("a stream that has closed", () => {
 
 describe("a stream that opens no connection", () => {
   it("tells nothing, and stands open", () => {
-    const served: SSESubscription = {
-      async *[Symbol.asyncIterator]() {},
-      close() {},
-      status: "connected",
-      dropped: 0,
-      on: () => () => {},
-    };
+    const { subscription } = scripted((sink) => sink.open({ resumed: false }));
 
-    instrumentSSE(served, META);
+    instrumentSSE(subscription, META);
 
+    expect(subscription.status).toBe("connected");
     expect(statuses).toEqual([]);
   });
 });

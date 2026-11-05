@@ -27,9 +27,10 @@ const EXECUTOR = "executeDirectWSChannel";
  * Execute a WS bidirectional channel endpoint in-process.
  *
  * Reuses the canonical pipeline (resolve → validate variables → middleware
- * → factory → onJoin → instrument). Returns a `WSChannel` whose `send`,
- * `on("data")`, and `close` are wired to the server's `ChannelHandlers`
- * (`onMessage`, `onLeave`) and to the playground broadcast registry.
+ * → factory → onJoin → instrument). Returns a channel — the one
+ * subscription object every kind is, and `send` — wired to the server's
+ * `ChannelHandlers` (`onMessage`, `onLeave`) and to the playground
+ * broadcast registry.
  *
  * Multiple in-process channels subscribing to the same fully-qualified topic
  * can broadcast between each other via `channelCtx.broadcast(topic, data)` —
@@ -98,14 +99,15 @@ export async function executeDirectWSChannel(
     await handlers.onJoin?.(state.channelCtx);
   } catch (error) {
     unsubscribeFn();
+    state.client.close();
     throw wrapStreamError(EXECUTOR, "onJoin failed", error);
   }
 
-  state.markConnected();
+  state.markOpen();
 
   if (options.signal) {
-    if (options.signal.aborted) void state.close();
-    else options.signal.addEventListener("abort", () => void state.close(), { once: true });
+    if (options.signal.aborted) state.client.close();
+    else options.signal.addEventListener("abort", () => state.client.close(), { once: true });
   }
 
   return instrumentWSChannel(

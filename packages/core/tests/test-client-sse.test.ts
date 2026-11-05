@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { SSEEvent, SSESubscription } from "../src/realtime/types";
+import type { Subscription } from "../src/realtime/subscription-types";
+import type { SSEEvent } from "../src/realtime/types";
 import { createTestClient } from "../src/testing/index";
 
 const testClient = createTestClient();
@@ -10,7 +11,7 @@ afterEach(() => {
 });
 
 /** Collect all events from an SSE subscription */
-async function collect<T>(sub: SSESubscription<T>): Promise<SSEEvent<T>[]> {
+async function collect<T>(sub: Subscription<T>): Promise<SSEEvent<T>[]> {
   const events: SSEEvent<T>[] = [];
   for await (const event of sub) {
     events.push(event);
@@ -26,7 +27,7 @@ describe("test client — SSE stream mocks", () => {
         yield { data: { text: "world" }, id: "2" };
       });
 
-      const sub = (client as any).notifications.feed() as SSESubscription<{ text: string }>;
+      const sub = (client as any).notifications.feed() as Subscription<{ text: string }>;
       const events = await collect(sub);
 
       expect(events).toEqual([
@@ -41,7 +42,7 @@ describe("test client — SSE stream mocks", () => {
         yield { data: { text: "hi" }, event: "message", id: "1" };
       });
 
-      const sub = (client as any).chat.messages() as SSESubscription<unknown>;
+      const sub = (client as any).chat.messages() as Subscription<unknown>;
       const events = await collect(sub);
 
       expect(events[0]?.event).toBe("join");
@@ -53,7 +54,7 @@ describe("test client — SSE stream mocks", () => {
         // no events
       });
 
-      const sub = (client as any).feed.empty() as SSESubscription<unknown>;
+      const sub = (client as any).feed.empty() as Subscription<unknown>;
       const events = await collect(sub);
 
       expect(events).toEqual([]);
@@ -68,14 +69,14 @@ describe("test client — SSE stream mocks", () => {
         yield { data: "ok" };
       });
 
-      const sub = (client as any).feed.live() as SSESubscription<string>;
+      const sub = (client as any).feed.live() as Subscription<string>;
+      const opening = sub.status;
       sub.on("status", (s) => statuses.push(s));
 
       await collect(sub);
 
-      expect(statuses).toContain("connecting");
-      expect(statuses).toContain("connected");
-      expect(statuses).toContain("disconnected");
+      expect(opening).toBe("connecting");
+      expect(statuses).toEqual(["connected", "disconnected"]);
     });
 
     it("status is disconnected after stream ends", async () => {
@@ -83,7 +84,7 @@ describe("test client — SSE stream mocks", () => {
         yield { data: "one" };
       });
 
-      const sub = (client as any).feed.live() as SSESubscription<string>;
+      const sub = (client as any).feed.live() as Subscription<string>;
       await collect(sub);
 
       expect(sub.status).toBe("disconnected");
@@ -99,7 +100,7 @@ describe("test client — SSE stream mocks", () => {
         }
       });
 
-      const sub = (client as any).feed.infinite() as SSESubscription<number>;
+      const sub = (client as any).feed.infinite() as Subscription<number>;
       const events: SSEEvent<number>[] = [];
 
       for await (const event of sub) {
@@ -124,7 +125,7 @@ describe("test client — SSE stream mocks", () => {
         yield { data: "event" };
       });
 
-      const sub = (client as any).feed.live() as SSESubscription<string>;
+      const sub = (client as any).feed.live() as Subscription<string>;
       await collect(sub);
 
       expect(history).toHaveLength(1);
@@ -140,7 +141,7 @@ describe("test client — SSE stream mocks", () => {
         yield { data: "event" };
       });
 
-      const sub = (client as any).feed.live({ userId: "42" }) as SSESubscription<string>;
+      const sub = (client as any).feed.live({ userId: "42" }) as Subscription<string>;
       await collect(sub);
 
       expect(history[0]?.variables).toEqual({ userId: "42" });
@@ -162,12 +163,12 @@ describe("test client — SSE stream mocks", () => {
         .once();
 
       // First call uses .once() mock (LIFO: top of stack)
-      const sub1 = (client as any).feed.live() as SSESubscription<string>;
+      const sub1 = (client as any).feed.live() as Subscription<string>;
       const events1 = await collect(sub1);
       expect(events1[0]?.data).toBe("first");
 
       // Second call falls through to persistent mock
-      const sub2 = (client as any).feed.live() as SSESubscription<string>;
+      const sub2 = (client as any).feed.live() as Subscription<string>;
       const events2 = await collect(sub2);
       expect(events2[0]?.data).toBe("fallback");
     });
@@ -182,7 +183,7 @@ describe("test client — SSE stream mocks", () => {
         .delay(50);
 
       const start = Date.now();
-      const sub = (client as any).feed.live() as SSESubscription<string>;
+      const sub = (client as any).feed.live() as Subscription<string>;
       await collect(sub);
       const elapsed = Date.now() - start;
 

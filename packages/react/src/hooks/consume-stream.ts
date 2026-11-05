@@ -1,4 +1,4 @@
-import type { SSEEvent, SSESubscription } from "@noverax/courier/realtime";
+import type { SSEEvent, Subscription } from "@noverax/courier/realtime";
 
 /**
  * Read a subscription to its end, handing over each event, and the error
@@ -12,7 +12,7 @@ import type { SSEEvent, SSESubscription } from "@noverax/courier/realtime";
  * void consumeStream(subscribe("live", "ticks"), (event) => log(event.data), report);
  */
 export async function consumeStream<TData>(
-  sub: SSESubscription<unknown>,
+  sub: Subscription<unknown>,
   receive: (event: SSEEvent<TData>) => void,
   fail: (error: Error) => void,
 ): Promise<void> {

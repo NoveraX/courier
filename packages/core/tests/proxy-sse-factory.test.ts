@@ -120,7 +120,7 @@ describe("createProxySSEFactory", () => {
     );
   });
 
-  it("returns the SSESubscription produced by subscribeSSE", () => {
+  it("returns the Subscription produced by subscribeSSE", () => {
     const factory = createProxySSEFactory("api");
     const subscription = factory("chat", "messages", undefined, {});
 

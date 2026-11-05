@@ -1,4 +1,4 @@
-import type { SSESubscription, WSChannel } from "../realtime/types";
+import type { Subscription, WSChannel } from "../realtime/subscription-types";
 
 /**
  * Uniform shape for HTTP transport primitives.
@@ -27,7 +27,7 @@ export type SSEFactory = (
   method: string,
   variables: unknown,
   options: Record<string, unknown>,
-) => SSESubscription<unknown>;
+) => Subscription<unknown>;
 
 /**
  * Uniform shape for **bidirectional** WS channel primitives.
@@ -50,12 +50,12 @@ export type WSChannelFactory = (
  * Uniform shape for **server-push** WS primitives.
  *
  * Used for endpoints declared without a `receive` schema (no send slot).
- * The returned subscription is iterable like an SSE subscription — server
- * pushes events to the client over a WebSocket transport.
+ * The returned subscription is read as every kind is — server pushes
+ * events to the client over a WebSocket transport.
  */
 export type WSPushFactory = (
   group: string,
   method: string,
   variables: unknown,
   options: Record<string, unknown>,
-) => SSESubscription<unknown>;
+) => Subscription<unknown>;

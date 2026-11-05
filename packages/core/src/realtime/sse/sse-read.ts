@@ -36,6 +36,7 @@ export async function readConnection<TData>(
   progress: ConnectionProgress,
 ): Promise<ConnectionEnd> {
   const connection = new AbortController();
+  ctx.current = connection;
   const stop = () => connection.abort();
   ctx.controller.signal.addEventListener("abort", stop, { once: true });
   let silence: ReturnType<typeof setTimeout> | undefined;
@@ -64,7 +65,7 @@ export async function readConnection<TData>(
     }
 
     ctx.config.onResponse?.(response);
-    ctx.state.set("connected");
+    ctx.sink.open({ resumed: false });
     expectMore();
 
     for await (const frame of parseSSEFrames(body)) {
@@ -76,6 +77,7 @@ export async function readConnection<TData>(
     return "dropped";
   } finally {
     clearTimeout(silence);
+    if (ctx.current === connection) ctx.current = undefined;
     ctx.controller.signal.removeEventListener("abort", stop);
     /* Releases the socket when the read stopped at an end-of-stream event. */
     connection.abort();
@@ -137,7 +139,7 @@ function parseFailure(data: string): StreamFailure {
 function deliver<TData>(ctx: SSEConnectionCtx<TData>, raw: RawSSEEvent): void {
   try {
     const parsed = ctx.config.parse(raw.data) as TData;
-    ctx.queue.push({ ...raw, data: parsed });
+    ctx.sink.data({ ...raw, data: parsed });
   } catch (parseErr) {
     log.warn(`Skipped an SSE event whose data could not be parsed: ${excerpt(raw.data)}`, parseErr);
   }

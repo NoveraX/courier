@@ -81,15 +81,54 @@ A proxy caller reaches another process's stream or channel too: the proxy relays
 - A channel's frames pass both ways, and it ends as its upstream subscription ends, with its code — a connection the upstream refuses included. A message the upstream subscription has no room to hold, while it joins or comes back, is answered with a `4429` error on the channel, which goes on. Subscribers of the server with equal variables share one upstream subscription.
 - A path parameter that is empty, `.` or `..` is refused before anything is sent, as it is for an HTTP call. Otherwise it would reach a route above the declared one with the server's credentials.
 
+## Reading a subscription
+
+Calling a stream, a push channel or a channel with `.send()` returns a subscription, and every kind reads the same way. A channel with `.send()` is the same object with `send` on it as well; on the others `send` does not exist, in the types or at run time.
+
+```ts
+const ticks = client.prices.ticks({ symbol: "ACME" }) // a stream or a push channel
+ticks.on("data", (tick) => render(tick))
+
+const room = client.chat.room({ room: "general", nick: "ada" }) // a channel with .send()
+room.on("data", (message) => append(message))
+room.send({ text: "hello" })
+```
+
+`for await` reads it too: each event comes with its data and, from a stream, its `id` and `event` name. The loop ends as the subscription ends, and leaving it early closes the subscription:
+
+```ts
+for await (const event of client.orders.updates({ shop: "north" })) {
+  render(event.data)
+}
+```
+
+What arrives before anything reads it — between the call and the first listener, or the loop — is kept for the first reader, up to a thousand events; past that the oldest are dropped, and `dropped` counts them. Once a listener reads, nothing is kept for later.
+
+A subscription has five events. Listening to any other is a type error, and throws `ConfigurationError` `UNKNOWN_EVENT`.
+
+| Event | Hears | Each time |
+| --- | --- | --- |
+| `data` | the data, and the event it came in | it delivers something |
+| `error` | a `RealtimeError` | the server refuses a message, a handler fails or a message is dropped from a full queue — the subscription goes on — and once more when it ends with an error |
+| `status` | `connecting`, `connected`, `reconnecting` or `disconnected` | its status changes |
+| `open` | `{ first, resumed }` | it is open: the first time, and again after each reconnect |
+| `close` | `{ reason }`: `closed`, `completed`, or `failed` with its `error` | it ends |
+
+A subscription is `connecting` from the moment it is made, and `connected` once the server runs it: a channel once the server has confirmed its subscription, not as soon as its socket opens. A listener that throws is logged, and the others still hear the event.
+
+`open` with `first: false` and `resumed: false` means the subscription came back, and what it missed while away may not have been sent: read what it shows again.
+
+`reconnect()` connects again at once. On a subscription that is open or waiting to reconnect, the socket or the stream's connection is opened anew, with its credentials asked for again; the channels of one caller share a socket, so all of them reconnect. A subscription the server ended opens again, its listeners kept — a loop that ended does not resume, a new one reads it. One the application closed stays closed: call the endpoint again. `close()` ends it for good.
+
 ## How a subscription ends
 
 A subscription ends in one of three ways, and the client can tell them apart.
 
-- **The client closes it** — `close()`, or a React hook unmounting. Nothing is reported.
-- **The server finishes it** — a stream's generator returned, or a channel closed itself. Iterating a stream ends (`for await` leaves its loop); a channel's status becomes `disconnected`. Neither reconnects.
-- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. Iterating a stream rejects with a `RealtimeError` carrying the code and message the server sent; a channel emits it on `error`, then its status becomes `disconnected`. A stream refused with a status no retry would change — a `4xx` other than `408` and `429`, or a redirect it does not follow, as one to another origin — arrives as code `4000 + status`, so a `401` is `4401` and a `302` is `4302`, and is not reconnected; a `408`, a `429` and a `5xx` are retried as a dropped connection is, after the `Retry-After` the server sent when it sent one.
+- **The client closes it** — `close()`, a loop left early, or a React hook unmounting. `close` says `closed`.
+- **The server finishes it** — a stream's generator returned, or a channel closed itself. A loop leaves; `close` says `completed`. It does not reconnect.
+- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. The `error` event hears the `RealtimeError` with the code and message the server sent, the status becomes `disconnected`, and `close` says `failed`; a loop rejects with the same error. A stream refused with a status no retry would change — a `4xx` other than `408` and `429`, or a redirect it does not follow, as one to another origin — arrives as code `4000 + status`, so a `401` is `4401` and a `302` is `4302`, and is not reconnected; a `408`, a `429` and a `5xx` are retried as a dropped connection is, after the `Retry-After` the server sent when it sent one.
 
-A dropped connection is none of these: the client reconnects, resumes a stream after the last event id it saw, and subscribes its channels again — see [Staying connected](#staying-connected). When it has spent its retries, iterating the stream rejects with a `ConnectionError`.
+A dropped connection is none of these: the client reconnects, resumes a stream after the last event id it saw, and subscribes its channels again — see [Staying connected](#staying-connected). When it has spent its retries, it fails with a `ConnectionError`.
 
 ```ts
 import { isRealtimeError } from "@noverax/courier"
@@ -106,6 +145,9 @@ try {
 const room = client.chat.room({ room: "general", nick: "ada" })
 room.on("error", (error) => notify(error.message)) // a refused message: the channel goes on
 room.on("status", (status) => setOnline(status === "connected"))
+room.on("close", (info) => {
+  if (info.reason === "failed" && info.error.code === 4401) signInAgain().then(() => room.reconnect())
+})
 ```
 
 A channel's `error` event also reports what it refused without ending: a message that failed its schema (`4422`), one larger than the server accepts (`4413`), or an `onMessage` that threw. `send()` returns whether the message went out or waits for the channel; `false` means it was dropped, with a warning.
@@ -172,7 +214,7 @@ A socket is `connected` once the server has admitted it — `onConnect` accepted
 A connection that drops reconnects on its own, and its channels subscribe again:
 
 - **After a wait.** Each wait is drawn at random between 0 and `initialMs × factor^n`, `n` the attempts that failed in a row before it, and is never longer than `maxMs`, so clients that lost a server together do not come back to it together. A connection that stays open for 10 s counts as having worked: its next drop starts the waits over. A server that asks for a wait — one shutting down, one at capacity — is not called back sooner. With `jitter: false` every wait is the exponential one.
-- **At once, when the page says so.** The network comes back (`online`, then a wait of up to a second at random), the page is shown again, it comes back from the back/forward cache, or its window gets focus. A connection open at that moment is checked instead: it sends a ping, and a socket that does not answer within 5 s is taken for gone. `reconnectOnResume: false` turns this off. Node and React Native give no such signals.
+- **At once, when the page says so.** The network comes back (`online`, then a wait of up to a second at random), the page is shown again, it comes back from the back/forward cache, or its window gets focus. A connection open at that moment is checked instead: it sends a ping, and a socket that does not answer within 5 s is taken for gone. `reconnectOnResume: false` turns this off. Node and React Native give no such signals: call `reconnect()` there, as from React Native's `AppState` when the app comes back to the foreground.
 - **A socket that falls silent** — no frame for the `heartbeat`'s interval and timeout together, 35 s by default — is taken for gone though it still reads as open: a network that dropped without a word sends no close.
 
 A socket that takes longer than 15 s to open, or a server that takes longer than 15 s to admit it, counts as a failed attempt. Some closes are not reconnected, as reconnecting would meet the same answer:

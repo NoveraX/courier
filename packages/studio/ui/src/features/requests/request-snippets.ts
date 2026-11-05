@@ -81,6 +81,7 @@ function courierCall(r: SnippetRequest): string {
   if (r.transport === "sse")
     return `for await (const event of ${call}) {\n  console.log(event.data);\n}`;
   if (r.transport === "ws") {
+    /* A push channel and one the caller sends on read the same way; the request does not say which it was. */
     return `const channel = ${call};\n\nchannel.on("data", (message) => console.log(message));`;
   }
   return `const data = await ${call};`;

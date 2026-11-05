@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { V1_DIALECT } from "../src/adapter/ws-dialect";
-import { handleReauth, sendAuthRequired } from "../src/adapter/ws-reauth";
-import type {
-  ConnectionRegistry,
-  InternalConnectionRegistry,
-} from "../src/adapter/ws-registry-types";
+import { handleReauth } from "../src/adapter/ws-reauth";
+import type { InternalConnectionRegistry } from "../src/adapter/ws-registry-types";
 import { createSession } from "../src/adapter/ws-session";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
@@ -170,23 +167,11 @@ describe("handleReauth", () => {
   });
 });
 
-describe("sendAuthRequired", () => {
-  it("asks the connection through connections.requireAuth, with the deadline given", async () => {
-    const requireAuth = vi.fn(async () => undefined);
-    const registry = { requireAuth } as unknown as ConnectionRegistry;
+describe("asking a connection for its credentials again", () => {
+  it("is connections.requireAuth alone: the package has no other way to it", async () => {
+    const courier = await import("../src/index");
 
-    await sendAuthRequired(registry, "c1", 5_000);
-
-    expect(requireAuth).toHaveBeenCalledWith("c1", { timeoutMs: 5_000 });
-  });
-
-  it("leaves the deadline to the handler's authRequiredTimeoutMs when it names none", async () => {
-    const requireAuth = vi.fn(async () => undefined);
-    const registry = { requireAuth } as unknown as ConnectionRegistry;
-
-    await sendAuthRequired(registry, "c1");
-
-    expect(requireAuth).toHaveBeenCalledWith("c1", { timeoutMs: undefined });
+    expect("sendAuthRequired" in courier).toBe(false);
   });
 });
 
@@ -229,7 +214,7 @@ describe("credentials the server asks a connected client for again", () => {
     let issued = 0;
     const connectionId = await connect(() => ({ frame: { auth: { token: `t${++issued}` } } }));
 
-    sendAuthRequired(served.handler.connections, connectionId, 200);
+    void served.handler.connections.requireAuth(connectionId, { timeoutMs: 200 });
     await settle(400);
 
     expect(seen).toEqual([{ token: "t2" }]);
@@ -242,7 +227,7 @@ describe("credentials the server asks a connected client for again", () => {
     served = await serveWS({}, { onReauth: ({ auth }) => ({ user: auth?.token }) });
     const connectionId = await connect();
 
-    sendAuthRequired(served.handler.connections, connectionId, 100);
+    void served.handler.connections.requireAuth(connectionId, { timeoutMs: 100 });
     await settle(300);
 
     expect(served.handler.connections.count).toBe(0);
@@ -254,7 +239,7 @@ describe("credentials the server asks a connected client for again", () => {
     served = await serveWS({}, {});
     const connectionId = await connect(() => ({ frame: { auth: { token: "any" } } }));
 
-    sendAuthRequired(served.handler.connections, connectionId, 150);
+    void served.handler.connections.requireAuth(connectionId, { timeoutMs: 150 });
     await settle(400);
 
     expect(served.handler.connections.count).toBe(0);
@@ -267,7 +252,7 @@ describe("credentials the server asks a connected client for again", () => {
     served = await serveWS({}, { pubsub, onReauth: ({ auth }) => ({ user: auth?.token }) });
     const connectionId = await connect(() => ({ frame: { auth: { token: "fresh" } } }));
 
-    sendAuthRequired(served.handler.connections, connectionId, 200);
+    void served.handler.connections.requireAuth(connectionId, { timeoutMs: 200 });
     await settle(400);
 
     expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "fresh" });

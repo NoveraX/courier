@@ -165,12 +165,12 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   maxConsecutiveDrops?: number | undefined;
   /**
    * Checks the credentials a client sends again on its open connection, as
-   * `sendAuthRequired` asks it to — `request` and `auth` as `onConnect`
+   * `connections.requireAuth` asks it to — `request` and `auth` as `onConnect`
    * reads them, with the new frame's headers. Return the connection's new
    * metadata, or throw to refuse them. Refused credentials close the
    * connection at once with 4401 — and so do any sent again when this is not
    * set, as nothing could check them. Taken, they lift the deadline
-   * `sendAuthRequired` set, and when who the connection is changed, each of
+   * `connections.requireAuth` set, and when who the connection is changed, each of
    * its subscriptions is authorized again: one `authorize` now refuses ends
    * with 4403.
    */
@@ -193,7 +193,7 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
     | undefined;
   /**
    * How long a client has to send its credentials again, once
-   * `sendAuthRequired` asked for them without naming a deadline of its own,
+   * `connections.requireAuth` asked for them without naming a deadline of its own,
    * before the connection is closed with 4401 (default 30000).
    */
   authRequiredTimeoutMs?: number | undefined;

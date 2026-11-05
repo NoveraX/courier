@@ -30,7 +30,6 @@ export {
   type SSEConnectionInfo,
   type SSEConnectionRegistry,
   type SSELifecycleConfig,
-  sendAuthRequired,
   type WebSocketLike,
   type WSHandler,
   type WSHandlerConfig,

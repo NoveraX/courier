@@ -13,7 +13,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import { sendAuthRequired } from "../src/adapter/ws-reauth";
 import type { WSHandler } from "../src/adapter/ws-types";
 import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
@@ -88,7 +87,7 @@ async function refreshRoundTrip(): Promise<{ meta: unknown; connections: number 
   const connections = handler?.connections;
   const [connection] = connections?.list() ?? [];
   if (!connections || !connection) throw new Error("no connection was opened");
-  sendAuthRequired(connections, connection.connectionId, 150);
+  void connections.requireAuth(connection.connectionId, { timeoutMs: 150 });
   await settle(300);
   return { meta: connections.get(connection.connectionId)?.meta, connections: connections.count };
 }

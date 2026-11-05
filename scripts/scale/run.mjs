@@ -11,7 +11,7 @@
  *   node scripts/scale/run.mjs --endpoints 3000
  *   node scripts/scale/run.mjs --only studio,ui --json scale-report.json
  *
- * The steps: tsc, runtime, codegen, payloads, studio (with proxy, editor,
+ * The steps: tsc, runtime, realtime, codegen, payloads, studio (with proxy, editor,
  * extension, mocks and ui inside it). Studio listens on --ports + 1, its mocks from
  * --ports + 10, the app on --ports.
  */
@@ -31,6 +31,7 @@ import { measured, report } from "./measure/metrics.mjs";
 import { measureMocksLoad } from "./measure/mocks-load.mjs";
 import { measurePayloads } from "./measure/payloads.mjs";
 import { attachedApp, measureProxy } from "./measure/proxy.mjs";
+import { measureRealtime } from "./measure/realtime.mjs";
 import { measureRuntime } from "./measure/runtime.mjs";
 import { measureStudio } from "./measure/studio.mjs";
 import { measureStudioUi } from "./measure/studio-ui.mjs";
@@ -40,6 +41,7 @@ const REPO = resolve(import.meta.dirname, "../..");
 const STEPS = [
   "tsc",
   "runtime",
+  "realtime",
   "codegen",
   "payloads",
   "studio",
@@ -99,6 +101,7 @@ async function step(name, measure) {
 
 await step("tsc", () => measureTypecheck(fixture));
 await step("runtime", () => measureRuntime(fixture));
+await step("realtime", () => measureRealtime(fixture));
 await step("codegen", () => measureCodegen(fixture));
 await step("payloads", () => measurePayloads(fixture));
 await step("studio", () =>

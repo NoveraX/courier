@@ -1,4 +1,4 @@
-export const metadata = { title: "Performance at Scale", description: "How Courier, Studio, its mocks and the VS Code extension behave on a large company's project — five APIs with a thousand endpoints, the hundreds of files that call them — every figure measured every night and held to a budget, and how to run the measurements on your own machine.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "Performance at Scale", description: "How Courier, Studio, its mocks and the VS Code extension behave on a large company's project — five APIs with a thousand endpoints, the hundreds of files that call them — every figure measured every night and held to a budget, and how to run the measurements on your own machine.", mode: "both", updated: "2026-11-05" }
 
 ## The project they are measured on
 
@@ -23,6 +23,20 @@ The figures below were measured on an Apple M2 Max laptop with Node 24. The nigh
 | Defining the 1000 endpoints and creating the callers | 132 ms, 16 MB of heap |
 | A call through the client, beyond `fetch` and `JSON.parse` themselves | 24 µs at the median, 72 µs at p99 |
 | Importing the project's OpenAPI document — 970 operations, 941 KB — in Studio | read in 42 ms, 341 files of code written in 186 ms; `tsc` over them 2.5 s, no errors |
+
+### WebSocket connections
+
+Courier's WebSocket handler driven with ten thousand sockets held in memory, the network left out, so each figure is the handler's own.
+
+| Measured | Figure |
+| --- | --- |
+| Admitting 10,000 connections, each through `onConnect` | 211 ms; 7.3 KB of heap a connection |
+| Subscribing all of them to one topic | 192 ms |
+| A broadcast to the 10,000 subscribers of that topic | 28 ms at p99, every one delivered |
+| `disconnect({ meta: { userId } })`, closing one user's 5 connections among them | 3.6 ms at p99 |
+| A signed command reaching another of three replicas, until the socket it closes is closed | 1.3 ms at p99 |
+| `maxConnectionsPerKey`, with keys hashed and the oldest given up, on each admission | 10 µs more |
+| `destroy()` with the 10,000 open | 58 ms |
 
 ### Large answers
 

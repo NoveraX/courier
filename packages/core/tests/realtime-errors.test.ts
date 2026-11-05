@@ -10,6 +10,7 @@ import {
   RealtimeTimeoutError,
   RealtimeValidationError,
 } from "../src/realtime/errors";
+import { WS_CODE } from "../src/realtime/ws/ws-codes";
 
 describe("RealtimeError hierarchy", () => {
   it("RealtimeError has code and message", () => {
@@ -59,6 +60,13 @@ describe("RealtimeError hierarchy", () => {
   it("RealtimeValidationError has code 4422", () => {
     const err = new RealtimeValidationError("Invalid payload");
     expect(err.code).toBe(4422);
+  });
+
+  it("RealtimeValidationError's 4422, a number kept out of a page's first chunk, is the table's code", () => {
+    expect(new RealtimeValidationError().code).toBe(WS_CODE.VALIDATION_FAILED);
+    expect(fromErrorCode(WS_CODE.VALIDATION_FAILED, "Invalid")).toBeInstanceOf(
+      RealtimeValidationError,
+    );
   });
 });
 

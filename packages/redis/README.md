@@ -167,6 +167,10 @@ Creates a Streams adapter for durable ordered event storage. Uses `XADD`/`XRANGE
 
 Creates a presence adapter: `track`, `heartbeat`, `untrack`, `list`, `sweep` and `onDiff` over a sorted set and a hash per topic, with the diffs broadcast to the other replicas through the `subscriber` connection.
 
+### `createRedisConnectionLeases(config: RedisConnectionLeasesConfig): ConnectionLeaseStore`
+
+Creates the store a WebSocket handler's `maxConnectionsPerKey` counts connections in, so the limit holds across replicas: each decision is one Lua script on one key, on Redis's own clock, and a lease lapses unless renewed within `ttlMs` (60 s by default).
+
 <br />
 
 ## Part of Courier

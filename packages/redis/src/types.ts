@@ -99,3 +99,22 @@ export interface RedisRateLimitConfig {
    */
   prefix?: string | undefined;
 }
+
+/** Configuration for {@link createRedisConnectionLeases} */
+export interface RedisConnectionLeasesConfig {
+  /** The Redis client the leases are kept with; every replica's points at the same Redis. */
+  redis: Redis;
+  /**
+   * Key prefix for the leases: one hash per key a limit counts, named by
+   * the key's hash, never the key itself.
+   * @default "courier:leases:"
+   */
+  prefix?: string | undefined;
+  /**
+   * How long a lease is kept unless renewed: a replica renews its own every
+   * 20 seconds, and one that stops without releasing frees them once this
+   * has passed.
+   * @default 60000
+   */
+  ttlMs?: number | undefined;
+}

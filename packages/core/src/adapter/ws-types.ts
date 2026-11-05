@@ -83,7 +83,8 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   /**
    * Where `maxConnectionsPerKey` counts connections: this replica's memory
    * unless given, or a store every replica shares, so the limit counts the
-   * key's connections wherever they are held.
+   * key's connections wherever they are held —
+   * `createRedisConnectionLeases()` from `@noverax/courier-redis`.
    */
   connectionLeases?: ConnectionLeaseStore | undefined;
   /**

@@ -491,13 +491,16 @@ A selector is a connection id, `{ id }` with as many as 1000 of them, or `{ meta
 
 ### Capping a User's Connections
 
-`maxConnectionsPerKey` limits the connections that share a key, read from what `onConnect` returned, and counts them in `connectionLeases`: this replica's memory unless you give a store every replica shares.
+`maxConnectionsPerKey` limits the connections that share a key, read from what `onConnect` returned, and counts them in `connectionLeases`: this replica's memory unless you give a store every replica shares, as [Redis](/docs/deployment/redis#connection-leases) is.
 
 ```ts title="ws.ts"
+import { createRedisConnectionLeases } from "@noverax/courier-redis"
+
 const ws = createWSHandler({
   pubsub,
   onConnect: ({ auth }) => ({ userId: auth?.userId }),
   maxConnectionsPerKey: { key: (meta) => meta.userId as string | undefined, max: 5 },
+  connectionLeases: createRedisConnectionLeases({ redis }),
 })
 ```
 

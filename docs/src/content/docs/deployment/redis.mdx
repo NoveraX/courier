@@ -159,6 +159,28 @@ courierHandler({ rateLimit: { requests: 300, window: 60_000, store } })
 
 One connection serves it, and it may be the one the Pub/Sub adapter publishes on. See [Rate limits](/docs/proxy-mode/overview#rate-limits).
 
+## Connection Leases
+
+Counts the connections a WebSocket handler's `maxConnectionsPerKey` limits on every replica: without it, each replica counts its own, and a user gets the limit once per replica. Each decision is one Lua script on one key, made on Redis's own clock, so two connections arriving together on two replicas never both take the last place:
+
+```ts title="ws.ts"
+import Redis from "ioredis"
+import { createRedisConnectionLeases } from "@noverax/courier-redis"
+
+const ws = createWSHandler({
+  pubsub,
+  onConnect: ({ auth }) => ({ userId: auth?.userId }),
+  maxConnectionsPerKey: { key: (meta) => meta.userId as string | undefined, max: 5 },
+  connectionLeases: createRedisConnectionLeases({
+    redis: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
+    prefix: "courier:leases:", // key prefix (default: "courier:leases:")
+    ttlMs: 60_000, // how long a lease is kept unless renewed (default: 60 s)
+  }),
+})
+```
+
+A replica renews its leases every 20 seconds, so one that stops without releasing frees them once `ttlMs` has passed. The key under a limit, a user's id say, reaches Redis hashed, with HMAC under `cluster.secret` when it is set. If Redis cannot decide within 2 seconds, the replica lets the connection in by its own count of the key's connections and logs why. See [Capping a user's connections](/docs/deployment/replication#capping-a-users-connections).
+
 ## Presence Adapter
 
 Tracks online users across replicas using Redis ZSET (scores) + HASH (metadata).
@@ -391,3 +413,4 @@ Redis adapters degrade gracefully — they never kill active client connections:
 | Stream | `{prefix}{topic}` | Auto-trim via MAXLEN |
 | Presence (score) | `{prefix}score:{topic}` | Managed by sweep |
 | Presence (meta) | `{prefix}meta:{topic}` | Managed by sweep |
+| Connection leases | `{prefix}key:{hash}`, one hash per key a limit counts | `ttlMs`, renewed every 20 s |

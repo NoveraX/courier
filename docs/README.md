@@ -270,6 +270,11 @@ every answer tells what is left of the tightest budget it took from in
 the proxy route passes on to the page. A page rendered on the server, and
 a Server Action, show the refusal where their data would be.
 
+Another site's page cannot spend a visitor's budget through their
+browser: an example page it loads as an image, a script, a frame or a
+fetch is refused 403 before it renders, as the browser's Fetch Metadata
+tells (`src/proxy.ts`), and only a link from it opens the page.
+
 The backend counts a call before it reads any of its body. The proxy
 route reads a call's JSON, only as large as the backend takes it, before
 it passes the call on; of an upload it holds none
@@ -369,7 +374,28 @@ SITE_URL=https://courier.noverax.cloud COURIER_BROWSERS=chromium npm run test:ex
 
 Every page's calls then come from the address the run is made from, and the
 tests of the visitors' budget, which would spend that address's, are
-skipped; one engine keeps the run within a minute's budget.
+skipped; one engine keeps the run within a minute's budget, and its 4
+first changes within the 6 copies the address makes in 10 minutes.
+
+Then check that no visitor can pass for another address in DDoS-Guard's
+header. In a private window, open the site's home page and run in the
+browser's console:
+
+```js
+const left = (headers) =>
+  fetch("/api/request?_s=api&_g=users&_m=getAll", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...headers },
+    body: JSON.stringify({ variables: {}, options: {} }),
+  }).then((answer) => answer.headers.get("x-ratelimit-remaining"))
+console.log(await left({}), await left({ "DDG-Connecting-IP": "192.0.2.1" }))
+```
+
+The second number is one less than the first when DDoS-Guard wrote over
+the made-up address, and both calls were counted as yours. Any other
+answer means the site believed it: check that `COURIER_TRUSTED_PROXIES`
+names DDoS-Guard's networks alone, and that DDoS-Guard still names the
+visitor in the header.
 
 <br />
 

@@ -3,9 +3,26 @@
  * the server, and its browser sends nothing to the proxy; the Server
  * Actions page creates a user and deletes one with the visitor's session,
  * which the action hands the browser, and the list rendered again on the
- * server holds the change — still there once the page is loaded again.
+ * server holds the change — still there once the page is loaded again. An
+ * example page another site loads as anything but a page is not rendered,
+ * so it calls the backend on no visitor's budget.
  */
 import { expect, sandbox, test } from "./support/fixtures"
+
+test("refuses an example page another site loads as an image, a script, a frame or a fetch, and opens one it links to", async ({
+  page,
+}) => {
+  /* What a browser sends for a load another site's page makes, as the page loads it. */
+  const loadAs = (mode: string, dest: string) =>
+    page.request.get("/docs/examples/direct", {
+      headers: { "sec-fetch-site": "cross-site", "sec-fetch-mode": mode, "sec-fetch-dest": dest },
+    })
+  await page.goto("/")
+  for (const dest of ["image", "script", "iframe", "empty"]) {
+    expect((await loadAs("no-cors", dest)).status(), dest).toBe(403)
+  }
+  expect((await loadAs("navigate", "document")).status()).toBe(200)
+})
 
 test("renders the direct page's answers on the server, with no call from the browser", async ({
   page,

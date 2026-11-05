@@ -19,6 +19,36 @@ function mockSSEResponse(body: string, status = 200): Response {
   });
 }
 
+/**
+ * A response whose stream sends `body` and stays open: it never ends, so
+ * the client has no end to reconnect after. `handled` resolves when the
+ * client asks for more, which it does only once it has handled `body`.
+ */
+function openSSEResponse(body: string): { response: Response; handled: Promise<void> } {
+  let asked = (): void => undefined;
+  const handled = new Promise<void>((resolve) => {
+    asked = resolve;
+  });
+  let sent = false;
+  const stream = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        if (sent) {
+          asked();
+          return new Promise<void>(() => undefined);
+        }
+        sent = true;
+        controller.enqueue(new TextEncoder().encode(body));
+        return undefined;
+      },
+    },
+    /* No chunk is asked for ahead of a read: the next pull is the client's next read. */
+    { highWaterMark: 0 },
+  );
+  const headers = { "Content-Type": "text/event-stream" };
+  return { response: new Response(stream, { status: 200, headers }), handled };
+}
+
 /** Collect all events from a subscription (with safety timeout) */
 async function drain<T>(sub: AsyncIterable<T>, max = 100): Promise<T[]> {
   const events: T[] = [];
@@ -137,13 +167,11 @@ describe("subscribeSSE", () => {
   });
 
   it("hands over nothing it had buffered once closed", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce(mockSSEResponse("data: 1\n\ndata: 2\n\ndata: 3\n\n")),
-    );
+    const { response, handled } = openSSEResponse("data: 1\n\ndata: 2\n\ndata: 3\n\n");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(response));
     const sub = subscribeSSE<number>("/sse", { maxAttempts: 1 });
-    /* Nothing reads yet, so the three events wait in the buffer. */
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    /* Nothing reads the subscription, so its three events wait in its buffer. */
+    await handled;
 
     sub.close();
 

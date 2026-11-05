@@ -368,7 +368,10 @@ describe("a channel whose socket opens", () => {
     await new Promise<void>((resolve) => ch.on("data", () => resolve()));
 
     for (const connection of served.handler.connections.list()) {
-      served.handler.connections.disconnect(connection.connectionId, 1012, "Service restart");
+      await served.handler.connections.disconnect(connection.connectionId, {
+        code: 1012,
+        reason: "Service restart",
+      });
     }
     await expect.poll(() => reconnects().length, { timeout: 4_000 }).toBeGreaterThanOrEqual(2);
 
@@ -403,7 +406,10 @@ describe("a channel whose socket opens", () => {
     await welcomed;
 
     for (const connection of served.handler.connections.list()) {
-      served.handler.connections.disconnect(connection.connectionId, 1012, "Service restart");
+      await served.handler.connections.disconnect(connection.connectionId, {
+        code: 1012,
+        reason: "Service restart",
+      });
     }
     await expect.poll(() => reconnects().length, { timeout: 4_000 }).toBe(1);
 

@@ -27,6 +27,8 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   sources?: Sources | undefined;
   /** Optional pub/sub adapter for horizontal scaling (e.g. Redis) */
   pubsub?: PubSubAdapter | undefined;
+  /** How the replicas sharing `pubsub` trust the commands they send each other */
+  cluster?: WSClusterOptions | undefined;
   /** Heartbeat interval in ms (default 25000) */
   heartbeatIntervalMs?: number | undefined;
   /** Pong timeout in ms (default 10000) */
@@ -164,6 +166,19 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * before the connection is closed with 4401 (default 30000).
    */
   authRequiredTimeoutMs?: number | undefined;
+}
+
+/** How the replicas of one application trust the commands they send each other. */
+export interface WSClusterOptions {
+  /**
+   * A secret every replica shares, of 32 bytes or more: each command one
+   * sends the others — `connections.disconnect`, `connections.requireAuth` —
+   * is signed with it, and one that is not, or not with it, is refused.
+   * Without it, whoever can publish on the adapter's channels can close any
+   * connection: on a Redis anything else reaches, set it, and keep
+   * publishing on the prefix's channels to the application with Redis ACLs.
+   */
+  secret?: string | undefined;
 }
 
 /** What a subscription was authorized as: its endpoint and the variables it was made with. */

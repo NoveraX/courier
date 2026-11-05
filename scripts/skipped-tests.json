@@ -1,5 +1,8 @@
 {
   "darwin": [
+    "packages/redis/tests/redis-cluster-commands.test.ts > commands between replicas sharing a Redis > are refused, with a cluster secret, when published straight to Redis, and taken when a replica signed them",
+    "packages/redis/tests/redis-cluster-commands.test.ts > commands between replicas sharing a Redis > ask a user's connection on another replica for its credentials again, through Redis",
+    "packages/redis/tests/redis-cluster-commands.test.ts > commands between replicas sharing a Redis > close a user's connection held by another replica, through Redis",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > does not bring a swept connection back on its next heartbeat",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > stops calling error handlers once disconnected, and leaves no listener behind",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > sweeps a topic holding more stale connections than Lua can unpack at once",
@@ -88,6 +91,9 @@
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > returns the permission bits of the file it read",
     "packages/core/tests/multipart/disk-store.test.ts > diskStore > keeps the folder and its files for this user alone",
     "packages/create-courier/tests/project/path-aliases.test.ts > aliasedFiles > fills the target's star, not one in the project folder's name",
+    "packages/redis/tests/redis-cluster-commands.test.ts > commands between replicas sharing a Redis > are refused, with a cluster secret, when published straight to Redis, and taken when a replica signed them",
+    "packages/redis/tests/redis-cluster-commands.test.ts > commands between replicas sharing a Redis > ask a user's connection on another replica for its credentials again, through Redis",
+    "packages/redis/tests/redis-cluster-commands.test.ts > commands between replicas sharing a Redis > close a user's connection held by another replica, through Redis",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > does not bring a swept connection back on its next heartbeat",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > stops calling error handlers once disconnected, and leaves no listener behind",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > sweeps a topic holding more stale connections than Lua can unpack at once",

@@ -1,3 +1,5 @@
+import { hasFields, readSelector } from "./connection-selector";
+import { disconnectCommand, requireAuthCommand, runCommand } from "./ws-connection-command";
 import {
   type BroadcastTargets,
   broadcastToAll,
@@ -19,6 +21,9 @@ import type { ServerTopicManager } from "./ws-topics";
  * TopicManager is injected lazily via `setTopicManager` to break
  * the circular init dependency (bridge needs registry, topicManager needs bridge hooks).
  *
+ * Alone, it reaches this replica's connections; with a pub/sub adapter
+ * `replicateRegistry` carries its broadcasts and commands to the others.
+ *
  * @returns Internal registry with add/remove + public send/broadcast API
  *
  * @example
@@ -27,6 +32,7 @@ import type { ServerTopicManager } from "./ws-topics";
  * registry.broadcastToTopic('api.chat.room#{"room":"a"}', { text: "hi" });
  * registry.broadcastToBaseTopic("api.chat.room", { text: "to all rooms" });
  * registry.sendToConnection(connId, "notifications", { alert: true });
+ * await registry.disconnect({ meta: { userId: "u1" } }, { code: 4003, reason: "Banned" });
  */
 export function createConnectionRegistry(): InternalConnectionRegistry {
   const entries = new Map<string, RegistryEntry>();
@@ -50,11 +56,7 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
     };
   }
 
-  function close(entry: RegistryEntry, code?: number, reason?: string): void {
-    entry.close(code ?? 1000, reason ?? "Disconnected by server");
-  }
-
-  return {
+  const registry: InternalConnectionRegistry = {
     get count() {
       return entries.size;
     },
@@ -63,9 +65,11 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
       return entry ? toInfo(entry) : undefined;
     },
     has: (connectionId) => entries.has(connectionId),
-    list: () => [...entries.values()].map(toInfo),
-    getByMeta(predicate) {
-      return [...entries.values()].filter((entry) => predicate(entry.meta)).map(toInfo);
+    list(selector) {
+      if (selector === undefined) return [...entries.values()].map(toInfo);
+      const selection = readSelector(selector);
+      if (typeof selection === "string") throw new TypeError(selection);
+      return registry.select(selection).map(toInfo);
     },
     send(connectionId, data) {
       entries.get(connectionId)?.sendRaw({ type: "data", payload: data, seq: ++broadcastSeq });
@@ -79,14 +83,11 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
         .get(connectionId)
         ?.sendRaw({ type: "data", topic, payload: data, seq: ++broadcastSeq });
     },
-    disconnect(connectionId, code, reason) {
-      const entry = entries.get(connectionId);
-      if (entry) close(entry, code, reason);
+    async disconnect(selector, options) {
+      runCommand(disconnectCommand(selector, options), registry);
     },
-    disconnectByMeta(predicate, code, reason) {
-      for (const entry of [...entries.values()]) {
-        if (predicate(entry.meta)) close(entry, code, reason);
-      }
+    async requireAuth(selector, options) {
+      runCommand(requireAuthCommand(selector, options), registry);
     },
     add(entry) {
       entries.set(entry.connectionId, entry);
@@ -99,8 +100,16 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
       if (entry) entry.meta = meta;
     },
     getEntry: (connectionId) => entries.get(connectionId),
+    select(selection) {
+      if ("ids" in selection) {
+        const named = [...new Set(selection.ids)].map((id) => entries.get(id));
+        return named.filter((entry): entry is RegistryEntry => entry !== undefined);
+      }
+      return [...entries.values()].filter((entry) => hasFields(entry.meta, selection.fields));
+    },
     setTopicManager(tm) {
       topicManager = tm;
     },
   };
+  return registry;
 }

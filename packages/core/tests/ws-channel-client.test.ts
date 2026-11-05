@@ -115,7 +115,11 @@ describe("a message sent right after opening a channel", () => {
     });
     const away = reaches(ch, "reconnecting");
 
-    served.handler.connections.disconnectByMeta(() => true, 1012, "Service restart");
+    const ids = served.handler.connections.list().map((connection) => connection.connectionId);
+    await served.handler.connections.disconnect(
+      { id: ids },
+      { code: 1012, reason: "Service restart" },
+    );
     await away;
     /* Set up only now, before the reconnect: a failed wait above leaves no second one pending. */
     const rejoined = reaches(ch, "connected");

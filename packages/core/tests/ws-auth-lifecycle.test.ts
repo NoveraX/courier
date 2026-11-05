@@ -19,8 +19,8 @@ function createEntry(id: string, meta: Record<string, unknown> = {}): RegistryEn
   };
 }
 
-describe("disconnectByMeta", () => {
-  it("disconnects all connections matching predicate", () => {
+describe("disconnecting the connections a selector's metadata names", () => {
+  it("closes each connection whose fields match, and no other", async () => {
     const registry = createConnectionRegistry();
     const admin = createEntry("a1", { role: "admin" });
     const user1 = createEntry("u1", { role: "user" });
@@ -29,29 +29,29 @@ describe("disconnectByMeta", () => {
     registry.add(user1);
     registry.add(user2);
 
-    registry.disconnectByMeta((m) => m.role === "user");
+    await registry.disconnect({ meta: { role: "user" } });
 
     expect(user1.close).toHaveBeenCalledOnce();
     expect(user2.close).toHaveBeenCalledOnce();
     expect(admin.close).not.toHaveBeenCalled();
   });
 
-  it("uses custom close code and reason", () => {
+  it("closes them with the code and reason given", async () => {
     const registry = createConnectionRegistry();
     const entry = createEntry("c1", { banned: true });
     registry.add(entry);
 
-    registry.disconnectByMeta((m) => m.banned === true, 4403, "Account banned");
+    await registry.disconnect({ meta: { banned: true } }, { code: 4403, reason: "Account banned" });
 
     expect(entry.close).toHaveBeenCalledWith(4403, "Account banned");
   });
 
-  it("does nothing when no connections match", () => {
+  it("closes nothing when no connection matches", async () => {
     const registry = createConnectionRegistry();
     const entry = createEntry("c1", { role: "admin" });
     registry.add(entry);
 
-    registry.disconnectByMeta((m) => m.role === "ghost");
+    await registry.disconnect({ meta: { role: "ghost" } });
 
     expect(entry.close).not.toHaveBeenCalled();
   });

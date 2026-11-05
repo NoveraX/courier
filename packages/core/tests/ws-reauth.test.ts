@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { V1_DIALECT } from "../src/adapter/ws-dialect";
 import { handleReauth, sendAuthRequired } from "../src/adapter/ws-reauth";
-import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry-types";
+import type {
+  ConnectionRegistry,
+  InternalConnectionRegistry,
+} from "../src/adapter/ws-registry-types";
 import { createSession } from "../src/adapter/ws-session";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
@@ -168,31 +171,22 @@ describe("handleReauth", () => {
 });
 
 describe("sendAuthRequired", () => {
-  it("asks the connection's own session, with the deadline given", () => {
-    const requireAuth = vi.fn(() => () => undefined);
-    const entry = { requireAuth } as unknown as RegistryEntry;
-    const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
+  it("asks the connection through connections.requireAuth, with the deadline given", async () => {
+    const requireAuth = vi.fn(async () => undefined);
+    const registry = { requireAuth } as unknown as ConnectionRegistry;
 
-    const cancel = sendAuthRequired(registry, "c1", 5_000);
+    await sendAuthRequired(registry, "c1", 5_000);
 
-    expect(requireAuth).toHaveBeenCalledWith(5_000);
-    expect(cancel).toBeTypeOf("function");
+    expect(requireAuth).toHaveBeenCalledWith("c1", { timeoutMs: 5_000 });
   });
 
-  it("leaves the deadline to the handler's authRequiredTimeoutMs when it names none", () => {
-    const requireAuth = vi.fn(() => () => undefined);
-    const entry = { requireAuth } as unknown as RegistryEntry;
-    const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
+  it("leaves the deadline to the handler's authRequiredTimeoutMs when it names none", async () => {
+    const requireAuth = vi.fn(async () => undefined);
+    const registry = { requireAuth } as unknown as ConnectionRegistry;
 
-    sendAuthRequired(registry, "c1");
+    await sendAuthRequired(registry, "c1");
 
-    expect(requireAuth).toHaveBeenCalledWith(undefined);
-  });
-
-  it("returns undefined for a connection this replica does not hold", () => {
-    const registry = { getEntry: vi.fn(() => undefined) } as unknown as InternalConnectionRegistry;
-
-    expect(sendAuthRequired(registry, "unknown")).toBeUndefined();
+    expect(requireAuth).toHaveBeenCalledWith("c1", { timeoutMs: undefined });
   });
 });
 

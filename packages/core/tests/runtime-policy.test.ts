@@ -24,7 +24,7 @@ import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier, defineApi } from "../src/define/index";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { seededRandom } from "./helpers/seeded-random";
+import { seededIntegers } from "./helpers/seeded-random";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 let errors: MockInstance<Console["error"]>;
@@ -296,7 +296,7 @@ describe("host entries, drawn at random", () => {
 
   it("serves every name they list, in whatever case a request writes it", () => {
     for (let seed = 1; seed <= 2_000; seed += 1) {
-      const next = seededRandom(seed);
+      const next = seededIntegers(seed);
       const names = Array.from({ length: 1 + next(5) }, () => nameFrom(next));
       const hosts = hostNamesOf(names);
       if ("problem" in hosts) throw new Error(`${names.join(",")}: ${hosts.problem}`);
@@ -309,7 +309,7 @@ describe("host entries, drawn at random", () => {
 
   it("refuses every entry with a scheme, a path, a user, a query, a fragment or a space", () => {
     for (let seed = 1; seed <= 2_000; seed += 1) {
-      const next = seededRandom(seed);
+      const next = seededIntegers(seed);
       const entry = SPOILERS[next(SPOILERS.length)]?.(nameFrom(next)) ?? "";
 
       expect(hostNamesOf([entry])).toHaveProperty("problem");
@@ -318,7 +318,7 @@ describe("host entries, drawn at random", () => {
 
   it("reads a list written to COURIER_ALLOWED_HOSTS as the list it was written from", () => {
     for (let seed = 1; seed <= 500; seed += 1) {
-      const next = seededRandom(seed);
+      const next = seededIntegers(seed);
       const names = Array.from({ length: 1 + next(6) }, () => nameFrom(next).toLowerCase());
       const written = names.map((name) => `${" ".repeat(next(3))}${name}`).join(",");
       vi.stubEnv("COURIER_ALLOWED_HOSTS", written);

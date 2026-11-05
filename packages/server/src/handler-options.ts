@@ -114,6 +114,7 @@ export function wsHandlerOptions(
     allowedOrigins: settings.allowedOrigins,
     allowedHosts: settings.allowedHosts,
     pubsub: config.pubsub,
+    cluster: config.cluster,
     heartbeatIntervalMs: config.heartbeatIntervalMs,
     heartbeatTimeoutMs: config.heartbeatTimeoutMs,
     maxBufferedAmount: config.maxBufferedAmount,

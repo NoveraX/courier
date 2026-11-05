@@ -464,6 +464,50 @@ export class AppModule implements NestModule, BeforeApplicationShutdown {
 }
 ```
 
+## A User's Connections, on Every Replica
+
+`connections.disconnect()` and `connections.requireAuth()` reach the connections a selector names on every replica that shares the pub/sub adapter, so signing a user out, or banning one, closes their connections wherever the load balancer sent them:
+
+```ts title="sign-out.ts"
+import type { ConnectionRegistry } from "@noverax/courier"
+
+export async function signOutEverywhere(connections: ConnectionRegistry, userId: string) {
+  // Each connection whose onConnect returned this userId, on every replica
+  await connections.disconnect({ meta: { userId } }, { code: 4001, reason: "Signed out" })
+}
+
+export async function askForFreshTokens(connections: ConnectionRegistry, userId: string) {
+  // Each of them sends its credentials again within 30 seconds, or is closed with 4401
+  await connections.requireAuth({ meta: { userId } }, { timeoutMs: 30_000 })
+}
+```
+
+A selector is a connection id, `{ id }` with as many as 1000 of them, or `{ meta }` comparing up to 16 fields of what `onConnect` returned, each to a string, a number or a boolean. One the handler cannot use — no id, a field compared to an object — rejects with a `TypeError` before anything is closed, and so does a code no socket can send. The call resolves once this replica's connections are closed and the command for the others has gone to the adapter; it is not sent at all when every id it names is this replica's. A replica Redis cannot reach at that moment misses the command, so revoke the user's credentials as well: a client that reconnects is then refused by `onConnect`. `count`, `get`, `list()` and `send()` stay with the replica that holds the connections.
+
+### Signing the commands
+
+Whoever can publish on the adapter's channels can send the replicas a command — on a Redis anything else reaches, close any connection. Give every replica the same secret of 32 bytes or more, and each command is signed with HMAC-SHA-256; one that is not signed, or not with the secret, is refused, and so is one sent again or more than a minute ago, each on one line of the server's log:
+
+```ts title="adapters.ts"
+const ws = createWSHandler({
+  pubsub,
+  cluster: { secret: process.env.COURIER_CLUSTER_SECRET }, // openssl rand -hex 32
+})
+```
+
+A shorter secret throws `CLUSTER_SECRET_INVALID` when the handler is made. Keep the secret out of the repository, as any credential, and keep publishing on the prefix's channels to your application with Redis ACLs as well.
+
+### Coming from 0.4
+
+| 0.4 | Now |
+|-----|-----|
+| `disconnect(id, code, reason)` | `await disconnect(id, { code, reason })` |
+| `disconnectByMeta((meta) => meta.userId === id, code, reason)` | `await disconnect({ meta: { userId: id } }, { code, reason })` |
+| `getByMeta(predicate)` | `list({ meta: { … } })`, or `list().filter(…)` for any other test |
+| `sendAuthRequired(connections, id, ms)` | `await connections.requireAuth(id, { timeoutMs: ms })` |
+
+A replica of 0.4 does not listen for commands, so while a rolling upgrade from it runs, a command reaches the replicas already upgraded. A replica that gets a command of a newer version than its own skips it, saying so in its log.
+
 ## Framework Comparison
 
 | Feature | Standalone | Next.js | Express | Fastify | Hono | NestJS |

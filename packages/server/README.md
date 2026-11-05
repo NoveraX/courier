@@ -152,6 +152,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `bodyIdleTimeoutMs` | 30 seconds | Longest pause between two pieces of a request body; then 408 |
 | `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive; then 408 |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
+| `cluster.secret` | `undefined` | A secret of 32 bytes or more, the same on every replica, that signs the commands `wsConnections.disconnect()` and `requireAuth()` send the other replicas; one not signed with it is refused |
 | `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |
 | `clientIp` | the socket's address | Names the address a WebSocket connection is counted against |
 | `maxSubscriptionsPerConnection` | `100` | Subscriptions one WebSocket connection may hold; its subscribe, unsubscribe and auth frames are limited to twice this a second, apart from its other messages, and one past the limit is refused with a `4429` error |
@@ -161,7 +162,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `authorize` | `undefined` | Decides whether a WebSocket subscription may start |
 | `authorizeMessage` | `undefined` | Decides whether a message sent on a channel is accepted |
 | `authTimeoutMs` | `3000` | How long `onConnect` waits for the client's `auth` frame, the first a Courier client sends; a client that sends none by then is admitted on its handshake alone |
-| `onReauth` | `undefined` | Checks the credentials a client sends again on an open WebSocket connection, as `sendAuthRequired` asks, and returns its new metadata; credentials it refuses close the connection at once with `4401`, and without it every such frame does |
+| `onReauth` | `undefined` | Checks the credentials a client sends again on an open WebSocket connection, as `connections.requireAuth` asks, and returns its new metadata; credentials it refuses close the connection at once with `4401`, and without it every such frame does |
 | `signals` | `true` | Drain on SIGTERM/SIGINT — on Windows also on Ctrl+Break and the console closing — then exit, unless the application handles the signal too, in which case its handler decides when the process ends |
 
 Every other option of the core HTTP and WebSocket handlers is accepted and passed on as well: the SSE lifecycle hooks and limits, `onConnect`, `onDisconnect`, `onError`, the heartbeat timings and the slow-consumer limits.

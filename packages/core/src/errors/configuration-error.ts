@@ -174,6 +174,11 @@ export type ConfigurationErrorCode =
    * is no number, or less than it can hold.
    */
   | "PUBSUB_OPTIONS_INVALID"
+  /**
+   * A WebSocket handler's `cluster.secret` is shorter than 32 bytes, or no
+   * string, or the runtime has no Web Crypto to sign with it.
+   */
+  | "CLUSTER_SECRET_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
   /**

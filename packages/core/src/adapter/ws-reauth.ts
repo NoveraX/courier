@@ -7,7 +7,7 @@ import type { WSSocketContext } from "./ws-context";
 import type { SessionClose } from "./ws-dialect";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
 import { reauthorizeSubscriptions } from "./ws-reauthorize";
-import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry-types";
+import type { ConnectionRegistry } from "./ws-registry-types";
 
 const log = createLogger("WS");
 
@@ -98,30 +98,28 @@ function refuse(ctx: WSSocketContext, failure: StreamFailure, cause: unknown): v
 }
 
 /**
- * Ask a connection for its credentials again: it is sent `auth_required`,
- * and answers with its credentials asked for anew — its `ws.auth`, the
- * headers of its session. Unless they come in and `onReauth` accepts them
- * within `timeoutMs` — the handler's `authRequiredTimeoutMs` when not
- * given — the connection is closed with 4401.
+ * Ask a connection for its credentials again — on whichever replica holds
+ * it: it is sent `auth_required`, and answers with its credentials asked
+ * for anew — its `ws.auth`, the headers of its session. Unless they come in
+ * and `onReauth` accepts them within `timeoutMs` — the handler's
+ * `authRequiredTimeoutMs` when not given — the connection is closed with
+ * 4401.
  *
+ * @deprecated Use `connections.requireAuth(connectionId, { timeoutMs })`,
+ *   which takes any selector — `{ meta: { userId } }` asks each connection
+ *   of a user.
  * @param registry - The handler's `connections`
  * @param connectionId - The connection to ask
  * @param timeoutMs - How long it has to answer; 0 sets no deadline
- * @returns Cleanup function to cancel the deadline, or nothing when the connection is not this replica's
+ * @returns Resolves once it is asked, or the command to ask it has gone to the other replicas
  *
  * @example
- * sendAuthRequired(handler.connections, connectionId, 10_000);
+ * await sendAuthRequired(handler.connections, connectionId, 10_000);
  */
 export function sendAuthRequired(
   registry: ConnectionRegistry,
   connectionId: string,
   timeoutMs?: number,
-): (() => void) | undefined {
-  const entry = isInternal(registry) ? registry.getEntry(connectionId) : undefined;
-  return entry?.requireAuth(timeoutMs);
-}
-
-/** Whether the registry is one a WS handler made, which holds the connections themselves. */
-function isInternal(registry: ConnectionRegistry): registry is InternalConnectionRegistry {
-  return "getEntry" in registry && typeof registry.getEntry === "function";
+): Promise<void> {
+  return registry.requireAuth(connectionId, { timeoutMs });
 }

@@ -16,9 +16,8 @@ import { holdFrames, type WSInbox } from "./ws-inbox";
 import { createIPTracker } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
 import { createLiveConnections } from "./ws-live-connections";
-import { createPubSubBridge } from "./ws-pubsub-bridge";
 import { createConnectionRegistry } from "./ws-registry";
-import { replicateBroadcasts } from "./ws-replicated-registry";
+import { replicate } from "./ws-replication";
 import { createServerTopicManager } from "./ws-topics";
 import type { WSHandler, WSHandlerConfig } from "./ws-types";
 
@@ -35,7 +34,8 @@ const log = createLogger("WS");
  *
  * @param config - Handler configuration (pubsub, heartbeat, lifecycle hooks, etc.)
  * @returns WSHandler with handleSocket and connections registry
- * @throws ConfigurationError when `config.sources` is not a dictionary of sources
+ * @throws ConfigurationError when `config.sources` is not a dictionary of sources, or
+ *   `config.cluster.secret` is shorter than 32 bytes
  * @example
  * const ws = createWSHandler({
  *   onConnect: ({ connectionId, request }) => ({ userId: extractUser(request) }),
@@ -58,7 +58,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   const refusals = createRefusalLog("WS");
   const maxPerIP = config.maxConnectionsPerIP ?? LIMITS.MAX_CONNECTIONS_PER_IP;
   const ipTracker = createIPTracker(maxPerIP);
-  const bridge = config.pubsub ? createPubSubBridge(config.pubsub, registry, refusals) : undefined;
+  const replication = replicate(config, registry, refusals);
+  const bridge = replication?.bridge;
   const topicManager = createServerTopicManager(
     bridge
       ? {
@@ -174,7 +175,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       ({ kind: "shutdown", retryAfterMs: Math.floor(Math.random() * spread) }) as const;
     await live.closeAll(shutdown, timeoutMs);
     studioHooks.sendWSMessage = undefined;
-    bridge?.destroy();
+    replication?.destroy();
   }
 
   function destroy(options?: { timeoutMs?: number | undefined }): Promise<void> {
@@ -183,7 +184,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   }
 
   /* With a pub/sub adapter, what the application broadcasts through the
-     registry reaches every replica, as a channel's ctx.broadcast does. */
-  const connections = bridge ? replicateBroadcasts(registry, bridge) : registry;
+     registry reaches every replica, as a channel's ctx.broadcast does, and
+     so do the connections it closes or asks for credentials again. */
+  const connections = replication?.connections ?? registry;
   return { handleSocket, connections, destroy };
 }

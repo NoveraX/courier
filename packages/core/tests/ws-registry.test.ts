@@ -96,7 +96,7 @@ describe("createConnectionRegistry", () => {
     registry.add(createEntry("c2", { role: "user" }));
     registry.add(createEntry("c3", { role: "admin" }));
 
-    const admins = registry.getByMeta((m) => m.role === "admin");
+    const admins = registry.list({ meta: { role: "admin" } });
     expect(admins).toHaveLength(2);
     expect(admins.map((c) => c.connectionId).sort()).toEqual(["c1", "c3"]);
   });
@@ -241,14 +241,14 @@ describe("createConnectionRegistry", () => {
     expect(entry.close).toHaveBeenCalledWith(1000, "Disconnected by server");
   });
 
-  it("disconnects with custom code and reason", () => {
+  it("disconnects with custom code and reason", async () => {
     const tm = createServerTopicManager();
     const registry = createConnectionRegistry();
     registry.setTopicManager(tm);
     const entry = createEntry("c1");
 
     registry.add(entry);
-    registry.disconnect("c1", 4001, "Banned");
+    await registry.disconnect("c1", { code: 4001, reason: "Banned" });
 
     expect(entry.close).toHaveBeenCalledWith(4001, "Banned");
   });

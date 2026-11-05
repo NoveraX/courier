@@ -1,4 +1,5 @@
 import type { WSMessage } from "../realtime/ws/ws-protocol";
+import type { Selection } from "./connection-selector";
 import type { ServerTopicManager } from "./ws-topics";
 
 /** Read-only connection info exposed via public API */
@@ -9,6 +10,38 @@ export interface ConnectionInfo {
   readonly topicCount: number;
 }
 
+/** What a metadata field of a selector is compared to. */
+export type MetaValue = string | number | boolean;
+
+/**
+ * Which connections an operation concerns: one by its id, several by
+ * theirs — at most 1000 — or each whose metadata has every field given —
+ * 1 to 16 — equal to its value, a string, a finite number or a boolean.
+ *
+ * @example
+ * ```ts
+ * await connections.disconnect({ meta: { userId: "u1" } }, { code: 4003, reason: "Banned" });
+ * ```
+ */
+export type ConnectionSelector =
+  | string
+  | { readonly id: string | readonly string[] }
+  | { readonly meta: Readonly<Record<string, MetaValue>> };
+
+/** How the connections the application closes are told why. */
+export interface DisconnectOptions {
+  /** A code a socket can send: 1000–1014 but 1004–1006, or 3000–4999. Default 1000 */
+  code?: number | undefined;
+  /** Why, as the client reads it, cut to the 123 bytes a close carries. Default "Disconnected by server" */
+  reason?: string | undefined;
+}
+
+/** How long connections asked for their credentials again have to send them. */
+export interface RequireAuthOptions {
+  /** Milliseconds; the handler's `authRequiredTimeoutMs` when not given, 0 for no deadline */
+  timeoutMs?: number | undefined;
+}
+
 /** Public API for managing active WebSocket connections */
 export interface ConnectionRegistry {
   /** Number of active connections */
@@ -17,10 +50,11 @@ export interface ConnectionRegistry {
   get(connectionId: string): ConnectionInfo | undefined;
   /** Check if a connection exists */
   has(connectionId: string): boolean;
-  /** List all active connections */
-  list(): ConnectionInfo[];
-  /** Filter connections by metadata predicate */
-  getByMeta(predicate: (meta: Record<string, unknown>) => boolean): ConnectionInfo[];
+  /**
+   * This replica's connections: every one, or those `selector` names.
+   * @throws TypeError for a selector that names no connection
+   */
+  list(selector?: ConnectionSelector): ConnectionInfo[];
   /** Send a data message to a specific connection */
   send(connectionId: string, data: unknown): void;
   /** Broadcast a data message to all connections (optionally exclude one). Yields to event loop for large audiences. */
@@ -31,14 +65,22 @@ export interface ConnectionRegistry {
   broadcastToBaseTopic(baseTopic: string, data: unknown, exclude?: string): Promise<void>;
   /** Send a data message to a specific connection with topic context */
   sendToConnection(connectionId: string, topic: string, data: unknown): void;
-  /** Force-disconnect a connection */
-  disconnect(connectionId: string, code?: number, reason?: string): void;
-  /** Disconnect all connections matching a metadata predicate (e.g. ban a user) */
-  disconnectByMeta(
-    predicate: (meta: Record<string, unknown>) => boolean,
-    code?: number,
-    reason?: string,
-  ): void;
+  /**
+   * Close the connections `selector` names, with `code` and `reason` — on
+   * every replica that shares the handler's pub/sub adapter. Resolves once
+   * this replica's are closed and the command for the others has gone to
+   * the adapter; rejects with a `TypeError`, closing none, for a selector
+   * that names no connection or a code no socket can send.
+   */
+  disconnect(selector: ConnectionSelector, options?: DisconnectOptions): Promise<void>;
+  /**
+   * Ask the connections `selector` names — on every replica — for their
+   * credentials again: each sends them, asked for anew, and unless
+   * `onReauth` takes them within `timeoutMs` it is closed with 4401.
+   * Resolves and rejects as `disconnect` does, a `TypeError` for a
+   * deadline no timer keeps too.
+   */
+  requireAuth(selector: ConnectionSelector, options?: RequireAuthOptions): Promise<void>;
 }
 
 /** Internal entry stored per connection */
@@ -67,6 +109,8 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
   updateMeta(connectionId: string, meta: Record<string, unknown>): void;
   /** Get raw entry (internal — for token refresh handler) */
   getEntry(connectionId: string): RegistryEntry | undefined;
+  /** This replica's entries a selection names, each once */
+  select(selection: Selection): RegistryEntry[];
   /** Inject topic manager after creation (breaks circular init dependency) */
   setTopicManager(tm: ServerTopicManager): void;
 }

@@ -180,7 +180,10 @@ describe("a client's auth frame", () => {
     }));
     await vi.waitFor(() => expect(heard).toEqual(["welcome"]));
     for (const connection of served.handler.connections.list()) {
-      served.handler.connections.disconnect(connection.connectionId, 1012, "Service restart");
+      await served.handler.connections.disconnect(connection.connectionId, {
+        code: 1012,
+        reason: "Service restart",
+      });
     }
     await vi.waitFor(() => expect(heard).toEqual(["welcome", "welcome"]), { timeout: 5000 });
     await settle(20);

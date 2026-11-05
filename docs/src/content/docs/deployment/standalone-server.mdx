@@ -196,6 +196,7 @@ server.sseConnections.disconnect(userStreams[0].connectionId)
 console.log(`Active WS connections: ${server.wsConnections.count}`)
 server.wsConnections.broadcast({ type: "announcement", text: "Maintenance in 5 min" })
 server.wsConnections.broadcastToTopic("chat:general", { type: "message", text: "Hello" })
+await server.wsConnections.disconnect({ meta: { userId: "user-1" } }, { code: 4003, reason: "Banned" })
 ```
 
 ### SSE Registry API
@@ -217,13 +218,13 @@ server.wsConnections.broadcastToTopic("chat:general", { type: "message", text: "
 |--------|-------------|
 | `count` | Number of active connections |
 | `get(id)` | Get connection info by ID |
-| `list()` | All active connections |
-| `getByMeta(fn)` | Filter by metadata predicate |
+| `list(selector?)` | All active connections, or those a selector names |
 | `send(id, data)` | Send to specific connection |
 | `broadcast(data, exclude?)` | Broadcast to all |
 | `broadcastToTopic(topic, data, exclude?)` | Broadcast to topic subscribers |
 | `broadcastToBaseTopic(baseTopic, data, exclude?)` | Broadcast to the subscribers of every qualified topic of an endpoint, whatever their variables |
-| `disconnect(id, code?, reason?)` | Force-close connection |
+| `disconnect(selector, { code?, reason? })` | Close the connections a selector names: an id, `{ id: [...] }` or `{ meta: { ... } }` |
+| `requireAuth(selector, { timeoutMs? })` | Ask them for their credentials again, which `onReauth` checks |
 
 A topic names its endpoint, `source.group.method`, qualified by a key as canonical JSON: the channel's [`.topic()`](/docs/advanced/realtime#topics) key, or all of the variables its subscribers passed when it names none. `qualifyTopic("api.chat.room", { room: "a" })` from `@noverax/courier/realtime` gives `api.chat.room#{"room":"a"}`, the topic a channel handler reads as `ctx.topic`. Every distinct key is a topic of its own.
 

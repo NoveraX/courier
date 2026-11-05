@@ -8,7 +8,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import { sendAuthRequired } from "../src/adapter/ws-reauth";
 import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
@@ -68,7 +67,7 @@ const asUser = ({ auth }: { auth: Record<string, unknown> | undefined }) => ({
 });
 
 describe("credentials sent again on an open connection", () => {
-  it("close it at once with 4401 when onReauth refuses what sendAuthRequired asked for", async () => {
+  it("close it at once with 4401 when onReauth refuses what requireAuth asked for", async () => {
     const handler = serve({
       onConnect: asUser,
       onReauth: () => {
@@ -77,7 +76,7 @@ describe("credentials sent again on an open connection", () => {
     });
     const { socket, connectionId } = await admitted(handler, { userId: "u1" });
     const asked = Date.now();
-    sendAuthRequired(handler.connections, connectionId, 4_000);
+    await handler.connections.requireAuth(connectionId, { timeoutMs: 4_000 });
 
     socket.receive({ type: "auth", id: "r1", payload: { auth: { token: "revoked" } } });
 
@@ -120,7 +119,7 @@ describe("credentials sent again on an open connection", () => {
     const { socket, connectionId } = await admitted(handler, { userId: "u1" });
     const asked = Date.now();
 
-    sendAuthRequired(handler.connections, connectionId);
+    await handler.connections.requireAuth(connectionId);
 
     expect(socket.sent).toContainEqual({ type: "auth_required" });
     await expect.poll(() => socket.closed?.code, { timeout: 2_000 }).toBe(4401);
@@ -151,7 +150,7 @@ describe("credentials sent again on an open connection", () => {
       onReauth: ({ auth }) => ({ userId: auth?.userId }),
     });
     const { socket, connectionId } = await admitted(handler, { userId: "u1" });
-    sendAuthRequired(handler.connections, connectionId, 200);
+    await handler.connections.requireAuth(connectionId, { timeoutMs: 200 });
 
     socket.receive({ type: "auth", id: "r5", payload: { auth: { userId: "u1" } } });
 
@@ -236,7 +235,7 @@ describe("a connection the application disconnects", () => {
     const handler = serve({ onConnect: asUser });
     const { socket, connectionId } = await admitted(handler, { userId: "u1" });
 
-    handler.connections.disconnect(connectionId, 4001, "Signed out");
+    await handler.connections.disconnect(connectionId, { code: 4001, reason: "Signed out" });
 
     expect(socket.closed).toMatchObject({ code: 4001, reason: "Signed out" });
   });
@@ -245,7 +244,9 @@ describe("a connection the application disconnects", () => {
     const handler = serve({ onConnect: asUser });
     const { socket, connectionId } = await admitted(handler, { userId: "u1" });
 
-    expect(() => handler.connections.disconnect(connectionId, 1006, "x")).toThrow(TypeError);
+    await expect(handler.connections.disconnect(connectionId, { code: 1006 })).rejects.toThrow(
+      TypeError,
+    );
     expect(socket.closed).toBeUndefined();
   });
 });

@@ -642,7 +642,7 @@ describe("createWSHandler — connections registry", () => {
     handler.handleSocket(ws, new Request("http://localhost/ws"));
 
     const conn = handler.connections.list()[0]!;
-    handler.connections.disconnect(conn.connectionId, 4001, "Banned");
+    await handler.connections.disconnect(conn.connectionId, { code: 4001, reason: "Banned" });
 
     expect(ws._closed).toEqual({ code: 4001, reason: "Banned" });
   });

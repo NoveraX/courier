@@ -1,3 +1,4 @@
+import { encodeMessage } from "../realtime/ws/ws-protocol";
 import { hasFields, readSelector } from "./connection-selector";
 import {
   disconnectCommand,
@@ -16,6 +17,8 @@ import type {
   InternalConnectionRegistry,
   RegistryEntry,
 } from "./ws-registry-types";
+import { resumableFrom } from "./ws-resume-position";
+import type { TopicHistory } from "./ws-topic-history";
 import { createTopicSequences } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
 
@@ -30,6 +33,7 @@ import type { ServerTopicManager } from "./ws-topics";
  * Alone, it reaches this replica's connections; with a pub/sub adapter
  * `replicateRegistry` carries its broadcasts and commands to the others.
  *
+ * @param history - The events kept to resume subscriptions from, when the handler keeps history
  * @returns Internal registry with add/remove + public send/broadcast API
  *
  * @example
@@ -40,7 +44,7 @@ import type { ServerTopicManager } from "./ws-topics";
  * registry.sendToConnection(connId, "notifications", { alert: true });
  * await registry.disconnect({ meta: { userId: "u1" } }, { code: 4003, reason: "Banned" });
  */
-export function createConnectionRegistry(): InternalConnectionRegistry {
+export function createConnectionRegistry(history?: TopicHistory): InternalConnectionRegistry {
   const entries = new Map<string, RegistryEntry>();
   let topicManager: ServerTopicManager | undefined;
   const sequences = createTopicSequences();
@@ -51,6 +55,7 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
       return topicManager;
     },
     sequences,
+    history,
   };
 
   function toInfo(entry: RegistryEntry): ConnectionInfo {
@@ -118,7 +123,25 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
       topicManager = tm;
     },
     positionOf: (topic) => sequences.position(topic),
-    forgetTopic: (topic) => sequences.forget(topic),
+    forgetTopic(topic) {
+      sequences.forget(topic);
+      history?.drop(topic);
+    },
+    eventsAfter(topic, since) {
+      const from = resumableFrom(since);
+      if (!history || !from || !sequences.has(topic)) return undefined;
+      const { seq, epoch } = sequences.position(topic);
+      if (from.epoch !== epoch || from.seq > seq) return undefined;
+      return history.between(topic, from.seq, seq);
+    },
+    resyncAll() {
+      for (const topic of [...sequences.topics()]) {
+        history?.drop(topic);
+        const frame = encodeMessage({ type: "resync", topic, ...sequences.position(topic) });
+        for (const id of topicManager?.subscribers(topic) ?? [])
+          entries.get(id)?.sendEncoded(frame);
+      }
+    },
   };
   return registry;
 }

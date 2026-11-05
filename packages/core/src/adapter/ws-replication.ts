@@ -52,10 +52,18 @@ export function replicate(
     },
     refusals,
   });
+  /* Back from an outage, the adapter may have missed what other replicas
+     published: every subscription is told, and resumes nothing from before. */
+  let previous = pubsub.state;
+  const stopHearing = pubsub.onStateChange((state) => {
+    if (state === "ready" && previous === "degraded") registry.resyncAll();
+    previous = state;
+  });
   return {
     bridge,
     connections: replicateRegistry(registry, bridge, control),
     destroy() {
+      stopHearing();
       bridge.destroy();
       control.destroy();
     },

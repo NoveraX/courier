@@ -175,6 +175,8 @@ function channelContext(
     connectionId,
     meta: {},
     signal: ended.signal,
+    /* The mock keeps no history, so a subscription never resumes. */
+    recovered: false,
     send(data) {
       if (!ended.signal.aborted) sendFrame(socket.ws, { type: "data", topic, payload: data });
     },

@@ -42,6 +42,7 @@ export function createMockWSChannel<TSend, TReceive>(
     connectionId: `mock_${Date.now()}`,
     meta: {},
     signal: ended.signal,
+    recovered: false,
     send(data: TReceive) {
       if (ended.signal.aborted) return;
       for (const handler of dataHandlers) handler(data);

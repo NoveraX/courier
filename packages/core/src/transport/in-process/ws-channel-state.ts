@@ -86,6 +86,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     connectionId,
     meta: {},
     signal: ended.signal,
+    recovered: false,
     send: (data) => emitData(outbound(data)),
     broadcast: (t, data) => broadcast(t, outbound(data), connectionId),
     close: () => {

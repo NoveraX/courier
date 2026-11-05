@@ -11,6 +11,7 @@ import type { AllowedHostsSetting } from "./runtime-policy";
 import type { WSHandlerStats } from "./ws-handler-stats";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
+import type { TopicHistoryOptions } from "./ws-topic-history";
 
 /**
  * Configuration for the server-side WebSocket handler.
@@ -35,6 +36,13 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   pubsub?: PubSubAdapter | undefined;
   /** How the replicas sharing `pubsub` trust the commands they send each other */
   cluster?: WSClusterOptions | undefined;
+  /**
+   * Keep each topic's recent events, so a subscription that comes back —
+   * its client lost the connection — is sent what it missed instead of
+   * starting over: `{}` for the defaults, 100 events a topic for a minute,
+   * 8 MiB in all. Off unless given: what is kept is memory.
+   */
+  history?: TopicHistoryOptions | undefined;
   /** Heartbeat interval in ms (default 25000) */
   heartbeatIntervalMs?: number | undefined;
   /** Pong timeout in ms (default 10000) */

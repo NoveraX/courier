@@ -187,6 +187,7 @@ describe("startPush", () => {
       connectionId: "conn-1",
       meta: { userId: "u1" },
       signal: expect.any(AbortSignal),
+      recovered: false,
     });
   });
 

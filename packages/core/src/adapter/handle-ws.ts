@@ -11,7 +11,8 @@ import { createLiveConnections } from "./ws-live-connections";
 import { openSockets } from "./ws-open-socket";
 import { createConnectionRegistry } from "./ws-registry";
 import { replicate } from "./ws-replication";
-import { createServerTopicManager } from "./ws-topics";
+import { createTopicHistory } from "./ws-topic-history";
+import { wireTopics } from "./ws-topic-wiring";
 import type { WSHandler, WSHandlerConfig } from "./ws-types";
 
 export type { WSSocketContext } from "./ws-context";
@@ -43,7 +44,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }
-  const registry = createConnectionRegistry();
+  const history = config.history ? createTopicHistory(config.history) : undefined;
+  const registry = createConnectionRegistry(history);
   /* One log of refusals for every connection of the handler, so a client
      that keeps being refused takes up one line an interval, not one each. */
   const refusals = createRefusalLog("WS");
@@ -55,14 +57,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
      registry reaches every replica, as a channel's ctx.broadcast does, and
      so do the connections it closes or asks for credentials again. */
   const connections = replication?.connections ?? registry;
-  const topicManager = createServerTopicManager({
-    onFirstSubscriber: (topic) => bridge?.onTopicSubscribe(topic),
-    onLastUnsubscriber: (topic) => {
-      bridge?.onTopicUnsubscribe(topic);
-      registry.forgetTopic(topic);
-    },
-  });
-  registry.setTopicManager(topicManager);
+  const { topicManager, retention } = wireTopics(registry, bridge, history);
   const live = createLiveConnections();
   const counters = createHandlerCounters();
   const limiter = connectionLimitOf(config, refusals);
@@ -103,6 +98,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     await live.closeAll(shutdown, timeoutMs);
     studioHooks.sendWSMessage = undefined;
     limiter?.destroy();
+    retention.destroy();
     replication?.destroy();
   }
 

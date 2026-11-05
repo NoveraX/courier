@@ -129,6 +129,12 @@ export interface WSContext<TVariables = unknown> {
    * it holds here; otherwise its `finally` runs only the next time it yields.
    */
   readonly signal: AbortSignal;
+  /**
+   * Whether the subscription resumed from where its client was: every
+   * event it missed, kept in the handler's `history`, was sent it before
+   * this handler ran, so a snapshot of the state is not needed again.
+   */
+  readonly recovered: boolean;
 }
 
 /** Server-side context for bidirectional WS channels */

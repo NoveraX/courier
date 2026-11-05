@@ -83,5 +83,7 @@ export function replicateRegistry(
     setTopicManager: (topicManager) => registry.setTopicManager(topicManager),
     positionOf: (topic) => registry.positionOf(topic),
     forgetTopic: (topic) => registry.forgetTopic(topic),
+    eventsAfter: (topic, since) => registry.eventsAfter(topic, since),
+    resyncAll: () => registry.resyncAll(),
   };
 }

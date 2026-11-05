@@ -16,6 +16,10 @@ export interface TopicSequences {
   position(topic: string): TopicPosition;
   /** Forget a topic no subscriber holds any more: its next event starts a new epoch */
   forget(topic: string): void;
+  /** Whether a topic's sequence is held: a subscriber holds the topic, or the handler holds it for one */
+  has(topic: string): boolean;
+  /** The topics whose sequences are held */
+  topics(): IterableIterator<string>;
 }
 
 /**
@@ -57,5 +61,7 @@ export function createTopicSequences(): TopicSequences {
     forget(topic) {
       positions.delete(topic);
     },
+    has: (topic) => positions.has(topic),
+    topics: () => positions.keys(),
   };
 }

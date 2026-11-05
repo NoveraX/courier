@@ -549,6 +549,19 @@ A shorter secret throws `CLUSTER_SECRET_INVALID` when the handler is made. Keep 
 
 A replica of 0.4 does not listen for commands, so while a rolling upgrade from it runs, a command reaches the replicas already upgraded. A replica that gets a command of a newer version than its own skips it, saying so in its log.
 
+## Resuming Subscriptions
+
+A client that lost its connection subscribes again with the position it counted, and a handler that keeps history sends it what it missed:
+
+```ts title="ws.ts"
+const ws = createWSHandler({
+  pubsub,
+  history: {}, // 100 events a topic, each kept a minute, 8 MiB in all
+})
+```
+
+Each event of a topic carries `seq`, dense from 1 on the replica that delivers it, and `subscribed` states the position with the epoch that names its sequence. Frames sent to one connection, such as a snapshot from `onJoin`, carry no number. A topic its last subscriber left is held for `maxAgeMs`, its events numbered and kept, so a client back within that time is sent them before `onJoin` runs. `onJoin` reads `ctx.recovered` and need not send its snapshot again. The client has to come back to the same replica, which sticky sessions give it. A position the history no longer reaches, another epoch or another replica answers `recovered: false`, and the client starts over from `onJoin`. Once the pub/sub adapter is back from an outage, each subscription is told `resync`: what other replicas published meanwhile never arrived.
+
 ## Framework Comparison
 
 | Feature | Standalone | Next.js | Express | Fastify | Hono | NestJS |

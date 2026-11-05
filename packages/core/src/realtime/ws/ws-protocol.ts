@@ -62,6 +62,10 @@ export interface WSMessage {
   seq?: number;
   /** On `subscribed` and `resync`: the name of the topic's sequence the numbers belong to */
   epoch?: string;
+  /** On `subscribe`: the position the client counted, to resume from */
+  since?: { seq: number; epoch: string };
+  /** On `subscribed` for a subscription that sent `since`: whether every event it missed was sent */
+  recovered?: boolean;
   /**
    * On `error`: what went wrong. With a `topic`, it concerns that
    * subscription, which goes on. On `complete`: why the server ended the

@@ -38,6 +38,7 @@ const log = createLogger("WS");
  * @param subscribeId - The id of the client's subscribe message, if any
  * @param responseSchema - The channel's response schema, which everything it sends is held to
  * @param authorized - What the subscription was authorized as
+ * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
  */
 export async function startChannel(
   ctx: WSSocketContext,
@@ -47,7 +48,9 @@ export async function startChannel(
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
   authorized?: AuthorizedSubscription,
+  resume: () => boolean = () => false,
 ): Promise<void> {
+  let recovered = false;
   const outbound = (data: unknown): unknown =>
     responseSchema ? checkResponseNow(responseSchema, data) : data;
 
@@ -67,6 +70,9 @@ export async function startChannel(
     connectionId: ctx.connectionId,
     meta: ctx.meta,
     signal: ended.signal,
+    get recovered() {
+      return recovered;
+    },
     send: (data) => {
       const payload = outbound(data);
       ctx.sendMessage({ type: "data", topic, payload });
@@ -108,6 +114,9 @@ export async function startChannel(
       }
     },
   });
+
+  /* Registered first, then sent what it missed, at once: no live event can come between. */
+  recovered = resume();
 
   try {
     await handlers.onJoin?.(channelCtx);

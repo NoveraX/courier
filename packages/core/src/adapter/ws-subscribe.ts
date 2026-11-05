@@ -124,6 +124,15 @@ async function openSubscription(
   const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
   const { source, group, method } = resolved;
   const authorized = { source, group, method, variables };
+  /* What the subscription missed since the position it sent, when all of it is kept. */
+  let recovered = false;
+  const resume = (): boolean => {
+    const missed =
+      msg.since === undefined ? undefined : ctx.registry.eventsAfter(subscribedTopic, msg.since);
+    for (const frame of missed ?? []) ctx.sendEncoded(frame);
+    recovered = missed !== undefined;
+    return recovered;
+  };
 
   try {
     if (!resolved.served) {
@@ -138,6 +147,7 @@ async function openSubscription(
         msg.id,
         resolved.schema.response,
         authorized,
+        resume,
       );
     } else {
       startPush(
@@ -148,6 +158,7 @@ async function openSubscription(
         msg.id,
         resolved.schema.response,
         authorized,
+        resume,
       );
     }
   } catch (error) {
@@ -165,7 +176,14 @@ async function openSubscription(
      sequence stands: every event it counted reached the subscription, live,
      as it was registered before the handler ran. */
   const { seq, epoch } = ctx.registry.positionOf(subscribedTopic);
-  ctx.sendMessage({ type: "subscribed", id: msg.id, topic: subscribedTopic, seq, epoch });
+  ctx.sendMessage({
+    type: "subscribed",
+    id: msg.id,
+    topic: subscribedTopic,
+    seq,
+    epoch,
+    ...(msg.since !== undefined && { recovered }),
+  });
   ctx.dt.onWSTrack?.({
     requestId: subRequestId,
     connectionId: ctx.connectionId,

@@ -120,6 +120,14 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
   setTopicManager(tm: ServerTopicManager): void;
   /** Where a topic's sequence stands on this replica: what `subscribed` states */
   positionOf(topic: string): TopicPosition;
-  /** A topic no subscriber holds any more: its sequence is let go of */
+  /** A topic no subscriber holds any more: its sequence and its history are let go of */
   forgetTopic(topic: string): void;
+  /**
+   * The frames of the events a subscription missed since the position it
+   * sent, or undefined when they cannot all be sent: another epoch, no
+   * history, a position the history no longer reaches, or none at all
+   */
+  eventsAfter(topic: string, since: unknown): readonly string[] | undefined;
+  /** Tell every subscription its topic's sequence may have missed events: the pub/sub adapter was away */
+  resyncAll(): void;
 }

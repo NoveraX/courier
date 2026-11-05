@@ -1,5 +1,6 @@
 import { encodeMessage } from "../realtime/ws/ws-protocol";
 import type { RegistryEntry } from "./ws-registry-types";
+import type { TopicHistory } from "./ws-topic-history";
 import type { TopicSequences } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
 
@@ -16,6 +17,8 @@ export interface BroadcastTargets {
   readonly topicManager: ServerTopicManager | undefined;
   /** The numbers of each topic's events */
   readonly sequences: TopicSequences;
+  /** The events kept to resume subscriptions from, when the handler keeps history */
+  readonly history: TopicHistory | undefined;
 }
 
 /** Counts the frames a broadcast has sent, yielding after every batch. */
@@ -79,9 +82,12 @@ export async function broadcastToTopic(
   exclude?: string,
 ): Promise<void> {
   const subscriberIds = targets.topicManager?.subscribers(topic);
-  if (!subscriberIds?.size) return;
+  /* A topic held for a subscriber that left has its events numbered and kept all the same. */
+  if (!subscriberIds?.size && !targets.sequences.has(topic)) return;
   const { seq } = targets.sequences.next(topic);
   const encoded = encodeMessage({ type: "data", topic, payload: data, seq });
+  targets.history?.record(topic, seq, encoded);
+  if (!subscriberIds?.size) return;
   /* The one left out learns the number was taken, so its count stays whole. */
   if (exclude !== undefined && subscriberIds.has(exclude)) {
     targets.entries.get(exclude)?.sendEncoded(encodeMessage({ type: "skip", topic, seq }));

@@ -28,6 +28,7 @@ const log = createLogger("WS");
  * @param subscribeId - The id of the client's subscribe message, if any
  * @param responseSchema - The endpoint's response schema, which every value is held to
  * @param authorized - What the subscription was authorized as
+ * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
  */
 export function startPush(
   ctx: WSSocketContext,
@@ -37,14 +38,19 @@ export function startPush(
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
   authorized?: AuthorizedSubscription,
+  resume: () => boolean = () => false,
 ): void {
   const ended = new AbortController();
+  let recovered = false;
   const wsCtx: WSContext = {
     topic,
     variables,
     connectionId: ctx.connectionId,
     meta: ctx.meta,
     signal: ended.signal,
+    get recovered() {
+      return recovered;
+    },
   };
 
   let generator: AsyncIterable<unknown>;
@@ -88,6 +94,8 @@ export function startPush(
     authorized,
     cleanup: () => ended.abort(),
   });
+  /* Registered first, then sent what it missed, at once: no live event can come between. */
+  recovered = resume();
 
   iterate()
     .catch((err: unknown) => log.warn("Push generator failed", err))

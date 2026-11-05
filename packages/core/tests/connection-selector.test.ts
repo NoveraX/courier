@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { hasFields, readSelector } from "../src/adapter/connection-selector";
+import { readSelector } from "../src/adapter/connection-selector";
 
 describe("readSelector", () => {
   it("reads a connection id, a list of them, or fields of metadata", () => {
@@ -61,33 +61,5 @@ describe("readSelector", () => {
 
     expect(readSelector({ meta: { token: { secret } } })).not.toContain(secret);
     expect(readSelector({ id: [secret.repeat(10)] })).not.toContain(secret);
-  });
-});
-
-describe("hasFields", () => {
-  function fieldsOf(selector: unknown) {
-    const selection = readSelector(selector);
-    if (typeof selection === "string" || !("fields" in selection)) {
-      throw new Error(`no fields: ${String(selection)}`);
-    }
-    return selection.fields;
-  }
-
-  it("matches metadata whose every field is equal to its value, in type as in value", () => {
-    const meta = { userId: "u1", tier: 2, admin: false };
-
-    expect(hasFields(meta, fieldsOf({ meta: { userId: "u1", tier: 2 } }))).toBe(true);
-    expect(hasFields(meta, fieldsOf({ meta: { userId: "u1", tier: 3 } }))).toBe(false);
-    expect(hasFields(meta, fieldsOf({ meta: { tier: "2" } }))).toBe(false);
-    expect(hasFields(meta, fieldsOf({ meta: { admin: false } }))).toBe(true);
-    expect(hasFields(meta, fieldsOf({ meta: { missing: "x" } }))).toBe(false);
-  });
-
-  it("matches only the connection's own fields, never what every object inherits", () => {
-    const inheriting = Object.create({ role: "admin" }) as Record<string, unknown>;
-
-    expect(hasFields(inheriting, fieldsOf({ meta: { role: "admin" } }))).toBe(false);
-    expect(hasFields({}, fieldsOf(JSON.parse('{"meta":{"__proto__":"x"}}')))).toBe(false);
-    expect(hasFields({}, fieldsOf({ meta: { constructor: "Object" } }))).toBe(false);
   });
 });

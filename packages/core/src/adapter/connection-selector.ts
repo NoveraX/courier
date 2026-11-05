@@ -5,9 +5,9 @@ const MAX_IDS = 1_000;
 /** The most metadata fields one selector compares. */
 const MAX_FIELDS = 16;
 /** The longest connection id or field name a selector takes, in characters. */
-const MAX_NAME_LENGTH = 128;
+export const MAX_NAME_LENGTH = 128;
 /** The longest string a field is compared to, in characters. */
-const MAX_VALUE_LENGTH = 1_024;
+export const MAX_VALUE_LENGTH = 1_024;
 
 const NOT_A_SELECTOR = "a selector is a connection id, { id } or { meta }";
 
@@ -42,23 +42,6 @@ export function readSelector(value: unknown): Selection | string {
   if (keys[0] === "id") return idsOf(Array.isArray(record.id) ? record.id : [record.id]);
   if (keys[0] === "meta") return fieldsOf(record.meta);
   return NOT_A_SELECTOR;
-}
-
-/**
- * Whether metadata has every field of a selection equal to its value. Only
- * the connection's own fields count: a selector naming `constructor` or
- * `__proto__` matches what the connection was given, not what every object
- * inherits.
- *
- * @param meta - A connection's metadata
- * @param fields - The fields a selection compares
- * @returns Whether each field is the connection's own and equal to its value
- */
-export function hasFields(
-  meta: Readonly<Record<string, unknown>>,
-  fields: ReadonlyArray<readonly [string, MetaValue]>,
-): boolean {
-  return fields.every(([name, value]) => Object.hasOwn(meta, name) && meta[name] === value);
 }
 
 function idsOf(ids: readonly unknown[]): Selection | string {

@@ -7,6 +7,7 @@ import type { ServerTopicManager } from "./ws-topics";
 /** Read-only connection info exposed via public API */
 export interface ConnectionInfo {
   readonly connectionId: string;
+  /** A copy of its metadata: what `onConnect` gave as it was let in, or the last `onReauth` renewed */
   readonly meta: Record<string, unknown>;
   readonly connectedAt: number;
   readonly topicCount: number;
@@ -19,6 +20,9 @@ export type MetaValue = string | number | boolean;
  * Which connections an operation concerns: one by its id, several by
  * theirs — at most 1000 — or each whose metadata has every field given —
  * 1 to 16 — equal to its value, a string, a finite number or a boolean.
+ * The metadata compared is what `onConnect` gave as the connection was let
+ * in, or the last `onReauth` renewed: a change to `ctx.meta` after that is
+ * not seen.
  *
  * @example
  * ```ts
@@ -88,6 +92,7 @@ export interface ConnectionRegistry {
 /** Internal entry stored per connection */
 export interface RegistryEntry {
   connectionId: string;
+  /** Its metadata, a frozen copy once the registry holds it: what a selector compares */
   meta: Record<string, unknown>;
   connectedAt: number;
   sendRaw: (msg: WSMessage) => void;
@@ -116,7 +121,7 @@ export interface RegistryEntry {
 export interface InternalConnectionRegistry extends ConnectionRegistry {
   add(entry: RegistryEntry): void;
   remove(connectionId: string): void;
-  /** Update connection metadata (e.g. after token refresh) */
+  /** Renew a connection's metadata after `onReauth`: a copy of it is what selectors compare from now on */
   updateMeta(connectionId: string, meta: Record<string, unknown>): void;
   /** Get raw entry (internal — for token refresh handler) */
   getEntry(connectionId: string): RegistryEntry | undefined;

@@ -1,6 +1,6 @@
 import { createRefusalLog, type RefusalLog } from "../logger/refusal-log";
 import type { TopicLog } from "../realtime/adapters";
-import { hasFields, readSelector } from "./connection-selector";
+import { readSelector } from "./connection-selector";
 import {
   disconnectCommand,
   evictCommand,
@@ -8,6 +8,7 @@ import {
   runCommand,
 } from "./ws-connection-command";
 import { createLogFollower } from "./ws-log-follower";
+import { createMetaIndex } from "./ws-meta-index";
 import {
   type BroadcastTargets,
   broadcastToAll,
@@ -62,6 +63,8 @@ export function createConnectionRegistry(
 ): InternalConnectionRegistry {
   const { history, log } = options;
   const entries = new Map<string, RegistryEntry>();
+  /* Of each entry's metadata as it was let in, or renewed: what a selector compares. */
+  const metaIndex = createMetaIndex();
   let topicManager: ServerTopicManager | undefined;
   const sequences = createTopicSequences();
 
@@ -79,7 +82,7 @@ export function createConnectionRegistry(
   function toInfo(entry: RegistryEntry): ConnectionInfo {
     return {
       connectionId: entry.connectionId,
-      meta: entry.meta,
+      meta: { ...entry.meta },
       connectedAt: entry.connectedAt,
       topicCount: topicManager?.topicCount(entry.connectionId) ?? 0,
     };
@@ -120,14 +123,24 @@ export function createConnectionRegistry(
       runCommand(evictCommand(connectionIds), registry);
     },
     add(entry) {
+      const held = entries.get(entry.connectionId);
+      if (held) metaIndex.remove(entry.connectionId, held.meta);
+      entry.meta = Object.freeze({ ...entry.meta });
       entries.set(entry.connectionId, entry);
+      metaIndex.add(entry.connectionId, entry.meta);
     },
     remove(connectionId) {
+      const entry = entries.get(connectionId);
+      if (!entry) return;
       entries.delete(connectionId);
+      metaIndex.remove(connectionId, entry.meta);
     },
     updateMeta(connectionId, meta) {
       const entry = entries.get(connectionId);
-      if (entry) entry.meta = meta;
+      if (!entry) return;
+      metaIndex.remove(connectionId, entry.meta);
+      entry.meta = Object.freeze({ ...meta });
+      metaIndex.add(connectionId, entry.meta);
     },
     getEntry: (connectionId) => entries.get(connectionId),
     select(selection) {
@@ -135,7 +148,8 @@ export function createConnectionRegistry(
         const named = [...new Set(selection.ids)].map((id) => entries.get(id));
         return named.filter((entry): entry is RegistryEntry => entry !== undefined);
       }
-      return [...entries.values()].filter((entry) => hasFields(entry.meta, selection.fields));
+      const named = metaIndex.select(selection.fields).map((id) => entries.get(id));
+      return named.filter((entry): entry is RegistryEntry => entry !== undefined);
     },
     setTopicManager(tm) {
       topicManager = tm;

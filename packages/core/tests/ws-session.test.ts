@@ -3,13 +3,15 @@
  * once, with the code the protocol's table gives the reason, the frame that
  * says why sent just before — `auth_error` before `auth_ok`, `disconnect`
  * after it; and the deadline of credentials asked for again with
- * `reauth_required`, which closes it when they are not renewed in time.
+ * `reauth_required`, which closes it when they are not renewed in time. A
+ * stopping server's pause is drawn anew for each connection.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { closeReason } from "../src/adapter/close-reason";
 import { closeOf, isSendableCloseCode, noticeOf, type SessionClose } from "../src/adapter/ws-close";
 import { createSession } from "../src/adapter/ws-session";
+import { shutdownClose } from "../src/adapter/ws-shutdown";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { createFakeSocket } from "./helpers/fake-socket";
 
@@ -168,6 +170,18 @@ describe("createSession", () => {
 
     expect(vi.getTimerCount()).toBe(0);
     expect(socket.sent).toEqual([{ type: "reauth_required", timeoutMs: 1_000 }]);
+  });
+});
+
+describe("shutdownClose", () => {
+  it("draws each connection's pause anew, within the spread", () => {
+    const random = vi.spyOn(Math, "random").mockReturnValueOnce(0).mockReturnValueOnce(0.9999);
+
+    expect([shutdownClose(), shutdownClose()]).toEqual([
+      { kind: "shutdown", retryAfterMs: 0 },
+      { kind: "shutdown", retryAfterMs: 4_999 },
+    ]);
+    random.mockRestore();
   });
 });
 

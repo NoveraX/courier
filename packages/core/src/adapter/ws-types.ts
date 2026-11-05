@@ -262,8 +262,12 @@ export interface WSHandler {
    * request does not carry one. Without it, and without a proxy's
    * forwarding headers, every caller is counted against one address, and
    * `maxConnectionsPerIP` caps the whole server.
+   *
+   * @returns What closes this connection as `destroy()` closes it — its
+   *   client told why and when to come back — for a host that ends the
+   *   socket itself, without stopping the handler
    */
-  handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void;
+  handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): () => void;
   /** Registry of active connections with send/broadcast/disconnect API */
   readonly connections: ConnectionRegistry;
   /**

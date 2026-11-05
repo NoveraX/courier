@@ -16,6 +16,7 @@ import type { LiveConnections } from "./ws-live-connections";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
 import { createSession, type WSSession } from "./ws-session";
+import { shutdownClose } from "./ws-shutdown";
 import type { ServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";
 
@@ -49,17 +50,19 @@ export interface SocketOpening {
  * `auth_error`, never the process.
  *
  * @param opening - What the handler lets sockets in with
- * @returns `handleSocket`, for the socket an adapter hands over with its upgrade request
+ * @returns `handleSocket`, for the socket an adapter hands over with its
+ *   upgrade request; it gives back what closes that socket as the
+ *   handler's stop does
  *
  * @example
  * ```ts
  * const handleSocket = openSockets({ config, registry, refusals, ipTracker, bridge, topicManager, live, stopping });
- * handleSocket(socket, request, peerAddress);
+ * const close = handleSocket(socket, request, peerAddress);
  * ```
  */
 export function openSockets(
   opening: SocketOpening,
-): (ws: WebSocketLike, request: Request, peerAddress?: string) => void {
+): (ws: WebSocketLike, request: Request, peerAddress?: string) => () => void {
   const { config, registry, refusals, ipTracker, bridge, topicManager, live, counters, limiter } =
     opening;
   /* Each frame a full buffer drops is counted, before the application's own hook hears of it. */
@@ -138,9 +141,7 @@ export function openSockets(
     return true;
   }
 
-  return (ws, request, peerAddress) => {
-    rememberPeerAddress(request, peerAddress);
-    const session = createSession(ws, counters.closedWith);
+  function open(ws: WebSocketLike, request: Request, session: WSSession): void {
     if (opening.stopping()) {
       session.close({ kind: "shutdown", retryAfterMs: 0 });
       return;
@@ -170,5 +171,14 @@ export function openSockets(
       ipTracker.release(ctx.clientIP);
       ctx.session.close({ kind: "internal" });
     });
+  }
+
+  return (ws, request, peerAddress) => {
+    rememberPeerAddress(request, peerAddress);
+    const session = createSession(ws, counters.closedWith);
+    open(ws, request, session);
+    /* What ends the socket from outside the handler — an upgrade server
+       detached before the handler stopped — closes it as the stop does. */
+    return () => session.close(shutdownClose());
   };
 }

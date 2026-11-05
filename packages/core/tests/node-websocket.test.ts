@@ -12,18 +12,26 @@ import { type AddressInfo, connect, type Socket } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
+import { createWSHandler } from "../src/adapter/handle-ws";
+import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
+import type { Sources } from "../src/define/types";
 import {
   attachWebSocketUpgrade,
   type UpgradeServer,
   type WebSocketUpgradeOptions,
 } from "../src/node";
 import type { WebSocketLike } from "../src/realtime/adapters";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { authFrame } from "./helpers/fake-socket";
 
 let server: Server | undefined;
 const clients: WebSocket[] = [];
 const peers: Socket[] = [];
+const handlers: WSHandler[] = [];
 
 afterEach(async () => {
+  await Promise.all(handlers.splice(0).map((handler) => handler.destroy({ timeoutMs: 100 })));
+  _resetSourcesForTests();
   for (const client of clients.splice(0)) client.terminate();
   for (const peer of peers.splice(0)) peer.destroy();
   server?.closeAllConnections();
@@ -46,6 +54,14 @@ function courier(s: Server, extra: Partial<WebSocketUpgradeOptions> = {}) {
     onSocket: (socket) => socket.send("courier"),
     ...extra,
   });
+}
+
+/** Courier's own handler, with an API to serve. */
+function handlerServing(config?: WSHandlerConfig): WSHandler {
+  registerSources({ api: { options: {}, groups: {} } } as unknown as Sources);
+  const handler = createWSHandler(config);
+  handlers.push(handler);
+  return handler;
 }
 
 /** The first message, the close code, or the HTTP status an upgrade gets. */
@@ -126,19 +142,107 @@ describe("the frame limit", () => {
 });
 
 describe("detaching", () => {
-  it("closes each connection it accepted with 1012, so the client reconnects later", async () => {
+  it("tells a connection the handler let in why, and when to come back, before closing it", async () => {
+    const handler = handlerServing();
+    let detach: () => void = () => undefined;
+    const url = await listen((s) => {
+      detach = courier(s, { onSocket: (socket, request) => handler.handleSocket(socket, request) });
+    });
+    const client = await opened(`${url}/api/ws`);
+    const frames = framesOf(client);
+    client.send(JSON.stringify(authFrame()));
+    await vi.waitFor(() => expect(frames).toMatchObject([{ type: "auth_ok" }]));
+    const closed = new Promise<number>((resolve) => client.once("close", resolve));
+
+    detach();
+
+    expect(await closed).toBe(1001);
+    expect(frames.at(-1)).toEqual({
+      type: "disconnect",
+      code: 1001,
+      reason: "Server shutting down",
+      retryAfterMs: expect.any(Number),
+    });
+    expect(frames.at(-1)?.retryAfterMs).toBeLessThan(5_000);
+  });
+
+  it("refuses with auth_error, before closing it, a connection the handler has not let in yet", async () => {
+    const handler = handlerServing();
+    let detach: () => void = () => undefined;
+    let handed = false;
+    const url = await listen((s) => {
+      detach = courier(s, {
+        onSocket: (socket, request) => {
+          handed = true;
+          return handler.handleSocket(socket, request);
+        },
+      });
+    });
+    const client = await opened(`${url}/api/ws`);
+    const frames = framesOf(client);
+    await vi.waitFor(() => expect(handed).toBe(true));
+    const closed = new Promise<number>((resolve) => client.once("close", resolve));
+
+    detach();
+
+    expect(await closed).toBe(1001);
+    expect(frames).toEqual([
+      {
+        type: "auth_error",
+        error: { code: 1001, message: "Server shutting down" },
+        v: 2,
+        retryAfterMs: expect.any(Number),
+      },
+    ]);
+  });
+
+  it("refuses with auth_error a connection no handler holds, which none let in", async () => {
     let detach: () => void = () => undefined;
     const url = await listen((s) => {
       detach = courier(s);
     });
     const client = new WebSocket(`${url}/api/ws`);
     clients.push(client);
-    await new Promise((resolve) => client.once("message", resolve));
+    const said: string[] = [];
+    client.on("message", (data) => said.push(String(data)));
+    await vi.waitFor(() => expect(said).toEqual(["courier"]));
     const closed = new Promise<number>((resolve) => client.once("close", resolve));
 
     detach();
 
-    expect(await closed).toBe(1012);
+    expect(await closed).toBe(1001);
+    expect(said.slice(1).map((text) => JSON.parse(text))).toEqual([
+      {
+        type: "auth_error",
+        error: { code: 1001, message: "Server shutting down" },
+        v: 2,
+        retryAfterMs: expect.any(Number),
+      },
+    ]);
+  });
+
+  it("sends a connection closing already nothing more, and ends it", async () => {
+    const handler = handlerServing({ authTimeoutMs: 50 });
+    let detach: () => void = () => undefined;
+    const url = await listen((s) => {
+      detach = courier(s, { onSocket: (socket, request) => handler.handleSocket(socket, request) });
+    });
+    const peer = await rawUpgrade(url, "101 Switching Protocols");
+    const chunks: Buffer[] = [];
+    peer.on("data", (chunk: Buffer) => chunks.push(chunk));
+    /* The handler refuses the silent peer — auth_error, then the close it never answers. */
+    await vi.waitFor(() => expect(framesFrom(Buffer.concat(chunks))).toHaveLength(2));
+    const ended = new Promise<"ended">((resolve) => peer.once("close", () => resolve("ended")));
+
+    detach();
+
+    expect(await within(ended, 1_000)).toBe("ended");
+    const [notice, ...rest] = framesFrom(Buffer.concat(chunks));
+    expect(JSON.parse(notice?.text ?? "")).toMatchObject({
+      type: "auth_error",
+      error: { code: 4408 },
+    });
+    expect(rest.map((frame) => frame.opcode)).toEqual([8]);
   });
 
   it("ends a connection whose peer never answered its close, which the HTTP server would wait on", async () => {
@@ -164,8 +268,35 @@ describe("detaching", () => {
   });
 });
 
+/** A client whose socket has opened. */
+async function opened(url: string): Promise<WebSocket> {
+  const client = new WebSocket(url);
+  clients.push(client);
+  await new Promise((resolve) => client.once("open", resolve));
+  return client;
+}
+
+/** Every frame a client is sent, parsed, as it comes. */
+function framesOf(client: WebSocket): Array<Record<string, unknown>> {
+  const frames: Array<Record<string, unknown>> = [];
+  client.on("message", (data) => frames.push(JSON.parse(String(data)) as Record<string, unknown>));
+  return frames;
+}
+
+/** The frames a server sent a bare peer, each its opcode and text: unmasked, shorter than 126 bytes. */
+function framesFrom(bytes: Buffer): Array<{ opcode: number; text: string }> {
+  const frames: Array<{ opcode: number; text: string }> = [];
+  for (let at = 0; at + 2 <= bytes.length; ) {
+    const length = bytes.readUInt8(at + 1) & 0x7f;
+    const text = bytes.subarray(at + 2, at + 2 + length).toString();
+    frames.push({ opcode: bytes.readUInt8(at) & 0x0f, text });
+    at += 2 + length;
+  }
+  return frames;
+}
+
 /** Open a Courier connection over a bare TCP socket, so the test can reset it. */
-async function rawUpgrade(url: string): Promise<Socket> {
+async function rawUpgrade(url: string, until = "courier"): Promise<Socket> {
   const { hostname, port } = new URL(url);
   const socket = connect(Number(port), hostname);
   await new Promise((resolve) => socket.once("connect", resolve));
@@ -176,7 +307,7 @@ async function rawUpgrade(url: string): Promise<Socket> {
   peers.push(socket);
   await new Promise<void>((resolve) => {
     socket.on("data", (chunk) => {
-      if (String(chunk).includes("courier")) resolve();
+      if (String(chunk).includes(until)) resolve();
     });
   });
   return socket;

@@ -1,6 +1,8 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { LIMITS } from "./adapter/limits";
+import { closeWithNotice } from "./adapter/ws-close";
+import { shutdownClose } from "./adapter/ws-shutdown";
 import { createLogger } from "./logger";
 import { toWebRequest } from "./node-request";
 import type { WebSocketLike } from "./realtime/adapters";
@@ -75,8 +77,13 @@ export interface WebSocketUpgradeOptions {
     noServer: true;
     maxPayload: number;
   }) => UpgradeServer | Promise<UpgradeServer>;
-  /** Receives each accepted connection. */
-  onSocket: (socket: WebSocketLike, request: Request) => void;
+  /**
+   * Receives each accepted connection, and may give back what closes it as
+   * its handler's stop does, for a detach before the handler stopped — as
+   * `handleSocket` of Courier's handler does.
+   */
+  // biome-ignore lint/suspicious/noConfusingVoidType: an onSocket with no return statement returns `void`, which `undefined` does not take
+  onSocket: (socket: WebSocketLike, request: Request) => (() => void) | void;
   /** Sees each upgrade request Courier answers, before it is accepted. */
   onRequest?: ((request: IncomingMessage) => void) | undefined;
   /** While this returns false — a server shutting down — upgrades get a 503. */
@@ -90,13 +97,17 @@ export interface WebSocketUpgradeOptions {
  * own would otherwise have two handlers accept the same socket, and `ws`
  * throws out of the process on the first connection.
  *
- * Detaching also closes every connection the handler accepted, with 1012 —
- * "service restart", which a Courier client answers by reconnecting later.
- * `ws` leaves accepted clients open when its server closes, so a host that
- * detached before closing its HTTP server waited on them indefinitely. A
- * connection already closed — by the handler's drain — whose peer never
- * answered is ended at once: `ws` would hold it 30 seconds more, and the
- * HTTP server's close with it.
+ * Detaching also closes every connection still open, its client told why
+ * and when to come back before the close, as the protocol has every close
+ * of the server's. One a Courier handler holds is closed as the handler's
+ * own stop closes it — `disconnect` with 1001, or `auth_error` before it
+ * was let in. One no handler holds was let in by none, so it is answered
+ * `auth_error` with 1001. `ws` leaves accepted clients open when its server
+ * closes, so a host that detached before closing its HTTP server waited on
+ * them indefinitely. A connection closing already — closed by the
+ * handler's drain, which told its client why — is sent nothing more; one
+ * whose peer never answered that close is ended at once: `ws` would hold it
+ * 30 seconds more, and the HTTP server's close with it.
  *
  * @param server - The HTTP server the application listens with
  * @param options - Path, frame limit and what to do with a connection
@@ -118,7 +129,8 @@ export function attachWebSocketUpgrade(
   options: WebSocketUpgradeOptions,
 ): () => void {
   const maxPayload = options.maxPayload ?? wsFrameLimit();
-  const accepted = new Set<UpgradedSocket>();
+  /* Each connection open, with what closes it as its handler's stop does, where one holds it. */
+  const accepted = new Map<UpgradedSocket, (() => void) | undefined>();
   let wss: Promise<UpgradeServer> | undefined;
 
   const onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
@@ -172,9 +184,10 @@ export function attachWebSocketUpgrade(
            its own only after an async `onConnect`, so a frame sent before
            that finished could take the process down. */
         ws.addEventListener("error", (event) => log.warn("WebSocket error", socketError(event)));
-        accepted.add(ws);
+        accepted.set(ws, undefined);
         ws.addEventListener("close", () => accepted.delete(ws));
-        options.onSocket(ws, request);
+        const close = options.onSocket(ws, request);
+        if (close) accepted.set(ws, close);
       });
     } catch (error) {
       /* The socket is answered rather than left open; the process stays up. */
@@ -186,9 +199,10 @@ export function attachWebSocketUpgrade(
   server.on("upgrade", onUpgrade);
   return () => {
     server.off("upgrade", onUpgrade);
-    for (const ws of accepted) {
-      if (ws.readyState === 1) ws.close(1012, "Server shutting down");
-      else ws.terminate();
+    for (const [ws, close] of accepted) {
+      if (ws.readyState !== 1) ws.terminate();
+      else if (close) close();
+      else closeWithNotice(ws, shutdownClose(), false);
     }
     accepted.clear();
     /* A server that failed to load was reported when the upgrade failed. */

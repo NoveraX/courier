@@ -34,13 +34,14 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
  * @param server - HTTP server from `app.getHttpServer()`
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.) and the `path` to listen on
  * @returns Stops the handler: upgrades are answered 503 from then on, each
- *   connection is closed with 1012 — which a Courier client answers by
- *   reconnecting later — and waited for up to 5 seconds, one whose client
- *   has not answered by then is ended, and the handler's subscriptions are
- *   let go of; it settles within that time, whatever the clients and the
- *   pub/sub adapter do. Call it before closing the HTTP server, which
- *   otherwise waits on those connections. It carries the handler's
- *   `connections` — to send, broadcast or disconnect — its
+ *   connection is closed with 1001 after a `disconnect` frame that tells its
+ *   client when to come back — a pause drawn across 5 seconds, so its
+ *   clients do not all return at once — and waited for up to 5 seconds, one
+ *   whose client has not answered by then is ended, and the handler's
+ *   subscriptions are let go of; it settles within that time, whatever the
+ *   clients and the pub/sub adapter do. Call it before closing the HTTP
+ *   server, which otherwise waits on those connections. It carries the
+ *   handler's `connections` — to send, broadcast or disconnect — its
  *   `destroy({ timeoutMs })`, the same stop with a deadline of your own,
  *   and its `stats()`.
  *

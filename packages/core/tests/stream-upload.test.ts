@@ -19,6 +19,7 @@ import type { HandlerConfig } from "../src/adapter/handler-config";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { NetworkError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware/define";
+import { retryMiddleware } from "../src/middleware/retry";
 import { chunked, concat } from "./helpers/multipart-fixtures";
 
 const { endpoint } = courier();
@@ -117,6 +118,34 @@ function upload(body: Uint8Array<ArrayBuffer>, declared = body.length, signal?: 
     duplex: "half",
   });
   return { request, pulls, chunks: Math.ceil(body.length / 1024) };
+}
+
+/** A browser's upload of `body` in eight pieces, `gapMs` apart, as a slow link sends one. */
+function slowUpload(body: Uint8Array<ArrayBuffer>, gapMs: number): Request {
+  const piece = Math.ceil(body.length / 8);
+  let sent = 0;
+  const stream = new ReadableStream<Uint8Array<ArrayBuffer>>(
+    {
+      async pull(controller) {
+        if (sent >= body.length) return controller.close();
+        if (sent > 0) await new Promise((resolve) => setTimeout(resolve, gapMs));
+        controller.enqueue(body.slice(sent, sent + piece));
+        sent += piece;
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  return new Request("http://localhost/api/request?_s=api&_g=files&_m=upload", {
+    method: "POST",
+    headers: {
+      origin: "http://localhost",
+      "content-type": `multipart/form-data; boundary=${B}`,
+      "content-length": String(body.length),
+    },
+    body: stream,
+    // @ts-expect-error -- required by the platform for a streaming body
+    duplex: "half",
+  });
 }
 
 /** An upstream that reads the whole upload, then answers 200. */
@@ -305,6 +334,63 @@ describe("an upload sent on as it arrives", () => {
     expect(seen[0]).toBeInstanceOf(BodyError);
     expect(seen[0]).toMatchObject({ code: "BODY_TOO_LARGE" });
     expect(seen[0]).not.toBeInstanceOf(NetworkError);
+  });
+
+  it("starts the call's timeout once the upload is sent whole, so a slow client is not cut off", async () => {
+    const { handlePost } = await proxyTo(readsAll, {}, endpoint.post("upload").timeout(300));
+    const body = concat(
+      field("_options", "{}"),
+      fileHead("file", "a.zip"),
+      "z".repeat(64_000),
+      "\r\n",
+      close,
+    );
+
+    /* Eight pieces 100 ms apart: well past the call's 300 ms, well within the body's idle limit. */
+    const response = await handlePost(slowUpload(body, 100));
+
+    expect(response.status).toBe(200);
+    expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("answers 408 BODY_TIMEOUT when a deadline runs out before the upload is sent whole", async () => {
+    const { handlePost } = await proxyTo(
+      readsAll,
+      {},
+      endpoint.post("upload").use(retryMiddleware({ deadline: 300 })),
+    );
+    const body = concat(
+      field("_options", "{}"),
+      fileHead("file", "a.zip"),
+      "z".repeat(64_000),
+      "\r\n",
+      close,
+    );
+
+    const response = await handlePost(slowUpload(body, 100));
+
+    expect(response.status).toBe(408);
+    expect(((await response.json()) as { code: string }).code).toBe("BODY_TIMEOUT");
+    expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("still times out an upstream that leaves the upload, sent whole, unanswered", async () => {
+    const silent = (req: IncomingMessage): void => {
+      req.resume();
+    };
+    const { handlePost } = await proxyTo(silent, {}, endpoint.post("upload").timeout(300));
+    const body = concat(
+      field("_options", "{}"),
+      fileHead("file", "a.zip"),
+      "z".repeat(8_000),
+      "\r\n",
+      close,
+    );
+
+    const response = await handlePost(upload(body).request);
+
+    expect(response.status).toBe(504);
+    expect(((await response.json()) as { code: string }).code).toBe("UPSTREAM_TIMEOUT");
   });
 
   it("is refused before the call runs when its options do not parse, its body taken off", async () => {

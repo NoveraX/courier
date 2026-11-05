@@ -107,6 +107,8 @@ export type ErrorHandlerCtx = FailureReport & {
   rawData: boolean;
   /** Header names the endpoint and its source carry across the proxy. */
   namedHeaders?: readonly string[] | undefined;
+  /** The call's variables: an upload being sent on as it arrives tells a slow client from a slow upstream. */
+  variables?: unknown;
 };
 
 export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknown {
@@ -143,7 +145,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     reportRequestError(error, ctx, undefined);
     return answerCallerLeft(error, ctx.context, ctx.rawData);
   }
-  const unsent = fromWire ? unsentUpload(error) : undefined;
+  const unsent = fromWire ? unsentUpload(error, ctx.variables) : undefined;
   if (unsent !== undefined) return refusedUpload(unsent, ctx);
 
   const responseResult =

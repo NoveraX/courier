@@ -20,6 +20,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/answered-message",
   "utils/send-streamed",
   "adapter/unsent-upload",
+  "utils/attempt-expiry",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

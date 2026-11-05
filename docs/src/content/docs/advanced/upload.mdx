@@ -166,6 +166,7 @@ The call's variables are then not a `FormData` but a `StreamedUpload`: a `Readab
 
 - a schema for the endpoint's variables, a middleware or a closure sees a stream, not fields, and one that reads it reads it in your backend's place;
 - the call is not retried, since its body cannot be sent twice;
+- the call's `timeout` starts once the upload has been sent whole: while it arrives, the body's own limits hold it — `bodyIdleTimeoutMs` between two pieces, `bodyTimeoutMs` for the whole — so a slow client is not taken for a slow backend, and a `deadline` that runs out before the upload has been sent whole is answered `408` with the code `BODY_TIMEOUT`;
 - your backend receives the body chunked, without a `Content-Length`;
 - under Node 22 and 24 a redirect fails the call, as it does any upload there.
 

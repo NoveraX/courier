@@ -124,6 +124,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
         timing,
         middlewareCount: middlewares.length,
         signal: call.inner.baseOptions.signal ?? undefined,
+        variables: ctx.variables,
       }),
       relayed,
     );

@@ -4,6 +4,7 @@ import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { assertAbsoluteUrl } from "./absolute-url";
 import { anySignal } from "./any-signal";
+import { attemptExpiry } from "./attempt-expiry";
 import { holdsDeviceFiles } from "./device-files";
 import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
@@ -13,7 +14,6 @@ import { sendWithUploadProgress, trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
-import { timeoutSignal } from "./timeout-signal";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   /** What the request sends; absent, nothing unless `json` is given. */
@@ -103,7 +103,7 @@ export async function coreFetch(
   }
 
   assertAbsoluteUrl(fullUrl);
-  const expiry = timeout ? timeoutSignal(timeout) : undefined;
+  const expiry = timeout ? attemptExpiry(timeout, requestBody) : undefined;
   const finalSignal = signal && expiry ? anySignal([signal, expiry]) : (expiry ?? signal);
 
   const init = {

@@ -40,6 +40,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/send-streamed": "src/browser/utils/send-streamed.ts",
       "adapter/unsent-upload": "src/adapter/unsent-upload.ts",
       "browser/adapter/unsent-upload": "src/browser/adapter/unsent-upload.ts",
+      "utils/attempt-expiry": "src/utils/attempt-expiry.ts",
+      "browser/utils/attempt-expiry": "src/browser/utils/attempt-expiry.ts",
     });
   });
 });

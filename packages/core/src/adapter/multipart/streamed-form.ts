@@ -4,6 +4,7 @@ import {
   type StreamedUploadSource,
   streamedUpload,
 } from "../../utils/streamed-upload";
+import { trackSending, type UploadSending } from "../../utils/upload-sending";
 import { isOptionsPart, TextFields } from "./form-fields";
 import { type MultipartPart, type MultipartParts, multipartParts } from "./multipart-parts";
 import { DEFAULT_PART_TYPE } from "./part-headers";
@@ -81,15 +82,14 @@ export async function streamedForm(
     throw error;
   }
   const encoding = new Reencoding(multipartBoundary(), parts, fields, first);
-  return {
-    options,
-    upload: streamedUpload(encoding.contentType, encoding),
-    stop: () => encoding.stop(),
-  };
+  const upload = streamedUpload(encoding.contentType, encoding);
+  trackSending(upload, encoding);
+  return { options, upload, stop: () => encoding.stop() };
 }
 
-/* What hands out the re-encoded upload, one piece each time it is asked for one. */
-class Reencoding implements StreamedUploadSource {
+/* What hands out the re-encoded upload, one piece each time it is asked for one, and says when
+   the last has gone. */
+class Reencoding implements StreamedUploadSource, UploadSending {
   readonly contentType: string;
   readonly #boundary: string;
   readonly #parts: MultipartParts;
@@ -102,6 +102,11 @@ class Reencoding implements StreamedUploadSource {
   #lead = "";
   #ended = false;
   #stopped = false;
+  #sentWhole = false;
+  #endWith: (whole: boolean) => void = () => {};
+  readonly ended: Promise<boolean> = new Promise((resolve) => {
+    this.#endWith = resolve;
+  });
 
   constructor(
     boundary: string,
@@ -124,16 +129,24 @@ class Reencoding implements StreamedUploadSource {
       await this.stop();
       throw error;
     }
-    if (this.#ended) controller.close();
+    if (!this.#ended) return;
+    controller.close();
+    this.#sentWhole = true;
+    this.#endWith(true);
   }
 
   cancel(): Promise<void> {
     return this.stop();
   }
 
+  whole(): boolean {
+    return this.#sentWhole;
+  }
+
   async stop(): Promise<void> {
     if (this.#stopped) return;
     this.#stopped = true;
+    this.#endWith(false);
     await this.#parts.return();
   }
 

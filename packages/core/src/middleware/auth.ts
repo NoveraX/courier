@@ -27,10 +27,12 @@ type Attempt = { readonly response: MiddlewareResponse } | { readonly error: unk
  * With `refreshToken`, a request refused with 401 is sent again carrying
  * the token it gives; a second 401 is the caller's to handle, and so is
  * the first when the refresh gives no token or the request's body is a
- * stream that cannot be sent twice. Every call refused while a refresh
- * runs, or sent before one that has since ended, takes that refresh's
- * token, so a refresh token that may be used only once is spent once
- * however the refusals fall.
+ * stream that cannot be sent twice. Every call refused with a token while
+ * its refresh runs, or sent with it before that refresh ended, takes that
+ * refresh's token, so a refresh token that may be used only once is spent
+ * once however the refusals fall. A refresh is shared by token and never
+ * between tokens: on a server, where `getToken` gives the token of the
+ * request's user, one user's call is never sent with another's.
  *
  * @param options - Where the token comes from, how to renew it, and where it goes
  * @returns The middleware, to place on a source or an endpoint
@@ -70,12 +72,13 @@ export function authMiddleware(options: AuthOptions): Middleware {
   // Wraps because it may send the request again (needs response access)
   return defineMiddleware("auth", "wrap", async (ctx, next) => {
     const sentAt = refresher?.generation ?? 0;
-    attach(ctx, tokenOf(await getToken()), "getToken");
+    const token = tokenOf(await getToken());
+    attach(ctx, token, "getToken");
     if (!refresher) return next();
 
     const first = await settle(next);
     if (!isUnauthorized(first) || !isReplayableBody(ctx.variables)) return unwrap(first);
-    const renewed = await refresher.renew(sentAt);
+    const renewed = await refresher.renew(token, sentAt);
     if (renewed === undefined) return unwrap(first);
     attach(ctx, renewed, "refreshToken");
     return next();

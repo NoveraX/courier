@@ -228,7 +228,7 @@ A token holding a control character other than a tab, a line break inside it amo
 
 ### With token refresh
 
-When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401, and so it does with the first when `refreshToken()` gives no token or the request's body is a stream that cannot be sent twice. One refresh serves every call its 401s came from: a call refused while a refresh runs waits for it, and one sent before a refresh that has since ended takes that refresh's token, so `refreshToken()` runs once however the refusals fall — a hundred calls sent with an expired token cost one refresh. A refresh that fails rejects the calls waiting on it with its error, and the next 401 tries again:
+When `refreshToken` is provided and the upstream answers 401, the middleware calls `refreshToken()`, updates the header, and sends the request again once. If the new token is refused too, the call rejects with that second 401, and so it does with the first when `refreshToken()` gives no token or the request's body is a stream that cannot be sent twice. One refresh serves every call refused with the token it renews: a call refused with that token while the refresh runs waits for it, and one sent with it before the refresh ended takes the refresh's token, so `refreshToken()` runs once however the refusals fall — a hundred calls sent with an expired token cost one refresh. A refresh that fails rejects the calls waiting on it with its error, and the next 401 tries again:
 
 ```ts title="lib/sources.ts"
 authMiddleware({
@@ -240,6 +240,8 @@ authMiddleware({
   },
 })
 ```
+
+A refresh is shared by token, never between tokens. On a server, where `getToken` and `refreshToken` read the user of the request being served — from its cookies, or an `AsyncLocalStorage` — each user's calls renew that user's token, and a call refused with one user's token is never sent again with another's. A call sent without a token refreshes for itself. A refresher remembers the last 100 tokens it renewed.
 
 ### API key authentication
 

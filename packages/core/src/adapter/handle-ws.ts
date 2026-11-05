@@ -1,29 +1,18 @@
-import { createLogger } from "../logger";
 import { createRefusalLog } from "../logger/refusal-log";
-import type { WebSocketLike } from "../realtime/adapters";
-import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { assertAllowedOrigins } from "./assert-allowed-origins";
 import type { ConnectResult } from "./connection-meta";
 import { LIMITS } from "./limits";
-import { rememberPeerAddress } from "./peer-address";
-import { admitSocket } from "./ws-admission";
-import { admitConnection } from "./ws-admit-connection";
-import { connectionFields } from "./ws-connection-fields";
-import { buildContext, type WSSocketContext } from "./ws-context";
-import { holdFrames, type WSInbox } from "./ws-inbox";
 import { createIPTracker } from "./ws-ip-tracker";
-import { wireEvents } from "./ws-lifecycle";
 import { createLiveConnections } from "./ws-live-connections";
+import { openSockets } from "./ws-open-socket";
 import { createConnectionRegistry } from "./ws-registry";
 import { replicate } from "./ws-replication";
 import { createServerTopicManager } from "./ws-topics";
 import type { WSHandler, WSHandlerConfig } from "./ws-types";
 
 export type { WSSocketContext } from "./ws-context";
-
-const log = createLogger("WS");
 
 /**
  * Create a server-side WebSocket handler for Courier endpoints.
@@ -72,92 +61,16 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   const live = createLiveConnections();
   let stopping: Promise<void> | undefined;
 
-  function handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void {
-    rememberPeerAddress(request, peerAddress);
-    const ctx = buildContext(ws, config, topicManager, registry, bridge, request, refusals);
-    if (stopping) {
-      ctx.session.close({ kind: "shutdown", retryAfterMs: 0 });
-      return;
-    }
-    live.add(ws, ctx);
-    const admission = admitSocket(request, config, ipTracker);
-    if (!("ip" in admission)) {
-      ctx.session.close(admission);
-      return;
-    }
-    ctx.clientIP = admission.ip;
-    /* What the client sends before its connection is admitted — who it is,
-       the subscriptions it makes as its socket opens — waits for it, in order. */
-    const inbox = holdFrames(ws, ctx.maxControlPerSecond, (held) => {
-      const fields = { ...connectionFields(ctx), held };
-      refusals.warn({ event: "frames refused", code: 4429, fields });
-      ctx.session.close({ kind: "flood" });
-    });
-
-    if (config.onConnect) {
-      /* What fails while a connection is admitted ends that connection, never the process. */
-      initConnection(ws, inbox, ctx, config.onConnect).catch((error: unknown) => {
-        log.error(`Connection ${ctx.connectionId} could not be admitted`, error);
-        ipTracker.release(ctx.clientIP);
-        ctx.session.close({ kind: "internal" });
-      });
-    } else {
-      registerAndActivate(ws, inbox, ctx);
-    }
-  }
-
-  async function initConnection(
-    ws: WebSocketLike,
-    inbox: WSInbox,
-    ctx: WSSocketContext,
-    onConnect: NonNullable<WSHandlerConfig["onConnect"]>,
-  ): Promise<void> {
-    /* Heard from the start, not once the connection is activated: a client
-       that left while onConnect ran would otherwise keep its registry entry,
-       a heartbeat timer and its per-address slot for good — enough of them
-       lock the address out. */
-    let closedWith: number | undefined;
-    ws.addEventListener("close", (event) => {
-      closedWith ??= event.code;
-    });
-    const outcome = await admitConnection(ctx, inbox, {
-      onConnect,
-      onDisconnect: config.onDisconnect,
-      authTimeoutMs: config.authTimeoutMs ?? 3000,
-      hookTimeoutMs: ctx.middlewareTimeoutMs,
-      left: () => closedWith,
-    });
-    if (outcome === "admitted") {
-      registerAndActivate(ws, inbox, ctx);
-      return;
-    }
-    ipTracker.release(ctx.clientIP);
-    ctx.session.dispose();
-  }
-
-  function registerAndActivate(ws: WebSocketLike, inbox: WSInbox, ctx: WSSocketContext): void {
-    const { session } = ctx;
-    registry.add({
-      connectionId: ctx.connectionId,
-      meta: ctx.meta,
-      connectedAt: Date.now(),
-      sendRaw: ctx.sendMessage,
-      sendEncoded: ctx.sendEncoded,
-      close: (code, reason) => session.close({ kind: "application", code, reason }),
-      requireAuth: (timeoutMs) => session.requireAuth(timeoutMs ?? ctx.authRequiredTimeoutMs),
-    });
-    const hb = createHeartbeat(
-      () => ctx.sendMessage({ type: "ping" }),
-      () => session.close({ kind: "heartbeat-timeout" }),
-      {
-        intervalMs: config.heartbeatIntervalMs ?? 25_000,
-        timeoutMs: config.heartbeatTimeoutMs ?? 10_000,
-      },
-    );
-    hb.start();
-    bridge?.onConnectionOpen();
-    wireEvents(ws, inbox, ctx, hb, topicManager, config, registry, ipTracker);
-  }
+  const handleSocket = openSockets({
+    config,
+    registry,
+    refusals,
+    ipTracker,
+    bridge,
+    topicManager,
+    live,
+    stopping: () => stopping !== undefined,
+  });
 
   // Wire Studio playground WS send — allows playground to relay messages to active connections
   studioHooks.sendWSMessage = (connectionId, topic, data) => {

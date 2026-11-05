@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIMITS } from "../src/adapter/limits";
 import { buildContext } from "../src/adapter/ws-context";
+import { V1_DIALECT } from "../src/adapter/ws-dialect";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
+import { createSession } from "../src/adapter/ws-session";
 import { createServerTopicManager } from "../src/adapter/ws-topics";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { createRefusalLog } from "../src/logger/refusal-log";
@@ -59,6 +61,7 @@ describe("buildContext", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -76,6 +79,7 @@ describe("buildContext", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -98,6 +102,7 @@ describe("buildContext", () => {
     });
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -123,6 +128,7 @@ describe("buildContext", () => {
 
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -137,6 +143,7 @@ describe("buildContext", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -159,6 +166,7 @@ describe("buildContext", () => {
 
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -179,6 +187,7 @@ describe("buildContext", () => {
 
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -194,6 +203,7 @@ describe("buildContext", () => {
     const before = performance.now();
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -211,6 +221,7 @@ describe("buildContext", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -240,6 +251,7 @@ describe("buildContext", () => {
 
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -258,6 +270,7 @@ describe("buildContext", () => {
     const { ws, config, topicManager, registry, request } = buildTestContext();
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -275,6 +288,7 @@ describe("buildContext", () => {
     const ws = createMockWs({ readyState: 3, send });
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -294,6 +308,7 @@ describe("buildContext", () => {
     const config = createConfig({ maxBufferedAmount: 1_000_000 });
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,
@@ -312,6 +327,7 @@ describe("buildContext", () => {
     const ws = createMockWs({ readyState: 1, bufferedAmount: 0, send });
     const ctx = buildContext(
       ws,
+      createSession(ws, V1_DIALECT),
       config,
       topicManager,
       registry,

@@ -8,12 +8,11 @@ import { generateRequestId, PLAYGROUND_RID_PARAM, playgroundRidOf, studioHooks }
 import { randomId } from "../utils/random-id";
 import { LIMITS } from "./limits";
 import { servedSources } from "./served-sources";
-import { V1_DIALECT } from "./ws-dialect";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { RateLimitBucket } from "./ws-rate-limit";
 import { createBucket } from "./ws-rate-limit";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
-import { createSession, type WSSession } from "./ws-session";
+import type { WSSession } from "./ws-session";
 import type { createServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";
 
@@ -112,6 +111,7 @@ export interface WSSocketContext {
  * initializes rate limit bucket, and emits Studio stream:open event.
  *
  * @param ws - WebSocket-like connection object
+ * @param session - The socket's session, made as the socket was handed over
  * @param config - Handler configuration (sources, limits, hooks)
  * @param topicManager - Server topic manager for subscription tracking
  * @param registry - Connection registry for broadcast/send
@@ -119,9 +119,11 @@ export interface WSSocketContext {
  * @param request - Original HTTP upgrade request
  * @param refusals - The handler's log of refusals
  * @returns Fully initialized per-connection context
+ * @throws ConfigurationError when the handler names no sources and none are registered
  */
 export function buildContext(
   ws: WebSocketLike,
+  session: WSSession,
   config: WSHandlerConfig,
   topicManager: ReturnType<typeof createServerTopicManager>,
   registry: InternalConnectionRegistry,
@@ -151,7 +153,6 @@ export function buildContext(
     playgroundRequestId = undefined;
   }
   const subscriptionIds = new Map<string, SubscriptionTracker>();
-  const session = createSession(ws, V1_DIALECT);
   let consecutiveDrops = 0;
 
   /** Shared backpressure guard — returns true if message can be sent */

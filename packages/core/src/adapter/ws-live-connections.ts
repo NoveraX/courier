@@ -1,11 +1,11 @@
 import type { WebSocketLike } from "../realtime/adapters";
-import type { WSSocketContext } from "./ws-context";
 import type { SessionClose } from "./ws-dialect";
+import type { WSSession } from "./ws-session";
 
 /** Every socket a handler holds, from its admission to its close, whether its connection is admitted yet or not. */
 export interface LiveConnections {
-  /** Hold a socket until its close event */
-  add(ws: WebSocketLike, ctx: WSSocketContext): void;
+  /** Hold a socket, with its session, until its close event */
+  add(ws: WebSocketLike, session: WSSession): void;
   readonly size: number;
   /**
    * Close every socket held, each for the reason `why` gives it, and
@@ -18,23 +18,23 @@ export interface LiveConnections {
 /**
  * The sockets of a handler, for a stop that must reach every one: a
  * connection still running `onConnect` is in no registry, yet it holds a
- * socket the stop has to close as well.
+ * socket the stop has to close as well, and so does one being refused.
  *
  * @returns The set, empty
  * @example
  * ```ts
  * const live = createLiveConnections();
- * live.add(ws, ctx);
+ * live.add(ws, session);
  * await live.closeAll(() => ({ kind: "shutdown", retryAfterMs: 0 }), 5_000);
  * ```
  */
 export function createLiveConnections(): LiveConnections {
-  const held = new Map<WebSocketLike, WSSocketContext>();
+  const held = new Map<WebSocketLike, WSSession>();
   let emptied: (() => void) | undefined;
 
   return {
-    add(ws, ctx) {
-      held.set(ws, ctx);
+    add(ws, session) {
+      held.set(ws, session);
       ws.addEventListener("close", () => {
         held.delete(ws);
         if (held.size === 0) emptied?.();
@@ -44,7 +44,7 @@ export function createLiveConnections(): LiveConnections {
       return held.size;
     },
     async closeAll(why, timeoutMs) {
-      for (const ctx of [...held.values()]) ctx.session.close(why());
+      for (const session of [...held.values()]) session.close(why());
       if (held.size === 0) return;
       let timer: ReturnType<typeof setTimeout> | undefined;
       await new Promise<void>((resolve) => {

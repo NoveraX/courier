@@ -112,7 +112,7 @@ describe("a stream whose connection cannot be made", () => {
     expect(statuses.some((event) => event.status === "open")).toBe(false);
   });
 
-  it("says the status a server refused it with, and waits as long as it asked", async () => {
+  it("says the status a server refused it with, and waits no less than it asked", async () => {
     const url = await serveEvents((res) => {
       res.writeHead(503, { "retry-after": "1" });
       res.end();
@@ -123,7 +123,8 @@ describe("a stream whose connection cannot be made", () => {
 
     expect(reconnects()[0]).toMatchObject({
       failures: 1,
-      retryIn: 1000,
+      /* The server's second, and the backoff's own wait on top. */
+      retryIn: 1000 + FAST.initialMs,
       cause: { message: "503 Service Unavailable" },
     });
   });

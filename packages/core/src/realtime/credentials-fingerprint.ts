@@ -1,24 +1,23 @@
-import { stableStringify } from "./topic-key";
-import type { WSCredentials } from "./ws-credentials";
+import { stableStringify } from "./ws/topic-key";
 
 /**
  * A short stand-in for credentials, kept to tell whether those asked for
  * next differ from those the server refused — not the credentials
- * themselves, which are let go of once their frame is sent.
+ * themselves, which are let go of once they are sent.
  *
  * Equal credentials always give the same fingerprint; different ones give
  * different ones but for a chance of one in 2^53. It is no secret's hash in
  * the cryptographic sense, and need not be: it never leaves the client, and
  * a collision costs one attempt not made.
  *
- * @param credentials - What a socket opens with
+ * @param credentials - What a socket or a stream opens with
  * @returns The fingerprint
  * @example
  * ```ts
  * fingerprintOf({ frame: { auth: { token: "t1" } } }) === fingerprintOf({ frame: { auth: { token: "t1" } } }); // → true
  * ```
  */
-export function fingerprintOf(credentials: WSCredentials | undefined): string {
+export function fingerprintOf(credentials: unknown): string {
   return hash53(stableStringify(JSON.parse(JSON.stringify(credentials ?? {}))));
 }
 

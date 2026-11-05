@@ -1,12 +1,14 @@
 import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
 import { layerHeaders } from "../../utils/layer-headers";
+import { fingerprintOf } from "../credentials-fingerprint";
 import type { StreamFailure } from "../describe-failure";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
 import type { SSEConnectionCtx } from "./sse-connection";
 import { eventStreamOf, refusal } from "./sse-response";
+import type { SSEConnectInit } from "./sse-types";
 
 const log = createLogger("SSE");
 const INTERNAL_ERROR = 5000;
@@ -18,6 +20,8 @@ export type ConnectionEnd = "complete" | "dropped" | RealtimeError;
 export interface ConnectionProgress {
   received: boolean;
   silent: boolean;
+  /** When the server accepted the connection, by the clock that does not jump */
+  openedAt?: number | undefined;
 }
 
 /**
@@ -37,6 +41,7 @@ export async function readConnection<TData>(
 ): Promise<ConnectionEnd> {
   const connection = new AbortController();
   ctx.current = connection;
+  ctx.heardAt = undefined;
   const stop = () => connection.abort();
   ctx.controller.signal.addEventListener("abort", stop, { once: true });
   let silence: ReturnType<typeof setTimeout> | undefined;
@@ -50,6 +55,8 @@ export async function readConnection<TData>(
 
   try {
     const opened = await ctx.config.beforeConnect?.();
+    const refused = sameAsRefused(ctx, opened);
+    if (refused) return refused;
     const send = ctx.config.fetch ?? fetch;
     const response = await send(ctx.url, {
       ...opened?.init,
@@ -65,11 +72,16 @@ export async function readConnection<TData>(
     }
 
     ctx.config.onResponse?.(response);
+    /* Accepted: a later 401 is a refusal of its own, with its own attempt. */
+    ctx.refused = undefined;
+    progress.openedAt = performance.now();
+    ctx.heardAt = Date.now();
     ctx.sink.open({ resumed: false });
     expectMore();
 
     for await (const frame of parseSSEFrames(body)) {
       expectMore();
+      ctx.heardAt = Date.now();
       progress.received = true;
       const end = take(ctx, frame);
       if (end) return end;
@@ -82,6 +94,24 @@ export async function readConnection<TData>(
     /* Releases the socket when the read stopped at an end-of-stream event. */
     connection.abort();
   }
+}
+
+/*
+ * The credentials of the connection being opened, against those the server
+ * last refused with 401: the same again end the stream with that refusal,
+ * as the server would answer them; others are the one attempt it allows.
+ * Only the session's headers are compared — what a token is carried in.
+ */
+function sameAsRefused<TData>(
+  ctx: SSEConnectionCtx<TData>,
+  opened: SSEConnectInit | undefined,
+): RealtimeError | undefined {
+  ctx.opened = fingerprintOf(opened?.headers ?? {});
+  const { refused } = ctx;
+  if (refused === undefined || refused.retried) return undefined;
+  if (refused.fingerprint === ctx.opened) return refused.error;
+  refused.retried = true;
+  return undefined;
 }
 
 function requestHeaders<TData>(ctx: SSEConnectionCtx<TData>): Record<string, string> {

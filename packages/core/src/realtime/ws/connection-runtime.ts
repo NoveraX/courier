@@ -1,4 +1,5 @@
 import type { ScopedLogger } from "../../logger";
+import { fingerprintOf } from "../credentials-fingerprint";
 import { transition } from "./connection-machine";
 import type {
   MachineContext,
@@ -7,7 +8,6 @@ import type {
   MachineState,
 } from "./connection-machine-types";
 import { connectionSocket } from "./connection-socket";
-import { fingerprintOf } from "./credentials-fingerprint";
 import type { WSCredentials } from "./ws-credentials";
 import { encodeMessage } from "./ws-protocol";
 import type { WSConnectionConfig, WSSocketFactory } from "./ws-types";

@@ -1,8 +1,12 @@
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
+import { type Backoff, resolveBackoff } from "../backoff";
+import { CLIENT_LIMITS } from "../client-limits";
+import { onResume } from "../resume-signals";
 import type { SubscriptionDriver, SubscriptionSink } from "../subscription-driver";
 import { SubscriptionHandle } from "../subscription-handle";
 import type { Subscription } from "../subscription-types";
 import { reconnectNow, runConnectionLoop, type SSEConnectionCtx } from "./sse-connection";
+import { resumeStream } from "./sse-resume";
 import type { SubscribeSSEOptions } from "./sse-types";
 
 /**
@@ -14,6 +18,7 @@ import type { SubscribeSSEOptions } from "./sse-types";
  * @param options - Connection and parsing options
  * @returns The subscription — read with `on("data")` or `for await`
  * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it
+ * @throws {ConfigurationError} `INVALID_BACKOFF` for a backoff no wait can be drawn from
  *
  * @example
  * const sub = subscribeSSE<Notification>("/api/sse/notifications");
@@ -26,8 +31,9 @@ export function subscribeSSE<TData = unknown>(
   options: SubscribeSSEOptions = {},
 ): Subscription<TData> {
   assertAbsoluteUrl(url);
+  const backoff = resolveBackoff(options.backoff);
   const subscription = new SubscriptionHandle<TData>(
-    sseDriver<TData>(url, options),
+    sseDriver<TData>(url, options, backoff),
     options.maxBufferSize,
   );
   const { signal } = options;
@@ -36,19 +42,27 @@ export function subscribeSSE<TData = unknown>(
   return subscription;
 }
 
-/* Each life of the subscription is one run of its connection loop, its Last-Event-ID carried over. */
-function sseDriver<TData>(url: string, options: SubscribeSSEOptions): SubscriptionDriver<TData> {
+/*
+ * Each life of the subscription is one run of its connection loop, its
+ * Last-Event-ID carried over, and the page's resume signals heard while it runs.
+ */
+function sseDriver<TData>(
+  url: string,
+  options: SubscribeSSEOptions,
+  backoff: Backoff,
+): SubscriptionDriver<TData> {
   let ctx: SSEConnectionCtx<TData> | undefined;
   let lastEventId = options.lastEventId;
+  let unhear: (() => void) | undefined;
   const start = (sink: SubscriptionSink<TData>): void => {
-    ctx = {
+    const life: SSEConnectionCtx<TData> = {
       url,
       controller: new AbortController(),
       sink,
       config: {
         headers: options.headers,
-        backoff: options.backoff,
-        heartbeatTimeout: options.heartbeatTimeout ?? 45_000,
+        backoff,
+        heartbeatTimeout: options.heartbeatTimeout ?? CLIENT_LIMITS.SSE_SILENCE_TIMEOUT_MS,
         maxAttempts: options.maxAttempts ?? Infinity,
         parse: options.parse ?? JSON.parse,
         ...(options.onResponse && { onResponse: options.onResponse }),
@@ -58,14 +72,27 @@ function sseDriver<TData>(url: string, options: SubscribeSSEOptions): Subscripti
       lastEventId: ctx?.lastEventId ?? lastEventId,
       serverRetryMs: undefined,
     };
-    lastEventId = ctx.lastEventId;
-    void runConnectionLoop(ctx);
+    ctx = life;
+    lastEventId = life.lastEventId;
+    const stop =
+      options.reconnectOnResume === false
+        ? undefined
+        : onResume((signal) => resumeStream(life, signal));
+    unhear = stop;
+    void runConnectionLoop(life).finally(() => {
+      stop?.();
+      if (unhear === stop) unhear = undefined;
+    });
   };
   return {
     open: start,
     reopen: start,
     reconnect: () => ctx && reconnectNow(ctx),
-    close: () => ctx?.controller.abort(),
+    close: () => {
+      unhear?.();
+      unhear = undefined;
+      ctx?.controller.abort();
+    },
     retry: () => ctx?.retry,
   };
 }

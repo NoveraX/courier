@@ -31,4 +31,11 @@ export const CLIENT_LIMITS = {
 
   /** Longest random wait before reconnecting on `online`, so clients one outage dropped do not return together (1 s) */
   RESUME_ONLINE_SPREAD_MS: 1_000,
+
+  /**
+   * How long a stream may hear nothing from its server — no event, no
+   * comment — before it is opened again, unless the subscription says
+   * otherwise: a Courier server comments every 25 s (45 s)
+   */
+  SSE_SILENCE_TIMEOUT_MS: 45_000,
 } as const;

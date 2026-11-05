@@ -1,9 +1,9 @@
 import { createLogger } from "../../logger";
-import { backoffDelay, resolveBackoff } from "../backoff";
+import { type Backoff, backoffDelay, hintedDelay } from "../backoff";
+import { CLIENT_LIMITS } from "../client-limits";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import type { ConnectionRetry } from "../retry-of";
 import type { SubscriptionSink } from "../subscription-driver";
-import type { BackoffConfig } from "../types";
 import { type ConnectionEnd, type ConnectionProgress, readConnection } from "./sse-read";
 import { SSEResponseError } from "./sse-response";
 import type { SubscribeSSEOptions } from "./sse-types";
@@ -16,7 +16,7 @@ const RETRYABLE = new Set([408, 429]);
 /** Resolved configuration passed to the connection loop */
 export interface SSEConnectionConfig {
   headers?: Record<string, string> | undefined;
-  backoff?: BackoffConfig | undefined;
+  backoff: Backoff;
   heartbeatTimeout: number;
   maxAttempts: number;
   parse: (raw: string) => unknown;
@@ -26,6 +26,13 @@ export interface SSEConnectionConfig {
   beforeConnect?: SubscribeSSEOptions["beforeConnect"];
   /** What sends each connection's request, in place of the platform's `fetch` */
   fetch?: SubscribeSSEOptions["fetch"];
+}
+
+/** Credentials the server refused with 401, and whether the one attempt with others was made. */
+export interface SSERefusal {
+  readonly fingerprint: string;
+  readonly error: RealtimeError;
+  retried: boolean;
 }
 
 /** Mutable context shared between connection loop and stream consumer */
@@ -43,6 +50,12 @@ export interface SSEConnectionCtx<TData> {
   current?: AbortController | undefined;
   /** Set to reconnect at once; ends the wait before the next connection, when one is waited out */
   now?: (() => void) | boolean | undefined;
+  /** When the open connection last heard from its server, by the clock a sleep moves on */
+  heardAt?: number | undefined;
+  /** The fingerprint of what the connection being opened was given by `beforeConnect` */
+  opened?: string | undefined;
+  /** The 401 the next connection answers to */
+  refused?: SSERefusal | undefined;
 }
 
 /**
@@ -67,11 +80,14 @@ export function reconnectNow<TData>(ctx: SSEConnectionCtx<TData>): void {
  * A stream the server ended is told apart from a dropped connection, so a
  * finished stream is not reconnected and replayed from the start, and a
  * failure or refusal does not end the loop as though the stream had
- * finished. A connection that delivers anything resets the count and the
- * backoff.
+ * finished. A connection that delivers anything starts `maxAttempts` over;
+ * the backoff starts over only after one that stayed open
+ * `RECONNECT_STABLE_MS`, so a server that ends each stream at once is
+ * called back less and less often.
  */
 export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Promise<void> {
   let failures = 0;
+  let unstable = 0;
   let lastError: unknown;
 
   while (!ctx.controller.signal.aborted) {
@@ -85,7 +101,14 @@ export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Pr
     } catch (error) {
       if (ctx.controller.signal.aborted) return;
       const refused = refusalFailure(error);
-      if (refused) return ctx.sink.end(refused);
+      if (refused && retriesWithOthers(ctx, refused)) {
+        log.warn("SSE request refused with 401: trying once more with credentials asked for anew");
+        continue;
+      }
+      if (refused) {
+        log.error("SSE request refused, not reconnecting", error);
+        return ctx.sink.end(refused);
+      }
       if (ctx.now !== true) {
         lastError = failed = error;
         if (error instanceof SSEResponseError) ctx.serverRetryMs ??= error.retryAfterMs;
@@ -95,26 +118,52 @@ export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Pr
     if (end !== "dropped") return ctx.sink.end(end === "complete" ? undefined : end);
     if (ctx.controller.signal.aborted) return;
 
-    failures = progress.received || ctx.now === true ? 0 : failures + 1;
+    const asked = ctx.now === true;
+    failures = progress.received || asked ? 0 : failures + 1;
     if (failures >= ctx.config.maxAttempts) return ctx.sink.end(gaveUp(failures, lastError));
+    unstable = stable(progress) || asked ? 0 : unstable + 1;
 
-    const delay = ctx.now === true ? 0 : noteRetry(ctx, failures, progress, failed);
+    const delay = asked ? 0 : noteRetry(ctx, Math.max(unstable - 1, 0), failures, progress, failed);
     ctx.sink.reconnecting();
     await wait(delay, ctx);
     /* Asked to reconnect at once: the attempts start over. */
-    if (ctx.now === true) failures = 0;
+    if (ctx.now === true) failures = unstable = 0;
   }
+}
+
+function stable(progress: ConnectionProgress): boolean {
+  const { openedAt } = progress;
+  return (
+    openedAt !== undefined && performance.now() - openedAt >= CLIENT_LIMITS.RECONNECT_STABLE_MS
+  );
+}
+
+/*
+ * A 401 is tried once more, at once, when there is a `beforeConnect` whose
+ * credentials may have changed since — a token renewed meanwhile. Whether
+ * they did is told as the next connection asks for them: the same again
+ * would be refused again, so that one ends the stream with this refusal.
+ */
+function retriesWithOthers<TData>(ctx: SSEConnectionCtx<TData>, refused: RealtimeError): boolean {
+  if (refused.code !== 4401 || !ctx.config.beforeConnect || ctx.refused?.retried) return false;
+  ctx.refused = { fingerprint: ctx.opened ?? "", error: refused, retried: false };
+  return true;
 }
 
 /* Noted before the subscription reports `reconnecting`, so whoever hears it can ask why. */
 function noteRetry<TData>(
   ctx: SSEConnectionCtx<TData>,
+  step: number,
   failures: number,
   progress: ConnectionProgress,
   failed: unknown,
 ): number {
-  const step = Math.max(0, failures - 1);
-  const delay = ctx.serverRetryMs ?? backoffDelay(step, resolveBackoff(ctx.config.backoff));
+  const hint = ctx.serverRetryMs;
+  const { backoff } = ctx.config;
+  const delay =
+    hint === undefined
+      ? backoffDelay(step, backoff)
+      : hintedDelay(Math.min(hint, CLIENT_LIMITS.RECONNECT_MAX_HINT_MS), step, backoff);
   ctx.serverRetryMs = undefined;
   ctx.retry = {
     failures,
@@ -125,16 +174,11 @@ function noteRetry<TData>(
   return delay;
 }
 
-/**
- * A refusal no retry would change — the request itself is wrong or not
- * allowed, or a redirect the client does not follow, as to another origin —
- * as the error the app reads. 408 and 429 are worth retrying.
- */
+/** A refusal reconnecting cannot fix — a client error other than 408 or 429 — as the RealtimeError it ends with */
 function refusalFailure(error: unknown): RealtimeError | undefined {
   if (!(error instanceof SSEResponseError)) return undefined;
   const { statusCode, reason, issues } = error;
   if (statusCode < 300 || statusCode >= 500 || RETRYABLE.has(statusCode)) return undefined;
-  log.error("SSE request refused, not reconnecting", error);
   return fromErrorCode(4000 + statusCode, reason, issues);
 }
 

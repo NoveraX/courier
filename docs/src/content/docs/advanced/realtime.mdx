@@ -230,6 +230,14 @@ A socket that takes longer than 15 s to open, or a server that takes longer than
 
 Every other close — a dropped network (`1006`), a server going away (`1001`, `1012`), a timeout (`4408`) — reconnects.
 
+A stream reconnects on the same rules, with what an HTTP stream has in place of a socket's, from the `Last-Event-ID` of the last event it read:
+
+- Its waits are drawn as a socket's are, and start over once a stream stayed open 10 s, so a server that ends each stream at once is called back less and less often. A server that asks for a wait — the stream's `retry:` field, `Retry-After` on a `429` or a `503` — is not called back sooner, nor waited for longer than five minutes.
+- A `401` is tried once more, at once, when the credentials asked for anew have changed — a session renewed meanwhile; the same credentials, or a second `401`, end the stream with an `AuthError`. Any other refusal from `400` to `499`, `408` and `429` aside, ends it with its error.
+- The page's signals bring back a stream that waits to reconnect. A stream has no ping to be checked with, and a Courier server comments on it every 25 s: one open when a signal comes is opened again only if it has heard nothing for longer than its `heartbeatTimeout`, 45 s, as after the computer slept. A stream that hears nothing for that long while the page is in use is opened again too.
+
+`subscribeSSE` from `@noverax/courier/realtime` takes `backoff`, `heartbeatTimeout`, `maxAttempts` and `reconnectOnResume` for a stream opened directly; a caller's streams keep these defaults.
+
 ## Who a connection is
 
 A browser's WebSocket carries the page's cookies on its handshake, and nothing else: no script can put an `Authorization` or an API key on it, and a token put in the URL ends up in the logs of every proxy and server it passes. So a Courier client says who it is in a frame of its own, the first it sends on every socket — before its subscriptions, on every reconnect too:

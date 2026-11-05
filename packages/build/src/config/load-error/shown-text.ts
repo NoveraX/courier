@@ -1,4 +1,4 @@
-import { maskEnvironmentValues } from "./mask-env-values";
+import { withoutSecrets } from "./mask-env-values";
 
 /** The longest part of the project's own message a load error quotes, in characters. */
 const MAX_QUOTED_LENGTH = 300;
@@ -8,8 +8,10 @@ const ESCAPE = 0x1b;
 
 /**
  * The first line of a message the project's code wrote, as a load error
- * quotes it: the environment's values masked, terminal codes and control
- * characters taken out, and cut short past 300 characters.
+ * quotes it: terminal codes and control characters taken out, the
+ * environment's values masked and every credential cut, and cut short past
+ * 300 characters. The codes go first: `redact()` reads a control character
+ * as a space, which would leave a code's text behind.
  *
  * @param text - The message
  * @returns The line to quote
@@ -19,9 +21,9 @@ const ESCAPE = 0x1b;
  * ```
  */
 export function shownText(text: string): string {
-  const line = maskEnvironmentValues(text.split("\n", 1)[0] ?? "");
-  const plain = withoutControls(line).trim();
-  return plain.length > MAX_QUOTED_LENGTH ? `${plain.slice(0, MAX_QUOTED_LENGTH)}…` : plain;
+  const plain = withoutControls(text.split("\n", 1)[0] ?? "");
+  const line = withoutSecrets(plain).trim();
+  return line.length > MAX_QUOTED_LENGTH ? `${line.slice(0, MAX_QUOTED_LENGTH)}…` : line;
 }
 
 /* The text without the codes a terminal reads — ESC, "[", parameters, a final letter — or any other control character. */

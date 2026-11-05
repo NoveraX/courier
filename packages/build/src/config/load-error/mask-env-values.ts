@@ -1,7 +1,10 @@
 /**
  * A message the project's code wrote, quoted with the values of the
  * environment masked: a module that throws `new Error("bad DATABASE_URL " +
- * url)` must not put the address into a CI log, which may be public.
+ * url)` must not put the address into a CI log, which may be public. What
+ * the environment does not hold — a bearer token, a password in an
+ * address, a `token=` pair — is then cut as the core's `redact()` cuts it,
+ * with the one sign it writes, `[redacted]`.
  *
  * A value is masked where it is 8 characters long or more; a shorter one —
  * `true`, a port — would mask words of the message itself and is rarely a
@@ -11,6 +14,9 @@
  */
 
 import { inspect } from "node:util";
+
+import { redact } from "@noverax/courier";
+import { REDACTED } from "@noverax/courier/internal";
 
 /** The shortest value masked. */
 const MIN_MASKED_LENGTH = 8;
@@ -46,13 +52,10 @@ const SYSTEM_VARIABLES = new Set([
 ]);
 const SYSTEM_PREFIXES = ["LC_", "XDG_", "npm_config_", "npm_package_", "npm_lifecycle_"];
 
-/** What stands in for a masked value. */
-export const MASKED = "***";
-
 /**
  * The text with every value of the environment that could be a secret
- * replaced by `***`, the longest first, so a value that holds another is
- * masked whole.
+ * replaced by `[redacted]`, the longest first, so a value that holds
+ * another is masked whole.
  *
  * @param text - The message, as the project's code wrote it
  * @param env - The environment whose values are masked
@@ -60,7 +63,7 @@ export const MASKED = "***";
  * @example
  * ```ts
  * maskEnvironmentValues("cannot reach postgres://u:p@db/app", { DATABASE_URL: "postgres://u:p@db/app" });
- * // → "cannot reach ***"
+ * // → "cannot reach [redacted]"
  * ```
  */
 export function maskEnvironmentValues(
@@ -75,9 +78,28 @@ export function maskEnvironmentValues(
   }
   let masked = text;
   for (const value of [...values].sort((a, b) => b.length - a.length)) {
-    masked = masked.split(value).join(MASKED);
+    masked = masked.split(value).join(REDACTED);
   }
   return masked;
+}
+
+/**
+ * The text with no secret left to quote: the environment's values masked,
+ * then every credential `redact()` finds cut.
+ *
+ * @param text - The message, as the project's code wrote it
+ * @param env - The environment whose values are masked
+ * @returns The message, with the one sign in place of each secret
+ * @example
+ * ```ts
+ * withoutSecrets("refused Bearer t0k3n", {}); // → "refused Bearer [redacted]"
+ * ```
+ */
+export function withoutSecrets(
+  text: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  return redact(maskEnvironmentValues(text, env));
 }
 
 function isSystem(name: string): boolean {
@@ -88,15 +110,16 @@ function isSystem(name: string): boolean {
  * What the project's code threw, as an error whose message and stack hold
  * no value of the environment: the error a load error carries as its
  * `cause`, so no log that prints it — at debug level, by a bundler — can
- * hold one either. It keeps the thrown error's name and `code`; a value
- * thrown that is no error becomes one, its text masked.
+ * hold one either; then what `redact()` cuts of a credential the
+ * environment does not hold. It keeps the thrown error's name and `code`;
+ * a value thrown that is no error becomes one, its text masked.
  *
  * @param thrown - What the code threw
  * @param env - The environment whose values are masked
  * @returns The error, masked
  * @example
  * ```ts
- * maskedError(new TypeError(`bad ${process.env.API_KEY}`)).message; // "bad ***"
+ * maskedError(new TypeError(`bad ${process.env.API_KEY}`)).message; // "bad [redacted]"
  * ```
  */
 export function maskedError(
@@ -104,7 +127,7 @@ export function maskedError(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): Error {
   if (!(thrown instanceof Error))
-    return new Error(maskEnvironmentValues(describedValue(thrown), env));
+    return redact(new Error(withoutSecrets(describedValue(thrown), env)));
   const masked = new Error(maskEnvironmentValues(thrown.message, env));
   masked.name = thrown.name;
   masked.stack =
@@ -114,7 +137,7 @@ export function maskedError(
   const code: unknown = Reflect.get(thrown, "code");
   if (typeof code === "string")
     Object.defineProperty(masked, "code", { value: code, enumerable: true });
-  return masked;
+  return redact(masked);
 }
 
 /**

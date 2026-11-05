@@ -31,10 +31,10 @@ export interface ConfigLoadErrorContext extends Record<string, unknown> {
  * what failed and in which module, with the chain of imports that led there
  * from the entry — `src/api.ts imports "server-only", which does not resolve
  * (courier.config.ts → src/api.ts).` — in one line; `hint` says what to do,
- * in another. Neither holds the value of an environment variable: the
- * project's own message is quoted with them masked. What the project threw
- * is the `cause`, for a log at debug level, with them masked in its message
- * and its stack too.
+ * in another. Neither holds a secret: the project's own message is quoted
+ * with the environment's values masked and every credential `redact()`
+ * finds cut, each as `[redacted]`. What the project threw is the `cause`,
+ * for a log at debug level, cut the same way in its message and its stack.
  *
  * @example
  * ```ts

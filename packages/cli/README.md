@@ -131,7 +131,7 @@ ERROR courier:routes  src/server/db.ts imports "client-only": it is the marker o
  INFO courier:routes  Import that code from a client component alone, out of the modules courier.config imports.
 ```
 
-A config still loading after 60 s — a module that waits for a connection as it is imported — is given up, and the command ends. Neither line holds the value of an environment variable: the project's own message is quoted with them masked. `COURIER_LOG_LEVEL=debug` adds what the project's code threw, its stack masked the same way. `courier-cli --help` lists the commands; `--version` prints the installed version.
+A config still loading after 60 s — a module that waits for a connection as it is imported — is given up, and the command ends. Neither line holds a secret: the project's own message is quoted with the values of its environment masked and every credential in it cut — a bearer token, a password in an address — each as `[redacted]`. `COURIER_LOG_LEVEL=debug` adds what the project's code threw, its stack masked the same way. `courier-cli --help` lists the commands; `--version` prints the installed version.
 
 <br />
 

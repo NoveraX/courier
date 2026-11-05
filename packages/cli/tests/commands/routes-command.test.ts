@@ -142,7 +142,7 @@ describe("courier-cli routes", () => {
     await run("--check");
 
     expect(said(error)).toContain(
-      "courier.config.ts threw Error: Invalid environment variables: ***.",
+      "courier.config.ts threw Error: Invalid environment variables: [redacted].",
     );
     expect(said(error) + said(info)).not.toContain("tok_live");
     expect(said(info)).toContain(

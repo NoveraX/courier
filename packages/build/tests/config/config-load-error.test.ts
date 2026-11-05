@@ -223,7 +223,7 @@ describe("code that throws while the config is read", () => {
 
     expect(error.code).toBe("EVALUATION_FAILED");
     expect(error.message).toBe(
-      "src/api.ts threw Error: token *** was refused (courier.config.ts → src/api.ts).",
+      "src/api.ts threw Error: token [redacted] was refused (courier.config.ts → src/api.ts).",
     );
     expect(error.message).not.toContain("tok_live");
     expect(error.hint).toBe(

@@ -5,7 +5,7 @@ import {
   type RateLimitWindow,
 } from "@noverax/courier"
 import type { Request, RequestHandler, Response } from "express"
-import { addressKey } from "./address-key"
+import { addressKey, UNKNOWN_ADDRESS } from "./address-key"
 import type { DemoLimits } from "./limits"
 import { Refusal, wholeSeconds } from "./refusal"
 import { VISITOR_ADDRESS_HEADER } from "./visitor-address"
@@ -15,6 +15,14 @@ import { visitorIn } from "./visitor-cookie"
 interface Taken {
   readonly limit: RateLimitWindow
   readonly decision: RateLimitDecision
+}
+
+/** Whom a call is counted as: their key, their budgets, and whose calls a refusal names. */
+interface Owner {
+  readonly key: string
+  readonly calls: RateLimitWindow
+  readonly writes: RateLimitWindow
+  readonly whose: string
 }
 
 /** The budgets of the examples' backend: every call's, and a new visitor's copy's. */
@@ -37,13 +45,14 @@ export interface Budgets {
  * server alike. Each call takes one from the budget of the address the
  * site's server names, then from the visitor's whose cookie it carries; a
  * write — any call but a read — takes one from their budgets of writes
- * too. A call past a budget is refused with 429 and `Retry-After`, and
- * takes from none after it; every answer says what is left of its
- * tightest budget, in the `X-RateLimit-*` headers Courier's proxy passes
- * on from an API to the page. A visitor's first change takes one more,
- * from the copies of their network, wider than an address: a visitor
- * makes one copy, and a script that makes copy after copy to crowd the
- * others out of the store is held back by it.
+ * too. The calls that name no address share one budget, far smaller than
+ * a visitor's. A call past a budget is refused with 429 and
+ * `Retry-After`, and takes from none after it; every answer says what is
+ * left of its tightest budget, in the `X-RateLimit-*` headers Courier's
+ * proxy passes on from an API to the page. A visitor's first change
+ * takes one more, from the copies of their network, wider than an
+ * address: a visitor makes one copy, and a script that makes copy after
+ * copy to crowd the others out of the store is held back by it.
  *
  * @param limits - The budgets, as `server/limits.ts` sets them
  * @param store - Where the budgets are kept: Courier's own, in this process
@@ -58,8 +67,17 @@ export function budgetsFor(
   limits: DemoLimits,
   store: RateLimitStore = memoryRateLimitStore()
 ): Budgets {
-  const calls = { requests: limits.calls, window: limits.budgetMs }
-  const writes = { requests: limits.writes, window: limits.budgetMs }
+  const visitors = {
+    calls: { requests: limits.calls, window: limits.budgetMs },
+    writes: { requests: limits.writes, window: limits.budgetMs },
+    whose: "from this visitor",
+  }
+  const unnamed: Owner = {
+    key: `address:${UNKNOWN_ADDRESS}`,
+    calls: { requests: limits.unknownCalls, window: limits.budgetMs },
+    writes: { requests: limits.unknownWrites, window: limits.budgetMs },
+    whose: "that name no visitor's address",
+  }
   const copies = { requests: limits.copies, window: limits.copiesMs }
   const take = async (key: string, limit: RateLimitWindow): Promise<Taken> => ({
     limit,
@@ -68,16 +86,17 @@ export function budgetsFor(
 
   return {
     async calls(req, res, next) {
+      const address = addressKey(req.headers[VISITOR_ADDRESS_HEADER])
       const visitor = visitorIn(req.headers.cookie)
-      const owners = [
-        `address:${addressKey(req.headers[VISITOR_ADDRESS_HEADER])}`,
-        ...(visitor === undefined ? [] : [`visitor:${visitor}`]),
+      const owners: Owner[] = [
+        address === UNKNOWN_ADDRESS ? unnamed : { key: `address:${address}`, ...visitors },
+        ...(visitor === undefined ? [] : [{ key: `visitor:${visitor}`, ...visitors }]),
       ]
       const write = req.method !== "GET" && req.method !== "HEAD"
       const taken: Taken[] = []
       for (const owner of owners) {
-        if (write) taken.push(await take(`writes:${owner}`, writes))
-        taken.push(await take(`calls:${owner}`, calls))
+        if (write) taken.push(await take(`writes:${owner.key}`, owner.writes))
+        taken.push(await take(`calls:${owner.key}`, owner.calls))
         const refused = taken.find(({ decision }) => !decision.allowed)
         if (refused !== undefined) {
           const wait = wholeSeconds(refused.decision.retryAfterMs)
@@ -85,7 +104,7 @@ export function budgetsFor(
           throw new Refusal(
             429,
             "RATE_LIMITED",
-            `Too many calls from this visitor; try again in ${wait} s`,
+            `Too many calls ${owner.whose}; try again in ${wait} s`,
             wait
           )
         }

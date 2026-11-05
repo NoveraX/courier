@@ -12,7 +12,7 @@ import { createDemoApp } from "../../server/app"
 import { DEMO_LIMITS } from "../../server/limits"
 import { type Served, serve } from "./serve"
 
-const LIMITS = { ...DEMO_LIMITS, calls: 4, writes: 2 }
+const LIMITS = { ...DEMO_LIMITS, calls: 4, writes: 2, unknownCalls: 2, unknownWrites: 1 }
 
 let backend: Served
 
@@ -86,8 +86,53 @@ describe("an address's budget", () => {
   })
 
   it("is one for every call that names no address, or one no address could be", async () => {
-    for (let read = 0; read < 4; read += 1) await call("GET")
+    for (let read = 0; read < 2; read += 1) await call("GET")
     expect((await call("GET", { address: "not an address" })).status).toBe(429)
+  })
+})
+
+describe("the budget of the calls that name no address", () => {
+  /* The backend as the site runs it: a call names no address when the site's server is set up
+     to name none, or fails to. */
+  async function unnamed(method: "GET" | "POST", calls: number): Promise<Response[]> {
+    const site = await serve(createDemoApp({ log: () => {} }))
+    try {
+      const answers: Response[] = []
+      for (let call = 0; call < calls; call += 1) {
+        answers.push(
+          await fetch(`${site.url}/echo`, {
+            method,
+            headers: { "content-type": "application/json" },
+            ...(method === "POST" && { body: "{}" }),
+          })
+        )
+      }
+      return answers
+    } finally {
+      await site.close()
+    }
+  }
+
+  it("is far smaller than a visitor's, and refused saying what the calls lack", async () => {
+    const answers = await unnamed("GET", 31)
+    const refused = answers.at(-1)
+    expect(answers.slice(0, -1).every((answer) => answer.status === 200)).toBe(true)
+    expect(refused?.status).toBe(429)
+    expect(Number(refused?.headers.get("retry-after"))).toBeGreaterThan(0)
+    expect(await refused?.json()).toEqual({
+      success: false,
+      code: "RATE_LIMITED",
+      message: expect.stringMatching(
+        /^Too many calls that name no visitor's address; try again in \d+ s$/
+      ),
+    })
+    expect(DEMO_LIMITS.unknownCalls * 10).toBeLessThanOrEqual(DEMO_LIMITS.calls)
+  })
+
+  it("holds writes to a tenth of a visitor's too", async () => {
+    const statuses = (await unnamed("POST", 3)).map((answer) => answer.status)
+    expect(statuses).toEqual([200, 200, 429])
+    expect(DEMO_LIMITS.unknownWrites * 10).toBeLessThanOrEqual(DEMO_LIMITS.writes)
   })
 })
 

@@ -13,7 +13,7 @@ const MIB = 1024 * 1024
 let backend: Served
 
 beforeAll(async () => {
-  backend = await serve(createDemoApp({ log: () => {} }))
+  backend = await serve(createDemoApp({ log: () => {} }), { as: "198.51.100.14" })
 })
 
 afterAll(() => backend.close())

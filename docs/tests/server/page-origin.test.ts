@@ -12,7 +12,7 @@ import { type Served, serve } from "./serve"
 let backend: Served
 
 beforeAll(async () => {
-  backend = await serve(createDemoApp())
+  backend = await serve(createDemoApp(), { as: "198.51.100.17" })
 })
 
 afterAll(() => backend.close())

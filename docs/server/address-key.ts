@@ -1,5 +1,8 @@
 import { isIP } from "node:net"
 
+/** The one caller every call that names no address counts as. */
+export const UNKNOWN_ADDRESS = "unknown"
+
 /**
  * Whom a call's address counts as for a budget: an IPv4 address as it is,
  * an IPv6 one by its network — its /64, which one subscriber is given whole
@@ -17,10 +20,10 @@ import { isIP } from "node:net"
  * ```
  */
 export function addressKey(address: string | string[] | undefined, prefix: 48 | 64 = 64): string {
-  if (typeof address !== "string") return "unknown"
+  if (typeof address !== "string") return UNKNOWN_ADDRESS
   const family = isIP(address)
   if (family === 4) return address
-  if (family !== 6) return "unknown"
+  if (family !== 6) return UNKNOWN_ADDRESS
   const groups = networkOf(address).slice(0, prefix / 16)
   return `${groups.join(":")}::/${prefix}`
 }

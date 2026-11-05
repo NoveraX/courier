@@ -131,9 +131,17 @@ The networks are the list under Firewall Settings in Configuring L7
 Protection. DDoS-Guard announces no change to it, and changes it rarely:
 compare the variable with the list now and then. Without the variables,
 every visitor who comes through one of DDoS-Guard's edges counts as that
-edge, and shares its budget. Traefik's own trust needs no change for this:
-set to DDoS-Guard's networks, `forwardedHeaders.trustedIPs` would keep
-DDoS-Guard's `X-Forwarded-For` too, and the address read stays the same.
+edge, and shares its budget.
+
+Leave Traefik trusting no peer, as Dokploy installs it: the container is
+then told of one hop, DDoS-Guard's edge, and of nothing a visitor wrote.
+Set to DDoS-Guard's networks, `forwardedHeaders.trustedIPs` would keep the
+`X-Forwarded-For` DDoS-Guard sends — the entries a visitor wrote, then
+their address — left of that edge. Courier reads the chain from the
+right and keeps the hops the proxies appended, however long or unreadable
+what a visitor wrote before them, so the nearest hop is DDoS-Guard's edge
+either way, and the address read is the one in `DDG-Connecting-IP`; but
+the visitor's own entries then reach the site, which needs none of them.
 
 DDoS-Guard recommends taking connections from its networks alone. Docker
 publishes Traefik's ports past `ufw`'s rules, so the rule belongs in
@@ -240,6 +248,12 @@ DDoS-Guard and Traefik is in
 [Behind DDoS-Guard and Traefik](#behind-ddos-guard-and-traefik). The
 backend takes the header as it comes, since only the site's server
 reaches it.
+
+A call the site's server names no address for — or one no address could
+be — counts as no one's: every such call shares one budget of 30 calls a
+minute, 2 of them writes, a tenth of a visitor's. A call gains nothing by
+naming none, and a deploy that names no one's address shows at once: its
+examples are refused, saying the calls name no visitor's address.
 
 A visitor's first change, which makes them their copy, takes from one
 more budget: the copies of the network it comes from — an IPv4 address,

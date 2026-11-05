@@ -20,7 +20,7 @@ let backend: Served
 
 beforeAll(async () => {
   store = new SandboxStore(DEMO_LIMITS)
-  backend = await serve(createDemoApp({ store, log: () => {} }))
+  backend = await serve(createDemoApp({ store, log: () => {} }), { as: "198.51.100.15" })
 })
 
 afterAll(() => backend.close())
@@ -125,9 +125,9 @@ describe("what keeps nothing", () => {
 describe("a visitor's users", () => {
   it("are kept up to their limit, past which a change is refused with what to do", async () => {
     const small = new SandboxStore(DEMO_LIMITS)
-    const limited = await serve(
-      createDemoApp({ limits: { ...DEMO_LIMITS, usersPerVisitor: 4 }, store: small, log: () => {} })
-    )
+    const limits = { ...DEMO_LIMITS, usersPerVisitor: 4 }
+    const app = createDemoApp({ limits, store: small, log: () => {} })
+    const limited = await serve(app, { as: "198.51.100.18" })
     try {
       const add = (cookie?: string) =>
         fetch(`${limited.url}/users`, {

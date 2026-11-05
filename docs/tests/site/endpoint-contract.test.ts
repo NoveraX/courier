@@ -6,6 +6,8 @@
  * endpoint of each routes module is called through the proxy, with
  * variables enough to fill any path, and none may be answered that the
  * backend has no such route — or that the proxy has no such endpoint.
+ * Each call comes from an address of its own, so that no budget refuses
+ * one before the backend has looked for its route.
  */
 import { createHandler, registerSources } from "@noverax/courier"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
@@ -34,6 +36,7 @@ const VARIABLES = {
 
 let backend: Served
 let proxy: ReturnType<typeof createHandler>
+let callers = 0
 
 beforeAll(async () => {
   backend = await serve(createDemoApp({ log: () => {} }))
@@ -60,6 +63,7 @@ async function unservedOf(source: string, names: readonly string[]): Promise<str
   const answers = await Promise.all(
     names.map(async (name) => {
       const [group, method] = name.split(".")
+      callers += 1
       const response = await proxy.handlePost(
         new Request(`${SITE}/api/request?_s=${source}&_g=${group}&_m=${method}`, {
           method: "POST",
@@ -67,13 +71,15 @@ async function unservedOf(source: string, names: readonly string[]): Promise<str
             origin: SITE,
             "sec-fetch-site": "same-origin",
             "content-type": "application/json",
+            "x-forwarded-for": `198.51.100.${callers}`,
           },
           body: JSON.stringify({ variables: VARIABLES, options: {} }),
         })
       )
       const text = await response.text()
       const missing = text.includes('"ROUTE_NOT_FOUND"') || text.includes("method not found")
-      return missing ? `${source}.${name}: ${response.status} ${text}` : undefined
+      const unchecked = response.status === 429
+      return missing || unchecked ? `${source}.${name}: ${response.status} ${text}` : undefined
     })
   )
   return answers.filter((answer) => answer !== undefined)

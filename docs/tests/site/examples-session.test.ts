@@ -39,6 +39,7 @@ function pageCall(method: string, variables: unknown, headers: Record<string, st
         origin: SITE,
         "sec-fetch-site": "same-origin",
         "content-type": "application/json",
+        "x-forwarded-for": "198.51.100.12",
         ...headers,
       },
       body: JSON.stringify({ variables, options: {} }),

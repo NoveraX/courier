@@ -20,6 +20,14 @@ export interface DemoLimits extends SandboxLimits {
   readonly writes: number
   readonly budgetMs: number
   /**
+   * Calls, and writes among them, that every call naming no address shares
+   * in each `budgetMs`: far fewer than one visitor's, so that a call gains
+   * nothing by naming none, and a deploy that names no one's address shows
+   * at once.
+   */
+  readonly unknownCalls: number
+  readonly unknownWrites: number
+  /**
    * Copies of the first data one network makes in each `copiesMs`, a
    * visitor's first change making them one: an IPv4 address's, or an IPv6
    * /48's, the most one subscriber may be given.
@@ -65,6 +73,8 @@ export const DEMO_LIMITS: DemoLimits = {
   calls: 300,
   writes: 20,
   budgetMs: 60_000,
+  unknownCalls: 30,
+  unknownWrites: 2,
   copies: 6,
   copiesMs: 10 * 60_000,
   visitors: 500,

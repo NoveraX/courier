@@ -14,7 +14,7 @@ import { type Served, serve } from "./serve"
 let backend: Served
 
 beforeAll(async () => {
-  backend = await serve(createDemoApp({ log: () => {} }))
+  backend = await serve(createDemoApp({ log: () => {} }), { as: "198.51.100.16" })
 })
 
 afterAll(() => backend.close())

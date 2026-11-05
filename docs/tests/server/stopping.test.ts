@@ -2,17 +2,22 @@
  * The examples' backend as its container runs it: started from
  * `server/index.ts` on a port the system picks, which it says it listens
  * on, and stopped with SIGTERM, as a container is — it takes no new
- * calls, lets the ones it is answering finish, and exits on its own.
+ * calls, lets the ones it is answering finish, cuts off one that would
+ * outlast the time it gives them, and exits on its own.
  */
 import { type ChildProcess, spawn } from "node:child_process"
 import { once } from "node:events"
-import { get } from "node:http"
+import { get, request } from "node:http"
 import { fileURLToPath } from "node:url"
 
 import { afterEach, describe, expect, it } from "vitest"
 
 const DOCS = fileURLToPath(new URL("../..", import.meta.url))
 const LISTENING = /listens on (http:\/\/127\.0\.0\.1:\d+)/
+/* As `server/limits.ts` has them: what the backend gives its calls once asked to stop, and how
+   long it waits for a call to arrive, which a backend with no time to give would wait instead. */
+const SHUTDOWN_MS = 5_000
+const REQUEST_MS = 30_000
 
 let backend: ChildProcess | undefined
 
@@ -55,12 +60,16 @@ function streamed(
   })
 }
 
+function startBackend(): ChildProcess {
+  return spawn(process.execPath, ["--import", "tsx", "server/index.ts"], {
+    cwd: DOCS,
+    env: { ...process.env, EXPRESS_HOST: "127.0.0.1", EXPRESS_PORT: "0" },
+  })
+}
+
 describe("the backend, asked to stop", () => {
   it("finishes the answer it is streaming, then exits by itself", async () => {
-    backend = spawn(process.execPath, ["--import", "tsx", "server/index.ts"], {
-      cwd: DOCS,
-      env: { ...process.env, EXPRESS_HOST: "127.0.0.1", EXPRESS_PORT: "0" },
-    })
+    backend = startBackend()
     const url = await addressOf(backend)
     const exited = once(backend, "exit")
     const answer = streamed(url, () => backend?.kill("SIGTERM"))
@@ -68,5 +77,37 @@ describe("the backend, asked to stop", () => {
     expect(complete).toBe(true)
     expect(body).toContain("data: [DONE]")
     expect(await exited).toEqual([0, null])
+  }, 30_000)
+
+  it("cuts off a call still arriving once its time is up, then exits by itself", async () => {
+    const started = startBackend()
+    backend = started
+    const url = new URL(await addressOf(started))
+    const exited = once(started, "exit")
+    /* An upload whose body never arrives whole: the backend has taken it once it says to go on. */
+    const upload = request({
+      hostname: url.hostname,
+      port: url.port,
+      path: "/upload",
+      method: "POST",
+      agent: false,
+      headers: {
+        "content-type": "multipart/form-data; boundary=x",
+        "content-length": "100000",
+        expect: "100-continue",
+      },
+    })
+    const cut = new Promise<NodeJS.ErrnoException>((resolve) => upload.once("error", resolve))
+    upload.once("continue", () => {
+      upload.write('--x\r\nContent-Disposition: form-data; name="file"; filename="a.txt"\r\n\r\n')
+      started.kill("SIGTERM")
+    })
+    upload.flushHeaders()
+    const signalled = Date.now()
+    expect((await cut).code).toBe("ECONNRESET")
+    expect(await exited).toEqual([0, null])
+    const took = Date.now() - signalled
+    expect(took).toBeGreaterThanOrEqual(SHUTDOWN_MS - 500)
+    expect(took).toBeLessThan(REQUEST_MS / 2)
   }, 30_000)
 })

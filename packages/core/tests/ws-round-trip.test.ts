@@ -9,7 +9,7 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 
@@ -132,9 +132,8 @@ describe("a push subscription", () => {
     );
 
     for await (const _event of executeWSPush(url, "api.live.feed")) break;
-    await settle();
 
-    expect(signal?.aborted).toBe(true);
+    await vi.waitFor(() => expect(signal?.aborted).toBe(true));
   });
 
   it("keeps delivering to one subscriber when another on the same topic leaves", async () => {
@@ -160,15 +159,17 @@ describe("a push subscription", () => {
     void (async () => {
       for await (const event of staying) seen.push(event.data);
     })();
-    await settle();
+    await vi.waitFor(() =>
+      expect([staying.status, leaving.status]).toEqual(["connected", "connected"]),
+    );
 
     leaving.close();
+    /* Time for an unsubscribe it should not have sent to reach the server. */
     await settle();
     emit(7);
-    await settle();
-    staying.close();
 
-    expect(seen).toEqual([7]);
+    await vi.waitFor(() => expect(seen).toEqual([7]));
+    staying.close();
   });
 });
 
@@ -204,12 +205,10 @@ describe("a channel", () => {
     );
 
     const { ch, errors } = open(url);
-    await settle(60);
+    await vi.waitFor(() => expect([errors.length, ch.status]).toEqual([1, "disconnected"]));
 
-    expect(errors).toHaveLength(1);
     expect(errors[0]).toBeInstanceOf(ForbiddenError);
     expect(errors[0]?.message).toBe("Not a member of this room");
-    expect(ch.status).toBe("disconnected");
   });
 
   it("hears of a refused message and goes on", async () => {
@@ -219,10 +218,10 @@ describe("a channel", () => {
       }),
     );
     const { ch, errors, data } = open(url);
-    await settle();
+    await vi.waitFor(() => expect(data).toEqual(["welcome"]));
 
     ch.send({ text: 42 });
-    await settle();
+    await vi.waitFor(() => expect(errors).toHaveLength(1));
 
     expect(errors[0]).toBeInstanceOf(RealtimeValidationError);
     expect(ch.status).toBe("connected");
@@ -239,10 +238,9 @@ describe("a channel", () => {
     const { ch, errors, data } = open(url);
 
     ch.send({ text: "early" });
-    await settle(60);
 
+    await vi.waitFor(() => expect(data).toEqual([{ echo: "early" }]));
     expect(errors).toEqual([]);
-    expect(data).toEqual([{ echo: "early" }]);
     ch.close();
   });
 
@@ -256,11 +254,11 @@ describe("a channel", () => {
       }),
     );
     const { ch, errors, data } = open(url);
-    await settle();
+    await vi.waitFor(() => expect(ch.status).toBe("connected"));
 
     ch.send({ text: "boom" });
     ch.send({ text: "fine" });
-    await settle();
+    await vi.waitFor(() => expect(data).toEqual(["echo"]));
 
     expect(errors.map((error) => error.code)).toEqual([5000]);
     expect(data).toEqual(["echo"]);
@@ -274,10 +272,10 @@ describe("a channel", () => {
       }),
     );
     const { ch, errors } = open(url);
-    await settle();
+    await vi.waitFor(() => expect(ch.status).toBe("connected"));
 
     ch.send({ text: "anything" });
-    await settle();
+    await vi.waitFor(() => expect(ch.status).toBe("disconnected"));
 
     expect(errors[0]).toMatchObject({ code: 4001, message: "kicked" });
     expect(ch.status).toBe("disconnected");

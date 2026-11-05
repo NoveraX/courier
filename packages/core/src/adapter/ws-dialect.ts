@@ -18,6 +18,7 @@ export type SessionClose =
   | { readonly kind: "heartbeat-timeout" }
   | { readonly kind: "slow-consumer" }
   | { readonly kind: "internal" }
+  | { readonly kind: "shutdown"; readonly retryAfterMs: number }
   | { readonly kind: "application"; readonly code: number; readonly reason: string };
 
 /** A close as the socket sends it. */
@@ -96,6 +97,8 @@ export const V1_DIALECT: WireDialect = {
         return { code: 4008, reason: "Slow consumer" };
       case "internal":
         return { code: 1011, reason: "Internal error" };
+      case "shutdown":
+        return { code: 1012, reason: "Server shutting down" };
       case "application":
         return { code: why.code, reason: why.reason };
     }

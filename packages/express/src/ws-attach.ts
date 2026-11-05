@@ -26,10 +26,12 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
  *
  * @param server - Node.js HTTP server (e.g. `http.createServer(app)`)
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.) and the `path` to listen on
- * @returns Detaches the handler: accepted connections are closed with 1012,
- *   which a Courier client answers by reconnecting later, and the handler's
- *   subscriptions are released. Call it before closing the HTTP server, which
- *   otherwise waits on those connections.
+ * @returns Stops the handler: upgrades are answered 503 from then on, each
+ *   connection is closed with 1012 — which a Courier client answers by
+ *   reconnecting later — and waited for up to 5 seconds, and the handler's
+ *   subscriptions are let go of; it settles within that time, whatever the
+ *   clients and the pub/sub adapter do. Call it before closing the HTTP
+ *   server, which otherwise waits on those connections.
  *
  * @example
  * ```ts
@@ -54,8 +56,10 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
   const wsHandler = createWSHandler(handlerOptions);
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "express" });
 
+  let accepting = true;
   const detach = attachWebSocketUpgrade(server, {
     path,
+    isAccepting: () => accepting,
     maxPayload: wsFrameLimit(handlerOptions.maxMessageSize),
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
     onRequest: (request) => {
@@ -64,8 +68,10 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 
+  /* No new socket while the ones held drain; what has not closed by then is closed by the detach. */
   return async () => {
-    detach();
+    accepting = false;
     await wsHandler.destroy();
+    detach();
   };
 }

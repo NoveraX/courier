@@ -15,6 +15,7 @@ import { buildContext, type WSSocketContext } from "./ws-context";
 import { holdFrames, type WSInbox } from "./ws-inbox";
 import { createIPTracker } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
+import { createLiveConnections } from "./ws-live-connections";
 import { createPubSubBridge } from "./ws-pubsub-bridge";
 import { createConnectionRegistry } from "./ws-registry";
 import { replicateBroadcasts } from "./ws-replicated-registry";
@@ -67,10 +68,17 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       : undefined,
   );
   registry.setTopicManager(topicManager);
+  const live = createLiveConnections();
+  let stopping: Promise<void> | undefined;
 
   function handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void {
     rememberPeerAddress(request, peerAddress);
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request, refusals);
+    if (stopping) {
+      ctx.session.close({ kind: "shutdown", retryAfterMs: 0 });
+      return;
+    }
+    live.add(ws, ctx);
     const admission = admitSocket(request, config, ipTracker);
     if (!("ip" in admission)) {
       ctx.session.close(admission);
@@ -113,26 +121,17 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     });
     const outcome = await admitConnection(ctx, inbox, {
       onConnect,
+      onDisconnect: config.onDisconnect,
       authTimeoutMs: config.authTimeoutMs ?? 3000,
       hookTimeoutMs: ctx.middlewareTimeoutMs,
-      left: () => closedWith !== undefined,
+      left: () => closedWith,
     });
-    if (outcome === "admitted" && closedWith === undefined) {
+    if (outcome === "admitted") {
       registerAndActivate(ws, inbox, ctx);
       return;
     }
     ipTracker.release(ctx.clientIP);
     ctx.session.dispose();
-    if (outcome === "admitted" && closedWith !== undefined) await notifyDisconnect(ctx, closedWith);
-  }
-
-  /** Let the application undo what its onConnect set up. */
-  async function notifyDisconnect(ctx: WSSocketContext, code: number): Promise<void> {
-    try {
-      await config.onDisconnect?.({ connectionId: ctx.connectionId, meta: ctx.meta, code });
-    } catch (error) {
-      log.warn("onDisconnect hook failed", error);
-    }
   }
 
   function registerAndActivate(ws: WebSocketLike, inbox: WSInbox, ctx: WSSocketContext): void {
@@ -166,9 +165,21 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     return true;
   };
 
-  async function destroy(): Promise<void> {
+  /* Every socket is closed — told when to come back, spread so they do not
+     all at once — and waited for within the deadline; the subscriptions on
+     the pub/sub adapter are let go of without waiting on it. */
+  async function stop(timeoutMs: number): Promise<void> {
+    const spread = LIMITS.WS_SHUTDOWN_RECONNECT_SPREAD_MS;
+    const shutdown = () =>
+      ({ kind: "shutdown", retryAfterMs: Math.floor(Math.random() * spread) }) as const;
+    await live.closeAll(shutdown, timeoutMs);
     studioHooks.sendWSMessage = undefined;
     bridge?.destroy();
+  }
+
+  function destroy(options?: { timeoutMs?: number | undefined }): Promise<void> {
+    stopping ??= stop(options?.timeoutMs ?? LIMITS.WS_SHUTDOWN_TIMEOUT_MS);
+    return stopping;
   }
 
   /* With a pub/sub adapter, what the application broadcasts through the

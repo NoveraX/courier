@@ -192,7 +192,7 @@ export class AppModule implements NestModule, BeforeApplicationShutdown {
 }
 ```
 
-`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `courierSSEMiddleware()` drains the same way. Call `detach()` from `courierWSAttach` before `app.close()`: it closes each WebSocket with 1012, which a Courier client answers by reconnecting later.
+`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `courierSSEMiddleware()` drains the same way. Call `detach()` from `courierWSAttach` before `app.close()`: it refuses new upgrades with 503, closes each WebSocket with 1012 — which a Courier client answers by reconnecting later — and waits for them up to 5 seconds, so it settles within that time whatever the clients and Redis do.
 
 <br />
 

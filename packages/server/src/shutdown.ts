@@ -1,6 +1,6 @@
 import type { Server } from "node:http";
 
-import type { SSEConnectionRegistry } from "@noverax/courier";
+import type { SSEConnectionRegistry, WSHandler } from "@noverax/courier";
 import { createLogger } from "@noverax/courier";
 import type { WebSocketServer } from "ws";
 
@@ -8,26 +8,38 @@ const log = createLogger("Server");
 
 const WS_DRAIN_TIMEOUT_MS = 5_000;
 
-/**
- * Create a graceful shutdown handler for the Courier server.
- *
- * @param httpServer - The server to close.
- * @param getWss - The WebSocket server, once one exists.
- * @param getSSE - The SSE side, to drain.
- * @param ready - Settles once the server listens or fails to.
- * @returns A function that stops the server.
- */
-export function createShutdown(
-  httpServer: Server,
-  getWss: () => WebSocketServer | undefined,
+/** What a Courier server stops. */
+export interface ShutdownParts {
+  /** The server to close */
+  httpServer: Server;
+  /** The WebSocket handler, which closes its connections and lets go of its subscriptions */
+  ws: Pick<WSHandler, "destroy">;
+  /** The `ws` server, once one exists: the sockets that did not close in time are ended there */
+  getWss: () => WebSocketServer | undefined;
+  /** The SSE side, to drain */
   getSSE: () =>
     | {
         sseConnections: SSEConnectionRegistry;
         shutdownSSE: (opts?: { retryMs?: number; drainMs?: number }) => Promise<void>;
       }
-    | undefined,
-  ready: Promise<unknown>,
-): () => Promise<void> {
+    | undefined;
+  /** Settles once the server listens or fails to */
+  ready: Promise<unknown>;
+}
+
+/**
+ * Create a graceful shutdown handler for the Courier server: its streams
+ * and its WebSocket connections are drained side by side — each told to
+ * come back, and waited for within its deadline — and the HTTP server is
+ * closed once they are. What does not close in time is ended, so the stop
+ * settles within the deadlines whatever the clients, Redis and the network
+ * do.
+ *
+ * @param parts - What it stops
+ * @returns A function that stops the server
+ */
+export function createShutdown(parts: ShutdownParts): () => Promise<void> {
+  const { httpServer, ready } = parts;
   let shuttingDown = false;
 
   const stop = async (): Promise<void> => {
@@ -35,8 +47,7 @@ export function createShutdown(
     shuttingDown = true;
     log.info("Shutting down...");
 
-    // Drain SSE and WS connections in parallel
-    await Promise.all([drainSSE(getSSE()), drainWebSockets(getWss())]);
+    await Promise.all([drainSSE(parts.getSSE()), drainWebSockets(parts)]);
 
     /* A server that never listened has nothing to close, and closing it
        rejected — under the default signal handlers that turned a SIGTERM
@@ -69,31 +80,9 @@ async function drainSSE(
   await sse.shutdownSSE({ retryMs: 3000, drainMs: 2000 });
 }
 
-/** Close all WS clients gracefully, then force-terminate after timeout */
-async function drainWebSockets(wss: WebSocketServer | undefined): Promise<void> {
-  if (!wss) return;
-
-  for (const ws of wss.clients) {
-    ws.close(1012, "Server shutting down");
-  }
-
-  await Promise.race([waitForEmpty(wss), sleep(WS_DRAIN_TIMEOUT_MS)]);
-
-  for (const ws of wss.clients) {
-    ws.terminate();
-  }
-}
-
-function waitForEmpty(wss: WebSocketServer): Promise<void> {
-  return new Promise((resolve) => {
-    const check = () => {
-      if (wss.clients.size === 0) resolve();
-      else setTimeout(check, 100);
-    };
-    check();
-  });
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/* The handler closes its connections and waits for them within the
+   deadline; a socket still open after it is ended without its handshake. */
+async function drainWebSockets(parts: ShutdownParts): Promise<void> {
+  await parts.ws.destroy({ timeoutMs: WS_DRAIN_TIMEOUT_MS });
+  for (const ws of parts.getWss()?.clients ?? []) ws.terminate();
 }

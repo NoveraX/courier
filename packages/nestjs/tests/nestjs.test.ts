@@ -377,12 +377,12 @@ describe("courierWSAttach", () => {
     onSpy.mockRestore();
   });
 
-  it("cleanup removes upgrade listener", () => {
+  it("cleanup removes upgrade listener once the handler has drained", async () => {
     const server = createServer();
     const offSpy = vi.spyOn(server, "off");
     const cleanup = courierWSAttach(server);
 
-    cleanup();
+    await cleanup();
     expect(offSpy).toHaveBeenCalledWith("upgrade", expect.any(Function));
     offSpy.mockRestore();
   });

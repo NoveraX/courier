@@ -247,12 +247,14 @@ curl http://localhost:3001/readyz
 
 When `signals: true` (default), the server handles `SIGTERM` and `SIGINT` — and on Windows also Ctrl+Break (`SIGBREAK`) and its console window closing (`SIGHUP`), which Windows follows a few seconds later by ending the process:
 
-1. **Readiness probe** flips to `503` immediately
-2. **SSE streams** receive a retry hint and close gracefully (3s window)
-3. **WebSocket connections** receive close frame with code `1012` (5s window)
-4. **HTTP server** stops accepting new connections
+1. **Readiness probe** flips to `503` immediately, and so does a WebSocket upgrade
+2. **SSE streams** receive a retry hint and close gracefully (3s window), while
+3. **WebSocket connections** are closed with code `1012` and waited for (5s window); one that has not closed by then is ended, and the server lets go of its pub/sub subscriptions without waiting on Redis
+4. **HTTP server** closes, once the connections are gone
 5. The process exits with code `0` — or `1` if a server failed to stop cleanly
 6. Second signal forces immediate exit
+
+The stop settles within those windows whatever the clients, the network and Redis do: a pub/sub adapter that cannot reach Redis holds nothing back.
 
 Elsewhere `SIGHUP` is left to your application, which may reload on it, as the [certificate renewal](/docs/advanced/proxies-and-certificates#renewing-the-certificate) does. If your application handles `SIGTERM` or `SIGINT` itself, the server still drains on the signal but leaves ending the process to your handler, so your own cleanup runs to completion. To decide the order yourself, pass `signals: false` and call `server.stop()` from your handler.
 

@@ -117,12 +117,13 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     markFailed(error);
   });
 
-  const stop = createShutdown(
+  const stop = createShutdown({
     httpServer,
-    () => wss,
-    () => handler,
+    ws: wsHandler,
+    getWss: () => wss,
+    getSSE: () => handler,
     ready,
-  );
+  });
 
   httpServer.listen(port, host, () => {
     const addr = httpServer.address() as AddressInfo;
@@ -143,10 +144,11 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     else onReady(result.url);
   });
 
+  /* Upgrades and readiness are refused from the first moment; the
+     connections are drained before the HTTP server closes. */
   async function wrappedStop(): Promise<void> {
     detachSignals?.();
     shuttingDown = true;
-    await wsHandler.destroy();
     await stop();
   }
 

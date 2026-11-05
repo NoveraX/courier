@@ -13,12 +13,14 @@ const log = createLogger("WS");
 /** What admitting a connection runs, and for how long it waits. */
 export interface AdmissionRules {
   readonly onConnect: NonNullable<WSHandlerConfig["onConnect"]>;
+  /** Told of a connection `onConnect` admitted whose client had left by then */
+  readonly onDisconnect: WSHandlerConfig["onDisconnect"];
   /** How long the client's first frame is waited for */
   readonly authTimeoutMs: number;
   /** How long `onConnect` may take */
   readonly hookTimeoutMs: number;
-  /** Whether the client has left while it was being admitted */
-  readonly left: () => boolean;
+  /** The code the socket closed with, when the client left while it was being admitted */
+  readonly left: () => number | undefined;
 }
 
 /** How admitting a connection came out. */
@@ -32,7 +34,8 @@ const TIMED_OUT = Symbol("onConnect did not settle in time");
  * `onConnect` refuses — or one whose frame is none a client sends — is
  * closed with why, and the refusal logged on one line; an `onConnect` that
  * has not settled by its deadline closes it as a fault of the server, which
- * the client may retry.
+ * the client may retry. A client that left while `onConnect` admitted it
+ * has its `onDisconnect` run, so what `onConnect` set up is undone.
  *
  * @param ctx - The connection
  * @param inbox - What its socket sent before it was admitted
@@ -49,7 +52,7 @@ export async function admitConnection(
   rules: AdmissionRules,
 ): Promise<AdmissionOutcome> {
   const admission = await awaitCredentials(ctx, inbox, rules.authTimeoutMs);
-  if (rules.left()) return "left";
+  if (rules.left() !== undefined) return "left";
   if ("invalid" in admission) {
     refuse(ctx, new Error("Its auth frame was not one a client sends"));
     return "refused";
@@ -69,13 +72,20 @@ export async function admitConnection(
       return "refused";
     }
     ctx.meta = connectionMetaOf(result, "onConnect");
-    return "admitted";
   } catch (error) {
     refuse(ctx, error);
     return "refused";
   } finally {
     clearTimeout(timer);
   }
+  const code = rules.left();
+  if (code === undefined) return "admitted";
+  try {
+    await rules.onDisconnect?.({ connectionId: ctx.connectionId, meta: ctx.meta, code });
+  } catch (error) {
+    log.warn("onDisconnect hook failed", error);
+  }
+  return "left";
 }
 
 /* What was thrown is the log's; the client hears a `RealtimeError`'s own

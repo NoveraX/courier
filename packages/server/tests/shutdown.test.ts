@@ -1,5 +1,11 @@
+/**
+ * How a Courier server stops: its streams and its WebSocket connections
+ * drained side by side, each within its deadline, what did not close in
+ * time ended, and the HTTP server closed only after them.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createShutdown } from "../src/shutdown";
+
+import { createShutdown, type ShutdownParts } from "../src/shutdown";
 
 // Mock createLogger to avoid side effects
 vi.mock("@noverax/courier", () => ({
@@ -10,36 +16,37 @@ vi.mock("@noverax/courier", () => ({
   }),
 }));
 
-// --- Mock factories ---
-
-function createMockHttpServer() {
-  return {
-    close: vi.fn((cb: (err?: Error) => void) => cb()),
+/** What a test hands createShutdown, in the shape a running server has. */
+function parts(overrides: Partial<Record<keyof ShutdownParts, unknown>> = {}) {
+  const order: string[] = [];
+  const httpServer = {
+    close: vi.fn((done: (error?: Error) => void) => {
+      order.push("http closed");
+      done();
+    }),
   };
+  const ws = {
+    destroy: vi.fn(async () => {
+      order.push("ws drained");
+    }),
+  };
+  const given = {
+    httpServer,
+    ws,
+    getWss: () => undefined,
+    getSSE: () => undefined,
+    /* A server that came up; stop closes only one that did. */
+    ready: Promise.resolve("http://localhost:3001"),
+    ...overrides,
+  };
+  return { given: given as unknown as ShutdownParts, httpServer, ws, order };
 }
 
-function createMockWss(clientCount = 0) {
-  const clients = new Set<{
-    close: ReturnType<typeof vi.fn>;
-    terminate: ReturnType<typeof vi.fn>;
-  }>();
-  for (let i = 0; i < clientCount; i++) {
-    clients.add({ close: vi.fn(), terminate: vi.fn() });
-  }
+function wssWith(count: number) {
+  const clients = new Set<{ terminate: ReturnType<typeof vi.fn> }>();
+  for (let i = 0; i < count; i++) clients.add({ terminate: vi.fn() });
   return { clients };
 }
-
-function createMockSSE() {
-  return {
-    sseConnections: { count: 0 },
-    shutdownSSE: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-// --- createShutdown ---
-
-/** A server that came up; `stop` closes only one that did. */
-const LISTENING = Promise.resolve("http://localhost:3001");
 
 describe("createShutdown", () => {
   beforeEach(() => {
@@ -50,125 +57,51 @@ describe("createShutdown", () => {
     vi.useRealTimers();
   });
 
-  it("returns a stop function", () => {
-    const httpServer = createMockHttpServer();
-    const stop = createShutdown(
-      httpServer as any,
-      () => undefined,
-      () => undefined,
-      LISTENING,
-    );
+  it("drains the WebSocket handler within 5 seconds, then closes the HTTP server", async () => {
+    const { given, ws, order } = parts();
 
-    expect(typeof stop).toBe("function");
+    await createShutdown(given)();
+
+    expect(ws.destroy).toHaveBeenCalledWith({ timeoutMs: 5_000 });
+    expect(order).toEqual(["ws drained", "http closed"]);
   });
 
-  it("closes HTTP server on stop", async () => {
-    const httpServer = createMockHttpServer();
-    const stop = createShutdown(
-      httpServer as any,
-      () => undefined,
-      () => undefined,
-      LISTENING,
-    );
+  it("drains SSE connections beside the WebSocket ones", async () => {
+    const sse = { sseConnections: { count: 0 }, shutdownSSE: vi.fn().mockResolvedValue(undefined) };
+    const { given } = parts({ getSSE: () => sse });
 
-    await stop();
-
-    expect(httpServer.close).toHaveBeenCalledOnce();
-  });
-
-  it("drains SSE connections on stop", async () => {
-    const httpServer = createMockHttpServer();
-    const sse = createMockSSE();
-    const stop = createShutdown(
-      httpServer as any,
-      () => undefined,
-      () => sse as any,
-      LISTENING,
-    );
-
-    await stop();
+    await createShutdown(given)();
 
     expect(sse.shutdownSSE).toHaveBeenCalledWith({ retryMs: 3000, drainMs: 2000 });
   });
 
-  it("closes WebSocket clients on stop", async () => {
-    const httpServer = createMockHttpServer();
-    const wss = createMockWss(2);
-    const stop = createShutdown(
-      httpServer as any,
-      () => wss as any,
-      () => undefined,
-      LISTENING,
-    );
+  it("ends the sockets still open once the handler's drain is over", async () => {
+    const wss = wssWith(2);
+    const { given } = parts({ getWss: () => wss });
 
-    const stopPromise = stop();
-    // Advance timers to resolve the drain timeout
-    await vi.advanceTimersByTimeAsync(6000);
-    await stopPromise;
+    await createShutdown(given)();
 
-    const clients = [...wss.clients];
-    expect(clients[0]!.close).toHaveBeenCalledWith(1012, "Server shutting down");
-    expect(clients[1]!.close).toHaveBeenCalledWith(1012, "Server shutting down");
-  });
-
-  it("terminates remaining WS clients after timeout", async () => {
-    const httpServer = createMockHttpServer();
-    const wss = createMockWss(1);
-    const stop = createShutdown(
-      httpServer as any,
-      () => wss as any,
-      () => undefined,
-      LISTENING,
-    );
-
-    const stopPromise = stop();
-    // Client doesn't close itself, so terminate is called after timeout
-    await vi.advanceTimersByTimeAsync(6000);
-    await stopPromise;
-
-    const client = [...wss.clients][0]!;
-    expect(client.terminate).toHaveBeenCalledOnce();
+    for (const client of wss.clients) expect(client.terminate).toHaveBeenCalledOnce();
   });
 
   it("is idempotent — second call is a no-op", async () => {
-    const httpServer = createMockHttpServer();
-    const stop = createShutdown(
-      httpServer as any,
-      () => undefined,
-      () => undefined,
-      LISTENING,
-    );
+    const { given, httpServer, ws } = parts();
+    const stop = createShutdown(given);
 
     await stop();
     await stop();
 
     expect(httpServer.close).toHaveBeenCalledOnce();
+    expect(ws.destroy).toHaveBeenCalledOnce();
   });
 
-  it("skips SSE drain when no SSE configured", async () => {
-    const httpServer = createMockHttpServer();
-    const stop = createShutdown(
-      httpServer as any,
-      () => undefined,
-      () => undefined,
-      LISTENING,
-    );
+  it("closes no HTTP server that never listened", async () => {
+    const failed = Promise.reject(new Error("Port 3001 is already in use"));
+    failed.catch(() => undefined);
+    const { given, httpServer } = parts({ ready: failed });
 
-    // Should not throw
-    await stop();
-    expect(httpServer.close).toHaveBeenCalledOnce();
-  });
+    await createShutdown(given)();
 
-  it("skips WS drain when no WS configured", async () => {
-    const httpServer = createMockHttpServer();
-    const stop = createShutdown(
-      httpServer as any,
-      () => undefined,
-      () => undefined,
-      LISTENING,
-    );
-
-    await stop();
-    expect(httpServer.close).toHaveBeenCalledOnce();
+    expect(httpServer.close).not.toHaveBeenCalled();
   });
 });

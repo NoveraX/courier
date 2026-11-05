@@ -33,6 +33,12 @@ export const LIMITS = {
   /** Max consecutive message drops before force-closing a slow connection (0 = disabled) */
   MAX_CONSECUTIVE_DROPS: 50,
 
+  /** How long a WebSocket handler's destroy() waits for its connections to close (5 s) */
+  WS_SHUTDOWN_TIMEOUT_MS: 5_000,
+
+  /** The span a stopping handler spreads its clients' reconnects over, so they do not come back at once (5 s) */
+  WS_SHUTDOWN_RECONNECT_SPREAD_MS: 5_000,
+
   /** Bytes an SSE stream may hold for a client that is not reading before broadcasts are dropped (1 MB) */
   SSE_MAX_BUFFERED_BYTES: 1_048_576,
 

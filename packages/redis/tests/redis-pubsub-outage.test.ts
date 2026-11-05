@@ -329,7 +329,8 @@ describe.skipIf(!available)(
 
       expect(
         await within(
-          handler.destroy().then(() => "settled"),
+          /* The socket never closes, so the stop takes its own deadline; Redis adds nothing to it. */
+          handler.destroy({ timeoutMs: 200 }).then(() => "settled"),
           1500,
         ),
       ).toBe("settled");

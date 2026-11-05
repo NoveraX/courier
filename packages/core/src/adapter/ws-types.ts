@@ -199,6 +199,13 @@ export interface WSHandler {
   handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void;
   /** Registry of active connections with send/broadcast/disconnect API */
   readonly connections: ConnectionRegistry;
-  /** Clean up pubsub subscriptions and internal state (call on server shutdown) */
-  destroy(): Promise<void>;
+  /**
+   * Stop: every connection is closed — a Courier client reconnects, to
+   * another replica behind a load balancer — and waited for until
+   * `timeoutMs` (default 5000), sockets handed to it from then on are closed
+   * at once, and its pub/sub subscriptions are let go of. It settles within
+   * the deadline whatever its clients and its pub/sub adapter do, and a
+   * second call is the same stop. The adapter itself is yours to disconnect.
+   */
+  destroy(options?: { timeoutMs?: number | undefined }): Promise<void>;
 }

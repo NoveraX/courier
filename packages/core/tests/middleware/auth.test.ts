@@ -4,8 +4,10 @@ import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { ConfigurationError, HTTPError, MissingTokenError } from "../../src/errors";
+import type { Context } from "../../src/http-client/types";
 import { authMiddleware } from "../../src/middleware/index";
 import type { WrapHandler } from "../../src/middleware/types";
+import { executeRequest } from "../../src/utils/execute";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 const { endpoint } = courier();
@@ -229,6 +231,38 @@ describe("authMiddleware without a token", () => {
     expect(error).toBeInstanceOf(MissingTokenError);
     expect(error).toMatchObject({ code: "TOKEN_MISSING", header: "Authorization" });
     expect(seen).toHaveLength(0);
+  });
+
+  it("answers a browser 401 TOKEN_MISSING through the proxy, with nothing in the server's log", async () => {
+    const { url, seen } = await answeringAll();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const api = defineApi({
+      name: "api",
+      baseURL: url,
+      expose: true,
+      middleware: [authMiddleware({ getToken: () => undefined, required: true })],
+      endpoints: { me: endpoint.get("me") },
+    });
+
+    const answer = (await executeRequest(
+      { api },
+      { source: "api", method: "me" } as never,
+      {
+        res: new Response(),
+        proxyMethod: "GET",
+        req: new Request("https://app.example.com/api/request"),
+      } as Context & { res: Response },
+    )) as Response;
+
+    expect(answer.status).toBe(401);
+    expect(await answer.json()).toEqual({
+      success: false,
+      message: "No token to send in the Authorization header, which the call requires",
+      code: "TOKEN_MISSING",
+    });
+    expect(logged).not.toHaveBeenCalled();
+    expect(seen).toHaveLength(0);
+    logged.mockRestore();
   });
 
   it("signs in through an API that sends the token, before there is one, and refreshes on its 401", async () => {

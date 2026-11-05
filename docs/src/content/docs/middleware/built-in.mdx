@@ -222,6 +222,8 @@ try {
 }
 ```
 
+Through the proxy, the browser is answered 401 with `{ "success": false, "message": …, "code": "TOKEN_MISSING" }`, as an upstream that wanted a token would answer, and the server's log stays quiet: a visitor who has not signed in is no failure of the server.
+
 A token holding a NUL or a line break inside it, which no header can carry, is refused before the request leaves with a `ConfigurationError` of code `HEADER_VALUE_INVALID`, and the error never repeats the token; a line break at its end, as a file read whole leaves one, is trimmed as `fetch` trims it. A `header` that is no header name, a `scheme` that is no auth scheme, or an option the middleware does not have is refused where the middleware is made, with code `AUTH_OPTIONS_INVALID`.
 
 ### With token refresh

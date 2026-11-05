@@ -1,4 +1,4 @@
-import { HTTPError, isRequestFailure, NetworkError, TimeoutError } from "../errors";
+import { HTTPError, isCourierError, isRequestFailure, NetworkError, TimeoutError } from "../errors";
 import { platformCause } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
@@ -73,6 +73,20 @@ function serverFailure(
   return { ...result, data: { success: false, message: "Request failed" } };
 }
 
+/* No token where the call requires one is the user's to mend by signing in, not the server's
+   failure: answered 401 as the upstream would have, with nothing in the log. Read by its code
+   rather than its class, so a page that sends no token carries none of authMiddleware's code. */
+function tokenMissing(
+  error: unknown,
+): { status: number; headers: Headers; data: unknown } | undefined {
+  if (!isCourierError(error) || error.code !== "TOKEN_MISSING") return undefined;
+  return {
+    status: 401,
+    headers: new Headers(),
+    data: { success: false, message: error.message, code: error.code },
+  };
+}
+
 /* A 2xx error is an upstream answer the proxy could not use — a body that
    would not parse. Passed on as it was, a failure reached the browser as a
    success carrying `{ success: false }` where the endpoint's data should be. */
@@ -129,7 +143,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
       ? upstreamAnswer(error)
       : error instanceof NetworkError || error instanceof TimeoutError
         ? unansweredUpstream(error)
-        : serverFailure(error, ctx.context);
+        : (tokenMissing(error) ?? serverFailure(error, ctx.context));
 
   reportRequestError(error, ctx, responseResult.status);
   return timed(ctx, {

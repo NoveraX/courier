@@ -17,24 +17,22 @@
  * a page carries the clients only when it opens a stream or channel.
  */
 
-export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/address-trust";
+export { addressTrust, deploymentTrust } from "../adapter/address-trust";
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
-export { BodyError, type BodyErrorCode, type BodyErrorStatus } from "../adapter/body-error";
-export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
+export { BodyError } from "../adapter/body-error";
+export { clientAddress, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
 export { BROWSERS_ONLY_REFUSAL } from "../adapter/entry-gate";
-export { type ExposureDecision, exposureOf } from "../adapter/exposure";
-export { type MultipartFormLimits, readMultipartForm } from "../adapter/multipart/read-form";
+export { exposureOf } from "../adapter/exposure";
+export { readMultipartForm } from "../adapter/multipart/read-form";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
-export { type BodyLimits, requestBodyStream } from "../adapter/read-body";
-export { type BodyText, readBodyText } from "../adapter/read-body-text";
+export { requestBodyStream } from "../adapter/read-body";
+export { readBodyText } from "../adapter/read-body-text";
 export { readAllowedHosts, readAllowedOrigins } from "../adapter/runtime-policy";
-export type { CloseFrame, SessionClose } from "../adapter/ws-close";
 export { closeOf, closeWithNotice, isSendableCloseCode, noticeOf } from "../adapter/ws-close";
-export { WS_DEFAULTS, type WSDefaults } from "../adapter/ws-defaults";
+export { WS_DEFAULTS } from "../adapter/ws-defaults";
 export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";
-export type { AuthOkFields, FirstFrame } from "../adapter/ws-handshake";
 export { authOkFrame, readFirstFrame } from "../adapter/ws-handshake";
 export {
   adoptListenOrigin,
@@ -44,9 +42,7 @@ export {
 } from "../app-origin";
 export {
   buildClientProxy,
-  type ClientShape,
   createClientRoot,
-  type ExecuteBackend,
   RUNTIME_HOOKS,
   shapeOfRoutes,
   shapeOfSource,
@@ -56,31 +52,26 @@ export { groupOptionsOf } from "../define/group-options-of";
 export {
   eachGroup,
   GROUP_PATH_SEPARATOR,
-  type GroupNode,
   groupChain,
   groupNames,
-  type PlacedGroup,
   subGroupsOf,
 } from "../define/group-tree";
 export { routesOf } from "../define/routes-of";
-export { discoverAppOrigin, type ServerOrigin } from "../discover-app-origin";
+export { discoverAppOrigin } from "../discover-app-origin";
 export { readLogFormat } from "../logger/log-format";
-export { createRefusalLog, type RefusalLog } from "../logger/refusal-log";
-export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
+export { createRefusalLog } from "../logger/refusal-log";
+export { eachEndpoint } from "../openapi/endpoints";
 export { standardJsonSchema } from "../openapi/json-schema";
 export { withDefaultsShown } from "../openapi/variable-defaults";
-export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
+export { mergeProxyPath, resolveProxyPath } from "../proxy-caller";
 export { proxyDefaultsOf } from "../proxy-caller/proxy-defaults";
-export type { ProxyCallerDefaults } from "../proxy-caller/types";
-export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
-export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
+export { createConnectionState } from "../realtime/connection-state";
+export { describeFailure } from "../realtime/describe-failure";
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
-export type { Heartbeat, HeartbeatConfig } from "../realtime/ws/heartbeat";
 export { createHeartbeat } from "../realtime/ws/heartbeat";
 export { WS_CODE } from "../realtime/ws/ws-codes";
-export type { WSMessage } from "../realtime/ws/ws-protocol";
 export { decodeMessage, encodeMessage, PROTOCOL_VERSION } from "../realtime/ws/ws-protocol";
-export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
+export { buildDirectWSUrl, parseWSTopic } from "../realtime/ws-address";
 export { addressedOrigin } from "../session/addressed-origin";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
 export { serverOriginOf } from "../socket-origin";
@@ -92,55 +83,27 @@ export {
   STUDIO_PASS_HEADER,
   STUDIO_PASS_REDEEMER,
   STUDIO_REQUEST_HEADER,
-  type StudioHooks,
   studioHooks,
 } from "../studio";
-export { CARRIED_BODY_BYTES, type CarriedBody, carriedBody } from "../studio/carried-body";
+export { CARRIED_BODY_BYTES, carriedBody } from "../studio/carried-body";
 export { failureCause } from "../studio/failure-cause";
-
+export { createKeptBodies, KEPT_BODY_BYTES } from "../studio/kept-bodies";
 export {
-  type BodyPart,
-  createKeptBodies,
-  KEPT_BODY_BYTES,
-  type KeptBodies,
-} from "../studio/kept-bodies";
-export {
-  type Banner,
-  type BannerRow,
-  type ColorLevel,
   colorLevel,
   createTerminalStyle,
-  type DeclaredOption,
   formatBanner,
   formatHelp,
   formatLink,
-  type Glyphs,
   glyphsFor,
-  type Help,
-  type HelpCommand,
-  type HelpExample,
-  type HelpOption,
   helpOptions,
-  type OutputStream,
-  type Paint,
   styleFor,
   supportsUnicode,
-  type TerminalStyle,
 } from "../terminal";
 export {
   createDirectHTTPExecutor,
   createProxyHTTPExecutor,
-  type DirectHTTPDefaults,
-  type DirectSSEDefaults,
-  type DirectWSDefaults,
   directStreamingFactories,
-  type HTTPExecutor,
-  type ProxySSEDefaults,
-  type ProxyWSDefaults,
   proxyStreamingFactories,
-  type SSEFactory,
-  type StreamingFactories,
-  type WSChannelFactory,
 } from "../transport";
 export { anySignal } from "../utils/any-signal";
 export { executeRequest } from "../utils/execute";
@@ -159,18 +122,14 @@ export {
   encodePathValue,
   escapePathText,
   fillPathParams,
-  type PathPiece,
   pathParamNames,
   pathPieces,
 } from "../utils/path-template";
-export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
+export { proxyRefusal } from "../utils/proxy-refusal";
 export { cutText, REDACTED, splitUrlsWithoutSecrets, urlWithoutSecrets } from "../utils/redact";
-export type { RenderMemo, RenderMemoProvider } from "../utils/render-memo";
 export { registerRenderMemo } from "../utils/render-memo";
 export { sliceWhole } from "../utils/slice-whole";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
-export {
-  type KnownWebhook,
-  knownWebhooks,
-  onKnownWebhooks,
-} from "../webhooks/webhook-registry";
+export { knownWebhooks, onKnownWebhooks } from "../webhooks/webhook-registry";
+/* Its types are named in types.ts. */
+export type * from "./types";

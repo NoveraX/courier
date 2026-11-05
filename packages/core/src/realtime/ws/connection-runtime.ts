@@ -1,5 +1,4 @@
 import type { ScopedLogger } from "../../logger";
-import { ConnectionError } from "../errors";
 import { transition } from "./connection-machine";
 import type {
   MachineContext,
@@ -7,10 +6,11 @@ import type {
   MachineEvent,
   MachineState,
 } from "./connection-machine-types";
+import { connectionSocket } from "./connection-socket";
 import { fingerprintOf } from "./credentials-fingerprint";
 import type { WSCredentials } from "./ws-credentials";
 import { encodeMessage } from "./ws-protocol";
-import type { WSClientSocket, WSConnectionConfig, WSSocketFactory } from "./ws-types";
+import type { WSConnectionConfig, WSSocketFactory } from "./ws-types";
 
 /** What the connection does for the runtime: its subscriptions' part of each transition. */
 export interface RuntimeHooks {
@@ -49,9 +49,8 @@ export interface ConnectionRuntime {
  * Run a connection's state machine: hand it each event in turn, keep the
  * one timer its state names — a phase's deadline, or the wait before a
  * reconnect — and do what each transition says about the socket and the
- * credentials. Everything a socket that is no longer the connection's does
- * is ignored, and so is an answer for credentials an attempt no longer
- * waits for.
+ * credentials. An answer for credentials an attempt no longer waits for is
+ * ignored, as is everything a socket that is no longer the connection's does.
  *
  * @param options - The connection's config, its hooks and its timing
  * @returns The running machine, idle until it is told `start`
@@ -63,9 +62,15 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
   let state: MachineState = { phase: "idle", failures: 0, authSeq: 0 };
   let running = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let socket: WSClientSocket | undefined;
   let credentials: WSCredentials | undefined;
   let asked = 0;
+  const socket = connectionSocket({
+    config,
+    log,
+    factory,
+    dispatch,
+    message: (data) => hooks.message(runtime, data),
+  });
 
   function dispatch(event: MachineEvent): void {
     pending.push(event);
@@ -115,15 +120,17 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
         askCredentials();
         return;
       case "open-socket":
-        openSocket();
+        socket.open(credentials?.handshake);
         return;
       case "send-auth":
-        send(encodeMessage({ type: "auth", id: effect.id, payload: credentials?.frame ?? {} }));
+        socket.send(
+          encodeMessage({ type: "auth", id: effect.id, payload: credentials?.frame ?? {} }),
+        );
         credentials = undefined;
         if (effect.opening) hooks.opened(runtime);
         return;
       case "drop-socket":
-        dropSocket(effect.code, effect.reason);
+        socket.drop(effect.code, effect.reason);
         return;
       default:
         hooks.effect(runtime, effect);
@@ -151,83 +158,15 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
     }
   }
 
-  function openSocket(): void {
-    let opened: WSClientSocket;
-    try {
-      opened = factory(config.url, config.protocols, credentials?.handshake);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      dispatch({
-        type: "socket-failed",
-        error: new ConnectionError(`The socket could not be made: ${reason}`),
-      });
-      return;
-    }
-    socket = opened;
-    let error: unknown;
-    let isOpen = false;
-    const mine = (): boolean => socket === opened;
-    const closed = (code: number, reason: string): void => {
-      if (!mine()) return;
-      socket = undefined;
-      release(opened);
-      dispatch({ type: "closed", closure: { code, reason }, announced: false, error });
-    };
-    opened.onopen = () => {
-      isOpen = true;
-      if (mine()) dispatch({ type: "socket-open" });
-    };
-    opened.onmessage = (event) => {
-      if (mine()) hooks.message(runtime, event.data);
-    };
-    opened.onclose = (event) => closed(event.code, event.reason);
-    /* What the error said is told with the close that follows it. Node 22's
-       WebSocket reports a refused connection with an error alone, its socket
-       left connecting, so one that has not opened is taken as closed — with
-       1006, all a failed handshake ever says. */
-    opened.onerror = (event) => {
-      error = event;
-      if (!isOpen) setTimeout(() => closed(1006, ""), 0);
-    };
-  }
-
-  function dropSocket(code: number, reason: string): void {
-    const dropped = socket;
-    socket = undefined;
-    if (dropped !== undefined) release(dropped, code, reason);
-  }
-
-  /*
-   * Let a socket go: nothing it does is heard any more. One still opening
-   * reports the abort of its handshake as an error, which is the close
-   * working — and a `ws` socket with no listener for it would throw it.
-   */
-  function release(dropped: WSClientSocket, code?: number, reason?: string): void {
-    dropped.onopen = dropped.onmessage = dropped.onclose = null;
-    dropped.onerror = (event) => log.debug("A socket let go of reported an error", event);
-    if (dropped.readyState >= 2) return;
-    try {
-      dropped.close(code, reason);
-    } catch (error) {
-      log.warn("A socket could not be closed", error);
-    }
-  }
-
-  function send(frame: string): boolean {
-    if (socket?.readyState !== 1) return false;
-    socket.send(frame);
-    return true;
-  }
-
   const runtime: ConnectionRuntime = {
     get state() {
       return state;
     },
     get buffered() {
-      return socket?.bufferedAmount ?? 0;
+      return socket.buffered;
     },
     dispatch,
-    send,
+    send: socket.send,
     onChange(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);

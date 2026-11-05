@@ -106,6 +106,9 @@ export type MachineState =
   | (Memory & { readonly phase: "closed"; readonly by: "client" | "server" })
   | (Memory & { readonly phase: "failed"; readonly error: RealtimeError });
 
+/** The state of one phase. */
+export type Phase<TPhase extends MachineState["phase"]> = Extract<MachineState, { phase: TPhase }>;
+
 /** What happens to a connection. */
 export type MachineEvent =
   | { readonly type: "start" }

@@ -214,9 +214,11 @@ export interface CourierServerConfig {
   /**
    * How the server keeps an upload while its call runs: `"auto"` — the
    * default — holds up to `uploadMemoryBytes` of its files in memory and
-   * writes the rest to `uploadDirectory`; `"memory"` never writes one to disk.
+   * writes the rest to `uploadDirectory`; `"memory"` never writes one to
+   * disk; `"stream"` keeps none of it, sending it on to the upstream as it
+   * arrives.
    */
-  uploadMode?: "auto" | "memory" | undefined;
+  uploadMode?: "auto" | "memory" | "stream" | undefined;
   /** How many bytes of one upload's files stay in memory before the rest go to disk — default 1 MB. */
   uploadMemoryBytes?: number | undefined;
   /** Where each upload's own folder is made, removed once its call is done — `os.tmpdir()` unless set. */

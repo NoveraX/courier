@@ -2,10 +2,10 @@ import type { AgentCall } from "../agent/types";
 import type { Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import { generateRequestId, type StudioHooks, studioHooks } from "../studio";
-import { describeFormData } from "../studio/describe-form-data";
+import { describeVariables } from "../studio/describe-form-data";
 import type { SchemaMetadata } from "../validation";
 import { agentShown } from "./agent-shown";
-import { estimateResponseSize, headersToObject, isFormData, normalizeHttpMethod } from "./helpers";
+import { estimateResponseSize, headersToObject, normalizeHttpMethod } from "./helpers";
 import type { SharedAnswer } from "./shared-answer";
 
 export type TimingState = {
@@ -56,8 +56,8 @@ export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void
     source: String(source),
     group: group ? String(group) : undefined,
     method: String(method),
-    /* Studio receives events as JSON, where a FormData would arrive as `{}`. */
-    variables: isFormData(variables) ? describeFormData(variables) : variables,
+    /* Studio receives events as JSON, where a FormData or a stream would arrive as `{}`. */
+    variables: describeVariables(variables),
     mode: start.mode,
     middlewareCount: start.middlewareCount,
     hasValidation: { variables: !!schema?.variables, response: !!schema?.response },

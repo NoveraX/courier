@@ -4,6 +4,7 @@ import type { WebBody } from "../http-client/web-types";
 import { countedStream } from "./counted-stream";
 import { FETCH_COPIES } from "./fetch-copies";
 import { sendAsStream } from "./send-as-stream";
+import { isStreamedUpload } from "./streamed-upload";
 
 /** How a body sent as a stream is sent. */
 export interface StreamedSend {
@@ -19,10 +20,12 @@ export interface StreamedSend {
  * Send a request's body as the stream of its bytes, where a server should.
  *
  * A server has no XMLHttpRequest, so an upload whose progress is asked for
- * is streamed and counted as fetch takes it. A form or a `Blob` is streamed
- * too where the platform's fetch would keep a copy of it for as long as it
- * sends it, as Node's does. Code a page never runs: a bundler that builds
- * for the browser takes a stand-in that sends nothing.
+ * is streamed and counted as fetch takes it. A form, a `Blob` or a stream
+ * is streamed too where the platform's fetch would keep a copy of it for as
+ * long as it sends it, as Node's does — every version a form or a `Blob`,
+ * Node 22 and 24 a stream — and so is a `StreamedUpload`, which goes with
+ * its own content type. Code a page never runs: a bundler that builds for
+ * the browser takes a stand-in that sends nothing.
  *
  * @param url - Where to send it
  * @param init - The request as fetch would take it; its body is set
@@ -49,8 +52,14 @@ export function sendStreamed(
       options,
     );
   }
-  if (FETCH_COPIES.forms && (init.body instanceof FormData || init.body instanceof Blob)) {
+  if (isStreamedUpload(init.body) || copied(init.body)) {
     return sendAsStream(url, init, (stream) => stream, options);
   }
   return undefined;
+}
+
+/* Whether the platform's fetch would hold the whole body while it sends it. */
+function copied(body: WebBody): boolean {
+  if (body instanceof FormData || body instanceof Blob) return FETCH_COPIES.forms;
+  return body instanceof ReadableStream && FETCH_COPIES.streams;
 }

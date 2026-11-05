@@ -1,4 +1,4 @@
-import { randomId } from "./random-id";
+import { multipartBoundary, partHead, toCrlf } from "./multipart-framing";
 
 /**
  * A FormData body as a Blob, built without reading its files.
@@ -10,13 +10,6 @@ import { randomId } from "./random-id";
  */
 
 const CRLF = "\r\n";
-const LINE_BREAK = /\r\n|\r|\n/g;
-const QUOTED_SPECIAL = /[\n\r"]/g;
-const ESCAPES: ReadonlyMap<string, string> = new Map([
-  ["\n", "%0A"],
-  ["\r", "%0D"],
-  ['"', "%22"],
-]);
 
 /** A multipart body and the content type that names its boundary. */
 export interface MultipartBody {
@@ -37,36 +30,17 @@ export interface MultipartBody {
  * ```
  */
 export function encodeMultipart(form: FormData): MultipartBody {
-  const boundary = `----courier-${randomId()}`;
+  const boundary = multipartBoundary();
   const parts: BlobPart[] = [];
 
   for (const [name, value] of form) {
-    const disposition = `Content-Disposition: form-data; name="${escapeQuoted(toCrlf(name))}"`;
     if (typeof value === "string") {
-      parts.push(`--${boundary}${CRLF}${disposition}${CRLF}${CRLF}${toCrlf(value)}${CRLF}`);
+      parts.push(`${partHead(boundary, name)}${toCrlf(value)}${CRLF}`);
       continue;
     }
-    const type = value.type || "application/octet-stream";
-    parts.push(
-      `--${boundary}${CRLF}${disposition}; filename="${escapeQuoted(value.name)}"${CRLF}` +
-        `Content-Type: ${type}${CRLF}${CRLF}`,
-      value,
-      CRLF,
-    );
+    parts.push(partHead(boundary, name, { filename: value.name, type: value.type }), value, CRLF);
   }
   parts.push(`--${boundary}--${CRLF}`);
 
   return { blob: new Blob(parts), contentType: `multipart/form-data; boundary=${boundary}` };
-}
-
-/* A bare CR or LF in a name or a text value becomes CRLF, as the standard's
-   encoding algorithm requires. */
-function toCrlf(text: string): string {
-  return text.replace(LINE_BREAK, CRLF);
-}
-
-/* Inside the quoted name and filename, the characters that would end the
-   quote or the header line are percent-encoded. */
-function escapeQuoted(text: string): string {
-  return text.replace(QUOTED_SPECIAL, (char) => ESCAPES.get(char) ?? char);
 }

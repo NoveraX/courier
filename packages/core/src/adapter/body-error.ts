@@ -54,3 +54,30 @@ export class BodyError extends Error {
     this.status = STATUS[code];
   }
 }
+
+/* How deep a failure's causes are searched: fetch wraps the body's error, a transport failure wraps fetch's. */
+const CAUSE_DEPTH = 4;
+
+/**
+ * The refusal of the request body a call was sending, when that is what
+ * failed the call: an upload sent on as it arrives fails fetch with the
+ * body's own `BodyError`, which fetch's failure — and the transport failure
+ * made of it — carry as their cause.
+ *
+ * @param error - What the call failed with
+ * @returns The body's refusal, or `undefined` for a call that failed for another reason
+ *
+ * @example
+ * ```ts
+ * const refused = bodyErrorOf(error);
+ * if (refused) return errorResponse(refused.status, refused.message, refused.code);
+ * ```
+ */
+export function bodyErrorOf(error: unknown): BodyError | undefined {
+  let cause = error;
+  for (let depth = 0; depth <= CAUSE_DEPTH && cause instanceof Error; depth++) {
+    if (cause instanceof BodyError) return cause;
+    cause = cause.cause;
+  }
+  return undefined;
+}

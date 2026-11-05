@@ -127,8 +127,9 @@ export async function coreFetch(
         { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
       );
     }
-    /* Handed over as it is, a form or a Blob is copied whole by Node's fetch for as long as
-       it is sent; sent as the stream of its bytes, it is read as it goes out. */
+    /* Handed over as it is, a form or a Blob — under Node 22 and 24 a stream too — is copied
+       whole by Node's fetch for as long as it is sent; sent as the stream of its bytes, it is
+       read as it goes out. A streamed upload goes with the content type that names its boundary. */
     const streamed =
       requestBody == null
         ? undefined

@@ -11,6 +11,11 @@ export interface MultipartPart extends PartHeaders {
   readonly body: ReadableStream<Uint8Array<ArrayBuffer>>;
 }
 
+/** The parts of a body, in order; `return` stops reading it, as leaving a loop over them does. */
+export interface MultipartParts extends AsyncIterableIterator<MultipartPart> {
+  return(): Promise<IteratorResult<MultipartPart>>;
+}
+
 /** What a multipart body is held to beyond its size. */
 export interface MultipartLimits {
   /** The most parts — fields and files — the body may hold */
@@ -54,11 +59,11 @@ export function multipartParts(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: MultipartLimits,
-): AsyncIterableIterator<MultipartPart> {
+): MultipartParts {
   return new Parts(new MultipartReader(body, boundary, limits.maxHeaderBytes), limits.maxParts);
 }
 
-class Parts implements AsyncIterableIterator<MultipartPart> {
+class Parts implements MultipartParts {
   readonly #reader: MultipartReader;
   readonly #maxParts: number;
   #count = 0;

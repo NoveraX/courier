@@ -1,4 +1,4 @@
-import { describeFormData } from "../studio/describe-form-data";
+import { describeVariables } from "../studio/describe-form-data";
 import type { StudioHooks } from "../studio/hooks";
 import { generateRequestId } from "../studio/singleton";
 import type { ProxyRouting } from "./read-routing";
@@ -67,8 +67,8 @@ export function announceProxyCall(
     parsed: (variables) =>
       dt.onProxyParse?.({
         ...routing,
-        /* Studio receives events as JSON, where a FormData would arrive as `{}`. */
-        variables: variables instanceof FormData ? describeFormData(variables) : variables,
+        /* Studio receives events as JSON, where a FormData or a stream would arrive as `{}`. */
+        variables: describeVariables(variables),
         requestId,
         timestamp: Date.now(),
       }),

@@ -1,3 +1,5 @@
+import type { EnvelopeRefusal } from "../adapter/envelope-result";
+import { unsentUpload } from "../adapter/unsent-upload";
 import { HTTPError, isCourierError, isRequestFailure, NetworkError, TimeoutError } from "../errors";
 import { platformCause } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
@@ -141,6 +143,8 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     reportRequestError(error, ctx, undefined);
     return answerCallerLeft(error, ctx.context, ctx.rawData);
   }
+  const unsent = fromWire ? unsentUpload(error) : undefined;
+  if (unsent !== undefined) return refusedUpload(unsent, ctx);
 
   const responseResult =
     error instanceof HTTPError
@@ -158,6 +162,19 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
        clears the session it names. */
     namedHeaders: ctx.namedHeaders,
   });
+}
+
+/**
+ * An upload sent on as it arrived failed on the client's side — cut short,
+ * too large, not multipart, too slow — and failed the call with it. The
+ * client is told why, as it would have been before the call ran, and the
+ * log says nothing of an upstream that failed nothing.
+ */
+function refusedUpload({ status, message, code }: EnvelopeRefusal, ctx: ErrorHandlerCtx): unknown {
+  const answer = { status, headers: new Headers(), data: { success: false, message, code } };
+  const refusal = new HTTPError(answer);
+  reportRequestError(refusal, ctx, status);
+  return timed(ctx, { ...answer, throw: refusal, rawData: ctx.rawData });
 }
 
 /**

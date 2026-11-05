@@ -78,8 +78,12 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * in memory where it has none, on an edge runtime. `"memory"` never
    * writes an upload to disk. Either way the call's variables are a
    * `FormData`, read as often as validation, middleware and a retry need.
+   * `"stream"` holds none of it: past its options, the upload is sent on as
+   * it arrives, re-encoded under a boundary of the proxy's own, and the
+   * call's variables are a `StreamedUpload` that the upstream alone reads —
+   * once, so the call is never retried, and without a `Content-Length`.
    */
-  uploadMode?: "auto" | "memory" | undefined;
+  uploadMode?: "auto" | "memory" | "stream" | undefined;
   /**
    * How many bytes of one upload's files `"auto"` keeps in memory before the
    * rest go to disk. Defaults to 1 MB; 0 writes every file to disk.

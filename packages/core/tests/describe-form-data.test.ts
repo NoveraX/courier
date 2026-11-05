@@ -88,6 +88,17 @@ describe("an upload as Studio sees it", () => {
     expect(Object.getPrototypeOf(described)).toBe(Object.prototype);
   });
 
+  it("tells an upload sent on as it arrives by its type, the stream kept out of the event", async () => {
+    const form = new FormData();
+    form.append("file", new File(["x"], "x.bin"));
+
+    await createHandler({ uploadMode: "stream" }).handlePost(upload(form));
+
+    const expected = { streamed: true, type: "multipart/form-data" };
+    expect(started.mock.calls.at(-1)?.[0].variables).toEqual(expected);
+    expect(parsed.mock.calls[0]?.[0].variables).toEqual(expected);
+  });
+
   it("survives JSON, which is how it reaches Studio", async () => {
     const form = new FormData();
     form.append("file", new File(["x"], "x.bin"));

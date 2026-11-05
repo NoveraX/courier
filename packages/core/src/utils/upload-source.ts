@@ -5,6 +5,7 @@
 
 import type { WebBody } from "../http-client/web-types";
 import { encodeMultipart } from "./multipart-body";
+import { isStreamedUpload } from "./streamed-upload";
 
 /* Made when first needed, so an engine without TextEncoder still loads the client. */
 let textEncoder: TextEncoder | undefined;
@@ -19,6 +20,11 @@ export interface UploadSource {
   size: number;
   /** The content type the body implies, when the caller names none. */
   contentType: string | null;
+  /**
+   * Whether that is the only content type it can be sent with, whatever the
+   * caller named: it names the boundary the body's parts are framed by.
+   */
+  framed: boolean;
   /** Whether `open` may be called more than once. */
   replayable: boolean;
   /** Stream the body from its start. */
@@ -41,12 +47,15 @@ export interface UploadSource {
  * ```
  */
 export function toUploadSource(body: WebBody): UploadSource {
+  if (isStreamedUpload(body)) {
+    return { size: 0, contentType: body.type, framed: true, replayable: false, open: () => body };
+  }
   if (body instanceof ReadableStream) {
-    return { size: 0, contentType: null, replayable: false, open: () => body };
+    return { size: 0, contentType: null, framed: false, replayable: false, open: () => body };
   }
   if (body instanceof FormData) {
     const { blob, contentType } = encodeMultipart(body);
-    return fromBlob(blob, contentType);
+    return { ...fromBlob(blob, contentType), framed: true };
   }
   if (body instanceof Blob) return fromBlob(body, body.type || null);
   if (typeof body === "string") return fromBytes(encodeText(body), "text/plain;charset=UTF-8");
@@ -63,13 +72,20 @@ export function toUploadSource(body: WebBody): UploadSource {
 }
 
 function fromBlob(blob: Blob, contentType: string | null): UploadSource {
-  return { size: blob.size, contentType, replayable: true, open: () => blob.stream() };
+  return {
+    size: blob.size,
+    contentType,
+    framed: false,
+    replayable: true,
+    open: () => blob.stream(),
+  };
 }
 
 function fromBytes(bytes: Uint8Array, contentType: string | null): UploadSource {
   return {
     size: bytes.byteLength,
     contentType,
+    framed: false,
     replayable: true,
     open: () =>
       new ReadableStream<Uint8Array>({

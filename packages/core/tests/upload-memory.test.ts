@@ -6,7 +6,9 @@
  *
  * Read whole, then parsed by the platform, 100 MB took 700 MB to 1.1 GB of
  * buffers. Parsed as it arrives, written to disk past its share of memory
- * and sent on as a stream, it takes a few megabytes, whatever its size.
+ * and sent on as a stream, it takes a few megabytes, whatever its size; sent
+ * on as it arrives (`uploadMode: "stream"`), as few to an upstream that
+ * reads slower than the client sends — the client is slowed instead.
  */
 import { type ChildProcess, fork } from "node:child_process";
 import { createServer, request, type Server } from "node:http";
@@ -36,12 +38,23 @@ function message<TMessage>(from: ChildProcess): Promise<TMessage> {
   });
 }
 
-/** An upstream that counts the bytes it receives, and answers with the count. */
-async function countingUpstream(): Promise<string> {
+/**
+ * An upstream that counts the bytes it receives, and answers with the count.
+ * `paced`, it stops reading for 2 ms after each 256 KB: slower than the
+ * client sends, so only backpressure keeps the proxy from holding the rest.
+ */
+async function countingUpstream(paced: boolean): Promise<string> {
   upstream = createServer((req, res) => {
     let bytes = 0;
+    let unpaused = 0;
     req.on("data", (chunk: Buffer) => {
       bytes += chunk.byteLength;
+      unpaused += chunk.byteLength;
+      if (paced && unpaused >= 256 * 1024) {
+        unpaused = 0;
+        req.pause();
+        setTimeout(() => req.resume(), 2);
+      }
     });
     req.on("end", () => res.end(JSON.stringify({ bytes })));
   });
@@ -93,24 +106,46 @@ function send(port: number, size: number): Promise<{ status: number; text: strin
   });
 }
 
+/** Send 100 MB through a proxy made with `handler`, and say the most it held. */
+async function measure(
+  handler: Record<string, unknown>,
+  paced: boolean,
+): Promise<{
+  answer: { status: number; text: string };
+  held: { peakBuffersMB: number; peakRssMB: number };
+}> {
+  const tsx = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
+  child = fork(join(__dirname, "fixtures/upload-memory.ts"), {
+    execArgv: ["--expose-gc", "--import", tsx],
+    env: {
+      ...process.env,
+      UPSTREAM_URL: await countingUpstream(paced),
+      HANDLER: JSON.stringify({ maxUploadBytes: SIZE + MB, ...handler }),
+    },
+  });
+  const { port } = await message<{ port: number }>(child);
+
+  const answer = await send(port, SIZE);
+  child.send("report");
+  return { answer, held: await message(child) };
+}
+
 describe("a 100 MB upload through the proxy", () => {
   it("holds the proxy's buffers under 16 MB and its RSS within bounds", {
     timeout: 120_000,
   }, async () => {
-    const tsx = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
-    child = fork(join(__dirname, "fixtures/upload-memory.ts"), {
-      execArgv: ["--expose-gc", "--import", tsx],
-      env: {
-        ...process.env,
-        UPSTREAM_URL: await countingUpstream(),
-        HANDLER: JSON.stringify({ maxUploadBytes: SIZE + MB }),
-      },
-    });
-    const { port } = await message<{ port: number }>(child);
+    const { answer, held } = await measure({}, false);
 
-    const answer = await send(port, SIZE);
-    child.send("report");
-    const held = await message<{ peakBuffersMB: number; peakRssMB: number }>(child);
+    expect(answer.status, answer.text).toBe(200);
+    expect(JSON.parse(answer.text).bytes).toBeGreaterThan(SIZE);
+    expect(held.peakBuffersMB).toBeLessThanOrEqual(BUDGET.buffersMB);
+    expect(held.peakRssMB).toBeLessThanOrEqual(BUDGET.rssMB);
+  });
+
+  it("sent on as it arrives, to an upstream slower than the client, holds as little", {
+    timeout: 120_000,
+  }, async () => {
+    const { answer, held } = await measure({ uploadMode: "stream" }, true);
 
     expect(answer.status, answer.text).toBe(200);
     expect(JSON.parse(answer.text).bytes).toBeGreaterThan(SIZE);

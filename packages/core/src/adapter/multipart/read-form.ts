@@ -1,6 +1,6 @@
-import { BodyError } from "../body-error";
 import type { FileStore } from "./file-store";
-import { type MultipartLimits, type MultipartPart, multipartParts } from "./multipart-parts";
+import { isOptionsPart, TextFields } from "./form-fields";
+import { type MultipartLimits, multipartParts } from "./multipart-parts";
 
 /** What an upload is held to beyond its size. */
 export interface FormLimits extends MultipartLimits {
@@ -14,9 +14,6 @@ export interface ReadForm {
   options: string | undefined;
   form: FormData;
 }
-
-/** The field the proxy client writes before the caller's, holding the call's options. */
-const OPTIONS_FIELD = "_options";
 
 /**
  * Read an upload into the caller's form, its files kept by `store`.
@@ -48,42 +45,14 @@ export async function readForm(
   store: FileStore,
 ): Promise<ReadForm> {
   const form = new FormData();
+  const fields = new TextFields(limits.maxFieldBytes);
   let options: string | undefined;
-  let fieldBytes = 0;
   let first = true;
   for await (const part of multipartParts(body, boundary, limits)) {
-    const isOptions = first && part.name === OPTIONS_FIELD;
+    if (first && isOptionsPart(part)) options = await fields.read(part);
+    else if (part.filename !== undefined) form.append(part.name, await store.file(part));
+    else form.append(part.name, await fields.read(part));
     first = false;
-    if (part.filename !== undefined) {
-      if (isOptions) throw new BodyError("BODY_MALFORMED", "options must be a JSON string");
-      form.append(part.name, await store.file(part));
-      continue;
-    }
-    const field = await fieldText(part, limits.maxFieldBytes - fieldBytes, limits.maxFieldBytes);
-    fieldBytes += field.bytes;
-    if (isOptions) options = field.text;
-    else form.append(part.name, field.text);
   }
   return { options, form };
-}
-
-async function fieldText(
-  part: MultipartPart,
-  room: number,
-  limit: number,
-): Promise<{ text: string; bytes: number }> {
-  const decoder = new TextDecoder("utf-8", { ignoreBOM: true });
-  let text = "";
-  let bytes = 0;
-  for await (const piece of part.body) {
-    bytes += piece.byteLength;
-    if (bytes > room) {
-      throw new BodyError(
-        "UPLOAD_FIELDS_TOO_LARGE",
-        `An upload's text fields exceed ${limit} bytes`,
-      );
-    }
-    text += decoder.decode(piece, { stream: true });
-  }
-  return { text: text + decoder.decode(), bytes };
 }

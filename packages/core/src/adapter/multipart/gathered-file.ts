@@ -1,3 +1,5 @@
+import { DEFAULT_PART_TYPE } from "./part-headers";
+
 /** How large the slabs a file is gathered in may grow: the first one, then twice that and on to this. */
 const MAX_SLAB_BYTES = 1_048_576;
 
@@ -64,7 +66,7 @@ export class GatheredFile {
    * @returns The file
    */
   file(name: string, type: string | undefined): File {
-    return new File(this.blobs(), name, { type: type ?? "text/plain" });
+    return new File(this.blobs(), name, { type: type ?? DEFAULT_PART_TYPE });
   }
 
   #flush(): void {

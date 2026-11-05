@@ -22,7 +22,11 @@ describe("createHandler's options for request bodies", () => {
   });
 
   it.each([
-    ["an upload mode it does not have", { uploadMode: "disk" }, 'uploadMode is "auto" or "memory"'],
+    [
+      "an upload mode it does not have",
+      { uploadMode: "disk" },
+      'uploadMode is "auto", "memory" or "stream"',
+    ],
     ["a share of memory below 0", { uploadMemoryBytes: -1 }, "uploadMemoryBytes"],
     ["a share of memory that is not whole", { uploadMemoryBytes: 1.5 }, "uploadMemoryBytes"],
     ["an empty upload folder", { uploadDirectory: "" }, "uploadDirectory names a folder"],

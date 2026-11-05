@@ -34,7 +34,7 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `allowedHosts` | loopback names and IP literals; every name in production | Host names the app is reached by; a request for any other gets `421` — see [Host validation](/docs/proxy-mode/overview#host-validation) |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope the handler reads; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload the handler reads; a larger one is refused with 413 |
-| `uploadMode` | `"auto"` | Where an upload is kept while the call runs: memory up to `uploadMemoryBytes`, then disk where there is one; `"memory"` never writes one to disk — see [where the proxy keeps an upload](/docs/advanced/upload#where-the-proxy-keeps-an-upload) |
+| `uploadMode` | `"auto"` | Where an upload is kept while the call runs: memory up to `uploadMemoryBytes`, then disk where there is one; `"memory"` never writes one to disk; `"stream"` keeps none of it and [sends it on as it arrives](/docs/advanced/upload#sending-an-upload-on-as-it-arrives) — see [where the proxy keeps an upload](/docs/advanced/upload#where-the-proxy-keeps-an-upload) |
 | `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory before the rest goes to disk |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made, removed once its call is done |
 | `maxUploadParts` | 1000 | Most fields and files one upload may hold |

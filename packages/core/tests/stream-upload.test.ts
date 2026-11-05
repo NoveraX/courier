@@ -1,0 +1,284 @@
+/**
+ * An upload the proxy sends on as it arrives (`uploadMode: "stream"`): what
+ * the upstream receives, and how each way the upload can end is answered —
+ * the client's body failing partway is the client's refusal, not a 502.
+ */
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
+
+import { createHandler } from "../src/adapter/create-handler";
+import type { HandlerConfig } from "../src/adapter/handler-config";
+import { courier, defineApi, defineGroup } from "../src/define/index";
+import { chunked, concat } from "./helpers/multipart-fixtures";
+
+const { endpoint } = courier();
+const B = "----courier-client";
+
+const field = (name: string, value: string): string =>
+  `--${B}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
+const fileHead = (name: string, filename: string): string =>
+  `--${B}\r\nContent-Disposition: form-data; name="${name}"; filename="${filename}"\r\n` +
+  "Content-Type: application/zip\r\n\r\n";
+const close = `--${B}--\r\n`;
+
+/**
+ * What the upstream made of one request: its headers, its bytes, and whether
+ * it arrived whole. A body that fails before fetch has connected never
+ * reaches the upstream at all.
+ */
+interface Arrival {
+  headers: IncomingHttpHeaders;
+  body: Buffer;
+  complete: boolean;
+}
+
+let upstream: Server | undefined;
+let warn: MockInstance<typeof console.warn>;
+
+beforeEach(() => {
+  warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.spyOn(console, "debug").mockImplementation(() => {});
+  vi.spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterEach(async () => {
+  vi.restoreAllMocks();
+  upstream?.closeAllConnections();
+  await new Promise<void>((resolve) => upstream?.close(() => resolve()) ?? resolve());
+  upstream = undefined;
+});
+
+/**
+ * Start an upstream that answers with `answer`, and the proxy in front of it.
+ *
+ * @returns The proxy's POST entry point, and each request's arrival once the upstream is done with it
+ */
+async function proxyTo(
+  answer: (req: IncomingMessage, res: ServerResponse) => void,
+  config: HandlerConfig = {},
+): Promise<{ handlePost: (request: Request) => Promise<Response>; arrivals: Promise<Arrival>[] }> {
+  const arrivals: Promise<Arrival>[] = [];
+  upstream = createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    arrivals.push(
+      new Promise((resolve) => {
+        req.once("close", () =>
+          resolve({ headers: req.headers, body: Buffer.concat(chunks), complete: req.complete }),
+        );
+      }),
+    );
+    answer(req, res);
+  });
+  await new Promise<void>((resolve) => upstream?.listen(0, "127.0.0.1", resolve));
+  const { port } = upstream.address() as AddressInfo;
+  const api = defineApi({
+    baseURL: `http://127.0.0.1:${port}`,
+    groups: {
+      files: defineGroup({
+        prefix: "files",
+        expose: true,
+        endpoints: { upload: endpoint.post("upload") },
+      }),
+    },
+  });
+  const { handlePost } = createHandler({ sources: { api }, uploadMode: "stream", ...config });
+  return { handlePost, arrivals };
+}
+
+/** A browser's upload of `body`, a kilobyte at a time, declaring `declared` bytes. */
+function upload(body: Uint8Array<ArrayBuffer>, declared = body.length, signal?: AbortSignal) {
+  const { stream, pulls } = chunked(
+    body,
+    Array.from({ length: Math.ceil(body.length / 1024) }, (_, at) => at * 1024),
+  );
+  const request = new Request("http://localhost/api/request?_s=api&_g=files&_m=upload", {
+    method: "POST",
+    headers: {
+      origin: "http://localhost",
+      "content-type": `multipart/form-data; boundary=${B}`,
+      "content-length": String(declared),
+    },
+    body: stream,
+    signal,
+    // @ts-expect-error -- required by the platform for a streaming body
+    duplex: "half",
+  });
+  return { request, pulls, chunks: Math.ceil(body.length / 1024) };
+}
+
+/** An upstream that reads the whole upload, then answers 200. */
+const readsAll = (_req: IncomingMessage, res: ServerResponse): void => {
+  _req.on("end", () => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end('{"ok":true}');
+  });
+};
+
+const logged = (text: string): boolean =>
+  warn.mock.calls.some((call) => call.map(String).join(" ").includes(text));
+
+describe("an upload sent on as it arrives", () => {
+  it("reaches the upstream as the caller's form, under a boundary of the proxy's own, chunked", async () => {
+    const { handlePost, arrivals } = await proxyTo(readsAll);
+    const { request } = upload(
+      concat(
+        field("_options", "{}"),
+        field("note", "hi"),
+        fileHead("file", "a.zip"),
+        "z".repeat(70_000),
+        "\r\n",
+        close,
+      ),
+    );
+
+    const response = await handlePost(request);
+    const arrival = await arrivals[0];
+
+    expect(response.status).toBe(200);
+    expect(arrival?.complete).toBe(true);
+    expect(arrival?.headers["content-type"]).toMatch(
+      /^multipart\/form-data; boundary=----courier-/,
+    );
+    expect(arrival?.headers["content-type"]).not.toContain(B);
+    expect(arrival?.headers["transfer-encoding"]).toBe("chunked");
+    expect(arrival?.headers["content-length"]).toBeUndefined();
+    const form = await new Response(new Uint8Array(arrival?.body ?? []), {
+      headers: { "content-type": arrival?.headers["content-type"] ?? "" },
+    }).formData();
+    expect([...form.keys()]).toEqual(["note", "file"]);
+    expect(form.get("note")).toBe("hi");
+    expect((form.get("file") as File).size).toBe(70_000);
+  });
+
+  it("answers 413 BODY_INCOMPLETE, not 502, when the client's body ends short partway", async () => {
+    const { handlePost, arrivals } = await proxyTo(readsAll);
+    const whole = concat(
+      field("note", "hi"),
+      fileHead("file", "a.zip"),
+      "z".repeat(50_000),
+      "\r\n",
+      close,
+    );
+    const { request } = upload(whole.slice(0, 30_000), whole.length);
+
+    const response = await handlePost(request);
+    const arrived = await Promise.all(arrivals);
+
+    expect(response.status).toBe(413);
+    expect(((await response.json()) as { code: string }).code).toBe("BODY_INCOMPLETE");
+    expect(arrived.filter((arrival) => arrival.complete)).toEqual([]);
+    expect(logged("BODY_INCOMPLETE")).toBe(true);
+    expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("answers 400 BODY_MALFORMED when a later part does not parse, the upstream never told it ended", async () => {
+    const { handlePost, arrivals } = await proxyTo(readsAll);
+    const { request } = upload(
+      concat(
+        field("note", "hi"),
+        fileHead("file", "a.zip"),
+        "z".repeat(20_000),
+        "\r\n",
+        `--${B}\r\nbroken\r\n\r\nx\r\n`,
+        close,
+      ),
+    );
+
+    const response = await handlePost(request);
+    const arrived = await Promise.all(arrivals);
+
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { code: string }).code).toBe("BODY_MALFORMED");
+    expect(arrived.filter((arrival) => arrival.complete)).toEqual([]);
+    expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("passes on an upstream's early answer, the rest of the upload taken off the connection", async () => {
+    const { handlePost } = await proxyTo((_req, res) => {
+      res.writeHead(413, { "content-type": "application/json" });
+      res.end('{"success":false,"message":"too large for the upstream"}');
+    });
+    const { request, pulls, chunks } = upload(
+      concat(field("note", "hi"), fileHead("file", "a.zip"), "z".repeat(2_000_000), "\r\n", close),
+    );
+
+    const response = await handlePost(request);
+
+    expect(response.status).toBe(413);
+    expect(((await response.json()) as { message: string }).message).toBe(
+      "too large for the upstream",
+    );
+    await expect.poll(pulls, { timeout: 10_000 }).toBe(chunks + 1);
+  });
+
+  it("answers 502 when the upstream fails partway, the rest of the upload taken off the connection", async () => {
+    const { handlePost } = await proxyTo((req) => {
+      let bytes = 0;
+      req.on("data", (chunk: Buffer) => {
+        bytes += chunk.length;
+        if (bytes > 100_000) req.socket.destroy();
+      });
+    });
+    const { request, pulls, chunks } = upload(
+      concat(field("note", "hi"), fileHead("file", "a.zip"), "z".repeat(2_000_000), "\r\n", close),
+    );
+
+    const response = await handlePost(request);
+
+    expect(response.status).toBe(502);
+    expect(((await response.json()) as { code: string }).code).toBe("UPSTREAM_UNREACHABLE");
+    await expect.poll(pulls, { timeout: 10_000 }).toBe(chunks + 1);
+  });
+
+  it("stops the upstream's request when the client leaves partway", async () => {
+    const leaving = new AbortController();
+    const { handlePost, arrivals } = await proxyTo((req, res) => {
+      let bytes = 0;
+      req.on("data", (chunk: Buffer) => {
+        bytes += chunk.length;
+        if (bytes > 50_000) leaving.abort();
+      });
+      req.on("end", () => res.end("{}"));
+    });
+    const { request } = upload(
+      concat(field("note", "hi"), fileHead("file", "a.zip"), "z".repeat(2_000_000), "\r\n", close),
+      undefined,
+      leaving.signal,
+    );
+
+    const response = await handlePost(request);
+    const arrival = await arrivals[0];
+
+    expect(response.status).toBe(499);
+    expect(arrival?.complete).toBe(false);
+    expect(logged("Upstream request failed")).toBe(false);
+  });
+
+  it("is refused before the call runs when its options do not parse, its body taken off", async () => {
+    const run = vi.fn(readsAll);
+    const { handlePost } = await proxyTo(run);
+    const { request, pulls, chunks } = upload(
+      concat(
+        field("_options", "not json"),
+        fileHead("file", "a.zip"),
+        "z".repeat(100_000),
+        "\r\n",
+        close,
+      ),
+    );
+
+    const response = await handlePost(request);
+
+    expect(response.status).toBe(400);
+    expect(run).not.toHaveBeenCalled();
+    await expect.poll(pulls).toBe(chunks + 1);
+  });
+});

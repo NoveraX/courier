@@ -145,6 +145,7 @@ export { getSources, registerSources } from "./sources";
 export { ensureCsrfToken } from "./utils/ensure-csrf-token";
 export { redact } from "./utils/redact";
 export { type SmoothProgressOptions, smoothProgress } from "./utils/smooth-progress";
+export { isStreamedUpload, type StreamedUpload } from "./utils/streamed-upload";
 export type {
   CacheConfig,
   Transport,

@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { coreFetch } from "../src/utils/fetch";
+import { streamedUpload } from "../src/utils/streamed-upload";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 vi.mock("../src/utils/fetch-copies", () => ({ FETCH_COPIES: { forms: true, streams: true } }));
@@ -49,6 +50,32 @@ describe("an upload where fetch would copy the stream", () => {
     });
 
     expect(sent.map((init) => init.redirect)).toEqual(["error"]);
+  });
+
+  it("sends a stream, and a streamed upload, told to follow no redirect too", async () => {
+    const sent: RequestInit[] = [];
+    const send = async (_url: string, init: RequestInit): Promise<Response> => {
+      sent.push(init);
+      if (init.body instanceof ReadableStream) await new Response(init.body).arrayBuffer();
+      return new Response("{}");
+    };
+    const bytes = new Uint8Array(4000).fill(5);
+
+    await coreFetch("POST", "http://127.0.0.1:9/raw", {
+      body: new Blob([bytes]).stream(),
+      fetch: send,
+    });
+    await coreFetch("POST", "http://127.0.0.1:9/upload", {
+      body: streamedUpload("multipart/form-data; boundary=x", {
+        pull(controller) {
+          controller.enqueue(bytes);
+          controller.close();
+        },
+      }),
+      fetch: send,
+    });
+
+    expect(sent.map((init) => init.redirect)).toEqual(["error", "error"]);
   });
 
   it("keeps the redirect mode a caller set itself", async () => {

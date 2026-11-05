@@ -1,6 +1,9 @@
 import { BodyError } from "../body-error";
 import { parseContentDisposition } from "./content-disposition";
 
+/** The media type of a part whose headers name none (RFC 7578 §4.4). */
+export const DEFAULT_PART_TYPE = "text/plain";
+
 /** What a part's headers say of it. */
 export interface PartHeaders {
   /** The field's name */

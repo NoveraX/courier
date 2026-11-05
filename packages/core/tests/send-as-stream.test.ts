@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { coreFetch } from "../src/utils/fetch";
+import { type StreamedUploadSource, streamedUpload } from "../src/utils/streamed-upload";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 /* Redirects followed as a fetch that keeps no copy of a stream, Node 26's, follows them;
@@ -124,5 +125,43 @@ describe("a Blob a server sends", () => {
     expect(calls[0]?.init.body).toBeInstanceOf(ReadableStream);
     expect([own?.get("content-type"), own?.get("content-length")]).toEqual(["image/png", "9"]);
     expect(named?.get("content-type")).toBe("application/octet-stream");
+  });
+});
+
+describe("a stream a server sends", () => {
+  const closing = (text: string): StreamedUploadSource => ({
+    pull(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
+    },
+  });
+
+  it("goes as a streamed upload with the type that names its boundary, whatever the caller named", async () => {
+    const { calls, send } = recordingFetch();
+    const upload = streamedUpload(
+      "multipart/form-data; boundary=----courier-x",
+      closing("--x--\r\n"),
+    );
+
+    await coreFetch("POST", "http://127.0.0.1:9/upload", {
+      body: upload,
+      headers: { "content-type": "application/json" },
+      fetch: send,
+    });
+
+    const headers = new Headers(calls[0]?.init.headers);
+    expect(headers.get("content-type")).toBe("multipart/form-data; boundary=----courier-x");
+    expect(headers.has("content-length")).toBe(false);
+    expect(calls[0]?.init).toMatchObject({ duplex: "half" });
+  });
+
+  it("goes to fetch as it is where fetch keeps no copy of a stream", async () => {
+    const { calls, send } = recordingFetch();
+    const stream = new ReadableStream(closing("raw"));
+
+    await coreFetch("POST", "http://127.0.0.1:9/raw", { body: stream, fetch: send });
+
+    expect(calls[0]?.init.body).toBe(stream);
+    expect(calls[0]?.init.redirect).toBeUndefined();
   });
 });

@@ -1,3 +1,6 @@
+import { isFormData } from "../utils/helpers";
+import { isStreamedUpload } from "../utils/streamed-upload";
+
 /** A file in an upload, as Studio shows it. */
 export interface DescribedFile {
   name: string;
@@ -40,4 +43,36 @@ export function describeFormData(
   /* `fromEntries` defines each field as an own property, so a field called
      `__proto__` stays a field. */
   return Object.fromEntries(fields);
+}
+
+/** An upload sent on as it arrives, as Studio shows it: by its media type alone. */
+export interface DescribedStream {
+  streamed: true;
+  type: string;
+}
+
+/**
+ * A call's variables as Studio can show them: a form field by field, as
+ * `describeFormData` writes one; an upload sent on as it arrives by its
+ * media type alone, since its bytes are the upstream's to read — kept out
+ * of the event, the stream is not held by the events Studio keeps until it
+ * connects; anything else as it is.
+ *
+ * @param variables - A call's variables
+ * @returns What Studio is told of them
+ *
+ * @example
+ * ```ts
+ * describeVariables(upload); // → { streamed: true, type: "multipart/form-data" }
+ * ```
+ */
+export function describeVariables(variables: unknown): unknown {
+  if (isFormData(variables)) return describeFormData(variables);
+  if (!isStreamedUpload(variables)) return variables;
+  const end = variables.type.indexOf(";");
+  const described: DescribedStream = {
+    streamed: true,
+    type: end === -1 ? variables.type : variables.type.slice(0, end),
+  };
+  return described;
 }

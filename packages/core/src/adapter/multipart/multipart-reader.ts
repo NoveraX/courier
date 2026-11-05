@@ -27,6 +27,8 @@ export class MultipartReader {
   #chunk: Uint8Array<ArrayBuffer> = EMPTY;
   #at = 0;
   #partEnded = true;
+  /* The body has ended, or failed: there is nothing left of it to cancel. */
+  #over = false;
 
   /**
    * @param body - The body's bytes
@@ -134,6 +136,8 @@ export class MultipartReader {
 
   /** Stop reading: the rest of the body is taken off the connection unread. */
   async cancel(reason?: unknown): Promise<void> {
+    if (this.#over) return;
+    this.#over = true;
     await this.#source.cancel(reason);
   }
 
@@ -145,10 +149,17 @@ export class MultipartReader {
   }
 
   async #fill(): Promise<boolean> {
-    const { done, value } = await this.#source.read();
-    this.#chunk = done ? EMPTY : value;
+    let read: ReadableStreamReadResult<Uint8Array<ArrayBuffer>>;
+    try {
+      read = await this.#source.read();
+    } catch (error) {
+      this.#over = true;
+      throw error;
+    }
+    this.#over ||= read.done;
+    this.#chunk = read.done ? EMPTY : read.value;
     this.#at = 0;
-    return !done;
+    return !read.done;
   }
 }
 

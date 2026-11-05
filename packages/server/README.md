@@ -145,7 +145,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `allowedHosts` | `COURIER_ALLOWED_HOSTS` | Host names the server is reached by, a list or a function it calls as it starts. A request addressed to any other host gets 421, and a socket is closed with 4421, as a DNS-rebinding page's would be. `localhost`, `*.localhost` and IP addresses are always served; left out, and with no variable, production serves every name and development nothing else |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |
-| `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"` holds up to `uploadMemoryBytes` of its files in memory and writes the rest to `uploadDirectory`, removed once the call is done; `"memory"` never writes one to disk |
+| `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"` holds up to `uploadMemoryBytes` of its files in memory and writes the rest to `uploadDirectory`, removed once the call is done; `"memory"` never writes one to disk; `"stream"` keeps none of it, sending it on to the upstream as it arrives |
 | `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory |
 | `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made; point it at a disk where `/tmp` is a `tmpfs` |
 | `maxUploadParts` | 1000 | Most fields and files one upload may hold |

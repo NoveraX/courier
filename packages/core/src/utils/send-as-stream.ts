@@ -7,9 +7,9 @@ import { toUploadSource } from "./upload-source";
  * Send a request's body as the stream of its bytes, read only as it is sent.
  *
  * A form's encoding chose its boundary, so its content type is the
- * encoding's, whatever the caller set; a `Blob`'s is its own unless the
- * caller named one. A body whose size is known is sent with its
- * `Content-Length`, as the platform would have sent it.
+ * encoding's, whatever the caller set — as a `StreamedUpload`'s is its own;
+ * a `Blob`'s is its own unless the caller named one. A body whose size is
+ * known is sent with its `Content-Length`, as the platform would have sent it.
  *
  * @param url - Where to send it
  * @param init - The request as fetch would take it; its body is set
@@ -34,7 +34,7 @@ export function sendAsStream(
 ): Promise<Response> {
   const source = toUploadSource(init.body);
   const headers = new Headers(init.headers);
-  if (source.contentType && (init.body instanceof FormData || !headers.has("content-type"))) {
+  if (source.contentType && (source.framed || !headers.has("content-type"))) {
     headers.set("content-type", source.contentType);
   }
   if (source.replayable) headers.set("content-length", String(source.size));

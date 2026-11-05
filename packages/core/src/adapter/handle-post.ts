@@ -53,7 +53,8 @@ export function createPostHandler(
       call.responded(response.status);
       return response;
     } finally {
-      /* The upload's files are the call's: they go once it has its answer, whatever ended it. */
+      /* What the upload holds is the call's — its files, or the rest of one sent on as it
+         arrived — and goes once the call has its answer, whatever ended it. */
       await read.release?.();
     }
   };

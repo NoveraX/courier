@@ -38,6 +38,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/answered-message": "src/browser/utils/answered-message.ts",
       "utils/send-streamed": "src/utils/send-streamed.ts",
       "browser/utils/send-streamed": "src/browser/utils/send-streamed.ts",
+      "adapter/unsent-upload": "src/adapter/unsent-upload.ts",
+      "browser/adapter/unsent-upload": "src/browser/adapter/unsent-upload.ts",
     });
   });
 });

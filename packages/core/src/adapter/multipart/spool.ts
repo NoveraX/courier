@@ -3,6 +3,7 @@ import type { FileHandle } from "node:fs/promises";
 import { createLogger } from "../../logger";
 import { BodyError } from "../body-error";
 import type { NodeDisk } from "./node-disk";
+import { DEFAULT_PART_TYPE } from "./part-headers";
 
 const log = createLogger("Proxy");
 
@@ -113,7 +114,7 @@ function written(disk: NodeDisk, path: string, handle: FileHandle): SpoolFile {
     async file(name, type) {
       await close();
       const blob = await disk.fs.openAsBlob(path);
-      return new File([blob], name, { type: type ?? "text/plain" });
+      return new File([blob], name, { type: type ?? DEFAULT_PART_TYPE });
     },
     abandon: close,
   };

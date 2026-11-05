@@ -3,7 +3,7 @@ import type { HandlerConfig } from "./handler-config";
 
 /* The longest wait a timer takes as given (2^31 - 1 ms, nearly 25 days). */
 const MAX_WAIT_MS = 2_147_483_647;
-const UPLOAD_MODES: ReadonlySet<unknown> = new Set(["auto", "memory"]);
+const UPLOAD_MODES: ReadonlySet<unknown> = new Set(["auto", "memory", "stream"]);
 
 /**
  * Refuse, where the handler is made, options for request bodies that could
@@ -29,7 +29,7 @@ export function assertBodyOptions(config: HandlerConfig | undefined, where: stri
 function bodyOptionsProblem(config: HandlerConfig): string | undefined {
   const { uploadMode, uploadMemoryBytes, uploadDirectory, maxUploadParts } = config;
   if (uploadMode !== undefined && !UPLOAD_MODES.has(uploadMode)) {
-    return `uploadMode is "auto" or "memory"; got ${String(uploadMode)}`;
+    return `uploadMode is "auto", "memory" or "stream"; got ${String(uploadMode)}`;
   }
   if (uploadMemoryBytes !== undefined && !wholeNumber(uploadMemoryBytes, 0)) {
     return `uploadMemoryBytes is a whole number of bytes, 0 or more; got ${String(uploadMemoryBytes)}`;

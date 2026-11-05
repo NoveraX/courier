@@ -1,25 +1,47 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { LIMITS } from "../src/adapter/limits";
 import { courier } from "../src/define/courier";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
+/*
+ * Do what `act` does, then let the pool's wait before it closes a socket
+ * nobody uses pass at once. What each test checks is what the wait leads
+ * to, not how soon a busy machine counts a second; the wait itself is
+ * pinned in ws-pool-idle.test.ts.
+ */
+function passIdleAfter(act: () => void): void {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldClearNativeTimers: true });
+  try {
+    act();
+    vi.advanceTimersByTime(LIMITS.WS_IDLE_CLOSE_MS);
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 describe("the pooled socket", () => {
   const { channel } = courier();
-  /** Longer than a pooled socket with nothing on it is kept open. */
-  const IDLE = 1_300;
   let served: ServedWS | undefined;
   let upgrades = 0;
+  /** The close code of the first connection the server saw close. */
+  let disconnected: Promise<number> = Promise.resolve(0);
 
   afterEach(async () => {
+    vi.useRealTimers();
     await stopWS(served);
     served = undefined;
     upgrades = 0;
   });
 
   async function serveRoom(): Promise<string> {
+    let closed: (code: number) => void = () => undefined;
+    disconnected = new Promise((resolve) => {
+      closed = resolve;
+    });
     served = await serveWS(
       {
         room: channel
@@ -42,6 +64,7 @@ describe("the pooled socket", () => {
           upgrades++;
           return {};
         },
+        onDisconnect: ({ code }) => closed(code),
       },
     );
     return served.url;
@@ -59,11 +82,10 @@ describe("the pooled socket", () => {
     const { ch, data } = open(url, "a");
     await vi.waitFor(() => expect(data).toEqual(["welcome"]));
 
-    ch.close();
+    passIdleAfter(() => ch.close());
 
-    await vi.waitFor(() => expect(served?.handler.connections.count).toBe(0), {
-      timeout: IDLE * 2,
-    });
+    /* The one socket there was closed by the client, and none opened after it. */
+    expect([await disconnected, upgrades]).toEqual([1000, 1]);
   });
 
   it("stays open while another channel still uses it", async () => {
@@ -72,12 +94,11 @@ describe("the pooled socket", () => {
     const second = open(url, "b");
     await vi.waitFor(() => expect([first.data, second.data]).toEqual([["welcome"], ["welcome"]]));
 
-    first.ch.close();
-    await settle(IDLE);
+    passIdleAfter(() => first.ch.close());
     second.ch.send({ text: "still here" });
 
     await vi.waitFor(() => expect(second.data).toEqual(["welcome", "echo still here"]));
-    expect(served?.handler.connections.count).toBe(1);
+    expect([upgrades, served?.handler.connections.count]).toEqual([1, 1]);
     second.ch.close();
   });
 
@@ -86,23 +107,25 @@ describe("the pooled socket", () => {
     const first = open(url, "a");
     await vi.waitFor(() => expect(first.data).toEqual(["welcome"]));
 
-    first.ch.close();
-    const next = open(url, "b");
-    await settle(IDLE);
+    let next: ReturnType<typeof open> | undefined;
+    passIdleAfter(() => {
+      first.ch.close();
+      next = open(url, "b");
+    });
 
-    await vi.waitFor(() => expect(next.data).toEqual(["welcome"]));
-    expect(upgrades).toBe(1);
-    expect(served?.handler.connections.count).toBe(1);
-    next.ch.close();
+    await vi.waitFor(() => expect(next?.data).toEqual(["welcome"]));
+    expect([upgrades, served?.handler.connections.count]).toEqual([1, 1]);
+    next?.ch.close();
   });
 
   it("closes once a push subscription's reader leaves the loop", async () => {
     const url = await serveRoom();
+    const loop = executeWSPush<number>(url, "api.live.ticks")[Symbol.asyncIterator]();
+    await loop.next();
 
-    for await (const _tick of executeWSPush<number>(url, "api.live.ticks")) break;
+    /* What a `break` out of `for await` calls. */
+    passIdleAfter(() => void loop.return?.());
 
-    await vi.waitFor(() => expect(served?.handler.connections.count).toBe(0), {
-      timeout: IDLE * 2,
-    });
+    expect([await disconnected, upgrades]).toEqual([1000, 1]);
   });
 });

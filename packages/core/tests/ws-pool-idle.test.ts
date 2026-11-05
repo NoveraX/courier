@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LIMITS } from "../src/adapter/limits";
 import { acquireConnection, clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { WSClientSocket, WSCloseEventLike } from "../src/realtime/ws/ws-types";
 
@@ -56,6 +57,33 @@ afterEach(() => {
 });
 
 describe("an idle pooled socket", () => {
+  it("closes once nobody took it for the idle wait, and not sooner", () => {
+    const lease = acquireConnection("ws://test/ws", config);
+    FakeSocket.opened[0]?.open();
+    lease.release();
+
+    vi.advanceTimersByTime(LIMITS.WS_IDLE_CLOSE_MS - 1);
+    const before = FakeSocket.opened[0]?.readyState;
+    vi.advanceTimersByTime(1);
+
+    expect([before, FakeSocket.opened[0]?.readyState]).toEqual([1, 3]);
+    expect(lease.connection.status).toBe("disconnected");
+  });
+
+  it("is kept for a lease taken before the idle wait is over", () => {
+    const first = acquireConnection("ws://test/ws", config);
+    FakeSocket.opened[0]?.open();
+    first.release();
+    vi.advanceTimersByTime(LIMITS.WS_IDLE_CLOSE_MS - 1);
+
+    const next = acquireConnection("ws://test/ws", config);
+    vi.advanceTimersByTime(LIMITS.WS_IDLE_CLOSE_MS);
+
+    expect(next.connection).toBe(first.connection);
+    expect([FakeSocket.opened.length, FakeSocket.opened[0]?.readyState]).toEqual([1, 1]);
+    next.release();
+  });
+
   it("is closed, not reopened, when it drops while nobody is subscribed", () => {
     const lease = acquireConnection("ws://test/ws", config);
     FakeSocket.opened[0]?.open();

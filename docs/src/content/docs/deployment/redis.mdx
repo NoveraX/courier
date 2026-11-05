@@ -65,6 +65,21 @@ const pubsub = createRedisPubSub({
 })
 ```
 
+### Topic Log
+
+With `log`, the adapter keeps a log of each topic's events in Redis, and a WebSocket handler publishes a topic's events through it. One script numbers each event, keeps it and publishes it, so every replica delivers it under the same number, the sender's too, and a client resumes its subscription on whichever replica it reaches next:
+
+```ts title="adapters.ts"
+const pubsub = createRedisPubSub({
+  publisher: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
+  subscriber: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
+  prefix: "courier:",
+  log: { maxEvents: 100, ttlMs: 3_600_000 }, // the defaults, which `log: {}` keeps
+})
+```
+
+Each topic keeps its last `maxEvents` events, trimmed as Redis trims a stream, a few more at times, for `ttlMs` after its last event. A replica that missed events while its connection was down reads them from the log and sends them first. A topic whose keys Redis lost begins its sequence anew in another epoch, and its subscribers are told `resync`. What is appended while Redis is away waits in the queue, in order with what is published. Every replica must keep the log, or none: with a log, a replica delivers no event the log did not number.
+
 ## Stream Adapter
 
 Keeps a stream's events in Redis Streams, so a client that reconnects to any replica can be sent what it missed.
@@ -399,6 +414,7 @@ Redis adapters degrade gracefully — they never kill active client connections:
 | Redis reconnects | The Pub/Sub adapter makes every subscription again and sends what waited, and presence hears the other replicas' diffs again |
 | Redis refuses a `SUBSCRIBE` | Tried again after a growing pause until Redis takes it; `onError` hears each refusal |
 | Redis hangs | The adapters' `disconnect()` and a WebSocket handler's `destroy()` settle within their deadlines all the same |
+| Redis fails over and loses its last writes | The topic log gives the lost events' numbers again: a replica that delivered a lost event drops the new one under its number, until the sequence passes it |
 | `isHealthy()` returns false | Your load balancer should stop sending new connections |
 
 <Callout variant="tip" title="ioredis reconnection">
@@ -414,3 +430,4 @@ Redis adapters degrade gracefully — they never kill active client connections:
 | Presence (score) | `{prefix}score:{topic}` | Managed by sweep |
 | Presence (meta) | `{prefix}meta:{topic}` | Managed by sweep |
 | Connection leases | `{prefix}key:{hash}`, one hash per key a limit counts | `ttlMs`, renewed every 20 s |
+| Topic log | `{prefix}courier:log:{sha1}` (a topic's number and epoch) and `{prefix}courier:log:{sha1}:events` (its events), one hash slot by the topic's SHA-1 | `ttlMs` after the topic's last event |

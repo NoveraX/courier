@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
 import type { ConnectionLeaseStore, LeaseGrant } from "@noverax/courier/realtime";
-import type { Redis } from "ioredis";
+import { defineScript, runScript } from "./redis-scripts";
 import type { RedisConnectionLeasesConfig } from "./types";
 
 /*
@@ -10,7 +9,7 @@ import type { RedisConnectionLeasesConfig } from "./types";
  * counts alike. Each lease's value is "<joined>:<expires>"; the oldest by
  * when it joined goes first, an id deciding between two of one moment.
  */
-const ACQUIRE = `
+const ACQUIRE = defineScript(`
 if redis.replicate_commands then redis.replicate_commands() end
 local clock = redis.call("TIME")
 local now = tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
@@ -42,10 +41,10 @@ end
 redis.call("HSET", KEYS[1], ARGV[1], string.format("%d", now) .. ":" .. string.format("%d", now + ttl))
 redis.call("PEXPIRE", KEYS[1], ttl)
 return reply
-`;
+`);
 
 /* A lease renewed if it is still held: one given up for a newer one stays given up. */
-const RENEW = `
+const RENEW = defineScript(`
 if redis.replicate_commands then redis.replicate_commands() end
 local value = redis.call("HGET", KEYS[1], ARGV[1])
 if not value then return 0 end
@@ -55,13 +54,7 @@ local joined = string.match(value, "^(%d+):")
 redis.call("HSET", KEYS[1], ARGV[1], joined .. ":" .. string.format("%d", now + tonumber(ARGV[2])))
 redis.call("PEXPIRE", KEYS[1], ARGV[2])
 return 1
-`;
-
-const SCRIPTS = { acquire: ACQUIRE, renew: RENEW };
-const SHAS = {
-  acquire: createHash("sha1").update(ACQUIRE).digest("hex"),
-  renew: createHash("sha1").update(RENEW).digest("hex"),
-};
+`);
 
 /**
  * Connection leases kept in Redis, so a limit on one key's connections
@@ -93,13 +86,13 @@ export function createRedisConnectionLeases({
   return {
     async acquire(scope, lease, rule) {
       const args = [lease, String(ttlMs), String(rule.max), rule.onExceed];
-      return grantOf(await run(redis, "acquire", `${prefix}${scope}`, args));
+      return grantOf(await runScript(redis, ACQUIRE, [`${prefix}${scope}`], args));
     },
     async renew(leases) {
       if (leases.length === 0) return;
       await Promise.all(
         leases.map(({ scope, lease }) =>
-          run(redis, "renew", `${prefix}${scope}`, [lease, String(ttlMs)]),
+          runScript(redis, RENEW, [`${prefix}${scope}`], [lease, String(ttlMs)]),
         ),
       );
     },
@@ -107,13 +100,6 @@ export function createRedisConnectionLeases({
       await redis.hdel(`${prefix}${scope}`, lease);
     },
   };
-}
-
-function run(redis: Redis, script: keyof typeof SCRIPTS, key: string, args: string[]) {
-  return redis.evalsha(SHAS[script], 1, key, ...args).catch((error: unknown) => {
-    if (!(error instanceof Error) || !error.message.startsWith("NOSCRIPT")) throw error;
-    return redis.eval(SCRIPTS[script], 1, key, ...args);
-  });
 }
 
 function grantOf(reply: unknown): LeaseGrant {

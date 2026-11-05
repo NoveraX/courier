@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 
 import type { OutboundLimits } from "./outbound-queue";
+import type { RedisTopicLogOptions } from "./redis-topic-log";
 
 /** Configuration for {@link createRedisPresence} */
 export interface RedisPresenceConfig {
@@ -68,6 +69,16 @@ export interface RedisPubSubConfig {
    * @default { maxMessages: 1000, maxBytes: 1048576, maxAgeMs: 5000 }
    */
   queue?: Partial<OutboundLimits> | undefined;
+  /**
+   * Keep a log of each topic's events in Redis, which numbers them in one
+   * sequence for every replica: each event is numbered, kept and published
+   * by one script, reaches every replica, its sender's too, and a
+   * subscription resumes from the log on any replica. A topic's sequence
+   * and events are two keys under `{prefix}courier:log:`, one hash slot.
+   * Without it, each replica numbers what it delivers itself.
+   * @default undefined — no log; `{}` keeps 100 events a topic, for an hour after its last
+   */
+  log?: RedisTopicLogOptions | undefined;
 }
 
 /** Configuration for {@link createRedisStream} */

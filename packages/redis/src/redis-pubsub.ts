@@ -5,6 +5,8 @@ import type { AdapterState, PubSubAdapter, PubSubEnvelope } from "@noverax/couri
 import { CONNECT_TIMEOUT_MS, DISCONNECT_TIMEOUT_MS } from "./adapter-deadlines";
 import { createOutboundQueue } from "./outbound-queue";
 import { trackPubSubState } from "./pubsub-state";
+import { createOutbound, stoppedError } from "./redis-outbound";
+import { createRedisTopicLog } from "./redis-topic-log";
 import { createSubscriptionReconciler } from "./subscription-reconciler";
 import type { RedisPubSubConfig } from "./types";
 import { envelopeOf } from "./wire-guards";
@@ -24,6 +26,11 @@ const log = createLogger("RedisPubSub");
  * `connect()` waits until both connections are ready; `disconnect()`
  * settles within its deadline whatever Redis does, and leaves the two
  * clients, which are yours, open.
+ *
+ * With `log`, it keeps a log of each topic's events in Redis, which
+ * numbers them in one sequence for every replica: a WebSocket handler then
+ * publishes a topic's events through it, and resumes subscriptions from it
+ * on any replica. What is appended waits with what is published.
  *
  * @example
  * ```ts
@@ -50,30 +57,16 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
   };
   const state = trackPubSubState([publisher, subscriber], report);
   const subscriptions = createSubscriptionReconciler(subscriber, report);
-
-  function drop(count: number, code: string): void {
-    if (count === 0) return;
-    counts.dropped += count;
-    refusals.warn({ event: "messages dropped", code, fields: { dropped: count } });
-  }
-
-  function send(channel: string, payload: string): Promise<void> {
-    return publisher.publish(channel, payload).then(
-      () => {
-        counts.published++;
-      },
-      (error: unknown) => {
-        counts.dropped++;
-        report(error instanceof Error ? error : new Error(String(error)));
-      },
-    );
-  }
-
-  const flush = (): void => {
-    const { messages, expired } = queue.takeAll(Date.now());
-    drop(expired, "QUEUE_EXPIRED");
-    for (const message of messages) void send(message.channel, message.payload);
-  };
+  const stopped = () => state.current === "stopped";
+  /* Behind what waits, in order, until the "ready" that sends it. */
+  const { dispatch, flush, drop } = createOutbound({
+    publisher,
+    queue,
+    counts,
+    refusals,
+    report,
+    stopped,
+  });
 
   const deliver = (channel: string, raw: string): void => {
     /* Another adapter's channel, on a subscriber connection two share, or one let go of. */
@@ -84,11 +77,12 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
       report(new Error(`Not a Courier message on channel "${channel}"`));
       return;
     }
-    if (envelope.origin === origin) return;
+    /* A replica's own events reach it too, once the log has numbered them. */
+    if (envelope.origin === origin && !envelope.logged) return;
     for (const handler of [...handlers]) {
       counts.delivered++;
       try {
-        handler(envelope.payload);
+        handler(envelope.payload, envelope.logged);
       } catch (error) {
         report(error instanceof Error ? error : new Error(String(error)));
       }
@@ -122,10 +116,11 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
     previous = next;
   });
 
-  const stoppedError = (): Error =>
-    new Error("The Redis pub/sub adapter was stopped with disconnect()");
+  const outlet = { publisher, prefix, origin, dispatch };
+  const topicLog = config.log && createRedisTopicLog(outlet, config.log);
 
   return {
+    log: topicLog,
     get state() {
       return state.current;
     },
@@ -157,10 +152,8 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
       if (state.current === "stopped") throw stoppedError();
       const envelope: PubSubEnvelope = { origin, payload: message, timestamp: Date.now() };
       const payload = JSON.stringify(envelope);
-      const channel = prefix + topic;
-      /* Behind what waits, in order, until the "ready" that sends it. */
-      if (publisher.status === "ready" && queue.messages === 0) return send(channel, payload);
-      drop(queue.push(channel, payload, Date.now()), "QUEUE_FULL");
+      const command = () => publisher.publish(prefix + topic, payload);
+      return dispatch(command, Buffer.byteLength(payload));
     },
     async subscribe(topic, handler) {
       if (state.current === "stopped") throw stoppedError();

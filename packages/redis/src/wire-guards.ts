@@ -7,7 +7,12 @@
  * event, and a damaged record fails as one.
  */
 
-import type { PresenceDiff, PresenceEntry, PubSubEnvelope } from "@noverax/courier/realtime";
+import type {
+  LoggedPosition,
+  PresenceDiff,
+  PresenceEntry,
+  PubSubEnvelope,
+} from "@noverax/courier/realtime";
 import type { PackedMeta } from "./redis-presence-keys";
 
 /** What a replica publishes for the others when presence on a topic changes. */
@@ -17,19 +22,44 @@ export interface DiffEnvelope {
   diff: PresenceDiff;
 }
 
+/** The longest epoch, and connection id, a logged envelope may name. */
+const MAX_NAME_LENGTH = 64;
+
 /**
- * Whether a message is an envelope a replica published.
+ * Whether a message is an envelope a replica published: one that names
+ * its origin and carries a payload, and — when a log numbered it — a whole
+ * position in the topic's sequence.
  *
  * @param value - The message, parsed
- * @returns Whether it names its origin and carries a payload
+ * @returns Whether it is one
  * @example
  * ```ts
  * isPubSubEnvelope({ origin: "a1", payload: { text: "hi" }, timestamp: 1 }); // true
+ * isPubSubEnvelope({ origin: "a1", payload: 1, logged: { seq: 0, epoch: "e" } }); // false
  * isPubSubEnvelope("hi"); // false
  * ```
  */
 export function isPubSubEnvelope(value: unknown): value is PubSubEnvelope {
-  return isRecord(value) && typeof value.origin === "string" && "payload" in value;
+  return (
+    isRecord(value) &&
+    typeof value.origin === "string" &&
+    "payload" in value &&
+    (value.logged === undefined || isLoggedPosition(value.logged))
+  );
+}
+
+function isLoggedPosition(value: unknown): value is LoggedPosition {
+  return (
+    isRecord(value) &&
+    Number.isSafeInteger(value.seq) &&
+    (value.seq as number) >= 1 &&
+    isName(value.epoch) &&
+    (value.exclude === undefined || isName(value.exclude))
+  );
+}
+
+function isName(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && value.length <= MAX_NAME_LENGTH;
 }
 
 /**

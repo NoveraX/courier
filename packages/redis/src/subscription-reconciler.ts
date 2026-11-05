@@ -1,8 +1,9 @@
+import type { LoggedPosition } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
 
 import { retryDelay } from "./retry-delay";
 
-type Handler = (message: unknown) => void;
+type Handler = (message: unknown, logged?: LoggedPosition) => void;
 
 /** Channels sent in one SUBSCRIBE or UNSUBSCRIBE, so a large set is no single huge command. */
 const BATCH = 500;

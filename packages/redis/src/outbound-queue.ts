@@ -17,18 +17,18 @@ const OUTBOUND_LIMITS: OutboundLimits = {
   maxAgeMs: 5_000,
 };
 
-/** A message waiting to be published. */
+/** A message waiting to be published, or an event to be appended to the log. */
 export interface QueuedMessage {
-  readonly channel: string;
-  readonly payload: string;
+  /** Send it, once Redis is back */
+  readonly send: () => Promise<void>;
   readonly bytes: number;
   readonly at: number;
 }
 
 /** Messages waiting for Redis, in the order they were published. */
 export interface OutboundQueue {
-  /** Queue one; returns how many were dropped for it — the oldest, or itself when it can never fit */
-  push(channel: string, payload: string, now: number): number;
+  /** Queue one, of `bytes`; returns how many were dropped for it — the oldest, or itself when it can never fit */
+  push(send: () => Promise<void>, bytes: number, now: number): number;
   /** Take every message in order; those older than `maxAgeMs` are dropped and counted */
   takeAll(now: number): { messages: QueuedMessage[]; expired: number };
   /** Drop every message; returns how many */
@@ -49,7 +49,7 @@ export interface OutboundQueue {
  * @example
  * ```ts
  * const queue = createOutboundQueue({ maxMessages: 10_000 });
- * dropped += queue.push("courier:room", payload, Date.now());
+ * dropped += queue.push(() => publish(channel, payload), Buffer.byteLength(payload), Date.now());
  * ```
  */
 export function createOutboundQueue(asked: Partial<OutboundLimits> | undefined): OutboundQueue {
@@ -63,8 +63,7 @@ export function createOutboundQueue(asked: Partial<OutboundLimits> | undefined):
   }
 
   return {
-    push(channel, payload, now) {
-      const size = Buffer.byteLength(payload);
+    push(send, size, now) {
       if (size > limits.maxBytes) return 1;
       let dropped = 0;
       while (
@@ -74,7 +73,7 @@ export function createOutboundQueue(asked: Partial<OutboundLimits> | undefined):
         dropOldest();
         dropped++;
       }
-      waiting.push({ channel, payload, bytes: size, at: now });
+      waiting.push({ send, bytes: size, at: now });
       bytes += size;
       return dropped;
     },

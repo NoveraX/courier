@@ -1,11 +1,15 @@
 /**
- * The streaming multipart parser held to two references. Bodies a real
+ * The streaming multipart parser held to its references. Bodies a real
  * encoder wrote — the platform's and Courier's own — read as the platform's
- * own parser reads them. And any body at all, well formed or broken by
- * random changes, read as the same rules applied to the whole body in one
- * buffer read it, however the body is cut into chunks. Each case runs from
- * a seed the failure names, so it can be run again.
+ * own parser reads them, and as @remix-run/multipart-parser does; a broken
+ * one read as it does wherever both take it. And any body at all, well
+ * formed or broken by random changes, read as the same rules applied to the
+ * whole body in one buffer read it, however the body is cut into chunks.
+ * Where the references part ways, `multipart-references.test.ts` says which
+ * reading is right, and why. Each case runs from a seed the failure names,
+ * so it can be run again.
  */
+import { MultipartParseError } from "@remix-run/multipart-parser";
 import { describe, expect, it } from "vitest";
 
 import { BodyError } from "../../src/adapter/body-error";
@@ -19,6 +23,7 @@ import {
   platformEntries,
   randomCuts,
   randomForm,
+  remixParts,
 } from "../helpers/multipart-corpus";
 import { chunked, type ReadPart, readParts, seededRandom } from "../helpers/multipart-fixtures";
 import { modelParts } from "../helpers/multipart-model";
@@ -28,6 +33,31 @@ const SEED = 0x5eed_c0de;
 const MANY_BODIES = { timeout: 60_000 };
 
 type Outcome = { parts: Array<Omit<ReadPart, "bytes"> & { bytes: string }> } | { refused: string };
+
+/* Courier reads a quoted name or filename as the HTML standard writes one; @remix-run/multipart-parser
+   reads it as MIME's quoted-string, keeping the HTML escapes and taking a backslash for the escape
+   of the character after it. Which is right, multipart-references.test.ts says. Written back as it
+   was sent, then read MIME's way, Courier's reading is @remix-run's. */
+const HTML_ESCAPES: Readonly<Record<string, string>> = { "\n": "%0A", "\r": "%0D", '"': "%22" };
+const readMimeWay = (text: string): string =>
+  text.replace(/[\n\r"]/g, (char) => HTML_ESCAPES[char] ?? char).replace(/\\(.)/gs, "$1");
+
+/* Parts as two parsers' readings compare. */
+const asRead = (parts: ReadPart[]) =>
+  parts.map((part) => ({
+    name: part.name,
+    filename: part.filename,
+    type: part.type,
+    bytes: latin1(part.bytes),
+  }));
+
+/* Courier's parts as @remix-run/multipart-parser reads their names. */
+const asRemixReads = (parts: ReadPart[]) =>
+  asRead(parts).map((part) => ({
+    ...part,
+    name: readMimeWay(part.name),
+    filename: part.filename === undefined ? undefined : readMimeWay(part.filename),
+  }));
 
 /* A refusal is compared by its code; anything else a parser throws fails the test. */
 async function outcomeOf(read: () => ReadPart[] | Promise<ReadPart[]>): Promise<Outcome> {
@@ -59,6 +89,58 @@ describe("the multipart parser against the platform's own", () => {
       }
     },
   );
+});
+
+describe("the multipart parser against @remix-run/multipart-parser", () => {
+  it("reads every well-formed body as it does, however it is cut", MANY_BODIES, async () => {
+    for (let run = 0; run < 300; run++) {
+      const random = seededRandom(SEED + 20_000 + run);
+      const form = randomForm(random);
+      for (const encode of [encodedByPlatform, encodedByCourier]) {
+        const { body, contentType } = await encode(form);
+        const boundary = boundaryOf(contentType);
+        const { stream } = chunked(body, randomCuts(random, body.length));
+
+        const parts = await readParts(stream, boundary);
+
+        expect(asRemixReads(parts), `seed ${SEED + 20_000 + run}, ${encode.name}`).toEqual(
+          asRead(remixParts(body, boundary)),
+        );
+      }
+    }
+  });
+
+  it("reads a broken body as it does wherever both take it", MANY_BODIES, async () => {
+    let both = 0;
+    for (let run = 0; run < 1000; run++) {
+      const seed = SEED + 30_000 + run;
+      const random = seededRandom(seed);
+      const encode = random() < 0.5 ? encodedByPlatform : encodedByCourier;
+      const { body: whole, contentType } = await encode(randomForm(random));
+      const boundary = boundaryOf(contentType);
+      const body = mutated(random, whole, boundary);
+      let ours: ReadPart[];
+      try {
+        ours = await readParts(chunked(body, randomCuts(random, body.length)).stream, boundary);
+      } catch (error) {
+        if (error instanceof BodyError) continue;
+        throw error;
+      }
+      let theirs: ReadPart[];
+      try {
+        theirs = remixParts(body, boundary);
+      } catch (error) {
+        /* A body it does not read throws its own error; a header that is not UTF-8, the decoder's. */
+        if (error instanceof MultipartParseError || error instanceof TypeError) continue;
+        throw error;
+      }
+      both += 1;
+
+      expect(asRemixReads(ours), `seed ${seed}`).toEqual(asRead(theirs));
+    }
+    /* Most broken bodies still parse: the comparison is made, not passed over. */
+    expect(both).toBeGreaterThan(300);
+  });
 });
 
 describe("the multipart parser against its rules over the whole body", () => {

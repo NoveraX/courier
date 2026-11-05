@@ -182,7 +182,7 @@ An upload is held, beyond its size, to 1000 parts, fields and files together (`m
 - a part sent in `base64` or `quoted-printable` (`Content-Transfer-Encoding`), which RFC 7578 retired;
 - a body that ends before its closing boundary.
 
-The same bytes could otherwise be read one way by the proxy and another by your backend. A text field is read as UTF-8, and a file's name from `filename*`, RFC 5987's encoded form, when the part carries one.
+The same bytes could otherwise be read one way by the proxy and another by your backend. A text field is read as UTF-8, its byte order mark kept. A file's name is read as browsers write it — a backslash is part of the name, and `%22`, `%0D` and `%0A` stand for `"`, CR and LF — or from `filename*`, RFC 5987's encoded form, when the part carries one. The parser is held in tests to two others, the platform's own and `@remix-run/multipart-parser`, over every body their encoders write; where those two read a body differently, it reads the body as RFC 7578 calls for, or refuses it.
 
 ## Multi-file upload
 

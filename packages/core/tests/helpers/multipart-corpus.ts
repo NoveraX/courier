@@ -1,3 +1,5 @@
+import { parseMultipart } from "@remix-run/multipart-parser";
+
 import { encodeMultipart } from "../../src/utils/multipart-body";
 import { concat, type ReadPart } from "./multipart-fixtures";
 
@@ -107,6 +109,20 @@ export async function platformEntries(
     );
   }
   return entries;
+}
+
+/**
+ * The parts @remix-run/multipart-parser reads from a body, as Courier's
+ * parser hands them out: each part's name, filename, `Content-Type` as sent
+ * and bytes. It throws for a body it does not read.
+ */
+export function remixParts(body: Uint8Array<ArrayBuffer>, boundary: string): ReadPart[] {
+  return [...parseMultipart(body, { boundary })].map((part) => ({
+    name: part.name ?? "",
+    filename: part.filename,
+    type: part.headers["content-type"],
+    bytes: new Uint8Array(part.bytes),
+  }));
 }
 
 /* The platform's reading of a part: a field as UTF-8 with its byte order mark kept, a file's

@@ -1,7 +1,7 @@
 import { endpointPath } from "../../define/address";
 import { pathWriter } from "../../define/path-tag";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
-import { RealtimeValidationError } from "../../realtime/errors";
+import { RealtimeValidationError } from "../../realtime/validation-error";
 import { isRecord } from "../../utils/is-record";
 import {
   encodePathValue,

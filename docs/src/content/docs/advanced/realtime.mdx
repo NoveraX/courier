@@ -36,7 +36,7 @@ A stream's `.implement()` takes an async generator, handed the subscription's `v
 
 ```ts title="api/orders.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
-import { ForbiddenError } from "@noverax/courier"
+import { ForbiddenError } from "@noverax/courier/realtime"
 import { tracked } from "@noverax/courier/realtime"
 import { z } from "zod"
 
@@ -133,7 +133,7 @@ A subscription ends in one of three ways, and the client can tell them apart.
 A dropped connection is none of these: the client reconnects, resumes a stream after the last event id it saw, and subscribes its channels again — see [Staying connected](#staying-connected). When it has spent its retries, it fails with a `ConnectionError`.
 
 ```ts
-import { isRealtimeError } from "@noverax/courier"
+import { isRealtimeError } from "@noverax/courier/realtime"
 
 const updates = client.orders.updates({ shop: "north" })
 try {

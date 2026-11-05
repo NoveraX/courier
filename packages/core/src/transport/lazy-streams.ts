@@ -1,4 +1,4 @@
-import { ConnectionError } from "../realtime/errors";
+import { ConnectionError } from "../realtime/realtime-error";
 import { lazyChannel, lazySubscription } from "./lazy-subscription";
 import type { SSEFactory, WSChannelFactory } from "./types";
 

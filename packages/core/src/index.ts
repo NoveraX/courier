@@ -122,16 +122,9 @@ export type {
   WrapMiddleware,
 } from "./middleware/types";
 export { createProxyCaller, type ProxyCallerOptions, type ProxyPath } from "./proxy-caller";
-export {
-  AuthError,
-  ConnectionError,
-  ForbiddenError,
-  fromErrorCode,
-  isRealtimeError,
-  RateLimitError,
-  RealtimeError,
-  RealtimeTimeoutError,
-} from "./realtime/errors";
+/* The realtime errors' base and a connection's; the others come with the
+   realtime client, from `@noverax/courier/realtime`, and load with it. */
+export { ConnectionError, RealtimeError } from "./realtime/realtime-error";
 export type { CallerWSOptions } from "./realtime/ws/ws-types";
 export type {
   HeaderReader,

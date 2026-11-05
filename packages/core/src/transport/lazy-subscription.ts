@@ -1,6 +1,6 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { createLogger } from "../logger";
-import { ConnectionError, RealtimeError } from "../realtime/errors";
+import { ConnectionError, RealtimeError } from "../realtime/realtime-error";
 import { retryOf, shareRetry } from "../realtime/retry-of";
 import type { Subscription, SubscriptionEvent, WSChannel } from "../realtime/subscription-types";
 import type { ConnectionStatus } from "../realtime/types";

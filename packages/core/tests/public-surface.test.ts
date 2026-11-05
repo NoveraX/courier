@@ -79,6 +79,26 @@ describe("the realtime entry", () => {
     expect(Object.keys(realtime).filter((name) => parts.includes(name))).toEqual([]);
     expect(parts.filter((name) => !(name in internal))).toEqual([]);
   });
+
+  /* A page that names nothing realtime loads none of them: what the root
+     re-exports, every page that calls an API reaches at start. */
+  it("offers the realtime errors, the root only their base and a connection's", () => {
+    const ownErrors = [
+      "AuthError",
+      "ForbiddenError",
+      "RateLimitError",
+      "RealtimeTimeoutError",
+      "fromErrorCode",
+      "isRealtimeError",
+    ];
+
+    expect(ownErrors.filter((name) => !(name in realtime))).toEqual([]);
+    expect(ownErrors.filter((name) => name in courier)).toEqual([]);
+    expect([courier.RealtimeError, courier.ConnectionError]).toEqual([
+      realtime.RealtimeError,
+      realtime.ConnectionError,
+    ]);
+  });
 });
 
 /**

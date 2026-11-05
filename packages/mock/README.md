@@ -194,7 +194,7 @@ On `/api/ws` a subscription goes as it does on a Courier server. The variables a
 
 ### Uploads and large bodies
 
-A mock reads a body as a Courier server does, at every path it serves: JSON — and a body sent with no type, or as plain text, when it is JSON — a form, `multipart/form-data` or URL-encoded, whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order, and a file sent as the whole body, which reaches the handler as a `Blob` of its type. A file's name is kept as it was sent, `../` and all: the mock writes no file, and a generated create keeps each file in its record as its name, type and size. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
+A mock reads a body as a Courier server does, at every path it serves: JSON — and a body sent with no type, or as plain text, when it is JSON — a form, `multipart/form-data` or URL-encoded, whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order, and a file sent as the whole body, which reaches the handler as a `Blob` of its type. A file's name is kept as it was sent, `../` and all: the mock writes no file, and a generated create keeps each file in its record as its name, type and size. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits. A form is parsed by the parser a Courier server uses, as it arrives, its text held to `maxBodyBytes` and its parts to 1000, and a body that ends short of the length it declared is refused with 413, as a Courier server refuses it.
 
 ```ts
 // courier.mocks.ts

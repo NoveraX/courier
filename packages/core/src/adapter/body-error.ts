@@ -12,9 +12,12 @@ export type BodyErrorCode =
   | "UPLOAD_FIELDS_TOO_LARGE"
   | "UPLOAD_STORAGE_FULL";
 
+/** The statuses a refused request body is answered with. */
+export type BodyErrorStatus = 400 | 408 | 413 | 415 | 507;
+
 /* An incomplete body is answered 413, as a body over the limit is: what cut
    it short was, in every case seen, a framework's own limit on its size. */
-const STATUS: Readonly<Record<BodyErrorCode, number>> = {
+const STATUS: Readonly<Record<BodyErrorCode, BodyErrorStatus>> = {
   BODY_TOO_LARGE: 413,
   BODY_INCOMPLETE: 413,
   BODY_MALFORMED: 400,
@@ -45,7 +48,7 @@ export class BodyError extends Error {
   /** The refusal's stable name. */
   readonly code: BodyErrorCode;
   /** The HTTP status the refusal is answered with. */
-  readonly status: number;
+  readonly status: BodyErrorStatus;
 
   constructor(code: BodyErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);

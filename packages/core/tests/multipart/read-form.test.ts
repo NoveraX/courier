@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { BodyError } from "../../src/adapter/body-error";
 import { memoryStore } from "../../src/adapter/multipart/memory-store";
-import { readForm } from "../../src/adapter/multipart/read-form";
+import { readForm, readMultipartForm } from "../../src/adapter/multipart/read-form";
 import { encodedByPlatform } from "../helpers/multipart-corpus";
 import { bytewise, chunked, concat } from "../helpers/multipart-fixtures";
 
@@ -133,5 +133,59 @@ describe("readForm", () => {
     const { form } = await read([["f", new File([concat(big)], "big.bin")]]);
 
     expect((form.get("f") as File).size).toBe(64 * 1024);
+  });
+});
+
+describe("readMultipartForm", () => {
+  const typeOf = (boundary: string): string => `multipart/form-data; boundary=${boundary}`;
+
+  it("reads every part into the form, a first _options field among them", async () => {
+    const { body, boundary } = await encoded([
+      ["_options", "a field like any other"],
+      ["file", new File(["bytes"], "a.bin", { type: "application/octet-stream" })],
+    ]);
+
+    const form = await readMultipartForm(chunked(body, [17]).stream, typeOf(boundary), {
+      maxFieldBytes: 1024,
+    });
+
+    expect(form.get("_options")).toBe("a field like any other");
+    expect(await (form.get("file") as File).text()).toBe("bytes");
+  });
+
+  it("holds the form to its parts limit and its text limit", async () => {
+    const { body, boundary } = await encoded([
+      ["a", "1"],
+      ["b", "2"],
+      ["c", "3"],
+    ]);
+
+    const parts = await refusalOf(
+      readMultipartForm(chunked(body, []).stream, typeOf(boundary), {
+        maxFieldBytes: 1024,
+        maxParts: 2,
+      }),
+    );
+    const text = await refusalOf(
+      readMultipartForm(chunked(body, []).stream, typeOf(boundary), { maxFieldBytes: 2 }),
+    );
+
+    expect([parts.code, text.code]).toEqual(["UPLOAD_TOO_MANY_PARTS", "UPLOAD_FIELDS_TOO_LARGE"]);
+  });
+
+  it("refuses a type that names no boundary, the body cancelled unread", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array<ArrayBuffer>>({
+      cancel() {
+        cancelled = true;
+      },
+    });
+
+    const error = await refusalOf(
+      readMultipartForm(body, "multipart/form-data", { maxFieldBytes: 1024 }),
+    );
+
+    expect(error.code).toBe("BODY_MALFORMED");
+    expect(cancelled).toBe(true);
   });
 });

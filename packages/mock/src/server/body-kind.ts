@@ -1,4 +1,5 @@
 import { logger } from "@noverax/courier";
+import { BodyError, readMultipartForm } from "@noverax/courier/internal";
 
 import { sizeLabel } from "../uploads/size-label";
 
@@ -48,14 +49,38 @@ export function bodyKindOf(contentType: string): BodyKind {
   return "raw";
 }
 
-async function formOf(bytes: Uint8Array<ArrayBuffer>, contentType: string) {
-  try {
-    /* The platform parses the form; the content type carries a multipart boundary. */
-    return await new Response(bytes, { headers: { "content-type": contentType } }).formData();
-  } catch (error) {
-    logger.debug("MockServer", "A form body could not be parsed", error);
-    return undefined;
+/* The whole body, its pieces joined once it has all arrived. */
+async function bytesOf(
+  body: ReadableStream<Uint8Array<ArrayBuffer>>,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const pieces: Uint8Array<ArrayBuffer>[] = [];
+  let total = 0;
+  for await (const piece of body) {
+    pieces.push(piece);
+    total += piece.byteLength;
   }
+  const bytes = new Uint8Array(total);
+  let at = 0;
+  for (const piece of pieces) {
+    bytes.set(piece, at);
+    at += piece.byteLength;
+  }
+  return bytes;
+}
+
+/* A multipart form, parsed as it arrives as a Courier server parses one; a URL-encoded one, read whole. */
+async function formOf(
+  body: ReadableStream<Uint8Array<ArrayBuffer>>,
+  contentType: string,
+  fieldLimit: number,
+): Promise<FormData> {
+  if (essence(contentType) !== "multipart/form-data") {
+    const form = new FormData();
+    const fields = new URLSearchParams(new TextDecoder().decode(await bytesOf(body)));
+    for (const [name, value] of fields) form.append(name, value);
+    return form;
+  }
+  return readMultipartForm(body, contentType, { maxFieldBytes: fieldLimit });
 }
 
 const NOT_JSON = Symbol("not JSON");
@@ -72,34 +97,42 @@ function jsonOf(bytes: Uint8Array<ArrayBuffer>): unknown {
 }
 
 /**
- * Read a body for what it holds. JSON is parsed and a form's fields read;
- * raw bytes are kept as a `Blob` of their type. A body with no type, or of
- * plain text, is read as JSON when it is JSON — as a `fetch` given a JSON
- * string and no type sends it — and refused with 413 when that JSON is
- * larger than `jsonLimit`; any other is raw bytes, as a `fetch` of an
- * `ArrayBuffer` or an untyped `Blob` sends them. RFC 9110 lets a server look
- * at such a body to tell.
+ * Read a body for what it holds. JSON is parsed and a form's fields read —
+ * a multipart form by Courier's own parser, as it arrives, its text held to
+ * `jsonLimit` and its files kept in memory; raw bytes are kept as a `Blob`
+ * of their type. A body with no type, or of plain text, is read as JSON
+ * when it is JSON — as a `fetch` given a JSON string and no type sends it —
+ * and refused with 413 when that JSON is larger than `jsonLimit`; any other
+ * is raw bytes, as a `fetch` of an `ArrayBuffer` or an untyped `Blob` sends
+ * them. RFC 9110 lets a server look at such a body to tell.
  *
- * @param bytes - The body
+ * @param body - The body, held to its limits
  * @param contentType - The request's `Content-Type`, or `""`
- * @param jsonLimit - The largest body read as JSON
+ * @param jsonLimit - The largest body read as JSON, and the most text a form holds
  * @returns What it holds, or why it could not be read
+ * @throws BodyError — the body's own refusal — for one the form's limits, or its reading, refused
  * @example
  * ```ts
- * await parseBody(bytes, "image/png", 1_048_576); // { kind: "raw", blob: Blob }
- * await parseBody(bytes, "text/plain;charset=UTF-8", 1_048_576); // { kind: "json", value: {…} }
+ * await parseBody(body, "image/png", 1_048_576); // { kind: "raw", blob: Blob }
+ * await parseBody(body, "text/plain;charset=UTF-8", 1_048_576); // { kind: "json", value: {…} }
  * ```
  */
 export async function parseBody(
-  bytes: Uint8Array<ArrayBuffer>,
+  body: ReadableStream<Uint8Array<ArrayBuffer>>,
   contentType: string,
   jsonLimit: number,
 ): Promise<ParsedBody | { error: string; status: 400 | 413 }> {
   const kind = bodyKindOf(contentType);
   if (kind === "form") {
-    const form = await formOf(bytes, contentType);
-    return form ? { kind, form } : { error: "The form body could not be read", status: 400 };
+    try {
+      return { kind, form: await formOf(body, contentType, jsonLimit) };
+    } catch (error) {
+      if (!(error instanceof BodyError) || error.code !== "BODY_MALFORMED") throw error;
+      logger.debug("MockServer", "A form body could not be parsed", error);
+      return { error: "The form body could not be read", status: 400 };
+    }
   }
+  const bytes = await bytesOf(body);
   const blob = (): Blob => new Blob([bytes], { type: essence(contentType) });
   if (kind === "raw") return { kind, blob: blob() };
   const value = jsonOf(bytes);

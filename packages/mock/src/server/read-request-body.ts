@@ -1,5 +1,5 @@
 import { logger } from "@noverax/courier";
-import { discardBody } from "@noverax/courier/internal";
+import { BodyError, type BodyErrorStatus, requestBodyStream } from "@noverax/courier/internal";
 import type { Context as HonoContext } from "hono";
 
 import { formFields } from "../form-fields";
@@ -10,7 +10,7 @@ import { oversizeRefusal, typeRefusal } from "../uploads/upload-refusals";
 import { uploadedFiles } from "../uploads/uploaded-files";
 import { bodyKindOf, type ParsedBody, parseBody } from "./body-kind";
 import { BODY_LIMITS, type BodyLimits } from "./body-limits";
-import { type PacedBody, readPaced } from "./paced-body";
+import { CutOff, pacedBody } from "./paced-body";
 
 /** How a request body is read: the mock's limits, the route's upload conditions, and whether its connection is lost partway. */
 export interface BodyRules {
@@ -25,7 +25,7 @@ export interface BodyRules {
 /** Why a body was not taken: its status and the reason. A `dropped` one had its connection cut, so nothing answers it. */
 export interface BodyRefusal {
   error: string;
-  status: 400 | 405 | 413 | 415 | 502;
+  status: 405 | 502 | BodyErrorStatus;
   dropped?: true | undefined;
 }
 
@@ -51,37 +51,26 @@ function declaredSize(request: Request): number | undefined {
   return request.headers.has("content-length") && Number.isFinite(declared) ? declared : undefined;
 }
 
-async function paced(c: HonoContext, limit: Limit, rules: BodyRules) {
-  const declared = declaredSize(c.req.raw);
-  try {
-    return await readPaced(c.req.raw, {
-      limit: limit.bytes,
-      kbps: rules.uploads?.bandwidth ?? 0,
-      cutAt: rules.interrupt ? Math.max(1, Math.ceil((declared ?? 0) / 2)) : undefined,
-      onProgress: rules.onProgress && ((received) => rules.onProgress?.(received, declared)),
-      signal: c.req.raw.signal,
-    });
-  } catch (error) {
-    logger.debug("MockServer", `The client stopped sending ${c.req.method} ${c.req.path}`, error);
-    return undefined;
-  }
-}
-
-/* A body stopped at its limit is answered at once: the rest is taken off the connection unread, so a browser still sending it hears the answer. */
-function stopped(
-  request: Request,
-  reason: Exclude<PacedBody, { ok: true }>["reason"],
-  limit: Limit,
-): BodyRefusal {
-  if (reason === "cut") {
+/* Why the body was not taken, as the mock answers it: over its limit or a route's upload
+   condition in its own words, cut off by the `interrupt` fault as a dropped connection, a client
+   that stopped sending as a body not sent whole; anything else as a Courier server refuses it. */
+function refusalOf(c: HonoContext, error: unknown, limit: Limit): BodyRefusal {
+  if (error instanceof CutOff) {
     return { error: createFaultError("interrupt").message, status: 502, dropped: true };
   }
-  discardBody(request);
-  if (limit.simulated) return oversizeRefusal(declaredSize(request), limit.bytes);
-  return {
-    error: `The request body is larger than ${sizeLabel(limit.bytes)}, the most this mock reads`,
-    status: 413,
-  };
+  if (!(error instanceof BodyError)) throw error;
+  if (error.code === "BODY_TOO_LARGE") {
+    if (limit.simulated) return oversizeRefusal(declaredSize(c.req.raw), limit.bytes);
+    return {
+      error: `The request body is larger than ${sizeLabel(limit.bytes)}, the most this mock reads`,
+      status: 413,
+    };
+  }
+  if (error.code === "BODY_ABORTED" || error.code === "BODY_UNREADABLE") {
+    logger.debug("MockServer", `The client stopped sending ${c.req.method} ${c.req.path}`, error);
+    return { error: "The request body was not sent whole", status: 400 };
+  }
+  return { error: error.message, status: error.status };
 }
 
 function typeChecked(body: ParsedBody, accept: readonly string[] | undefined): RequestBody {
@@ -91,15 +80,19 @@ function typeChecked(body: ParsedBody, accept: readonly string[] | undefined): R
 }
 
 /**
- * Read a request body as a Courier server does: JSON up to 1 MB, a form or
- * an upload up to 10 MB — or the limits the mock was given — under the
- * upload conditions in force: no faster than their speed, no larger than
- * their size limit, holding no file of a type they do not take.
+ * Read a request body as a Courier server does — with its body stream and
+ * its multipart parser: JSON up to 1 MB, a form or an upload up to 10 MB —
+ * or the limits the mock was given — under the upload conditions in force:
+ * no faster than their speed, no larger than their size limit, holding no
+ * file of a type they do not take.
  *
  * A body over a limit is refused with 413 before it is all read, and the
- * rest taken off the connection; a file of a type not taken with 415; one
- * that does not parse, or whose client stopped sending it, with 400. One
- * cut off by the `interrupt` fault is refused as dropped. Raw bytes — a
+ * rest taken off the connection; one that ends short of its length with
+ * 413 too, as a Courier server behind a framework that cut it short answers
+ * it; a compressed one with 415, as is a file of a type not taken; one that
+ * does not parse, or whose client stopped sending it, with 400; one that
+ * stalls with 408.
+ * One cut off by the `interrupt` fault is refused as dropped. Raw bytes — a
  * file sent as the whole body — are read as a `Blob` of their type.
  *
  * @param c - The request's context
@@ -117,11 +110,20 @@ export async function readRequestBody(
 ): Promise<RequestBody> {
   const contentType = c.req.header("content-type") ?? "";
   const limit = limitOf(contentType, rules);
-  const read = await paced(c, limit, rules);
-  if (read === undefined) return { error: "The request body was not sent whole", status: 400 };
-  if (!read.ok) return stopped(c.req.raw, read.reason, limit);
-  const body = await parseBody(read.bytes, contentType, rules.limits.json);
-  return "error" in body ? body : typeChecked(body, rules.uploads?.accept);
+  const declared = declaredSize(c.req.raw);
+  const body = pacedBody(requestBodyStream(c.req.raw, { maxBytes: limit.bytes }), {
+    kbps: rules.uploads?.bandwidth ?? 0,
+    cutAt: rules.interrupt ? Math.max(1, Math.ceil((declared ?? 0) / 2)) : undefined,
+    onProgress: rules.onProgress && ((received) => rules.onProgress?.(received, declared)),
+    signal: c.req.raw.signal,
+  });
+  let parsed: RequestBody;
+  try {
+    parsed = await parseBody(body, contentType, rules.limits.json);
+  } catch (error) {
+    return refusalOf(c, error, limit);
+  }
+  return "error" in parsed ? parsed : typeChecked(parsed, rules.uploads?.accept);
 }
 
 /**

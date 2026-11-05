@@ -19,11 +19,12 @@
 
 export { type AddressTrust, addressTrust, deploymentTrust } from "../adapter/address-trust";
 export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
-export { BodyError, type BodyErrorCode } from "../adapter/body-error";
+export { BodyError, type BodyErrorCode, type BodyErrorStatus } from "../adapter/body-error";
 export { clientAddress, type HeaderOf, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
 export { BROWSERS_ONLY_REFUSAL } from "../adapter/entry-gate";
 export { type ExposureDecision, exposureOf } from "../adapter/exposure";
+export { type MultipartFormLimits, readMultipartForm } from "../adapter/multipart/read-form";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { type BodyLimits, requestBodyStream } from "../adapter/read-body";

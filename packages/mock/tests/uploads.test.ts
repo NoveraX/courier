@@ -90,6 +90,78 @@ function stream(path: string, chunks: string[], { gapMs = 0, abortAfter = Infini
   });
 }
 
+describe("an upload read as a Courier server reads it", () => {
+  const multipart = { "content-type": "multipart/form-data; boundary=b" };
+  const lines = (...text: string[]): string => text.join("\r\n");
+
+  it("refuses a part that names a header twice, which a parser behind it could read either way", async () => {
+    const res = await post(
+      "/files",
+      lines(
+        "--b",
+        'Content-Disposition: form-data; name="a"',
+        'Content-Disposition: form-data; name="b"',
+        "",
+        "x",
+        "--b--",
+        "",
+      ),
+      multipart,
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "The form body could not be read" });
+  });
+
+  it("reads a file's name from filename*, as RFC 5987 encodes it", async () => {
+    const res = await post(
+      "/files",
+      lines(
+        "--b",
+        `Content-Disposition: form-data; name="file"; filename="resume.pdf"; filename*=UTF-8''r%C3%A9sum%C3%A9.pdf`,
+        "Content-Type: application/pdf",
+        "",
+        "%PDF",
+        "--b--",
+        "",
+      ),
+      multipart,
+    );
+
+    expect(await res.json()).toEqual({
+      fields: { file: { name: "résumé.pdf", type: "application/pdf", size: 4 } },
+    });
+  });
+
+  it("refuses a form of more than 1000 parts with 413", async () => {
+    const part = lines("--b", 'Content-Disposition: form-data; name="p"', "", "", "");
+
+    const res = await post("/files", `${part.repeat(1001)}--b--\r\n`, multipart);
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: "An upload holds more than 1000 parts" });
+  });
+
+  it("holds a form's text to maxBodyBytes, the limit JSON is held to", async () => {
+    const form = new FormData();
+    form.append("note", "x".repeat(3000));
+
+    const res = await post("/files", form);
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: "An upload's text fields exceed 2048 bytes" });
+  });
+
+  it("refuses a compressed body with 415, which it would read as something else", async () => {
+    const res = await post("/files", '{"note":"x"}', {
+      "content-type": "application/json",
+      "content-encoding": "gzip",
+    });
+
+    expect(res.status).toBe(415);
+  });
+});
+
 describe("an upload to a mock", () => {
   it("reaches the handler: its fields, and each file with its name, type and size", async () => {
     const form = new FormData();

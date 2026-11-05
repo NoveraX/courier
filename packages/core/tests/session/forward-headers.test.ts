@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { forwardedHeaders } from "../../src/session/forward-headers";
 import type { IncomingRequest } from "../../src/session/incoming-request";
+import { forwardedChain } from "../../src/utils/forwarded-for";
 
 function incoming(
   headers: Record<string, string>,
@@ -14,6 +15,7 @@ const PARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 const OPEN_TELEMETRY = Symbol.for("opentelemetry.js.api.1");
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   Reflect.deleteProperty(globalThis, OPEN_TELEMETRY);
 });
 
@@ -114,6 +116,15 @@ describe("forwardedHeaders", () => {
 
   it("names no user where nothing recorded an address", () => {
     expect(forwardedHeaders(incoming({}), { clientAddress: ["x-real-ip"] })).toEqual([]);
+  });
+
+  it("names no user where every hop it could read is a proxy the deployment names", () => {
+    vi.stubEnv("COURIER_TRUSTED_PROXIES", "192.0.2.0/28");
+    const chain = forwardedChain("192.0.2.5", "192.0.2\t.150, 192.0.2.6");
+
+    expect(
+      forwardedHeaders(incoming({}, { clientAddress: chain }), { clientAddress: ["x-real-ip"] }),
+    ).toEqual([["x-forwarded-for", "unknown, 192.0.2.6, 192.0.2.5"]]);
   });
 
   it("reads and sends the id under a header the API names", () => {

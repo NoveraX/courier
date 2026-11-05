@@ -136,3 +136,46 @@ describe("a runtime that does not report the connection", () => {
     expect(seen?.["x-forwarded-for"]).toBe("6.6.6.6");
   });
 });
+
+/* What a user writes stands left of what the proxies append: here, more than a header of
+   addresses holds. */
+const WRITTEN = Array.from({ length: 60 }, (_, n) => `192.0.2.${129 + n}`).join(", ");
+
+describe("a chain the user wrote part of", () => {
+  it("keeps the hops the proxies appended to one longer than a header of addresses holds", async () => {
+    register();
+
+    await callFrom("10.0.0.2", { "x-forwarded-for": `${WRITTEN}, 192.0.2.140` });
+
+    const chain = String(seen?.["x-forwarded-for"]);
+    expect(chain).toMatch(/^unknown, (192\.0\.2\.\d+, )+192\.0\.2\.140, 10\.0\.0\.2$/);
+    expect(chain.length).toBeLessThanOrEqual(512);
+  });
+
+  it("keeps the hops right of one that is no address, and carries what it left out as unknown", async () => {
+    register();
+
+    await callFrom("10.0.0.2", { "x-forwarded-for": "192.0.2\t.150, 192.0.2.140" });
+
+    expect(seen?.["x-forwarded-for"]).toBe("unknown, 192.0.2.140, 10.0.0.2");
+  });
+
+  it("keeps the nearest hops where the runtime does not report the connection", async () => {
+    register();
+
+    await callFrom(undefined, { "x-forwarded-for": `${WRITTEN}, 192.0.2.203, 192.0.2.10` });
+
+    expect(seen?.["x-forwarded-for"]).toMatch(/^unknown, .+, 192\.0\.2\.203, 192\.0\.2\.10$/);
+  });
+
+  it("holds the chain to what a header of addresses takes, however long each hop", async () => {
+    register();
+    const longest = "[2001:0db8:ffff:ffff:ffff:ffff:198.51.100.255]:65535";
+
+    await callFrom("10.0.0.2", { "x-forwarded-for": Array(20).fill(longest).join(", ") });
+
+    const chain = String(seen?.["x-forwarded-for"]);
+    expect(chain).toMatch(/^unknown, .+, 10\.0\.0\.2$/);
+    expect(chain.length).toBeLessThanOrEqual(512);
+  });
+});

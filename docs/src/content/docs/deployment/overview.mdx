@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Deployment Overview",
   description: "Choose the right deployment strategy for your Courier application — standalone server, framework adapter, single or multi-replica.",
-  updated: "2026-11-05",
+  updated: "2026-11-06",
 }
 
 ## Deployment Models
@@ -100,7 +100,7 @@ courierHandler({ allowedOrigins: ["https://app.example.com", "https://*.example.
 
 ### The user's address
 
-An API a call goes to through your server sees your server's address. Courier tells it the user's in `X-Forwarded-For`, as every proxy does: the chain the proxies in front recorded, with the address of the one that connected appended — the same header nginx's `$proxy_add_x_forwarded_for` writes. A caller that connects from a public address is the whole chain, since what it claims about addresses before it is its own word; a connection from this machine or a private network is a proxy, and its chain is kept. Next.js, React Router and edge functions do not report the connection: there the chain goes on as the proxy in front, or Next.js itself where none is, recorded it. Each API reads the user's address from the chain with its own trust, as it reads any proxied request's.
+An API a call goes to through your server sees your server's address. Courier tells it the user's in `X-Forwarded-For`, as every proxy does: the chain the proxies in front recorded, with the address of the one that connected appended — the same header nginx's `$proxy_add_x_forwarded_for` writes. A caller that connects from a public address is the whole chain, since what it claims about addresses before it is its own word; a connection from this machine or a private network is a proxy, and its chain is kept. Next.js, React Router and edge functions do not report the connection: there the chain goes on as the proxy in front, or Next.js itself where none is, recorded it. A chain is kept from the right, where the proxies wrote it — the nearest eight entries at most, up to the first that is no address — and `unknown` stands for the rest, so a user who writes a long chain, or one no proxy would, cannot push the proxies' entries out. Each API reads the user's address from the chain with its own trust, as it reads any proxied request's.
 
 Courier counts a user's connections by one address — the WebSocket limit per address, the limits you set per caller. It reads that address from the right of the chain, past this machine and private networks, since each proxy appends what it saw and an address a user forges stands left of it. A DDoS filter, a CDN or a load balancer on public addresses is one more proxy to read past: name its addresses and ranges, and the header it names the user in, if it has one.
 

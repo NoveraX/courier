@@ -29,6 +29,8 @@ const USER = "198.51.100.23";
 const EDGE = "203.0.113.50";
 const FILTER = "192.0.2.17";
 const FORGED = "6.6.6.6";
+/* A chain of the user's own, longer than a header of addresses holds. */
+const WRITTEN = Array.from({ length: 60 }, (_, n) => `192.0.2.${129 + n}`).join(", ");
 
 let upstream: Server;
 let upstreamURL: string;
@@ -112,6 +114,39 @@ describe("the address an API finds with request-ip", () => {
     const replaced = { "x-forwarded-for": FILTER, "ddg-connecting-ip": USER };
 
     expect(await through("10.0.0.2", replaced, { clientAddress: ["x-client-ip"] })).toBe(USER);
+  });
+
+  it("is the user's behind the DDoS filter when the user writes a chain too long, or with a tab, and the proxy after it keeps the chain", async () => {
+    vi.stubEnv("COURIER_TRUSTED_PROXIES", "192.0.2.0/25");
+    vi.stubEnv("COURIER_CLIENT_ADDRESS_HEADER", "DDG-Connecting-IP");
+    const tooLong = {
+      "x-forwarded-for": `${WRITTEN}, 192.0.2.203, 192.0.2.10`,
+      "ddg-connecting-ip": "192.0.2.203",
+    };
+    const withTab = {
+      "x-forwarded-for": "192.0.2.130\t, 192.0.2.204, 192.0.2.10",
+      "ddg-connecting-ip": "192.0.2.204",
+    };
+
+    expect(await through(undefined, tooLong, { clientAddress: ["x-client-ip"] })).toBe(
+      "192.0.2.203",
+    );
+    expect(await through(undefined, withTab, { clientAddress: ["x-client-ip"] })).toBe(
+      "192.0.2.204",
+    );
+  });
+
+  it("is the user's behind a balancer the deployment names when the user writes a chain too long, or with a tab", async () => {
+    vi.stubEnv("COURIER_TRUSTED_PROXIES", "192.0.2.0/28");
+    const withTab = { "x-forwarded-for": "192.0.2.150\t, 192.0.2.140" };
+    const tooLong = { "x-forwarded-for": `${WRITTEN}, 192.0.2.140` };
+
+    expect(await through("192.0.2.5", withTab, { clientAddress: ["x-client-ip"] })).toBe(
+      "192.0.2.140",
+    );
+    expect(await through("192.0.2.5", tooLong, { clientAddress: ["x-client-ip"] })).toBe(
+      "192.0.2.140",
+    );
   });
 
   it("is the user's IPv6 address", async () => {

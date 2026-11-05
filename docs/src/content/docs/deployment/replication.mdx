@@ -508,6 +508,23 @@ Over the limit, the oldest connection of the key is closed with `4429` "Replaced
 
 Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within 2 seconds, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out.
 
+Give it a list to apply several limits at once. A rule keyed by the address is `maxConnectionsPerIP` for the whole cluster:
+
+```ts title="ws.ts"
+const ws = createWSHandler({
+  pubsub,
+  onConnect: ({ auth }) => ({ userId: auth?.userId }),
+  maxConnectionsPerKey: [
+    { key: (meta) => meta.userId as string | undefined, max: 5 },
+    // at most 50 connections from one address, on every replica together
+    { key: (_, { clientIp }) => clientIp, max: 50, onExceed: "reject" },
+  ],
+  connectionLeases: createRedisConnectionLeases({ redis }),
+})
+```
+
+The address is the one the handler counts the connection against, after `clientIp` and the proxies it trusts. `maxConnectionsPerIP` still holds each replica's own sockets before `onConnect` admits them; a rule counts every replica's together once it has. The rules that refuse are applied first, so a connection refused has given nothing up. A handler with no rule asks the store nothing.
+
 ### Signing the commands
 
 Whoever can publish on the adapter's channels can send the replicas a command — on a Redis anything else reaches, close any connection. Give every replica the same secret of 32 bytes or more, and each command is signed with HMAC-SHA-256; one that is not signed, or not with the secret, is refused, and so is one sent again or more than a minute ago, each on one line of the server's log:

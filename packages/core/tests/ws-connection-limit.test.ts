@@ -27,7 +27,13 @@ function limiter(
   const warn = vi.spyOn(refusals, "warn");
   return {
     warn,
-    limit: createConnectionLimiter({ rule, store, secret: extra.secret, refusals, ...extra }),
+    limit: createConnectionLimiter({
+      rules: [rule],
+      store,
+      secret: extra.secret,
+      refusals,
+      ...extra,
+    }),
   };
 }
 
@@ -50,25 +56,82 @@ describe("createConnectionLimiter", () => {
     const store = spiedStore();
     const { limit } = limiter(store);
 
-    expect(await limit.admit("c1", {})).toEqual([]);
+    expect(await limit.admit({ connectionId: "c1", meta: {}, clientIp: "203.0.113.7" })).toEqual(
+      [],
+    );
     expect(store.acquire).not.toHaveBeenCalled();
   });
 
   it("gives up the oldest of a key's connections for a new one over the limit", async () => {
     const { limit } = limiter(createMemoryConnectionLeases());
 
-    await limit.admit("c1", { userId: "u1" });
-    await limit.admit("c2", { userId: "u1" });
+    await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" });
+    await limit.admit({ connectionId: "c2", meta: { userId: "u1" }, clientIp: "203.0.113.7" });
 
-    expect(await limit.admit("c3", { userId: "u1" })).toEqual(["c1"]);
-    expect(await limit.admit("c4", { userId: "u2" })).toEqual([]);
+    expect(
+      await limit.admit({ connectionId: "c3", meta: { userId: "u1" }, clientIp: "203.0.113.7" }),
+    ).toEqual(["c1"]);
+    expect(
+      await limit.admit({ connectionId: "c4", meta: { userId: "u2" }, clientIp: "203.0.113.7" }),
+    ).toEqual([]);
+  });
+
+  it("keeps each rule's keys apart, though two rules give the same key", async () => {
+    const store = spiedStore();
+    const refusals = createRefusalLog("WS");
+    const limit = createConnectionLimiter({
+      rules: [
+        { key: (meta) => meta.userId as string | undefined, max: 5 },
+        { key: (_, { clientIp }) => clientIp, max: 5 },
+      ],
+      store,
+      secret: undefined,
+      refusals,
+    });
+
+    await limit.admit({
+      connectionId: "c1",
+      meta: { userId: "203.0.113.7" },
+      clientIp: "203.0.113.7",
+    });
+
+    expect(new Set(store.scopes).size).toBe(2);
+  });
+
+  it("refuses by a rule that rejects before any rule gives a connection up for the new one", async () => {
+    const store = createMemoryConnectionLeases();
+    const limit = createConnectionLimiter({
+      rules: [
+        { key: (meta) => meta.userId as string | undefined, max: 1 },
+        { key: (_, { clientIp }) => clientIp, max: 1, onExceed: "reject" },
+      ],
+      store,
+      secret: undefined,
+      refusals: createRefusalLog("WS"),
+    });
+    await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" });
+
+    expect(
+      await limit.admit({ connectionId: "c2", meta: { userId: "u1" }, clientIp: "203.0.113.7" }),
+    ).toBeUndefined();
+    expect(
+      await limit.admit({ connectionId: "c3", meta: { userId: "u2" }, clientIp: "198.51.100.1" }),
+    ).toEqual([]);
   });
 
   it("hands the store the key hashed, never as it is, and with the secret's HMAC when there is one", async () => {
     const plain = spiedStore();
     const keyed = spiedStore();
-    await limiter(plain).limit.admit("c1", { userId: "alice@example.com" });
-    await limiter(keyed, { secret: SECRET }).limit.admit("c1", { userId: "alice@example.com" });
+    await limiter(plain).limit.admit({
+      connectionId: "c1",
+      meta: { userId: "alice@example.com" },
+      clientIp: "203.0.113.7",
+    });
+    await limiter(keyed, { secret: SECRET }).limit.admit({
+      connectionId: "c1",
+      meta: { userId: "alice@example.com" },
+      clientIp: "203.0.113.7",
+    });
 
     for (const scope of [...plain.scopes, ...keyed.scopes]) {
       expect(scope).toMatch(/^key:[0-9a-f]{16}$/);
@@ -86,9 +149,15 @@ describe("createConnectionLimiter", () => {
     };
     const { limit, warn } = limiter(failing);
 
-    expect(await limit.admit("c1", { userId: "u1" })).toEqual([]);
-    expect(await limit.admit("c2", { userId: "u1" })).toEqual([]);
-    expect(await limit.admit("c3", { userId: "u1" })).toEqual(["c1"]);
+    expect(
+      await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" }),
+    ).toEqual([]);
+    expect(
+      await limit.admit({ connectionId: "c2", meta: { userId: "u1" }, clientIp: "203.0.113.7" }),
+    ).toEqual([]);
+    expect(
+      await limit.admit({ connectionId: "c3", meta: { userId: "u1" }, clientIp: "203.0.113.7" }),
+    ).toEqual(["c1"]);
     expect(warn).toHaveBeenCalledWith(
       expect.objectContaining({ code: "LEASES_UNAVAILABLE" }),
       expect.any(Error),
@@ -104,7 +173,9 @@ describe("createConnectionLimiter", () => {
     const { limit } = limiter(silent, { timeoutMs: 50 });
     const started = Date.now();
 
-    expect(await limit.admit("c1", { userId: "u1" })).toEqual([]);
+    expect(
+      await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" }),
+    ).toEqual([]);
     expect(Date.now() - started).toBeLessThan(1_000);
   });
 
@@ -112,8 +183,8 @@ describe("createConnectionLimiter", () => {
     vi.useFakeTimers();
     const store = spiedStore();
     const { limit } = limiter(store, { renewEveryMs: 1_000 });
-    await limit.admit("c1", { userId: "u1" });
-    await limit.admit("c2", { userId: "u2" });
+    await limit.admit({ connectionId: "c1", meta: { userId: "u1" }, clientIp: "203.0.113.7" });
+    await limit.admit({ connectionId: "c2", meta: { userId: "u2" }, clientIp: "203.0.113.7" });
 
     await vi.advanceTimersByTimeAsync(1_000);
     expect(store.renew).toHaveBeenCalledWith([

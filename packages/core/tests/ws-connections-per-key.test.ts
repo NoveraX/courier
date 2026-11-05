@@ -46,10 +46,14 @@ function serve(config: WSHandlerConfig): WSHandler {
 }
 
 /** A client of `userId`, once the handler has registered or refused it. */
-async function connect(handler: WSHandler, userId: string): Promise<FakeSocket> {
+async function connect(
+  handler: WSHandler,
+  userId: string,
+  address = "203.0.113.7",
+): Promise<FakeSocket> {
   const known = new Set(handler.connections.list().map((c) => c.connectionId));
   const socket = createFakeSocket();
-  handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
+  handler.handleSocket(socket, new Request("http://localhost/api/ws"), address);
   socket.receive({ type: "auth", payload: { auth: { userId } } });
   const registered = () => handler.connections.list().some((c) => !known.has(c.connectionId));
   await expect.poll(() => registered() || socket.closed !== undefined).toBe(true);
@@ -111,6 +115,27 @@ describe("maxConnectionsPerKey", () => {
     expect([onB.closed, newest.closed]).toEqual([undefined, undefined]);
   });
 
+  it("limits one address's connections on every replica sharing the store, by the address the handler counts", async () => {
+    const bus = createMemoryBus();
+    const connectionLeases = createMemoryConnectionLeases();
+    const perAddress = {
+      key: (_: unknown, { clientIp }: { clientIp: string }) => clientIp,
+      max: 2,
+      onExceed: "reject" as const,
+    };
+    const shared = { maxConnectionsPerKey: [perUser(5), perAddress], connectionLeases };
+    const a = serve({ ...shared, pubsub: bus.replica("a") });
+    const b = serve({ ...shared, pubsub: bus.replica("b") });
+    await connect(a, "u1");
+    await connect(b, "u2");
+
+    const third = await connect(b, "u3");
+    const elsewhere = await connect(b, "u3", "198.51.100.1");
+
+    expect(third.closed).toMatchObject({ code: 4429, reason: "Too many connections" });
+    expect(elsewhere.closed).toBeUndefined();
+  });
+
   it.each([
     ["without onConnect to read keys from", { onConnect: undefined }],
     ["with a max that is no whole number", { maxConnectionsPerKey: { ...perUser(2), max: 1.5 } }],
@@ -119,6 +144,7 @@ describe("maxConnectionsPerKey", () => {
       "with an onExceed of neither kind",
       { maxConnectionsPerKey: { ...perUser(2), onExceed: "drop" } },
     ],
+    ["with an empty list of rules", { maxConnectionsPerKey: [] }],
   ])("is refused when the handler is made %s", (_case, extra) => {
     expect(() =>
       createWSHandler({

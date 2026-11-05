@@ -76,10 +76,14 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   maxConnectionsPerIP?: number | undefined;
   /**
    * A limit on the connections that share a key — one user's tabs and
-   * devices — counted on every replica that shares `connectionLeases`. The
-   * key is read from what `onConnect` returned, so the limit needs it.
+   * devices, one address's — counted on every replica that shares
+   * `connectionLeases`; a list of them, several at once. The key is read
+   * once `onConnect` has admitted the connection, so the limit needs it.
    */
-  maxConnectionsPerKey?: ConnectionLimitRule<ConnectionMeta<TConnect>> | undefined;
+  maxConnectionsPerKey?:
+    | ConnectionLimitRule<ConnectionMeta<TConnect>>
+    | readonly ConnectionLimitRule<ConnectionMeta<TConnect>>[]
+    | undefined;
   /**
    * Where `maxConnectionsPerKey` counts connections: this replica's memory
    * unless given, or a store every replica shares, so the limit counts the
@@ -187,10 +191,15 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   authRequiredTimeoutMs?: number | undefined;
 }
 
-/** A limit on the connections that share a key — one user's tabs and devices. */
+/** A limit on the connections that share a key — one user's tabs and devices, one address's. */
 export interface ConnectionLimitRule<TMeta = Record<string, unknown>> {
-  /** The key a connection counts against, from what `onConnect` returned; `undefined` puts it under no limit */
-  key: (meta: TMeta) => string | undefined;
+  /**
+   * The key a connection counts against: from what `onConnect` returned —
+   * `(meta) => meta.userId` — or the address the handler counts it against,
+   * after `clientIp` and the proxies it trusts — `(_, { clientIp }) => clientIp`.
+   * `undefined` puts the connection under no limit of this rule.
+   */
+  key: (meta: TMeta, connection: { readonly clientIp: string }) => string | undefined;
   /** Connections one key holds at most: a whole number, 1 or more */
   max: number;
   /**

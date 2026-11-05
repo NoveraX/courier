@@ -127,7 +127,11 @@ export function openSockets(
 
   /* A place under the limit: those given up for it are closed wherever they are held. */
   async function withinLimit(of: ConnectionLimiter, ctx: WSSocketContext): Promise<boolean> {
-    const evicted = await of.admit(ctx.connectionId, ctx.meta);
+    const evicted = await of.admit({
+      connectionId: ctx.connectionId,
+      meta: ctx.meta,
+      clientIp: ctx.clientIP,
+    });
     if (evicted === undefined) return false;
     if (evicted.length > 0) opening.evict(evicted);
     return true;

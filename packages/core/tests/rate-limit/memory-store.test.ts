@@ -56,4 +56,35 @@ describe("memoryRateLimitStore", () => {
     expect(store.take("c", TWO_A_MINUTE)).toMatchObject({ allowed: true });
     expect(store.take("a", TWO_A_MINUTE)).toMatchObject({ allowed: true, remaining: 1 });
   });
+
+  it("forgets the longest-idle caller as fast as it counts a call, however many callers it remembers", () => {
+    const store = memoryRateLimitStore();
+    const remembered = 100_000;
+    for (let n = 0; n < remembered; n += 1) store.take(`caller ${n}`, TWO_A_MINUTE);
+    const known = Array.from({ length: 400 }, (_, n) => `caller ${remembered - 400 + n}`);
+    let newcomers = 0;
+
+    /* The fastest of a few rounds: a pause to collect garbage, or the store's own sweep of the
+       callers whose budget is whole, measures neither kind of call. */
+    const fastest = (calls: () => void): number => {
+      let best = Number.POSITIVE_INFINITY;
+      for (let round = 0; round < 5; round += 1) {
+        const started = performance.now();
+        calls();
+        best = Math.min(best, performance.now() - started);
+      }
+      return best;
+    };
+    const ofKnown = fastest(() => {
+      for (const key of known) store.take(key, TWO_A_MINUTE);
+    });
+    const ofNew = fastest(() => {
+      for (let n = 0; n < known.length; n += 1) {
+        newcomers += 1;
+        store.take(`newcomer ${newcomers}`, TWO_A_MINUTE);
+      }
+    });
+
+    expect(ofNew / ofKnown).toBeLessThan(10);
+  });
 });

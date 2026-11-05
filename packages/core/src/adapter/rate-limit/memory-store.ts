@@ -16,6 +16,9 @@ const SWEEP_EVERY = 1024;
  * is whole again is forgotten. Past `maxCallers` remembered at once, the
  * longest-idle is forgotten first, so a flood of new addresses costs a
  * bounded amount of memory and never refuses a caller it does not know.
+ * Each call costs the same however many callers are remembered: one is
+ * forgotten for each one past them, and the callers whose budget is whole
+ * are swept once in a while.
  *
  * @param options - How many callers to remember at once; 100,000 by default
  * @returns The store
@@ -36,17 +39,19 @@ export function memoryRateLimitStore({
       const { decision, spentUntil } = takeCall(spent.get(key), limit, now);
       spent.delete(key);
       spent.set(key, spentUntil);
-      if (spent.size > maxCallers) sweep(spent, now, maxCallers);
+      if (spent.size > maxCallers) forgetLongestIdle(spent);
       return decision;
     },
   };
 }
 
-/* Forget whom a whole budget is waiting for, then, past `keep`, the longest idle. */
-function sweep(spent: Map<string, number>, now: number, keep = Number.POSITIVE_INFINITY): void {
+/* Forget whom a whole budget is waiting for. */
+function sweep(spent: Map<string, number>, now: number): void {
   for (const [key, until] of spent) if (until <= now) spent.delete(key);
-  for (const key of spent.keys()) {
-    if (spent.size <= keep) return;
-    spent.delete(key);
-  }
+}
+
+/* Each call moves its caller last, so the first is the one idle the longest. */
+function forgetLongestIdle(spent: Map<string, number>): void {
+  const longestIdle = spent.keys().next();
+  if (!longestIdle.done) spent.delete(longestIdle.value);
 }

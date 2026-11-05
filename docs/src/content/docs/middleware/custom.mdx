@@ -1,4 +1,4 @@
-export const metadata = { title: "Custom Middleware", description: "Write your own middleware to intercept requests, modify headers, transform responses, and handle errors.", mode: "both", updated: "2026-10-09" }
+export const metadata = { title: "Custom Middleware", description: "Write your own middleware to intercept requests, modify headers, transform responses, and handle errors.", mode: "both", updated: "2026-11-05" }
 
 ## Writing a Middleware
 
@@ -68,6 +68,27 @@ import { defineMiddleware } from "@noverax/courier/middleware"
 
 const passthrough = defineMiddleware("passthrough", "wrap", (_ctx, next) => next())
 ```
+
+### Narrow the signal
+
+A `wrap` handler may narrow `ctx.signal` for what lies inside it — give it a deadline of its own — and the request is sent with the signal the chain leaves. Join the call's own signal rather than replace it, so the caller's cancellation still goes through, and put it back once `next()` settles:
+
+```ts title="lib/middleware/deadline.ts"
+import { defineMiddleware } from "@noverax/courier/middleware"
+
+export const deadlineMiddleware = defineMiddleware("deadline", "wrap", async (ctx, next) => {
+  const own = ctx.signal
+  const limit = AbortSignal.timeout(5_000)
+  ctx.signal = own ? AbortSignal.any([own, limit]) : limit
+  try {
+    return await next()
+  } finally {
+    ctx.signal = own
+  }
+})
+```
+
+A retry policy's `deadline` does this for its attempts and the waits between them.
 
 ### Transform the response
 

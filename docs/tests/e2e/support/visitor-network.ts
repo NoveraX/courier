@@ -10,6 +10,8 @@ import {
 import { createServer as createHttpsServer } from "node:https"
 import { connect, type Socket } from "node:net"
 
+import { chainHeaders, type Route } from "./deployment-chain"
+
 /** How one visitor's browser reaches the site: through the proxy its context is set to. */
 export interface VisitorNetwork {
   /** The proxy server the browser's context is given. */
@@ -23,8 +25,10 @@ export interface VisitorNetworkOptions {
   readonly site: URL
   /** The name the browser asks for, over HTTPS. */
   readonly host: string
-  /** The address the visitor comes from, as the proxy in front reports it. */
+  /** The address the visitor comes from. */
   readonly address: string
+  /** Whether the visitor comes through the DDoS filter, as visitors do, or around it. */
+  readonly route?: Route | undefined
   readonly keyPath: string
   readonly certPath: string
 }
@@ -54,8 +58,8 @@ function listen(server: Server): Promise<number> {
   })
 }
 
-/* The front: TLS for the site's name, then each request to the site's server over plain HTTP,
-   saying who sent it and how — as a CDN or a DDoS filter in front of the container does. */
+/* The front: TLS for the site's name, then each request to the site's server over plain HTTP, its
+   headers as the DDoS filter and Traefik before the container write them (deployment-chain.ts). */
 function frontFor(options: VisitorNetworkOptions) {
   return (req: IncomingMessage, res: ServerResponse) => {
     const upstream = request(
@@ -64,12 +68,7 @@ function frontFor(options: VisitorNetworkOptions) {
         port: options.site.port,
         method: req.method,
         path: req.url,
-        headers: {
-          ...passedOn(req.headers),
-          "x-forwarded-for": options.address,
-          "x-forwarded-proto": "https",
-          "x-forwarded-host": req.headers.host ?? options.host,
-        },
+        headers: chainHeaders(passedOn(req.headers), options.route ?? "filter", options.address),
       },
       (answer) => {
         res.writeHead(answer.statusCode ?? 502, passedOn(answer.headers))
@@ -84,11 +83,12 @@ function frontFor(options: VisitorNetworkOptions) {
 
 /**
  * Open the network one visitor reaches the site through: a TLS front on
- * the site's name, before the site's own server as a CDN would stand, and
- * a proxy that tunnels the browser's connections to that name — and to no
- * other — to the front. A browser given the proxy opens `https://<host>`
- * as the site, an origin that is neither localhost nor plain HTTP, and the
- * site sees the visitor at the address given.
+ * the site's name, before the site's own server as the DDoS filter and
+ * Traefik stand in production, and a proxy that tunnels the browser's
+ * connections to that name — and to no other — to the front. A browser
+ * given the proxy opens `https://<host>` as the site, an origin that is
+ * neither localhost nor plain HTTP, and the site is told of the visitor as
+ * the production chain tells it: through the filter, or around it.
  *
  * @param options - The site, its name, the visitor's address, and the front's key and certificate
  * @returns The network

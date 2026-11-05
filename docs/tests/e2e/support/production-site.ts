@@ -4,6 +4,8 @@ import { createServer } from "node:net"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { FILTER_NETWORK } from "./deployment-chain"
+
 /** The site's production server, as its container runs it. */
 export interface ProductionSite {
   /** Where Next's server listens, on this machine alone. */
@@ -91,6 +93,9 @@ export async function startProductionSite(): Promise<ProductionSite> {
       API_URL: `http://127.0.0.1:${apiPort}`,
       EXPRESS_HOST: "127.0.0.1",
       EXPRESS_PORT: String(apiPort),
+      /* As the site's container runs behind DDoS-Guard and Traefik: see the README's In production. */
+      COURIER_TRUSTED_PROXIES: FILTER_NETWORK,
+      COURIER_CLIENT_ADDRESS_HEADER: "DDG-Connecting-IP",
     },
   })
   let printed = ""

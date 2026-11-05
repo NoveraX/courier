@@ -97,6 +97,72 @@ build only, and only once the reader accepts in the bar at the foot of the
 page: a local run, a preview or a test sends nothing. The counter and its page
 views are in `src/site/analytics`; the reader's answer, in `src/site/consent`.
 
+### Behind DDoS-Guard and Traefik
+
+The site is reached through DDoS-Guard, then the Traefik that Dokploy runs,
+then the site's container. The examples count each visitor by their
+address, which the container reads this way:
+
+- DDoS-Guard names the address that connected to it in `DDG-Connecting-IP`,
+  whatever a visitor sent there, and appends it to `X-Forwarded-For`, whose
+  earlier entries a visitor can write
+  ([Configuring L7 Protection](https://ddos-guard.net/tutorials/general/l7-settings)).
+- Traefik drops the `X-Forwarded-*` headers a peer it does not trust sent —
+  Dokploy installs it trusting none — and names the peer it saw in
+  `X-Forwarded-For`. `DDG-Connecting-IP` it passes on as it came, from
+  anyone.
+- Courier believes `DDG-Connecting-IP` only on a request whose nearest hop,
+  as Traefik named it, is in one of DDoS-Guard's networks. A request that
+  went around DDoS-Guard has its own address there instead, and is counted
+  by it, whatever it sends in the header.
+
+Only Traefik reaches the container: its port stays unpublished, as
+Dokploy leaves it, since a request sent to it directly could write any
+address into the chain. The container's environment names DDoS-Guard's
+networks and header — in Dokploy, the application's Environment Variables,
+then Deploy:
+
+```bash
+COURIER_TRUSTED_PROXIES=<DDoS-Guard's networks, comma-separated>
+COURIER_CLIENT_ADDRESS_HEADER=DDG-Connecting-IP
+```
+
+The networks are the list under Firewall Settings in Configuring L7
+Protection. DDoS-Guard announces no change to it, and changes it rarely:
+compare the variable with the list now and then. Without the variables,
+every visitor who comes through one of DDoS-Guard's edges counts as that
+edge, and shares its budget. Traefik's own trust needs no change for this:
+set to DDoS-Guard's networks, `forwardedHeaders.trustedIPs` would keep
+DDoS-Guard's `X-Forwarded-For` too, and the address read stays the same.
+
+DDoS-Guard recommends taking connections from its networks alone. Docker
+publishes Traefik's ports past `ufw`'s rules, so the rule belongs in
+Traefik, before the site. In Dokploy's Traefik File System, add to
+`dynamic/middlewares.yml`:
+
+```yaml
+http:
+  middlewares:
+    ddos-guard-only:
+      ipAllowList:
+        sourceRange:
+          - <each of DDoS-Guard's networks>
+```
+
+Then, in the application's Advanced tab, add `ddos-guard-only` to the
+`middlewares` of each of its routers in the Traefik configuration. Traefik
+matches `sourceRange` against the address that connected to it, which is
+DDoS-Guard's. Dokploy writes that file again when the application's
+domains change: check that the middleware is still listed after editing a
+domain. The host's own firewall can hold the rule instead — the
+`DOCKER-USER` chain, `ufw-docker`, or the provider's firewall.
+
+DDoS-Guard does not serve HTTP/3, while Dokploy's Traefik advertises it
+(`Alt-Svc: h3`) from its `websecure` entry point, which DDoS-Guard passes on
+to browsers. Removing `http3` from `entryPoints.websecure` in Traefik File
+System's `traefik.yml`, then restarting Traefik, stops browsers trying
+QUIC first.
+
 ## Writing a page
 
 A page is an MDX file under `src/content/docs` that opens with its metadata:
@@ -157,10 +223,8 @@ The examples' proxy route (`src/app/api/request`) holds each caller — the
 user's address, as the deployment's proxies report it — to 300 calls a
 minute, 20 of them writes, and answers a call past either with 429 and
 `Retry-After`. It reads a call's body only as large as the backend takes
-it. Behind a CDN or a DDoS filter on public addresses, name the filter's
-ranges in `COURIER_TRUSTED_PROXIES` and the header it names the user in in
-`COURIER_CLIENT_ADDRESS_HEADER` (see the docs' Deployment page): otherwise
-every user it passes on counts as one of the filter's own addresses.
+it. How the user's address is read behind DDoS-Guard and Traefik is in
+[Behind DDoS-Guard and Traefik](#behind-ddos-guard-and-traefik).
 Server Actions and the pages in direct mode call the backend without the
 proxy route; what they can make it keep is held by the limits above.
 

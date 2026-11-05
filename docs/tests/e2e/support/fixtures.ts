@@ -7,6 +7,7 @@ import {
   type Response,
 } from "@playwright/test"
 
+import type { Route } from "./deployment-chain"
 import { fromSetup, SITE_HOST, STAND, visitorAddress } from "./stand"
 import { openVisitorNetwork, type VisitorNetwork } from "./visitor-network"
 
@@ -21,16 +22,19 @@ export const DEPLOYED = Boolean(process.env.SITE_URL)
 
 /**
  * Open the network a visitor of their own reaches the site through, at an
- * address no worker has.
+ * address no worker has: through the DDoS filter, as visitors come, or
+ * around it, as one who found the server's own address would.
  *
  * @param index - Which such visitor, from 100 up: past the workers' own addresses
+ * @param route - Through the filter, or around it
  * @returns The network
  */
-export function openVisitor(index: number): Promise<VisitorNetwork> {
+export function openVisitor(index: number, route: Route = "filter"): Promise<VisitorNetwork> {
   return openVisitorNetwork({
     site: new URL(fromSetup(STAND.site)),
     host: SITE_HOST,
     address: visitorAddress(index),
+    route,
     keyPath: fromSetup(STAND.key),
     certPath: fromSetup(STAND.cert),
   })

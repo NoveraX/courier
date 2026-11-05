@@ -1,17 +1,17 @@
 import { createLogger } from "../logger";
 import type { RefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
-import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { rememberPeerAddress } from "./peer-address";
+import { activateConnection } from "./ws-activate";
 import { admitSocket } from "./ws-admission";
 import { admitConnection } from "./ws-admit-connection";
 import { connectionFields } from "./ws-connection-fields";
+import type { ConnectionLimiter } from "./ws-connection-limit";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { V1_DIALECT } from "./ws-dialect";
 import type { HandlerCounters } from "./ws-handler-stats";
 import { holdFrames, type WSInbox } from "./ws-inbox";
 import type { IPTracker } from "./ws-ip-tracker";
-import { wireEvents } from "./ws-lifecycle";
 import type { LiveConnections } from "./ws-live-connections";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
@@ -32,6 +32,10 @@ export interface SocketOpening {
   readonly live: LiveConnections;
   /** What the handler counts as its sockets close and their frames are dropped */
   readonly counters: HandlerCounters;
+  /** The limit on the connections of one key, when the handler has one */
+  readonly limiter: ConnectionLimiter | undefined;
+  /** Close the connections a limit gave up for newer ones, wherever they are held */
+  readonly evict: (connectionIds: readonly string[]) => void;
   /** Whether the handler is stopping, when a socket handed to it is closed at once */
   readonly stopping: () => boolean;
 }
@@ -54,7 +58,8 @@ export interface SocketOpening {
 export function openSockets(
   opening: SocketOpening,
 ): (ws: WebSocketLike, request: Request, peerAddress?: string) => void {
-  const { config, registry, refusals, ipTracker, bridge, topicManager, live, counters } = opening;
+  const { config, registry, refusals, ipTracker, bridge, topicManager, live, counters, limiter } =
+    opening;
   /* Each frame a full buffer drops is counted, before the application's own hook hears of it. */
   const counted: WSHandlerConfig = {
     ...config,
@@ -109,37 +114,23 @@ export function openSockets(
       authTimeoutMs: config.authTimeoutMs ?? 3000,
       hookTimeoutMs: ctx.middlewareTimeoutMs,
       left: () => closedWith,
+      limit: limiter && ((admitted) => withinLimit(limiter, admitted)),
     });
     if (outcome === "admitted") {
-      registerAndActivate(ws, inbox, ctx);
+      activateConnection(ws, inbox, ctx, opening);
       return;
     }
+    limiter?.release(ctx.connectionId);
     ipTracker.release(ctx.clientIP);
     ctx.session.dispose();
   }
 
-  function registerAndActivate(ws: WebSocketLike, inbox: WSInbox, ctx: WSSocketContext): void {
-    const { session } = ctx;
-    registry.add({
-      connectionId: ctx.connectionId,
-      meta: ctx.meta,
-      connectedAt: Date.now(),
-      sendRaw: ctx.sendMessage,
-      sendEncoded: ctx.sendEncoded,
-      close: (code, reason) => session.close({ kind: "application", code, reason }),
-      requireAuth: (timeoutMs) => session.requireAuth(timeoutMs ?? ctx.authRequiredTimeoutMs),
-    });
-    const hb = createHeartbeat(
-      () => ctx.sendMessage({ type: "ping" }),
-      () => session.close({ kind: "heartbeat-timeout" }),
-      {
-        intervalMs: config.heartbeatIntervalMs ?? 25_000,
-        timeoutMs: config.heartbeatTimeoutMs ?? 10_000,
-      },
-    );
-    hb.start();
-    bridge?.onConnectionOpen();
-    wireEvents(ws, inbox, ctx, hb, topicManager, config, registry, ipTracker);
+  /* A place under the limit: those given up for it are closed wherever they are held. */
+  async function withinLimit(of: ConnectionLimiter, ctx: WSSocketContext): Promise<boolean> {
+    const evicted = await of.admit(ctx.connectionId, ctx.meta);
+    if (evicted === undefined) return false;
+    if (evicted.length > 0) opening.evict(evicted);
+    return true;
   }
 
   return (ws, request, peerAddress) => {
@@ -168,12 +159,13 @@ export function openSockets(
       ctx.session.close({ kind: "flood" });
     });
     if (!config.onConnect) {
-      registerAndActivate(ws, inbox, ctx);
+      activateConnection(ws, inbox, ctx, opening);
       return;
     }
     /* What fails while a connection is admitted ends that connection, never the process. */
     initConnection(ws, inbox, ctx, config.onConnect).catch((error: unknown) => {
       log.error(`Connection ${ctx.connectionId} could not be admitted`, error);
+      limiter?.release(ctx.connectionId);
       ipTracker.release(ctx.clientIP);
       ctx.session.close({ kind: "internal" });
     });

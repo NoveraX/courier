@@ -12,6 +12,7 @@ function createEntry(id: string, meta: Record<string, unknown> = {}) {
     sendEncoded: vi.fn(),
     close: vi.fn(),
     requireAuth: vi.fn(() => () => undefined),
+    evict: vi.fn(),
   };
 }
 

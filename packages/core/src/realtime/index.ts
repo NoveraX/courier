@@ -2,6 +2,11 @@ export type {
   AdapterDeadline,
   AdapterLifecycle,
   AdapterState,
+  ConnectionLeaseStore,
+  HeldLease,
+  LeaseGrant,
+  LeaseOverflow,
+  LeaseRule,
   PresenceAdapter,
   PresenceDiff,
   PresenceEntry,
@@ -24,6 +29,7 @@ export {
   RealtimeValidationError,
 } from "./errors";
 export { createMemoryBus, type MemoryBus } from "./memory-bus";
+export { createMemoryConnectionLeases } from "./memory-leases";
 export { createMemoryPresence } from "./memory-presence";
 export { createMemoryPubSub } from "./memory-pubsub";
 export { createMemoryStream } from "./memory-stream";

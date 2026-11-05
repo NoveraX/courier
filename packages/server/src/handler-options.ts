@@ -123,6 +123,8 @@ export function wsHandlerOptions(
     middlewareTimeoutMs: config.middlewareTimeoutMs,
     maxMessagesPerSecond: config.maxMessagesPerSecond,
     maxConnectionsPerIP: config.maxConnectionsPerIP,
+    maxConnectionsPerKey: config.maxConnectionsPerKey,
+    connectionLeases: config.connectionLeases,
     clientIp: config.clientIp,
     authorize: config.authorize,
     onConnect: config.onConnect,

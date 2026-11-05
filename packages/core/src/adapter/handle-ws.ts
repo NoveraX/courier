@@ -6,6 +6,7 @@ import type { ConnectResult } from "./connection-meta";
 import { LIMITS } from "./limits";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
 import { createIPTracker } from "./ws-ip-tracker";
+import { connectionLimitOf } from "./ws-limit-rule";
 import { createLiveConnections } from "./ws-live-connections";
 import { openSockets } from "./ws-open-socket";
 import { createConnectionRegistry } from "./ws-registry";
@@ -50,6 +51,10 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   const ipTracker = createIPTracker(maxPerIP);
   const replication = replicate(config, registry, refusals);
   const bridge = replication?.bridge;
+  /* With a pub/sub adapter, what the application broadcasts through the
+     registry reaches every replica, as a channel's ctx.broadcast does, and
+     so do the connections it closes or asks for credentials again. */
+  const connections = replication?.connections ?? registry;
   const topicManager = createServerTopicManager(
     bridge
       ? {
@@ -61,6 +66,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   registry.setTopicManager(topicManager);
   const live = createLiveConnections();
   const counters = createHandlerCounters();
+  const limiter = connectionLimitOf(config, refusals);
   let stopping: Promise<void> | undefined;
 
   const handleSocket = openSockets({
@@ -72,6 +78,12 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     topicManager,
     live,
     counters,
+    limiter,
+    evict: (connectionIds) => {
+      connections.evict(connectionIds).catch((error: unknown) => {
+        refusals.warn({ event: "eviction not sent", code: "PUBSUB_STOPPED" }, error);
+      });
+    },
     stopping: () => stopping !== undefined,
   });
 
@@ -91,6 +103,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       ({ kind: "shutdown", retryAfterMs: Math.floor(Math.random() * spread) }) as const;
     await live.closeAll(shutdown, timeoutMs);
     studioHooks.sendWSMessage = undefined;
+    limiter?.destroy();
     replication?.destroy();
   }
 
@@ -98,11 +111,6 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     stopping ??= stop(options?.timeoutMs ?? LIMITS.WS_SHUTDOWN_TIMEOUT_MS);
     return stopping;
   }
-
-  /* With a pub/sub adapter, what the application broadcasts through the
-     registry reaches every replica, as a channel's ctx.broadcast does, and
-     so do the connections it closes or asks for credentials again. */
-  const connections = replication?.connections ?? registry;
 
   function stats(): WSHandlerStats {
     const { topics, subscriptions } = topicManager.counts();

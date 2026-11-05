@@ -10,6 +10,8 @@ export type SessionClose =
   | { readonly kind: "host" }
   | { readonly kind: "origin" }
   | { readonly kind: "limit" }
+  /** Given up for a newer connection of its key, over `maxConnectionsPerKey` */
+  | { readonly kind: "evicted" }
   | { readonly kind: "flood" }
   | { readonly kind: "auth-refused"; readonly failure: StreamFailure }
   | { readonly kind: "admission-timeout" }
@@ -81,6 +83,8 @@ export const V1_DIALECT: WireDialect = {
         return { code: 4403, reason: "Origin not allowed" };
       case "limit":
         return { code: 4429, reason: "Too many connections" };
+      case "evicted":
+        return { code: 4429, reason: "Replaced by a newer connection" };
       case "flood":
         return { code: 4429, reason: "Too many messages before the connection was accepted" };
       case "auth-refused":

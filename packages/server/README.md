@@ -153,6 +153,8 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive; then 408 |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
 | `cluster.secret` | `undefined` | A secret of 32 bytes or more, the same on every replica, that signs the commands `wsConnections.disconnect()` and `requireAuth()` send the other replicas; one not signed with it is refused |
+| `maxConnectionsPerKey` | `undefined` | A limit on the WebSocket connections that share a key — `{ key: (meta) => meta.userId, max: 3 }`; over it the oldest is closed with `4429`, or, with `onExceed: "reject"`, the new one |
+| `connectionLeases` | this replica's memory | Where `maxConnectionsPerKey` counts connections — `createRedisConnectionLeases()` to count them on every replica |
 | `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |
 | `clientIp` | the socket's address | Names the address a WebSocket connection is counted against |
 | `maxSubscriptionsPerConnection` | `100` | Subscriptions one WebSocket connection may hold; its subscribe, unsubscribe and auth frames are limited to twice this a second, apart from its other messages, and one past the limit is refused with a `4429` error |

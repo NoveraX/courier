@@ -21,6 +21,11 @@ export interface AdmissionRules {
   readonly hookTimeoutMs: number;
   /** The code the socket closed with, when the client left while it was being admitted */
   readonly left: () => number | undefined;
+  /**
+   * Takes the connection's place under a limit on its key's connections,
+   * once `onConnect` has said who it is: false when the limit refuses it
+   */
+  readonly limit?: ((ctx: WSSocketContext) => Promise<boolean>) | undefined;
 }
 
 /** How admitting a connection came out. */
@@ -34,8 +39,10 @@ const TIMED_OUT = Symbol("onConnect did not settle in time");
  * `onConnect` refuses — or one whose frame is none a client sends — is
  * closed with why, and the refusal logged on one line; an `onConnect` that
  * has not settled by its deadline closes it as a fault of the server, which
- * the client may retry. A client that left while `onConnect` admitted it
- * has its `onDisconnect` run, so what `onConnect` set up is undone.
+ * the client may retry. Under a limit on its key's connections, it then
+ * takes its place, and one the limit refuses is closed with 4429. A client
+ * that left while `onConnect` admitted it, and one the limit refused, has
+ * its `onDisconnect` run, so what `onConnect` set up is undone.
  *
  * @param ctx - The connection
  * @param inbox - What its socket sent before it was admitted
@@ -78,14 +85,25 @@ export async function admitConnection(
   } finally {
     clearTimeout(timer);
   }
+  /* Admitted by onConnect, so onDisconnect hears of it however it ends here. */
+  if (rules.limit && !(await rules.limit(ctx))) {
+    const why = { kind: "limit" } as const;
+    ctx.session.close(why);
+    await disconnected(ctx, rules, ctx.session.dialect.closeOf(why).code);
+    return "refused";
+  }
   const code = rules.left();
   if (code === undefined) return "admitted";
+  await disconnected(ctx, rules, code);
+  return "left";
+}
+
+async function disconnected(ctx: WSSocketContext, rules: AdmissionRules, code: number) {
   try {
     await rules.onDisconnect?.({ connectionId: ctx.connectionId, meta: ctx.meta, code });
   } catch (error) {
     log.warn("onDisconnect hook failed", error);
   }
-  return "left";
 }
 
 /* What was thrown is the log's; the client hears a `RealtimeError`'s own

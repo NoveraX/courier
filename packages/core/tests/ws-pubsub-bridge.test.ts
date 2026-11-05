@@ -24,6 +24,7 @@ function createEntry(id: string) {
     sendEncoded: vi.fn(),
     close: vi.fn(),
     requireAuth: vi.fn(() => () => undefined),
+    evict: vi.fn(),
   };
 }
 

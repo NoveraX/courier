@@ -1,5 +1,10 @@
 import type { Sources } from "../define/types";
-import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
+import type {
+  ConnectionLeaseStore,
+  LeaseOverflow,
+  PubSubAdapter,
+  WebSocketLike,
+} from "../realtime/adapters";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { AllowedHostsSetting } from "./runtime-policy";
@@ -69,6 +74,18 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   maxMessagesPerSecond?: number | undefined;
   /** Max concurrent connections from a single IP address (default 50) */
   maxConnectionsPerIP?: number | undefined;
+  /**
+   * A limit on the connections that share a key — one user's tabs and
+   * devices — counted on every replica that shares `connectionLeases`. The
+   * key is read from what `onConnect` returned, so the limit needs it.
+   */
+  maxConnectionsPerKey?: ConnectionLimitRule<ConnectionMeta<TConnect>> | undefined;
+  /**
+   * Where `maxConnectionsPerKey` counts connections: this replica's memory
+   * unless given, or a store every replica shares, so the limit counts the
+   * key's connections wherever they are held.
+   */
+  connectionLeases?: ConnectionLeaseStore | undefined;
   /**
    * Names the address a connection is counted against. A `Request` carries no
    * peer address, so without this the cap falls back to forwarding headers —
@@ -167,6 +184,21 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * before the connection is closed with 4401 (default 30000).
    */
   authRequiredTimeoutMs?: number | undefined;
+}
+
+/** A limit on the connections that share a key — one user's tabs and devices. */
+export interface ConnectionLimitRule<TMeta = Record<string, unknown>> {
+  /** The key a connection counts against, from what `onConnect` returned; `undefined` puts it under no limit */
+  key: (meta: TMeta) => string | undefined;
+  /** Connections one key holds at most: a whole number, 1 or more */
+  max: number;
+  /**
+   * Over the limit, the oldest of the key's connections are closed for the
+   * new one (`"evict-oldest"`, the default), or the new one is refused
+   * (`"reject"`). Either is closed with 4429, which a Courier client does
+   * not reconnect on.
+   */
+  onExceed?: LeaseOverflow | undefined;
 }
 
 /** How the replicas of one application trust the commands they send each other. */

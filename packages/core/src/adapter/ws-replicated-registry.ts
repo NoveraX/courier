@@ -2,6 +2,7 @@ import type { ClusterControl } from "./cluster-control";
 import {
   type CheckedCommand,
   disconnectCommand,
+  evictCommand,
   requireAuthCommand,
   runCommand,
 } from "./ws-connection-command";
@@ -73,6 +74,7 @@ export function replicateRegistry(
       registry.sendToConnection(connectionId, topic, data),
     disconnect: async (selector, options) => everywhere(disconnectCommand(selector, options)),
     requireAuth: async (selector, options) => everywhere(requireAuthCommand(selector, options)),
+    evict: async (connectionIds) => everywhere(evictCommand(connectionIds)),
     add: (entry) => registry.add(entry),
     remove: (connectionId) => registry.remove(connectionId),
     updateMeta: (connectionId, meta) => registry.updateMeta(connectionId, meta),

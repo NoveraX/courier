@@ -1,3 +1,4 @@
+import { isRecord } from "../utils/is-record";
 import { closeReason } from "./close-reason";
 import { readSelector, type Selection } from "./connection-selector";
 import { isSendableCloseCode } from "./ws-dialect";
@@ -29,6 +30,11 @@ export type ConnectionCommand =
       readonly selector: ConnectionSelector;
       /** Absent, each replica gives its own `authRequiredTimeoutMs` */
       readonly timeoutMs?: number;
+    }
+  | {
+      /** Given up for newer connections of their key, which a limit admitted */
+      readonly kind: "evict";
+      readonly selector: { readonly id: readonly string[] };
     };
 
 /** A command read, with the connections it selects. */
@@ -38,7 +44,7 @@ export interface CheckedCommand {
 }
 
 /** The kinds of command a replica carries out; another is a newer replica's. */
-export const COMMAND_KINDS: ReadonlySet<string> = new Set(["disconnect", "require-auth"]);
+export const COMMAND_KINDS: ReadonlySet<string> = new Set(["disconnect", "require-auth", "evict"]);
 
 /**
  * Read a command — the application's, or one another replica sent — into
@@ -63,7 +69,12 @@ export function readCommand(value: unknown): CheckedCommand | string {
     }
     return { command: { kind, selector: selector as ConnectionSelector, code, reason }, selection };
   }
-  if (kind !== "require-auth") return "a command disconnects or asks for credentials again";
+  if (kind === "evict") {
+    if (!("ids" in selection) || !isRecord(selector)) return "connections are evicted by their ids";
+    return { command: { kind, selector: { id: selection.ids } }, selection };
+  }
+  if (kind !== "require-auth")
+    return "a command disconnects, asks for credentials again, or evicts";
   if (timeoutMs === undefined)
     return { command: { kind, selector: selector as ConnectionSelector }, selection };
   if (!isDeadline(timeoutMs)) {
@@ -103,6 +114,15 @@ export function requireAuthCommand(
 }
 
 /**
+ * The command to close connections a limit gave up for newer ones of their key.
+ *
+ * @throws TypeError for no id, or more than a selector names
+ */
+export function evictCommand(connectionIds: readonly string[]): CheckedCommand {
+  return checked({ kind: "evict", selector: { id: connectionIds } });
+}
+
+/**
  * Carry a command out on the connections of this replica it selects.
  *
  * @returns The entries it reached
@@ -114,6 +134,7 @@ export function runCommand(
   const entries = registry.select(selection);
   for (const entry of entries) {
     if (command.kind === "disconnect") entry.close(command.code, command.reason);
+    else if (command.kind === "evict") entry.evict();
     else entry.requireAuth(command.timeoutMs);
   }
   return entries;

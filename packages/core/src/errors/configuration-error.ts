@@ -179,6 +179,12 @@ export type ConfigurationErrorCode =
    * string, or the runtime has no Web Crypto to sign with it.
    */
   | "CLUSTER_SECRET_INVALID"
+  /**
+   * A WebSocket handler's `maxConnectionsPerKey` has no key function, a
+   * `max` that is no whole number of 1 or more, an `onExceed` of neither
+   * kind, or sits on a handler with no `onConnect` to read keys from.
+   */
+  | "CONNECTION_LIMIT_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
   /**

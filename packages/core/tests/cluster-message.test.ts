@@ -40,6 +40,24 @@ describe("readClusterMessage", () => {
     expect(readClusterMessage(unbounded)).toMatchObject({ message: unbounded });
   });
 
+  it("reads a command to evict connections by their ids, and by nothing else", () => {
+    const evict = { ...disconnect, cmd: { kind: "evict", selector: { id: ["c1", "c2"] } } };
+
+    expect(readClusterMessage(evict)).toMatchObject({
+      message: evict,
+      selection: { ids: ["c1", "c2"] },
+    });
+    expect(readClusterMessage({ ...evict, cmd: { kind: "evict", selector: "c1" } })).toHaveProperty(
+      "malformed",
+    );
+    expect(
+      readClusterMessage({
+        ...evict,
+        cmd: { kind: "evict", selector: { meta: { userId: "u1" } } },
+      }),
+    ).toHaveProperty("malformed");
+  });
+
   it("keeps the signature, and nothing it does not act on", () => {
     const signed = { ...disconnect, sig: "ab".repeat(32), relayedBy: "proxy" };
 
@@ -51,7 +69,7 @@ describe("readClusterMessage", () => {
 
   it("skips a message of a version it does not know, and a command of a kind it does not", () => {
     expect(readClusterMessage({ ...disconnect, v: 2 })).toEqual({ skipped: "version" });
-    expect(readClusterMessage({ ...disconnect, cmd: { kind: "evict", ids: ["c1"] } })).toEqual({
+    expect(readClusterMessage({ ...disconnect, cmd: { kind: "drain", selector: "c1" } })).toEqual({
       skipped: "kind",
     });
   });

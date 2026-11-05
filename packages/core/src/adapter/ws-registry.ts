@@ -1,5 +1,10 @@
 import { hasFields, readSelector } from "./connection-selector";
-import { disconnectCommand, requireAuthCommand, runCommand } from "./ws-connection-command";
+import {
+  disconnectCommand,
+  evictCommand,
+  requireAuthCommand,
+  runCommand,
+} from "./ws-connection-command";
 import {
   type BroadcastTargets,
   broadcastToAll,
@@ -88,6 +93,9 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
     },
     async requireAuth(selector, options) {
       runCommand(requireAuthCommand(selector, options), registry);
+    },
+    async evict(connectionIds) {
+      runCommand(evictCommand(connectionIds), registry);
     },
     add(entry) {
       entries.set(entry.connectionId, entry);

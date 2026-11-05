@@ -99,6 +99,8 @@ export interface RegistryEntry {
    * @returns The function that lifts the deadline
    */
   requireAuth: (timeoutMs?: number) => () => void;
+  /** Close it, given up for a newer connection of its key */
+  evict: () => void;
 }
 
 /** @internal Registry with add/remove methods for handler integration */
@@ -111,6 +113,8 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
   getEntry(connectionId: string): RegistryEntry | undefined;
   /** This replica's entries a selection names, each once */
   select(selection: Selection): RegistryEntry[];
+  /** Close the connections a limit gave up for newer ones, wherever they are held */
+  evict(connectionIds: readonly string[]): Promise<void>;
   /** Inject topic manager after creation (breaks circular init dependency) */
   setTopicManager(tm: ServerTopicManager): void;
 }

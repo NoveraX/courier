@@ -181,3 +181,47 @@ export interface PresenceAdapter extends AdapterLifecycle {
   /** Subscribe to presence diffs (joins/leaves) on a topic */
   onDiff(topic: string, handler: (diff: PresenceDiff) => void): () => void;
 }
+
+// ---------------------------------------------------------------------------
+// Connection leases — what a limit on one key's connections counts
+// ---------------------------------------------------------------------------
+
+/** What a scope's limit does with a connection over it. */
+export type LeaseOverflow = "evict-oldest" | "reject";
+
+/** The limit a lease is taken under. */
+export interface LeaseRule {
+  /** Leases a scope holds at most */
+  readonly max: number;
+  /** Over it, the oldest leases are given up for the new one, or the new one is refused */
+  readonly onExceed: LeaseOverflow;
+}
+
+/** A lease a replica holds, as it renews it. */
+export interface HeldLease {
+  readonly scope: string;
+  readonly lease: string;
+}
+
+/** A lease granted, with the leases given up for it; or refused. */
+export type LeaseGrant =
+  | { readonly admitted: true; readonly evict: readonly string[] }
+  | { readonly admitted: false };
+
+/**
+ * Where the leases of a limit on one key's connections are kept: this
+ * replica's memory, or a store every replica shares, as Redis is, so the
+ * limit counts the key's connections wherever they are held. Each decision
+ * is the store's alone, made at once, so two connections arriving together
+ * on two replicas never both take the last place, nor give up the same
+ * lease twice. A shared store lets a lease lapse unless it is renewed, so a
+ * replica that stops without releasing frees its leases in time.
+ */
+export interface ConnectionLeaseStore {
+  /** Take a lease in a scope, under its rule: the oldest given up for it, or it refused */
+  acquire(scope: string, lease: string, rule: LeaseRule): Promise<LeaseGrant>;
+  /** Keep the leases this replica holds from lapsing */
+  renew(leases: readonly HeldLease[]): Promise<void>;
+  /** Give a lease up */
+  release(scope: string, lease: string): Promise<void>;
+}

@@ -489,6 +489,22 @@ export async function askForFreshTokens(connections: ConnectionRegistry, userId:
 
 A selector is a connection id, `{ id }` with as many as 1000 of them, or `{ meta }` comparing up to 16 fields of what `onConnect` returned, each to a string, a number or a boolean. One the handler cannot use — no id, a field compared to an object — rejects with a `TypeError` before anything is closed, and so does a code no socket can send. The call resolves once this replica's connections are closed and the command for the others has gone to the adapter; it is not sent at all when every id it names is this replica's. A replica Redis cannot reach at that moment misses the command, so revoke the user's credentials as well: a client that reconnects is then refused by `onConnect`. `count`, `get`, `list()` and `send()` stay with the replica that holds the connections.
 
+### Capping a User's Connections
+
+`maxConnectionsPerKey` limits the connections that share a key, read from what `onConnect` returned, and counts them in `connectionLeases`: this replica's memory unless you give a store every replica shares.
+
+```ts title="ws.ts"
+const ws = createWSHandler({
+  pubsub,
+  onConnect: ({ auth }) => ({ userId: auth?.userId }),
+  maxConnectionsPerKey: { key: (meta) => meta.userId as string | undefined, max: 5 },
+})
+```
+
+Over the limit, the oldest connection of the key is closed with `4429` "Replaced by a newer connection", wherever it is held, and a Courier client does not reconnect on it. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. A key that is `undefined` puts the connection under no limit.
+
+Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within 2 seconds, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out.
+
 ### Signing the commands
 
 Whoever can publish on the adapter's channels can send the replicas a command — on a Redis anything else reaches, close any connection. Give every replica the same secret of 32 bytes or more, and each command is signed with HMAC-SHA-256; one that is not signed, or not with the secret, is refused, and so is one sent again or more than a minute ago, each on one line of the server's log:

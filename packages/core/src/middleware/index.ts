@@ -1,3 +1,4 @@
+export type { RetryEvent, RetryOptions, RetryTrigger } from "../define/options";
 export {
   authMiddleware,
   cacheMiddleware,

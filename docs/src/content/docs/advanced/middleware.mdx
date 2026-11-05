@@ -119,18 +119,23 @@ authMiddleware({
 
 ### retryMiddleware
 
-Retries failed requests with exponential backoff:
+Retries failed requests with random waits that grow, as the AWS SDKs' standard retry mode does:
 
 ```ts
 import { retryMiddleware } from "@noverax/courier/middleware"
 
 retryMiddleware({
-  limit: 3,                                        // Max retries (default: 3)
-  delay: 300,                                      // First wait in ms (default: 300)
-  backoff: "exponential",                          // How the wait grows (default: "exponential")
-  retryOn: ["network", 502, 503, 504],             // Failures or a test (default: "network", "timeout" and >= 500)
+  limit: 3,                              // Max retries (default: 3, at most 10)
+  delay: 300,                            // First wait in ms (default: 300)
+  backoff: "exponential",                // How the wait grows (default: "exponential")
+  jitter: "full",                        // A random wait up to it (default: "full")
+  maxDelay: 20_000,                      // The longest wait (default: 20000)
+  deadline: 10_000,                      // All attempts and waits together (default: none)
+  retryOn: ["network", 429, 502, 503, 504], // Failures or a test (default: "network", 408, 425, 429, 500, 502, 503, 504)
 })
 ```
+
+An answer's `Retry-After` is waited for as it asks, a timeout is not retried unless `retryOn` names it, and a budget shared by the policy's calls stops the retries while an upstream keeps failing. [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) lists what is retried and why.
 
 ### rateLimitMiddleware
 

@@ -1,5 +1,5 @@
 import type { AgentOptions } from "../agent/types";
-import type { Middleware, RetryFailure } from "../middleware/types";
+import type { Middleware, MiddlewareContext, RetryFailure } from "../middleware/types";
 import type { EndpointSession } from "../session/types";
 import type { CacheConfig } from "../validation";
 
@@ -120,37 +120,65 @@ export type RetryTrigger = number | "network" | "timeout";
  * A retry policy: on an endpoint, inherited from its base, or given to
  * `retryMiddleware` — one vocabulary for all three.
  *
- * Without `retryOn`, a 5xx, a request that got no answer and one whose time
- * ran out are retried. An endpoint that writes is sent once, since a write
- * whose answer was lost may already have been carried out — unless it
- * declares an `idempotencyKey`, whose one key on every attempt lets the
- * upstream apply it once, or `mutations` is set.
+ * Without `retryOn`, a request that got no answer and the answers 408, 425,
+ * 429, 500, 502, 503 and 504 are retried — not one whose own time ran out.
+ * The waits are random up to a doubling delay, no longer than `maxDelay`,
+ * or what an answer's `Retry-After` asks. An endpoint that writes is sent
+ * once, since a write whose answer was lost may already have been carried
+ * out — unless it declares an `idempotencyKey`, whose one key on every
+ * attempt lets the upstream apply it once, it certainly never left, or
+ * `mutations` is set.
  *
  * @example
  * ```ts
- * endpoint.get("report").retry({ limit: 5, delay: 1_000, backoff: "fixed", retryOn: ["network", 503] });
+ * endpoint.get("report").retry({ limit: 5, delay: 1_000, deadline: 30_000, retryOn: ["network", 503] });
  * ```
  */
 export interface RetryOptions {
-  /** How many times a failed attempt is made again (default: 3) */
+  /** How many times a failed attempt is made again (default: 3, at most 10) */
   limit?: number | undefined;
   /** The wait before the first retry, in ms (default: 300) */
   delay?: number | undefined;
   /** How the wait grows between retries (default: "exponential", doubling it) */
   backoff?: "fixed" | "exponential" | undefined;
+  /** "full" waits a random time up to the wait, "none" the wait itself (default: "full") */
+  jitter?: "full" | "none" | undefined;
+  /** The longest one wait may be, in ms; an answer asking for longer is not retried (default: 20000) */
+  maxDelay?: number | undefined;
+  /** The most time the attempts and the waits between them may take, in ms (default: none) */
+  deadline?: number | undefined;
   /**
    * Which failures deserve another attempt: answers' statuses, `"network"`
    * for a request that got no answer and `"timeout"` for one whose time ran
-   * out, or a test of why the attempt failed (default: `"network"`,
-   * `"timeout"` and 5xx).
+   * out, or a test of why the attempt failed (default: `"network"` and 408,
+   * 425, 429, 500, 502, 503, 504).
    */
   retryOn?: readonly RetryTrigger[] | ((failure: RetryFailure) => boolean) | undefined;
   /**
    * Retry an endpoint that writes as well as one that reads (default: only
    * a write whose endpoint declares an `idempotencyKey`, which the upstream
-   * applies once however many times it arrives; `false` retries no write).
+   * applies once however many times it arrives, or one that never left;
+   * `false` retries no write).
    */
   mutations?: boolean | undefined;
+  /**
+   * Told before each retry: the attempt it makes, the wait before it, and
+   * why. A promise it returns is waited for, and one that throws or rejects
+   * fails the call with its error.
+   */
+  onRetry?: ((retry: RetryEvent, ctx: MiddlewareContext) => unknown) | undefined;
+  /** Where the jitter's randomness comes from: a number from 0 to 1, as `Math.random` gives (default) */
+  random?: (() => number) | undefined;
+}
+
+/** A retry a policy is about to make. */
+export interface RetryEvent {
+  /** The attempt it makes: 2 for the first retry. */
+  readonly attempt: number;
+  /** How long it waits first, in ms. */
+  readonly delay: number;
+  /** Why the attempt before it failed. */
+  readonly failure: RetryFailure;
 }
 
 /** Everything the runtime needs about an endpoint, flattened at definition. */

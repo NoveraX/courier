@@ -1,8 +1,12 @@
-import type { ResolvedEndpointOptions } from "../define/options";
+import type { ResolvedEndpointOptions, RetryOptions } from "../define/options";
 import type { BoundMethodOptions } from "../http-client/types";
-import { retryMiddleware } from "../middleware/retry";
+import { defineMiddleware } from "../middleware/define";
+import type * as RetryPolicies from "../middleware/retry-policies";
 import type { Middleware } from "../middleware/types";
 import { anySignal } from "./any-signal";
+
+/* The policies' code, loaded with the first call whose endpoint has one. */
+let retryPolicies: Promise<typeof RetryPolicies> | undefined;
 
 /**
  * Order the middleware a request runs through.
@@ -10,14 +14,30 @@ import { anySignal } from "./any-signal";
  * Source-level middleware wraps the endpoint's own, so a concern declared once
  * for the whole API still observes a request an endpoint also decorated. A
  * retry policy sits outside the endpoint's middleware so a retried attempt
- * runs them again.
+ * runs them again. An endpoint's policy is made once, not on every call, and
+ * spends the retry budget its API's endpoints share; its code is loaded with
+ * the first call that has one, so a page whose endpoints retry nothing never
+ * loads it.
+ *
+ * @param source - The API the endpoint belongs to
+ * @param sourceMiddleware - The API's own middleware
+ * @param endpointOptions - The endpoint's resolved options
+ * @returns The middleware, outermost first
  */
 export function resolveMiddlewareChain(
+  source: object,
   sourceMiddleware: readonly Middleware[] | undefined,
   endpointOptions: ResolvedEndpointOptions | undefined,
 ): Middleware[] {
-  const retry = endpointOptions?.retry ? [retryMiddleware(endpointOptions.retry)] : [];
+  const retry = endpointOptions?.retry ? [endpointPolicy(source, endpointOptions.retry)] : [];
   return [...(sourceMiddleware ?? []), ...retry, ...(endpointOptions?.middleware ?? [])];
+}
+
+function endpointPolicy(source: object, options: RetryOptions): Middleware {
+  return defineMiddleware("retry", "wrap", async (ctx, next) => {
+    retryPolicies ??= import("../middleware/retry-policies");
+    return (await retryPolicies).endpointRetry(source, options)(ctx, next);
+  });
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { ServerResponse } from "node:http";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -50,13 +52,22 @@ async function answering(...statuses: number[]): Promise<Upstream> {
 }
 
 describe("retryMiddleware by default", () => {
-  it.each([400, 401, 404, 409, 422, 429])("does not retry a %i answer", async (status) => {
+  it.each([400, 401, 404, 409, 422, 501])("does not retry a %i answer", async (status) => {
     const { url, seen } = await answering(status);
     const client = clientFor(url, retryMiddleware({ limit: 3, delay: 1 }));
 
     await expect(client.read({ code: status })).rejects.toMatchObject({ status });
 
     expect(seen).toHaveLength(1);
+  });
+
+  it.each([408, 425, 429, 500, 502, 503, 504])("retries a %i answer", async (status) => {
+    const { url, seen } = await answering(status);
+    const client = clientFor(url, retryMiddleware({ limit: 3, delay: 1 }));
+
+    await expect(client.read({ code: status })).resolves.toEqual({ ok: true });
+
+    expect(seen).toHaveLength(2);
   });
 
   it("retries a 5xx answer until the upstream succeeds", async () => {
@@ -85,6 +96,41 @@ describe("retryMiddleware by default", () => {
     const client = clientFor(upstream.url, retryMiddleware({ limit: 2, delay: 1 }));
 
     await expect(client.read({ code: 0 })).resolves.toEqual({ ok: true });
+
+    expect(upstream.seen).toHaveLength(2);
+  });
+
+  it("does not send a read again once its own timeout ran out", async () => {
+    /* A hung upstream: with three retries it once held the call for four timeouts. */
+    upstream = await startUpstream(() => {});
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        middleware: [retryMiddleware({ limit: 3, delay: 1 })],
+        endpoints: { slow: endpoint.get("slow").timeout(100) },
+      }),
+    );
+
+    await expect(client.slow()).rejects.toMatchObject({ name: "TimeoutError", scope: "attempt" });
+
+    expect(upstream.seen).toHaveLength(1);
+  });
+
+  it("sends a read whose timeout ran out again when retryOn names timeouts", async () => {
+    upstream = await startUpstream((_req, res, index) => {
+      if (index > 0) sendJson(res, 200, { ok: true });
+    });
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: upstream.url,
+        middleware: [retryMiddleware({ limit: 1, delay: 1, retryOn: ["timeout"] })],
+        endpoints: { slow: endpoint.get("slow").timeout(100) },
+      }),
+    );
+
+    await expect(client.slow()).resolves.toEqual({ ok: true });
 
     expect(upstream.seen).toHaveLength(2);
   });
@@ -195,7 +241,7 @@ describe("retryMiddleware and cancellation", () => {
     });
     const client = clientFor(
       upstream.url,
-      retryMiddleware({ delay: LONG_DELAY, retryOn: anyFailure }),
+      retryMiddleware({ delay: LONG_DELAY, jitter: "none", retryOn: anyFailure }),
     );
 
     await expect(
@@ -213,7 +259,7 @@ describe("retryMiddleware and cancellation", () => {
       abortedAt = Date.now();
       controller.abort(new Error("navigated away"));
     });
-    const client = clientFor(upstream.url, retryMiddleware({ delay: LONG_DELAY }));
+    const client = clientFor(upstream.url, retryMiddleware({ delay: LONG_DELAY, jitter: "none" }));
 
     await expect(client.with({ signal: controller.signal }).read({ code: 200 })).rejects.toThrow();
 
@@ -231,7 +277,7 @@ describe("retryMiddleware and cancellation", () => {
         controller.abort();
       }, 50);
     });
-    const client = clientFor(upstream.url, retryMiddleware({ delay: LONG_DELAY }));
+    const client = clientFor(upstream.url, retryMiddleware({ delay: LONG_DELAY, jitter: "none" }));
 
     await expect(
       client.with({ signal: controller.signal }).read({ code: 503 }),
@@ -295,7 +341,7 @@ describe("retryMiddleware and cancellation", () => {
       defineApi({
         name: "api",
         baseURL: upstream.url,
-        middleware: [retryMiddleware({ limit: 2, delay: 200, backoff: "fixed" })],
+        middleware: [retryMiddleware({ limit: 2, delay: 200, backoff: "fixed", jitter: "none" })],
         endpoints: {
           read: endpoint.get("slow").variables<{ q: string }>().use(attempts).cancelPrevious(),
         },
@@ -310,6 +356,59 @@ describe("retryMiddleware and cancellation", () => {
     await expect(second).resolves.toEqual({ q: "ab" });
     expect(await first).toMatchObject({ status: 499 });
     expect(upstream.seen.map((request) => request.url)).toEqual(["/slow?q=a", "/slow?q=ab"]);
+  });
+});
+
+/** Answer 503, asking to be asked again after `retryAfter`. */
+function unavailable(res: ServerResponse, retryAfter: string): void {
+  res.writeHead(503, { "content-type": "application/json", "retry-after": retryAfter });
+  res.end(JSON.stringify({ message: "unavailable" }));
+}
+
+describe("retryMiddleware and an answer's Retry-After", () => {
+  it("waits what the answer asks rather than its own delay", async () => {
+    upstream = await startUpstream((_req, res, index) =>
+      index === 0 ? unavailable(res, "0") : sendJson(res, 200, { ok: true }),
+    );
+    const waits: number[] = [];
+    const client = clientFor(
+      upstream.url,
+      retryMiddleware({
+        delay: 60_000,
+        jitter: "none",
+        onRetry: (retry) => waits.push(retry.delay),
+      }),
+    );
+
+    await expect(client.read({ code: 503 })).resolves.toEqual({ ok: true });
+
+    expect(waits).toEqual([0]);
+  });
+
+  it("fails at once when the answer asks for longer than maxDelay", async () => {
+    upstream = await startUpstream((_req, res) => unavailable(res, "120"));
+    const client = clientFor(upstream.url, retryMiddleware({ delay: 1 }));
+
+    await expect(client.read({ code: 503 })).rejects.toMatchObject({ status: 503 });
+
+    expect(upstream.seen).toHaveLength(1);
+  });
+});
+
+describe("retryMiddleware and a deadline", () => {
+  it("stops an attempt it overtakes with a TimeoutError of scope deadline", async () => {
+    upstream = await startUpstream(() => {});
+    const client = clientFor(upstream.url, retryMiddleware({ deadline: 200 }));
+    const started = performance.now();
+
+    await expect(client.read({ code: 200 })).rejects.toMatchObject({
+      name: "TimeoutError",
+      scope: "deadline",
+      timeout: 200,
+    });
+
+    expect(performance.now() - started).toBeLessThan(2_000);
+    expect(upstream.seen).toHaveLength(1);
   });
 });
 
@@ -331,6 +430,32 @@ describe("retryMiddleware and writes", () => {
     await expect(client.write({ item: "book" })).resolves.toEqual({ ok: true });
 
     expect(seen).toHaveLength(2);
+  });
+
+  it("sends a write again whose connection was refused: it never left", async () => {
+    const closed = await startUpstream(() => {});
+    await closed.close();
+    const retries: RetryFailure[] = [];
+    const client = clientFor(
+      closed.url,
+      retryMiddleware({ limit: 2, delay: 1, onRetry: (retry) => retries.push(retry.failure) }),
+    );
+
+    await expect(client.write({ item: "book" })).rejects.toMatchObject({
+      name: "NetworkError",
+      systemCode: "ECONNREFUSED",
+    });
+
+    expect(retries).toHaveLength(2);
+  });
+
+  it("does not send a write again that may have reached the upstream", async () => {
+    upstream = await startUpstream((req) => req.socket.destroy());
+    const client = clientFor(upstream.url, retryMiddleware({ limit: 3, delay: 1 }));
+
+    await expect(client.write({ item: "book" })).rejects.toBeInstanceOf(NetworkError);
+
+    expect(upstream.seen).toHaveLength(1);
   });
 
   it("retries an endpoint declared a read whatever verb carries it", async () => {
@@ -411,7 +536,9 @@ describe("one vocabulary for a policy and the middleware", () => {
         name: "api",
         baseURL: url,
         endpoints: {
-          read: endpoint.get("items").retry({ limit: 1, delay: 600, backoff: "fixed" }),
+          read: endpoint
+            .get("items")
+            .retry({ limit: 1, delay: 600, backoff: "fixed", jitter: "none" }),
         },
       }),
     );
@@ -425,10 +552,31 @@ describe("one vocabulary for a policy and the middleware", () => {
     expect(performance.now() - started).toBeGreaterThanOrEqual(595);
   });
 
-  it("does not take the old names", () => {
-    // @ts-expect-error — `limit` is the number of retries
-    endpoint.get("items").retry({ attempts: 3 });
+  it("does not take the old names, in its types or when the policy is made", async () => {
     // @ts-expect-error — `delay` is the wait in ms; `backoff` is how it grows
-    retryMiddleware({ backoff: 300 });
+    expect(() => retryMiddleware({ backoff: 300 })).toThrow(
+      "A retry policy's backoff cannot be 300",
+    );
+    const { url, seen } = await answering();
+    const base = courier({ retry: { limit: 50 } });
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: url,
+        endpoints: {
+          // @ts-expect-error — `limit` is the number of retries
+          renamed: endpoint.get("items").retry({ attempts: 3 }),
+          tooMany: base.endpoint.get("items"),
+        },
+      }),
+    );
+
+    /* An endpoint's policy is made on its first call, which it refuses before sending. */
+    await expect(client.renamed()).rejects.toMatchObject({
+      code: "RETRY_OPTIONS_INVALID",
+      message: 'A retry policy has no option "attempts"',
+    });
+    await expect(client.tooMany()).rejects.toThrow("A retry policy's limit cannot be 50");
+    expect(seen).toHaveLength(0);
   });
 });

@@ -11,7 +11,7 @@ const SYSTEM = /^E[A-Z\d_]+$/;
 const IP_ADDRESS = /^(?:\d{1,3}(?:\.\d{1,3}){3}|[\da-f.]*:[\da-f:.]*(?:%[\w.-]+)?)$/i;
 
 /* OpenSSL's verdicts on a server's certificate, as Node names them. */
-const CERTIFICATE_VERDICTS: ReadonlySet<string> = new Set([
+export const CERTIFICATE_VERDICTS: ReadonlySet<string> = new Set([
   "UNABLE_TO_GET_ISSUER_CERT",
   "UNABLE_TO_GET_CRL",
   "UNABLE_TO_DECRYPT_CERT_SIGNATURE",

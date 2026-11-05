@@ -1,4 +1,4 @@
-export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "Options", description: "Full reference of source-level and per-request configuration options.", mode: "both", updated: "2026-11-05" }
 
 ## Overview
 
@@ -131,7 +131,7 @@ const api = defineApi({
 ```
 
 <Callout variant="info" title="Retry via middleware">
-Retry logic is handled by `retryMiddleware` from `@noverax/courier/middleware`. It supports exponential backoff with a configurable base delay and custom retry conditions. See [Middleware](/docs/advanced/middleware) for details.
+Retry logic is handled by `retryMiddleware` from `@noverax/courier/middleware`: random waits that grow up to a ceiling, an answer's `Retry-After`, a `deadline` for all the attempts together, and a budget that stops retrying an upstream that keeps failing. The `timeout` is each attempt's own. See [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) for details.
 </Callout>
 
 ## Caching

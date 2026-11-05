@@ -1,4 +1,4 @@
-export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-11-05" }
 
 ## Overview
 
@@ -244,7 +244,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.use(...middleware)` | middleware for this endpoint, run after the base's |
 | `.headers(names)` | the headers it carries across the proxy, each way — see [Headers](/docs/advanced/options#headers) |
 | `.timeout(ms)` | how long the upstream call may take |
-| `.retry({ limit, delay, backoff, retryOn, mutations })` | its retry policy, in `retryMiddleware`'s terms; a write is retried when it declares an `idempotencyKey`, or with `mutations: true` |
+| `.retry({ limit, delay, deadline, retryOn, mutations, … })` | its retry policy, in [`retryMiddleware`'s terms](/docs/middleware/built-in#retrymiddleware); a write is retried when it declares an `idempotencyKey`, when it never left, or with `mutations: true`. The policies of one API's endpoints share a retry budget |
 | `.meta(values)` | values for your own tooling; the runtime ignores them |
 | `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
 | `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()`. A write declared one loses what guards a write — see [User Sessions](/docs/server-side/session#writes-another-site-sets-off) |

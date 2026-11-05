@@ -82,7 +82,7 @@ export async function runTransportMiddleware(input: TransportMiddlewareInput): P
 
   const sourceMiddleware = (dataSource.options as { middleware?: unknown } | undefined)
     ?.middleware as Parameters<typeof composeMiddleware>[0] | undefined;
-  const middlewares = resolveMiddlewareChain(sourceMiddleware, endpointOptions);
+  const middlewares = resolveMiddlewareChain(dataSource, sourceMiddleware, endpointOptions);
 
   if (middlewares.length > 0) {
     const timeoutMs = input.timeoutMs ?? LIMITS.MIDDLEWARE_TIMEOUT_MS;

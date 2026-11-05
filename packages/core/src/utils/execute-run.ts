@@ -5,6 +5,7 @@ import type { Middleware, MiddlewareContext } from "../middleware/types";
 import type { CallSession } from "../session/call-session";
 import type { SchemaMetadata } from "../validation";
 import { keepAnswerCookies } from "./answer-cookies";
+import { anySignal } from "./any-signal";
 import { applyCacheHeaders } from "./cache-headers";
 import { handleExecuteError } from "./execute-error";
 import { executeInner, type InnerExecuteDeps } from "./execute-inner";
@@ -59,9 +60,12 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       timing.tVarValidation = result.duration;
     }
 
+    /* Sent with the signal the middleware leave: a retry policy's deadline narrows it for the
+       attempts it wraps, and the call's own signal holds whatever they left. */
     const execute = async () => {
       const innerResult = await executeInner({
         ...call.inner,
+        baseOptions: withSignal(call.inner.baseOptions, ctx.signal),
         middlewareHeaders: ctx.headers,
         variables: ctx.variables,
       });
@@ -124,6 +128,15 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       relayed,
     );
   }
+}
+
+function withSignal<TOptions extends { signal?: AbortSignal | null | undefined }>(
+  options: TOptions,
+  signal: AbortSignal | undefined,
+): TOptions {
+  const own = options.signal ?? undefined;
+  if (signal === undefined || signal === own) return options;
+  return { ...options, signal: own ? anySignal([own, signal]) : signal };
 }
 
 function withCookies(answer: unknown, cookies: readonly string[]): unknown {

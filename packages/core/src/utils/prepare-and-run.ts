@@ -97,7 +97,11 @@ async function runHeld(
   /* Source-level middleware wraps endpoint-level, so a concern declared once
      for the whole API still sees a request an endpoint also decorated. A
      retry policy is the outermost of the endpoint's own, so it re-runs them. */
-  const middlewares = resolveMiddlewareChain(dataSource.options?.middleware, endpointOptions);
+  const middlewares = resolveMiddlewareChain(
+    dataSource,
+    dataSource.options?.middleware,
+    endpointOptions,
+  );
 
   /* Told before the session settles: a write that asks for its token first
      shows that request within its own time, and one the session refuses

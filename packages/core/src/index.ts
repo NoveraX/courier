@@ -52,6 +52,7 @@ export type {
   TypedClient,
   WithOptions,
 } from "./client";
+export type { RetryEvent, RetryOptions, RetryTrigger } from "./define/options";
 export type {
   ConfigurationErrorCode,
   CourierErrorOptions,

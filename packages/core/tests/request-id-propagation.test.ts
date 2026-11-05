@@ -131,11 +131,14 @@ describe("a request id nginx wrote", () => {
       headers: { accept: "text/event-stream" },
       signal: controller.signal,
     });
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    /* The API ends each stream after its event and the relay opens it
+       again, as often as its wait allows: every attempt carries the ids. */
+    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
     controller.abort();
     await response.body?.cancel().catch(() => undefined);
 
-    expect(ids()).toEqual([KEPT]);
+    const attempts = ids();
+    expect(attempts).toEqual(attempts.map(() => KEPT));
   });
 
   it("is sent again on every attempt a retry makes", async () => {

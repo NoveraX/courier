@@ -108,6 +108,9 @@ const main = defineCommand({
         narrowing: { readOnly: args["read-only"] === true, deny: list(args.deny) },
       };
       if (args.list === true) {
+        /* The listing reads definitions and serves nothing, so the project's code may skip what it checks only to serve. */
+        const { enterDefinitionsPhase } = await import("@noverax/courier-build/config");
+        enterDefinitionsPhase();
         write(formatToolList(await listProject(project), styleFor(process.stdout)).trimEnd());
         process.exit(0);
       }

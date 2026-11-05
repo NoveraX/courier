@@ -10,6 +10,7 @@ export const metadata = { title: "How Courier Reads Your Project", description: 
 | Studio | As it starts, and on every save | The same files, read again when one is saved |
 | A bundler plugin — `withCourier()`, the Vite plugins, the others | On every build and dev server start, and again when a file the config read changes | Under Vite, the env files Vite reads for the mode; under Next.js, webpack and the rest, the variables the framework's own process has |
 | A mock server's worker | As it starts | Studio's |
+| `courier-mcp` | As it starts and on every save, or once for `--list` | The process's, then the files `--dotenv` names |
 | `courier-server` | As it starts | The process's |
 | `attachRuntime()` | As your app starts | Your app's |
 
@@ -19,7 +20,7 @@ Every reading runs your modules as your server would, and outside it. Keep the m
 
 ## The definitions phase
 
-Wherever Courier reads your project — `courier-cli routes`, Studio and its commands, the process a bundler plugin reads the routes in — `COURIER_PHASE` holds `definitions`, as `NEXT_PHASE` names a phase of Next.js. Where your application runs — `courier-server`, `attachRuntime()`, the app itself — it is not set. Code that checks the environment as it is imported can skip the check then, where your API's definitions need none of what it checks:
+Wherever Courier reads your project — `courier-cli routes`, `courier-mcp --list`, Studio and its commands, the process a bundler plugin reads the routes in — `COURIER_PHASE` holds `definitions`, as `NEXT_PHASE` names a phase of Next.js. Where your application runs — `courier-server`, `courier-mcp` serving an agent, `attachRuntime()`, the app itself — it is not set. Code that checks the environment as it is imported can skip the check then, where your API's definitions need none of what it checks:
 
 ```ts title="src/env.ts"
 import { createEnv } from "@t3-oss/env-nextjs"

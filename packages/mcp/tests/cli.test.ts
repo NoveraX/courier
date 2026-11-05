@@ -141,6 +141,35 @@ describe("courier-mcp", () => {
     expect(upstream.received).toHaveLength(calls);
   });
 
+  it("tells the project's code it reads definitions on --list, so a check of the environment can be skipped", () => {
+    const project = mkdtempSync(join(tmpdir(), "courier-mcp-phase-"));
+    try {
+      symlinkSync(REPO_NODE_MODULES, join(project, "node_modules"), "dir");
+      writeFileSync(
+        join(project, "courier.config.ts"),
+        `
+          import { courier, defineApi } from "@noverax/courier/define";
+          if (process.env.COURIER_PHASE !== "definitions") throw new Error("Invalid environment variables");
+          const { endpoint } = courier();
+          export default {
+            sources: { shop: defineApi({ baseURL: "https://shop.example.com", endpoints: { order: endpoint.get("orders/:id") } }) },
+          };
+        `,
+      );
+
+      const run = spawnSync(process.execPath, [CLI, "--cwd", project, "--list"], {
+        env: ENV,
+        encoding: "utf8",
+      });
+
+      expect(run.stderr).not.toContain("Invalid environment variables");
+      expect(run.status).toBe(0);
+      expect(run.stdout).toContain("0 of 1 endpoint offered to agents");
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
   it("narrows what is offered on --read-only and --deny, never widening it", () => {
     const run = spawnSync(
       process.execPath,

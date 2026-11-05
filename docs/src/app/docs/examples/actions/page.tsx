@@ -3,6 +3,7 @@ import { sources } from "@/api"
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
+import { answerOf } from "@/site/sandbox/server-call"
 
 import { CreateUserForm } from "./create-form"
 import { UserList } from "./user-list"
@@ -69,7 +70,7 @@ function UserRow({ user }) {
 export const metadata = exampleMetadata("actions")
 
 export default async function ActionsExamplesPage() {
-  const users = await action.users.getAll()
+  const users = await answerOf(action.users.getAll())
 
   return (
     <ExamplePage name="actions">
@@ -99,7 +100,13 @@ export default async function ActionsExamplesPage() {
         description="Server-fetched list with per-row delete actions. Deleted rows disappear after revalidation."
         code={deleteCode}
       >
-        <UserList users={users.data} />
+        {users.error === undefined ? (
+          <UserList users={users.data.data} />
+        ) : (
+          <p role="alert" className="m-0 font-mono text-meta text-err">
+            {users.status} · {users.error}
+          </p>
+        )}
       </ExampleSection>
     </ExamplePage>
   )

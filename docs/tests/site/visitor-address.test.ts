@@ -6,8 +6,8 @@
  * address it names; one who claims other addresses, in `X-Forwarded-For`
  * or in the filter's header, is counted by their own; and one who goes
  * around the filter is counted by the address Traefik saw, whatever
- * header they send. Each call's budget, as the proxy route's limit tells
- * it, shows whom it was counted as.
+ * header they send. Each call's budget, as the backend tells it through
+ * the proxy route, shows whom it was counted as.
  */
 import { createHandler, registerSources } from "@noverax/courier"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -42,7 +42,7 @@ function trustAsDeployed(trusted: boolean): void {
   process.env.COURIER_CLIENT_ADDRESS_HEADER = trusted ? "DDG-Connecting-IP" : ""
 }
 
-/* The calls left in the budget of whoever a read from `visitor` was counted as. */
+/* The calls left in the budget of the address a read from `visitor` was counted as. */
 async function callsLeft(
   visitor: string,
   route: Route,
@@ -64,7 +64,7 @@ async function callsLeft(
     })
   )
   expect(response.status).toBe(200)
-  return Number(/"calls";r=(\d+)/.exec(response.headers.get("ratelimit") ?? "")?.[1])
+  return Number(response.headers.get("x-ratelimit-remaining"))
 }
 
 describe("a visitor behind the DDoS filter", () => {

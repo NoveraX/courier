@@ -1,10 +1,16 @@
-import { createCaller } from "@noverax/courier"
+import { createCaller, registerRequestContext } from "@noverax/courier"
+import { nextRequestContext } from "@noverax/courier-next"
 import { api } from "@/api"
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 import { ServerAnswer } from "@/site/sandbox/server-answer"
+import { answerOf } from "@/site/sandbox/server-call"
 
+/* The page's calls carry the request it is rendered for — the visitor's session and address — as
+   any server code a framework serves does, so they read the visitor's own data and take from the
+   visitor's budget like their calls through the proxy route. */
+registerRequestContext(nextRequestContext)
 const caller = createCaller(api)
 
 const setupCode = `// Direct mode — import source and create caller inline
@@ -25,9 +31,9 @@ const posts = await caller.posts.getAll()`
 export const metadata = exampleMetadata("direct")
 
 export default async function DirectExamplesPage() {
-  const users = await caller.users.getAll()
-  const user = await caller.users.getById({ id: 1 })
-  const posts = await caller.posts.getAll()
+  const users = await answerOf(caller.users.getAll())
+  const user = await answerOf(caller.users.getById({ id: 1 }))
+  const posts = await answerOf(caller.posts.getAll())
 
   return (
     <ExamplePage name="direct">
@@ -49,7 +55,7 @@ export default async function DirectExamplesPage() {
         description="Data is fetched during server rendering. The response is streamed as HTML — zero client-side fetch."
         code={fetchAllCode}
       >
-        <ServerAnswer label="caller.users.getAll()" data={users} />
+        <ServerAnswer label="caller.users.getAll()" answer={users} />
       </ExampleSection>
 
       <ExampleSection
@@ -57,7 +63,7 @@ export default async function DirectExamplesPage() {
         description="Path parameters like :id are replaced automatically from the variables object."
         code={fetchOneCode}
       >
-        <ServerAnswer label="caller.users.getById({ id: 1 })" data={user} />
+        <ServerAnswer label="caller.users.getById({ id: 1 })" answer={user} />
       </ExampleSection>
 
       <ExampleSection
@@ -65,7 +71,7 @@ export default async function DirectExamplesPage() {
         description="Access any request group the same way. The API surface is identical to proxy mode."
         code={fetchPostsCode}
       >
-        <ServerAnswer label="caller.posts.getAll()" data={posts} />
+        <ServerAnswer label="caller.posts.getAll()" answer={posts} />
       </ExampleSection>
     </ExamplePage>
   )

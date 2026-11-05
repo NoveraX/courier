@@ -1,18 +1,20 @@
 import { BreakableText } from "@/site/code/breakable-text"
 import { ResponseView } from "./response-view"
+import type { ServerAnswer as Answer } from "./server-call"
 
 /**
  * What a call made while the page rendered on the server answered — no
- * request left the browser for it.
+ * request left the browser for it: its data, or the refusal it was
+ * answered with, status and message.
  *
- * @param props - The call's name and its answer
+ * @param props - The call's name and what it came to
  * @returns The panel
  * @example
  * ```tsx
- * <ServerAnswer label="caller.users.getAll()" data={await caller.users.getAll()} />
+ * <ServerAnswer label="caller.users.getAll()" answer={await answerOf(caller.users.getAll())} />
  * ```
  */
-export function ServerAnswer({ label, data }: { label: string; data: unknown }) {
+export function ServerAnswer({ label, answer }: { label: string; answer: Answer<unknown> }) {
   return (
     <section
       aria-label={label}
@@ -27,7 +29,7 @@ export function ServerAnswer({ label, data }: { label: string; data: unknown }) 
         </span>
       </div>
       <div className="p-4.5">
-        <ResponseView data={data} />
+        <ResponseView data={answer.data} error={answer.error} status={answer.status} />
       </div>
     </section>
   )

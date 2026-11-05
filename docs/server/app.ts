@@ -1,6 +1,7 @@
 import express, { type Express, type RequestHandler } from "express"
 
 import { answerFailures, noSuchRoute } from "./answers"
+import { budgetsFor } from "./budgets"
 import { SandboxStore } from "./data/sandbox-store"
 import { DEMO_LIMITS, type DemoLimits } from "./limits"
 import { type RefusalLog, refusalLog } from "./refusal-log"
@@ -37,7 +38,8 @@ const noStore: RequestHandler = (_req, res, next) => {
  * CORS headers: no browser calls it, and the proxy decides which pages may
  * call through it. Every answer is JSON, a refusal too, and no answer is
  * one a cache may keep. Each visitor's users and posts are their own, kept
- * in the store under the cookie their first change hands them.
+ * in the store under the cookie their first change hands them, and every
+ * call takes from its visitor's budgets, wherever on the site it was made.
  *
  * @param options - Its limits, its store, and where it counts what it refuses
  * @returns The application
@@ -56,6 +58,12 @@ export function createDemoApp({
   app.disable("x-powered-by")
   app.set("etag", false)
   app.use(noStore)
+  /* The container's health check is the container's own: no visitor's budget holds it. */
+  app.get("/health", (_req, res) => {
+    res.json({ status: "ok" })
+  })
+  /* Before a body is read: a call past its budget costs no more than its headers. */
+  app.use(budgetsFor(limits))
   app.use(express.json({ limit: limits.bodyBytes }))
   app.use(
     express.urlencoded({
@@ -70,9 +78,6 @@ export function createDemoApp({
   app.use("/upload", uploadRouter(limits))
   app.use("/echo", echoRouter())
   app.use("/", miscRouter())
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok" })
-  })
 
   app.use(noSuchRoute)
   app.use(answerFailures(log, limits.bodyBytes))

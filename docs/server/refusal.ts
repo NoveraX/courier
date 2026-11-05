@@ -7,6 +7,7 @@ export type RefusalCode =
   | "ROUTE_NOT_FOUND"
   | "UPLOAD_REFUSED"
   | "VISITOR_DATA_FULL"
+  | "RATE_LIMITED"
 
 /**
  * A call the examples' backend answers with an error it expected: a field

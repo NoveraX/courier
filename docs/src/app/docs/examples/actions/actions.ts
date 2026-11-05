@@ -3,6 +3,7 @@
 import { createAction } from "@noverax/courier-next"
 import { revalidatePath } from "next/cache"
 import { sources } from "@/api"
+import { actionFailure } from "@/site/sandbox/server-call"
 
 const action = createAction(sources, "api")
 
@@ -25,8 +26,8 @@ export async function createUser(_prev: ActionState, formData: FormData): Promis
     const user = await action.users.create({ name, email, role })
     revalidatePath("/docs/examples/actions")
     return { success: true, data: user }
-  } catch {
-    return { error: "Failed to create user." }
+  } catch (failure) {
+    return { error: actionFailure(failure, "Failed to create user.") }
   }
 }
 
@@ -41,7 +42,7 @@ export async function deleteUser(_prev: ActionState, formData: FormData): Promis
     await action.users.remove({ id })
     revalidatePath("/docs/examples/actions")
     return { success: true, data: { id } }
-  } catch {
-    return { error: `Failed to delete user #${id}.` }
+  } catch (failure) {
+    return { error: actionFailure(failure, `Failed to delete user #${id}.`) }
   }
 }

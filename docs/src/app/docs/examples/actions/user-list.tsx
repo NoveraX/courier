@@ -39,6 +39,11 @@ function UserRow({ user }: { user: User }) {
           </span>
         </div>
         <p className="m-0 mt-0.5 truncate text-label text-fg-subtle">{user.email}</p>
+        {state.error && (
+          <p role="alert" className="m-0 mt-0.5 text-label text-err">
+            {state.error}
+          </p>
+        )}
       </div>
       <form action={action}>
         <input type="hidden" name="id" value={user.id} />

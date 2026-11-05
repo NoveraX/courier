@@ -1,9 +1,10 @@
 /**
  * How the site's proxy route serves the live examples: Courier's handler
  * with the route's own settings, over the site's sources and the examples'
- * backend. Each caller has a budget of calls and a tighter one of writes,
- * a call past either is answered 429 with when to try again, another
- * caller is not held back by it, and a body is read only as large as the
+ * backend. The route sends the backend each caller's address, which the
+ * backend keeps their budgets by: the page is told what is left, and a
+ * call past a budget is answered 429 with when to try again, without
+ * holding back another caller. A body is read only as large as the
  * backend takes it.
  */
 import { createHandler, registerSources } from "@noverax/courier"
@@ -55,14 +56,16 @@ function pageCall(
 const envelope = (variables: unknown) => JSON.stringify({ variables, options: {} })
 const newUser = envelope({ name: "Jane Doe", email: "jane@example.com" })
 
-describe("a caller's budget", () => {
-  it("is told with every answer: calls for a read, writes and calls for a write", async () => {
+describe("a caller's budget, kept by the backend", () => {
+  it("is told with every answer: calls left after a read, writes left after a write", async () => {
     const read = await pageCall("198.51.100.1", "users.getAll", envelope({}))
     expect(read.status).toBe(200)
-    expect(read.headers.get("ratelimit-policy")).toBe('"calls";q=300;w=60')
+    expect(read.headers.get("x-ratelimit-limit")).toBe("300")
+    expect(read.headers.get("x-ratelimit-remaining")).toBe("299")
     const write = await pageCall("198.51.100.1", "users.create", newUser)
     expect(write.status).toBe(201)
-    expect(write.headers.get("ratelimit-policy")).toBe('"writes";q=20;w=60, "calls";q=300;w=60')
+    expect(write.headers.get("x-ratelimit-limit")).toBe("20")
+    expect(write.headers.get("x-ratelimit-remaining")).toBe("19")
   })
 
   it("refuses a caller's write past 20 a minute with 429 and when to try again, and no one else's", async () => {

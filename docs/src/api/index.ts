@@ -1,6 +1,7 @@
 import { defineApi } from "@noverax/courier/define"
 import { logMiddleware } from "@noverax/courier/middleware"
 
+import { VISITOR_ADDRESS_HEADER } from "../../server/visitor-address"
 import { VISITOR_COOKIE } from "../../server/visitor-cookie"
 import { echo } from "./echo"
 import { files } from "./files"
@@ -15,11 +16,16 @@ const API_URL = process.env.API_URL ?? "http://localhost:4000"
    and no other cookie of the site reaches the backend. */
 const visitorSession = { cookies: [VISITOR_COOKIE] }
 
+/* The visitor's address, as Courier reads it past the proxies the deployment trusts, which the
+   backend counts each call's budget by, whichever path the call took. */
+const visitorAddress = { clientAddress: [VISITOR_ADDRESS_HEADER] }
+
 /* Each source's every endpoint is one an example calls from its page. */
 export const api = defineApi({
   baseURL: API_URL,
   expose: true,
   session: visitorSession,
+  forward: visitorAddress,
   groups: { users, posts, files, misc, echo },
 })
 
@@ -28,6 +34,7 @@ export const api = defineApi({
 export const encodedApi = defineApi({
   baseURL: API_URL,
   expose: true,
+  forward: visitorAddress,
   groups: { echo },
   bodySerializer: (data: Record<string, unknown>) =>
     new URLSearchParams(Object.entries(data).map(([k, v]) => [k, String(v)])),
@@ -55,6 +62,7 @@ export const middlewareApi = defineApi({
   baseURL: API_URL,
   expose: true,
   session: visitorSession,
+  forward: visitorAddress,
   middleware: [logMiddleware()],
   groups: { users, misc },
 })

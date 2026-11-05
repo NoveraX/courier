@@ -11,6 +11,14 @@ import type { SandboxLimits } from "./data/sandbox-store"
  * 40 MiB.
  */
 export interface DemoLimits extends SandboxLimits {
+  /**
+   * Calls one caller makes in each `budgetMs`, and writes among them: the
+   * budget of the visitor's address, and of the visitor too, every path
+   * to the backend takes from.
+   */
+  readonly calls: number
+  readonly writes: number
+  readonly budgetMs: number
   /** Users one visitor keeps, the first data's own among them. */
   readonly usersPerVisitor: number
   /** Posts one visitor keeps, the first data's own among them. */
@@ -47,6 +55,9 @@ export interface DemoLimits extends SandboxLimits {
 
 /** The limits the examples' backend runs with. */
 export const DEMO_LIMITS: DemoLimits = {
+  calls: 300,
+  writes: 20,
+  budgetMs: 60_000,
   visitors: 500,
   idleMs: 30 * 60_000,
   lifetimeMs: 2 * 60 * 60_000,

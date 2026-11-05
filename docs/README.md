@@ -217,16 +217,35 @@ take, which a test measures. The cookie's `__Host-` prefix needs HTTPS, or
 the local machine: a visitor served over plain HTTP from another machine
 keeps no changes, and the log says why.
 
-### The proxy route's limits
+### Each visitor's budget
 
-The examples' proxy route (`src/app/api/request`) holds each caller — the
-user's address, as the deployment's proxies report it — to 300 calls a
-minute, 20 of them writes, and answers a call past either with 429 and
-`Retry-After`. It reads a call's body only as large as the backend takes
-it. How the user's address is read behind DDoS-Guard and Traefik is in
-[Behind DDoS-Guard and Traefik](#behind-ddos-guard-and-traefik).
-Server Actions and the pages in direct mode call the backend without the
-proxy route; what they can make it keep is held by the limits above.
+Each visitor makes up to 300 calls a minute to the examples' backend, and
+up to 20 of them writes: every call that is not a read, an upload and the
+encoding example's echo among them. That is more than a reader trying
+every example at once makes. The backend keeps the budget
+(`server/budgets.ts`), where every path to it meets: the pages' calls
+through the proxy route (`src/app/api/request`), the Server Actions', and
+the pages' own in direct mode. It counts each call against the visitor's
+address — an IPv6 one as its /64 network — and, once they have it, their
+cookie: a visitor is held to the budget whether they drop the cookie or
+change address.
+
+The site's server names the visitor's address to the backend in
+`X-Visitor-Address`, as Courier reads it from the request it serves
+(`forward.clientAddress` in `src/api/index.ts`); how it is read behind
+DDoS-Guard and Traefik is in
+[Behind DDoS-Guard and Traefik](#behind-ddos-guard-and-traefik). The
+backend takes the header as it comes, since only the site's server
+reaches it.
+
+A call past a budget is answered 429 `RATE_LIMITED`, with `Retry-After`;
+every answer tells what is left of the tightest budget it took from in
+`X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`, which
+the proxy route passes on to the page. A page rendered on the server, and
+a Server Action, show the refusal where their data would be. The proxy
+route reads a call's body, only as large as the backend takes it, before
+the backend counts the call; the backend counts a call before it reads
+any of its body.
 
 ## Project structure
 
@@ -276,6 +295,7 @@ refuses as `{ "success": false, "message": "…", "code": "…" }`:
 | `UPLOAD_REFUSED` | 400, 413 | A second file, a file in another field, more fields or longer ones than it reads |
 | `NOT_FOUND` | 404 | A user or a post it does not have |
 | `ROUTE_NOT_FOUND` | 404 | A route it does not have |
+| `RATE_LIMITED` | 429 | A call past its visitor's budget, in [Each visitor's budget](#each-visitors-budget) |
 
 A failure of its own is answered 500 `INTERNAL`, its details kept to the
 log; a refusal is logged as one line, at most once a minute for each code.
@@ -313,8 +333,8 @@ SITE_URL=https://courier.noverax.cloud COURIER_BROWSERS=chromium npm run test:ex
 ```
 
 Every page's calls then come from the address the run is made from, and the
-test of the proxy route's limit, which would spend that address's writes,
-is skipped; one engine keeps the run within a minute's writes.
+tests of the visitors' budget, which would spend that address's, are
+skipped; one engine keeps the run within a minute's budget.
 
 <br />
 

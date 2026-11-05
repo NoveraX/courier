@@ -1,4 +1,5 @@
 import type { PresenceAdapter, PresenceDiff } from "@noverax/courier/realtime";
+import { CONNECT_TIMEOUT_MS, DISCONNECT_TIMEOUT_MS, withinDeadline } from "./adapter-deadlines";
 import { createErrorForwarder } from "./error-forwarder";
 import { trackHealth } from "./health";
 import { createDiffBroadcast } from "./redis-presence-broadcast";
@@ -20,6 +21,15 @@ const DEFAULT_PREFIX = "presence:";
  *
  * - ZSET `{prefix}score:{topic}` — member: connectionId, score: lastSeenAt ms
  * - HASH `{prefix}meta:{topic}` — field: connectionId, value: JSON metadata+userId+joinedAt
+ *
+ * It works from the moment it is made: what it is asked before Redis
+ * answers waits for Redis, as the client's commands do, and the other
+ * replicas' diffs are heard as soon as the subscriber is ready, and again
+ * after every reconnect and every refusal. `connect({ timeoutMs })`
+ * resolves once Redis answers both clients, and rejects with a client's own
+ * error, or at its deadline while the adapter goes on connecting;
+ * `disconnect({ timeoutMs })` settles within its deadline whatever Redis
+ * does, and what is asked after it is ignored.
  *
  * @example
  * ```ts
@@ -43,10 +53,12 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
   const diffHandlers = new Map<string, Set<DiffHandler>>();
   const health = trackHealth(redis);
   const origin = config.origin ?? crypto.randomUUID();
-  let connected = false;
-
+  const clients = subscriber ? [redis, subscriber] : [redis];
   const emitError = createErrorEmitter(errorHandlers);
   const deliverLocally = createDiffEmitter(diffHandlers, emitError);
+  /* Each topic heard from the other replicas, and how to stop hearing it. */
+  const heard = new Map<string, () => void>();
+  let stopped = false;
 
   const broadcast = createDiffBroadcast({
     redis,
@@ -73,33 +85,39 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
     emitDiff,
     sk: (topic) => scoreKey(prefix, topic),
     mk: (topic) => metaKey(prefix, topic),
-    isConnected: () => connected,
+    isStopped: () => stopped,
   };
 
+  errors.start();
+  /* A client made with lazyConnect waits for a command; this one is sent as soon as it is asked. */
+  for (const client of clients) {
+    if (client.status === "wait") client.connect().catch(() => undefined);
+  }
+
   return {
-    /* A `connect` that only set a flag reported success against a Redis that
-       was not there, and the caller learned otherwise at the first command. */
-    async connect() {
-      await redis.ping();
-      if (subscriber) await subscriber.ping();
-      errors.start();
-      connected = true;
+    async connect(options) {
+      if (stopped) throw new Error("The Redis presence adapter was stopped with disconnect()");
+      /* Answered by Redis itself, not a flag: a PING goes once the client
+         has connected, and a client that cannot says why. */
+      const answers = Promise.all(clients.map((client) => client.ping()));
+      await withinDeadline(answers, options?.timeoutMs ?? CONNECT_TIMEOUT_MS);
     },
 
-    async disconnect() {
-      connected = false;
-      await broadcast.close();
+    async disconnect(options) {
+      if (stopped) return;
+      stopped = true;
+      heard.clear();
+      await broadcast.close(options?.timeoutMs ?? DISCONNECT_TIMEOUT_MS);
       errors.stop();
       errorHandlers.clear();
       diffHandlers.clear();
       health.cleanup();
     },
 
-    isHealthy: () => connected && health.isHealthy(),
+    isHealthy: () => !stopped && health.isHealthy(),
 
     onError(handler) {
       errorHandlers.add(handler);
-      errors.start();
       return () => {
         errorHandlers.delete(handler);
       };
@@ -121,16 +139,16 @@ export function createRedisPresence(config: RedisPresenceConfig): PresenceAdapte
       set.add(handler);
       const captured = set;
 
-      /* Subscribing is what makes this replica hear the others; without a
-         subscriber client it only ever hears itself. */
-      broadcast.listen(topic).catch(emitError);
+      /* Hearing a topic is what makes this replica hear the others' diffs
+         on it; without a subscriber client it only ever hears itself. */
+      if (!stopped && !heard.has(topic)) heard.set(topic, broadcast.listen(topic));
 
       return () => {
         captured.delete(handler);
-        if (captured.size === 0) {
-          diffHandlers.delete(topic);
-          broadcast.stopListening(topic).catch(emitError);
-        }
+        if (captured.size > 0) return;
+        diffHandlers.delete(topic);
+        heard.get(topic)?.();
+        heard.delete(topic);
       };
     },
   };

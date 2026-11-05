@@ -28,6 +28,14 @@ describe("createMemoryPresence", () => {
       expect(presence.isHealthy()).toBe(false);
     });
 
+    it("keeps what it is asked before connect(), as every adapter works without it", async () => {
+      const unconnected = createMemoryPresence({ sweepIntervalMs: 0 });
+      await unconnected.track("room", alice);
+
+      expect((await unconnected.list("room")).map((entry) => entry.userId)).toEqual(["alice"]);
+      await unconnected.disconnect();
+    });
+
     it("ignores operations when disconnected", async () => {
       await presence.disconnect();
       await presence.track("room", alice);

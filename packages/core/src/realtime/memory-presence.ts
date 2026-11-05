@@ -9,7 +9,10 @@ type DiffHandler = (diff: PresenceDiff) => void;
 
 /**
  * In-process presence adapter for single-server or testing.
- * Tracks connections per topic with automatic stale-entry sweep.
+ * Tracks connections per topic with automatic stale-entry sweep. It works
+ * from the moment it is made, as every adapter does: `connect()` is there
+ * for the contract, and what it is asked once `disconnect()` stopped it is
+ * ignored.
  *
  * @example
  * ```ts
@@ -32,7 +35,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
   const topics = new Map<string, Map<string, PresenceEntry>>();
   const diffHandlers = new Map<string, Set<DiffHandler>>();
   const errorHandlers = new Set<(error: Error) => void>();
-  let connected = false;
+  let stopped = false;
   let sweepTimer: ReturnType<typeof setInterval> | undefined;
 
   function emitError(error: Error): void {
@@ -89,14 +92,15 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
     }
   }
 
+  startSweepTimer();
+
   return {
     async connect() {
-      connected = true;
-      startSweepTimer();
+      if (stopped) throw new Error("The memory presence adapter was stopped with disconnect()");
     },
 
     async disconnect() {
-      connected = false;
+      stopped = true;
       if (sweepTimer !== undefined) {
         clearInterval(sweepTimer);
         sweepTimer = undefined;
@@ -106,7 +110,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
       errorHandlers.clear();
     },
 
-    isHealthy: () => connected,
+    isHealthy: () => !stopped,
 
     onError(handler) {
       errorHandlers.add(handler);
@@ -116,7 +120,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
     },
 
     async track(topic, entry) {
-      if (!connected) return;
+      if (stopped) return;
       const now = Date.now();
       const full: PresenceEntry = { ...entry, joinedAt: now, lastSeenAt: now };
       getOrCreateTopic(topic).set(entry.connectionId, full);
@@ -124,7 +128,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
     },
 
     async update(topic, connectionId, metadata) {
-      if (!connected) return;
+      if (stopped) return;
       const entries = topics.get(topic);
       if (!entries) return;
       const existing = entries.get(connectionId);
@@ -133,7 +137,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
     },
 
     async untrack(topic, connectionId) {
-      if (!connected) return;
+      if (stopped) return;
       const entries = topics.get(topic);
       if (!entries) return;
       const existing = entries.get(connectionId);
@@ -149,7 +153,7 @@ export function createMemoryPresence(config?: PresenceConfig): PresenceAdapter {
     },
 
     async heartbeat(topic, connectionId) {
-      if (!connected) return;
+      if (stopped) return;
       const entries = topics.get(topic);
       if (!entries) return;
       const existing = entries.get(connectionId);

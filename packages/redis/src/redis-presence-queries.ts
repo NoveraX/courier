@@ -11,7 +11,7 @@ import { buildEntries, parseScorePairs, SWEEP_LUA, unpackMeta } from "./redis-pr
 
 /** Return all active presence entries for a topic. */
 export async function listEntries(ctx: PresenceContext, topic: string): Promise<PresenceEntry[]> {
-  if (!ctx.isConnected()) return [];
+  if (ctx.isStopped()) return [];
   try {
     const raw = await ctx.redis.zrangebyscore(ctx.sk(topic), "-inf", "+inf", "WITHSCORES");
     if (raw.length === 0) return [];
@@ -33,7 +33,7 @@ export async function sweepEntries(
   topic: string,
   staleThresholdMs: number,
 ): Promise<PresenceEntry[]> {
-  if (!ctx.isConnected()) return [];
+  if (ctx.isStopped()) return [];
   const cutoff = Date.now() - staleThresholdMs;
   try {
     const raw = (await ctx.redis.eval(

@@ -2,6 +2,7 @@ import { createLogger } from "@noverax/courier";
 import { createRefusalLog } from "@noverax/courier/internal";
 import type { AdapterState, PubSubAdapter, PubSubEnvelope } from "@noverax/courier/realtime";
 
+import { CONNECT_TIMEOUT_MS, DISCONNECT_TIMEOUT_MS } from "./adapter-deadlines";
 import { createOutboundQueue } from "./outbound-queue";
 import { trackPubSubState } from "./pubsub-state";
 import { createSubscriptionReconciler } from "./subscription-reconciler";
@@ -9,8 +10,6 @@ import type { RedisPubSubConfig } from "./types";
 import { envelopeOf } from "./wire-guards";
 
 const log = createLogger("RedisPubSub");
-const CONNECT_TIMEOUT_MS = 10_000;
-const DISCONNECT_TIMEOUT_MS = 2_000;
 
 /**
  * Redis Pub/Sub adapter for horizontal WS scaling, on two connections: one

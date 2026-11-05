@@ -40,7 +40,7 @@ export async function trackEntry(
   topic: string,
   entry: { userId: string; connectionId: string; metadata: Record<string, unknown> },
 ): Promise<void> {
-  if (!ctx.isConnected()) return;
+  if (ctx.isStopped()) return;
   const now = Date.now();
   try {
     const p = ctx.redis.pipeline();
@@ -65,7 +65,7 @@ export async function updateEntry(
   connectionId: string,
   metadata: Record<string, unknown>,
 ): Promise<void> {
-  if (!ctx.isConnected()) return;
+  if (ctx.isStopped()) return;
   try {
     const raw = await ctx.redis.hget(ctx.mk(topic), connectionId);
     if (!raw) return;
@@ -90,7 +90,7 @@ export async function untrackEntry(
   topic: string,
   connectionId: string,
 ): Promise<void> {
-  if (!ctx.isConnected()) return;
+  if (ctx.isStopped()) return;
   try {
     const raw = await ctx.redis.hget(ctx.mk(topic), connectionId);
     if (!raw) return;
@@ -118,7 +118,7 @@ export async function heartbeatEntry(
   topic: string,
   connectionId: string,
 ): Promise<void> {
-  if (!ctx.isConnected()) return;
+  if (ctx.isStopped()) return;
   try {
     /* XX: refresh a member, never add one, so a heartbeat that comes after a
        sweep does not put the connection back without its metadata, gone from

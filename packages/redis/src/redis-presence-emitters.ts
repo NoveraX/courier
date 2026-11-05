@@ -20,7 +20,8 @@ export interface PresenceContext {
   readonly emitDiff: (topic: string, diff: PresenceDiff) => void;
   readonly sk: (topic: string) => string;
   readonly mk: (topic: string) => string;
-  isConnected(): boolean;
+  /** Whether `disconnect()` stopped the adapter, after which what it is asked is ignored */
+  isStopped(): boolean;
 }
 
 /** Convert any thrown value to a real `Error` instance */

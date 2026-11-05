@@ -197,7 +197,7 @@ const presence = createRedisPresence({
 await presence.connect()
 ```
 
-Presence is used from a channel's handlers: track a connection when it joins, refresh it on each of its heartbeats, untrack it when it leaves, and tell the room. Give the adapter a `subscriber` connection as well, and `onDiff` hears the joins and leaves of every replica, not only its own.
+Presence is used from a channel's handlers: track a connection when it joins, refresh it on each of its heartbeats, untrack it when it leaves, and tell the room. Give the adapter a `subscriber` connection as well, and `onDiff` hears the joins and leaves of every replica, not only its own. The adapter works from the moment it is made: what it is asked before Redis answers waits for Redis, as the client's commands do, and `connect({ timeoutMs })` resolves once Redis answers both connections.
 
 ```ts title="api/rooms.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -394,11 +394,11 @@ Redis adapters degrade gracefully — they never kill active client connections:
 
 | Scenario | Behavior |
 |----------|----------|
-| Redis down at start | The Pub/Sub adapter is `connecting`: what is published waits in its queue, subscriptions are made once Redis answers. `connect()` rejects at its deadline; the adapter goes on. |
-| Redis temporarily down | PubSub messages wait in the queue, within its bounds, and go out once Redis is back; past the bounds the oldest are dropped and counted. `append` rejects and `getHistory` returns no events, and `onError` hears both. Presence calls do nothing — `list` returns no entries — and `onError` hears why. |
-| Redis reconnects | The Pub/Sub adapter makes every subscription again and sends what waited |
+| Redis down at start | The Pub/Sub adapter is `connecting`: what is published waits in its queue, subscriptions are made once Redis answers. Presence calls wait for Redis, and its diffs are heard once Redis answers. `connect()` rejects at its deadline; the adapter goes on. |
+| Redis temporarily down | PubSub messages wait in the queue, within its bounds, and go out once Redis is back; past the bounds the oldest are dropped and counted. `append` rejects and `getHistory` returns no events, and `onError` hears both. Presence calls wait as the client's commands wait, and once the client gives up they do nothing — `list` returns no entries — and `onError` hears why. |
+| Redis reconnects | The Pub/Sub adapter makes every subscription again and sends what waited, and presence hears the other replicas' diffs again |
 | Redis refuses a `SUBSCRIBE` | Tried again after a growing pause until Redis takes it; `onError` hears each refusal |
-| Redis hangs | `disconnect()` and a WebSocket handler's `destroy()` settle within their deadlines all the same |
+| Redis hangs | The adapters' `disconnect()` and a WebSocket handler's `destroy()` settle within their deadlines all the same |
 | `isHealthy()` returns false | Your load balancer should stop sending new connections |
 
 <Callout variant="tip" title="ioredis reconnection">

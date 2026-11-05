@@ -165,7 +165,7 @@ Creates a Streams adapter for durable ordered event storage. Uses `XADD`/`XRANGE
 
 ### `createRedisPresence(config: RedisPresenceConfig): PresenceAdapter`
 
-Creates a presence adapter: `track`, `heartbeat`, `untrack`, `list`, `sweep` and `onDiff` over a sorted set and a hash per topic, with the diffs broadcast to the other replicas through the `subscriber` connection.
+Creates a presence adapter: `track`, `heartbeat`, `untrack`, `list`, `sweep` and `onDiff` over a sorted set and a hash per topic, with the diffs broadcast to the other replicas through the `subscriber` connection. It works before `connect()`, hears the other replicas' diffs again after a reconnect or a refused `SUBSCRIBE`, and its `connect({ timeoutMs })` and `disconnect({ timeoutMs })` settle within their deadlines.
 
 ### `createRedisConnectionLeases(config: RedisConnectionLeasesConfig): ConnectionLeaseStore`
 

@@ -13,11 +13,15 @@
  *
  * Redis puts a subscribed connection into a mode that accepts almost nothing
  * else, so receiving needs its own client. Without one, diffs stay local and
- * the adapter says so rather than pretending.
+ * the adapter says so rather than pretending. A topic's channel is wanted
+ * rather than subscribed once: made as soon as the subscriber is ready, again
+ * after every reconnect and after a refusal, so a replica that started
+ * before Redis, or lost it a while, hears the others again.
  */
 
 import type { PresenceDiff } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
+import { createSubscriptionReconciler } from "./subscription-reconciler";
 import { type DiffEnvelope, isDiffEnvelope } from "./wire-guards";
 
 /** Channel a topic's diffs travel on. */
@@ -25,18 +29,17 @@ export function diffChannel(prefix: string, topic: string): string {
   return `${prefix}diff:${topic}`;
 }
 
-/** Everything the broadcast side needs, gathered once at construction. */
 export interface DiffBroadcast {
   /** Send a diff to the other replicas. Does nothing without a subscriber. */
   publish(topic: string, diff: PresenceDiff): void;
-  /** Start listening for other replicas' diffs on this topic. */
-  listen(topic: string): Promise<void>;
-  /** Stop listening for this topic. */
-  stopListening(topic: string): Promise<void>;
-  /** Release the subscription. */
-  close(): Promise<void>;
+  /** Hear the other replicas' diffs on a topic, until the returned function is called. */
+  listen(topic: string): () => void;
+  /** Hear nothing more, letting the channels go within `timeoutMs`. */
+  close(timeoutMs: number): Promise<void>;
   /** Whether diffs reach other replicas at all. */
   readonly crossReplica: boolean;
+  /** The topics' channels wanted, and those Redis has confirmed. */
+  readonly channels: { readonly wanted: number; readonly confirmed: number };
 }
 
 export function createDiffBroadcast(input: {
@@ -48,20 +51,38 @@ export function createDiffBroadcast(input: {
   onError: (error: Error) => void;
 }): DiffBroadcast {
   const { redis, subscriber, prefix, origin, deliver, onError } = input;
-  const listening = new Set<string>();
+  const subscriptions = subscriber && createSubscriptionReconciler(subscriber, onError);
 
-  subscriber?.on("message", (channel: string, raw: string) => {
+  /* A channel this adapter does not want is another's, on a subscriber two
+     adapters share; a diff goes to the topic of the channel it came on,
+     whatever topic its envelope names. */
+  const onMessage = (channel: string, raw: string): void => {
+    const handlers = subscriptions?.handlersOf(channel);
+    if (!handlers) return;
+    let envelope: unknown;
     try {
-      const envelope: unknown = JSON.parse(raw);
-      if (!isDiffEnvelope(envelope))
-        throw new Error(`Not a Courier presence change on channel "${channel}"`);
-      /* A replica already ran its own handlers before publishing. */
-      if (envelope.origin === origin) return;
-      deliver(envelope.topic, envelope.diff);
-    } catch (err) {
-      onError(err instanceof Error ? err : new Error(String(err)));
+      envelope = JSON.parse(raw);
+    } catch {
+      envelope = undefined;
     }
-  });
+    if (!isDiffEnvelope(envelope)) {
+      onError(new Error(`Not a Courier presence change on channel "${channel}"`));
+      return;
+    }
+    /* A replica already ran its own handlers before publishing. */
+    if (envelope.origin === origin) return;
+    for (const handler of [...handlers]) handler(envelope.diff);
+  };
+  const onReady = (): void => subscriptions?.connected();
+  const onLost = (): void => subscriptions?.disconnected();
+  const events = [
+    ["message", onMessage],
+    ["ready", onReady],
+    ["close", onLost],
+    ["end", onLost],
+  ] as const;
+  for (const [event, listener] of events) subscriber?.on(event, listener);
+  if (subscriber?.status === "ready") subscriptions?.connected();
 
   return {
     crossReplica: subscriber !== undefined,
@@ -74,26 +95,20 @@ export function createDiffBroadcast(input: {
       });
     },
 
-    async listen(topic) {
-      if (!subscriber || listening.has(topic)) return;
-      listening.add(topic);
-      try {
-        await subscriber.subscribe(diffChannel(prefix, topic));
-      } catch (err) {
-        listening.delete(topic);
-        throw err;
-      }
+    listen(topic) {
+      if (!subscriptions) return () => undefined;
+      return subscriptions.add(diffChannel(prefix, topic), (diff) => {
+        deliver(topic, diff as PresenceDiff);
+      });
     },
 
-    async stopListening(topic) {
-      if (!subscriber || !listening.delete(topic)) return;
-      await subscriber.unsubscribe(diffChannel(prefix, topic));
+    async close(timeoutMs) {
+      for (const [event, listener] of events) subscriber?.off(event, listener);
+      await subscriptions?.stop(timeoutMs);
     },
 
-    async close() {
-      if (!subscriber) return;
-      for (const topic of listening) await subscriber.unsubscribe(diffChannel(prefix, topic));
-      listening.clear();
+    get channels() {
+      return { wanted: subscriptions?.wanted ?? 0, confirmed: subscriptions?.confirmed ?? 0 };
     },
   };
 }

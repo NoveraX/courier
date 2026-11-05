@@ -193,6 +193,7 @@ app.all("/api/request", proxy)
 
 // SSE streaming — do NOT apply compression middleware to this route
 const sse = courierSSEHandler({
+  pubsub, // sseConnections.disconnect() reaches every replica's streams
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -273,6 +274,7 @@ await fastify.register(courierPlugin, { prefix: "/api/request" })
 // SSE streaming — the plugin drains its own streams on close; this route
 // drains in preClose, or fastify.close() waits for its streams to end
 const sse = courierSSEHandler({
+  pubsub, // sseConnections.disconnect() reaches every replica's streams
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -344,6 +346,7 @@ app.all("/api/request", courierHandler())
 
 // SSE streaming
 app.get("/api/sse", courierSSEHandler({
+  pubsub, // sseConnections.disconnect() reaches every replica's streams
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -445,6 +448,7 @@ import { courierMiddleware, courierSSEMiddleware } from "@noverax/courier-nestjs
 
 const proxy = courierMiddleware()
 const sse = courierSSEMiddleware({
+  pubsub, // sseConnections.disconnect() reaches every replica's streams
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -486,6 +490,8 @@ export async function askForFreshTokens(connections: ConnectionRegistry, userId:
   await connections.requireAuth({ meta: { userId } }, { timeoutMs: 30_000 })
 }
 ```
+
+`sseConnections.disconnect()` takes the same selectors, comparing what `onSSEConnect` returned, and ends the streams on every replica whose HTTP or SSE handler was given the same `pubsub`; the standalone server passes its own to both. A stream ended so says nothing of why, and its client reconnects as from a dropped one, so revoke the user's credentials too: `onSSEConnect` then refuses it. The SSE handlers' commands travel on a channel of their own, signed with the same `cluster.secret`.
 
 A selector is a connection id, `{ id }` with as many as 1000 of them, or `{ meta }` comparing up to 16 fields of what `onConnect` returned, each to a string, a number or a boolean. The metadata compared is a copy taken as the connection was let in, renewed by each `onReauth`: a change made to `ctx.meta` after that is not seen, and `get()` and `list()` hand out copies of it too. Each replica finds the connections a selector names through an index of those fields, without a pass over every connection. One the handler cannot use — no id, a field compared to an object — rejects with a `TypeError` before anything is closed, and so does a code no socket can send. The call resolves once this replica's connections are closed and the command for the others has gone to the adapter; it is not sent at all when every id it names is this replica's. A replica Redis cannot reach at that moment misses the command, so revoke the user's credentials as well: a client that reconnects is then refused by `onConnect`. `count`, `get`, `list()` and `send()` stay with the replica that holds the connections.
 
@@ -546,6 +552,9 @@ A shorter secret throws `CLUSTER_SECRET_INVALID` when the handler is made. Keep 
 | `disconnectByMeta((meta) => meta.userId === id, code, reason)` | `await disconnect({ meta: { userId: id } }, { code, reason })` |
 | `getByMeta(predicate)` | `list({ meta: { … } })`, or `list().filter(…)` for any other test |
 | `sendAuthRequired(connections, id, ms)` | `await connections.requireAuth(id, { timeoutMs: ms })` |
+| `sseConnections.getByMeta(predicate)` | `sseConnections.list({ meta: { … } })` |
+| `sseConnections.disconnect(id, reason)` | `await sseConnections.disconnect(id)`, or a selector, on every replica |
+| `sseConnections.broadcastToMeta(predicate, event)` | `sseConnections.broadcastToMeta({ userId }, event)` |
 
 A replica of 0.4 does not listen for commands, so while a rolling upgrade from it runs, a command reaches the replicas already upgraded. A replica that gets a command of a newer version than its own skips it, saying so in its log.
 

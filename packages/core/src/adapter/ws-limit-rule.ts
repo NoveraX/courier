@@ -44,7 +44,7 @@ export function connectionLimitOf(
   return createConnectionLimiter({
     rules,
     store: config.connectionLeases ?? createMemoryConnectionLeases(),
-    secret: clusterSecretOf(config),
+    secret: clusterSecretOf(config.cluster, "createWSHandler"),
     refusals,
   });
 }

@@ -71,6 +71,8 @@ export function httpHandlerOptions(
 ): HandlerConfig {
   const options: Forwarded<HandlerConfig> = {
     sources: config.sources,
+    pubsub: config.pubsub,
+    cluster: config.cluster,
     allowedOrigins: settings.allowedOrigins,
     allowedHosts: settings.allowedHosts,
     sseHeaders: config.sseHeaders,

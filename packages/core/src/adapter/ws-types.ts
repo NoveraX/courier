@@ -35,7 +35,7 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   /** Optional pub/sub adapter for horizontal scaling (e.g. Redis) */
   pubsub?: PubSubAdapter | undefined;
   /** How the replicas sharing `pubsub` trust the commands they send each other */
-  cluster?: WSClusterOptions | undefined;
+  cluster?: ClusterOptions | undefined;
   /**
    * Keep each topic's recent events, so a subscription that comes back —
    * its client lost the connection — is sent what it missed instead of
@@ -220,11 +220,12 @@ export interface ConnectionLimitRule<TMeta = Record<string, unknown>> {
 }
 
 /** How the replicas of one application trust the commands they send each other. */
-export interface WSClusterOptions {
+export interface ClusterOptions {
   /**
    * A secret every replica shares, of 32 bytes or more: each command one
-   * sends the others — `connections.disconnect`, `connections.requireAuth` —
-   * is signed with it, and one that is not, or not with it, is refused.
+   * sends the others — `connections.disconnect`, `connections.requireAuth`,
+   * `sseConnections.disconnect` — is signed with it, and one that is not,
+   * or not with it, is refused.
    * Without it, whoever can publish on the adapter's channels can close any
    * connection: on a Redis anything else reaches, set it, and keep
    * publishing on the prefix's channels to the application with Redis ACLs.

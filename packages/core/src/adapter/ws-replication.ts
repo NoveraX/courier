@@ -40,7 +40,7 @@ export function replicate(
   registry: InternalConnectionRegistry,
   refusals: RefusalLog,
 ): Replication | undefined {
-  const secret = clusterSecretOf(config);
+  const secret = clusterSecretOf(config.cluster, "createWSHandler");
   const { pubsub } = config;
   if (!pubsub) return undefined;
   const bridge = createPubSubBridge(pubsub, registry, refusals);

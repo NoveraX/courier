@@ -1,3 +1,4 @@
+import { createRefusalLog } from "../logger/refusal-log";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { executeRequest } from "../utils/execute";
@@ -17,6 +18,7 @@ import { createProxyLimiter } from "./rate-limit/proxy-limiter";
 import { assertListedSettings } from "./runtime-policy";
 import { servedSources } from "./served-sources";
 import { createSSEConnectionRegistry } from "./sse-registry";
+import { replicateSSE } from "./sse-replication";
 import type { SSEConnectionRegistry } from "./sse-types";
 
 export type AdapterHandler = {
@@ -79,6 +81,8 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
   const post = createPostHandler(execute, dt, config);
   const sseRegistry = createSSEConnectionRegistry();
   const sse = createSSEHandler(config, sseRegistry);
+  /* With a pub/sub adapter, the streams a selector names are ended on every replica. */
+  const replication = replicateSSE(config, sseRegistry, createRefusalLog("SSE"));
 
   const route = async (request: Request): Promise<Response> => {
     if (isSSERequest(request)) return sse(request);
@@ -98,8 +102,11 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     handleGet: entry(get),
     handlePost: entry(post),
     handleSSE: entry(sse),
-    sseConnections: sseRegistry,
-    shutdownSSE: (opts) => sseRegistry.shutdown(opts),
+    sseConnections: replication?.connections ?? sseRegistry,
+    async shutdownSSE(opts) {
+      replication?.destroy();
+      await sseRegistry.shutdown(opts);
+    },
   };
 }
 

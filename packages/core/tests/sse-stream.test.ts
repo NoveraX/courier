@@ -47,7 +47,7 @@ function createMockRegistry(overrides?: Partial<InternalSSERegistry>): InternalS
     get: vi.fn().mockReturnValue({ eventCount: 0, totalBytes: 0 }),
     has: vi.fn().mockReturnValue(true),
     list: vi.fn().mockReturnValue([]),
-    getByMeta: vi.fn().mockReturnValue([]),
+    select: vi.fn().mockReturnValue([]),
     getByEndpoint: vi.fn().mockReturnValue([]),
     disconnect: vi.fn(),
     disconnectAll: vi.fn(),

@@ -33,6 +33,8 @@ export interface ClusterControlOptions {
   /** Carry out on this replica a command another sent */
   readonly run: (command: CheckedCommand) => void;
   readonly refusals: RefusalLog;
+  /** The channel the commands travel on (default `CONTROL_CHANNEL`, the WebSocket handlers') */
+  readonly channel?: string | undefined;
 }
 
 /**
@@ -52,7 +54,7 @@ export interface ClusterControlOptions {
  * ```
  */
 export function createClusterControl(options: ClusterControlOptions): ClusterControl {
-  const { pubsub, run, refusals } = options;
+  const { pubsub, run, refusals, channel = CONTROL_CHANNEL } = options;
   const signer = options.secret === undefined ? undefined : createClusterSigner(options.secret);
   const replay = createReplayGuard({ windowMs: WINDOW_MS, capacity: SEEN_IDS });
   const channels = createPubSubChannels(pubsub);
@@ -81,7 +83,7 @@ export function createClusterControl(options: ClusterControlOptions): ClusterCon
     run({ command: message.cmd, selection });
   }
 
-  channels.retain(CONTROL_CHANNEL, (raw) => {
+  channels.retain(channel, (raw) => {
     receive(raw).catch((error: unknown) => {
       refusals.warn({ event: "cluster command failed", code: "INTERNAL" }, error);
     });
@@ -93,7 +95,7 @@ export function createClusterControl(options: ClusterControlOptions): ClusterCon
       const message: ClusterMessage = signer
         ? { ...unsigned, sig: await signer.sign(unsigned) }
         : unsigned;
-      await pubsub.publish(CONTROL_CHANNEL, message);
+      await pubsub.publish(channel, message);
     },
     destroy: () => channels.destroy(),
   };

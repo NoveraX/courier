@@ -3,10 +3,12 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { StudioHooks } from "../studio/hooks";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { InternalSSERegistry } from "./sse-registry";
+import type { ConnectionSelector, MetaValue } from "./ws-registry-types";
 /** Read-only SSE connection info exposed via public API */
 export interface SSEConnectionInfo {
   readonly connectionId: string;
   readonly connectedAt: number;
+  /** A copy of its metadata: what `onSSEConnect` returned as the stream opened */
   readonly meta: Record<string, unknown>;
   readonly source: string;
   readonly group: string | undefined;
@@ -45,16 +47,25 @@ export interface SSEConnectionRegistry {
   get(connectionId: string): SSEConnectionInfo | undefined;
   /** Check if a connection exists */
   has(connectionId: string): boolean;
-  /** List all active connections */
-  list(): SSEConnectionInfo[];
-  /** Filter connections by metadata predicate */
-  getByMeta(predicate: (meta: Record<string, unknown>) => boolean): SSEConnectionInfo[];
+  /**
+   * This replica's streams: every one, or those `selector` names — by id,
+   * or by fields of the metadata `onSSEConnect` returned.
+   * @throws TypeError for a selector that names no connection
+   */
+  list(selector?: ConnectionSelector): SSEConnectionInfo[];
   /** Filter connections by endpoint (all params optional for flexible matching) */
   getByEndpoint(source: string, group?: string, method?: string): SSEConnectionInfo[];
-  /** Force-close a single SSE connection */
-  disconnect(connectionId: string, reason?: string): void;
-  /** Force-close all SSE connections */
-  disconnectAll(reason?: string): void;
+  /**
+   * End the streams `selector` names — on every replica that shares the
+   * handler's pub/sub adapter. A stream ended so says nothing of why: its
+   * client reconnects as from a dropped stream, and passes `onSSEConnect`
+   * again. Resolves once this replica's are ended and the command for the
+   * others has gone to the adapter; rejects with a `TypeError`, ending
+   * none, for a selector that names no connection.
+   */
+  disconnect(selector: ConnectionSelector): Promise<void>;
+  /** End every stream of this replica */
+  disconnectAll(): void;
   /** Send an event to a specific SSE connection (bypasses generator) */
   send(connectionId: string, event: SSEBroadcastEvent): boolean;
   /** Broadcast an event to all connections matching an endpoint filter */
@@ -64,9 +75,14 @@ export interface SSEConnectionRegistry {
     group?: string,
     method?: string,
   ): SSEBroadcastResult;
-  /** Broadcast an event to connections matching a metadata predicate */
+  /**
+   * Send an event to this replica's streams whose metadata has every field
+   * given — 1 to 16 — equal to its value, a string, a finite number or a
+   * boolean, as a selector's `meta` compares them.
+   * @throws TypeError for fields no selector takes
+   */
   broadcastToMeta(
-    predicate: (meta: Record<string, unknown>) => boolean,
+    fields: Readonly<Record<string, MetaValue>>,
     event: SSEBroadcastEvent,
   ): SSEBroadcastResult;
   /** Broadcast an event to all active connections */

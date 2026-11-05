@@ -37,7 +37,7 @@ export type {
   RequireAuthOptions,
 } from "./ws-registry-types";
 export type {
-  WSClusterOptions,
+  ClusterOptions,
   WSHandler,
   WSHandlerConfig,
   WSHandlerDescriptor,

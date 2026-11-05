@@ -1,8 +1,10 @@
 import type { Sources } from "../define/types";
+import type { PubSubAdapter } from "../realtime/adapters";
 import type { ConnectResult } from "./connection-meta";
 import type { ProxyRateLimit } from "./rate-limit/types";
 import type { AllowedHostsSetting, AllowedOriginsSetting } from "./runtime-policy";
 import type { SSELifecycleConfig } from "./sse-types";
+import type { ClusterOptions } from "./ws-types";
 
 /**
  * Optional configuration for createHandler. `TConnect` is what
@@ -19,6 +21,13 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * cannot change what it serves.
    */
   sources?: Sources | undefined;
+  /**
+   * The pub/sub adapter the replicas share: with it, `sseConnections.disconnect()`
+   * ends the streams a selector names on every replica, not only this one's
+   */
+  pubsub?: PubSubAdapter | undefined;
+  /** How the replicas sharing `pubsub` trust the commands they send each other */
+  cluster?: ClusterOptions | undefined;
   /** Additional response headers for SSE (e.g., CORS) */
   sseHeaders?: Record<string, string> | undefined;
   /** Max SSE connection lifetime in ms. After TTL, stream closes and client reconnects via Last-Event-ID. */

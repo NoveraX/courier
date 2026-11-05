@@ -94,14 +94,14 @@ describe("SSEConnectionRegistry", () => {
     });
   });
 
-  describe("getByMeta", () => {
-    it("filters connections by metadata predicate", () => {
+  describe("list by selector", () => {
+    it("lists the connections whose metadata has the fields given", () => {
       registry = createSSEConnectionRegistry();
       registry.add(createEntry({ meta: { role: "admin" } }));
       registry.add(createEntry({ meta: { role: "user" } }));
       registry.add(createEntry({ meta: { role: "admin" } }));
 
-      const admins = registry.getByMeta((m) => m.role === "admin");
+      const admins = registry.list({ meta: { role: "admin" } });
       expect(admins).toHaveLength(2);
     });
   });
@@ -140,17 +140,17 @@ describe("SSEConnectionRegistry", () => {
   });
 
   describe("disconnect / disconnectAll", () => {
-    it("disconnect calls abort on the entry", () => {
+    it("disconnect calls abort on the entry", async () => {
       registry = createSSEConnectionRegistry();
       const entry = createEntry();
       registry.add(entry);
-      registry.disconnect(entry.connectionId);
+      await registry.disconnect(entry.connectionId);
       expect(entry.abort).toHaveBeenCalledOnce();
     });
 
-    it("disconnect is safe for unknown ID", () => {
+    it("disconnect is safe for unknown ID", async () => {
       registry = createSSEConnectionRegistry();
-      expect(() => registry.disconnect("nonexistent")).not.toThrow();
+      await expect(registry.disconnect("nonexistent")).resolves.toBeUndefined();
     });
 
     it("disconnectAll aborts all entries", () => {

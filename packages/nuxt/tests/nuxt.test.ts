@@ -16,7 +16,6 @@ vi.mock("@noverax/courier", async (importOriginal) => {
         get: vi.fn(),
         has: vi.fn(),
         list: vi.fn(() => []),
-        getByMeta: vi.fn(() => []),
         getByEndpoint: vi.fn(() => []),
         disconnect: vi.fn(),
         disconnectAll: vi.fn(),

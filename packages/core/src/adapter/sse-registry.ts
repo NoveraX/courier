@@ -1,11 +1,15 @@
+import { readSelector, type Selection } from "./connection-selector";
 import { createBroadcastEngine } from "./sse-broadcast";
 import { executeSSEShutdown } from "./sse-shutdown";
 import type { SSEBroadcastEvent, SSEConnectionInfo, SSEConnectionRegistry } from "./sse-types";
+import { createMetaIndex } from "./ws-meta-index";
+import type { ConnectionSelector } from "./ws-registry-types";
 
 /** Internal entry stored per SSE connection */
 export interface SSERegistryEntry {
   connectionId: string;
   connectedAt: number;
+  /** Its metadata, a frozen copy once the registry holds it: what a selector compares */
   meta: Record<string, unknown>;
   source: string;
   group: string | undefined;
@@ -35,13 +39,15 @@ export interface InternalSSERegistry extends SSEConnectionRegistry {
   shutdown(options?: { retryMs?: number; drainMs?: number }): Promise<void>;
   /** Shared AbortSignal that fires on shutdown */
   readonly shutdownSignal: AbortSignal;
+  /** This replica's entries a selection names, each once */
+  select(selection: Selection): SSERegistryEntry[];
 }
 
 function toInfo(entry: SSERegistryEntry): SSEConnectionInfo {
   return {
     connectionId: entry.connectionId,
     connectedAt: entry.connectedAt,
-    meta: entry.meta,
+    meta: { ...entry.meta },
     source: entry.source,
     group: entry.group,
     method: entry.method,
@@ -51,13 +57,25 @@ function toInfo(entry: SSERegistryEntry): SSEConnectionInfo {
   };
 }
 
+function selectionOf(selector: ConnectionSelector): Selection {
+  const selection = readSelector(selector);
+  if (typeof selection === "string") throw new TypeError(selection);
+  return selection;
+}
+
+const held = (entry: SSERegistryEntry | undefined): entry is SSERegistryEntry =>
+  entry !== undefined;
+
 /**
  * Create an SSE connection registry that tracks active streams.
  * Supports server-initiated broadcast via `send`, `broadcastToEndpoint`,
- * `broadcastToMeta`, and `broadcastAll` methods.
+ * `broadcastToMeta`, and `broadcastAll` methods. A selector finds its
+ * streams by id, or through an index of each stream's metadata, a copy
+ * taken as it opened.
  */
 export function createSSEConnectionRegistry(): InternalSSERegistry {
   const entries = new Map<string, SSERegistryEntry>();
+  const metaIndex = createMetaIndex();
   const shutdownController = new AbortController();
   const broadcast = createBroadcastEngine(entries);
   let isShuttingDown = false;
@@ -71,7 +89,7 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
     }
   }
 
-  return {
+  const registry: InternalSSERegistry = {
     get count() {
       return entries.size;
     },
@@ -89,22 +107,21 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
     has(id) {
       return entries.has(id);
     },
-    list() {
-      return [...entries.values()].map(toInfo);
+    list(selector) {
+      if (selector === undefined) return [...entries.values()].map(toInfo);
+      return registry.select(selectionOf(selector)).map(toInfo);
     },
-
-    getByMeta(predicate) {
-      const result: SSEConnectionInfo[] = [];
-      for (const e of entries.values()) if (predicate(e.meta)) result.push(toInfo(e));
-      return result;
+    select(selection) {
+      const ids = "ids" in selection ? new Set(selection.ids) : metaIndex.select(selection.fields);
+      return [...ids].map((id) => entries.get(id)).filter(held);
     },
 
     getByEndpoint(source, group, method) {
       return [...matchEndpoint(source, group, method)].map(toInfo);
     },
 
-    disconnect(id) {
-      entries.get(id)?.abort();
+    async disconnect(selector) {
+      for (const entry of registry.select(selectionOf(selector))) entry.abort();
     },
     disconnectAll() {
       for (const e of [...entries.values()]) e.abort();
@@ -118,11 +135,8 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
       return broadcast.deliver(matchEndpoint(source, group, method), event);
     },
 
-    broadcastToMeta(predicate, event) {
-      const matching = function* () {
-        for (const e of entries.values()) if (predicate(e.meta)) yield e;
-      };
-      return broadcast.deliver(matching(), event);
+    broadcastToMeta(fields, event) {
+      return broadcast.deliver(registry.select(selectionOf({ meta: fields })), event);
     },
 
     broadcastAll(event) {
@@ -134,12 +148,19 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
         entry.abort();
         return false;
       }
+      const before = entries.get(entry.connectionId);
+      if (before) metaIndex.remove(entry.connectionId, before.meta);
+      entry.meta = Object.freeze({ ...entry.meta });
       entries.set(entry.connectionId, entry);
+      metaIndex.add(entry.connectionId, entry.meta);
       return true;
     },
 
     remove(id) {
+      const entry = entries.get(id);
+      if (!entry) return;
       entries.delete(id);
+      metaIndex.remove(id, entry.meta);
     },
 
     recordEvent(id, bytes) {
@@ -156,4 +177,5 @@ export function createSSEConnectionRegistry(): InternalSSERegistry {
       await executeSSEShutdown(entries, shutdownController, options);
     },
   };
+  return registry;
 }

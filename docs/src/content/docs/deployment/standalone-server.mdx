@@ -189,8 +189,8 @@ The server exposes registries for monitoring and managing active connections:
 ```ts title="monitoring.ts"
 // SSE connections
 console.log(`Active SSE streams: ${server.sseConnections.count}`)
-const userStreams = server.sseConnections.getByMeta((meta) => meta.userId === "user-1")
-server.sseConnections.disconnect(userStreams[0].connectionId)
+const userStreams = server.sseConnections.list({ meta: { userId: "user-1" } })
+await server.sseConnections.disconnect({ meta: { userId: "user-1" } })
 
 // WebSocket connections
 console.log(`Active WS connections: ${server.wsConnections.count}`)
@@ -206,11 +206,12 @@ await server.wsConnections.disconnect({ meta: { userId: "user-1" } }, { code: 40
 | `count` | Number of active streams |
 | `get(id)` | Get connection info by ID |
 | `has(id)` | Check if connection exists |
-| `list()` | All active connections |
-| `getByMeta(fn)` | Filter by metadata predicate |
+| `list(selector?)` | All active streams, or those a selector names: an id, `{ id: [...] }` or `{ meta: { ... } }` |
 | `getByEndpoint(source, group?, method?)` | Filter by endpoint |
-| `disconnect(id, reason?)` | Force-close a stream |
-| `disconnectAll(reason?)` | Force-close all streams |
+| `disconnect(selector)` | End the streams a selector names, on every replica with `pubsub`; each client reconnects |
+| `disconnectAll()` | End every stream of this replica |
+| `send(id, event)` | Send an event to one stream |
+| `broadcastToMeta(fields, event)` | Send an event to the streams whose metadata has every field given |
 
 ### WebSocket Registry API
 
@@ -228,7 +229,7 @@ await server.wsConnections.disconnect({ meta: { userId: "user-1" } }, { code: 40
 
 A topic names its endpoint, `source.group.method`, qualified by a key as canonical JSON: the channel's [`.topic()`](/docs/advanced/realtime#topics) key, or all of the variables its subscribers passed when it names none. `qualifyTopic("api.chat.room", { room: "a" })` from `@noverax/courier/realtime` gives `api.chat.room#{"room":"a"}`, the topic a channel handler reads as `ctx.topic`. Every distinct key is a topic of its own.
 
-With a `pubsub` adapter configured, the three broadcasts reach the connections of every replica, the same as a channel handler's `ctx.broadcast`. `count`, `get`, `list`, `send` and `disconnect` concern the connections of the replica you call them on.
+With a `pubsub` adapter configured, the three broadcasts reach the connections of every replica, the same as a channel handler's `ctx.broadcast`, and `disconnect` and `requireAuth` reach every replica's connections, as `sseConnections.disconnect` does its streams. `count`, `get`, `list` and `send` concern the connections of the replica you call them on.
 
 ## Health Checks
 

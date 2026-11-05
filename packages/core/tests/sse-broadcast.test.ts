@@ -111,14 +111,14 @@ describe("SSE Broadcast", () => {
   });
 
   describe("broadcastToMeta", () => {
-    it("sends to connections matching metadata predicate", () => {
+    it("sends to connections whose metadata has every field given", () => {
       const registry = createSSEConnectionRegistry();
       const admin = createEntry({ meta: { role: "admin" } });
       const user = createEntry({ meta: { role: "user" } });
       registry.add(admin);
       registry.add(user);
 
-      const result = registry.broadcastToMeta((m) => m.role === "admin", { data: "admin-only" });
+      const result = registry.broadcastToMeta({ role: "admin" }, { data: "admin-only" });
       expect(result.size).toBe(1);
       expect(result.get(admin.connectionId)).toBe(true);
       expect(user.send).not.toHaveBeenCalled();

@@ -81,6 +81,8 @@ A proxy caller reaches another process's stream or channel too: the proxy relays
 - A channel's frames pass both ways, and it ends as its upstream subscription ends, with its code — a connection the upstream refuses included. A message the upstream subscription has no room to hold, while it joins or comes back, is answered with a `4429` error on the channel, which goes on. Subscribers of the server with equal variables share one upstream subscription.
 - A path parameter that is empty, `.` or `..` is refused before anything is sent, as it is for an HTTP call. Otherwise it would reach a route above the declared one with the server's credentials.
 
+A channel or a stream is kept from clients until something marks it, as an HTTP endpoint is — `.expose()` on it, or `expose` on its group or its API — whether the server relays it or serves it itself with `.implement()`. A subscription to one nothing marks is answered as for a channel that does not exist (`complete` with `4403`), and a stream as for an unknown one (`400`), so a client guessing names learns nothing. While developing, the server's log says which endpoint it refused and why, once for each.
+
 ## Reading a subscription
 
 Calling a stream, a push channel or a channel with `.send()` returns a subscription, and every kind reads the same way. A channel with `.send()` is the same object with `send` on it as well; on the others `send` does not exist, in the types or at run time.
@@ -126,7 +128,7 @@ A subscription ends in one of three ways, and the client can tell them apart.
 
 - **The client closes it** — `close()`, a loop left early, or a React hook unmounting. `close` says `closed`.
 - **The server finishes it** — a stream's generator returned, or a channel closed itself. A loop leaves; `close` says `completed`. It does not reconnect.
-- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. The `error` event hears the `RealtimeError` with the code and message the server sent, the status becomes `disconnected`, and `close` says `failed`; a loop rejects with the same error. A stream refused with a status no retry would change — a `4xx` other than `408` and `429`, or a redirect it does not follow, as one to another origin — arrives as code `4000 + status`, so a `401` is `4401` and a `302` is `4302`, and is not reconnected; a `408`, a `429` and a `5xx` are retried as a dropped connection is, after the `Retry-After` the server sent when it sent one.
+- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. The `error` event hears the `RealtimeError` with the code and message the server sent, the status becomes `disconnected`, and `close` says `failed`; a loop rejects with the same error. A stream refused with a status no retry would change — a `4xx` other than `408` and `429`, or a redirect it does not follow, as one to another origin — arrives as code `4000 + status`, so a `401` is `4401` and a `302` is `4302`, and is not reconnected — a `401` aside, which is tried once more when the credentials asked for anew have changed; a `408`, a `429` and a `5xx` are retried as a dropped connection is, no sooner than the `Retry-After` the server sent.
 
 A dropped connection is none of these: the client reconnects, resumes a stream after the last event id it saw, and subscribes its channels again — see [Staying connected](#staying-connected). When it has spent its retries, it fails with a `ConnectionError`.
 
@@ -197,7 +199,7 @@ export const client = createProxyCaller(routes.api, {
 })
 ```
 
-- `auth` — what the client tells the server about itself, as socket.io's `auth` does: an object, or a function that returns one, called anew before every connect and reconnect so the token in it is current. It is sent in the socket's first frame, never in its URL, where proxies and servers log it, and the server's `onConnect` reads it as `auth` — see [Who a connection is](#who-a-connection-is). It is sent again, asked for anew, when the server asks with `sendAuthRequired`; a caller without it leaves that request unanswered, and the server closes the connection at its deadline.
+- `auth` — what the client tells the server about itself, as socket.io's `auth` does: an object, or a function that returns one, called anew before every connect and reconnect so the token in it is current. It is sent in the socket's first frame, never in its URL, where proxies and servers log it, and the server's `onConnect` reads it as `auth` — see [Who a connection is](#who-a-connection-is). It is sent again, asked for anew, when the server asks with `connections.requireAuth`; a caller without it leaves that request unanswered, and the server closes the connection at its deadline.
 - `backoff` — the wait before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on). See [Staying connected](#staying-connected).
 - `heartbeat` — the server's ping interval and pong timeout; a server silent for longer than the two together is taken for gone, and the client reconnects.
 - `messageQueue` — what the socket keeps to send while it cannot: messages sent while it reconnects, and those sent on a channel the server has not confirmed yet. `maxCount` (100) and `maxBytes` (1 MB) hold for all its channels together. `overflow` says what a message that finds no room does: with `"reject"`, the default, it is dropped with a warning and its `send` answers `false`; with `"drop-oldest"`, it is kept, and the oldest message waiting goes instead — its channel hears a `4429` error.
@@ -217,6 +219,18 @@ A connection that drops reconnects on its own, and its channels subscribe again:
 - **At once, when the page says so.** The network comes back (`online`, then a wait of up to a second at random), the page is shown again, it comes back from the back/forward cache, or its window gets focus. A connection open at that moment is checked instead: it sends a ping, and a socket that does not answer within 5 s is taken for gone. `reconnectOnResume: false` turns this off. Node and React Native give no such signals: call `reconnect()` there, as from React Native's `AppState` when the app comes back to the foreground.
 - **A socket that falls silent** — no frame for the `heartbeat`'s interval and timeout together, 35 s by default — is taken for gone though it still reads as open: a network that dropped without a word sends no close.
 
+In a React Native app, the app coming back to the foreground is the signal to pass on:
+
+```ts title="app/realtime.ts"
+import { AppState } from "react-native"
+
+const room = client.chat.room({ room: "general", nick: "ada" })
+
+AppState.addEventListener("change", (state) => {
+  if (state === "active") room.reconnect()
+})
+```
+
 A socket that takes longer than 15 s to open, or a server that takes longer than 15 s to admit it, counts as a failed attempt. Some closes are not reconnected, as reconnecting would meet the same answer:
 
 | Code | Why | The client |
@@ -225,7 +239,7 @@ A socket that takes longer than 15 s to open, or a server that takes longer than
 | `4401` | credentials refused, expired or not renewed in time | asks for its credentials anew, once, and signs in with them if they changed; otherwise ends its channels with an `AuthError` |
 | `4403`, `4421` | origin or host not allowed | ends its channels with the error |
 | `4409` | replaced by a newer connection of the same user | ends its channels: reconnecting would replace that one in turn |
-| `4429` | too many connections from the address or the user | waits as long as the server asked; with no wait given, ends its channels with a `RateLimitError` |
+| `4429` | too many connections from the address or the user, or replaced by a newer one of the user's | ends its channels with a `RateLimitError`: the server holds as many as it allows, and reconnecting would take a newer one's place. A server that names a wait is called back after it |
 | `1002`, `1003`, `1007`, `1008`, `4400`, `4000`–`4099` | the protocol, a policy, or the application said no | ends its channels with the error |
 
 Every other close — a dropped network (`1006`), a server going away (`1001`, `1012`), a timeout (`4408`) — reconnects.
@@ -260,7 +274,11 @@ const server = await createCourierServer({
 
 The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. A client that sends no `auth` frame — one that is not Courier's — is admitted on its handshake alone once its first frame comes, or after `authTimeoutMs` (3 s).
 
-To have a client prove who it is again on an open connection — its token about to expire — call `sendAuthRequired(connections, connectionId, timeoutMs)`: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata. Credentials it refuses, or none in time, close the connection with `4401`, and the client goes on as after any `4401`: it asks once more, and signs in again only with credentials that changed.
+To have a client prove who it is again on an open connection — its token about to expire — call `connections.requireAuth(connectionId, { timeoutMs })`, or name every connection of a user with a selector, `connections.requireAuth({ meta: { userId } })`, which reaches them on every replica that shares the pub/sub adapter: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata. `sendAuthRequired`, which asked one connection, still works and is deprecated.
+
+Credentials `onReauth` refuses close the connection at once with `4401` — and so do any the client sends again to a handler with no `onReauth`, since nothing could check them; none sent by the deadline close it too. A request without a `timeoutMs` of its own gives the client the handler's `authRequiredTimeoutMs`, 30 seconds by default. Once renewed credentials change who the connection is, each of its subscriptions is authorized again, and one the new identity may not hold ends with `4403`. A `RealtimeError` thrown by `onConnect` — `ForbiddenError("Banned")` — closes the connection with its own code and message; anything else closes it with `4401` "Connection rejected". The client goes on as after any `4401`: it asks once more, and signs in again only with credentials that changed.
+
+`connections.disconnect(selector, { code, reason })` closes the connections a selector names — a connection id, `{ id: [...] }`, or `{ meta: { userId } }` — on every replica; see [A User's Connections, on Every Replica](/docs/deployment/replication#a-users-connections-on-every-replica).
 
 ## Next steps
 

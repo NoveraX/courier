@@ -7,6 +7,9 @@ export type {
   LeaseGrant,
   LeaseOverflow,
   LeaseRule,
+  LoggedEvent,
+  LoggedPosition,
+  LogPosition,
   PresenceAdapter,
   PresenceDiff,
   PresenceEntry,
@@ -15,6 +18,7 @@ export type {
   PubSubStats,
   StoredEvent,
   StreamAdapter,
+  TopicLog,
   WebSocketLike,
 } from "./adapters";
 export {
@@ -28,11 +32,12 @@ export {
   RealtimeTimeoutError,
   RealtimeValidationError,
 } from "./errors";
-export { createMemoryBus, type MemoryBus } from "./memory-bus";
+export { createMemoryBus, type MemoryBus, type MemoryBusOptions } from "./memory-bus";
 export { createMemoryConnectionLeases } from "./memory-leases";
 export { createMemoryPresence } from "./memory-presence";
 export { createMemoryPubSub } from "./memory-pubsub";
 export { createMemoryStream } from "./memory-stream";
+export type { MemoryTopicLogOptions } from "./memory-topic-log";
 export type { PresenceConfig } from "./presence-types";
 export type { SubscribeSSEOptions } from "./sse";
 export { subscribeSSE } from "./sse";

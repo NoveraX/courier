@@ -51,11 +51,11 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
 // ---------------------------------------------------------------------------
 
 describe("startPush", () => {
-  it("throws on, naming the endpoint, when the implementation returns nothing to iterate", () => {
+  it("throws on, naming the endpoint, when the implementation returns nothing to iterate", async () => {
     const { ctx, sent } = createMockCtx();
     const handler = async () => "not a generator";
 
-    expect(() => startPush(ctx, 'api.chat.feed#{"room":"a"}', handler, {})).toThrow(
+    await expect(startPush(ctx, 'api.chat.feed#{"room":"a"}', handler, {})).rejects.toThrow(
       /"api\.chat\.feed" returned a promise, where a stream's returns what it yields/,
     );
     expect(sent).toEqual([]);
@@ -205,13 +205,13 @@ describe("startPush", () => {
     expect(onStreamMessage.mock.calls[0]![0].eventType).toBe("data");
   });
 
-  it("throws on when handler init throws, for the subscribe flow to refuse once", () => {
+  it("throws on when handler init throws, for the subscribe flow to refuse once", async () => {
     const handler = () => {
       throw new Error("Init boom");
     };
     const { ctx, sent } = createMockCtx();
 
-    expect(() => startPush(ctx, "topic", handler, {})).toThrow("Init boom");
+    await expect(startPush(ctx, "topic", handler, {})).rejects.toThrow("Init boom");
     expect(sent).toEqual([]);
     expect(ctx.topicManager.subscribe).not.toHaveBeenCalled();
   });
@@ -324,18 +324,19 @@ describe("startChannel", () => {
     expect(ctx.topicManager.subscribe).toHaveBeenCalledOnce();
   });
 
-  it("publishes to the other replicas via broadcast", async () => {
-    const publishToTopic = vi.fn(async () => undefined);
+  it("broadcasts through the bridge, which reaches every replica, leaving the sender out", async () => {
+    const publishEvent = vi.fn(async () => undefined);
     const onJoin = vi.fn();
     const factory = () => ({ onJoin, onMessage: vi.fn() });
-    const { ctx } = createMockCtx({ bridge: { publishToTopic } as never });
+    const { ctx } = createMockCtx({ bridge: { publishEvent } as never });
 
     await startChannel(ctx, "topic", factory, {});
 
     const channelCtx = onJoin.mock.calls[0]![0];
     channelCtx.broadcast("room", "hello");
 
-    expect(publishToTopic).toHaveBeenCalledWith("room", "hello");
+    expect(publishEvent).toHaveBeenCalledWith("room", "hello", "conn-1");
+    expect(ctx.registry.broadcastToTopic).not.toHaveBeenCalled();
   });
 
   it("rolls back subscription and rethrows when onJoin throws", async () => {

@@ -16,12 +16,14 @@ import type { PubSubAdapter } from "../src/realtime/adapters";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 
 function createEntry(id: string) {
+  const sendEncoded = vi.fn();
   return {
     connectionId: id,
     meta: {},
     connectedAt: Date.now(),
     sendRaw: vi.fn(),
-    sendEncoded: vi.fn(),
+    sendEncoded,
+    sendTopicEvent: (_topic: string, _position: unknown, encoded: string) => sendEncoded(encoded),
     close: vi.fn(),
     requireAuth: vi.fn(() => () => undefined),
     evict: vi.fn(),
@@ -29,7 +31,7 @@ function createEntry(id: string) {
 }
 
 function replica(pubsub: PubSubAdapter) {
-  const registry = createConnectionRegistry();
+  const registry = createConnectionRegistry({ log: pubsub.log });
   const bridge = createPubSubBridge(pubsub, registry, createRefusalLog("WS"));
   const topics = createServerTopicManager({
     onFirstSubscriber: (topic) => bridge.onTopicSubscribe(topic),
@@ -147,7 +149,7 @@ describe("createPubSubBridge", () => {
     const { bridge } = replica(pubsub);
     await pubsub.disconnect();
 
-    await bridge.publishToTopic("api.chat.a", { text: "late" });
+    await bridge.publishEvent("api.chat.a", { text: "late" });
 
     const said = warn.mock.calls.map((call) => format(...call));
     expect(said).toEqual([
@@ -158,7 +160,7 @@ describe("createPubSubBridge", () => {
 });
 
 describe("a broadcast between two replicas on one bus", () => {
-  it("reaches the other replica's local subscribers, and not the replica that sent it", async () => {
+  it("reaches each replica's subscribers once: the sender's from it, the other's from the bus", async () => {
     const bus = createMemoryBus();
     const a = replica(bus.replica("a"));
     const b = replica(bus.replica("b"));
@@ -169,15 +171,38 @@ describe("a broadcast between two replicas on one bus", () => {
     a.topics.subscribe("a-1", { topic: "api.chat.room", cleanup: vi.fn() });
     b.topics.subscribe("b-1", { topic: "api.chat.room", cleanup: vi.fn() });
 
-    await a.bridge.publishToTopic("api.chat.room", { text: "from a" });
+    await a.bridge.publishEvent("api.chat.room", { text: "from a" });
 
     await expect.poll(() => onB.sendEncoded.mock.calls.length).toBe(1);
-    expect(JSON.parse(String(onB.sendEncoded.mock.calls[0]?.[0]))).toMatchObject({
-      type: "data",
-      topic: "api.chat.room",
-      payload: { text: "from a" },
-    });
-    expect(onA.sendEncoded).not.toHaveBeenCalled();
+    for (const entry of [onA, onB]) {
+      expect(entry.sendEncoded).toHaveBeenCalledOnce();
+      expect(JSON.parse(String(entry.sendEncoded.mock.calls[0]?.[0]))).toMatchObject({
+        type: "data",
+        topic: "api.chat.room",
+        payload: { text: "from a" },
+        seq: 1,
+      });
+    }
+  });
+
+  it("with a log, delivers no event the log did not number, and says so once", async () => {
+    vi.stubEnv("NO_COLOR", "1");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const bus = createMemoryBus({ log: {} });
+    const b = replica(bus.replica("b"));
+    const onB = createEntry("b-1");
+    b.registry.add(onB);
+    b.topics.subscribe("b-1", { topic: "api.chat.room", cleanup: vi.fn() });
+
+    await bus.replica("a").publish("api.chat.room", { text: "around the log" });
+    await bus.replica("c").publish("api.chat.room", { text: "around it again" });
+
+    await expect.poll(() => warn.mock.calls.length).toBe(1);
+    expect(format(...(warn.mock.calls[0] ?? []))).toMatch(
+      /event not delivered code=UNLOGGED endpoint=api\.chat\.room/,
+    );
+    expect(onB.sendEncoded).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   it("reaches every qualified topic of the endpoint on the other replica", async () => {

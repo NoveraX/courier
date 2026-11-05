@@ -1,4 +1,5 @@
-import { encodeMessage } from "../realtime/ws/ws-protocol";
+import { createRefusalLog, type RefusalLog } from "../logger/refusal-log";
+import type { TopicLog } from "../realtime/adapters";
 import { hasFields, readSelector } from "./connection-selector";
 import {
   disconnectCommand,
@@ -6,11 +7,13 @@ import {
   requireAuthCommand,
   runCommand,
 } from "./ws-connection-command";
+import { createLogFollower } from "./ws-log-follower";
 import {
   type BroadcastTargets,
   broadcastToAll,
   broadcastToBaseTopic,
   broadcastToTopic,
+  resyncEvery,
 } from "./ws-registry-broadcast";
 import type {
   ConnectionInfo,
@@ -21,6 +24,16 @@ import { resumableFrom } from "./ws-resume-position";
 import type { TopicHistory } from "./ws-topic-history";
 import { createTopicSequences } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
+
+/** What a registry delivers topics' events with besides its connections. */
+export interface RegistryOptions {
+  /** The events kept to resume subscriptions from, when the handler keeps history */
+  history?: TopicHistory | undefined;
+  /** The pub/sub adapter's log, which numbers each topic's events for every replica, when it keeps one */
+  log?: TopicLog | undefined;
+  /** The handler's log of refusals, for a topic log that does not answer */
+  refusals?: RefusalLog | undefined;
+}
 
 /**
  * Create a connection registry that tracks active WebSocket connections.
@@ -33,7 +46,7 @@ import type { ServerTopicManager } from "./ws-topics";
  * Alone, it reaches this replica's connections; with a pub/sub adapter
  * `replicateRegistry` carries its broadcasts and commands to the others.
  *
- * @param history - The events kept to resume subscriptions from, when the handler keeps history
+ * @param options - The history it keeps, and the log it follows
  * @returns Internal registry with add/remove + public send/broadcast API
  *
  * @example
@@ -44,7 +57,10 @@ import type { ServerTopicManager } from "./ws-topics";
  * registry.sendToConnection(connId, "notifications", { alert: true });
  * await registry.disconnect({ meta: { userId: "u1" } }, { code: 4003, reason: "Banned" });
  */
-export function createConnectionRegistry(history?: TopicHistory): InternalConnectionRegistry {
+export function createConnectionRegistry(
+  options: RegistryOptions = {},
+): InternalConnectionRegistry {
+  const { history, log } = options;
   const entries = new Map<string, RegistryEntry>();
   let topicManager: ServerTopicManager | undefined;
   const sequences = createTopicSequences();
@@ -57,6 +73,8 @@ export function createConnectionRegistry(history?: TopicHistory): InternalConnec
     sequences,
     history,
   };
+  const follower =
+    log && createLogFollower(targets, log, options.refusals ?? createRefusalLog("WS"));
 
   function toInfo(entry: RegistryEntry): ConnectionInfo {
     return {
@@ -134,14 +152,13 @@ export function createConnectionRegistry(history?: TopicHistory): InternalConnec
       if (from.epoch !== epoch || from.seq > seq) return undefined;
       return history.between(topic, from.seq, seq);
     },
-    resyncAll() {
-      for (const topic of [...sequences.topics()]) {
-        history?.drop(topic);
-        const frame = encodeMessage({ type: "resync", topic, ...sequences.position(topic) });
-        for (const id of topicManager?.subscribers(topic) ?? [])
-          entries.get(id)?.sendEncoded(frame);
-      }
+    deliverLogged(topic, payload, logged) {
+      if (follower) follower.deliver(topic, payload, logged);
+      else void broadcastToTopic(targets, topic, payload, logged.exclude);
     },
+    follows: (topic) => sequences.has(topic),
+    follow: (topic, position) => sequences.follow(topic, position),
+    catchUp: async () => (follower ? follower.catchUp() : resyncEvery(targets)),
   };
   return registry;
 }

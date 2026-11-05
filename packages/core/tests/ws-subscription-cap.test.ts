@@ -13,6 +13,7 @@ import { createWSHandler } from "../src/adapter/handle-ws";
 import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
 import type { WebSocketLike } from "../src/realtime/adapters";
+import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { decodeMessage, encodeMessage, type WSMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 
@@ -47,11 +48,14 @@ function createSocket(): Socket {
 
 function serve(maxSubscriptionsPerConnection: number): { socket: Socket; live: () => number } {
   let live = 0;
-  const feed = channel.response<string>().implement(async function* () {
-    live += 1;
-    yield "hello";
-    await new Promise(() => {});
-  } as never);
+  const feed = channel
+    .variables<{ i?: number }>()
+    .response<string>()
+    .implement(async function* () {
+      live += 1;
+      yield "hello";
+      await new Promise(() => {});
+    } as never);
   registerSources({
     api: { options: { expose: true, groups: { live: { options: {}, feed } } } },
   } as Sources);
@@ -63,15 +67,15 @@ function serve(maxSubscriptionsPerConnection: number): { socket: Socket; live: (
   return { socket, live: () => live };
 }
 
-function subscribe(socket: Socket, topic: string): void {
-  socket.emit("message", { data: encodeMessage({ type: "subscribe", id: topic, topic }) });
+function subscribe(socket: Socket, topic: string, payload?: unknown): void {
+  socket.emit("message", { data: encodeMessage({ type: "subscribe", id: topic, topic, payload }) });
 }
 
 describe("maxSubscriptionsPerConnection", () => {
   it("holds against a burst sent in one turn", async () => {
     const { socket, live } = serve(5);
 
-    for (let i = 0; i < 50; i += 1) subscribe(socket, `api.live.feed#${i}`);
+    for (let i = 0; i < 50; i += 1) subscribe(socket, qualifyTopic("api.live.feed", { i }), { i });
     await settle();
 
     expect(socket.sent.filter((m) => m.type === "subscribed")).toHaveLength(5);

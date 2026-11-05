@@ -48,7 +48,7 @@ export async function startChannel(
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
   authorized?: AuthorizedSubscription,
-  resume: () => boolean = () => false,
+  resume: () => boolean | Promise<boolean> = () => false,
 ): Promise<void> {
   let recovered = false;
   const outbound = (data: unknown): unknown =>
@@ -115,8 +115,8 @@ export async function startChannel(
     },
   });
 
-  /* Registered first, then sent what it missed, at once: no live event can come between. */
-  recovered = resume();
+  /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
+  recovered = await resume();
 
   try {
     await handlers.onJoin?.(channelCtx);
@@ -133,9 +133,8 @@ export async function startChannel(
   }
 }
 
+/* To every subscriber of every replica but the sender, who is sent `skip`. */
 function broadcastToTopic(ctx: WSSocketContext, topic: string, data: unknown): void {
-  // Local delivery — all subscribers on this server (exclude sender)
-  void ctx.registry.broadcastToTopic(topic, data, ctx.connectionId);
-  // Remote delivery — all other replicas via pubsub (echo prevention built-in)
-  void ctx.bridge?.publishToTopic(topic, data);
+  if (ctx.bridge) void ctx.bridge.publishEvent(topic, data, ctx.connectionId);
+  else void ctx.registry.broadcastToTopic(topic, data, ctx.connectionId);
 }

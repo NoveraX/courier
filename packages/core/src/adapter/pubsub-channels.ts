@@ -1,5 +1,5 @@
 import { createLogger } from "../logger";
-import type { PubSubAdapter } from "../realtime/adapters";
+import type { LoggedPosition, PubSubAdapter } from "../realtime/adapters";
 
 const log = createLogger("WS");
 
@@ -16,7 +16,7 @@ export interface PubSubChannels {
    * Take a reference on a channel. The first subscribes to it, delivering
    * what other replicas publish there to `deliver`.
    */
-  retain(channel: string, deliver: (message: unknown) => void): void;
+  retain(channel: string, deliver: (message: unknown, logged?: LoggedPosition) => void): void;
   /** Drop a reference on a channel. The last unsubscribes from it. */
   release(channel: string): void;
   /** Unsubscribe from every channel, at once: nothing still under way is waited for. */
@@ -46,12 +46,12 @@ export function createPubSubChannels(pubsub: PubSubAdapter): PubSubChannels {
   function subscribe(
     channel: string,
     tracked: TrackedChannel,
-    deliver: (m: unknown) => void,
+    deliver: (m: unknown, logged?: LoggedPosition) => void,
   ): void {
     const current = (): boolean => !destroyed && channels.get(channel) === tracked;
     pubsub
-      .subscribe(channel, (message) => {
-        if (current()) deliver(message);
+      .subscribe(channel, (message, logged) => {
+        if (current()) deliver(message, logged);
       })
       .then(
         (unsubscribe) => {

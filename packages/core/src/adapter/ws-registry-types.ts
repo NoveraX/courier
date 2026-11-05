@@ -1,3 +1,4 @@
+import type { LoggedPosition } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import type { Selection } from "./connection-selector";
 import type { TopicPosition } from "./ws-topic-sequences";
@@ -92,6 +93,13 @@ export interface RegistryEntry {
   sendRaw: (msg: WSMessage) => void;
   /** Send pre-encoded JSON string — avoids redundant JSON.stringify on broadcast */
   sendEncoded: (encoded: string) => void;
+  /**
+   * Send a frame of a topic's sequence — an event, a `skip`, a `resync` —
+   * with the position it brings the count to: while the connection's
+   * subscription to the topic resumes from a log, one the resumption sends
+   * itself is dropped, and the others are held until it has
+   */
+  sendTopicEvent: (topic: string, position: TopicPosition, encoded: string) => void;
   /** Close the connection as the application asked, with an application's code */
   close: (code: number, reason: string) => void;
   /**
@@ -128,6 +136,16 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
    * history, a position the history no longer reaches, or none at all
    */
   eventsAfter(topic: string, since: unknown): readonly string[] | undefined;
-  /** Tell every subscription its topic's sequence may have missed events: the pub/sub adapter was away */
-  resyncAll(): void;
+  /**
+   * The pub/sub adapter is back from an outage, which may have cost events:
+   * with a log, each topic is caught up from it; without, or for a topic
+   * the log cannot catch up, the subscriptions are told `resync`
+   */
+  catchUp(): Promise<void>;
+  /** Deliver an event a log numbered to this replica's subscribers of its topic, in the order of its number */
+  deliverLogged(topic: string, payload: unknown, logged: LoggedPosition): void;
+  /** Whether this replica counts a topic's sequence: a subscriber holds it, or an event of it came */
+  follows(topic: string): boolean;
+  /** Count a topic's sequence from where a log's stands, unless this replica counts it already */
+  follow(topic: string, position: TopicPosition): void;
 }

@@ -9,9 +9,9 @@ import { randomId } from "../utils/random-id";
 import { LIMITS } from "./limits";
 import { servedSources } from "./served-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
-import type { RateLimitBucket } from "./ws-rate-limit";
-import { createBucket } from "./ws-rate-limit";
+import { createBucket, type RateLimitBucket } from "./ws-rate-limit";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
+import type { ResumeGate } from "./ws-resume";
 import type { WSSession } from "./ws-session";
 import type { createServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";
@@ -58,6 +58,8 @@ export interface WSSocketContext {
    * each with the subscription's opening, which a message to it waits for.
    */
   subscribing: Map<string, Promise<void>>;
+  /** Topics whose subscription resumes from the pub/sub adapter's log, each with the live frames it is not sent yet */
+  resuming: Map<string, ResumeGate>;
   sources: Sources;
   registry: InternalConnectionRegistry;
   bridge: PubSubBridge | undefined;
@@ -181,6 +183,7 @@ export function buildContext(
     closed: false,
     subscriptionIds,
     subscribing: new Map(),
+    resuming: new Map(),
     sources: servedSources(config.sources),
     registry,
     bridge,

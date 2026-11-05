@@ -8,12 +8,14 @@ import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
 function createEntry(id: string, meta: Record<string, unknown> = {}): RegistryEntry {
+  const sendEncoded = vi.fn();
   return {
     connectionId: id,
     meta,
     connectedAt: Date.now(),
     sendRaw: vi.fn(),
-    sendEncoded: vi.fn(),
+    sendEncoded,
+    sendTopicEvent: (_topic: string, _position: unknown, encoded: string) => sendEncoded(encoded),
     close: vi.fn(),
     requireAuth: vi.fn(() => () => undefined),
     evict: vi.fn(),

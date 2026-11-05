@@ -4,6 +4,7 @@ import type { WSSocketContext } from "./ws-context";
 import type { WSInbox } from "./ws-inbox";
 import { wireEvents } from "./ws-lifecycle";
 import type { SocketOpening } from "./ws-open-socket";
+import { sendTopicFrame } from "./ws-resume";
 
 /**
  * Register a connection let in, and start hearing it: it joins the
@@ -35,6 +36,7 @@ export function activateConnection(
     connectedAt: Date.now(),
     sendRaw: ctx.sendMessage,
     sendEncoded: ctx.sendEncoded,
+    sendTopicEvent: (topic, position, encoded) => sendTopicFrame(ctx, topic, position, encoded),
     close: (code, reason) => session.close({ kind: "application", code, reason }),
     requireAuth: (timeoutMs) => session.requireAuth(timeoutMs ?? ctx.authRequiredTimeoutMs),
     evict: () => session.close({ kind: "evicted" }),

@@ -20,7 +20,8 @@ import type { InternalConnectionRegistry } from "./ws-registry-types";
  * An application broadcasting after an HTTP mutation reaches every replica's
  * clients through it, as a channel handler's `ctx.broadcast` does; calling
  * `pubsub.publish` itself would skip the replica that took the request,
- * because a replica ignores its own publishes.
+ * because a replica ignores its own publishes — and with the adapter's log,
+ * every replica, since none delivers an event the log did not number.
  *
  * @param registry - This replica's connections
  * @param bridge - The replica's pub/sub bridge
@@ -58,12 +59,7 @@ export function replicateRegistry(
     async broadcast(data, exclude) {
       await Promise.all([registry.broadcast(data, exclude), bridge.publishToAll(data)]);
     },
-    async broadcastToTopic(topic, data, exclude) {
-      await Promise.all([
-        registry.broadcastToTopic(topic, data, exclude),
-        bridge.publishToTopic(topic, data),
-      ]);
-    },
+    broadcastToTopic: (topic, data, exclude) => bridge.publishEvent(topic, data, exclude),
     async broadcastToBaseTopic(baseTopic, data, exclude) {
       await Promise.all([
         registry.broadcastToBaseTopic(baseTopic, data, exclude),
@@ -84,6 +80,9 @@ export function replicateRegistry(
     positionOf: (topic) => registry.positionOf(topic),
     forgetTopic: (topic) => registry.forgetTopic(topic),
     eventsAfter: (topic, since) => registry.eventsAfter(topic, since),
-    resyncAll: () => registry.resyncAll(),
+    catchUp: () => registry.catchUp(),
+    deliverLogged: (topic, payload, logged) => registry.deliverLogged(topic, payload, logged),
+    follows: (topic) => registry.follows(topic),
+    follow: (topic, position) => registry.follow(topic, position),
   };
 }

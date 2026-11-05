@@ -562,6 +562,16 @@ const ws = createWSHandler({
 
 Each event of a topic carries `seq`, dense from 1 on the replica that delivers it, and `subscribed` states the position with the epoch that names its sequence. Frames sent to one connection, such as a snapshot from `onJoin`, carry no number. A topic its last subscriber left is held for `maxAgeMs`, its events numbered and kept, so a client back within that time is sent them before `onJoin` runs. `onJoin` reads `ctx.recovered` and need not send its snapshot again. The client has to come back to the same replica, which sticky sessions give it. A position the history no longer reaches, another epoch or another replica answers `recovered: false`, and the client starts over from `onJoin`. Once the pub/sub adapter is back from an outage, each subscription is told `resync`: what other replicas published meanwhile never arrived.
 
+Replicas whose pub/sub adapter keeps a log share one sequence a topic instead, and need no `history`. The log numbers each event as it is published; every replica delivers it, the sender's too, and any replica resumes a subscription from the log, so a client need not come back to the one it left. What arrives live while a subscription resumes is sent after what it missed. A replica that missed events reads them from the log and sends them before the next; where the log no longer keeps them, or began another sequence, its subscribers are told `resync`. Back from an outage, a replica catches each topic up from the log. Handlers in one process share a log through their bus:
+
+```ts title="ws.ts"
+const bus = createMemoryBus({ log: {} }) // 1000 events a topic, 10 000 topics
+const a = createWSHandler({ pubsub: bus.replica("a") })
+const b = createWSHandler({ pubsub: bus.replica("b") })
+```
+
+With a log, no replica delivers an event the log did not number: one sent by `pubsub.publish` itself is left out, with a warning once an interval.
+
 ## Framework Comparison
 
 | Feature | Standalone | Next.js | Express | Fastify | Hono | NestJS |

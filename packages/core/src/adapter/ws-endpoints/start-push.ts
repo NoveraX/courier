@@ -30,7 +30,7 @@ const log = createLogger("WS");
  * @param authorized - What the subscription was authorized as
  * @param resume - Sends what the subscription missed, once it is registered; whether it sent all of it
  */
-export function startPush(
+export async function startPush(
   ctx: WSSocketContext,
   topic: string,
   endpoint: unknown,
@@ -38,8 +38,8 @@ export function startPush(
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
   authorized?: AuthorizedSubscription,
-  resume: () => boolean = () => false,
-): void {
+  resume: () => boolean | Promise<boolean> = () => false,
+): Promise<void> {
   const ended = new AbortController();
   let recovered = false;
   const wsCtx: WSContext = {
@@ -94,8 +94,8 @@ export function startPush(
     authorized,
     cleanup: () => ended.abort(),
   });
-  /* Registered first, then sent what it missed, at once: no live event can come between. */
-  recovered = resume();
+  /* Registered first, then sent what it missed: a live event that comes meanwhile follows it. */
+  recovered = await resume();
 
   iterate()
     .catch((err: unknown) => log.warn("Push generator failed", err))

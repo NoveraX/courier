@@ -20,6 +20,18 @@ export interface TopicSequences {
   has(topic: string): boolean;
   /** The topics whose sequences are held */
   topics(): IterableIterator<string>;
+  /**
+   * Follow an event a log numbered: `next` when it is the one after the
+   * last, `duplicate` for one already counted, `gap` when some came
+   * between, `epoch` when the log began another sequence
+   */
+  adopt(topic: string, seq: number, epoch: string): "next" | "duplicate" | "gap" | "epoch";
+  /**
+   * Follow a log's sequence of a topic from where it stands, unless this
+   * replica counts the topic already: its subscribers were told where its
+   * count stands, and the events that follow correct it
+   */
+  follow(topic: string, position: TopicPosition): void;
 }
 
 /**
@@ -63,5 +75,24 @@ export function createTopicSequences(): TopicSequences {
     },
     has: (topic) => positions.has(topic),
     topics: () => positions.keys(),
+    adopt(topic, seq, epoch) {
+      const known = positions.get(topic);
+      if (!known) {
+        positions.set(topic, { seq, epoch });
+        return "next";
+      }
+      if (known.epoch !== epoch) {
+        known.epoch = epoch;
+        known.seq = seq;
+        return "epoch";
+      }
+      if (seq <= known.seq) return "duplicate";
+      const skipped = seq > known.seq + 1;
+      known.seq = seq;
+      return skipped ? "gap" : "next";
+    },
+    follow(topic, { seq, epoch }) {
+      if (!positions.has(topic)) positions.set(topic, { seq, epoch });
+    },
   };
 }

@@ -42,6 +42,12 @@ export const LIMITS = {
   WS_LEASE_TIMEOUT_MS: 2_000,
   /** How often a replica renews the leases it holds — a third of the 60 s a shared store keeps them */
   WS_LEASE_RENEW_MS: 20_000,
+  /** How long a topic log has to say where a topic stands, or send back its events, before a replica goes on without */
+  WS_LOG_TIMEOUT_MS: 2_000,
+  /** Live frames of a topic held for a subscription while it resumes from the log; one more, and it resumes nothing */
+  WS_RESUME_HELD_FRAMES: 1_000,
+  /** Events of a topic held while a replica reads the ones it missed from the log; the rest are read later too */
+  WS_LOG_WAITING_EVENTS: 1_000,
 
   /** Bytes an SSE stream may hold for a client that is not reading before broadcasts are dropped (1 MB) */
   SSE_MAX_BUFFERED_BYTES: 1_048_576,

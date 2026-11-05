@@ -47,10 +47,51 @@ export interface AdapterLifecycle {
 
 /** Internal envelope wrapping published messages for echo prevention */
 export interface PubSubEnvelope<TPayload = unknown> {
-  /** Origin server UUID — messages from self are skipped */
+  /** Origin server UUID — messages from self are skipped, but for an event a log numbered */
   origin: string;
   payload: TPayload;
   timestamp: number;
+  /** Where the event stands, when the adapter's log numbered it: every replica gets it, its sender too */
+  logged?: LoggedPosition | undefined;
+}
+
+/** Where a topic's sequence stands in a log: the last number given, in the epoch that names the sequence. */
+export interface LogPosition {
+  /** The last number given, 0 before the first event */
+  readonly seq: number;
+  /** The name of the sequence: another epoch is another count */
+  readonly epoch: string;
+}
+
+/** Where an event a log numbered stands, as it reaches a subscriber. */
+export interface LoggedPosition extends LogPosition {
+  /** The connection it is not sent to, the channel's sender, on the replica that holds it */
+  readonly exclude?: string | undefined;
+}
+
+/** An event a log keeps. */
+export interface LoggedEvent extends LoggedPosition {
+  readonly payload: unknown;
+}
+
+/**
+ * A log of each topic's events, numbered in one sequence every replica
+ * shares: an event is numbered by the log as it is published, reaches
+ * every replica subscribed, its sender too, in the order of its number,
+ * and any replica can send a subscription back what it missed, wherever
+ * it was before.
+ */
+export interface TopicLog {
+  /** Number an event of a topic and publish it to every replica subscribed, this one too */
+  append(topic: string, payload: unknown, exclude?: string): Promise<void>;
+  /** Where the topic's sequence stands */
+  position(topic: string): Promise<LogPosition>;
+  /**
+   * The topic's events after `from.seq` up to `upTo`, in order, or
+   * undefined when the log no longer keeps one of them, or its sequence is
+   * another epoch than `from.epoch` now
+   */
+  read(topic: string, from: LogPosition, upTo: number): Promise<readonly LoggedEvent[] | undefined>;
 }
 
 /**
@@ -106,9 +147,18 @@ export interface PubSubAdapter extends AdapterLifecycle {
    * adapter's own are skipped.
    * @returns Unsubscribe function
    */
-  subscribe(topic: string, handler: (message: unknown) => void): Promise<() => void>;
+  subscribe(
+    topic: string,
+    handler: (message: unknown, logged?: LoggedPosition) => void,
+  ): Promise<() => void>;
   /** What it is doing now */
   stats(): PubSubStats;
+  /**
+   * The log that numbers each topic's events in one sequence for every
+   * replica, when the adapter keeps one: a handler then publishes a
+   * topic's events through it, and resumes subscriptions from it
+   */
+  readonly log?: TopicLog | undefined;
 }
 
 // ---------------------------------------------------------------------------

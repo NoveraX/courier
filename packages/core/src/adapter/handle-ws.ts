@@ -45,10 +45,10 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }
   const history = config.history ? createTopicHistory(config.history) : undefined;
-  const registry = createConnectionRegistry(history);
   /* One log of refusals for every connection of the handler, so a client
      that keeps being refused takes up one line an interval, not one each. */
   const refusals = createRefusalLog("WS");
+  const registry = createConnectionRegistry({ history, log: config.pubsub?.log, refusals });
   const maxPerIP = config.maxConnectionsPerIP ?? LIMITS.MAX_CONNECTIONS_PER_IP;
   const ipTracker = createIPTracker(maxPerIP);
   const replication = replicate(config, registry, refusals);

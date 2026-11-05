@@ -53,10 +53,11 @@ export function replicate(
     refusals,
   });
   /* Back from an outage, the adapter may have missed what other replicas
-     published: every subscription is told, and resumes nothing from before. */
+     published: each topic is caught up from the log, when it keeps one;
+     otherwise every subscription is told, and resumes nothing from before. */
   let previous = pubsub.state;
   const stopHearing = pubsub.onStateChange((state) => {
-    if (state === "ready" && previous === "degraded") registry.resyncAll();
+    if (state === "ready" && previous === "degraded") void registry.catchUp();
     previous = state;
   });
   return {

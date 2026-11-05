@@ -1,5 +1,6 @@
 import type { RefusalLog } from "../logger/refusal-log";
 import type { ConnectionLeaseStore, LeaseGrant, LeaseRule } from "../realtime/adapters";
+import { withinDeadline } from "../utils/within-deadline";
 import { LIMITS } from "./limits";
 import type { ConnectionLimitRule } from "./ws-types";
 
@@ -175,12 +176,4 @@ function keyHasher(secret: string | undefined): (key: string) => Promise<string>
       byte.toString(16).padStart(2, "0"),
     ).join("");
   };
-}
-
-function withinDeadline<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const expired = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`no answer within ${timeoutMs} ms`)), timeoutMs);
-  });
-  return Promise.race([promise, expired]).finally(() => clearTimeout(timer));
 }

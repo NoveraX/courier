@@ -9,6 +9,7 @@ import { closeSubscriptionEntry, openSubscriptionEntry } from "./ws-dispatch-hel
 import { startChannel, startPush, startRelay } from "./ws-endpoints";
 import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
+import { resumeSubscription } from "./ws-resume";
 import { subscriptionTopic } from "./ws-subscribe-topic";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
@@ -126,11 +127,8 @@ async function openSubscription(
   const authorized = { source, group, method, variables };
   /* What the subscription missed since the position it sent, when all of it is kept. */
   let recovered = false;
-  const resume = (): boolean => {
-    const missed =
-      msg.since === undefined ? undefined : ctx.registry.eventsAfter(subscribedTopic, msg.since);
-    for (const frame of missed ?? []) ctx.sendEncoded(frame);
-    recovered = missed !== undefined;
+  const resume = async (): Promise<boolean> => {
+    recovered = await resumeSubscription(ctx, subscribedTopic, msg.since);
     return recovered;
   };
 
@@ -150,7 +148,7 @@ async function openSubscription(
         resume,
       );
     } else {
-      startPush(
+      await startPush(
         ctx,
         subscribedTopic,
         resolved.endpoint,

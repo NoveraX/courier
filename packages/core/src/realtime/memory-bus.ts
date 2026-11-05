@@ -1,8 +1,21 @@
 import { randomId } from "../utils/random-id";
-import type { AdapterState, PubSubAdapter, PubSubEnvelope } from "./adapters";
+import type {
+  AdapterState,
+  LoggedPosition,
+  PubSubAdapter,
+  PubSubEnvelope,
+  TopicLog,
+} from "./adapters";
+import { createMemoryTopicLogs, type MemoryTopicLogOptions } from "./memory-topic-log";
 
 type Listener = (envelope: PubSubEnvelope) => void;
-type Handler = (message: unknown) => void;
+type Handler = (message: unknown, logged?: LoggedPosition) => void;
+
+/** What a memory bus keeps besides its channels. */
+export interface MemoryBusOptions {
+  /** A log every replica shares, which numbers each topic's events in one sequence */
+  log?: MemoryTopicLogOptions | undefined;
+}
 
 /** One bus in this process, which several handlers' adapters share as replicas share a Redis server. */
 export interface MemoryBus {
@@ -31,12 +44,21 @@ export interface MemoryBus {
  * const b = createWSHandler({ pubsub: bus.replica("b") });
  * ```
  */
-export function createMemoryBus(): MemoryBus {
+export function createMemoryBus(options: MemoryBusOptions = {}): MemoryBus {
   const channels = new Map<string, Set<Listener>>();
-  return { replica: (origin) => memoryReplica(channels, origin ?? `mem_${randomId()}`) };
+  const logFor = options.log ? createMemoryTopicLogs(channels, options.log) : undefined;
+  return {
+    replica(origin = `mem_${randomId()}`) {
+      return memoryReplica(channels, origin, logFor?.(origin));
+    },
+  };
 }
 
-function memoryReplica(channels: Map<string, Set<Listener>>, origin: string): PubSubAdapter {
+function memoryReplica(
+  channels: Map<string, Set<Listener>>,
+  origin: string,
+  log: TopicLog | undefined,
+): PubSubAdapter {
   const own = new Map<string, { handlers: Set<Handler>; listener: Listener }>();
   const errorHandlers = new Set<(error: Error) => void>();
   const stateListeners = new Set<(state: AdapterState) => void>();
@@ -51,11 +73,12 @@ function memoryReplica(channels: Map<string, Set<Listener>>, origin: string): Pu
 
   function listen(handlers: Set<Handler>): Listener {
     return (envelope) => {
-      if (envelope.origin === origin) return;
+      /* A replica's own events reach it too, once a log has numbered them. */
+      if (envelope.origin === origin && !envelope.logged) return;
       for (const handler of [...handlers]) {
         delivered++;
         try {
-          handler(envelope.payload);
+          handler(envelope.payload, envelope.logged);
         } catch (error) {
           emitError(error);
         }
@@ -77,6 +100,14 @@ function memoryReplica(channels: Map<string, Set<Listener>>, origin: string): Pu
   }
 
   return {
+    log: log && {
+      ...log,
+      append(topic, payload, exclude) {
+        if (state === "stopped") return refuseStopped();
+        published++;
+        return log.append(topic, payload, exclude);
+      },
+    },
     get state() {
       return state;
     },

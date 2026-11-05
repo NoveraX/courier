@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createLogger } from "@noverax/courier";
 import type { TransformCache } from "@noverax/courier-build/config";
-import { createConfigJiti } from "@noverax/courier-build/config";
+import { configLoadError, createConfigJiti } from "@noverax/courier-build/config";
 import { isCommonJsEntry } from "./is-commonjs-entry";
 
 type ConfigJiti = Awaited<ReturnType<typeof createConfigJiti>>;
@@ -65,7 +65,8 @@ const log = createLogger("Studio");
  * @param transformCache - Where each module's transform is reused while its
  *   bytes are unchanged
  * @returns The file's module namespace
- * @throws What evaluating the file, or a module it imports, threw
+ * @throws ConfigLoadError saying why the file, or a module it imports, did
+ *   not load, with the chain of imports from the file
  * @example
  * ```ts
  * const cache: CourierModuleCache = {};
@@ -77,16 +78,24 @@ export async function loadCourierEntry(
   cache: CourierModuleCache,
   transformCache: TransformCache,
 ): Promise<unknown> {
-  const jiti = await createConfigJiti(file, { transformCache });
+  const transformFailures = new Map<string, unknown>();
+  const jiti = await createConfigJiti(file, {
+    transformCache,
+    onTransformError: (filename, error) => transformFailures.set(filename, error),
+  });
   const key = jiti.resolve(file);
   const evaluated = cache[key];
   if (evaluated?.loaded === true) return evaluated.exports;
   const source = readFileSync(file, "utf8");
   const required = isCommonJsEntry(file, source) ? requireAfresh(file, key, cache) : null;
   if (required !== null) return required;
-  await evaluateInto(key, cache, () =>
-    jiti.evalModule(source, { filename: key, async: true, cache, forceTranspile: true }),
-  );
+  try {
+    await evaluateInto(key, cache, () =>
+      jiti.evalModule(source, { filename: key, async: true, cache, forceTranspile: true }),
+    );
+  } catch (error) {
+    throw configLoadError(error, { entry: file, cache, entryKey: key, transformFailures });
+  }
   const exports: unknown = cache[key]?.exports;
   return exports;
 }

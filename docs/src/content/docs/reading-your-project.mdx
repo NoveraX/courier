@@ -35,4 +35,26 @@ A framework resolves some imports where it builds the server, never through Node
 - SvelteKit's prefix is its default, `PUBLIC_`; one `svelte.config.js` sets is not read, as that would run another of your files.
 - Astro coerces each variable to the type its `env.schema` declares and fills in its default. The schema lives in `astro.config`, which Courier does not run, so here every variable is the string the environment holds, and one it does not hold is `undefined`.
 - An import your tsconfig `paths` name is yours: Courier follows your alias, not the framework's rule.
-- An installed package resolves its own imports as Node does, since Node loads it: a library that imports `server-only` itself fails outside Next. Import such a library inside the function that uses it — a middleware, say — rather than at the top of a module the config imports.
+- An installed package Node loads itself resolves its imports as Node does while that works. Where it fails — a library that imports `server-only`, which Node cannot load — Courier runs the package itself, and answers its imports as it answers your modules'. A package Node loads without a failure keeps Node's answers: one that imports an installed `client-only` is not refused.
+
+## When the project does not load
+
+Every reader says why in the same words — `courier-cli`, Studio, a bundler plugin and a mock server alike: what failed, in which module, and the chain of imports from the config to it; then what to do.
+
+```text
+src/server/db.ts imports "client-only": it is the marker of code for the browser, which Next.js refuses on the server, where courier.config is read (courier.config.ts → src/api.ts → src/server/db.ts).
+Import that code from a client component alone, out of the modules courier.config imports.
+```
+
+| Code | What happened |
+| --- | --- |
+| `MODULE_NOT_FOUND` | An import did not resolve. Where it is one of a framework's own and Courier reads the project as another — `$env/static/private` in a project whose package.json lists no `@sveltejs/kit` — the hint names that framework; where the project's framework explains it — `$lib` before `svelte-kit sync`, `~/` before `nuxi prepare`, `$app/navigation` outside SvelteKit's server — the hint says what to do |
+| `MODULE_REFUSED` | An import the framework refuses where definitions run: Next's `client-only` |
+| `TRANSFORM_FAILED` | A module does not compile — its syntax, JSX, a framework's own file format |
+| `EVALUATION_FAILED` | The project's code threw while it ran. In a Nuxt project, a name Nuxt imports for you, such as `useRuntimeConfig`, is not defined outside Nuxt's build: definitions must not depend on Nuxt's runtime |
+| `LOAD_TIMED_OUT` | The config was still loading after its time — 60 s for `courier-cli routes` and a bundler plugin, 20 s for Studio — as a module waits for something that does not come |
+
+- The project's own message is quoted with the value of every environment variable masked as `***` — every value of 8 characters or more, but for the system's own variables: paths, the user, the locale. Courier writes no value itself, only names. What the code threw is masked the same way, its stack included, wherever it is logged.
+- `courier-cli` prints the stack at `COURIER_LOG_LEVEL=debug`; Studio shows the message on its APIs page and in its status bar.
+- A program reads the same through `ConfigLoadError`, from `@noverax/courier-build/config`: its `code`, its `hint`, and `context.importChain`, each module by its path and an installed package by its name.
+

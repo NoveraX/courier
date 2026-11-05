@@ -189,14 +189,15 @@ describe("loadCourierConfig — transform cache", () => {
     expect(Object.keys(edited?.config.sources ?? {})).toEqual(["second"]);
   });
 
-  it("a load without a cache transforms every time, through jiti's own uncached transform", async () => {
-    await loadCourierConfig({ cwd: dir });
-    await loadCourierConfig({ cwd: dir });
+  it("a load without a cache transforms every module every time, with jiti's caches off", async () => {
+    const transformed: string[] = [];
 
-    expect(createJiti).toHaveBeenCalledTimes(2);
+    await loadCourierConfig({ cwd: dir, onModule: (file) => transformed.push(file) });
+    await loadCourierConfig({ cwd: dir, onModule: (file) => transformed.push(file) });
+
+    expect(transformed.sort()).toEqual([configFile, configFile, sourcesFile, sourcesFile].sort());
     for (const [, options] of vi.mocked(createJiti).mock.calls) {
       expect(options).toMatchObject({ moduleCache: false, fsCache: false });
-      expect(options).not.toHaveProperty("transform");
     }
   });
 

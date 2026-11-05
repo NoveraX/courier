@@ -24,10 +24,26 @@ export type ModuleRule =
   /** A module definitions must not reach: importing it fails the load, saying why and what to do. */
   | { readonly kind: "refused"; readonly reason: string; readonly remedy: string };
 
-/** How a framework's server answers imports outside its build. */
-export interface ResolutionProfile {
-  /** The framework; `undefined` for a project read as plain Node. */
-  readonly framework: FrameworkMarker | undefined;
+/** What a framework says of an import or a name of its own that the load could not find. */
+export interface Diagnosis {
+  /** What the import or the name is, worded to follow it: `is a module of SvelteKit's runtime, …`. */
+  readonly reason: string;
+  /** What to do about it, worded as an instruction. */
+  readonly remedy: string;
+}
+
+/** What a framework's server answers outside its build, and what it says of what it does not. */
+export interface FrameworkRules {
   /** The imports the framework's server answers itself, by specifier. */
   readonly modules: ReadonlyMap<string, ModuleRule>;
+  /** What the framework says of an import of its own that does not resolve outside its build. */
+  readonly unresolved?: ((specifier: string) => Diagnosis | undefined) | undefined;
+  /** What the framework says of a name its build provides where the code imports nothing. */
+  readonly undefinedName?: ((name: string) => Diagnosis | undefined) | undefined;
+}
+
+/** How a framework's server answers imports outside its build. */
+export interface ResolutionProfile extends FrameworkRules {
+  /** The framework; `undefined` for a project read as plain Node. */
+  readonly framework: FrameworkMarker | undefined;
 }

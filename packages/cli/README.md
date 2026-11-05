@@ -124,7 +124,14 @@ It type-checks against the config it was written from: a path the API no longer 
 | `--cwd <dir>` | The project's root (default: the working directory) |
 | `--dotenv <files>` | The env files to read before the config, comma-separated (default: `.env.development.local`, `.env.local`, `.env.development` and `.env`, those there are) |
 
-The command exits with status 1 when the module is out of date under `--check`, when the file there holds code Courier did not write, or when the config does not load — each with one line naming the problem. `courier-cli --help` lists the commands; `--version` prints the installed version.
+The command exits with status 1 when the module is out of date under `--check`, when the file there holds code Courier did not write, or when the config does not load — each with one line naming the problem. For a config that does not load, the line names the module that failed and the chain of imports from the config to it, and a second says what to do:
+
+```text
+ERROR courier:routes  src/server/db.ts imports "client-only": it is the marker of code for the browser, which Next.js refuses on the server, where courier.config is read (courier.config.ts → src/api.ts → src/server/db.ts).
+ INFO courier:routes  Import that code from a client component alone, out of the modules courier.config imports.
+```
+
+A config still loading after 60 s — a module that waits for a connection as it is imported — is given up, and the command ends. Neither line holds the value of an environment variable: the project's own message is quoted with them masked. `COURIER_LOG_LEVEL=debug` adds what the project's code threw, its stack masked the same way. `courier-cli --help` lists the commands; `--version` prints the installed version.
 
 <br />
 

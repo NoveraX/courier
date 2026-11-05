@@ -114,6 +114,42 @@ describe("courier-cli routes", () => {
     );
   });
 
+  it("says why a config did not load, in a line, and what to do, in another", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `import "./missing";\nexport default { sources: {} };\n`,
+    );
+
+    await run("--check");
+
+    expect(process.exitCode).toBe(1);
+    expect(said(error)).toContain('courier.config.ts imports "./missing", which does not resolve.');
+    expect(said(info)).toContain("Correct the import, or create the module it names.");
+  });
+
+  it("names the env files it reads when the config's code threw, and no variable's value", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.stubEnv("SHOP_TOKEN", "tok_live_4f9c2e7a");
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `throw new Error("Invalid environment variables: " + process.env.SHOP_TOKEN);\n`,
+    );
+
+    await run("--check");
+
+    expect(said(error)).toContain(
+      "courier.config.ts threw Error: Invalid environment variables: ***.",
+    );
+    expect(said(error) + said(info)).not.toContain("tok_live");
+    expect(said(info)).toContain(
+      "courier-cli reads the project's variables from .env.development.local",
+    );
+    vi.unstubAllEnvs();
+  });
+
   it("refuses a module --out would put outside the project", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
 

@@ -1,14 +1,12 @@
 import { type ChildProcess, fork } from "node:child_process";
 
+import { CONFIG_READ_LIMIT_MS } from "../config/read-limits";
 import { packageFile } from "../util/package-file";
 import { RoutesReadError } from "./routes-read-error";
 import type { RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
 import { superviseChild } from "./supervise-child";
 import { workerMessages } from "./worker-messages";
 import type { WorkerReply } from "./worker-reply";
-
-/** How long a reading may take before it is given up: a config that waits on the network never ends. */
-const READ_LIMIT_MS = 60_000;
 
 /** The package this module ships in, by the name its manifest gives. */
 const PACKAGE_NAME = "@noverax/courier-build";
@@ -30,7 +28,7 @@ const PACKAGE_NAME = "@noverax/courier-build";
  */
 export function evaluateInChild(
   request: RoutesRequest,
-  limitMs: number = READ_LIMIT_MS,
+  limitMs: number = CONFIG_READ_LIMIT_MS,
 ): Promise<RoutesSnapshot> {
   return new Promise((resolve, reject) => {
     const unread = (message: string): RoutesReadError =>

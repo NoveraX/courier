@@ -37,7 +37,7 @@ import type { CourierConfig } from "@noverax/courier/config";
 import { assertOwnConfig } from "./assert-own-config";
 import { CONFIG_BASENAMES, configCandidates } from "./config-candidates";
 import type { ConfigJitiOptions } from "./config-jiti";
-import { createConfigJiti } from "./config-jiti";
+import { type ImportProjectFileOptions, importProjectFile } from "./import-project-file";
 import { createTransformCache, type TransformCache } from "./transform-cache";
 import { findTransformCacheDirectory } from "./transform-cache-directory";
 
@@ -92,6 +92,13 @@ export interface LoadCourierConfigOptions {
    * of modules, most of a second. Passed over when `transformCache` is given.
    */
   projectTransforms?: boolean | undefined;
+  /**
+   * How long the load may take before it is given up with `ConfigLoadError`
+   * `LOAD_TIMED_OUT`, in milliseconds. The config's code runs on — nothing
+   * stops a module's top-level code — so a process that gives up should
+   * end. Left out, the load is waited for however long it takes.
+   */
+  timeoutMs?: number | undefined;
 }
 
 /**
@@ -142,10 +149,10 @@ export function findConfigFileAt(cwd: string): string | null {
  * Find and load a `courier.config.*` file.
  *
  * Returns `null` when no config file exists, so a caller can fall back.
- * Throws when a file was found and loading it failed, reporting what the
- * loader reported — for a TypeScript config, usually an unresolvable import.
+ * Throws `ConfigLoadError` when a file was found and loading it failed,
+ * saying why, where — the chain of imports — and what to do.
  *
- * @param options - Where to look, and where to reuse transforms
+ * @param options - Where to look, where to reuse transforms, and how long to wait
  * @returns The config and its canonical path, or `null` when there is no config
  * @example
  * ```ts
@@ -162,7 +169,11 @@ export async function loadCourierConfig(
   const transformCache =
     options.transformCache ??
     (options.projectTransforms === true ? projectTransformCache(dirname(found)) : undefined);
-  return loadCourierConfigFile(found, { transformCache, onModule: options.onModule });
+  return loadCourierConfigFile(found, {
+    transformCache,
+    onModule: options.onModule,
+    timeoutMs: options.timeoutMs,
+  });
 }
 
 /**
@@ -182,15 +193,11 @@ export function projectTransformCache(projectRoot: string): TransformCache | und
   return directory === null ? undefined : createTransformCache({ directory, maxMemoryChars: 0 });
 }
 
-/** How one config file is loaded: the loader's options, and when its code is about to run. */
-export interface LoadConfigFileOptions extends ConfigJitiOptions {
-  /**
-   * Called once the loader is made, just before the config's code runs. A
-   * caller noting what that code reads starts here, so the loader's own
-   * start-up is not taken for the config's.
-   */
-  beforeRun?: (() => void) | undefined;
-}
+/**
+ * How one config file is loaded: the loader's options, what runs just before
+ * the config's code does, and how long it may take; see `importProjectFile`.
+ */
+export interface LoadConfigFileOptions extends ImportProjectFileOptions {}
 
 /**
  * Load one config file, found by whatever means the caller chose — the
@@ -198,10 +205,12 @@ export interface LoadConfigFileOptions extends ConfigJitiOptions {
  *
  * @param file - Absolute path of an existing config file
  * @param options - How the loader resolves imports and where it reuses
- *   transforms, see {@link ConfigJitiOptions}, and what runs before the config
+ *   transforms, see {@link ConfigJitiOptions}, what runs before the config,
+ *   and how long it may take
  * @returns The config and the canonical path it was loaded from
- * @throws What the loader reported when the file will not load — for a
- *   TypeScript config, usually an unresolvable import
+ * @throws ConfigLoadError when the file will not load: an import that does
+ *   not resolve or that the framework refuses, a module that does not
+ *   compile, or code that throws
  * @example
  * ```ts
  * const { config } = await loadCourierConfigFile("/app/courier.config.ts", {
@@ -211,19 +220,20 @@ export interface LoadConfigFileOptions extends ConfigJitiOptions {
  */
 export async function loadCourierConfigFile(
   file: string,
-  { beforeRun, ...options }: LoadConfigFileOptions = {},
+  options: LoadConfigFileOptions = {},
 ): Promise<LoadedCourierConfig> {
   /* Resolve symlinks so downstream consumers — the dev server's dependency
      watcher above all — observe the canonical path. */
   const configFile = realpathSync(file);
 
-  const jiti = await createConfigJiti(configFile, options);
-  beforeRun?.();
+  const namespace = await importProjectFile(configFile, options);
+  /* What the loader's import hands back with `default: true`: the default export, or the namespace. */
+  const named: unknown = isObjectLike(namespace) ? Reflect.get(namespace, "default") : undefined;
+  const config: unknown = named ?? namespace;
 
-  /* A throw here is jiti reporting why a config it found will not load —
-     usually an import it could not resolve. It carries the only useful
-     detail, so it propagates as-is rather than being re-wrapped. */
-  const config = await jiti.import<CourierConfig>(configFile, { default: true });
+  return { config: config as CourierConfig, configFile };
+}
 
-  return { config, configFile };
+function isObjectLike(value: unknown): value is object {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
 }

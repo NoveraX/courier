@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { loadCourierConfig } from "../src/server/config-loader";
+import { ConfigLoaderError, loadCourierConfig } from "../src/server/config-loader";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
 
@@ -69,5 +69,26 @@ describe("Studio's loader", () => {
     const loaded = await loadCourierConfig(dir);
 
     expect(loaded.config.sources.shop?.options?.baseURL).toBe("https://shop.example.com");
+  });
+});
+
+describe("Studio's loader, given a project that does not load", () => {
+  it("says what failed, the chain of imports to it, and what to do", async () => {
+    write("package.json", JSON.stringify({ type: "module", dependencies: { next: "16.4.3" } }));
+    write("src/api.ts", `import "client-only";\nexport const shop = {};\n`);
+    write(
+      "courier.config.ts",
+      `import { shop } from "./src/api";\nexport default { sources: { shop } };\n`,
+    );
+
+    const error = await loadCourierConfig(dir).then(
+      () => undefined,
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(ConfigLoaderError);
+    expect((error as ConfigLoaderError).message).toBe(
+      'Failed to load courier.config: src/api.ts imports "client-only": it is the marker of code for the browser, which Next.js refuses on the server, where courier.config is read (courier.config.ts → src/api.ts). Import that code from a client component alone, out of the modules courier.config imports.',
+    );
   });
 });

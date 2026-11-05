@@ -42,6 +42,12 @@ export interface ConfigJitiOptions {
    * the file lists.
    */
   profile?: ResolutionProfile | undefined;
+  /**
+   * Told of each module whose transform failed — its syntax — with what the
+   * transformer said, so whoever reports the load's failure can say which
+   * module would not compile.
+   */
+  onTransformError?: ((filename: string, error: unknown) => void) | undefined;
 }
 
 type CreateJiti = (id: string, options?: JitiOptions) => Jiti;
@@ -76,7 +82,10 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
  * project's package.json lists (see `profileOf`), in every module it
  * transforms; one the project's own path aliases name is theirs. A package
  * the loader hands to Node — an installed library — resolves its own imports
- * as Node does.
+ * as Node does while that works; where it fails — a library that imports
+ * `server-only` itself — the loader runs the package itself, and answers
+ * them there too. A package Node loads without a failure keeps Node's
+ * answers: one that imports an installed `client-only` is not refused.
  *
  * The module cache is off because this is also the reload path: the dev
  * server loads the files again on every edit, and a cached module would hand
@@ -122,7 +131,14 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
  */
 export async function createConfigJiti(
   file: string,
-  { aliases = true, transformCache, onModule, runTransform, profile }: ConfigJitiOptions = {},
+  {
+    aliases = true,
+    transformCache,
+    onModule,
+    runTransform,
+    profile,
+    onTransformError,
+  }: ConfigJitiOptions = {},
 ): Promise<Jiti> {
   const { createJiti } = await import("jiti");
   const alias = aliases ? readPathAliases(dirname(file)).loader : {};
@@ -135,7 +151,9 @@ export async function createConfigJiti(
     fsCache: false,
     tryNative: false,
   };
-  if (!transformCache && !onModule && !runTransform) return createJiti(file, options);
+  if (!transformCache && !onModule && !runTransform && !onTransformError) {
+    return createJiti(file, options);
+  }
   const compute = jitiOwnTransform(createJiti);
   const cached: Transform = transformCache
     ? (transformOptions) => transformCache.transform(transformOptions, compute)
@@ -145,8 +163,15 @@ export async function createConfigJiti(
   const transform: Transform = (given) => {
     const transformOptions =
       given.filename === undefined ? given : { ...given, filename: normalize(given.filename) };
-    if (onModule && transformOptions.filename !== undefined) onModule(transformOptions.filename);
-    return runTransform ? runTransform(() => cached(transformOptions)) : cached(transformOptions);
+    const { filename } = transformOptions;
+    if (onModule && filename !== undefined) onModule(filename);
+    const result = runTransform
+      ? runTransform(() => cached(transformOptions))
+      : cached(transformOptions);
+    if (onTransformError && filename !== undefined && result.error !== undefined) {
+      onTransformError(filename, result.error);
+    }
+    return result;
   };
   return createJiti(file, { ...options, transform });
 }

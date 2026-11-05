@@ -1,6 +1,11 @@
 import { basename, relative, resolve, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { type LoadedCourierConfig, loadCourierConfig } from "@noverax/courier-build/config";
+import {
+  CONFIG_READ_LIMIT_MS,
+  ConfigLoadError,
+  type LoadedCourierConfig,
+  loadCourierConfig,
+} from "@noverax/courier-build/config";
 import { type ArgsDef, defineCommand } from "citty";
 import { DOTENV_ARG, loadProjectEnv } from "../project-env";
 import { closeFormatProcesses } from "../project-format/formatter-host";
@@ -12,6 +17,10 @@ import { routesSettingProblem } from "../routes-module/routes-setting-problem";
 import { writeRoutesModule } from "../routes-module/write-routes-module";
 
 const log = createLogger("Routes");
+
+/** Where the command reads the project's variables from, for a config whose code threw. */
+const VARIABLES_READ =
+  "courier-cli reads the project's variables from .env.development.local, .env.local, .env.development and .env, those there are, or from the files --dotenv names.";
 
 /** The `routes` command's options. */
 export const ROUTES_ARGS = {
@@ -50,17 +59,33 @@ export const routesCommand = defineCommand({
   args: ROUTES_ARGS,
   async run({ args }) {
     const root = resolve(args.cwd ?? process.cwd());
+    let gaveUp = false;
     try {
       process.exitCode = (await writeRoutes(root, args)) ? 0 : 1;
     } catch (error) {
-      /* One line naming the problem, and a failing status. */
-      log.error(error instanceof Error ? error.message : String(error));
+      report(error);
       process.exitCode = 1;
+      gaveUp = error instanceof ConfigLoadError && error.code === "LOAD_TIMED_OUT";
     } finally {
       await closeFormatProcesses(root);
     }
+    /* The config's code still runs, and what it opened would keep the process for good. */
+    if (gaveUp) process.exit(1);
   },
 });
+
+/* One line naming the problem, and for a config that did not load, one saying what to do. */
+function report(error: unknown): void {
+  if (!(error instanceof ConfigLoadError)) {
+    log.error(error instanceof Error ? error.message : String(error));
+    return;
+  }
+  log.error(error.message);
+  log.info(error.hint);
+  if (error.code === "EVALUATION_FAILED") log.info(VARIABLES_READ);
+  /* Masked already: the cause holds no variable's value. */
+  if (error.cause !== undefined) log.debug("What the project's code threw", error.cause);
+}
 
 /* Whether the module is as courier.config.ts gives it, or now is. */
 async function writeRoutes(
@@ -72,6 +97,7 @@ async function writeRoutes(
     cwd: root,
     requireAtCwd: true,
     projectTransforms: true,
+    timeoutMs: CONFIG_READ_LIMIT_MS,
   });
   if (loaded === null)
     throw new Error(`No courier.config.* in ${root}: the routes are read from it`);

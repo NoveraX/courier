@@ -14,7 +14,7 @@ import { ConfigurationError } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
 import type { TransformCache } from "@noverax/courier-build/config";
-import { findConfigFileAt } from "@noverax/courier-build/config";
+import { ConfigLoadError, findConfigFileAt } from "@noverax/courier-build/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
@@ -143,11 +143,13 @@ export async function loadCourierConfig(
   try {
     evaluated = await evaluateCourierFiles(configFile, loadable(mocks), observed.cache);
   } catch (err) {
-    throw new ConfigLoaderError(
-      "CONFIG_INVALID",
-      `Failed to load courier.config: ${messageOf(err)}`,
-      { cause: err, context: { cwd: projectRoot }, depHashes },
-    );
+    /* The loader's own words say where the load failed and what to do. */
+    const said = err instanceof ConfigLoadError ? `${err.message} ${err.hint}` : messageOf(err);
+    throw new ConfigLoaderError("CONFIG_INVALID", `Failed to load courier.config: ${said}`, {
+      cause: err,
+      context: { cwd: projectRoot },
+      depHashes,
+    });
   }
   const { config } = evaluated;
   validateCourierConfig(config, configFile, depHashes);

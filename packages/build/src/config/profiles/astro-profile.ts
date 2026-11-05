@@ -8,12 +8,12 @@
  */
 
 import { environmentView } from "./environment-view";
-import type { ModuleRule } from "./resolution-profile";
+import type { FrameworkRules, ModuleRule } from "./resolution-profile";
 
 const everyVariable = (): boolean => true;
 
 /** What Astro's server answers for its environment modules. */
-export const ASTRO_MODULES: ReadonlyMap<string, ModuleRule> = new Map<string, ModuleRule>([
+const MODULES: ReadonlyMap<string, ModuleRule> = new Map<string, ModuleRule>([
   [
     "astro:env/server",
     {
@@ -26,3 +26,16 @@ export const ASTRO_MODULES: ReadonlyMap<string, ModuleRule> = new Map<string, Mo
   ],
   ["astro:env/client", { kind: "provided", exports: () => environmentView(everyVariable) }],
 ]);
+
+/** What Astro's server answers for its environment modules, and says of its other virtual ones. */
+export const ASTRO_RULES: FrameworkRules = {
+  modules: MODULES,
+  unresolved: (specifier) =>
+    specifier.startsWith("astro:")
+      ? {
+          reason: "is a module of Astro's runtime, which only Astro's build has",
+          remedy:
+            "Import it from a page, an endpoint or a middleware, and keep it out of the modules courier.config imports, which may read astro:env/server and astro:env/client",
+        }
+      : undefined,
+};

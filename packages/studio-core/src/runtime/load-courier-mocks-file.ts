@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs";
-import { type ConfigJitiOptions, createConfigJiti } from "@noverax/courier-build/config";
+import { type ConfigJitiOptions, importProjectFile } from "@noverax/courier-build/config";
 
 import { readMocksExport } from "./read-mocks-export";
 
@@ -22,7 +22,8 @@ export interface LoadedCourierMocks {
  * @param options - How the loader resolves imports and where it reuses
  *   transforms; see {@link ConfigJitiOptions}
  * @returns The declared mocks and the file's canonical path
- * @throws What the loader reported, or what {@link readMocksExport} did
+ * @throws ConfigLoadError when the file, or a module it imports, does not
+ *   load; what {@link readMocksExport} throws for an export it cannot read
  * @example
  * ```ts
  * const { mocks } = await loadCourierMocksFile("/app/courier.mocks.ts");
@@ -33,7 +34,6 @@ export async function loadCourierMocksFile(
   options: ConfigJitiOptions = {},
 ): Promise<LoadedCourierMocks> {
   const mocksFile = realpathSync(file);
-  const jiti = await createConfigJiti(mocksFile, options);
-  const namespace = await jiti.import<unknown>(mocksFile);
+  const namespace = await importProjectFile(mocksFile, options);
   return { mocks: readMocksExport(namespace, mocksFile), mocksFile };
 }

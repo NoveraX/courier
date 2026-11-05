@@ -70,8 +70,8 @@ describe("the routes of a Next.js project", () => {
 
     expect(error).toBeInstanceOf(RoutesReadError);
     expect((error as RoutesReadError).code).toBe("CONFIG_NOT_LOADED");
-    expect((error as RoutesReadError).message).toContain(
-      "client-only is the marker of code for the browser, which Next.js refuses on the server",
+    expect((error as RoutesReadError).message).toBe(
+      'courier.config.ts did not load, so the routes a page takes were not read: api.ts imports "client-only": it is the marker of code for the browser, which Next.js refuses on the server, where courier.config is read (courier.config.ts → api.ts). Import that code from a client component alone, out of the modules courier.config imports.',
     );
   }, 30_000);
 });

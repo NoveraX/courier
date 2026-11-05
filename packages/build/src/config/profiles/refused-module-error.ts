@@ -20,6 +20,8 @@ export interface RefusedModuleContext extends Record<string, unknown> {
  */
 export class RefusedModuleError extends CourierError<"MODULE_REFUSED"> {
   declare readonly context: RefusedModuleContext;
+  /** Why the framework refuses it, worded to follow the import: `is the marker of …`. */
+  readonly reason: string;
   /** What to do about it, worded as an instruction. */
   readonly remedy: string;
 
@@ -37,6 +39,7 @@ export class RefusedModuleError extends CourierError<"MODULE_REFUSED"> {
       code: "MODULE_REFUSED",
       context: { specifier, framework: framework?.label },
     });
+    this.reason = rule.reason;
     this.remedy = rule.remedy;
   }
 }

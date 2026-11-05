@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createConfigJiti } from "../../src/config/config-jiti";
 import { loadCourierConfig } from "../../src/config/load-config";
+import { ConfigLoadError } from "../../src/config/load-error/config-load-error";
 import { RefusedModuleError } from "../../src/config/profiles/refused-module-error";
 
 /* The copy Next.js resolves `server-only` to: the same manifest as the npm
@@ -104,11 +105,10 @@ describe("a Next.js project", () => {
     const installed = await loadFailure();
 
     for (const error of [absent, installed]) {
-      expect(error).toBeInstanceOf(RefusedModuleError);
-      expect((error as RefusedModuleError).message).toBe(
-        "client-only is the marker of code for the browser, which Next.js refuses on the server, where courier.config is read. Import that code from a client component alone, out of the modules courier.config imports.",
-      );
-      expect((error as RefusedModuleError).context).toEqual({
+      expect(error).toBeInstanceOf(ConfigLoadError);
+      expect((error as ConfigLoadError).code).toBe("MODULE_REFUSED");
+      expect((error as ConfigLoadError).cause).toBeInstanceOf(RefusedModuleError);
+      expect(((error as ConfigLoadError).cause as RefusedModuleError).context).toEqual({
         specifier: "client-only",
         framework: "Next.js",
       });
@@ -227,7 +227,10 @@ describe("a project that lists no framework answering imports of its own", () =>
   it("resolves server-only as Node does, finding nothing", async () => {
     project({ express: "5.1.0" }, `import "server-only";\nexport const api = {};\n`);
 
-    expect(String(await loadFailure())).toContain("Cannot find module 'server-only'");
+    expect(await loadFailure()).toMatchObject({
+      code: "MODULE_NOT_FOUND",
+      context: { specifier: "server-only" },
+    });
   });
 
   it("is read by the framework of the package.json nearest the config", async () => {
@@ -245,7 +248,10 @@ describe("a project that lists no framework answering imports of its own", () =>
       (error: unknown) => error,
     );
 
-    expect(String(failure)).toContain("Cannot find module 'server-only'");
+    expect(failure).toMatchObject({
+      code: "MODULE_NOT_FOUND",
+      context: { specifier: "server-only" },
+    });
   });
 });
 

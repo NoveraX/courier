@@ -614,7 +614,7 @@ describe("an outcome that cannot be applied", () => {
     expect(lastStatus(u, "loaded")).toMatchObject({ configFile: "courier.config.ts" });
     expect(reasonCode(outcome)).toBe("MOCKS_LOAD_FAILING");
     expect(startupIssues()).toEqual([
-      "courier.mocks.ts did not load, so no mocks are declared: [Object: null prototype] {}",
+      "courier.mocks.ts did not load, so no mocks are declared: courier.mocks.ts threw [Object: null prototype] {}.",
     ]);
   }, 20_000);
 

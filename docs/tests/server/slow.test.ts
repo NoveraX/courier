@@ -13,8 +13,23 @@ import { type Served, serve } from "./serve"
 
 let backend: Served
 
+/* A call over a connection of its own, its answer read to the end. */
+function answered(path: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    request(`${backend.url}${path}`, { agent: false }, (response) => {
+      response.resume()
+      response.once("end", resolve)
+    })
+      .once("error", reject)
+      .end()
+  })
+}
+
 beforeAll(async () => {
   backend = await serve(createDemoApp({ log: () => {} }), { as: "198.51.100.16" })
+  /* With real timers: the budgets keep a timer of their own from a visitor's first call, which the
+     fake ones below would count with the slow endpoint's. */
+  await answered("/users")
 })
 
 afterAll(() => backend.close())

@@ -178,7 +178,7 @@ courierHandler({
 })
 ```
 
-The counts are kept in the process. Replicas behind one balancer share them in Redis, where every call is taken in one script on Redis's clock — see [Redis](/docs/deployment/redis#rate-limit-store):
+The counts are kept in the process, and a caller is forgotten no later than two windows after its last call — two seconds, for a window shorter than a second. Replicas behind one balancer share them in Redis, where every call is taken in one script on Redis's clock — see [Redis](/docs/deployment/redis#rate-limit-store):
 
 ```ts
 import { createRedisRateLimitStore } from "@noverax/courier-redis"

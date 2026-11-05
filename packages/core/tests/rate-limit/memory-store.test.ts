@@ -88,3 +88,56 @@ describe("memoryRateLimitStore", () => {
     expect(ofNew / ofKnown).toBeLessThan(10);
   });
 });
+
+describe("a store no call comes to", () => {
+  const ONE_A_MINUTE = { requests: 1, window: 60_000 };
+
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+  });
+
+  it("forgets each caller within a window of its budget being whole again, then keeps no timer", () => {
+    const store = memoryRateLimitStore();
+    store.take("first", ONE_A_MINUTE);
+    vi.advanceTimersByTime(1);
+    store.take("last", ONE_A_MINUTE);
+
+    /* The first is forgotten as its budget is whole; the last, whole a moment later, is kept. */
+    vi.advanceTimersByTime(59_999);
+    expect(vi.getTimerCount()).toBe(1);
+
+    /* Two windows after its call, short of the moment it was made in. */
+    vi.advanceTimersByTime(60_000);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("keeps no timer without callers, and none that keeps the process running", () => {
+    const set = vi.spyOn(globalThis, "setTimeout");
+    const store = memoryRateLimitStore();
+    expect(vi.getTimerCount()).toBe(0);
+
+    store.take("a", ONE_A_MINUTE);
+    store.take("b", ONE_A_MINUTE);
+
+    expect(vi.getTimerCount()).toBe(1);
+    expect(set).toHaveBeenCalledTimes(1);
+    const timer = set.mock.results[0]?.value as NodeJS.Timeout | undefined;
+    expect(timer?.hasRef()).toBe(false);
+    set.mockRestore();
+  });
+
+  it("sweeps as often as the shortest window it counts in, and once a second at most", () => {
+    const store = memoryRateLimitStore();
+    store.take("calls", ONE_A_MINUTE);
+    store.take("writes", { requests: 1, window: 10_000 });
+
+    vi.advanceTimersToNextTimer();
+    expect(Date.now()).toBe(10_000);
+
+    store.take("bursts", { requests: 10, window: 100 });
+    vi.advanceTimersToNextTimer();
+    expect(Date.now()).toBe(11_000);
+  });
+});

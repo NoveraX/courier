@@ -1,4 +1,4 @@
-export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Courier.", mode: "both", updated: "2026-10-09" }
+export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Courier — and where a call's chain comes from.", mode: "both", updated: "2026-11-05" }
 
 ## How Middleware Works
 
@@ -155,6 +155,48 @@ const api = defineApi({
 <Callout variant="info" title="Execution order matters">
 Middleware execute in array order. In the example above, `logMiddleware` is outermost (logs first, receives the final response last), `authMiddleware` is innermost (runs right before the endpoint handler). Place cross-cutting concerns like logging and retry at the beginning, and request-specific concerns like auth at the end.
 </Callout>
+
+## Where a Call's Chain Comes From
+
+A call's middleware come from four places, and run strictly one after another — never two at once. Each wraps everything after it, so the first listed is the outermost:
+
+```
+caller
+  │
+  ▼
+defineApi({ middleware })        the API's own: once per call, around everything below
+  │
+  ▼
+.retry() / courier({ retry })    the endpoint's retry policy: runs again only what lies below it
+  │
+  ▼
+courier({ middleware })          the base the endpoint was built from, and every extend() — left out with inherit: false
+  │
+  ▼
+.use(a).use(b)                   the endpoint's own, in the order they were named
+  │
+  ▼
+request ──▶ upstream
+```
+
+On the way in, each middleware's `before` runs, and an `async` one is awaited before the next begins; on the way out, each `after` runs from the innermost to the outermost. A `wrap` handler holds everything after it in its `next()`, so what it does before `next()` runs on the way in, and what it does after on the way out.
+
+The order decides what a retry repeats. A retry policy runs again what lies inside it — the base's middleware and the endpoint's `.use()`, then the request — and never what lies outside it, such as the API's own middleware. Where `retryMiddleware` sits among the API's middleware decides the same for them: placed before `authMiddleware`, every attempt asks `getToken` again and carries the token current at that moment; placed after, the token is asked for once. A common order is logging, then retry, then auth:
+
+```ts title="lib/sources.ts"
+import { defineApi } from "@noverax/courier/define"
+import { authMiddleware, logMiddleware, retryMiddleware } from "@noverax/courier/middleware"
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [
+    logMiddleware(),                                         // one line per call, its retries inside it
+    retryMiddleware({ limit: 2 }),                           // repeats what follows it
+    authMiddleware({ getToken: () => session.accessToken }), // asked again on every attempt
+  ],
+  groups: { /* ... */ },
+})
+```
 
 ## Key Capabilities
 

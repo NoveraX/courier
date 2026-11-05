@@ -3,6 +3,7 @@ import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { AllowedHostsSetting } from "./runtime-policy";
+import type { WSHandlerStats } from "./ws-handler-stats";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
 
@@ -223,4 +224,21 @@ export interface WSHandler {
    * second call is the same stop. The adapter itself is yours to disconnect.
    */
   destroy(options?: { timeoutMs?: number | undefined }): Promise<void>;
+  /** What the handler holds and has done: its connections, subscriptions, closes by code, dropped frames, its pub/sub adapter's own */
+  stats(): WSHandlerStats;
+}
+
+/**
+ * What a framework adapter hands back with its WebSocket handler's entry
+ * point — `courierWSAttach`'s cleanup, `courierWSHandler`'s route handler —
+ * so an application reaches the handler's connections, stops it, and reads
+ * its stats as one on `createWSHandler` does.
+ */
+export interface WSHandlerDescriptor {
+  /** The handler's connections; with a pub/sub adapter, broadcasts and commands reach every replica */
+  readonly connections: ConnectionRegistry;
+  /** Stop the handler within `timeoutMs` (default 5000), as `WSHandler.destroy` does */
+  destroy(options?: { timeoutMs?: number | undefined }): Promise<void>;
+  /** What the handler holds and has done */
+  stats(): WSHandlerStats;
 }

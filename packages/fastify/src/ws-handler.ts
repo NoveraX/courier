@@ -1,4 +1,9 @@
-import type { ConnectResult, WebSocketLike, WSHandlerConfig } from "@noverax/courier";
+import type {
+  ConnectResult,
+  WebSocketLike,
+  WSHandlerConfig,
+  WSHandlerDescriptor,
+} from "@noverax/courier";
 import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
@@ -10,6 +15,14 @@ import {
 import type { FastifyRequest } from "fastify";
 
 const log = createLogger("Fastify");
+
+/**
+ * What `courierWSHandler` returns: the route handler for `{ websocket: true }`
+ * routes, carrying the handler's `connections`, its `destroy({ timeoutMs })`
+ * and its `stats()`.
+ */
+export type CourierWSRoute = ((socket: WebSocketLike, request: FastifyRequest) => void) &
+  WSHandlerDescriptor;
 
 /**
  * Create a Fastify WebSocket route handler for Courier realtime.
@@ -26,7 +39,10 @@ const log = createLogger("Fastify");
  * plugin would read more.
  *
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
- * @returns Route handler for `{ websocket: true }` routes
+ * @returns Route handler for `{ websocket: true }` routes, carrying the
+ *   handler's `connections`, its `destroy({ timeoutMs })` — call it from an
+ *   `onClose` hook, so the handler's connections are closed and its pub/sub
+ *   subscriptions let go of — and its `stats()`
  *
  * @example
  * ```ts
@@ -35,18 +51,20 @@ const log = createLogger("Fastify");
  * import { courierWSHandler } from "@noverax/courier-fastify";
  *
  * await fastify.register(fastifyWebsocket, { options: { maxPayload: wsFrameLimit() } });
- * fastify.get("/api/ws", { websocket: true }, courierWSHandler());
+ * const ws = courierWSHandler();
+ * fastify.get("/api/ws", { websocket: true }, ws);
+ * fastify.addHook("onClose", () => ws.destroy());
  * ```
  */
 export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>(
   options?: WSHandlerConfig<TConnect>,
-): (socket: WebSocketLike, request: FastifyRequest) => void {
+): CourierWSRoute {
   const wsHandler = createWSHandler(options);
   const maxMessageSize = options?.maxMessageSize ?? DEFAULT_WS_MAX_MESSAGE_SIZE;
   let checkedPayloadLimit = false;
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "fastify" });
 
-  return (socket: unknown, request: FastifyRequest) => {
+  const route = (socket: unknown, request: FastifyRequest) => {
     if (!isSocket(socket)) throw pluginMissing();
     announce(serverOriginOf(request.raw.socket));
     if (!checkedPayloadLimit) {
@@ -55,6 +73,12 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
     }
     wsHandler.handleSocket(socket, toWebRequest(request.raw));
   };
+
+  return Object.assign(route, {
+    connections: wsHandler.connections,
+    destroy: (stop?: { timeoutMs?: number | undefined }) => wsHandler.destroy(stop),
+    stats: () => wsHandler.stats(),
+  });
 }
 
 /** Did `@fastify/websocket` hand over a socket, rather than Fastify a request? */

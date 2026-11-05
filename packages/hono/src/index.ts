@@ -1,4 +1,9 @@
-import type { ConnectResult, HandlerConfig, WSHandlerConfig } from "@noverax/courier";
+import type {
+  ConnectResult,
+  HandlerConfig,
+  WSHandlerConfig,
+  WSHandlerDescriptor,
+} from "@noverax/courier";
 import { createHandler, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { rememberPeerAddress } from "@noverax/courier/internal";
@@ -68,11 +73,21 @@ export type HonoWSEvents = {
 };
 
 /**
+ * What `courierWSHandler` returns: the factory of each connection's events,
+ * for `upgradeWebSocket`, carrying the handler's `connections`, its
+ * `destroy({ timeoutMs })` and its `stats()`.
+ */
+export type CourierWSRoute = ((c: Context) => HonoWSEvents) & WSHandlerDescriptor;
+
+/**
  * Create Hono WebSocket event handlers for Courier realtime.
  * Use with your runtime's upgradeWebSocket helper.
  *
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.)
- * @returns Factory that produces WSEvents per connection
+ * @returns Factory that produces WSEvents per connection, carrying the
+ *   handler's `connections`, its `destroy({ timeoutMs })` — call it as the
+ *   server stops, so the handler's connections are closed and its pub/sub
+ *   subscriptions let go of — and its `stats()`
  *
  * @example Node.js
  * ```ts
@@ -88,11 +103,11 @@ export type HonoWSEvents = {
  */
 export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>(
   options?: WSHandlerConfig<TConnect>,
-): (c: Context) => HonoWSEvents {
+): CourierWSRoute {
   const wsHandler = createWSHandler(options);
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "hono" });
 
-  return (c: Context): HonoWSEvents => {
+  const route = (c: Context): HonoWSEvents => {
     announce(serverOriginOfHono(c));
     let adapter: ReturnType<typeof createSocketAdapter>;
 
@@ -117,4 +132,10 @@ export function courierWSHandler<TConnect extends ConnectResult = ConnectResult>
       },
     };
   };
+
+  return Object.assign(route, {
+    connections: wsHandler.connections,
+    destroy: (stop?: { timeoutMs?: number | undefined }) => wsHandler.destroy(stop),
+    stats: () => wsHandler.stats(),
+  });
 }

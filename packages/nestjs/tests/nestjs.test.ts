@@ -44,7 +44,8 @@ vi.mock("@noverax/courier", async (importOriginal) => {
         disconnect: vi.fn(),
         requireAuth: vi.fn(),
       },
-      destroy: vi.fn(),
+      destroy: vi.fn(async () => undefined),
+      stats: vi.fn(),
     })),
   };
 });

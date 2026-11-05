@@ -38,6 +38,7 @@ export interface WSSession {
  *
  * @param ws - The connection's socket
  * @param dialect - The protocol it speaks
+ * @param onClose - Told the code of the close the server sends, as it sends it
  * @returns The session
  * @example
  * ```ts
@@ -45,7 +46,11 @@ export interface WSSession {
  * session.close({ kind: "heartbeat-timeout" });
  * ```
  */
-export function createSession(ws: WebSocketLike, dialect: WireDialect): WSSession {
+export function createSession(
+  ws: WebSocketLike,
+  dialect: WireDialect,
+  onClose?: (code: number) => void,
+): WSSession {
   let closing = false;
   let deadline: ReturnType<typeof setTimeout> | undefined;
 
@@ -69,6 +74,7 @@ export function createSession(ws: WebSocketLike, dialect: WireDialect): WSSessio
       closing = true;
       lift();
       const frame = dialect.closeOf(why);
+      onClose?.(frame.code);
       ws.close(frame.code, closeReason(frame.reason));
     },
     requireAuth(timeoutMs) {

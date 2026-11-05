@@ -6,7 +6,11 @@ import type { ServerOrigin } from "@noverax/courier/internal";
 import { sendWebResponse, serverOriginOf, toWebRequest } from "@noverax/courier/node";
 
 export { requestContext } from "./request-context";
-export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
+export {
+  type CourierWSAttachment,
+  type CourierWSAttachOptions,
+  courierWSAttach,
+} from "./ws-attach";
 
 const log = createLogger("Express");
 

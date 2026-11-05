@@ -34,6 +34,8 @@ export {
   type WSClusterOptions,
   type WSHandler,
   type WSHandlerConfig,
+  type WSHandlerDescriptor,
+  type WSHandlerStats,
 } from "./adapter";
 export type { AgentOffer, AgentPolicy } from "./agent/agent-policy";
 export type {

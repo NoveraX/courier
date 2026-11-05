@@ -8,6 +8,7 @@ import { admitConnection } from "./ws-admit-connection";
 import { connectionFields } from "./ws-connection-fields";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { V1_DIALECT } from "./ws-dialect";
+import type { HandlerCounters } from "./ws-handler-stats";
 import { holdFrames, type WSInbox } from "./ws-inbox";
 import type { IPTracker } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
@@ -29,6 +30,8 @@ export interface SocketOpening {
   readonly bridge: PubSubBridge | undefined;
   readonly topicManager: ServerTopicManager;
   readonly live: LiveConnections;
+  /** What the handler counts as its sockets close and their frames are dropped */
+  readonly counters: HandlerCounters;
   /** Whether the handler is stopping, when a socket handed to it is closed at once */
   readonly stopping: () => boolean;
 }
@@ -51,7 +54,15 @@ export interface SocketOpening {
 export function openSockets(
   opening: SocketOpening,
 ): (ws: WebSocketLike, request: Request, peerAddress?: string) => void {
-  const { config, registry, refusals, ipTracker, bridge, topicManager, live } = opening;
+  const { config, registry, refusals, ipTracker, bridge, topicManager, live, counters } = opening;
+  /* Each frame a full buffer drops is counted, before the application's own hook hears of it. */
+  const counted: WSHandlerConfig = {
+    ...config,
+    onMessageDrop(drop) {
+      counters.droppedFrame();
+      config.onMessageDrop?.(drop);
+    },
+  };
 
   /* What fails as a socket let in is set up — no sources registered yet —
      is the server's fault: the socket is closed and why is logged, never
@@ -61,7 +72,7 @@ export function openSockets(
       const ctx = buildContext(
         ws,
         session,
-        config,
+        counted,
         topicManager,
         registry,
         bridge,
@@ -133,7 +144,7 @@ export function openSockets(
 
   return (ws, request, peerAddress) => {
     rememberPeerAddress(request, peerAddress);
-    const session = createSession(ws, V1_DIALECT);
+    const session = createSession(ws, V1_DIALECT, counters.closedWith);
     if (opening.stopping()) {
       session.close({ kind: "shutdown", retryAfterMs: 0 });
       return;

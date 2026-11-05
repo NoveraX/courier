@@ -83,6 +83,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     stop: wrappedStop,
     sseConnections: handler.sseConnections,
     wsConnections: wsHandler.connections,
+    stats: () => ({ ws: wsHandler.stats(), sseStreams: handler.sseConnections.count }),
   };
 
   const httpServer = createServer(

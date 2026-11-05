@@ -1,5 +1,5 @@
 import type { Server } from "node:http";
-import type { ConnectResult, WSHandlerConfig } from "@noverax/courier";
+import type { ConnectResult, WSHandlerConfig, WSHandlerDescriptor } from "@noverax/courier";
 import { createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
@@ -8,6 +8,13 @@ import {
   serverOriginOf,
   wsFrameLimit,
 } from "@noverax/courier/node";
+
+/**
+ * What `courierWSAttach` returns: the cleanup to call before closing the
+ * HTTP server — `await cleanup()`, as before — carrying the handler's
+ * `connections`, its `destroy({ timeoutMs })` and its `stats()`.
+ */
+export type CourierWSAttachment = (() => Promise<void>) & WSHandlerDescriptor;
 
 /** Options for `courierWSAttach`: the WebSocket handler's, plus where it listens. */
 export interface CourierWSAttachOptions<TConnect extends ConnectResult = ConnectResult>
@@ -32,7 +39,10 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
  *   has not answered by then is ended, and the handler's subscriptions are
  *   let go of; it settles within that time, whatever the clients and the
  *   pub/sub adapter do. Call it before closing the HTTP server, which
- *   otherwise waits on those connections.
+ *   otherwise waits on those connections. It carries the handler's
+ *   `connections` — to send, broadcast or disconnect — its
+ *   `destroy({ timeoutMs })`, the same stop with a deadline of your own,
+ *   and its `stats()`.
  *
  * @example
  * ```ts
@@ -52,7 +62,7 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
 export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
   server: Server,
   options: CourierWSAttachOptions<TConnect> = {},
-): () => Promise<void> {
+): CourierWSAttachment {
   const { path = DEFAULT_WS_PATH, ...handlerOptions } = options;
   const wsHandler = createWSHandler(handlerOptions);
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "express" });
@@ -69,10 +79,18 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 
-  /* No new socket while the ones held drain; what has not closed by then is ended by the detach. */
-  return async () => {
+  /* No new socket while the ones held drain; what has not closed by then
+     is ended by the detach. A second call is the same stop. */
+  let stopping: Promise<void> | undefined;
+  function destroy(options?: { timeoutMs?: number | undefined }): Promise<void> {
     accepting = false;
-    await wsHandler.destroy();
-    detach();
-  };
+    stopping ??= wsHandler.destroy(options).then(detach);
+    return stopping;
+  }
+
+  return Object.assign(() => destroy(), {
+    connections: wsHandler.connections,
+    destroy,
+    stats: () => wsHandler.stats(),
+  });
 }

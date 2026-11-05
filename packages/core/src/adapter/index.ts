@@ -26,6 +26,7 @@ export type {
   SSEConnectionRegistry,
   SSELifecycleConfig,
 } from "./sse-types";
+export type { WSHandlerStats } from "./ws-handler-stats";
 export { sendAuthRequired } from "./ws-reauth";
 export type {
   ConnectionInfo,
@@ -35,4 +36,9 @@ export type {
   MetaValue,
   RequireAuthOptions,
 } from "./ws-registry-types";
-export type { WSClusterOptions, WSHandler, WSHandlerConfig } from "./ws-types";
+export type {
+  WSClusterOptions,
+  WSHandler,
+  WSHandlerConfig,
+  WSHandlerDescriptor,
+} from "./ws-types";

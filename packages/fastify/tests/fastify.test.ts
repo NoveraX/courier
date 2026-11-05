@@ -43,6 +43,7 @@ vi.mock("@noverax/courier", async (importOriginal) => {
         requireAuth: vi.fn(),
       },
       destroy: vi.fn(),
+      stats: vi.fn(),
     })),
   };
 });
@@ -104,6 +105,7 @@ function createMockWSResult(handleSocket = vi.fn()) {
       requireAuth: vi.fn(),
     },
     destroy: vi.fn(),
+    stats: vi.fn(),
   };
 }
 

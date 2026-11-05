@@ -286,7 +286,7 @@ fastify.get("/api/sse", sse)
 fastify.addHook("preClose", () => sse.shutdownSSE())
 
 // WebSocket
-fastify.get("/ws", { websocket: true }, courierWSHandler({
+const ws = courierWSHandler({
   pubsub,
   heartbeatIntervalMs: 25_000,
   allowedOrigins: [process.env.ALLOWED_ORIGIN!],
@@ -299,7 +299,10 @@ fastify.get("/ws", { websocket: true }, courierWSHandler({
   onDisconnect: ({ meta, code }) => {
     console.log("WS closed", { meta, code })
   },
-}))
+})
+fastify.get("/ws", { websocket: true }, ws)
+// closes each socket with 1012 within 5 s, and lets go of its pub/sub subscriptions
+fastify.addHook("preClose", () => ws.destroy())
 
 // Health checks
 fastify.get("/health", async () => ({ status: "ok" }))
@@ -375,6 +378,8 @@ const server = serve({
 })
 
 process.on("SIGTERM", async () => {
+  // each socket closed with 1012 and waited for up to 5 s, before the server closes
+  await ws.destroy()
   server.close()
   await disconnectAdapters()
 })
@@ -518,6 +523,7 @@ A replica of 0.4 does not listen for commands, so while a rolling upgrade from i
 | WS library | Built-in | N/A | `ws` (peer) | `@fastify/websocket` | `ws` (peer) | `ws` (peer) |
 | Processes | 1 | 2 (Next + WS) | 1 | 1 | 1 | 1 |
 | PubSub wiring | `pubsub` config | On WS server | `courierWSAttach` opts | `courierWSHandler` opts | `courierWSHandler` opts | `courierWSAttach` opts |
+| Connections, stop, stats | `server.wsConnections`, `stop()`, `stats()` | On WS server | `connections`, `destroy()`, `stats()` on what `courierWSAttach` returns | on what `courierWSHandler` returns | on what `courierWSHandler` returns | on what `courierWSAttach` returns |
 
 ## Sticky Sessions
 

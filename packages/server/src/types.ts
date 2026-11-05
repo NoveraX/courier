@@ -5,6 +5,7 @@ import type {
   HandlerConfig,
   SSEConnectionRegistry,
   WSHandlerConfig,
+  WSHandlerStats,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 
@@ -106,4 +107,14 @@ export interface CourierServer {
   readonly sseConnections: SSEConnectionRegistry;
   /** Active WS connection registry */
   readonly wsConnections: ConnectionRegistry;
+  /** What the server holds and has done: its WebSocket handler's stats, and the streams open */
+  stats(): CourierServerStats;
+}
+
+/** What a Courier server holds and has done, as a metrics scrape or a health check reads it. */
+export interface CourierServerStats {
+  /** Its WebSocket handler's: connections, subscriptions, closes by code, its pub/sub adapter's own */
+  readonly ws: WSHandlerStats;
+  /** SSE streams open */
+  readonly sseStreams: number;
 }

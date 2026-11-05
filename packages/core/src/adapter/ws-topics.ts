@@ -33,6 +33,8 @@ export interface ServerTopicManager {
   topicsByBase(baseTopic: string): ReadonlySet<string>;
   /** Total active connections */
   readonly size: number;
+  /** Topics with a subscriber, and the subscriptions to them, every connection's together */
+  counts(): { readonly topics: number; readonly subscriptions: number };
 }
 
 /**
@@ -48,6 +50,7 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
   const topicIndex = new Map<string, Set<string>>();
   /** Base topic → Set of qualified topics — O(1) base→qualified lookup */
   const baseIndex = new Map<string, Set<string>>();
+  let subscriptions = 0;
 
   function addToIndex(topic: string, connectionId: string): void {
     const isNewTopic = !topicIndex.has(topic);
@@ -56,7 +59,10 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
       conns = new Set();
       topicIndex.set(topic, conns);
     }
-    conns.add(connectionId);
+    if (!conns.has(connectionId)) {
+      conns.add(connectionId);
+      subscriptions++;
+    }
     if (isNewTopic) {
       const { baseTopic } = unqualifyTopic(topic);
       let qualified = baseIndex.get(baseTopic);
@@ -71,7 +77,7 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
   function removeFromIndex(topic: string, connectionId: string): void {
     const conns = topicIndex.get(topic);
     if (!conns) return;
-    conns.delete(connectionId);
+    if (conns.delete(connectionId)) subscriptions--;
     if (conns.size === 0) {
       topicIndex.delete(topic);
       const { baseTopic } = unqualifyTopic(topic);
@@ -166,5 +172,6 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     get size() {
       return connections.size;
     },
+    counts: () => ({ topics: topicIndex.size, subscriptions }),
   };
 }

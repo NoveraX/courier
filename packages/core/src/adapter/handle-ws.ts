@@ -4,6 +4,7 @@ import { studioHooks } from "../studio";
 import { assertAllowedOrigins } from "./assert-allowed-origins";
 import type { ConnectResult } from "./connection-meta";
 import { LIMITS } from "./limits";
+import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
 import { createIPTracker } from "./ws-ip-tracker";
 import { createLiveConnections } from "./ws-live-connections";
 import { openSockets } from "./ws-open-socket";
@@ -59,6 +60,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   );
   registry.setTopicManager(topicManager);
   const live = createLiveConnections();
+  const counters = createHandlerCounters();
   let stopping: Promise<void> | undefined;
 
   const handleSocket = openSockets({
@@ -69,6 +71,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     bridge,
     topicManager,
     live,
+    counters,
     stopping: () => stopping !== undefined,
   });
 
@@ -100,5 +103,20 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
      registry reaches every replica, as a channel's ctx.broadcast does, and
      so do the connections it closes or asks for credentials again. */
   const connections = replication?.connections ?? registry;
-  return { handleSocket, connections, destroy };
+
+  function stats(): WSHandlerStats {
+    const { topics, subscriptions } = topicManager.counts();
+    return {
+      connections: registry.count,
+      admitting: live.size - registry.count,
+      topics,
+      subscriptions,
+      closed: counters.closed,
+      droppedFrames: counters.droppedFrames,
+      stopping: stopping !== undefined,
+      pubsub: config.pubsub?.stats(),
+    };
+  }
+
+  return { handleSocket, connections, destroy, stats };
 }

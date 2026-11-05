@@ -7,7 +7,7 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest 
 import { sendHijacked } from "./send-hijacked";
 
 export { requestContext } from "./request-context";
-export { courierWSHandler } from "./ws-handler";
+export { type CourierWSRoute, courierWSHandler } from "./ws-handler";
 
 /** Where the proxy caller sends its calls unless told otherwise. */
 const DEFAULT_PROXY_PATH = "/api/request";

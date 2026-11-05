@@ -90,34 +90,9 @@ try {
 
 The browser's side and the server's side of a proxied call each fail by these rules. A browser that could not reach the proxy — offline, the server down — rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError`. A browser call that was cancelled rejects with an `AbortError`, as a direct call does. When the server's side got no answer from the API, the proxy itself answers the browser, without naming the API's host: an `HTTPError` `502` with `data.code` `"UPSTREAM_UNREACHABLE"`, or `504` with `"UPSTREAM_TIMEOUT"` when the server's side ran out of time. The reason stays in the server's log.
 
-## From Status 0
-
-Earlier versions threw an `HTTPError` with status 0 for both a request that got no answer and one that ran out of time. Each now has its own class:
-
-| Before | Now |
-|---|---|
-| `isHTTPError(error) && error.status === 0` | `isNetworkError(error) \|\| isTimeoutError(error)` |
-| `error.data.code === "TIMEOUT"` | `isTimeoutError(error)` |
-| `error.data.code` — the system's code | `error.systemCode` |
-| `retryOn: [0, 503]` | `retryOn: ["network", "timeout", 503]` |
-| `new HTTPError({ status: 0, … })` in a mock or a test | `new NetworkError({ cause })` |
-
-`new HTTPError()` refuses a status outside 100 to 599 with a `RangeError`, so a stand-in still built the old way says so at once.
-
-## From the Signal's Reason and Status 499
-
-Earlier versions rejected a cancelled call with whatever its signal was given, and a call a newer one superseded with an `HTTPError` of status 499:
-
-| Before | Now |
-|---|---|
-| `error instanceof DOMException && error.name === "AbortError"` | `isAbortError(error)` |
-| `error === reason`, the reason the signal was given | `isAbortError(error) && error.cause === reason` |
-| `isHTTPError(error) && error.status === 499` | `isAbortError(error) && error.code === "SUPERSEDED"` |
-
-A check of `error.name === "AbortError"` still holds, as Courier's `AbortError` is named so. An upstream's own answer of status 499 is an `HTTPError` like any other.
-
 ## Related
 
 - [HTTPError](/docs/api/http-error) — an answer with an error status
 - [Error Handling Guide](/docs/core-concepts/error-handling) — patterns for handling them
 - [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) — which failures a retry policy repeats
+- [Upgrading from 0.4](/docs/upgrading) — what to write in place of status 0 and 499

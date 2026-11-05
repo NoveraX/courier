@@ -544,21 +544,7 @@ const ws = createWSHandler({
 
 A shorter secret throws `CLUSTER_SECRET_INVALID` when the handler is made. Keep the secret out of the repository, as any credential, and keep publishing on the prefix's channels to your application with Redis ACLs as well.
 
-### Coming from 0.4
-
-| 0.4 | Now |
-|-----|-----|
-| `disconnect(id, code, reason)` | `await disconnect(id, { code, reason })` |
-| `disconnectByMeta((meta) => meta.userId === id, code, reason)` | `await disconnect({ meta: { userId: id } }, { code, reason })` |
-| `getByMeta(predicate)` | `list({ meta: { … } })`, or `list().filter(…)` for any other test |
-| `sendAuthRequired(connections, id, ms)` | `await connections.requireAuth(id, { timeoutMs: ms })` |
-| `sseConnections.getByMeta(predicate)` | `sseConnections.list({ meta: { … } })` |
-| `sseConnections.disconnect(id, reason)` | `await sseConnections.disconnect(id)`, or a selector, on every replica |
-| `sseConnections.broadcastToMeta(predicate, event)` | `sseConnections.broadcastToMeta({ userId }, event)` |
-
-The protocol is version 2, which the client names in its first frame, `auth`: the server answers `auth_ok`, and says why before each close, in `auth_error` or `disconnect`. A page left from 0.4 is refused with `1002` "Protocol version 2 required: reload the page", which a 0.4 client takes as final, so it does not retry; a newer client that reaches a replica of 0.4 reconnects after a pause, until the upgrade is done. A few codes changed: a connection given up for a newer one of its key is closed with `4409`, not `4429`; a stopping server closes with `1001` and says when to come back, not `1012`; and a slow consumer is closed with `1013`, not `4008`.
-
-A replica of 0.4 does not listen for commands, so while a rolling upgrade from it runs, a command reaches the replicas already upgraded. A replica that gets a command of a newer version than its own skips it, saying so in its log.
+A replica that gets a command of a newer version than its own, as while a rolling upgrade runs, skips it, saying so in its log. The calls and the codes that changed since 0.4 are on [Upgrading from 0.4](/docs/upgrading#realtime).
 
 ## Resuming Subscriptions
 

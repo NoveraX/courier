@@ -1,0 +1,140 @@
+export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads.", updated: "2026-11-05" }
+
+This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, and how the proxy reads a request body. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
+
+## Call Errors
+
+A call that got no successful answer rejects with an `HTTPError` when an answer came, a `NetworkError` when none did and a `TimeoutError` when its time ran out, and a cancelled call with Courier's `AbortError` — see [NetworkError, TimeoutError & AbortError](/docs/api/call-errors).
+
+| 0.4 | Now |
+|---|---|
+| `isHTTPError(error) && error.status === 0` | `isNetworkError(error) \|\| isTimeoutError(error)` |
+| `error.data.code === "TIMEOUT"` | `isTimeoutError(error)` |
+| `error.data.code` — the system's code | `error.systemCode` |
+| `new HTTPError({ status: 0, … })` in a mock or a test | `new NetworkError({ cause })`: `new HTTPError()` refuses a status outside 100 to 599 with a `RangeError` |
+| An answer the browser hides — `mode: "no-cors"`, a redirect it was told not to follow — read as status 0 | `ConfigurationError` `RESPONSE_OPAQUE` |
+| `onError: (error: HTTPError) => …` | `onError: (error: RequestFailure) => …` — an `HTTPError`, a `NetworkError` or a `TimeoutError` |
+| `error instanceof DOMException && error.name === "AbortError"` | `isAbortError(error)` |
+| `error === reason`, the reason the signal was given | `isAbortError(error) && error.cause === reason` |
+| `isHTTPError(error) && error.status === 499`, a call a newer one superseded | `isAbortError(error) && error.code === "SUPERSEDED"` |
+
+A check of `error.name === "AbortError"` still holds, as Courier's `AbortError` is named so, and an upstream's own answer of status 499 is an `HTTPError` like any other. A cancellation is no failure: `onError` is not told of it, and no retry repeats it.
+
+## Retries
+
+A retry policy repeats what an upstream may get over, waits a random time between attempts, and shares a budget with the calls it retries — see [retryMiddleware](/docs/middleware/built-in#retrymiddleware). The query hooks leave retries to it.
+
+| 0.4 | Now |
+|---|---|
+| Without `retryOn`, a timeout retried | not retried unless `retryOn` names `"timeout"` |
+| Without `retryOn`, every 5xx retried, `501` among them | `500`, `502`, `503` and `504` retried, and `408`, `425` and `429` |
+| `retryOn: [0, 503]` | `retryOn: ["network", "timeout", 503]` |
+| `retryOn: (response) => response.status === 503` | `retryOn: (failure) => failure.kind === "status" && failure.status === 503` |
+| Waits of exactly the backoff, doubling from 300 ms with no ceiling | a random wait up to it, never past `maxDelay`, 20 s; `jitter: "none"` waits it exactly |
+| `Retry-After` unread | waited, in seconds or as a date; an answer that asks for longer than `maxDelay` is not retried |
+| A `limit` of any size | at most 10 |
+| An option the policy does not have — `attempts`, `retries`, `backoff: 300` — ignored | `ConfigurationError` `RETRY_OPTIONS_INVALID`: the options are `limit`, `delay`, `backoff: "fixed"` or `"exponential"`, and the others the reference lists |
+| An endpoint's `.retry()` taken as written | checked on the endpoint's first call, refused with the same code |
+| `useQuery`, `useSuspenseQuery`, `useInfiniteQuery` and `useComputedQuery` retrying a failed call three times | no retries of their own: the API's `.retry()` or `retryMiddleware` repeats a call, or `defaultOptions.queries.retry` on the `QueryClient` keeps the hooks' |
+
+## Headers
+
+A request's headers are put together in one place, which refuses a value no request can carry before anything is sent — see [Options Reference](/docs/advanced/options) and [authMiddleware](/docs/middleware/built-in#authmiddleware).
+
+| 0.4 | Now |
+|---|---|
+| A header value with a NUL or a line break inside it, refused by the platform with a `TypeError` that repeats the value | `ConfigurationError` `HEADER_VALUE_INVALID`, naming the header and not its value, before anything is sent; a character past U+00FF too |
+| A header value with another control character, such as a vertical tab, refused by the dispatcher as it sends: an `HTTPError` of status 0, and retried | `ConfigurationError` `HEADER_VALUE_INVALID` before anything is sent, and not retried |
+| `authMiddleware` with no token sending `Bearer undefined`, or `Bearer` for `""` | no header; `required: true` refuses the call with a `MissingTokenError` before it is sent |
+| `authMiddleware` taking an option it does not have, a `header` that is no header name, or a `scheme` that is no scheme | `ConfigurationError` `AUTH_OPTIONS_INVALID` where the middleware is made |
+| An `allowedHosts` entry with a scheme, a path or a user, matching nothing | `ConfigurationError` `INVALID_ALLOWED_HOST` where the handler is made |
+
+## Realtime
+
+### On the Server
+
+`connections` and `sseConnections` name connections by a selector — an id, `{ id }` with up to 1000 of them, or `{ meta }` — and reach them on every replica that shares the pub/sub adapter — see [A User's Connections, on Every Replica](/docs/deployment/replication#a-users-connections-on-every-replica).
+
+| 0.4 | Now |
+|---|---|
+| `connections.disconnect(id, code, reason)` | `await connections.disconnect(id, { code, reason })` |
+| `connections.disconnectByMeta((meta) => meta.userId === id, code, reason)` | `await connections.disconnect({ meta: { userId: id } }, { code, reason })` |
+| `connections.getByMeta(predicate)` | `connections.list({ meta: { … } })`, or `list().filter(…)` for any other test |
+| `sendAuthRequired(connections, id, ms)` | `await connections.requireAuth(id, { timeoutMs: ms })` |
+| `sseConnections.getByMeta(predicate)` | `sseConnections.list({ meta: { … } })` |
+| `sseConnections.disconnect(id, reason)` | `await sseConnections.disconnect(id)`, or a selector |
+| `sseConnections.disconnectAll(reason)` | `sseConnections.disconnectAll()` |
+| `sseConnections.broadcastToMeta(predicate, event)` | `sseConnections.broadcastToMeta({ userId }, event)` |
+| `WSClusterOptions` | `ClusterOptions`, which both handlers take |
+| A pub/sub adapter of your own | implements `state`, `onStateChange()` and `stats()`, takes a subscription without waiting on its server, queues what is published while it is not ready within bounds, and rejects `publish()` and `subscribe()` only once disconnected; the adapters Courier ships need nothing done |
+| Handlers of one process sharing `createMemoryPubSub()`, which delivered nothing | `createMemoryBus()`, each handler on `bus.replica(name)`; `createMemoryPubSub()` is one replica alone |
+
+### In the Client
+
+Every subscription, stream and channel is one `Subscription` object, and a connection runs on one state machine — see [Streams & Channels](/docs/advanced/realtime).
+
+| 0.4 | Now |
+|---|---|
+| `SSESubscription` | `Subscription`, from `@noverax/courier/realtime`; `WSChannel` extends it |
+| A subscription written by hand | needs `on()` for `data`, `error`, `status`, `open` and `close`, `reconnect()` and `dropped` |
+| `on()` with an event the subscription does not have, taken | refused by its types, and with `ConfigurationError` `UNKNOWN_EVENT` as it runs |
+| A channel `connected` once its socket opened | once the server confirmed its subscribe |
+| A connection `connected` once its socket opened | once the server admitted it, one round trip later |
+| A `WSConnection` written by hand | needs `reconnect()`, `state` and `onStateChange` |
+| `WSConnectionState.protocol` | `connectionId` |
+| A reconnect wait of half to all of the backoff's delay, starting over once the server first answered | a random wait up to all of it, starting over once a connection stayed open 10 s; the page's resume signals reconnect at once unless `ws.reconnectOnResume` is `false` |
+| A `4401` ending the connection | credentials asked for anew, and sent once more if they changed |
+| A stream's backoff starting over once it delivered something | once it stayed open 10 s |
+| A stream's `retry:` field or `Retry-After` waited alone | waited with the backoff's wait on top, never past five minutes |
+| A backoff no wait can be drawn from, failing the first reconnect | `subscribeSSE` throws `ConfigurationError` `INVALID_BACKOFF` |
+| An in-process subscription telling its status again to a listener added late | its status told as it changes, once |
+| A push subscription handed back while its client loads, with `send` | no `send`: a channel alone has it |
+
+### Realtime Errors
+
+| 0.4 | Now |
+|---|---|
+| `TimeoutError` from `@noverax/courier`, code 4408 | `RealtimeTimeoutError` from `@noverax/courier/realtime`; the root's `TimeoutError` is a call's |
+| `AuthError`, `ForbiddenError`, `RateLimitError`, `fromErrorCode` and `isRealtimeError` from `@noverax/courier` | the same names from `@noverax/courier/realtime` |
+
+`RealtimeError` and `ConnectionError` stay at the package root, so a page that catches a realtime error need not load the client for it.
+
+## Protocol Version 2
+
+The client and the server speak protocol version 2, and neither speaks the version before it, so deploy them together — see [Streams & Channels](/docs/advanced/realtime).
+
+| 0.4 | Now |
+|---|---|
+| A socket let in on its handshake, its first frame read as credentials when it was `auth` | every socket's first frame is `auth` naming version 2, which the server answers with `auth_ok` |
+| A page left from 0.4 on an upgraded server | refused with `1002` "Protocol version 2 required: reload the page", which the 0.4 client does not retry |
+| A client of this release on a replica of 0.4 | reconnects after a wait, until the rollout has replaced that replica |
+| `4429` for a connection given up for a newer one of its key | `4409` |
+| `1012` from a stopping server | `1001`, saying when to come back |
+| `4008` for a slow consumer | `1013` |
+| The client's `ws.heartbeat` and `ws.maxMessageSize` | gone: the server's `heartbeatIntervalMs`, `heartbeatTimeoutMs` and `maxMessageSize` hold, and `auth_ok` tells the client |
+
+A replica of 0.4 does not listen for the commands replicas send each other, so while a rolling upgrade runs, `connections.disconnect()` and `connections.requireAuth()` reach the connections of the replicas already upgraded. Revoke the user's credentials as well: a client that reconnects is then refused by `onConnect`.
+
+## Request Bodies and Uploads
+
+The proxy reads a request body as it arrives, holds it to the limits `createHandler` takes, and answers a body it refuses with the status and the code of why — see [createHandler](/docs/api/api-route#request-bodies) and [File Upload](/docs/advanced/upload).
+
+| 0.4 | Now |
+|---|---|
+| A body shorter than its `Content-Length` read as if whole, a form answered `400` "Invalid multipart body" | `413` `BODY_INCOMPLETE`, naming both lengths |
+| A compressed request body, read as it came | `415` `BODY_ENCODING_UNSUPPORTED` |
+| A body read for as long as it took | `408` `BODY_TIMEOUT` after 30 s without a byte (`bodyIdleTimeoutMs`) or 5 minutes in all (`bodyTimeoutMs`) |
+| A form of any number of parts | `413` past 1000 parts (`maxUploadParts`), 8 KB of headers a part, or text fields past `maxBodyBytes` together, with `UPLOAD_TOO_MANY_PARTS`, `UPLOAD_PART_HEADERS_TOO_LARGE` or `UPLOAD_FIELDS_TOO_LARGE` |
+| A form parsed by the platform's `formData()`, a bare line feed, a header named twice or a part in base64 taken | `400` `BODY_MALFORMED` |
+| A JSON body that is not UTF-8, its bytes replaced | `400` `BODY_MALFORMED` |
+| An upload kept in memory under Node | its files past `uploadMemoryBytes`, 1 MB, written to `uploadDirectory`, and a disk with no room answered `507` `UPLOAD_STORAGE_FULL`; `uploadMode: "memory"` keeps them in memory |
+| A redirect from the upstream followed by an upload or a stream body under Node 22 and 24 | the call fails as a network error: they are sent with `redirect: "error"`, so fetch keeps no copy of them; a `redirect` the caller sets is kept |
+| The mock reading a body by itself | the server's own stream and parser, to the same limits |
+
+## Related
+
+- [NetworkError, TimeoutError & AbortError](/docs/api/call-errors) — the errors a call rejects with
+- [Built-in Middleware](/docs/middleware/built-in) — `retryMiddleware` and `authMiddleware`
+- [Streams & Channels](/docs/advanced/realtime) — a client's connection, its states and its codes
+- [Replication Guide](/docs/deployment/replication) — a user's connections on every replica
+- [createHandler](/docs/api/api-route) — the limits a request body is held to

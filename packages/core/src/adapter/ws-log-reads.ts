@@ -1,13 +1,13 @@
 import type { RefusalLog } from "../logger/refusal-log";
 import type { LoggedEvent } from "../realtime/adapters";
 import { withinDeadline } from "../utils/within-deadline";
-import { LIMITS } from "./limits";
+import { WS_SERVER_LIMITS } from "./ws-server-limits";
 import type { TopicPosition } from "./ws-topic-sequences";
 
 /**
- * What a topic log answered within `WS_LOG_TIMEOUT_MS`, or undefined for
- * one that failed or did not answer in time — said in the refusal log, once
- * an interval, and gone on without.
+ * What a topic log answered within `WS_SERVER_LIMITS.LOG_TIMEOUT_MS`, or
+ * undefined for one that failed or did not answer in time — said in the
+ * refusal log, once an interval, and gone on without.
  *
  * @param promise - The log's answer
  * @param refusals - The handler's log of refusals
@@ -19,7 +19,7 @@ import type { TopicPosition } from "./ws-topic-sequences";
  */
 export async function askLog<T>(promise: Promise<T>, refusals: RefusalLog): Promise<T | undefined> {
   try {
-    return await withinDeadline(promise, LIMITS.WS_LOG_TIMEOUT_MS);
+    return await withinDeadline(promise, WS_SERVER_LIMITS.LOG_TIMEOUT_MS);
   } catch (error) {
     refusals.warn({ event: "topic log not read", code: "LOG_UNAVAILABLE" }, error);
     return undefined;

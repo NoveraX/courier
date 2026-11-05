@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import { LIMITS } from "../src/adapter/limits";
+import { WS_SERVER_LIMITS } from "../src/adapter/ws-server-limits";
 import type { WSHandler } from "../src/adapter/ws-types";
 import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
@@ -330,7 +330,10 @@ describe("resuming a subscription from the log", () => {
     const { a, epoch } = await missedThree(bus);
     const slow = slowReads(bus.replica("b"));
     const again = open(serve(slow.adapter));
-    const live = Array.from({ length: LIMITS.WS_RESUME_HELD_FRAMES + 1 }, (_, i) => `${i + 4}`);
+    const live = Array.from(
+      { length: WS_SERVER_LIMITS.RESUME_HELD_FRAMES + 1 },
+      (_, i) => `${i + 4}`,
+    );
 
     asked(again, { seq: 1, epoch });
     await expect.poll(() => slow.reads.count).toBe(1);
@@ -342,7 +345,7 @@ describe("resuming a subscription from the log", () => {
     expect(eventsOf(again)).toEqual(live.map((text, i) => [i + 4, text]));
   });
 
-  it("resumes nothing when the log does not answer within WS_LOG_TIMEOUT_MS", async () => {
+  it("resumes nothing when the log does not answer within LOG_TIMEOUT_MS", async () => {
     const bus = createMemoryBus({ log: {} });
     const { epoch } = await missedThree(bus);
     const slow = slowReads(bus.replica("b"));
@@ -350,7 +353,7 @@ describe("resuming a subscription from the log", () => {
     vi.useFakeTimers();
 
     asked(again, { seq: 1, epoch });
-    await vi.advanceTimersByTimeAsync(LIMITS.WS_LOG_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(WS_SERVER_LIMITS.LOG_TIMEOUT_MS);
 
     expect(answerOf(again)).toMatchObject({ seq: 3, recovered: false });
     expect(eventsOf(again)).toEqual([]);

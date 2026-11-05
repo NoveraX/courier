@@ -5,7 +5,7 @@ import type { SchemaMetadata } from "../validation";
 import { ValidationError, validateSchema } from "../validation";
 import { endpointName } from "./endpoint-name";
 import { isExposedToWire } from "./exposure";
-import { warnNotExposed } from "./not-exposed";
+import { warnRealtimeNotExposed } from "./not-exposed-realtime";
 import { errorResponse } from "./parse";
 
 /**
@@ -43,7 +43,7 @@ export function resolveSSEEndpoint(
 
   /* Same answer as an unknown name, for the same reason. */
   if (!isExposedToWire(dataSource, group, schema)) {
-    warnNotExposed(endpointName({ source, group, method }), "sse");
+    warnRealtimeNotExposed(endpointName({ source, group, method }), "sse");
     return errorResponse(400, notFound);
   }
   if (schema?.transport !== "sse") {

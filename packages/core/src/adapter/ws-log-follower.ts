@@ -1,9 +1,9 @@
 import type { RefusalLog } from "../logger/refusal-log";
 import type { LoggedPosition, TopicLog } from "../realtime/adapters";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
-import { LIMITS } from "./limits";
 import { askLog, wholeRange } from "./ws-log-reads";
 import { type BroadcastTargets, deliverToTopic } from "./ws-registry-broadcast";
+import { WS_SERVER_LIMITS } from "./ws-server-limits";
 import type { TopicPosition } from "./ws-topic-sequences";
 
 /** How many topics a replica back from an outage catches up from the log at once. */
@@ -82,7 +82,7 @@ export function createLogFollower(
   function deliver(topic: string, payload: unknown, logged: LoggedPosition): void {
     const waiting = filling.get(topic);
     if (waiting) {
-      if (waiting.length < LIMITS.WS_LOG_WAITING_EVENTS) waiting.push({ payload, logged });
+      if (waiting.length < WS_SERVER_LIMITS.LOG_WAITING_EVENTS) waiting.push({ payload, logged });
       return;
     }
     if (!sequences.has(topic)) {

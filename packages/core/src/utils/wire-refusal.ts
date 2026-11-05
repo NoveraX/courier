@@ -49,7 +49,7 @@ export function refuseWireCall(call: WireCall): WireRefusal | undefined {
   /* Answered as an unknown name is: telling a caller that guessing names is
      forbidden confirms that the name it guessed exists. */
   if (!isExposedToWire(call.dataSource, group, call.schema)) {
-    warnNotExposed(call.endpoint, "proxy");
+    warnNotExposed(call.endpoint);
     return { status: 400, message: `${call.endpoint}: method not found` };
   }
   if (call.proxyMethod === "GET" && call.schema?.type !== "query") {

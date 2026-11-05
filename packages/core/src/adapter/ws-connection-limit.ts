@@ -1,7 +1,7 @@
 import type { RefusalLog } from "../logger/refusal-log";
 import type { ConnectionLeaseStore, LeaseGrant, LeaseRule } from "../realtime/adapters";
 import { withinDeadline } from "../utils/within-deadline";
-import { LIMITS } from "./limits";
+import { WS_SERVER_LIMITS } from "./ws-server-limits";
 import type { ConnectionLimitRule } from "./ws-types";
 
 const encoder = new TextEncoder();
@@ -61,8 +61,8 @@ export interface ConnectionLimiterOptions {
  */
 export function createConnectionLimiter(options: ConnectionLimiterOptions): ConnectionLimiter {
   const { store, refusals } = options;
-  const timeoutMs = options.timeoutMs ?? LIMITS.WS_LEASE_TIMEOUT_MS;
-  const renewEveryMs = options.renewEveryMs ?? LIMITS.WS_LEASE_RENEW_MS;
+  const timeoutMs = options.timeoutMs ?? WS_SERVER_LIMITS.LEASE_TIMEOUT_MS;
+  const renewEveryMs = options.renewEveryMs ?? WS_SERVER_LIMITS.LEASE_RENEW_MS;
   const hashKey = keyHasher(options.secret);
   /* Each rule with its place in the list, which keeps its keys apart; those that refuse first. */
   const rules = options.rules

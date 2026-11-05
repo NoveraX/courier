@@ -11,6 +11,7 @@ import { createLiveConnections } from "./ws-live-connections";
 import { openSockets } from "./ws-open-socket";
 import { createConnectionRegistry } from "./ws-registry";
 import { replicate } from "./ws-replication";
+import { WS_SERVER_LIMITS } from "./ws-server-limits";
 import { createTopicHistory } from "./ws-topic-history";
 import { wireTopics } from "./ws-topic-wiring";
 import type { WSHandler, WSHandlerConfig } from "./ws-types";
@@ -92,7 +93,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
      all at once — and waited for within the deadline; the subscriptions on
      the pub/sub adapter are let go of without waiting on it. */
   async function stop(timeoutMs: number): Promise<void> {
-    const spread = LIMITS.WS_SHUTDOWN_RECONNECT_SPREAD_MS;
+    const spread = WS_SERVER_LIMITS.SHUTDOWN_RECONNECT_SPREAD_MS;
     const shutdown = () =>
       ({ kind: "shutdown", retryAfterMs: Math.floor(Math.random() * spread) }) as const;
     await live.closeAll(shutdown, timeoutMs);
@@ -103,7 +104,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   }
 
   function destroy(options?: { timeoutMs?: number | undefined }): Promise<void> {
-    stopping ??= stop(options?.timeoutMs ?? LIMITS.WS_SHUTDOWN_TIMEOUT_MS);
+    stopping ??= stop(options?.timeoutMs ?? WS_SERVER_LIMITS.SHUTDOWN_TIMEOUT_MS);
     return stopping;
   }
 

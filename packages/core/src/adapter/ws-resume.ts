@@ -1,9 +1,9 @@
 import type { LoggedEvent, TopicLog } from "../realtime/adapters";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
-import { LIMITS } from "./limits";
 import type { WSSocketContext } from "./ws-context";
 import { askLog, wholeRange } from "./ws-log-reads";
 import { resumableFrom } from "./ws-resume-position";
+import { WS_SERVER_LIMITS } from "./ws-server-limits";
 import type { TopicPosition } from "./ws-topic-sequences";
 
 /**
@@ -47,7 +47,7 @@ export function sendTopicFrame(
   }
   const { upTo } = gate;
   if (!upTo || (position.epoch === upTo.epoch && position.seq <= upTo.seq)) return;
-  if (gate.held.length < LIMITS.WS_RESUME_HELD_FRAMES) {
+  if (gate.held.length < WS_SERVER_LIMITS.RESUME_HELD_FRAMES) {
     gate.held.push(encoded);
     return;
   }

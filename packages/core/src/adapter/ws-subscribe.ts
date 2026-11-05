@@ -161,8 +161,11 @@ async function openSubscription(
     return;
   }
 
-  // Send "subscribed" AFTER channel/push init to prevent race
-  ctx.sendMessage({ type: "subscribed", id: msg.id, topic: subscribedTopic });
+  /* Sent once the channel or the push has begun, with where the topic's
+     sequence stands: every event it counted reached the subscription, live,
+     as it was registered before the handler ran. */
+  const { seq, epoch } = ctx.registry.positionOf(subscribedTopic);
+  ctx.sendMessage({ type: "subscribed", id: msg.id, topic: subscribedTopic, seq, epoch });
   ctx.dt.onWSTrack?.({
     requestId: subRequestId,
     connectionId: ctx.connectionId,

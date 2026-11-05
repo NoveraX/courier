@@ -75,23 +75,20 @@ describe("startPush", () => {
     expect(dataMessages).toHaveLength(2);
     expect(dataMessages[0]!.payload).toBe("first");
     expect(dataMessages[0]!.topic).toBe("api.chat.feed");
-    expect(dataMessages[0]!.seq).toBe(1);
     expect(dataMessages[1]!.payload).toBe("second");
-    expect(dataMessages[1]!.seq).toBe(2);
   });
 
-  it("increments seq on each yielded value", async () => {
-    const { ctx } = createMockCtx();
+  it("sends each value as a frame of this connection alone, which no topic's sequence numbers", async () => {
+    const { ctx, sent } = createMockCtx();
     const handler = async function* () {
       yield "a";
       yield "b";
-      yield "c";
     };
 
     startPush(ctx, "topic", handler, {});
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(ctx.seq.value).toBe(3);
+    expect(sent.filter((m) => m.type === "data").map((m) => m.seq)).toEqual([undefined, undefined]);
   });
 
   it("registers subscription with cleanup in topicManager", () => {

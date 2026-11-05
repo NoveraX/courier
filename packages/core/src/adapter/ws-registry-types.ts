@@ -1,5 +1,6 @@
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import type { Selection } from "./connection-selector";
+import type { TopicPosition } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
 
 /** Read-only connection info exposed via public API */
@@ -117,4 +118,8 @@ export interface InternalConnectionRegistry extends ConnectionRegistry {
   evict(connectionIds: readonly string[]): Promise<void>;
   /** Inject topic manager after creation (breaks circular init dependency) */
   setTopicManager(tm: ServerTopicManager): void;
+  /** Where a topic's sequence stands on this replica: what `subscribed` states */
+  positionOf(topic: string): TopicPosition;
+  /** A topic no subscriber holds any more: its sequence is let go of */
+  forgetTopic(topic: string): void;
 }

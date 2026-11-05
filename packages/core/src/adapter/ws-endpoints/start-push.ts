@@ -66,8 +66,7 @@ export function startPush(
       for await (const yielded of abortableEvents(generator, ended.signal)) {
         const value = responseSchema ? await checkResponse(responseSchema, yielded) : yielded;
         if (ended.signal.aborted) return;
-        ctx.seq.value++;
-        ctx.sendMessage({ type: "data", topic, payload: value, seq: ctx.seq.value });
+        ctx.sendMessage({ type: "data", topic, payload: value });
         emitChannelMessage(ctx, topic, value, "data");
       }
       if (ended.signal.aborted) return;

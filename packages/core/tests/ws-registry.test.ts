@@ -226,8 +226,12 @@ describe("createConnectionRegistry", () => {
 
     await registry.broadcastToTopic("room", "data", "c1");
 
-    expect(e1.sendEncoded).not.toHaveBeenCalled();
-    expect(e2.sendEncoded).toHaveBeenCalled();
+    expect(e1.sendEncoded).toHaveBeenCalledExactlyOnceWith(
+      '{"type":"skip","topic":"room","seq":1}',
+    );
+    expect(e2.sendEncoded).toHaveBeenCalledExactlyOnceWith(
+      '{"type":"data","topic":"room","payload":"data","seq":1}',
+    );
   });
 
   it("disconnects a connection", () => {

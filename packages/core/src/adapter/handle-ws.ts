@@ -55,14 +55,13 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
      registry reaches every replica, as a channel's ctx.broadcast does, and
      so do the connections it closes or asks for credentials again. */
   const connections = replication?.connections ?? registry;
-  const topicManager = createServerTopicManager(
-    bridge
-      ? {
-          onFirstSubscriber: (topic) => bridge.onTopicSubscribe(topic),
-          onLastUnsubscriber: (topic) => bridge.onTopicUnsubscribe(topic),
-        }
-      : undefined,
-  );
+  const topicManager = createServerTopicManager({
+    onFirstSubscriber: (topic) => bridge?.onTopicSubscribe(topic),
+    onLastUnsubscriber: (topic) => {
+      bridge?.onTopicUnsubscribe(topic);
+      registry.forgetTopic(topic);
+    },
+  });
   registry.setTopicManager(topicManager);
   const live = createLiveConnections();
   const counters = createHandlerCounters();

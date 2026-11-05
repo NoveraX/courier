@@ -16,6 +16,7 @@ import type {
   InternalConnectionRegistry,
   RegistryEntry,
 } from "./ws-registry-types";
+import { createTopicSequences } from "./ws-topic-sequences";
 import type { ServerTopicManager } from "./ws-topics";
 
 /**
@@ -42,14 +43,14 @@ import type { ServerTopicManager } from "./ws-topics";
 export function createConnectionRegistry(): InternalConnectionRegistry {
   const entries = new Map<string, RegistryEntry>();
   let topicManager: ServerTopicManager | undefined;
-  let broadcastSeq = 0;
+  const sequences = createTopicSequences();
 
   const targets: BroadcastTargets = {
     entries,
     get topicManager() {
       return topicManager;
     },
-    nextSeq: () => ++broadcastSeq,
+    sequences,
   };
 
   function toInfo(entry: RegistryEntry): ConnectionInfo {
@@ -77,16 +78,14 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
       return registry.select(selection).map(toInfo);
     },
     send(connectionId, data) {
-      entries.get(connectionId)?.sendRaw({ type: "data", payload: data, seq: ++broadcastSeq });
+      entries.get(connectionId)?.sendRaw({ type: "data", payload: data });
     },
     broadcast: (data, exclude) => broadcastToAll(targets, data, exclude),
     broadcastToTopic: (topic, data, exclude) => broadcastToTopic(targets, topic, data, exclude),
     broadcastToBaseTopic: (baseTopic, data, exclude) =>
       broadcastToBaseTopic(targets, baseTopic, data, exclude),
     sendToConnection(connectionId, topic, data) {
-      entries
-        .get(connectionId)
-        ?.sendRaw({ type: "data", topic, payload: data, seq: ++broadcastSeq });
+      entries.get(connectionId)?.sendRaw({ type: "data", topic, payload: data });
     },
     async disconnect(selector, options) {
       runCommand(disconnectCommand(selector, options), registry);
@@ -118,6 +117,8 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
     setTopicManager(tm) {
       topicManager = tm;
     },
+    positionOf: (topic) => sequences.position(topic),
+    forgetTopic: (topic) => sequences.forget(topic),
   };
   return registry;
 }

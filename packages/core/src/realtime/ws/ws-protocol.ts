@@ -30,7 +30,9 @@ export type WSMessageType =
   | "complete"
   | "auth"
   | "auth_required"
-  | "renamed";
+  | "renamed"
+  | "skip"
+  | "resync";
 
 const VALID_TYPES: ReadonlySet<string> = new Set<WSMessageType>([
   "subscribe",
@@ -46,6 +48,8 @@ const VALID_TYPES: ReadonlySet<string> = new Set<WSMessageType>([
   "auth",
   "auth_required",
   "renamed",
+  "skip",
+  "resync",
 ]);
 
 export interface WSMessage {
@@ -54,7 +58,10 @@ export interface WSMessage {
   source?: string;
   topic?: string;
   payload?: unknown;
+  /** On an event of a topic, and on `skip`, `resync` and `subscribed`: its number in the topic's sequence */
   seq?: number;
+  /** On `subscribed` and `resync`: the name of the topic's sequence the numbers belong to */
+  epoch?: string;
   /**
    * On `error`: what went wrong. With a `topic`, it concerns that
    * subscription, which goes on. On `complete`: why the server ended the

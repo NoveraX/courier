@@ -81,5 +81,7 @@ export function replicateRegistry(
     getEntry: (connectionId) => registry.getEntry(connectionId),
     select: (selection) => registry.select(selection),
     setTopicManager: (topicManager) => registry.setTopicManager(topicManager),
+    positionOf: (topic) => registry.positionOf(topic),
+    forgetTopic: (topic) => registry.forgetTopic(topic),
   };
 }

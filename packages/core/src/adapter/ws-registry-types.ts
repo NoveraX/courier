@@ -49,9 +49,14 @@ export interface RegistryEntry {
   sendRaw: (msg: WSMessage) => void;
   /** Send pre-encoded JSON string — avoids redundant JSON.stringify on broadcast */
   sendEncoded: (encoded: string) => void;
-  close: (code?: number, reason?: string) => void;
-  /** When a token asked for with `auth_required` must have come in by */
-  authDeadline?: ReturnType<typeof setTimeout> | undefined;
+  /** Close the connection as the application asked, with an application's code */
+  close: (code: number, reason: string) => void;
+  /**
+   * Ask for its credentials again, within `timeoutMs` — the handler's
+   * `authRequiredTimeoutMs` when not given, 0 for no deadline
+   * @returns The function that lifts the deadline
+   */
+  requireAuth: (timeoutMs?: number) => () => void;
 }
 
 /** @internal Registry with add/remove methods for handler integration */

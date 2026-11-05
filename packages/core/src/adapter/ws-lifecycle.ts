@@ -56,6 +56,7 @@ export function wireEvents(
     // Mark closed FIRST so any in-flight `handleSubscribe` await chain bails
     // out on its next guard check before mutating per-connection state.
     ctx.closed = true;
+    ctx.session.dispose();
     unregisterPlaygroundAbort?.();
     heartbeat.stop();
     ipTracker?.release(ctx.clientIP);

@@ -24,6 +24,7 @@ import { sha256Hex } from "../../utils/sha256-hex";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
+import type { AuthorizedSubscription } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 
 /** What a client hears of a message the upstream had no room to take. */
@@ -60,6 +61,7 @@ export interface RelayTarget {
  * @param target - The channel
  * @param variables - Its validated variables
  * @param headers - What the subscription's middleware and session produced
+ * @param authorized - What the subscription was authorized as
  * @example
  * ```ts
  * startRelay(ctx, 'api.chat.room#{"room":"r1"}', { api, group: "chat", method: "room" }, { room: "r1" }, headers);
@@ -71,6 +73,7 @@ export function startRelay(
   target: RelayTarget,
   variables: unknown,
   headers: Headers,
+  authorized?: AuthorizedSubscription,
 ): void {
   const address = channelAddress(target.api, target.group, target.method, variables);
   const options = upstreamOptions(target, layerHeaders(sourceHeadersOf(target.api), headers));
@@ -123,6 +126,7 @@ export function startRelay(
   });
   ctx.topicManager.subscribe(ctx.connectionId, {
     topic,
+    authorized,
     cleanup: async () => {
       ended = true;
       unwatch?.();

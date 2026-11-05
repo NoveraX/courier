@@ -110,7 +110,9 @@ describe("a WebSocket handler's refusals in the log", () => {
     socket.receive({ type: "auth", id: "r1", payload: { auth: { token: "revoked" } } });
 
     const line = await refusalLine("credentials refused");
-    expect(line).toMatch(/credentials refused code=4401 reason="Error: token revoked" conn=\S+$/);
+    expect(line).toMatch(
+      /credentials refused code=4401 reason="Error: token revoked" conn=\S+ addr=[0-9a-f]{8}$/,
+    );
   });
 
   it("logs credentials sent again to a handler with no onReauth on one line, saying why", async () => {
@@ -121,7 +123,7 @@ describe("a WebSocket handler's refusals in the log", () => {
 
     const line = await refusalLine("credentials refused");
     expect(line).toMatch(
-      /credentials refused code=4401 reason="no onReauth checks them" conn=\S+$/,
+      /credentials refused code=4401 reason="no onReauth checks them" conn=\S+ addr=[0-9a-f]{8}$/,
     );
   });
 

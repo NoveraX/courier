@@ -15,6 +15,7 @@ function createEntry(id: string, meta: Record<string, unknown> = {}): RegistryEn
     sendRaw: vi.fn(),
     sendEncoded: vi.fn(),
     close: vi.fn(),
+    requireAuth: vi.fn(() => () => undefined),
   };
 }
 

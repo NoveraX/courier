@@ -92,7 +92,6 @@ export function createConnectionRegistry(): InternalConnectionRegistry {
       entries.set(entry.connectionId, entry);
     },
     remove(connectionId) {
-      clearTimeout(entries.get(connectionId)?.authDeadline);
       entries.delete(connectionId);
     },
     updateMeta(connectionId, meta) {

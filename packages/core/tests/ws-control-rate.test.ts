@@ -9,6 +9,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 
+import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { decodeMessage, encodeMessage, type WSMessage } from "../src/realtime/ws/ws-protocol";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
@@ -26,8 +27,11 @@ interface Client {
   received: WSMessage[];
 }
 
-async function connect(maxSubscriptionsPerConnection: number): Promise<Client> {
-  served = await serveWS({}, { maxSubscriptionsPerConnection });
+async function connect(
+  maxSubscriptionsPerConnection: number,
+  config: WSHandlerConfig = {},
+): Promise<Client> {
+  served = await serveWS({}, { maxSubscriptionsPerConnection, ...config });
   const socket = new WebSocket(served.url);
   sockets.push(socket);
   const received: WSMessage[] = [];
@@ -57,7 +61,8 @@ describe("control frames", () => {
   });
 
   it("count credentials sent again too", async () => {
-    const client = await connect(5);
+    /* Credentials sent again are checked by onReauth; without it each closes the connection. */
+    const client = await connect(5, { onReauth: () => ({}) });
 
     for (let i = 0; i < 15; i += 1) client.send({ type: "auth", payload: { auth: { token: i } } });
     await settle(100);

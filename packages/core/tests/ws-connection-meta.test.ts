@@ -4,11 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { V1_DIALECT } from "../src/adapter/ws-dialect";
 import { handleReauth } from "../src/adapter/ws-reauth";
+import { createSession } from "../src/adapter/ws-session";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
+import { createFakeSocket } from "./helpers/fake-socket";
 import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 /**
@@ -102,9 +105,10 @@ describe("a connection whose onConnect returns something other than an object", 
 });
 
 describe("credentials sent again whose onReauth returns something other than an object", () => {
-  it("is refused, and leaves the metadata as it was", async () => {
+  it("are refused, closing the connection, and leave the metadata as it was", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const sent: WSMessage[] = [];
+    const socket = createFakeSocket();
     const registry = { updateMeta: vi.fn(), getEntry: vi.fn(() => undefined) };
     const ctx = {
       connectionId: "conn-1",
@@ -114,15 +118,17 @@ describe("credentials sent again whose onReauth returns something other than an 
       onReauth: async () => "user-2",
       registry,
       refusals: createRefusalLog("WS"),
+      session: createSession(socket, V1_DIALECT),
+      middlewareTimeoutMs: 30_000,
+      clientIP: "203.0.113.7",
     } as unknown as WSSocketContext;
 
     await handleReauth(ctx, { type: "auth", id: "1", payload: { auth: { token: "fresh" } } });
 
     expect(ctx.meta).toEqual({ userId: "user-1" });
     expect(registry.updateMeta).not.toHaveBeenCalled();
-    expect(sent).toEqual([
-      { type: "error", id: "1", error: { code: 4401, message: "Credentials rejected" } },
-    ]);
+    expect(sent).toEqual([]);
+    expect(socket.closed).toMatchObject({ code: 4401, reason: "Credentials rejected" });
     expect(format(...(warn.mock.calls[0] ?? []))).toContain("onReauth returned a string");
     warn.mockRestore();
   });

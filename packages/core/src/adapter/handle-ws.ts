@@ -1,5 +1,4 @@
 import { createLogger } from "../logger";
-import { addressTag } from "../logger/address-tag";
 import { createRefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
@@ -7,11 +6,11 @@ import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { assertAllowedOrigins } from "./assert-allowed-origins";
 import type { ConnectResult } from "./connection-meta";
-import { connectionMetaOf } from "./connection-meta-of";
 import { LIMITS } from "./limits";
 import { rememberPeerAddress } from "./peer-address";
 import { admitSocket } from "./ws-admission";
-import { awaitCredentials } from "./ws-admit";
+import { admitConnection } from "./ws-admit-connection";
+import { connectionFields } from "./ws-connection-fields";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { holdFrames, type WSInbox } from "./ws-inbox";
 import { createIPTracker } from "./ws-ip-tracker";
@@ -25,11 +24,6 @@ import type { WSHandler, WSHandlerConfig } from "./ws-types";
 export type { WSSocketContext } from "./ws-context";
 
 const log = createLogger("WS");
-
-/** What names a connection in a refusal's line: its id, and a tag of its address. */
-function whoIs(ctx: WSSocketContext): { conn: string; addr: string } {
-  return { conn: ctx.connectionId, addr: addressTag(ctx.clientIP) };
-}
 
 /**
  * Create a server-side WebSocket handler for Courier endpoints.
@@ -76,23 +70,27 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
 
   function handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void {
     rememberPeerAddress(request, peerAddress);
-    const ip = admitSocket(ws, request, config, ipTracker);
-    if (ip === undefined) return;
-
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request, refusals);
-    ctx.clientIP = ip;
+    const admission = admitSocket(request, config, ipTracker);
+    if (!("ip" in admission)) {
+      ctx.session.close(admission);
+      return;
+    }
+    ctx.clientIP = admission.ip;
     /* What the client sends before its connection is admitted — who it is,
        the subscriptions it makes as its socket opens — waits for it, in order. */
-    const inbox = holdFrames(ws, ctx.maxControlPerSecond, (held) =>
-      refusals.warn({ event: "frames refused", code: 4429, fields: { ...whoIs(ctx), held } }),
-    );
+    const inbox = holdFrames(ws, ctx.maxControlPerSecond, (held) => {
+      const fields = { ...connectionFields(ctx), held };
+      refusals.warn({ event: "frames refused", code: 4429, fields });
+      ctx.session.close({ kind: "flood" });
+    });
 
     if (config.onConnect) {
       /* What fails while a connection is admitted ends that connection, never the process. */
-      initConnection(ws, inbox, ctx).catch((error: unknown) => {
+      initConnection(ws, inbox, ctx, config.onConnect).catch((error: unknown) => {
         log.error(`Connection ${ctx.connectionId} could not be admitted`, error);
         ipTracker.release(ctx.clientIP);
-        ws.close(1011, "Internal error");
+        ctx.session.close({ kind: "internal" });
       });
     } else {
       registerAndActivate(ws, inbox, ctx);
@@ -103,6 +101,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     ws: WebSocketLike,
     inbox: WSInbox,
     ctx: WSSocketContext,
+    onConnect: NonNullable<WSHandlerConfig["onConnect"]>,
   ): Promise<void> {
     /* Heard from the start, not once the connection is activated: a client
        that left while onConnect ran would otherwise keep its registry entry,
@@ -112,33 +111,19 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     ws.addEventListener("close", (event) => {
       closedWith ??= event.code;
     });
-
-    const admission = await awaitCredentials(ctx, inbox, config.authTimeoutMs ?? 3000);
-    if (closedWith !== undefined) {
-      ipTracker.release(ctx.clientIP);
+    const outcome = await admitConnection(ctx, inbox, {
+      onConnect,
+      authTimeoutMs: config.authTimeoutMs ?? 3000,
+      hookTimeoutMs: ctx.middlewareTimeoutMs,
+      left: () => closedWith !== undefined,
+    });
+    if (outcome === "admitted" && closedWith === undefined) {
+      registerAndActivate(ws, inbox, ctx);
       return;
     }
-    try {
-      if ("invalid" in admission) throw new Error("Its auth frame was not one a client sends");
-      const onConnect = config.onConnect;
-      if (onConnect) {
-        const { connectionId, request } = ctx;
-        const result = await onConnect({ connectionId, request, auth: admission.auth });
-        ctx.meta = connectionMetaOf(result, "onConnect");
-      }
-    } catch (err) {
-      refusals.warn({ event: "connection refused", code: 4401, fields: whoIs(ctx) }, err);
-      ipTracker.release(ctx.clientIP);
-      ws.close(4401, "Connection rejected");
-      return;
-    }
-
-    if (closedWith !== undefined) {
-      ipTracker.release(ctx.clientIP);
-      await notifyDisconnect(ctx, closedWith);
-      return;
-    }
-    registerAndActivate(ws, inbox, ctx);
+    ipTracker.release(ctx.clientIP);
+    ctx.session.dispose();
+    if (outcome === "admitted" && closedWith !== undefined) await notifyDisconnect(ctx, closedWith);
   }
 
   /** Let the application undo what its onConnect set up. */
@@ -151,17 +136,19 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   }
 
   function registerAndActivate(ws: WebSocketLike, inbox: WSInbox, ctx: WSSocketContext): void {
+    const { session } = ctx;
     registry.add({
       connectionId: ctx.connectionId,
       meta: ctx.meta,
       connectedAt: Date.now(),
       sendRaw: ctx.sendMessage,
       sendEncoded: ctx.sendEncoded,
-      close: (code, reason) => ws.close(code, reason),
+      close: (code, reason) => session.close({ kind: "application", code, reason }),
+      requireAuth: (timeoutMs) => session.requireAuth(timeoutMs ?? ctx.authRequiredTimeoutMs),
     });
     const hb = createHeartbeat(
       () => ctx.sendMessage({ type: "ping" }),
-      () => ws.close(4408, "Heartbeat timeout"),
+      () => session.close({ kind: "heartbeat-timeout" }),
       {
         intervalMs: config.heartbeatIntervalMs ?? 25_000,
         timeoutMs: config.heartbeatTimeoutMs ?? 10_000,

@@ -21,8 +21,8 @@ export interface WSInbox {
  * until its connection is: a client proves who it is and subscribes as soon
  * as its socket opens, and a subscription sent while `onConnect` ran was
  * lost, leaving the client connected to nothing. A socket that sends more
- * than `maxHeld` frames before then is closed with 4429, and `onOverflow`
- * is told how many it held.
+ * than `maxHeld` frames before then is let go of — nothing more it sends is
+ * kept — and `onOverflow` is told how many it held, to close it.
  *
  * @param ws - The admitted socket
  * @param maxHeld - How many frames it may send before its connection is admitted
@@ -53,9 +53,9 @@ export function holdFrames(
   function hold(raw: string): void {
     if (held === undefined) return;
     if (held.length >= maxHeld) {
-      onOverflow(held.length);
+      const count = held.length;
       held = undefined;
-      ws.close(4429, "Too many messages before the connection was accepted");
+      onOverflow(count);
       return;
     }
     held.push(raw);

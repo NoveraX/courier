@@ -10,6 +10,7 @@ import { abortableEvents } from "../../utils/abortable-events";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
+import type { AuthorizedSubscription } from "../ws-types";
 import { emitChannelMessage } from "./emit-channel-message";
 import { reportHandlerFailure } from "./report-handler-failure";
 
@@ -26,6 +27,7 @@ const log = createLogger("WS");
  * @param variables - Validated subscription variables
  * @param subscribeId - The id of the client's subscribe message, if any
  * @param responseSchema - The endpoint's response schema, which every value is held to
+ * @param authorized - What the subscription was authorized as
  */
 export function startPush(
   ctx: WSSocketContext,
@@ -34,6 +36,7 @@ export function startPush(
   variables: unknown,
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
+  authorized?: AuthorizedSubscription,
 ): void {
   const ended = new AbortController();
   const wsCtx: WSContext = {
@@ -83,6 +86,7 @@ export function startPush(
 
   ctx.topicManager.subscribe(ctx.connectionId, {
     topic,
+    authorized,
     cleanup: () => ended.abort(),
   });
 

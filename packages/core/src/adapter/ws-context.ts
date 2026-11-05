@@ -8,10 +8,12 @@ import { generateRequestId, PLAYGROUND_RID_PARAM, playgroundRidOf, studioHooks }
 import { randomId } from "../utils/random-id";
 import { LIMITS } from "./limits";
 import { servedSources } from "./served-sources";
+import { V1_DIALECT } from "./ws-dialect";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import type { RateLimitBucket } from "./ws-rate-limit";
 import { createBucket } from "./ws-rate-limit";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
+import { createSession, type WSSession } from "./ws-session";
 import type { createServerTopicManager } from "./ws-topics";
 import type { WSHandlerConfig } from "./ws-types";
 
@@ -100,6 +102,8 @@ export interface WSSocketContext {
   clientIP: string;
   /** The handler's log of refusals, which every connection of it shares */
   refusals: RefusalLog;
+  /** Where the connection's close, its dialect and its credentials' deadline are kept */
+  session: WSSession;
 }
 
 /**
@@ -147,6 +151,7 @@ export function buildContext(
     playgroundRequestId = undefined;
   }
   const subscriptionIds = new Map<string, SubscriptionTracker>();
+  const session = createSession(ws, V1_DIALECT);
   let consecutiveDrops = 0;
 
   /** Shared backpressure guard — returns true if message can be sent */
@@ -160,7 +165,7 @@ export function buildContext(
       config.onMessageDrop?.({ connectionId, topic, bufferedAmount: ws.bufferedAmount });
       if (maxConsecutiveDrops > 0 && consecutiveDrops >= maxConsecutiveDrops) {
         log.warn(`Persistent overflow — closing slow connection (conn=${connectionId})`);
-        ws.close(4008, "Slow consumer");
+        session.close({ kind: "slow-consumer" });
       }
       return false;
     }
@@ -205,5 +210,6 @@ export function buildContext(
     authRequiredTimeoutMs: config.authRequiredTimeoutMs ?? 30_000,
     clientIP: "",
     refusals,
+    session,
   };
 }

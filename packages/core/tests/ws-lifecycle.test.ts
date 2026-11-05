@@ -62,6 +62,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     maxControlPerSecond: 200,
     controlBucket: { tokens: 200, lastRefillAt: Date.now() },
     clientIP: "127.0.0.1",
+    session: { dispose: vi.fn(), close: vi.fn() },
     ...overrides,
   } as unknown as WSSocketContext;
   return { ctx, sent };

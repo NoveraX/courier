@@ -23,6 +23,7 @@ function createEntry(id: string) {
     sendRaw: vi.fn(),
     sendEncoded: vi.fn(),
     close: vi.fn(),
+    requireAuth: vi.fn(() => () => undefined),
   };
 }
 

@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { V1_DIALECT } from "../src/adapter/ws-dialect";
 import { handleReauth, sendAuthRequired } from "../src/adapter/ws-reauth";
 import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry-types";
+import { createSession } from "../src/adapter/ws-session";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSCredentials } from "../src/realtime/ws/ws-credentials";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
+import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 const HANDSHAKE = new Request("http://app.example.com/api/ws", {
@@ -17,8 +20,10 @@ const HANDSHAKE = new Request("http://app.example.com/api/ws", {
 function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
   ctx: WSSocketContext;
   sent: WSMessage[];
+  socket: FakeSocket;
 } {
   const sent: WSMessage[] = [];
+  const socket = createFakeSocket();
   const ctx = {
     connectionId: "conn-1",
     meta: { userId: "user-1" },
@@ -28,22 +33,28 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     onReauth: undefined,
     registry: { updateMeta: vi.fn(), getEntry: vi.fn(() => undefined) },
     refusals: createRefusalLog("WS"),
+    session: createSession(socket, V1_DIALECT),
+    middlewareTimeoutMs: 30_000,
+    subscribing: new Map(),
+    clientIP: "203.0.113.7",
     ...overrides,
   } as unknown as WSSocketContext;
 
-  return { ctx, sent };
+  return { ctx, sent, socket };
 }
 
 describe("handleReauth", () => {
-  it("refuses credentials when no onReauth can check them, and leaves meta alone", async () => {
+  it("closes the connection at once when no onReauth can check credentials, and leaves meta alone", async () => {
     const output = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { ctx, sent } = createMockCtx();
+    const { ctx, sent, socket } = createMockCtx();
     await handleReauth(ctx, { type: "auth", id: "1", payload: { auth: { token: "new-jwt" } } });
 
     expect(ctx.meta).toEqual({ userId: "user-1" });
-    expect(sent).toEqual([
-      { type: "error", id: "1", error: { code: 4401, message: "Credentials rejected" } },
-    ]);
+    expect(sent).toEqual([]);
+    expect(socket.closed).toMatchObject({
+      code: 4401,
+      reason: "Credentials cannot be renewed on this connection",
+    });
     expect(output.mock.calls.some((call) => String(call[1]).includes("no onReauth"))).toBe(true);
     output.mockRestore();
   });
@@ -131,19 +142,19 @@ describe("handleReauth", () => {
     expect(sent).toHaveLength(0);
   });
 
-  it("sends 4401 and does not update meta when handler throws", async () => {
+  it("closes with 4401 at once, and does not update meta, when onReauth throws", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const onReauth = vi.fn().mockRejectedValue(new Error("expired"));
     const updateMeta = vi.fn();
-    const { ctx, sent } = createMockCtx({
+    const { ctx, sent, socket } = createMockCtx({
       onReauth,
       registry: { updateMeta } as unknown as InternalConnectionRegistry,
     });
 
     await handleReauth(ctx, { type: "auth", id: "3", payload: { auth: { token: "bad-jwt" } } });
 
-    expect(sent).toHaveLength(1);
-    expect(sent[0]!.error?.code).toBe(4401);
+    expect(sent).toEqual([]);
+    expect(socket.closed).toMatchObject({ code: 4401, reason: "Credentials rejected" });
     expect(updateMeta).not.toHaveBeenCalled();
   });
 
@@ -157,68 +168,31 @@ describe("handleReauth", () => {
 });
 
 describe("sendAuthRequired", () => {
-  it("sends auth_required to connection", () => {
-    const sendRaw = vi.fn();
-    const close = vi.fn();
-    const entry: RegistryEntry = {
-      connectionId: "c1",
-      meta: {},
-      connectedAt: 0,
-      sendRaw,
-      sendEncoded: vi.fn(),
-      close,
-    };
+  it("asks the connection's own session, with the deadline given", () => {
+    const requireAuth = vi.fn(() => () => undefined);
+    const entry = { requireAuth } as unknown as RegistryEntry;
     const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
 
-    sendAuthRequired(registry, "c1", 0);
+    const cancel = sendAuthRequired(registry, "c1", 5_000);
 
-    expect(sendRaw).toHaveBeenCalledOnce();
-    const msg = sendRaw.mock.calls[0]![0] as WSMessage;
-    expect(msg.type).toBe("auth_required");
+    expect(requireAuth).toHaveBeenCalledWith(5_000);
+    expect(cancel).toBeTypeOf("function");
   });
 
-  it("returns undefined for unknown connection", () => {
+  it("leaves the deadline to the handler's authRequiredTimeoutMs when it names none", () => {
+    const requireAuth = vi.fn(() => () => undefined);
+    const entry = { requireAuth } as unknown as RegistryEntry;
+    const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
+
+    sendAuthRequired(registry, "c1");
+
+    expect(requireAuth).toHaveBeenCalledWith(undefined);
+  });
+
+  it("returns undefined for a connection this replica does not hold", () => {
     const registry = { getEntry: vi.fn(() => undefined) } as unknown as InternalConnectionRegistry;
-    const result = sendAuthRequired(registry, "unknown");
-    expect(result).toBeUndefined();
-  });
 
-  it("disconnects after timeout if no refresh", async () => {
-    const close = vi.fn();
-    const entry: RegistryEntry = {
-      connectionId: "c1",
-      meta: {},
-      connectedAt: 0,
-      sendRaw: vi.fn(),
-      sendEncoded: vi.fn(),
-      close,
-    };
-    const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
-
-    const cancel = sendAuthRequired(registry, "c1", 50);
-    expect(cancel).toBeDefined();
-
-    await new Promise((r) => setTimeout(r, 80));
-    expect(close).toHaveBeenCalledWith(4401, "Auth timeout — credentials not sent again");
-  });
-
-  it("cancel function prevents timeout disconnect", async () => {
-    const close = vi.fn();
-    const entry: RegistryEntry = {
-      connectionId: "c1",
-      meta: {},
-      connectedAt: 0,
-      sendRaw: vi.fn(),
-      sendEncoded: vi.fn(),
-      close,
-    };
-    const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
-
-    const cancel = sendAuthRequired(registry, "c1", 50);
-    cancel!();
-
-    await new Promise((r) => setTimeout(r, 80));
-    expect(close).not.toHaveBeenCalled();
+    expect(sendAuthRequired(registry, "unknown")).toBeUndefined();
   });
 });
 
@@ -281,7 +255,7 @@ describe("credentials the server asks a connected client for again", () => {
     expect(client?.status).toBe("disconnected");
   });
 
-  it("closes the connection at the deadline when no onReauth can accept them", async () => {
+  it("closes the connection as soon as the credentials come, when no onReauth can accept them", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     served = await serveWS({}, {});
     const connectionId = await connect(() => ({ frame: { auth: { token: "any" } } }));

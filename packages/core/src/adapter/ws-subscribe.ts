@@ -122,11 +122,13 @@ async function openSubscription(
     ctx.sendMessage({ type: "renamed", id: msg.id, topic, payload: subscribedTopic });
   }
   const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
+  const { source, group, method } = resolved;
+  const authorized = { source, group, method, variables };
 
   try {
     if (!resolved.served) {
       const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
-      startRelay(ctx, subscribedTopic, target, variables, headers);
+      startRelay(ctx, subscribedTopic, target, variables, headers, authorized);
     } else if (isChannelSchema(resolved.schema)) {
       await startChannel(
         ctx,
@@ -135,6 +137,7 @@ async function openSubscription(
         variables,
         msg.id,
         resolved.schema.response,
+        authorized,
       );
     } else {
       startPush(
@@ -144,6 +147,7 @@ async function openSubscription(
         variables,
         msg.id,
         resolved.schema.response,
+        authorized,
       );
     }
   } catch (error) {

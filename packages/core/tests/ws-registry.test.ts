@@ -11,6 +11,7 @@ function createEntry(id: string, meta: Record<string, unknown> = {}) {
     sendRaw: vi.fn(),
     sendEncoded: vi.fn(),
     close: vi.fn(),
+    requireAuth: vi.fn(() => () => undefined),
   };
 }
 

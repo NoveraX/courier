@@ -55,7 +55,12 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   maxSubscriptionsPerConnection?: number | undefined;
   /** Max inbound message size in bytes (default 65536 = 64KB) */
   maxMessageSize?: number | undefined;
-  /** Middleware execution timeout in ms (default 30000) */
+  /**
+   * How long a hook may take, in ms (default 30000): a subscription's
+   * middleware and `authorize`, and `onConnect` and `onReauth`. A connection
+   * whose `onConnect` has not settled by then is closed with 1011, which a
+   * client retries; one whose `onReauth` has not, with 4401.
+   */
   middlewareTimeoutMs?: number | undefined;
   /** Max inbound messages per second per connection — token bucket (default 100) */
   maxMessagesPerSecond?: number | undefined;
@@ -85,9 +90,11 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * `request` is the upgrade request, with the headers of the client's
    * `auth` frame a browser could not put on it — an `Authorization`, an API
    * key — and `auth` is the client's `ws.auth`. Return the connection's
-   * metadata — an object — or nothing, or throw to refuse the connection: it
-   * is closed with 4401 "Connection rejected", and what was thrown is logged,
-   * never sent. What it returns types `meta` in the hooks written after it.
+   * metadata — an object — or nothing, or throw to refuse the connection: a
+   * `RealtimeError` closes it with its own code and message (`ForbiddenError`
+   * with 4403), anything else with 4401 "Connection rejected", what was
+   * thrown logged on one line and never sent. What it returns types `meta` in
+   * the hooks written after it.
    */
   onConnect?:
     | ((info: {
@@ -127,9 +134,12 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * Checks the credentials a client sends again on its open connection, as
    * `sendAuthRequired` asks it to — `request` and `auth` as `onConnect`
    * reads them, with the new frame's headers. Return the connection's new
-   * metadata, or throw to refuse them. Refused credentials — and every
-   * frame, when this is not set — leave the deadline `sendAuthRequired`
-   * set, so the connection is closed at it.
+   * metadata, or throw to refuse them. Refused credentials close the
+   * connection at once with 4401 — and so do any sent again when this is not
+   * set, as nothing could check them. Taken, they lift the deadline
+   * `sendAuthRequired` set, and when who the connection is changed, each of
+   * its subscriptions is authorized again: one `authorize` now refuses ends
+   * with 4403.
    */
   onReauth?:
     | ((info: {
@@ -148,14 +158,28 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
         payload: unknown;
       }) => boolean | Promise<boolean>)
     | undefined;
-  /** Timeout in ms for the credentials asked for with auth_required (default 30000) */
+  /**
+   * How long a client has to send its credentials again, once
+   * `sendAuthRequired` asked for them without naming a deadline of its own,
+   * before the connection is closed with 4401 (default 30000).
+   */
   authRequiredTimeoutMs?: number | undefined;
+}
+
+/** What a subscription was authorized as: its endpoint and the variables it was made with. */
+export interface AuthorizedSubscription {
+  readonly source: string;
+  readonly group?: string | undefined;
+  readonly method: string;
+  readonly variables: unknown;
 }
 
 /** Active subscription entry tracked per connection */
 export interface WSSubscriptionEntry {
   /** Topic string (e.g. "chat.messages") */
   topic: string;
+  /** What it was authorized as, so it is authorized again once who the connection is changes */
+  authorized?: AuthorizedSubscription | undefined;
   /** Cleanup function — calls onLeave or cancels generator */
   cleanup: () => void | Promise<void>;
   /** Channel message handler — called on incoming "message" for this topic */

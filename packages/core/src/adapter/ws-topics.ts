@@ -21,6 +21,8 @@ export interface ServerTopicManager {
   has(connectionId: string, topic: string): boolean;
   /** Get subscription entry for a connection + topic */
   get(connectionId: string, topic: string): WSSubscriptionEntry | undefined;
+  /** The subscriptions a connection holds, as they are now */
+  entriesOf(connectionId: string): WSSubscriptionEntry[];
   /** Number of topics a connection is subscribed to */
   topicCount(connectionId: string): number;
   /** Get all connection IDs subscribed to a topic — O(1) via reverse index. Returns ReadonlySet (zero-copy). */
@@ -138,6 +140,10 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     return [...topicIndex.keys()];
   }
 
+  function entriesOf(connectionId: string): WSSubscriptionEntry[] {
+    return [...(connections.get(connectionId)?.values() ?? [])];
+  }
+
   function topicCount(connectionId: string): number {
     return connections.get(connectionId)?.size ?? 0;
   }
@@ -152,6 +158,7 @@ export function createServerTopicManager(hooks?: TopicManagerHooks): ServerTopic
     disconnectAll,
     has,
     get,
+    entriesOf,
     topicCount,
     subscribers,
     allTopics,

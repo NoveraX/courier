@@ -1,3 +1,7 @@
+/* Marked as server code, as a Next app's API modules often are: Courier's plugin reads it
+   while next build and next dev run, as Next's own server layers do. */
+import "server-only";
+
 import { courier, defineApi } from "@noverax/courier/define";
 
 import { API_URL } from "./api-url";

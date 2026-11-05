@@ -8,12 +8,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ConfigurationError } from "../src/errors/configuration-error";
 import { ChannelHandle } from "../src/realtime/channel-handle";
-import { ConnectionError } from "../src/realtime/errors";
+import { ConnectionError, ForbiddenError, RealtimeError } from "../src/realtime/errors";
+import { isFinalError } from "../src/realtime/final-errors";
 import type { SubscriptionSink } from "../src/realtime/subscription-driver";
 import { SubscriptionHandle } from "../src/realtime/subscription-handle";
 import type { ConnectionStatus } from "../src/realtime/types";
 import { lazySSEFactory, lazyWSChannelFactory } from "../src/transport/lazy-streams";
-import { MAX_WAITING } from "../src/transport/lazy-subscription";
+import { lazyChannel, MAX_WAITING } from "../src/transport/lazy-subscription";
 import type { SSEFactory, WSChannelFactory } from "../src/transport/types";
 
 /* A subscription the test runs by hand: what it is told, the test tells it. */
@@ -275,3 +276,51 @@ describe("what a subscription is before its client loads", () => {
     logged.mockRestore();
   });
 });
+
+describe("the error a channel whose client loads ends on", () => {
+  it("is final as the loaded channel tells it, and one the channel goes on after is not", async () => {
+    const loading = deferred<ChannelHandle<unknown, unknown>>();
+    const lazy = lazyChannel(loading.promise);
+    const finals: Array<[number, boolean]> = [];
+    lazy.on("error", (error) => finals.push([error.code, isFinalError(error)]));
+    const { handle, sink } = scriptedChannel();
+
+    loading.resolve(handle);
+    await loading.promise;
+    sink().error(new RealtimeError(4422, "Invalid message"));
+    sink().end(new ForbiddenError("Not a member"));
+
+    expect(finals).toEqual([
+      [4422, false],
+      [4403, true],
+    ]);
+  });
+
+  it("is final when the client cannot be loaded", async () => {
+    const lazy = lazyChannel(Promise.reject(new Error("chunk missing")));
+    const finals: Array<[RealtimeError, boolean]> = [];
+    lazy.on("error", (error) => finals.push([error, isFinalError(error)]));
+
+    await expect.poll(() => finals).toEqual([[expect.any(ConnectionError), true]]);
+  });
+});
+
+/* A channel the test tells what its server says. */
+function scriptedChannel() {
+  let opened: SubscriptionSink<unknown> | undefined;
+  const handle = new ChannelHandle<unknown, unknown>(
+    {
+      open: (to) => {
+        opened = to;
+      },
+      reconnect: () => undefined,
+      close: () => undefined,
+    },
+    () => true,
+  );
+  const sink = (): SubscriptionSink<unknown> => {
+    if (!opened) throw new Error("not opened");
+    return opened;
+  };
+  return { handle, sink };
+}

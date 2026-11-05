@@ -27,7 +27,7 @@ import {
 } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import type { RealtimeError } from "../src/realtime/errors";
+import { ForbiddenError, type RealtimeError } from "../src/realtime/errors";
 import type { Subscription } from "../src/realtime/subscription-types";
 import { studioHooks } from "../src/studio";
 import type { StreamStatusEvent } from "../src/studio/hooks-stream";
@@ -314,6 +314,8 @@ async function channelServer(config?: WSHandlerConfig): Promise<string> {
               },
               onMessage(ctx, message) {
                 if (message.text === "bye") return ctx.close(4000, "Room closed");
+                if (message.text === "done") return ctx.close();
+                if (message.text === "boom") throw new ForbiddenError("Not in this room");
                 ctx.send({ text: `echo ${message.text}` });
               },
             })),
@@ -338,6 +340,24 @@ async function serveChannels(
   });
   closers.push(() => handler.destroy());
   return listen(server);
+}
+
+/** A client's room, relayed by a proxy to the server that serves it, and what it heard. */
+async function relayedRoom() {
+  const api = relayedChat(await channelServer());
+  const proxy = await serveChannels({ chat: api }, "/api/ws");
+  const caller = createProxyCaller(routesOf(api, "chat"), {
+    proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
+  });
+  const room = caller.live.room({ room: "r1" });
+  const heard: string[] = [];
+  const errors: Array<[number, string]> = [];
+  const closes: string[] = [];
+  room.on("data", (line) => heard.push(line.text));
+  room.on("error", (error) => errors.push([error.code, error.message]));
+  room.on("close", (info) => closes.push(info.reason));
+  await expect.poll(() => heard, { timeout: 2_000 }).toEqual(["welcome to r1"]);
+  return { room, heard, errors, closes };
 }
 
 function relayedChat(upstreamOrigin: string) {
@@ -431,6 +451,37 @@ describe("a channel another server serves, through the proxy", () => {
       failures: 1,
       cause: await refusedSocketCause(),
     });
+  });
+
+  it("ends the client's subscription once, with the error the upstream failed it with", async () => {
+    const { room, errors, closes } = await relayedRoom();
+
+    room.send({ text: "bye" });
+
+    await expect.poll(() => closes, { timeout: 2_000 }).toEqual(["failed"]);
+    expect(errors).toEqual([[4000, "Room closed"]]);
+  });
+
+  it("tells the client an error the upstream goes on after, and keeps its subscription", async () => {
+    const { room, heard, errors, closes } = await relayedRoom();
+
+    room.send({ text: "boom" });
+    await expect.poll(() => errors, { timeout: 2_000 }).toEqual([[4403, "Not in this room"]]);
+    room.send({ text: "still here" });
+
+    await expect
+      .poll(() => heard, { timeout: 2_000 })
+      .toEqual(["welcome to r1", "echo still here"]);
+    expect(closes).toEqual([]);
+  });
+
+  it("completes the client's subscription as the upstream completes it", async () => {
+    const { room, errors, closes } = await relayedRoom();
+
+    room.send({ text: "done" });
+
+    await expect.poll(() => closes, { timeout: 2_000 }).toEqual(["completed"]);
+    expect(errors).toEqual([]);
   });
 
   it("ends the client's subscription with why the upstream refused its connection", async () => {

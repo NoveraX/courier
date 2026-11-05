@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfigurationError } from "../src/errors/configuration-error";
 import { ChannelHandle } from "../src/realtime/channel-handle";
 import { ConnectionError, ForbiddenError, RealtimeError } from "../src/realtime/errors";
+import { isFinalError } from "../src/realtime/final-errors";
 import { observeData } from "../src/realtime/observe-data";
 import type { SubscriptionDriver, SubscriptionSink } from "../src/realtime/subscription-driver";
 import { SubscriptionHandle } from "../src/realtime/subscription-handle";
@@ -174,6 +175,48 @@ describe("a subscription's events", () => {
     sink().data({ data: 2 });
 
     expect(data).toEqual([1]);
+  });
+});
+
+describe("the error a subscription ends on", () => {
+  it("is final as its listeners hear it, and one the subscription goes on after is not", () => {
+    const { subscription, sink } = played();
+    sink().open({ resumed: false });
+    const told = heard(subscription);
+    const finals: Array<[number, boolean]> = [];
+    subscription.on("error", (error) => finals.push([error.code, isFinalError(error)]));
+
+    sink().error(new RealtimeError(4422, "Invalid message"));
+    sink().end(new ForbiddenError("Not a member"));
+
+    expect(finals).toEqual([
+      [4422, false],
+      [4403, true],
+    ]);
+    expect(told).toEqual(["error 4422", "error 4403", "status disconnected", "close failed"]);
+  });
+
+  it("is final when the subscription ended on it while it was being made", async () => {
+    const subscription = new SubscriptionHandle<unknown>({
+      open: (sink) => sink.end(new ForbiddenError("Not a member")),
+      reconnect: () => undefined,
+      close: () => undefined,
+    });
+    const finals: boolean[] = [];
+    subscription.on("error", (error) => finals.push(isFinalError(error)));
+    await Promise.resolve();
+
+    expect(finals).toEqual([true]);
+  });
+
+  it("is final as the connection error its listeners hear, when what ended it was another error", () => {
+    const { subscription, sink } = played();
+    const finals: Array<[unknown, boolean]> = [];
+    subscription.on("error", (error) => finals.push([error, isFinalError(error)]));
+
+    sink().end(new Error("socket gone"));
+
+    expect(finals).toEqual([[expect.any(ConnectionError), true]]);
   });
 });
 

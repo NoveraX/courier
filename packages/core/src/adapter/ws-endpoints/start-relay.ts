@@ -7,6 +7,7 @@
 
 import { describeFailure } from "../../realtime/describe-failure";
 import type { RealtimeError } from "../../realtime/errors";
+import { isFinalError } from "../../realtime/final-errors";
 import { WS_CODE } from "../../realtime/ws/ws-codes";
 import { credentialsFor } from "../../realtime/ws/ws-credentials";
 import type { WSConnectionConfig } from "../../realtime/ws/ws-types";
@@ -115,19 +116,15 @@ export function startRelay(
   /* An error the upstream reports while it takes a message — one too large —
      reaches the client on its own, so the message's drop is not told twice. */
   let refusedWhileSending = false;
-  /* The error the upstream ends a subscription with comes just before the
-     channel reports itself disconnected. */
+  /* The upstream marks the error it ended its subscription on: that one the
+     close carries, as the client's end; any other reaches the client as an
+     error of its own. */
   upstream.on("error", (error) => {
     refusedWhileSending = true;
-    queueMicrotask(() => {
-      if (upstream.status === "disconnected") end(error);
-      else if (!ended)
-        ctx.sendMessage({ type: "error", topic, error: describeFailure(error, "Upstream error") });
-    });
+    if (ended || isFinalError(error)) return;
+    ctx.sendMessage({ type: "error", topic, error: describeFailure(error, "Upstream error") });
   });
-  upstream.on("status", (status) => {
-    if (status === "disconnected") queueMicrotask(() => end());
-  });
+  upstream.on("close", (info) => end(info.reason === "failed" ? info.error : undefined));
   ctx.topicManager.subscribe(ctx.connectionId, {
     topic,
     authorized,

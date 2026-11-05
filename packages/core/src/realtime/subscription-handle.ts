@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { ConnectionError, RealtimeError } from "./errors";
+import { markFinal } from "./final-errors";
 import { OBSERVE_DATA, type ObservableChannel } from "./observe-data";
 import { shareRetry } from "./retry-of";
 import { DEFAULT_MAX_BUFFER_SIZE } from "./sse/event-queue";
@@ -149,7 +150,10 @@ export class SubscriptionHandle<TData> implements Subscription<TData>, Observabl
     /* Listeners hear a RealtimeError; the loop rejects with the error as it came. */
     const failure =
       error && (error instanceof RealtimeError ? error : new ConnectionError(error.message));
-    if (failure) this.#emit("error", failure);
+    if (failure) {
+      markFinal(failure);
+      this.#emit("error", failure);
+    }
     if (generation !== this.#generation) return;
     this.#setStatus("disconnected");
     if (generation !== this.#generation) return;

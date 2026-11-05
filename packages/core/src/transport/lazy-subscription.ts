@@ -1,5 +1,6 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { createLogger } from "../logger";
+import { markFinal } from "../realtime/final-errors";
 import { ConnectionError, RealtimeError } from "../realtime/realtime-error";
 import { retryOf, shareRetry } from "../realtime/retry-of";
 import type { Subscription, SubscriptionEvent, WSChannel } from "../realtime/subscription-types";
@@ -69,9 +70,12 @@ function lazyOf(opening: Promise<Subscription<unknown>>, sends?: boolean): Lazy 
       }
     }
   };
-  /* What ended before the real one came: a close, or `error`. */
+  /* What ended before the real one came: a close, or `error` — the one it ends on. */
   const end = (error?: RealtimeError): void => {
-    if (error) tell("error", error);
+    if (error) {
+      markFinal(error);
+      tell("error", error);
+    }
     tell("status", "disconnected");
     tell("close", error ? { reason: "failed", error } : { reason: "closed" });
   };

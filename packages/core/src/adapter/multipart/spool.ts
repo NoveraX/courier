@@ -4,6 +4,7 @@ import { createLogger } from "../../logger";
 import { BodyError } from "../body-error";
 import type { NodeDisk } from "./node-disk";
 import { DEFAULT_PART_TYPE } from "./part-headers";
+import { folderPrefix, sweepOnce } from "./stale-uploads";
 
 const log = createLogger("Proxy");
 
@@ -31,7 +32,9 @@ export interface SpoolFile {
  * when the first file needs it, with a name no one can guess, readable by
  * this process's user alone, each file in it written once, under a number
  * rather than the name a client sent, and the whole of it removed once the
- * call is done — or when the process exits, for one left behind.
+ * call is done — or when the process exits, for one left behind. A process
+ * stopped by a signal it does not handle runs no exit handler: what it left
+ * the next process on the host removes as it makes its first folder there.
  *
  * Windows lets a file go only once every reader has closed it: an upstream
  * still reading a file as the call ends holds it a moment longer, and the
@@ -40,12 +43,14 @@ export interface SpoolFile {
 export class Spool {
   readonly #disk: NodeDisk;
   readonly #parent: string;
+  readonly #staleAfterMs: number;
   #folder: string | undefined;
   #count = 0;
 
-  constructor(disk: NodeDisk, parent: string) {
+  constructor(disk: NodeDisk, parent: string, staleAfterMs: number) {
     this.#disk = disk;
     this.#parent = parent;
+    this.#staleAfterMs = staleAfterMs;
   }
 
   /**
@@ -57,8 +62,9 @@ export class Spool {
    */
   async create(): Promise<SpoolFile | undefined> {
     const { fs, path } = this.#disk;
+    sweepOnce(this.#disk, this.#parent, this.#staleAfterMs);
     try {
-      this.#folder ??= await fs.promises.mkdtemp(path.join(this.#parent, "courier-upload-"));
+      this.#folder ??= await fs.promises.mkdtemp(path.join(this.#parent, folderPrefix(this.#disk)));
     } catch (error) {
       if (!NO_FOLDER.has(codeOf(error))) throw stored(error);
       tellNoFolder(this.#parent, error);

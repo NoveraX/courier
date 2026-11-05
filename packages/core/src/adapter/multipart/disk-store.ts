@@ -1,3 +1,4 @@
+import { LIMITS } from "../limits";
 import type { FileStore } from "./file-store";
 import { GatheredFile } from "./gathered-file";
 import type { MultipartPart } from "./multipart-parts";
@@ -14,6 +15,8 @@ export interface DiskStoreOptions {
   memoryBytes: number;
   /** The size of a file's first slab in memory */
   slabBytes: number;
+  /** How old a folder a gone process left must be for it to be removed; the body's timeout unless given */
+  staleAfterMs?: number | undefined;
 }
 
 /**
@@ -38,7 +41,11 @@ export interface DiskStoreOptions {
  * ```
  */
 export function diskStore(options: DiskStoreOptions): FileStore {
-  const spool = new Spool(options.disk, options.directory);
+  const spool = new Spool(
+    options.disk,
+    options.directory,
+    options.staleAfterMs ?? LIMITS.BODY_TIMEOUT_MS,
+  );
   let inMemory = 0;
   let toDisk = true;
 

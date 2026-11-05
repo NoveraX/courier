@@ -138,5 +138,6 @@ function storeFor(config: HandlerConfig | undefined): FileStore {
     directory: config?.uploadDirectory ?? disk.os.tmpdir(),
     memoryBytes: config?.uploadMemoryBytes ?? LIMITS.UPLOAD_MEMORY_BYTES,
     slabBytes: LIMITS.UPLOAD_SLAB_BYTES,
+    staleAfterMs: config?.bodyTimeoutMs ?? LIMITS.BODY_TIMEOUT_MS,
   });
 }

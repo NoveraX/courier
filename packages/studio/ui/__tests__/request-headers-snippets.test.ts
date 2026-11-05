@@ -141,7 +141,10 @@ describe("a request written out", () => {
     expect(requestSnippet(sse, "shell").code).toBe(
       "curl -N \\\n  'http://localhost:5173/api/events' \\\n  -H 'accept: text/event-stream'",
     );
-    expect(requestSnippet(ws, "shell").code).toBe("websocat \\\n  'ws://localhost:5173/ws'");
+    const websocat = requestSnippet(ws, "shell").code;
+    expect(websocat).toContain(`'{"type":"auth","v":2,"id":"a1","payload":{}}'`);
+    expect(websocat).toContain(`'{"type":"subscribe","id":"s1","topic":"api.users.room"}'`);
+    expect(websocat).toContain("} | websocat \\\n  'ws://localhost:5173/ws'");
     expect(requestSnippet(sse, "browser").code).toContain(
       'new EventSource("http://localhost:5173/api/events")',
     );

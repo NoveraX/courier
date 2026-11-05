@@ -5,6 +5,7 @@ import { courierArgs } from "./courier-args";
 import { deliverySnippet } from "./delivery-snippet";
 import { requestBodyFile } from "./request-body-file";
 import { httpMethodOf } from "./request-parts";
+import { wsBrowserSnippet, wsShellSnippet } from "./ws-snippets";
 
 /** The ways a request can be written out: a shell command, browser code, a Courier call. */
 export type SnippetFlavor = "shell" | "browser" | "courier";
@@ -88,15 +89,13 @@ function courierCall(r: SnippetRequest): string {
 }
 
 function streamShell(r: SnippetRequest, url: string, headers: Record<string, string>): string {
+  if (r.transport === "ws") return wsShellSnippet(r, url, headers);
   const flags = Object.entries(headers).map(([k, v]) => `-H '${k}: ${v}'`);
-  if (r.transport === "ws") return ["websocat", `'${url}'`, ...flags].join(" \\\n  ");
   return ["curl -N", `'${url}'`, "-H 'accept: text/event-stream'", ...flags].join(" \\\n  ");
 }
 
-function streamBrowser(r: SnippetRequest, url: string): string {
-  if (r.transport === "ws") {
-    return `const socket = new WebSocket("${url}");\n\nsocket.onmessage = (event) => console.log(JSON.parse(event.data));`;
-  }
+function streamBrowser(r: SnippetRequest, url: string, headers: Record<string, string>): string {
+  if (r.transport === "ws") return wsBrowserSnippet(r, url, headers);
   const named = r.streamEvents?.find((e) => e.eventType && e.eventType !== "data")?.eventType;
   const listen = named
     ? `events.addEventListener("${named}", (event) => console.log(JSON.parse(event.data)));`
@@ -133,9 +132,9 @@ export function requestSnippet(
     };
   }
   if (r.transport === "sse" || r.transport === "ws") {
-    return flavor === "shell"
-      ? { code: streamShell(r, url, headers), redacted }
-      : { code: streamBrowser(r, url), redacted: false };
+    /* A page's EventSource takes no headers; its socket carries them in its first frame. */
+    if (flavor === "shell") return { code: streamShell(r, url, headers), redacted };
+    return { code: streamBrowser(r, url, headers), redacted: r.transport === "ws" && redacted };
   }
   const input = {
     url,

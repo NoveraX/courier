@@ -92,6 +92,7 @@ export function safeStringify(value: unknown, indent = 0): string {
   }
 }
 
-function shellEscape(s: string): string {
+/** A string as it goes between single quotes in a shell command: each quote closed, escaped and opened again. */
+export function shellEscape(s: string): string {
   return s.replace(/'/g, "'\\''");
 }

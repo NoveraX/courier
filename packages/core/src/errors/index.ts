@@ -1,3 +1,4 @@
+export { AbortError, type AbortErrorCode, isAbortError } from "./abort-error";
 export {
   ConfigurationError,
   type ConfigurationErrorCode,

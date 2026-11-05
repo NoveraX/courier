@@ -1,4 +1,4 @@
-export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-10-28" }
+export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-11-05" }
 
 ## Overview
 
@@ -78,7 +78,7 @@ export const users = defineGroup({
 })
 ```
 
-The cancelled call rejects with an `HTTPError` of status `499`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out while `coalesce` is on, as it is by default. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it. A call holds its endpoint from the moment it starts until it settles, its retries and the waits between them included: a newer call cancels an older one still getting ready to send, or waiting to try again, at once, and that call never sends.
+The cancelled call rejects with an `AbortError` whose `code` is `"SUPERSEDED"`; the newer one proceeds. A newer call identical to the one it cancels — the same search typed again — is answered by the request already in flight, so no second request goes out while `coalesce` is on, as it is by default. A middleware sees the error as it would any other, and the [retry middleware](/docs/middleware/built-in) never retries it. A call holds its endpoint from the moment it starts until it settles, its retries and the waits between them included: a newer call cancels an older one still getting ready to send, or waiting to try again, at once, and that call never sends.
 
 ### Where to turn it on
 
@@ -128,7 +128,7 @@ A cancelled call is no failure the user needs to hear about:
 ```tsx title="components/search-users.tsx"
 "use client"
 
-import { isHTTPError } from "@noverax/courier"
+import { isAbortError } from "@noverax/courier"
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
@@ -143,7 +143,7 @@ export function SearchUsers() {
       // users.search is marked .cancelPrevious(): each keystroke cancels the search still in flight
       setUsers(await caller.users.search({ q }))
     } catch (error) {
-      if (isHTTPError(error) && error.status === 499) return // superseded by a newer search
+      if (isAbortError(error)) return // superseded by a newer search
       console.error("Search failed:", error)
     }
   }
@@ -164,6 +164,7 @@ Pass a `signal` with the call. It works on any call, alongside both of the above
 ```tsx title="components/cancellable-report.tsx"
 "use client"
 
+import { isAbortError } from "@noverax/courier"
 import { useEffect, useRef } from "react"
 
 import { caller } from "@/lib/caller"
@@ -181,7 +182,7 @@ export function CancellableReport() {
         .generate({ type: "monthly" })
       console.log("Report:", report)
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return
+      if (isAbortError(error)) return
       throw error
     }
   }
@@ -197,7 +198,7 @@ export function CancellableReport() {
 }
 ```
 
-A call aborted through your signal rejects with the reason you gave, as `fetch` does: a `DOMException` named `AbortError` unless you passed another. On a call whose `cancelPrevious` is on, the call stops at whichever comes first — your signal, or a newer call.
+A call aborted through your signal rejects with Courier's `AbortError`, whose `code` is `"ABORTED"` and whose `cause` is the reason you gave — the platform's `DOMException` named `AbortError` when you gave none — wherever the call was: before its request left, while it was out, while its answer was read, or while a middleware held it between attempts. A call a newer one superseded rejects the same way, with `code` `"SUPERSEDED"`. On a call whose `cancelPrevious` is on, the call stops at whichever comes first — your signal, or a newer call. A cancellation is no failure: `onError` is not told of it, and no retry repeats it. A retry policy's `deadline` that runs out is a `TimeoutError` instead, as it is a failure.
 
 ## Next steps
 

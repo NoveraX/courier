@@ -3,7 +3,7 @@ import { discoverAppOrigin } from "./discover-app-origin";
 import { createLogger } from "./logger";
 import { addressedTo } from "./node-origin";
 import { serverOriginOf } from "./socket-origin";
-import { isAbortError } from "./utils/abort";
+import { isCancellation } from "./utils/abort";
 import { defineOwn } from "./utils/define-own";
 
 const log = createLogger("Node");
@@ -187,6 +187,6 @@ function joinedVary(varied: number | string | readonly string[], own: string | n
  * else may be a body still running for nobody.
  */
 function noteUnstoppedBody(error: unknown): void {
-  if (isAbortError(error)) log.debug("The response body had already stopped", error);
+  if (isCancellation(error)) log.debug("The response body had already stopped", error);
   else log.warn("Could not stop the response body", error);
 }

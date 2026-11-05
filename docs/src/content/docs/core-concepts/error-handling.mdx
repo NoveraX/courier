@@ -10,7 +10,9 @@ A call that got no successful answer rejects with one of three errors, told apar
 | `NetworkError` | No answer came: a host that does not resolve, a connection refused or dropped, a certificate refused | `systemCode` — `ECONNREFUSED`, `ENOTFOUND`, … where the platform gave one — and the platform's error as `cause` |
 | `TimeoutError` | The time ran out: the request's `timeout`, or a retry policy's `deadline` | `scope` — `"attempt"` or `"deadline"` — and `timeout` in ms |
 
-Each extends Courier's `CourierError`, itself an `Error`, with a stable `code`: `"HTTP_ERROR"`, `"NETWORK_ERROR"` or `"TIMEOUT"`. `isRequestFailure()` is true for all three, and the type `RequestFailure` names them together — what a caller's `onError` receives. See [NetworkError & TimeoutError](/docs/api/call-errors).
+Each extends Courier's `CourierError`, itself an `Error`, with a stable `code`: `"HTTP_ERROR"`, `"NETWORK_ERROR"` or `"TIMEOUT"`. `isRequestFailure()` is true for all three, and the type `RequestFailure` names them together — what a caller's `onError` receives. See [NetworkError, TimeoutError & AbortError](/docs/api/call-errors).
+
+A call that was cancelled rejects with an `AbortError` instead, which is no failure: `code` `"ABORTED"` when its signal aborted, the reason it was given as `cause`, and `"SUPERSEDED"` when a newer call of its endpoint took its place. `isAbortError()` tells it apart; `onError` is not told of it.
 
 ## The HTTPError Class
 
@@ -232,13 +234,14 @@ if (isTimeoutError(error)) {
 }
 
 // 4. Cancellation
-// A call cancelled through your own signal rejects with the reason you
-// gave, as fetch does: a DOMException named "AbortError" by default.
-// This holds while the answer's body is still being read, too.
-// A read cancelled by a newer call of its endpoint — cancelPrevious on
-// for both — rejects with HTTPError status 499.
-if (isHTTPError(error) && error.status === 499) {
-  // Superseded by a newer read of the same endpoint
+// A call cancelled through your own signal rejects with an AbortError,
+// code "ABORTED", the reason you gave as its cause — the platform's
+// DOMException when you gave none. This holds while the answer's body is
+// still being read, too. A read a newer call of its endpoint superseded —
+// cancelPrevious on for both — rejects with code "SUPERSEDED".
+if (isAbortError(error)) {
+  error.code  // "ABORTED", or "SUPERSEDED" when a newer read of the same endpoint took its place
+  error.cause // the reason the signal was given
 }
 
 // 5. Your own code's failures

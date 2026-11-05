@@ -256,7 +256,7 @@ export interface HttpAddressed<
    * Let a newer call of this read cancel its call still in flight — a
    * search as the user types, where only the last answer matters — whatever
    * variables each was called with; the older call rejects with an
-   * `HTTPError` of status 499. With `false`, every call completes whatever
+   * `AbortError` of code `SUPERSEDED`. With `false`, every call completes whatever
    * the endpoint's groups, the client or the API say. A call's own
    * `.with({ cancelPrevious })` decides over it. It runs where one user is:
    * in a browser or an app.

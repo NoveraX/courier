@@ -30,7 +30,7 @@ export type ProxyCallerOptions = {
    * Whether a newer call of one of this client's reads cancels the older
    * call of that read still in flight — a search as the user types —
    * through this client or any other given the same routes; the cancelled
-   * call rejects with an `HTTPError` of status 499. An endpoint's
+   * call rejects with an `AbortError` of code `SUPERSEDED`. An endpoint's
    * `.cancelPrevious()` and its groups' own, which the routes carry, and a
    * call's `.with()` say otherwise. Defaults to the API's own, which the
    * routes carry too. It runs in a browser page or a React Native app, and

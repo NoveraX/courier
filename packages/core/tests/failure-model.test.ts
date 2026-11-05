@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { isNetworkError, NetworkError } from "../src/errors";
+import { AbortError, isNetworkError, NetworkError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 
 const { endpoint } = courier();
@@ -59,7 +59,7 @@ describe.each([
     expect((error as NetworkError).cause).toBe(cause);
   });
 
-  it("rethrows a cancellation the caller asked for as an AbortError", async () => {
+  it("rejects a cancellation the caller asked for with Courier's AbortError, the platform's as its cause", async () => {
     vi.stubGlobal("fetch", hangingFetch);
     const controller = new AbortController();
 
@@ -67,8 +67,9 @@ describe.each([
     controller.abort();
     const error = await pending.catch((e: unknown) => e);
 
-    expect(error).toBeInstanceOf(DOMException);
-    expect((error as DOMException).name).toBe("AbortError");
+    expect(error).toBeInstanceOf(AbortError);
+    expect((error as AbortError).cause).toBeInstanceOf(DOMException);
+    expect((error as AbortError).cause).toMatchObject({ name: "AbortError" });
   });
 });
 

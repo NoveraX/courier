@@ -1,4 +1,4 @@
-import { HTTPError } from "../errors";
+import { AbortError } from "../errors/abort-error";
 import { studioHooks } from "../studio";
 
 export const supportsAbortController = typeof globalThis.AbortController === "function";
@@ -8,7 +8,7 @@ interface Holder {
   readonly controller: AbortController;
   inFlight: boolean;
   /** What the call was cancelled with, once a newer call superseded it. */
-  cancelled?: HTTPError;
+  cancelled?: AbortError;
 }
 
 /** The calls holding each endpoint, the newest last: one API's, or one set of routes'. */
@@ -19,12 +19,12 @@ export type EndpointHolds = Map<string, Holder[]>;
  * settles: across its attempts, and the waits between them.
  */
 export interface EndpointHold {
-  /** Aborted, with an `HTTPError` of status 499, once a newer call supersedes the call. */
+  /** Aborted, with an `AbortError` of code `SUPERSEDED`, once a newer call supersedes the call. */
   readonly signal: AbortSignal;
   /**
    * Before each request the call sends.
    *
-   * @throws The 499 the call is cancelled with, when a newer call has superseded it meanwhile
+   * @throws The `AbortError` the call is cancelled with, when a newer call has superseded it meanwhile
    */
   sending(): void;
   /** Once a request has been handed to `fetch`: the older calls still in flight are cancelled now. */
@@ -104,14 +104,10 @@ export function holdEndpoint(holds: EndpointHolds, key: string): EndpointHold {
   };
 }
 
-/* Cancel a call a newer one superseded, with a 499, and tell Studio — once. */
-function cancel(holder: Holder, key: string): HTTPError {
+/* Cancel a call a newer one superseded, and tell Studio — once. */
+function cancel(holder: Holder, key: string): AbortError {
   if (holder.cancelled) return holder.cancelled;
-  const cancelled = new HTTPError({
-    data: { success: false, message: "cancel request" },
-    status: 499,
-    headers: new Headers(),
-  });
+  const cancelled = new AbortError({ code: "SUPERSEDED" });
   holder.cancelled = cancelled;
   studioHooks.onCallSuperseded?.({ key, timestamp: Date.now() });
   studioHooks.onRequestAbort?.({ id: key, reason: "superseded", timestamp: Date.now() });

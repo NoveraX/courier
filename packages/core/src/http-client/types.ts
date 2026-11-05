@@ -182,7 +182,7 @@ export type BaseOptions = MergeOptions &
      * Whether a newer call of one of this source's reads cancels its call
      * still in flight to the same endpoint — a search as the user types —
      * whatever variables each was called with. The older call rejects with
-     * an `HTTPError` of status 499. A call's `.with()`, an endpoint's
+     * an `AbortError` of code `SUPERSEDED`. A call's `.with()`, an endpoint's
      * `.cancelPrevious()`, a group's own `cancelPrevious` and the client's
      * option say otherwise for what they hold, the nearest deciding. It
      * runs where one user is: in a browser or an app. A write is never

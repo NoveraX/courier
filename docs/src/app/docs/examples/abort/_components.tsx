@@ -1,16 +1,12 @@
 "use client"
 
-import { isHTTPError } from "@noverax/courier"
+import { isAbortError, isHTTPError } from "@noverax/courier"
 import { useRef, useState } from "react"
 
 import { caller } from "@/lib/caller"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
-
-function isAbort(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError"
-}
 
 export function ManualAbortDemo() {
   const controller = useRef<AbortController | null>(null)
@@ -25,7 +21,7 @@ export function ManualAbortDemo() {
     try {
       setData(await caller.misc.with({ signal: controller.current.signal }).slow())
     } catch (failure: unknown) {
-      if (isAbort(failure)) setError("Aborted: Cancel stopped the request")
+      if (isAbortError(failure)) setError("Aborted: Cancel stopped the request")
       else if (isHTTPError(failure)) setError(`${failure.status} · ${failure.message}`)
       else throw failure
     } finally {
@@ -115,8 +111,8 @@ export function CancelPreviousDemo() {
     try {
       setData(await caller.misc.with({ cancelPrevious: true }).slow())
     } catch (failure: unknown) {
-      /* A newer call cancelled this one: it answers instead. */
-      if (isHTTPError(failure) && failure.status === 499) setCancelled((n) => n + 1)
+      /* A newer call superseded this one: it answers instead. */
+      if (isAbortError(failure) && failure.code === "SUPERSEDED") setCancelled((n) => n + 1)
       else throw failure
     } finally {
       setPending((n) => n - 1)

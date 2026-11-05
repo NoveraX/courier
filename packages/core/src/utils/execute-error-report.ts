@@ -3,7 +3,7 @@ import type { Context } from "../http-client/types";
 import type { RequestFailureKind, StudioHooks } from "../studio";
 import { failureCause } from "../studio/failure-cause";
 import { ValidationError } from "../validation";
-import { isAbortError } from "./abort";
+import { isCancellation } from "./abort";
 import { callerLeft } from "./caller-left";
 import { proxyTimingOf, type TimingState } from "./execute-studio";
 import { estimateResponseSize, headersToObject } from "./helpers";
@@ -45,7 +45,7 @@ export function failureKind(
   context?: Context,
 ): RequestFailureKind {
   if (error instanceof ValidationError) return "validation";
-  if (isAbortError(error) || callerLeft(context)) return "aborted";
+  if (isCancellation(error) || callerLeft(context)) return "aborted";
   if (signal?.aborted === true && error === signal.reason) return "aborted";
   if (error instanceof HTTPError) return "http";
   if (error instanceof TimeoutError) return "timeout";

@@ -1,6 +1,6 @@
 import { HTTPError } from "../errors";
-import { abortReason } from "../utils/abort-reason";
 import type { EndpointHold } from "../utils/cancel-previous";
+import { cancellation } from "../utils/cancellation";
 import { compileUrl, resolveBasePath } from "../utils/url";
 import { stripUndefined } from "./body-builder";
 import { type RequestOptions, withCallTransport } from "./call-transport";
@@ -118,7 +118,7 @@ export function bindMethod(
          caller's reason, and the reader reports that as a body it could
          not parse; it is rethrown as the cancellation it is. */
       hold?.returned();
-      if (options.signal?.aborted) throw abortReason(options.signal);
+      if (options.signal?.aborted) throw cancellation(options.signal);
       throw error;
     }
   };

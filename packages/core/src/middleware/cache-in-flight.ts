@@ -1,4 +1,4 @@
-import { abortReason } from "../utils/abort-reason";
+import { cancellation } from "../utils/cancellation";
 import type { MiddlewareResponse } from "./types";
 
 /** The misses being fetched, by cache key: what each will store, or nothing. */
@@ -56,9 +56,9 @@ function untilStopped<TValue>(
   signal: AbortSignal | undefined,
 ): Promise<TValue> {
   if (signal === undefined) return promise;
-  if (signal.aborted) return Promise.reject(abortReason(signal));
+  if (signal.aborted) return Promise.reject(cancellation(signal));
   return new Promise<TValue>((resolve, reject) => {
-    const stop = () => reject(abortReason(signal));
+    const stop = () => reject(cancellation(signal));
     signal.addEventListener("abort", stop, { once: true });
     promise.then(
       (value) => {

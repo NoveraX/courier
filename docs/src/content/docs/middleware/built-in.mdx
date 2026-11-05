@@ -129,7 +129,7 @@ The calls a policy retries share a budget, as the AWS SDKs keep one: a retry spe
 
 ### Told of each retry
 
-`onRetry` is told before each wait: the attempt it is about to make, the wait, and why the attempt before it failed. It is the place to log or count retries. A promise it returns is waited for before the wait begins, and an `onRetry` that throws or rejects fails the call with its error:
+`onRetry` is told before each wait: the attempt it is about to make, the wait, and why the attempt before it failed. It is the place to log or count retries. A promise it returns is waited for before the wait begins, but no longer than the call is: the `deadline` ends the call with its `TimeoutError` while the promise is pending, and a cancellation with an `AbortError`, the promise left to settle on its own. An `onRetry` that throws or rejects fails the call with its error:
 
 ```ts title="lib/sources.ts"
 retryMiddleware({
@@ -163,7 +163,7 @@ A `retry` policy on a `courier()` base or an endpoint's `.retry()` follows the s
 
 ### Cancellations
 
-A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a read that a newer call of its endpoint cancelled because its `cancelPrevious` was on (status 499). A call cancelled while the middleware waits between attempts, or just after an attempt failed, is answered at once with its signal's reason, not with the failure it no longer waits on — so a read a newer call superseded never sends again.
+A cancellation is never retried, whatever `retryOn` says: not a call whose signal the caller aborted, whatever reason it gave, and not a read that a newer call of its endpoint superseded because its `cancelPrevious` was on — an `AbortError` of code `"SUPERSEDED"`. A call cancelled while the middleware waits between attempts, or just after an attempt failed, is answered at once with an `AbortError`, not with the failure it no longer waits on — so a read a newer call superseded never sends again.
 
 ### A policy is checked as it is made
 
@@ -327,7 +327,7 @@ const api = defineApi({
 Unlike server-side rate limiters that return 429 errors, this middleware **delays** requests until the window allows them. Your code does not need to handle rate limit errors -- the middleware transparently queues requests.
 </Callout>
 
-The limit holds however many calls arrive at once: at most `maxRequests` requests go out in any `window` milliseconds, and calls beyond it wait their turn in the order they came. The window is measured from when each request actually went, so a busy event loop that runs the limiter's timers late delays the queue rather than letting several requests out together. A caller that aborts its signal leaves the queue at once and rejects with the signal's reason; its turn passes to the call queued behind it.
+The limit holds however many calls arrive at once: at most `maxRequests` requests go out in any `window` milliseconds, and calls beyond it wait their turn in the order they came. The window is measured from when each request actually went, so a busy event loop that runs the limiter's timers late delays the queue rather than letting several requests out together. A caller that aborts its signal leaves the queue at once and rejects with an `AbortError`, its signal's reason as the cause; its turn passes to the call queued behind it.
 
 ---
 

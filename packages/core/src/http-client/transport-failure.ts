@@ -1,9 +1,10 @@
+import { AbortError } from "../errors/abort-error";
 import { CourierError } from "../errors/courier-error";
 import { NetworkError } from "../errors/network-error";
 import { TimeoutError } from "../errors/timeout-error";
 import type { FailureCause } from "../studio/failure-cause";
-import { isAbortError } from "../utils/abort";
-import { abortReason } from "../utils/abort-reason";
+import { isCancellation } from "../utils/abort";
+import { cancellation } from "../utils/cancellation";
 
 const TIMEOUT_ERROR = "TimeoutError";
 
@@ -22,11 +23,11 @@ export interface RequestExpiry {
  *
  * Only fetch's own rejection is classified here, so a mistake made before
  * the request — a body that would not serialize — is never taken for a
- * network failure. A cancellation the caller asked for is thrown as one:
- * as fetch rejected it when that says so, as why the signal aborted when
- * not — expo/fetch rejects a cancelled request as a plain `FetchError`. A
- * Courier error stays what it is: a misconfiguration found as the request
- * was sent, or a deadline that ran out. The request's own timeout is a
+ * network failure. A cancelled request is thrown as an `AbortError`, why
+ * its signal aborted as the cause, however fetch rejected it — expo/fetch
+ * rejects one as a plain `FetchError`. A Courier error stays what it is: a
+ * misconfiguration found as the request was sent, a deadline that ran out,
+ * a newer call that superseded this one. The request's own timeout is a
  * `TimeoutError`, also where fetch only reports an abort, as React
  * Native's does; anything else fetch rejected with is a `NetworkError`.
  *
@@ -45,15 +46,21 @@ export function fetchFailure(
   signal: AbortSignal | null | undefined,
   expiry: RequestExpiry = {},
 ): unknown {
-  if (signal?.aborted) {
-    return error === signal.reason || isAbortError(error) ? error : abortReason(signal);
-  }
+  if (signal?.aborted) return cancellation(signal, error);
+  /* Before Courier's own: a request it shared, or its upload, was cancelled for the timeout. */
+  if (expiry.timedOut) return attemptTimeout(error, expiry.timeout);
   if (error instanceof CourierError) return error;
-  if (expiry.timedOut || (error instanceof Error && error.name === TIMEOUT_ERROR)) {
-    return new TimeoutError({ scope: "attempt", timeout: expiry.timeout, cause: error });
+  if (error instanceof Error && error.name === TIMEOUT_ERROR) {
+    return attemptTimeout(error, expiry.timeout);
   }
-  if (isAbortError(error)) return error;
+  if (isCancellation(error)) return cancellation(undefined, error);
   return error instanceof Error ? transportFailure(error) : error;
+}
+
+/* A request's own timeout, its cause what the platform said: what a cancellation held is its own. */
+function attemptTimeout(error: unknown, timeout: number | undefined): TimeoutError {
+  const cause = error instanceof AbortError && error.cause !== undefined ? error.cause : error;
+  return new TimeoutError({ scope: "attempt", timeout, cause });
 }
 
 /**

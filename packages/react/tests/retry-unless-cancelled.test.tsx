@@ -4,7 +4,8 @@
 
 /**
  * The query hooks never retry a cancellation: a read a newer call of its
- * endpoint cancelled (`cancelPrevious`), or one whose own signal aborted.
+ * endpoint superseded (`cancelPrevious`), which rejects with an
+ * `AbortError` of code `SUPERSEDED`, or one whose own signal aborted.
  * TanStack Query takes both for failures and would send the read again,
  * which cancels the newer call in turn. Every other failure is retried as
  * the hook says, then as the client's defaults say; where neither says,
@@ -68,27 +69,30 @@ afterEach(async () => {
 });
 
 describe("a query hook", () => {
-  it("does not retry a read a newer call of its endpoint cancelled", async () => {
+  it("does not retry a read a newer call of its endpoint cancelled, though the hook retries", async () => {
     const api = makeApi();
     const q = createQueryCaller(api);
-    const { result } = renderHook(() => q.users.useQuery("search", { variables: { q: "a" } }), {
-      wrapper,
-    });
+    const { result } = renderHook(
+      () => q.users.useQuery("search", { variables: { q: "a" }, retry: 3 }),
+      { wrapper },
+    );
     await waitFor(() => expect(sent("/users/search")).toBe(1));
 
     const newer = createCaller(api).users.search({ q: "ab" });
 
     await expect(newer).resolves.toEqual({ q: "ab", ok: true });
-    await waitFor(() => expect(result.current.error).toMatchObject({ status: 499 }));
+    await waitFor(() =>
+      expect(result.current.error).toMatchObject({ name: "AbortError", code: "SUPERSEDED" }),
+    );
     expect(result.current.failureCount).toBe(1);
     expect(sent("/users/search")).toBe(2);
   });
 
-  it("does not retry a read whose own signal aborted", async () => {
+  it("does not retry a read whose own signal aborted, though the hook retries", async () => {
     const q = createQueryCaller(makeApi());
     const controller = new AbortController();
     const { result } = renderHook(
-      () => q.users.useQuery("slow", { requestOptions: { signal: controller.signal } }),
+      () => q.users.useQuery("slow", { retry: 3, requestOptions: { signal: controller.signal } }),
       { wrapper },
     );
     await waitFor(() => expect(sent("/users/slow")).toBe(1));

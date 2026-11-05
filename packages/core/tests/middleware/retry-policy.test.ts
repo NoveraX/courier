@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ResolvedEndpointOptions, RetryEvent, RetryOptions } from "../../src/define/options";
-import { HTTPError, NetworkError, TimeoutError } from "../../src/errors";
+import { AbortError, HTTPError, NetworkError, TimeoutError } from "../../src/errors";
 import { retryMiddleware, retryPolicy } from "../../src/middleware/retry";
 import { type RetryBudget, retryBudget } from "../../src/middleware/retry-budget";
 import { endpointRetry } from "../../src/middleware/retry-policies";
@@ -176,11 +176,20 @@ describe("what a policy retries where retryOn says nothing", () => {
     }
   });
 
-  it("does not retry a call a newer one replaced, whatever retryOn says", async () => {
-    const outcome = await call({ delay: 1, retryOn: () => true }, [answer(499), ok]);
+  it("does not retry a call a newer one superseded, whatever retryOn says", async () => {
+    const superseded: Step = () => Promise.reject(new AbortError({ code: "SUPERSEDED" }));
 
-    expect(outcome.error).toMatchObject({ status: 499 });
+    const outcome = await call({ delay: 1, retryOn: () => true }, [superseded, ok]);
+
+    expect(outcome.error).toMatchObject({ name: "AbortError", code: "SUPERSEDED" });
     expect(outcome.sentAt).toHaveLength(1);
+  });
+
+  it("takes an upstream's own 499 for an answer like any other, retried where retryOn names it", async () => {
+    const outcome = await call({ delay: 1, retryOn: [499] }, [answer(499), ok]);
+
+    expect(outcome.response).toMatchObject({ status: 200 });
+    expect(outcome.sentAt).toHaveLength(2);
   });
 
   it("makes no more than limit retries", async () => {
@@ -301,7 +310,7 @@ describe("a deadline", () => {
     expect(outcome.sentAt).toEqual([0, 100]);
   });
 
-  it("lets the caller's own cancellation through as it was given", async () => {
+  it("lets the caller's own cancellation through, an AbortError with the reason it was given", async () => {
     const controller = new AbortController();
     const reason = new Error("navigated away");
     setTimeout(() => controller.abort(reason), 200);
@@ -312,7 +321,8 @@ describe("a deadline", () => {
       contextFor({ signal: controller.signal }),
     );
 
-    expect(outcome.error).toBe(reason);
+    expect(outcome.error).toBeInstanceOf(AbortError);
+    expect(outcome.error).toMatchObject({ code: "ABORTED", cause: reason });
   });
 
   it("leaves the call's signal as it found it, and no timer behind", async () => {
@@ -541,6 +551,40 @@ describe("onRetry", () => {
       expect(outcome.error).toBe(lost);
       expect(outcome.sentAt).toHaveLength(1);
     }
+  });
+
+  it("is waited for no longer than the deadline, its promise left to settle on its own", async () => {
+    const late = () =>
+      new Promise((_resolve, reject) => setTimeout(reject, 1_000, new Error("late")));
+    let ended: unknown = "waiting on onRetry";
+    const policy = retryPolicy({ delay: 1, deadline: 100, onRetry: late }, retryBudget());
+    const ctx = contextFor();
+
+    void (policy.handler as WrapHandler)(ctx, () => dropped()(ctx)).catch((error: unknown) => {
+      ended = error;
+    });
+    await vi.runAllTimersAsync();
+
+    expect(ended).toBeInstanceOf(TimeoutError);
+    expect(ended).toMatchObject({ scope: "deadline", timeout: 100 });
+  });
+
+  it("is waited for no longer than the caller waits, the call rejecting with an AbortError", async () => {
+    const controller = new AbortController();
+    const onRetry = vi.fn(() => new Promise(() => {}));
+    let ended: unknown = "waiting on onRetry";
+    const policy = retryPolicy({ delay: 1, onRetry }, retryBudget());
+    const ctx = contextFor({ signal: controller.signal });
+
+    void (policy.handler as WrapHandler)(ctx, () => dropped()(ctx)).catch((error: unknown) => {
+      ended = error;
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(onRetry).toHaveBeenCalledOnce();
+    controller.abort();
+    await vi.advanceTimersByTimeAsync(10);
+
+    expect(ended).toBeInstanceOf(AbortError);
   });
 });
 

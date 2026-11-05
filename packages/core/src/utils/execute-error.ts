@@ -3,9 +3,10 @@ import { platformCause } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import { ValidationError } from "../validation";
-import { isAbortError } from "./abort";
+import { isCancellation } from "./abort";
 import { answeredMessage } from "./answered-message";
 import { answerCallerLeft, callerLeft } from "./caller-left";
+import { cancellation } from "./cancellation";
 import { type FailureReport, reportRequestError } from "./execute-error-report";
 import { buildResponse, type InternalResponse } from "./execute-response";
 import { injectTimingHeaders } from "./execute-studio";
@@ -125,15 +126,16 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
   }
 
   const fromWire = ctx.context?.proxyMethod !== undefined;
-  /* A direct caller gets its failure as it happened: a cancellation with the
-     reason it gave, a request that got no answer or ran out of time as such,
+  /* A direct caller gets its failure as it happened: a cancellation as an
+     AbortError, the reason it gave its cause, a request that got no answer or ran out of time as such,
      with its cause, the upstream's own answer — a 2xx whose body would not
      parse keeps its 200 — or what its own middleware threw — not a 502 from
      a gateway that is not there, nor an HTTP 500 with no cause. A caller
      that asked for a Response is answered with one, unless it cancelled. */
-  if (!fromWire && (!answersWithResponse || isAbortError(error) || isRequestFailure(error))) {
+  const cancelled = isCancellation(error) || ctx.signal?.aborted === true;
+  if (!fromWire && (!answersWithResponse || cancelled || isRequestFailure(error))) {
     reportRequestError(error, ctx, error instanceof HTTPError ? error.status : undefined);
-    throw error;
+    throw cancelled ? cancellation(ctx.signal, error) : error;
   }
   if (callerLeft(ctx.context)) {
     reportRequestError(error, ctx, undefined);

@@ -3,7 +3,7 @@
  *
  * It exists for reads: a search box sends a request per keystroke and only
  * the last answer matters. It leaves writes alone: applied to them, two
- * different creates to one path would lose the first with a 499, although
+ * different creates to one path would lose the first as superseded, although
  * the server has usually received and applied it — so a write marked with
  * `.cancelPrevious()` is refused where it is written, and an API, a client
  * or a call that turns it on cancels its reads alone.
@@ -19,7 +19,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { ConfigurationError, HTTPError } from "../src/errors";
+import { AbortError, ConfigurationError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { startUpstream, type Upstream } from "./helpers/upstream";
@@ -61,8 +61,9 @@ function api() {
   });
 }
 
-function status(error: unknown): number | undefined {
-  return error instanceof HTTPError ? error.status : undefined;
+/** The code a cancelled call rejects with: `SUPERSEDED`, where a newer call took its place. */
+function cancelled(error: unknown): string | undefined {
+  return error instanceof AbortError ? error.code : undefined;
 }
 
 const INVALID = expect.objectContaining({ code: "CANCEL_PREVIOUS_INVALID" });
@@ -178,20 +179,20 @@ describe("cancelPrevious on a direct call", () => {
   it("still cancels a read superseded by the next one", async () => {
     const client = createCaller(api());
 
-    const first = client.search({ q: "a" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
     const second = client.search({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ method: "GET", body: "" });
   });
 
   it("cancels a POST the endpoint declares a read", async () => {
     const client = createCaller(api());
 
-    const first = client.find({ q: "a" }).catch(status);
+    const first = client.find({ q: "a" }).catch(cancelled);
     const second = client.find({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ method: "POST", body: '{"q":"ab"}' });
   });
 
@@ -256,10 +257,10 @@ describe("cancelPrevious on a proxy client given its routes", () => {
   it("still cancels a superseded read", async () => {
     const client = createProxyCaller(routesOf(api(), "orders"));
 
-    const first = client.search({ q: "a" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
     const second = client.search({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ method: "GET", body: "" });
   });
 
@@ -301,14 +302,14 @@ describe("cancelPrevious on a proxy client given its routes", () => {
     it("still cancels a superseded read, whatever verb carries it", async () => {
       const client = toldClient();
 
-      const first = client.search({ q: "a" }).catch(status);
+      const first = client.search({ q: "a" }).catch(cancelled);
       const second = client.search({ q: "ab" });
-      const firstFind = client.find({ q: "a" }).catch(status);
+      const firstFind = client.find({ q: "a" }).catch(cancelled);
       const secondFind = client.find({ q: "ab" });
 
-      expect(await first).toBe(499);
+      expect(await first).toBe("SUPERSEDED");
       await expect(second).resolves.toEqual({ method: "GET", body: "" });
-      expect(await firstFind).toBe(499);
+      expect(await firstFind).toBe("SUPERSEDED");
       await expect(secondFind).resolves.toEqual({ method: "POST", body: '{"q":"ab"}' });
     });
   });

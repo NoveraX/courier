@@ -2,7 +2,7 @@ import { isBodilessStatus } from "../http-client/response";
 import type { UploadProgress } from "../http-client/types";
 import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
-import { abortReason } from "./abort-reason";
+import { cancellation } from "./cancellation";
 import { isRecord } from "./is-record";
 import { platformError } from "./platform-error";
 
@@ -52,7 +52,7 @@ function send(
   return new Promise((resolve, reject) => {
     const signal = init.signal;
     if (signal?.aborted) {
-      reject(abortReason(signal));
+      reject(cancellation(signal));
       return;
     }
 
@@ -85,11 +85,11 @@ function send(
       settle();
       reject(new TypeError("Network request failed"));
     });
-    /* Cancelled through the signal, the request rejects with its reason, as
-       fetch does; without this listener the promise never settled. */
+    /* Cancelled through the signal, the request rejects with an AbortError, its reason as the
+       cause, as fetch's does; without this listener the promise never settled. */
     xhr.addEventListener("abort", () => {
       settle();
-      reject(signal ? abortReason(signal) : platformError("The request was aborted", "AbortError"));
+      reject(cancellation(signal, platformError("The request was aborted", "AbortError")));
     });
 
     xhr.send(body);

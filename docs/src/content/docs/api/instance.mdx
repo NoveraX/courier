@@ -94,7 +94,7 @@ type Context = {
 
 ## Error Handling
 
-`HttpClient` converts HTTP error responses (status >= 400) into `HTTPError` objects with `status`, `headers`, and parsed `data`. A request that got no answer rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError` — see [NetworkError & TimeoutError](/docs/api/call-errors).
+`HttpClient` converts HTTP error responses (status >= 400) into `HTTPError` objects with `status`, `headers`, and parsed `data`. A request that got no answer rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError` — see [NetworkError, TimeoutError & AbortError](/docs/api/call-errors).
 
 ## Related
 

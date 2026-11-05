@@ -312,7 +312,7 @@ describe("retryMiddleware and cancellation", () => {
     await arrived;
     const second = client.read({ q: "ab" });
 
-    await expect(first).rejects.toMatchObject({ status: 499 });
+    await expect(first).rejects.toMatchObject({ name: "AbortError", code: "SUPERSEDED" });
     await expect(second).resolves.toEqual({ ok: true });
     expect(upstream.seen).toHaveLength(2);
   });
@@ -354,7 +354,7 @@ describe("retryMiddleware and cancellation", () => {
     const second = client.read({ q: "ab" });
 
     await expect(second).resolves.toEqual({ q: "ab" });
-    expect(await first).toMatchObject({ status: 499 });
+    expect(await first).toMatchObject({ name: "AbortError", code: "SUPERSEDED" });
     expect(upstream.seen.map((request) => request.url)).toEqual(["/slow?q=a", "/slow?q=ab"]);
   });
 });

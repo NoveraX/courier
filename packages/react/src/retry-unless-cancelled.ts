@@ -1,16 +1,13 @@
-import { isHTTPError } from "@noverax/courier";
+import { isAbortError } from "@noverax/courier";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
-
-/** Status of a read a newer call of its endpoint cancelled, as `cancelPrevious` asks. */
-const SUPERSEDED = 499;
 
 /**
  * A query's `retry`, as its hook or its client sets it, that never retries
- * a cancellation: a read a newer call of its endpoint cancelled — an
- * `HTTPError` of status 499, as `retryMiddleware` treats it — or one whose
- * own signal, given in `requestOptions`, has aborted. TanStack Query leaves
- * its own cancellations alone, but takes these for failures, and retrying
- * one would cancel the newer call in turn.
+ * a cancellation: an `AbortError` — a read a newer call of its endpoint
+ * superseded, code `SUPERSEDED` — or a read whose own signal, given in
+ * `requestOptions`, has aborted. TanStack Query leaves its own
+ * cancellations alone, but takes these for failures, and retrying one
+ * would cancel the newer call in turn.
  *
  * Where neither the hook nor the client sets `retry`, the query retries
  * nothing of its own: a call is repeated by its API's retry policy, which
@@ -38,7 +35,7 @@ export function retryUnlessCancelled(
   const retry = configured ?? false;
   return (failureCount, error) => {
     if (signal?.aborted === true) return false;
-    if (isHTTPError(error) && error.status === SUPERSEDED) return false;
+    if (isAbortError(error)) return false;
     if (typeof retry === "number") return failureCount < retry;
     if (typeof retry === "function") {
       const verdict: unknown = Reflect.apply(retry, undefined, [failureCount, error]);

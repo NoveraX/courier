@@ -14,7 +14,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { HTTPError } from "../src/errors";
+import { AbortError } from "../src/errors";
 import { createProxyCaller, type ProxyCallerOptions } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { isUpstream } from "./helpers/is-upstream";
@@ -75,17 +75,17 @@ function slowUpstream(input: RequestInfo | URL, init?: RequestInit): Promise<Res
   });
 }
 
-/** How each of two overlapping calls ended: answered, or the status it was cancelled with. */
+/** How each of two overlapping calls ended: answered, or the code it was cancelled with. */
 function outcomes(first: Promise<unknown>, second: Promise<unknown>): Promise<unknown[]> {
   const ended = (call: Promise<unknown>) =>
     call.then(
       () => "answered",
-      (error: unknown) => (error instanceof HTTPError ? error.status : error),
+      (error: unknown) => (error instanceof AbortError ? error.code : error),
     );
   return Promise.all([ended(first), ended(second)]);
 }
 
-const CANCELLED = [499, "answered"];
+const CANCELLED = ["SUPERSEDED", "answered"];
 const KEPT = ["answered", "answered"];
 
 beforeEach(() => {

@@ -8,7 +8,8 @@
 
 import { CourierError, HTTPError, NetworkError } from "../errors";
 import { isBodilessStatus } from "../http-client/response";
-import { isAbortError } from "../utils/abort";
+import { isCancellation } from "../utils/abort";
+import { cancellation } from "../utils/cancellation";
 import { isWireBody, readWireBody } from "../utils/wire-body";
 import { validationFailure } from "./validation-failure";
 
@@ -90,17 +91,17 @@ export async function readProxyAnswer(
  * browser sees — is a `NetworkError` with the original as its cause, as in
  * direct mode, rather than a bare TypeError that `onError` never sees; a
  * timeout is already a `TimeoutError`. Courier's own errors stay what they
- * are, and a cancellation stays as it was, whatever reason the caller gave
- * for it.
+ * are, and a cancellation is an `AbortError`, whatever reason the caller
+ * gave for it.
  *
  * @param error - Whatever the request rejected with
  * @param signal - The call's signal, whose reason a cancellation rejects with
  * @returns The error to reject the call with
  */
 export function asProxyFailure(error: unknown, signal?: AbortSignal | null): unknown {
-  if (signal?.aborted && error === signal.reason) return error;
   if (error instanceof CourierError) return error;
-  if (isAbortError(error) || !(error instanceof Error)) return error;
+  if (signal?.aborted || isCancellation(error)) return cancellation(signal, error);
+  if (!(error instanceof Error)) return error;
   return new NetworkError({ cause: error });
 }
 

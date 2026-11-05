@@ -16,7 +16,7 @@ import { cacheMiddleware } from "../src/middleware/cache";
 import type { MiddlewareContext, WrapHandler } from "../src/middleware/types";
 import { subscribeSSE } from "../src/realtime/sse";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
-import { isAbortError } from "../src/utils/abort";
+import { isCancellation } from "../src/utils/abort";
 
 const { endpoint } = courier();
 const restores: Array<() => void> = [];
@@ -103,7 +103,7 @@ describe("a call cancelled in React Native", () => {
 
       controller.abort();
 
-      expect(isAbortError(await pending)).toBe(true);
+      expect(isCancellation(await pending)).toBe(true);
     },
   );
 
@@ -152,7 +152,7 @@ describe("cancelling the previous call in React Native", () => {
     const first = rejection(client.slow.with({ signal: controller.signal })());
     const second = client.slow.with({ signal: controller.signal })();
 
-    expect(isAbortError(await first)).toBe(true);
+    expect(isCancellation(await first)).toBe(true);
     await expect(second).resolves.toEqual({ ok: true });
   });
 });

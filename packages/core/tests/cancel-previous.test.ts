@@ -8,7 +8,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { HTTPError } from "../src/errors";
+import { AbortError } from "../src/errors";
 import { studioHooks } from "../src/studio";
 import {
   type EndpointHolds,
@@ -52,7 +52,7 @@ describe("holdEndpoint", () => {
     expect(superseded).not.toHaveBeenCalled();
   });
 
-  it("cancels at once an older call with no request in flight, with a 499, and tells Studio", () => {
+  it("cancels at once an older call with no request in flight, as superseded, and tells Studio", () => {
     const table = holds();
     const cancelled = vi.fn();
     const superseded = vi.fn();
@@ -63,8 +63,8 @@ describe("holdEndpoint", () => {
     const newer = holdEndpoint(table, KEY);
 
     expect(older.signal.aborted).toBe(true);
-    expect(older.signal.reason).toBeInstanceOf(HTTPError);
-    expect((older.signal.reason as HTTPError).status).toBe(499);
+    expect(older.signal.reason).toBeInstanceOf(AbortError);
+    expect((older.signal.reason as AbortError).code).toBe("SUPERSEDED");
     expect(newer.signal.aborted).toBe(false);
     expect(superseded).toHaveBeenCalledWith(expect.objectContaining({ reason: "superseded" }));
     expect(cancelled).toHaveBeenCalledWith(expect.objectContaining({ key: KEY }));
@@ -90,7 +90,7 @@ describe("holdEndpoint", () => {
     holdEndpoint(table, KEY);
     older.returned();
 
-    expect(() => older.sending()).toThrow(expect.objectContaining({ status: 499 }));
+    expect(() => older.sending()).toThrow(expect.objectContaining({ code: "SUPERSEDED" }));
     expect(older.signal.aborted).toBe(true);
   });
 

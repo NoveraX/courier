@@ -1,11 +1,13 @@
-export const metadata = { title: "NetworkError & TimeoutError", description: "The errors a call rejects with when no answer came, or its time ran out — with the platform's code, the scope of the time, and the guards that tell them apart.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-05" }
 
-A call that got no successful answer rejects with one of three errors, each telling what happened: an `HTTPError` holds an answer, a `NetworkError` says none came, a `TimeoutError` that the time ran out. None of them is ever the other dressed up: there is no `HTTPError` with status 0.
+A call that got no successful answer rejects with one of three errors, each telling what happened: an `HTTPError` holds an answer, a `NetworkError` says none came, a `TimeoutError` that the time ran out. None of them is ever the other dressed up: there is no `HTTPError` with status 0. A call that was cancelled rejects with an `AbortError`, which is no failure.
 
 ## Import
 
 ```ts
 import {
+  AbortError,
+  isAbortError,
   isNetworkError,
   isRequestFailure,
   isTimeoutError,
@@ -49,15 +51,33 @@ Thrown when the time ran out before the answer was whole — while waiting for i
 
 An attempt that ran out of time may have reached the server, which may still be working on it.
 
+## AbortError
+
+```ts
+import { CourierError } from "@noverax/courier"
+
+declare class AbortError extends CourierError<"ABORTED" | "SUPERSEDED"> {}
+```
+
+Thrown when a call was cancelled before it was answered. Nothing failed: `isRequestFailure()` is false for it, a caller's `onError` is not told of it, and no retry repeats it.
+
+- `code` — `"ABORTED"` when the call's signal aborted: before its request left, while it was out, while its answer was read, or while a middleware held it between attempts. `"SUPERSEDED"` when a newer call of an endpoint that cancels the previous one took its place — see [Deduplication & Abort](/docs/advanced/abort).
+- `cause` — the reason the signal was given: yours, or the platform's `DOMException` named `AbortError` when you gave none. A superseded call has none.
+- `message` — `"The call was cancelled"`, or `"A newer call of the endpoint superseded this one"`.
+- `name` — `"AbortError"`, as the platform's own is named.
+
+A retry policy's `deadline` that runs out is a `TimeoutError` of scope `"deadline"`, not an `AbortError`: the call did not finish in time.
+
 ## Telling Them Apart
 
 ```ts
-import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
+import { isAbortError, isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
 
 try {
   await caller.users.getAll()
 } catch (error) {
-  if (isTimeoutError(error)) showSlow(error.timeout)
+  if (isAbortError(error)) console.debug("cancelled:", error.code) // nobody waits for the answer
+  else if (isTimeoutError(error)) showSlow(error.timeout)
   else if (isNetworkError(error)) showOffline(error.systemCode)
   else if (isHTTPError(error)) showRefused(error.status)
   else throw error
@@ -68,7 +88,7 @@ try {
 
 ## Through the Proxy
 
-The browser's side and the server's side of a proxied call each fail by these rules. A browser that could not reach the proxy — offline, the server down — rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError`. When the server's side got no answer from the API, the proxy itself answers the browser, without naming the API's host: an `HTTPError` `502` with `data.code` `"UPSTREAM_UNREACHABLE"`, or `504` with `"UPSTREAM_TIMEOUT"` when the server's side ran out of time. The reason stays in the server's log.
+The browser's side and the server's side of a proxied call each fail by these rules. A browser that could not reach the proxy — offline, the server down — rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError`. A browser call that was cancelled rejects with an `AbortError`, as a direct call does. When the server's side got no answer from the API, the proxy itself answers the browser, without naming the API's host: an `HTTPError` `502` with `data.code` `"UPSTREAM_UNREACHABLE"`, or `504` with `"UPSTREAM_TIMEOUT"` when the server's side ran out of time. The reason stays in the server's log.
 
 ## From Status 0
 
@@ -83,6 +103,18 @@ Earlier versions threw an `HTTPError` with status 0 for both a request that got 
 | `new HTTPError({ status: 0, … })` in a mock or a test | `new NetworkError({ cause })` |
 
 `new HTTPError()` refuses a status outside 100 to 599 with a `RangeError`, so a stand-in still built the old way says so at once.
+
+## From the Signal's Reason and Status 499
+
+Earlier versions rejected a cancelled call with whatever its signal was given, and a call a newer one superseded with an `HTTPError` of status 499:
+
+| Before | Now |
+|---|---|
+| `error instanceof DOMException && error.name === "AbortError"` | `isAbortError(error)` |
+| `error === reason`, the reason the signal was given | `isAbortError(error) && error.cause === reason` |
+| `isHTTPError(error) && error.status === 499` | `isAbortError(error) && error.code === "SUPERSEDED"` |
+
+A check of `error.name === "AbortError"` still holds, as Courier's `AbortError` is named so. An upstream's own answer of status 499 is an `HTTPError` like any other.
 
 ## Related
 

@@ -163,8 +163,9 @@ export interface RetryOptions {
   mutations?: boolean | undefined;
   /**
    * Told before each retry: the attempt it makes, the wait before it, and
-   * why. A promise it returns is waited for, and one that throws or rejects
-   * fails the call with its error.
+   * why. A promise it returns is waited for, no longer than the call is:
+   * the deadline or a cancellation ends the call while it is pending. One
+   * that throws or rejects fails the call with its error.
    */
   onRetry?: ((retry: RetryEvent, ctx: MiddlewareContext) => unknown) | undefined;
   /** Where the jitter's randomness comes from: a number from 0 to 1, as `Math.random` gives (default) */

@@ -26,7 +26,7 @@ export const REFERENCE_SECTIONS: NavSection[] = [
       { title: "createHandler", href: "/docs/api/api-route" },
       { title: "HttpClient", href: "/docs/api/instance" },
       { title: "HTTPError", href: "/docs/api/http-error" },
-      { title: "NetworkError & TimeoutError", href: "/docs/api/call-errors" },
+      { title: "NetworkError, TimeoutError & AbortError", href: "/docs/api/call-errors" },
       { title: "redact", href: "/docs/api/redact" },
       { title: "CallOptions", href: "/docs/api/call-options" },
       { title: "Types", href: "/docs/api/types" },

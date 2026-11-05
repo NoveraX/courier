@@ -148,9 +148,10 @@ describe("coreFetch", () => {
         signal: controller.signal,
       });
 
-      controller.abort(new Error("left"));
+      const reason = new Error("left");
+      controller.abort(reason);
 
-      await expect(pending).rejects.toThrow("left");
+      await expect(pending).rejects.toMatchObject({ name: "AbortError", cause: reason });
       expect(getFetchCall().init.signal?.aborted).toBe(true);
     });
 

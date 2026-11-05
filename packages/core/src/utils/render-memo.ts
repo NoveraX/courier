@@ -1,4 +1,4 @@
-import { abortReason } from "./abort-reason";
+import { cancellation } from "./cancellation";
 import { type KeptAnswer, keepAnswer, replayAnswer } from "./kept-answer";
 import type { SharingCall } from "./shared-answer";
 import { shareFlight } from "./shared-flight";
@@ -83,7 +83,7 @@ async function answerInRender(
   call: SharingCall | undefined,
 ): Promise<Response> {
   const kept = await memo.get(key);
-  if (signal?.aborted) throw abortReason(signal);
+  if (signal?.aborted) throw cancellation(signal);
   if (kept !== undefined) {
     call?.onShared?.({ by: "render", with: kept.by });
     return replayAnswer(kept);

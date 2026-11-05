@@ -1,4 +1,4 @@
-import { abortReason } from "./abort-reason";
+import { cancellation } from "./cancellation";
 import { readUntilLeft } from "./read-until-left";
 import type { SharingCall } from "./shared-answer";
 
@@ -56,7 +56,7 @@ export function shareFlight(
   call?: SharingCall,
   keep?: KeepAnswer,
 ): Promise<Response> {
-  if (signal?.aborted) return Promise.reject(abortReason(signal));
+  if (signal?.aborted) return Promise.reject(cancellation(signal));
   const flight = flights.get(key) ?? takeOff(key, send, signal !== undefined, keep);
   return new Promise<Response>((resolve, reject) => {
     const waiter: Waiter = { resolve, reject, signal, call, settled: false };
@@ -85,7 +85,7 @@ function leave(key: string, flight: Flight, waiter: Waiter): void {
   if (waiter.settled) return;
   waiter.settled = true;
   flight.waiters.delete(waiter);
-  waiter.reject(waiter.signal ? abortReason(waiter.signal) : undefined);
+  waiter.reject(cancellation(waiter.signal));
   if (flight.waiters.size > 0) return;
   if (flights.get(key) === flight) flights.delete(key);
   flight.controller.abort(waiter.signal?.reason);

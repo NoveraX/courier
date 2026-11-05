@@ -2,7 +2,7 @@ import type { Context, HttpMethods } from "../http-client/types";
 import { createLogger } from "../logger";
 import { type CallSession, sameRequestContext, sessionFor } from "../session/call-session";
 import { csrfSource } from "../session/csrf-source";
-import { abortReason } from "./abort-reason";
+import { cancellation } from "./cancellation";
 import { callSessionTarget } from "./execute-session";
 import type { CallTarget } from "./execute-target";
 import { setCookiesOf } from "./set-cookies";
@@ -185,9 +185,9 @@ function unlessAborted<TValue>(
   signal: AbortSignal | undefined,
 ): Promise<TValue> {
   if (signal === undefined) return work;
-  if (signal.aborted) return Promise.reject(abortReason(signal));
+  if (signal.aborted) return Promise.reject(cancellation(signal));
   return new Promise<TValue>((resolve, reject) => {
-    const stop = (): void => reject(abortReason(signal));
+    const stop = (): void => reject(cancellation(signal));
     signal.addEventListener("abort", stop, { once: true });
     work.then(resolve, reject).finally(() => signal.removeEventListener("abort", stop));
   });

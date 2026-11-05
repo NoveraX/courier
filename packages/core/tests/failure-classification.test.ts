@@ -4,8 +4,9 @@
  * Not everything that goes wrong around fetch is a network failure. A
  * timeout says it timed out — through the proxy, a 504 with a code that says
  * so, not a 502 claiming the upstream could not be reached. A caller's own
- * cancellation rejects with the reason it gave, whatever it is, even when it
- * lands while the answer is read; and the caller's own mistakes — a
+ * cancellation rejects with an `AbortError` whose cause is the reason it
+ * gave, whatever it is, even when it lands while the answer is read; and
+ * the caller's own mistakes — a
  * middleware that throws, a BigInt in the body — reject as themselves, not
  * dressed as HTTP failures.
  */
@@ -17,7 +18,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { type HTTPError, NetworkError, TimeoutError } from "../src/errors";
+import { AbortError, type HTTPError, NetworkError, TimeoutError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
@@ -125,42 +126,55 @@ describe("a host that cannot be reached", () => {
   });
 });
 
+/** The reason a cancelled call was given, once it is told for an AbortError. */
+function cancelledFor(error: unknown): unknown {
+  expect(error).toBeInstanceOf(AbortError);
+  expect(error).toMatchObject({ code: "ABORTED" });
+  return (error as AbortError).cause;
+}
+
 describe("a call the caller cancels", () => {
   it.each([
     ["an Error", new Error("user navigated away")],
     ["a string", "cancelled-by-user"],
-  ])("rejects with the reason it gave, when that is %s", async (_kind, reason) => {
-    const controller = new AbortController();
-    const pending = rejection(createCaller(api()).slow.with({ signal: controller.signal })());
-    setTimeout(() => controller.abort(reason), 50);
+  ])(
+    "rejects with an AbortError whose cause is the reason it gave, when that is %s",
+    async (_kind, reason) => {
+      const controller = new AbortController();
+      const pending = rejection(createCaller(api()).slow.with({ signal: controller.signal })());
+      setTimeout(() => controller.abort(reason), 50);
 
-    expect(await pending).toBe(reason);
-  });
+      expect(cancelledFor(await pending)).toBe(reason);
+    },
+  );
 });
 
 describe("a call the caller cancels while its answer is read", () => {
   it.each([
     ["a success", 200],
     ["an error", 500],
-  ])("rejects with the reason it gave, when the answer is %s", async (_kind, status) => {
-    const reason = new Error("user navigated away");
-    const controller = new AbortController();
-    const pending = rejection(
-      createCaller(api()).partial.with({ signal: controller.signal })({ status }),
-    );
-    setTimeout(() => controller.abort(reason), 150);
+  ])(
+    "rejects with an AbortError whose cause is the reason it gave, when the answer is %s",
+    async (_kind, status) => {
+      const reason = new Error("user navigated away");
+      const controller = new AbortController();
+      const pending = rejection(
+        createCaller(api()).partial.with({ signal: controller.signal })({ status }),
+      );
+      setTimeout(() => controller.abort(reason), 150);
 
-    expect(await pending).toBe(reason);
-  });
+      expect(cancelledFor(await pending)).toBe(reason);
+    },
+  );
 
-  it("rejects with a reason that is not an error, as it was given", async () => {
+  it("keeps a reason that is not an error as it was given, as the cause", async () => {
     const controller = new AbortController();
     const pending = rejection(
       createCaller(api()).partial.with({ signal: controller.signal })({ status: 200 }),
     );
     setTimeout(() => controller.abort("cancelled-by-user"), 150);
 
-    expect(await pending).toBe("cancelled-by-user");
+    expect(cancelledFor(await pending)).toBe("cancelled-by-user");
   });
 });
 
@@ -193,7 +207,7 @@ describe("a failure in the caller's own code", () => {
 });
 
 describe("a proxy call the caller cancels", () => {
-  it("rejects with the reason it gave", async () => {
+  it("rejects with an AbortError whose cause is the reason it gave", async () => {
     const source = api();
     registerSources({ calls: source });
     const handler = createHandler();
@@ -212,7 +226,7 @@ describe("a proxy call the caller cancels", () => {
       const pending = rejection(client.slow.with({ signal: controller.signal })());
       setTimeout(() => controller.abort(reason), 50);
 
-      expect(await pending).toBe(reason);
+      expect(cancelledFor(await pending)).toBe(reason);
     } finally {
       proxy.closeAllConnections();
       await new Promise<void>((resolve) => proxy.close(() => resolve()));

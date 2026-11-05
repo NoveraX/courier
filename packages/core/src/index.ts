@@ -54,11 +54,13 @@ export type {
 } from "./client";
 export type { RetryEvent, RetryOptions, RetryTrigger } from "./define/options";
 export type {
+  AbortErrorCode,
   ConfigurationErrorCode,
   CourierErrorOptions,
   RequestFailure,
   TimeoutScope,
 } from "./errors";
+export { AbortError, isAbortError } from "./errors/abort-error";
 export { ConfigurationError, isConfigurationError } from "./errors/configuration-error";
 export { CourierError, isCourierError } from "./errors/courier-error";
 export { HTTPError, isHTTPError } from "./errors/http-error";

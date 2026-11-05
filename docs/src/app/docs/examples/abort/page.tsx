@@ -26,7 +26,8 @@ import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api)
 
-// A newer call made the same way cancels the one still in flight, which rejects with status 499
+// A newer call made the same way cancels the one still in flight, which rejects with an
+// AbortError whose code is "SUPERSEDED"
 await caller.misc.with({ cancelPrevious: true }).slow()
 
 // Or once for every call of the endpoint, where it is defined:
@@ -48,7 +49,7 @@ export default function AbortExamplesPage() {
 
       <ExampleSection
         title="Cancel the previous call"
-        description="The endpoint answers after 3 s. Call again before it does: the older call is cancelled with status 499, and the newer one is answered by the request already in flight."
+        description="The endpoint answers after 3 s. Call again before it does: the older call is cancelled with an AbortError, its code SUPERSEDED, and the newer one is answered by the request already in flight."
         code={cancelPreviousCode}
         learnMore={{
           href: "/docs/advanced/abort#cancelling-the-previous-call",

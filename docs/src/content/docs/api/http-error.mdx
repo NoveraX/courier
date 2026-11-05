@@ -132,7 +132,7 @@ const errorMiddleware = defineMiddleware("errors", "wrap", async (ctx, next) => 
 
 ## Network Errors and Timeouts
 
-A request that got no answer — a host that does not resolve, a connection refused or dropped — rejects with a `NetworkError`, and one whose time ran out with a `TimeoutError`, never with an `HTTPError`: see [NetworkError & TimeoutError](/docs/api/call-errors). Through the proxy, the server's side of the call answers the browser, so a browser gets an `HTTPError` `502` with `code: "UPSTREAM_UNREACHABLE"` or `504` with `code: "UPSTREAM_TIMEOUT"`:
+A request that got no answer — a host that does not resolve, a connection refused or dropped — rejects with a `NetworkError`, and one whose time ran out with a `TimeoutError`, never with an `HTTPError`: see [NetworkError, TimeoutError & AbortError](/docs/api/call-errors). Through the proxy, the server's side of the call answers the browser, so a browser gets an `HTTPError` `502` with `code: "UPSTREAM_UNREACHABLE"` or `504` with `code: "UPSTREAM_TIMEOUT"`:
 
 ```ts
 import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
@@ -148,7 +148,7 @@ try {
 
 ## Related
 
-- [NetworkError & TimeoutError](/docs/api/call-errors) — a request that got no answer, or ran out of time
+- [NetworkError, TimeoutError & AbortError](/docs/api/call-errors) — a request that got no answer, or ran out of time
 - [Error Handling Guide](/docs/core-concepts/error-handling) — in-depth error handling patterns
 - [Middleware](/docs/middleware/overview) — middleware chain for error interception
 - [HttpClient](/docs/api/instance) — where HTTPError is thrown

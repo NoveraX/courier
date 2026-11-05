@@ -10,9 +10,13 @@ describe("createAdmissionQueue", () => {
   it("refuses a caller whose signal has already aborted without spending a turn", async () => {
     const queue = createAdmissionQueue(1, 5000);
     const controller = new AbortController();
-    controller.abort(new Error("gone"));
+    const reason = new Error("gone");
+    controller.abort(reason);
 
-    await expect(queue.enter(controller.signal)).rejects.toThrow("gone");
+    await expect(queue.enter(controller.signal)).rejects.toMatchObject({
+      name: "AbortError",
+      cause: reason,
+    });
     const started = performance.now();
     await queue.enter(undefined);
 
@@ -20,15 +24,16 @@ describe("createAdmissionQueue", () => {
     expect(performance.now() - started).toBeLessThan(2_500);
   });
 
-  it("rejects a waiting caller with its signal's reason when it cancels", async () => {
+  it("rejects a waiting caller with an AbortError whose cause is its signal's reason", async () => {
     const queue = createAdmissionQueue(1, 5000);
     await queue.enter(undefined);
     const controller = new AbortController();
     const waiting = queue.enter(controller.signal);
+    const reason = new Error("changed my mind");
 
-    controller.abort(new Error("changed my mind"));
+    controller.abort(reason);
 
-    await expect(waiting).rejects.toThrow("changed my mind");
+    await expect(waiting).rejects.toMatchObject({ name: "AbortError", cause: reason });
   });
 
   it("stops its timer once every waiting caller has cancelled", async () => {

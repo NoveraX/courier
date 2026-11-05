@@ -16,7 +16,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
-import { HTTPError } from "../src/errors";
+import { AbortError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
@@ -52,8 +52,9 @@ function slowUpstream(input: RequestInfo | URL, init?: RequestInit): Promise<Res
   });
 }
 
-function status(error: unknown): number | undefined {
-  return error instanceof HTTPError ? error.status : undefined;
+/** The code a cancelled call rejects with: `SUPERSEDED`, where a newer call took its place. */
+function cancelled(error: unknown): string | undefined {
+  return error instanceof AbortError ? error.code : undefined;
 }
 
 beforeEach(() => {
@@ -71,12 +72,12 @@ describe("a direct call in a browser", () => {
     vi.stubGlobal("fetch", slowUpstream);
   });
 
-  it("cancels the call still in flight with a 499", async () => {
+  it("cancels the call still in flight as superseded", async () => {
     const client = createCaller(api) as unknown as Client;
-    const first = client.search({ q: "a" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
     const second = client.search({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
   });
 
@@ -84,10 +85,10 @@ describe("a direct call in a browser", () => {
     const sent = vi.fn(slowUpstream);
     vi.stubGlobal("fetch", sent);
     const client = createCaller(api) as unknown as Client;
-    const first = client.search({ q: "ab" }).catch(status);
+    const first = client.search({ q: "ab" }).catch(cancelled);
     const second = client.search({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
     expect(sent).toHaveBeenCalledTimes(1);
   });
@@ -105,12 +106,12 @@ describe("a direct call in a browser", () => {
 
   it("keeps cancelling after a cancelled call settles", async () => {
     const client = createCaller(api) as unknown as Client;
-    const first = client.search({ q: "a" }).catch(status);
-    const second = client.search({ q: "ab" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
+    const second = client.search({ q: "ab" }).catch(cancelled);
     await first;
     const third = client.search({ q: "abc" });
 
-    expect(await second).toBe(499);
+    expect(await second).toBe("SUPERSEDED");
     await expect(third).resolves.toEqual({ url: `${UPSTREAM}/search?q=abc` });
   });
 });
@@ -167,12 +168,12 @@ describe("a direct call slow to send", () => {
     vi.stubGlobal("fetch", sent);
     const { client, open } = gatedClient(1);
 
-    const first = client.search({ q: "a" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
     const second = client.search({ q: "ab" });
     await newerSent;
     open(0);
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
     expect(sent).toHaveBeenCalledTimes(1);
   });
@@ -181,13 +182,13 @@ describe("a direct call slow to send", () => {
     vi.stubGlobal("fetch", slowUpstream);
     const { client, open } = gatedClient(2);
 
-    const first = client.search({ q: "a" }).catch(status);
-    const second = client.search({ q: "ab" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
+    const second = client.search({ q: "ab" }).catch(cancelled);
     const third = client.search({ q: "abc" });
     open(0);
     open(1);
 
-    expect([await first, await second]).toEqual([499, 499]);
+    expect([await first, await second]).toEqual(["SUPERSEDED", "SUPERSEDED"]);
     await expect(third).resolves.toEqual({ url: `${UPSTREAM}/search?q=abc` });
   });
 });
@@ -257,20 +258,20 @@ describe("the proxy", () => {
   it("answers the browser client's identical newer call from the request already made", async () => {
     const proxied = vi.mocked(fetch);
     const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
-    const first = client.search({ q: "ab" }).catch(status);
+    const first = client.search({ q: "ab" }).catch(cancelled);
     const second = client.search({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
     expect(proxied.mock.calls.filter(([input]) => !isUpstream(input, UPSTREAM))).toHaveLength(1);
   });
 
   it("cancels in the browser client, which takes the endpoint's say from its routes", async () => {
     const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
-    const first = client.search({ q: "a" }).catch(status);
+    const first = client.search({ q: "a" }).catch(cancelled);
     const second = client.search({ q: "ab" });
 
-    expect(await first).toBe(499);
+    expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
   });
 });

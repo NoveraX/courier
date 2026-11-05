@@ -1,5 +1,5 @@
 import { createLogger } from "../logger";
-import { isAbortError } from "./abort";
+import { isCancellation } from "./abort";
 
 const log = createLogger("Stream");
 const ABORTED = Symbol("aborted");
@@ -99,6 +99,6 @@ function nextOrAbort<TEvent>(
 /* A handler that watches its ctx.signal, as it should, rejects with the
    abort that closed the stream; that is the close working, not a failure. */
 function lateFailure(when: string, error: unknown): void {
-  if (isAbortError(error)) log.debug(`Stream generator ended by its abort ${when}`, error);
+  if (isCancellation(error)) log.debug(`Stream generator ended by its abort ${when}`, error);
   else log.warn(`Stream generator failed ${when}`, error);
 }

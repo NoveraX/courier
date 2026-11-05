@@ -1,9 +1,8 @@
 import type { RetryOptions } from "../define/options";
-import { HTTPError } from "../errors";
-import { isAbortError } from "../utils/abort";
-import { abortReason } from "../utils/abort-reason";
+import { isCancellation } from "../utils/abort";
+import { cancellation } from "../utils/cancellation";
 import { isReplayableBody } from "../utils/replayable-body";
-import { pause } from "./pause";
+import { pause, waitUnlessStopped } from "./pause";
 import { type RetryBudget, retryBudget } from "./retry-budget";
 import { neverLeft, retriedByDefault } from "./retry-causes";
 import { startDeadline } from "./retry-deadline";
@@ -19,9 +18,6 @@ import type {
   RetryFailure,
   WrapMiddleware,
 } from "./types";
-
-/** What a request a newer identical one replaced is rejected with. */
-const CLIENT_CLOSED_REQUEST = 499;
 
 /**
  * Retry middleware: a failed attempt made again, as a retry policy says.
@@ -46,10 +42,10 @@ const CLIENT_CLOSED_REQUEST = 499;
  * not a storm of them.
  *
  * A cancellation is never retried: not the caller's, whatever reason it
- * gave, and not a call that a newer one replaced (status 499). A call
- * cancelled while the middleware waits between attempts, or just after an
- * attempt failed, is answered at once with its signal's reason rather than
- * the failure it no longer waits on.
+ * gave, and not a call that a newer one superseded. A call cancelled while
+ * the middleware waits between attempts, or just after an attempt failed,
+ * is answered at once with an `AbortError` rather than the failure it no
+ * longer waits on.
  *
  * An endpoint that writes is sent once, since a write whose answer was lost
  * may still have been carried out — unless it declares an
@@ -117,7 +113,7 @@ export function retryPolicy(options: RetryOptions, budget: RetryBudget): WrapMid
         const failure = failureOf(outcome);
         if (failure === undefined && "response" in outcome) budget.answered(spent);
         const repeat =
-          retry < limit && !isCancellation(outcome, outer) && isReplayableBody(ctx.variables);
+          retry < limit && !endedByCancellation(outcome, outer) && isReplayableBody(ctx.variables);
         if (failure === undefined || !repeat || !retryOn(failure) || !mayRepeat(failure)) {
           return unwrap(outcome, outer);
         }
@@ -126,7 +122,12 @@ export function retryPolicy(options: RetryOptions, budget: RetryBudget): WrapMid
           return unwrap(outcome, outer);
         spent = budget.spend(failure);
         if (spent === undefined) return unwrap(outcome, outer);
-        await onRetry?.({ attempt: retry + 2, delay: wait, failure }, ctx);
+        if (onRetry) {
+          await waitUnlessStopped(
+            onRetry({ attempt: retry + 2, delay: wait, failure }, ctx),
+            ctx.signal,
+          );
+        }
         await pause(wait, ctx.signal);
       }
     } finally {
@@ -162,21 +163,17 @@ async function settle(next: NextFn): Promise<Attempt> {
 
 function unwrap(outcome: Attempt, signal: AbortSignal | undefined): MiddlewareResponse {
   if (!("error" in outcome)) return outcome.response;
-  if (signal?.aborted) throw abortReason(signal);
+  if (signal?.aborted) throw cancellation(signal);
   throw outcome.error;
 }
 
 /**
  * Did this attempt end because nobody wants its answer any more?
  *
- * The caller's signal says so whatever the attempt was rejected with; a
- * cancellation given a reason reaches here as that reason, not as an abort.
+ * The caller's signal says so whatever the attempt was rejected with; so
+ * does an `AbortError` — the call's own, or one a newer call superseded.
  */
-function isCancellation(outcome: Attempt, signal: MiddlewareContext["signal"]): boolean {
+function endedByCancellation(outcome: Attempt, signal: MiddlewareContext["signal"]): boolean {
   if (signal?.aborted) return true;
-  if (!("error" in outcome)) return false;
-  const { error } = outcome;
-  return (
-    isAbortError(error) || (error instanceof HTTPError && error.status === CLIENT_CLOSED_REQUEST)
-  );
+  return "error" in outcome && isCancellation(outcome.error);
 }

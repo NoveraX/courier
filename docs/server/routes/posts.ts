@@ -37,7 +37,7 @@ export function postsRouter(limits: DemoLimits, visits: Visits): Router {
     res.json(postIn(visits.read(req), wholeNumber(req.params.id, "id", ID)))
   })
 
-  router.post("/", (req, res) => {
+  router.post("/", async (req, res) => {
     const fields = fieldsOf(req.body)
     const post = {
       userId: fields.userId === undefined ? 1 : wholeNumber(fields.userId, "userId", ID),
@@ -46,7 +46,7 @@ export function postsRouter(limits: DemoLimits, visits: Visits): Router {
       tags: tagsOf(fields.tags, limits),
     }
     const making = { most: limits.postsPerVisitor, at: new Date() }
-    res.status(201).json(visits.change(req, res, (data) => addPost(data, post, making)))
+    res.status(201).json(await visits.change(req, res, (data) => addPost(data, post, making)))
   })
 
   return router

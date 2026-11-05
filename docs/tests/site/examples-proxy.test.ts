@@ -70,8 +70,10 @@ describe("a caller's budget, kept by the backend", () => {
   })
 
   it("refuses a caller's write past 20 a minute with 429 and when to try again, and no one else's", async () => {
+    /* The encoding example's echo: writes that make no visitor a copy of the data. */
+    const echo = envelope({ text: "hi" })
     for (let write = 0; write < 20; write += 1) {
-      expect((await pageCall("198.51.100.2", "users.create", newUser)).status).toBe(201)
+      expect((await pageCall("198.51.100.2", "echo.send", echo)).status).toBe(200)
     }
     const refused = await pageCall("198.51.100.2", "users.create", newUser)
     expect(refused.status).toBe(429)

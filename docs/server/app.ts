@@ -53,7 +53,8 @@ export function createDemoApp({
   store = new SandboxStore(limits),
   log = refusalLog(),
 }: DemoAppOptions = {}): Express {
-  const visits = visitsIn(store, limits.lifetimeMs)
+  const budgets = budgetsFor(limits)
+  const visits = visitsIn(store, limits.lifetimeMs, budgets.copy)
   const app = express()
   app.disable("x-powered-by")
   app.set("etag", false)
@@ -63,7 +64,7 @@ export function createDemoApp({
     res.json({ status: "ok" })
   })
   /* Before a body is read: a call past its budget costs no more than its headers. */
-  app.use(budgetsFor(limits))
+  app.use(budgets.calls)
   app.use(express.json({ limit: limits.bodyBytes }))
   app.use(
     express.urlencoded({

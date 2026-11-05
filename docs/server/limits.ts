@@ -19,6 +19,13 @@ export interface DemoLimits extends SandboxLimits {
   readonly calls: number
   readonly writes: number
   readonly budgetMs: number
+  /**
+   * Copies of the first data one network makes in each `copiesMs`, a
+   * visitor's first change making them one: an IPv4 address's, or an IPv6
+   * /48's, the most one subscriber may be given.
+   */
+  readonly copies: number
+  readonly copiesMs: number
   /** Users one visitor keeps, the first data's own among them. */
   readonly usersPerVisitor: number
   /** Posts one visitor keeps, the first data's own among them. */
@@ -58,9 +65,12 @@ export const DEMO_LIMITS: DemoLimits = {
   calls: 300,
   writes: 20,
   budgetMs: 60_000,
+  copies: 6,
+  copiesMs: 10 * 60_000,
   visitors: 500,
   idleMs: 30 * 60_000,
   lifetimeMs: 2 * 60 * 60_000,
+  inUseMs: 5 * 60_000,
   usersPerVisitor: 30,
   postsPerVisitor: 20,
   nameLength: 80,

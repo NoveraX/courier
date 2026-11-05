@@ -3,7 +3,9 @@
  * examples' first data; their first change that goes through makes them a
  * copy under an id the store makes; the copy goes once it idles too long,
  * once it is too old, or — past the store's visitors — when it is the one
- * unused the longest. Time is the test's own clock, never waited for.
+ * unused the longest and no longer in use. Data in use is never dropped
+ * for a new copy, which is refused instead. Time is the test's own clock,
+ * never waited for.
  */
 import { describe, expect, it } from "vitest"
 
@@ -14,7 +16,7 @@ import type { DemoView } from "../../server/data/types"
 import { Refusal } from "../../server/refusal"
 import { below, seeded } from "./random"
 
-const LIMITS: SandboxLimits = { visitors: 3, idleMs: 1000, lifetimeMs: 5000 }
+const LIMITS: SandboxLimits = { visitors: 3, idleMs: 1000, lifetimeMs: 5000, inUseMs: 100 }
 
 function storeOn(clock: { now: number }, limits = LIMITS): SandboxStore {
   let made = 0
@@ -58,6 +60,14 @@ describe("a visitor with no data of their own", () => {
       })
     ).toThrow(refused)
     expect(store.size).toBe(0)
+  })
+
+  it("is kept nothing, and so would be made a copy, until their first change", () => {
+    const store = storeOn({ now: 0 })
+    expect(store.keeps(undefined)).toBe(false)
+    const { visitor } = store.change(undefined, add("jane"))
+    expect(store.keeps(visitor)).toBe(true)
+    expect(store.keeps("visitor-2")).toBe(false)
   })
 
   it("never has an id they name themselves taken for theirs", () => {
@@ -106,7 +116,7 @@ describe("a visitor's data", () => {
     expect(store.change(visitor, add("again")).made).toBe(true)
   })
 
-  it("goes first when it is the one unused the longest, once the store is full", () => {
+  it("goes first when it is the one unused the longest, once the store is full and it is no longer in use", () => {
     const clock = { now: 0 }
     const store = storeOn(clock)
     const first = store.change(undefined, add("a")).visitor
@@ -114,7 +124,7 @@ describe("a visitor's data", () => {
     const second = store.change(undefined, add("b")).visitor
     clock.now = 20
     const third = store.change(undefined, add("c")).visitor
-    clock.now = 30
+    clock.now = 110
     store.read(first)
     store.change(undefined, add("d"))
     expect(store.size).toBe(3)
@@ -123,19 +133,48 @@ describe("a visitor's data", () => {
     expect(names(store.read(third))).toContain("c")
   })
 
+  it("stays while it is in use, a new visitor's copy refused instead, with when there will be room", () => {
+    const clock = { now: 0 }
+    const store = storeOn(clock)
+    const visitors = ["a", "b", "c"].map((name) => {
+      clock.now += 10
+      return store.change(undefined, add(name)).visitor
+    })
+    clock.now = 50
+
+    let refused: unknown
+    try {
+      store.change(undefined, add("d"))
+    } catch (error) {
+      refused = error
+    }
+    expect(refused).toBeInstanceOf(Refusal)
+    expect(refused).toMatchObject({ status: 503, code: "STORE_FULL", retryAfter: 1 })
+    expect(() => store.checkRoom()).toThrow(Refusal)
+    expect(store.size).toBe(3)
+    expect(visitors.map((visitor) => names(store.read(visitor)).at(-1))).toEqual(["a", "b", "c"])
+
+    clock.now = 160
+    expect(() => store.checkRoom()).not.toThrow()
+    expect(store.change(undefined, add("d")).made).toBe(true)
+    expect(store.read(visitors[0])).toBe(SEED)
+  })
+
   it("is refused a store that could keep no one", () => {
-    expect(() => new SandboxStore({ visitors: 0, idleMs: 1, lifetimeMs: 1 })).toThrow(RangeError)
-    expect(() => new SandboxStore({ visitors: 1, idleMs: 0, lifetimeMs: 1 })).toThrow(RangeError)
+    const limits = { visitors: 1, idleMs: 1, lifetimeMs: 1, inUseMs: 0 }
+    expect(() => new SandboxStore({ ...limits, visitors: 0 })).toThrow(RangeError)
+    expect(() => new SandboxStore({ ...limits, idleMs: 0 })).toThrow(RangeError)
+    expect(() => new SandboxStore({ ...limits, inUseMs: -1 })).toThrow(RangeError)
   })
 })
 
 describe("any run of visitors' calls", () => {
-  it("keeps each visitor's data from the others', the first data unchanged, and no more than it may", () => {
+  it("keeps each visitor's data from the others', and in use, the first data unchanged, and no more than it may", () => {
     const first = JSON.stringify([...SEED.users.values(), ...SEED.posts.values()])
     for (let seed = 1; seed <= 20; seed += 1) {
       const next = seeded(seed)
       const clock = { now: 0 }
-      const store = storeOn(clock, { visitors: 4, idleMs: 50, lifetimeMs: 200 })
+      const store = storeOn(clock, { visitors: 4, idleMs: 50, lifetimeMs: 200, inUseMs: 20 })
       const ids = new Map<number, { id: string; createdAt: number; usedAt: number }>()
       for (let call = 0; call < 2000; call += 1) {
         clock.now += below(next, 12)
@@ -147,17 +186,25 @@ describe("any run of visitors' calls", () => {
           const expired =
             known !== undefined &&
             (clock.now - known.usedAt >= 50 || clock.now - known.createdAt >= 200)
+          const inUse =
+            known !== undefined &&
+            clock.now - known.usedAt < 20 &&
+            clock.now - known.createdAt < 200
           for (const name of names(data).filter((written) => written.startsWith("v"))) {
             expect(name.split("-")[0], label).toBe(`v${slot}`)
           }
           if (expired) expect(data, label).toBe(SEED)
+          if (inUse) expect(data, label).not.toBe(SEED)
           if (known !== undefined && data !== SEED) known.usedAt = clock.now
           continue
         }
-        /* A call counts as a use of the visitor's data whether or not its change goes through. */
-        if (known !== undefined) known.usedAt = clock.now
         try {
           const { visitor, made } = store.change(known?.id, (data) => {
+            /* A call counts as a use of the visitor's data whether or not its change goes
+               through: data of theirs holds a name of theirs, where a copy holds none. */
+            if (known !== undefined && names(data).some((name) => name.startsWith(`v${slot}-`))) {
+              known.usedAt = clock.now
+            }
             if (below(next, 4) === 0) throw new Refusal(404, "NOT_FOUND", "gone")
             return add(`v${slot}-${call}`)(data)
           })
@@ -176,7 +223,7 @@ describe("the work of a call", () => {
   it("stays the same however many visitors' data the store keeps", () => {
     const visitors = 20_000
     const clock = { now: 0 }
-    const store = storeOn(clock, { visitors, idleMs: 60_000, lifetimeMs: 600_000 })
+    const store = storeOn(clock, { visitors, idleMs: 60_000, lifetimeMs: 600_000, inUseMs: 0 })
     const ids = Array.from({ length: visitors }, () => store.change(undefined, () => 0).visitor)
     const started = performance.now()
     for (let call = 0; call < 100_000; call += 1) {

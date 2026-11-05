@@ -61,7 +61,7 @@ export function usersRouter(limits: DemoLimits, visits: Visits): Router {
     res.json({ user, post })
   })
 
-  router.post("/", (req, res) => {
+  router.post("/", async (req, res) => {
     const fields = fieldsOf(req.body)
     const user = {
       name: named(fields.name),
@@ -69,10 +69,10 @@ export function usersRouter(limits: DemoLimits, visits: Visits): Router {
       role: fields.role === undefined ? "user" : role(fields.role),
     } as const
     const making = { most: limits.usersPerVisitor, at: new Date() }
-    res.status(201).json(visits.change(req, res, (data) => addUser(data, user, making)))
+    res.status(201).json(await visits.change(req, res, (data) => addUser(data, user, making)))
   })
 
-  router.put("/:id", (req, res) => {
+  router.put("/:id", async (req, res) => {
     const id = wholeNumber(req.params.id, "id", ID)
     const fields = fieldsOf(req.body)
     const user = {
@@ -80,10 +80,10 @@ export function usersRouter(limits: DemoLimits, visits: Visits): Router {
       email: addressed(fields.email),
       role: role(fields.role),
     }
-    res.json(visits.change(req, res, (data) => changeUser(data, id, user)))
+    res.json(await visits.change(req, res, (data) => changeUser(data, id, user)))
   })
 
-  router.patch("/:id", (req, res) => {
+  router.patch("/:id", async (req, res) => {
     const id = wholeNumber(req.params.id, "id", ID)
     const fields = fieldsOf(req.body)
     if (fields.name === undefined && fields.email === undefined && fields.role === undefined) {
@@ -94,12 +94,12 @@ export function usersRouter(limits: DemoLimits, visits: Visits): Router {
       ...(fields.email !== undefined && { email: addressed(fields.email) }),
       ...(fields.role !== undefined && { role: role(fields.role) }),
     }
-    res.json(visits.change(req, res, (data) => changeUser(data, id, changes)))
+    res.json(await visits.change(req, res, (data) => changeUser(data, id, changes)))
   })
 
-  router.delete("/:id", (req, res) => {
+  router.delete("/:id", async (req, res) => {
     const id = wholeNumber(req.params.id, "id", ID)
-    visits.change(req, res, (data) => data.users.delete(userIn(data, id).id))
+    await visits.change(req, res, (data) => data.users.delete(userIn(data, id).id))
     res.status(204).end()
   })
 

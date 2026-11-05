@@ -26,10 +26,11 @@ export const noSuchRoute: RequestHandler = (req) => {
 
 /**
  * Answer what stopped a call, always in JSON, as
- * `{ success: false, message, code }`: a refusal with its own status, a
- * body the parsers could not read as the refusal it is, and anything else
- * as 500 `INTERNAL`, whose details go to the log alone. A refusal is
- * expected and logs one line; a failure logs its stack.
+ * `{ success: false, message, code }`: a refusal with its own status, and
+ * `Retry-After` for one that time lifts, a body the parsers could not read
+ * as the refusal it is, and anything else as 500 `INTERNAL`, whose details
+ * go to the log alone. A refusal is expected and logs one line; a failure
+ * logs its stack.
  *
  * @param log - Where refusals are counted
  * @param bodyBytes - The largest body the backend reads, named when one is larger
@@ -46,6 +47,7 @@ export function answerFailures(log: RefusalLog, bodyBytes: number): ErrorRequest
     const refusal = refusalOf(error, bodyBytes)
     if (refusal !== undefined) {
       log(refusal.code)
+      if (refusal.retryAfter !== undefined) res.setHeader("Retry-After", String(refusal.retryAfter))
       res
         .status(refusal.status)
         .json({ success: false, message: refusal.message, code: refusal.code })

@@ -2,23 +2,27 @@ import { isIP } from "node:net"
 
 /**
  * Whom a call's address counts as for a budget: an IPv4 address as it is,
- * an IPv6 one by its /64 network, which one subscriber is given whole and
- * could spend address by address — as Courier's own limit counts them —
- * and one caller, `unknown`, for every call that names none.
+ * an IPv6 one by its network — its /64, which one subscriber is given whole
+ * and could spend address by address, as Courier's own limit counts them,
+ * or its /48, the most one subscriber may be given — and one caller,
+ * `unknown`, for every call that names none.
  *
  * @param address - The header's value, as the call carried it
+ * @param prefix - The IPv6 network's length
  * @returns The key
  * @example
  * ```ts
  * addressKey("2001:db8:1:2::7") // "2001:db8:1:2::/64"
+ * addressKey("2001:db8:1:2::7", 48) // "2001:db8:1::/48"
  * ```
  */
-export function addressKey(address: string | string[] | undefined): string {
+export function addressKey(address: string | string[] | undefined, prefix: 48 | 64 = 64): string {
   if (typeof address !== "string") return "unknown"
   const family = isIP(address)
   if (family === 4) return address
   if (family !== 6) return "unknown"
-  return `${networkOf(address).join(":")}::/64`
+  const groups = networkOf(address).slice(0, prefix / 16)
+  return `${groups.join(":")}::/${prefix}`
 }
 
 /* The first four groups of an IPv6 address, written out: what `::` stands for, filled in. */

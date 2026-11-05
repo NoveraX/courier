@@ -135,12 +135,10 @@ function within<T>(ms: number, answer: Promise<T>): Promise<T | undefined> {
 describe("an upload", () => {
   it("past its caller's budget is answered at once, before its file has come", async () => {
     const address = "198.51.100.30"
-    const newUser = JSON.stringify({
-      variables: { name: "Jane Doe", email: "jane@example.com" },
-      options: {},
-    })
+    /* The encoding example's echo: writes that make no visitor a copy of the data. */
+    const echo = JSON.stringify({ variables: { text: "hi" }, options: {} })
     for (let write = 0; write < DEMO_LIMITS.writes; write += 1) {
-      expect((await call(address, "users.create", newUser, "application/json")).status).toBe(201)
+      expect((await call(address, "echo.send", echo, "application/json")).status).toBe(200)
     }
     const { held, release } = holdBack()
     const answer = call(address, "files.upload", upload(CHUNK, held), MULTIPART)

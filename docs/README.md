@@ -210,12 +210,15 @@ backend — through the proxy route, and from the pages and Server Actions —
 and no other cookie of the site reaches the backend.
 
 A visitor's data is kept in memory, for 30 minutes unused and for 2 hours
-at most; the backend keeps 500 visitors' data at once, the one unused the
-longest going first, and each visitor up to 30 users and 20 posts. The
-limits are in `server/limits.ts`, with the most memory they let the data
-take, which a test measures. The cookie's `__Host-` prefix needs HTTPS, or
-the local machine: a visitor served over plain HTTP from another machine
-keeps no changes, and the log says why.
+at most, and each visitor keeps up to 30 users and 20 posts. The backend
+keeps 500 visitors' data at once. Past them, a new visitor's copy takes
+the room of the data unused the longest, once that has gone unused for 5
+minutes: while every visitor's data is in use, a first change is refused
+503 `STORE_FULL`, with when to try again, and no one's data goes for it.
+The limits are in `server/limits.ts`, with the most memory they let the
+data take, which a test measures. The cookie's `__Host-` prefix needs
+HTTPS, or the local machine: a visitor served over plain HTTP from another
+machine keeps no changes, and the log says why.
 
 ### Each visitor's budget
 
@@ -237,6 +240,13 @@ DDoS-Guard and Traefik is in
 [Behind DDoS-Guard and Traefik](#behind-ddos-guard-and-traefik). The
 backend takes the header as it comes, since only the site's server
 reaches it.
+
+A visitor's first change, which makes them their copy, takes from one
+more budget: the copies of the network it comes from — an IPv4 address,
+or an IPv6 /48, the most one subscriber may be given — 6 in 10 minutes. A
+visitor makes one copy, and keeps it while they use it; a script that
+makes copy after copy to crowd the others out of the store is refused
+past them.
 
 A call past a budget is answered 429 `RATE_LIMITED`, with `Retry-After`;
 every answer tells what is left of the tightest budget it took from in
@@ -301,7 +311,8 @@ refuses as `{ "success": false, "message": "…", "code": "…" }`:
 | `UPLOAD_REFUSED` | 400, 413 | A second file, a file in another field, more fields or longer ones than it reads |
 | `NOT_FOUND` | 404 | A user or a post it does not have |
 | `ROUTE_NOT_FOUND` | 404 | A route it does not have |
-| `RATE_LIMITED` | 429 | A call past its visitor's budget, in [Each visitor's budget](#each-visitors-budget) |
+| `STORE_FULL` | 503 | A first change while every visitor's data the backend keeps is in use, in [Each visitor's data](#each-visitors-data) |
+| `RATE_LIMITED` | 429 | A call past its visitor's budget, or a first change past its network's copies, in [Each visitor's budget](#each-visitors-budget) |
 
 A failure of its own is answered 500 `INTERNAL`, its details kept to the
 log; a refusal is logged as one line, at most once a minute for each code.

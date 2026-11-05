@@ -1,5 +1,14 @@
 import { isRecord } from "../../utils/is-record";
-import type { FrameError, FrameReading, ServerFrame } from "./server-frame-types";
+import {
+  isCode,
+  isCount,
+  isFrameError,
+  isString,
+  isWait,
+  optional,
+  positionOf,
+} from "./frame-fields";
+import type { FrameReading, ServerFrame } from "./server-frame-types";
 
 type Reader = (fields: Record<string, unknown>) => ServerFrame | undefined;
 
@@ -11,7 +20,7 @@ const READERS: Readonly<Record<string, Reader>> = {
   pong: () => ({ type: "pong" }),
   auth_ok: readAuthOk,
   auth_error: (f) => {
-    if (!isFrameError(f.error) || !isVersion(f.v)) return undefined;
+    if (!isFrameError(f.error) || !isCount(f.v)) return undefined;
     if (f.id !== undefined && !isString(f.id)) return undefined;
     const { error, v } = f;
     return optional(f.retryAfterMs, isWait, (retryAfterMs) => ({
@@ -40,10 +49,13 @@ const READERS: Readonly<Record<string, Reader>> = {
     isString(f.topic) && isString(f.payload)
       ? { type: "renamed", topic: f.topic, to: f.payload }
       : undefined,
-  subscribed: (f) =>
-    isString(f.topic)
-      ? optional(f.id, isString, (id) => ({ type: "subscribed", topic: f.topic as string, id }))
-      : undefined,
+  subscribed: (f) => {
+    const position = positionOf(f);
+    if (!isString(f.topic) || position === undefined) return undefined;
+    if (f.id !== undefined && !isString(f.id)) return undefined;
+    if (f.recovered !== undefined && typeof f.recovered !== "boolean") return undefined;
+    return { type: "subscribed", topic: f.topic, id: f.id, position, recovered: f.recovered };
+  },
   unsubscribed: (f) => (isString(f.topic) ? { type: "unsubscribed", topic: f.topic } : undefined),
   complete: (f) =>
     isString(f.topic)
@@ -53,8 +65,17 @@ const READERS: Readonly<Record<string, Reader>> = {
           error,
         }))
       : undefined,
-  data: (f) =>
-    optional(f.topic, isString, (topic) => ({ type: "data", topic, payload: f.payload })),
+  data: (f) => {
+    if (f.topic !== undefined && !isString(f.topic)) return undefined;
+    if (f.seq !== undefined && !isCount(f.seq)) return undefined;
+    return { type: "data", topic: f.topic, payload: f.payload, seq: f.seq };
+  },
+  skip: (f) =>
+    isString(f.topic) && isCount(f.seq) ? { type: "skip", topic: f.topic, seq: f.seq } : undefined,
+  resync: (f) => {
+    const position = positionOf(f);
+    return isString(f.topic) && position ? { type: "resync", topic: f.topic, position } : undefined;
+  },
   error: (f) => {
     if (!isFrameError(f.error)) return undefined;
     const { error } = f;
@@ -100,10 +121,11 @@ export function readServerFrame(raw: unknown): FrameReading {
  */
 function readAuthOk(f: Record<string, unknown>): ServerFrame | undefined {
   const { heartbeat, limits } = f;
-  if (!isString(f.id) || !isVersion(f.v) || !isString(f.connectionId)) return undefined;
-  if (!isRecord(heartbeat) || !isRecord(limits) || !isSize(limits.maxMessageSize)) return undefined;
+  if (!isString(f.id) || !isCount(f.v) || !isString(f.connectionId)) return undefined;
+  if (!isRecord(heartbeat) || !isRecord(limits) || !isCount(limits.maxMessageSize))
+    return undefined;
   const { intervalMs, timeoutMs } = heartbeat;
-  if (!isSize(intervalMs) || !isSize(timeoutMs) || intervalMs + timeoutMs > MAX_TIMER_MS) {
+  if (!isCount(intervalMs) || !isCount(timeoutMs) || intervalMs + timeoutMs > MAX_TIMER_MS) {
     return undefined;
   }
   return {
@@ -114,46 +136,4 @@ function readAuthOk(f: Record<string, unknown>): ServerFrame | undefined {
     heartbeat: { intervalMs, timeoutMs },
     limits: { maxMessageSize: limits.maxMessageSize },
   };
-}
-
-/* A field a frame may leave out, checked when it is there. */
-function optional<TValue, TFrame>(
-  value: unknown,
-  holds: (value: unknown) => value is TValue,
-  make: (value: TValue | undefined) => TFrame,
-): TFrame | undefined {
-  if (value === undefined) return make(undefined);
-  return holds(value) ? make(value) : undefined;
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-/* A protocol's version: 1, 2, … */
-function isVersion(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 1;
-}
-
-/* A count of bytes or milliseconds no smaller than one. */
-function isSize(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= 1;
-}
-
-/* A wait in milliseconds, none included. */
-function isWait(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
-}
-
-function isCode(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value);
-}
-
-function isFrameError(value: unknown): value is FrameError {
-  return (
-    isRecord(value) &&
-    isCode(value.code) &&
-    typeof value.message === "string" &&
-    (value.issues === undefined || Array.isArray(value.issues))
-  );
 }

@@ -5,6 +5,16 @@ export interface FrameError {
   readonly issues?: readonly unknown[] | undefined;
 }
 
+/**
+ * Where a topic's sequence stands for a subscription: the number of the
+ * last event counted for it — delivered, sent again or skipped — in the
+ * sequence `epoch` names. A new epoch starts the numbers over.
+ */
+export interface TopicPosition {
+  readonly seq: number;
+  readonly epoch: string;
+}
+
 /** How often a server pings a connection, and how long it waits for the answer. */
 export interface ServerHeartbeat {
   readonly intervalMs: number;
@@ -44,10 +54,28 @@ export type ServerFrame =
       readonly retryAfterMs?: number | undefined;
     }
   | { readonly type: "renamed"; readonly topic: string; readonly to: string }
-  | { readonly type: "subscribed"; readonly topic: string; readonly id?: string | undefined }
+  /** The subscription runs, the topic's events after `position` to come */
+  | {
+      readonly type: "subscribed";
+      readonly topic: string;
+      readonly id?: string | undefined;
+      readonly position: TopicPosition;
+      /** For a subscribe that sent `since`: whether every event it missed was sent before this */
+      readonly recovered?: boolean | undefined;
+    }
   | { readonly type: "unsubscribed"; readonly topic: string }
   | { readonly type: "complete"; readonly topic: string; readonly error?: FrameError | undefined }
-  | { readonly type: "data"; readonly topic?: string | undefined; readonly payload: unknown }
+  /** An event of the topic, numbered `seq`; or, without one, a frame for this connection alone */
+  | {
+      readonly type: "data";
+      readonly topic?: string | undefined;
+      readonly payload: unknown;
+      readonly seq?: number | undefined;
+    }
+  /** The event `seq` of the topic was not sent to this connection: it was the one that sent it */
+  | { readonly type: "skip"; readonly topic: string; readonly seq: number }
+  /** The server cannot vouch for what came before: the topic goes on after `position` */
+  | { readonly type: "resync"; readonly topic: string; readonly position: TopicPosition }
   | {
       readonly type: "error";
       readonly id?: string | undefined;

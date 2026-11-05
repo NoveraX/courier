@@ -55,14 +55,20 @@ export function subscribeToTopic(
   };
 }
 
-/** Send the subscribe for a topic, with the id the server answers it by. */
+/**
+ * Send the subscribe for a topic, with the id the server answers it by, and
+ * the position it stood at as `since` when it was running before: the
+ * server sends what it missed, if it still has it.
+ */
 export function requestSubscription(
   ctx: Pick<TopicOpsContext, "runtime" | "topics">,
   topic: string,
   variables: unknown,
 ): void {
   const id = ctx.topics.expect(topic);
-  ctx.runtime.send(encodeMessage({ type: "subscribe", id, topic, payload: variables }));
+  const position = ctx.topics.subscriptionOf(topic)?.position;
+  const since = position && { since: { seq: position.seq, epoch: position.epoch } };
+  ctx.runtime.send(encodeMessage({ type: "subscribe", id, topic, payload: variables, ...since }));
 }
 
 /**

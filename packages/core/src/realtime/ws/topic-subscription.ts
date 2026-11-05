@@ -12,6 +12,10 @@ export interface Subscription {
   confirmed: boolean;
   /** Id of the subscribe the server has yet to confirm */
   awaiting?: string | undefined;
+  /** Where the topic's sequence stands for it, once the server said: what it resumes from */
+  position?: { seq: number; epoch: string } | undefined;
+  /** The server could not vouch for the sequence before it confirmed the subscription */
+  broken?: boolean;
   /** Set once another subscription took over its subscribers */
   mergedInto?: Subscription;
 }

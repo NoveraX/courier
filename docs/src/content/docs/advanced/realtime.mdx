@@ -113,12 +113,12 @@ A subscription has five events. Listening to any other is a type error, and thro
 | `data` | the data, and the event it came in | it delivers something |
 | `error` | a `RealtimeError` | the server refuses a message, a handler fails or a message is dropped from a full queue — the subscription goes on — and once more when it ends with an error |
 | `status` | `connecting`, `connected`, `reconnecting` or `disconnected` | its status changes |
-| `open` | `{ first, resumed }` | it is open: the first time, and again after each reconnect |
+| `open` | `{ first, resumed }` | it is open: the first time, again after each reconnect, and when the server says what it holds may be stale |
 | `close` | `{ reason }`: `closed`, `completed`, or `failed` with its `error` | it ends |
 
 A subscription is `connecting` from the moment it is made, and `connected` once the server runs it: a channel once the server has confirmed its subscription, not as soon as its socket opens. A listener that throws is logged, and the others still hear the event.
 
-`open` with `first: false` and `resumed: false` means the subscription came back, and what it missed while away may not have been sent: read what it shows again.
+A channel or a push subscription made again after a drop tells the server the last event of its topic it counted, and `resumed: true` says the server sent every event it missed — the server keeps them for that only where the channel's handler has a `history`, or the server a Redis log: nothing needs reading again. `open` with `first: false` and `resumed: false` means what it missed may not have been sent — the server could not, or the topic's sequence broke while it ran: read what it shows again. A stream hears `resumed: false` after every reconnect.
 
 `reconnect()` connects again at once. On a subscription that is open or waiting to reconnect, the socket or the stream's connection is opened anew, with its credentials asked for again; the channels of one caller share a socket, so all of them reconnect. A subscription the server ended opens again, its listeners kept — a loop that ended does not resume, a new one reads it. One the application closed stays closed: call the endpoint again. `close()` ends it for good.
 

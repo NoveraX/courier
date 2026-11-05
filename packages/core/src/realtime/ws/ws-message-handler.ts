@@ -6,6 +6,7 @@ import type { MessageQueue } from "./message-queue";
 import type { FrameError, ServerFrame } from "./server-frame-types";
 import { unqualifyTopic } from "./topic-key";
 import { messageFrame } from "./topic-operations";
+import { brokeOff, countEvent, restart, startAt } from "./topic-position";
 import type { TopicRegistry } from "./topic-registry-types";
 import type { Subscription } from "./topic-subscription";
 import { encodeMessage } from "./ws-protocol";
@@ -51,14 +52,24 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, frame: Serv
       followRename(ctx, frame.topic, frame.to);
       return;
     case "subscribed":
-      confirmSubscription(ctx, frame.topic, frame.id);
+      confirmSubscription(ctx, frame);
       return;
     case "complete":
       ctx.topics.end(frame.topic, failureOf(frame.error));
       return;
     case "data":
-      if (frame.topic !== undefined) ctx.topics.dispatch(frame.topic, frame.payload);
+      if (frame.topic !== undefined && counts(ctx, frame.topic, frame.seq)) {
+        ctx.topics.dispatch(frame.topic, frame.payload);
+      }
       return;
+    case "skip":
+      counts(ctx, frame.topic, frame.seq);
+      return;
+    case "resync": {
+      const s = ctx.topics.subscriptionOf(frame.topic);
+      if (s !== undefined) restart(s, frame.position);
+      return;
+    }
     case "error":
       routeError(ctx, frame);
       return;
@@ -108,24 +119,44 @@ function followRename(ctx: MessageDispatchContext, topic: string, serverTopic: s
 
 /**
  * The server is running the subscription: what was kept for it goes out, in
- * the order it was sent, and its subscribers hear it is open. A confirmation
- * nobody waits for is a subscription the client left before the server set
- * it up, which the server would otherwise keep until the socket closes.
+ * the order it was sent, and its subscribers hear it is open — and whether
+ * it resumed. A confirmation nobody waits for is a subscription the client
+ * left before the server set it up, which the server would otherwise keep
+ * until the socket closes.
  */
 function confirmSubscription(
   ctx: MessageDispatchContext,
-  topic: string,
-  id: string | undefined,
+  frame: Extract<ServerFrame, { type: "subscribed" }>,
 ): void {
-  const confirmed = ctx.topics.confirm(topic, id);
+  const confirmed = ctx.topics.confirm(frame.topic, frame.id);
   if (confirmed === undefined) {
-    ctx.runtime.send(encodeMessage({ type: "unsubscribe", topic }));
+    ctx.runtime.send(encodeMessage({ type: "unsubscribe", topic: frame.topic }));
     return;
   }
   if (confirmed === "stale") return;
+  const resumed = startAt(confirmed, frame.position, frame.recovered);
   for (const message of ctx.queue.take(confirmed))
     ctx.runtime.send(messageFrame(confirmed.topic, message.payload));
-  for (const subscriber of [...confirmed.subscribers]) subscriber.open?.({ resumed: false });
+  for (const subscriber of [...confirmed.subscribers]) subscriber.open?.({ resumed });
+}
+
+/*
+ * Count an event, or a skip, in its subscription's position: false for one
+ * counted already, which is not delivered again. Events that never came
+ * between the last and this one break the sequence, as a resync does.
+ */
+function counts(ctx: MessageDispatchContext, topic: string, seq: number | undefined): boolean {
+  const s = seq === undefined ? undefined : ctx.topics.subscriptionOf(topic);
+  if (s === undefined || seq === undefined) return true;
+  const from = (s.position?.seq ?? 0) + 1;
+  const counted = countEvent(s, seq);
+  if (counted === "gap") {
+    ctx.log.warn(
+      `Events ${from} to ${seq - 1} of ${s.topic} never came: what it holds may be stale`,
+    );
+    brokeOff(s);
+  }
+  return counted !== "counted";
 }
 
 /**

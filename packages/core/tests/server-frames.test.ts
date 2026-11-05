@@ -48,10 +48,24 @@ const frames: Record<string, ServerFrame> = {
     topic: "api.room#{}",
     to: "api.room",
   },
-  '{"type":"subscribed","id":"sub-1","topic":"api.room"}': {
+  '{"type":"subscribed","id":"sub-1","topic":"api.room","seq":41,"epoch":"k2m9x"}': {
     type: "subscribed",
     id: "sub-1",
     topic: "api.room",
+    position: { seq: 41, epoch: "k2m9x" },
+  },
+  '{"type":"subscribed","id":"sub-2","topic":"api.room","seq":0,"epoch":"e","recovered":false}': {
+    type: "subscribed",
+    id: "sub-2",
+    topic: "api.room",
+    position: { seq: 0, epoch: "e" },
+    recovered: false,
+  },
+  '{"type":"skip","topic":"api.room","seq":42}': { type: "skip", topic: "api.room", seq: 42 },
+  '{"type":"resync","topic":"api.room","seq":7,"epoch":"n3w"}': {
+    type: "resync",
+    topic: "api.room",
+    position: { seq: 7, epoch: "n3w" },
   },
   '{"type":"unsubscribed","topic":"api.room"}': { type: "unsubscribed", topic: "api.room" },
   '{"type":"complete","topic":"api.room","error":{"code":4403,"message":"No"}}': {
@@ -63,6 +77,12 @@ const frames: Record<string, ServerFrame> = {
     type: "data",
     topic: "api.room",
     payload: { n: 1 },
+    seq: 3,
+  },
+  '{"type":"data","topic":"api.room","payload":"snapshot"}': {
+    type: "data",
+    topic: "api.room",
+    payload: "snapshot",
   },
   '{"type":"error","id":"sub-1","topic":"api.room","error":{"code":4422,"message":"Invalid","issues":[{}]}}':
     {
@@ -89,7 +109,19 @@ describe("readServerFrame", () => {
     ["no type", "[1,2]"],
     ["no type", '{"type":7}'],
     ["a subscribed frame", '{"type":"subscribed"}'],
-    ["a subscribed frame", '{"type":"subscribed","topic":"api.room","id":5}'],
+    ["a subscribed frame", '{"type":"subscribed","topic":"t","id":5,"seq":0,"epoch":"e"}'],
+    ["a subscribed frame", '{"type":"subscribed","topic":"t","id":"s"}'],
+    ["a subscribed frame", '{"type":"subscribed","topic":"t","seq":-1,"epoch":"e"}'],
+    ["a subscribed frame", '{"type":"subscribed","topic":"t","seq":1.5,"epoch":"e"}'],
+    ["a subscribed frame", '{"type":"subscribed","topic":"t","seq":1,"epoch":""}'],
+    ["a subscribed frame", `{"type":"subscribed","topic":"t","seq":1,"epoch":"${"e".repeat(65)}"}`],
+    ["a subscribed frame", '{"type":"subscribed","topic":"t","seq":1,"epoch":"e","recovered":1}'],
+    ["a data frame", '{"type":"data","topic":"t","payload":1,"seq":0}'],
+    ["a data frame", '{"type":"data","topic":"t","payload":1,"seq":"3"}'],
+    ["a skip frame", '{"type":"skip","topic":"t","seq":0}'],
+    ["a skip frame", '{"type":"skip","seq":4}'],
+    ["a resync frame", '{"type":"resync","topic":"t","seq":4}'],
+    ["a resync frame", '{"type":"resync","topic":"t","seq":-4,"epoch":"e"}'],
     ["a data frame", '{"type":"data","topic":{"room":"a"},"payload":1}'],
     ["a complete frame", '{"type":"complete","topic":"t","error":{"code":"4403","message":"No"}}'],
     ["a error frame", '{"type":"error","error":{"code":4.5,"message":"x"}}'],
@@ -165,6 +197,14 @@ function holds(frame: ServerFrame): boolean {
   if (frame.type === "disconnect") {
     return Number.isInteger(frame.code) && typeof frame.reason === "string";
   }
+  if ("position" in fields && fields.position !== undefined) {
+    const { seq, epoch } = fields.position as { seq: unknown; epoch: unknown };
+    const named = typeof epoch === "string" && epoch.length > 0 && epoch.length <= 64;
+    if (!Number.isSafeInteger(seq) || (seq as number) < 0 || !named) return false;
+  }
+  if ("seq" in fields && fields.seq !== undefined) {
+    if (!Number.isSafeInteger(fields.seq) || (fields.seq as number) < 1) return false;
+  }
   if ("error" in fields && fields.error !== undefined) {
     const error = fields.error as Record<string, unknown>;
     return Number.isInteger(error.code) && typeof error.message === "string";
@@ -192,6 +232,8 @@ const TYPES = [
   "disconnect",
   "renamed",
   "subscribed",
+  "skip",
+  "resync",
   "unsubscribed",
   "complete",
   "data",
@@ -201,7 +243,7 @@ const TYPES = [
 const KEYS = [
   ...["type", "id", "topic", "payload", "error", "code", "message", "issues", "seq", "v"],
   ...["connectionId", "heartbeat", "intervalMs", "timeoutMs", "limits", "maxMessageSize"],
-  ...["retryAfterMs", "reason"],
+  ...["retryAfterMs", "reason", "epoch", "recovered"],
 ];
 
 function randomValue(random: () => number, depth: number): unknown {

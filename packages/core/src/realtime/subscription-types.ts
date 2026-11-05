@@ -21,7 +21,9 @@ export interface OpenInfo {
   /**
    * Whether the server sent everything since the subscription last stood
    * open: nothing was missed. `false` after a reconnect means the server
-   * could not tell or could not make up for it — read the state again.
+   * could not tell or could not make up for it — read the state again. An
+   * open that comes while the subscription is open means the same: the
+   * server could not vouch for what it sent meanwhile.
    */
   readonly resumed: boolean;
 }

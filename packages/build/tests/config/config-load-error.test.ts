@@ -227,7 +227,7 @@ describe("code that throws while the config is read", () => {
     );
     expect(error.message).not.toContain("tok_live");
     expect(error.hint).toBe(
-      "Courier runs courier.config.ts and every module it imports, as your server would: a module that checks the environment as it is imported needs those variables set where Courier reads the project.",
+      'Courier runs courier.config.ts and every module it imports, as your server would: a module that checks the environment as it is imported needs those variables set where Courier reads the project, or can skip the check while COURIER_PHASE is "definitions".',
     );
     expect(error.cause).toBeInstanceOf(Error);
   });

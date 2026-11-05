@@ -170,6 +170,8 @@ Check the module in the job that checks your code, after the install:
 - run: npx @noverax/courier-cli routes --check
 ```
 
+The command runs `courier.config.ts` and every module it imports, as your server would. While it does, `COURIER_PHASE` is `definitions`, so a module that checks the environment as it is imported can skip the check — `skipValidation: process.env.COURIER_PHASE === "definitions"` with `@t3-oss/env` — and the variables the definitions read, such as an API's `baseURL`, can come from an env file of their own: `--dotenv .env.ci`. See [How Courier reads your project](https://courier.noverax.cloud/docs/reading-your-project#in-ci).
+
 The file is what a page may call, so review a change to it as you review a change to an endpoint's permissions — a `CODEOWNERS` entry gives it the owners of the API:
 
 ```

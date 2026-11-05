@@ -1,5 +1,6 @@
 export { CONFIG_BASENAMES, configCandidates } from "./config-candidates";
 export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
+export { COURIER_PHASE, DEFINITIONS_PHASE, enterDefinitionsPhase } from "./definitions-phase";
 export {
   detectFramework,
   FRAMEWORK_MARKERS,

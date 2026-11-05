@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
+import { enterDefinitionsPhase } from "@noverax/courier-build/config";
 import { createProjectEnv, DOTENV_ARG, type ProjectEnv } from "@noverax/courier-cli/devkit";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 import { closeOnFatal } from "./close-on-fatal";
@@ -19,6 +20,8 @@ import { studioVersion } from "./server/studio-version";
 
 checkNodeVersion();
 quietSqliteWarning();
+/* Studio reads the project's definitions, and serves none of its requests: the project's code may tell. */
+enterDefinitionsPhase();
 
 const log = createLogger("CLI");
 

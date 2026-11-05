@@ -251,6 +251,9 @@ export default {
 | `readPathAliases(projectRoot)` | `/config` | The tsconfig `paths` the loader resolves imports through |
 | `projectFramework(folder)` / `detectFramework(listed)` / `FRAMEWORK_MARKERS` | `/config` | The framework a project is built with, told by the packages the nearest package.json lists |
 | `profileOf(framework)` / `RefusedModuleError` | `/config` | How the framework's server answers the imports it answers itself, and the error for one it refuses where definitions run |
+| `importProjectFile(file, options?)` / `ConfigLoadError` / `configLoadError(error, load)` | `/config` | Run one of the project's files with the project's loader, and why one did not load: its `code`, the `hint`, and `context.importChain` from the entry to the module that failed, no variable's value in any of them |
+| `COURIER_PHASE` / `DEFINITIONS_PHASE` / `enterDefinitionsPhase(env?)` | `/config` | The variable a project's code reads to tell that Courier reads its definitions, its value then, and how a process says so before the project's code runs |
+| `CONFIG_READ_LIMIT_MS` | `/config` | How long one reading of a config may take, 60 s, before `courier-cli routes` and the routes plugin give it up |
 | `unknownConfigKeys(config)` | `/config` | The keys of a config Courier does not read, which are usually typos |
 
 <br />

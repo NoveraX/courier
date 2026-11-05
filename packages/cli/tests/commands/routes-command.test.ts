@@ -56,6 +56,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   process.exitCode = undefined;
+  delete process.env.COURIER_PHASE;
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -148,6 +149,18 @@ describe("courier-cli routes", () => {
       "courier-cli reads the project's variables from .env.development.local",
     );
     vi.unstubAllEnvs();
+  });
+
+  it("tells the project's code it reads definitions, so a check of the environment can be skipped", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `if (process.env.COURIER_PHASE !== "definitions") throw new Error("Invalid environment variables");\nexport default { sources: {}, studio: { routes: false } };\n`,
+    );
+
+    await run("--check");
+
+    expect(process.exitCode).toBe(0);
   });
 
   it("refuses a module --out would put outside the project", async () => {

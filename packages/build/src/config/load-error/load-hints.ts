@@ -72,5 +72,5 @@ export function evaluationHint(
     error instanceof ReferenceError ? /^(\S+) is not defined/.exec(error.message)?.[1] : undefined;
   const said = name === undefined ? undefined : profile.undefinedName?.(name);
   if (name !== undefined && said !== undefined) return `${name} ${said.reason}. ${said.remedy}.`;
-  return `Courier runs ${entryName} and every module it imports, as your server would: a module that checks the environment as it is imported needs those variables set where Courier reads the project.`;
+  return `Courier runs ${entryName} and every module it imports, as your server would: a module that checks the environment as it is imported needs those variables set where Courier reads the project, or can skip the check while COURIER_PHASE is "definitions".`;
 }

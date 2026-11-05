@@ -1,4 +1,4 @@
-export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-05" }
 
 ## Overview
 
@@ -190,6 +190,8 @@ npx @noverax/courier-cli routes --check
 ```
 
 It writes nothing, and fails when the module on disk is not what the marks give: a mark changed without the module written again fails the build rather than a page. Install the CLI in the project — `npm install --save-dev @noverax/courier-cli` — so the job runs the version your lockfile pins.
+
+The step runs `courier.config.ts` and every module it imports, in a job that usually has none of your application's variables. `COURIER_PHASE` is `definitions` while it does, so a module that checks the environment as it is imported can skip the check, and `--dotenv` names an env file with the variables the definitions read — see [In CI](/docs/reading-your-project#in-ci).
 
 A line in `CODEOWNERS` gives the module to the people who own the API, so no endpoint becomes a page's to call without their review:
 

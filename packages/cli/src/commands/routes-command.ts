@@ -3,6 +3,7 @@ import { createLogger } from "@noverax/courier";
 import {
   CONFIG_READ_LIMIT_MS,
   ConfigLoadError,
+  enterDefinitionsPhase,
   type LoadedCourierConfig,
   loadCourierConfig,
 } from "@noverax/courier-build/config";
@@ -59,6 +60,7 @@ export const routesCommand = defineCommand({
   args: ROUTES_ARGS,
   async run({ args }) {
     const root = resolve(args.cwd ?? process.cwd());
+    enterDefinitionsPhase();
     let gaveUp = false;
     try {
       process.exitCode = (await writeRoutes(root, args)) ? 0 : 1;

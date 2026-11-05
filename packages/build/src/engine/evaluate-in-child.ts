@@ -1,5 +1,6 @@
 import { type ChildProcess, fork } from "node:child_process";
 
+import { COURIER_PHASE, DEFINITIONS_PHASE } from "../config/definitions-phase";
 import { CONFIG_READ_LIMIT_MS } from "../config/read-limits";
 import { packageFile } from "../util/package-file";
 import { RoutesReadError } from "./routes-read-error";
@@ -41,8 +42,10 @@ export function evaluateInChild(
       reject(unread(`${PACKAGE_NAME} cannot find the folder it is installed in: install it again`));
       return;
     }
+    /* The project's code is told it is read, not run to serve: COURIER_PHASE, in this process alone. */
     const child = fork(worker, [], {
       execArgv: [],
+      env: { ...process.env, [COURIER_PHASE]: DEFINITIONS_PHASE },
       stdio: ["ignore", "inherit", "inherit", "ipc"],
     });
     const settle = settleOnce(superviseChild(child), resolve, reject);

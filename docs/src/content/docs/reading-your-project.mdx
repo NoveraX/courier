@@ -17,6 +17,23 @@ A variable the process was started with wins over every file, and the first file
 
 Every reading runs your modules as your server would, and outside it. Keep the modules `courier.config.ts` imports to what defines your APIs: a module that connects to a database or calls a service when it is imported does so on every reading.
 
+## The definitions phase
+
+Wherever Courier reads your project — `courier-cli routes`, Studio and its commands, the process a bundler plugin reads the routes in — `COURIER_PHASE` holds `definitions`, as `NEXT_PHASE` names a phase of Next.js. Where your application runs — `courier-server`, `attachRuntime()`, the app itself — it is not set. Code that checks the environment as it is imported can skip the check then, where your API's definitions need none of what it checks:
+
+```ts title="src/env.ts"
+import { createEnv } from "@t3-oss/env-nextjs"
+import { z } from "zod"
+
+export const env = createEnv({
+  server: { DATABASE_URL: z.string().url(), API_URL: z.string().url() },
+  runtimeEnv: { DATABASE_URL: process.env.DATABASE_URL, API_URL: process.env.API_URL },
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION || process.env.COURIER_PHASE === "definitions",
+})
+```
+
+Courier sets the variable and decides nothing else for your code: a check it skips, a connection it does not open, is your code's to choose.
+
 ## Modules your framework answers itself
 
 A framework resolves some imports where it builds the server, never through Node: Next.js makes `server-only` an empty module on its server layers, SvelteKit and Astro write their env modules from the environment. A plain Node loader finds none of them, so Courier answers them as that framework's server does. It tells the framework from the `package.json` nearest the config, by the package it lists — `next`, `@sveltejs/kit`, `astro` — and answers in every module of your project it runs:
@@ -57,4 +74,15 @@ Import that code from a client component alone, out of the modules courier.confi
 - The project's own message is quoted with the value of every environment variable masked as `***` — every value of 8 characters or more, but for the system's own variables: paths, the user, the locale. Courier writes no value itself, only names. What the code threw is masked the same way, its stack included, wherever it is logged.
 - `courier-cli` prints the stack at `COURIER_LOG_LEVEL=debug`; Studio shows the message on its APIs page and in its status bar.
 - A program reads the same through `ConfigLoadError`, from `@noverax/courier-build/config`: its `code`, its `hint`, and `context.importChain`, each module by its path and an installed package by its name.
+
+## In CI
+
+`courier-cli routes --check` runs your config in CI, where your application's variables usually are not:
+
+- **Skip the checks your definitions do not need** while `COURIER_PHASE` is `definitions`, as above — the switch your env library has: `skipValidation` for `@t3-oss/env`, or `SKIP_ENV_VALIDATION=1` where your project reads it already.
+- **Give the variables the definitions read**, such as an API's `baseURL`, with an env file of their own: `courier-cli routes --check --dotenv .env.ci`. A placeholder serves where the value only names an address the check never calls.
+- **Keep the definitions' modules plain.** A module the config imports that opens a connection or calls a service as it loads does so on every reading; open it in the function that needs it.
+- **Mark server modules as your framework does.** `import "server-only"` in a Next.js project, `$env/static/private` in a SvelteKit one, are answered as their servers answer them.
+
+The job's log holds no value of a variable: a load that fails names the module and quotes its message masked.
 

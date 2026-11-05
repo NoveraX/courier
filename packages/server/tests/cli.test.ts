@@ -213,6 +213,31 @@ describe("courier-server", () => {
     expect(await statusFor(url, "rebound.example")).toBe(421);
   }, 30_000);
 
+  it("runs the project's code as the app, without COURIER_PHASE", async () => {
+    const url = await serve(
+      project('{ allowedHosts: [process.env.COURIER_PHASE ?? "unset.example"] }'),
+    );
+    const { port } = new URL(url);
+    const status = await new Promise<number>((resolve, reject) => {
+      httpRequest(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/api/request?_s=api&_m=ping",
+          headers: { host: "unset.example" },
+        },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        },
+      )
+        .on("error", reject)
+        .end();
+    });
+
+    expect(status).not.toBe(421);
+  }, 30_000);
+
   it("exits 1, saying why, when the config's host names cannot be read", () => {
     const result = run(project('{ allowedHosts: ["https://app.example"] }'));
 

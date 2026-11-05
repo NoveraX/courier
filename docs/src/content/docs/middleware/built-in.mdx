@@ -81,7 +81,7 @@ Where `retryOn` says nothing:
 | A certificate the platform refused — a `NetworkError` | no | no second attempt mends it |
 | 408, 425, 429 | yes | the server gave up waiting, the request came too early, too many came at once |
 | 500, 502, 503, 504 | yes | failures an upstream may get over |
-| 501, every 4xx above, any other answer | no | the same request would be refused again |
+| 501 and every other status | no | the same request would be refused again |
 | Its own time running out — a `TimeoutError` | no | a slow upstream would only be made slower; name `"timeout"` in `retryOn` to retry it |
 | A response that fails its schema, a middleware that throws | never | whatever `retryOn` says |
 

@@ -34,6 +34,12 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | `allowedHosts` | loopback names and IP literals; every name in production | Host names the app is reached by; a request for any other gets `421` — see [Host validation](/docs/proxy-mode/overview#host-validation) |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope the handler reads; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload the handler reads; a larger one is refused with 413 |
+| `uploadMode` | `"auto"` | Where an upload is kept while the call runs: memory up to `uploadMemoryBytes`, then disk where there is one; `"memory"` never writes one to disk — see [where the proxy keeps an upload](/docs/advanced/upload#where-the-proxy-keeps-an-upload) |
+| `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory before the rest goes to disk |
+| `uploadDirectory` | `os.tmpdir()` | Where each upload's own folder is made, removed once its call is done |
+| `maxUploadParts` | 1000 | Most fields and files one upload may hold |
+| `bodyIdleTimeoutMs` | 30 seconds | Longest pause between two pieces of a request body |
+| `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive |
 | `sseHeaders` | — | Extra response headers on every SSE stream |
 | `sseMaxLifetimeMs` | 30 minutes | Longest an SSE stream stays open before the client reconnects with `Last-Event-ID` |
 | `maxSSEConnections` | unlimited | Most SSE streams open at once |
@@ -51,11 +57,12 @@ The handler reads a body as it arrives and refuses it, with the status and `code
 | Ends before the length its `Content-Length` declares — something in front of the route cut it short, as [a Next.js proxy](/docs/frameworks/nextjs#uploads-and-proxyts) does | `413` | `BODY_INCOMPLETE` |
 | Runs past its `Content-Length`, or names one that is not a length | `400` | `BODY_MALFORMED` |
 | Is compressed (`Content-Encoding`) | `415` | `BODY_ENCODING_UNSUPPORTED` |
-| Sends nothing for 30 seconds, or is still arriving 5 minutes after it began | `408` | `BODY_TIMEOUT` |
-| An upload of more than 1000 parts, fields and files together | `413` | `UPLOAD_TOO_MANY_PARTS` |
+| Sends nothing for `bodyIdleTimeoutMs`, or is still arriving `bodyTimeoutMs` after it began | `408` | `BODY_TIMEOUT` |
+| An upload of more than `maxUploadParts`, fields and files together | `413` | `UPLOAD_TOO_MANY_PARTS` |
 | An upload whose text fields together take more than `maxBodyBytes` | `413` | `UPLOAD_FIELDS_TOO_LARGE` |
 | An upload with a part whose headers take more than 8 KB | `413` | `UPLOAD_PART_HEADERS_TOO_LARGE` |
 | An upload that does not parse as `multipart/form-data` — see [what the proxy takes](/docs/advanced/upload#what-the-proxy-takes) | `400` | `BODY_MALFORMED` |
+| An upload the disk has no room left for | `507` | `UPLOAD_STORAGE_FULL` |
 
 A JSON envelope must be UTF-8; one that is not is answered `400`.
 

@@ -9,7 +9,8 @@ export type BodyErrorCode =
   | "BODY_UNREADABLE"
   | "UPLOAD_TOO_MANY_PARTS"
   | "UPLOAD_PART_HEADERS_TOO_LARGE"
-  | "UPLOAD_FIELDS_TOO_LARGE";
+  | "UPLOAD_FIELDS_TOO_LARGE"
+  | "UPLOAD_STORAGE_FULL";
 
 /* An incomplete body is answered 413, as a body over the limit is: what cut
    it short was, in every case seen, a framework's own limit on its size. */
@@ -24,6 +25,7 @@ const STATUS: Readonly<Record<BodyErrorCode, number>> = {
   UPLOAD_TOO_MANY_PARTS: 413,
   UPLOAD_PART_HEADERS_TOO_LARGE: 413,
   UPLOAD_FIELDS_TOO_LARGE: 413,
+  UPLOAD_STORAGE_FULL: 507,
 };
 
 /**

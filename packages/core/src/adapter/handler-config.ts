@@ -71,6 +71,41 @@ export interface HandlerConfig<TConnect extends ConnectResult = ConnectResult>
    */
   maxUploadBytes?: number | undefined;
   /**
+   * How the proxy holds an upload while the call runs. `"auto"`, the
+   * default, keeps up to `uploadMemoryBytes` of an upload's files in memory
+   * and writes the rest to `uploadDirectory`, each file then a `File` read
+   * from disk, where the runtime has a file system — Node — and keeps it all
+   * in memory where it has none, on an edge runtime. `"memory"` never
+   * writes an upload to disk. Either way the call's variables are a
+   * `FormData`, read as often as validation, middleware and a retry need.
+   */
+  uploadMode?: "auto" | "memory" | undefined;
+  /**
+   * How many bytes of one upload's files `"auto"` keeps in memory before the
+   * rest go to disk. Defaults to 1 MB; 0 writes every file to disk.
+   */
+  uploadMemoryBytes?: number | undefined;
+  /**
+   * The folder `"auto"` makes each upload's own folder in, readable by this
+   * process's user alone and removed once the call is done. Defaults to
+   * `os.tmpdir()`, which `TMPDIR` sets; where that is a memory-backed
+   * `tmpfs`, point this at a disk.
+   */
+  uploadDirectory?: string | undefined;
+  /** The most parts — fields and files — one upload may hold. Defaults to 1000. */
+  maxUploadParts?: number | undefined;
+  /**
+   * The longest pause between two pieces of a request body, in
+   * milliseconds, before it is refused with 408. Defaults to 30 seconds.
+   */
+  bodyIdleTimeoutMs?: number | undefined;
+  /**
+   * The longest a request body may take to arrive, in milliseconds, before
+   * it is refused with 408. Defaults to 5 minutes, as Node's own
+   * `requestTimeout`.
+   */
+  bodyTimeoutMs?: number | undefined;
+  /**
    * How many calls one caller may make through the proxy: every call takes
    * one from `requests` in each `window`, a write from `writes` as well,
    * and a call past either is answered 429 with `Retry-After`. A caller is

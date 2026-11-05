@@ -48,8 +48,13 @@ export function createPostHandler(
     call.parsed(read.envelope.variables);
 
     const payload = { ...routing, ...read.envelope };
-    const response = await execute(request, payload, "POST", proxyReceiveAt, call.requestId);
-    call.responded(response.status);
-    return response;
+    try {
+      const response = await execute(request, payload, "POST", proxyReceiveAt, call.requestId);
+      call.responded(response.status);
+      return response;
+    } finally {
+      /* The upload's files are the call's: they go once it has its answer, whatever ended it. */
+      await read.release?.();
+    }
   };
 }

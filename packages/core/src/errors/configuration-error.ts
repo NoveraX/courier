@@ -237,6 +237,8 @@ export type ConfigurationErrorCode =
   | "DEFAULTS_INVALID"
   /** The proxy's `rateLimit` cannot work as written: a budget that is not a positive count over a positive window, or a key or a store that is not one. */
   | "RATE_LIMIT_INVALID"
+  /** A handler's options for request bodies cannot work as written: an upload mode it does not have, a count or a wait that is not a whole positive number, an upload folder that names none. */
+  | "BODY_OPTIONS_INVALID"
   /**
    * A framework adapter was asked to serve requests with their session at
    * hand, and the framework serves them some way the adapter cannot wrap.

@@ -73,6 +73,7 @@
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > refuses a FIFO without waiting for a writer",
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > rethrows any other failure to open the file",
     "packages/cli/tests/util/read-regular-file.test.ts > readRegularFile > returns the permission bits of the file it read",
+    "packages/core/tests/multipart/disk-store.test.ts > diskStore > keeps the folder and its files for this user alone",
     "packages/create-courier/tests/project/path-aliases.test.ts > aliasedFiles > fills the target's star, not one in the project folder's name",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > does not bring a swept connection back on its next heartbeat",
     "packages/redis/tests/redis-integration.test.ts > createRedisPresence > stops calling error handlers once disconnected, and leaves no listener behind",

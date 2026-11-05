@@ -4,9 +4,13 @@ import type { Envelope } from "./parse-envelope";
 
 const log = createLogger("Proxy");
 
-/** A proxy POST's envelope, or the status, message and code that refuse it. */
+/**
+ * A proxy POST's envelope, or the status, message and code that refuse it.
+ * An envelope whose files were kept for the call comes with `release`, to
+ * be awaited once the call is done, however it ended.
+ */
 export type EnvelopeResult =
-  | { ok: true; envelope: Envelope }
+  | { ok: true; envelope: Envelope; release?: (() => Promise<void>) | undefined }
   | { ok: false; status: number; message: string; code?: string | undefined };
 
 /**

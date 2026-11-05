@@ -9,16 +9,24 @@ import { describe, expect, it } from "vitest";
 import { multipartParts } from "../../src/adapter/multipart/multipart-parts";
 import { chunked, concat, ROOMY } from "../helpers/multipart-fixtures";
 
-/* The shortest of five runs, the one least disturbed by the rest of the machine. */
-async function fastest(run: () => Promise<void>): Promise<number> {
-  let best = Number.POSITIVE_INFINITY;
-  for (let attempt = 0; attempt < 5; attempt++) {
+/* Each run's shortest of five, the two taken in turn so that the rest of a busy machine slows both alike. */
+async function fastestOfEach(
+  first: () => Promise<unknown>,
+  second: () => Promise<unknown>,
+): Promise<[number, number]> {
+  let best: [number, number] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
+  for (let round = 0; round < 5; round++) {
     const started = performance.now();
-    await run();
-    best = Math.min(best, performance.now() - started);
+    await first();
+    const between = performance.now();
+    await second();
+    best = [Math.min(best[0], between - started), Math.min(best[1], performance.now() - between)];
   }
   return best;
 }
+
+/* Several megabytes parsed ten times over take a second alone, longer beside the rest of the suite. */
+const TIMED = { timeout: 60_000 };
 
 async function drain(
   body: Uint8Array<ArrayBuffer>,
@@ -47,25 +55,27 @@ function adversarial(boundary: string, size: number): Uint8Array<ArrayBuffer> {
 }
 
 describe("the multipart parser's time", () => {
-  it("does not grow with the boundary's length on data built to defeat the search", async () => {
-    const SIZE = 4 * 1024 * 1024;
-    const short = "a".repeat(10);
-    const long = "a".repeat(70);
-    const shortBody = adversarial(short, SIZE);
-    const longBody = adversarial(long, SIZE);
+  it(
+    "does not grow with the boundary's length on data built to defeat the search",
+    TIMED,
+    async () => {
+      const SIZE = 4 * 1024 * 1024;
+      const short = "a".repeat(10);
+      const long = "a".repeat(70);
+      const shortBody = adversarial(short, SIZE);
+      const longBody = adversarial(long, SIZE);
 
-    const shortTime = await fastest(async () => {
-      await drain(shortBody, short, 1);
-    });
-    const longTime = await fastest(async () => {
-      await drain(longBody, long, 1);
-    });
+      const [shortTime, longTime] = await fastestOfEach(
+        () => drain(shortBody, short, 1),
+        () => drain(longBody, long, 1),
+      );
 
-    /* A search that compares the whole needle at each byte would take 7 times as long. */
-    expect(longTime / shortTime).toBeLessThan(3);
-  });
+      /* A search that compares the whole needle at each byte would take 7 times as long. */
+      expect(longTime / shortTime, `${shortTime} ms, ${longTime} ms`).toBeLessThan(3);
+    },
+  );
 
-  it("grows in step with the number of parts, 10 000 of them included", async () => {
+  it("grows in step with the number of parts, 10 000 of them included", TIMED, async () => {
     const boundary = "----courier-many-parts";
     const form = (count: number): Uint8Array<ArrayBuffer> =>
       concat(
@@ -77,17 +87,16 @@ describe("the multipart parser's time", () => {
         `--${boundary}--\r\n`,
       );
     expect(await drain(form(10_000), boundary, 10_000)).toBe(10_000);
-    const few = form(2_000);
-    const many = form(20_000);
+    /* Large enough that neither run is over in the few milliseconds a busy machine takes from it. */
+    const few = form(5_000);
+    const many = form(50_000);
 
-    const smallTime = await fastest(async () => {
-      await drain(few, boundary, 20_000);
-    });
-    const largeTime = await fastest(async () => {
-      await drain(many, boundary, 20_000);
-    });
+    const [smallTime, largeTime] = await fastestOfEach(
+      () => drain(few, boundary, 50_000),
+      () => drain(many, boundary, 50_000),
+    );
 
     /* Ten times the parts take about ten times as long; a parser that went back over earlier parts would take a hundred. */
-    expect(largeTime / smallTime).toBeLessThan(30);
+    expect(largeTime / smallTime, `${smallTime} ms, ${largeTime} ms`).toBeLessThan(30);
   });
 });

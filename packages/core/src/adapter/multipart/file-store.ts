@@ -14,4 +14,10 @@ export interface FileStore {
    * @returns The file, named and typed as the part was
    */
   file(part: MultipartPart): Promise<File>;
+
+  /**
+   * Let go of what the store keeps for the files it handed out: once the
+   * call has run, or the upload was refused. A file read after it fails.
+   */
+  release(): Promise<void>;
 }

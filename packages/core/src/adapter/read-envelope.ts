@@ -45,6 +45,8 @@ export async function readEnvelope(
 
   const body = await readBodyText(request, {
     maxBytes: config?.maxBodyBytes ?? LIMITS.MAX_PROXY_BODY_BYTES,
+    idleTimeoutMs: config?.bodyIdleTimeoutMs,
+    timeoutMs: config?.bodyTimeoutMs,
   });
   if (!body.ok) return refusedBody(body.error);
   const parsed = parseJsonEnvelope(body.text);

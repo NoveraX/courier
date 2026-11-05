@@ -24,6 +24,8 @@ import { chunked, type ReadPart, readParts, seededRandom } from "../helpers/mult
 import { modelParts } from "../helpers/multipart-model";
 
 const SEED = 0x5eed_c0de;
+/* Thousands of bodies take a second alone and several beside the rest of the suite, slower on a busy runner. */
+const MANY_BODIES = { timeout: 60_000 };
 
 type Outcome = { parts: Array<Omit<ReadPart, "bytes"> & { bytes: string }> } | { refused: string };
 
@@ -38,43 +40,51 @@ async function outcomeOf(read: () => ReadPart[] | Promise<ReadPart[]>): Promise<
 }
 
 describe("the multipart parser against the platform's own", () => {
-  it("reads every well-formed body as the platform's parser reads it, however it is cut", async () => {
-    for (let run = 0; run < 300; run++) {
-      const random = seededRandom(SEED + run);
-      const form = randomForm(random);
-      for (const encode of [encodedByPlatform, encodedByCourier]) {
-        const { body, contentType } = await encode(form);
-        const expected = await platformEntries(body, contentType);
-        const { stream } = chunked(body, randomCuts(random, body.length));
+  it(
+    "reads every well-formed body as the platform's parser reads it, however it is cut",
+    MANY_BODIES,
+    async () => {
+      for (let run = 0; run < 300; run++) {
+        const random = seededRandom(SEED + run);
+        const form = randomForm(random);
+        for (const encode of [encodedByPlatform, encodedByCourier]) {
+          const { body, contentType } = await encode(form);
+          const expected = await platformEntries(body, contentType);
+          const { stream } = chunked(body, randomCuts(random, body.length));
 
-        const parts = await readParts(stream, boundaryOf(contentType));
+          const parts = await readParts(stream, boundaryOf(contentType));
 
-        expect(asEntries(parts), `seed ${SEED + run}, ${encode.name}`).toEqual(expected);
+          expect(asEntries(parts), `seed ${SEED + run}, ${encode.name}`).toEqual(expected);
+        }
       }
-    }
-  });
+    },
+  );
 });
 
 describe("the multipart parser against its rules over the whole body", () => {
-  it("reads any body, broken or not, as the whole-body reading does, cut anywhere", async () => {
-    for (let run = 0; run < 2000; run++) {
-      const seed = SEED + 10_000 + run;
-      const random = seededRandom(seed);
-      const encode = random() < 0.5 ? encodedByPlatform : encodedByCourier;
-      const { body: whole, contentType } = await encode(randomForm(random));
-      const boundary = boundaryOf(contentType);
-      const body = random() < 0.8 ? mutated(random, whole, boundary) : whole;
-      const limits = {
-        maxParts: 1 + Math.floor(random() * 12),
-        maxHeaderBytes: 48 + Math.floor(random() * 400),
-      };
+  it(
+    "reads any body, broken or not, as the whole-body reading does, cut anywhere",
+    MANY_BODIES,
+    async () => {
+      for (let run = 0; run < 2000; run++) {
+        const seed = SEED + 10_000 + run;
+        const random = seededRandom(seed);
+        const encode = random() < 0.5 ? encodedByPlatform : encodedByCourier;
+        const { body: whole, contentType } = await encode(randomForm(random));
+        const boundary = boundaryOf(contentType);
+        const body = random() < 0.8 ? mutated(random, whole, boundary) : whole;
+        const limits = {
+          maxParts: 1 + Math.floor(random() * 12),
+          maxHeaderBytes: 48 + Math.floor(random() * 400),
+        };
 
-      const expected = await outcomeOf(() => modelParts(body, boundary, limits));
-      const actual = await outcomeOf(() =>
-        readParts(chunked(body, randomCuts(random, body.length)).stream, boundary, limits),
-      );
+        const expected = await outcomeOf(() => modelParts(body, boundary, limits));
+        const actual = await outcomeOf(() =>
+          readParts(chunked(body, randomCuts(random, body.length)).stream, boundary, limits),
+        );
 
-      expect(actual, `seed ${seed}`).toEqual(expected);
-    }
-  });
+        expect(actual, `seed ${seed}`).toEqual(expected);
+      }
+    },
+  );
 });

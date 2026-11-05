@@ -1,6 +1,7 @@
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
 import { executeRequest } from "../utils/execute";
+import { assertBodyOptions } from "./assert-body-options";
 import type { ConnectResult } from "./connection-meta";
 import { discardBody } from "./discard-body";
 import { gateEntry } from "./entry-gate";
@@ -43,8 +44,9 @@ export type AdapterHandler = {
  * @param config - Hosts, origins, limits, SSE lifecycle and, optionally, the sources
  * @returns The handler, its SSE registry and its shutdown
  * @throws ConfigurationError when `config.sources` is not a dictionary of
- *   sources, or `allowedHosts` or `allowedOrigins` is a list holding an entry
- *   no request can match; one given as a function is read with the first request
+ *   sources, `allowedHosts` or `allowedOrigins` is a list holding an entry
+ *   no request can match — one given as a function is read with the first
+ *   request — or an option for request bodies could not work as written
  *
  * @example
  * ```ts
@@ -58,6 +60,7 @@ export function createHandler<TConnect extends ConnectResult = ConnectResult>(
 export function createHandler(config?: HandlerConfig): AdapterHandler {
   assertListedSettings(config ?? {}, "createHandler");
   assertRateLimit(config?.rateLimit, "createHandler");
+  assertBodyOptions(config, "createHandler");
   if (config?.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
   }

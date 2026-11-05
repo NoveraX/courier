@@ -62,4 +62,7 @@ export const LIMITS = {
 
   /** Size of the pieces an upload's file is gathered in, in memory (64 KB) */
   UPLOAD_SLAB_BYTES: 65_536,
+
+  /** Bytes of one upload's files kept in memory before the rest go to disk, where there is one (1 MB) */
+  UPLOAD_MEMORY_BYTES: 1_048_576,
 } as const;

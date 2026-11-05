@@ -4,6 +4,7 @@ import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import { ValidationError } from "../validation";
 import { isAbortError } from "./abort";
+import { answeredMessage } from "./answered-message";
 import { answerCallerLeft, callerLeft } from "./caller-left";
 import { type FailureReport, reportRequestError } from "./execute-error-report";
 import { buildResponse, type InternalResponse } from "./execute-response";
@@ -65,8 +66,9 @@ function serverFailure(
   const message = error instanceof Error ? error.message : "[SERVER ERROR]";
   const result = { status: 500, headers: new Headers() };
 
+  /* A server that asked for a Response may hand it to a browser: the words stay, credentials go. */
   if (context?.proxyMethod === undefined) {
-    return { ...result, data: { success: false, message } };
+    return { ...result, data: { success: false, message: answeredMessage(message) } };
   }
 
   log.error(`Request failed: ${message}`, error);

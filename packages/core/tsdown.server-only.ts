@@ -15,6 +15,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/forwarded-for",
   "session/validate-forward",
   "errors/http-error-inspect",
+  "utils/answered-message",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

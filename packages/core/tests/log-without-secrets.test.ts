@@ -2,7 +2,8 @@
  * No credential reaches the server's log, on any path a failure takes to
  * it: a middleware's own error the proxy answers with "Request failed", an
  * upstream it could not reach, the log middleware's line — in text and in
- * JSON — nor the answer the browser gets.
+ * JSON — nor the answer the browser gets, from the proxy or in the
+ * `Response` a direct call is answered with.
  */
 import { inspect } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -72,6 +73,21 @@ afterEach(() => {
 });
 
 describe("a failure on its way to the server's log", () => {
+  it("loses the token a middleware's own error quoted in the Response a direct call is answered with", async () => {
+    const answer = (await executeRequest(
+      sourcesWith([quotesTheToken]),
+      { source: "api", method: "items" } as never,
+      { res: new Response(), req: new Request("https://app.example.com/orders") } as Context & {
+        res: Response;
+      },
+    )) as Response;
+    const said = await answer.text();
+
+    expect(answer.status).toBe(500);
+    expect(said).not.toContain(SECRET);
+    expect(said).toContain("is an invalid header value");
+  });
+
   it("loses the token a middleware's own error quoted, in the log and in the answer", async () => {
     const answer = await throughProxy([quotesTheToken]);
 

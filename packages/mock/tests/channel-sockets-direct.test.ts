@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 import type { MockRequestContext } from "../src/types";
+import { admit } from "./helpers/admit";
 
 const { channel } = courier();
 const Members = z.object({ room: z.string(), nick: z.string() });
@@ -74,12 +75,9 @@ async function serve() {
 async function open(url: string): Promise<{ socket: WebSocket; frames: WSMessage[] }> {
   const socket = new WebSocket(url);
   sockets.push(socket);
+  await admit(socket);
   const frames: WSMessage[] = [];
   socket.on("message", (raw) => frames.push(decodeMessage(raw.toString())));
-  await new Promise((resolve, reject) => {
-    socket.once("open", resolve);
-    socket.once("error", reject);
-  });
   return { socket, frames };
 }
 
@@ -102,7 +100,7 @@ describe("a channel's own path", () => {
       expect(frames.slice(0, 3)).toEqual([
         { type: "renamed", id: "1", topic: ROOM, payload: SERVED },
         { type: "data", topic: SERVED, payload: "welcome" },
-        { type: "subscribed", id: "1", topic: SERVED },
+        { type: "subscribed", id: "1", topic: SERVED, seq: 0, epoch: expect.any(String) },
       ]),
     );
   });

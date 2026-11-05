@@ -9,6 +9,7 @@ import type { MockHistoryEntry } from "../../types";
 import {
   acceptProxySocket,
   activateChannelSocket,
+  closeSocket,
   headersOf,
   PROXY_WS_PATH,
 } from "../channel-sockets";
@@ -175,7 +176,7 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
   return { handleUpgrade, close };
 }
 
-/** Close a socket with 1001, and cut it if the client does not answer in time. */
+/** Close a socket as a stopping server does, and cut it if the client does not answer in time. */
 function closeGracefully(
   ws: WSServerType["clients"] extends Set<infer T> ? T : never,
 ): Promise<void> {
@@ -183,7 +184,7 @@ function closeGracefully(
     ws.once("close", () => resolve());
     const cut = setTimeout(() => ws.terminate(), CLOSE_GRACE_MS);
     cut.unref();
-    ws.close(1001, "Mock server stopping");
+    closeSocket(ws, { kind: "shutdown", retryAfterMs: 0 });
   });
 }
 

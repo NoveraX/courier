@@ -78,6 +78,8 @@ function open(handler: WSHandler) {
     new Request("http://localhost/api/ws"),
     "203.0.113.9",
   );
+  /* Its first frame is auth, as a Courier client's is. */
+  socket.receive({ type: "auth", v: 2, id: "a0" });
   return socket;
 }
 

@@ -89,7 +89,7 @@ Your server makes calls with the user's session while it serves a request, and a
 
 ### Channels
 
-A channel's socket passes the origin rule as it opens, so a page on another site cannot open one with the user's cookies. Its first frame may add the headers a browser could not put on the handshake, and never those a browser or a proxy sets: `Cookie`, `Origin`, `Host`, `Referer`, `Forwarded`, `X-Forwarded-*`, `Sec-*`, `Proxy-*` and the headers that claim a client address. A frame's header names and values must be ones HTTP can carry, at most 64 of them; a frame that breaks those rules is refused, and with `onConnect` the connection is closed with `4401`.
+A channel's socket passes the origin rule as it opens, so a page on another site cannot open one with the user's cookies. Its first frame may add the headers a browser could not put on the handshake, and never those a browser or a proxy sets: `Cookie`, `Origin`, `Host`, `Referer`, `Forwarded`, `X-Forwarded-*`, `Sec-*`, `Proxy-*` and the headers that claim a client address. A frame's header names and values must be ones HTTP can carry, at most 64 of them; a frame that breaks those rules is refused, and the connection is closed with `4401`.
 
 ## AI agents
 

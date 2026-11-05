@@ -173,7 +173,7 @@ app.addHook("preClose", () => ws.destroy())
 
 Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. The plugin's `ws` server reads each frame whole before Courier sees it, up to its `maxPayload` — 100 MiB unless you set it. Set it to `wsFrameLimit(maxMessageSize)` — 1 MiB, or twice the handler's `maxMessageSize` (64 KB by default) when that is larger — as the Express and Nest adapters do: a message somewhat over `maxMessageSize` is then refused with close code 4413 for that message alone, the socket and its other subscriptions kept, and a frame larger still is refused with 1009 before it is read. Left at 100 MiB, the handler warns once at the first connection. Without the plugin, the route answers 500 with a `WEBSOCKET_PLUGIN_MISSING` error.
 
-What `courierWSHandler()` returns carries the handler's `connections` — to send, broadcast, or close a user's connections on every replica — its `stats()`, and `destroy({ timeoutMs })`. Call `destroy()` from `preClose`, as above: each socket is closed with 1012, which a Courier client answers by reconnecting later, and waited for up to 5 seconds, and the handler's pub/sub subscriptions are let go of. The plugin ends what is still open when the app closes.
+What `courierWSHandler()` returns carries the handler's `connections` — to send, broadcast, or close a user's connections on every replica — its `stats()`, and `destroy({ timeoutMs })`. Call `destroy()` from `preClose`, as above: each socket is closed with 1001, told when to come back, which a Courier client answers by reconnecting then, and waited for up to 5 seconds, and the handler's pub/sub subscriptions are let go of. The plugin ends what is still open when the app closes.
 
 <br />
 

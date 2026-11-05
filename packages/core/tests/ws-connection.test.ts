@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSClientSocket, WSConnectionConfig } from "../src/realtime/ws/ws-types";
+import { admission } from "./helpers/admission";
 
 // ---------------------------------------------------------------------------
 // Mock WebSocket
@@ -47,9 +48,9 @@ class MockWebSocket implements WSClientSocket {
     this.onmessage?.(new MessageEvent("message", { data }));
   }
 
-  /** The server admits the socket: its first frame, here the answer to the client's ping. */
+  /** The server admits the socket: `auth_ok`, its answer to the client's auth frame. */
   simulateAdmission(): void {
-    this.simulateMessage(encodeMessage({ type: "pong" }));
+    this.simulateMessage(admission(this.sent));
   }
 
   simulateError(): void {
@@ -74,7 +75,6 @@ function createConfig(overrides?: Partial<WSConnectionConfig>): WSConnectionConf
   return {
     url: "ws://test/ws",
     socketFactory: mockFactory,
-    heartbeat: { intervalMs: 100_000, timeoutMs: 50_000 },
     ...overrides,
   };
 }
@@ -111,7 +111,7 @@ describe("createWSConnection", () => {
     expect(conn.state).toEqual({ phase: "authenticating", attempt: 1 });
     lastWs().simulateAdmission();
     expect(conn.status).toBe("connected");
-    expect(conn.state).toEqual({ phase: "open", protocol: 1 });
+    expect(conn.state).toEqual({ phase: "open", connectionId: "c1" });
     expect(statuses).toEqual(["connecting", "connected"]);
     conn.close();
   });
@@ -132,6 +132,7 @@ describe("createWSConnection", () => {
   it("dispatches incoming data to topic handler", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
+    lastWs().simulateAdmission();
 
     const handler = vi.fn<(payload: unknown) => void>();
     conn.subscribe("chat:room", handler);
@@ -355,6 +356,7 @@ describe("createWSConnection", () => {
     expect(lastWs().headers).toEqual({ authorization: "Bearer secret123" });
     expect(JSON.parse(lastWs().sent[0]!)).toEqual({
       type: "auth",
+      v: 2,
       id: "a1",
       payload: { auth: { tenant: "t1" } },
     });
@@ -378,6 +380,7 @@ describe("createWSConnection", () => {
 
     expect(JSON.parse(lastWs().sent[0]!)).toEqual({
       type: "auth",
+      v: 2,
       id: "a2",
       payload: { auth: { token: "t2" } },
     });
@@ -409,7 +412,7 @@ describe("createWSConnection", () => {
     const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
 
-    expect(JSON.parse(lastWs().sent[0]!)).toEqual({ type: "auth", id: "a1", payload: {} });
+    expect(JSON.parse(lastWs().sent[0]!)).toEqual({ type: "auth", v: 2, id: "a1", payload: {} });
     conn.close();
   });
 });

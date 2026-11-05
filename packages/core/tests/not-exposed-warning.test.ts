@@ -17,7 +17,7 @@ import type { Context } from "../src/http-client/types";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { executeRequest } from "../src/utils/execute";
-import { createFakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 
 const { endpoint, channel, stream } = courier();
 
@@ -103,6 +103,7 @@ describe("a client's subscription to a channel nothing marks", () => {
     const handler = createWSHandler({ heartbeatIntervalMs: 60_000 });
     const socket = createFakeSocket();
     handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
+    socket.receive(authFrame());
 
     for (const id of ["s1", "s2"]) {
       socket.receive({ type: "subscribe", id, topic: qualifyTopic("api.live.room", {}) });

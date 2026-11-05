@@ -15,6 +15,7 @@ import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSChannelContext, WSContext } from "../src/realtime/types";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { authFrame } from "./helpers/fake-socket";
 
 const { channel } = courier();
 const TOPIC = "api.live.feed";
@@ -48,6 +49,7 @@ function serve(feed: unknown): Socket {
   } as unknown as Sources);
   const socket = createSocket();
   createWSHandler().handleSocket(socket, new Request("http://localhost/api/ws"));
+  socket.emit("message", { data: encodeMessage(authFrame()) });
   return socket;
 }
 

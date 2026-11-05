@@ -2,9 +2,10 @@
  * The connection's state machine under random sequences of what can happen
  * to a connection: sockets that open, close and fall silent, credentials
  * that come late or never, a server that refuses, an application that
- * reconnects and closes at any moment. Whatever the order, it keeps one
- * socket at a time, is open only once admitted, sends its credentials only
- * on an open socket, and stays closed once closed.
+ * reconnects and closes at any moment, a server of another version that
+ * answers in its own frames. Whatever the order, it keeps one socket at a
+ * time, is open only once admitted, sends its credentials only on an open
+ * socket, and stays closed once closed.
  *
  * Sequences come from a seeded generator; a failure names its seed, and the
  * same seed replays it.
@@ -32,7 +33,10 @@ function generator(seed: number): () => number {
 
 type Socket = "none" | "opening" | "open";
 
-const CODES = [1000, 1001, 1006, 1009, 1011, 1012, 1013, 4000, 4100, 4401, 4403, 4408, 4409, 4429];
+const CODES = [
+  ...[1000, 1001, 1002, 1006, 1009, 1011, 1012, 1013],
+  ...[4000, 4100, 4401, 4403, 4408, 4409, 4429],
+];
 
 /* What can happen next, given the socket the machine has: the world only does what it can. */
 function nextEvent(random: () => number, state: MachineState, socket: Socket): MachineEvent {
@@ -47,10 +51,20 @@ function nextEvent(random: () => number, state: MachineState, socket: Socket): M
   ];
   if (socket === "opening") world.push({ type: "socket-open" });
   if (socket !== "none") {
-    const closure = { code: pick(CODES), reason: "", ...(random() < 0.3 && { retryAfterMs: 500 }) };
+    const closure = {
+      code: pick(CODES),
+      reason: "",
+      ...(random() < 0.3 && { retryAfterMs: 500 }),
+      ...(random() < 0.3 && { version: pick([1, 2, 3]) }),
+    };
     world.push({ type: "closed", closure, announced: random() < 0.5 });
     world.push(
-      { type: "admitted", protocol: 1 },
+      {
+        type: "admitted",
+        connectionId: "c1",
+        heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
+      },
+      { type: "mismatch", frame: "subscribed" },
       { type: "renewed" },
       { type: "silent", forMs: 35_000 },
     );

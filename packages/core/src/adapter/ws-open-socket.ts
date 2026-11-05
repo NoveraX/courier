@@ -8,7 +8,7 @@ import { admitConnection } from "./ws-admit-connection";
 import { connectionFields } from "./ws-connection-fields";
 import type { ConnectionLimiter } from "./ws-connection-limit";
 import { buildContext, type WSSocketContext } from "./ws-context";
-import { V1_DIALECT } from "./ws-dialect";
+import { WS_DEFAULTS } from "./ws-defaults";
 import type { HandlerCounters } from "./ws-handler-stats";
 import { holdFrames, type WSInbox } from "./ws-inbox";
 import type { IPTracker } from "./ws-ip-tracker";
@@ -42,9 +42,11 @@ export interface SocketOpening {
 
 /**
  * A handler's way in for a socket: refused for its host, its origin or its
- * address before anything is read for it; admitted, when the handler has
- * `onConnect`, on the credentials of its first frame; then registered and
- * heard. Whatever fails on the way closes the socket, never the process.
+ * address before anything is read for it; admitted on its first frame, an
+ * `auth` of the protocol version spoken here, and on what `onConnect`
+ * makes of its credentials when the handler has it; then sent `auth_ok`,
+ * registered and heard. Whatever fails on the way closes the socket, after
+ * `auth_error`, never the process.
  *
  * @param opening - What the handler lets sockets in with
  * @returns `handleSocket`, for the socket an adapter hands over with its upgrade request
@@ -98,7 +100,6 @@ export function openSockets(
     ws: WebSocketLike,
     inbox: WSInbox,
     ctx: WSSocketContext,
-    onConnect: NonNullable<WSHandlerConfig["onConnect"]>,
   ): Promise<void> {
     /* Heard from the start, not once the connection is activated: a client
        that left while onConnect ran would otherwise keep its registry entry,
@@ -109,15 +110,15 @@ export function openSockets(
       closedWith ??= event.code;
     });
     const outcome = await admitConnection(ctx, inbox, {
-      onConnect,
+      onConnect: config.onConnect,
       onDisconnect: config.onDisconnect,
-      authTimeoutMs: config.authTimeoutMs ?? 3000,
+      authTimeoutMs: config.authTimeoutMs ?? WS_DEFAULTS.authTimeoutMs,
       hookTimeoutMs: ctx.middlewareTimeoutMs,
       left: () => closedWith,
       limit: limiter && ((admitted) => withinLimit(limiter, admitted)),
     });
-    if (outcome === "admitted") {
-      activateConnection(ws, inbox, ctx, opening);
+    if (outcome.kind === "admitted") {
+      activateConnection(ws, inbox, ctx, opening, outcome.id);
       return;
     }
     limiter?.release(ctx.connectionId);
@@ -139,7 +140,7 @@ export function openSockets(
 
   return (ws, request, peerAddress) => {
     rememberPeerAddress(request, peerAddress);
-    const session = createSession(ws, V1_DIALECT, counters.closedWith);
+    const session = createSession(ws, counters.closedWith);
     if (opening.stopping()) {
       session.close({ kind: "shutdown", retryAfterMs: 0 });
       return;
@@ -162,12 +163,8 @@ export function openSockets(
       });
       ctx.session.close({ kind: "flood" });
     });
-    if (!config.onConnect) {
-      activateConnection(ws, inbox, ctx, opening);
-      return;
-    }
     /* What fails while a connection is admitted ends that connection, never the process. */
-    initConnection(ws, inbox, ctx, config.onConnect).catch((error: unknown) => {
+    initConnection(ws, inbox, ctx).catch((error: unknown) => {
       log.error(`Connection ${ctx.connectionId} could not be admitted`, error);
       limiter?.release(ctx.connectionId);
       ipTracker.release(ctx.clientIP);

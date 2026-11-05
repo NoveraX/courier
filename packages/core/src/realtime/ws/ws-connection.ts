@@ -70,10 +70,8 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     ping: () => runtime.send(encodeMessage({ type: "ping" })),
     onSilent: (forMs) => runtime.dispatch({ type: "silent", forMs }),
   });
-  const heartbeat = {
-    intervalMs: config.heartbeat?.intervalMs ?? CLIENT_LIMITS.WS_HEARTBEAT_INTERVAL_MS,
-    timeoutMs: config.heartbeat?.timeoutMs ?? CLIENT_LIMITS.WS_HEARTBEAT_TIMEOUT_MS,
-  };
+  /* The protocol's default until a server's `auth_ok` says what it takes. */
+  const limits = { maxMessageSize: LIMITS.MAX_MESSAGE_SIZE };
 
   const context = (now: number): MachineContext => ({
     now,
@@ -95,7 +93,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
       queue,
       liveness,
       log,
-      heartbeat,
+      limits,
       renewable: config.credentials !== undefined,
       notice,
     }),
@@ -106,7 +104,9 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     topics,
     queue,
     log,
-    maxMessageSize: config.maxMessageSize ?? LIMITS.MAX_MESSAGE_SIZE,
+    get maxMessageSize() {
+      return limits.maxMessageSize;
+    },
     maxBufferedAmount: config.maxBufferedAmount ?? DEFAULT_MAX_BUFFERED,
     overflowed: (topic) =>
       notice("overflow", `The outbound queue is full: a message on ${topic} was not kept`),

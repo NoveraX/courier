@@ -32,7 +32,7 @@ function viewOf(state: MachineState): WSConnectionState {
       return { phase: state.phase, attempt: state.failures + 1 };
     case "open":
     case "reauthenticating":
-      return { phase: state.phase, protocol: state.protocol };
+      return { phase: state.phase, connectionId: state.connectionId };
     case "reconnecting":
       return {
         phase: "reconnecting",
@@ -89,6 +89,13 @@ export function retryOfState(state: MachineState): ConnectionRetry | undefined {
       };
     case "silent":
       return { ...base, silentFor: cause.forMs };
+    case "mismatch":
+      return {
+        ...base,
+        error: new ConnectionError(
+          `The server's first frame (${cause.frame}) answers no auth: it speaks another version of the protocol`,
+        ),
+      };
     case "timeout":
       return { ...base, error: new ConnectionError(timeoutText(cause.waitingFor)) };
     case "credentials":

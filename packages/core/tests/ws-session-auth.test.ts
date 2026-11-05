@@ -14,7 +14,7 @@ import type { Sources } from "../src/define/types";
 import { ForbiddenError } from "../src/realtime/errors";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const { channel } = courier();
 const room = channel
@@ -51,7 +51,7 @@ function serve(config: WSHandlerConfig): WSHandler {
 function open(handler: WSHandler, auth: Record<string, unknown>): FakeSocket {
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
-  socket.receive({ type: "auth", payload: { auth } });
+  socket.receive(authFrame({ auth }));
   return socket;
 }
 
@@ -121,7 +121,7 @@ describe("credentials sent again on an open connection", () => {
 
     await handler.connections.requireAuth(connectionId);
 
-    expect(socket.sent).toContainEqual({ type: "auth_required" });
+    expect(socket.sent).toContainEqual({ type: "reauth_required", timeoutMs: 150 });
     await expect.poll(() => socket.closed?.code, { timeout: 2_000 }).toBe(4401);
     expect((socket.closed?.at ?? 0) - asked).toBeGreaterThanOrEqual(140);
   });
@@ -154,7 +154,9 @@ describe("credentials sent again on an open connection", () => {
 
     socket.receive({ type: "auth", id: "r5", payload: { auth: { userId: "u1" } } });
 
-    await expect.poll(() => socket.sent).toContainEqual({ type: "auth", id: "r5" });
+    await expect
+      .poll(() => socket.sent)
+      .toContainEqual(expect.objectContaining({ type: "auth_ok", id: "r5" }));
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(socket.closed).toBeUndefined();
   });

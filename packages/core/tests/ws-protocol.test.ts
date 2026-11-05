@@ -73,7 +73,10 @@ describe("decodeMessage", () => {
       "subscribed",
       "unsubscribed",
       "auth",
-      "auth_required",
+      "auth_ok",
+      "auth_error",
+      "reauth_required",
+      "disconnect",
     ];
 
     for (const type of types) {

@@ -11,6 +11,7 @@ import { WebSocket } from "ws";
 
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { decodeMessage, encodeMessage, type WSMessage } from "../src/realtime/ws/ws-protocol";
+import { authFrame } from "./helpers/fake-socket";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 let served: ServedWS | undefined;
@@ -40,6 +41,9 @@ async function connect(
     socket.once("open", resolve);
     socket.once("error", reject);
   });
+  /* Let in first, as a Courier client is: its first frame is auth. */
+  socket.send(encodeMessage(authFrame()));
+  await expect.poll(() => received.some((m) => m.type === "auth_ok")).toBe(true);
   return { send: (message) => socket.send(encodeMessage(message)), received };
 }
 

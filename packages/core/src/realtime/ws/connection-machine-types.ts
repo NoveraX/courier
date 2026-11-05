@@ -1,9 +1,7 @@
 import type { RealtimeError } from "../errors";
 import type { ResumeSignal } from "../resume-signals";
 import type { SocketClosure } from "./reconnect-classifier";
-
-/** The protocol the server of an open socket speaks: 1 before Courier 0.5, 2 from it. */
-export type ProtocolVersion = 1 | 2;
+import type { ServerHeartbeat } from "./server-frame-types";
 
 /** Why a connection is waiting to reconnect. */
 export type ReconnectCause =
@@ -18,6 +16,12 @@ export type ReconnectCause =
     }
   /** Nothing came from the server for this long */
   | { readonly kind: "silent"; readonly forMs: number }
+  /**
+   * The server answered `auth` with a frame no server of this protocol
+   * sends first — a server of another version, as a replica of an older
+   * build is while a rollout replaces it
+   */
+  | { readonly kind: "mismatch"; readonly frame: string }
   /** The socket did not open, or the server did not answer its credentials, in time */
   | { readonly kind: "timeout"; readonly waitingFor: "socket" | "admission" | "renewal" }
   /** The credentials could not be had */
@@ -33,9 +37,10 @@ export type WSConnectionState =
   | { readonly phase: "connecting"; readonly attempt: number }
   /** The socket is open, and the server has yet to admit it */
   | { readonly phase: "authenticating"; readonly attempt: number }
-  | { readonly phase: "open"; readonly protocol: ProtocolVersion }
+  /** Admitted; `connectionId` is what the server's logs name the connection by */
+  | { readonly phase: "open"; readonly connectionId: string }
   /** Open, and proving who it is again */
-  | { readonly phase: "reauthenticating"; readonly protocol: ProtocolVersion }
+  | { readonly phase: "reauthenticating"; readonly connectionId: string }
   | {
       readonly phase: "reconnecting";
       readonly attempt: number;
@@ -85,13 +90,15 @@ export type MachineState =
     })
   | (Memory & {
       readonly phase: "open";
-      readonly protocol: ProtocolVersion;
+      readonly connectionId: string;
+      readonly heartbeat: ServerHeartbeat;
       readonly openedAt: number;
       readonly fingerprint: string;
     })
   | (Memory & {
       readonly phase: "reauthenticating";
-      readonly protocol: ProtocolVersion;
+      readonly connectionId: string;
+      readonly heartbeat: ServerHeartbeat;
       readonly openedAt: number;
       readonly fingerprint: string;
       readonly authId: string;
@@ -117,7 +124,14 @@ export type MachineEvent =
   /** The socket could not even be made: an address or a policy the platform refuses */
   | { readonly type: "socket-failed"; readonly error: RealtimeError }
   | { readonly type: "socket-open" }
-  | { readonly type: "admitted"; readonly protocol: ProtocolVersion }
+  /** The server took the first `auth`: `auth_ok`, with how it pings the connection */
+  | {
+      readonly type: "admitted";
+      readonly connectionId: string;
+      readonly heartbeat: ServerHeartbeat;
+    }
+  /** The server's first frame answered no `auth`: the kind of frame it was */
+  | { readonly type: "mismatch"; readonly frame: string }
   /** The server asked for the credentials again, or the application did */
   | { readonly type: "renewal-requested" }
   | { readonly type: "renewed" }
@@ -148,9 +162,11 @@ export type MachineEffect =
   /** The socket is gone: subscriptions wait for the next, each told `error` when there is one */
   | { readonly type: "subscriptions-wait"; readonly error?: RealtimeError | undefined }
   | { readonly type: "subscriptions-end"; readonly error?: RealtimeError | undefined }
-  | { readonly type: "watch" }
+  /** Take the socket for dead once nothing has come for the server's heartbeat */
+  | { readonly type: "watch"; readonly heartbeat: ServerHeartbeat }
   | { readonly type: "unwatch" }
-  | { readonly type: "probe" }
+  /** Ping now, and take the socket for dead if no answer comes in time */
+  | { readonly type: "probe"; readonly heartbeat: ServerHeartbeat }
   /** What waited for the connection to open goes out */
   | { readonly type: "flush" };
 

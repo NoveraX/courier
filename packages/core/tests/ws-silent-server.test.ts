@@ -10,6 +10,7 @@ import { WebSocketServer } from "ws";
 
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
+import { admission } from "./helpers/admission";
 
 let server: Server | undefined;
 let connection: WSConnection | undefined;
@@ -24,9 +25,10 @@ afterEach(async () => {
 });
 
 /**
- * A server that pings every socket every 20 ms, as a Courier server does
- * every 25 s. `hang()` makes the first socket go silent and stop reading —
- * the close handshake can then never complete.
+ * A server that admits each socket saying it pings every 100 ms, and then
+ * pings every 20 ms, as a Courier server says and does every 25 s. `hang()`
+ * makes the first socket go silent and stop reading — the close handshake
+ * can then never complete.
  */
 async function pingingServer(): Promise<{ url: string; sockets: () => number; hang(): void }> {
   const timers: ReturnType<typeof setInterval>[] = [];
@@ -34,9 +36,12 @@ async function pingingServer(): Promise<{ url: string; sockets: () => number; ha
   server.on("upgrade", (_request, socket) => raw.push(socket as Socket));
   const wss = new WebSocketServer({ server });
   wss.on("connection", (ws) => {
-    const timer = setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 20);
-    timers.push(timer);
-    ws.on("close", () => clearInterval(timer));
+    ws.once("message", (data) => {
+      ws.send(admission([String(data)], { heartbeat: { intervalMs: 100, timeoutMs: 100 } }));
+      const timer = setInterval(() => ws.send(JSON.stringify({ type: "ping" })), 20);
+      timers.push(timer);
+      ws.on("close", () => clearInterval(timer));
+    });
   });
   await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
@@ -66,7 +71,6 @@ describe("a connection to a server that stops answering", () => {
     const hub = await pingingServer();
     connection = createWSConnection({
       url: hub.url,
-      heartbeat: { intervalMs: 100, timeoutMs: 100 },
       backoff: { initialMs: 10, jitter: false },
     });
     await until(connection, "connected");

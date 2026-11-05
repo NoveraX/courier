@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { retryOf } from "../src/realtime/retry-of";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSClientSocket, WSConnection, WSConnectionConfig } from "../src/realtime/ws/ws-types";
+import { admission } from "./helpers/admission";
 
 /** A socket the test drives: it opens, answers, fails and receives as told. */
 class StandInSocket implements WSClientSocket {
@@ -34,11 +35,13 @@ class StandInSocket implements WSClientSocket {
     this.readyState = 3;
   }
 
-  /** The socket opens and the server admits it. */
+  /** The socket opens and the server admits it, with its usual heartbeat: 25 s, and 10 to answer. */
   open(): void {
     this.readyState = 1;
     this.onopen?.({});
-    this.onmessage?.({ data: '{"type":"pong"}' });
+    this.onmessage?.({
+      data: admission(this.sent, { heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 } }),
+    });
   }
 
   /** The connection drops, as a refused or lost one closes: 1006. */

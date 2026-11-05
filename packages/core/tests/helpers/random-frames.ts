@@ -13,8 +13,13 @@ export const FRAME_TYPES: readonly WSMessageType[] = [
   "unsubscribed",
   "complete",
   "auth",
-  "auth_required",
+  "auth_ok",
+  "auth_error",
+  "reauth_required",
+  "disconnect",
   "renamed",
+  "skip",
+  "resync",
 ];
 
 /* Strings a frame may carry that JSON has to escape, or that a reader might take for something else. */

@@ -11,18 +11,25 @@ import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 
 import { logger } from "@noverax/courier";
-import type { WSMessage } from "@noverax/courier/internal";
+import { WS_DEFAULTS, type WSMessage } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket, WebSocketServer } from "ws";
 import { parseMessage } from "../ws-handler/parse-message";
 import { generateConnectionId } from "../ws-handler/protocol";
-import { keepAlive } from "../ws-keep-alive";
-import { takeAuthFrame } from "./credentials";
+import { type KeepAlive, keepAlive } from "../ws-keep-alive";
+import {
+  admitSocket,
+  closeSocket,
+  heartbeatOf,
+  renewCredentials,
+  type SocketHeartbeat,
+} from "./admission";
 import { sendFrame } from "./frames";
 import { handleMessage, handleUnsubscribe } from "./message";
 import { handleSubscribe, PROXY_WS_PATH } from "./subscribe";
 import { leaveSubscription } from "./subscription";
 import type { ChannelRoute, ChannelSocket, ChannelSocketConfig } from "./types";
 
+export { closeSocket } from "./admission";
 export { PROXY_WS_PATH } from "./subscribe";
 export type { ChannelRoute, ChannelSocketConfig } from "./types";
 
@@ -95,13 +102,29 @@ export function activateChannelSocket(
     opening: new Map(),
     leaving: new Map(),
   };
-  const alive = keepAlive(ws, config.heartbeat);
+  const heartbeat = heartbeatOf(config.heartbeat);
+  let alive: KeepAlive | undefined;
+  let refused = false;
+  /* Until its auth frame comes a socket is served nothing, and one that sends none is let go. */
+  const waiting = setTimeout(() => {
+    refused = true;
+    closeSocket(ws, { kind: "no-auth-frame", timeoutMs: WS_DEFAULTS.authTimeoutMs });
+  }, WS_DEFAULTS.authTimeoutMs);
+  waiting.unref();
   ws.on("message", (raw: Buffer | string) => {
+    if (refused) return;
+    if (alive === undefined) {
+      clearTimeout(waiting);
+      if (admitSocket(socket, raw.toString(), heartbeat)) alive = keepAlive(ws, heartbeat);
+      else refused = true;
+      return;
+    }
     const message = parseMessage(ws, raw);
     if (message?.type === "pong") alive.receivedPong();
-    else if (message) route(socket, message);
+    else if (message) route(socket, message, heartbeat);
   });
   ws.on("close", () => {
+    clearTimeout(waiting);
     for (const [topic, subscription] of [...socket.subscriptions]) {
       void leaveSubscription(socket, topic, subscription);
     }
@@ -110,11 +133,11 @@ export function activateChannelSocket(
 }
 
 /* A mock asks for no credentials: an `auth` frame only gives the mocks the headers it carries. */
-function route(socket: ChannelSocket, message: WSMessage): void {
+function route(socket: ChannelSocket, message: WSMessage, heartbeat: SocketHeartbeat): void {
   const failed = (error: unknown) =>
     logger.warn("MockWS", `A "${message.type}" frame could not be handled (${socket.id})`, error);
   if (message.type === "ping") sendFrame(socket.ws, { type: "pong" });
-  else if (message.type === "auth") takeAuthFrame(socket, message);
+  else if (message.type === "auth") renewCredentials(socket, message, heartbeat);
   else if (message.type === "subscribe") void handleSubscribe(socket, message).catch(failed);
   else if (message.type === "unsubscribe") void handleUnsubscribe(socket, message).catch(failed);
   else if (message.type === "message") void handleMessage(socket, message).catch(failed);

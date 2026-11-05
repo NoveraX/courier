@@ -236,7 +236,7 @@ process.on("SIGTERM", async () => {
   shuttingDown = true
   // server.close() waits for open streams and sockets, so drain them first:
   // SSE clients get a `courier:shutdown` notice; cleanupWS() refuses new upgrades,
-  // closes each socket with 1012 and settles within 5 seconds, whatever Redis does.
+  // closes each socket with 1001 and settles within 5 seconds, whatever Redis does.
   await Promise.all([proxy.shutdownSSE(), sse.shutdownSSE(), cleanupWS()])
   server.close()
   await disconnectAdapters()
@@ -303,7 +303,7 @@ const ws = courierWSHandler({
   },
 })
 fastify.get("/ws", { websocket: true }, ws)
-// closes each socket with 1012 within 5 s, and lets go of its pub/sub subscriptions
+// closes each socket with 1001 within 5 s, and lets go of its pub/sub subscriptions
 fastify.addHook("preClose", () => ws.destroy())
 
 // Health checks
@@ -381,7 +381,7 @@ const server = serve({
 })
 
 process.on("SIGTERM", async () => {
-  // each socket closed with 1012 and waited for up to 5 s, before the server closes
+  // each socket closed with 1001 and waited for up to 5 s, before the server closes
   await ws.destroy()
   server.close()
   await disconnectAdapters()
@@ -510,7 +510,7 @@ const ws = createWSHandler({
 })
 ```
 
-Over the limit, the oldest connection of the key is closed with `4429` "Replaced by a newer connection", wherever it is held, and a Courier client does not reconnect on it. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. A key that is `undefined` puts the connection under no limit.
+Over the limit, the oldest connection of the key is closed with `4409` "Replaced by a newer connection", wherever it is held, and a Courier client does not reconnect on it. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. A key that is `undefined` puts the connection under no limit.
 
 Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within 2 seconds, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out.
 
@@ -555,6 +555,8 @@ A shorter secret throws `CLUSTER_SECRET_INVALID` when the handler is made. Keep 
 | `sseConnections.getByMeta(predicate)` | `sseConnections.list({ meta: { … } })` |
 | `sseConnections.disconnect(id, reason)` | `await sseConnections.disconnect(id)`, or a selector, on every replica |
 | `sseConnections.broadcastToMeta(predicate, event)` | `sseConnections.broadcastToMeta({ userId }, event)` |
+
+The protocol is version 2, which the client names in its first frame, `auth`: the server answers `auth_ok`, and says why before each close, in `auth_error` or `disconnect`. A page left from 0.4 is refused with `1002` "Protocol version 2 required: reload the page", which a 0.4 client takes as final, so it does not retry; a newer client that reaches a replica of 0.4 reconnects after a pause, until the upgrade is done. A few codes changed: a connection given up for a newer one of its key is closed with `4409`, not `4429`; a stopping server closes with `1001` and says when to come back, not `1012`; and a slow consumer is closed with `1013`, not `4008`.
 
 A replica of 0.4 does not listen for commands, so while a rolling upgrade from it runs, a command reaches the replicas already upgraded. A replica that gets a command of a newer version than its own skips it, saying so in its log.
 

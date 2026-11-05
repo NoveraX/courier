@@ -15,7 +15,7 @@ import type { Sources } from "../src/define/types";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const { channel } = courier();
 const room = channel
@@ -62,6 +62,7 @@ async function subscribed(socket: FakeSocket, topic: string, payload: unknown, i
 function open(): FakeSocket {
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
+  socket.receive(authFrame());
   return socket;
 }
 

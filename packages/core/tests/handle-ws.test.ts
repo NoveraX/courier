@@ -9,6 +9,7 @@ import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { ENDPOINT_SCHEMA } from "../src/validation";
+import { authFrame } from "./helpers/fake-socket";
 
 afterEach(() => {
   _resetSourcesForTests();
@@ -73,6 +74,24 @@ function createMockSocket(): MockSocket {
   };
 }
 
+/**
+ * Hand a socket over, as an adapter does, and let it in: its client's first
+ * frame is `auth`, and the connection is admitted — `auth_ok` sent — or
+ * refused within the turns admission takes, timers fake or not.
+ */
+async function admit(
+  handleSocket: (ws: WebSocketLike, request: Request) => void,
+  ws: MockSocket,
+  request: Request,
+): Promise<void> {
+  handleSocket(ws, request);
+  ws._emit("message", { data: JSON.stringify(authFrame()) });
+  for (let turn = 0; turn < 100 && !ws._closed; turn++) {
+    if (ws._sent.some((m) => m.type === "auth_ok")) return;
+    await Promise.resolve();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Mock Sources
 // ---------------------------------------------------------------------------
@@ -113,13 +132,14 @@ function createWSSource(handler: unknown, transport: "ws" = "ws", receive?: unkn
 
 describe("createWSHandler", () => {
   /** A rebound page's socket is same-origin to it; only the host tells. */
-  it("closes a socket opened on a host the app does not serve with 4421", () => {
+  it("closes a socket opened on a host the app does not serve with 4421", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, {});
 
     const ws = createMockSocket();
-    handleSocket(
+    await admit(
+      handleSocket,
       ws,
       new Request("http://rebound.example:3000/ws", {
         headers: { Origin: "http://rebound.example:3000" },
@@ -130,19 +150,19 @@ describe("createWSHandler", () => {
     vi.unstubAllEnvs();
   });
 
-  it("keeps a socket opened on a host allowedHosts lists", () => {
+  it("keeps a socket opened on a host allowedHosts lists", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, { allowedHosts: ["app.example.com"] });
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://app.example.com/ws"));
+    await admit(handleSocket, ws, new Request("http://app.example.com/ws"));
 
     expect(ws._closed).toBeNull();
     vi.unstubAllEnvs();
   });
 
-  it("rejects connections with invalid origin", () => {
+  it("rejects connections with invalid origin", async () => {
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, {
       allowedOrigins: ["http://localhost:3000"],
@@ -153,11 +173,11 @@ describe("createWSHandler", () => {
       headers: { Origin: "http://evil.com" },
     });
 
-    handleSocket(ws, req);
+    await admit(handleSocket, ws, req);
     expect(ws._closed).toEqual({ code: 4403, reason: "Origin not allowed" });
   });
 
-  it("allows connections with valid origin", () => {
+  it("allows connections with valid origin", async () => {
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, {
       allowedOrigins: ["http://localhost:3000"],
@@ -168,7 +188,7 @@ describe("createWSHandler", () => {
       headers: { Origin: "http://localhost:3000" },
     });
 
-    handleSocket(ws, req);
+    await admit(handleSocket, ws, req);
     expect(ws._closed).toBeNull();
   });
 
@@ -189,13 +209,13 @@ describe("createWSHandler", () => {
     });
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws?_playground_rid=rid-bypass-1"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws?_playground_rid=rid-bypass-1"));
 
     expect(ws._closed).toBeNull();
     clearPlaygroundAbortRegistry();
   });
 
-  it("still rejects connections with mismatched Origin even when _playground_rid is present (browser CSRF)", () => {
+  it("still rejects connections with mismatched Origin even when _playground_rid is present (browser CSRF)", async () => {
     // A malicious page that tries to forge a playground request from a
     // browser will ALWAYS carry an Origin header (browser spec requirement),
     // so the bypass must NOT apply when Origin is set. Validate normally.
@@ -205,7 +225,8 @@ describe("createWSHandler", () => {
     });
 
     const ws = createMockSocket();
-    handleSocket(
+    await admit(
+      handleSocket,
       ws,
       new Request("http://localhost/ws?_playground_rid=rid-csrf", {
         headers: { Origin: "http://evil.com" },
@@ -228,7 +249,7 @@ describe("createWSHandler", () => {
     const ws = createMockSocket();
     const req = new Request("http://localhost/ws?_playground_rid=rid-ws-cancel-1");
 
-    handleSocket(ws, req);
+    await admit(handleSocket, ws, req);
     expect(playgroundAbortRegistrySize()).toBe(1);
     expect(ws._closed).toBeNull();
 
@@ -257,7 +278,11 @@ describe("createWSHandler", () => {
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources);
 
-    handleSocket(createMockSocket(), new Request("http://localhost/ws?_playground_rid=bad%20id"));
+    await admit(
+      handleSocket,
+      createMockSocket(),
+      new Request("http://localhost/ws?_playground_rid=bad%20id"),
+    );
 
     expect(playgroundAbortRegistrySize()).toBe(0);
     clearPlaygroundAbortRegistry();
@@ -273,7 +298,7 @@ describe("createWSHandler", () => {
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     expect(playgroundAbortRegistrySize()).toBe(0);
   });
@@ -287,7 +312,11 @@ describe("createWSHandler", () => {
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws?_playground_rid=rid-ws-natural-close"));
+    await admit(
+      handleSocket,
+      ws,
+      new Request("http://localhost/ws?_playground_rid=rid-ws-natural-close"),
+    );
     expect(playgroundAbortRegistrySize()).toBe(1);
 
     // Natural client-side close (not via registry) — close listener should
@@ -309,7 +338,7 @@ describe("createWSHandler", () => {
     });
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     // First message is stream:open hook related, skip to heartbeat
     ws._sent.length = 0;
@@ -320,7 +349,7 @@ describe("createWSHandler", () => {
     vi.useRealTimers();
   });
 
-  it("handles pong messages to reset heartbeat", () => {
+  it("handles pong messages to reset heartbeat", async () => {
     vi.useFakeTimers();
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, {
@@ -329,7 +358,7 @@ describe("createWSHandler", () => {
     });
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     vi.advanceTimersByTime(100);
     // Send pong — should not close
@@ -342,7 +371,7 @@ describe("createWSHandler", () => {
     vi.useRealTimers();
   });
 
-  it("closes connection on heartbeat timeout", () => {
+  it("closes connection on heartbeat timeout", async () => {
     vi.useFakeTimers();
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources, {
@@ -351,7 +380,7 @@ describe("createWSHandler", () => {
     });
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     // Advance past heartbeat interval — ping sent
     vi.advanceTimersByTime(100);
@@ -374,7 +403,7 @@ describe("createWSHandler", () => {
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     ws._emit("message", {
       data: encodeMessage({ type: "subscribe", id: "sub-1", topic: "testSource.chat.feed" }),
@@ -393,13 +422,13 @@ describe("createWSHandler", () => {
     expect(dataMessages[1]?.payload).toBe("msg-2");
   });
 
-  it("rejects subscribe to non-WS endpoint", () => {
+  it("rejects subscribe to non-WS endpoint", async () => {
     const httpHandler = vi.fn();
     const sources = createWSSource(httpHandler, "http" as "ws");
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     ws._emit("message", {
       data: encodeMessage({ type: "subscribe", id: "sub-1", topic: "testSource.chat.feed" }),
@@ -420,7 +449,7 @@ describe("createWSHandler", () => {
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     ws._emit("message", {
       data: encodeMessage({ type: "subscribe", id: "sub-1", topic: "testSource.chat.feed" }),
@@ -447,7 +476,7 @@ describe("createWSHandler", () => {
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     ws._emit("message", {
       data: encodeMessage({ type: "subscribe", id: "sub-1", topic: "testSource.chat.feed" }),
@@ -464,12 +493,12 @@ describe("createWSHandler", () => {
     expect(unsub!.topic).toBe("testSource.chat.feed");
   });
 
-  it("rejects invalid JSON messages", () => {
+  it("rejects invalid JSON messages", async () => {
     const sources = createWSSource(vi.fn());
     const { handleSocket } = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     ws._emit("message", { data: "not-json{{{" });
 
@@ -489,7 +518,7 @@ describe("createWSHandler", () => {
     });
 
     const ws = createMockSocket();
-    handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handleSocket, ws, new Request("http://localhost/ws"));
 
     ws._emit("message", {
       data: encodeMessage({ type: "subscribe", id: "sub-1", topic: "testSource.chat.feed" }),
@@ -516,12 +545,12 @@ describe("createWSHandler — connections registry", () => {
     expect(handler.connections.count).toBe(0);
   });
 
-  it("tracks connections after handleSocket", () => {
+  it("tracks connections after handleSocket", async () => {
     const sources = createWSSource(vi.fn());
     const handler = setupWSHandler(sources);
 
-    handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
-    handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, createMockSocket(), new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, createMockSocket(), new Request("http://localhost/ws"));
 
     expect(handler.connections.count).toBe(2);
     expect(handler.connections.list()).toHaveLength(2);
@@ -532,7 +561,7 @@ describe("createWSHandler — connections registry", () => {
     const handler = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handler.handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws, new Request("http://localhost/ws"));
     expect(handler.connections.count).toBe(1);
 
     ws._emit("close", { code: 1000 });
@@ -541,14 +570,15 @@ describe("createWSHandler — connections registry", () => {
     expect(handler.connections.count).toBe(0);
   });
 
-  it("does not register rejected connections", () => {
+  it("does not register rejected connections", async () => {
     const sources = createWSSource(vi.fn());
     const handler = setupWSHandler(sources, {
       allowedOrigins: ["http://allowed.com"],
     });
 
     const ws = createMockSocket();
-    handler.handleSocket(
+    await admit(
+      handler.handleSocket,
       ws,
       new Request("http://localhost/ws", {
         headers: { Origin: "http://evil.com" },
@@ -567,7 +597,7 @@ describe("createWSHandler — connections registry", () => {
     });
 
     const ws = createMockSocket();
-    handler.handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws, new Request("http://localhost/ws"));
     await new Promise((r) => setTimeout(r, 10));
 
     expect(handler.connections.count).toBe(0);
@@ -580,7 +610,7 @@ describe("createWSHandler — connections registry", () => {
     });
 
     const ws = createMockSocket();
-    handler.handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws, new Request("http://localhost/ws"));
     ws._emit("message", { data: JSON.stringify({ type: "auth", payload: {} }) });
     await new Promise((r) => setTimeout(r, 10));
 
@@ -589,12 +619,12 @@ describe("createWSHandler — connections registry", () => {
     expect(conn?.meta).toEqual({ userId: "u42", role: "admin" });
   });
 
-  it("generates UUID connection IDs", () => {
+  it("generates UUID connection IDs", async () => {
     const sources = createWSSource(vi.fn());
     const handler = setupWSHandler(sources);
 
-    handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
-    handler.handleSocket(createMockSocket(), new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, createMockSocket(), new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, createMockSocket(), new Request("http://localhost/ws"));
 
     const ids = handler.connections.list().map((c) => c.connectionId);
     expect(ids).toHaveLength(2);
@@ -605,12 +635,12 @@ describe("createWSHandler — connections registry", () => {
     }
   });
 
-  it("can send to a specific connection", () => {
+  it("can send to a specific connection", async () => {
     const sources = createWSSource(vi.fn());
     const handler = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handler.handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws, new Request("http://localhost/ws"));
 
     const conn = handler.connections.list()[0]!;
     handler.connections.send(conn.connectionId, { hello: "world" });
@@ -625,8 +655,8 @@ describe("createWSHandler — connections registry", () => {
 
     const ws1 = createMockSocket();
     const ws2 = createMockSocket();
-    handler.handleSocket(ws1, new Request("http://localhost/ws"));
-    handler.handleSocket(ws2, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws1, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws2, new Request("http://localhost/ws"));
 
     await handler.connections.broadcast("ping");
 
@@ -639,7 +669,7 @@ describe("createWSHandler — connections registry", () => {
     const handler = setupWSHandler(sources);
 
     const ws = createMockSocket();
-    handler.handleSocket(ws, new Request("http://localhost/ws"));
+    await admit(handler.handleSocket, ws, new Request("http://localhost/ws"));
 
     const conn = handler.connections.list()[0]!;
     await handler.connections.disconnect(conn.connectionId, { code: 4001, reason: "Banned" });

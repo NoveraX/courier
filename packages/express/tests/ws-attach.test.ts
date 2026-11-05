@@ -16,6 +16,9 @@ import { WebSocket, WebSocketServer } from "ws";
 
 import { courierWSAttach } from "../src";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 let server: Server | undefined;
 const clients: WebSocket[] = [];
 
@@ -88,12 +91,17 @@ describe("courierWSAttach and the message limit", () => {
     const frames: { type: string; error?: { code: number } }[] = [];
     client.on("message", (raw) => frames.push(JSON.parse(String(raw)) as { type: string }));
     await new Promise((resolve) => client.on("open", resolve));
+    client.send(AUTH);
 
     client.send("x".repeat(64 * 1024));
     client.send(JSON.stringify({ type: "ping" }));
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    expect(frames.map((frame) => frame.error?.code ?? frame.type)).toEqual([4413, "pong"]);
+    expect(frames.map((frame) => frame.error?.code ?? frame.type)).toEqual([
+      "auth_ok",
+      4413,
+      "pong",
+    ]);
     expect(client.readyState).toBe(WebSocket.OPEN);
   });
 

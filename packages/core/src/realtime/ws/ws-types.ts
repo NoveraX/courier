@@ -2,7 +2,6 @@ import type { SourceWebSocket } from "../../http-client/source-transport";
 import type { RealtimeError } from "../errors";
 import type { BackoffConfig, ConnectionStatus } from "../types";
 import type { WSConnectionState } from "./connection-machine-types";
-import type { HeartbeatConfig } from "./heartbeat";
 import type { MessageQueueConfig } from "./message-queue";
 import type { WSAuth, WSCredentials } from "./ws-credentials";
 
@@ -60,16 +59,19 @@ export type WSSocketFactory = (
 // Connection config
 // ---------------------------------------------------------------------------
 
+/**
+ * How a WebSocket connection is made. What the server pings it by and the
+ * largest message it takes come from the server, in the `auth_ok` that
+ * admits the connection: a socket nothing has come on for the server's
+ * ping interval and pong timeout together is taken for gone, and a message
+ * larger than the server takes is not sent — its topic hears 4413, and the
+ * connection goes on. Until a server has said, messages are held to 64 KiB.
+ */
 export interface WSConnectionConfig {
   /** WebSocket endpoint URL */
   url: string;
   /** Sub-protocols for the WS handshake */
   protocols?: string[] | undefined;
-  /**
-   * The server's ping interval and pong timeout: a socket nothing has come
-   * on for both together is taken for gone, even while it reads as open
-   */
-  heartbeat?: HeartbeatConfig | undefined;
   /** Reconnection backoff configuration */
   backoff?: BackoffConfig | undefined;
   /** What the connection keeps to send while it cannot, and what overflowing it does */
@@ -94,12 +96,6 @@ export interface WSConnectionConfig {
   onStatusChange?: ((status: ConnectionStatus) => void) | undefined;
   /** Max bufferedAmount before dropping sends (default 1MB) */
   maxBufferedAmount?: number | undefined;
-  /**
-   * Largest message sent, as the length of its encoded frame — the server's
-   * `maxMessageSize` (default 64 KB). A larger one is not sent: its topic
-   * hears a 4413 error, and the connection goes on.
-   */
-  maxMessageSize?: number | undefined;
   /** WebSocket factory — override for testing */
   socketFactory?: WSSocketFactory | undefined;
   /**
@@ -134,14 +130,14 @@ export interface WSConnectionConfig {
  */
 export type CallerWSOptions = Pick<
   WSConnectionConfig,
-  "backoff" | "heartbeat" | "messageQueue" | "protocols" | "maxMessageSize" | "reconnectOnResume"
+  "backoff" | "messageQueue" | "protocols" | "reconnectOnResume"
 > & {
   /**
    * What the client tells the server about itself — a token, a tenant —
    * sent in the first frame of every socket, never in its URL, and read by
    * the server's `onConnect` as `auth`. A function is called anew before
    * every connect and reconnect, and when the server asks again with
-   * `sendAuthRequired`.
+   * `connections.requireAuth`.
    */
   auth?: WSAuth | undefined;
 };
@@ -204,9 +200,9 @@ export interface WSConnection {
   send(topic: string, payload: unknown): boolean;
   /**
    * Send the socket's credentials again, asked for anew, without
-   * reconnecting — as the server asks with `sendAuthRequired`, or once the
-   * application has renewed its token. On a connection that is not open it
-   * does nothing: the next socket asks for them anyway.
+   * reconnecting — as the server asks with `connections.requireAuth`, or
+   * once the application has renewed its token. On a connection that is not
+   * open it does nothing: the next socket asks for them anyway.
    */
   authenticate(): void;
   /**

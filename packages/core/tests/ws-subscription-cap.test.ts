@@ -16,6 +16,7 @@ import type { WebSocketLike } from "../src/realtime/adapters";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { decodeMessage, encodeMessage, type WSMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { authFrame } from "./helpers/fake-socket";
 
 const { channel } = courier();
 const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
@@ -64,6 +65,7 @@ function serve(maxSubscriptionsPerConnection: number): { socket: Socket; live: (
     socket,
     new Request("http://localhost/api/ws"),
   );
+  socket.emit("message", { data: encodeMessage(authFrame()) });
   return { socket, live: () => live };
 }
 
@@ -74,6 +76,8 @@ function subscribe(socket: Socket, topic: string, payload?: unknown): void {
 describe("maxSubscriptionsPerConnection", () => {
   it("holds against a burst sent in one turn", async () => {
     const { socket, live } = serve(5);
+    /* Let in first: before auth_ok, the server holds no more frames than twice the cap. */
+    await settle();
 
     for (let i = 0; i < 50; i += 1) subscribe(socket, qualifyTopic("api.live.feed", { i }), { i });
     await settle();

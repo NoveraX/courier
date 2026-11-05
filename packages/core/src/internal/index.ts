@@ -30,7 +30,12 @@ export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { type BodyLimits, requestBodyStream } from "../adapter/read-body";
 export { type BodyText, readBodyText } from "../adapter/read-body-text";
 export { readAllowedHosts, readAllowedOrigins } from "../adapter/runtime-policy";
+export type { CloseFrame, SessionClose } from "../adapter/ws-close";
+export { closeOf, closeWithNotice, isSendableCloseCode, noticeOf } from "../adapter/ws-close";
+export { WS_DEFAULTS, type WSDefaults } from "../adapter/ws-defaults";
 export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";
+export type { AuthOkFields, FirstFrame } from "../adapter/ws-handshake";
+export { authOkFrame, readFirstFrame } from "../adapter/ws-handshake";
 export {
   adoptListenOrigin,
   DEV_SERVER_ORIGIN_ENV,
@@ -70,12 +75,10 @@ export type { ProxyCallerDefaults } from "../proxy-caller/types";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
-export {
-  createHeartbeat,
-  type Heartbeat,
-  type HeartbeatConfig,
-} from "../realtime/ws/heartbeat";
-export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
+export type { Heartbeat, HeartbeatConfig } from "../realtime/ws/heartbeat";
+export { createHeartbeat } from "../realtime/ws/heartbeat";
+export type { WSMessage } from "../realtime/ws/ws-protocol";
+export { decodeMessage, encodeMessage, PROTOCOL_VERSION } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
 export { addressedOrigin } from "../session/addressed-origin";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
@@ -161,11 +164,8 @@ export {
 } from "../utils/path-template";
 export { proxyRefusal, type StandInCall } from "../utils/proxy-refusal";
 export { cutText, REDACTED, splitUrlsWithoutSecrets, urlWithoutSecrets } from "../utils/redact";
-export {
-  type RenderMemo,
-  type RenderMemoProvider,
-  registerRenderMemo,
-} from "../utils/render-memo";
+export type { RenderMemo, RenderMemoProvider } from "../utils/render-memo";
+export { registerRenderMemo } from "../utils/render-memo";
 export { sliceWhole } from "../utils/slice-whole";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 export {

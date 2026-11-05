@@ -14,12 +14,6 @@ export const CLIENT_LIMITS = {
   /** How long an open socket checked on a resume signal may take to answer its ping (5 s) */
   WS_RESUME_PROBE_TIMEOUT_MS: 5_000,
 
-  /** The server's ping interval a client counts on until its server says otherwise (25 s) */
-  WS_HEARTBEAT_INTERVAL_MS: 25_000,
-
-  /** How late past its interval a ping may come before the client takes the server for gone (10 s) */
-  WS_HEARTBEAT_TIMEOUT_MS: 10_000,
-
   /** How long a connection must stay open for its next drop to start the backoff over (10 s) */
   RECONNECT_STABLE_MS: 10_000,
 

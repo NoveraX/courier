@@ -1,5 +1,10 @@
 import type { WebSocketLike } from "../../src/realtime/adapters";
-import { decodeMessage, encodeMessage, type WSMessage } from "../../src/realtime/ws/ws-protocol";
+import {
+  decodeMessage,
+  encodeMessage,
+  PROTOCOL_VERSION,
+  type WSMessage,
+} from "../../src/realtime/ws/ws-protocol";
 
 /** How the handler closed a socket, and when. */
 export interface SocketClosure {
@@ -63,4 +68,20 @@ export function createFakeSocket(): FakeSocket {
     },
   };
   return socket;
+}
+
+/**
+ * The first frame a Courier client sends on a socket: `auth`, of the
+ * protocol version spoken here, carrying what `payload` names.
+ *
+ * @param payload - Its `{ headers?, auth? }`, when it carries any
+ * @param id - Its id, which `auth_ok` answers with
+ * @returns The frame
+ * @example
+ * ```ts
+ * socket.receive(authFrame({ auth: { token: "t1" } }));
+ * ```
+ */
+export function authFrame(payload?: unknown, id = "a0"): WSMessage {
+  return { type: "auth", v: PROTOCOL_VERSION, id, ...(payload !== undefined && { payload }) };
 }

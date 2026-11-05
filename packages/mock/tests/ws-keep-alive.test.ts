@@ -11,6 +11,7 @@ import WebSocket from "ws";
 
 import { createMockServer, type MockServer } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-route-types";
+import { admit } from "./helpers/admit";
 
 const chat: PrefixMapping[] = [
   {
@@ -45,20 +46,20 @@ async function boot(): Promise<string> {
   return url.replace(/^http/, "ws");
 }
 
-/** A socket that answers each ping with a pong, or does not; resolves once open. */
+/** A socket that answers each ping with a pong, or does not; resolves once it is let in. */
 async function connect(
   url: string,
   answers: boolean,
 ): Promise<{ socket: WebSocket; frames: WSMessage[] }> {
   const socket = new WebSocket(url);
   sockets.push(socket);
+  await admit(socket);
   const frames: WSMessage[] = [];
   socket.on("message", (raw) => {
     const frame = decodeMessage(String(raw));
     frames.push(frame);
     if (answers && frame.type === "ping") socket.send(encodeMessage({ type: "pong" }));
   });
-  await new Promise((resolve) => socket.once("open", resolve));
   return { socket, frames };
 }
 
@@ -77,11 +78,12 @@ describe.each([
     expect(socket.readyState).toBe(WebSocket.OPEN);
   });
 
-  it("is closed with 4408 once its client stops answering", async () => {
-    const { socket } = await connect(`${await boot()}${path}`, false);
+  it("is closed with 4408 once its client stops answering, and told so first", async () => {
+    const { socket, frames } = await connect(`${await boot()}${path}`, false);
 
     const code = await new Promise<number>((resolve) => socket.once("close", resolve));
 
     expect(code).toBe(4408);
+    expect(frames.at(-1)).toEqual({ type: "disconnect", code: 4408, reason: "Heartbeat timeout" });
   });
 });

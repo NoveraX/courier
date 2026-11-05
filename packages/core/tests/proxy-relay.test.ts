@@ -513,7 +513,6 @@ describe("a channel another server serves, through the proxy", () => {
     const proxy = await serveChannels({ chat: api }, "/api/ws", { maxMessageSize: 200_000 });
     const caller = createProxyCaller(routesOf(api, "chat"), {
       proxyPath: { ws: `${proxy.replace("http", "ws")}/api/ws` },
-      ws: { maxMessageSize: 200_000 },
     });
     const room = caller.live.room({ room: "r1" });
     const heard: string[] = [];

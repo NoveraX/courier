@@ -80,11 +80,15 @@ describe("the topic a subscription is known by", () => {
     await new Promise((resolve) => socket.once("open", resolve));
     const topic = qualifyTopic("api.live.room", { room: VICTIM_ROOM });
 
+    socket.send(JSON.stringify({ type: "auth", v: 2, id: "a1" }));
     socket.send(
       JSON.stringify({ type: "subscribe", id: "s1", topic, payload: { room: VICTIM_ROOM } }),
     );
     await settle(60);
 
-    expect(frames).toEqual([expect.objectContaining({ type: "subscribed", topic })]);
+    expect(frames).toEqual([
+      expect.objectContaining({ type: "auth_ok", id: "a1" }),
+      expect.objectContaining({ type: "subscribed", topic }),
+    ]);
   });
 });

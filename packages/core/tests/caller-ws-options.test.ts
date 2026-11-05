@@ -2,10 +2,10 @@
  * A caller's `ws` options reach the socket its channels share, end to end on
  * a real `ws` server.
  *
- * `auth`, the backoff, the heartbeat and the queue limits are options of the
- * connection, passed through the caller: `auth` is what `onConnect` reads,
- * sent in the socket's first frame — never its URL — and sent again, asked
- * for anew, when the server asks with `auth_required`.
+ * `auth`, the backoff and the queue limits are options of the connection,
+ * passed through the caller: `auth` is what `onConnect` reads, sent in the
+ * socket's first frame — never its URL — and sent again, asked for anew,
+ * when the server asks with `reauth_required`.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

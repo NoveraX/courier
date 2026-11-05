@@ -325,6 +325,8 @@ describe.skipIf(!available)(
         new Request("http://localhost/api/ws"),
         "203.0.113.5",
       );
+      const auth = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+      for (const listener of listeners.get("message") ?? []) listener({ data: auth });
       await expect.poll(() => handler.connections.count).toBe(1);
 
       expect(

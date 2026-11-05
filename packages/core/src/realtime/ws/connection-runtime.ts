@@ -1,5 +1,6 @@
 import type { ScopedLogger } from "../../logger";
 import { fingerprintOf } from "../credentials-fingerprint";
+import { authFrame } from "./auth-frame";
 import { transition } from "./connection-machine";
 import type {
   MachineContext,
@@ -9,7 +10,6 @@ import type {
 } from "./connection-machine-types";
 import { connectionSocket } from "./connection-socket";
 import type { WSCredentials } from "./ws-credentials";
-import { encodeMessage } from "./ws-protocol";
 import type { WSConnectionConfig, WSSocketFactory } from "./ws-types";
 
 /** What the connection does for the runtime: its subscriptions' part of each transition. */
@@ -123,9 +123,7 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
         socket.open(credentials?.handshake);
         return;
       case "send-auth":
-        socket.send(
-          encodeMessage({ type: "auth", id: effect.id, payload: credentials?.frame ?? {} }),
-        );
+        socket.send(authFrame(effect.id, credentials, effect.opening));
         credentials = undefined;
         if (effect.opening) hooks.opened(runtime);
         return;

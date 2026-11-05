@@ -7,6 +7,8 @@
  * the subscription cannot go on.
  */
 
+import { randomBytes } from "node:crypto";
+
 import { logger } from "@noverax/courier";
 import { describeFailure, type StreamFailure, type WSMessage } from "@noverax/courier/internal";
 import { unqualifyTopic } from "@noverax/courier/realtime";
@@ -145,5 +147,19 @@ async function join(
     sendEnd(ws, request.topic, message.id, failure);
     return leaveSubscription(socket, request.topic, opened, failure);
   }
-  if (!opened.left) sendFrame(ws, { type: "subscribed", ...id, topic: request.topic });
+  if (!opened.left) sendFrame(ws, subscribedFrame(message, request.topic));
+}
+
+/* The mock numbers no event and keeps none: each topic stands at 0 in a sequence of its own, and a subscription that resumes is told it missed what it may have. */
+const EPOCH = `mock-${randomBytes(6).toString("hex")}`;
+
+function subscribedFrame(message: WSMessage, topic: string): WSMessage {
+  return {
+    type: "subscribed",
+    ...(message.id !== undefined && { id: message.id }),
+    topic,
+    seq: 0,
+    epoch: EPOCH,
+    ...(message.since !== undefined && { recovered: false }),
+  };
 }

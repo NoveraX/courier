@@ -20,6 +20,9 @@ import { WebSocket } from "ws";
 
 import { courierSSEMiddleware, courierWSAttach } from "../src/index";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 const { stream } = courier();
 let server: Server | undefined;
 
@@ -98,12 +101,15 @@ describe("detaching the WebSocket handler", () => {
     });
     const client = new WebSocket(`ws://${host}/api/ws`);
     await new Promise((resolve) => client.once("open", resolve));
+    const admitted = new Promise((resolve) => client.once("message", resolve));
+    client.send(AUTH);
+    await admitted;
     const closed = new Promise<number>((resolve) => client.once("close", resolve));
 
     try {
       await detach();
 
-      expect(await Promise.race([closed, timeout(3000)])).toBe(1012);
+      expect(await Promise.race([closed, timeout(3000)])).toBe(1001);
     } finally {
       client.terminate();
     }

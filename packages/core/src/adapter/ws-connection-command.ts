@@ -1,7 +1,7 @@
 import { isRecord } from "../utils/is-record";
 import { closeReason } from "./close-reason";
 import { readSelector, type Selection } from "./connection-selector";
-import { isSendableCloseCode } from "./ws-dialect";
+import { isSendableCloseCode } from "./ws-close";
 import type {
   ConnectionSelector,
   DisconnectOptions,

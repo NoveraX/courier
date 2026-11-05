@@ -1,6 +1,6 @@
 import { isHostAllowed } from "./host-policy";
 import { isOriginAllowed } from "./origin-policy";
-import type { SessionClose } from "./ws-dialect";
+import type { SessionClose } from "./ws-close";
 import { extractClientIP, type IPTracker } from "./ws-ip-tracker";
 import type { WSHandlerConfig } from "./ws-types";
 

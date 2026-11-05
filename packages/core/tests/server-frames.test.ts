@@ -2,17 +2,47 @@
  * What the client reads of a server's message: a frame whose fields hold,
  * a kind of frame it does not know, or a message that is not a frame. A
  * fuzz run feeds it random JSON and broken real frames; it never throws, and
- * hands on only frames whose fields are what they claim.
+ * hands on only frames whose fields are what they claim — a server's
+ * heartbeat among them, which a timer has to be able to wait out.
  */
 import { describe, expect, it } from "vitest";
 
-import { readServerFrame, type ServerFrame } from "../src/realtime/ws/server-frames";
+import type { ServerFrame } from "../src/realtime/ws/server-frame-types";
+import { readServerFrame } from "../src/realtime/ws/server-frames";
 
 const frames: Record<string, ServerFrame> = {
   '{"type":"ping"}': { type: "ping" },
   '{"type":"pong"}': { type: "pong" },
-  '{"type":"auth","id":"a2"}': { type: "auth", id: "a2" },
-  '{"type":"auth_required"}': { type: "auth_required" },
+  '{"type":"auth_ok","id":"a1","v":2,"connectionId":"c_7f3k","heartbeat":{"intervalMs":25000,"timeoutMs":10000},"limits":{"maxMessageSize":65536,"maxSubscriptions":100}}':
+    {
+      type: "auth_ok",
+      id: "a1",
+      v: 2,
+      connectionId: "c_7f3k",
+      heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
+      limits: { maxMessageSize: 65_536 },
+    },
+  '{"type":"auth_error","id":"a1","error":{"code":4429,"message":"Too many connections"},"v":2,"retryAfterMs":1500}':
+    {
+      type: "auth_error",
+      id: "a1",
+      error: { code: 4429, message: "Too many connections" },
+      v: 2,
+      retryAfterMs: 1_500,
+    },
+  '{"type":"auth_error","error":{"code":1002,"message":"Protocol version 2 required: reload the page"},"v":2}':
+    {
+      type: "auth_error",
+      error: { code: 1002, message: "Protocol version 2 required: reload the page" },
+      v: 2,
+    },
+  '{"type":"reauth_required","timeoutMs":0}': { type: "reauth_required", timeoutMs: 0 },
+  '{"type":"disconnect","code":1001,"reason":"Server shutting down","retryAfterMs":2380}': {
+    type: "disconnect",
+    code: 1001,
+    reason: "Server shutting down",
+    retryAfterMs: 2_380,
+  },
   '{"type":"renamed","topic":"api.room#{}","payload":"api.room"}': {
     type: "renamed",
     topic: "api.room#{}",
@@ -49,7 +79,7 @@ describe("readServerFrame", () => {
   });
 
   it("names a kind of frame it does not know rather than taking it for broken", () => {
-    expect(readServerFrame('{"type":"auth_ok","id":"a1"}')).toEqual({ unknown: "auth_ok" });
+    expect(readServerFrame('{"type":"auth_required"}')).toEqual({ unknown: "auth_required" });
     expect(readServerFrame('{"type":"__proto__"}')).toEqual({ unknown: "__proto__" });
   });
 
@@ -65,6 +95,24 @@ describe("readServerFrame", () => {
     ["a error frame", '{"type":"error","error":{"code":4.5,"message":"x"}}'],
     ["a error frame", '{"type":"error","error":{"code":1,"message":"x","issues":"many"}}'],
     ["a renamed frame", '{"type":"renamed","topic":"t","payload":{}}'],
+    ["a auth_ok frame", authOk({ heartbeat: undefined })],
+    ["a auth_ok frame", authOk({ heartbeat: { intervalMs: 0, timeoutMs: 10_000 } })],
+    ["a auth_ok frame", authOk({ heartbeat: { intervalMs: 25_000, timeoutMs: 1.5 } })],
+    ["a auth_ok frame", authOk({ heartbeat: { intervalMs: 2 ** 31 - 10, timeoutMs: 10 } })],
+    ["a auth_ok frame", authOk({ limits: { maxMessageSize: -1 } })],
+    ["a auth_ok frame", authOk({ v: "2" })],
+    ["a auth_ok frame", authOk({ connectionId: 7 })],
+    ["a auth_ok frame", authOk({ id: undefined })],
+    ["a auth_error frame", '{"type":"auth_error","error":{"code":4401,"message":"No"}}'],
+    ["a auth_error frame", '{"type":"auth_error","error":{"code":"4401","message":"No"},"v":2}'],
+    [
+      "a auth_error frame",
+      '{"type":"auth_error","error":{"code":4429,"message":"No"},"v":2,"retryAfterMs":-1}',
+    ],
+    ["a reauth_required frame", '{"type":"reauth_required"}'],
+    ["a reauth_required frame", '{"type":"reauth_required","timeoutMs":-5}'],
+    ["a disconnect frame", '{"type":"disconnect","code":"1001","reason":"Going away"}'],
+    ["a disconnect frame", '{"type":"disconnect","code":4409}'],
   ])("refuses %s: %s", (why, raw) => {
     expect(readServerFrame(raw)).toEqual({ invalid: why });
   });
@@ -87,12 +135,36 @@ describe("readServerFrame", () => {
   });
 });
 
+/* An auth_ok frame as a v2 server sends it, with `fields` in place of its own. */
+function authOk(fields: Record<string, unknown>): string {
+  return JSON.stringify({
+    type: "auth_ok",
+    id: "a1",
+    v: 2,
+    connectionId: "c1",
+    heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
+    limits: { maxMessageSize: 65_536, maxSubscriptions: 100 },
+    ...fields,
+  });
+}
+
 /* Whether every field a frame names is what its type says it is. */
 function holds(frame: ServerFrame): boolean {
   const optionalString = (value: unknown) => value === undefined || typeof value === "string";
+  const wait = (value: unknown) => value === undefined || (typeof value === "number" && value >= 0);
   const fields: Record<string, unknown> = { ...frame };
   if (!optionalString(fields.id) || !optionalString(fields.topic)) return false;
   if ("to" in fields && typeof fields.to !== "string") return false;
+  if ("v" in fields && !Number.isInteger(fields.v)) return false;
+  if (!wait(fields.retryAfterMs) || !wait(fields.timeoutMs)) return false;
+  if (frame.type === "auth_ok") {
+    const { intervalMs, timeoutMs } = frame.heartbeat;
+    const timer = Number.isInteger(intervalMs + timeoutMs) && intervalMs + timeoutMs < 2 ** 31;
+    return timer && intervalMs > 0 && timeoutMs > 0 && frame.limits.maxMessageSize > 0;
+  }
+  if (frame.type === "disconnect") {
+    return Number.isInteger(frame.code) && typeof frame.reason === "string";
+  }
   if ("error" in fields && fields.error !== undefined) {
     const error = fields.error as Record<string, unknown>;
     return Number.isInteger(error.code) && typeof error.message === "string";
@@ -114,8 +186,10 @@ function generator(seed: number): () => number {
 const TYPES = [
   "ping",
   "pong",
-  "auth",
-  "auth_required",
+  "auth_ok",
+  "auth_error",
+  "reauth_required",
+  "disconnect",
   "renamed",
   "subscribed",
   "unsubscribed",
@@ -124,7 +198,11 @@ const TYPES = [
   "error",
   "x",
 ];
-const KEYS = ["type", "id", "topic", "payload", "error", "code", "message", "issues", "seq"];
+const KEYS = [
+  ...["type", "id", "topic", "payload", "error", "code", "message", "issues", "seq", "v"],
+  ...["connectionId", "heartbeat", "intervalMs", "timeoutMs", "limits", "maxMessageSize"],
+  ...["retryAfterMs", "reason"],
+];
 
 function randomValue(random: () => number, depth: number): unknown {
   const pick = random();

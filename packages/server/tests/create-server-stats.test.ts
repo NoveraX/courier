@@ -9,6 +9,9 @@ import { WebSocket } from "ws";
 import { createCourierServer } from "../src/create-server";
 import type { CourierServer } from "../src/types";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 let server: CourierServer | undefined;
 const clients: WebSocket[] = [];
 
@@ -33,6 +36,7 @@ describe("CourierServer.stats()", () => {
       client.once("open", resolve);
       client.once("error", reject);
     });
+    client.send(AUTH);
 
     await expect.poll(() => server?.stats().ws.connections).toBe(1);
   });

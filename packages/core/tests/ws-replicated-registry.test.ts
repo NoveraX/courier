@@ -11,6 +11,7 @@ import { courier } from "../src/define/courier";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
+import { authFrame } from "./helpers/fake-socket";
 import { type ServedWS, serveWS, settle, stopWS, subscribers } from "./helpers/ws-server";
 
 const { channel } = courier();
@@ -81,7 +82,8 @@ describe("a broadcast through one replica's connection registry", () => {
     const frames: unknown[] = [];
     const raw = new WebSocket(b.url);
     raw.on("message", (data) => frames.push(JSON.parse(String(data))));
-    /* Counted by the replica, the socket is open: what it sends now follows the handshake. */
+    raw.once("open", () => raw.send(JSON.stringify(authFrame())));
+    /* Counted by the replica, the socket was let in: what it sends now follows auth_ok. */
     await expect.poll(() => b.handler.connections.count, { timeout: 2000 }).toBe(1);
 
     await a.handler.connections.broadcast({ announcement: "maintenance" });

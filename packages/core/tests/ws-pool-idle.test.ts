@@ -43,7 +43,6 @@ class FakeSocket implements WSClientSocket {
 const config = {
   socketFactory: (url: string) => new FakeSocket(url),
   backoff: { initialMs: 100, jitter: false },
-  heartbeat: { intervalMs: 100_000, timeoutMs: 50_000 },
 };
 
 beforeEach(() => {

@@ -1,5 +1,6 @@
 import { CLIENT_LIMITS } from "../client-limits";
 import { AuthError, fromErrorCode, type RealtimeError } from "../errors";
+import { PROTOCOL_VERSION } from "./ws-protocol";
 
 /** The close code of a socket closed over a frame larger than the server reads. */
 export const MESSAGE_TOO_BIG = 1009;
@@ -14,6 +15,8 @@ export interface SocketClosure {
   readonly reason: string;
   /** How long the server asked the client to wait before connecting again */
   readonly retryAfterMs?: number | undefined;
+  /** The protocol the server speaks, as its `auth_error` said */
+  readonly version?: number | undefined;
 }
 
 /** What a closed socket means for its connection. */
@@ -28,16 +31,20 @@ export type CloseDisposition =
   | { readonly action: "finish" };
 
 /*
- * Codes a reconnect cannot change: a protocol the two ends do not share, a
- * policy, an origin or host the server refuses, a connection replaced by a
- * newer one of the same user — reconnecting would replace that one in turn.
+ * Codes a reconnect cannot change: data or a policy the server will not
+ * take, an origin or host it refuses, a connection replaced by a newer one
+ * of the same user — reconnecting would replace that one in turn.
  */
-const FINAL: ReadonlySet<number> = new Set([1002, 1003, 1007, 1008, 4400, 4403, 4409, 4421]);
+const FINAL: ReadonlySet<number> = new Set([1003, 1007, 1008, 4400, 4403, 4409, 4421]);
 
 /**
  * Read a socket's close against the protocol's table of codes.
  *
  * - 1000: the server ended the connection; it is not reopened.
+ * - 1002: the two ends speak different versions of the protocol. A server
+ *   older than the client is a replica a rollout replaces, and is tried
+ *   again; a newer one needs a newer client — the page loaded again — and
+ *   one of the client's own version refused a broken first frame.
  * - 4401: credentials refused, expired or not renewed in time — asked for
  *   anew once, and sent only if they changed.
  * - 4429: a limit; with the server's `retryAfterMs`, tried again after it,
@@ -65,6 +72,8 @@ export function classifyClose(closure: SocketClosure): CloseDisposition {
     };
   }
   const afterMs = hintOf(closure.retryAfterMs);
+  const olderServer = closure.version !== undefined && closure.version < PROTOCOL_VERSION;
+  if (code === 1002 && !olderServer) return stop(closure);
   if (code === 4429 && afterMs === undefined) return stop(closure);
   if (FINAL.has(code) || (code >= 4000 && code <= 4099)) return stop(closure);
   return afterMs === undefined ? { action: "retry" } : { action: "retry", afterMs };

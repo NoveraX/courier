@@ -56,6 +56,24 @@ describe("classifyClose", () => {
     expect(disposition.error.message).toBe("Refused");
   });
 
+  it("reconnects after 1002 from a server older than the client: a rollout replaces it", () => {
+    expect(classifyClose({ code: 1002, reason: "Old", version: 1 })).toEqual({ action: "retry" });
+    expect(classifyClose({ code: 1002, reason: "Old", version: 1, retryAfterMs: 900 })).toEqual({
+      action: "retry",
+      afterMs: 900,
+    });
+  });
+
+  it.each([
+    [3, "a server newer than the client: the page has to be loaded again"],
+    [2, "a server of the client's own version: the client's auth frame was broken"],
+  ])("gives up after 1002 from server version %i (%s)", (version) => {
+    const disposition = classifyClose({ code: 1002, reason: "Refused", version });
+
+    expect(disposition.action).toBe("stop");
+    expect(disposition.action === "stop" && disposition.error).toBeInstanceOf(ConnectionError);
+  });
+
   it("ends the connection as the server ended it after 1000", () => {
     expect(classifyClose({ code: 1000, reason: "" })).toEqual({ action: "finish" });
   });

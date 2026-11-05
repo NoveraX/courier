@@ -63,7 +63,7 @@ The NestJS integration applies Courier's proxy as Nest middleware on the route y
     </td>
     <td valign="top">
       <h4>Graceful shutdown</h4>
-      Streams drained from <code>beforeApplicationShutdown</code>, sockets closed with 1012 — clients reconnect on their own.
+      Streams drained from <code>beforeApplicationShutdown</code>, sockets closed with 1001 — clients reconnect on their own.
     </td>
   </tr>
 </table>
@@ -192,7 +192,7 @@ export class AppModule implements NestModule, BeforeApplicationShutdown {
 }
 ```
 
-`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `courierSSEMiddleware()` drains the same way. Call `detach()` from `courierWSAttach` before `app.close()`: it refuses new upgrades with 503, closes each WebSocket with 1012 — which a Courier client answers by reconnecting later — and waits for them up to 5 seconds, then ends each one whose client has not answered, so it settles within that time whatever the clients and Redis do. It carries the handler's `connections`, `stats()` and `destroy({ timeoutMs })`, the same stop with a deadline of your own.
+`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `courierSSEMiddleware()` drains the same way. Call `detach()` from `courierWSAttach` before `app.close()`: it refuses new upgrades with 503, closes each WebSocket with 1001, telling it when to come back — which a Courier client answers by reconnecting then — and waits for them up to 5 seconds, then ends each one whose client has not answered, so it settles within that time whatever the clients and Redis do. It carries the handler's `connections`, `stats()` and `destroy({ timeoutMs })`, the same stop with a deadline of your own.
 
 <br />
 

@@ -79,7 +79,7 @@ async function connect(handler: WSHandler, userId: string) {
     new Request("http://localhost/api/ws"),
     "203.0.113.9",
   );
-  const auth = JSON.stringify({ type: "auth", payload: { auth: { userId } } });
+  const auth = JSON.stringify({ type: "auth", v: 2, id: "a0", payload: { auth: { userId } } });
   for (const listener of listeners.get("message") ?? []) listener({ data: auth });
   await expect.poll(() => handler.connections.count).toBe(before + 1);
   return socket;
@@ -112,7 +112,7 @@ describe.skipIf(!available)(
 
       await expect
         .poll(() => held.sent, { timeout: 5_000 })
-        .toContainEqual({ type: "auth_required" });
+        .toContainEqual({ type: "reauth_required", timeoutMs: 60_000 });
     });
 
     it("are refused, with a cluster secret, when published straight to Redis, and taken when a replica signed them", async () => {

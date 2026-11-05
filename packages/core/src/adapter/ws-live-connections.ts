@@ -1,5 +1,5 @@
 import type { WebSocketLike } from "../realtime/adapters";
-import type { SessionClose } from "./ws-dialect";
+import type { SessionClose } from "./ws-close";
 import type { WSSession } from "./ws-session";
 
 /** Every socket a handler holds, from its admission to its close, whether its connection is admitted yet or not. */

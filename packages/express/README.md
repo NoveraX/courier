@@ -59,7 +59,7 @@ The Express adapter runs Courier's proxy as Express middleware: it turns the Nod
     </td>
     <td valign="top">
       <h4>Graceful shutdown</h4>
-      Each stream is told when to reconnect and each socket closed with 1012, so clients come back on their own.
+      Each stream and each socket is told when to reconnect — sockets are closed with 1001 — so clients come back on their own.
     </td>
     <td valign="top">
       <h4>Secure by default</h4>
@@ -160,7 +160,7 @@ process.on("SIGTERM", async () => {
 })
 ```
 
-`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `detach()` refuses new upgrades with 503, closes each WebSocket with 1012 — which a Courier client answers by reconnecting later — and waits for them up to 5 seconds, then ends each one whose client has not answered, so it settles within that time whatever the clients and Redis do. It carries the handler's `connections`, `stats()` and `destroy({ timeoutMs })`, the same stop with a deadline of your own. The proxy route serves streams too, which is why it drains as well.
+`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `detach()` refuses new upgrades with 503, closes each WebSocket with 1001, telling it when to come back — which a Courier client answers by reconnecting then — and waits for them up to 5 seconds, then ends each one whose client has not answered, so it settles within that time whatever the clients and Redis do. It carries the handler's `connections`, `stats()` and `destroy({ timeoutMs })`, the same stop with a deadline of your own. The proxy route serves streams too, which is why it drains as well.
 
 <br />
 

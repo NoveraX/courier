@@ -153,7 +153,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `bodyTimeoutMs` | 5 minutes | Longest a request body may take to arrive; then 408 |
 | `pubsub` | `undefined` | Pub/Sub adapter the replicas share (e.g. Redis): WS broadcasts and commands, and `sseConnections.disconnect()`, reach every replica |
 | `cluster.secret` | `undefined` | A secret of 32 bytes or more, the same on every replica, that signs the commands `wsConnections.disconnect()`, `requireAuth()` and `sseConnections.disconnect()` send the other replicas; one not signed with it is refused |
-| `maxConnectionsPerKey` | `undefined` | A limit on the WebSocket connections that share a key — `{ key: (meta) => meta.userId, max: 3 }`, or the address, `{ key: (_, { clientIp }) => clientIp, max: 50 }` — or a list of them; over one, the oldest is closed with `4429`, or, with `onExceed: "reject"`, the new one |
+| `maxConnectionsPerKey` | `undefined` | A limit on the WebSocket connections that share a key — `{ key: (meta) => meta.userId, max: 3 }`, or the address, `{ key: (_, { clientIp }) => clientIp, max: 50 }` — or a list of them; over one, the oldest is closed with `4409`, or, with `onExceed: "reject"`, the new one with `4429` |
 | `history` | `undefined` | Keep each topic's recent events, `{}` for 100 a topic kept a minute and 8 MiB in all, so a subscription that comes back is sent what it missed |
 | `connectionLeases` | this replica's memory | Where `maxConnectionsPerKey` counts connections — `createRedisConnectionLeases()` to count them on every replica |
 | `maxConnectionsPerIP` | `50` | WebSocket connections one address may hold; raise it for clients behind a shared NAT or proxy |

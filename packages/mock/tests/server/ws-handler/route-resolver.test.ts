@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import type { MockServer } from "../../../src/server/create-mock-server";
 import { createMockServer } from "../../../src/server/create-mock-server";
+import { admit } from "../../helpers/admit";
 
 let server: MockServer;
 let url: string;
@@ -39,10 +40,9 @@ async function channelVariables(query: string): Promise<unknown> {
     return { onMessage: () => undefined };
   });
   const ws = new WebSocket(`${url.replace(/^http/, "ws")}/rt/room?${query}`);
+  await admit(ws);
   await new Promise<void>((resolve, reject) => {
-    ws.once("open", () =>
-      ws.send(encodeMessage({ type: "subscribe", topic: "rt.room", id: "s1" })),
-    );
+    ws.send(encodeMessage({ type: "subscribe", topic: "rt.room", id: "s1" }));
     ws.once("message", (raw: Buffer) => {
       const frame = decodeMessage(raw.toString());
       if (frame.type === "subscribed") resolve();

@@ -23,6 +23,7 @@ import {
   type MockServerOptions,
 } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-route-types";
+import { admit } from "./helpers/admit";
 
 const running: MockServer[] = [];
 
@@ -264,7 +265,7 @@ describe("stopping", () => {
     }));
     const { url } = await server.start();
     const client = new WebSocket(`${url.replace(/^http/, "ws")}/chat/room`);
-    await new Promise((resolve) => client.once("open", resolve));
+    await admit(client);
     client.send(encodeMessage({ type: "subscribe", topic: "chat.room", id: "s1" }));
     await new Promise((resolve) => client.once("message", resolve));
     const closed = new Promise<number>((resolve) => client.once("close", resolve));

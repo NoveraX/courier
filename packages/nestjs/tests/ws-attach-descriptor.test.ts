@@ -12,6 +12,9 @@ import { WebSocket } from "ws";
 
 import { courierWSAttach } from "../src";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 let server: Server | undefined;
 const clients: WebSocket[] = [];
 
@@ -42,6 +45,10 @@ async function connect(url: string): Promise<{ closed: Promise<number> }> {
     client.once("open", resolve);
     client.once("error", reject);
   });
+  /* Let in, as a Courier client is: its first frame is auth, answered by auth_ok. */
+  const admitted = new Promise((resolve) => client.once("message", resolve));
+  client.send(AUTH);
+  await admitted;
   return { closed };
 }
 
@@ -68,7 +75,7 @@ describe("what courierWSAttach hands back", () => {
 
     expect(attached()).toBe(stopping);
     await stopping;
-    expect(await closed).toBe(1012);
+    expect(await closed).toBe(1001);
     expect(attached.stats().stopping).toBe(true);
   });
 });

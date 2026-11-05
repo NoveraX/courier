@@ -33,11 +33,11 @@ export function wireEvents(
   // across reconnect cycles.
   const unregisterPlaygroundAbort = ctx.playgroundRequestId
     ? registerPlaygroundAbort(ctx.playgroundRequestId, () => {
-        try {
-          ws.close(1000, "Cancelled by Studio Playground");
-        } catch {
-          // ws may already be closing — ignore.
-        }
+        ctx.session.close({
+          kind: "application",
+          code: 1000,
+          reason: "Cancelled by Studio Playground",
+        });
       })
     : undefined;
 
@@ -48,7 +48,7 @@ export function wireEvents(
       routeMessage(ctx, raw, heartbeat);
     } catch (error) {
       log.error(`A frame of connection ${ctx.connectionId} could not be handled`, error);
-      ws.close(1011, "Internal error");
+      ctx.session.close({ kind: "internal" });
     }
   });
 

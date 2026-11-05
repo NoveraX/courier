@@ -1,8 +1,9 @@
 import type { ScopedLogger } from "../../logger";
 import { fromErrorCode, type RealtimeError } from "../errors";
+import type { MachineEvent } from "./connection-machine-types";
 import type { ConnectionRuntime } from "./connection-runtime";
 import type { MessageQueue } from "./message-queue";
-import type { FrameError, ServerFrame } from "./server-frames";
+import type { FrameError, ServerFrame } from "./server-frame-types";
 import { unqualifyTopic } from "./topic-key";
 import { messageFrame } from "./topic-operations";
 import type { TopicRegistry } from "./topic-registry-types";
@@ -22,9 +23,10 @@ export interface MessageDispatchContext {
 }
 
 /**
- * Act on one frame the server sent: answer its ping, follow a subscription
- * it confirmed, renamed, ended or failed, hand a topic's data to the topic,
- * and take what it says about the connection's credentials.
+ * Act on one frame the server sent an admitted connection: answer its ping,
+ * follow a subscription it confirmed, renamed, ended or failed, hand a
+ * topic's data to the topic, take what it says about the connection's
+ * credentials, and why it is closing the socket.
  *
  * @param ctx - The connection's state and subscriptions
  * @param frame - The frame, its fields checked
@@ -34,10 +36,14 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, frame: Serv
     case "ping":
       ctx.runtime.send(encodeMessage({ type: "pong" }));
       return;
-    case "auth":
+    case "auth_ok":
       if (renewalId(ctx) === frame.id) ctx.runtime.dispatch({ type: "renewed" });
       return;
-    case "auth_required":
+    case "auth_error":
+    case "disconnect":
+      ctx.runtime.dispatch(closingWith(frame));
+      return;
+    case "reauth_required":
       if (ctx.renewable) ctx.runtime.dispatch({ type: "renewal-requested" });
       else ctx.log.warn("The server asked for credentials, and this connection has none to send");
       return;
@@ -59,6 +65,30 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, frame: Serv
     default:
       return;
   }
+}
+
+/**
+ * The server is closing the socket, and says why: the frame right before the
+ * close carries its code, its reason and the wait the server asks for, and
+ * gets through where a balancer loses the close itself.
+ *
+ * @param frame - `auth_error` before the connection is admitted or when its
+ *   credentials are not renewed, `disconnect` after
+ * @returns The event the connection's machine is told
+ */
+export function closingWith(
+  frame: Extract<ServerFrame, { type: "auth_error" | "disconnect" }>,
+): MachineEvent {
+  const closure =
+    frame.type === "auth_error"
+      ? {
+          code: frame.error.code,
+          reason: frame.error.message,
+          retryAfterMs: frame.retryAfterMs,
+          version: frame.v,
+        }
+      : { code: frame.code, reason: frame.reason, retryAfterMs: frame.retryAfterMs };
+  return { type: "closed", closure, announced: true };
 }
 
 /**
@@ -100,8 +130,9 @@ function confirmSubscription(
 
 /**
  * An error about a topic reaches its subscribers, not only the client's log;
- * one answering the credentials sent again is about the connection. Any
- * other error is the connection's.
+ * one answering the credentials sent again — a frame the server could not
+ * read, the socket left open — is about the connection. Any other error is
+ * the connection's.
  */
 function routeError(
   ctx: MessageDispatchContext,
@@ -109,17 +140,8 @@ function routeError(
 ): void {
   const error = failureOf(frame.error) ?? fromErrorCode(INTERNAL_ERROR, "Unknown server error");
   if (frame.id !== undefined && frame.id === renewalId(ctx)) {
-    /* A server before 0.5 refuses credentials sent again with an error frame and keeps the socket open. */
-    if (error.code === 4401) {
-      ctx.runtime.dispatch({
-        type: "closed",
-        closure: { code: 4401, reason: error.message },
-        announced: true,
-      });
-    } else {
-      ctx.log.warn(`The credentials sent again were not taken: ${error.message}`);
-      ctx.runtime.dispatch({ type: "credentials-failed", error });
-    }
+    ctx.log.warn(`The credentials sent again were not taken: ${error.message}`);
+    ctx.runtime.dispatch({ type: "credentials-failed", error });
     return;
   }
   /* A subscribe refused outright — too many control frames in a second — will never be confirmed. */

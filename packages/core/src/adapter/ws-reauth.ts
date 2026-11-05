@@ -2,9 +2,9 @@ import { createLogger } from "../logger";
 import { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { connectionMetaOf } from "./connection-meta-of";
+import { closeOf, type SessionClose } from "./ws-close";
 import { connectionFields } from "./ws-connection-fields";
 import type { WSSocketContext } from "./ws-context";
-import type { SessionClose } from "./ws-dialect";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
 import { reauthorizeSubscriptions } from "./ws-reauthorize";
 
@@ -45,6 +45,7 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
   if (!onReauth) {
     refuse(
       ctx,
+      msg,
       { code: 4401, message: "Credentials cannot be renewed on this connection" },
       "no onReauth checks them",
     );
@@ -68,12 +69,13 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
       ctx.session.close({
         kind: "reauth-refused",
         failure: { code: 4401, message: "Credentials could not be checked in time" },
+        id: msg.id,
       });
       return;
     }
     next = connectionMetaOf(result, "onReauth");
   } catch (error) {
-    if (!ctx.closed) refuse(ctx, describeFailure(error, "Credentials rejected", 4401), error);
+    if (!ctx.closed) refuse(ctx, msg, describeFailure(error, "Credentials rejected", 4401), error);
     return;
   } finally {
     clearTimeout(timer);
@@ -82,16 +84,21 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
   Object.assign(ctx.meta, next);
   ctx.request = request;
   ctx.registry.updateMeta(ctx.connectionId, ctx.meta);
-  ctx.session.credentialsRenewed();
-  ctx.sendMessage(ctx.session.dialect.reauthAccepted(msg.id));
+  ctx.session.credentialsRenewed(msg.id);
   if (changed) await reauthorizeSubscriptions(ctx);
 }
 
 /* Logged on one line with what was thrown, and closed at once with the
-   refusal's code: no deadline is left for a client that was turned down. */
-function refuse(ctx: WSSocketContext, failure: StreamFailure, cause: unknown): void {
-  const why: SessionClose = { kind: "reauth-refused", failure };
-  const { code } = ctx.session.dialect.closeOf(why);
+   refusal's code, after `auth_error` naming the frame refused: no deadline
+   is left for a client that was turned down. */
+function refuse(
+  ctx: WSSocketContext,
+  msg: WSMessage,
+  failure: StreamFailure,
+  cause: unknown,
+): void {
+  const why: SessionClose = { kind: "reauth-refused", failure, id: msg.id };
+  const { code } = closeOf(why);
   ctx.refusals.warn({ event: "credentials refused", code, fields: connectionFields(ctx) }, cause);
   ctx.session.close(why);
 }

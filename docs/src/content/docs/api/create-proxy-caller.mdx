@@ -67,10 +67,9 @@ type ProxyCallerOptions = {
 type CallerWSOptions = {
   auth?: WSAuthParams | (() => WSAuthParams | undefined | Promise<WSAuthParams | undefined>)
   backoff?: { initialMs?: number; maxMs?: number; factor?: number; jitter?: boolean }
-  heartbeat?: { intervalMs?: number; timeoutMs?: number }
-  messageQueue?: { maxCount?: number; maxBytes?: number }
+  messageQueue?: { maxCount?: number; maxBytes?: number; overflow?: "reject" | "drop-oldest" }
   protocols?: string[]
-  maxMessageSize?: number
+  reconnectOnResume?: boolean
 }
 
 type WSAuthParams = Record<string, unknown>

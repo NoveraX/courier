@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSSocketContext } from "../src/adapter/ws-context";
-import { V1_DIALECT } from "../src/adapter/ws-dialect";
 import { handleReauth } from "../src/adapter/ws-reauth";
 import { createSession } from "../src/adapter/ws-session";
 import { createRefusalLog } from "../src/logger/refusal-log";
@@ -118,7 +117,7 @@ describe("credentials sent again whose onReauth returns something other than an 
       onReauth: async () => "user-2",
       registry,
       refusals: createRefusalLog("WS"),
-      session: createSession(socket, V1_DIALECT),
+      session: createSession(socket),
       middlewareTimeoutMs: 30_000,
       clientIP: "203.0.113.7",
     } as unknown as WSSocketContext;

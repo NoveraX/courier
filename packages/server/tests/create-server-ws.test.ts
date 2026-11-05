@@ -11,6 +11,9 @@ import { WebSocket } from "ws";
 import { createCourierServer } from "../src/create-server";
 import type { CourierServer, CourierServerOptions } from "../src/types";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 const { channel } = courier();
 
 let server: CourierServer | undefined;
@@ -44,7 +47,9 @@ function connect(url: string): Promise<WebSocket> {
   const client = new WebSocket(url);
   clients.push(client);
   return new Promise((resolve, reject) => {
-    client.once("open", () => resolve(client));
+    /* Let in, as a Courier client is: its first frame is auth, answered by auth_ok. */
+    client.once("open", () => client.send(AUTH));
+    client.once("message", () => resolve(client));
     client.once("error", reject);
   });
 }

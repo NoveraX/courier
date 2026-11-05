@@ -77,12 +77,6 @@ export interface WSSocketContext {
    * hooks, middleware and the session read; renewed by an accepted `onReauth`
    */
   request: Request;
-  /**
-   * Whether the connection has taken its credentials: its first frame,
-   * read as them when it is an `auth` frame, and every later one as asked
-   * for again
-   */
-  credentialed: boolean;
   meta: Record<string, unknown>;
   maxSubscriptions: number;
   maxMessageSize: number;
@@ -103,7 +97,7 @@ export interface WSSocketContext {
   clientIP: string;
   /** The handler's log of refusals, which every connection of it shares */
   refusals: RefusalLog;
-  /** Where the connection's close, its dialect and its credentials' deadline are kept */
+  /** Where the connection's admission, its close and its credentials' deadline are kept */
   session: WSSession;
 }
 
@@ -199,7 +193,6 @@ export function buildContext(
     t0: performance.now(),
     handshake: request,
     request,
-    credentialed: false,
     meta: {},
     maxSubscriptions,
     maxMessageSize: config.maxMessageSize ?? LIMITS.MAX_MESSAGE_SIZE,

@@ -20,6 +20,7 @@ import type { RealtimeError } from "../src/realtime/errors";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { authFrame } from "./helpers/fake-socket";
 import { settle } from "./helpers/ws-server";
 
 const { channel } = courier();
@@ -75,9 +76,8 @@ async function serve(maxPayload?: number): Promise<string> {
 }
 
 /** A channel and a push subscription sharing one socket. */
-function openBoth(url: string, maxMessageSize?: number) {
-  const config = maxMessageSize === undefined ? undefined : { maxMessageSize };
-  const ch = executeWSChannel<{ text: string }, string>(url, "api.live.room", undefined, config);
+function openBoth(url: string) {
+  const ch = executeWSChannel<{ text: string }, string>(url, "api.live.room");
   const data: string[] = [];
   const errors: RealtimeError[] = [];
   ch.on("data", (message) => data.push(message));
@@ -119,6 +119,7 @@ describe("a message larger than the limit", () => {
     const frames: { type: string; error?: { code: number } }[] = [];
     socket.on("message", (raw) => frames.push(JSON.parse(String(raw)) as { type: string }));
     await new Promise((resolve) => socket.once("open", resolve));
+    socket.send(JSON.stringify(authFrame()));
 
     socket.send(
       JSON.stringify({ type: "message", topic: "api.live.room", payload: "x".repeat(70_000) }),
@@ -126,7 +127,11 @@ describe("a message larger than the limit", () => {
     socket.send(JSON.stringify({ type: "ping" }));
     await settle(100);
 
-    expect(frames.map((frame) => frame.error?.code ?? frame.type)).toEqual([4413, "pong"]);
+    expect(frames.map((frame) => frame.error?.code ?? frame.type)).toEqual([
+      "auth_ok",
+      4413,
+      "pong",
+    ]);
     expect(socket.readyState).toBe(WebSocket.OPEN);
   });
 });

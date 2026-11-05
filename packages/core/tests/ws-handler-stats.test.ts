@@ -14,7 +14,7 @@ import type { Sources } from "../src/define/types";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const { channel } = courier();
 const room = channel
@@ -46,7 +46,7 @@ function serve(config: WSHandlerConfig = {}): WSHandler {
 function open(handler: WSHandler, userId: string, url = "http://localhost/api/ws"): FakeSocket {
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request(url), "203.0.113.7");
-  socket.receive({ type: "auth", payload: { auth: { userId } } });
+  socket.receive(authFrame({ auth: { userId } }));
   return socket;
 }
 

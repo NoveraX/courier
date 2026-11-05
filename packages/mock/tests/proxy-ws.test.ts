@@ -14,6 +14,7 @@ import WebSocket from "ws";
 import { z } from "zod";
 import { createAutoMockServer } from "../src/auto/create-auto-server";
 import { createMockServer } from "../src/server/create-mock-server";
+import { admit } from "./helpers/admit";
 
 const { channel } = courier();
 const Members = z.object({ room: z.string(), nick: z.string() });
@@ -162,12 +163,9 @@ describe("a proxy caller pointed at the mock", () => {
 async function open(wsUrl: string): Promise<{ socket: WebSocket; frames: WSMessage[] }> {
   const socket = new WebSocket(wsUrl);
   sockets.push(socket);
+  await admit(socket);
   const frames: WSMessage[] = [];
   socket.on("message", (raw) => frames.push(decodeMessage(raw.toString())));
-  await new Promise((resolve, reject) => {
-    socket.once("open", resolve);
-    socket.once("error", reject);
-  });
   return { socket, frames };
 }
 
@@ -192,7 +190,7 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
       expect(frames.slice(0, 3)).toEqual([
         { type: "renamed", id: "1", topic: ROOM, payload: SERVED },
         { type: "data", topic: SERVED, payload: { from: "mock", text: "welcome ada" } },
-        { type: "subscribed", id: "1", topic: SERVED },
+        { type: "subscribed", id: "1", topic: SERVED, seq: 0, epoch: expect.any(String) },
       ]),
     );
   });
@@ -299,7 +297,7 @@ describe("a mock server built without a source", () => {
 
     await vi.waitFor(() =>
       expect(frames).toEqual([
-        { type: "subscribed", id: "1", topic: "shop.chat.room" },
+        { type: "subscribed", id: "1", topic: "shop.chat.room", seq: 0, epoch: expect.any(String) },
         { type: "data", topic: "shop.chat.room", payload: { any: "thing" } },
       ]),
     );

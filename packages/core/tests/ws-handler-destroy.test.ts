@@ -11,7 +11,7 @@ import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import type { PubSubAdapter } from "../src/realtime/adapters";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 beforeEach(() => {
   registerSources({ api: { options: { expose: true, groups: {} } } } as never);
@@ -27,6 +27,7 @@ function serve(config: WSHandlerConfig = {}) {
 
 function open(handler: ReturnType<typeof serve>, socket = createFakeSocket()): FakeSocket {
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
+  socket.receive(authFrame());
   return socket;
 }
 
@@ -52,14 +53,14 @@ function within<T>(promise: Promise<T>, ms: number): Promise<T | "still waiting"
 }
 
 describe("WSHandler.destroy()", () => {
-  it("closes every connection with 1012, and settles once they have closed", async () => {
+  it("closes every connection with 1001, and settles once they have closed", async () => {
     const handler = serve();
     const sockets = [open(handler), open(handler)];
     await expect.poll(() => handler.connections.count).toBe(2);
 
     await handler.destroy();
 
-    expect(sockets.map((socket) => socket.closed?.code)).toEqual([1012, 1012]);
+    expect(sockets.map((socket) => socket.closed?.code)).toEqual([1001, 1001]);
     expect(sockets[0]?.closed?.reason).toBe("Server shutting down");
     expect(handler.connections.count).toBe(0);
   });
@@ -73,7 +74,7 @@ describe("WSHandler.destroy()", () => {
     await handler.destroy({ timeoutMs: 100 });
 
     expect(Date.now() - started).toBeLessThan(1_000);
-    expect(socket.closed?.code).toBe(1012);
+    expect(socket.closed?.code).toBe(1001);
   });
 
   it("closes at once a socket handed to it once it is stopping", async () => {
@@ -82,7 +83,7 @@ describe("WSHandler.destroy()", () => {
 
     const late = open(handler);
 
-    expect(late.closed?.code).toBe(1012);
+    expect(late.closed?.code).toBe(1001);
     await stopping;
     expect(handler.connections.count).toBe(0);
   });
@@ -96,7 +97,7 @@ describe("WSHandler.destroy()", () => {
     await handler.destroy({ timeoutMs: 500 });
     admit({ userId: "u1" });
 
-    expect(socket.closed?.code).toBe(1012);
+    expect(socket.closed?.code).toBe(1001);
     await Promise.resolve();
     expect(handler.connections.count).toBe(0);
   });

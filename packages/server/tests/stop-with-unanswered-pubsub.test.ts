@@ -34,7 +34,7 @@ function unanswered(): PubSubAdapter {
 }
 
 describe("a standalone server stopping while its pub/sub adapter never answers", () => {
-  it("closes its WebSocket clients with 1012 and settles within its deadline", async () => {
+  it("closes its WebSocket clients with 1001 and settles within its deadline", async () => {
     const live = defineApi({ expose: true, baseURL: "http://127.0.0.1:1", endpoints: { feed } });
     server = createCourierServer({
       sources: { live },
@@ -49,13 +49,14 @@ describe("a standalone server stopping while its pub/sub adapter never answers",
       client.once("open", resolve);
       client.once("error", reject);
     });
+    client.send(JSON.stringify({ type: "auth", v: 2, id: "a0" }));
     const closed = new Promise<number>((resolve) => client.once("close", resolve));
     await expect.poll(() => server?.wsConnections.count).toBe(1);
 
     const started = Date.now();
     await server.stop();
 
-    expect(await closed).toBe(1012);
+    expect(await closed).toBe(1001);
     /* The deadline of the drain is 5 s; a stop that waited on the adapter would never come. */
     expect(Date.now() - started).toBeLessThan(5_000);
   });

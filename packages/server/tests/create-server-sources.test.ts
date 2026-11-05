@@ -15,6 +15,9 @@ import { WebSocket } from "ws";
 import { createCourierServer } from "../src/create-server";
 import type { CourierServer } from "../src/types";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 const { endpoint, channel } = courier();
 
 let upstream: Server;
@@ -54,8 +57,12 @@ async function subscribeReply(url: string, topic: string): Promise<string> {
   const client = new WebSocket(url.replace("http", "ws"));
   await new Promise((resolve) => client.once("open", resolve));
   const reply = new Promise<string>((resolve) => {
-    client.on("message", (data) => resolve((JSON.parse(String(data)) as { type: string }).type));
+    client.on("message", (data) => {
+      const { type } = JSON.parse(String(data)) as { type: string };
+      if (type !== "auth_ok") resolve(type);
+    });
   });
+  client.send(AUTH);
   client.send(JSON.stringify({ type: "subscribe", id: topic, topic }));
   const type = await reply;
   client.terminate();

@@ -1,47 +1,41 @@
 import { isRecord } from "../../utils/is-record";
-
-/** What a server says went wrong, as a frame carries it. */
-export interface FrameError {
-  readonly code: number;
-  readonly message: string;
-  readonly issues?: readonly unknown[] | undefined;
-}
-
-/** A frame a server sends a client, its fields checked. */
-export type ServerFrame =
-  | { readonly type: "ping" }
-  | { readonly type: "pong" }
-  /** The credentials sent again were taken (a server before 0.5) */
-  | { readonly type: "auth"; readonly id?: string | undefined }
-  /** Send the credentials again (a server before 0.5) */
-  | { readonly type: "auth_required" }
-  | { readonly type: "renamed"; readonly topic: string; readonly to: string }
-  | { readonly type: "subscribed"; readonly topic: string; readonly id?: string | undefined }
-  | { readonly type: "unsubscribed"; readonly topic: string }
-  | { readonly type: "complete"; readonly topic: string; readonly error?: FrameError | undefined }
-  | { readonly type: "data"; readonly topic?: string | undefined; readonly payload: unknown }
-  | {
-      readonly type: "error";
-      readonly id?: string | undefined;
-      readonly topic?: string | undefined;
-      readonly error: FrameError;
-    };
-
-/** What reading one message gave: a frame, or why there is none. */
-export type FrameReading =
-  | { readonly frame: ServerFrame }
-  /** A kind of frame this client does not know — a newer server's — ignored */
-  | { readonly unknown: string }
-  /** A message that is not a frame, or a frame with a field that does not hold */
-  | { readonly invalid: string };
+import type { FrameError, FrameReading, ServerFrame } from "./server-frame-types";
 
 type Reader = (fields: Record<string, unknown>) => ServerFrame | undefined;
+
+/* The longest wait a timer keeps: a longer one runs out at once. */
+const MAX_TIMER_MS = 2_147_483_647;
 
 const READERS: Readonly<Record<string, Reader>> = {
   ping: () => ({ type: "ping" }),
   pong: () => ({ type: "pong" }),
-  auth: (f) => optional(f.id, isString, (id) => ({ type: "auth", id })),
-  auth_required: () => ({ type: "auth_required" }),
+  auth_ok: readAuthOk,
+  auth_error: (f) => {
+    if (!isFrameError(f.error) || !isVersion(f.v)) return undefined;
+    if (f.id !== undefined && !isString(f.id)) return undefined;
+    const { error, v } = f;
+    return optional(f.retryAfterMs, isWait, (retryAfterMs) => ({
+      type: "auth_error",
+      id: f.id as string | undefined,
+      error,
+      v,
+      retryAfterMs,
+    }));
+  },
+  reauth_required: (f) =>
+    isWait(f.timeoutMs) && Number.isInteger(f.timeoutMs)
+      ? { type: "reauth_required", timeoutMs: f.timeoutMs }
+      : undefined,
+  disconnect: (f) => {
+    if (!isCode(f.code) || !isString(f.reason)) return undefined;
+    const { code, reason } = f;
+    return optional(f.retryAfterMs, isWait, (retryAfterMs) => ({
+      type: "disconnect",
+      code,
+      reason,
+      retryAfterMs,
+    }));
+  },
   renamed: (f) =>
     isString(f.topic) && isString(f.payload)
       ? { type: "renamed", topic: f.topic, to: f.payload }
@@ -93,9 +87,33 @@ export function readServerFrame(raw: unknown): FrameReading {
   }
   if (!isRecord(parsed) || !isString(parsed.type)) return { invalid: "no type" };
   const read = Object.hasOwn(READERS, parsed.type) ? READERS[parsed.type] : undefined;
-  if (read === undefined) return { unknown: parsed.type };
+  /* Named in a warning: as much of the name as one needs. */
+  if (read === undefined) return { unknown: parsed.type.slice(0, 64) };
   const frame = read(parsed);
   return frame === undefined ? { invalid: `a ${parsed.type} frame` } : { frame };
+}
+
+/*
+ * The server's answer to `auth`. Its heartbeat is what the connection takes
+ * the socket for dead by, so both waits are whole milliseconds a timer can
+ * wait out together: a longer one would run out at once, every time.
+ */
+function readAuthOk(f: Record<string, unknown>): ServerFrame | undefined {
+  const { heartbeat, limits } = f;
+  if (!isString(f.id) || !isVersion(f.v) || !isString(f.connectionId)) return undefined;
+  if (!isRecord(heartbeat) || !isRecord(limits) || !isSize(limits.maxMessageSize)) return undefined;
+  const { intervalMs, timeoutMs } = heartbeat;
+  if (!isSize(intervalMs) || !isSize(timeoutMs) || intervalMs + timeoutMs > MAX_TIMER_MS) {
+    return undefined;
+  }
+  return {
+    type: "auth_ok",
+    id: f.id,
+    v: f.v,
+    connectionId: f.connectionId,
+    heartbeat: { intervalMs, timeoutMs },
+    limits: { maxMessageSize: limits.maxMessageSize },
+  };
 }
 
 /* A field a frame may leave out, checked when it is there. */
@@ -112,11 +130,29 @@ function isString(value: unknown): value is string {
   return typeof value === "string";
 }
 
+/* A protocol's version: 1, 2, … */
+function isVersion(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1;
+}
+
+/* A count of bytes or milliseconds no smaller than one. */
+function isSize(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1;
+}
+
+/* A wait in milliseconds, none included. */
+function isWait(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isCode(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
 function isFrameError(value: unknown): value is FrameError {
   return (
     isRecord(value) &&
-    typeof value.code === "number" &&
-    Number.isInteger(value.code) &&
+    isCode(value.code) &&
     typeof value.message === "string" &&
     (value.issues === undefined || Array.isArray(value.issues))
   );

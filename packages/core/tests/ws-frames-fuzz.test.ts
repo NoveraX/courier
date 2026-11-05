@@ -8,14 +8,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import { isSendableCloseCode } from "../src/adapter/ws-dialect";
+import { isSendableCloseCode } from "../src/adapter/ws-close";
 import type { WSHandler } from "../src/adapter/ws-types";
 import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 import { randomFrame, randomText, randomValue } from "./helpers/random-frames";
 import { seededRandom } from "./helpers/seeded-random";
 
@@ -76,6 +76,7 @@ describe("a WebSocket handler sent anything", () => {
       for (let client = 0; client < 25; client++) {
         const socket = createFakeSocket();
         handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
+        socket.receive(authFrame());
         for (let frame = 0; frame < 120 && socket.closed === undefined; frame++) {
           expect(() => socket.emit("message", { data: anything(random) })).not.toThrow();
           if (frame % 20 === 0) await settle();
@@ -86,6 +87,7 @@ describe("a WebSocket handler sent anything", () => {
 
       const healthy = createFakeSocket();
       handler.handleSocket(healthy, new Request("http://localhost/api/ws"), "198.51.100.1");
+      healthy.receive(authFrame());
       healthy.receive({ type: "subscribe", id: "s1", topic: TOPICS[0] ?? "" });
       await expect
         .poll(() => healthy.sent)

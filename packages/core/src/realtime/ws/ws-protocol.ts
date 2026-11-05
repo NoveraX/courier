@@ -3,12 +3,19 @@
  * Defines the message envelope used for all WS communication.
  */
 
+/** The version of the protocol a client's first `auth` names, and `auth_ok` and `auth_error` answer with. */
+export const PROTOCOL_VERSION = 2;
+
 /**
- * The kinds of frame. A client's first frame on every socket is `auth`, its
- * payload `{ headers?, auth? }` — the headers it could not put on the
- * handshake, and the caller's `ws.auth` — which the server admits the
- * connection on; `auth_required` asks the client to send it again, and an
- * `auth` with the same `id` accepts what it sent. The server answers a
+ * The kinds of frame. A client's first frame on every socket is `auth`,
+ * with `v`, the protocol version it speaks, and its payload
+ * `{ headers?, auth? }` — the headers it could not put on the handshake,
+ * and the caller's `ws.auth` — which the server admits the connection on,
+ * answering `auth_ok`, or `auth_error` just before it closes the socket.
+ * The server's first frame is always one of those, or `disconnect`, which
+ * precedes every close once the connection is admitted. `reauth_required`
+ * asks the client to send its credentials again, in an `auth` that `auth_ok`
+ * with the same `id` accepts. The server answers a
  * `subscribe` carrying an `id` with
  * `subscribed` once the subscription is running, or `complete` with an
  * `error` when it refuses it — both with that `id`. When it subscribes the
@@ -29,7 +36,10 @@ export type WSMessageType =
   | "unsubscribed"
   | "complete"
   | "auth"
-  | "auth_required"
+  | "auth_ok"
+  | "auth_error"
+  | "reauth_required"
+  | "disconnect"
   | "renamed"
   | "skip"
   | "resync";
@@ -46,7 +56,10 @@ const VALID_TYPES: ReadonlySet<string> = new Set<WSMessageType>([
   "unsubscribed",
   "complete",
   "auth",
-  "auth_required",
+  "auth_ok",
+  "auth_error",
+  "reauth_required",
+  "disconnect",
   "renamed",
   "skip",
   "resync",
@@ -66,6 +79,22 @@ export interface WSMessage {
   since?: { seq: number; epoch: string };
   /** On `subscribed` for a subscription that sent `since`: whether every event it missed was sent */
   recovered?: boolean;
+  /** On a client's first `auth`: the version of the protocol it speaks. On `auth_ok` and `auth_error`: the server's */
+  v?: number | undefined;
+  /** On `auth_ok`: the connection's id, which grants nothing */
+  connectionId?: string | undefined;
+  /** On `auth_ok`: how often the server sends `ping`, and how long it waits for the `pong` */
+  heartbeat?: { intervalMs: number; timeoutMs: number } | undefined;
+  /** On `auth_ok`: the largest message the server reads, and the most subscriptions it holds */
+  limits?: { maxMessageSize: number; maxSubscriptions: number } | undefined;
+  /** On `reauth_required`: how long the client has to send its credentials again; 0 for no deadline */
+  timeoutMs?: number | undefined;
+  /** On `disconnect`: the code the socket is closed with */
+  code?: number | undefined;
+  /** On `disconnect`: why, as the client reads it */
+  reason?: string | undefined;
+  /** On `disconnect` and `auth_error`: how long to wait before coming back */
+  retryAfterMs?: number | undefined;
   /**
    * On `error`: what went wrong. With a `topic`, it concerns that
    * subscription, which goes on. On `complete`: why the server ended the

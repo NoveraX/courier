@@ -176,7 +176,7 @@ A stream's events, a push channel's values and what a channel's handlers pass to
 
 ## Message size
 
-A server accepts messages up to its `maxMessageSize`, 64 KB by default, and answers a larger one with a `4413` error on a connection that stays open. The client does not send one: a channel's `send` of a message whose encoded frame is longer than its own `maxMessageSize` — 64 KB unless the caller's `ws` says otherwise — puts nothing on the wire: `send` answers `false`, and the channel's `error` event reads code `4413`. The channel and everything else on the socket go on.
+A server accepts messages up to its `maxMessageSize`, 64 KB by default, and answers a larger one with a `4413` error on a connection that stays open. The client does not send one: the server names its `maxMessageSize` when it admits the socket, and a channel's `send` of a message whose encoded frame is longer — longer than 64 KB, until a server has named its own — puts nothing on the wire: `send` answers `false`, and the channel's `error` event reads code `4413`. The channel and everything else on the socket go on.
 
 A server whose WebSocket layer closes the socket over a frame too large to read, with close code `1009`, loses that one message only: the client reconnects, and each channel on the socket hears a `1009` error.
 
@@ -192,32 +192,30 @@ export const client = createProxyCaller(routes.api, {
   ws: {
     auth: async () => ({ token: await session.accessToken() }),
     backoff: { initialMs: 500, maxMs: 10_000 },
-    heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
     messageQueue: { maxCount: 100, overflow: "drop-oldest" },
-    maxMessageSize: 65_536,
   },
 })
 ```
 
 - `auth` — what the client tells the server about itself, as socket.io's `auth` does: an object, or a function that returns one, called anew before every connect and reconnect so the token in it is current. It is sent in the socket's first frame, never in its URL, where proxies and servers log it, and the server's `onConnect` reads it as `auth` — see [Who a connection is](#who-a-connection-is). It is sent again, asked for anew, when the server asks with `connections.requireAuth`; a caller without it leaves that request unanswered, and the server closes the connection at its deadline.
 - `backoff` — the wait before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on). See [Staying connected](#staying-connected).
-- `heartbeat` — the server's ping interval and pong timeout; a server silent for longer than the two together is taken for gone, and the client reconnects.
 - `messageQueue` — what the socket keeps to send while it cannot: messages sent while it reconnects, and those sent on a channel the server has not confirmed yet. `maxCount` (100) and `maxBytes` (1 MB) hold for all its channels together. `overflow` says what a message that finds no room does: with `"reject"`, the default, it is dropped with a warning and its `send` answers `false`; with `"drop-oldest"`, it is kept, and the oldest message waiting goes instead — its channel hears a `4429` error.
 - `reconnectOnResume` — whether the page's signals act on the socket, `true` unless set to `false`. See [Staying connected](#staying-connected).
 - `protocols` — WebSocket sub-protocols for the handshake.
-- `maxMessageSize` — the largest message sent; see [Message size](#message-size).
+
+How often the server pings the socket and the largest message it takes are the server's to say: it names both when it admits the socket, and the client goes by them — see [Staying connected](#staying-connected) and [Message size](#message-size).
 
 A caller with `ws` options opens a socket of its own, beside the one another caller uses on the same URL, so its options are never dropped in favour of the other's.
 
 ## Staying connected
 
-A socket is `connected` once the server has admitted it — `onConnect` accepted its credentials — not as soon as it opens, so a connection the server refuses never reads `connected`. A Courier server before 0.5 says nothing when it admits a socket, so with one the client takes the first frame it gets — the answer to a ping it sends with its credentials — for the admission.
+A socket is `connected` once the server has admitted it — `onConnect` accepted its credentials, and the server answered them with `auth_ok` — not as soon as it opens, so a connection the server refuses never reads `connected`. A server that answers in frames of another version of the protocol, as a replica of an older build does while a rollout replaces it, is left at once and called back after a wait.
 
 A connection that drops reconnects on its own, and its channels subscribe again:
 
 - **After a wait.** Each wait is drawn at random between 0 and `initialMs × factor^n`, `n` the attempts that failed in a row before it, and is never longer than `maxMs`, so clients that lost a server together do not come back to it together. A connection that stays open for 10 s counts as having worked: its next drop starts the waits over. A server that asks for a wait — one shutting down, one at capacity — is not called back sooner. With `jitter: false` every wait is the exponential one.
 - **At once, when the page says so.** The network comes back (`online`, then a wait of up to a second at random), the page is shown again, it comes back from the back/forward cache, or its window gets focus. A connection open at that moment is checked instead: it sends a ping, and a socket that does not answer within 5 s is taken for gone. `reconnectOnResume: false` turns this off. Node and React Native give no such signals: call `reconnect()` there, as from React Native's `AppState` when the app comes back to the foreground.
-- **A socket that falls silent** — no frame for the `heartbeat`'s interval and timeout together, 35 s by default — is taken for gone though it still reads as open: a network that dropped without a word sends no close.
+- **A socket that falls silent** — no frame for the server's ping interval and pong timeout together, as the server named them when it admitted the socket: 35 s for a Courier server's defaults — is taken for gone though it still reads as open: a network that dropped without a word sends no close.
 
 In a React Native app, the app coming back to the foreground is the signal to pass on:
 
@@ -231,7 +229,7 @@ AppState.addEventListener("change", (state) => {
 })
 ```
 
-A socket that takes longer than 15 s to open, or a server that takes longer than 15 s to admit it, counts as a failed attempt. Some closes are not reconnected, as reconnecting would meet the same answer:
+A socket that takes longer than 15 s to open, or a server that takes longer than 15 s to admit it, counts as a failed attempt. A Courier server says why it closes a socket in a frame right before the close, and the client goes by that frame's code and wait: a balancer may lose the close itself, but not the frame before it. Some closes are not reconnected, as reconnecting would meet the same answer:
 
 | Code | Why | The client |
 | --- | --- | --- |
@@ -239,10 +237,11 @@ A socket that takes longer than 15 s to open, or a server that takes longer than
 | `4401` | credentials refused, expired or not renewed in time | asks for its credentials anew, once, and signs in with them if they changed; otherwise ends its channels with an `AuthError` |
 | `4403`, `4421` | origin or host not allowed | ends its channels with the error |
 | `4409` | replaced by a newer connection of the same user | ends its channels: reconnecting would replace that one in turn |
-| `4429` | too many connections from the address or the user, or replaced by a newer one of the user's | ends its channels with a `RateLimitError`: the server holds as many as it allows, and reconnecting would take a newer one's place. A server that names a wait is called back after it |
-| `1002`, `1003`, `1007`, `1008`, `4400`, `4000`–`4099` | the protocol, a policy, or the application said no | ends its channels with the error |
+| `4429` | too many connections from the address or the user | ends its channels with a `RateLimitError`, unless the server names a wait: then it is called back after it |
+| `1002` | the two ends speak different versions of the protocol | from a server older than the client, reconnects after a wait, as a rollout replaces that server; from a newer one, ends its channels with the error — the page needs loading again |
+| `1003`, `1007`, `1008`, `4400`, `4000`–`4099` | data or a policy the server will not take, or the application said no | ends its channels with the error |
 
-Every other close — a dropped network (`1006`), a server going away (`1001`, `1012`), a timeout (`4408`) — reconnects.
+Every other close — a dropped network (`1006`), a server going away (`1001`, `1012`), an internal error (`1011`), a slow consumer (`1013`), a timeout (`4408`) — reconnects, no sooner than the wait the server named, if it named one.
 
 A stream reconnects on the same rules, with what an HTTP stream has in place of a socket's, from the `Last-Event-ID` of the last event it read:
 
@@ -272,9 +271,9 @@ const server = await createCourierServer({
 })
 ```
 
-The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. A client that sends no `auth` frame — one that is not Courier's — is admitted on its handshake alone once its first frame comes, or after `authTimeoutMs` (3 s).
+The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. A socket whose first frame is no `auth` of the protocol's version — a client that is not Courier's, or a page left open from an older build — is refused with `1002` and why, and one that sends nothing for `authTimeoutMs` (3 s) is closed with `4408`.
 
-To have a client prove who it is again on an open connection — its token about to expire — call `connections.requireAuth(connectionId, { timeoutMs })`, or name every connection of a user with a selector, `connections.requireAuth({ meta: { userId } })`, which reaches them on every replica that shares the pub/sub adapter: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata. `sendAuthRequired`, which asked one connection, still works and is deprecated.
+To have a client prove who it is again on an open connection — its token about to expire — call `connections.requireAuth(connectionId, { timeoutMs })`, or name every connection of a user with a selector, `connections.requireAuth({ meta: { userId } })`, which reaches them on every replica that shares the pub/sub adapter: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata.
 
 Credentials `onReauth` refuses close the connection at once with `4401` — and so do any the client sends again to a handler with no `onReauth`, since nothing could check them; none sent by the deadline close it too. A request without a `timeoutMs` of its own gives the client the handler's `authRequiredTimeoutMs`, 30 seconds by default. Once renewed credentials change who the connection is, each of its subscriptions is authorized again, and one the new identity may not hold ends with `4403`. A `RealtimeError` thrown by `onConnect` — `ForbiddenError("Banned")` — closes the connection with its own code and message; anything else closes it with `4401` "Connection rejected". The client goes on as after any `4401`: it asks once more, and signs in again only with credentials that changed.
 

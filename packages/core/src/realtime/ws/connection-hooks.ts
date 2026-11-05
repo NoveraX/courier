@@ -4,11 +4,12 @@ import type { MachineEffect } from "./connection-machine-types";
 import type { ConnectionRuntime, RuntimeHooks } from "./connection-runtime";
 import type { Liveness } from "./liveness";
 import type { MessageQueue } from "./message-queue";
+import type { FrameReading } from "./server-frame-types";
 import { readServerFrame } from "./server-frames";
 import { requestSubscription } from "./topic-operations";
 import type { TopicRegistry } from "./topic-registry-types";
 import type { Subscription } from "./topic-subscription";
-import { dispatchIncomingMessage } from "./ws-message-handler";
+import { closingWith, dispatchIncomingMessage } from "./ws-message-handler";
 import { encodeMessage } from "./ws-protocol";
 
 /** What a connection's part of each transition works with. */
@@ -17,8 +18,8 @@ export interface HookParts {
   readonly queue: MessageQueue<Subscription>;
   readonly liveness: Liveness;
   readonly log: ScopedLogger;
-  /** The server's ping interval and pong timeout, as the connection counts on them */
-  readonly heartbeat: { readonly intervalMs: number; readonly timeoutMs: number };
+  /** What the server takes, as its `auth_ok` said: the largest message, encoded */
+  readonly limits: { maxMessageSize: number };
   /** Whether the connection has credentials to send again when the server asks */
   readonly renewable: boolean;
   /** Warn of something once for the connection's life, however often it happens */
@@ -34,22 +35,19 @@ export interface HookParts {
  * @returns The hooks its runtime calls
  */
 export function connectionHooks(parts: HookParts): RuntimeHooks {
-  const { topics, queue, liveness, log, heartbeat, notice } = parts;
+  const { topics, queue, liveness, log, notice } = parts;
   return {
     opened(runtime) {
       for (const entry of topics.entries()) {
         requestSubscription({ runtime, topics }, entry.qualifiedTopic, entry.variables);
       }
-      /* A server before 0.5 sends nothing until it admits the socket: its answer to this ping says it has. */
-      runtime.send(encodeMessage({ type: "ping" }));
     },
     message(runtime, data) {
       liveness.heard();
-      if (runtime.state.phase === "authenticating") {
-        runtime.dispatch({ type: "admitted", protocol: 1 });
-      }
       const reading = readServerFrame(data);
-      if ("unknown" in reading) {
+      if (runtime.state.phase === "authenticating") {
+        admit(runtime, reading, parts);
+      } else if ("unknown" in reading) {
         notice(
           "unknown",
           `Ignored a frame of a kind this client does not know: ${reading.unknown}`,
@@ -69,17 +67,46 @@ export function connectionHooks(parts: HookParts): RuntimeHooks {
       }
     },
     effect(runtime, effect) {
-      run(runtime, effect, parts, heartbeat);
+      run(runtime, effect, parts);
     },
   };
 }
 
-function run(
-  runtime: ConnectionRuntime,
-  effect: MachineEffect,
-  { topics, queue, liveness, log }: HookParts,
-  heartbeat: HookParts["heartbeat"],
-): void {
+/*
+ * The server's first frame on a socket answers the `auth` that opened it:
+ * `auth_ok` admits the connection, `auth_error` says why it will not, and
+ * `disconnect` that the server is closing. A server of this protocol sends
+ * nothing before; any other frame comes from a server of another version.
+ */
+function admit(runtime: ConnectionRuntime, reading: FrameReading, parts: HookParts): void {
+  const { state } = runtime;
+  const frame = "frame" in reading ? reading.frame : undefined;
+  if (frame?.type === "auth_ok" && state.phase === "authenticating" && frame.id === state.authId) {
+    parts.limits.maxMessageSize = frame.limits.maxMessageSize;
+    runtime.dispatch({
+      type: "admitted",
+      connectionId: frame.connectionId,
+      heartbeat: frame.heartbeat,
+    });
+  } else if (frame?.type === "auth_error" || frame?.type === "disconnect") {
+    runtime.dispatch(closingWith(frame));
+  } else {
+    const kind = kindOf(reading);
+    parts.log.warn(
+      `The server's first frame (${kind}) answers no auth: it speaks another version of the protocol`,
+    );
+    runtime.dispatch({ type: "mismatch", frame: kind });
+  }
+}
+
+/* What a message was: the kind of frame, or why it is none. */
+function kindOf(reading: FrameReading): string {
+  if ("frame" in reading) return reading.frame.type;
+  return "unknown" in reading ? reading.unknown : reading.invalid;
+}
+
+function run(runtime: ConnectionRuntime, effect: MachineEffect, parts: HookParts): void {
+  const { topics, queue, liveness, log } = parts;
   switch (effect.type) {
     case "subscriptions-wait":
       topics.unconfirmAll(effect.error);
@@ -91,13 +118,15 @@ function run(
       return;
     }
     case "watch":
-      liveness.watch(heartbeat.intervalMs + heartbeat.timeoutMs);
+      liveness.watch(effect.heartbeat.intervalMs + effect.heartbeat.timeoutMs);
       return;
     case "unwatch":
       liveness.stop();
       return;
     case "probe":
-      liveness.probe(Math.min(heartbeat.timeoutMs, CLIENT_LIMITS.WS_RESUME_PROBE_TIMEOUT_MS));
+      liveness.probe(
+        Math.min(effect.heartbeat.timeoutMs, CLIENT_LIMITS.WS_RESUME_PROBE_TIMEOUT_MS),
+      );
       return;
     case "flush":
       for (const { topic, payload } of queue.take(undefined)) {

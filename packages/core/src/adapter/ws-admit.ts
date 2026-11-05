@@ -1,26 +1,34 @@
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
-import { decodeMessage } from "../realtime/ws/ws-protocol";
+import type { SessionClose } from "./ws-close";
 import type { WSSocketContext } from "./ws-context";
 import { frameCredentials, withFrameHeaders } from "./ws-frame-credentials";
+import { readFirstFrame } from "./ws-handshake";
 import type { WSInbox } from "./ws-inbox";
 
-/** What a connection is admitted with: the client's `ws.auth`, or an `auth` frame no client sends. */
-export type Admission = { readonly auth: WSAuthParams | undefined } | { readonly invalid: true };
+/**
+ * What a connection is admitted with: the `auth` frame's id and the
+ * client's `ws.auth`, or why it is refused before anything checks it.
+ */
+export type Admission =
+  | { readonly id: string | undefined; readonly auth: WSAuthParams | undefined }
+  | { readonly refused: SessionClose };
 
 /**
- * Wait for the first frame a client sends, and take it as the credentials
- * its connection is made with when it is an `auth` frame: its headers on
- * the connection's request, its `auth` for `onConnect`. A Courier client
- * sends one as soon as its socket opens; one that sends none within
- * `timeoutMs`, or another frame first, is admitted on its handshake alone.
+ * Wait for the first frame a client sends, which is its `auth`, of the
+ * protocol version spoken here: its headers go on the connection's
+ * request, its `auth` to `onConnect`. A first frame of another kind, an
+ * `auth` naming no version or another one, or none within `timeoutMs`, is
+ * refused — the version with 1002 and why, so a page left from an older
+ * build is told to reload rather than retry.
  *
  * @param ctx - The connection
  * @param inbox - What its socket has sent
  * @param timeoutMs - How long to wait for the first frame
- * @returns The `auth` it was admitted with, or that its frame was not one a client sends
+ * @returns What it is admitted with, or why it is refused
  * @example
  * ```ts
  * const admission = await awaitCredentials(ctx, inbox, 3000);
+ * if ("refused" in admission) ctx.session.close(admission.refused);
  * ```
  */
 export async function awaitCredentials(
@@ -29,52 +37,16 @@ export async function awaitCredentials(
   timeoutMs: number,
 ): Promise<Admission> {
   const raw = await inbox.first(timeoutMs);
-  ctx.credentialed = true;
-  if (raw === undefined || raw.length > ctx.maxMessageSize) return { auth: undefined };
-  const payload = authPayloadOf(raw);
-  if (payload === NOT_AUTH) return { auth: undefined };
+  if (raw === undefined) return { refused: { kind: "no-auth-frame", timeoutMs } };
   inbox.takeFirst();
-  const credentials = frameCredentials(payload);
+  const first = readFirstFrame(raw, ctx.maxMessageSize);
+  if ("refused" in first) return first;
+  const id = typeof first.auth.id === "string" ? first.auth.id : undefined;
+  const credentials = frameCredentials(first.auth.payload);
   const request = credentials && withFrameHeaders(ctx.handshake, credentials);
-  if (credentials === undefined || request === undefined) return { invalid: true };
-  ctx.request = request;
-  return { auth: credentials.auth };
-}
-
-/**
- * Take an `auth` frame as the credentials of a connection admitted without
- * waiting for it — on a handler with no `onConnect` to read them — so its
- * subscriptions are made with the frame's headers.
- *
- * @param ctx - The connection
- * @param payload - The frame's payload
- * @example
- * ```ts
- * applyFrameCredentials(ctx, msg.payload);
- * ```
- */
-export function applyFrameCredentials(ctx: WSSocketContext, payload: unknown): void {
-  const credentials = frameCredentials(payload);
-  const request = credentials && withFrameHeaders(ctx.handshake, credentials);
-  if (request === undefined) {
-    ctx.refusals.warn({
-      event: "auth frame refused",
-      code: 4400,
-      fields: { conn: ctx.connectionId },
-    });
-    ctx.sendMessage({ type: "error", error: { code: 4400, message: "Invalid auth frame" } });
-    return;
+  if (credentials === undefined || request === undefined) {
+    return { refused: { kind: "bad-auth-frame", id } };
   }
   ctx.request = request;
-}
-
-const NOT_AUTH = Symbol("not an auth frame");
-
-function authPayloadOf(raw: string): unknown {
-  try {
-    const msg = decodeMessage(raw);
-    return msg.type === "auth" ? msg.payload : NOT_AUTH;
-  } catch {
-    return NOT_AUTH;
-  }
+  return { id, auth: credentials.auth };
 }

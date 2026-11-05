@@ -168,7 +168,7 @@ serve({ fetch: app.fetch, port: 3000, websocket: { server: wss } })
 
 Point the client at the same paths with `proxyPath: { sse: "/api/sse", ws: "/api/ws" }`.
 
-What `courierWSHandler()` returns carries the handler's `connections` — to send, broadcast, or close a user's connections on every replica — its `stats()`, and `destroy({ timeoutMs })`. Call `await ws.destroy()` as the server stops, before it closes: each socket is closed with 1012, which a Courier client answers by reconnecting later, and waited for up to 5 seconds, and the handler's pub/sub subscriptions are let go of.
+What `courierWSHandler()` returns carries the handler's `connections` — to send, broadcast, or close a user's connections on every replica — its `stats()`, and `destroy({ timeoutMs })`. Call `await ws.destroy()` as the server stops, before it closes: each socket is closed with 1001, told when to come back, which a Courier client answers by reconnecting then, and waited for up to 5 seconds, and the handler's pub/sub subscriptions are let go of.
 
 Each caller may hold up to `maxConnectionsPerIP` WebSockets (50 by default). The caller is the connection's remote address, which the adapter reads from the runtime — `@hono/node-server`, Bun and Deno report it — and, when that address is a local or private one such as a reverse proxy's, the proxy's `X-Forwarded-For`. On a runtime that reports none, such as Cloudflare Workers, the proxy headers name the caller. If your proxy chain is deeper, name the caller yourself with `clientIp: (request) => …`.
 

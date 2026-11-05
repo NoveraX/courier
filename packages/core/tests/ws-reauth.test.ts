@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
-import { V1_DIALECT } from "../src/adapter/ws-dialect";
 import { handleReauth } from "../src/adapter/ws-reauth";
 import type { InternalConnectionRegistry } from "../src/adapter/ws-registry-types";
 import { createSession } from "../src/adapter/ws-session";
@@ -24,6 +23,8 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
 } {
   const sent: WSMessage[] = [];
   const socket = createFakeSocket();
+  const session = createSession(socket);
+  session.admit({ type: "auth_ok", id: "a0", v: 2, connectionId: "conn-1" });
   const ctx = {
     connectionId: "conn-1",
     meta: { userId: "user-1" },
@@ -33,7 +34,7 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
     onReauth: undefined,
     registry: { updateMeta: vi.fn(), getEntry: vi.fn(() => undefined) },
     refusals: createRefusalLog("WS"),
-    session: createSession(socket, V1_DIALECT),
+    session,
     middlewareTimeoutMs: 30_000,
     subscribing: new Map(),
     clientIP: "203.0.113.7",
@@ -62,7 +63,7 @@ describe("handleReauth", () => {
   it("calls onReauth with the handshake and the frame, and keeps what it returns", async () => {
     const onReauth = vi.fn().mockResolvedValue({ userId: "user-2", role: "admin" });
     const updateMeta = vi.fn();
-    const { ctx, sent } = createMockCtx({
+    const { ctx, socket } = createMockCtx({
       onReauth,
       registry: {
         updateMeta,
@@ -83,7 +84,7 @@ describe("handleReauth", () => {
     expect(info.request.headers.get("cookie")).toBe("sid=a1");
     expect(ctx.request.headers.get("authorization")).toBe("Bearer fresh-jwt");
     expect(updateMeta).toHaveBeenCalledWith("conn-1", expect.objectContaining({ role: "admin" }));
-    expect(sent[0]!.type).toBe("auth");
+    expect(socket.sent.at(-1)).toEqual({ type: "auth_ok", id: "2", v: 2, connectionId: "conn-1" });
   });
 
   it("takes no cookie, origin or forwarding header from the frame", async () => {

@@ -24,7 +24,7 @@ import { createMemoryBus } from "../src/realtime/memory-bus";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const joined: boolean[] = [];
 const { channel } = courier();
@@ -66,6 +66,7 @@ function serve(pubsub: PubSubAdapter): WSHandler {
 function open(handler: WSHandler): FakeSocket {
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
+  socket.receive(authFrame());
   return socket;
 }
 

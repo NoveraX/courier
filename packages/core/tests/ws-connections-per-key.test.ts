@@ -1,7 +1,7 @@
 /**
  * A limit on one key's connections — a user's tabs and devices — through a
  * WebSocket handler: over it, the oldest connection of the key is closed
- * with 4429 for the new one, or the new one is refused with 4429 and its
+ * with 4409 for the new one, or the new one is refused with 4429 and its
  * onDisconnect run; a connection that closes gives its place back; replicas
  * sharing a lease store count the key's connections together, and evict
  * across each other.
@@ -14,7 +14,7 @@ import { ConfigurationError } from "../src/errors";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { createMemoryConnectionLeases } from "../src/realtime/memory-leases";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const handlers: WSHandler[] = [];
 
@@ -54,14 +54,14 @@ async function connect(
   const known = new Set(handler.connections.list().map((c) => c.connectionId));
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), address);
-  socket.receive({ type: "auth", payload: { auth: { userId } } });
+  socket.receive(authFrame({ auth: { userId } }));
   const registered = () => handler.connections.list().some((c) => !known.has(c.connectionId));
   await expect.poll(() => registered() || socket.closed !== undefined).toBe(true);
   return socket;
 }
 
 describe("maxConnectionsPerKey", () => {
-  it("closes the oldest connection of a key over the limit with 4429, for the new one", async () => {
+  it("closes the oldest connection of a key over the limit with 4409, for the new one", async () => {
     const handler = serve({ maxConnectionsPerKey: perUser(2) });
     const first = await connect(handler, "u1");
     const second = await connect(handler, "u1");
@@ -70,7 +70,7 @@ describe("maxConnectionsPerKey", () => {
 
     await expect
       .poll(() => first.closed)
-      .toMatchObject({ code: 4429, reason: "Replaced by a newer connection" });
+      .toMatchObject({ code: 4409, reason: "Replaced by a newer connection" });
     expect([second.closed, third.closed]).toEqual([undefined, undefined]);
     await expect.poll(() => handler.stats().connections).toBe(2);
   });
@@ -111,7 +111,7 @@ describe("maxConnectionsPerKey", () => {
 
     const newest = await connect(b, "u1");
 
-    await expect.poll(() => onA.closed?.code).toBe(4429);
+    await expect.poll(() => onA.closed?.code).toBe(4409);
     expect([onB.closed, newest.closed]).toEqual([undefined, undefined]);
   });
 

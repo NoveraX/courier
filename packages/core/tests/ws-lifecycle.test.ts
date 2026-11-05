@@ -8,6 +8,7 @@ import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { wsFrameLimit } from "../src/node";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
+import { authFrame } from "./helpers/fake-socket";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 let served: ServedWS | undefined;
@@ -411,6 +412,9 @@ describe("wireEvents", () => {
     served = await serveWS({}, { onError: ({ error }) => errors.push(error) });
     const client = new WebSocket(served.url);
     await new Promise((resolve) => client.once("open", resolve));
+    const admitted = new Promise((resolve) => client.once("message", resolve));
+    client.send(JSON.stringify(authFrame()));
+    await admitted;
 
     client.send("x".repeat(wsFrameLimit() + 1));
     await new Promise((resolve) => client.once("close", resolve));

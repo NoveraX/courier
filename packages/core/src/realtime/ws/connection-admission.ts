@@ -82,12 +82,18 @@ export function fromAuthenticating(
           phase: "open",
           failures: state.failures,
           authSeq: state.authSeq,
-          protocol: event.protocol,
+          connectionId: event.connectionId,
+          heartbeat: event.heartbeat,
           openedAt: ctx.now,
           fingerprint: state.fingerprint,
         },
-        effects: [{ type: "watch" }, { type: "flush" }],
+        effects: [{ type: "watch", heartbeat: event.heartbeat }, { type: "flush" }],
       };
+    case "mismatch":
+      return schedule(state, ctx, { kind: "mismatch", frame: event.frame }, [
+        { type: "drop-socket", code: 1002, reason: "Protocol mismatch" },
+        { type: "subscriptions-wait" },
+      ]);
     case "closed":
       return onClosed(state, ctx, event.closure, event.announced, event.error);
     case "timeout":

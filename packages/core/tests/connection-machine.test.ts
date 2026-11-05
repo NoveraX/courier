@@ -26,6 +26,7 @@ const ctx = (now = NOW): MachineContext => ({
 });
 
 const connectDeadline = { ms: 15_000, fires: "timeout" } as const;
+const HEARTBEAT = { intervalMs: 25_000, timeoutMs: 10_000 } as const;
 const authDeadline = { ms: 15_000, fires: "timeout" } as const;
 
 const idle: MachineState = { phase: "idle", failures: 0, authSeq: 0 };
@@ -53,7 +54,8 @@ const open = (openedAt = NOW): MachineState => ({
   phase: "open",
   failures: 0,
   authSeq: 1,
-  protocol: 1,
+  connectionId: "c1",
+  heartbeat: HEARTBEAT,
   openedAt,
   fingerprint: "f1",
 });
@@ -61,7 +63,8 @@ const reauthenticating: MachineState = {
   phase: "reauthenticating",
   failures: 0,
   authSeq: 2,
-  protocol: 1,
+  connectionId: "c1",
+  heartbeat: HEARTBEAT,
   openedAt: NOW,
   fingerprint: "f1",
   authId: "a2",
@@ -90,6 +93,7 @@ const closed = (code: number, reason = "", announced = false): MachineEvent => (
   closure: { code, reason },
   announced,
 });
+const admitted: MachineEvent = { type: "admitted", connectionId: "c1", heartbeat: HEARTBEAT };
 
 function step(state: MachineState, event: MachineEvent, now = NOW) {
   return transition(state, event, ctx(now));
@@ -123,10 +127,10 @@ describe("a connection that starts", () => {
     });
   });
 
-  it("is open once the server admits it, and watches the socket", () => {
-    expect(step(authenticating, { type: "admitted", protocol: 1 })).toEqual({
+  it("is open once the server admits it, and watches the socket by the server's heartbeat", () => {
+    expect(step(authenticating, admitted)).toEqual({
       state: open(),
-      effects: [{ type: "watch" }, { type: "flush" }],
+      effects: [{ type: "watch", heartbeat: HEARTBEAT }, { type: "flush" }],
     });
   });
 
@@ -185,6 +189,55 @@ describe("an attempt that does not get through", () => {
     expect(effects).toEqual([
       { type: "drop-socket", code: 4100, reason: "Admission timed out" },
       { type: "subscriptions-wait" },
+    ]);
+  });
+
+  it("leaves a server that answers its auth frame in another version of the protocol, and waits", () => {
+    expect(step(authenticating, { type: "mismatch", frame: "subscribed" })).toEqual({
+      state: {
+        phase: "reconnecting",
+        failures: 1,
+        authSeq: 1,
+        refusal: undefined,
+        retryIn: 1000,
+        cause: { kind: "mismatch", frame: "subscribed" },
+        deadline: { ms: 1000, fires: "retry" },
+      },
+      effects: [
+        { type: "drop-socket", code: 1002, reason: "Protocol mismatch" },
+        { type: "subscriptions-wait" },
+      ],
+    });
+  });
+
+  it("waits to reconnect to a server older than itself, which a rollout replaces", () => {
+    const refusal: MachineEvent = {
+      type: "closed",
+      closure: { code: 1002, reason: "Protocol version 1 is spoken here, not 2", version: 1 },
+      announced: true,
+    };
+
+    expect(step(authenticating, refusal)).toMatchObject({
+      state: { phase: "reconnecting", cause: { kind: "closed", code: 1002, opened: true } },
+      effects: [{ type: "drop-socket", code: 1000, reason: "" }, { type: "subscriptions-wait" }],
+    });
+  });
+
+  it.each([
+    ["newer than itself: the page has to be loaded again", 3],
+    ["of its own version: its auth frame was broken", 2],
+  ])("gives up on a server that refuses its version, %s", (_why, version) => {
+    const refusal: MachineEvent = {
+      type: "closed",
+      closure: { code: 1002, reason: "Protocol version 2 required: reload the page", version },
+      announced: true,
+    };
+    const { state } = step(authenticating, refusal);
+
+    expect(state.phase).toBe("failed");
+    expect(state.phase === "failed" && [state.error.code, state.error.message]).toEqual([
+      1002,
+      "Protocol version 2 required: reload the page",
     ]);
   });
 
@@ -356,7 +409,7 @@ describe("credentials the server refuses with 4401", () => {
       refusal: { fingerprint: "f0", error: new AuthError("Token expired"), retried: true },
     };
 
-    expect(step(retried, { type: "admitted", protocol: 1 }).state).not.toHaveProperty("refusal");
+    expect(step(retried, admitted).state).not.toHaveProperty("refusal");
   });
 });
 
@@ -460,10 +513,10 @@ describe("a resume signal", () => {
     });
   });
 
-  it("has an open connection checked", () => {
+  it("has an open connection checked, within the server's heartbeat", () => {
     expect(step(open(), { type: "resume", signal: "online" })).toEqual({
       state: open(),
-      effects: [{ type: "probe" }],
+      effects: [{ type: "probe", heartbeat: HEARTBEAT }],
     });
   });
 
@@ -517,7 +570,8 @@ describe("an event that means nothing where the connection stands", () => {
   const events: MachineEvent[] = [
     { type: "start" },
     { type: "socket-open" },
-    { type: "admitted", protocol: 1 },
+    admitted,
+    { type: "mismatch", frame: "data" },
     { type: "renewed" },
     { type: "retry" },
     { type: "silent", forMs: 1 },

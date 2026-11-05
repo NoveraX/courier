@@ -13,6 +13,7 @@ import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { defineApi } from "../src/define";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { authFrame } from "./helpers/fake-socket";
 
 const ADDRESS = { "X-Forwarded-For": "203.0.113.7" };
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,7 +60,7 @@ function handlerWith(config: WSHandlerConfig) {
 function connect(handler: ReturnType<typeof createWSHandler>): Socket {
   const socket = createSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
-  socket.emit("message", { data: JSON.stringify({ type: "auth", payload: {} }) });
+  socket.emit("message", { data: JSON.stringify(authFrame({})) });
   return socket;
 }
 
@@ -161,21 +162,23 @@ describe("a client that leaves before it says who it is", () => {
 });
 
 describe("a client that sends no auth frame", () => {
-  it("is admitted on its handshake alone once the server stops waiting", async () => {
+  it("is refused with 4408 once the server stops waiting, onConnect never run", async () => {
     const onConnect = vi.fn(() => ({}));
     const handler = handlerWith({ authTimeoutMs: 30, onConnect });
     const socket = createSocket();
     handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
 
-    await wait(10);
-    expect(onConnect).not.toHaveBeenCalled();
-    await wait(40);
+    await wait(60);
 
-    expect(onConnect).toHaveBeenCalledWith(expect.objectContaining({ auth: undefined }));
-    expect(handler.connections.count).toBe(1);
+    expect(onConnect).not.toHaveBeenCalled();
+    expect(socket.sent.map((frame) => JSON.parse(frame))).toEqual([
+      { type: "auth_error", error: { code: 4408, message: "No auth frame within 30 ms" }, v: 2 },
+    ]);
+    expect(socket.closedWith).toBe(4408);
+    expect(handler.connections.count).toBe(0);
   });
 
-  it("is admitted at once when another frame comes first, which is then handled", async () => {
+  it("is refused with 1002 when another frame comes first, which is never handled", async () => {
     const onConnect = vi.fn(() => ({}));
     const handler = handlerWith({ onConnect });
     const socket = createSocket();
@@ -184,7 +187,10 @@ describe("a client that sends no auth frame", () => {
     socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
     await wait(10);
 
-    expect(onConnect).toHaveBeenCalledOnce();
-    expect(socket.sent.map((frame) => JSON.parse(frame).type)).toEqual(["pong"]);
+    expect(onConnect).not.toHaveBeenCalled();
+    expect(socket.sent.map((frame) => JSON.parse(frame))).toEqual([
+      { type: "auth_error", error: { code: 1002, message: "The first frame is auth" }, v: 2 },
+    ]);
+    expect(socket.closedWith).toBe(1002);
   });
 });

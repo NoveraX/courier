@@ -15,6 +15,9 @@ import { WebSocket } from "ws";
 
 import { courierWSAttach } from "../src/index";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 let server: Server | undefined;
 const clients: WebSocket[] = [];
 
@@ -36,6 +39,9 @@ async function open(): Promise<WebSocket> {
   const client = new WebSocket(`ws://127.0.0.1:${(server.address() as AddressInfo).port}/api/ws`);
   clients.push(client);
   await new Promise((resolve) => client.on("open", resolve));
+  const admitted = new Promise((resolve) => client.once("message", resolve));
+  client.send(AUTH);
+  await admitted;
   return client;
 }
 

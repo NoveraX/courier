@@ -26,6 +26,7 @@ import {
   type MockServerOptions,
 } from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-route-types";
+import { admit } from "./helpers/admit";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,15 +110,6 @@ function frameQueue(ws: WebSocket): () => Promise<WSMessage> {
   };
 }
 
-/** Wait for the socket to enter OPEN state */
-function waitForOpen(ws: WebSocket): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (ws.readyState === ws.OPEN) return resolve();
-    ws.once("open", () => resolve());
-    ws.once("error", reject);
-  });
-}
-
 /** Wait for socket close, returning code + reason */
 function waitForClose(ws: WebSocket): Promise<{ code: number; reason: string }> {
   return new Promise((resolve) => {
@@ -166,7 +158,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
     const subscribed = await waitForFrame(ws);
@@ -199,7 +191,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await next();
@@ -230,7 +222,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await next();
@@ -254,7 +246,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     const roomB = 'chat.room#{"room":"b"}';
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic: roomA, id: "s1", payload: { room: "a" } });
     expect(await next()).toMatchObject({ type: "subscribed", topic: roomA });
@@ -282,7 +274,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
     const frames: WSMessage[] = [];
@@ -305,7 +297,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
     // Allow the server's onJoin path to register the connection
@@ -327,7 +319,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     server.requestHooks.onEnd = ended;
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
     ws.close();
@@ -357,7 +349,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     server.mock("chat", "room").channel(() => ({ onMessage: () => {} }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
 
@@ -384,7 +376,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
 
@@ -401,7 +393,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     server.mock("chat", "room").channel(() => ({ onMessage: () => {} }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "message", topic: "chat.room", payload: { text: "early" } });
 
     const frame = await waitForFrame(ws);
@@ -422,7 +414,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
 
@@ -442,7 +434,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
     expect(await waitForFrame(ws)).toEqual({
@@ -466,7 +458,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
     const frame = await waitForFrame(ws);
@@ -482,7 +474,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     });
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
     expect(await waitForFrame(ws)).toEqual({
@@ -506,7 +498,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await waitForFrame(ws);
     send(ws, { type: "message", topic: "chat.room", payload: { text: "boom" } });
@@ -537,7 +529,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const frames: WSMessage[] = [];
     ws.on("message", (raw: Buffer | string) => frames.push(decodeMessage(raw.toString())));
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
@@ -566,7 +558,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
     await next();
@@ -624,7 +616,7 @@ describe("mock ws-handler — real broadcast", () => {
 
     const a = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     const b = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await Promise.all([waitForOpen(a), waitForOpen(b)]);
+    await Promise.all([admit(a), admit(b)]);
 
     send(a, { type: "subscribe", topic: "chat.room", id: "sa" });
     send(b, { type: "subscribe", topic: "chat.room", id: "sb" });
@@ -669,7 +661,7 @@ describe("mock ws-handler — real broadcast", () => {
     const served = 'api.chat.room#{"room":"r1"}';
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic: asked, id: "s1", payload: { room: "r1" } });
 
@@ -698,7 +690,7 @@ describe("mock ws-handler — real broadcast", () => {
     const topic = 'api.chat.room#{"room":"r1"}';
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
-    await waitForOpen(ws);
+    await admit(ws);
     const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic, id: "s1", payload: { room: "r1" } });
 
@@ -752,7 +744,7 @@ describe("mock ws-handler — origin allowlist", () => {
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"), {
       headers: { Origin: "https://allowed.example" },
     });
-    await waitForOpen(ws);
+    await admit(ws);
     expect(ws.readyState).toBe(ws.OPEN);
     ws.close();
     await waitForClose(ws);

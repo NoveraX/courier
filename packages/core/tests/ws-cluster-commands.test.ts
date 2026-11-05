@@ -16,7 +16,7 @@ import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { ConfigurationError } from "../src/errors";
 import { createMemoryBus, type MemoryBus } from "../src/realtime/memory-bus";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 
 const SECRET = "a-cluster-secret-of-32-bytes-or-more";
 
@@ -58,7 +58,7 @@ async function connect(handler: WSHandler, userId: string) {
   const known = new Set(handler.connections.list().map((c) => c.connectionId));
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), "203.0.113.7");
-  socket.receive({ type: "auth", payload: { auth: { userId } } });
+  socket.receive(authFrame({ auth: { userId } }));
   const added = () => handler.connections.list().find((c) => !known.has(c.connectionId));
   await expect.poll(added).toBeDefined();
   return { socket, connectionId: added()?.connectionId ?? "" };
@@ -142,7 +142,9 @@ describe("connections.requireAuth across replicas", () => {
 
     await a.connections.requireAuth({ meta: { userId: "u1" } }, { timeoutMs: 100 });
 
-    await expect.poll(() => held.socket.sent).toContainEqual({ type: "auth_required" });
+    await expect
+      .poll(() => held.socket.sent)
+      .toContainEqual(expect.objectContaining({ type: "reauth_required" }));
     await expect.poll(() => held.socket.closed?.code, { timeout: 2_000 }).toBe(4401);
   });
 });

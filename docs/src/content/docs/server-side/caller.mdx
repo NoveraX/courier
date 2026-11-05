@@ -33,7 +33,7 @@ type CallerDefaults = {
   // Called when any request succeeds
   onSuccess?: (data: unknown) => void | Promise<void>
   // The sockets of this caller's channels and push subscriptions: token,
-  // reconnect backoff, heartbeat, queue limits — see Streams & Channels
+  // reconnect backoff, queue limits — see Streams & Channels
   ws?: CallerWSOptions
 }
 ```

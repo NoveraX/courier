@@ -41,7 +41,7 @@ export function fromOpen(
     case "reconnect":
       return connect(state, ctx, 0, undefined, dropped(4000, "Reconnecting"));
     case "resume":
-      return { state, effects: [{ type: "probe" }] };
+      return { state, effects: [{ type: "probe", heartbeat: state.heartbeat }] };
     default:
       return stay(state);
   }
@@ -61,8 +61,8 @@ function startRenewal(state: Phase<"open">, ctx: MachineContext): Step {
 }
 
 function backToOpen(state: Phase<"reauthenticating">): Phase<"open"> {
-  const { failures, authSeq, protocol, openedAt, fingerprint } = state;
-  return { phase: "open", failures, authSeq, protocol, openedAt, fingerprint };
+  const { failures, authSeq, connectionId, heartbeat, openedAt, fingerprint } = state;
+  return { phase: "open", failures, authSeq, connectionId, heartbeat, openedAt, fingerprint };
 }
 
 /* Leave an open socket: let it go, stop watching it, and hold the subscriptions for the next. */

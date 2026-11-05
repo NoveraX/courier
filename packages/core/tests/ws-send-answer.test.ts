@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSClientSocket, WSConnectionConfig } from "../src/realtime/ws/ws-types";
+import { admission } from "./helpers/admission";
 
 class Socket implements WSClientSocket {
   static last: Socket | undefined;
@@ -37,9 +38,9 @@ class Socket implements WSClientSocket {
     this.onopen?.(new Event("open"));
   }
 
-  /** The server admits the socket: its first frame, here the answer to the client's ping. */
+  /** The server admits the socket: `auth_ok`, its answer to the client's auth frame. */
   admit(): void {
-    this.onmessage?.(new MessageEvent("message", { data: '{"type":"pong"}' }));
+    this.onmessage?.(new MessageEvent("message", { data: admission(this.sent) }));
   }
 }
 
@@ -47,7 +48,6 @@ function connect(overrides?: Partial<WSConnectionConfig>) {
   return createWSConnection({
     url: "ws://test/ws",
     socketFactory: () => new Socket(),
-    heartbeat: { intervalMs: 100_000, timeoutMs: 50_000 },
     ...overrides,
   });
 }

@@ -16,7 +16,7 @@ import type { Sources } from "../src/define/types";
 import { defineMiddleware } from "../src/middleware";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
+import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const { channel } = courier();
 const ADDRESS = "203.0.113.7";
@@ -55,7 +55,7 @@ function serve(config: WSHandlerConfig, middleware: unknown[] = []): WSHandler {
 function open(handler: WSHandler, auth: Record<string, unknown>): FakeSocket {
   const socket = createFakeSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws"), ADDRESS);
-  socket.receive({ type: "auth", payload: { auth } });
+  socket.receive(authFrame({ auth }));
   return socket;
 }
 

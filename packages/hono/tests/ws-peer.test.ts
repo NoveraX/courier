@@ -17,6 +17,9 @@ import { WebSocket, WebSocketServer } from "ws";
 
 import { courierWSHandler } from "../src/index";
 
+/** The first frame a Courier client sends: `auth`, of protocol version 2. */
+const AUTH = JSON.stringify({ type: "auth", v: 2, id: "a0" });
+
 const clients: WebSocket[] = [];
 let close: (() => Promise<void>) | undefined;
 
@@ -70,7 +73,10 @@ function connect(host: string, port: number): Promise<string> {
       clearTimeout(silent);
       resolve(outcome);
     };
-    client.on("open", () => client.send(JSON.stringify({ type: "ping" })));
+    client.on("open", () => {
+      client.send(AUTH);
+      client.send(JSON.stringify({ type: "ping" }));
+    });
     client.on("message", (frame) => {
       if ((JSON.parse(String(frame)) as { type?: string }).type === "pong") finish("open");
     });

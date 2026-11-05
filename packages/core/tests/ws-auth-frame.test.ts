@@ -137,7 +137,9 @@ describe("a client's auth frame", () => {
       socket.onopen = resolve;
     });
 
-    socket.send(JSON.stringify({ type: "auth", payload: { headers: { authorization: 42 } } }));
+    socket.send(
+      JSON.stringify({ type: "auth", v: 2, payload: { headers: { authorization: 42 } } }),
+    );
 
     expect(await closed).toBe(4401);
     expect(onConnect).not.toHaveBeenCalled();
@@ -160,9 +162,11 @@ describe("a client's auth frame", () => {
         socket.onopen = resolve;
       });
 
-      socket.send(JSON.stringify({ type: "auth", payload: { headers: { "x-bad name": "1" } } }));
+      socket.send(
+        JSON.stringify({ type: "auth", v: 2, payload: { headers: { "x-bad name": "1" } } }),
+      );
 
-      expect(await answered).toMatch(/^closed 4401$|"code":4400/);
+      expect(await answered).toMatch(/"type":"auth_error","error":\{"code":4401/);
       const { ch, heard } = openRoom(served.url, () => ({}));
       await vi.waitFor(() => expect(heard).toEqual(["welcome"]));
       ch.close();

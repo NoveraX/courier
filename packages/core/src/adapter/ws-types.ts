@@ -7,7 +7,7 @@ import type {
 } from "../realtime/adapters";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
-import type { AllowedHostsSetting } from "./runtime-policy";
+import type { AllowedHostsSetting, AllowedOriginsSetting } from "./runtime-policy";
 import type { WSHandlerStats } from "./ws-handler-stats";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
@@ -51,16 +51,21 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   maxBufferedAmount?: number | undefined;
   /**
    * Origins of other pages that may open a socket, as `HandlerConfig`'s
-   * `allowedOrigins` rules them: unset, the application's own pages, and in
-   * development other local ports. A refused origin is closed with 4403.
+   * `allowedOrigins` rules them — a list, a function read when the first
+   * socket opens, or `COURIER_ALLOWED_ORIGINS`; none of them, the
+   * application's own pages, and in development other local ports. A
+   * refused origin is closed with 4403. While the setting cannot be read,
+   * every socket is answered `auth_error` and closed with 1011, and the log
+   * says why once.
    */
-  allowedOrigins?: string[] | undefined;
+  allowedOrigins?: AllowedOriginsSetting | undefined;
   /**
    * The host names this server is reached by, as `HandlerConfig`'s
    * `allowedHosts` rules them — a list, a function read when the first
    * socket opens, or `COURIER_ALLOWED_HOSTS`. A socket opened on any other
-   * host is closed with 4421, and so is every socket while the setting
-   * cannot be read.
+   * host is closed with 4421. While the setting cannot be read, every
+   * socket is answered `auth_error` and closed with 1011, and the log says
+   * why once.
    */
   allowedHosts?: AllowedHostsSetting | undefined;
   /**

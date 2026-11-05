@@ -189,6 +189,7 @@ describe("closeOf", () => {
   const closes: Array<[SessionClose, number, string]> = [
     [{ kind: "host" }, 4421, "Host not allowed"],
     [{ kind: "origin" }, 4403, "Origin not allowed"],
+    [{ kind: "misconfigured" }, 1011, "This server is misconfigured; its log says why"],
     [{ kind: "limit" }, 4429, "Too many connections"],
     [{ kind: "evicted" }, 4409, "Replaced by a newer connection"],
     [{ kind: "flood" }, 4429, "Too many messages before the connection was accepted"],

@@ -1,9 +1,9 @@
 import { createRefusalLog } from "../logger/refusal-log";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
-import { assertAllowedOrigins } from "./assert-allowed-origins";
 import type { ConnectResult } from "./connection-meta";
 import { LIMITS } from "./limits";
+import { assertListedSettings } from "./runtime-policy";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
 import { createIPTracker } from "./ws-ip-tracker";
 import { connectionLimitOf } from "./ws-limit-rule";
@@ -42,7 +42,7 @@ export function createWSHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: WSHandlerConfig<TConnect>,
 ): WSHandler;
 export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
-  assertAllowedOrigins(config.allowedOrigins, "createWSHandler");
+  assertListedSettings(config, "createWSHandler");
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }

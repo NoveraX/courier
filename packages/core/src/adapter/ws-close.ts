@@ -3,6 +3,7 @@ import type { StreamFailure } from "../realtime/describe-failure";
 import { WS_CODE } from "../realtime/ws/ws-codes";
 import { encodeMessage, PROTOCOL_VERSION, type WSMessage } from "../realtime/ws/ws-protocol";
 import { closeReason } from "./close-reason";
+import { MISCONFIGURED_REFUSAL } from "./entry-gate";
 
 /**
  * Why the server closes a connection, which its code, its reason and the
@@ -12,6 +13,8 @@ import { closeReason } from "./close-reason";
 export type SessionClose =
   | { readonly kind: "host" }
   | { readonly kind: "origin" }
+  /** Its hosts or origins cannot be read: the handler serves no socket until they can */
+  | { readonly kind: "misconfigured" }
   | { readonly kind: "limit" }
   /** Given up for a newer connection of its key, over `maxConnectionsPerKey` */
   | { readonly kind: "evicted" }
@@ -100,6 +103,8 @@ export function closeOf(why: SessionClose): CloseFrame {
       return { code: WS_CODE.HOST_NOT_ALLOWED, reason: "Host not allowed" };
     case "origin":
       return { code: WS_CODE.FORBIDDEN, reason: "Origin not allowed" };
+    case "misconfigured":
+      return { code: WS_CODE.INTERNAL_ERROR, reason: MISCONFIGURED_REFUSAL };
     case "limit":
       return { code: WS_CODE.TOO_MANY, reason: "Too many connections" };
     case "evicted":

@@ -459,13 +459,14 @@ describe("a handler created with the setting", () => {
   });
 });
 
-/** A socket that records how it was closed. */
-function socket(): WebSocketLike & { closed: number | undefined } {
+/** A socket that records the frames it was sent and how it was closed. */
+function socket(): WebSocketLike & { closed: number | undefined; sent: unknown[] } {
   const ws = {
     readyState: 1,
     bufferedAmount: 0,
     closed: undefined as number | undefined,
-    send: () => {},
+    sent: [] as unknown[],
+    send: (data: string) => ws.sent.push(JSON.parse(data)),
     close(code?: number) {
       ws.closed = code;
       ws.readyState = 3;
@@ -494,7 +495,8 @@ describe("a WebSocket handler created with the setting", () => {
   });
 
   afterEach(async () => {
-    await Promise.all(handlers.splice(0).map((handler) => handler.destroy()));
+    /* Its sockets send no close event: what it waits for them is cut short. */
+    await Promise.all(handlers.splice(0).map((handler) => handler.destroy({ timeoutMs: 100 })));
     _resetSourcesForTests();
   });
 
@@ -520,7 +522,7 @@ describe("a WebSocket handler created with the setting", () => {
     expect(rebound.closed).toBe(4421);
   });
 
-  it("closes every socket, a loopback one too, while the hosts cannot be read", () => {
+  it("refuses every socket, a loopback one too, with auth_error and 1011 while the hosts cannot be read", () => {
     vi.stubEnv("COURIER_ALLOWED_HOSTS", "https://app.example.com");
     const { handleSocket } = wsHandler({});
     const listed = socket();
@@ -529,11 +531,76 @@ describe("a WebSocket handler created with the setting", () => {
     handleSocket(listed, new Request("http://app.example.com/ws"));
     handleSocket(loopback, new Request("http://localhost:3000/ws"));
 
-    expect(listed.closed).toBe(4421);
-    expect(loopback.closed).toBe(4421);
+    for (const refused of [listed, loopback]) {
+      expect(refused.sent).toEqual([MISCONFIGURED]);
+      expect(refused.closed).toBe(1011);
+    }
     expect(loggedErrors()).toHaveLength(1);
   });
+
+  it("lets in a page its allowedOrigins function lists, read when the first socket opens", () => {
+    const origins = vi.fn(() => ["https://shop.example.com"]);
+    const { handleSocket } = wsHandler({ allowedOrigins: origins });
+    const listed = socket();
+    const foreign = socket();
+
+    expect(origins).not.toHaveBeenCalled();
+    handleSocket(listed, fromPage("https://shop.example.com"));
+    handleSocket(foreign, fromPage("https://evil.example"));
+
+    expect(listed.closed).toBeUndefined();
+    expect(foreign.closed).toBe(4403);
+    expect(origins).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets in a page COURIER_ALLOWED_ORIGINS lists when the config names none", () => {
+    vi.stubEnv("COURIER_ALLOWED_ORIGINS", "https://shop.example.com");
+    const { handleSocket } = wsHandler({});
+    const listed = socket();
+    const foreign = socket();
+
+    handleSocket(listed, fromPage("https://shop.example.com"));
+    handleSocket(foreign, fromPage("https://evil.example"));
+
+    expect(listed.closed).toBeUndefined();
+    expect(foreign.closed).toBe(4403);
+  });
+
+  it("refuses every socket with auth_error and 1011 while the origins cannot be read, saying why once", () => {
+    const { handleSocket } = wsHandler({
+      allowedOrigins: () => {
+        throw new Error("SHOP_URL is not set");
+      },
+    });
+    const sockets = [socket(), socket(), socket()];
+
+    for (const ws of sockets) handleSocket(ws, fromPage("https://shop.example.com"));
+
+    for (const refused of sockets) {
+      expect(refused.sent).toEqual([MISCONFIGURED]);
+      expect(refused.closed).toBe(1011);
+    }
+    expect(loggedErrors()).toHaveLength(1);
+  });
+
+  it("refuses, when it is created, a list it could never match", () => {
+    expect(() => createWSHandler({ allowedHosts: ["https://app.example.com"] })).toThrow(
+      'createWSHandler: allowedHosts, as the config gives it: the entry "https://app.example.com" has a scheme',
+    );
+  });
 });
+
+/* What a socket is told before its close while the handler's settings cannot be read. */
+const MISCONFIGURED = {
+  type: "auth_error",
+  error: { code: 1011, message: "This server is misconfigured; its log says why" },
+  v: 2,
+};
+
+/** An upgrade request from a page of `origin`, to the API's own host. */
+function fromPage(origin: string): Request {
+  return new Request("http://api.example.com/ws", { headers: { origin } });
+}
 
 describe("a handler whose allowedOrigins cannot be read", () => {
   it("answers every request 500, a same-origin one too", async () => {

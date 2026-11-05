@@ -1,4 +1,7 @@
+import { requestClientAddress } from "@noverax/courier/internal"
+
 import { isLabPace, LAB_MAX_BYTES, LAB_PACE_HEADER, MB } from "@/site/upload-lab/lab-settings"
+import { addressKey } from "../../../../server/address-key"
 import { takeLabSlot } from "./lab-slots"
 import { LabRefusal, readPaced } from "./paced-read"
 
@@ -10,6 +13,13 @@ const DEADLINE_MS = 30_000
 
 const refuse = (status: number, error: string, headers?: Record<string, string>) =>
   Response.json({ error }, { status, headers })
+
+/* Whom an upload comes from, as the examples' budgets count a visitor: their address, read past
+   the proxies the deployment names as Courier reads it for its own limit — no public entry of
+   Courier's names it yet — an IPv6 one by its /64. */
+function callerOf(request: Request): string {
+  return addressKey(requestClientAddress(request))
+}
 
 /* What stops an upload before a byte of it is read, if anything does. */
 function refusalOf(request: Request): Response | null {
@@ -33,7 +43,8 @@ function refusalOf(request: Request): Response | null {
  * names, as a slow link would, counts it and drops it. Reading slowly
  * holds the socket back, so the browser's own progress reports follow the
  * pace — which only holds while every proxy in front of the site streams
- * the upload through rather than buffering it first.
+ * the upload through rather than buffering it first. It reads one upload
+ * at a time from each address, a few in all.
  *
  * @param request - A multipart upload naming its pace
  * @returns The bytes read and how long that took, or why the upload was refused
@@ -41,8 +52,13 @@ function refusalOf(request: Request): Response | null {
 export async function POST(request: Request): Promise<Response> {
   const refusal = refusalOf(request)
   if (refusal) return refusal
-  const release = takeLabSlot()
-  if (!release) return refuse(429, "The lab is reading other uploads", { "retry-after": "5" })
+  const release = takeLabSlot(callerOf(request))
+  if (release === "yours") {
+    return refuse(429, "The lab is reading an upload of yours", { "retry-after": "5" })
+  }
+  if (release === "full") {
+    return refuse(429, "The lab is reading other uploads", { "retry-after": "5" })
+  }
   try {
     const pace = Number(request.headers.get(LAB_PACE_HEADER))
     const read = await readPaced(request.body, {

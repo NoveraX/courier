@@ -2,7 +2,8 @@
  * The upload guide's lab: its numbers and chart say what the two
  * bars did, the run it shows at rest is one smoothProgress could have
  * drawn, and the site's lab route reads an upload at the pace a page names
- * — and refuses what a page would not send.
+ * — and refuses what a page would not send, an upload that stops coming,
+ * and a second one from an address it is reading one from.
  */
 import { afterEach, describe, expect, it } from "vitest"
 
@@ -36,10 +37,35 @@ function body(bytes: number, chunk = 16 * 1024): ReadableStream<Uint8Array> {
   })
 }
 
-function upload(bytes: number, headers: Record<string, string> = {}): Request {
+/* A body that sends a few bytes, then nothing until `end` is called. */
+function stalled(): { body: ReadableStream<Uint8Array>; end: () => void } {
+  let end = () => {}
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(16))
+      end = () => controller.close()
+    },
+  })
+  return { body, end: () => end() }
+}
+
+/* What a promise came to, or a failure once `ms` pass without it. */
+function within<T>(ms: number, promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`still waiting after ${ms} ms`)), ms)
+  })
+  return Promise.race([promise, late]).finally(() => clearTimeout(timer))
+}
+
+function upload(
+  bytes: number,
+  headers: Record<string, string> = {},
+  sent: ReadableStream<Uint8Array> = body(bytes)
+): Request {
   const init: RequestInit & { duplex: "half" } = {
     method: "POST",
-    body: body(bytes),
+    body: sent,
     duplex: "half",
     headers: {
       "content-length": String(bytes),
@@ -205,10 +231,38 @@ describe("the site's lab route", () => {
     await expect(tooSlow).rejects.toEqual(expect.objectContaining({ status: 408 }))
   })
 
+  it("stops waiting for an upload that sends no more, once the time it waits is up", async () => {
+    const { body: silent } = stalled()
+    const read = readPaced(silent, { bytesPerSecond: MB, limit: MB, deadline: 100 })
+
+    await expect(within(2_000, read)).rejects.toEqual(expect.objectContaining({ status: 408 }))
+  })
+
+  it.each([
+    ["an IPv4 address", "198.51.100.7", "198.51.100.7", "198.51.100.8"],
+    ["an IPv6 /64", "2001:db8:1:2::1", "2001:db8:1:2::99", "2001:db8:1:3::1"],
+  ])(
+    "reads one upload at a time from %s, and another's beside it",
+    async (_, first, again, other) => {
+      const reading = stalled()
+      const held = POST(upload(1024, { "x-forwarded-for": first }, reading.body))
+      try {
+        const mine = await POST(upload(1024, { "x-forwarded-for": again }))
+        expect(mine.status).toBe(429)
+        expect(mine.headers.get("retry-after")).toBe("5")
+        expect(await mine.json()).toEqual({ error: "The lab is reading an upload of yours" })
+        expect((await POST(upload(1024, { "x-forwarded-for": other }))).status).toBe(200)
+      } finally {
+        reading.end()
+        await held
+      }
+    }
+  )
+
   it("answers busy, with when to try again, while every slot reads another upload", async () => {
     for (let at = 0; at < LAB_SLOTS; at += 1) {
-      const release = takeLabSlot()
-      if (release) held.push(release)
+      const release = takeLabSlot(`192.0.2.${at + 1}`)
+      if (typeof release === "function") held.push(release)
     }
 
     const response = await POST(upload(1024))

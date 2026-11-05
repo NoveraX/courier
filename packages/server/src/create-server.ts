@@ -7,7 +7,6 @@ import { announceHosting } from "@noverax/courier/announce";
 import { adoptListenOrigin } from "@noverax/courier/internal";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type * as Ws from "ws";
-import type { WebSocketServer } from "ws";
 
 import {
   httpHandlerOptions,
@@ -74,7 +73,6 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   const handler = createHandler(httpHandlerOptions(config, settings));
   const wsHandler = createWSHandler(wsHandlerOptions(config, settings));
 
-  let wss: WebSocketServer | undefined;
   let shuttingDown = false;
 
   const { ready, markListening, markFailed } = createReadiness();
@@ -91,15 +89,12 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     createRequestListener(handler, settings.allowedOrigins, () => shuttingDown),
   );
 
-  attachWebSocketUpgrade(httpServer, {
+  const detachWebSockets = attachWebSocketUpgrade(httpServer, {
     /* This server hosts nothing but Courier, so every path is its own. */
     path: undefined,
     maxPayload: wsFrameLimit(config),
     isAccepting: () => !shuttingDown,
-    createServer: async (serverOptions) => {
-      wss = new (await loadWs()).WebSocketServer(serverOptions);
-      return wss;
-    },
+    createServer: async (serverOptions) => new (await loadWs()).WebSocketServer(serverOptions),
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 
@@ -120,7 +115,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   const stop = createShutdown({
     httpServer,
     ws: wsHandler,
-    getWss: () => wss,
+    detachWebSockets,
     getSSE: () => handler,
     ready,
   });

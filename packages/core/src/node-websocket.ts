@@ -41,13 +41,18 @@ export function wsFrameLimit(maxMessageSize: number = DEFAULT_WS_MAX_MESSAGE_SIZ
   return Math.max(DEFAULT_WS_FRAME_LIMIT, 2 * maxMessageSize);
 }
 
+/** A connection `ws` accepted: what the handler uses, and a way to end it without the closing handshake. */
+interface UpgradedSocket extends WebSocketLike {
+  terminate(): void;
+}
+
 /** The part of `ws`'s `WebSocketServer` this uses, so core does not depend on `ws`. */
 export interface UpgradeServer {
   handleUpgrade(
     request: IncomingMessage,
     socket: Duplex,
     head: Buffer,
-    done: (socket: WebSocketLike) => void,
+    done: (socket: UpgradedSocket) => void,
   ): void;
   close(): void;
 }
@@ -88,12 +93,16 @@ export interface WebSocketUpgradeOptions {
  * Detaching also closes every connection the handler accepted, with 1012 —
  * "service restart", which a Courier client answers by reconnecting later.
  * `ws` leaves accepted clients open when its server closes, so a host that
- * detached before closing its HTTP server waited on them indefinitely.
+ * detached before closing its HTTP server waited on them indefinitely. A
+ * connection already closed — by the handler's drain — whose peer never
+ * answered is ended at once: `ws` would hold it 30 seconds more, and the
+ * HTTP server's close with it.
  *
  * @param server - The HTTP server the application listens with
  * @param options - Path, frame limit and what to do with a connection
  * @returns A function that detaches the handler, closes the connections it
- *   accepted and closes the `ws` server
+ *   accepted, ends those that did not answer their close, and closes the
+ *   `ws` server
  *
  * @example
  * ```ts
@@ -109,7 +118,7 @@ export function attachWebSocketUpgrade(
   options: WebSocketUpgradeOptions,
 ): () => void {
   const maxPayload = options.maxPayload ?? wsFrameLimit();
-  const accepted = new Set<WebSocketLike>();
+  const accepted = new Set<UpgradedSocket>();
   let wss: Promise<UpgradeServer> | undefined;
 
   const onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
@@ -177,7 +186,10 @@ export function attachWebSocketUpgrade(
   server.on("upgrade", onUpgrade);
   return () => {
     server.off("upgrade", onUpgrade);
-    for (const ws of accepted) ws.close(1012, "Server shutting down");
+    for (const ws of accepted) {
+      if (ws.readyState === 1) ws.close(1012, "Server shutting down");
+      else ws.terminate();
+    }
     accepted.clear();
     /* A server that failed to load was reported when the upgrade failed. */
     void wss?.then(

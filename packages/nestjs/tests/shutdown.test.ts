@@ -4,13 +4,14 @@
  * `app.close()` waits for every open connection, and an SSE stream does not
  * end on its own, so the middleware's streams can be drained rather than
  * holding the close for the stream's lifetime cap, 30 minutes by default.
- * Detaching the WebSocket handler closes every client it accepted.
+ * Detaching the WebSocket handler closes every client it accepted, and ends
+ * those that do not answer within its drain.
  *
  * Nest runs its middleware on the Express instance it creates, which is what
  * serves the middleware here.
  */
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { type AddressInfo, connect, type Socket } from "node:net";
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
 import express from "express";
@@ -50,6 +51,19 @@ async function listen(configure: (s: Server) => void): Promise<string> {
 
 const timeout = (ms: number) =>
   new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
+
+/** A client that takes the upgrade and then sends nothing, not even the close it is asked for. */
+async function silentPeer(host: string): Promise<Socket> {
+  const [hostname, port] = host.split(":");
+  const socket = connect(Number(port), hostname);
+  await new Promise((resolve) => socket.once("connect", resolve));
+  socket.write(
+    `GET /api/ws HTTP/1.1\r\nHost: ${host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
+  );
+  await new Promise((resolve) => socket.once("data", resolve));
+  return socket;
+}
 
 describe("draining a NestJS host's SSE streams", () => {
   it("tells each stream's client to come back later and lets the server close", async () => {
@@ -94,4 +108,24 @@ describe("detaching the WebSocket handler", () => {
       client.terminate();
     }
   });
+
+  it("ends a connection whose client never answers its close, so the server can close", async () => {
+    let detach: () => Promise<void> = async () => undefined;
+    const host = await listen((s) => {
+      detach = courierWSAttach(s);
+    });
+    const peer = await silentPeer(host);
+    const ended = new Promise((resolve) => peer.once("close", () => resolve("ended")));
+
+    try {
+      await detach();
+
+      /* Left to `ws`, it would end 30 seconds after the handler's 5-second drain. */
+      expect(await Promise.race([ended, timeout(1000)])).toBe("ended");
+      const closed = new Promise((resolve) => server?.close(() => resolve("closed")));
+      expect(await Promise.race([closed, timeout(1000)])).toBe("closed");
+    } finally {
+      peer.destroy();
+    }
+  }, 15_000);
 });

@@ -160,7 +160,7 @@ process.on("SIGTERM", async () => {
 })
 ```
 
-`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `detach()` refuses new upgrades with 503, closes each WebSocket with 1012 — which a Courier client answers by reconnecting later — and waits for them up to 5 seconds, so it settles within that time whatever the clients and Redis do. The proxy route serves streams too, which is why it drains as well.
+`shutdownSSE()` sends each stream's client a `courier:shutdown` notice that tells it when to reconnect, then ends the streams; `sseConnections` lists the open ones. `detach()` refuses new upgrades with 503, closes each WebSocket with 1012 — which a Courier client answers by reconnecting later — and waits for them up to 5 seconds, then ends each one whose client has not answered, so it settles within that time whatever the clients and Redis do. The proxy route serves streams too, which is why it drains as well.
 
 <br />
 

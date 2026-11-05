@@ -28,10 +28,11 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
  * @param options - WS handler options (heartbeat, allowedOrigins, etc.) and the `path` to listen on
  * @returns Stops the handler: upgrades are answered 503 from then on, each
  *   connection is closed with 1012 — which a Courier client answers by
- *   reconnecting later — and waited for up to 5 seconds, and the handler's
- *   subscriptions are let go of; it settles within that time, whatever the
- *   clients and the pub/sub adapter do. Call it before closing the HTTP
- *   server, which otherwise waits on those connections.
+ *   reconnecting later — and waited for up to 5 seconds, one whose client
+ *   has not answered by then is ended, and the handler's subscriptions are
+ *   let go of; it settles within that time, whatever the clients and the
+ *   pub/sub adapter do. Call it before closing the HTTP server, which
+ *   otherwise waits on those connections.
  *
  * @example
  * ```ts
@@ -68,7 +69,7 @@ export function courierWSAttach<TConnect extends ConnectResult = ConnectResult>(
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 
-  /* No new socket while the ones held drain; what has not closed by then is closed by the detach. */
+  /* No new socket while the ones held drain; what has not closed by then is ended by the detach. */
   return async () => {
     accepting = false;
     await wsHandler.destroy();

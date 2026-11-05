@@ -12,13 +12,20 @@ import { type AddressInfo, connect, type Socket } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
-import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
+import {
+  attachWebSocketUpgrade,
+  type UpgradeServer,
+  type WebSocketUpgradeOptions,
+} from "../src/node";
+import type { WebSocketLike } from "../src/realtime/adapters";
 
 let server: Server | undefined;
 const clients: WebSocket[] = [];
+const peers: Socket[] = [];
 
 afterEach(async () => {
   for (const client of clients.splice(0)) client.terminate();
+  for (const peer of peers.splice(0)) peer.destroy();
   server?.closeAllConnections();
   await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());
   server = undefined;
@@ -32,7 +39,7 @@ async function listen(configure: (s: Server) => void): Promise<string> {
 }
 
 /** Accept with Courier's handler and answer each connection with a word. */
-function courier(s: Server, extra: { maxPayload?: number; isAccepting?: () => boolean } = {}) {
+function courier(s: Server, extra: Partial<WebSocketUpgradeOptions> = {}) {
   return attachWebSocketUpgrade(s, {
     path: "/api/ws",
     createServer: (options) => new WebSocketServer(options) as unknown as UpgradeServer,
@@ -133,6 +140,28 @@ describe("detaching", () => {
 
     expect(await closed).toBe(1012);
   });
+
+  it("ends a connection whose peer never answered its close, which the HTTP server would wait on", async () => {
+    let detach: () => void = () => undefined;
+    let accepted: WebSocketLike | undefined;
+    const url = await listen((s) => {
+      detach = courier(s, {
+        onSocket: (socket) => {
+          accepted = socket;
+          socket.send("courier");
+        },
+      });
+    });
+    const peer = await rawUpgrade(url);
+    const ended = new Promise<"ended">((resolve) => peer.once("close", () => resolve("ended")));
+    /* The handler's drain closed it; the peer, gone silent, sends no close back. */
+    accepted?.close(1012, "Server shutting down");
+
+    detach();
+
+    /* Left to `ws`, the connection would end 30 seconds after the close. */
+    expect(await within(ended, 1_000)).toBe("ended");
+  });
 });
 
 /** Open a Courier connection over a bare TCP socket, so the test can reset it. */
@@ -144,12 +173,20 @@ async function rawUpgrade(url: string): Promise<Socket> {
     "GET /api/ws HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
       "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
   );
+  peers.push(socket);
   await new Promise<void>((resolve) => {
     socket.on("data", (chunk) => {
       if (String(chunk).includes("courier")) resolve();
     });
   });
   return socket;
+}
+
+function within<T>(promise: Promise<T>, ms: number): Promise<T | "still waiting"> {
+  return Promise.race([
+    promise,
+    new Promise<"still waiting">((resolve) => setTimeout(() => resolve("still waiting"), ms)),
+  ]);
 }
 
 describe("a client that drops the connection", () => {

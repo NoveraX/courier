@@ -30,22 +30,19 @@ function parts(overrides: Partial<Record<keyof ShutdownParts, unknown>> = {}) {
       order.push("ws drained");
     }),
   };
+  const detachWebSockets = vi.fn(() => {
+    order.push("ws detached");
+  });
   const given = {
     httpServer,
     ws,
-    getWss: () => undefined,
+    detachWebSockets,
     getSSE: () => undefined,
     /* A server that came up; stop closes only one that did. */
     ready: Promise.resolve("http://localhost:3001"),
     ...overrides,
   };
   return { given: given as unknown as ShutdownParts, httpServer, ws, order };
-}
-
-function wssWith(count: number) {
-  const clients = new Set<{ terminate: ReturnType<typeof vi.fn> }>();
-  for (let i = 0; i < count; i++) clients.add({ terminate: vi.fn() });
-  return { clients };
 }
 
 describe("createShutdown", () => {
@@ -57,13 +54,13 @@ describe("createShutdown", () => {
     vi.useRealTimers();
   });
 
-  it("drains the WebSocket handler within 5 seconds, then closes the HTTP server", async () => {
+  it("drains the WebSocket handler within 5 seconds, ends what it left open, then closes the HTTP server", async () => {
     const { given, ws, order } = parts();
 
     await createShutdown(given)();
 
     expect(ws.destroy).toHaveBeenCalledWith({ timeoutMs: 5_000 });
-    expect(order).toEqual(["ws drained", "http closed"]);
+    expect(order).toEqual(["ws drained", "ws detached", "http closed"]);
   });
 
   it("drains SSE connections beside the WebSocket ones", async () => {
@@ -73,15 +70,6 @@ describe("createShutdown", () => {
     await createShutdown(given)();
 
     expect(sse.shutdownSSE).toHaveBeenCalledWith({ retryMs: 3000, drainMs: 2000 });
-  });
-
-  it("ends the sockets still open once the handler's drain is over", async () => {
-    const wss = wssWith(2);
-    const { given } = parts({ getWss: () => wss });
-
-    await createShutdown(given)();
-
-    for (const client of wss.clients) expect(client.terminate).toHaveBeenCalledOnce();
   });
 
   it("is idempotent — second call is a no-op", async () => {

@@ -6,10 +6,10 @@
  * is told to come back later and the server closes, rather than hanging for
  * the stream's lifetime cap, 30 minutes by default. Detaching the WebSocket
  * handler closes the connections it accepted, telling clients the server is
- * going away.
+ * going away, and ends those whose clients do not answer within its drain.
  */
 import { createServer, type Server } from "node:http";
-import type { AddressInfo } from "node:net";
+import { type AddressInfo, connect, type Socket } from "node:net";
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
 import express from "express";
@@ -70,6 +70,19 @@ function closeServer(): Promise<string> {
 const timeout = (ms: number) =>
   new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
 
+/** A client that takes the upgrade and then sends nothing, not even the close it is asked for. */
+async function silentPeer(host: string): Promise<Socket> {
+  const [hostname, port] = host.split(":");
+  const socket = connect(Number(port), hostname);
+  await new Promise((resolve) => socket.once("connect", resolve));
+  socket.write(
+    `GET /api/ws HTTP/1.1\r\nHost: ${host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
+  );
+  await new Promise((resolve) => socket.once("data", resolve));
+  return socket;
+}
+
 describe("draining an Express host's SSE streams", () => {
   it("tells each stream's client to come back later and lets the server close", async () => {
     const sse = courierSSEHandler();
@@ -128,4 +141,22 @@ describe("detaching the WebSocket handler", () => {
       client.terminate();
     }
   });
+
+  it("ends a connection whose client never answers its close, so the server can close", async () => {
+    server = createServer();
+    const detach = courierWSAttach(server);
+    await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
+    const peer = await silentPeer(`127.0.0.1:${(server.address() as AddressInfo).port}`);
+    const ended = new Promise((resolve) => peer.once("close", () => resolve("ended")));
+
+    try {
+      await detach();
+
+      /* Left to `ws`, it would end 30 seconds after the handler's 5-second drain. */
+      expect(await Promise.race([ended, timeout(1000)])).toBe("ended");
+      expect(await Promise.race([closeServer(), timeout(1000)])).toBe("closed");
+    } finally {
+      peer.destroy();
+    }
+  }, 15_000);
 });

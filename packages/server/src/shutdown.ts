@@ -2,7 +2,6 @@ import type { Server } from "node:http";
 
 import type { SSEConnectionRegistry, WSHandler } from "@noverax/courier";
 import { createLogger } from "@noverax/courier";
-import type { WebSocketServer } from "ws";
 
 const log = createLogger("Server");
 
@@ -14,8 +13,8 @@ export interface ShutdownParts {
   httpServer: Server;
   /** The WebSocket handler, which closes its connections and lets go of its subscriptions */
   ws: Pick<WSHandler, "destroy">;
-  /** The `ws` server, once one exists: the sockets that did not close in time are ended there */
-  getWss: () => WebSocketServer | undefined;
+  /** Stops taking upgrades, and ends the sockets whose peers never answered their close */
+  detachWebSockets: () => void;
   /** The SSE side, to drain */
   getSSE: () =>
     | {
@@ -81,8 +80,8 @@ async function drainSSE(
 }
 
 /* The handler closes its connections and waits for them within the
-   deadline; a socket still open after it is ended without its handshake. */
+   deadline; the detach ends, without their handshake, those still open. */
 async function drainWebSockets(parts: ShutdownParts): Promise<void> {
   await parts.ws.destroy({ timeoutMs: WS_DRAIN_TIMEOUT_MS });
-  for (const ws of parts.getWss()?.clients ?? []) ws.terminate();
+  parts.detachWebSockets();
 }

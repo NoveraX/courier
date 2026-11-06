@@ -6,7 +6,9 @@
  * download resolves to the bytes, as in direct mode. A 204 read with `.raw`
  * resolves to the `{ status, headers, data }` it is in direct mode, not to
  * `null`. And a binary variable, which JSON would carry as
- * "[object Object]", is refused before anything is sent.
+ * "[object Object]", travels in a record upload and reaches the closure as
+ * the bytes it was; a stream, which no form's part is, is refused before
+ * anything is sent.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -150,13 +152,19 @@ describe("a bodiless answer read with .raw through the proxy", () => {
 });
 
 describe("a binary variable through the proxy", () => {
-  it("is refused before anything is sent, rather than sent as [object Object]", async () => {
+  it("reaches the closure as the bytes it was, rather than as [object Object]", async () => {
+    await proxyClient("arrayBuffer").put({ body: Uint8Array.of(1, 2, 3) });
+
+    expect(upstream.received.map((request) => [...request.body])).toEqual([[1, 2, 3]]);
+  });
+
+  it("is refused before anything is sent when it is a stream, which no form's part is", async () => {
     const error = await proxyClient("arrayBuffer")
-      .put({ body: Uint8Array.of(1, 2, 3) })
+      .put({ body: new Blob([Uint8Array.of(1)]).stream() as unknown as Uint8Array<ArrayBuffer> })
       .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(ConfigurationError);
-    expect((error as ConfigurationError).message).toContain("variables.body");
+    expect((error as ConfigurationError).message).toContain("variables.body is a stream");
     expect(upstream.received).toEqual([]);
   });
 });

@@ -14,6 +14,16 @@ const CRLF = "\r\n";
 /* The characters a File keeps of the type it is given: one holding any other has none (File API). */
 const MEDIA_TYPE = /^[\x20-\x7e]*$/;
 
+/** A part as the re-encoded upload sends it: a field's text, or a file's bytes as they arrive. */
+export type OutgoingPart =
+  | { readonly name: string; readonly text: string }
+  | {
+      readonly name: string;
+      readonly filename: string;
+      readonly type: string | undefined;
+      readonly body: ReadableStream<Uint8Array<ArrayBuffer>>;
+    };
+
 /** An upload being sent on: the call's options, the upload itself, and what stops it. */
 export interface StreamedForm {
   /** The text of the first part, when it is the options field the client writes first */
@@ -81,7 +91,49 @@ export async function streamedForm(
     await parts.return();
     throw error;
   }
-  const encoding = new Reencoding(multipartBoundary(), parts, fields, first);
+  return sending(options, formParts(first, parts, fields), parts);
+}
+
+/* A form's parts as they come: a field read whole, a file passed through. */
+async function* formParts(
+  first: MultipartPart | undefined,
+  parts: MultipartParts,
+  fields: TextFields,
+): AsyncGenerator<OutgoingPart, void, undefined> {
+  let part = first;
+  while (true) {
+    if (part === undefined) {
+      const next = await parts.next();
+      if (next.done) return;
+      part = next.value;
+    }
+    yield part.filename === undefined
+      ? { name: part.name, text: await fields.read(part) }
+      : { name: part.name, filename: part.filename, type: part.type, body: part.body };
+    part = undefined;
+  }
+}
+
+/**
+ * An upload sent on as the parts `outgoing` gives, re-encoded under a
+ * boundary of the proxy's own, and what stops it: stopping takes the rest of
+ * the body off the connection unread.
+ *
+ * @param options - The call's options, read before
+ * @param outgoing - The parts to send, in order, read from `parts` as they are asked for
+ * @param parts - The body's parts, whose reading stopping ends
+ * @returns The streamed upload
+ * @example
+ * ```ts
+ * return sending(options, formParts(first, parts, fields), parts);
+ * ```
+ */
+export function sending(
+  options: string | undefined,
+  outgoing: AsyncIterator<OutgoingPart>,
+  parts: MultipartParts,
+): StreamedForm {
+  const encoding = new Reencoding(multipartBoundary(), outgoing, parts);
   const upload = streamedUpload(encoding.contentType, encoding);
   trackSending(upload, encoding);
   return { options, upload, stop: () => encoding.stop() };
@@ -92,10 +144,9 @@ export async function streamedForm(
 class Reencoding implements StreamedUploadSource, UploadSending {
   readonly contentType: string;
   readonly #boundary: string;
+  readonly #outgoing: AsyncIterator<OutgoingPart>;
   readonly #parts: MultipartParts;
-  readonly #fields: TextFields;
   readonly #encoder = new TextEncoder();
-  #first: MultipartPart | undefined;
   /* The file whose bytes are being sent. */
   #file: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined;
   /* The line break that ends a file's bytes, sent with whatever follows them. */
@@ -108,17 +159,11 @@ class Reencoding implements StreamedUploadSource, UploadSending {
     this.#endWith = resolve;
   });
 
-  constructor(
-    boundary: string,
-    parts: MultipartParts,
-    fields: TextFields,
-    first: MultipartPart | undefined,
-  ) {
+  constructor(boundary: string, outgoing: AsyncIterator<OutgoingPart>, parts: MultipartParts) {
     this.contentType = `multipart/form-data; boundary=${boundary}`;
     this.#boundary = boundary;
+    this.#outgoing = outgoing;
     this.#parts = parts;
-    this.#fields = fields;
-    this.#first = first;
   }
 
   async pull(controller: ReadableStreamDefaultController<Uint8Array<ArrayBuffer>>): Promise<void> {
@@ -157,19 +202,14 @@ class Reencoding implements StreamedUploadSource, UploadSending {
       this.#file = undefined;
       this.#lead = CRLF;
     }
-    let part = this.#first;
-    this.#first = undefined;
-    if (part === undefined) {
-      const next = await this.#parts.next();
-      if (next.done) {
-        this.#ended = true;
-        return this.#text(`--${this.#boundary}--${CRLF}`);
-      }
-      part = next.value;
+    const next = await this.#outgoing.next();
+    if (next.done) {
+      this.#ended = true;
+      return this.#text(`--${this.#boundary}--${CRLF}`);
     }
-    if (part.filename === undefined) {
-      const text = await this.#fields.read(part);
-      return this.#text(`${partHead(this.#boundary, part.name)}${toCrlf(text)}${CRLF}`);
+    const part = next.value;
+    if ("text" in part) {
+      return this.#text(`${partHead(this.#boundary, part.name)}${toCrlf(part.text)}${CRLF}`);
     }
     this.#file = part.body.getReader();
     return this.#text(

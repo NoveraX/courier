@@ -25,6 +25,7 @@ export { discardBody } from "../adapter/discard-body";
 export { BROWSERS_ONLY_REFUSAL } from "../adapter/entry-gate";
 export { exposureOf } from "../adapter/exposure";
 export { readMultipartForm } from "../adapter/multipart/read-form";
+export { readRecordUpload } from "../adapter/multipart/read-record";
 export { isOriginAccepted, isOriginAllowed, isOriginListed } from "../adapter/origin-policy";
 export { peerAddressOf, rememberPeerAddress } from "../adapter/peer-address";
 export { requestBodyStream } from "../adapter/read-body";
@@ -126,6 +127,7 @@ export {
   pathPieces,
 } from "../utils/path-template";
 export { proxyRefusal } from "../utils/proxy-refusal";
+export { RECORD_UPLOAD_TYPE } from "../utils/record-upload";
 export { cutText, REDACTED, splitUrlsWithoutSecrets, urlWithoutSecrets } from "../utils/redact";
 export { registerRenderMemo } from "../utils/render-memo";
 export { sliceWhole } from "../utils/slice-whole";

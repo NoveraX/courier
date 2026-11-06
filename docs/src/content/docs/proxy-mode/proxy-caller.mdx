@@ -139,7 +139,7 @@ When sending FormData, Courier writes the call's options as an `_options` field 
 </Callout>
 
 <Callout variant="warning" title="Binary variables">
-JSON cannot carry a `Blob`, an `ArrayBuffer` or a typed array, so a proxy call whose plain-object variables hold one is refused with a `ConfigurationError` (`VARIABLE_NOT_ENCODABLE`) before anything is sent. Put binary data in a FormData.
+A record whose field holds a `Blob`, a `File` or bytes travels as a record upload, and the server restores it — see [A file among the variables](/docs/advanced/upload#a-file-among-the-variables). Binary data where no form carries it — deeper than a field, a stream, an item of a list that is the variables — is refused with a `ConfigurationError` (`VARIABLE_NOT_ENCODABLE`) before anything is sent.
 </Callout>
 
 ## Binary answers

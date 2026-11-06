@@ -1,11 +1,12 @@
 import { assertCancelPrevious } from "../define/assert-cancel-previous";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
+import { layerHeaders } from "../utils/layer-headers";
 import { servesOneUser } from "../utils/serves-one-user";
 import { assertJsonValue } from "../utils/variables-encoding";
 import { assertCarriable } from "./assert-carriable";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
 import { inProcessRoute } from "./in-process";
-import { buildPostPayload } from "./post-payload";
+import { buildPostPayload, isRecordUpload } from "./post-payload";
 import { proxyCancelPreviousOf } from "./proxy-cancel-previous";
 import { proxyRouting } from "./proxy-routing";
 import { resolveProxyPath } from "./resolve-path";
@@ -57,9 +58,8 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       kind: ProxyEndpointKind | undefined,
     ): Promise<unknown> {
       assertCarriable(variables);
-      if (!isFormData(variables)) {
-        assertJsonValue(variables, "variables", "a proxy call carries a file in a FormData");
-      }
+      const upload = isFormData(variables) || isRecordUpload(variables);
+      if (!upload) assertJsonValue(variables, "variables");
       const { group, method } = parseEndpointKey(endpoint);
       /* Found before the call first waits, as some frameworks know the
          request being served only until then. What finding it fails with —
@@ -86,7 +86,15 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       };
 
       if (
-        goesAsGet(call, { url, source, group, method, variables, reads: kind === "cached-read" })
+        goesAsGet(call, {
+          url,
+          source,
+          group,
+          method,
+          variables,
+          upload,
+          reads: kind === "cached-read",
+        })
       ) {
         return handleGetProxy({
           url,
@@ -105,6 +113,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         });
       }
 
+      const { contentType, ...payload } = buildPostPayload(variables, call.server);
       return sendFetch(
         "post",
         url,
@@ -112,7 +121,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
           ...local,
           /* The call's own query and body, which nothing a caller passes may replace. */
           searchParams: proxyRouting(source, group, method),
-          ...buildPostPayload(variables, call.server),
+          ...payload,
           /* A read that goes as a POST — its variables too long for an address, or
              sensitive — is joined as the read it is; one the client knows nothing of is not. */
           reads: kind === "cached-read" || kind === "read",
@@ -120,7 +129,9 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
           onUploadProgress: call.onUploadProgress,
           onDownloadProgress: call.onDownloadProgress,
           timeout: call.timeout,
-          headers: call.headers,
+          headers: contentType
+            ? layerHeaders(call.headers, { "content-type": contentType })
+            : call.headers,
         },
         { ...fetchCtx, stream: call.stream, raw: call.server.rawData === true },
       );
@@ -144,10 +155,10 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
 
 /**
  * Whether a call goes to the proxy as GET: when it asks for GET, or when it
- * does not say and the endpoint reads. A body — form data, an upload whose
- * progress is watched — goes as POST whatever was asked, and so does a read
- * that did not ask for GET and whose variables would make the address too
- * long for the servers and CDNs on the way.
+ * does not say and the endpoint reads. A body — form data, a record that
+ * holds a file, an upload whose progress is watched — goes as POST whatever
+ * was asked, and so does a read that did not ask for GET and whose variables
+ * would make the address too long for the servers and CDNs on the way.
  */
 function goesAsGet(
   call: {
@@ -161,10 +172,12 @@ function goesAsGet(
     group: string | undefined;
     method: string;
     variables: unknown;
+    /** Whether the variables are a form, or a record that holds a file */
+    upload: boolean;
     reads: boolean;
   },
 ): boolean {
-  if (isFormData(target.variables) || call.onUploadProgress) return false;
+  if (target.upload || call.onUploadProgress) return false;
   if (call.proxyMethod !== undefined) return call.proxyMethod === "GET";
   if (!target.reads) return false;
   return fitsInAddress(target.url, getProxyQuery({ ...target, serverOptions: call.server }));

@@ -21,6 +21,8 @@ export interface MultipartBody {
  * Encode form entries as `multipart/form-data`, as the HTML standard does.
  *
  * @param form - The entries to encode
+ * @param type - The body's media type, a multipart one of another name: a
+ *   proxy call's record that holds a file goes under one of its own
  * @returns The body and its content type
  *
  * @example
@@ -29,7 +31,7 @@ export interface MultipartBody {
  * await fetch(url, { method: "POST", body: blob, headers: { "content-type": contentType } });
  * ```
  */
-export function encodeMultipart(form: FormData): MultipartBody {
+export function encodeMultipart(form: FormData, type = "multipart/form-data"): MultipartBody {
   const boundary = multipartBoundary();
   const parts: BlobPart[] = [];
 
@@ -42,5 +44,5 @@ export function encodeMultipart(form: FormData): MultipartBody {
   }
   parts.push(`--${boundary}--${CRLF}`);
 
-  return { blob: new Blob(parts), contentType: `multipart/form-data; boundary=${boundary}` };
+  return { blob: new Blob(parts), contentType: `${type}; boundary=${boundary}` };
 }

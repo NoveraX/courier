@@ -18,13 +18,16 @@ import { ConfigurationError } from "../errors/configuration-error";
 /** Where a file sits in a record a form carries: its field, and its item in a list there. */
 export type FilePlace = readonly [field: string] | readonly [field: string, item: number];
 
-/** A part of the form a record goes as. */
-export interface FormEntry {
+/** A part of the form a record goes as: text, or a file. */
+export interface FormEntry<TFile = Blob> {
   readonly name: string;
-  readonly value: string | Blob;
-  /** Where the value was, for a file: what a proxy that restores the record puts it back at */
+  readonly value: string | TFile;
+  /** Where the value sat in the record: a proxy that restores the record puts a file back there */
   readonly at: FilePlace;
 }
+
+/** What a form takes as a file at a place of the record, or `undefined` for a value it writes as text. */
+export type FileOf<TFile> = (value: unknown, at: FilePlace) => TFile | undefined;
 
 function isBlob(value: unknown): value is Blob {
   return typeof Blob !== "undefined" && value instanceof Blob;
@@ -38,10 +41,28 @@ function isStream(value: unknown): boolean {
   return typeof ReadableStream !== "undefined" && value instanceof ReadableStream;
 }
 
-/* A value a form carries as a file: a Blob, or bytes. */
-function isFile(value: unknown): value is Blob | ArrayBuffer | ArrayBufferView {
+/**
+ * Whether a form carries a value as a file: a `Blob`, or bytes.
+ *
+ * @param value - A value of the variables
+ * @returns `true` for a file
+ * @example
+ * ```ts
+ * isFile(new Uint8Array([1])); // → true
+ * ```
+ */
+export function isFile(value: unknown): value is Blob | ArrayBuffer | ArrayBufferView {
   return isBlob(value) || isBytes(value);
 }
+
+/* A file as the form takes it: a Blob as it is, bytes as a Blob of their own. */
+function blobOf(value: unknown): Blob | undefined {
+  if (isBlob(value)) return value;
+  return isBytes(value) ? new Blob([ownBytes(value)]) : undefined;
+}
+
+/* Why a stream is refused anywhere but as the whole body. */
+const NO_STREAM_PART = "a form's part is no stream; send it as the body";
 
 /** Why a file is refused where a request sends its variables in its address. */
 export const ADDRESS_HOLDS_TEXT = "an address holds text; send a file with a verb that has a body";
@@ -73,7 +94,8 @@ export function assertJsonValue(
   binary = "a form carries a file in a field of the variables, or in a list there",
   seen: Set<object> = new Set(),
 ): void {
-  if (isFile(value) || isStream(value)) refuse(at, "binary data", binary);
+  if (isStream(value)) refuse(at, "a stream", NO_STREAM_PART);
+  if (isFile(value)) refuse(at, "binary data", binary);
   if (value instanceof Set) refuse(at, "a Set", "JSON writes it as {}; send a list");
   if (value instanceof Map) refuse(at, "a Map", "JSON writes it as {}; send an object");
   if (typeof value !== "object" || value === null || seen.has(value)) return;
@@ -107,6 +129,7 @@ export function holdsFile(record: Record<string, unknown>): boolean {
  * field `undefined` or `null` is left out, as a form has no such value.
  *
  * @param record - The variables, a file in one of their fields
+ * @param fileOf - What is a file, at its place; a `Blob` or bytes unless given
  * @returns Each part, with where it sat
  * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a value no part carries
  * @example
@@ -114,28 +137,37 @@ export function holdsFile(record: Record<string, unknown>): boolean {
  * formEntries({ title: "T", tags: ["a", "b"] }).map((entry) => entry.value); // → ["T", "a", "b"]
  * ```
  */
-export function formEntries(record: Record<string, unknown>): FormEntry[] {
-  const entries: FormEntry[] = [];
+export function formEntries(record: Record<string, unknown>): FormEntry[];
+export function formEntries<TFile>(
+  record: Record<string, unknown>,
+  fileOf: FileOf<TFile>,
+): FormEntry<TFile>[];
+export function formEntries(
+  record: Record<string, unknown>,
+  fileOf: FileOf<unknown> = blobOf,
+): FormEntry<unknown>[] {
+  const entries: FormEntry<unknown>[] = [];
+  const add = (name: string, value: unknown, at: FilePlace, path: string): void => {
+    const file = fileOf(value, at);
+    const part = file === undefined ? textOf(value, path) : file;
+    if (part !== undefined) entries.push({ name, value: part, at });
+  };
   for (const [name, value] of Object.entries(record)) {
     if (!Array.isArray(value)) {
-      const part = partOf(value, `variables.${name}`);
-      if (part !== undefined) entries.push({ name, value: part, at: [name] });
+      add(name, value, [name], `variables.${name}`);
       continue;
     }
     value.forEach((item: unknown, index) => {
-      const part = partOf(item, `variables.${name}[${index}]`);
-      if (part !== undefined) entries.push({ name, value: part, at: [name, index] });
+      add(name, item, [name, index], `variables.${name}[${index}]`);
     });
   }
   return entries;
 }
 
-/* A value as a form's part: text, or a file. */
-function partOf(value: unknown, at: string): string | Blob | undefined {
+/* A value as a form's text part. */
+function textOf(value: unknown, at: string): string | undefined {
   if (value === undefined || value === null) return undefined;
-  if (isBlob(value)) return value;
-  if (isBytes(value)) return new Blob([ownBytes(value)]);
-  if (isStream(value)) refuse(at, "a stream", "a form's part is no stream; send it as the body");
+  if (isStream(value)) refuse(at, "a stream", NO_STREAM_PART);
   if (value instanceof Date) return value.toISOString();
   if (typeof value !== "object") return String(value);
   assertJsonValue(value, at, "a form sends an object as JSON; give the file a field of its own");

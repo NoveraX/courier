@@ -1,3 +1,4 @@
+import { RECORD_UPLOAD_TYPE } from "../utils/record-upload";
 import { discardBody } from "./discard-body";
 import { type EnvelopeResult, refusedBody } from "./envelope-result";
 import type { HandlerConfig } from "./handler-config";
@@ -38,6 +39,7 @@ export async function readEnvelope(
   const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
 
   if (mediaType === "multipart/form-data") return readUpload(request, contentType, config);
+  if (mediaType === RECORD_UPLOAD_TYPE) return readUpload(request, contentType, config, true);
   if (mediaType !== "application/json") {
     discardBody(request);
     return { ok: false, status: 415, message: "Unsupported Content-Type" };

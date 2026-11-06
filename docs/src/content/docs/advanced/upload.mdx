@@ -107,7 +107,11 @@ What no form of the request carries is refused before anything is sent, with a `
 
 A read sends a `FormData`'s text fields in its address, as a browser sends a form whose method is GET; a file in it is refused the same way.
 
-A proxy call carries a file in a `FormData`: a record that holds one is refused there with the same code — see [Binary data outside FormData](#binary-data-outside-formdata).
+Through the proxy, a record that holds a file travels as a record upload: a multipart body of its own media type, `multipart/vnd.courier.variables`, which holds the call's options, the record with each file's place, and the files. The server restores the record, so the endpoint's schema, its middleware and its closure see what a direct call sees, and the upstream receives the form a direct call sends — the same parts, each file passed through as it arrived.
+
+Sent on as it arrives (`uploadMode: "stream"`, below), the call's variables are a `StreamedUpload`, as a form's are: the upstream receives the form the record goes as, and the path takes no parameter from it.
+
+A record upload is a format between the proxy client and the server: a server of an earlier release answers it `415`, so deploy the client and the server together.
 
 ## Raw binary bodies
 
@@ -299,17 +303,15 @@ Because the endpoint is in the URL, the proxy knows which call an upload is for 
 
 ## Binary data outside FormData <ModeBadge mode="proxy" />
 
-Variables other than a `FormData` travel to the proxy as JSON, which has no binary type: a `Blob`, `File`, `ArrayBuffer`, typed array or `ReadableStream` would arrive as `{}`. A proxy call whose variables hold one anywhere is therefore refused before it is sent, with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE` and whose message names where it sits. Send the file inside a `FormData`; a direct call from the server carries any body as it is.
+A record of variables that holds a file in a field, or in a list there, reaches the server through the proxy as it was — see [A file among the variables](#a-file-among-the-variables). Other variables travel to the proxy as JSON, which has no binary type: a `Blob`, `File`, `ArrayBuffer`, typed array or `ReadableStream` would arrive as `{}`. A proxy call whose variables hold one where no form carries it — a file deeper than a field, a stream in a field, binary data in a list — is therefore refused before it is sent, with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE` and whose message names where it sits. A direct call from the server carries any body as it is.
 
 ```typescript
-// Refused in proxy mode: the Blob would reach the server as {}
-await caller.files.upload({ body: blob })
-// ConfigurationError: [courier] variables.body is binary data, ...
+// Refused in proxy mode: a form sends an object as JSON, which keeps no file
+await caller.files.upload({ meta: { body: blob } })
+// ConfigurationError: [courier] variables.meta.body is binary data, ...
 
-// Reaches the server intact
-const formData = new FormData()
-formData.append("file", blob, "report.pdf")
-await caller.files.upload(formData)
+// Reaches the server intact: the file sits in a field
+await caller.files.upload({ name: "report.pdf", body: blob })
 ```
 
 ## Empty file handling

@@ -10,7 +10,9 @@ import type { FileStore } from "./multipart/file-store";
 import { memoryStore } from "./multipart/memory-store";
 import { nodeDisk } from "./multipart/node-disk";
 import { type FormLimits, readForm } from "./multipart/read-form";
+import { readRecord } from "./multipart/read-record";
 import { streamedForm } from "./multipart/streamed-form";
+import { streamedRecord } from "./multipart/streamed-record";
 import { UPLOAD_ROOM, UploadHold } from "./multipart/upload-hold";
 import { requestBodyStream } from "./read-body";
 import { parseWireOptionsJson } from "./wire-options";
@@ -18,13 +20,15 @@ import { parseWireOptionsJson } from "./wire-options";
 /** An upload read as far as its call needs before it runs, and what lets go of it. */
 interface HeldUpload {
   options: string | undefined;
-  variables: FormData | StreamedUpload;
+  variables: FormData | Record<string, unknown> | StreamedUpload;
   release(): Promise<void>;
 }
 
 /**
- * Read a proxy upload — a `multipart/form-data` body — into its envelope:
- * the options the client wrote first, and the caller's upload.
+ * Read a proxy upload — a `multipart/form-data` body, or a record upload — into
+ * its envelope: the options the client wrote first, and the caller's upload.
+ * A record upload's variables are the record its client sent, each file at
+ * the place it held; a form's are the form.
  *
  * The body is parsed as it arrives, never held whole before it is. Kept,
  * each file is held once, as the part that carried it ends — in memory, or
@@ -42,6 +46,7 @@ interface HeldUpload {
  * @param request - The proxy request
  * @param contentType - Its `Content-Type`, which names the boundary
  * @param config - The handler's limits and how it holds uploads
+ * @param record - Whether the body is a record upload, `multipart/vnd.courier.variables`
  * @returns The envelope and the `release` that lets go of what the upload
  *   holds, or why it is refused
  *
@@ -54,6 +59,7 @@ export async function readUpload(
   request: Request,
   contentType: string,
   config: HandlerConfig | undefined,
+  record = false,
 ): Promise<EnvelopeResult> {
   let boundary: string;
   try {
@@ -78,8 +84,8 @@ export async function readUpload(
   try {
     upload =
       config?.uploadMode === "stream"
-        ? await sentOn(body, boundary, limits)
-        : await kept(body, boundary, limits, config);
+        ? await sentOn(body, boundary, limits, record)
+        : await kept(body, boundary, limits, config, record);
   } catch (error) {
     if (error instanceof BodyError) return refusedBody(error);
     throw error;
@@ -103,6 +109,7 @@ async function kept(
   boundary: string,
   limits: FormLimits,
   config: HandlerConfig | undefined,
+  record: boolean,
 ): Promise<HeldUpload> {
   const hold = new UploadHold({
     memoryBytes: config?.totalUploadMemoryBytes ?? UPLOAD_ROOM.MEMORY_BYTES,
@@ -110,6 +117,10 @@ async function kept(
   });
   const store = storeFor(config, hold);
   try {
+    if (record) {
+      const read = await readRecord(body, boundary, limits, store, hold);
+      return { options: read.options, variables: read.variables, release: () => store.release() };
+    }
     const { options, form } = await readForm(body, boundary, limits, store, hold);
     return { options, variables: form, release: () => store.release() };
   } catch (error) {
@@ -126,8 +137,13 @@ async function sentOn(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
+  record: boolean,
 ): Promise<HeldUpload> {
-  const { options, upload, stop } = await streamedForm(body, boundary, limits);
+  const { options, upload, stop } = await (record ? streamedRecord : streamedForm)(
+    body,
+    boundary,
+    limits,
+  );
   return {
     options,
     variables: upload,

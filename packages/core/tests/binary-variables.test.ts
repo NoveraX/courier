@@ -1,11 +1,12 @@
 /**
  * Binary data inside a proxy call's variables.
  *
- * The proxy envelope is JSON, and JSON has no binary type: a Blob, an
- * ArrayBuffer or a stream would become `{}` on the way, and a closure that
- * sends `v.body` upstream would send the text `[object Object]` while the
- * call resolved as if the bytes had arrived. Such a call is refused before
- * anything is sent, naming where the binary value sits.
+ * A record whose field holds a file — a Blob, an ArrayBuffer, a typed array —
+ * travels as a record upload, and the server restores it, so a closure that
+ * sends `v.body` upstream sends the bytes the page had. What no form carries
+ * — a stream in a field, a file deeper than a field or a list's item — is
+ * refused before anything is sent, naming where it sits: JSON would have
+ * turned it into `{}` on the way.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -73,15 +74,24 @@ describe("a proxy call carrying binary variables", () => {
     ["a Blob", new Blob([bytes])],
     ["an ArrayBuffer", bytes.slice().buffer],
     ["a typed array", bytes],
-    ["a stream", new Blob([bytes]).stream()],
-  ])("is refused before anything is sent when it holds %s", async (_, body) => {
+  ])("hands the closure the bytes when a field holds %s", async (_, body) => {
     const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
 
-    const failure = await client.files.upload({ body }).catch((error: unknown) => error);
+    await expect(client.files.upload({ body, name: "a" })).resolves.toEqual({ ok: true });
+
+    expect(upstreamBodies).toEqual([bytes]);
+  });
+
+  it("is refused before anything is sent when a field holds a stream", async () => {
+    const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
+
+    const failure = await client.files
+      .upload({ body: new Blob([bytes]).stream() })
+      .catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(ConfigurationError);
     expect((failure as ConfigurationError).code).toBe("VARIABLE_NOT_ENCODABLE");
-    expect((failure as Error).message).toContain("variables.body");
+    expect((failure as Error).message).toContain("variables.body is a stream");
     expect(upstreamBodies).toHaveLength(0);
   });
 

@@ -143,6 +143,7 @@ A call's variables are written into its request by one set of rules, in a direct
 | A file in a read's variables, sent in its address as `{}` | `VARIABLE_NOT_ENCODABLE` |
 | A read's `FormData`, its fields left out of its address | its text fields sent in the address; a file in it is `VARIABLE_NOT_ENCODABLE` |
 | `error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE"` | `error.code === "VARIABLE_NOT_ENCODABLE"`, from a direct call and from a proxy call alike |
+| A proxy call's record whose field held a file, refused | sent as a record upload, `multipart/vnd.courier.variables`, which the server restores the record from. A server of an earlier release answers it `415`: deploy the client and the server together |
 
 ## Endpoints Addressed with .via()
 

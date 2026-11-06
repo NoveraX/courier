@@ -184,6 +184,15 @@ function specUrl(url: string): URL {
       url,
     });
   }
+  /* A credential in the address goes wherever the address is written down — the config, a log, a
+     page — so it is refused here, before anything is sent; the import's auth carries it instead. */
+  if (parsed.username !== "" || parsed.password !== "") {
+    throw new SpecFetchError(
+      "SPEC_CREDENTIALS_IN_URL",
+      `${url} carries a user or a password in its address. Give them as the import's auth, read from the environment, and the address without them.`,
+      { url },
+    );
+  }
   return parsed;
 }
 

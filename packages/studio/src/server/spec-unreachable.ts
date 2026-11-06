@@ -74,7 +74,7 @@ export function proxyRefused(
   const reason = statusText ? `407 ${statusText}` : "407";
   return new SpecFetchError(
     "SPEC_UNREACHABLE",
-    `${url.host} could not be reached through the proxy at ${proxy.origin} (the proxy answered ${reason}). Give the proxy's credentials in its URL, as http://user:password@proxy:port.`,
+    `${url.host} could not be reached through the proxy at ${proxy.origin} (the proxy answered ${reason}). Give the proxy's credentials in the proxy's URL, its user and password before its host.`,
     { url: url.href },
   );
 }
@@ -88,7 +88,7 @@ function reasonOf(code: string, cause: Error): string {
 
 function credentialsHint(code: string, cause: Error): string {
   return code === "ERR_PROXY_TUNNEL" && / 407\b/.test(cause.message)
-    ? " Give the proxy's credentials in its URL, as http://user:password@proxy:port."
+    ? " Give the proxy's credentials in the proxy's URL, its user and password before its host."
     : "";
 }
 

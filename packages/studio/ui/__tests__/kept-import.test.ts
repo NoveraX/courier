@@ -30,6 +30,16 @@ describe("what of an unfinished import is kept", () => {
     expect(keptImport("raw", "x".repeat(70_000))).toBeNull();
     expect(readKeptImport({ source: "file", content: "x" })).toBeNull();
   });
+
+  it("is not an address that carries a credential, which every page of the project would be shown", () => {
+    expect(keptImport("url", "https://ana:pw@api.example/openapi.json")).toBeNull();
+    expect(keptImport("url", "https://api.example/openapi.json?api_key=k3y-9f2c")).toBeNull();
+    expect(readKeptImport({ source: "url", content: "https://ana:pw@api.example/x" })).toBeNull();
+    expect(keptImport("url", "https://api.example/openapi.json?page=2")).toEqual({
+      source: "url",
+      content: "https://api.example/openapi.json?page=2",
+    });
+  });
 });
 
 describe("the import wizard", () => {

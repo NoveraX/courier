@@ -1,3 +1,4 @@
+import { urlWithoutSecrets } from "@noverax/courier/internal";
 import { create } from "zustand";
 
 import type { ImportSource } from "@/features/apis/types-generate";
@@ -28,7 +29,8 @@ export const useKeptImport = create<{ kept: KeptImport | null }>(() => ({ kept: 
 /**
  * What of an unfinished import is worth keeping: an address, or a pasted
  * spec while it is small. A file is not kept — it is picked again — nor is
- * an empty field.
+ * an empty field, nor an address that carries a credential: what is kept is
+ * shown to every page of the project, a page without its token too.
  *
  * @param source - Where the spec comes from
  * @param content - The address or text typed
@@ -44,6 +46,7 @@ export function keptImport(
   fromTraffic = false,
 ): KeptImport | null {
   if (source === "file" || content.trim() === "") return null;
+  if (source === "url" && urlWithoutSecrets(content) !== content) return null;
   if (source === "raw" && content.length > KEPT_TEXT_CHARS) return null;
   return { source, content, ...(source === "raw" && fromTraffic && { fromTraffic: true }) };
 }

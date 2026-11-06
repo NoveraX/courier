@@ -1,9 +1,11 @@
-import { CourierError } from "@noverax/courier";
+import { CourierError, redact } from "@noverax/courier";
+import { urlWithoutSecrets } from "@noverax/courier/internal";
 import { errnoCode, messageOf } from "@noverax/courier-cli/devkit";
 
 /** Why Studio did not fetch a specification from a URL. */
 export type SpecFetchErrorCode =
   | "SPEC_URL_INVALID"
+  | "SPEC_CREDENTIALS_IN_URL"
   | "SPEC_HOST_PRIVATE"
   | "SPEC_REDIRECTS"
   | "SPEC_REDIRECT_INVALID"
@@ -16,6 +18,7 @@ export type SpecFetchErrorCode =
 /* Codes for a URL Studio refused to fetch, rather than one it failed to. */
 const REFUSALS: ReadonlySet<SpecFetchErrorCode> = new Set([
   "SPEC_URL_INVALID",
+  "SPEC_CREDENTIALS_IN_URL",
   "SPEC_HOST_PRIVATE",
 ]);
 
@@ -33,10 +36,12 @@ export class SpecFetchError extends CourierError<SpecFetchErrorCode> {
     message: string,
     options: { cause?: unknown; url?: string } = {},
   ) {
-    super(message, {
+    /* The address is the developer's, and may carry what the import's auth should have: what is
+       said of it, here and wherever the error is shown or logged, says it without its secrets. */
+    super(redact(message), {
       code,
       cause: options.cause,
-      context: options.url ? { url: options.url } : undefined,
+      context: options.url ? { url: urlWithoutSecrets(options.url) } : undefined,
     });
   }
 

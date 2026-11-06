@@ -4,6 +4,7 @@
 
 import { createLogger } from "@noverax/courier";
 import type { CourierImportEntry } from "@noverax/courier/config";
+import { urlWithoutSecrets } from "@noverax/courier/internal";
 import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { messageOf, readProjectText } from "@noverax/courier-cli/devkit";
 import type { ImportStateEntry } from "../apis/imports-state";
@@ -77,16 +78,18 @@ export async function fetchSpecRaw(
       return await fetchSpec(specUrl, allowlist, { headers, signal });
     } catch (err) {
       if (signal?.aborted) return null;
-      log.warn(`Studio could not fetch the spec from ${specUrl}`, err);
+      /* Said of the address without the credentials it may carry. */
+      const shown = urlWithoutSecrets(specUrl);
+      log.warn(`Studio could not fetch the spec from ${shown}`, err);
       if (err instanceof SpecHostsUnavailableError) {
-        sendRouteFailure(res, err, `Failed to fetch spec from ${specUrl}`);
+        sendRouteFailure(res, err, `Failed to fetch spec from ${shown}`);
         return null;
       }
       const refused = err instanceof SpecFetchError && err.refused;
       const reason = messageOf(err);
       res
         .status(refused ? 400 : 502)
-        .json({ error: `Failed to fetch spec from ${specUrl}: ${reason}` });
+        .json({ error: `Failed to fetch spec from ${shown}: ${reason}` });
       return null;
     }
   }

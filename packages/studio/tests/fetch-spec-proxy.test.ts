@@ -211,7 +211,7 @@ describe("with Node's proxy on", () => {
     expect(through.seen).toEqual(["CONNECT hidden.example:443 (auth)"]);
     expect(failure).toMatchObject({
       code: "SPEC_UNREACHABLE",
-      message: `hidden.example could not be reached through the proxy at ${through.url} (the proxy answered 407 Refused). Give the proxy's credentials in its URL, as http://user:password@proxy:port.`,
+      message: `hidden.example could not be reached through the proxy at ${through.url} (the proxy answered 407 Refused). Give the proxy's credentials in the proxy's URL, its user and password before its host.`,
     });
     expect(String((failure as Error).message)).not.toContain("s3cret");
   });

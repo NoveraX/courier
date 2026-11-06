@@ -76,8 +76,18 @@ const reconnecting: MachineState = {
   authSeq: 1,
   refusal: undefined,
   retryIn: 4000,
+  retryAt: NOW + 4000,
   cause: { kind: "closed", code: 1006, reason: "", opened: true },
   deadline: { ms: 4000, fires: "retry" },
+};
+/* Refused over a limit, the server naming a wait of 10 s: called back 11 s on. */
+const heldBack: MachineState = {
+  ...reconnecting,
+  retryIn: 11_000,
+  retryAt: NOW + 11_000,
+  notBefore: NOW + 10_000,
+  cause: { kind: "closed", code: 4429, reason: "Too many connections", opened: true },
+  deadline: { ms: 11_000, fires: "retry" },
 };
 const failed: MachineState = {
   phase: "failed",
@@ -200,6 +210,7 @@ describe("an attempt that does not get through", () => {
         authSeq: 1,
         refusal: undefined,
         retryIn: 1000,
+        retryAt: NOW + 1000,
         cause: { kind: "mismatch", frame: "subscribed" },
         deadline: { ms: 1000, fires: "retry" },
       },
@@ -270,6 +281,7 @@ describe("an open connection that drops", () => {
         authSeq: 1,
         refusal: undefined,
         retryIn: 1000,
+        retryAt: NOW + 1000,
         cause: { kind: "closed", code: 1006, reason: "", opened: true },
         deadline: { ms: 1000, fires: "retry" },
       },
@@ -289,14 +301,19 @@ describe("an open connection that drops", () => {
     expect(state).toMatchObject({ failures: 5, retryIn: 16_000 });
   });
 
-  it("waits no less than the server asked", () => {
+  it("waits no less than the server asked, and keeps when that wait ends", () => {
     const { state } = step(open(), {
       type: "closed",
       closure: { code: 1001, reason: "", retryAfterMs: 2500 },
       announced: false,
     });
 
-    expect(state).toMatchObject({ phase: "reconnecting", retryIn: 3500 });
+    expect(state).toMatchObject({
+      phase: "reconnecting",
+      retryIn: 3500,
+      retryAt: NOW + 3500,
+      notBefore: NOW + 2500,
+    });
   });
 
   it("tells each subscription of a message lost over the server's frame limit", () => {
@@ -509,8 +526,46 @@ describe("a resume signal", () => {
       ...reconnecting,
       failures: 0,
       retryIn: 400,
+      retryAt: NOW + 400,
       deadline: { ms: 400, fires: "retry" },
     });
+  });
+
+  it("never puts a reconnect off: one due sooner than the random moment keeps its time", () => {
+    const due = { ...reconnecting, retryIn: 100, retryAt: NOW + 100 };
+
+    expect(step(due, { type: "resume", signal: "online" }).state).toEqual({ ...due, failures: 0 });
+  });
+
+  it.each(["visible", "pageshow", "focus", "online"] as const)(
+    "keeps a wait the server asked for on %s, a little past it, its failures counted",
+    (signal) => {
+      expect(step(heldBack, { type: "resume", signal }, NOW + 1000)).toEqual({
+        state: {
+          ...heldBack,
+          retryIn: 9_400,
+          retryAt: NOW + 10_400,
+          deadline: { ms: 9_400, fires: "retry" },
+        },
+        effects: [],
+      });
+    },
+  );
+
+  it("reconnects at once once the wait the server asked for is over", () => {
+    expect(step(heldBack, { type: "resume", signal: "focus" }, NOW + 10_000).state).toEqual(
+      connecting({ authSeq: 1 }),
+    );
+  });
+
+  it("keeps a wait due before the moment past the server's", () => {
+    const due = {
+      ...heldBack,
+      retryAt: NOW + 10_200,
+      deadline: { ms: 10_200, fires: "retry" as const },
+    };
+
+    expect(step(due, { type: "resume", signal: "focus" })).toEqual({ state: due, effects: [] });
   });
 
   it("has an open connection checked, within the server's heartbeat", () => {

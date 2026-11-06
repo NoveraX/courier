@@ -7,7 +7,8 @@
  * than its server asks, and no more than five minutes for it; a 401 is tried
  * once more when the credentials asked for anew have changed; and the page's
  * signals bring back a stream that waits to reconnect, or that a sleep left
- * silent. The streams here are the test's own, under fake timers.
+ * silent — though not before a wait its server asked for, the failures in a
+ * row still counted. The streams here are the test's own, under fake timers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -226,6 +227,41 @@ describe("the page's signals", () => {
     await settled();
 
     expect([served.length, subscription.status]).toEqual([2, "connected"]);
+  });
+
+  it("keep the wait a 429's Retry-After asked for", async () => {
+    const fetch = stubFetch((call) =>
+      call === 0 ? { status: 429, headers: { "Retry-After": "30" } } : undefined,
+    );
+    open();
+    await settled();
+    await vi.advanceTimersByTimeAsync(1_500);
+
+    signal("focus");
+    await vi.advanceTimersByTimeAsync(28_499);
+    await settled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(101);
+    await settled();
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("keep that wait when the network comes back, the refusals in a row counted", async () => {
+    const fetch = stubFetch((call) =>
+      call < 2 ? { status: 429, headers: { "Retry-After": "30" } } : undefined,
+    );
+    const subscription = open();
+    const waits = waitsOf(subscription);
+    await settled();
+
+    signal("online");
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(101);
+    await settled();
+
+    expect(waits, "the second refusal waits 30 s and 200 ms").toEqual([30_100, 30_200]);
   });
 
   it("open again a stream a sleep left silent, and leave one heard from lately", async () => {

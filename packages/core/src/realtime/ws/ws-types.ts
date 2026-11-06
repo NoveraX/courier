@@ -79,9 +79,10 @@ export interface WSConnectionConfig {
   /**
    * Whether the page's resume signals act on the connection (default
    * `true`): one waiting to reconnect does so at once when the network comes
-   * back, the page is shown again or its window gets focus, and an open one
-   * is checked with a ping. Where there is no page — Node, React Native —
-   * there are no signals, and `reconnect()` serves.
+   * back, the page is shown again or its window gets focus — not before a
+   * wait its server asked for, which it keeps — and an open one is checked
+   * with a ping. Where there is no page — Node, React Native — there are no
+   * signals, and `reconnect()` serves.
    */
   reconnectOnResume?: boolean | undefined;
   /**

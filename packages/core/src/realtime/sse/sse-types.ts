@@ -32,9 +32,10 @@ export interface SubscribeSSEOptions {
   /**
    * Whether the page's signals act on the stream — the network back, the
    * page shown again or back from the back/forward cache, its window
-   * focused: one waiting to reconnect does so at once, and one open that
-   * has heard nothing from its server for longer than `heartbeatTimeout`,
-   * as after the computer slept, is opened again. `true` unless set to `false`.
+   * focused: one waiting to reconnect does so at once, though not before a
+   * wait its server asked for, and one open that has heard nothing from its
+   * server for longer than `heartbeatTimeout`, as after the computer slept,
+   * is opened again. `true` unless set to `false`.
    */
   reconnectOnResume?: boolean | undefined;
   /** External cancellation signal */

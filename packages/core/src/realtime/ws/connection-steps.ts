@@ -65,7 +65,10 @@ function failuresAfter(state: MachineState, ctx: MachineContext): number {
   return stable ? 0 : state.failures + 1;
 }
 
-/** Wait to reconnect, as long as the backoff says, or not sooner than the server asked. */
+/**
+ * Wait to reconnect, as long as the backoff says, or not sooner than the
+ * server asked — a wait it asked for is kept to, the page's signals too.
+ */
 export function schedule(
   from: MachineState,
   ctx: MachineContext,
@@ -82,6 +85,8 @@ export function schedule(
       authSeq: from.authSeq,
       refusal: from.refusal,
       retryIn,
+      retryAt: ctx.now + retryIn,
+      ...(hintMs !== undefined && { notBefore: ctx.now + hintMs }),
       cause,
       deadline: { ms: retryIn, fires: "retry" },
     },

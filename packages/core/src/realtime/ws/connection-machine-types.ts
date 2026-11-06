@@ -107,6 +107,10 @@ export type MachineState =
   | (Memory & {
       readonly phase: "reconnecting";
       readonly retryIn: number;
+      /** When the wait ends, by the clock the machine is handed */
+      readonly retryAt: number;
+      /** Before when the server asked not to be called back, when it asked: a page's signal does not end the wait sooner */
+      readonly notBefore?: number | undefined;
       readonly cause: ReconnectCause;
       readonly deadline: Deadline;
     })

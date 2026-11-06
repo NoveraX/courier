@@ -5,7 +5,8 @@
  * reconnects and closes at any moment, a server of another version that
  * answers in its own frames. Whatever the order, it keeps one socket at a
  * time, is open only once admitted, sends its credentials only on an open
- * socket, and stays closed once closed.
+ * socket, stays closed once closed, and lets no page's signal bring it back
+ * before a wait its server asked for is over.
  *
  * Sequences come from a seeded generator; a failure names its seed, and the
  * same seed replays it.
@@ -125,6 +126,14 @@ function run(seed: number, length: number): void {
       }
     }
     if (state.phase === "connecting" && before.phase !== "connecting") ended = false;
+    const held = before.phase === "reconnecting" ? before.notBefore : undefined;
+    if (event.type === "resume" && held !== undefined && now < held) {
+      expect(state, `${where}: back before the server's wait`).toMatchObject({
+        phase: "reconnecting",
+        failures: before.failures,
+      });
+      expect(state.phase === "reconnecting" && state.retryAt >= held, where).toBe(true);
+    }
     if ("deadline" in state) {
       expect(Number.isFinite(state.deadline.ms) && state.deadline.ms >= 0, where).toBe(true);
     }

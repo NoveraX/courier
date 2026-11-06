@@ -7,6 +7,7 @@ import type { SubscriptionSink } from "../subscription-driver";
 import { type ConnectionEnd, type ConnectionProgress, readConnection } from "./sse-read";
 import { SSEResponseError } from "./sse-response";
 import type { SubscribeSSEOptions } from "./sse-types";
+import { waitToReconnect } from "./sse-wait";
 
 const log = createLogger("SSE");
 
@@ -48,8 +49,13 @@ export interface SSEConnectionCtx<TData> {
   retry?: ConnectionRetry | undefined;
   /** The connection being read, aborted to reconnect at once */
   current?: AbortController | undefined;
-  /** Set to reconnect at once; ends the wait before the next connection, when one is waited out */
-  now?: (() => void) | boolean | undefined;
+  /**
+   * Set to reconnect at once. While the wait before the next connection
+   * lasts, what ends it — or, given a moment, brings its end forward to it
+   */
+  now?: ((at?: number) => void) | boolean | undefined;
+  /** Before when the server asked not to be called back, by the clock that does not jump */
+  notBefore?: number | undefined;
   /** When the open connection last heard from its server, by the clock a sleep moves on */
   heardAt?: number | undefined;
   /** The fingerprint of what the connection being opened was given by `beforeConnect` */
@@ -125,7 +131,7 @@ export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Pr
 
     const delay = asked ? 0 : noteRetry(ctx, Math.max(unstable - 1, 0), failures, progress, failed);
     ctx.sink.reconnecting();
-    await wait(delay, ctx);
+    await waitToReconnect(delay, ctx);
     /* Asked to reconnect at once: the attempts start over. */
     if (ctx.now === true) failures = unstable = 0;
   }
@@ -158,13 +164,13 @@ function noteRetry<TData>(
   progress: ConnectionProgress,
   failed: unknown,
 ): number {
-  const hint = ctx.serverRetryMs;
+  const asked = ctx.serverRetryMs;
+  const hint =
+    asked === undefined ? undefined : Math.min(asked, CLIENT_LIMITS.RECONNECT_MAX_HINT_MS);
   const { backoff } = ctx.config;
-  const delay =
-    hint === undefined
-      ? backoffDelay(step, backoff)
-      : hintedDelay(Math.min(hint, CLIENT_LIMITS.RECONNECT_MAX_HINT_MS), step, backoff);
+  const delay = hint === undefined ? backoffDelay(step, backoff) : hintedDelay(hint, step, backoff);
   ctx.serverRetryMs = undefined;
+  ctx.notBefore = hint === undefined ? undefined : performance.now() + hint;
   ctx.retry = {
     failures,
     retryIn: delay,
@@ -186,21 +192,4 @@ function gaveUp(failures: number, lastError: unknown): ConnectionError {
   const status = lastError instanceof SSEResponseError ? lastError.statusCode : undefined;
   const cause = lastError instanceof Error ? `: ${lastError.message}` : "";
   return new ConnectionError(`SSE connection failed ${failures} times in a row${cause}`, status);
-}
-
-/* The wait before the next connection, ended early by the subscription's end or by `reconnectNow`. */
-function wait<TData>(ms: number, ctx: SSEConnectionCtx<TData>): Promise<void> {
-  if (ms === 0) return Promise.resolve();
-  const { signal } = ctx.controller;
-  return new Promise((resolve) => {
-    const wake = () => {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", wake);
-      if (ctx.now === wake) ctx.now = undefined;
-      resolve();
-    };
-    const timer = setTimeout(wake, ms);
-    signal.addEventListener("abort", wake, { once: true });
-    ctx.now = wake;
-  });
 }

@@ -3,9 +3,12 @@
  *
  * A page whose network comes back, or that is shown again, reconnects its
  * socket at once rather than waiting out the backoff — up to 30 seconds by
- * default — and an application can reconnect it at once itself. A socket
- * that still reads as open when the network comes back is checked: a dead
- * one sends no close event, and only the server's silence gave it away.
+ * default — and an application can reconnect it at once itself. A wait the
+ * server asked for is kept: a server at capacity is called back a little at
+ * random after it, however often the page says it is back, and the
+ * refusals in a row stay counted. A socket that still reads as open when
+ * the network comes back is checked: a dead one sends no close event, and
+ * only the server's silence gave it away.
  *
  * The sockets here are stand-ins the test opens, admits and fails, under
  * fake timers for the waits: no network is involved.
@@ -48,6 +51,20 @@ class StandInSocket implements WSClientSocket {
   fail(): void {
     this.readyState = 3;
     this.onclose?.({ code: 1006, reason: "" });
+  }
+
+  /** The socket opens and the server refuses it over its connection limit, naming a wait of 10 s. */
+  refuse(): void {
+    this.readyState = 1;
+    this.onopen?.({});
+    this.onmessage?.({
+      data: JSON.stringify({
+        type: "auth_error",
+        error: { code: 4429, message: "Too many connections" },
+        v: 2,
+        retryAfterMs: 10_000,
+      }),
+    });
   }
 }
 
@@ -156,6 +173,53 @@ describe("a connection waiting out its backoff", () => {
     await vi.advanceTimersByTimeAsync(1_000);
 
     expect(sockets.length).toBe(before);
+  });
+});
+
+describe("a connection waiting out the wait its server asked for", () => {
+  /* Without jitter the first wait is the server's 10 s and the backoff's 1 s. */
+  const atTheLimit = () => open({ backoff: { jitter: false } });
+
+  it("is not brought back before it when its window gets focus", async () => {
+    atTheLimit();
+    lastSocket().refuse();
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    window.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(8_999);
+    expect(sockets).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1_001);
+
+    expect(sockets).toHaveLength(2);
+  });
+
+  it("is not brought back before it when the network comes back, and counts its refusals", async () => {
+    const conn = atTheLimit();
+    lastSocket().refuse();
+    await vi.advanceTimersByTimeAsync(11_000);
+    lastSocket().refuse();
+
+    window.dispatchEvent(new Event("online"));
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(sockets).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(1_001);
+    expect(sockets).toHaveLength(3);
+    lastSocket().refuse();
+
+    expect(retryOf(conn)?.retryIn, "the third refusal waits 10 s and 4").toBe(14_000);
+  });
+
+  it("is not brought back before it however often its tab is shown", async () => {
+    atTheLimit();
+    lastSocket().refuse();
+
+    for (let shown = 0; shown < 5; shown++) {
+      await vi.advanceTimersByTimeAsync(1_100);
+      show();
+    }
+    await vi.advanceTimersByTimeAsync(4_000);
+
+    expect(sockets).toHaveLength(1);
   });
 });
 

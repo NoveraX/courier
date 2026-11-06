@@ -1,3 +1,4 @@
+import type { ResumeSignal } from "../resume-signals";
 import type { MachineContext, MachineEvent, Phase, Step } from "./connection-machine-types";
 import { connect, onClosed, schedule, stay } from "./connection-steps";
 
@@ -85,16 +86,32 @@ export function fromReconnecting(
       return connect(state, ctx, state.failures, state.refusal);
     case "reconnect":
       return connect(state, ctx, 0, undefined);
-    case "resume": {
-      if (event.signal !== "online") return connect(state, ctx, 0, state.refusal);
-      /* The network is back for everyone it dropped at once: each waits a little at random. */
-      const retryIn = ctx.spread();
-      return {
-        state: { ...state, failures: 0, retryIn, deadline: { ms: retryIn, fires: "retry" } },
-        effects: [],
-      };
-    }
+    case "resume":
+      return resumed(state, event.signal, ctx);
     default:
       return stay(state);
   }
+}
+
+/*
+ * A page's signal shortens only the client's own wait, never puts it off.
+ * A wait the server asked for — one at capacity, one shutting down — is
+ * kept: the connection comes back a little at random after it, the
+ * failures in a row still counted, as the server's answer is the same. The
+ * network back, for everyone it dropped at once, brings each back a little
+ * at random too, and starts the waits over; any other signal reconnects now.
+ */
+function resumed(state: Phase<"reconnecting">, signal: ResumeSignal, ctx: MachineContext): Step {
+  const { notBefore, retryAt } = state;
+  const held = notBefore !== undefined && ctx.now < notBefore;
+  if (!held && signal !== "online") return connect(state, ctx, 0, state.refusal);
+  const at = Math.min((held ? notBefore : ctx.now) + ctx.spread(), retryAt);
+  if (held && at === retryAt) return stay(state);
+  const failures = held ? state.failures : 0;
+  if (at === retryAt) return { state: { ...state, failures }, effects: [] };
+  const retryIn = at - ctx.now;
+  return {
+    state: { ...state, failures, retryIn, retryAt: at, deadline: { ms: retryIn, fires: "retry" } },
+    effects: [],
+  };
 }

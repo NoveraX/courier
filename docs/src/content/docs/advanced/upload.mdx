@@ -237,7 +237,7 @@ Under Next.js a route's body arrives without backpressure: Next.js reads the bro
 
 ### What the proxy takes
 
-An upload is held, beyond its size, to 1000 parts, fields and files together (`maxUploadParts`), to 8 KB of headers for each part, and its text fields together to `maxBodyBytes`, the limit a JSON call is held to. The proxy refuses one that breaks a limit as soon as the part that breaks it arrives, with `413` and a `code` that names the limit, and takes the rest of the body off the connection unread, so the browser reads the answer. A form that does not parse is answered `400` with the code `BODY_MALFORMED`:
+An upload is held, beyond its size, to 1000 parts, fields and files together (`maxUploadParts`), to 8 KB of headers for each part, and its text fields together to `maxBodyBytes`, the limit a JSON call is held to. A record upload's parts are counted as the form it goes as: its options, each field that holds a value, each item of a list and each file — a list of a thousand empty strings is a thousand parts, sent as so many to your backend — and a record over the limit is refused once it is read, before any of it is sent on. The proxy refuses one that breaks a limit as soon as the part that breaks it arrives, with `413` and a `code` that names the limit, and takes the rest of the body off the connection unread, so the browser reads the answer. A form that does not parse is answered `400` with the code `BODY_MALFORMED`:
 
 - a line that ends in a bare line feed, or a header line folded onto the next;
 - a part with no `Content-Disposition: form-data`, or no `name`, or a header or a parameter given twice;

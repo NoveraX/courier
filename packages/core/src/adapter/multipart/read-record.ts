@@ -40,15 +40,24 @@ export function malformedRecord(why: string): BodyError {
  * an item of a list there, that holds `null`; the files come in the order the
  * record's fields, and the items of each list, give their places.
  *
+ * The record is held to the parts an upload may hold as the form it goes as
+ * would be: each field that holds a value, each item of a list and each file
+ * is a part of that form, beside the parts before the record. A list of a
+ * few hundred thousand empty strings, a few hundred kilobytes of text, went
+ * on as as many parts.
+ *
  * @param text - The part's text
+ * @param maxParts - The most parts an upload may hold
+ * @param before - The parts the upload holds before the record: its options
  * @returns The record, and its files' places in the order they come
- * @throws BodyError `BODY_MALFORMED` for text that is no such record, or a place it does not hold
+ * @throws BodyError `BODY_MALFORMED` for text that is no such record, or a place it does not hold;
+ *   `UPLOAD_TOO_MANY_PARTS` for a record whose form holds more parts than `maxParts` allows
  * @example
  * ```ts
- * recordOf('{"variables":{"title":"Dune","cover":null},"files":[["cover"]]}').places; // → [["cover"]]
+ * recordOf('{"variables":{"title":"Dune","cover":null},"files":[["cover"]]}', 1000).places; // → [["cover"]]
  * ```
  */
-export function recordOf(text: string): RecordSlots {
+export function recordOf(text: string, maxParts: number, before = 0): RecordSlots {
   let decoded: unknown;
   try {
     decoded = JSON.parse(text, reviveWithoutPrototypeKeys);
@@ -63,12 +72,19 @@ export function recordOf(text: string): RecordSlots {
   const named = new Set(files.map(placeKey));
   if (named.size !== files.length) throw malformedRecord("names a file's place twice");
   const places: FilePlace[] = [];
+  let parts = before;
+  /* A value the form writes a part for: one that is not null, or a file at its place. */
+  const take = (value: unknown, place: FilePlace): void => {
+    const file = value === null && named.has(JSON.stringify(place));
+    if (file) places.push(place);
+    if (file || value !== null) parts += 1;
+  };
   for (const [field, value] of Object.entries(variables)) {
-    if (value === null && named.has(JSON.stringify([field]))) places.push([field]);
-    if (!Array.isArray(value)) continue;
-    value.forEach((item: unknown, index) => {
-      if (item === null && named.has(JSON.stringify([field, index]))) places.push([field, index]);
-    });
+    if (!Array.isArray(value)) take(value, [field]);
+    else for (const [index, item] of value.entries()) take(item, [field, index]);
+  }
+  if (parts > maxParts) {
+    throw new BodyError("UPLOAD_TOO_MANY_PARTS", `An upload holds more than ${maxParts} parts`);
   }
   if (places.length !== files.length)
     throw malformedRecord("names a place its record holds no file at");
@@ -128,7 +144,7 @@ export async function readRecord(
       if (part.name !== RECORD_PART || part.filename !== undefined) {
         throw malformedRecord(`holds no ${RECORD_PART} part after its options`);
       }
-      record = recordOf(await fields.read(part));
+      record = recordOf(await fields.read(part), limits.maxParts, options === undefined ? 0 : 1);
     } else {
       const place = record.places[filled];
       if (place === undefined || part.filename === undefined || part.name !== place[0]) {

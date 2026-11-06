@@ -1,10 +1,11 @@
 /**
  * A record upload — a record of variables that holds a file, sent through the
  * proxy as `multipart/vnd.courier.variables` — is held to what every upload
- * is: its size to `maxUploadBytes`, its text to `maxBodyBytes`, what it keeps
- * to the room every upload shares, refused 413 or 503 with the codes a form
- * gets. Sent on as it arrives, it is read no faster than the upstream takes
- * it. A multipart body of a type the proxy does not take is refused 415.
+ * is: its size to `maxUploadBytes`, its text to `maxBodyBytes`, its parts to
+ * `maxUploadParts` as the form it goes as counts them, what it keeps to the
+ * room every upload shares, refused 413 or 503 with the codes a form gets.
+ * Sent on as it arrives, it is read no faster than the upstream takes it. A
+ * multipart body of a type the proxy does not take is refused 415.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -88,6 +89,19 @@ function recordBody(fileBytes: number, text = "hi"): Uint8Array<ArrayBuffer> {
   );
 }
 
+/** A record upload of a file and a list of `items` empty strings, each a part of the form it goes as. */
+function listBody(items: number): Uint8Array<ArrayBuffer> {
+  const record = { variables: { cover: null, tags: Array(items).fill("") }, files: [["cover"]] };
+  return concat(
+    field("_options", "{}"),
+    field("_variables", JSON.stringify(record)),
+    fileHead.replace('name="file"', 'name="cover"'),
+    "png",
+    "\r\n",
+    close,
+  );
+}
+
 function request(body: BodyInit, type = `${RECORD_UPLOAD_TYPE}; boundary=${B}`, length?: number) {
   return new Request("http://localhost/api/request?_s=api&_g=files&_m=upload", {
     method: "POST",
@@ -128,6 +142,30 @@ describe("a record upload", () => {
 
     expect(answer.status).toBe(413);
     expect(await answer.json()).toMatchObject({ success: false, code: "BODY_TOO_LARGE" });
+  });
+
+  it.each([
+    ["kept", {}],
+    ["sent on as it arrives", { uploadMode: "stream" } as const],
+  ])("holds its record to maxUploadParts as the form it goes as, %s", async (_, config) => {
+    let calls = 0;
+    const handlePost = await proxyTo((req, res) => {
+      calls += 1;
+      req.resume();
+      req.on("end", () => res.end("{}"));
+    }, config);
+
+    /* Its options, its file and 998 items: 1000 parts, the most an upload may hold. */
+    const taken = await handlePost(request(listBody(998)));
+    const refused = await handlePost(request(listBody(999)));
+
+    expect(taken.status).toBe(200);
+    expect(refused.status).toBe(413);
+    expect(await refused.json()).toMatchObject({
+      code: "UPLOAD_TOO_MANY_PARTS",
+      message: "An upload holds more than 1000 parts",
+    });
+    expect(calls).toBe(1);
   });
 
   it("whose record's text passes maxBodyBytes is refused 413, the code a form's text gets", async () => {

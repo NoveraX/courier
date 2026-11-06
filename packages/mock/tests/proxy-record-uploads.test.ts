@@ -7,8 +7,8 @@
  * record. It holds one to its limits as it holds a form — over its upload
  * limit refused with 413, its text over the limit JSON is held to with 413,
  * a file of a type the mock's or the route's own types leave out with the
- * 415 a form's file gets — and one that does not parse with 400, as a
- * Courier server refuses it.
+ * 415 a form's file gets — and one that does not parse, or whose form would
+ * hold more parts than an upload may, as a Courier server refuses it.
  */
 import { createCaller, createProxyCaller, HTTPError } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
@@ -206,6 +206,51 @@ describe("a record that holds a file, through the proxy to a mock", () => {
       expect(handled).toBe(0);
     },
   );
+});
+
+describe("a record upload whose form holds more parts than an upload may", () => {
+  /* The mock's own limits, which the record's text is held to as well. */
+  const roomy = createAutoMockServer({
+    source: reportsApi("http://api.test"),
+    port: 0,
+    log: false,
+    overrides: (mock) => {
+      mock("reports", "note").returns(({ variables }) => {
+        handled += 1;
+        return { tags: (variables as { tags: unknown[] }).tags.length };
+      });
+    },
+  });
+  let roomyUrl: string;
+  beforeAll(async () => {
+    roomyUrl = (await roomy.start()).url;
+  });
+  afterAll(async () => {
+    await roomy.stop();
+  });
+
+  const listed = (items: number) =>
+    fetch(
+      `${roomyUrl}/api/request?_s=api&_g=reports&_m=note`,
+      recordUpload(
+        ["_options", "{}"],
+        ["_variables", JSON.stringify({ variables: { tags: Array(items).fill("") }, files: [] })],
+      ),
+    );
+
+  it("is refused 413 as a Courier server refuses it, before its handler runs", async () => {
+    /* Its options and 999 items: 1000 parts, the most an upload may hold. */
+    const taken = await listed(999);
+    const refused = await listed(1000);
+
+    expect(await taken.json()).toEqual({ tags: 999 });
+    expect(refused.status).toBe(413);
+    expect(await refused.json()).toEqual({
+      success: false,
+      message: "An upload holds more than 1000 parts",
+    });
+    expect(handled).toBe(1);
+  });
 });
 
 describe("a record upload written by hand", () => {

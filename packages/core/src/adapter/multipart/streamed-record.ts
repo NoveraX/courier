@@ -41,7 +41,11 @@ export async function streamedRecord(
     if (next.done || next.value.name !== RECORD_PART || next.value.filename !== undefined) {
       throw malformedRecord(`holds no ${RECORD_PART} part after its options`);
     }
-    record = recordOf(await fields.read(next.value));
+    record = recordOf(
+      await fields.read(next.value),
+      limits.maxParts,
+      options === undefined ? 0 : 1,
+    );
   } catch (error) {
     await parts.return();
     throw error;

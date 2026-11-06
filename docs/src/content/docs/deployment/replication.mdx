@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Replication Guide",
   description: "Production-ready multi-replica setup for every supported framework — Next.js, Express, Fastify, Hono, NestJS, and Standalone Server.",
-  updated: "2026-11-05",
+  updated: "2026-11-06",
 }
 
 This guide shows a complete, production-ready realtime setup with Redis adapters for each supported framework.
@@ -510,7 +510,7 @@ const ws = createWSHandler({
 })
 ```
 
-Over the limit, the oldest connection of the key is closed with `4409` "Replaced by a newer connection", wherever it is held, and a Courier client does not reconnect on it. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. A key that is `undefined` puts the connection under no limit.
+Over the limit, the oldest connection of the key is closed with `4409` "Replaced by a newer connection", wherever it is held, and a Courier client does not reconnect on it. With `onExceed: "reject"`, the new connection is closed with `4429` instead, and its `onDisconnect` runs. The server tells its client to try again in 10 seconds, as a place may free meanwhile, and `onConnect` and `onDisconnect` run for each try. A key that is `undefined` puts the connection under no limit.
 
 Keys reach the store hashed, with HMAC under `cluster.secret` when it is set, never as they are. If the store cannot decide within 2 seconds, the replica decides by its own count of the key's connections and logs why: a limit guards against abuse, and an outage of the store must not lock users out.
 

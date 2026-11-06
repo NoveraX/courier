@@ -45,7 +45,7 @@ describe("classifyClose", () => {
     [4403, "origin not allowed", ForbiddenError],
     [4409, "replaced by a newer connection", RealtimeError],
     [4421, "host not allowed", RealtimeError],
-    [4429, "too many connections, with no wait to come back after", RateLimitError],
+    [4429, "a limit that names no wait to come back after", RateLimitError],
   ])("gives up after %i (%s)", (code, _why, kind) => {
     const disposition = classifyClose({ code, reason: "Refused" });
 
@@ -164,19 +164,19 @@ describe("a connection the server refuses", () => {
     expect(statuses).not.toContain("reconnecting");
   });
 
-  it("ends the channel when the address has too many connections", async () => {
+  it("calls the channel back after the server's wait when the address has too many connections", async () => {
     served = await serveWS({ room }, { maxConnectionsPerIP: 1 });
     const first = open(served.url);
     await settle(100);
 
     const second = open(`${served.url}?peer=second`);
     await settle(1_500);
+    const status = second.ch.status;
     first.ch.close();
+    second.ch.close();
 
-    expect(second.errors).toHaveLength(1);
-    expect(second.errors[0]).toBeInstanceOf(RateLimitError);
-    expect(second.ch.status).toBe("disconnected");
-    expect(second.statuses).not.toContain("reconnecting");
+    expect(second.errors).toEqual([]);
+    expect(status).toBe("reconnecting");
   });
 
   it("ends the channel when its origin is not allowed", async () => {

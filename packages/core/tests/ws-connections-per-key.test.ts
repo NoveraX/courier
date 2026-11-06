@@ -71,11 +71,16 @@ describe("maxConnectionsPerKey", () => {
     await expect
       .poll(() => first.closed)
       .toMatchObject({ code: 4409, reason: "Replaced by a newer connection" });
+    expect(first.sent.at(-1)).toEqual({
+      type: "disconnect",
+      code: 4409,
+      reason: "Replaced by a newer connection",
+    });
     expect([second.closed, third.closed]).toEqual([undefined, undefined]);
     await expect.poll(() => handler.stats().connections).toBe(2);
   });
 
-  it("refuses a new connection over the limit with 4429 when told to, and runs its onDisconnect", async () => {
+  it("refuses a new connection over the limit with 4429 and a wait when told to, and runs its onDisconnect", async () => {
     const onDisconnect = vi.fn();
     const handler = serve({ maxConnectionsPerKey: perUser(1, "reject"), onDisconnect });
     const first = await connect(handler, "u1");
@@ -83,6 +88,7 @@ describe("maxConnectionsPerKey", () => {
     const second = await connect(handler, "u1");
 
     expect(second.closed).toMatchObject({ code: 4429, reason: "Too many connections" });
+    expect(second.sent.at(-1)).toMatchObject({ type: "auth_error", retryAfterMs: 10_000 });
     expect(first.closed).toBeUndefined();
     expect(onDisconnect).toHaveBeenCalledWith(
       expect.objectContaining({ meta: { userId: "u1" }, code: 4429 }),

@@ -237,7 +237,7 @@ A socket that takes longer than 15 s to open, or a server that takes longer than
 | `4401` | credentials refused, expired or not renewed in time | asks for its credentials anew, once, and signs in with them if they changed; otherwise ends its channels with an `AuthError` |
 | `4403`, `4421` | origin or host not allowed | ends its channels with the error |
 | `4409` | replaced by a newer connection of the same user | ends its channels: reconnecting would replace that one in turn |
-| `4429` | too many connections from the address or the user | ends its channels with a `RateLimitError`, unless the server names a wait: then it is called back after it |
+| `4429` | too many connections from the address or the user, or too much sent before the connection was let in | called back after the wait the server names, 10 s for too many connections, as a place may free meanwhile; with none named, as for too much sent, ends its channels with a `RateLimitError` |
 | `1002` | the two ends speak different versions of the protocol | from a server older than the client, reconnects after a wait, as a rollout replaces that server; from a newer one, ends its channels with the error — the page needs loading again |
 | `1003`, `1007`, `1008`, `4400`, `4000`–`4099` | data or a policy the server will not take, or the application said no | ends its channels with the error |
 
@@ -271,7 +271,7 @@ const server = await createCourierServer({
 })
 ```
 
-The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. What it holds is bounded: twice `maxSubscriptionsPerConnection` frames, four times `maxMessageSize` in all, and no frame larger than `maxMessageSize`. A socket that sends more before it is admitted is closed with `4429`. A socket whose first frame is no `auth` of the protocol's version — a client that is not Courier's, or a page left open from an older build — is refused with `1002` and why, and one that sends nothing for `authTimeoutMs` (3 s) is closed with `4408`.
+The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. What it holds is bounded: twice `maxSubscriptionsPerConnection` frames, four times `maxMessageSize` in all, and no frame larger than `maxMessageSize`. A socket that sends more before it is admitted is closed with `4429`, naming no wait: a Courier client does not come back after it. A socket whose first frame is no `auth` of the protocol's version — a client that is not Courier's, or a page left open from an older build — is refused with `1002` and why, and one that sends nothing for `authTimeoutMs` (3 s) is closed with `4408`.
 
 To have a client prove who it is again on an open connection — its token about to expire — call `connections.requireAuth(connectionId, { timeoutMs })`, or name every connection of a user with a selector, `connections.requireAuth({ meta: { userId } })`, which reaches them on every replica that shares the pub/sub adapter: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata.
 

@@ -4,6 +4,7 @@ import { WS_CODE } from "../realtime/ws/ws-codes";
 import { encodeMessage, PROTOCOL_VERSION, type WSMessage } from "../realtime/ws/ws-protocol";
 import { closeReason } from "./close-reason";
 import { MISCONFIGURED_REFUSAL } from "./entry-gate";
+import { WS_SERVER_LIMITS } from "./ws-server-limits";
 
 /**
  * Why the server closes a connection, which its code, its reason and the
@@ -15,6 +16,7 @@ export type SessionClose =
   | { readonly kind: "origin" }
   /** Its hosts or origins cannot be read: the handler serves no socket until they can */
   | { readonly kind: "misconfigured" }
+  /** Over a limit on the connections of its address or its key: its client tries again after a wait, as a place may free */
   | { readonly kind: "limit" }
   /** Given up for a newer connection of its key, over `maxConnectionsPerKey` */
   | { readonly kind: "evicted" }
@@ -145,7 +147,7 @@ export function closeOf(why: SessionClose): CloseFrame {
  * The frame that tells a client why it is closed, sent just before the
  * close: `auth_error` while it has not been let in, and for credentials it
  * sent again that were refused; `disconnect` once it has been. A stopping
- * server says when to come back.
+ * server says when to come back, and so does a limit on connections.
  *
  * @param why - Why it is closed
  * @param close - The code and reason it is closed with
@@ -159,7 +161,7 @@ export function closeOf(why: SessionClose): CloseFrame {
  */
 export function noticeOf(why: SessionClose, close: CloseFrame, admitted: boolean): WSMessage {
   const { code, reason } = close;
-  const later = why.kind === "shutdown" ? { retryAfterMs: why.retryAfterMs } : {};
+  const later = pauseOf(why);
   if (admitted && why.kind !== "reauth-refused")
     return { type: "disconnect", code, reason, ...later };
   const id = "id" in why ? why.id : undefined;
@@ -170,6 +172,15 @@ export function noticeOf(why: SessionClose, close: CloseFrame, admitted: boolean
     v: PROTOCOL_VERSION,
     ...later,
   };
+}
+
+/* The wait a client comes back after: a stopping server's, drawn for each connection, and a
+   limit's on connections, which a place freeing lifts. Too much sent before the connection was
+   let in, or a connection replaced, is told none: coming back would meet the same answer. */
+function pauseOf(why: SessionClose): { readonly retryAfterMs?: number } {
+  if (why.kind === "shutdown") return { retryAfterMs: why.retryAfterMs };
+  if (why.kind === "limit") return { retryAfterMs: WS_SERVER_LIMITS.LIMIT_RETRY_AFTER_MS };
+  return {};
 }
 
 /**

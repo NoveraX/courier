@@ -8,6 +8,8 @@ export const WS_SERVER_LIMITS = {
   SHUTDOWN_TIMEOUT_MS: 5_000,
   /** The span a stopping handler spreads its clients' reconnects over, so they do not come back at once (5 s) */
   SHUTDOWN_RECONNECT_SPREAD_MS: 5_000,
+  /** How long a client refused for a limit on connections — its address's, its key's — waits to try again, as a place may free meanwhile (10 s) */
+  LIMIT_RETRY_AFTER_MS: 10_000,
   /** How long a lease store has to decide a connection's place before the replica decides alone */
   LEASE_TIMEOUT_MS: 2_000,
   /** How often a replica renews the leases it holds — a third of the 60 s a shared store keeps them */

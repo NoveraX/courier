@@ -85,6 +85,29 @@ describe("createSession", () => {
     });
   });
 
+  it("tells a client refused for a limit on connections when to try again, and one that sent too much not", () => {
+    const [limited, flooded] = [createFakeSocket(), createFakeSocket()];
+
+    createSession(limited).close({ kind: "limit" });
+    createSession(flooded).close({ kind: "flood" });
+
+    expect(limited.sent).toEqual([
+      {
+        type: "auth_error",
+        error: { code: 4429, message: "Too many connections" },
+        v: 2,
+        retryAfterMs: 10_000,
+      },
+    ]);
+    expect(flooded.sent).toEqual([
+      {
+        type: "auth_error",
+        error: { code: 4429, message: "Too much sent before the connection was accepted" },
+        v: 2,
+      },
+    ]);
+  });
+
   it("refuses a code no socket can send, before closing anything", () => {
     const socket = createFakeSocket();
     const session = createSession(socket);

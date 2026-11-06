@@ -1,9 +1,10 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createTerminalStyle } from "@noverax/courier/internal";
 import { afterAll, describe, expect, it } from "vitest";
 
+import { SetupFailure } from "../../src/apply/setup-failure";
 import { transact } from "../../src/apply/transaction";
 import type { Plan } from "../../src/plan/build-plan";
 import { packageManager } from "../../src/project/package-manager";
@@ -47,7 +48,11 @@ function tree(root: string): Record<string, string> {
   );
 }
 
-async function upgradeWith(root: string, behaviour: string) {
+async function upgradeWith(
+  root: string,
+  behaviour: string,
+  afterWrites?: (signal: AbortSignal) => Promise<void>,
+) {
   const ends: SetupEnd[] = [];
   const text = textReport(createTerminalStyle(0, false), () => undefined);
   const report = {
@@ -62,6 +67,7 @@ async function upgradeWith(root: string, behaviour: string) {
       manager: packageManager("npm"),
       plan: PLAN,
       install: { when: "after", commands: [[process.execPath, FAKE, behaviour, "prod"]] },
+      afterWrites,
     },
     { questions: undefined, report, toolOutput: "stdout" },
   );
@@ -79,6 +85,27 @@ describe("transact, installing after the writes", () => {
     expect(JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"))).toEqual({
       lockfileVersion: 3,
       listed: { "@noverax/courier": "^0.5.0" },
+    });
+  });
+
+  it("keeps package.json someone changed after the install, and names it once, when a later step fails", async () => {
+    const root = projectWith({ "package.json": BEFORE, "package-lock.json": "{}\n" });
+    const theirs = AFTER.replace("{\n", '{\n  "private": true,\n');
+
+    const { result, end } = await upgradeWith(root, "lock", async () => {
+      writeFileSync(join(root, "package.json"), theirs);
+      throw new SetupFailure("IMPORT_FAILED", "A later step failed");
+    });
+
+    expect(result).toBe(1);
+    expect(readFileSync(join(root, "package.json"), "utf8")).toBe(theirs);
+    expect(readFileSync(join(root, "package-lock.json"), "utf8")).toBe("{}\n");
+    expect(end).toMatchObject({
+      kind: "failed",
+      undone: {
+        putBack: ["package-lock.json"],
+        kept: [{ path: "package.json", why: expect.stringContaining("changed since") }],
+      },
     });
   });
 

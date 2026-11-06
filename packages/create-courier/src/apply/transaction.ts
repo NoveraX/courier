@@ -47,6 +47,10 @@ function undoAfter(
   const files = journal.undo();
   const manifests = snapshot?.restore() ?? { removed: [], putBack: [], kept: [] };
   const restored = new Set([...manifests.putBack, ...manifests.removed]);
+  /* package.json an install rewrote is no change of the person's: the snapshot put it back. */
+  const journalKept = files.kept.filter((file) => !restored.has(file.path));
+  /* A file both kept is named once, as the journal names it. */
+  const named = new Set(journalKept.map((file) => file.path));
   const failure = error instanceof SetupFailure ? error : undefined;
   const code = failure?.code ?? "UNEXPECTED_ERROR";
   io.report.end({
@@ -56,8 +60,7 @@ function undoAfter(
     undone: {
       removed: [...files.removed, ...manifests.removed],
       putBack: [...files.putBack, ...manifests.putBack],
-      /* package.json an install rewrote is no change of the person's: the snapshot put it back. */
-      kept: [...files.kept.filter((file) => !restored.has(file.path)), ...manifests.kept],
+      kept: [...journalKept, ...manifests.kept.filter((file) => !named.has(file.path))],
     },
     reinstall: snapshot === undefined ? undefined : changes.manager.install().join(" "),
     error: failure === undefined && error instanceof Error ? error : undefined,
@@ -91,6 +94,7 @@ export function transact(changes: Changes, io: SetupIO): Promise<Done | number> 
     let snapshot: ManifestSnapshot | undefined;
     const installNow = async (commands: readonly string[][]) => {
       await install(root, commands, signal, io.toolOutput);
+      snapshot?.installed();
       io.report.installed(commands);
     };
     try {

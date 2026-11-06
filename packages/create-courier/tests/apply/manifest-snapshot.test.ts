@@ -25,6 +25,33 @@ describe("snapshotManifests", () => {
     expect(readFileSync(join(root, "yarn.lock"), "utf8")).toBe("# yarn\n");
   });
 
+  it("puts a file back once the install has run only while it holds what the install left, and keeps one changed since", () => {
+    const root = projectWith({
+      "package.json": '{ "name": "app" }\n',
+      "package-lock.json": "{}\n",
+    });
+    const snapshot = snapshotManifests(root);
+    const theirs = '{ "name": "app", "scripts": { "dev": "vite" } }\n';
+
+    writeFileSync(join(root, "package.json"), '{ "name": "app", "dependencies": {} }\n');
+    writeFileSync(join(root, "package-lock.json"), '{ "lockfileVersion": 3 }\n');
+    snapshot.installed();
+    writeFileSync(join(root, "package.json"), theirs);
+
+    expect(snapshot.restore()).toEqual({
+      removed: [],
+      putBack: ["package-lock.json"],
+      kept: [
+        {
+          path: "package.json",
+          why: "it changed after the install wrote it, so it was left as it is",
+        },
+      ],
+    });
+    expect(readFileSync(join(root, "package.json"), "utf8")).toBe(theirs);
+    expect(readFileSync(join(root, "package-lock.json"), "utf8")).toBe("{}\n");
+  });
+
   it("notes the workspace's lockfile, which an install in one of its packages writes", () => {
     const root = projectWith({
       "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",

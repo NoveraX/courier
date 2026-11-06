@@ -1,10 +1,12 @@
-export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-11-06" }
+export const metadata = { title: "createCaller", description: "Factory function that creates a typed caller for server-side direct HTTP calls — no proxy hop needed.", mode: "direct", updated: "2026-11-07" }
 
 ## Import
 
 ```ts
 import { createCaller } from "@noverax/courier"
 ```
+
+`@noverax/courier` gives the server's caller, wherever it runs, and so does `@noverax/courier/server`; a page or an app takes its own from `@noverax/courier/client`. The server's caller lends the calls of its process what only a server does — the user's session, read from the request a call's context names or the one an adapter serves, and the addresses that request came through — and checks the options only a server reads as it is made: `session`, `forward`, the header lists beside a session and `.agent()`, whatever `NODE_ENV` says. A page's caller carries none of that code, and its calls carry the cookies the browser sends, each call refused before it goes when it would carry them over plain HTTP across the public internet. On a server, it takes what the server lent once a handler was made, the sources registered, the server's caller or a Server Action made, or the framework's request context registered with `registerRequestContext` or served with `withIncomingRequest`, and the server checks the same options at the first call it lends a request's session to. Where nothing was, a call of an API that keeps a session or forwards headers, whose context names a request, is refused with `ConfigurationError` `SERVER_CAPABILITY_MISSING`, naming the endpoint, rather than sent without the user's credentials; the refusal says what to do on a server, and what else it finds: code built for a page, or another copy of the core under another contract.
 
 ## Signature
 

@@ -18,10 +18,10 @@ const SESSION_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Refuse, where the API is defined, a session that could not work as
- * written: a key no session has, a cookie name no browser keeps, a header
- * no request can carry, a session that names no credential at all, or one
- * whose API is reached over plain HTTP across the public internet.
+ * Refuse, where a server takes the API up, a session that could not work
+ * as written: a key no session has, a cookie name no browser keeps, a
+ * header no request can carry, a session that names no credential at all,
+ * or one whose API is reached over plain HTTP across the public internet.
  *
  * @param session - The `session` the API was defined with
  * @param baseURL - Where the API is reached

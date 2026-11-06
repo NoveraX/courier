@@ -12,8 +12,8 @@ const FORWARD_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Refuse, where the API is defined, a `forward` that could not work as
- * written: a key it has no option for, a header name no request carries,
+ * Refuse, where a server takes the API up, a `forward` that could not
+ * work as written: a key it has no option for, a header name no request carries,
  * one that carries credentials or a connection's own headers, one that
  * claims a client's address outside `clientAddress`, or one that has an
  * option of its own.

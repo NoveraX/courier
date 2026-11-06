@@ -1,4 +1,4 @@
-export const metadata = { title: "User Sessions", description: "Carry the user's session, and the request's own headers, to your API — from a page the server renders, through the proxy, and from the browser.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "User Sessions", description: "Carry the user's session, and the request's own headers, to your API — from a page the server renders, through the proxy, and from the browser.", mode: "both", updated: "2026-11-07" }
 
 ## The problem it solves
 
@@ -259,9 +259,13 @@ A channel repeats no double-submit token: the server checks a socket's origin as
 
 `cacheMiddleware({ scope: "public" })` never answers a call that carries the user's session from its shared copy, nor stores its answer, and `scope: "session"` gives each set of credentials a call sends a partition of its own — in a browser and a React Native app too, where the platform sends the session's cookies. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
 
-## Errors where the API is defined
+## Where a session is checked
 
-`defineApi` refuses a session that could not work as written with a `ConfigurationError`, whose codes are listed under [`session`](/docs/api/define#session).
+A session that could not work as written is refused with a `ConfigurationError` before any call, whatever `NODE_ENV` says, on every way a server calls the API with a request: as its sources are registered, as a handler is made with them — the proxy route's, a socket's, the MCP server's — as the server's caller or a [Server Action](/docs/server-side/actions) is made, as `ensureCsrfToken` gives a page its token, and at the first call the server lends a request's session to, whichever caller made it. The codes are listed under [`session`](/docs/api/define#session).
+
+A page and a React Native app check, as each call goes, that it would not carry the session over plain HTTP across the public internet: such a call is refused with `SESSION_INSECURE_TRANSPORT` before anything is sent, unless `allowHttp` is set. An address on the machine or on a private network is not across the internet, and the call goes. A page's definitions check none of the rest.
+
+A call of an API that keeps a session or forwards headers, whose context names the request it serves, cannot go without the server's part. Made with the caller of `@noverax/courier/client` in a process where nothing lent it — no handler made, no sources registered, no server's caller made — it is refused with `ConfigurationError` `SERVER_CAPABILITY_MISSING`, naming the endpoint, rather than sent without the user's credentials. Make server code's caller with `createCaller` from `@noverax/courier/server`, or register the framework's request context with `registerRequestContext`. The refusal says so, and adds what else it finds: code built for a page, or another copy of the core of another version in the process, which `npm ls @noverax/courier`, `pnpm why @noverax/courier` or `yarn why @noverax/courier` shows.
 
 ## Next Steps
 

@@ -147,7 +147,7 @@ Next.js takes `withCourier()` from `@noverax/courier-next/plugin`, under Turbopa
 
 ## esbuild
 
-The same routes, under esbuild: the plugin from `@noverax/courier-build/esbuild` builds them in place of `@noverax/courier/routes`, and a bundle for any `platform` but `node` — a page's — fails where it takes the config itself.
+The same routes, under esbuild: the plugin from `@noverax/courier-build/esbuild` builds them in place of `@noverax/courier/routes`, and a bundle for any `platform` but `node` — a page's — fails where it takes the config itself. A page's bundle takes the core's modules for a page with `platform: "browser"`, esbuild's default; `"neutral"` sets no condition, and a page built so takes the core's server modules.
 
 ```ts
 import { build } from "esbuild"
@@ -164,7 +164,7 @@ await build({ entryPoints: ["src/main.ts"], bundle: true, outdir: "dist", plugin
 
 ## Rollup and Rolldown
 
-Rollup and Rolldown take the same plugin, from `@noverax/courier-build/rollup`. Neither tells a page's bundle from a server's, so a bundle is taken for a page's, which fails where it takes the config itself; a server's, which may import it, says so:
+Rollup and Rolldown take the same plugin, from `@noverax/courier-build/rollup`. Neither tells a page's bundle from a server's, so a bundle is taken for a page's, which fails where it takes the config itself; a server's, which may import it, says so. A page's bundle takes the core's modules for a page by the `browser` condition, which Rollup's `@rollup/plugin-node-resolve` sets with `nodeResolve({ browser: true })`:
 
 ```js
 // rollup.config.js

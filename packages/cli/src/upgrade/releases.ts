@@ -97,6 +97,11 @@ export const RELEASES: readonly Release[] = [
         docs: `${UPGRADING}#endpoints-addressed-with-via`,
       },
       {
+        title:
+          "A page imports from @noverax/courier/client, a server from /server; a server checks an API's session",
+        docs: `${UPGRADING}#a-pages-imports-and-a-servers`,
+      },
+      {
         title: "create-courier needs Node.js 22.13; --yes changes no project git has not committed",
         docs: `${UPGRADING}#create-courier-and-courier-cli`,
       },

@@ -58,12 +58,13 @@ Seven of them are easy to skip by accident and worth understanding:
 - `npm run check:browser` builds what a page takes from Courier — the
   definitions, a direct caller, a proxy caller, React Query hooks with
   either — as an app's bundler builds it for production, with esbuild,
-  webpack and Vite. It fails when a page reaches a built-in module of
-  Node, when what loads at start grows past its budget for a bundler,
-  and when a module calls a browser API newer than the requirements name
-  (Safari 15.4, Chrome 97, Firefox 104), or one a page served over plain
-  HTTP lacks, without checking for it first. A change that earns more bytes
-  raises the budget of the bundler it grew under in
+  webpack and Vite; Turbopack, which no script runs outside Next.js, is
+  measured in the frameworks matrix (below). It fails when a page reaches a
+  built-in module of Node, when what loads at start grows past its budget
+  for a bundler, and when a module calls a browser API newer than the
+  requirements name (Safari 15.4, Chrome 97, Firefox 104), or one a page
+  served over plain HTTP lacks, without checking for it first. A change that
+  earns more bytes raises the budget of the bundler it grew under in
   `scripts/browser-bundles/scenarios.mjs`, saying why in its commit. It
   fails too when a page takes, in any chunk, a dynamic import's too, a core
   module only a server runs — one of the areas `module-sides.json` names, or
@@ -125,10 +126,14 @@ Seven of them are easy to skip by accident and worth understanding:
 - **Errors**: validate at system boundaries, not between trusted internals.
   Never swallow an error silently — log it or rethrow it.
 - **Comments**: explain why, not what. Delete commented-out code; git has it.
-- **Code only a server runs**: a core module a page never needs but would
-  still bundle — the terminal logger, the addresses a request came through —
+- **Code a page runs otherwise**: a core module a page runs too, but with a
+  part of its own — the terminal logger against the page's console, the
+  words a failure is answered with, which a server cuts credentials out of —
   is listed in `packages/core/tsdown.server-only.ts`, and a stand-in of the
-  same path and exports sits under `packages/core/src/browser/`. The build
+  same path and exports sits under `packages/core/src/browser/`. A module a
+  page never runs is no such module: a page's code does not import it, and
+  takes what it does from the server's registry of capabilities, as
+  `check:graph` holds it (above). The build
   imports the module through `#courier-server/…`, which the package's
   `imports` field resolves to the stand-in for a bundler building a page,
   and to the module itself for Node, an edge runtime and React Native. The
@@ -229,6 +234,12 @@ npm run test:frameworks -- --dev nuxt-4
 
 `COURIER_BROWSERS` picks the engines either check runs in, such as
 `COURIER_BROWSERS=chromium,webkit`.
+
+The Next.js 16 application gets a page for each scenario `check:browser`
+measures too, and `bundle.spec.ts` holds what Turbopack loads of Courier at
+start on each to the scenario's `turbopack` budget, reading the chunks a
+prerendered page names through their source maps, so React and React Query
+count as the application's own.
 
 CI runs one job for each version on every push and pull request, and again
 every week: a version is a range that resolves to its newest release, so a

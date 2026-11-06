@@ -1,8 +1,8 @@
 import { ConfigurationError } from "../../errors/configuration-error";
 
 /**
- * Refuse, where the API is defined, a session beside a header list that
- * carries cookies wholesale: `"cookie"` would send every cookie of the
+ * Refuse, where a server takes the API up, a session beside a header list
+ * that carries cookies wholesale: `"cookie"` would send every cookie of the
  * application, and `"set-cookie"` pass every cookie the API sets onto the
  * application's origin, unmade — the very things the session limits.
  *

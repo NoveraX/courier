@@ -59,7 +59,10 @@ export function capabilitySlots(): Slots {
  * slots whatever else its global object holds: one that put a DOM there
  * for a library is still a server. A page's bundle takes a stand-in of
  * this module, which reads no slot, so a script on the page cannot stand
- * in for a server and be handed the page's calls.
+ * in for a server and be handed the page's calls. That holds by the
+ * `browser` condition a bundler builds a page with — Rollup's
+ * `nodeResolve({ browser: true })`, esbuild's `platform: "browser"`: a page
+ * built without it takes this module.
  *
  * @param name - The capability
  * @returns Its implementation, or `undefined`

@@ -1,4 +1,4 @@
-export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-07" }
 
 ## Overview
 
@@ -122,6 +122,8 @@ export const client = createProxyCaller(routes.api)
 | Jest | the transformer `@noverax/courier-build/jest` |
 | Angular | the builders of [`@noverax/courier-angular`](https://github.com/NoveraX/courier/tree/master/packages/angular#readme), in `angular.json` |
 | Parcel | [`@noverax/parcel-transformer-courier`](https://github.com/NoveraX/courier/tree/master/packages/parcel-transformer#readme), in `.parcelrc` |
+
+A page's bundle takes the core's modules for a page by the `browser` condition: under esbuild, `platform: "browser"`, its default, sets it, and under Rollup, `nodeResolve({ browser: true })` — see [Requirements](/docs/installation#requirements).
 
 Each needs `@noverax/courier-build` installed beside it: a dev dependency, or a dependency in a Next.js app, whose `next start` loads `next.config`. The [framework guides](/docs/frameworks/overview) show the line for each, and [the engine's README](https://github.com/NoveraX/courier/tree/master/packages/build#readme) its options. `npx @noverax/create-courier` sets the plugin up in a new project, and `npx @noverax/courier-cli setup` moves a project that takes `courier.routes.ts` to it.
 

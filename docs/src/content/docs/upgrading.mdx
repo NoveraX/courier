@@ -1,6 +1,6 @@
-export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, variables, the kind of a .via() endpoint, and Studio's imports.", updated: "2026-11-06" }
+export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, variables, the kind of a .via() endpoint, where a server's options are checked, and Studio's imports.", updated: "2026-11-07" }
 
-This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, how variables are written into a request, whether an endpoint addressed with `.via()` reads or writes, and what Studio writes for an import. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
+This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, how variables are written into a request, whether an endpoint addressed with `.via()` reads or writes, where the options only a server reads are checked, and what Studio writes for an import. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
 
 ## Run the Upgrade
 
@@ -181,6 +181,17 @@ An endpoint addressed with `.via()` reads or writes as the verb its closure call
 | A closure that calls a reading verb on one path and a writing verb on another — a write | no endpoint until `.reads()` or `.writes()` names its kind; a group refuses it with that reason |
 | A closure typed `HttpProbe<Variables>` — a write | its type no longer says which verb it calls: leave its return type to be inferred, or name the kind with `.reads()` or `.writes()` |
 | A call on which a declared read's closure called `.put()`, `.patch()` or `.del()`, sent and retried as a read | `ConfigurationError` `ENDPOINT_VERB_KIND` before anything is sent; so is a call whose closure calls a verb of the other kind than the one the endpoint was defined with |
+
+## A Page's Imports and a Server's
+
+`@noverax/courier` keeps every name it had. Beside it, `@noverax/courier/client` gives what a page or an app calls an API with, and `@noverax/courier/server` what a server does with one — see [createCaller](/docs/api/create-caller#import). The options a server reads are checked on every way it calls the API with a request, and a page's definitions carry none of the checks: a page and an app check, as they call, only that their session goes nowhere over plain HTTP across the public internet — see [`session`](/docs/api/define#session).
+
+| 0.4 | Now |
+|---|---|
+| A `session`, a `forward` or a header list beside a session that could not work as written, refused by `defineApi` in every runtime | refused before any call, whatever `NODE_ENV` says, on every way a server calls the API with a request — its sources registered, a handler made with them, the server's caller or a Server Action made, `ensureCsrfToken`, the first call it lends a request's session to; a page's `defineApi` refuses none of it, and a page or an app refuses, as it makes it, a call that would carry its session over plain HTTP across the public internet |
+| A change to an API's `session`, `forward` or a header list after a server took the API up, sent by the next call unchecked | held as it was checked: `api.options` gives a frozen copy of each, a change made through it throws a `TypeError`, and a change to the objects given to `defineApi`, which stay yours, reaches no call |
+| `.agent()` given what it does not take, refused where the endpoint was written | `AGENT_OPTIONS_INVALID` as a server's sources are registered, a handler or its caller is made with them, and as `courier-mcp` lists its tools, naming where `.agent()` was written |
+| `createCaller` from `@noverax/courier` in a page | the same caller, with the server's part beside it; `createCaller` from `@noverax/courier/client` leaves that out of the page |
 
 ## create-courier and courier-cli
 

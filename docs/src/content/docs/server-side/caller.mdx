@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-11-04" }
+export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-11-06" }
 
 ## API signature
 
@@ -201,7 +201,7 @@ await serverCaller.users.getAll({ page: 1 })
 Both use the same `executeRequest` core under the hood, and the same `session` the API describes.
 
 <Callout variant="warning" title="Server-only import">
-In a Next.js app, never import your server caller in `"use client"` files: the API definition contains your `process.env.API_URL`, which would be exposed in the client bundle. A single-page app that calls its API from the browser uses `createCaller` there on purpose, with an address the browser may know — see [User Sessions](/docs/server-side/session).
+In a Next.js app, never import your server caller in `"use client"` files: the API definition contains your `process.env.API_URL`, which would be exposed in the client bundle. A single-page app that calls its API from the browser uses `createCaller` there on purpose, from `@noverax/courier/client`, which leaves the server's part out of the page, with an address the browser may know — see [User Sessions](/docs/server-side/session) and [where each caller comes from](/docs/api/create-caller#import).
 </Callout>
 
 ## Next Steps

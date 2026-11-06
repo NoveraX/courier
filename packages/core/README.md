@@ -363,6 +363,34 @@ import {
 } from "@noverax/courier"
 ```
 
+### `@noverax/courier/client` — A Page's Calls
+
+What a page or an app calls an API with, and none of the server's part: a page that imports from here loads less than one that imports the same names from the root.
+
+```ts
+import {
+  createCaller,          // A direct caller: a page's calls carry the cookies the browser sends
+  createProxyCaller,     // Proxy factory — browser → server → backend
+  createFetch,           // The standalone fetch client
+  HTTPError,             // Typed HTTP error with status, headers, data
+  isHTTPError,           // Type guard for HTTPError
+} from "@noverax/courier/client"
+```
+
+### `@noverax/courier/server` — A Server's Side
+
+```ts
+import {
+  createCaller,          // The server's caller: the user's session from the request a call serves
+  createHandler,         // Web Standard adapter handler for server frameworks
+  registerSources,       // The sources the proxy route and Studio serve
+  registerRequestContext, // A framework's request, for the calls made while it is served
+  ensureCsrfToken,       // The double-submit token for a page the server renders
+} from "@noverax/courier/server"
+```
+
+The options a server reads — `session`, `forward`, the header lists beside a session, `.agent()` — are checked on every way it calls the API with a request: its sources registered, a handler made with them, its caller or a Server Action made, `ensureCsrfToken`, and the first call it lends a request's session to. A page or an app checks, as it calls, that its session goes nowhere over plain HTTP across the public internet.
+
 ### `@noverax/courier/define` — API Definition
 
 ```ts

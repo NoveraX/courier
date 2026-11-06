@@ -1,4 +1,4 @@
-export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-11-07" }
 
 ## Import
 
@@ -228,15 +228,18 @@ defineApi({
 
 An endpoint takes it with `session: false` when it answers every user alike, and `session: "unguarded"` for a write that does no harm when another site sets it off, such as signing out. See [User Sessions](/docs/server-side/session).
 
-`defineApi` refuses a session that could not work as written, with a `ConfigurationError`:
+A session that could not work as written is refused with a `ConfigurationError` before any call, whatever `NODE_ENV` says, on every way a server calls the API with a request: as its sources are registered, as a handler is made with them — the proxy route's, a socket's, the MCP server's — as the server's caller or a Server Action is made, as `ensureCsrfToken` gives a page its token, and at the first call the server lends a request's session to, whichever caller made it. A page and a React Native app check one of these themselves, as each call goes: a call that would carry the session over plain HTTP across the public internet is refused with `SESSION_INSECURE_TRANSPORT` before anything is sent. Their definitions check none of them:
 
 | Code | When |
 | --- | --- |
-| `SESSION_OPTIONS_INVALID` | An option a session does not have, a cookie name no browser keeps, a header no request carries, or no credential named at all |
+| `SESSION_OPTIONS_INVALID` | An option a session does not have, a cookie name no browser keeps, a header no request carries, no credential named at all, or a session that is no plain data |
 | `SESSION_INSECURE_TRANSPORT` | The API is reached over plain HTTP across the public internet, and `allowHttp` is not set |
 | `SESSION_HEADER_CONFLICT` | The API's `allowedHeaders`, or an endpoint's `.headers()`, names `cookie` or `set-cookie`, which would carry every cookie past the session |
-| `FORWARD_OPTIONS_INVALID` | An option `forward` does not have, or a header it may not carry. A page does not check `forward`, which passes nothing on there: the server that shares the definition refuses it |
+| `FORWARD_OPTIONS_INVALID` | An option `forward` does not have, a header it may not carry, or a `forward` that is no plain data |
+| `HEADER_LIST_INVALID` | The API's `allowedHeaders`, or an endpoint's `.headers()`, is no list of header names: a `Set`, say |
 | `INVALID_ALLOWED_ORIGIN` | An `allowedOrigins` entry no page's `Origin` can equal |
+
+Once a server has taken the API up, it holds what it checked: in place of the API's `session`, `forward` and header lists, and of each endpoint's `.headers()` and `.agent()`, the options give a copy frozen to its depths, read once, as the check read it — the objects and the lists as you wrote them, which code that reads the options back reads as it did before — and an option the API did not name is held unset. None of them is changed or set later — doing so throws a `TypeError`. The objects given to `defineApi` stay yours, and a change made to them later reaches no call. Options put in the place of the API's or an endpoint's, and an endpoint the API is given later, are checked and held the same way before a call takes them, an endpoint too as the sources are registered again. A call reads its API's options once, as it is made, and takes what the server holds of those wherever it goes — the headers of the request it forwards, those its answer hands the browser, the address a stream opens at — so options put in their place while it is on its way are the next call's, and a server sends only what it checked. These options are data, objects of plain data and lists of strings. A server reads every option a call is made with as its own properties alone — the API's, its groups' and its endpoints', the call's own and its caller's context, those it checks and those it does not, `fetch`, `redirect`, `baseURL` and `headers` among them: what a prototype answers for a key they do not have, `Object.prototype` among them, is none of theirs and changes nothing of the call. Each request Courier sends says its own method, headers, body and signal, and its redirect where it stays on its origin; what a platform's `fetch` reads of a request beyond them is the platform's own — Node's takes a `dispatcher` from `Object.prototype`, whatever request it is handed. An instance of a class, a `Map` or a `Set` in their place is refused. In options you froze yourself no copy can take an option's place, so a server takes one there only frozen to its depths, and refuses it otherwise with the code of its check; options you sealed are held as any are.
 
 ### forward
 

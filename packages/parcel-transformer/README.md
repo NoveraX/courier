@@ -54,7 +54,7 @@ Run the transformer on the module `@noverax/courier/routes` ships, and on the co
 }
 ```
 
-Courier's packages name their modules in their `exports`, which Parcel reads once the project's `package.json` asks it to:
+Courier's packages name their modules in their `exports`, and the core the stand-ins a page takes of its server's modules in its `imports`. Parcel reads the two only once the project's `package.json` turns them on, and without it no entry point of Courier's resolves and the build fails:
 
 ```json
 {

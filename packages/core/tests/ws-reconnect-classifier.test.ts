@@ -9,6 +9,7 @@ import {
   ForbiddenError,
   RateLimitError,
   RealtimeError,
+  RealtimeValidationError,
 } from "../src/realtime/errors";
 import { classifyClose } from "../src/realtime/ws/reconnect-classifier";
 import type { WSClientSocket } from "../src/realtime/ws/ws-types";
@@ -43,9 +44,14 @@ describe("classifyClose", () => {
     [4099, "an application code", RealtimeError],
     [4400, "the client broke the protocol", RealtimeError],
     [4403, "origin not allowed", ForbiddenError],
+    [4404, "what the connection names is not there", RealtimeError],
     [4409, "replaced by a newer connection", RealtimeError],
+    [4413, "more than the server takes", RealtimeError],
+    [4418, "a refusal of the client's own, as an HTTP 4xx is", RealtimeError],
     [4421, "host not allowed", RealtimeError],
+    [4422, "what the client sent, its schema refuses", RealtimeValidationError],
     [4429, "a limit that names no wait to come back after", RateLimitError],
+    [4499, "the last of those refusals", RealtimeError],
   ])("gives up after %i (%s)", (code, _why, kind) => {
     const disposition = classifyClose({ code, reason: "Refused" });
 
@@ -163,6 +169,34 @@ describe("a connection the server refuses", () => {
     expect(ch.status).toBe("disconnected");
     expect(statuses).not.toContain("reconnecting");
   });
+
+  it.each([
+    [4404, () => new RealtimeError(4404, "No such tenant")],
+    [4413, () => new RealtimeError(4413, "Too much asked for")],
+    [4422, () => new RealtimeValidationError("Invalid auth: tenant is required")],
+  ])(
+    "ends the channel with a refusal %i of onConnect, which asking again would meet",
+    async (code, refusal) => {
+      let attempts = 0;
+      served = await serveWS(
+        { room },
+        {
+          onConnect: () => {
+            attempts++;
+            throw refusal();
+          },
+        },
+      );
+
+      const { ch, errors, statuses } = open(served.url);
+      await settle(1_500);
+
+      expect(attempts).toBe(1);
+      expect(errors).toEqual([expect.objectContaining({ code, message: refusal().message })]);
+      expect(ch.status).toBe("disconnected");
+      expect(statuses).not.toContain("reconnecting");
+    },
+  );
 
   it("calls the channel back after the server's wait when the address has too many connections", async () => {
     served = await serveWS({ room }, { maxConnectionsPerIP: 1 });

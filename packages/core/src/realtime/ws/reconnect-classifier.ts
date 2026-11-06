@@ -28,20 +28,25 @@ export type CloseDisposition =
   /** The server ended the connection, and nothing went wrong */
   | { readonly action: "finish" };
 
-/*
- * Codes a reconnect cannot change: data or a policy the server will not
- * take, an origin or host it refuses, a connection replaced by a newer one
- * of the same user — reconnecting would replace that one in turn.
- */
+/* Data or a policy the server will not take, as a proxy or `ws` says: a reconnect cannot change it. */
 const FINAL: ReadonlySet<number> = new Set([
   WS_CODE.UNSUPPORTED_DATA,
   WS_CODE.INVALID_PAYLOAD,
   WS_CODE.POLICY_VIOLATION,
-  WS_CODE.BAD_REQUEST,
-  WS_CODE.FORBIDDEN,
-  WS_CODE.REPLACED,
-  WS_CODE.HOST_NOT_ALLOWED,
 ]);
+
+/*
+ * The codes of 4400 and up follow the HTTP statuses of the same meaning,
+ * and those of 4400 to 4499 an answer to what the client sent, as HTTP's
+ * 4xx are: an origin or a host refused, what the connection names not
+ * there, what it sent refused, a connection replaced by a newer one of the
+ * same user — reconnecting would replace that one in turn. Asking again
+ * would meet the same answer, but for a timeout, which 4408 is.
+ */
+function refusedForGood(code: number): boolean {
+  const refusal = Math.floor(code / 100) === Math.floor(WS_CODE.BAD_REQUEST / 100);
+  return refusal && code !== WS_CODE.TIMEOUT;
+}
 
 /**
  * Read a socket's close against the protocol's table of codes.
@@ -55,7 +60,9 @@ const FINAL: ReadonlySet<number> = new Set([
  *   anew once, and sent only if they changed.
  * - 4429: a limit; with the server's `retryAfterMs`, tried again after it,
  *   and without one, given up.
- * - 4000–4099, and the codes above that no reconnect changes: given up.
+ * - 4000–4099, the rest of 4400–4499 but 4408 — an answer to what the
+ *   client sent, as HTTP's 4xx are — and 1003, 1007, 1008: given up, as no
+ *   reconnect changes them.
  * - Anything else — a dropped network, a server going away (1001, 1012), a
  *   slow consumer (1013), a timeout (4408) — reconnects, after the server's
  *   `retryAfterMs` when it gave one.
@@ -78,12 +85,14 @@ export function classifyClose(closure: SocketClosure): CloseDisposition {
     };
   }
   const afterMs = hintOf(closure.retryAfterMs);
+  const retry: CloseDisposition =
+    afterMs === undefined ? { action: "retry" } : { action: "retry", afterMs };
+  if (code === WS_CODE.TOO_MANY) return afterMs === undefined ? stop(closure) : retry;
   const olderServer = closure.version !== undefined && closure.version < PROTOCOL_VERSION;
   if (code === WS_CODE.PROTOCOL_MISMATCH && !olderServer) return stop(closure);
-  if (code === WS_CODE.TOO_MANY && afterMs === undefined) return stop(closure);
   const application = code >= WS_CODE.APPLICATION_FIRST && code <= WS_CODE.APPLICATION_LAST;
-  if (FINAL.has(code) || application) return stop(closure);
-  return afterMs === undefined ? { action: "retry" } : { action: "retry", afterMs };
+  if (FINAL.has(code) || application || refusedForGood(code)) return stop(closure);
+  return retry;
 }
 
 function stop(closure: SocketClosure): CloseDisposition {

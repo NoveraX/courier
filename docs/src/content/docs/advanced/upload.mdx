@@ -104,6 +104,7 @@ What no form of the request carries is refused before anything is sent, with a `
 | `[file]` | a list has no field names: send an object |
 | `{ tags: new Set(…) }`, `{ seen: new Map(…) }` | JSON writes either as `{}`, in a body or in an address |
 | `{ id: 12n }` | JSON writes no `BigInt`: send it as text, or give `BigInt` a `toJSON` of your own |
+| `meta.self = meta` | JSON writes no value inside itself; one met twice on different paths is written twice, and sent |
 | a file in the variables of a `get`, `head`, `options` or `del` | those send their variables in the address, which holds text |
 
 A read sends a `FormData`'s text fields in its address, as a browser sends a form whose method is GET; a file in it is refused the same way.

@@ -86,8 +86,10 @@ function refuse(at: string, what: string, instead: string): never {
 /**
  * Refuse what JSON would lose from a value: binary data, which it writes as
  * `{}` or as numbered fields, a `Set` or a `Map`, which it writes as `{}`, and
- * a `BigInt`, which it refuses to write. A value with a `toJSON` of its own
- * is written as that says, and not looked into.
+ * a `BigInt` or a value inside itself, which it refuses to write. A value
+ * with a `toJSON` of its own is written as that says, and not looked into. A
+ * value met twice on different paths is no cycle: JSON writes it twice, and
+ * it is looked into on each, as JSON writes it.
  *
  * @param value - The value
  * @param at - Where it sits, for the message: `variables.meta`
@@ -101,8 +103,9 @@ function refuse(at: string, what: string, instead: string): never {
 export function assertJsonValue(
   value: unknown,
   at: string,
-  binary = "a form carries a file in a field of the variables, or in a list there",
-  seen: Set<object> = new Set(),
+  binary = "give the file a field of its own",
+  /* The objects the value sits in, on the path it was reached by. */
+  holders: Set<object> = new Set(),
 ): void {
   if (isStream(value)) refuse(at, "a stream", NO_STREAM_PART);
   if (isFile(value)) refuse(at, "binary data", binary);
@@ -112,13 +115,20 @@ export function assertJsonValue(
     /* JSON writes none, unless a toJSON of the program's own does. */
     refuse(at, "a BigInt", "send it as text");
   }
-  if (typeof value !== "object" || value === null || seen.has(value)) return;
+  if (typeof value !== "object" || value === null) return;
   if (typeof Reflect.get(value, "toJSON") === "function") return;
-  seen.add(value);
+  if (holders.has(value)) refuse(at, "the value it sits in", "JSON writes no cycle");
+  holders.add(value);
   const members: Array<[string, unknown]> = Object.entries(value);
   for (const [key, child] of members) {
-    assertJsonValue(child, Array.isArray(value) ? `${at}[${key}]` : `${at}.${key}`, binary, seen);
+    assertJsonValue(
+      child,
+      Array.isArray(value) ? `${at}[${key}]` : `${at}.${key}`,
+      binary,
+      holders,
+    );
   }
+  holders.delete(value);
 }
 
 /**
@@ -185,7 +195,7 @@ export function formEntries(
    with its key, a string without its quotes; nothing for what JSON leaves out or writes as
    `null` — a function, `NaN`, a date that is no date. */
 function textOf(value: unknown, at: string, key: string): string | undefined {
-  assertJsonValue(value, at, "a form sends an object as JSON; give the file a field of its own");
+  assertJsonValue(value, at);
   const json = JSON.stringify({ [key]: value }).slice(JSON.stringify(key).length + 2, -1);
   if (json === "" || json === "null") return undefined;
   return json[0] === '"' ? String(JSON.parse(json)) : json;

@@ -227,6 +227,50 @@ describe("variables JSON would lose", () => {
     },
   );
 
+  it.each([
+    ["in a field beside a file", true, "variables.meta.self is the value it sits in"],
+    ["in a body of JSON", false, "variables.meta.self is the value it sits in"],
+  ])("refuse a value inside itself %s, named where it points back", async (_, file, said) => {
+    const meta: Record<string, unknown> = { secret: "made-up-secret" };
+    meta.self = meta;
+    const api = await client({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+
+    const refusal = await refusalOf(
+      api.save?.({ ...(file && { cover: new Blob(["png"]) }), meta }),
+    );
+
+    expect(refusal.message).toContain(said);
+    expect(refusal.message).not.toContain("made-up-secret");
+  });
+
+  it("refuse a value inside itself through a list, named by the item that points back", async () => {
+    const meta: Record<string, unknown> = {};
+    meta.items = [{ name: "a" }, meta];
+    const api = await client({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+
+    const refusal = await refusalOf(api.save?.({ cover: new Blob(["png"]), meta }));
+
+    expect(refusal.message).toContain("variables.meta.items[1] is the value it sits in");
+  });
+
+  it("send a value met on two paths twice, as JSON writes it: it is no cycle", async () => {
+    const shared = { n: 1 };
+    const api = await client({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+
+    await api.save?.({
+      cover: new Blob(["png"]),
+      pair: { x: shared, y: shared },
+      list: [shared, shared],
+    });
+
+    expect((await sentParts()).map(({ name, text }) => [name, text])).toEqual([
+      ["cover", "png"],
+      ["pair", '{"x":{"n":1},"y":{"n":1}}'],
+      ["list", '{"n":1}'],
+      ["list", '{"n":1}'],
+    ]);
+  });
+
   it("are written as their own toJSON says, not looked into", async () => {
     class Money {
       readonly #cache = new Map<string, string>();

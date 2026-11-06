@@ -49,6 +49,8 @@ function spendWrites(page: Page): Promise<number[]> {
 
 interface Spending {
   spent: boolean
+  /* Settles once a call is refused: the budget is spent. */
+  refused: Promise<void>
   stop: boolean
   statuses: Record<number, number>
 }
@@ -58,7 +60,11 @@ interface Spending {
    unhurried, not to busy the stand. */
 function spendCalls(page: Page): Promise<JSHandle<Spending>> {
   return page.evaluateHandle(() => {
-    const state: Spending = { spent: false, stop: false, statuses: {} }
+    let spend = () => {}
+    const refused = new Promise<void>((resolve) => {
+      spend = resolve
+    })
+    const state: Spending = { spent: false, refused, stop: false, statuses: {} }
     const lane = async () => {
       while (!state.stop) {
         const response = await fetch("/api/request?_s=api&_g=users&_m=getAll", {
@@ -67,7 +73,10 @@ function spendCalls(page: Page): Promise<JSHandle<Spending>> {
           body: JSON.stringify({ variables: {}, options: {} }),
         })
         state.statuses[response.status] = (state.statuses[response.status] ?? 0) + 1
-        if (response.status === 429) state.spent = true
+        if (response.status === 429) {
+          state.spent = true
+          spend()
+        }
         if (state.spent) await new Promise((resolve) => setTimeout(resolve, 10))
       }
     }
@@ -76,10 +85,48 @@ function spendCalls(page: Page): Promise<JSHandle<Spending>> {
   })
 }
 
-async function fillForm(page: Page): Promise<void> {
+async function fillForm(page: Page, email = "grace@example.com"): Promise<void> {
   const form = sandbox(page, FORM)
   await form.getByLabel("name", { exact: true }).fill("Grace Hopper")
-  await form.getByLabel("email", { exact: true }).fill("grace@example.com")
+  await form.getByLabel("email", { exact: true }).fill(email)
+}
+
+/* Server Actions tried before one must be refused, and server renders. */
+const MOST_TRIES = 10
+
+/* Creates a user with the Server Action until it is refused, each try with an address of its own,
+   so its answer — that user, or the refusal — tells from an earlier try's. A write goes through
+   when it comes as the budget lets one back in, before the page's next call takes it. */
+async function actionRefused(page: Page): Promise<boolean> {
+  const form = sandbox(page, FORM)
+  for (let attempt = 0; attempt < MOST_TRIES; attempt += 1) {
+    const email = `grace.${attempt}@example.com`
+    await fillForm(page, email)
+    await form.getByRole("button", { name: "Create" }).click()
+    await expect(form.getByText(REFUSED).or(form.getByText(email)).first()).toBeVisible()
+    if (await form.getByText(REFUSED).isVisible()) return true
+  }
+  return false
+}
+
+/* Whether the page the server renders at `path`, asked for from the page, shows `text`. */
+function renders(page: Page, path: string, text: string): Promise<boolean> {
+  return page.evaluate(
+    async (asked) => {
+      const html = await (await fetch(asked.path)).text()
+      return html.includes(asked.text)
+    },
+    { path, text }
+  )
+}
+
+/* Whether a render of the page at `path` is refused within the tries, asked for again while one
+   comes as the budget lets a call back in. */
+async function renderRefused(page: Page, path: string): Promise<boolean> {
+  for (let attempt = 0; attempt < MOST_TRIES; attempt += 1) {
+    if (await renders(page, path, REFUSED)) return true
+  }
+  return false
 }
 
 test("refuses a Server Action's write once the page spent the visitor's writes", async ({
@@ -100,8 +147,7 @@ test("refuses a Server Action's write once the page spent the visitor's writes",
     }
 
     expect((await spendWrites(hasty)).slice(0, 20)).toEqual(Array(20).fill(201))
-    await sandbox(hasty, FORM).getByRole("button", { name: "Create" }).click()
-    await expect(sandbox(hasty, FORM)).toContainText(REFUSED)
+    expect(await actionRefused(hasty)).toBe(true)
 
     await sandbox(calm, FORM).getByRole("button", { name: "Create" }).click()
     await expect(sandbox(calm, FORM)).toContainText("grace@example.com")
@@ -110,17 +156,6 @@ test("refuses a Server Action's write once the page spent the visitor's writes",
     await Promise.all(networks.map((network) => network.close()))
   }
 })
-
-/* Whether the page the server renders at `path`, asked for from the page, shows `text`. */
-function renders(page: Page, path: string, text: string): Promise<boolean> {
-  return page.evaluate(
-    async (asked) => {
-      const html = await (await fetch(asked.path)).text()
-      return html.includes(asked.text)
-    },
-    { path, text }
-  )
-}
 
 test("refuses the pages the server renders and its Server Actions once the page spent the visitor's calls", async ({
   browser,
@@ -138,17 +173,10 @@ test("refuses the pages the server renders and its Server Actions once the page 
     const page = await visitor.newPage()
     await page.goto("/docs/examples/actions")
     const spending = await spendCalls(page)
-    await expect.poll(() => spending.evaluate((state) => state.spent)).toBe(true)
+    await spending.evaluate((state) => state.refused)
 
-    /* A call of the server's goes through only when it comes as the budget refills one, before the
-       page's next call takes it: rarely, so a render seldom needs asking for again. */
-    await expect.poll(() => renders(page, "/docs/examples/direct", REFUSED)).toBe(true)
-    await expect(async () => {
-      /* A Server Action that went through empties the form. */
-      await fillForm(page)
-      await sandbox(page, FORM).getByRole("button", { name: "Create" }).click()
-      await expect(sandbox(page, FORM)).toContainText(REFUSED, { timeout: 2_000 })
-    }).toPass({ timeout: 20_000 })
+    expect(await renderRefused(page, "/docs/examples/direct")).toBe(true)
+    expect(await actionRefused(page)).toBe(true)
 
     const calm = await other.newPage()
     await calm.goto("/docs/examples/direct")

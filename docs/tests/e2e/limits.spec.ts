@@ -15,6 +15,10 @@ import { visitorAddress } from "./support/stand"
 
 test.skip(DEPLOYED, "spends a minute's writes of the address it runs from")
 
+/* Writes tried before one must be refused: twice the budget. Even at a write a second, the budget
+   lets only 13 back in by the 40th. */
+const MOST_WRITES = 40
+
 /* A write through the proxy route from the page itself, claiming an address if given: its status
    and its Retry-After. */
 function write(page: Page, claimed?: string): Promise<[number, string | null]> {
@@ -54,12 +58,20 @@ test("counts each visitor behind the filter on their own, whatever address they 
       throw new Error("No page opened")
     }
     await Promise.all([hasty, calm, around].map((page) => page.goto("/docs/examples/basic")))
-    const answers: Array<[number, string | null]> = []
-    for (let call = 0; call < 21; call += 1) answers.push(await write(hasty, `192.0.2.${call + 1}`))
-    expect(answers.slice(0, 20).map(([status]) => status)).toEqual(Array(20).fill(201))
-    const [status, retryAfter] = answers[20] ?? []
-    expect(status).toBe(429)
-    expect(Number(retryAfter)).toBeGreaterThan(0)
+    /* Writes until one is refused, each claiming an address of its own. The budget lets a write
+       back in every 3 s of its minute's 20, so how many go through first depends on how fast
+       they go: at least the 20, then the refusal, which only counting the visitor's own gives. */
+    const statuses: number[] = []
+    let refusal: [number, string | null] | undefined
+    for (let call = 0; call < MOST_WRITES && refusal === undefined; call += 1) {
+      const answer = await write(hasty, `192.0.2.${call + 1}`)
+      if (answer[0] === 429) refusal = answer
+      else statuses.push(answer[0])
+    }
+    expect(statuses.length).toBeGreaterThanOrEqual(20)
+    expect(new Set(statuses)).toEqual(new Set([201]))
+    expect(refusal?.[0]).toBe(429)
+    expect(Number(refusal?.[1])).toBeGreaterThan(0)
 
     expect((await write(calm))[0]).toBe(201)
     expect((await write(around, visitorAddress(first)))[0]).toBe(201)

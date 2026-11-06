@@ -24,7 +24,7 @@ A link in a page to `/docs/<page>#<anchor>` names `<page>.md` in the folder and 
 
 ## Point your agent at them
 
-Agents read `AGENTS.md`, at your project's root, when they start. Courier's block in it tells yours where the docs are; add it as it stands:
+Agents read `AGENTS.md`, at your project's root, when they start. Courier's block in it tells yours where the docs are. Setting Courier up writes it if you say so — in a terminal it asks, and `--agents-md` answers yes — and installs `@noverax/courier-docs` with it: `npx @noverax/create-courier --agents-md` for a new project, `npx @noverax/courier-cli setup --agents-md` for one that has Courier already. Or add the block as it stands:
 
 ```markdown title="AGENTS.md"
 <!-- BEGIN:courier-agent-rules -->
@@ -36,7 +36,7 @@ Courier keeps this block up to date while it is here, and leaves the rest of thi
 <!-- END:courier-agent-rules -->
 ```
 
-Studio, as it starts, brings the block up to date for the Courier it runs with — the text between its markers, in an `AGENTS.md` that has them — and leaves the rest of the file alone, as it leaves a file without the block.
+Studio, as it starts, brings the block up to date for the Courier it runs with — the text between its markers, in an `AGENTS.md` that has them — and so does `courier-cli upgrade`. Both leave the rest of the file alone, as they leave a file without the block.
 
 ## Search and read them as tools
 

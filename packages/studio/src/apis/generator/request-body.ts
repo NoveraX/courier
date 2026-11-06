@@ -4,7 +4,12 @@
  */
 
 import { ownValue } from "../own-value";
-import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import type {
+  ParsedEndpoint,
+  ParsedSchema,
+  ParsedSchemaProperty,
+  ParsedSpec,
+} from "../parser/types";
 import { bodyMedia } from "./body-media";
 import { variableParameters } from "./variable-parameters";
 
@@ -18,11 +23,23 @@ import { variableParameters } from "./variable-parameters";
  * - `nested` — fields of which one shares its name with a path or query
  *   parameter; they cannot share one variables object with the parameters
  *   either, so they are passed under a key of their own too.
- * - `form` — a multipart form, taken as a `FormData`, whose entries also
- *   fill the path.
+ * - `form` — a multipart form taken as a `FormData`, whose entries also
+ *   fill the path: one whose schema names no fields, or one of whose fields
+ *   shares its name with a parameter. A file travels through the proxy in a
+ *   field of the variables, so the fields cannot go under a key of their own.
+ * - `multipart` — a multipart form whose fields the schema names: they sit
+ *   in the variables beside the parameters, a file typed as a `Blob`, and
+ *   go as a form by `multipartBody`, a file among them or not.
  * - `bytes` — a file or other bytes sent as they are, taken as a `Blob`.
  */
-export type RequestBodyKind = "none" | "fields" | "value" | "nested" | "form" | "bytes";
+export type RequestBodyKind =
+  | "none"
+  | "fields"
+  | "value"
+  | "nested"
+  | "form"
+  | "multipart"
+  | "bytes";
 
 /**
  * The kind of body an endpoint sends.
@@ -41,6 +58,10 @@ export type RequestBodyKind = "none" | "fields" | "value" | "nested" | "form" | 
 export function requestBodyKind(ep: ParsedEndpoint, spec: ParsedSpec): RequestBodyKind {
   if (!ep.requestBody) return "none";
   const media = bodyMedia(ep);
+  if (media === "form") {
+    const parts = multipartFields(ep, spec);
+    return parts === null || sharesParameterName(ep, Object.keys(parts)) ? "form" : "multipart";
+  }
   if (media !== "structured") return media;
   const fields = fieldNames(ep.requestBody, spec, new Set());
   if (fields === null) return "value";
@@ -66,6 +87,34 @@ export function requestBodyKind(ep: ParsedEndpoint, spec: ParsedSpec): RequestBo
 export function sharesParameterName(ep: ParsedEndpoint, fields: readonly string[]): boolean {
   const names = new Set(variableParameters(ep).map((param) => param.name));
   return fields.some((field) => names.has(field));
+}
+
+/**
+ * The fields a multipart form's schema names: an object's own, or those of
+ * the object it refers to. A form whose schema names none — no schema, an
+ * object without properties, alternatives — is taken as a `FormData`.
+ *
+ * @param ep - The endpoint, whose body is a multipart form
+ * @param spec - The specification, for the schema a body refers to
+ * @returns The fields by name, or `null` when the schema names none
+ * @example
+ * ```ts
+ * Object.keys(multipartFields(uploadFile, spec) ?? {}); // → ["file", "note"]
+ * ```
+ */
+export function multipartFields(
+  ep: ParsedEndpoint,
+  spec: ParsedSpec,
+): Readonly<Record<string, ParsedSchemaProperty>> | null {
+  let schema = ep.requestBody ?? undefined;
+  const seen = new Set<string>();
+  while (schema?.type === "ref" && schema.refName && !seen.has(schema.refName)) {
+    seen.add(schema.refName);
+    schema = ownValue(spec.schemas, schema.refName);
+  }
+  if (schema?.type !== "object") return null;
+  const named = Object.entries(schema.properties ?? {}).filter(([name]) => name !== "");
+  return named.length > 0 ? Object.fromEntries(named) : null;
 }
 
 /**

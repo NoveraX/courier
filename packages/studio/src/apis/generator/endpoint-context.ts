@@ -28,6 +28,8 @@ export interface EndpointUses {
   formBody: boolean;
   /** Whether a closure writes query values with `formQuery`. */
   formQuery: boolean;
+  /** Whether a closure writes a multipart form with `multipartBody`. */
+  multipartBody: boolean;
   /** Whether a definition sends variables as headers with `headerVariablesMiddleware`. */
   headerVariables: boolean;
   /**
@@ -89,6 +91,7 @@ export function endpointContext(
       validator: false,
       formBody: false,
       formQuery: false,
+      multipartBody: false,
       headerVariables: false,
       ownFields: false,
       bases: new Set(),

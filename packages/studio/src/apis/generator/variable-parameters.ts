@@ -1,4 +1,4 @@
-import type { ParsedEndpoint, ParsedParameter } from "../parser/types";
+import type { ParsedEndpoint, ParsedParameter, ParsedSchema } from "../parser/types";
 import { bodyMedia } from "./body-media";
 
 /* A header OpenAPI tells a client to ignore as a parameter: it sets it itself. */
@@ -24,8 +24,8 @@ export function variableParameters(ep: ParsedEndpoint): ParsedParameter[] {
  * `headerVariablesMiddleware` sends as headers. Left out: one a client sets
  * itself (`Accept`, `Content-Type`, `Authorization`), as OpenAPI says; one
  * named like a path or query parameter, which the variables cannot hold
- * twice; and every one beside a multipart form, which is the whole of what
- * such a call is made with.
+ * twice; and every one beside a multipart form taken as a `FormData`, which
+ * is the whole of what such a call is made with.
  *
  * @param ep - The endpoint
  * @returns Its header parameters
@@ -35,13 +35,27 @@ export function variableParameters(ep: ParsedEndpoint): ParsedParameter[] {
  * ```
  */
 export function headerParameters(ep: ParsedEndpoint): ParsedParameter[] {
-  if (ep.requestBody && bodyMedia(ep) === "form") return [];
   const taken = new Set(placedParameters(ep).map((param) => param.name));
-  return ep.parameters.filter(
+  const headers = ep.parameters.filter(
     (param) =>
       param.in === "header" &&
       !CLIENT_HEADERS.has(param.name.toLowerCase()) &&
       !taken.has(param.name),
+  );
+  if (!ep.requestBody || bodyMedia(ep) !== "form") return headers;
+  const names = new Set([...taken, ...headers.map((param) => param.name)]);
+  return isRecordForm(ep.requestBody, names) ? headers : [];
+}
+
+/* Whether a multipart form is called with a record of its fields, as
+   `requestBodyKind` tells with the specification: its schema names them,
+   and none is named as a parameter is. Told without it, a schema that refers
+   to another is taken to name some, as it almost always does. */
+function isRecordForm(body: ParsedSchema, parameters: ReadonlySet<string>): boolean {
+  if (body.type === "ref") return true;
+  const fields = Object.keys(body.properties ?? {}).filter((name) => name !== "");
+  return (
+    body.type === "object" && fields.length > 0 && !fields.some((name) => parameters.has(name))
   );
 }
 

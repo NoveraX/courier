@@ -18,7 +18,7 @@ const STREAM_NOTE =
 
 /* Said of an endpoint taking bytes, which only a direct caller can send. */
 const BYTES_NOTE =
-  "Sends the Blob as the body, as it is. The proxy carries JSON and FormData only, so call it from a direct caller.";
+  "Sends the Blob as the body, as it is. The proxy carries a file in a form or in a field of the variables, not as the whole body, so call it from a direct caller.";
 
 /**
  * Write one line per endpoint, each after its description when comments are

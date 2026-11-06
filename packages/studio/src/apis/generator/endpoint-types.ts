@@ -3,13 +3,18 @@
  */
 
 import { ownValue } from "../own-value";
-import type { ParsedEndpoint, ParsedSchemaProperty } from "../parser/types";
+import type {
+  ParsedEndpoint,
+  ParsedSchema,
+  ParsedSchemaProperty,
+  ParsedSpec,
+} from "../parser/types";
 import { type EndpointContext, endpointTypeStyle } from "./endpoint-context";
 import { fieldType, schemaToTsType, type TypeStyle } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
 import { typeKey } from "./literals";
 import { parameterProperty } from "./parameter-property";
-import { bodyKey, requestBodyKind } from "./request-body";
+import { bodyKey, multipartFields, requestBodyKind } from "./request-body";
 import { variableParameters } from "./variable-parameters";
 
 /**
@@ -52,6 +57,11 @@ export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContex
      types are named through globalThis: a schema the specification calls Blob
      or FormData, imported into the same file, would stand in for them. */
   if (kind === "form") return "globalThis.FormData";
+  /* A multipart form's fields sit beside the parameters. */
+  if (kind === "multipart") {
+    const body = partFields(multipartFields(ep, context.spec) ?? {}, context, style);
+    return `{ ${[...parts, ...body].join("; ")} }`;
+  }
   if (kind === "value" || kind === "nested" || kind === "bytes") {
     const body = kind === "bytes" ? "globalThis.Blob" : bodyType(ep, context, style);
     /* A body the operation does not require may be left out. */
@@ -95,6 +105,59 @@ function fields(
   return Object.entries(properties)
     .filter(([name]) => name !== "")
     .map(([name, prop]) => field(name, prop, context, style));
+}
+
+/**
+ * The fields of a multipart form, each written as a JSON field is but a
+ * file: a string that holds a file's bytes is the `Blob` a call passes
+ * there, and a list of them a list of `Blob`s, which the form sends as
+ * files. Named through globalThis, past a schema of its name.
+ */
+function partFields(
+  properties: Readonly<Record<string, ParsedSchemaProperty>>,
+  context: EndpointContext,
+  style: TypeStyle,
+): string[] {
+  return Object.entries(properties).map(([name, prop]) => {
+    const file = fileType(prop, context.spec);
+    return file === null
+      ? field(name, prop, context, style)
+      : fileField(name, prop, file, context, style);
+  });
+}
+
+/* The type of a field a form sends as a file or a list of files, or `null` for one it sends as text. */
+function fileType(prop: ParsedSchemaProperty, spec: ParsedSpec): string | null {
+  if (holdsBytes(prop, spec)) return "globalThis.Blob";
+  if (prop.type === "array" && prop.items && holdsBytes(prop.items, spec)) {
+    return "globalThis.Blob[]";
+  }
+  return null;
+}
+
+/* Whether a schema holds a file's bytes, itself or as the schema it refers to. */
+function holdsBytes(schema: ParsedSchema | ParsedSchemaProperty, spec: ParsedSpec): boolean {
+  if (schema.binary) return true;
+  if (schema.type !== "ref" || !schema.refName) return false;
+  return ownValue(spec.schemas, schema.refName)?.binary === true;
+}
+
+/* A field a form sends as a file, optional and nullable as its property says. */
+function fileField(
+  name: string,
+  prop: ParsedSchemaProperty,
+  type: string,
+  context: EndpointContext,
+  style: TypeStyle,
+): string {
+  const doc =
+    context.options.includeComments && prop.description
+      ? `/** ${jsdocText(prop.description)} */ `
+      : "";
+  const optional = !prop.required;
+  const nullable = prop.nullable ? " | null" : "";
+  const absent = optional && style.undefinedWhenOptional ? " | undefined" : "";
+  return `${doc}${typeKey(name)}${optional ? "?" : ""}: ${type}${nullable}${absent}`;
 }
 
 /**

@@ -16,7 +16,7 @@ import { isEventStream, type ResponseReading, responseReading } from "./response
 import { hasStyledQuery } from "./styled-query";
 import { headerParameters } from "./variable-parameters";
 import { variablesSchema } from "./variables-schema";
-import { sendsUrlEncoded, wireClosure } from "./wire-closure";
+import { sendsMultipart, sendsUrlEncoded, wireClosure } from "./wire-closure";
 
 /* What an endpoint keeps of its operation's description: enough for a model to choose the tool by. */
 const DESCRIPTION_LIMIT = 300;
@@ -60,6 +60,7 @@ export function buildEndpointDefinition(
   const declared = context.options.generateTypes && LOOSE.has(context.options.validation);
   const kind = requestBodyKind(ep, context.spec);
   if (sendsUrlEncoded(ep, kind)) context.uses.formBody = true;
+  if (sendsMultipart(ep, kind)) context.uses.multipartBody = true;
   const closure = wireClosure(ep, path, kind, reading);
   if (closure !== null && hasStyledQuery(ep)) context.uses.formQuery = true;
   /* A stream of events is subscribed to, and its answer is each event. */

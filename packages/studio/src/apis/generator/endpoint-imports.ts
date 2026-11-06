@@ -83,8 +83,9 @@ function schemaImport(values: string[], types: string[], from: string): string[]
 
 /**
  * The import of what a file defines its endpoints with: `courier`, the
- * definer, `formBody` when a closure writes a url-encoded body, and
- * `formQuery` when one writes query values in a style of their own.
+ * definer, `formBody` when a closure writes a url-encoded body,
+ * `formQuery` when one writes query values in a style of their own, and
+ * `multipartBody` when one writes a multipart form.
  *
  * @param context - The file's endpoints, written
  * @param definer - `defineGroup` for a group's file, `defineApi` for a flat source's
@@ -103,6 +104,7 @@ export function defineImport(
     definer,
     ...(context.uses.formBody ? ["formBody"] : []),
     ...(context.uses.formQuery ? ["formQuery"] : []),
+    ...(context.uses.multipartBody ? ["multipartBody"] : []),
   ];
   return namedStatement("import", names, "@noverax/courier/define");
 }

@@ -17,7 +17,7 @@ import { toInternalMethod } from "@noverax/courier/internal";
 import type { ParsedEndpoint } from "../parser/types";
 import { callOptions as options } from "./call-options";
 import { destructuringClosure } from "./destructuring-closure";
-import { formClosure } from "./form-closure";
+import { formClosure, multipartClosure } from "./form-closure";
 import { jsLiteral } from "./literals";
 import { bodyKey, ownJsonMedia, type RequestBodyKind } from "./request-body";
 import { isEventStream, type ResponseReading } from "./response-reading";
@@ -80,6 +80,7 @@ function placingClosure(
   const query = params.filter((param) => param.in === "query");
 
   if (kind === "form") return formClosure(method, at, params, read);
+  if (sendsMultipart(ep, kind)) return multipartClosure(ep, method, at, read);
   if (sendsUrlEncoded(ep, kind)) {
     return urlEncodedClosure(ep, method, at, read, kind === "nested" ? bodyKey(ep) : null);
   }
@@ -158,6 +159,23 @@ export function sendsUrlEncoded(ep: ParsedEndpoint, kind: RequestBodyKind): bool
     WITH_BODY.has(toInternalMethod(ep.httpMethod)) &&
     isUrlEncoded(ep)
   );
+}
+
+/**
+ * Whether an endpoint sends its fields as a multipart form, written by
+ * `multipartBody`: a write or a QUERY whose multipart body's schema names
+ * its fields, which sit beside the parameters.
+ *
+ * @param ep - The endpoint
+ * @param kind - The kind of body it sends
+ * @returns Whether its closure writes the body with `multipartBody`
+ * @example
+ * ```ts
+ * sendsMultipart(uploadFile, "multipart"); // → true
+ * ```
+ */
+export function sendsMultipart(ep: ParsedEndpoint, kind: RequestBodyKind): boolean {
+  return kind === "multipart" && WITH_BODY.has(toInternalMethod(ep.httpMethod));
 }
 
 function isUrlEncoded(ep: ParsedEndpoint): boolean {

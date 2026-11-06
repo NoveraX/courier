@@ -1,6 +1,8 @@
 /**
  * An endpoint's body is taken in the form its media type needs: a multipart
- * upload as a FormData, bytes as a Blob, a list as a list — whichever
+ * upload whose schema names its fields as a record of them, a file a Blob,
+ * sent as a form whether a file is among them or not; one whose schema names
+ * none as a FormData; bytes as a Blob, a list as a list — whichever
  * validator the client was generated with, with its parameters beside it,
  * directly and through the proxy.
  */
@@ -29,6 +31,13 @@ const media = (type: string, schema?: unknown) => ({
 });
 const ok = { "200": { description: "ok" } };
 const fileId = { name: "fileId", in: "path", required: true, schema: { type: "string" } };
+const profileId = { name: "profileId", in: "path", required: true, schema: { type: "string" } };
+const uploadToken = {
+  name: "X-Upload-Token",
+  in: "header",
+  required: true,
+  schema: { type: "string" },
+};
 const binary = { type: "string", format: "binary" };
 const strings = { type: "array", items: { type: "string" } };
 
@@ -50,7 +59,11 @@ function spec(origin: string): ParsedSpec {
             requestBody: media("multipart/form-data", {
               type: "object",
               required: ["file"],
-              properties: { file: binary, note: { type: "string" } },
+              properties: {
+                file: binary,
+                note: { type: "string" },
+                extras: { type: "array", items: binary },
+              },
             }),
           }),
         },
@@ -70,6 +83,27 @@ function spec(origin: string): ParsedSpec {
             }),
           }),
         },
+        "/profiles/{profileId}": {
+          put: op("updateProfile", {
+            parameters: [profileId, uploadToken],
+            requestBody: media("multipart/form-data", {
+              type: "object",
+              required: ["name"],
+              properties: { name: { type: "string" }, age: { type: "integer" }, photo: binary },
+            }),
+          }),
+        },
+        "/files/{fileId}/copies": {
+          post: op("copyFile", {
+            parameters: [fileId],
+            requestBody: media("multipart/form-data", {
+              type: "object",
+              required: ["fileId", "file"],
+              properties: { fileId: { type: "string" }, file: binary },
+            }),
+          }),
+        },
+        "/inbox": { post: op("dropAnything", { requestBody: media("multipart/form-data") }) },
         "/files/{fileId}": {
           put: op("replaceFile", {
             parameters: [fileId],
@@ -117,17 +151,24 @@ function calls(): [string, () => unknown, (r: UpstreamServer["requests"][number]
   return [
     [
       "uploadFile",
-      () => form({ file: new Blob(["png bytes"]), note: "hi" }),
+      () => ({
+        file: new Blob(["png bytes"]),
+        note: "hi",
+        extras: [new Blob(["first extra"]), new Blob(["second extra"])],
+      }),
       (r) => {
         expect(`${r.method} ${r.path}`).toBe("POST /v1/files");
         expect(r.contentType).toMatch(/^multipart\/form-data/);
         expect(r.body).toContain("png bytes");
         expect(r.body).toContain('name="note"');
+        expect(r.body.match(/name="extras"; filename=/g)).toHaveLength(2);
+        expect(r.body).toContain("first extra");
+        expect(r.body).toContain("second extra");
       },
     ],
     [
       "uploadAvatar",
-      () => form({ image: new Blob(["avatar bytes"]) }),
+      () => ({ image: new Blob(["avatar bytes"]) }),
       (r) => {
         expect(r.contentType).toMatch(/^multipart\/form-data/);
         expect(r.body).toContain("avatar bytes");
@@ -135,11 +176,44 @@ function calls(): [string, () => unknown, (r: UpstreamServer["requests"][number]
     ],
     [
       "uploadContent",
-      () => form({ file: new Blob(["content"]), fields: "name" }),
+      () => ({ file: new Blob(["content"]), fields: ["name"] }),
       (r) => {
         expect(r.query).toEqual([["fields", "name"]]);
         expect(r.body).toContain("content");
         expect(r.body).not.toContain('name="fields"');
+      },
+    ],
+    [
+      "updateProfile",
+      () => ({ profileId: "p1", "X-Upload-Token": "t1", name: "Ada", age: 36 }),
+      (r) => {
+        expect(`${r.method} ${r.path}`).toBe("PUT /v1/profiles/p1");
+        /* No file among the fields, and a form all the same. */
+        expect(r.contentType).toMatch(/^multipart\/form-data/);
+        expect(r.body).toMatch(/name="name"\r\n\r\nAda\r\n/);
+        expect(r.body).toMatch(/name="age"\r\n\r\n36\r\n/);
+        expect(r.body).not.toContain("profileId");
+        expect(r.body).not.toContain("X-Upload-Token");
+        expect(r.headers["x-upload-token"]).toBe("t1");
+      },
+    ],
+    [
+      /* A field named as a parameter: a file travels through the proxy in a
+         field of the variables, so the form stays a FormData. */
+      "copyFile",
+      () => form({ fileId: "f1", file: new Blob(["copy bytes"]) }),
+      (r) => {
+        expect(`${r.method} ${r.path}`).toBe("POST /v1/files/f1/copies");
+        expect(r.contentType).toMatch(/^multipart\/form-data/);
+        expect(r.body).toContain("copy bytes");
+      },
+    ],
+    [
+      "dropAnything",
+      () => form({ anything: new Blob(["dropped"]) }),
+      (r) => {
+        expect(r.contentType).toMatch(/^multipart\/form-data/);
+        expect(r.body).toContain("dropped");
       },
     ],
     [
@@ -179,16 +253,40 @@ const DIRECT_ONLY: [string, () => unknown, string][] = [
 const CONSUMER = `import { shopApi } from "./src/api/shop";
 
 export async function calls(form: FormData, file: Blob): Promise<void> {
-  await shopApi.files.uploadFile(form);
-  await shopApi.files.uploadAvatar(form);
-  await shopApi.files.uploadContent(form);
+  await shopApi.files.uploadFile({ file, note: "hi", extras: [file, file] });
+  await shopApi.files.uploadFile({ file });
+  await shopApi.files.uploadAvatar({ image: file });
+  await shopApi.files.uploadContent({ file, fields: ["name"] });
+  await shopApi.files.uploadContent({});
+  await shopApi.files.updateProfile({ profileId: "p1", "X-Upload-Token": "t", name: "Ada" });
+  await shopApi.files.updateProfile({
+    profileId: "p1",
+    "X-Upload-Token": "t",
+    name: "Ada",
+    age: 36,
+    photo: file,
+  });
+  await shopApi.files.copyFile(form);
+  await shopApi.files.dropAnything(form);
   await shopApi.files.replaceFile({ fileId: "f1", body: file });
   await shopApi.files.putRaw(file);
   await shopApi.files.tagFile({ fileId: "f1", body: ["a"] });
   await shopApi.files.deleteVersions({ fileId: "f1", body: ["v1"] });
   await shopApi.files.bulkCreate([{ name: "a" }]);
-  // @ts-expect-error a form is sent as a FormData
+  // @ts-expect-error a form's file is a Blob
   await shopApi.files.uploadFile({ file: "x" });
+  // @ts-expect-error each of a list of files is a Blob
+  await shopApi.files.uploadFile({ file, extras: ["x"] });
+  // @ts-expect-error a form whose fields the schema names is called with them
+  await shopApi.files.uploadFile(form);
+  // @ts-expect-error the file is required
+  await shopApi.files.uploadFile({ note: "hi" });
+  // @ts-expect-error the header is required
+  await shopApi.files.updateProfile({ profileId: "p1", name: "Ada" });
+  // @ts-expect-error a form whose schema names no fields is sent as a FormData
+  await shopApi.files.dropAnything({ anything: file });
+  // @ts-expect-error so is one a field of which is named as a parameter
+  await shopApi.files.copyFile({ fileId: "f1", file });
   // @ts-expect-error the bytes are a Blob
   await shopApi.files.replaceFile({ fileId: "f1", body: "text" });
   // @ts-expect-error a tag is text

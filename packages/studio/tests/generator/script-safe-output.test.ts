@@ -240,10 +240,7 @@ describe("a call of the generated client", () => {
   });
 
   it("sends a form's fields apart from the query parameter it names", async () => {
-    const form = new FormData();
-    form.append(FIELD, "t");
-    form.append("note", "n");
-    const request = await sent(call("upload")(form));
+    const request = await sent(call("upload")({ [FIELD]: "t", note: "n" }));
 
     expect(request?.path).toBe(new URL(`https://shop.example/up${SCRIPT_END}`).pathname);
     expect(request?.query).toEqual([[FIELD, "t"]]);

@@ -2,10 +2,47 @@
  * The closure of an endpoint that takes a multipart form.
  */
 
-import type { ParsedParameter } from "../parser/types";
+import type { ParsedEndpoint, ParsedParameter } from "../parser/types";
 import { callOptions } from "./call-options";
+import { destructuringClosure } from "./destructuring-closure";
 import { jsLiteral, objectKey } from "./literals";
 import { styledQuery } from "./styled-query";
+import { destructure } from "./variable-bindings";
+
+/**
+ * The closure of an endpoint that takes a multipart form whose fields its
+ * schema names: the path and query parameters are taken out of the
+ * variables, and the rest are written as the body by `multipartBody`, a file
+ * among them or not — a record that holds none would go as JSON, which such
+ * an API refuses. Taking nothing out, it hands the variables on whole, so
+ * the upload a proxy sends on as it arrives reaches the upstream as it is.
+ *
+ * @param ep - The endpoint
+ * @param method - The verb, as the endpoint builder names it
+ * @param at - The endpoint's path within its group, as a string literal
+ * @param read - How the answer is read, as an options entry, when not as JSON
+ * @returns The closure's source
+ * @example
+ * ```ts
+ * multipartClosure(uploadFile, "post", '"files"', null);
+ * // '(http, body) => http.post("files", void 0, { body: multipartBody(body) })'
+ * ```
+ */
+export function multipartClosure(
+  ep: ParsedEndpoint,
+  method: string,
+  at: string,
+  read: string | null,
+): string {
+  const { pattern, searchParams, ownCopy } = destructure(
+    ep.parameters.filter((param) => param.in === "query"),
+    ep.parameters.filter((param) => param.in === "path"),
+  );
+  const options = callOptions("body: multipartBody(body)", searchParams, read);
+  const call = `http.${method}(${at}, void 0, { ${options} })`;
+  if (!pattern) return `(http, body) => ${call}`;
+  return destructuringClosure(`${pattern}, ...body`, call, ownCopy);
+}
 
 /**
  * Place a form's entries on the wire, when its verb cannot.

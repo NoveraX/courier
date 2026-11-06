@@ -21,6 +21,42 @@ describe("an address", () => {
     );
   });
 
+  it("loses a user and a password in every spelling a URL parser reads them in", () => {
+    const spellings = [
+      "https://ana:pw@api.test/openapi.json",
+      "HTTPS://ana:pw@api.test/openapi.json",
+      "https://ana%40corp:pw@api.test/openapi.json",
+      "https://ana:pw@[::1]:8443/openapi.json",
+      " https://ana:pw@api.test/openapi.json",
+      "\thttps://ana:pw@api.test/openapi.json",
+      "https:/ana:pw@api.test/openapi.json",
+      "https:\\\\ana:pw@api.test/openapi.json",
+      "https:\\\\deploy:Zq9x-made-up-secret-77@api.example.com/openapi.json",
+      "https:ana:pw@api.test/openapi.json",
+      " ht\ttps://ana:pw@api.test/openapi.json?api_key=k3y",
+    ];
+    for (const address of spellings) {
+      const shown = urlWithoutSecrets(address);
+      const read = new URL(shown.trim());
+
+      expect([read.username, read.password]).toEqual(["", ""]);
+      expect(shown).not.toMatch(/ana|deploy|Zq9x|k3y/);
+    }
+    expect(urlWithoutSecrets("https:\\\\ana:pw@api.test/openapi.json?page=2&api_key=k3y")).toBe(
+      "https://api.test/openapi.json?page=2&api_key=[redacted]",
+    );
+  });
+
+  it("keeps an address with no credentials as written, a space before it and all", () => {
+    for (const address of [
+      " https://api.test/openapi.json",
+      "HTTPS://API.test",
+      "https:/api.test",
+    ]) {
+      expect(urlWithoutSecrets(address)).toBe(address);
+    }
+  });
+
   it("keeps its numbers, a UUID, a file's name, a page's anchor, and a path with no host", () => {
     const kept = [
       "https://api.test/v1/orders/123e4567-e89b-12d3-a456-426614174000?page=2#items",

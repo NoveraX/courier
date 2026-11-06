@@ -1,3 +1,4 @@
+import { parseUrl } from "../parse-url";
 import { isSecretLike } from "./is-secret-like";
 import { REDACTED } from "./redacted";
 import { secretName } from "./secret-name";
@@ -26,15 +27,31 @@ const ADDRESS = /^[a-z][a-z0-9+.-]{0,31}:\/\//i;
  * link's key. `page=2`, a UUID, `report-2026-10-18.pdf` and a page's
  * `#anchor` stay.
  *
+ * A URL parser reads a user and a password in more spellings than
+ * `scheme://user:password@` — after a space or a tab, with `\\`, one slash
+ * or none in place of `//` — and fetch sends them. An address that still
+ * reads so once cut as written is cut as the parser reads it instead: its
+ * `href`, with no user and no password.
+ *
  * @param address - An absolute address, or a path with its query
  * @returns The address, its credentials cut
  * @example
  * ```ts
  * urlWithoutSecrets("https://ana:pw@api.test/v1/users?page=2&token=t0k3n#top");
  * // → "https://api.test/v1/users?page=2&token=[redacted]#top"
+ * urlWithoutSecrets(" https:/ana:pw@api.test/openapi.json"); // → "https://api.test/openapi.json"
  * ```
  */
 export function urlWithoutSecrets(address: string): string {
+  const cut = cutAsWritten(address);
+  const read = parseUrl(cut.trim());
+  if (read === undefined || (read.username === "" && read.password === "")) return cut;
+  read.username = "";
+  read.password = "";
+  return cutAsWritten(read.href);
+}
+
+function cutAsWritten(address: string): string {
   const parts = PARTS.exec(address);
   if (!parts) return address;
   const [, scheme = "", authority = "", path = "", query = "", fragment = ""] = parts;

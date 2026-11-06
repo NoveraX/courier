@@ -40,6 +40,26 @@ describe("what of an unfinished import is kept", () => {
       content: "https://api.example/openapi.json?page=2",
     });
   });
+
+  it.each([
+    "https://ana:pw@api.test/openapi.json",
+    "HTTPS://ana:pw@api.test/openapi.json",
+    "https://ana%40corp:pw@api.test/openapi.json",
+    "https://ana:pw@[::1]:8443/openapi.json",
+    " https://ana:pw@api.test/openapi.json",
+    "\thttps://ana:pw@api.test/openapi.json",
+    "https:/ana:pw@api.test/openapi.json",
+    "https:\\\\ana:pw@api.test/openapi.json",
+    "https:\\\\deploy:Zq9x-made-up-secret-77@api.example.com/openapi.json",
+    "https:ana:pw@api.test/openapi.json",
+  ])(
+    "is not an address a URL parser reads a user and a password in, however spelled: %j",
+    (address) => {
+      expect(new URL(address).password).not.toBe("");
+      expect(keptImport("url", address)).toBeNull();
+      expect(readKeptImport({ source: "url", content: address })).toBeNull();
+    },
+  );
 });
 
 describe("the import wizard", () => {

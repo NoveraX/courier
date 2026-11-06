@@ -1,5 +1,6 @@
 import type { Socket } from "socket.io";
 
+import { keptImportValue } from "./kept-import-value";
 import type { PageState } from "./storage/page-state";
 
 /**
@@ -7,7 +8,9 @@ import type { PageState } from "./storage/page-state";
  * was shown, Get started's progress, the Playground's drafts — and send it
  * as it connects, saying whether this page may change it: one opened
  * without the token may not, and keeps its changes to itself. A change one
- * page makes, every other open page follows.
+ * page makes, every other open page follows. The API import left
+ * unfinished is kept and sent as {@link keptImportValue} has it, with no
+ * address that carries a credential, whichever page sent it.
  *
  * @param socket - The page's socket
  * @param pages - The page state in the project's database
@@ -18,11 +21,16 @@ import type { PageState } from "./storage/page-state";
  * ```
  */
 export function bindPageState(socket: Socket, pages: PageState, writable: boolean): void {
-  socket.emit("page:state", { writable, state: pages.read() });
+  const state = pages.read();
+  if (state["apis.import"] !== undefined) {
+    state["apis.import"] = keptImportValue(state["apis.import"]);
+  }
+  socket.emit("page:state", { writable, state });
   socket.on("page:state:set", (raw: unknown) => {
     if (typeof raw !== "object" || raw === null) return;
     const key: unknown = Reflect.get(raw, "key");
-    const value: unknown = Reflect.get(raw, "value");
+    const given: unknown = Reflect.get(raw, "value");
+    const value = key === "apis.import" ? keptImportValue(given) : given;
     if (pages.write(key, value)) socket.broadcast.emit("page:state:changed", { key, value });
   });
 }

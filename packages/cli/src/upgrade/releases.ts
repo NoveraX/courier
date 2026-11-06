@@ -104,6 +104,11 @@ export const RELEASES: readonly Release[] = [
           "A specification that holds a file hashes anew; a multipart operation takes its fields",
         docs: `${UPGRADING}#studio-imports`,
       },
+      {
+        title:
+          "Courier's file icons go in as the editor starts: courier.fileIcons.automatic replaces offer",
+        docs: `${UPGRADING}#courier-file-icons`,
+      },
     ],
     migrations: [
       REALTIME_ERRORS,

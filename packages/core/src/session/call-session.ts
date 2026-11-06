@@ -156,7 +156,11 @@ export function sameRequestContext(
 
 let native: Promise<typeof NativeSession> | undefined;
 
+/* Loaded with an app's first call that carries a session; a load that failed is asked for again. */
 function nativePart(): Promise<typeof NativeSession> {
-  native ??= import("./native-session");
+  native ??= import("./native-session").catch((cause: unknown) => {
+    native = undefined;
+    throw cause;
+  });
   return native;
 }

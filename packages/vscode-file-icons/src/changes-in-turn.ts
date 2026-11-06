@@ -19,8 +19,8 @@ export interface ChangesInTurn {
 
 /**
  * The changes to Courier's icons, one at a time: the themes rebuild on
- * each, and an offer, a command and a sync may come together. A change that
- * fails is logged, and the next is still made.
+ * each, and the start, a command and a sync may come together. A change
+ * that fails is logged, and the next is still made.
  *
  * @returns How to ask for a change, and to wait for those asked for
  * @example

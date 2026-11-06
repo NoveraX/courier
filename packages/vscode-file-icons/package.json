@@ -1,7 +1,7 @@
 {
   "name": "courier-file-icons",
   "displayName": "Courier File Icons",
-  "description": "Courier's own icons for courier.config.ts, courier.mocks.ts and the .courier folder in Material Icon Theme and vscode-icons, the folder drawn in each theme's own style. Agree once: they follow you into the other theme, onto your other machines, into remote windows and through updates.",
+  "description": "Courier's own icons for courier.config.ts, courier.mocks.ts and the .courier folder in Material Icon Theme and vscode-icons, the folder drawn in each theme's own style. In as the editor starts, they follow you into the other theme, onto your other machines, into remote windows and through updates, and come out with one click.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#08090a",
@@ -78,10 +78,10 @@
     "configuration": {
       "title": "Courier File Icons",
       "properties": {
-        "courier.fileIcons.offer": {
+        "courier.fileIcons.automatic": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Offer once, in a Courier project, to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and `.courier` when the icon theme in use is Material Icon Theme or vscode-icons — as the editor starts, or when you pick such a theme. Once you agree in one theme, the icons go into the other by themselves when you pick it. Off: run **Courier: Show Courier's Icons in the File Icon Theme** when you want them."
+          "markdownDescription": "Put Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and `.courier` into the icon theme in use by themselves when it is Material Icon Theme or vscode-icons: as the editor starts, and into each such theme you pick. Turns off once you take the icons out — with **Take Them Out** on the message that they went in, with **Courier: Remove Courier's Icons from the File Icon Theme**, or out of your settings by hand — and on again with **Courier: Show Courier's Icons in the File Icon Theme**. Read from your user settings only, never a workspace's."
         }
       }
     }

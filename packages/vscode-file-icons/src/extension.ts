@@ -7,11 +7,11 @@ let registration: FileIconsRegistration | undefined;
 
 /**
  * Start Courier File Icons: Courier's own icons for its config, its mocks
- * and the `.courier` folder in the icon themes that take custom icons,
- * offered once in a Courier project and kept as the user's settings say
- * from then on. It runs where the editor's window runs — on this computer
- * in a remote window too — beside the icon themes it puts the icons in,
- * and tells the Courier extension that its icon commands are there.
+ * and the `.courier` folder in the icon themes that take custom icons, put
+ * in as it starts and kept as the user's settings say from then on. It
+ * runs where the editor's window runs — on this computer in a remote
+ * window too — beside the icon themes it puts the icons in, and tells the
+ * Courier extension that its icon commands are there.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example

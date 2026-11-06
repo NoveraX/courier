@@ -36,7 +36,7 @@ export const Disposable = {
   from: (...held: Held[]): Held => ({ dispose: () => held.map((each) => each.dispose()) }),
 };
 
-/** The settings the code reads — the user's, as a test sets them — by their full key: `courier.fileIcons.offer`. */
+/** The settings the code reads — the user's, as a test sets them — by their full key: `courier.fileIcons.automatic`. */
 export const settings = new Map<string, unknown>();
 
 /** The settings of the workspace open, by their full key, which take the place of the user's. */
@@ -52,11 +52,17 @@ export const configurationListeners = new Set<
   (change: { affectsConfiguration(key: string): boolean }) => unknown
 >();
 
-/** The Courier configs the workspace holds, as the editor's search finds them. */
-export const workspaceConfigs: string[] = [];
-
-/** Who watches the workspace's Courier configs come and go. */
-export const configWatchers = new EventEmitter<void>();
+/**
+ * Tell those who listen that a setting changed, as VS Code does after any
+ * write — the code's own, the user's in their settings file, or Settings
+ * Sync's: a change affects its key and each section it sits in.
+ *
+ * @param key - The setting's full key
+ */
+export function settingChanged(key: string): void {
+  const affects = (section: string) => key === section || key.startsWith(`${section}.`);
+  for (const listener of configurationListeners) listener({ affectsConfiguration: affects });
+}
 
 /** Who listens for the user trusting the workspace. */
 export const trustGranted = new EventEmitter<void>();
@@ -76,6 +82,7 @@ const configuration = (section?: string) => {
       if (value === undefined) scope.delete(full(key));
       else scope.set(full(key), value);
       for (const listener of settingsChanged) listener(full(key));
+      settingChanged(full(key));
     },
   };
 };
@@ -90,13 +97,6 @@ export const workspace = {
     configurationListeners.add(listener);
     return { dispose: () => configurationListeners.delete(listener) };
   },
-  findFiles: async () => workspaceConfigs.map((path) => Uri.file(path)),
-  createFileSystemWatcher: () => ({
-    onDidCreate: configWatchers.event,
-    onDidDelete: configWatchers.event,
-    dispose: () => undefined,
-  }),
-  onDidChangeWorkspaceFolders: () => ({ dispose: () => undefined }),
   onDidGrantWorkspaceTrust: trustGranted.event,
 };
 
@@ -114,8 +114,8 @@ export const extensions = {
   onDidChange: extensionListeners.event,
 };
 
-/** What the code showed the user. */
-export const shown = { warnings: [] as string[], infos: [] as string[] };
+/** What the code showed the user: the messages, and the buttons each information came with. */
+export const shown = { warnings: [] as string[], infos: [] as string[], buttons: [] as string[][] };
 
 /** The picks a test makes for the user, and the buttons they press. */
 export const asked = { picks: [] as unknown[], buttons: [] as string[] };
@@ -123,13 +123,22 @@ export const asked = { picks: [] as unknown[], buttons: [] as string[] };
 /** What the code wrote to its log, level and line. */
 export const logged: [string, string][] = [];
 
+/** Whether this window is the one the user is in, as a test has it. */
+export const windowState = { focused: true };
+
+/** Who listens for the user coming to this window or leaving it. */
+export const windowStates = new EventEmitter<{ focused: boolean }>();
+
 export const window = {
+  state: windowState,
+  onDidChangeWindowState: windowStates.event,
   showWarningMessage: async (message: string) => {
     shown.warnings.push(message);
     return undefined;
   },
-  showInformationMessage: async (message: string) => {
+  showInformationMessage: async (message: string, ...buttons: string[]) => {
     shown.infos.push(message);
+    shown.buttons.push(buttons);
     return asked.buttons.shift();
   },
   createOutputChannel: () => ({

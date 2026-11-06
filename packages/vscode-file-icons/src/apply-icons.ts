@@ -5,7 +5,7 @@ import {
   removeMaterial,
 } from "./apply-material";
 import { applyVsicons, hasVsiconsIcons, keepVsiconsCurrent, removeVsicons } from "./apply-vsicons";
-import type { CourierIcons, IconTheme } from "./icon-files";
+import { type CourierIcons, ICON_THEME_IDS, type IconTheme } from "./icon-files";
 
 /**
  * Put Courier's icons into an icon theme, through the user settings the
@@ -77,4 +77,17 @@ export async function keepIconsCurrent(icons: CourierIcons): Promise<void> {
  */
 export function hasCourierIcons(theme: IconTheme): boolean {
   return theme === "material" ? hasMaterialIcons() : hasVsiconsIcons();
+}
+
+/**
+ * The icon themes the user's settings hold Courier's icons for.
+ *
+ * @returns The themes
+ * @example
+ * ```ts
+ * const lost = [...before].filter((theme) => !themesHoldingIcons().has(theme));
+ * ```
+ */
+export function themesHoldingIcons(): Set<IconTheme> {
+  return new Set(ICON_THEME_IDS.filter(hasCourierIcons));
 }

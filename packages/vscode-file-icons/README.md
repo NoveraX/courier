@@ -6,7 +6,7 @@
 
   <p><strong>Courier's own icons in your icon theme.</strong></p>
 
-  <p>Courier's icons for <code>courier.config.ts</code>, <code>courier.mocks.ts</code> and the <code>.courier</code> folder in Material Icon Theme and vscode-icons, the folder drawn in each theme's own style. You agree once; from then on they follow you into the other theme, onto your other machines, into remote windows and through updates.</p>
+  <p>Courier's icons for <code>courier.config.ts</code>, <code>courier.mocks.ts</code> and the <code>.courier</code> folder in Material Icon Theme and vscode-icons, the folder drawn in each theme's own style. They go in as the editor starts; from then on they follow you into the other theme, onto your other machines, into remote windows and through updates, and come out with one click.</p>
 
   <p>
     <a href="https://code.visualstudio.com/"><img alt="VS Code 1.95 or later" src="https://img.shields.io/badge/vs%20code-1.95%2B-1c63d6?style=flat-square&labelColor=08090a" /></a>
@@ -40,28 +40,28 @@ Material Icon Theme and vscode-icons take custom icons through their own setting
 
 [Courier Studio](https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode) installs this extension with it. It runs where the editor's window runs, beside the icon themes — on this computer in a remote window too, while Courier itself runs where your code is.
 
-## Agree once
+## In at once
 
-With either theme in use in a Courier project — as the editor starts, when a Courier project turns up in the workspace, or when you pick the theme later — the extension offers to put the icons in, and one click shows them, no reload needed. **Courier: Show Courier's Icons in the File Icon Theme** does it any time, and **Courier: Remove Courier's Icons from the File Icon Theme** takes them out again.
+With either theme in use, the extension puts the icons in as the editor starts — in any workspace — or as soon as you pick the theme, no reload needed, and says so once, in the window you are in, with **Take Them Out**. That takes them out of every theme and keeps them out, on your other machines too, as does **Courier: Remove Courier's Icons from the File Icon Theme**; **Courier: Show Courier's Icons in the File Icon Theme** puts them back any time. Icons you take out of your settings by hand stay out as well.
 
 ## Then they follow you
 
 | When | What happens |
 | --- | --- |
-| You pick the other theme | The icons go into it, in its own style, without asking again |
+| You pick the other theme | The icons go into it, in its own style, without a word |
 | You install the other theme later | The same, once it runs |
-| You open another machine Settings Sync brings your settings to | The icons are put in place there on their own, without asking again |
+| You open another machine Settings Sync brings your settings to | The icons are put in place there on their own, without a word |
 | You open a remote window — SSH, WSL, a container, a codespace | They show as they do locally: the extension runs on this computer, beside the theme |
-| You use several profiles | A profile that asked for the icons shows them; one that never did leaves the others' copies alone |
+| You use several profiles | Each profile shows them as its own settings say; one without them leaves the others' copies alone |
 | An update comes | Nothing changes: the settings name no version |
-| You take them out, on any machine | They go on every machine Settings Sync reaches, and their copies there go with the last profile that used them |
+| You take them out, on any machine | They go on every machine Settings Sync reaches and stay out until you show them again; their copies there go with the last profile that used them |
 | You uninstall the extension | They keep showing; take them out first to leave nothing behind |
 
 ## Where the icons live
 
 The icons go in through your user settings — the associations those themes read — beside your own, which stay as they are. The icons themselves sit in a folder of their own beside Material Icon Theme, `.noverax-courier-icons` in the editor's extensions folder — its dot keeps the editor from reading it as an extension — and in vscode-icons' custom icons folder. Every profile shares both folders: an empty file for each profile that put the icons in, named by a digest of an id the profile keeps in its own state, keeps the copies until the last of them takes the icons out — and a profile not started for ninety days, deleted or temporary, no longer keeps them.
 
-Each icon theme builds one theme file, in its own folder, for every profile — from the settings of whichever profile changed them last. A profile that asked for Courier's icons and finds them left out has it built again as it starts: vscode-icons by its own command, Material Icon Theme, which has none, by Courier's folder entry going out and coming back. vscode-icons is built again without them for a profile that never asked; Material Icon Theme may show them there until its settings change in that profile.
+Each icon theme builds one theme file, in its own folder, for every profile — from the settings of whichever profile changed them last. A profile whose settings hold Courier's icons and finds them left out has it built again as it starts: vscode-icons by its own command, Material Icon Theme, which has none, by Courier's folder entry going out and coming back. vscode-icons is built again without them for a profile whose settings hold none; Material Icon Theme may show them there until its settings change in that profile.
 
 A list of vscode-icons associations in a folder's own settings takes the place of yours there, so Courier's icons would not show in it: the extension says so once per folder and, when you agree, adds Courier's icons after the folder's own — in the folder's settings file, which your team may share. A folder you trust whose settings name Courier's icons gets their copies, whoever put them there.
 
@@ -78,7 +78,7 @@ Other icon themes take no custom icons; VS Code's own Seti among them.
 
 | Setting | What it does |
 | --- | --- |
-| `courier.fileIcons.offer` | Offer once to put Courier's icons into the icon theme in use (default: on) |
+| `courier.fileIcons.automatic` | Put Courier's icons into the icon theme in use by themselves, and into each one you pick (default: on); off once you take them out, on again once you show them. Read from your user settings only |
 
 Its log is under **Courier File Icons** in the Output panel.
 

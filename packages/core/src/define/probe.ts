@@ -6,9 +6,11 @@ import { standIn } from "./stand-in";
 /**
  * Opaque result of a wire call.
  *
- * The closure describing an endpoint is never executed for its value — it is
- * invoked once against a recording proxy — so relating this to the response
- * type would cost a structural comparison per endpoint and buy no safety.
+ * As the endpoint is defined, its closure runs against a recorder and what it
+ * returns is dropped; on a call, it runs against the client and hands back
+ * the request the wire made. The closure only passes on what the wire gave
+ * it, so relating this to the response type would cost a structural
+ * comparison per endpoint and buy no safety.
  */
 declare const WIRE: unique symbol;
 

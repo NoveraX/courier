@@ -1,4 +1,4 @@
-export const metadata = { title: "Types", description: "Complete reference for all TypeScript types exported by @noverax/courier.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "Types", description: "Complete reference for all TypeScript types exported by @noverax/courier.", mode: "both", updated: "2026-11-06" }
 
 ## Overview
 
@@ -130,24 +130,33 @@ The clients infer all of this themselves; name a type with these helpers where o
 ### Wire Surfaces
 
 The object `.via()` hands the closure. Name these to lift a closure out of the
-chain into a function of its own:
+chain into a function of its own. The closure runs as the endpoint is defined,
+against a recorder, and again on every call and every retried attempt — a
+stream's or a channel's for each subscription — so it describes the request and
+does nothing else:
 
 ```ts
 interface HttpWire {
-  get(path?: string, variables?: unknown): WireCall
-  post(path?: string, body?: unknown): WireCall
-  put(path?: string, body?: unknown): WireCall
-  patch(path?: string, body?: unknown): WireCall
-  del(path?: string, variables?: unknown): WireCall
-  head(path?: string, variables?: unknown): WireCall
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall
+  post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall
+  put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall
+  patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall
+  del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall
+  head(path?: string, options?: MethodOptions<"head">): WireCall
+  options(path?: string, variables?: unknown, options?: MethodOptions<"options">): WireCall
+  query(path?: string, body?: unknown, options?: MethodOptions<"query">): WireCall
+  /** A path with values put into it, each sent as text: http.path`reports/${year}` */
+  path(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
 interface StreamWire {
-  get(path?: string, variables?: unknown): WireCall
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall
+  path(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
 interface ChannelWire {
-  connect(path?: string, variables?: unknown): WireCall
+  connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall
+  path(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
 type HttpProbe<Variables> = (http: HttpWire, variables: Variables) => WireCall

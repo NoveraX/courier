@@ -166,8 +166,14 @@ export interface HttpBuilder<TVariables, TVariablesOut, TExpose extends ExposeMa
    * worked into.
    *
    * The closure hides which verb it calls, so the endpoint is taken to write;
-   * `.reads()` says otherwise. It is invoked once for its method and path and
-   * never executed for its value.
+   * `.reads()` says otherwise.
+   *
+   * The closure runs once as the endpoint is defined, with stand-ins for the
+   * variables, to learn its method and path; then on every call and on every
+   * attempt a retry makes, with the call's own variables and a client that
+   * sends the request. It describes the request and nothing more: a counter
+   * it bumps, a line it logs or a token it fetches runs each of those times,
+   * which is a middleware's work.
    */
   via(
     probe: HttpProbe<TVariablesOut>,
@@ -386,7 +392,13 @@ export interface StreamBuilder<
     PathParamNames<TPath>,
     TExpose
   >;
-  /** Address it with a closure, for a path the variables have to be worked into. */
+  /**
+   * Address it with a closure, for a path the variables have to be worked into.
+   *
+   * The closure runs once as the stream is defined, with stand-ins for the
+   * variables, to learn its path; then each time a subscription opens, with
+   * its variables. The subscription keeps that address across its reconnects.
+   */
   via(
     probe: StreamProbe<TVariablesOut>,
     options?: StreamEndpointOptions,
@@ -501,7 +513,13 @@ export interface ChannelBuilder<
     PathParamNames<TPath>,
     TExpose
   >;
-  /** Address it with a closure, for a path the variables have to be worked into. */
+  /**
+   * Address it with a closure, for a path the variables have to be worked into.
+   *
+   * The closure runs once as the channel is defined, with stand-ins for the
+   * variables, to learn its path; then each time a subscription opens, with
+   * its variables. The subscription keeps that address across its reconnects.
+   */
   via(
     probe: ChannelProbe<TVariablesOut>,
     options?: ChannelEndpointOptions,

@@ -1,4 +1,4 @@
-export const metadata = { title: "HttpClient", description: "Internal HTTP client that wraps native fetch with typed methods, automatic serialization, and path parameter resolution.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "HttpClient", description: "Internal HTTP client that wraps native fetch with typed methods, automatic serialization, and path parameter resolution.", mode: "both", updated: "2026-11-06" }
 
 ## Overview
 
@@ -11,9 +11,10 @@ export const metadata = { title: "HttpClient", description: "Internal HTTP clien
 ## HTTP Methods
 
 At definition time `.via()` hands its closure an `HttpWire` — a recorder that
-captures which method and path the endpoint addresses. At request time the same
-closure runs against an `HttpClient` bound to the source, whose six methods carry
-the call out:
+captures which method and path the endpoint addresses, with stand-ins for the
+variables. On every call, and on every attempt a retry makes, the same closure
+runs against an `HttpClient` bound to the source, whose eight methods carry the
+call out, beside `path`, which puts a value into the path:
 
 ```ts
 get: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
@@ -22,6 +23,8 @@ put: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
 patch: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
 del: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
 head: <T>(url?, options?) => Promise<HttpResponse<T>>
+options: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
+query: <T>(url?, variables?, options?) => Promise<HttpResponse<T>>
 ```
 
 ## HttpResponse

@@ -1,4 +1,4 @@
-export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Defining APIs", description: "Define your API structure with courier, defineGroup, and defineApi — the foundation of type-safe API calls.", mode: "both", updated: "2026-11-06" }
 
 ## Overview
 
@@ -61,6 +61,8 @@ endpoint.post("").variables(CreateUserSchema).response(UserSchema)
 ```
 
 `.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`, `options`, `query`), and `path`, which [puts a value into the path](/docs/advanced/path-params#a-value-in-a-closures-path) as text — and optionally `vars` (the variables).
+
+The closure runs once as the endpoint is defined, with stand-ins for the variables, to learn the method and path it addresses. It then runs on every call and on every attempt a retry makes, with the call's own variables and a client that sends the request; a stream's or a channel's closure runs each time a subscription opens. So it describes the request and nothing more: a counter it bumps, a line it logs or a token it fetches would run each of those times, the stand-ins included. Work that belongs to a call is [middleware's](/docs/middleware/overview).
 
 A base can carry what a whole vendor surface shares, so no endpoint repeats it:
 

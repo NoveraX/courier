@@ -125,7 +125,10 @@ export type MachineEvent =
   | { readonly type: "start" }
   | { readonly type: "credentials"; readonly fingerprint: string }
   | { readonly type: "credentials-failed"; readonly error: unknown }
-  /** The socket could not even be made: an address or a policy the platform refuses */
+  /**
+   * The socket could not even be made: an address or a policy the platform
+   * refuses, or credentials no frame can carry
+   */
   | { readonly type: "socket-failed"; readonly error: RealtimeError }
   | { readonly type: "socket-open" }
   /** The server took the first `auth`: `auth_ok`, with how it pings the connection */

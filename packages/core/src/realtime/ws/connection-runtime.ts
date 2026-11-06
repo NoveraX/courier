@@ -1,5 +1,4 @@
 import type { ScopedLogger } from "../../logger";
-import { fingerprintOf } from "../credentials-fingerprint";
 import { authFrame } from "./auth-frame";
 import { transition } from "./connection-machine";
 import type {
@@ -9,6 +8,7 @@ import type {
   MachineState,
 } from "./connection-machine-types";
 import { connectionSocket } from "./connection-socket";
+import { credentialsEvent } from "./credentials-event";
 import type { WSCredentials } from "./ws-credentials";
 import type { WSConnectionConfig, WSSocketFactory } from "./ws-types";
 
@@ -139,8 +139,9 @@ export function createConnectionRuntime(options: RuntimeOptions): ConnectionRunt
     const request = ++asked;
     const answer = (found: WSCredentials | undefined): void => {
       if (request !== asked) return;
-      credentials = found;
-      dispatch({ type: "credentials", fingerprint: fingerprintOf(found) });
+      const event = credentialsEvent(found);
+      if (event.type === "credentials") credentials = found;
+      dispatch(event);
     };
     const refuse = (error: unknown): void => {
       if (request !== asked) return;

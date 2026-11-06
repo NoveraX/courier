@@ -8,6 +8,8 @@ import { CancelledError } from "./cancelled-error";
 import { createCourier } from "./create";
 import { createCourierVersion } from "./create-courier-version";
 import { FRAMEWORKS } from "./frameworks";
+import { textReport } from "./report/text-report";
+import type { SetupIO } from "./setup-io";
 
 const log = createLogger("Create");
 
@@ -104,14 +106,14 @@ const main = defineCommand({
   meta: { name: "create-courier", version: createCourierVersion(), description: SUMMARY },
   args: ARGS,
   async run({ args }) {
-    const style = styleFor(process.stdout);
-    const terminal = {
+    const io: SetupIO = {
       interactive: process.stdin.isTTY === true && process.stderr.isTTY === true,
-      style,
-      print: (lines: readonly string[]) => process.stdout.write(`${lines.join("\n")}\n`),
+      report: textReport(styleFor(process.stdout), (lines) =>
+        process.stdout.write(`${lines.join("\n")}\n`),
+      ),
     };
     try {
-      process.exitCode = await createCourier(args, terminal);
+      process.exitCode = await createCourier(args, io);
     } catch (error) {
       if (error instanceof CancelledError) {
         process.stderr.write(`\n${error.message}.\n`);

@@ -1,26 +1,13 @@
-import type { Terminal } from "../add-courier";
 import type { CreateRun } from "../create-run";
 import { changedLines } from "../edit/line-diff";
 import type { Plan, PlannedEdit } from "../plan/build-plan";
-import { manualLines, nextLines } from "../plan/plan-lines";
 import type { RecipeContext } from "../recipes/recipe-types";
-import { prepare, reportTypes } from "./after-install";
+import type { SetupIO } from "../setup-io";
+import { prepare } from "./after-install";
 import { importSpecification } from "./import-specification";
 import { install, installCommands } from "./install";
-import type { Touched } from "./typecheck";
+import { type Touched, typecheckTouched } from "./typecheck";
 import { checkEditsCurrent, writePlannedEdits, writePlannedFiles } from "./write-plan";
-
-/* What is left to the person, and what to run next. */
-function closingLines(plan: Plan, terminal: Terminal): string[] {
-  return [
-    ...(plan.manual.length > 0
-      ? ["", "Left to you", ...plan.manual.flatMap((step) => manualLines(step, terminal.style))]
-      : []),
-    "",
-    "Next",
-    ...nextLines(plan.next, terminal.style),
-  ];
-}
 
 /* The lines each edit added, by file, for the type check to hold it to. */
 function changedByEdits(edits: readonly PlannedEdit[]): Map<string, Set<number>> {
@@ -44,61 +31,57 @@ async function installAndCheck(
   plan: Plan,
   run: CreateRun,
   touched: Touched,
-  terminal: Terminal,
+  io: SetupIO,
 ): Promise<number> {
-  const commands = installCommands(ctx.manager, plan);
-  if (run.install === false) {
-    terminal.print([
-      "",
-      "Install the packages to finish:",
-      ...commands.map((command) => `  ${command.join(" ")}`),
-    ]);
-    return 0;
-  }
-  await install(ctx.project.root, commands);
-  await prepare(ctx, plan, terminal);
+  await install(ctx.project.root, installCommands(ctx.manager, plan));
+  await prepare(ctx, plan, io.report);
   if (run.openapi !== undefined) {
     const status = await importSpecification(ctx.project.root, run.openapi, run.name);
     if (status !== 0) return status;
   }
-  return reportTypes(ctx.project.root, touched, terminal);
+  const outcome = await typecheckTouched(ctx.project.root, touched);
+  io.report.typechecked(outcome);
+  if (outcome.kind !== "errors") return 0;
+  io.report.end({ kind: "typecheck-failed" });
+  return 1;
 }
 
 /**
  * Carry a plan out: write its files, scripts and changes, install its
  * packages — or name the commands with `--no-install` — import the
  * specification if one was given, check the types of what it added and
- * changed, and say what is left to the person and what to run next.
+ * changed, and report what is left to the person and what to run next.
  *
  * @param ctx - The project, and what is set up in it
  * @param plan - The plan the person agreed to
  * @param run - What the command line asked for
- * @param terminal - Where to write
+ * @param io - Where to tell what it does
  * @param done - What it says once the packages are in and the types check
  * @returns The exit status: 0 once set up, 1 when what it added does not type-check
  * @example
  * ```ts
- * return applyPlan(ctx, plan, run, terminal);
+ * return applyPlan(ctx, plan, run, io);
  * ```
  */
 export async function applyPlan(
   ctx: RecipeContext,
   plan: Plan,
   run: CreateRun,
-  terminal: Terminal,
+  io: SetupIO,
   done = "Courier is set up.",
 ): Promise<number> {
   const { root } = ctx.project;
   checkEditsCurrent(root, plan.edits);
   const written = writePlannedFiles(root, plan.files);
-  const edited = writePlannedEdits(root, plan.edits);
-  const files = `${written.length} ${written.length === 1 ? "file" : "files"}`;
-  const changes = edited.length > 0 ? `, and changed ${edited.join(", ")}` : "";
-  terminal.print(["", `Wrote ${files}${changes}.`]);
+  const changed = writePlannedEdits(root, plan.edits);
+  io.report.wrote({ written, changed });
+  if (run.install === false) {
+    io.report.end({ kind: "install-left", plan, commands: installCommands(ctx.manager, plan) });
+    return 0;
+  }
   const touched: Touched = { added: written, changed: changedByEdits(plan.edits) };
-  const status = await installAndCheck(ctx, plan, run, touched, terminal);
+  const status = await installAndCheck(ctx, plan, run, touched, io);
   if (status !== 0) return status;
-  const said = run.install === false ? [] : ["", terminal.style.green(done)];
-  terminal.print([...said, ...closingLines(plan, terminal)]);
+  io.report.end({ kind: "applied", plan, said: done });
   return 0;
 }

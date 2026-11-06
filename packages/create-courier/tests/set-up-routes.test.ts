@@ -12,6 +12,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { writePlannedEdits, writePlannedFiles } from "../src/apply/write-plan";
 import { frameworkById } from "../src/frameworks";
 import { buildPlan } from "../src/plan/build-plan";
+import { textReport } from "../src/report/text-report";
 import { setUpRoutes } from "../src/set-up-routes";
 import { contextOf, manifest, projectWith, removeProjects } from "./recipes/project-fixture";
 
@@ -64,8 +65,7 @@ function terminal() {
     printed,
     terminal: {
       interactive: false,
-      style: createTerminalStyle(0, false),
-      print: (lines: readonly string[]) => printed.push(...lines),
+      report: textReport(createTerminalStyle(0, false), (lines) => printed.push(...lines)),
     },
   };
 }

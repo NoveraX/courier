@@ -1,6 +1,6 @@
 import { basename, dirname } from "node:path";
 
-import { addCourier, type Terminal } from "../add-courier";
+import { addCourier } from "../add-courier";
 import { runTool, toolFailure } from "../apply/run-tool";
 import type { CreateRun } from "../create-run";
 import { FRAMEWORKS, type Framework, frameworkById } from "../frameworks";
@@ -11,6 +11,7 @@ import {
   packageManager,
 } from "../project/package-manager";
 import { askChoice, askYesNo } from "../prompt";
+import type { SetupIO } from "../setup-io";
 import { wantsMcp } from "../wants-mcp";
 import { generatorFor } from "./generators";
 import { prepareTemplate } from "./prepare-template";
@@ -18,9 +19,9 @@ import { prepareTemplate } from "./prepare-template";
 /* Remix continues as React Router's framework mode, which its new projects are made with. */
 const CREATABLE = FRAMEWORKS.filter((framework) => framework.id !== "remix");
 
-async function frameworkToCreate(run: CreateRun, terminal: Terminal): Promise<Framework> {
+async function frameworkToCreate(run: CreateRun, io: SetupIO): Promise<Framework> {
   if (run.framework !== undefined) return frameworkById(run.framework);
-  if (!terminal.interactive) {
+  if (!io.interactive) {
     throw new Error(
       `Name the framework to create the project with: --framework ${CREATABLE.map((framework) => framework.id).join("|")}`,
     );
@@ -48,16 +49,18 @@ function packageNameOf(root: string): string {
   );
 }
 
-async function agreed(run: CreateRun, terminal: Terminal): Promise<boolean> {
+async function agreed(run: CreateRun, io: SetupIO): Promise<boolean> {
   if (run.yes === true) return true;
-  if (!terminal.interactive) {
-    terminal.print([
-      "Nothing was created: run it again with --yes to create it, or --dry-run to only show the plan.",
-    ]);
+  if (!io.interactive) {
+    io.report.end({
+      kind: "refused",
+      code: "CONFIRMATION_REQUIRED",
+      said: "Nothing was created: run it again with --yes to create it, or --dry-run to only show the plan.",
+    });
     return false;
   }
   if (await askYesNo("Create it, and set Courier up in it?", true)) return true;
-  terminal.print(["Nothing was created."]);
+  io.report.end({ kind: "refused", code: "DECLINED", said: "Nothing was created." });
   return false;
 }
 
@@ -71,34 +74,28 @@ async function agreed(run: CreateRun, terminal: Terminal): Promise<boolean> {
  *
  * @param root - The new project's folder
  * @param run - What the command line asked for
- * @param terminal - Where to write, and whether to ask
+ * @param io - Where to tell what it does, and whether to ask
  * @returns The exit status
  * @example
  * ```ts
- * process.exitCode = await createProject("/work/shop", { framework: "next", yes: true }, terminal);
+ * process.exitCode = await createProject("/work/shop", { framework: "next", yes: true }, io);
  * ```
  */
-export async function createProject(
-  root: string,
-  run: CreateRun,
-  terminal: Terminal,
-): Promise<number> {
+export async function createProject(root: string, run: CreateRun, io: SetupIO): Promise<number> {
   const name = packageNameOf(root);
   const manager = packageManager(managerName(run));
-  const framework = await frameworkToCreate(run, terminal);
-  const mcp = await wantsMcp(run, terminal);
+  const framework = await frameworkToCreate(run, io);
+  const mcp = await wantsMcp(run, io);
   const generator = generatorFor(framework.id, name, manager.name);
   const how = generator
     ? `npx --yes ${generator.args.join(" ")}`
     : "an Express server in TypeScript, the command's own";
-  terminal.print([
-    terminal.style.bold(`Create ${name} with ${framework.label}, then set Courier up in it`),
-    "",
-    `  ${how}`,
-    "",
-  ]);
-  if (run["dry-run"] === true || !(await agreed(run, terminal)))
-    return run["dry-run"] === true ? 0 : 1;
+  io.report.newProject({ name, framework: framework.label, how });
+  if (run["dry-run"] === true) {
+    io.report.end({ kind: "dry-run" });
+    return 0;
+  }
+  if (!(await agreed(run, io))) return 1;
   if (generator) {
     const command = ["npx", "--yes", ...generator.args];
     const result = await runTool(command, {
@@ -112,8 +109,7 @@ export async function createProject(
         `${framework.label}'s generator: ${toolFailure(command, result, SETUP_LIMITS.generatorMs)}; nothing of Courier's was added`,
       );
   }
-  await prepareTemplate({ root, name, framework: framework.id, manager, generator }, terminal);
-  terminal.print([""]);
+  await prepareTemplate({ root, name, framework: framework.id, manager, generator }, io.report);
   return addCourier(
     root,
     {
@@ -124,6 +120,6 @@ export async function createProject(
       yes: true,
       fresh: true,
     },
-    terminal,
+    io,
   );
 }

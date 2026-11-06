@@ -1,6 +1,6 @@
-import type { Terminal } from "./add-courier";
 import type { CreateRun } from "./create-run";
 import { askYesNo } from "./prompt";
+import type { SetupIO } from "./setup-io";
 
 /**
  * Whether to offer the API's reads to AI agents in the editor, over MCP:
@@ -9,16 +9,16 @@ import { askYesNo } from "./prompt";
  * answer. Asked before anything is changed.
  *
  * @param run - What the command line asked for
- * @param terminal - Whether a person can answer
+ * @param io - Whether a person can answer
  * @returns `true` to add the project's MCP server for the editor
  * @throws {CancelledError} When the person cancels the question
  * @example
  * ```ts
- * const mcp = await wantsMcp(run, terminal);
+ * const mcp = await wantsMcp(run, io);
  * ```
  */
-export async function wantsMcp(run: CreateRun, terminal: Terminal): Promise<boolean> {
+export async function wantsMcp(run: CreateRun, io: SetupIO): Promise<boolean> {
   if (run.mcp !== undefined) return run.mcp;
-  if (!terminal.interactive || run.yes === true || run["dry-run"] === true) return false;
+  if (!io.interactive || run.yes === true || run["dry-run"] === true) return false;
   return askYesNo("Offer the API's reads to AI agents in your editor, over MCP?", false);
 }

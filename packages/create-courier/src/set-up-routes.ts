@@ -1,10 +1,8 @@
 import { basename } from "node:path";
 
-import type { Terminal } from "./add-courier";
 import { applyPlan } from "./apply/apply-plan";
 import { frameworkOf } from "./framework-of";
 import { buildPlan, changesAnything } from "./plan/build-plan";
-import { planLines } from "./plan/plan-lines";
 import { configuredSources } from "./project/configured-sources";
 import { importExtension } from "./project/module-style";
 import { managerFor } from "./project/package-manager";
@@ -14,8 +12,11 @@ import { askYesNo } from "./prompt";
 import { isRoutesFramework } from "./recipes/edits/framework-routes";
 import type { RecipeContext } from "./recipes/recipe-types";
 import { routesSetupRecipe } from "./routes-setup/routes-setup-recipe";
+import type { SetupIO } from "./setup-io";
 
-export type { Terminal } from "./add-courier";
+export type { SetupReport } from "./report/setup-report";
+export { textReport } from "./report/text-report";
+export type { SetupIO } from "./setup-io";
 
 /** What the command line asked of the routes' setup. */
 export interface RoutesSetupRun {
@@ -41,19 +42,15 @@ const DONE = "The pages take their routes from Courier's plugin.";
  *
  * @param root - The project's folder, which holds its package.json
  * @param run - What the command line asked for
- * @param terminal - Where to write, and whether to ask
+ * @param io - Where to tell what it does, and whether to ask
  * @returns The exit status
  * @throws {Error} When the project has no tsconfig.json, Courier has no plugin for its framework, or its config declares no API
  * @example
  * ```ts
- * process.exitCode = await setUpRoutes("/work/shop", { yes: true }, terminal);
+ * process.exitCode = await setUpRoutes("/work/shop", { yes: true }, io);
  * ```
  */
-export async function setUpRoutes(
-  root: string,
-  run: RoutesSetupRun,
-  terminal: Terminal,
-): Promise<number> {
+export async function setUpRoutes(root: string, run: RoutesSetupRun, io: SetupIO): Promise<number> {
   const project = readProject(root);
   if (!project.exists("tsconfig.json")) {
     throw new Error(
@@ -88,27 +85,32 @@ export async function setUpRoutes(
   const plan = buildPlan(ctx, routesSetupRecipe(ctx, framework.id));
   const name = project.manifest.name ?? basename(root);
   const title = `Build the pages' routes in with Courier's plugin in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`;
-  terminal.print(planLines(title, plan, terminal.style));
+  io.report.plan({ title, plan });
   if (!changesAnything(plan)) {
-    terminal.print([
+    const said =
       plan.manual.length > 0
         ? "Nothing here is for the command to change: the steps left to you are above."
-        : DONE,
-    ]);
+        : DONE;
+    io.report.end({ kind: "unchanged", said, next: [] });
     return 0;
   }
-  if (run["dry-run"] === true) return 0;
+  if (run["dry-run"] === true) {
+    io.report.end({ kind: "dry-run" });
+    return 0;
+  }
   if (run.yes !== true) {
-    if (!terminal.interactive) {
-      terminal.print([
-        "Nothing was changed: run it again with --yes to make the changes, or --dry-run to only show the plan.",
-      ]);
+    if (!io.interactive) {
+      io.report.end({
+        kind: "refused",
+        code: "CONFIRMATION_REQUIRED",
+        said: "Nothing was changed: run it again with --yes to make the changes, or --dry-run to only show the plan.",
+      });
       return 1;
     }
     if (!(await askYesNo("Make the changes?", true))) {
-      terminal.print(["Nothing was changed."]);
+      io.report.end({ kind: "refused", code: "DECLINED", said: "Nothing was changed." });
       return 1;
     }
   }
-  return applyPlan(ctx, plan, run, terminal, DONE);
+  return applyPlan(ctx, plan, run, io, DONE);
 }

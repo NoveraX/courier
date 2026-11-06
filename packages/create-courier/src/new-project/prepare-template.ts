@@ -1,9 +1,9 @@
-import type { Terminal } from "../add-courier";
 import { install } from "../apply/install";
 import { runTool, toolFailure } from "../apply/run-tool";
 import type { FrameworkId } from "../frameworks";
 import { SETUP_LIMITS } from "../limits";
 import type { PackageManager } from "../project/package-manager";
+import type { SetupReport } from "../report/setup-report";
 import { writeExpressTemplate } from "./express-template";
 import { fixFreshProject } from "./fresh-fixes";
 import type { Generator } from "./generators";
@@ -24,18 +24,18 @@ export interface NewTemplate {
  * needs for what Courier adds to it to build — Astro's server adapter.
  *
  * @param template - The new project
- * @param terminal - Where to say what was put right and added
+ * @param report - Where to say what was put right and added
  * @throws {Error} When an install or a step fails, naming it
  * @example
  * ```ts
- * await prepareTemplate({ root, name: "shop", framework: "astro", manager, generator }, terminal);
+ * await prepareTemplate({ root, name: "shop", framework: "astro", manager, generator }, io.report);
  * ```
  */
-export async function prepareTemplate(template: NewTemplate, terminal: Terminal): Promise<void> {
+export async function prepareTemplate(template: NewTemplate, report: SetupReport): Promise<void> {
   const { root, name, framework, manager, generator } = template;
   const express = generator ? undefined : writeExpressTemplate(root, name);
   const fixed = fixFreshProject(root, framework, manager.name);
-  if (fixed.length > 0) terminal.print(["", ...fixed]);
+  if (fixed.length > 0) report.note(fixed);
   if (express) {
     await install(root, [
       manager.add(express.dependencies, false),
@@ -54,6 +54,6 @@ export async function prepareTemplate(template: NewTemplate, terminal: Terminal)
       throw new Error(
         `${toolFailure(command, result, SETUP_LIMITS.installMs)}; nothing of Courier's was added`,
       );
-    terminal.print(["", step.done]);
+    report.note([step.done]);
   }
 }

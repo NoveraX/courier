@@ -1,11 +1,12 @@
 import { styleFor } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
-import type { Terminal } from "../src/add-courier";
+import { textReport } from "../src/report/text-report";
+import type { SetupIO } from "../src/setup-io";
 import { wantsMcp } from "../src/wants-mcp";
 
-function terminalThat(interactive: boolean): Terminal {
-  return { interactive, style: styleFor(undefined), print: () => undefined };
+function terminalThat(interactive: boolean): SetupIO {
+  return { interactive, report: textReport(styleFor(undefined), () => undefined) };
 }
 
 describe("wantsMcp", () => {

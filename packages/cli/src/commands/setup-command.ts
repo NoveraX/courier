@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { styleFor } from "@noverax/courier/internal";
-import { setUpRoutes } from "@noverax/create-courier/setup";
+import { type SetupIO, setUpRoutes, textReport } from "@noverax/create-courier/setup";
 import { type ArgsDef, defineCommand } from "citty";
 
 const log = createLogger("Setup");
@@ -51,13 +51,14 @@ export const setupCommand = defineCommand({
   args: SETUP_ARGS,
   async run({ args }) {
     const root = resolve(args.cwd ?? process.cwd());
-    const terminal = {
+    const io: SetupIO = {
       interactive: process.stdin.isTTY === true && process.stderr.isTTY === true,
-      style: styleFor(process.stdout),
-      print: (lines: readonly string[]) => process.stdout.write(`${lines.join("\n")}\n`),
+      report: textReport(styleFor(process.stdout), (lines) =>
+        process.stdout.write(`${lines.join("\n")}\n`),
+      ),
     };
     try {
-      process.exitCode = await setUpRoutes(root, args, terminal);
+      process.exitCode = await setUpRoutes(root, args, io);
     } catch (error) {
       /* One line naming the problem, and a failing status. */
       log.error(error instanceof Error ? error.message : String(error));

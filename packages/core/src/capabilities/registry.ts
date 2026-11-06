@@ -1,5 +1,6 @@
-import { servesOneUser } from "../utils/serves-one-user";
+import { isReactNative } from "../utils/is-react-native";
 import type { InProcessProxyCapability } from "./in-process-proxy";
+import type { SessionCapability } from "./session";
 import type { StudioCapability } from "./studio";
 
 /**
@@ -11,6 +12,8 @@ import type { StudioCapability } from "./studio";
 export interface ServerCapabilities {
   /** The proxy of this process, which a proxy caller on its server reaches without leaving it */
   readonly inProcessProxy: InProcessProxyCapability;
+  /** The user's session, read from the request being served, and the cookies its answers set carried on */
+  readonly session: SessionCapability;
   /** Studio's view of the calls, where Studio is attached */
   readonly studio: StudioCapability;
 }
@@ -52,9 +55,11 @@ export function capabilitySlots(): Slots {
 /**
  * The server's implementation of one capability, as the server that runs
  * this code provided it — or `undefined`: nothing provided it, or the code
- * runs in a page or an app. A page asks nothing of the registry whatever
- * lies on its global object, so a script on the page cannot stand in for a
- * server and be handed the page's calls.
+ * runs in a React Native app, which serves no request. A server reads its
+ * slots whatever else its global object holds: one that put a DOM there
+ * for a library is still a server. A page's bundle takes a stand-in of
+ * this module, which reads no slot, so a script on the page cannot stand
+ * in for a server and be handed the page's calls.
  *
  * @param name - The capability
  * @returns Its implementation, or `undefined`
@@ -66,6 +71,31 @@ export function capabilitySlots(): Slots {
 export function serverCapability<TName extends ServerCapabilityName>(
   name: TName,
 ): ServerCapabilities[TName] | undefined {
-  if (servesOneUser()) return undefined;
+  if (isReactNative()) return undefined;
   return capabilitySlots()[name];
+}
+
+/* Every contract's key starts so: another one on the global object is another copy's registry. */
+const KEY_PREFIX = "courier.serverCapabilities.";
+
+/**
+ * What else may keep a call from the server's part, beside nothing having
+ * lent it: a registry of another contract on the global object, kept by a
+ * copy of the core of another version, which this one does not read. That
+ * copy makes its registry the first time it reads one, so the key may
+ * hold no slot at all.
+ *
+ * @returns The cause, as a refusal adds it to its advice, or `undefined` where nothing more is known
+ * @example
+ * ```ts
+ * const cause = missingCapabilityCause();
+ * ```
+ */
+export function missingCapabilityCause(): string | undefined {
+  const own = Symbol.keyFor(REGISTRY);
+  const others = Object.getOwnPropertySymbols(globalThis)
+    .map((symbol) => Symbol.keyFor(symbol))
+    .filter((key) => key !== undefined && key !== own && key.startsWith(KEY_PREFIX));
+  if (others.length === 0) return undefined;
+  return `this process runs another copy of the core too, under another contract: its registry is kept under ${others.join(", ")}, which this copy, under ${own}, does not read. Have one version of @noverax/courier installed, as npm ls @noverax/courier, pnpm why @noverax/courier or yarn why @noverax/courier shows`;
 }

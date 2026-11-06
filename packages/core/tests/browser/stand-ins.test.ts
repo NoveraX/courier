@@ -44,6 +44,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/attempt-expiry": "src/browser/utils/attempt-expiry.ts",
       "define/announce-source": "src/define/announce-source.ts",
       "browser/define/announce-source": "src/browser/define/announce-source.ts",
+      "capabilities/registry": "src/capabilities/registry.ts",
+      "browser/capabilities/registry": "src/browser/capabilities/registry.ts",
     });
   });
 });

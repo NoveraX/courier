@@ -88,8 +88,16 @@ describe("the root", () => {
   });
 
   it("offers the very bindings the entries do", () => {
-    for (const [name, value] of [...Object.entries(client), ...Object.entries(server)]) {
+    for (const [name, value] of Object.entries(server)) {
       expect(Reflect.get(root, name), name).toBe(value);
     }
+    for (const [name, value] of Object.entries(client)) {
+      if (name !== "createCaller") expect(Reflect.get(root, name), name).toBe(value);
+    }
+  });
+
+  it("makes its callers with the server's caller, which a page's leaves out", () => {
+    expect(root.createCaller).toBe(server.createCaller);
+    expect(client.createCaller).not.toBe(server.createCaller);
   });
 });

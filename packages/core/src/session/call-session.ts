@@ -1,11 +1,12 @@
+import { missingCapabilityCause, serverCapability } from "../capabilities/registry";
+import type { SessionCapability } from "../capabilities/session";
+import { ConfigurationError } from "../errors/configuration-error";
 import type { Context } from "../http-client/types";
 import { isReactNative } from "../utils/is-react-native";
 import { servesOneUser } from "../utils/serves-one-user";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
 import type * as NativeSession from "./native-session";
-import { captureIncomingRequest } from "./request-context";
-import type * as ServerSession from "./server-session";
 import type { SessionTarget } from "./session-target";
 import type { SessionOptions } from "./types";
 
@@ -56,14 +57,16 @@ export interface CallSession {
  * The request being served is asked for synchronously, before the call
  * first waits — some frameworks know it only until then — and read when the
  * answer is awaited. A caller that named a request in its context is served
- * from it alone; a browser sends its own cookies; elsewhere the registered
- * adapters say which request is being served, if any is. What a server
- * reads of a request is loaded with the first call that reads one, so a
- * browser never loads it.
+ * from it alone; any other call, from the request the registered adapters
+ * say is being served, when one is — on a server that put a DOM on its
+ * global object too. With none, a browser sends its own cookies and an app
+ * the ones it kept. What a server reads of a request is the server's to
+ * lend — a page imports none of it.
  *
  * @param context - The call's context
- * @param target - The call's API and endpoint, as the session reads them
+ * @param target - The call's API and endpoint, as the session reads it
  * @returns What the call carries, now or once the request is found; `undefined` for nothing
+ * @throws ConfigurationError `SERVER_CAPABILITY_MISSING` when the context names a request and no server lends a session
  * @example
  * ```ts
  * const session = await sessionFor(context, target);
@@ -75,13 +78,34 @@ export function sessionFor(
 ): CallSession | Promise<CallSession | undefined> | undefined {
   if (target.session === undefined && target.forward === undefined) return undefined;
   if (context !== undefined && namesRequest(context)) {
-    return serverPart().then((server) => server.contextSession(context, target));
+    return Promise.resolve().then(() => serverSession(target).contextSession(context, target));
   }
-  if (servesOneUser()) return oneUserSession(target);
-  const found = captureIncomingRequest();
-  if (found === undefined) return undefined;
-  return Promise.all([found, serverPart()]).then(([incoming, server]) =>
-    incoming === undefined ? undefined : server.ambientSession(incoming, target),
+  const served = serverCapability("session")?.ambientSession(target);
+  if (served !== undefined) return served;
+  return servesOneUser() ? oneUserSession(target) : undefined;
+}
+
+/**
+ * The server's session, which a call that names the request it serves
+ * cannot go without: sent without it, the call would carry none of the
+ * user's credentials where its code counts on them.
+ *
+ * @param target - The call, named in the refusal
+ * @returns The session the server lends
+ * @throws ConfigurationError `SERVER_CAPABILITY_MISSING` when no server lends one
+ * @example
+ * ```ts
+ * serverSession(target).relayCookies(upstream, session, false);
+ * ```
+ */
+export function serverSession(target: Pick<SessionTarget, "name">): SessionCapability {
+  const session = serverCapability("session");
+  if (session !== undefined) return session;
+  /* The advice for the likelier cause, and the other one beside it when it is known. */
+  const cause = missingCapabilityCause();
+  throw new ConfigurationError(
+    "SERVER_CAPABILITY_MISSING",
+    `[courier] ${target.name} names the request it serves in its context, and nothing here reads one: only a server does. On a server, make the caller with createCaller from @noverax/courier/server, or register the framework's request context with registerRequestContext${cause === undefined ? "" : `; ${cause}`}.`,
   );
 }
 
@@ -129,11 +153,4 @@ let native: Promise<typeof NativeSession> | undefined;
 function nativePart(): Promise<typeof NativeSession> {
   native ??= import("./native-session");
   return native;
-}
-
-let server: Promise<typeof ServerSession> | undefined;
-
-function serverPart(): Promise<typeof ServerSession> {
-  server ??= import("./server-session");
-  return server;
 }

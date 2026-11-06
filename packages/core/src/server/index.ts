@@ -14,7 +14,6 @@ export { handleWhileConnected } from "../adapter/handle-while-connected";
 export { createWSHandler } from "../adapter/handle-ws";
 export { memoryRateLimitStore } from "../adapter/rate-limit/memory-store";
 export { detectAppOrigin, getAppOrigin, setAppOrigin } from "../app-origin";
-export { createCaller } from "../caller";
 /* Its client types, each from the module that declares it, are named in client/public-types.ts. */
 export type * from "../client/public-types";
 export { AbortError, isAbortError } from "../errors/abort-error";
@@ -30,11 +29,12 @@ export { createLogger, logger } from "../logger";
 export { defineMiddleware } from "../middleware/define";
 export { createProxyCaller } from "../proxy-caller/create-proxy-caller";
 export { ConnectionError, RealtimeError } from "../realtime/realtime-error";
-export { registerRequestContext } from "../session/request-context";
-export { ensureCsrfToken } from "../utils/ensure-csrf-token";
 export { redact } from "../utils/redact/redact";
 export { isStreamedUpload } from "../utils/streamed-upload";
 export { isValidationError, ValidationError } from "../validation";
+export { createCaller } from "./create-caller";
+export { ensureCsrfToken } from "./ensure-csrf-token";
 /* Its own types, each from the module that declares it, are named in public-types.ts. */
 export type * from "./public-types";
+export { registerRequestContext } from "./session/request-context";
 export { getSources, registerSources } from "./sources";

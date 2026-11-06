@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { addressedTo } from "./node-origin";
 import { appendSetCookie } from "./node-set-cookie";
+import { preferRequestContext } from "./server/session/request-context";
 import type { IncomingRequest, RequestContextProvider } from "./session/incoming-request";
-import { preferRequestContext } from "./session/request-context";
 import { forwardedChain } from "./utils/forwarded-for";
 import { parseUrl } from "./utils/parse-url";
 

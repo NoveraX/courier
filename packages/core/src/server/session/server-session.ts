@@ -1,14 +1,14 @@
-import type { Context } from "../http-client/types";
-import type { CallSession } from "./call-session";
+import type { Context } from "../../http-client/types";
+import type { CallSession } from "../../session/call-session";
+import type { IncomingRequest } from "../../session/incoming-request";
+import { type SessionCredentials, sessionCredentials } from "../../session/session-credentials";
+import type { SessionTarget } from "../../session/session-target";
+import { assertSecureTransport } from "../../session/transport";
+import type { SessionOptions } from "../../session/types";
 import { incomingFromContext } from "./context-incoming";
 import { forwardedHeaders } from "./forward-headers";
-import type { IncomingRequest } from "./incoming-request";
 import { onBehalfOf } from "./on-behalf";
 import { cookieJarFor } from "./request-state";
-import { type SessionCredentials, sessionCredentials } from "./session-credentials";
-import type { SessionTarget } from "./session-target";
-import { assertSecureTransport } from "./transport";
-import type { SessionOptions } from "./types";
 import { writeRefusal } from "./write-guard";
 
 /** How the request a call is served from relates to the call. */

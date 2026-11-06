@@ -2,11 +2,12 @@ import { getSourceName } from "../define/api";
 import type { AnyDefinedApi } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import { csrfSource } from "../session/csrf-source";
-import { captureIncomingRequest } from "../session/request-context";
-import { cookieJarFor } from "../session/request-state";
-import { askForToken, askOnce, tokenCall } from "./csrf-prime";
-import { callInstruments } from "./execute-studio";
-import { prepareAndRun } from "./prepare-and-run";
+import { askForToken, askOnce, tokenCall } from "../utils/csrf-prime";
+import { callInstruments } from "../utils/execute-studio";
+import { prepareAndRun } from "../utils/prepare-and-run";
+import { provideServerCapabilities } from "./provide-server-capabilities";
+import { captureIncomingRequest } from "./session/request-providers";
+import { cookieJarFor } from "./session/request-state";
 
 /**
  * Ask the API for the user's double-submit token now, while a request is
@@ -31,6 +32,7 @@ import { prepareAndRun } from "./prepare-and-run";
  * ```
  */
 export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
+  provideServerCapabilities();
   const csrf = api.options.session?.csrf;
   const source = getSourceName(api) ?? "api";
   if (csrf?.from === undefined) {

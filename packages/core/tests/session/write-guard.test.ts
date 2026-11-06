@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-
+import { writeRefusal } from "../../src/server/session/write-guard";
 import type { IncomingRequest } from "../../src/session/incoming-request";
-import { writeRefusal } from "../../src/session/write-guard";
 
 function incoming(method: string, headers: Record<string, string>): IncomingRequest {
   return { key: {}, method, origin: "https://app.example.com", headers: new Headers(headers) };

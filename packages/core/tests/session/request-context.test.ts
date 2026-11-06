@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { withIncomingRequest } from "../../src/node-request-context";
+import { registerRequestContext } from "../../src/server/session/request-context";
+import { captureIncomingRequest } from "../../src/server/session/request-providers";
 import type { IncomingRequest, RequestContextProvider } from "../../src/session/incoming-request";
-import { captureIncomingRequest, registerRequestContext } from "../../src/session/request-context";
 
 const removals: Array<() => void> = [];
 

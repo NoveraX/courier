@@ -1,6 +1,6 @@
-import { cookieJarOf } from "./cookie-header";
-import type { IncomingRequest } from "./incoming-request";
-import { isDeletion, type SetCookie } from "./set-cookie";
+import { cookieJarOf } from "../../session/cookie-header";
+import type { IncomingRequest } from "../../session/incoming-request";
+import { isDeletion, type SetCookie } from "../../session/set-cookie";
 
 /** What the calls made for one request share while it is served. */
 interface RequestState {

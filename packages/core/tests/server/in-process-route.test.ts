@@ -7,13 +7,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type AdapterHandler, createHandler } from "../../src/adapter/create-handler";
+import * as pageRegistry from "../../src/browser/capabilities/registry";
 import { _resetServerCapabilitiesForTests } from "../../src/capabilities/provide-server-capability";
 import { serverCapability } from "../../src/capabilities/registry";
 import { courier, defineApi } from "../../src/define";
 import { inProcessRoute } from "../../src/server/in-process-route";
+import { onBehalfOf } from "../../src/server/session/on-behalf";
 import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import type { IncomingRequest } from "../../src/session/incoming-request";
-import { onBehalfOf } from "../../src/session/on-behalf";
 
 const { endpoint } = courier();
 const api = defineApi({
@@ -100,10 +101,17 @@ describe("the in-process proxy as a server capability", () => {
     );
   });
 
-  it("is not taken in a page", () => {
+  it("is taken on a server that put a DOM on its global object", () => {
     registerSources({ api });
     vi.stubGlobal("document", {});
 
-    expect(serverCapability("inProcessProxy")).toBeUndefined();
+    expect(serverCapability("inProcessProxy")).toBeDefined();
+  });
+
+  it("is not taken in a page, whose bundle reads no slot", () => {
+    registerSources({ api });
+    vi.stubGlobal("document", {});
+
+    expect(pageRegistry.serverCapability("inProcessProxy")).toBeUndefined();
   });
 });

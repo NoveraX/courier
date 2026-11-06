@@ -1,6 +1,6 @@
-import { isOriginAccepted, isOriginListed } from "../adapter/origin-policy";
-import { parseUrl } from "../utils/parse-url";
-import type { IncomingRequest } from "./incoming-request";
+import { isOriginAccepted, isOriginListed } from "../../adapter/origin-policy";
+import type { IncomingRequest } from "../../session/incoming-request";
+import { parseUrl } from "../../utils/parse-url";
 
 /* Methods a browser sends for a link, an image or a page another site shows. */
 const SAFE_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);

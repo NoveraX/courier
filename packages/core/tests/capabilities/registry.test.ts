@@ -1,7 +1,8 @@
 /**
  * The registry a server lends its capabilities through: what the server
- * provides is found by the calls of its process, and a page or an app
- * finds nothing whatever lies on its global object.
+ * provides is found by the calls of its process — a server that put a DOM
+ * on its global object among them — and a React Native app finds nothing.
+ * A page's bundle takes a stand-in that reads no slot at all.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -53,11 +54,12 @@ describe("serverCapability", () => {
     }
   });
 
-  it("answers undefined in a page, whatever its global object holds", () => {
-    provideServerCapability("inProcessProxy", capability());
-    vi.stubGlobal("document", {});
+  it("answers what was provided on a server that put a DOM on its global object", () => {
+    const provided = capability();
+    provideServerCapability("inProcessProxy", provided);
+    vi.stubGlobal("document", { cookie: "" });
 
-    expect(serverCapability("inProcessProxy")).toBeUndefined();
+    expect(serverCapability("inProcessProxy")).toBe(provided);
   });
 
   it("answers undefined in a React Native app", () => {

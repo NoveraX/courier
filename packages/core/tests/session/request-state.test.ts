@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-
+import { cookieJarFor, keepCookie, requestIdFor } from "../../src/server/session/request-state";
 import type { IncomingRequest } from "../../src/session/incoming-request";
-import { cookieJarFor, keepCookie, requestIdFor } from "../../src/session/request-state";
 
 function incoming(cookie: string): IncomingRequest {
   return { key: {}, method: "GET", headers: new Headers({ cookie }) };
@@ -46,7 +45,7 @@ describe("cookieJarFor", () => {
 describe("the state of a request being served", () => {
   it("is shared with another copy of Courier, as a page's own bundle may carry one", async () => {
     vi.resetModules();
-    const other = await import("../../src/session/request-state");
+    const other = await import("../../src/server/session/request-state");
     const request = incoming("sid=old");
 
     keepCookie(request, { name: "sid", value: "new" });

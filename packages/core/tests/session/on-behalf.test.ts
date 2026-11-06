@@ -3,9 +3,8 @@
  * for the request being served, which the proxy takes the session from.
  */
 import { describe, expect, it, vi } from "vitest";
-
+import { onBehalfOf, serveOnBehalf } from "../../src/server/session/on-behalf";
 import type { IncomingRequest } from "../../src/session/incoming-request";
-import { onBehalfOf, serveOnBehalf } from "../../src/session/on-behalf";
 
 const PROXY = "http://127.0.0.1/api/request";
 
@@ -32,7 +31,7 @@ describe("serveOnBehalf", () => {
 
   it("is found by another copy of Courier, as a page's own bundle may carry one", async () => {
     vi.resetModules();
-    const other = await import("../../src/session/on-behalf");
+    const other = await import("../../src/server/session/on-behalf");
     const request = new Request(PROXY);
     const served = incoming();
 

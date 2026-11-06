@@ -1,5 +1,4 @@
-import { buildClientProxy } from "./client/proxy";
-import { shapeOfSource } from "./client/shape";
+import { directClient } from "./client/direct-client";
 import type { FlatClient, MixedClient, TypedClient } from "./client/types";
 import type {
   AnyDefinedApi,
@@ -12,9 +11,6 @@ import type {
 import type { RequestFailure } from "./errors";
 import type { RequestContext } from "./http-client/types";
 import type { CallerWSOptions } from "./realtime/ws/ws-types";
-import { composeBackend } from "./transport/compose-backend";
-import { createDirectHTTPExecutor } from "./transport/direct/http";
-import { directStreamingFactories } from "./transport/direct-streaming";
 
 export type CallerDefaults = {
   timeout?: number | undefined;
@@ -43,7 +39,11 @@ export type CallerDefaults = {
 
 /**
  * Create a typed client for direct (universal) mode.
- * Works everywhere: browser, Node.js, Deno, Bun.
+ * Works everywhere: browser, Node.js, Deno, Bun. On a server it takes the
+ * user's session from the request being served as the server lends it —
+ * once the framework's request context is registered, or sources are; a
+ * call that names its request in its context needs the server's caller,
+ * from `@noverax/courier/server`.
  *
  * @example
  * ```ts
@@ -84,12 +84,5 @@ export function createCaller(
 ): FlatClient<Record<never, never>>;
 
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
-  const http = createDirectHTTPExecutor(source, defaults);
-  const backend = composeBackend(
-    source as Record<string, unknown>,
-    http,
-    directStreamingFactories(source, defaults),
-  );
-
-  return buildClientProxy(backend, {}, false, shapeOfSource(source as Record<string, unknown>));
+  return directClient(source, defaults);
 }

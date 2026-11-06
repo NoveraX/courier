@@ -1,5 +1,5 @@
-import { createLogger } from "../logger";
-import type { IncomingRequest, RequestContextProvider } from "./incoming-request";
+import { createLogger } from "../../logger";
+import type { IncomingRequest, RequestContextProvider } from "../../session/incoming-request";
 
 const log = createLogger("Session");
 
@@ -17,26 +17,17 @@ function providers(): RequestContextProvider[] {
 }
 
 /**
- * Tell calls how to find the request the application is serving, so that
- * the APIs that keep a `session`, or `forward` a request's headers, take
- * them from it. Framework adapters provide one; registering it once on the
- * server is enough, and registering the same one again changes nothing.
- * The provider registered last is asked first.
+ * Add a provider of the request being served, asked before the ones added
+ * earlier; adding the same one again changes nothing.
  *
  * @param provider - Finds the request being served, or answers `undefined`
  * @returns A function that removes the provider again
  * @example
  * ```ts
- * // instrumentation.ts
- * import { registerRequestContext } from "@noverax/courier";
- * import { nextRequestContext } from "@noverax/courier-next";
- *
- * export function register() {
- *   registerRequestContext(nextRequestContext);
- * }
+ * const remove = addRequestContextProvider(provider);
  * ```
  */
-export function registerRequestContext(provider: RequestContextProvider): () => void {
+export function addRequestContextProvider(provider: RequestContextProvider): () => void {
   const list = providers();
   if (!list.includes(provider)) list.unshift(provider);
   return () => {
@@ -46,17 +37,15 @@ export function registerRequestContext(provider: RequestContextProvider): () => 
 }
 
 /**
- * Ask a provider before every other: the one that knows the request code
- * was explicitly given to serve, as `withIncomingRequest` gives it, which
- * a framework's provider registered after it must not hide.
+ * Ask a provider before every other, wherever it stood.
  *
  * @param provider - Finds the request being served, or answers `undefined`
  * @example
  * ```ts
- * preferRequestContext(() => store.getStore());
+ * preferRequestContextProvider(() => store.getStore());
  * ```
  */
-export function preferRequestContext(provider: RequestContextProvider): void {
+export function preferRequestContextProvider(provider: RequestContextProvider): void {
   const list = providers();
   if (list[0] === provider) return;
   const at = list.indexOf(provider);

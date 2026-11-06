@@ -1,9 +1,9 @@
-import { randomId } from "../utils/random-id";
+import type { IncomingRequest } from "../../session/incoming-request";
+import { isRequestId, REQUEST_ID_HEADER } from "../../session/request-id";
+import type { ForwardOptions } from "../../session/types";
+import { randomId } from "../../utils/random-id";
 import { addressHeaders } from "./forward-address";
-import type { IncomingRequest } from "./incoming-request";
-import { isRequestId, REQUEST_ID_HEADER } from "./request-id";
 import { requestIdFor } from "./request-state";
-import type { ForwardOptions } from "./types";
 
 /* version-traceid-parentid-flags, neither id all zeros, as W3C Trace Context writes it. */
 const TRACEPARENT = /^(?!ff)[\da-f]{2}-(?!0{32})[\da-f]{32}-(?!0{16})[\da-f]{16}-[\da-f]{2}$/;

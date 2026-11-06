@@ -15,6 +15,7 @@ import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();
@@ -37,8 +38,8 @@ const upstreamHeaders: Headers[] = [];
 
 beforeEach(() => {
   /* The proxy client as a browser runs it; a server's own reaches its proxy in process. */
-  vi.stubGlobal("document", {});
   registerSources({ api });
+  asBrowserPage();
   const handler = createHandler();
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);

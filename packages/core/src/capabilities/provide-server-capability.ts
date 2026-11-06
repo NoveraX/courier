@@ -3,12 +3,17 @@ import { capabilitySlots, type ServerCapabilities, type ServerCapabilityName } f
 
 const log = createLogger("Server");
 
+/* The implementations a slot was offered once it was filled, each said once: a second copy of the
+   core offers its own again for every request it serves. */
+const leftOut = new WeakSet<object>();
+
 /**
  * Lend the calls of this process a server's implementation of one
  * capability. The first one provided stays: providing the same one again
  * changes nothing, and another one — a second copy of the core loaded
  * beside the first — is left out, so a module loaded later cannot take a
- * slot the server filled.
+ * slot the server filled. That one is told at debug level once, however
+ * often it is offered.
  *
  * @param name - The capability
  * @param capability - The server's implementation of it
@@ -27,7 +32,9 @@ export function provideServerCapability<TName extends ServerCapabilityName>(
     held[name] = capability;
     return;
   }
-  if (current !== capability) log.debug(`${name} was provided already; the first one stays`);
+  if (current === capability || leftOut.has(capability)) return;
+  leftOut.add(capability);
+  log.debug(`${name} was provided already; the first one stays`);
 }
 
 /**

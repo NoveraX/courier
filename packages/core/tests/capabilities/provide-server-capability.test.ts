@@ -1,7 +1,8 @@
 /**
  * Lending a capability: the first implementation of a slot stays, said
- * once at debug level when another one comes, and the same one again
- * changes nothing.
+ * once at debug level when another one comes — however often that one is
+ * offered again, as a second copy of the core offers its own for each
+ * request it serves — and the same one again changes nothing.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -42,6 +43,36 @@ describe("provideServerCapability", () => {
     expect(serverCapability("inProcessProxy")).toBe(first);
     expect(printed).toHaveLength(1);
     expect(printed[0]?.join(" ")).toContain("inProcessProxy was provided already");
+  });
+
+  it("says once of a second copy's implementation, though it is offered for every request served", () => {
+    const printed = debugLines();
+    const first = capability();
+    const secondCopys = capability();
+    provideServerCapability("inProcessProxy", first);
+    for (let request = 0; request < 10; request += 1) {
+      provideServerCapability("inProcessProxy", secondCopys);
+    }
+
+    expect(serverCapability("inProcessProxy")).toBe(first);
+    expect(printed).toHaveLength(1);
+  });
+
+  it("says once of a second copy of the core, which offers its session for each request it serves", async () => {
+    const printed = debugLines();
+    _resetServerCapabilitiesForTests("session");
+    const served = () => ({ key: {}, method: "GET", headers: new Headers() });
+    const first = await import("../../src/node-request-context");
+    first.withIncomingRequest(served(), () => undefined);
+    vi.resetModules();
+    const second = await import("../../src/node-request-context");
+    for (let request = 0; request < 10; request += 1) {
+      second.withIncomingRequest(served(), () => undefined);
+    }
+
+    const said = printed.filter((line) => line.join(" ").includes("session was provided already"));
+    expect(said).toHaveLength(1);
+    _resetServerCapabilitiesForTests("session");
   });
 
   it("changes nothing, and says nothing, when the same implementation is provided again", () => {

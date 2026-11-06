@@ -1,7 +1,9 @@
 /**
  * A browser calling an API whose double-submit token it has not been handed
  * yet: a write asks where the API hands the token out first — once, however
- * many writes wait — and repeats the token the browser then keeps.
+ * many writes wait — and repeats the token the browser then keeps. The core
+ * is loaded as a page's bundle takes it, with the registry's stand-in,
+ * which reads no slot a server lends.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +11,8 @@ import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import type { CsrfOptions } from "../../src/session/types";
+
+vi.mock("../../src/capabilities/registry", () => import("../../src/browser/capabilities/registry"));
 
 const { endpoint } = courier();
 const fetchSpy = vi.fn();

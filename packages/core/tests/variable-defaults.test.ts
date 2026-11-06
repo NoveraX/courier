@@ -16,6 +16,7 @@ import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -109,8 +110,8 @@ describe("a defaulted variable", () => {
   });
 
   it("is filled in on the server for a browser's call through the proxy", async () => {
-    vi.stubGlobal("document", {});
     registerSources({ site: news() });
+    asBrowserPage();
     const handler = createHandler();
     const proxied = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);

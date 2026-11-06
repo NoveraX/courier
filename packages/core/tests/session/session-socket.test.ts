@@ -17,9 +17,9 @@ import { courier } from "../../src/define/courier";
 import { defineGroup } from "../../src/define/group";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../../src/node";
 import { clearWSConnectionPool } from "../../src/realtime/caller-ws";
+import { registerRequestContext } from "../../src/server/session/request-context";
 import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import type { IncomingRequest } from "../../src/session/incoming-request";
-import { registerRequestContext } from "../../src/session/request-context";
 
 const { channel } = courier();
 

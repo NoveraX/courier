@@ -1,4 +1,4 @@
-import type { IncomingRequest } from "./incoming-request";
+import type { IncomingRequest } from "../../session/incoming-request";
 
 /* Kept on the global object, as the sources are: a bundler may load this
    module twice — Nuxt's webpack and Rspack builders bundle a page's own copy

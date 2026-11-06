@@ -30,6 +30,7 @@ import { stampSourceKeys } from "../define/stamp-source-keys";
 import type { Sources } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import { provideInProcessProxy } from "./provide-in-process-proxy";
+import { provideServerCapabilities } from "./provide-server-capabilities";
 
 const SOURCES_KEY = Symbol.for("courier.sources");
 
@@ -115,8 +116,10 @@ export function prepareSources(sources: Sources, callee: string, usage: string):
  */
 export function registerSources(sources: Sources): void {
   prepareSources(sources, "registerSources", "registerSources({ api, billing })");
-  /* Sources are registered on a server: its own proxy callers can reach
-     the proxy that serves them in process from now on. */
+  /* Sources are registered on a server: its calls take the user's session
+     from the request being served, and its own proxy callers reach the
+     proxy that serves them in process, from now on. */
+  provideServerCapabilities();
   provideInProcessProxy();
 
   const registry = getRegistry();

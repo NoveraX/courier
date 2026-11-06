@@ -7,7 +7,6 @@ export {
   memoryRateLimitStore,
 } from "./adapter";
 export { detectAppOrigin, getAppOrigin, setAppOrigin } from "./app-origin";
-export { createCaller } from "./caller";
 export { AbortError, isAbortError } from "./errors/abort-error";
 export { isCallFailure } from "./errors/call-failure";
 export { ConfigurationError, isConfigurationError } from "./errors/configuration-error";
@@ -25,9 +24,10 @@ export type * from "./public-types";
 /* The realtime errors' base and a connection's; the others come with the
    realtime client, from `@noverax/courier/realtime`, and load with it. */
 export { ConnectionError, RealtimeError } from "./realtime/realtime-error";
+export { createCaller } from "./server/create-caller";
+export { ensureCsrfToken } from "./server/ensure-csrf-token";
+export { registerRequestContext } from "./server/session/request-context";
 export { getSources, registerSources } from "./server/sources";
-export { registerRequestContext } from "./session/request-context";
-export { ensureCsrfToken } from "./utils/ensure-csrf-token";
 export { redact } from "./utils/redact";
 export { smoothProgress } from "./utils/smooth-progress";
 export { isStreamedUpload } from "./utils/streamed-upload";

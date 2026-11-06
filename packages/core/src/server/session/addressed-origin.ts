@@ -1,5 +1,5 @@
-import { parseUrl } from "../utils/parse-url";
-import type { HeaderReader } from "./incoming-request";
+import type { HeaderReader } from "../../session/incoming-request";
+import { parseUrl } from "../../utils/parse-url";
 
 /**
  * The origin a request was addressed to, as its client addressed it: the

@@ -5,8 +5,11 @@
  * runs come from `@noverax/courier/server`.
  *
  * Universal code — a page rendered on the server too — imports this entry
- * as well: on the server, its proxy callers reach the application's own
- * proxy as the server lends it, once the sources are registered there.
+ * as well: on the server, its calls take the user's session and reach the
+ * application's own proxy as the server lends them, once a request context
+ * or the sources are registered there. Server code that names the request
+ * it serves — `createCaller(api, { context: { req } })` — takes its caller
+ * from `@noverax/courier/server`.
  */
 
 export { createCaller } from "../caller";

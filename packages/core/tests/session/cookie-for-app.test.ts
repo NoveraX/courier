@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cookieForApp } from "../../src/session/cookie-for-app";
+import { cookieForApp } from "../../src/server/session/cookie-for-app";
 import type { SetCookie } from "../../src/session/set-cookie";
 
 describe("cookieForApp", () => {

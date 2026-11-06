@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { forwardedHeaders } from "../../src/session/forward-headers";
+import { forwardedHeaders } from "../../src/server/session/forward-headers";
 import type { IncomingRequest } from "../../src/session/incoming-request";
 import { forwardedChain } from "../../src/utils/forwarded-for";
 

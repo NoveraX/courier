@@ -258,6 +258,12 @@ export type ConfigurationErrorCode =
    */
   | "SESSION_INSECURE_TRANSPORT"
   /**
+   * A call names the request it serves in its context — `req`, `headers` or
+   * `incoming` — where nothing reads one: only a server's caller does, or a
+   * caller in a process whose server registered a request context.
+   */
+  | "SERVER_CAPABILITY_MISSING"
+  /**
    * An API keeps a `session`, and its header list — or an endpoint's — names
    * `cookie` or `set-cookie`, which would carry every cookie past it.
    */

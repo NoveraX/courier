@@ -1,4 +1,5 @@
 import { createRefusalLog } from "../logger/refusal-log";
+import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import type { ConnectResult } from "./connection-meta";
@@ -42,6 +43,7 @@ export function createWSHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: WSHandlerConfig<TConnect>,
 ): WSHandler;
 export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
+  provideServerCapabilities();
   assertListedSettings(config, "createWSHandler");
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");

@@ -17,6 +17,7 @@ import { routesOf } from "../src/define/routes-of";
 import { webIncomingRequest, withIncomingRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -245,8 +246,8 @@ describe("a call that stops waiting", () => {
 
 describe("through the proxy", () => {
   it("a browser's identical reads reach the proxy once", async () => {
-    vi.stubGlobal("document", {});
     registerSources({ shop: api() });
+    asBrowserPage();
     const handler = createHandler();
     const proxied = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
@@ -265,8 +266,8 @@ describe("through the proxy", () => {
   });
 
   it("a read whose variables go as a POST's reaches the proxy once, as reads do", async () => {
-    vi.stubGlobal("document", {});
     registerSources({ shop: api() });
+    asBrowserPage();
     const handler = createHandler();
     const proxied = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
@@ -284,8 +285,8 @@ describe("through the proxy", () => {
   });
 
   it("a client sends each call alone when its API or the client says so", async () => {
-    vi.stubGlobal("document", {});
     registerSources({ shop: api({ coalesce: false }) });
+    asBrowserPage();
     const handler = createHandler();
     const proxied = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);

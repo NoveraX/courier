@@ -1,4 +1,5 @@
 import { createRefusalLog } from "../logger/refusal-log";
+import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import { executeRequest } from "../utils/execute";
@@ -60,6 +61,7 @@ export function createHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: HandlerConfig<TConnect>,
 ): AdapterHandler;
 export function createHandler(config?: HandlerConfig): AdapterHandler {
+  provideServerCapabilities();
   assertListedSettings(config ?? {}, "createHandler");
   assertRateLimit(config?.rateLimit, "createHandler");
   assertBodyOptions(config, "createHandler");

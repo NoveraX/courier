@@ -3,7 +3,8 @@
  * installs, through Courier's bundler plugin: a test gets them under Node
  * and under jsdom, where it may import the config itself, and in watch mode
  * an edit to a definition reruns the test that imports them, with the new
- * routes rather than the ones Vitest kept from the run before.
+ * routes rather than the ones Vitest kept from the run before. Under jsdom
+ * Vitest takes the core's modules for a server, not a page's.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -28,7 +29,22 @@ function seen(): string[] {
 }
 
 test("a test gets the routes under Node and under jsdom, beside the config", () => {
-  const run = spawnSync(process.execPath, [...VITEST, "run"], {
+  const run = spawnSync(
+    process.execPath,
+    [...VITEST, "run", "src/routes.test.ts", "src/dom.test.ts"],
+    {
+      cwd: APP_ROOT,
+      env: QUIET,
+      encoding: "utf8",
+    },
+  );
+
+  expect(`${run.stdout}${run.stderr}`).toMatch(/Tests\s+2 passed/);
+  expect(run.status).toBe(0);
+});
+
+test("under jsdom, a test takes the core's server side, and a page's call keeps the page's session", () => {
+  const run = spawnSync(process.execPath, [...VITEST, "run", "src/sides.test.ts"], {
     cwd: APP_ROOT,
     env: QUIET,
     encoding: "utf8",

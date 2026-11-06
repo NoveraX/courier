@@ -71,8 +71,9 @@ export { createHeartbeat } from "../realtime/ws/heartbeat";
 export { WS_CODE } from "../realtime/ws/ws-codes";
 export { decodeMessage, encodeMessage, PROTOCOL_VERSION } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl, parseWSTopic } from "../realtime/ws-address";
+export { provideServerCapabilities } from "../server/provide-server-capabilities";
+export { addressedOrigin } from "../server/session/addressed-origin";
 export { getSourcesGeneration, onSourcesChange, prepareSources } from "../server/sources";
-export { addressedOrigin } from "../session/addressed-origin";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
 export { serverOriginOf } from "../socket-origin";
 export {

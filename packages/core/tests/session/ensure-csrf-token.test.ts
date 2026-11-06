@@ -14,9 +14,9 @@ import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { ConfigurationError } from "../../src/errors/configuration-error";
 import { defineMiddleware } from "../../src/middleware/define";
+import { ensureCsrfToken } from "../../src/server/ensure-csrf-token";
+import { registerRequestContext } from "../../src/server/session/request-context";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
-import { registerRequestContext } from "../../src/session/request-context";
-import { ensureCsrfToken } from "../../src/utils/ensure-csrf-token";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 const { endpoint } = courier();

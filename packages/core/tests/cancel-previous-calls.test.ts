@@ -20,6 +20,7 @@ import { AbortError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();
@@ -223,7 +224,7 @@ describe("a call on a server", () => {
 describe("the proxy", () => {
   beforeEach(() => {
     /* The proxy client as a browser runs it; a server's own reaches its proxy in process. */
-    vi.stubGlobal("document", {});
+    asBrowserPage();
     const handler = createHandler();
     vi.stubGlobal(
       "fetch",

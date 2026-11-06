@@ -1,4 +1,4 @@
-import type { CallSession } from "../session/call-session";
+import { type CallSession, serverSession } from "../session/call-session";
 import { renewSessionPartition } from "../session/one-user-partition";
 
 /**
@@ -28,6 +28,5 @@ export async function keepAnswerCookies(
     return [];
   }
   if (session?.incoming === undefined) return [];
-  const { relayCookies } = await import("../session/relay");
-  return relayCookies(upstream, session, session.toResponse);
+  return serverSession({ name: "A call" }).relayCookies(upstream, session, session.toResponse);
 }

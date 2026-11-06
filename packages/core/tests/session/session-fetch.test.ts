@@ -8,8 +8,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
+import { registerRequestContext } from "../../src/server/session/request-context";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
-import { registerRequestContext } from "../../src/session/request-context";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 const { endpoint } = courier();

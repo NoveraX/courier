@@ -1,11 +1,11 @@
-import { createLogger } from "../logger";
-import { setCookiesOf } from "../utils/set-cookies";
-import type { CallSession } from "./call-session";
+import { createLogger } from "../../logger";
+import type { CallSession } from "../../session/call-session";
+import type { IncomingRequest, RelayedCookie } from "../../session/incoming-request";
+import { sessionCookies } from "../../session/session-credentials";
+import { parseSetCookie, type SetCookie, serializeSetCookie } from "../../session/set-cookie";
+import { setCookiesOf } from "../../utils/set-cookies";
 import { cookieForApp } from "./cookie-for-app";
-import type { IncomingRequest, RelayedCookie } from "./incoming-request";
 import { keepCookie } from "./request-state";
-import { sessionCookies } from "./session-credentials";
-import { parseSetCookie, type SetCookie, serializeSetCookie } from "./set-cookie";
 
 const log = createLogger("Session");
 /* One warning per cookie and reason: the same answer arrives with every call. */

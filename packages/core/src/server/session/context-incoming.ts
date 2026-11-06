@@ -1,9 +1,9 @@
-import { peerAddressOf } from "../adapter/peer-address";
-import type { Context } from "../http-client/types";
-import { forwardedChain } from "../utils/forwarded-for";
-import { parseUrl } from "../utils/parse-url";
+import { peerAddressOf } from "../../adapter/peer-address";
+import type { Context } from "../../http-client/types";
+import type { IncomingRequest } from "../../session/incoming-request";
+import { forwardedChain } from "../../utils/forwarded-for";
+import { parseUrl } from "../../utils/parse-url";
 import { addressedOrigin } from "./addressed-origin";
-import type { IncomingRequest } from "./incoming-request";
 
 /**
  * The request a caller named in its context, as the session reads it: the

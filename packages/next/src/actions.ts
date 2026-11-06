@@ -6,7 +6,12 @@ import {
   type ValidationIssue,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import { buildClientProxy, type ExecuteBackend, executeRequest } from "@noverax/courier/internal";
+import {
+  buildClientProxy,
+  type ExecuteBackend,
+  executeRequest,
+  provideServerCapabilities,
+} from "@noverax/courier/internal";
 
 import { nextIncomingRequest } from "./request-context";
 
@@ -82,6 +87,9 @@ export function createAction<TSources extends Sources, TKey extends string & key
   source: TKey,
   defaults: ActionDefaults = {},
 ): InferClient<TSources[TKey]> {
+  /* A server's own entry: its calls take the user's session from the action's request, which no
+     other part of the server need have lent. */
+  provideServerCapabilities();
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const incoming = await actionRequest();
     /* The session an API keeps is its own to take; `headers: false` turns

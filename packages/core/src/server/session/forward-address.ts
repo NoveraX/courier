@@ -1,5 +1,5 @@
-import { clientAddress } from "../adapter/client-address";
-import type { IncomingRequest } from "./incoming-request";
+import { clientAddress } from "../../adapter/client-address";
+import type { IncomingRequest } from "../../session/incoming-request";
 
 /* One address, or a forwarding chain of them, as a header carries it. */
 const ADDRESSES = /^[ -~]{1,512}$/;

@@ -1,5 +1,5 @@
-import { parseUrl } from "../utils/parse-url";
-import type { SetCookie } from "./set-cookie";
+import type { SetCookie } from "../../session/set-cookie";
+import { parseUrl } from "../../utils/parse-url";
 
 /** A cookie made for the application's origin, or why none could be. */
 export type AppCookie =

@@ -13,8 +13,8 @@ import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { HTTPError } from "../../src/errors/http-error";
+import { registerRequestContext } from "../../src/server/session/request-context";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
-import { registerRequestContext } from "../../src/session/request-context";
 import { studioHooks } from "../../src/studio";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 

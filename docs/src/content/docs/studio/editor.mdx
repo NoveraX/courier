@@ -132,7 +132,7 @@ With no Studio running, the view offers to start one; in a workspace without Cou
 | **Courier: Show OpenAPI Document…** | Opens a source's OpenAPI document, as Studio writes it from your config, in an editor tab |
 | **Courier: Check API Changes…** | Runs `courier-studio diff` against a branch, a tag or a commit, and reports what the change breaks |
 
-Each runs in a terminal of its own, named after it and the project, in the project's folder, as `npx @noverax/courier-studio …` — the project's own Studio when it has one installed.
+Each runs in a terminal of its own, named after it and the project, in the project's folder, as `npx @noverax/courier-studio …` — the project's own Studio when it has one installed. The terminal starts the command itself, each argument whole, rather than typing a line into your shell: no shell reads an address you gave, PowerShell's `$(…)` and `cmd`'s `&` included, and none keeps the line in its history. Once the command ends, your shell takes the terminal over on macOS and Linux, and `cmd` on Windows.
 
 ## Tasks and tests
 

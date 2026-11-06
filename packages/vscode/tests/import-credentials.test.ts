@@ -13,7 +13,7 @@ import {
   headersProblem,
   variableProblem,
 } from "../src/generate/import-credentials";
-import { studioCommandLine } from "../src/generate/studio-cli";
+import { studioLaunch } from "../src/generate/studio-cli";
 import { asked } from "./vscode-stand-in";
 
 const URL = "https://specs.example/orders.json";
@@ -26,26 +26,27 @@ beforeEach(() => {
 
 describe("the command an import behind auth runs", () => {
   it("names the variables that hold each credential, and no value", () => {
-    const line = (args: string[]) => studioCommandLine(["import", URL, ...args], "darwin");
+    /* What npx is given after the package's name. */
+    const given = (args: string[]) =>
+      [...studioLaunch(["import", URL, ...args], "darwin").shellArgs].slice(3);
 
-    expect(line(credentialArgs({ kind: "bearer", token: " ORDERS_SPEC_TOKEN " }))).toBe(
-      "npx @noverax/courier-studio import https://specs.example/orders.json --bearer-env ORDERS_SPEC_TOKEN",
-    );
+    expect(given(credentialArgs({ kind: "bearer", token: " ORDERS_SPEC_TOKEN " }))).toEqual([
+      "import",
+      URL,
+      "--bearer-env",
+      "ORDERS_SPEC_TOKEN",
+    ]);
     expect(
-      line(credentialArgs({ kind: "basic", username: "SPEC_USER", password: "SPEC_PASSWORD" })),
-    ).toBe(
-      "npx @noverax/courier-studio import https://specs.example/orders.json --basic-env SPEC_USER:SPEC_PASSWORD",
-    );
+      given(credentialArgs({ kind: "basic", username: "SPEC_USER", password: "SPEC_PASSWORD" })),
+    ).toEqual(["import", URL, "--basic-env", "SPEC_USER:SPEC_PASSWORD"]);
     expect(
-      line(
+      given(
         credentialArgs({
           kind: "header",
           headers: "X-Api-Key = ORDERS_API_KEY, X-Tenant=TENANT_ID",
         }),
       ),
-    ).toBe(
-      "npx @noverax/courier-studio import https://specs.example/orders.json --header-env X-Api-Key=ORDERS_API_KEY,X-Tenant=TENANT_ID",
-    );
+    ).toEqual(["import", URL, "--header-env", "X-Api-Key=ORDERS_API_KEY,X-Tenant=TENANT_ID"]);
     expect(credentialArgs({ kind: "none" })).toEqual([]);
   });
 

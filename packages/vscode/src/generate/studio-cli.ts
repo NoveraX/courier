@@ -2,50 +2,83 @@ import * as vscode from "vscode";
 
 import type { CourierProject } from "../projects/courier-projects";
 
-/**
- * A word for the shell the terminal runs, as one argument whatever it holds:
- * single quotes on macOS and Linux, double quotes on Windows.
- *
- * @param word - The word
- * @param platform - The platform the terminal runs on
- * @returns The word, quoted
- * @example
- * ```ts
- * shellWord("https://api.example/openapi.json?v=1"); // "'https://api.example/openapi.json?v=1'"
- * ```
+/** How a terminal runs one of Courier Studio's commands: the program it starts, and that program's arguments. */
+export interface StudioLaunch {
+  shellPath: string;
+  /* A string on Windows, which VS Code passes as the command line it is. */
+  shellArgs: string[] | string;
+}
+
+/*
+ * The shell takes each argument as a positional one, `"$@"`, never as text it
+ * reads, so nothing in an argument is expanded or run; once the command
+ * ends, the user's own shell takes the terminal over, as it holds it.
  */
-export function shellWord(word: string, platform: NodeJS.Platform = process.platform): string {
-  if (/^[\w@%+=:,./-]+$/.test(word)) return word;
-  if (platform === "win32") return `"${word.replace(/"/g, '""')}"`;
-  return `'${word.replace(/'/g, "'\\''")}'`;
+const POSIX_SCRIPT =
+  'npx @noverax/courier-studio "$@"; [ -n "$SHELL" ] && exec "$SHELL"; exec /bin/sh';
+
+/* What cmd reads as its own: each escaped with ^. */
+const CMD_META = /([()\][%!^"`<>&|;, *?])/g;
+
+/* A word as the C runtime npx's node reads its arguments with takes it whole: quoted, a quote and the backslashes before one escaped. */
+function quotedForArgv(word: string): string {
+  let quoted = '"';
+  let slashes = 0;
+  for (const char of word) {
+    if (char === "\\") {
+      slashes += 1;
+      continue;
+    }
+    quoted += "\\".repeat(char === '"' ? slashes * 2 + 1 : slashes) + char;
+    slashes = 0;
+  }
+  return `${quoted}${"\\".repeat(slashes * 2)}"`;
+}
+
+/*
+ * A word for cmd, as https://qntm.org/cmd lays it out: quoted for argv, then
+ * each character cmd reads as its own escaped with ^ — twice, as npx is a
+ * .cmd file, whose %* cmd reads once more. No quote is left for cmd to
+ * read, so no ^ goes unread, and a `%` broken by one is no variable.
+ */
+function cmdWord(word: string): string {
+  return quotedForArgv(word).replace(CMD_META, "^$1").replace(CMD_META, "^$1");
 }
 
 /**
- * The line a terminal runs one of Courier Studio's commands with: by the
- * package's full name, so npx runs the project's own copy, each argument
- * whole.
+ * How a terminal runs one of Courier Studio's commands — by the package's
+ * full name, so npx runs the project's own copy — with each argument passed
+ * whole and never read by a shell: on macOS and Linux as `sh`'s positional
+ * arguments, then the user's shell; on Windows through `cmd`, every
+ * character it reads as its own escaped, then `cmd` on its own. No
+ * PowerShell reads the line, which would run a `$(…)` inside an address
+ * even in quotes, and no shell keeps it in its history.
  *
  * @param args - The command and its arguments: `["import", spec]`
  * @param platform - The platform the terminal runs on
- * @returns The line
+ * @returns The program the terminal starts, and its arguments
  * @example
  * ```ts
- * studioCommandLine(["import", "https://api.example/openapi.json"]); // → "npx @noverax/courier-studio import https://api.example/openapi.json"
+ * studioLaunch(["import", "https://api.example/openapi.json"], "darwin");
+ * // → { shellPath: "/bin/sh", shellArgs: ["-c", …, "courier-studio", "import", "https://api.example/openapi.json"] }
  * ```
  */
-export function studioCommandLine(
+export function studioLaunch(
   args: readonly string[],
   platform: NodeJS.Platform = process.platform,
-): string {
-  return ["npx", "@noverax/courier-studio", ...args]
-    .map((word) => shellWord(word, platform))
-    .join(" ");
+): StudioLaunch {
+  if (platform !== "win32") {
+    return { shellPath: "/bin/sh", shellArgs: ["-c", POSIX_SCRIPT, "courier-studio", ...args] };
+  }
+  const line = ["npx", "@noverax/courier-studio", ...args.map(cmdWord)].join(" ");
+  return { shellPath: "cmd.exe", shellArgs: `/d /s /k "${line}"` };
 }
 
 /**
  * Run one of Courier Studio's commands for a project in a terminal of its
- * own — by the package's full name, so npx runs the project's own copy —
- * where it shows its plan and asks before it writes.
+ * own, as {@link studioLaunch} starts it, where it shows its plan and asks
+ * before it writes. The terminal is not brought back once the editor
+ * restarts, which would run the command again.
  *
  * @param project - The project, whose folder the command runs in
  * @param title - The terminal's name
@@ -64,7 +97,8 @@ export function runStudioCommand(
     name: `${title} · ${project.name}`,
     cwd: project.root,
     iconPath: new vscode.ThemeIcon("terminal"),
+    isTransient: true,
+    ...studioLaunch(args),
   });
-  terminal.sendText(studioCommandLine(args));
   terminal.show();
 }

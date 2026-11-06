@@ -15,7 +15,9 @@ import { createClusterSigner } from "../src/adapter/cluster-signature";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { ConfigurationError } from "../src/errors";
+import type { PubSubAdapter } from "../src/realtime/adapters";
 import { createMemoryBus, type MemoryBus } from "../src/realtime/memory-bus";
+import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 
@@ -239,9 +241,11 @@ describe("a cluster with a secret", () => {
 
 describe("a cluster with no secret", () => {
   const unsigned = () => warned.filter((line) => line.includes("taken unsigned"));
+  /* An adapter the bus did not make, as an application's own over Redis is. */
+  const foreign = (): PubSubAdapter => ({ ...createMemoryBus().replica("elsewhere") });
 
-  it("says once for its adapter that commands are taken unsigned, however many handlers share it", async () => {
-    const pubsub = createMemoryBus().replica("a");
+  it("says once for an adapter of its own that commands are taken unsigned, however many handlers share it", async () => {
+    const pubsub = foreign();
 
     handlers.push(createWSHandler({ pubsub }), createWSHandler({ pubsub }));
     await createHandler({ pubsub }).shutdownSSE({ drainMs: 0 });
@@ -250,9 +254,22 @@ describe("a cluster with no secret", () => {
     expect(unsigned()[0]).toContain("cluster: { secret }");
   });
 
+  it("says nothing of it over a bus in the process, which nothing outside it can publish on", async () => {
+    const bus = createMemoryBus();
+
+    handlers.push(
+      createWSHandler({ pubsub: bus.replica("a") }),
+      createWSHandler({ pubsub: bus.replica("b") }),
+      createWSHandler({ pubsub: createMemoryPubSub() }),
+    );
+    await createHandler({ pubsub: bus.replica("c") }).shutdownSSE({ drainMs: 0 });
+
+    expect(unsigned()).toEqual([]);
+  });
+
   it("says nothing of it with a secret, or with no adapter", () => {
     handlers.push(
-      createWSHandler({ pubsub: createMemoryBus().replica("a"), cluster: { secret: SECRET } }),
+      createWSHandler({ pubsub: foreign(), cluster: { secret: SECRET } }),
       createWSHandler({}),
     );
 

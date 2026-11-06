@@ -1,6 +1,7 @@
 import { ConfigurationError } from "../errors";
 import { createLogger } from "../logger";
 import type { PubSubAdapter } from "../realtime/adapters";
+import { isInProcess } from "../realtime/in-process-adapters";
 import type { ClusterOptions } from "./ws-types";
 
 /** The shortest cluster secret taken, in bytes: an HMAC-SHA-256 key no shorter than its digest. */
@@ -51,7 +52,9 @@ export function clusterSecretOf(
  * it are taken unsigned: whoever can publish on its channels — anything
  * else its Redis reaches — can close any connection, or ask every one for
  * its credentials again. What the replicas do is the same either way:
- * signing stays the cluster's choice.
+ * signing stays the cluster's choice. A bus in the process is not named:
+ * nothing outside the process can publish on it, and a line every local
+ * run logs for nothing teaches to read none.
  *
  * @param pubsub - The adapter the commands travel over
  * @example
@@ -60,7 +63,7 @@ export function clusterSecretOf(
  * ```
  */
 export function warnUnsignedCommands(pubsub: PubSubAdapter): void {
-  if (unsignedOver.has(pubsub)) return;
+  if (isInProcess(pubsub) || unsignedOver.has(pubsub)) return;
   unsignedOver.add(pubsub);
   log.warn(
     `Commands between replicas are taken unsigned: whoever can publish on the pub/sub adapter's channels can close any connection. Give every replica the same cluster: { secret } of ${MIN_SECRET_BYTES} bytes or more — \`openssl rand -hex 32\` makes one.`,

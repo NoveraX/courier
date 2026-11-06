@@ -6,6 +6,7 @@ import type {
   PubSubEnvelope,
   TopicLog,
 } from "./adapters";
+import { markInProcess } from "./in-process-adapters";
 import { createMemoryTopicLogs, type MemoryTopicLogOptions } from "./memory-topic-log";
 
 type Listener = (envelope: PubSubEnvelope) => void;
@@ -49,7 +50,7 @@ export function createMemoryBus(options: MemoryBusOptions = {}): MemoryBus {
   const logFor = options.log ? createMemoryTopicLogs(channels, options.log) : undefined;
   return {
     replica(origin = `mem_${randomId()}`) {
-      return memoryReplica(channels, origin, logFor?.(origin));
+      return markInProcess(memoryReplica(channels, origin, logFor?.(origin)));
     },
   };
 }

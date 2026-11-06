@@ -44,7 +44,8 @@ export interface ClusterControlOptions {
  * it has read it as one it knows — signed by the cluster when there is a
  * secret. What it refuses is logged on one line, never acted on; a newer
  * replica's command is skipped. Without a secret, the log says once for
- * the adapter that its commands are taken unsigned.
+ * the adapter that its commands are taken unsigned, unless a bus in the
+ * process made it.
  *
  * @param options - The adapter, the secret, what to do with a command, the log
  * @returns The channel

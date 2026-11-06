@@ -3,7 +3,8 @@
  * extension pack installs it: a stand-in Studio answers as the real one
  * does, a workspace's project says where it runs, and the suite opens a
  * file there and reads the hints the editor shows over its calls, and the
- * audit's findings it marks at them.
+ * audit's findings it marks at them. A stand-in vscode-icons is the icon
+ * theme in use, for Courier File Icons to put Courier's icons into.
  *
  * Runs the VS Code at VSCODE_PATH; or the version VSCODE_VERSION names, which
  * @vscode/test-electron downloads — `stable`, `insiders`, a version number, or
@@ -163,13 +164,56 @@ writeFileSync(
   'export const orders = defineGroup({\n  endpoints: {\n    place: endpoint.post(""),\n  },\n});\n',
 );
 const report = join(scratch, "report.json");
+/*
+ * vscode-icons as Courier File Icons meets it, standing in for the real
+ * one: the icon theme in use, and the settings it takes custom icons by.
+ * Its theme file is not where the real one rebuilds its own, so Courier
+ * waits for no rebuild of it.
+ */
+const vsicons = join(scratch, "vscode-icons");
+mkdirSync(vsicons);
+writeFileSync(join(vsicons, "theme.json"), "{}");
+writeFileSync(
+  join(vsicons, "package.json"),
+  JSON.stringify({
+    name: "vscode-icons",
+    publisher: "vscode-icons-team",
+    version: "0.0.0",
+    engines: { vscode: "^1.95.0" },
+    contributes: {
+      iconThemes: [{ id: "vscode-icons", label: "VSCode Icons", path: "./theme.json" }],
+      configuration: {
+        properties: {
+          "vsicons.associations.files": { type: "array", default: [] },
+          "vsicons.associations.folders": { type: "array", default: [] },
+          "vsicons.customIconFolderPath": { type: "string", default: "" },
+        },
+      },
+    },
+  }),
+);
+const customIcons = join(scratch, "icons");
+mkdirSync(join(scratch, "user-data", "User"), { recursive: true });
+writeFileSync(
+  join(scratch, "user-data", "User", "settings.json"),
+  JSON.stringify({
+    "workbench.iconTheme": "vscode-icons",
+    "vsicons.customIconFolderPath": customIcons,
+    /* Courier File Icons 0.4's setting, which the extension takes away as it starts. */
+    "courier.fileIcons.offer": true,
+  }),
+);
 
 try {
   await runTests({
     ...editorToRun(),
-    extensionDevelopmentPath: [extension, fileIcons],
+    extensionDevelopmentPath: [extension, fileIcons, vsicons],
     extensionTestsPath: join(here, "suite.cjs"),
-    extensionTestsEnv: { COURIER_EDITOR_REPORT: report, COURIER_EDITOR_STUDIO: url },
+    extensionTestsEnv: {
+      COURIER_EDITOR_REPORT: report,
+      COURIER_EDITOR_STUDIO: url,
+      COURIER_EDITOR_ICONS: join(customIcons, "vsicons-custom-icons"),
+    },
     launchArgs: [
       workspace,
       "--disable-extensions",

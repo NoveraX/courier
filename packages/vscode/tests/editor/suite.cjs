@@ -4,11 +4,13 @@
  * audit's finding marked at it, going to the endpoint's declaration and
  * back, the lines over the declaration, the endpoint in Go to Symbol, the
  * commands the extension offers and its snippets — and Courier File Icons
- * beside it, running where the editor's window runs, with its commands.
+ * beside it, running where the editor's window runs, with its commands,
+ * putting Courier's icons into the icon theme in use as the editor starts.
  * What it saw is written to COURIER_EDITOR_REPORT; a mismatch fails the run.
  */
 const assert = require("node:assert/strict");
-const { writeFileSync } = require("node:fs");
+const { existsSync, writeFileSync } = require("node:fs");
+const { join } = require("node:path");
 const vscode = require("vscode");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -108,14 +110,43 @@ async function addedEndpoint(folder) {
   return document.lineAt(3).text;
 }
 
-/* Courier File Icons as the editor runs it: where, and the commands it registered once started. */
+/* A setting as the user's own settings hold it. */
+const userSetting = (key) => vscode.workspace.getConfiguration().inspect(key)?.globalValue;
+
+/* Whether the user's settings hold Courier's icons for the stand-in vscode-icons. */
+const iconsIn = () =>
+  (userSetting("vsicons.associations.files") ?? []).some(
+    (entry) => entry?.icon === "courier-config",
+  );
+
+/* Courier's icons as the editor starts, no command run: once they are in, whether their copy is there and 0.4's setting gone. */
+async function iconsAtStart() {
+  for (let attempt = 0; attempt < 75 && !iconsIn(); attempt++) await sleep(200);
+  return {
+    in: iconsIn(),
+    copied: existsSync(join(process.env.COURIER_EDITOR_ICONS, "file_type_courier-config.svg")),
+    offer: userSetting("courier.fileIcons.offer"),
+  };
+}
+
+/*
+ * Courier File Icons as the editor runs it: where, the commands it
+ * registered once started, Courier's icons in the theme in use as the
+ * editor starts, then out by Remove, which keeps them out, and in again
+ * by Show, which lets them go in by themselves again.
+ */
 async function fileIcons() {
   const extension = vscode.extensions.getExtension("noverax.courier-file-icons");
   await extension?.activate();
   const commands = (await vscode.commands.getCommands(true))
     .filter((name) => name.startsWith("courier.fileIcons."))
     .sort();
-  return { kind: extension?.packageJSON.extensionKind, commands };
+  const started = await iconsAtStart();
+  const now = () => ({ in: iconsIn(), automatic: userSetting("courier.fileIcons.automatic") });
+  await vscode.commands.executeCommand("courier.fileIcons.remove");
+  const removed = now();
+  await vscode.commands.executeCommand("courier.fileIcons.show");
+  return { kind: extension?.packageJSON.extensionKind, commands, started, removed, shown: now() };
 }
 
 exports.run = async function run() {
@@ -206,8 +237,14 @@ exports.run = async function run() {
   assert.deepEqual(report.tasks, ["studio", "verify", "openapi", "diff", "agents"]);
   assert.deepEqual(
     report.fileIcons,
-    { kind: ["ui"], commands: ["courier.fileIcons.remove", "courier.fileIcons.show"] },
-    "Courier File Icons runs where the window runs, its commands registered",
+    {
+      kind: ["ui"],
+      commands: ["courier.fileIcons.remove", "courier.fileIcons.show"],
+      started: { in: true, copied: true, offer: undefined },
+      removed: { in: false, automatic: false },
+      shown: { in: true, automatic: undefined },
+    },
+    "Courier File Icons runs where the window runs, its commands registered, and puts Courier's icons into the icon theme in use as the editor starts, with no question first: out for good by Remove, in again by Show",
   );
   assert.deepEqual(report.snippets, [
     "courier-api",

@@ -8,6 +8,7 @@
  * session, a middleware, an endpoint's closure, a caller's own. A service
  * token the API sends reaches its upstream whatever the page writes.
  */
+import { once } from "node:events";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -111,13 +112,16 @@ describe("a header the API sets in its headers", () => {
   it("opens a relayed stream with the API's own", async () => {
     registerSources({ api: api({ headers: OWN }) });
     const controller = new AbortController();
+    /* The relay answers the page first, then loads its stream client and opens the upstream:
+       the request is awaited as it arrives, however long a loaded machine takes to send it. */
+    const arrived = once(upstream, "request");
 
     const response = await proxied("sse?_s=api&_m=live", FORGED, {
       method: "GET",
       headers: { accept: "text/event-stream" },
       signal: controller.signal,
     });
-    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    await arrived;
     controller.abort();
     await response.body?.cancel().catch(() => undefined);
 

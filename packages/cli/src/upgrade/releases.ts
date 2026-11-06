@@ -107,7 +107,7 @@ export const RELEASES: readonly Release[] = [
       },
       {
         title:
-          "Courier's file icons go in as the editor starts: courier.fileIcons.automatic replaces offer",
+          "Courier File Icons goes in as the editor starts, and carries courier.fileIcons.offer over itself",
         docs: `${UPGRADING}#courier-file-icons`,
       },
     ],

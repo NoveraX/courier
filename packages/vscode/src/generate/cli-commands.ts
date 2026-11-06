@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { chooseProject } from "../commands/project-commands";
 import type { CourierCore } from "../core/courier-core";
 import { fetchOpenApi } from "../studio/studio-api";
+import { addressProblem } from "./import-address";
 import { askCredentials } from "./import-credentials";
 import { runStudioCommand } from "./studio-cli";
 
@@ -68,6 +69,7 @@ async function importApi(core: CourierCore): Promise<void> {
       ? await vscode.window.showInputBox({
           title: "Import an API: its address",
           placeHolder: "https://api.example.com/openapi.json",
+          validateInput: addressProblem,
         })
       : how?.by === "file"
         ? (

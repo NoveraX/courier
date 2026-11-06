@@ -181,7 +181,8 @@ export const shown = { warnings: [] as string[], infos: [] as string[], opened: 
 /**
  * What the code showed as errors, the picks a test makes for the user, the
  * buttons they press, and what they type into each input box, in turn —
- * `undefined` to give up — with what an input box refused of it.
+ * `undefined` to give up — with what an input box refused of it, and what
+ * it warned of as it took a value.
  */
 export const asked = {
   errors: [] as string[],
@@ -189,7 +190,16 @@ export const asked = {
   buttons: [] as string[],
   typed: [] as (string | undefined)[],
   refused: [] as string[],
+  warned: [] as string[],
 };
+
+export const InputBoxValidationSeverity = { Info: 1, Warning: 2, Error: 3 } as const;
+
+/* What an input box's check answers: a string, or a message of its severity, refuses; a lesser one is shown. */
+type InputProblem = string | { message: string; severity: number } | undefined;
+
+/** The terminals the code opened: what each was opened with, and the lines sent to it. */
+export const terminals: { options: unknown; sent: string[] }[] = [];
 
 /** What the code wrote to its log, level and line. */
 export const logged: [string, string][] = [];
@@ -223,14 +233,23 @@ export const window = {
     const wanted = asked.picks.shift();
     return items.find((item) => JSON.stringify(item).includes(String(wanted)));
   },
-  /* VS Code takes no value its check refuses: the user types again, or gives up. */
-  showInputBox: async (options?: { validateInput?: (value: string) => string | undefined }) => {
+  /* VS Code takes no value its check refuses: the user types again, or gives up. A warning is shown, and the value taken. */
+  showInputBox: async (options?: { validateInput?: (value: string) => InputProblem }) => {
     for (let typed = asked.typed.shift(); typed !== undefined; typed = asked.typed.shift()) {
       const problem = options?.validateInput?.(typed);
       if (problem === undefined) return typed;
-      asked.refused.push(problem);
+      if (typeof problem !== "string" && problem.severity !== InputBoxValidationSeverity.Error) {
+        asked.warned.push(problem.message);
+        return typed;
+      }
+      asked.refused.push(typeof problem === "string" ? problem : problem.message);
     }
     return undefined;
+  },
+  createTerminal: (options: unknown) => {
+    const terminal = { options, sent: [] as string[] };
+    terminals.push(terminal);
+    return { sendText: (line: string) => void terminal.sent.push(line), show: () => undefined };
   },
 };
 

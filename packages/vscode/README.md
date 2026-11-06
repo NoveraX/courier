@@ -150,7 +150,7 @@ With no Studio running, the view starts one — your project's own `studio` scri
 
 ## Adding to your API, and testing it
 
-**New Endpoint…** — from the palette, the view, or the editor's context menu — asks for the group, the name, the method and the path, and types the endpoint in after the group's last one, the way that file writes its endpoints, its variables and response left for you to fill in. **Import an API…**, **Show OpenAPI Document…** and **Check API Changes…** run Studio's own commands for the project; for an address behind auth, Import an API asks for the environment variables that hold its credentials and runs the command with their names, never a value.
+**New Endpoint…** — from the palette, the view, or the editor's context menu — asks for the group, the name, the method and the path, and types the endpoint in after the group's last one, the way that file writes its endpoints, its variables and response left for you to fill in. **Import an API…**, **Show OpenAPI Document…** and **Check API Changes…** run Studio's own commands for the project; for an address behind auth, Import an API asks for the environment variables that hold its credentials and runs the command with their names, never a value, and refuses an address with a user or a password in it as you type it.
 
 The calls Studio recorded as tests, under `tests/recorded/`, show in the Test Explorer and run against the API as your code declares it now. **Terminal › Run Task… › courier** runs Studio, the recorded calls' check, the OpenAPI documents, the change report and the agents' list for each project.
 

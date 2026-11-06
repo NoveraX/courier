@@ -28,6 +28,8 @@ export interface InFlightEntry {
   /** Hands the request's answers to whoever sent it. */
   deliver: (answer: PlaygroundAnswer) => void;
   transport: "http" | "sse" | "ws";
+  /** When it was sent, as `performance.now()` reads it: a cancelled run's end says how long it ran. */
+  sentAt: number;
   /** Armed for HTTP requests only — cleared on terminal event or cancel. */
   timeout?: NodeJS.Timeout;
 }

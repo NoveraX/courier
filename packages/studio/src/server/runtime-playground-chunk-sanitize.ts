@@ -31,7 +31,8 @@ export interface SanitizedChunkPayload {
 
 export interface SanitizedEndPayload {
   rid: string;
-  summary: { durationMs: number; count?: number };
+  /** `cancelled` when the run ended because its sender cancelled it, which only Studio's router says. */
+  summary: { durationMs: number; count?: number; cancelled?: true };
 }
 
 export interface SanitizedErrorPayload {

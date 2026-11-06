@@ -16,6 +16,12 @@
  * request went to, and hands it to whoever sent the request. Terminal events
  * clear the inFlight entry.
  *
+ * A cancel is the router's to settle, since an answer and a cancel can cross
+ * on the way: the run ends for its sender the moment it is cancelled — with
+ * a `playground:end` that says so — the runtime is told to stop it, and
+ * nothing the runtime sends for that rid afterwards is handed on. An HTTP
+ * run the runtime leaves unanswered past its timeout is stopped there too.
+ *
  * On runtime socket disconnect: end every in-flight rid that socket was
  * serving with a `playground:error` to its sender, then clear the entries —
  * whether or not another process still runs under its runtime id. On UI
@@ -26,14 +32,13 @@
  * it again handed another UI's stream to whoever sent it.
  */
 
-import { createLogger } from "@noverax/courier";
 import type { Namespace, Socket } from "socket.io";
 import type { BindingTable } from "./catalog/binding-table";
+import { armTimeout, endCancelled, failedAnswer, stopAtRuntime } from "./playground-endings";
 import { createPlaygroundForwarders, type PlaygroundForwarders } from "./playground-forwarders";
 import {
   type InFlight,
   type InFlightEntry,
-  type PlaygroundAnswer,
   settle,
   settleWhere,
   tellEach,
@@ -46,17 +51,6 @@ import {
   sanitizeRidOnly,
   sanitizeWrite,
 } from "./runtime-playground-router-sanitize";
-
-const log = createLogger("Studio");
-
-/**
- * Hard ceiling on HTTP playground request lifetime. A runtime that silently
- * hangs returns a visible `playground:error` instead of a spinning UI
- * forever. SSE and WS requests are NOT timed out at this layer: their
- * natural lifetime is bounded by the user's Unsubscribe action, the
- * runtime responder's `AbortSignal`, or the runtime socket disconnect.
- */
-const HTTP_TIMEOUT_MS = 30_000;
 
 export interface RuntimePlaygroundRouter extends PlaygroundForwarders {
   dispatch(uiSocket: Socket, raw: unknown): void;
@@ -103,34 +97,18 @@ export function createRuntimePlaygroundRouter(
 ): RuntimePlaygroundRouter {
   const inFlight: InFlight = new Map();
 
-  const failed = (rid: string, message: string): PlaygroundAnswer => ({
-    event: "playground:error",
-    payload: { rid, error: { message } },
-  });
-
-  const armTimeout = (rid: string, entry: InFlightEntry): void => {
-    entry.timeout = setTimeout(() => {
-      if (inFlight.get(rid) !== entry) return;
-      log.warn(
-        `playground:exec timeout after ${HTTP_TIMEOUT_MS}ms — rid=${rid} runtime=${entry.runtimeId}`,
-      );
-      settle(inFlight, rid);
-      entry.deliver(failed(rid, `Runtime did not respond within ${HTTP_TIMEOUT_MS / 1000}s`));
-    }, HTTP_TIMEOUT_MS);
-  };
-
   const send = (
     sender: string,
     deliver: InFlightEntry["deliver"],
     payload: PlaygroundExecPayload,
   ): void => {
     if (inFlight.has(payload.rid)) {
-      deliver(failed(payload.rid, `A request ${payload.rid} is already in flight`));
+      deliver(failedAnswer(payload.rid, `A request ${payload.rid} is already in flight`));
       return;
     }
     const target = playgroundTarget(deps.bindingTable, payload);
     if ("refusal" in target) {
-      deliver(failed(payload.rid, target.refusal));
+      deliver(failedAnswer(payload.rid, target.refusal));
       return;
     }
     const { runtimeId, socket } = target;
@@ -140,8 +118,9 @@ export function createRuntimePlaygroundRouter(
       sender,
       deliver,
       transport: payload.transport,
+      sentAt: performance.now(),
     };
-    if (payload.transport === "http") armTimeout(payload.rid, entry);
+    if (payload.transport === "http") armTimeout(inFlight, payload.rid, entry);
     inFlight.set(payload.rid, entry);
     /* Which runtime runs the call is Studio's to decide; the runtime is sent the call only. */
     const { runtimeId: _preferred, ...call } = payload;
@@ -163,8 +142,10 @@ export function createRuntimePlaygroundRouter(
   const run = (call: PlaygroundExecPayload, signal?: AbortSignal): Promise<PlaygroundRunOutcome> =>
     collectRun({
       start: (deliver) => send(`studio:${call.rid}`, deliver, call),
-      cancel: () =>
-        settle(inFlight, call.rid)?.runtimeSocket.emit("playground:cancel", { rid: call.rid }),
+      cancel: () => {
+        const entry = settle(inFlight, call.rid);
+        if (entry) stopAtRuntime(call.rid, entry, "cancel the replay at the runtime");
+      },
       signal,
     });
 
@@ -179,10 +160,8 @@ export function createRuntimePlaygroundRouter(
     run,
     cancel: (uiSocket, raw) => {
       const payload = sanitizeRidOnly(raw);
-      if (payload)
-        sentBy(uiSocket, payload.rid)?.runtimeSocket.emit("playground:cancel", {
-          rid: payload.rid,
-        });
+      const entry = payload ? sentBy(uiSocket, payload.rid) : undefined;
+      if (payload && entry) endCancelled(inFlight, payload.rid, entry);
     },
     write: (uiSocket, raw) => {
       const payload = sanitizeWrite(raw);
@@ -195,7 +174,7 @@ export function createRuntimePlaygroundRouter(
     onRuntimeDisconnect: (runtimeSocketId) => {
       const served = settleWhere(inFlight, (e) => e.runtimeSocket.id === runtimeSocketId);
       tellEach(served, "report the runtime's disconnect", (rid, entry) =>
-        entry.deliver(failed(rid, "Runtime disconnected mid-request")),
+        entry.deliver(failedAnswer(rid, "Runtime disconnected mid-request")),
       );
     },
     onUiDisconnect: (uiSocketId) => {
@@ -207,7 +186,7 @@ export function createRuntimePlaygroundRouter(
     dispose: () => {
       const open = settleWhere(inFlight, () => true);
       tellEach(open, "report Studio closing", (rid, entry) =>
-        entry.deliver(failed(rid, "Studio closed before the runtime answered")),
+        entry.deliver(failedAnswer(rid, "Studio closed before the runtime answered")),
       );
     },
     callsInFlight: (uiSocketId) => {

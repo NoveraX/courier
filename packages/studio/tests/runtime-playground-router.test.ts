@@ -301,23 +301,99 @@ describe("createRuntimePlaygroundRouter", () => {
     expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-1" });
   });
 
-  it("cancel forwards to runtime but does not delete inFlight (waits for terminal event)", () => {
-    const { runtimeSock, ui, router } = setupRouter(["sse"]);
+  it.each(["http", "sse"] as const)(
+    "ends a cancelled %s run for its page at once, and stops it at the runtime",
+    (transport) => {
+      const { runtimeSock, ui, router } = setupRouter([transport]);
 
+      router.dispatch(ui as any, {
+        rid: "r-cancel",
+        source: "api",
+        group: "f",
+        method: "s",
+        transport,
+      });
+      router.cancel(ui as any, { rid: "r-cancel" });
+
+      expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-cancel" });
+      expect(router._inFlightSize()).toBe(0);
+      expect(ui.emit.mock.calls).toEqual([
+        [
+          "playground:end",
+          { rid: "r-cancel", summary: { durationMs: expect.any(Number), cancelled: true } },
+        ],
+      ]);
+    },
+  );
+
+  it("hands on nothing the runtime sends for a run after it was cancelled", () => {
+    const { ui, router } = setupRouter();
     router.dispatch(ui as any, {
-      rid: "r-cancel",
+      rid: "r-late",
       source: "api",
       group: "f",
       method: "s",
-      transport: "sse",
+      transport: "http",
     });
-    router.cancel(ui as any, { rid: "r-cancel" });
+    router.cancel(ui as any, { rid: "r-late" });
+    ui.emit.mockClear();
 
-    expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-cancel" });
-    expect(router._inFlightSize()).toBe(1);
+    /* The answer raced the cancel, and lost: the run ended when it was cancelled. */
+    router.forwardChunk(
+      { rid: "r-late", chunk: { kind: "http-result", status: 200, data: { ready: true } } },
+      "rt-sock-1",
+    );
+    router.forwardEnd({ rid: "r-late", summary: { durationMs: 400 } }, "rt-sock-1");
+    router.forwardError({ rid: "r-late", error: { message: "aborted" } }, "rt-sock-1");
 
-    router.forwardEnd({ rid: "r-cancel", summary: { durationMs: 10 } }, "rt-sock-1");
+    expect(ui.emit).not.toHaveBeenCalled();
+  });
+
+  it("ends a cancelled run for its page when the runtime cannot be told", () => {
+    const { runtimeSock, ui, router } = setupRouter();
+    router.dispatch(ui as any, {
+      rid: "r-unreachable",
+      source: "api",
+      group: "f",
+      method: "s",
+      transport: "http",
+    });
+    runtimeSock.emit.mockImplementation(() => {
+      throw new Error("socket closed");
+    });
+
+    router.cancel(ui as any, { rid: "r-unreachable" });
+
+    expect(ui.emit).toHaveBeenCalledWith(
+      "playground:end",
+      expect.objectContaining({ rid: "r-unreachable" }),
+    );
     expect(router._inFlightSize()).toBe(0);
+  });
+
+  it("stops at the runtime a call it leaves unanswered past the timeout", () => {
+    vi.useFakeTimers();
+    try {
+      const { runtimeSock, ui, router } = setupRouter();
+      router.dispatch(ui as any, {
+        rid: "r-silent",
+        source: "api",
+        group: "f",
+        method: "s",
+        transport: "http",
+      });
+
+      vi.advanceTimersByTime(30_000);
+
+      expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-silent" });
+      expect(ui.emit).toHaveBeenCalledWith("playground:error", {
+        rid: "r-silent",
+        error: { message: "Runtime did not respond within 30s" },
+      });
+      expect(router._inFlightSize()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects malformed playground:exec payloads silently", () => {

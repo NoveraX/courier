@@ -1,7 +1,8 @@
 /**
  * What Studio is told of the fetch a call makes: where it went, and how it
  * ended — the code an upstream answered with, even when the answer is a
- * failure, and none when no answer came at all.
+ * failure, and none when no answer came at all. A call refused before it is
+ * sent makes no fetch, and Studio is told of none.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -22,6 +23,7 @@ let server: Server | undefined;
 
 afterEach(async () => {
   delete hooks.onRequestStart;
+  delete hooks.onHttpFetchStart;
   delete hooks.onHttpFetchError;
   await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());
   server = undefined;
@@ -73,5 +75,46 @@ describe("a fetch that fails", () => {
 
     expect(failed).toHaveBeenCalledOnce();
     expect(failed.mock.calls[0]?.[0]).not.toHaveProperty("status");
+  });
+});
+
+describe("a call refused before it is sent", () => {
+  it.each([
+    [
+      "by its closure calling a verb of the other kind",
+      "kinds",
+      { write: true },
+      "ENDPOINT_VERB_KIND",
+    ],
+    [
+      "for variables no request carries",
+      "save",
+      { tags: new Set(["a"]) },
+      "VARIABLE_NOT_ENCODABLE",
+    ],
+  ])("makes no fetch, and Studio is told of none: %s", async (_, method, variables, code) => {
+    server = createServer((_req, res) => res.writeHead(200).end("{}"));
+    await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
+    const started = vi.fn();
+    const failed = watchFailures();
+    hooks.onHttpFetchStart = started;
+    const client = createCaller(
+      defineApi({
+        name: "api",
+        baseURL: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+        endpoints: {
+          kinds: endpoint
+            .variables<{ write: boolean }>()
+            .via((http, vars) => (vars.write === true ? http.put("x") : http.get("x")))
+            .reads(),
+          save: endpoint.post("save").variables<Record<string, unknown>>(),
+        },
+      }),
+    ) as unknown as Record<string, (variables: unknown) => Promise<unknown>>;
+
+    await expect(client[method]?.(variables)).rejects.toMatchObject({ code });
+
+    expect(started).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled();
   });
 });

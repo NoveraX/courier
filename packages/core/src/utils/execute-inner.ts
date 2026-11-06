@@ -43,6 +43,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
   const vars = deps.variables;
   const ft0 = deps.hasStudio ? performance.now() : 0;
   deps.timing.shared = undefined;
+  deps.timing.sent = false;
 
   let response: Awaited<ReturnType<typeof deps.endpoint>>;
   try {
@@ -63,13 +64,18 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
       vars,
     );
   } catch (fetchError) {
-    if (deps.hasStudio) deps.timing.tFetch = performance.now() - ft0;
-    deps.dt.onHttpFetchError?.({
-      requestId: deps.requestId,
-      message: fetchError instanceof Error ? fetchError.message : String(fetchError),
-      ...(isHTTPError(fetchError) && { status: fetchError.status }),
-      timestamp: Date.now(),
-    });
+    /* A call refused before it was sent — its closure's verb of the other kind, variables no
+       request carries — made no fetch: Studio is told of none, nor of a time it took. The
+       mark is Studio's, set as a fetch starts. */
+    if (deps.timing.sent) {
+      deps.timing.tFetch = performance.now() - ft0;
+      deps.dt.onHttpFetchError?.({
+        requestId: deps.requestId,
+        message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+        ...(isHTTPError(fetchError) && { status: fetchError.status }),
+        timestamp: Date.now(),
+      });
+    }
     throw fetchError;
   }
 
@@ -135,7 +141,7 @@ function keptToKind(methods: HttpMethods, schema: SchemaMetadata | undefined): H
         `[courier] the closure called .${verb}() on an endpoint ${
           named
             ? ".reads() declared a read, which never calls .put(), .patch() or .del()"
-            : `its verb made a ${kind === "query" ? "read" : "write"}: a closure that calls a reading verb and a writing one names the kind with .reads() or .writes()`
+            : `its verb made a ${kind === "query" ? "read" : "write"}: name its kind with .reads() or .writes()`
         }`,
       );
     };

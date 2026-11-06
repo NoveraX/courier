@@ -52,7 +52,7 @@ async function runHeld(
   const pendingSession = startCallSession(target, context);
   const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
   const instance = clientForCall(dataSource, context, schema?.type, hold);
-  if (studio.hasStudio) attachFetchHook(instance, studio);
+  if (studio.hasStudio) attachFetchHook(instance, studio, timing);
 
   const {
     rawData = false,

@@ -15,6 +15,8 @@ export type TimingState = {
   tFetch: number;
   /** How the call's read was answered by another call's request, when it was */
   shared?: SharedAnswer | undefined;
+  /** Whether this attempt's request was sent: one refused before then made no fetch */
+  sent?: boolean | undefined;
 };
 
 export type StudioContext = {
@@ -180,8 +182,10 @@ export function emitRequestEnd(
 export function attachFetchHook(
   instance: { onBeforeFetch?: (method: string, url: string) => void },
   dCtx: StudioContext,
+  timing: TimingState,
 ): void {
   instance.onBeforeFetch = (httpMethod, fullUrl) => {
+    timing.sent = true;
     dCtx.dt.onHttpFetchStart?.({
       requestId: dCtx.requestId,
       url: fullUrl,

@@ -224,7 +224,11 @@ function isOwned(view: Uint8Array): view is Uint8Array<ArrayBuffer> {
  * ```
  */
 export function formOf(record: Record<string, unknown>): FormData | undefined {
-  return holdsFile(record) ? multipartForm(record) : undefined;
+  /* multipartForm's loop, which a page's bundle takes this way without multipartForm itself. */
+  if (!holdsFile(record)) return undefined;
+  const form = new FormData();
+  for (const { name, value } of formEntries(record)) form.append(name, value);
+  return form;
 }
 
 /**

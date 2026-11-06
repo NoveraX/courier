@@ -35,6 +35,10 @@ describe("a page's neighbours", () => {
     })
     expect(neighbors("/docs/create-courier")).toMatchObject({
       previous: { href: "/docs/quick-start" },
+      next: { href: "/docs/create-courier-reference" },
+    })
+    expect(neighbors("/docs/create-courier-reference")).toMatchObject({
+      previous: { href: "/docs/create-courier" },
       next: { href: "/docs/project-setup" },
     })
     expect(neighbors("/docs/introduction").previous).toBeUndefined()

@@ -37,7 +37,7 @@ describe("the adapters on the landing page", () => {
   })
 
   it("names each framework as the one command's --framework takes it, as its page documents", () => {
-    const row = docsPage("/docs/create-courier")
+    const row = docsPage("/docs/create-courier-reference")
       .split("\n")
       .find((line) => line.startsWith("| `--framework <name>`"))
 

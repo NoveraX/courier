@@ -20,6 +20,7 @@ export const LEARN_SECTIONS: NavSection[] = [
       { title: "Installation", href: "/docs/installation" },
       { title: "Quick Start", href: "/docs/quick-start" },
       { title: "Create Courier", href: "/docs/create-courier" },
+      { title: "Create Courier Reference", href: "/docs/create-courier-reference" },
       { title: "Project Setup", href: "/docs/project-setup" },
       { title: "How Courier Reads Your Project", href: "/docs/reading-your-project" },
       { title: "Upgrading from 0.4", href: "/docs/upgrading" },

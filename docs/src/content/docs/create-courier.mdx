@@ -93,7 +93,7 @@ Every setup in a project without Courier adds `courier.config.ts`, the list of y
 - **Replace a file of yours.** A file is only ever added. Where a file of yours stands where Courier's would go — your own `instrumentation.ts`, say — it is kept, and the lines it lacks are listed for you.
 - **Offer what you have.** In a project whose `courier.config.ts` declares APIs already, it adds no example — no API, page, mock or query hooks — and says how many APIs the config declares. It reads your code for what is wired up: the config's APIs registered, the server and the browser connected to Studio, the proxy route, Studio's plugin in your bundler's config. Only a real call counts, not one in a comment or a string, and only in a file the app loads — by the framework's own convention, as its entry, or imported by another file, through a relative path or one of your aliases (tsconfig `paths` and `baseUrl`, package.json `imports`): a router nothing mounts still has its step. A change it makes never imports a name your file binds already, nor adds a route whose URL path a route of yours has: those are left to you. A file that lacks a part is shown only that part. The config is found under any of the names Studio reads, `courier.config.mjs` among them, and no `courier.config.ts` is added beside it. A package you list as a dependency or a dev one is not installed again, nor a peer or optional one that Node finds installed, in your project or hoisted in a workspace; one listed there alone and not installed is added, and the plan says why. One of Courier's on another release line is named and left as it is, with what brings the two to one: `npx @noverax/courier-cli@latest upgrade` for a project on an older line, `npx @noverax/create-courier@latest` for one on a newer line. Scripts are added to `package.json` in its own layout: `studio` where Studio is set up, and — where pages call through your server and the project marks an endpoint with `.expose()` or has a routes module — `routes`, with `@noverax/courier-cli` to run it. A script of yours under one of those names is kept as it is, and the step that would run Courier's runs its command instead.
 - **Edit a file it cannot read.** A change to a file of yours is made only where the file has a shape the command knows: one default export of a config object, one `const app = express()`. It is shown line by line in the plan and checked against the file right before it is written; a file that changed meanwhile stops the setup with its name. Anywhere else, the change is left to you, with the lines to add.
-- **Leave a project half set up.** It installs the packages first, and writes nothing until the install is done. When the install fails, a file it writes cannot be written, the specification's import fails, or you press Ctrl+C, what it did is undone: the files it added are removed, the files it changed are put back, and `package.json` and the lockfile are as they were before the install. Each file is written whole, under its name at once, and only inside the project: a path that leads out of it through a link stops the setup before anything is written there. A file someone changed after the setup wrote it is kept, and named. `node_modules` may still hold what the install added, which your package manager's install takes out again. A run after one whose packages were never installed, with `--no-install` say, installs what the files Courier added import: the example's hooks, its schemas and its mock. Each program the setup runs has its time: 20 minutes for an install or a framework's generator, 5 minutes for Studio's import, for TypeScript's check and for a program like `astro sync`.
+- **Leave a project half set up.** It installs the packages first, and writes nothing until the install is done. When the install fails, a file it writes cannot be written, the specification's import fails, or you press Ctrl+C, what it did is undone: the files it added are removed, the files it changed are put back, and `package.json` and the lockfile are as they were before the install. Each file is written whole, under its name at once, and only inside the project: a path that leads out of it through a link stops the setup before anything is written there. A file someone changed after the setup wrote it is kept, and named. `node_modules` may still hold what the install added, which your package manager's install takes out again. A run after one whose packages were never installed, with `--no-install` say, installs what the files Courier added import: the example's hooks, its schemas and its mock. Each program the setup runs has its time, [named in the reference](/docs/create-courier-reference#how-long-a-program-may-run).
 - **Take a port that is taken.** Studio takes 6280 and the mock 7001 unless something listens there already, another project's Studio say; then the next free one, written in `courier.config.ts` and `courier.mocks.ts`.
 
 ## Your own API
@@ -128,43 +128,10 @@ Installs `@noverax/courier-docs`, the docs of the Courier you install, and write
 npx @noverax/create-courier --json --dry-run
 ```
 
-With `--json` the command asks nothing, and writes one JSON document to standard output as it ends; the install and the other programs it runs write to standard error. `--yes` and `--dry-run` mean what they mean without it: with neither, the document holds the plan and the status `refused`.
-
-| Field | |
-|---|---|
-| `schemaVersion` | `1`. Within it, fields are only ever added |
-| `status` | `applied`, `unchanged`, `dry-run`, `refused` or `failed` |
-| `exitCode` | What the command exits with: 0, or 1 for a refusal or a failure |
-| `newProject` | The project it created, where it created one: its `name`, `framework` and how it was made |
-| `plan` | Its `title`; the `files`, each with its `path`, `state` (`create`, `same`, `courier` or `kept`) and `purpose`; the `edits`, with the `lines` each removes and adds; the `packages`; what is left to you, `manual`; what to run, `next`; what it leaves out and why, `leftOut`; what git says, `git`; the APIs your config declares, `configured`; and, where you asked for Courier's block, `agentRules`: `AGENTS.md` and `CLAUDE.md`, each with its `path` and `state` (`create`, `append`, `update`, `same` or `kept`) |
-| `written`, `changed` | The files it added, and the files of yours it changed |
-| `install` | Whether the install ran, and its commands: those left to you with `--no-install` |
-| `warnings` | Programs that write the types the added files read, such as `astro sync`, that failed |
-| `typecheck` | `clean`, `errors` with their `lines`, `unchecked` with its `reason`, or `no-typescript` |
-| `undone` | For a run that failed part way: the files it `removed` and `putBack`, and those it `kept`, each with why |
-| `error` | Its `code` and `message`: `CONFIRMATION_REQUIRED`, `DECLINED`, `GIT_DIRTY`, `NODE_TOO_OLD`, `SPEC_CREDENTIALS_IN_URL` or `REFUSED` for a refusal, which changed nothing; `INSTALL_FAILED`, `INSTALL_TIMED_OUT`, `CANCELLED`, `FILE_APPEARED`, `FILE_CHANGED`, `WRITE_FAILED`, `PATH_OUTSIDE_PROJECT`, `IMPORT_FAILED`, `GENERATOR_FAILED`, `TYPECHECK_FAILED` or `UNEXPECTED_ERROR` for a failure |
-
-`npx @noverax/courier-cli setup --json` writes the same document, its `command` naming it.
+With `--json` the command asks nothing, and writes one JSON document to standard output as it ends — the plan, what was done and how it ended; [Create Courier Reference](/docs/create-courier-reference#the-json-document) says what each field holds, and how `--yes` and `--dry-run` go with it.
 
 ## Options
 
-| Option | |
-|---|---|
-| `[dir]` | The project's folder, or a new one to create (default: the working directory) |
-| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
-| `--no-example` | Set Courier up with no API yet: no example API, page, mock or hooks. `--example` beside `--openapi` is refused |
-| `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
-| `--name <name>` | The imported API's name (default: from the specification) |
-| `--no-studio` | Leave Studio out, and with it the example's mock, which Studio runs |
-| `--no-mocks` | Leave the example's mock out. `--mocks` beside `--no-studio` or `--openapi` is refused: the mock is the example's, and Studio runs it |
-| `--mcp` | Offer the API's reads to AI agents in your editor |
-| `--agents-md` | Point your editor's agent at the docs of the Courier you install: Courier's block in `AGENTS.md`, and `@noverax/courier-docs` |
-| `--routes <mode>` | `plugin`: pages take their routes from Courier's plugin for the app's build; `file`: from `courier.routes.ts` (default: `plugin`, or `file` where the project keeps one) |
-| `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's, or the one that started the command) |
-| `--no-install` | Write the files, and name the install commands |
-| `--yes`, `-y` | Go ahead without asking |
-| `--allow-dirty` | Go ahead with `--yes` where git has changes not committed |
-| `--dry-run` | Show the plan, and change nothing |
-| `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing |
+Every option, with what it takes and what it is left at, is in [Create Courier Reference](/docs/create-courier-reference#options).
 
 It needs Node.js 22.13 or later, which Studio and its mock need too, and a project with a `tsconfig.json`: Courier is typed end to end.

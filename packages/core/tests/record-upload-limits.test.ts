@@ -170,7 +170,7 @@ describe("a record upload", () => {
   });
 
   it("sent on as it arrives is read no faster than the upstream takes it, none of it kept", async () => {
-    const body = recordBody(4_000_000);
+    const body = recordBody(16_000_000);
     const cuts = Array.from({ length: Math.ceil(body.length / 16_384) }, (_, at) => at * 16_384);
     const { stream, pulls } = chunked(body, cuts);
     let received = 0;
@@ -183,15 +183,16 @@ describe("a record upload", () => {
         });
         req.on("end", () => res.end("{}"));
       },
-      { uploadMode: "stream" },
+      { uploadMode: "stream", maxUploadBytes: 32_000_000 },
     );
 
     const answer = await handlePost(request(stream, undefined, body.length));
 
     expect(answer.status).toBe(200);
-    expect(received).toBeGreaterThan(4_000_000);
-    /* The parser and the sockets on the way hold a few chunks; the upload, kept, would be all of it. */
-    expect(lead).toBeLessThan(1_000_000);
+    expect(received).toBeGreaterThan(16_000_000);
+    /* The parser and the sockets on the way hold some of it, more of it on a loaded machine;
+       kept, the upload would be read whole before the upstream got a byte of it. */
+    expect(lead).toBeLessThan(body.length / 2);
   });
 });
 

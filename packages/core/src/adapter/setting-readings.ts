@@ -8,6 +8,7 @@
  */
 
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors";
+import { wordsUpTo } from "../utils/words-up-to";
 import {
   RUNTIME_SETTING_LIMITS,
   RUNTIME_SETTING_VARIABLES,
@@ -147,16 +148,29 @@ function isStringList(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
-/* What was thrown, in a line: its name and the first line of its message. */
+/* What was thrown, in a line: an error by its name and the first line of its message, anything
+   else as text. */
 function described(error: unknown): string {
-  const line =
-    error instanceof Error
-      ? `${error.name}: ${error.message.split("\n", 1)[0] ?? ""}`
-      : String(error).split("\n", 1)[0];
-  return quoted(line ?? "");
+  const text = error instanceof Error ? `${error.name}: ${error.message}` : thrownText(error);
+  return quoted(text.split("\n", 1)[0] ?? "");
 }
 
+/* A text quoted in a message, cut where a word ends past its length. */
 function quoted(text: string): string {
-  const max = RUNTIME_SETTING_LIMITS.MAX_QUOTED_LENGTH;
-  return text.length > max ? `${text.slice(0, max)}…` : text;
+  return wordsUpTo(text, RUNTIME_SETTING_LIMITS.MAX_QUOTED_LENGTH);
+}
+
+/* A value thrown that is no error, as text: Node's inspector writes one with no string form of its
+   own, which would throw again when made one; where the runtime has none, its kind stands for it. */
+function thrownText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof process !== "undefined" && typeof process.getBuiltinModule === "function") {
+    const { inspect } = process.getBuiltinModule("node:util");
+    return inspect(value, { depth: 2, breakLength: Number.POSITIVE_INFINITY });
+  }
+  try {
+    return String(value);
+  } catch {
+    return `a ${typeof value} with no text of its own`;
+  }
 }

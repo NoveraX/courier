@@ -178,6 +178,33 @@ describe("reading allowedHosts", () => {
     expect(reading.error.cause).toBe(thrown);
   });
 
+  it("cuts what the function threw where a word ends, so a token is never written in part", () => {
+    /* Made up: a JWT's shape, which the log's redaction knows only whole. */
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwcm9iZSJ9.c2lnbmF0dXJlLXByb2Jl";
+
+    const reading = readAllowedHosts(() => {
+      throw new Error(`${"word ".repeat(56)}${token} after it`);
+    });
+
+    expect(reading.ok).toBe(false);
+    if (reading.ok) return;
+    expect(reading.error.message).not.toContain("eyJ");
+    expect(reading.error.message).toMatch(/the function threw Error: (word )+word…$/);
+  });
+
+  it("fails closed when the function throws a value with no string form of its own", () => {
+    const reading = readAllowedHosts(() => {
+      throw Object.create(null);
+    });
+
+    expect(reading.ok).toBe(false);
+    if (reading.ok) return;
+    expect(reading.error.code).toBe("RUNTIME_SETTING_FAILED");
+    expect(reading.error.message).toBe(
+      "allowedHosts, as the config's function gives it: the function threw [Object: null prototype] {}",
+    );
+  });
+
   it.each([
     ["a string", "app.example.com"],
     ["a list with a number in it", ["app.example.com", 443]],

@@ -201,6 +201,17 @@ What Studio writes from an imported specification, and the hash it keeps of one 
 | A specification that holds a file's bytes — `format: binary`, or OpenAPI 3.1's `contentMediaType` — hashed as it was parsed | hashed anew, as the parser marks such a file now: **Manage** shows the import as changed once, and a URL import's `pinHash` is refused with `409` `SPEC_PIN_MISMATCH`, whose message names the pinned hash and the new one. Import the specification again, then pin the new hash |
 | A multipart operation called with a `FormData` built for it: `form.append("file", file); form.append("note", "hi")` | imported again, called with a record of its fields, `{ file, note: "hi" }`: a file is a `Blob`, a list of files a `Blob[]`, and `multipartBody` sends them as a form whether a file is among them or not. One whose schema names no fields, or a field of which is named as a parameter, still takes a `FormData` |
 
+## Courier File Icons
+
+Courier File Icons puts Courier's icons into the icon theme in use without asking first — see [VS Code Extension](/docs/studio/editor#courier-file-icons). There is nothing to do by hand: it carries the answers you gave 0.4 over as it starts.
+
+| 0.4 | Now |
+|---|---|
+| A question, in a Courier project, before the icons went in | the icons go into Material Icon Theme or vscode-icons as the editor starts, in any workspace, and one message says so, with **Take Them Out** |
+| `courier.fileIcons.offer` | `courier.fileIcons.automatic`, read from your user settings alone; `offer: false` is turned into `automatic: false`, and the old key is taken away |
+| **Not Now**, or the question closed unanswered | the icons stay out: `courier.fileIcons.automatic` is turned off for you |
+| **Courier: Show Courier's Icons in the File Icon Theme** with an icon theme in use that takes no icons, such as Seti: a pick of the installed themes that do | the editor's **File Icon Theme** picker, to choose one that takes them |
+
 ## Related
 
 - [NetworkError, TimeoutError & AbortError](/docs/api/call-errors) — the errors a call rejects with

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { REPO } from "../../support/project";
 import { APPS } from "./apps";
 import { run } from "./run";
+import { writeScenarioPages } from "./scenario-pages";
 import { FRAMEWORKS, type Target } from "./targets";
 
 /** Where the applications are built: outside the repository, so npm never takes it for theirs. */
@@ -37,6 +38,8 @@ export async function prepare(
   for (const template of [target.app, ...(target.overlays ?? [])]) {
     cpSync(join(FRAMEWORKS, "apps", template), root, { recursive: true });
   }
+  /* A page for each scenario check:browser measures, which bundle.spec.ts reads the build of. */
+  if (target.bundle !== undefined) writeScenarioPages(root);
   const settings = APPS[target.app];
   writeFileSync(
     join(root, settings.apiUrlModule),

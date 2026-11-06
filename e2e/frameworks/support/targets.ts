@@ -33,6 +33,11 @@ export interface Target {
    * version starts it otherwise than its template does
    */
   readonly dev?: readonly string[];
+  /**
+   * The bundler whose build of a page `bundle.spec.ts` holds to its budget:
+   * the application gets a page for each scenario `check:browser` measures
+   */
+  readonly bundle?: "turbopack" | undefined;
   /** Courier's packages it installs, packed as the registry would ship them */
   readonly packages: readonly string[];
   /** What it installs from npm, by name and range */

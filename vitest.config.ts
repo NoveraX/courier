@@ -13,6 +13,7 @@ export default defineConfig({
       "packages/studio/ui",
       "docs",
       { test: { name: "scripts", include: ["scripts/**/*.test.mjs"] } },
+      { test: { name: "e2e-support", include: ["e2e/frameworks/support/**/*.test.ts"] } },
     ],
     coverage: {
       provider: "v8",

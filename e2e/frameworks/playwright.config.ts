@@ -21,7 +21,11 @@ const runId = underDev ? `${target.id}-dev` : target.id;
 /* The checks that drive the application: under its dev server, the routes' alone. */
 function checks(): string[] {
   if (underDev) return app.dev === undefined ? [] : ["routes.spec.ts"];
-  return app.routesPage === undefined ? [app.spec] : [app.spec, "routes.spec.ts"];
+  return [
+    app.spec,
+    ...(app.routesPage === undefined ? [] : ["routes.spec.ts"]),
+    ...(target.bundle === undefined ? [] : ["bundle.spec.ts"]),
+  ];
 }
 
 const testMatch = checks();

@@ -61,15 +61,17 @@
   {
     "id": "next-16",
     "app": "next",
-    "overlays": ["next-proxy"],
-    "packages": ["core", "build", "next"],
+    "overlays": ["next-proxy", "next-bundle"],
+    "bundle": "turbopack",
+    "packages": ["core", "build", "next", "react"],
     "install": {
       "next": "16",
       "react": "19",
       "react-dom": "19",
       "@types/react": "19",
       "@types/node": "24",
-      "typescript": "6"
+      "typescript": "6",
+      "@tanstack/react-query": "5"
     }
   },
   {

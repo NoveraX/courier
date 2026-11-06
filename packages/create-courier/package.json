@@ -54,6 +54,11 @@
       "types": "./lib/engine.d.ts",
       "import": "./lib/engine.js",
       "default": "./lib/engine.js"
+    },
+    "./agent-rules": {
+      "types": "./lib/agent-rules.d.ts",
+      "import": "./lib/agent-rules.js",
+      "default": "./lib/agent-rules.js"
     }
   },
   "typesVersions": {
@@ -63,6 +68,9 @@
       ],
       "engine": [
         "./lib/engine.d.ts"
+      ],
+      "agent-rules": [
+        "./lib/agent-rules.d.ts"
       ]
     }
   },

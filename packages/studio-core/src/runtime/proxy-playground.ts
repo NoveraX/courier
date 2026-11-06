@@ -13,6 +13,14 @@ import { passHeaders, withoutPassHeader } from "./pass-headers";
 /* A path on the app's own origin: one leading slash, not a protocol-relative URL. */
 const RELATIVE_PATH = /^\/(?!\/)/;
 
+/** What a Playground call through the proxy is sent with, beside its headers. */
+export interface ProxyCallOptions {
+  /** Told how much of a form body has been sent */
+  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
+  /** Aborts the call: its request to the app's proxy route, which then stops its own */
+  signal?: AbortSignal | undefined;
+}
+
 /** A Playground call, as the responder runs it. */
 export interface PlaygroundCall {
   source: string;
@@ -39,19 +47,19 @@ export interface PlaygroundCall {
  * @param sources - The runtime's registered sources
  * @param call - The endpoint, its variables and headers
  * @param raw - Whether to answer with the status and headers around the data
- * @param onUploadProgress - Told how much of a form body has been sent
+ * @param options - What tells the upload's progress, and the signal that cancels the call
  * @returns What the endpoint's call returns: data, the raw answer, a
  *   subscription or a channel
  * @example
  * ```ts
- * const answer = await callThroughProxy(sources, { source: "api", group: "users", method: "list", variables: {}, headers: {} }, true);
+ * const answer = await callThroughProxy(sources, { source: "api", group: "users", method: "list", variables: {}, headers: {} }, true, { signal });
  * ```
  */
 export function callThroughProxy(
   sources: Sources,
   call: PlaygroundCall,
   raw: boolean,
-  onUploadProgress?: (progress: UploadProgress) => void,
+  { onUploadProgress, signal }: ProxyCallOptions = {},
 ): unknown {
   const definition = Reflect.get(sources, call.source);
   const routes: CourierRoutes = isRecord(definition)
@@ -70,6 +78,7 @@ export function callThroughProxy(
   const scoped = withOptions(client, {
     withinOrigin: true,
     ...(onUploadProgress && { onUploadProgress }),
+    ...(signal && { signal }),
   });
   const root = raw ? member(scoped, "raw") : scoped;
   const owner = groupNames(call.group).reduce(member, root);

@@ -14,9 +14,11 @@
  *    `playground:chunk` / `playground:end` / `playground:error`, all keyed
  *    by the same `rid`.
  *
- *  - `playground:cancel { rid }` aborts an in-flight request. The responder
- *    looks up the AbortController stored under that rid and aborts, and a
- *    stream the app's proxy serves in this process is stopped there too.
+ *  - `playground:cancel { rid }` aborts an in-flight request: an HTTP call's
+ *    request to the API, through the app's proxy route as well, a stream or
+ *    a channel — and one the app's proxy serves in this process is stopped
+ *    there too. Studio's router ends the run for the page, so nothing more
+ *    is sent for that rid.
  *
  *  - `playground:write { rid, data }` writes a message into a live WS channel
  *    opened by an earlier `playground:execute { transport: "ws" }`. Looks up
@@ -43,6 +45,7 @@ import {
   sanitizeWrite,
 } from "./playground-payloads";
 import { isStreamRedirect, streamRedirectAdvice } from "./proxy-redirect";
+import { quietOnceCancelled } from "./quiet-once-cancelled";
 import {
   dispatchSSE,
   dispatchWS,
@@ -60,6 +63,8 @@ export interface ResponderSocket {
 
 interface InFlightEntry {
   ac: AbortController;
+  /* The socket the run answers through, silent once it is cancelled. */
+  told: ResponderSocket;
   channel?: PlaygroundChannel;
   /* Written before the channel opened, and sent once it has. */
   pending: unknown[];
@@ -105,7 +110,7 @@ export function setupPlaygroundResponder(
     if (!payload) return;
     const entry = inFlight.get(payload.rid);
     if (!entry) return;
-    if (entry.channel) write(socket, payload.rid, entry.channel, payload.data);
+    if (entry.channel) write(entry.told, payload.rid, entry.channel, payload.data);
     else entry.pending.push(payload.data);
   };
 
@@ -126,37 +131,39 @@ async function runExecute(
   getSources: () => Sources,
 ): Promise<void> {
   const ac = new AbortController();
-  const entry: InFlightEntry = { ac, pending: [] };
+  const told = quietOnceCancelled(socket, ac.signal);
+  const entry: InFlightEntry = { ac, told, pending: [] };
   inFlight.set(payload.rid, entry);
 
   const sources = getSources();
   const source = sources[payload.source];
   if (!source) {
-    emitError(socket, payload.rid, `Source "${payload.source}" not registered in this runtime`);
+    emitError(told, payload.rid, `Source "${payload.source}" not registered in this runtime`);
     inFlight.delete(payload.rid);
     return;
   }
 
   try {
     if (payload.transport === "http") {
-      await dispatchHttp(socket, payload, sources, executeRequest);
+      await dispatchHttp(told, payload, sources, { exec: executeRequest, signal: ac.signal });
       return;
     }
     const open = streamOpenersFor(sources, payload);
     if (payload.transport === "sse") {
-      await dispatchSSE(socket, payload, sources, ac.signal, open.sse);
+      await dispatchSSE(told, payload, sources, ac.signal, open.sse);
     } else if (wsEndpointKind(sources, payload) === "push") {
-      await dispatchWSPush(socket, payload, sources, ac.signal, open.push);
+      await dispatchWSPush(told, payload, sources, ac.signal, open.push);
     } else {
-      await dispatchWS(socket, payload, sources, ac.signal, open.channel, (channel) => {
+      await dispatchWS(told, payload, sources, ac.signal, open.channel, (channel) => {
         entry.channel = channel;
-        for (const data of entry.pending.splice(0)) write(socket, payload.rid, channel, data);
+        for (const data of entry.pending.splice(0)) write(told, payload.rid, channel, data);
       });
     }
   } catch (err) {
-    emitError(socket, payload.rid, failureOf(payload, err));
+    emitError(told, payload.rid, failureOf(payload, err));
   } finally {
-    inFlight.delete(payload.rid);
+    /* A cancelled run is gone from the registry already, and its rid may be taken again. */
+    if (inFlight.get(payload.rid) === entry) inFlight.delete(payload.rid);
     revokeStudioPasses(playgroundRequestId(payload.rid));
   }
 }

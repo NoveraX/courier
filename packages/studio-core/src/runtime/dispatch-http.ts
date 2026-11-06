@@ -18,6 +18,14 @@ export interface HttpResultChunk {
   error?: string;
 }
 
+/** What runs a Playground call, and what stops it. */
+export interface HttpRun {
+  /** The executor, `executeRequest` */
+  exec: typeof executeRequest;
+  /** Aborts the call when the Playground cancels it: its request to the API, or to the app's proxy route */
+  signal: AbortSignal;
+}
+
 /**
  * Run an HTTP endpoint for the Playground and send back what it answered.
  *
@@ -27,22 +35,23 @@ export interface HttpResultChunk {
  * as a server's 500, since nothing was sent.
  *
  * The call runs under `playgroundRequestId(rid)`, through the proxy as well,
- * so the request Studio shows for it is the Playground's own.
+ * so the request Studio shows for it is the Playground's own. A cancel
+ * aborts it in either mode, and Studio shows that request as aborted.
  *
- * @param socket - The runtime's Studio socket
+ * @param socket - The runtime's Studio socket, silent once the run is cancelled
  * @param payload - What the Playground asked to run
  * @param sources - The sources to run it against
- * @param exec - The executor, `executeRequest`
+ * @param run - The executor, and the signal that cancels the call
  * @example
  * ```ts
- * await dispatchHttp(socket, payload, getSources(), executeRequest);
+ * await dispatchHttp(told, payload, getSources(), { exec: executeRequest, signal: ac.signal });
  * ```
  */
 export async function dispatchHttp(
   socket: ResponderSocket,
   payload: PlaygroundExecutePayload,
   sources: Sources,
-  exec: typeof executeRequest,
+  { exec, signal }: HttpRun,
 ): Promise<void> {
   const startedAt = performance.now();
   const onUploadProgress = payload.form
@@ -57,7 +66,7 @@ export async function dispatchHttp(
           },
         })
     : undefined;
-  const chunk = await run(payload, sources, exec, onUploadProgress);
+  const chunk = await run(payload, sources, { exec, signal }, onUploadProgress);
   socket.emit("playground:chunk", { rid: payload.rid, chunk });
   socket.emit("playground:end", {
     rid: payload.rid,
@@ -68,14 +77,17 @@ export async function dispatchHttp(
 async function run(
   payload: PlaygroundExecutePayload,
   sources: Sources,
-  exec: typeof executeRequest,
+  { exec, signal }: HttpRun,
   onUploadProgress: ((progress: UploadProgress) => void) | undefined,
 ): Promise<HttpResultChunk> {
   const requestId = playgroundRequestId(payload.rid);
   try {
     const answer =
       payload.mode === "proxy"
-        ? await callThroughProxy(sources, callOf(payload, requestId), true, onUploadProgress)
+        ? await callThroughProxy(sources, callOf(payload, requestId), true, {
+            signal,
+            ...(onUploadProgress && { onUploadProgress }),
+          })
         : await exec(
             sources,
             {
@@ -86,6 +98,7 @@ async function run(
               options: {
                 headers: payload.headers ?? {},
                 rawData: true,
+                signal,
                 ...(onUploadProgress && { onUploadProgress }),
               },
             },

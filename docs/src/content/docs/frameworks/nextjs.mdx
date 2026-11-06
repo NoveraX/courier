@@ -338,7 +338,25 @@ export const api = defineApi({
 | Pages Router | `withRequestContext` from `@noverax/courier-next/pages` wraps `getServerSideProps` and API routes |
 | Client components | A proxy caller: the proxy route reads the browser's request |
 
-The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only. With `cacheComponents`, put a component whose calls carry the session under `<Suspense>`, as you would one that reads `cookies()`, and keep such calls out of `"use cache"`; Next.js 14, 15 and 16 are covered alike. [User Sessions](/docs/server-side/session) covers the options and the writes another site sets off.
+<Callout variant="warning" title="Next.js builds pages ahead of time">
+Reading the request is what tells Next.js that a page belongs to one user and has to be rendered per request. `next build` does not run `instrumentation.ts`, so a provider registered only there finds no request while pages are built: a page whose calls carry the session would be built once, without anyone's, and served to everyone. `createServerCaller` registers the provider where its caller is made, which a build loads.
+</Callout>
+
+| Next.js | What differs | How the session handles it |
+| --- | --- | --- |
+| 14 | `headers()` and `cookies()` answer synchronously; a server's `fetch` is kept in the data cache by default | Their answer is awaited, which takes either form; a call made for a request is fetched with `cache: "no-store"` |
+| 15 | Both answer with a promise | Awaited |
+| 16 | Both answer with a promise alone; with `cacheComponents`, request data is read under `<Suspense>` and never inside `"use cache"` | A component whose calls carry the session goes under `<Suspense>`, as one reading `cookies()` itself would, and becomes the page's dynamic part; inside `"use cache"` such a call fails with Next.js's own error, and an endpoint with `session: false` is cached as any other call |
+
+In every version, what Next.js stops a render with — a page found to be dynamic, a prerender postponed, a request read inside a cache — reaches Next.js as it came, and a build, a script or `generateStaticParams` finds no request and sends no session.
+
+The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only, and the log says so. Next.js also URL-encodes the value it writes, so a cookie whose value is not already URL-encoded is not handed over through it — relay it through the proxy route instead, which passes cookies on byte for byte.
+
+<Callout variant="info" title="Next.js does not tell a request's method">
+A Server Action's request is POST; any other request a Next.js App Router serves is read as a page's. A Route Handler's write for a client that is no browser, and so marks nothing, is refused — such a client authenticates with its own token, not with your users' cookies.
+</Callout>
+
+[User Sessions](/docs/server-side/session) covers the options and the writes another site sets off.
 
 ### A page that writes while it renders
 

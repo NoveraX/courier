@@ -1,4 +1,4 @@
-export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "defineApi", description: "Creates a data source with base URL, options, middleware, and endpoint groups.", mode: "both", updated: "2026-11-06" }
 
 ## Import
 
@@ -228,9 +228,28 @@ defineApi({
 
 An endpoint takes it with `session: false` when it answers every user alike, and `session: "unguarded"` for a write that does no harm when another site sets it off, such as signing out. See [User Sessions](/docs/server-side/session).
 
+`defineApi` refuses a session that could not work as written, with a `ConfigurationError`:
+
+| Code | When |
+| --- | --- |
+| `SESSION_OPTIONS_INVALID` | An option a session does not have, a cookie name no browser keeps, a header no request carries, or no credential named at all |
+| `SESSION_INSECURE_TRANSPORT` | The API is reached over plain HTTP across the public internet, and `allowHttp` is not set |
+| `SESSION_HEADER_CONFLICT` | The API's `allowedHeaders`, or an endpoint's `.headers()`, names `cookie` or `set-cookie`, which would carry every cookie past the session |
+| `FORWARD_OPTIONS_INVALID` | An option `forward` does not have, or a header it may not carry. A page does not check `forward`, which passes nothing on there: the server that shares the definition refuses it |
+| `INVALID_ALLOWED_ORIGIN` | An `allowedOrigins` entry no page's `Origin` can equal |
+
 ### forward
 
-The headers a call made while serving a request carries from it: `requestId`, `trace`, `clientAddress`, `userAgent`, `locale`, and further `headers` by name. `requestId` and `clientAddress` also take header names, for an API that logs the request's id or reads the user's address under names of its own. An endpoint keeps them off its calls with `forward: false`. See [User Sessions](/docs/server-side/session#forward).
+The headers a call made while serving a request carries from it. An endpoint keeps them off its calls with `forward: false`; how they travel with the user's session is in [User Sessions](/docs/server-side/session).
+
+| Option | What it carries |
+| --- | --- |
+| `requestId` | The request's own `x-request-id` — the id nginx's `$request_id`, a load balancer or a platform wrote, so each API's logs join your application's — when it is one: up to 200 visible characters, none a quote or a backslash. Otherwise an id made for it. Every call made while serving the request carries the same id, on every attempt a retry makes. A header's name names another header; several — `["x-request-id", "x-correlation-id"]` — are each sent the id, read from the first the request carries one in. |
+| `trace` | W3C `traceparent` and `tracestate`, when the request carries a valid one and no OpenTelemetry tracer in the process propagates it already. |
+| `clientAddress` | The user's address as `X-Forwarded-For`: the chain the proxies in front recorded, with the address of the one that connected. A header's name, or several — `["x-real-ip", "x-client-ip"]` — are each sent the user's address alone as well, for an API that reads it from one header; naming `x-forwarded-for` sends it there in place of the chain, and `forwarded` as RFC 7239's `for=`. See [The user's address](/docs/deployment/overview#the-users-address). |
+| `userAgent` | The user's browser, as `User-Agent`. |
+| `locale` | The user's languages, as `Accept-Language`. |
+| `headers` | Further headers of the request, by name — a tenant, a region your edge added. Credentials, connection headers and the headers that claim a client's address cannot be listed: a request could have written them itself; `clientAddress` sends the user's address in those. |
 
 ## Related
 

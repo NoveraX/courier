@@ -1,4 +1,4 @@
-export const metadata = { title: "Framework Adapters", description: "Every official server adapter: the package to install, where it mounts, and the guide that walks through it.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "Framework Adapters", description: "Every official server adapter: the package to install, where it mounts, and the guide that walks through it.", mode: "proxy", updated: "2026-11-06" }
 
 Courier's proxy runs behind one route of your app. An official adapter mounts it in your framework: install its package and add that route. The handler takes no arguments, because it reads the sources the app registered, so moving to another framework changes only the import and the one call.
 
@@ -44,7 +44,7 @@ An API that keeps a `session` gets the user's session with every call server cod
 | Hono | `app.use(requestContext())` | 4 |
 | NestJS | `app.use(requestContext())`, on the Express or the Fastify platform | 10, 11, 12 |
 
-Where each goes, and what each framework does differently, is in [User Sessions](/docs/server-side/session#framework-setup).
+Where each goes is in [User Sessions](/docs/server-side/session#framework-setup), and what Next.js does differently in [its guide](/docs/frameworks/nextjs#the-users-session).
 
 ## The client side
 

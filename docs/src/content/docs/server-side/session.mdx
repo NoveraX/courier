@@ -45,14 +45,7 @@ export const api = defineApi({
 
 ### `forward`
 
-| Option | What it carries |
-| --- | --- |
-| `requestId` | The request's own `x-request-id` — the id nginx's `$request_id`, a load balancer or a platform wrote, so each API's logs join your application's — when it is one: up to 200 visible characters, none a quote or a backslash. Otherwise an id made for it. Every call made while serving the request carries the same id, on every attempt a retry makes. A header's name names another header; several — `["x-request-id", "x-correlation-id"]` — are each sent the id, read from the first the request carries one in. |
-| `trace` | W3C `traceparent` and `tracestate`, when the request carries a valid one and no OpenTelemetry tracer in the process propagates it already. |
-| `clientAddress` | The user's address as `X-Forwarded-For`: the chain the proxies in front recorded, with the address of the one that connected. A header's name, or several — `["x-real-ip", "x-client-ip"]` — are each sent the user's address alone as well, for an API that reads it from one header; naming `x-forwarded-for` sends it there in place of the chain, and `forwarded` as RFC 7239's `for=`. See [The user's address](/docs/deployment/overview#the-users-address). |
-| `userAgent` | The user's browser, as `User-Agent`. |
-| `locale` | The user's languages, as `Accept-Language`. |
-| `headers` | Further headers of the request, by name — a tenant, a region your edge added. Credentials, connection headers and the headers that claim a client's address cannot be listed: a request could have written them itself; `clientAddress` sends the user's address in those. |
+The headers of the request being served that the API should see: its id, so each API's logs join your application's; the W3C trace context; the user's address, browser and languages; and further headers by name — never a credential, a connection header or a header that claims a client's address, which a request could have written itself. Each option is listed under [`forward`](/docs/api/define#forward), and the user's address is told in full in [The user's address](/docs/deployment/overview#the-users-address).
 
 ## Where a call takes it from
 
@@ -64,7 +57,7 @@ Courier finds the request being served as a call starts, before it first waits �
 | The proxy route, for a browser's call | The session from the browser's request to the proxy |
 | A proxy caller in server code, such as universal code rendering a page | The proxy in the same process, with the session of the user the page is for — no request leaves the server |
 | Server code that names a request: `createCaller(api, { context: { req } })` | The session from that request |
-| A browser | Its own cookies, sent by the browser: the call asks for them with `credentials: "include"`, so an API on another origin of the page's site gets them too; one on another site gets them only where the browser lets it — see [an API on another site](#an-api-on-another-site) |
+| A browser | Its own cookies, sent by the browser, which the call asks for with `credentials: "include"` — see [an API on another site](#an-api-on-another-site) |
 | A React Native app | Its own cookies, sent by the platform as a browser sends them; what a page would read from `document.cookie` is kept from the API's answers — see [React Native](/docs/frameworks/react-native#the-users-session) |
 | Server code with no request — a script, a cron job, a build | Nothing |
 
@@ -152,19 +145,7 @@ const app = await NestFactory.create(AppModule)
 app.use(requestContext())
 ```
 
-`createAction` takes the action's request itself, and `withRequestContext` from `@noverax/courier-next/pages` serves `getServerSideProps` and API routes of the Pages Router. Any other Node server serves a request with `withIncomingRequest(nodeIncomingRequest(req, res), next)` from `@noverax/courier/node`; another framework registers a provider of its own with `registerRequestContext`.
-
-<Callout variant="warning" title="Next.js builds pages ahead of time">
-Reading the request is what tells Next.js that a page belongs to one user and has to be rendered per request. `next build` does not run `instrumentation.ts`, so a provider registered only there finds no request while pages are built: a page whose calls carry the session would be built once, without anyone's, and served to everyone. `createServerCaller` registers the provider where its caller is made, which a build loads.
-</Callout>
-
-| Next.js | What differs | How the session handles it |
-| --- | --- | --- |
-| 14 | `headers()` and `cookies()` answer synchronously; a server's `fetch` is kept in the data cache by default | Their answer is awaited, which takes either form; a call made for a request is fetched with `cache: "no-store"` |
-| 15 | Both answer with a promise | Awaited |
-| 16 | Both answer with a promise alone; with `cacheComponents`, request data is read under `<Suspense>` and never inside `"use cache"` | A component whose calls carry the session goes under `<Suspense>`, as one reading `cookies()` itself would, and becomes the page's dynamic part; inside `"use cache"` such a call fails with Next.js's own error, and an endpoint with `session: false` is cached as any other call |
-
-In every version, what Next.js stops a render with — a page found to be dynamic, a prerender postponed, a request read inside a cache — reaches Next.js as it came, and a build, a script or `generateStaticParams` finds no request and sends no session.
+What Next.js does differently — a Server Action, the Pages Router, a page built ahead of time — is on [Next.js](/docs/frameworks/nextjs#the-users-session). Any other Node server serves a request with `withIncomingRequest(nodeIncomingRequest(req, res), next)` from `@noverax/courier/node`; another framework registers a provider of its own with `registerRequestContext`.
 
 ## What a call sends
 
@@ -227,7 +208,7 @@ When the API renews the session, or ends it on signing out, its cookies are carr
 - The calls still to come for the same request send the new value at once.
 - The browser is handed them on the response being prepared, made for your application's origin: set for every path, since the API's path names its own routes; a `Domain` kept only where it covers your host; `Secure` over HTTPS, and on the local machine only where the API set it, as WebKit on Linux keeps no secure cookie for `http://localhost`; elsewhere it is dropped, and `SameSite=None` becomes `Lax`. A `__Host-` or `__Secure-` cookie your origin cannot keep is not handed over, and the log says why, as it does when a page that has already started streaming can no longer set a cookie.
 
-Cookies the session does not name stay with the API. Set `relay: false` to keep even the session's own within the request.
+Cookies the session does not name stay with the API. Set `relay: false` to keep even the session's own within the request. SvelteKit, Nuxt and Express hand every cookie over as the API wrote it. What Next.js lets a response carry is on [Next.js](/docs/frameworks/nextjs#the-users-session).
 
 ### An API on another site
 
@@ -239,10 +220,6 @@ A page's calls go with the cookies the browser keeps for the API, as far as the 
 Either way, the API answers the page's origin with `Access-Control-Allow-Origin` naming it and `Access-Control-Allow-Credentials: true`. A double-submit token is a cookie the page reads, so the API sets it where the page can read it, for its host or a parent domain such as `Domain=example.com`; a page cannot read another site's cookies, and a write then goes without its token, which the log says.
 
 Courier says once, in the browser's console, when an API that keeps its session in cookies is on another site than the page. Serve the API on the page's site, under a subdomain, or call it through the [proxy](/docs/proxy-mode/overview), which carries the session with the application's own requests.
-
-<Callout variant="info" title="What a framework lets a response carry">
-Next.js lets a Server Action or a Route Handler set cookies, not a page while it renders; a session the API renews during a render reaches the calls of that render only, and the log says so. Next.js also URL-encodes the value it writes, so a cookie whose value is not already URL-encoded is not handed over through it — relay it through the proxy route instead, which passes cookies on byte for byte. SvelteKit, Nuxt and Express hand every cookie over as the API wrote it.
-</Callout>
 
 ## Writes another site sets off
 
@@ -257,11 +234,7 @@ The log says why a write was refused, and Studio lists it, ended by its 403 and 
 
 A write that does no harm when someone else sets it off — signing out from a link — says so with `session: "unguarded"`.
 
-A read sent over POST — a GraphQL query, a search, an endpoint declared `.reads()` — is a read here: it goes with the double-submit token, which the API asks of every POST, and a page reached from another site's link still loads with it. Declare an endpoint a read only when it changes nothing: a write declared one is made for another site's link too, with the user's session and their token.
-
-<Callout variant="info" title="Next.js does not tell a request's method">
-A Server Action's request is POST; any other request a Next.js App Router serves is read as a page's. A Route Handler's write for a client that is no browser, and so marks nothing, is refused — such a client authenticates with its own token, not with your users' cookies.
-</Callout>
+A read sent over POST — a GraphQL query, a search, an endpoint declared `.reads()` — is a read here: it goes with the double-submit token, which the API asks of every POST, and a page reached from another site's link still loads with it. Declare an endpoint a read only when it changes nothing: a write declared one is made for another site's link too, with the user's session and their token. How Next.js tells a page from a write is on [Next.js](/docs/frameworks/nextjs#the-users-session).
 
 ## Calls that answer everyone alike
 
@@ -271,39 +244,24 @@ An endpoint with `session: false` is called without the session, and a call to i
 
 A stream or a channel of an API with a `session` carries the user's session as a read over HTTP does — the cookies `cookies` names, the `bearer`, the headers `forward` names — and the API's own `headers`, read anew on every connection, so a reconnect sends the token the user has now.
 
-A stream:
+| From | A stream's connections | A channel's socket, on every reconnect too |
+| --- | --- | --- |
+| A server | Send the session taken from the request being served when the stream was opened, and the cookies its answer sets reach the browser as a call's do | Carries it on the handshake, taken from the request being served when the channel is opened. A socket is kept to that request: one request's channels share it, and two users' channels never share one |
+| A browser | Ask the browser to send its cookies — `credentials: "include"`, unless the API sets `credentials` itself — and send the bearer the page reads | Has the platform send the session's cookies on the handshake itself, as it sends them with a call. A page cannot put a header on the handshake, so the bearer and the API's headers go in its first frame, which the server reads as the handshake's own — see [Who a connection is](/docs/advanced/realtime-connections#who-a-connection-is) |
+| A React Native app | Send the app's cookies and the bearer the app's calls have learned, and learn what the stream's answer sets | Carries the platform's cookies on the handshake, and the bearer and the API's headers beside them |
+| The proxy, relaying it | Opened upstream with the session of the browser that opened it; a proxy caller sends the browser's cookies to the proxy route with its streams as with its calls | Opened upstream with the session of the browser that subscribed, the headers `allowedHeaders` lets through and those the middleware set, as a relayed call is. One user's subscriptions share an upstream socket; no two users' do |
 
-- From a server, its connections send the session taken from the request being served when the stream was opened, and the cookies its answer sets reach the browser as a call's do.
-- From a browser, its connections ask the browser to send its cookies — `credentials: "include"`, unless the API sets `credentials` itself — and send the bearer the page reads.
-- From a React Native app, its connections send the app's cookies and the bearer the app's calls have learned, and learn what the stream's answer sets.
-- A stream the proxy relays is opened upstream with the session of the browser that opened it. A proxy caller sends the browser's cookies to the proxy route with its streams as with its calls.
-
-A channel, on every socket it opens and every reconnect:
-
-- On a server, they go on the socket's handshake, taken from the request being served when the channel is opened. A socket is kept to that request: one request's channels share it, and two users' channels never share one. A channel that has not found that request in 15 s — a framework's request context that never answers — ends with a `ConnectionError`: the request is found once, as the channel is opened, and waiting longer would not find it.
-- In a browser, the platform sends the session's cookies on the handshake itself, as it sends them with a call. A page cannot put a header on a WebSocket's handshake, so the bearer and the API's headers go in the socket's first frame, which the server reads as the handshake's own — see [Who a connection is](/docs/advanced/realtime-connections#who-a-connection-is).
-- In a React Native app, the platform sends its cookies on the handshake, and the bearer and the API's headers go on it beside them.
-- A channel the proxy relays is opened upstream with the session of the browser that subscribed, the headers `allowedHeaders` lets through and those the middleware set, as a relayed call is. One user's subscriptions share an upstream socket; no two users' do.
+A channel that has not found the request being served in 15 s — a framework's request context that never answers — ends with a `ConnectionError`: the request is found once, as the channel is opened, and waiting longer would not find it.
 
 A channel repeats no double-submit token: the server checks a socket's origin as it opens, so a page on another site cannot open one on the user's behalf.
 
 ## Caching
 
-`cacheMiddleware({ scope: "public" })` never answers a call that carries the user's session from its shared copy, nor stores its answer, and names the endpoint once in the log. `scope: "session"` gives each set of credentials a call sends a partition of its own, named by their SHA-256 digest so the credentials never sit in a store's keys. On Next.js 14, calls made for a request are fetched with `cache: "no-store"`, so its data cache keeps no user's answer.
-
-In a browser or a React Native app, where the platform sends the session's cookies out of a script's reach, every call of an API with a `session` counts as carrying it, and `scope: "session"` partitions by the credentials a script can read and by the writes made with the session — so users taking turns on one device never share a cached answer. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
+`cacheMiddleware({ scope: "public" })` never answers a call that carries the user's session from its shared copy, nor stores its answer, and `scope: "session"` gives each set of credentials a call sends a partition of its own — in a browser and a React Native app too, where the platform sends the session's cookies. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
 
 ## Errors where the API is defined
 
-`defineApi` refuses a session that could not work as written, with a `ConfigurationError`:
-
-| Code | When |
-| --- | --- |
-| `SESSION_OPTIONS_INVALID` | An option a session does not have, a cookie name no browser keeps, a header no request carries, or no credential named at all |
-| `SESSION_INSECURE_TRANSPORT` | The API is reached over plain HTTP across the public internet, and `allowHttp` is not set |
-| `SESSION_HEADER_CONFLICT` | The API's `allowedHeaders`, or an endpoint's `.headers()`, names `cookie` or `set-cookie`, which would carry every cookie past the session |
-| `FORWARD_OPTIONS_INVALID` | An option `forward` does not have, or a header it may not carry. A page does not check `forward`, which passes nothing on there: the server that shares the definition refuses it |
-| `INVALID_ALLOWED_ORIGIN` | An `allowedOrigins` entry no page's `Origin` can equal |
+`defineApi` refuses a session that could not work as written with a `ConfigurationError`, whose codes are listed under [`session`](/docs/api/define#session).
 
 ## Next Steps
 

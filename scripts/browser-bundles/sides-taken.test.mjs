@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { sidesTaken } from "./sides-taken.mjs";
+import { publishedModules, sidesTaken } from "./sides-taken.mjs";
 
 describe("sidesTaken", () => {
   const modules = ["logger/server.js", "utils/forwarded-for.js"];
@@ -40,5 +40,23 @@ describe("sidesTaken", () => {
       server: [],
       browser: [],
     });
+  });
+});
+
+describe("publishedModules", () => {
+  it("names the core's modules a build took by their path under lib, installed or in the workspace", () => {
+    const inputs = [
+      "node_modules/@noverax/courier/lib/client/index.js",
+      "/repo/packages/core/lib/adapter/limits.js",
+      "C:\\repo\\packages\\core\\lib\\server\\sources.js",
+      "page.js",
+      "packages/studio-core/lib/logger/server.js",
+    ];
+
+    expect(publishedModules(inputs)).toEqual([
+      "client/index.js",
+      "adapter/limits.js",
+      "server/sources.js",
+    ]);
   });
 });

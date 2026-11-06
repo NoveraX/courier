@@ -56,19 +56,24 @@ Seven of them are easy to skip by accident and worth understanding:
   every export's JavaScript and types as Node and bundlers do. Any message
   fails it, a suggestion included.
 - `npm run check:browser` builds what a page takes from Courier — the
-  definitions, a direct caller, a proxy caller, React Query hooks — as an
-  app's bundler builds it for production. It fails when a page reaches a
-  built-in module of Node, when what loads at start grows past its budget,
+  definitions, a direct caller, a proxy caller, React Query hooks with
+  either — as an app's bundler builds it for production, with esbuild,
+  webpack and Vite. It fails when a page reaches a built-in module of
+  Node, when what loads at start grows past its budget for a bundler,
   and when a module calls a browser API newer than the requirements name
   (Safari 15.4, Chrome 97, Firefox 104), or one a page served over plain
   HTTP lacks, without checking for it first. A change that earns more bytes
-  raises the budget in `scripts/browser-bundles/scenarios.mjs`, saying why
-  in its commit. It fails too when a page takes a core module only a
-  server runs, or Node, an edge runtime or React Native takes its browser
-  stand-in (below), and when what Next.js's edge runtime may take of the
-  core reads a Node API off the global `process` — anything but
-  `process.env` — which Next.js's build of a middleware refuses or warns
-  of: such code reads it off `globalThis.process`, checking for it.
+  raises the budget of the bundler it grew under in
+  `scripts/browser-bundles/scenarios.mjs`, saying why in its commit. It
+  fails too when a page takes, in any chunk, a dynamic import's too, a core
+  module only a server runs — one of the areas `module-sides.json` names, or
+  one taken as it is where its browser stand-in belongs — or Node, an edge
+  runtime or React Native takes that stand-in (below), and when what
+  Next.js's edge runtime may take of the core reads a Node API off the
+  global `process` — anything but `process.env` — which Next.js's build of a
+  middleware refuses or warns of: such code reads it off
+  `globalThis.process`, checking for it. A bundler that cannot build a
+  scenario fails it in the bundler's own words.
 - `npm run check:graph` follows every module the page entries reach — the
   core's `@noverax/courier/client`, `/define`, `/middleware`, `/routes`,
   `/fetch`, `/internal-client` and `/realtime`, and `@noverax/courier-react`

@@ -23,6 +23,10 @@ import type { WSHandlerConfig } from "./ws-types";
 
 const log = createLogger("WS");
 
+/* How many messages' worth a socket may send before it is admitted: its auth and the subscriptions
+   a client makes as its socket opens fit in it many times over. */
+const HELD_MESSAGES = 4;
+
 /** What a handler lets a socket in with. */
 export interface SocketOpening {
   readonly config: WSHandlerConfig;
@@ -157,11 +161,16 @@ export function openSockets(
     if (!ctx) return;
     /* What the client sends before its connection is admitted — who it is,
        the subscriptions it makes as its socket opens — waits for it, in order. */
-    const inbox = holdFrames(ws, ctx.maxControlPerSecond, (held) => {
+    const limits = {
+      frames: ctx.maxControlPerSecond,
+      size: HELD_MESSAGES * ctx.maxMessageSize,
+      frameSize: ctx.maxMessageSize,
+    };
+    const inbox = holdFrames(ws, limits, (held) => {
       refusals.warn({
         event: "frames refused",
         code: WS_CODE.TOO_MANY,
-        fields: { ...connectionFields(ctx), held },
+        fields: { ...connectionFields(ctx), held: held.frames, size: held.size },
       });
       ctx.session.close({ kind: "flood" });
     });

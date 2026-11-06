@@ -30,6 +30,9 @@ import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 
+/* What a socket may send before it is admitted, roomy enough for these tests' frames. */
+const HELD = { frames: 10, size: 1_000_000, frameSize: 100_000 };
+
 type ListenerMap = Map<string, Array<(event: unknown) => void>>;
 
 function createMockWs() {
@@ -115,7 +118,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10, () => {}),
+      holdFrames(ws as never, HELD, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -138,7 +141,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10, () => {}),
+      holdFrames(ws as never, HELD, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -161,7 +164,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10, () => {}),
+      holdFrames(ws as never, HELD, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -185,7 +188,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
-      holdFrames(ws as never, 10, () => {}),
+      holdFrames(ws as never, HELD, () => {}),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,

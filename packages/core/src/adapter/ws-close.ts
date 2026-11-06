@@ -112,7 +112,7 @@ export function closeOf(why: SessionClose): CloseFrame {
     case "flood":
       return {
         code: WS_CODE.TOO_MANY,
-        reason: "Too many messages before the connection was accepted",
+        reason: "Too much sent before the connection was accepted",
       };
     case "version":
       return { code: WS_CODE.PROTOCOL_MISMATCH, reason: why.reason };

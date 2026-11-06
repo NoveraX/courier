@@ -11,6 +11,9 @@ import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { authFrame } from "./helpers/fake-socket";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
+/* What a socket may send before it is admitted, roomy enough for these tests' frames. */
+const HELD = { frames: 10, size: 1_000_000, frameSize: 100_000 };
+
 let served: ServedWS | undefined;
 
 afterEach(async () => {
@@ -104,7 +107,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -139,7 +142,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -169,7 +172,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -195,7 +198,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -220,7 +223,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -250,7 +253,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -298,7 +301,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -331,7 +334,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -362,7 +365,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -388,7 +391,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -438,7 +441,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,
@@ -462,7 +465,7 @@ describe("wireEvents", () => {
 
     wireEvents(
       ws,
-      holdFrames(ws, 10, () => {}),
+      holdFrames(ws, HELD, () => {}),
       ctx,
       heartbeat as never,
       topicManager as never,

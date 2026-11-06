@@ -192,7 +192,7 @@ describe("closeOf", () => {
     [{ kind: "misconfigured" }, 1011, "This server is misconfigured; its log says why"],
     [{ kind: "limit" }, 4429, "Too many connections"],
     [{ kind: "evicted" }, 4409, "Replaced by a newer connection"],
-    [{ kind: "flood" }, 4429, "Too many messages before the connection was accepted"],
+    [{ kind: "flood" }, 4429, "Too much sent before the connection was accepted"],
     [{ kind: "version", reason: "The first frame is auth" }, 1002, "The first frame is auth"],
     [{ kind: "no-auth-frame", timeoutMs: 3000 }, 4408, "No auth frame within 3000 ms"],
     [{ kind: "bad-auth-frame", id: "a1" }, 4401, "Invalid auth frame"],

@@ -69,4 +69,63 @@ describe("a client whose connection onConnect is still deciding on", () => {
     expect(await closed).toBe(4429);
     admit();
   });
+
+  it("is closed with 4429, and told why, once what it sends grows past four messages' worth", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let admit: () => void = () => {};
+    served = await serveWS(
+      { room },
+      {
+        maxMessageSize: 1_000,
+        onConnect: () => new Promise<undefined>((resolve) => (admit = () => resolve(undefined))),
+      },
+    );
+    const { socket, closed, frames } = await opened(served.url);
+
+    socket.send(JSON.stringify({ type: "auth", v: 2, id: "a0" }));
+    for (let i = 0; i < 5; i++)
+      socket.send(JSON.stringify({ type: "ping", payload: "x".repeat(900) }));
+
+    expect(await closed).toBe(4429);
+    expect(frames).toEqual([
+      expect.objectContaining({
+        type: "auth_error",
+        error: expect.objectContaining({ code: 4429 }),
+      }),
+    ]);
+    admit();
+  });
+
+  it("is closed with 4429 for one frame larger than a message may be, which it does not hold", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let admit: () => void = () => {};
+    served = await serveWS(
+      { room },
+      {
+        maxMessageSize: 1_000,
+        onConnect: () => new Promise<undefined>((resolve) => (admit = () => resolve(undefined))),
+      },
+    );
+    const { socket, closed } = await opened(served.url);
+
+    socket.send(JSON.stringify({ type: "auth", v: 2, id: "a0" }));
+    socket.send("x".repeat(1_001));
+
+    expect(await closed).toBe(4429);
+    admit();
+  });
 });
+
+/* A bare socket, open, with the frames the server sends it and the code it is closed with. */
+async function opened(url: string) {
+  const socket = new WebSocket(url);
+  const frames: unknown[] = [];
+  socket.onmessage = (event) => frames.push(JSON.parse(String(event.data)));
+  const closed = new Promise<number>((resolve) => {
+    socket.onclose = (event) => resolve(event.code);
+  });
+  await new Promise((resolve) => {
+    socket.onopen = resolve;
+  });
+  return { socket, closed, frames };
+}

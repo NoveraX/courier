@@ -1,4 +1,4 @@
-export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Streams & Channels", description: "Serve server-sent event streams and WebSocket channels, share a topic between subscribers, and broadcast to it.", mode: "both", updated: "2026-11-06" }
 
 ## Overview
 
@@ -271,7 +271,7 @@ const server = await createCourierServer({
 })
 ```
 
-The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. A socket whose first frame is no `auth` of the protocol's version — a client that is not Courier's, or a page left open from an older build — is refused with `1002` and why, and one that sends nothing for `authTimeoutMs` (3 s) is closed with `4408`.
+The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. What it holds is bounded: twice `maxSubscriptionsPerConnection` frames, four times `maxMessageSize` in all, and no frame larger than `maxMessageSize`. A socket that sends more before it is admitted is closed with `4429`. A socket whose first frame is no `auth` of the protocol's version — a client that is not Courier's, or a page left open from an older build — is refused with `1002` and why, and one that sends nothing for `authTimeoutMs` (3 s) is closed with `4408`.
 
 To have a client prove who it is again on an open connection — its token about to expire — call `connections.requireAuth(connectionId, { timeoutMs })`, or name every connection of a user with a selector, `connections.requireAuth({ meta: { userId } })`, which reaches them on every replica that shares the pub/sub adapter: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata.
 

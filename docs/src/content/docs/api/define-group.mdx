@@ -1,4 +1,4 @@
-export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "defineGroup", description: "Creates a typed endpoint group with a shared URL prefix and endpoint definitions.", mode: "both", updated: "2026-11-06" }
 
 ## Import
 
@@ -52,7 +52,7 @@ type GroupOptions = {
 - `cancelPrevious` — whether a newer call of one of the group's reads cancels the older call of that read still in flight. It overrides the client's and the source's, a group inside another overrides its outer group's, and an endpoint's `.cancelPrevious()` and a call's `.with()` override it. A value other than `true` or `false` throws `ConfigurationError("CANCEL_PREVIOUS_INVALID")`. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 - `fetch`, `webSocket`, `dispatcher` — how the group's calls, streams and channels reach their server, over the source's: an undici `Agent` holding a client certificate for this group alone, a `ProxyAgent`. A group inside another takes each from the nearest group that sets it, and a call's `.with()` sets its own over both. Bun's `proxy` and `tls` and Deno's `client` are taken the same way. One that cannot send — a `fetch` or a `webSocket` that is not a function, a `dispatcher` with no `dispatch` method — throws `ConfigurationError("SOURCE_TRANSPORT_INVALID")`. See [One group](/docs/advanced/proxies-and-certificates#one-group).
 - `groups` — groups inside this one, created with `defineGroup`, to any depth: see [Groups inside groups](#groups-inside-groups). A group made only of groups needs no `endpoints`.
-- `endpoints` — record of typed endpoint functions. Any name but `options`, which holds the group's own settings, and `raw` or `with`, which every client answers with its own `.raw` and `.with()`; an endpoint of one of those names is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")`, and so does one named `__proto__`, which would be lost. The same holds for the endpoints given to `defineApi`, whose groups cannot be named `raw` or `with` either. A path called `options` or `raw` is fine: name the endpoint `getOptions` or `getRaw`. See [Reserved names](/docs/core-concepts/defining-apis#reserved-names).
+- `endpoints` — record of typed endpoint functions, under any name but the [reserved ones](#reserved-names), which hold for the endpoints and groups given to `defineApi` as well.
 
 ## Basic Usage
 
@@ -160,6 +160,24 @@ endpoint.get(":id").variables<{ id: string }>().response<User>()
 // Variables required — caller must pass { id: string }
 ```
 
+## A verb's options
+
+An endpoint's verb takes options for that endpoint alone:
+
+```ts
+const { endpoint } = courier()
+
+endpoint.post("orders", { idempotencyKey: "header:idempotency-key", tags: ["orders"] })
+endpoint.get("customers", { sensitiveVariables: true })
+endpoint.get("legacy", { deprecated: "Use /v2/legacy", inherit: false })
+```
+
+- `idempotencyKey` — the header each call sends a key of its own in, the same on every attempt a retry makes, so an upstream that deduplicates by it applies a write once: a retry policy retries such a write without `mutations: true`, and the mock server answers a repeated key with its first answer. A key the caller sends is kept. Anything but `header:<name>` is refused where the endpoint is defined.
+- `sensitiveVariables` — a read whose variables stay out of the address: it goes to the proxy as POST — see [GET or POST](/docs/api/create-proxy-caller#get-or-post).
+- `inherit: false` — skip the base's middleware; the endpoint's own `.use()` and the source's `middleware` still run.
+- `tags`, `deprecated`, `operation` — read by Studio and the mock server, not by the runtime.
+- `mock` — the example answer, status and delay the mock server gives it.
+
 ## Streams and Channels
 
 A `stream` delivers server-sent events and a `channel` is a WebSocket subscription. Each is either served by the process that defines it, with `.implement()`, or addressed where another process serves it:
@@ -205,6 +223,24 @@ const getById = endpoint.get(":id").variables<{ id: string }>().response<User>()
 type Response = InferResponse<typeof getById>   // User
 type Variables = InferVariables<typeof getById> // { id: string }
 ```
+
+## Reserved Names
+
+Three names cannot be given to an endpoint or a group. Each is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")` when the group or the source is defined, with a message that names the clash and suggests another name:
+
+| Name | Refused for | Why |
+|------|-------------|-----|
+| `options` | endpoints | It holds the group's or the source's own settings beside its endpoints. |
+| `raw` | endpoints and groups | Every client answers it with `.raw`, at its root, on each group and on each flat endpoint. |
+| `with` | endpoints and groups | Every client answers it with `.with()`, in the same places. |
+
+An endpoint or a group typed `any` passes the type check under any of these names, as `any` passes every one; the definition throws all the same.
+
+An endpoint cannot be named `__proto__` either, the name every object gives its prototype: copied onto its group or source it would be lost. It throws the same error when the group or the source is defined, whether written `["__proto__"]` or as a plain key, which makes it the record's prototype. A group of that name is reached like any other.
+
+A path of that name is fine: `getRaw: endpoint.get(":id/raw")` reaches it.
+
+No group or endpoint name may hold a dot, which separates the names of a group's path: one throws `ConfigurationError("DOTTED_NAME")` where it is defined.
 
 ## Related
 

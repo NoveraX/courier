@@ -9,11 +9,11 @@ export interface AuthFlags {
   "header-env"?: string | undefined;
 }
 
-/* `NAME=VALUE`, the name before the first `=`. */
+/* `NAME=VALUE`, the name before the first `=`. What was given is not said back: it may be a value. */
 function pair(given: string, flag: string): [string, string] {
   const at = given.indexOf("=");
   if (at < 1 || at === given.length - 1) {
-    throw new Error(`--${flag} takes Header=VARIABLE pairs, separated by commas, not "${given}"`);
+    throw new Error(`--${flag} takes Header=VARIABLE pairs, separated by commas`);
   }
   return [given.slice(0, at).trim(), given.slice(at + 1).trim()];
 }
@@ -48,7 +48,9 @@ export function authFromFlags(flags: AuthFlags): CourierImportAuth | undefined {
   if (basic !== undefined) {
     const [username, password] = basic.split(":");
     if (username === undefined || password === undefined || basic.split(":").length !== 2) {
-      throw new Error(`--basic-env takes USER_VARIABLE:PASSWORD_VARIABLE, not "${basic}"`);
+      throw new Error(
+        "--basic-env takes USER_VARIABLE:PASSWORD_VARIABLE, the two variables' names",
+      );
     }
     return readImportAuth(
       { type: "basic", username: { env: username }, password: { env: password } },

@@ -1,3 +1,4 @@
+import { isSecretVariableName } from "@noverax/courier/internal";
 import * as vscode from "vscode";
 
 /** How an address is read: as anyone reads it, or with credentials the environment holds. */
@@ -7,8 +8,6 @@ export type Credentials =
   | { kind: "basic"; username: string; password: string }
   | { kind: "header"; headers: string };
 
-/* A variable's name as names are written: a value pasted in its place, which has lower case, goes no further. */
-const VARIABLE = /^[A-Z_][A-Z0-9_]{0,255}$/;
 /* RFC 9110's token: what a header's name is made of. */
 const HEADER = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 
@@ -35,7 +34,8 @@ const WHERE =
  */
 export function variableProblem(value: string): string | undefined {
   if (value.trim() === "") return "Name the variable";
-  return VARIABLE.test(value.trim())
+  /* The core's rule, as Studio's: a value pasted in a name's place, which mixes in lower case, goes no further. */
+  return isSecretVariableName(value.trim())
     ? undefined
     : "A variable's name is written in capitals, digits and _, not starting with a digit: ORDERS_SPEC_TOKEN";
 }

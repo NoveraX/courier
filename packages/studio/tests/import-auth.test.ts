@@ -6,6 +6,7 @@
  * value; written into `courier.config.ts` as references alone; and shown
  * to no page, nor the credentials an import's address carries.
  */
+import { isSecretVariableName } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
 import { IMPORTS_STATE_VERSION } from "../src/apis/imports-state";
@@ -106,6 +107,19 @@ describe("an import's auth, read", () => {
     expect(codeOf(() => readImportAuth(raw, true))).toBe(code);
   });
 
+  it("refuses a value given where a variable's name goes, by the one rule, and never says it back", () => {
+    for (const pasted of ["sk_live_51HmadeUp9f2c", "orders_token", "t0k3n-made-up"]) {
+      const run = () => readImportAuth({ type: "bearer", token: { env: pasted } }, true);
+
+      expect(codeOf(run)).toBe("SECRET_NAME_INVALID");
+      expect(run).not.toThrow(pasted);
+    }
+    const header = () =>
+      readImportAuth({ type: "header", headers: { "Bearer k3y-made-up": { env: "A" } } }, true);
+    expect(codeOf(header)).toBe("HEADER_NAME_INVALID");
+    expect(header).not.toThrow("k3y-made-up");
+  });
+
   it("keeps a header named __proto__ an own header, not the prototype", () => {
     const auth = readImportAuth(
       JSON.parse('{"type":"header","headers":{"__proto__":{"env":"A"}}}'),
@@ -139,14 +153,17 @@ function anyAuth(next: (below: number) => number, depth = 0): unknown {
     "x y",
     "",
   ];
+  /* A variable's name, as often one written in capitals as one written otherwise. */
+  const names = ["ORDERS_TOKEN", "SPEC_USER", "A_1", "_T", "orders_token", "__proto__", "1A", ""];
   const word = () => words[next(words.length)];
+  const name = () => names[next(names.length)];
   const pick = next(depth > 2 ? 4 : 9);
-  if (pick === 7) return { type: "bearer", token: { env: word() } };
+  if (pick === 7) return { type: "bearer", token: { env: name() } };
   if (pick === 8)
     return { type: "header", headers: { [String(word())]: anyAuth(next, depth + 1) } };
   if (pick === 0) return word();
   if (pick === 1) return next(3) === 0 ? null : next(100);
-  if (pick === 2) return { env: word() };
+  if (pick === 2) return { env: name() };
   if (pick === 3) return [anyAuth(next, depth + 1)];
   const record: Record<string, unknown> = { type: word() };
   for (let i = next(4); i > 0; i -= 1) {
@@ -158,8 +175,6 @@ function anyAuth(next: (below: number) => number, depth = 0): unknown {
   }
   return record;
 }
-
-const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 describe("an import's auth, read from anything a request may send", () => {
   it("is refused as an auth's error, or is an auth whose every credential names a variable", () => {
@@ -181,7 +196,9 @@ describe("an import's auth, read from anything a request may send", () => {
             ? [auth.username, auth.password]
             : Object.values(auth.headers);
       for (const secret of secrets) {
-        expect(typeof secret === "object" && ENV_NAME.test(secret.env), `seed ${seed}`).toBe(true);
+        expect(typeof secret === "object" && isSecretVariableName(secret.env), `seed ${seed}`).toBe(
+          true,
+        );
       }
       if (auth.type === "header") {
         expect(Object.keys(auth.headers).every((name) => name.toLowerCase() !== "host")).toBe(true);
@@ -217,6 +234,19 @@ describe("the auth the command line names", () => {
       "USER_VARIABLE:PASSWORD_VARIABLE",
     );
     expect(() => authFromFlags({ "header-env": "X-Api-Key" })).toThrow("Header=VARIABLE");
+  });
+
+  it("never says back a value given in place of a name", () => {
+    const given = [
+      { "bearer-env": "sk_live_51HmadeUp9f2c" },
+      { "basic-env": "ana:pw-made-up:77" },
+      { "header-env": "k3y-made-up" },
+      { "header-env": "X-Api-Key=k3y-made-up" },
+    ];
+    for (const flags of given) {
+      expect(() => authFromFlags(flags)).toThrow();
+      expect(() => authFromFlags(flags)).not.toThrow(/sk_live|pw-made-up|k3y-made-up/);
+    }
   });
 });
 

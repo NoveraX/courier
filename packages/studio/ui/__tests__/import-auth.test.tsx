@@ -86,6 +86,14 @@ describe("the auth the wizard reads with", () => {
     expect(variablesOf(header)).toEqual(["ORDERS_API_KEY"]);
     expect(authLacks({ ...header, headers: [{ name: "X-Api-Key", variable: "" }] })).not.toBeNull();
   });
+
+  it("sends no name written otherwise than in capitals, a value pasted in its place", () => {
+    const pasted: AuthDraft = { ...NO_AUTH, kind: "bearer", token: "sk_live_51HmadeUp9f2c" };
+
+    expect(authLacks(pasted)).toContain("capitals, digits and _");
+    expect(authRefsOf(pasted)).toBeUndefined();
+    expect(authLacks({ ...NO_AUTH, kind: "bearer", token: "orders_spec_token" })).not.toBeNull();
+  });
 });
 
 describe("an unfinished import behind auth", () => {

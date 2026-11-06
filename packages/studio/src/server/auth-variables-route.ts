@@ -3,9 +3,10 @@
  * sets the variables an import's auth names.
  */
 
+import { isSecretVariableName } from "@noverax/courier/internal";
 import { isRecord } from "@noverax/courier-cli/devkit";
 
-import { IMPORT_AUTH_LIMITS, isVariableName } from "./import-auth";
+import { IMPORT_AUTH_LIMITS } from "./import-auth";
 import { variableValue } from "./import-auth-headers";
 import { refusedElsewhere } from "./parse-credentials";
 import type { JsonResponse, RouteRequest } from "./route-types";
@@ -44,7 +45,7 @@ export function registerAuthVariablesRoute(
     const names = namesOf(req.body);
     if (names === null) {
       res.status(400).json({
-        error: `names must list 1 to ${MAX_NAMES} environment variables: letters, digits and _, not starting with a digit.`,
+        error: `names must list 1 to ${MAX_NAMES} environment variables, each written in capitals, digits and _, not starting with a digit.`,
         code: "SECRET_NAME_INVALID",
       });
       return;
@@ -60,7 +61,7 @@ function namesOf(body: unknown): string[] | null {
   if (!Array.isArray(names) || names.length === 0 || names.length > MAX_NAMES) return null;
   const listed: readonly unknown[] = names;
   const valid = listed.filter(
-    (name): name is string => typeof name === "string" && isVariableName(name),
+    (name): name is string => typeof name === "string" && isSecretVariableName(name),
   );
   return valid.length === listed.length ? [...new Set(valid)] : null;
 }

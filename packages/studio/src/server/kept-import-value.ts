@@ -4,9 +4,8 @@
  * without the project's token too.
  */
 
-import { urlWithoutSecrets } from "@noverax/courier/internal";
+import { isSecretVariableName, urlWithoutSecrets } from "@noverax/courier/internal";
 
-import { isVariableName } from "./import-auth";
 import { isPlainObject } from "./is-plain-object";
 
 const NAMED = ["token", "username", "password"] as const;
@@ -45,5 +44,5 @@ function namesOnly(auth: Record<string, unknown>): Record<string, unknown> {
 }
 
 function nameOf(name: unknown): string {
-  return typeof name === "string" && isVariableName(name.trim()) ? name.trim() : "";
+  return typeof name === "string" && isSecretVariableName(name.trim()) ? name.trim() : "";
 }

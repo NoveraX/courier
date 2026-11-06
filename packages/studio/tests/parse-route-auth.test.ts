@@ -227,7 +227,7 @@ describe("POST /api/apis/auth-variables", () => {
     const url = await start();
 
     const { status, text } = await variables(url, {
-      names: [VARIABLE, "COURIER_TEST_UNSET_TOKEN", "__proto__"],
+      names: [VARIABLE, "COURIER_TEST_UNSET_TOKEN"],
     });
 
     expect(status).toBe(200);
@@ -235,10 +235,21 @@ describe("POST /api/apis/auth-variables", () => {
       variables: [
         { name: VARIABLE, set: true },
         { name: "COURIER_TEST_UNSET_TOKEN", set: false },
-        { name: "__proto__", set: false },
       ],
     });
     expect(text).not.toContain(SECRET);
+  });
+
+  it("answers for no name written otherwise than in capitals, and says none back", async () => {
+    const url = await start();
+
+    for (const name of ["__proto__", "npm_config_cache", "sk_live_51HmadeUp9f2c"]) {
+      const { status, text } = await variables(url, { names: [VARIABLE, name] });
+
+      expect(status).toBe(400);
+      expect(JSON.parse(text)).toMatchObject({ code: "SECRET_NAME_INVALID" });
+      expect(text).not.toContain(name);
+    }
   });
 
   it("answers only a page with the project's token, and only for names a variable can have", async () => {

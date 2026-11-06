@@ -22,7 +22,7 @@ export type CourierImportGenerateClient = "direct" | "proxy" | "both" | "none";
  * the project's `.env*` files in, and say a variable is not set by its name.
  */
 export interface CourierSecretRef {
-  /** The environment variable that holds the secret: letters, digits and `_`, not starting with a digit. */
+  /** The environment variable that holds the secret: capitals, digits and `_`, not starting with a digit — `ORDERS_SPEC_TOKEN`. */
   env: string;
 }
 

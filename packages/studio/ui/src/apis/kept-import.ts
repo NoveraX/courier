@@ -1,4 +1,4 @@
-import { urlWithoutSecrets } from "@noverax/courier/internal";
+import { isSecretVariableName, urlWithoutSecrets } from "@noverax/courier/internal";
 import { useEffect } from "react";
 import { create } from "zustand";
 
@@ -14,8 +14,6 @@ import { isPlainObject } from "@/socket/is-plain-object";
 
 /* A pasted spec is kept while it is small; a large one, or a file, is picked again. */
 const KEPT_TEXT_CHARS = 64 * 1024;
-/* A variable's name as names are written: a value pasted in its place, which has lower case, is not kept. */
-const KEPT_VARIABLE = /^[A-Z_][A-Z0-9_]{0,255}$/;
 const KEPT_HEADER_CHARS = 128;
 
 /** An API import left unfinished: where its spec comes from, and the address or text typed. */
@@ -28,8 +26,9 @@ export interface KeptImport {
   auth?: AuthDraft | undefined;
 }
 
+/* A variable's name as names are written: a value pasted in its place, which mixes in lower case, is not kept. */
 function keptVariable(name: unknown): string {
-  return typeof name === "string" && KEPT_VARIABLE.test(name.trim()) ? name.trim() : "";
+  return typeof name === "string" && isSecretVariableName(name.trim()) ? name.trim() : "";
 }
 
 function keptHeaders(rows: unknown): HeaderVariable[] {

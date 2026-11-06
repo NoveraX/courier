@@ -1,5 +1,6 @@
 import { CourierError } from "@noverax/courier";
 import type { CourierImportAuth, CourierSecretValue } from "@noverax/courier/config";
+import { isSecretVariableName } from "@noverax/courier/internal";
 import { isRecord } from "@noverax/courier-cli/devkit";
 
 /** Why an import's auth cannot be sent; none of them carries a secret's value. */
@@ -23,7 +24,7 @@ export class ImportAuthError extends CourierError<ImportAuthErrorCode> {
 
 /** How long and how many: the most an import's auth may name. */
 export const IMPORT_AUTH_LIMITS = {
-  /** Characters in an environment variable's name. */
+  /** Characters in an environment variable's name, as the core's rule for one bounds it. */
   envName: 256,
   /** Headers a `header` auth sends. */
   headers: 32,
@@ -31,7 +32,6 @@ export const IMPORT_AUTH_LIMITS = {
   value: 8 * 1024,
 } as const;
 
-const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /* RFC 9110's token: what a field name is made of. */
 const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 /* The request's own framing and its hop: a value of the auth's would break it, or reach past the host. */
@@ -50,22 +50,6 @@ const NOT_ALLOWED: ReadonlySet<string> = new Set([
   "accept-encoding",
 ]);
 
-/**
- * Whether a name is one an environment variable can have: letters, digits
- * and `_`, not starting with a digit, up to {@link IMPORT_AUTH_LIMITS}'s
- * `envName` characters.
- *
- * @param name - The name
- * @returns Whether it is one
- * @example
- * ```ts
- * isVariableName("ORDERS_SPEC_TOKEN"); // → true
- * ```
- */
-export function isVariableName(name: string): boolean {
-  return name.length <= IMPORT_AUTH_LIMITS.envName && ENV_NAME.test(name);
-}
-
 function invalid(message: string): ImportAuthError {
   return new ImportAuthError("AUTH_INVALID", message);
 }
@@ -83,10 +67,11 @@ function secretOf(raw: unknown, field: string, referencesOnly: boolean): Courier
   if (!isRecord(raw) || Object.keys(raw).length !== 1 || typeof raw.env !== "string") {
     throw invalid(`${field} must be ${referencesOnly ? "" : "a string or "}{ env: "NAME" }`);
   }
-  if (!isVariableName(raw.env)) {
+  /* Refused without the name: a value given in its place would be said back. */
+  if (!isSecretVariableName(raw.env)) {
     throw new ImportAuthError(
       "SECRET_NAME_INVALID",
-      `${field} names no environment variable: a name is letters, digits and _, not starting with a digit, up to ${IMPORT_AUTH_LIMITS.envName} characters.`,
+      `${field} names no environment variable: a name is written in capitals, digits and _, not starting with a digit, up to ${IMPORT_AUTH_LIMITS.envName} characters, as ORDERS_SPEC_TOKEN.`,
     );
   }
   return { env: raw.env };
@@ -103,7 +88,7 @@ function headersOf(raw: unknown, referencesOnly: boolean): Record<string, Courie
     if (!HEADER_NAME.test(name)) {
       throw new ImportAuthError(
         "HEADER_NAME_INVALID",
-        `auth.headers names ${JSON.stringify(name.slice(0, 64))}, which is not a header name.`,
+        "auth.headers names something no header is called: a header's name is one word with no space, colon or quote, as X-Api-Key.",
       );
     }
     if (NOT_ALLOWED.has(name.toLowerCase())) {

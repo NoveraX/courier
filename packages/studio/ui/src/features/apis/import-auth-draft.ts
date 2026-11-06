@@ -4,6 +4,8 @@
  * variable that holds it, never its value.
  */
 
+import { isSecretVariableName } from "@noverax/courier/internal";
+
 /** How the wizard authenticates to a specification's host. */
 export type AuthKind = "none" | "bearer" | "basic" | "header";
 
@@ -36,6 +38,9 @@ export type ImportAuthRefs =
 /** The most headers an import's auth sends, as Studio takes them. */
 export const MAX_AUTH_HEADERS = 32;
 
+const NOT_A_NAME =
+  "A variable's name is written in capitals, digits and _, not starting with a digit: ORDERS_SPEC_TOKEN";
+
 /** No auth: the wizard reads the specification as anyone could. */
 export const NO_AUTH: AuthDraft = {
   kind: "none",
@@ -56,8 +61,9 @@ function filledHeaders(draft: AuthDraft): HeaderVariable[] {
 
 /**
  * What the draft still lacks before Studio can read with it: a variable
- * or a header's name left empty. Studio itself says what is wrong with a
- * name it is given.
+ * or a header's name left empty, or a variable's name not written as one —
+ * a value typed in its place, which is never sent. Studio itself says
+ * what is wrong with a header's name.
  *
  * @param draft - The auth as filled in
  * @returns What to fill in, or `null` when nothing is left
@@ -67,6 +73,12 @@ function filledHeaders(draft: AuthDraft): HeaderVariable[] {
  * ```
  */
 export function authLacks(draft: AuthDraft): string | null {
+  const empty = emptyOf(draft);
+  if (empty !== null) return empty;
+  return variablesOf(draft).every(isSecretVariableName) ? null : NOT_A_NAME;
+}
+
+function emptyOf(draft: AuthDraft): string | null {
   if (draft.kind === "bearer" && draft.token.trim() === "")
     return "Name the variable that holds the token";
   if (draft.kind === "basic" && (draft.username.trim() === "" || draft.password.trim() === ""))

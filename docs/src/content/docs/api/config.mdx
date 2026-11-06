@@ -33,7 +33,7 @@ The API specifications Studio imported, by key. Studio writes an entry when it i
 | `type` | `"openapi"` \| `"swagger"` \| `"graphql"` \| `"asyncapi"` \| `"postman"` | The specification's format, which picks its parser |
 | `importType` | `"url"` \| `"file"` \| `"raw"` | Where it came from. A file's path and a pasted specification are supplied in Studio at each re-sync, never stored |
 | `from` | `string` | `url` only: the address Studio fetches it from |
-| `auth` | `{ type: "bearer", token }` \| `{ type: "basic", username, password }` \| `{ type: "header", headers }` | `url` only: sent with every fetch of `from`, to its own origin only. Each credential is a string or `{ env: "NAME" }`, read from the environment as it is sent — see [Specifications behind auth](/docs/studio/import-api#specifications-behind-auth) |
+| `auth` | `{ type: "bearer", token }` \| `{ type: "basic", username, password }` \| `{ type: "header", headers }` | `url` only: sent with every fetch of `from`, to its own origin only. Each credential is a string or `{ env: "NAME" }`, the variable's name written in capitals, digits and `_`, read from the environment as it is sent — see [Specifications behind auth](/docs/studio/import-api#specifications-behind-auth) |
 | `pinHash` | `string` | `url` only: the one specification the import is generated from, by the hash Studio records; another is refused |
 | `outputDir` | `string` | The directory that holds the import's own directory, `<outputDir>/<source-name>/` |
 | `sourceName` | `string` | The source's name in the generated `defineApi` call — default: the key |

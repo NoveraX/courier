@@ -48,6 +48,7 @@ export {
   shapeOfRoutes,
   shapeOfSource,
 } from "../client";
+export { isSecretVariableName } from "../config/secret-variable-name";
 export { isDefinedApi } from "../define/api";
 export { groupOptionsOf } from "../define/group-options-of";
 export {

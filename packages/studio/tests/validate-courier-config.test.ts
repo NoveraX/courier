@@ -169,7 +169,7 @@ describe("validateCourierConfig on imports", () => {
     [
       "auth that names no environment variable",
       { ...URL_IMPORT, auth: { type: "bearer", token: { env: "1-TOKEN" } } },
-      "courier.config.imports.x.auth.token names no environment variable: a name is letters, digits and _, not starting with a digit, up to 256 characters.",
+      "courier.config.imports.x.auth.token names no environment variable: a name is written in capitals, digits and _, not starting with a digit, up to 256 characters, as ORDERS_SPEC_TOKEN.",
     ],
     [
       "auth that sets a header framing the request",

@@ -1,3 +1,4 @@
+import { isSecretVariableName } from "@noverax/courier/internal";
 import { useEffect, useState } from "react";
 
 import { authVariables } from "@/apis/client";
@@ -6,8 +7,6 @@ import { studioToken } from "@/lib/studio-token";
 
 /* Asked once typing stops. */
 const SETTLE_MS = 300;
-/* Studio refuses a list with any other name in it; only names it could look up are asked for. */
-const VARIABLE = /^[A-Za-z_][A-Za-z0-9_]{0,255}$/;
 
 /**
  * Whether Studio's environment sets each variable an import's auth names,
@@ -25,9 +24,8 @@ const VARIABLE = /^[A-Za-z_][A-Za-z0-9_]{0,255}$/;
  */
 export function useAuthVariables(auth: AuthDraft): ReadonlyMap<string, boolean> {
   const [answered, setAnswered] = useState<ReadonlyMap<string, boolean>>(() => new Map());
-  const asked = variablesOf(auth)
-    .filter((name) => VARIABLE.test(name))
-    .join("\n");
+  /* Studio refuses a list with any other name in it; only names it could look up are asked for. */
+  const asked = variablesOf(auth).filter(isSecretVariableName).join("\n");
   useEffect(() => {
     /* Studio answers only a page with the project's token. */
     if (asked === "" || studioToken() === null) return;

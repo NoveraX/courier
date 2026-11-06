@@ -10,17 +10,33 @@ const v = (text: string) => {
   return version;
 };
 
-/* The ids the docs site gives a page's headings, as rehype-slug writes them: lower case, spaces to hyphens, the rest of its punctuation dropped. */
-function headingIds(page: string): Set<string> {
-  return new Set(
-    [...page.matchAll(/^#{2,4} (.+)$/gm)].map((heading) =>
-      (heading[1] ?? "")
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N} _-]/gu, "")
-        .replace(/ /g, "-"),
-    ),
-  );
+/* The id the docs site gives a heading, as rehype-slug writes it: lower case, spaces to hyphens, the rest of its punctuation dropped. */
+function idOf(heading: string): string {
+  return heading
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} _-]/gu, "")
+    .replace(/ /g, "-");
 }
+
+function headingIds(page: string): Set<string> {
+  return new Set([...page.matchAll(/^#{2,4} (.+)$/gm)].map((heading) => idOf(heading[1] ?? "")));
+}
+
+/* The ids of the sections whose rows pair what 0.4 did with what holds now: a release's breaking changes. */
+function changeSections(page: string): string[] {
+  return page
+    .split(/^(?=#{2,4} )/m)
+    .filter((section) => /^\| 0\.4 \| Now \|$/m.test(section))
+    .map((section) => idOf(/^#{2,4} (.+)$/m.exec(section)?.[1] ?? ""));
+}
+
+const PAGE = readFileSync(
+  new URL("../../../../docs/src/content/docs/upgrading.mdx", import.meta.url),
+  "utf8",
+);
+const ANCHORS = RELEASES.flatMap((release) => release.notes)
+  .map((note) => /\/docs\/upgrading#(.+)$/.exec(note.docs)?.[1])
+  .filter((anchor): anchor is string => anchor !== undefined);
 
 describe("Courier's releases", () => {
   it("are crossed after the line the project is on, up to the target's own", () => {
@@ -34,17 +50,17 @@ describe("Courier's releases", () => {
   });
 
   it("are in order, and send each breaking change to a heading the upgrading page has", () => {
-    const page = readFileSync(
-      new URL("../../../../docs/src/content/docs/upgrading.mdx", import.meta.url),
-      "utf8",
-    );
-    const ids = headingIds(page);
-    const anchors = RELEASES.flatMap((release) => release.notes)
-      .map((note) => /\/docs\/upgrading#(.+)$/.exec(note.docs)?.[1])
-      .filter((anchor): anchor is string => anchor !== undefined);
+    const ids = headingIds(PAGE);
 
     expect(RELEASES.map((release) => release.version)).toEqual(["0.4.0", "0.5.0"]);
-    expect(anchors.length).toBeGreaterThan(0);
-    expect(anchors.filter((anchor) => !ids.has(anchor))).toEqual([]);
+    expect(ANCHORS.length).toBeGreaterThan(0);
+    expect(ANCHORS.filter((anchor) => !ids.has(anchor))).toEqual([]);
+  });
+
+  it("name every section of the upgrading page that pairs 0.4 with what holds now", () => {
+    const sections = changeSections(PAGE);
+
+    expect(sections).toContain("endpoints-addressed-with-via");
+    expect(sections.filter((section) => !ANCHORS.includes(section))).toEqual([]);
   });
 });

@@ -94,6 +94,15 @@ export const RELEASES: readonly Release[] = [
         title: "A .via() endpoint reads or writes as the verb its closure calls",
         docs: `${UPGRADING}#endpoints-addressed-with-via`,
       },
+      {
+        title: "create-courier needs Node.js 22.13; --yes changes no project git has not committed",
+        docs: `${UPGRADING}#create-courier-and-courier-cli`,
+      },
+      {
+        title:
+          "A specification that holds a file hashes anew; a multipart operation takes its fields",
+        docs: `${UPGRADING}#studio-imports`,
+      },
     ],
     migrations: [
       REALTIME_ERRORS,

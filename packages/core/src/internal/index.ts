@@ -132,6 +132,7 @@ export { cutText, REDACTED, splitUrlsWithoutSecrets, urlWithoutSecrets } from ".
 export { registerRenderMemo } from "../utils/render-memo";
 export { sliceWhole } from "../utils/slice-whole";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
+export { formOf } from "../utils/variables-encoding";
 export { knownWebhooks, onKnownWebhooks } from "../webhooks/webhook-registry";
 /* Its types are named in types.ts. */
 export type * from "./types";

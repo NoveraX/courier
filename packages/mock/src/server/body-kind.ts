@@ -1,15 +1,21 @@
 import { logger } from "@noverax/courier";
-import { BodyError, readMultipartForm } from "@noverax/courier/internal";
+import {
+  BodyError,
+  formOf as formSentFor,
+  RECORD_UPLOAD_TYPE,
+  readMultipartForm,
+  readRecordUpload,
+} from "@noverax/courier/internal";
 
 import { sizeLabel } from "../uploads/size-label";
 
 /**
  * What a request body holds, by its content type: JSON, a form — multipart
- * or URL-encoded — raw bytes of any other type, or a body to be told by
- * what it holds: one with no type, or plain text, which is what `fetch`
- * calls a string body it is given no type for.
+ * or URL-encoded — a proxy client's record upload, raw bytes of any other
+ * type, or a body to be told by what it holds: one with no type, or plain
+ * text, which is what `fetch` calls a string body it is given no type for.
  */
-export type BodyKind = "json" | "form" | "raw" | "sniffed";
+export type BodyKind = "json" | "form" | "record" | "raw" | "sniffed";
 
 /** A body read for what it holds: JSON parsed, a form's fields, raw bytes as a `Blob` of their type. */
 export type ParsedBody =
@@ -45,6 +51,7 @@ export function bodyKindOf(contentType: string): BodyKind {
   const type = essence(contentType);
   if (type === "" || type === "text/plain") return "sniffed";
   if (FORM_TYPES.has(type)) return "form";
+  if (type === RECORD_UPLOAD_TYPE) return "record";
   if (type === "application/json" || type.endsWith("+json")) return "json";
   return "raw";
 }
@@ -85,8 +92,7 @@ async function formOf(
 
 const NOT_JSON = Symbol("not JSON");
 
-function jsonOf(bytes: Uint8Array<ArrayBuffer>): unknown {
-  const text = new TextDecoder().decode(bytes);
+function jsonOf(text: string): unknown {
   if (text.trim() === "") return undefined;
   try {
     return JSON.parse(text);
@@ -96,15 +102,38 @@ function jsonOf(bytes: Uint8Array<ArrayBuffer>): unknown {
   }
 }
 
+/* A record upload as a Courier proxy passes it on — as a direct call sends its record — so a
+   handler is given what a direct call gives it: a record that holds a file as the form sent for
+   it, its options in the first `_options` field, as a proxy client writes a form's; one that
+   holds none as JSON. */
+function sentAs(
+  variables: Record<string, unknown>,
+  options: string | undefined,
+): ParsedBody | { error: string; status: 400 } {
+  const sent = formSentFor(variables);
+  if (sent === undefined) {
+    const parsed = jsonOf(options ?? "");
+    return parsed === NOT_JSON
+      ? { error: "_options must be a JSON string", status: 400 }
+      : { kind: "json", value: { variables, options: parsed } };
+  }
+  const form = new FormData();
+  form.append("_options", options ?? "");
+  for (const [name, value] of sent) form.append(name, value);
+  return { kind: "form", form };
+}
+
 /**
  * Read a body for what it holds. JSON is parsed and a form's fields read —
  * a multipart form by Courier's own parser, as it arrives, its text held to
- * `jsonLimit` and its files kept in memory; raw bytes are kept as a `Blob`
- * of their type. A body with no type, or of plain text, is read as JSON
- * when it is JSON — as a `fetch` given a JSON string and no type sends it —
- * and refused with 413 when that JSON is larger than `jsonLimit`; any other
- * is raw bytes, as a `fetch` of an `ArrayBuffer` or an untyped `Blob` sends
- * them. RFC 9110 lets a server look at such a body to tell.
+ * `jsonLimit` and its files kept in memory; a proxy client's record upload
+ * by its parser too, to the same limits, and given as what a direct call
+ * sends for its record; raw bytes are kept as a `Blob` of their type. A
+ * body with no type, or of plain text, is read as JSON when it is JSON — as
+ * a `fetch` given a JSON string and no type sends it — and refused with 413
+ * when that JSON is larger than `jsonLimit`; any other is raw bytes, as a
+ * `fetch` of an `ArrayBuffer` or an untyped `Blob` sends them. RFC 9110
+ * lets a server look at such a body to tell.
  *
  * @param body - The body, held to its limits
  * @param contentType - The request's `Content-Type`, or `""`
@@ -123,6 +152,16 @@ export async function parseBody(
   jsonLimit: number,
 ): Promise<ParsedBody | { error: string; status: 400 | 413 }> {
   const kind = bodyKindOf(contentType);
+  if (kind === "record") {
+    try {
+      const read = await readRecordUpload(body, contentType, { maxFieldBytes: jsonLimit });
+      return sentAs(read.variables, read.options);
+    } catch (error) {
+      if (!(error instanceof BodyError) || error.code !== "BODY_MALFORMED") throw error;
+      logger.debug("MockServer", "A record upload could not be parsed", error);
+      return { error: error.message, status: 400 };
+    }
+  }
   if (kind === "form") {
     try {
       return { kind, form: await formOf(body, contentType, jsonLimit) };
@@ -135,7 +174,7 @@ export async function parseBody(
   const bytes = await bytesOf(body);
   const blob = (): Blob => new Blob([bytes], { type: essence(contentType) });
   if (kind === "raw") return { kind, blob: blob() };
-  const value = jsonOf(bytes);
+  const value = jsonOf(new TextDecoder().decode(bytes));
   if (value === NOT_JSON) {
     return kind === "sniffed"
       ? { kind: "raw", blob: blob() }

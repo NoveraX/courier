@@ -21,10 +21,12 @@ const OPTIONS_FIELD = "_options";
  * Read the call a proxy request names, as a Courier proxy reads it.
  *
  * The endpoint is named in the URL — `_s`, `_g`, `_m` — for a POST as for a
- * GET. A POST's body is `{ variables, options }` as JSON, or a form whose
- * first `_options` field holds the options; a GET carries its variables in
- * `_v` and its options in `_o`. A call that asks for the raw response
- * (`options.rawData`) is answered with the response around the data.
+ * GET. A POST's body is `{ variables, options }` as JSON, a form whose
+ * first `_options` field holds the options, or a record that holds a file,
+ * sent as a record upload, which `readBody` gives as the form a direct call
+ * sends for it; a GET carries its variables in `_v` and its options in
+ * `_o`. A call that asks for the raw response (`options.rawData`) is
+ * answered with the response around the data.
  *
  * @param c - The request's Hono context
  * @param readBody - Reads a POST's body, once the URL has named the endpoint
@@ -59,7 +61,7 @@ function fromQuery(params: URLSearchParams): Envelope {
   return { variables, options };
 }
 
-/* A proxy client sends JSON or a form; raw bytes it refuses to send, so none arrive from one. */
+/* A proxy client sends JSON, a form or a record upload; raw bytes it refuses to send, so none arrive from one. */
 async function fromBody(read: Promise<RequestBody>): Promise<Envelope> {
   const body = await read;
   if ("error" in body) return body;

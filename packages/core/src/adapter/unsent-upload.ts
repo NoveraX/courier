@@ -1,31 +1,31 @@
+import { HTTPError } from "../errors/http-error";
 import { TimeoutError } from "../errors/timeout-error";
 import { sendingOf } from "../utils/upload-sending";
 import { BodyError, bodyErrorOf } from "./body-error";
-import { type EnvelopeRefusal, refusedBody } from "./envelope-result";
+import { refusedBody } from "./envelope-result";
 
 /**
- * The refusal of an upload a proxied call was sending on as it arrived,
- * when that upload failing on the client's side — cut short, over a limit,
- * not multipart, too slow — is what failed the call; told once in the log.
- * A time that ran out — a deadline — while the upload was still arriving is
- * the client's upload too slow as well: the upstream was waiting on it.
- *
- * Only a server proxies an upload: a bundler that builds for the browser
- * takes a stand-in that finds none.
+ * The failure a proxied call is answered with when the upload it was
+ * sending on as it arrived failing on the client's side — cut short, over
+ * a limit, not multipart, too slow — is what failed it: the refusal the
+ * client would have met before the call ran, told once in the log. A time
+ * that ran out — a deadline — while the upload was still arriving is the
+ * client's upload too slow as well: the upstream was waiting on it.
  *
  * @param error - What the call failed with
  * @param variables - The call's variables, its upload among them
- * @returns The refusal to answer with, or `undefined` for a call that failed for another reason
+ * @returns The refusal, as the error the call is answered with; `undefined` for a call that failed for another reason
  *
  * @example
  * ```ts
- * const unsent = unsentUpload(error, ctx.variables);
- * if (unsent) return errorResponse(unsent.status, unsent.message, unsent.code);
+ * executeCall(sources, call, { ...context, unsentUpload }, refuse);
  * ```
  */
-export function unsentUpload(error: unknown, variables?: unknown): EnvelopeRefusal | undefined {
+export function unsentUpload(error: unknown, variables?: unknown): HTTPError | undefined {
   const refused = bodyErrorOf(error) ?? arrivingTooSlowly(error, variables);
-  return refused === undefined ? undefined : refusedBody(refused);
+  if (refused === undefined) return undefined;
+  const { status, message, code } = refusedBody(refused);
+  return new HTTPError({ status, headers: new Headers(), data: { success: false, message, code } });
 }
 
 function arrivingTooSlowly(error: unknown, variables: unknown): BodyError | undefined {

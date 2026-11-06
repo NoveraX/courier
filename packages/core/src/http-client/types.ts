@@ -1,5 +1,6 @@
 import type { AgentCall } from "../agent/types";
 import type { PathWriter } from "../define/path-tag";
+import type { HTTPError } from "../errors/http-error";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { IncomingRequest } from "../session/incoming-request";
@@ -291,4 +292,11 @@ export type Context = RequestContext & {
   incoming?: IncomingRequest | undefined;
   /** The agent the call comes from, when an MCP server made it for one. */
   agent?: AgentCall | undefined;
+  /**
+   * The failure a call is answered with when the upload the proxy was
+   * sending on as it arrived — cut short, over a limit, too slow — is what
+   * failed it. The proxy sets it on each call a browser sends it, the only
+   * calls that send an upload on as it arrives.
+   */
+  unsentUpload?: ((error: unknown, variables: unknown) => HTTPError | undefined) | undefined;
 };

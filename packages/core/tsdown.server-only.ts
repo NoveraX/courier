@@ -5,11 +5,10 @@ import type { TsdownPlugin } from "tsdown";
  * The modules only a server runs whose place in a page's bundle a module
  * of the same name under `src/browser/` takes: the terminal logger, the
  * hook Node prints an `HTTPError` through, the words a failure is answered
- * with, the sending of an upload as a stream, the refusal of one the proxy
- * sent on as it arrived, the word Studio is sent as an API is defined,
- * the reading of what a server lends the calls of its process, and an
- * upload sent without its progress, which a page's form, holding no
- * device's file, never refuses.
+ * with, the sending of an upload as a stream, the time an attempt runs
+ * for, the word Studio is sent as an API is defined, the reading of what
+ * a server lends the calls of its process, and an upload sent without its
+ * progress, which a page's form, holding no device's file, never refuses.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -19,7 +18,6 @@ export const SERVER_ONLY_MODULES = [
   "errors/http-error-inspect",
   "utils/answered-message",
   "utils/send-streamed",
-  "adapter/unsent-upload",
   "utils/attempt-expiry",
   "define/announce-source",
   "capabilities/registry",

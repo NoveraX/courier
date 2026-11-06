@@ -1,5 +1,3 @@
-import type { EnvelopeRefusal } from "../adapter/envelope-result";
-import { unsentUpload } from "../adapter/unsent-upload";
 import { HTTPError, isCourierError, isRequestFailure, NetworkError, TimeoutError } from "../errors";
 import { platformCause } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
@@ -144,17 +142,19 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
     ctx.report?.requestError(error, ctx, undefined);
     return answerCallerLeft(error, ctx.context, ctx.rawData);
   }
-  const unsent = fromWire ? unsentUpload(error, ctx.variables) : undefined;
-  if (unsent !== undefined) return refusedUpload(unsent, ctx);
+  /* An upload the proxy sent on as it arrived that failed on the client's
+     side is answered as it would have been refused before the call ran,
+     and the log says nothing of an upstream that failed nothing. */
+  const failure = ctx.context?.unsentUpload?.(error, ctx.variables) ?? error;
 
   const responseResult =
-    error instanceof HTTPError
-      ? upstreamAnswer(error)
-      : error instanceof NetworkError || error instanceof TimeoutError
-        ? unansweredUpstream(error)
-        : (tokenMissing(error) ?? serverFailure(error, ctx.context));
+    failure instanceof HTTPError
+      ? upstreamAnswer(failure)
+      : failure instanceof NetworkError || failure instanceof TimeoutError
+        ? unansweredUpstream(failure)
+        : (tokenMissing(failure) ?? serverFailure(failure, ctx.context));
 
-  ctx.report?.requestError(error, ctx, responseResult.status);
+  ctx.report?.requestError(failure, ctx, responseResult.status);
   return timed(ctx, {
     ...responseResult,
     throw: new HTTPError(responseResult),
@@ -163,19 +163,6 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
        clears the session it names. */
     namedHeaders: ctx.namedHeaders,
   });
-}
-
-/**
- * An upload sent on as it arrived failed on the client's side — cut short,
- * too large, not multipart, too slow — and failed the call with it. The
- * client is told why, as it would have been before the call ran, and the
- * log says nothing of an upstream that failed nothing.
- */
-function refusedUpload({ status, message, code }: EnvelopeRefusal, ctx: ErrorHandlerCtx): unknown {
-  const answer = { status, headers: new Headers(), data: { success: false, message, code } };
-  const refusal = new HTTPError(answer);
-  ctx.report?.requestError(refusal, ctx, status);
-  return timed(ctx, { ...answer, throw: refusal, rawData: ctx.rawData });
 }
 
 /**

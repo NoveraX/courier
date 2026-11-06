@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createLogger } from "@noverax/courier";
 import type { TransformCache } from "@noverax/courier-build/config";
-import { configLoadError, createConfigJiti } from "@noverax/courier-build/config";
+import { configLoadError, createConfigJiti, maskedError } from "@noverax/courier-build/config";
 import { isCommonJsEntry } from "./is-commonjs-entry";
 
 type ConfigJiti = Awaited<ReturnType<typeof createConfigJiti>>;
@@ -115,7 +115,7 @@ async function evaluateInto(
     if (cache[key]?.loaded !== true) throw error;
     log.debug(
       `${key} ran, but the loader could not hand back its exports; they are read as it left them`,
-      error,
+      maskedError(error),
     );
   }
 }
@@ -138,7 +138,8 @@ function requireAfresh(
   try {
     exports = require(file);
   } catch (error) {
-    log.debug(`${file} did not run as CommonJS; it is transpiled instead`, error);
+    /* Masked as a load error is: what the file threw can hold any value of the environment. */
+    log.debug(`${file} did not run as CommonJS; it is transpiled instead`, maskedError(error));
     return null;
   }
   const module = require.cache[file];

@@ -162,7 +162,7 @@ export default withCourier({ experimental: { proxyClientMaxBodySize: "60mb" } })
 
 Next.js 14 copies the whole body for its middleware, whatever its size, and cuts nothing short.
 
-Next.js reads a route's request body as fast as the browser sends it, whatever the route has taken. An upload [sent on as it arrives](/docs/advanced/upload#sending-an-upload-on-as-it-arrives) (`uploadMode: "stream"`) behind a backend slower than the browser therefore waits in Next.js's memory for the backend to take it.
+Next.js reads a route's request body as fast as the browser sends it, whatever the route has taken. An upload [sent on as it arrives](/docs/proxy-mode/uploads#sending-an-upload-on-as-it-arrives) (`uploadMode: "stream"`) behind a backend slower than the browser therefore waits in Next.js's memory for the backend to take it.
 
 ## Step 2: Client-side caller (React Query)
 

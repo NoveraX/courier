@@ -7,6 +7,12 @@
  * that links to the new one, for a reader the page cannot send on.
  */
 export const MOVED_ANCHORS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "/docs/advanced/upload": {
+    "where-the-proxy-keeps-an-upload": "/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload",
+    "sending-an-upload-on-as-it-arrives":
+      "/docs/proxy-mode/uploads#sending-an-upload-on-as-it-arrives",
+    "what-the-proxy-takes": "/docs/proxy-mode/uploads#what-the-proxy-takes",
+  },
   "/docs/advanced/realtime": {
     "connection-options": "/docs/advanced/realtime-connections#connection-options",
     "staying-connected": "/docs/advanced/realtime-connections#staying-connected",

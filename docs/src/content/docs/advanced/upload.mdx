@@ -201,53 +201,11 @@ Progress counts the bytes handed to the network, as the browser or the runtime r
 
 ### Progress in proxy mode
 
-In proxy mode an upload travels twice: from the browser to the proxy route, then from the proxy to your backend. `onUploadProgress` measures the first hop only. The proxy reads the whole upload before it forwards anything, since it parses the form to hand the endpoint its fields, and then sends it on. So the progress reaches 100% when the proxy has the file, and the call resolves once the backend has received it and answered: behind a slow backend, a 25 MB upload can sit at 100% for several seconds. [Sent on as it arrives](#sending-an-upload-on-as-it-arrives), the upload goes no faster than the backend takes it, and the progress follows the backend's pace.
+In proxy mode an upload travels twice: from the browser to the proxy route, then from the proxy to your backend. `onUploadProgress` measures the first hop only. The proxy reads the whole upload before it forwards anything, since it parses the form to hand the endpoint its fields, and then sends it on. So the progress reaches 100% when the proxy has the file, and the call resolves once the backend has received it and answered: behind a slow backend, a 25 MB upload can sit at 100% for several seconds. [Sent on as it arrives](/docs/proxy-mode/uploads#sending-an-upload-on-as-it-arrives), the upload goes no faster than the backend takes it, and the progress follows the backend's pace.
 
-The proxy parses the upload as it arrives and keeps each file once, then sends the form on as a stream; how much of it stays in memory is [where the proxy keeps an upload](#where-the-proxy-keeps-an-upload): under Node a 100 MB upload holds a few megabytes of the proxy's memory. It follows a redirect from your backend only where `fetch` can follow one without a copy, as above. Upload straight to storage — a pre-signed URL, or a direct call — when files are very large, or when the backend should see them while they arrive.
+The proxy parses the upload as it arrives and keeps each file once, then sends the form on as a stream; how much of it stays in memory is [where the proxy keeps an upload](/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload): under Node a 100 MB upload holds a few megabytes of the proxy's memory. It follows a redirect from your backend only where `fetch` can follow one without a copy, as above. Upload straight to storage — a pre-signed URL, or a direct call — when files are very large, or when the backend should see them while they arrive.
 
-### Where the proxy keeps an upload
-
-Under Node the proxy keeps the first `uploadMemoryBytes` of an upload's files in memory, 1 MB, and writes the rest to disk as they arrive, each piece before it reads the next, so a slow disk slows the upload rather than filling memory. Your endpoint, its validation and its middleware get the same `FormData` either way, each file on disk a `File` read from there as it is read, and a retry sends it again. The files are written to a folder of the call's own in `uploadDirectory`, `os.tmpdir()` unless you name one, which only the server's user may read, under numbers rather than the names the client sent, and the folder is removed once the call has its answer, however it ended, and when the process exits. A process stopped by SIGTERM or SIGINT without a handler runs no exit handler: catch the signal and call `process.exit()`, as `courier-server` does, or the next process on the host removes what it left as it makes its first folder there. A file kept after the call cannot be read: copy what you keep.
-
-On an edge runtime, which has no disk, the proxy keeps the upload in memory, up to `maxUploadBytes` (10 MB unless the handler sets it); size that limit for the runtime's memory.
-
-| Option | Default | What it sets |
-| --- | --- | --- |
-| `uploadMode` | `"auto"` | `"auto"`: memory up to `uploadMemoryBytes`, then disk where there is one; `"memory"`: never disk; `"stream"`: nothing kept, [sent on as it arrives](#sending-an-upload-on-as-it-arrives) |
-| `uploadMemoryBytes` | 1 MB | how much of one upload's files stays in memory; `0` writes every file to disk |
-| `totalUploadMemoryBytes` | 64 MB | how much every upload together keeps in memory at once, files and text fields |
-| `totalUploadDiskBytes` | 1 GB | how much every upload together keeps on disk at once |
-| `uploadDirectory` | `os.tmpdir()` | where each upload's folder is made |
-
-Every upload the process keeps shares 64 MB in memory (`totalUploadMemoryBytes`) and 1 GB on disk (`totalUploadDiskBytes`): one upload is held to `maxUploadBytes`, and these hold a crowd of clients uploading at once. Past the room in memory a file goes to disk from its first byte; an upload left no room at all — on disk, or in memory where it must stay there: under `"memory"`, on an edge runtime, its text fields, and a record upload's record, which one sent on as it arrives holds until its call has its answer — is refused with `503`, `Retry-After: 5` and the code `UPLOAD_CAPACITY_REACHED`, and the log says so once every ten seconds. Where `/tmp` is a `tmpfs`, as on many Linux systems and containers, it is memory: point `uploadDirectory` at a disk. A disk with no room left refuses the upload with `507` and the code `UPLOAD_STORAGE_FULL`. Where the folder cannot be made at all — a read-only file system, no such folder — the proxy says so once in its log and keeps uploads in memory, as `uploadMode: "memory"` would.
-
-### Sending an upload on as it arrives
-
-With `uploadMode: "stream"` the proxy keeps nothing of an upload. It reads the call's options, which the client writes first, runs the call, and sends the rest to your backend as it arrives: a file's bytes pass through as the backend reads them, and the browser's upload goes no faster than that. A 100 MB upload holds a few megabytes of the proxy's memory, however slowly the backend reads, and nothing is written to disk. It suits an endpoint that only hands the upload on, on an edge runtime as under Node.
-
-The call's variables are then not a `FormData` but a `StreamedUpload`: a `ReadableStream` of the multipart body your backend receives, with its content type, boundary included, in `type`. `isStreamedUpload(variables)`, from `@noverax/courier`, tells it apart. So:
-
-- a schema for the endpoint's variables, a middleware or a closure sees a stream, not fields, and one that reads it reads it in your backend's place;
-- the form a record goes as starts with its source's `defaultBody`, the record's fields over it, as a direct call merges them — unless the endpoint's closure names its own body, which takes none;
-- the call is not retried, since its body cannot be sent twice;
-- the call's `timeout` starts once the upload has been sent whole: while it arrives, the body's own limits hold it — `bodyIdleTimeoutMs` between two pieces, `bodyTimeoutMs` for the whole — so a slow client is not taken for a slow backend, and a `deadline` that runs out before the upload has been sent whole is answered `408` with the code `BODY_TIMEOUT`;
-- your backend receives the body chunked, without a `Content-Length`;
-- under Node 22 and 24 a redirect fails the call, as it does any upload there.
-
-The form reaches your backend re-encoded, as the other modes send it: under a boundary of the proxy's own, each part with its name, filename and type alone. An upload that breaks a limit, does not parse, ends short of its length or stalls on the way stops the request to your backend, which never sees it end, and the browser is answered as it would have been before the call ran — `413`, `400` or `408`, with the code. A backend that answers before it has read the whole upload has its answer passed on, and the rest of the upload is taken off the connection.
-
-Under Next.js a route's body arrives without backpressure: Next.js reads the browser's upload as fast as it comes and keeps what the route has not taken yet, so behind a backend slower than the browser the rest of the upload waits in Next.js's memory rather than the proxy's.
-
-### What the proxy takes
-
-An upload is held, beyond its size, to 1000 parts, fields and files together (`maxUploadParts`), to 8 KB of headers for each part, and its text fields together to `maxBodyBytes`, the limit a JSON call is held to. A record upload's parts are counted as the form it goes as: its options, each field that holds a value, each item of a list and each file — a list of a thousand empty strings is a thousand parts, sent as so many to your backend — and a record over the limit is refused once it is read, before any of it is sent on. The proxy refuses one that breaks a limit as soon as the part that breaks it arrives, with `413` and a `code` that names the limit, and takes the rest of the body off the connection unread, so the browser reads the answer. A form that does not parse is answered `400` with the code `BODY_MALFORMED`:
-
-- a line that ends in a bare line feed, or a header line folded onto the next;
-- a part with no `Content-Disposition: form-data`, or no `name`, or a header or a parameter given twice;
-- a part sent in `base64` or `quoted-printable` (`Content-Transfer-Encoding`), which RFC 7578 retired;
-- a body that ends before its closing boundary.
-
-The same bytes could otherwise be read one way by the proxy and another by your backend. A text field is read as UTF-8, its byte order mark kept. A file's name is read as browsers write it — a backslash is part of the name, and `%22`, `%0D` and `%0A` stand for `"`, CR and LF — or from `filename*`, RFC 5987's encoded form, when the part carries one. The parser is held in tests to two others, the platform's own and `@remix-run/multipart-parser`, over every body their encoders write; where those two read a body differently, it reads the body as RFC 7578 calls for, or refuses it.
+How the proxy keeps an upload meanwhile — in memory, on disk, or not at all, sent on as it arrives — and what it takes of one are on [Uploads Through the Proxy](/docs/proxy-mode/uploads).
 
 ## Multi-file upload
 

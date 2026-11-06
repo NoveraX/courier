@@ -73,7 +73,7 @@ What the [standalone server](/docs/deployment/standalone-server) reads when its 
 | `allowedHosts` | `COURIER_ALLOWED_HOSTS` | The host names the server is reached by, a list or a function it calls as it starts; a request to another is refused with `421`. `--allowed-hosts` overrides it, and the server does not start while either list cannot be read |
 | `maxBodyBytes` | 1 MB | The largest JSON envelope the proxy reads; a larger one is refused with `413` |
 | `maxUploadBytes` | 10 MB | The largest `multipart/form-data` upload the proxy reads |
-| `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"`, memory up to `uploadMemoryBytes` and disk past it; `"memory"`, never disk; `"stream"`, nowhere — [sent on as it arrives](/docs/advanced/upload#sending-an-upload-on-as-it-arrives) — see [where the proxy keeps an upload](/docs/advanced/upload#where-the-proxy-keeps-an-upload) |
+| `uploadMode` | `"auto"` | Where an upload is kept while its call runs: `"auto"`, memory up to `uploadMemoryBytes` and disk past it; `"memory"`, never disk; `"stream"`, nowhere — [sent on as it arrives](/docs/proxy-mode/uploads#sending-an-upload-on-as-it-arrives) — see [where the proxy keeps an upload](/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload) |
 | `uploadMemoryBytes` | 1 MB | How much of one upload's files stays in memory |
 | `totalUploadMemoryBytes` | 64 MB | How much every upload together keeps in memory at once |
 | `totalUploadDiskBytes` | 1 GB | How much every upload together keeps on disk at once |

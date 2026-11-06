@@ -3,6 +3,7 @@ import { CALL_ERROR_FINDINGS } from "./migrations/call-error-findings";
 import { CANCEL_PREVIOUS_LIST } from "./migrations/cancel-previous-list";
 import { HTTP_ERROR_STATUS_ZERO } from "./migrations/http-error-status-zero";
 import { HTTP_PROBE_TYPE } from "./migrations/http-probe-type";
+import { PIN_HASH } from "./migrations/pin-hash";
 import { REALTIME_ERRORS } from "./migrations/realtime-errors";
 import { REALTIME_FINDINGS } from "./migrations/realtime-findings";
 import { RETRY_ON_ZERO } from "./migrations/retry-on-zero";
@@ -115,6 +116,7 @@ export const RELEASES: readonly Release[] = [
       VARIABLE_NOT_ENCODABLE,
       VIA_KIND,
       HTTP_PROBE_TYPE,
+      PIN_HASH,
     ],
   },
 ];

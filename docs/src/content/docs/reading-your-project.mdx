@@ -72,7 +72,7 @@ Import that code from a client component alone, out of the modules courier.confi
 | `EVALUATION_FAILED` | The project's code threw while it ran. In a Nuxt project, a name Nuxt imports for you, such as `useRuntimeConfig`, is not defined outside Nuxt's build: definitions must not depend on Nuxt's runtime |
 | `LOAD_TIMED_OUT` | The config was still loading after its time — 60 s for `courier-cli routes` and a bundler plugin, 20 s for Studio — as a module waits for something that does not come |
 
-- The project's own message is quoted with the value of every environment variable masked as `[redacted]` — every value of 8 characters or more, but for the system's own variables: paths, the user, the locale — and then with every credential cut as [`redact()`](/docs/api/redact) cuts one, the environment's or not: a bearer token, a password in an address, a `token=` pair. Courier writes no value itself, only names. What the code threw is cut the same way, its stack included, wherever it is logged.
+- The project's own message is quoted with the environment's values masked as `[redacted]`: each variable's value as it is, escaped in JSON, encoded for an address, trimmed, and each line of a value of several, such as a key in PEM — every such form of 8 characters or more, the system's own variables left alone: paths, the user, the locale. Then every credential is cut as [`redact()`](/docs/api/redact) cuts one, the environment's or not: a bearer token, a password in an address, a `token=` pair. A shorter value is not masked, nor is a value the code changed some other way — cut, or encoded otherwise. Courier writes no value itself, only names. What the code threw is cut the same way, its stack included, wherever it is logged.
 - `courier-cli` prints the stack at `COURIER_LOG_LEVEL=debug`; Studio shows the message on its APIs page and in its status bar.
 - A program reads the same through `ConfigLoadError`, from `@noverax/courier-build/config`: its `code`, its `hint`, and `context.importChain`, each module by its path and an installed package by its name.
 
@@ -85,5 +85,5 @@ Import that code from a client component alone, out of the modules courier.confi
 - **Keep the definitions' modules plain.** A module the config imports that opens a connection or calls a service as it loads does so on every reading; open it in the function that needs it.
 - **Mark server modules as your framework does.** `import "server-only"` in a Next.js project, `$env/static/private` in a SvelteKit one, are answered as their servers answer them.
 
-The job's log holds no value of a variable: a load that fails names the module and quotes its message masked.
+A load that fails names the module and quotes its message masked by that rule, so the job's log holds a variable's value in none of the forms it lists.
 

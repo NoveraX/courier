@@ -127,3 +127,61 @@ describe("maskedError", () => {
     );
   });
 });
+
+describe("the forms a value takes in a message", () => {
+  /* A key in PEM, as a multi-line variable holds one; every value here is made up. */
+  const PEM =
+    "-----BEGIN PROBE KEY-----\nAAAABBBBCCCCDDDDEEEE\nFFFFGGGGHHHHIIIIJJJJ\n-----END PROBE KEY-----";
+
+  it("masks a value escaped in JSON, as a message that writes its settings out holds it", () => {
+    const said = maskEnvironmentValues(`bad config ${JSON.stringify({ key: PEM })}`, { KEY: PEM });
+
+    expect(said).toBe(`bad config {"key":"${REDACTED}"}`);
+  });
+
+  it("masks a value encoded for an address", () => {
+    const key = "pr0be+k3y/v4lue=";
+
+    expect(
+      maskEnvironmentValues(`GET https://api.invalid/?k=${encodeURIComponent(key)} failed`, {
+        KEY: key,
+      }),
+    ).toBe(`GET https://api.invalid/?k=${REDACTED} failed`);
+  });
+
+  it("masks a value trimmed, as code that read it from a CRLF file or quotes with spaces has it", () => {
+    const env = { CRLF: "s3cr3t-v4lue-0000\r", QUOTED: "  padded-s3cr3t  " };
+
+    expect(maskEnvironmentValues("tried s3cr3t-v4lue-0000 and padded-s3cr3t", env)).toBe(
+      `tried ${REDACTED} and ${REDACTED}`,
+    );
+  });
+
+  it("masks each line of a value of several, wherever a line stands alone", () => {
+    const said = maskEnvironmentValues("line AAAABBBBCCCCDDDDEEEE, then FFFFGGGGHHHHIIIIJJJJ", {
+      KEY: PEM,
+    });
+
+    expect(said).toBe(`line ${REDACTED}, then ${REDACTED}`);
+  });
+
+  it("leaves a form shorter than 8 characters, as it leaves a value that short", () => {
+    const env = { KEY: "abc\ndefghijk" };
+
+    expect(maskEnvironmentValues("abc and defghijk", env)).toBe(`abc and ${REDACTED}`);
+  });
+
+  it("masks a value in a quoted message before its control characters are taken out", () => {
+    vi.stubEnv("BELL_KEY", "abc\u0007defghij");
+
+    expect(shownText("refused abc\u0007defghij, try again")).toBe(`refused ${REDACTED}, try again`);
+    vi.unstubAllEnvs();
+  });
+
+  it("masks a value that spans lines in a quoted message, whose first line alone is shown", () => {
+    vi.stubEnv("PROBE_PEM", PEM);
+
+    expect(shownText(`bad key ${PEM} given`)).toBe(`bad key ${REDACTED} given`);
+    vi.unstubAllEnvs();
+  });
+});

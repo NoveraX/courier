@@ -6,9 +6,13 @@
  * address, a `token=` pair — is then cut as the core's `redact()` cuts it,
  * with the one sign it writes, `[redacted]`.
  *
- * A value is masked where it is 8 characters long or more; a shorter one —
- * `true`, a port — would mask words of the message itself and is rarely a
- * secret. The values of the variables a system sets for every process —
+ * A value is found as the variable holds it, and in the forms code writes
+ * it in: escaped in JSON, encoded for an address, trimmed, and each line of
+ * a value of several, such as a key in PEM. A value, or one of its forms, is
+ * masked where it is 8 characters long or more; a shorter one — `true`, a
+ * port — would mask words of the message itself and is rarely a secret. A
+ * value the code changed some other way — cut, encoded otherwise — is not
+ * found. The values of the variables a system sets for every process —
  * paths, the user's name, the locale — are left alone: they are no secret,
  * and masking `HOME` would take the path out of every file a message names.
  */
@@ -53,9 +57,9 @@ const SYSTEM_VARIABLES = new Set([
 const SYSTEM_PREFIXES = ["LC_", "XDG_", "npm_config_", "npm_package_", "npm_lifecycle_"];
 
 /**
- * The text with every value of the environment that could be a secret
- * replaced by `[redacted]`, the longest first, so a value that holds
- * another is masked whole.
+ * The text with every value of the environment that could be a secret,
+ * and every form of it above, replaced by `[redacted]`, the longest first,
+ * so a value that holds another is masked whole.
  *
  * @param text - The message, as the project's code wrote it
  * @param env - The environment whose values are masked
@@ -72,9 +76,8 @@ export function maskEnvironmentValues(
 ): string {
   const values = new Set<string>();
   for (const [name, value] of Object.entries(env)) {
-    if (value !== undefined && value.length >= MIN_MASKED_LENGTH && !isSystem(name)) {
-      values.add(value);
-    }
+    if (value === undefined || value.length < MIN_MASKED_LENGTH || isSystem(name)) continue;
+    for (const form of formsOf(value)) if (form.length >= MIN_MASKED_LENGTH) values.add(form);
   }
   let masked = text;
   for (const value of [...values].sort((a, b) => b.length - a.length)) {
@@ -104,6 +107,19 @@ export function withoutSecrets(
 
 function isSystem(name: string): boolean {
   return SYSTEM_VARIABLES.has(name) || SYSTEM_PREFIXES.some((prefix) => name.startsWith(prefix));
+}
+
+/* A value, and the forms code writes it in: escaped in JSON, encoded for an address, trimmed, and
+   each line of a value of several, trimmed too. */
+function formsOf(value: string): string[] {
+  const lines = value.split(/\r?\n/);
+  return [
+    value,
+    JSON.stringify(value).slice(1, -1),
+    encodeURIComponent(value),
+    value.trim(),
+    ...(lines.length > 1 ? lines.map((line) => line.trim()) : []),
+  ];
 }
 
 /**

@@ -54,15 +54,7 @@ export function sealHandler(
   handler: AnyProbe,
   options: AnyEndpointOptions,
 ): Record<string | symbol, unknown> {
-  return {
-    [ENDPOINT_SCHEMA]: resolveSchemas(state),
-    kind: state.kind,
-    method: "get" as const,
-    path: "",
-    probe: handler,
-    served: true,
-    options: resolveOptions(state, options),
-  };
+  return sealAt(state, { method: "get", path: "", probe: handler, served: true }, options);
 }
 
 /**

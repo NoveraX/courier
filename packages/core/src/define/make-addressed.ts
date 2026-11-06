@@ -1,7 +1,7 @@
 import { agentOptions } from "../agent/agent-options";
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
-import { isReadingMethod, normalizeHttpMethod } from "../utils/helpers";
+import { normalizeHttpMethod } from "../utils/helpers";
 import type { CacheConfig } from "../validation";
 import type { BuilderState } from "./builder";
 import { withValue } from "./builder";
@@ -59,15 +59,13 @@ export function makeAddressed(
   const readOnly = (method: string, code: ConfigurationErrorCode, why: string): void => {
     if (state.kind === "query") return;
     const named = `[courier] ${method} was named on`;
-    /* A closure's verb, even a reading one, leaves the endpoint taken to write. */
-    const how = isReadingMethod(wire.method) ? ".via()" : `.${wire.method}()`;
     throw new ConfigurationError(
       code,
       state.kind !== "mutation"
         ? `${named} a stream or a channel: only an HTTP read takes it.`
         : state.kindNamed
           ? `${named} an endpoint declared a write with .writes(): ${why}.`
-          : `${named} an endpoint addressed with ${how}, which writes: ${why}. Declare a read with .reads() first.`,
+          : `${named} an endpoint addressed with .${wire.method}(), which writes: ${why}. Declare a read with .reads() first.`,
     );
   };
 

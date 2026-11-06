@@ -4,7 +4,10 @@ import { type PathWriter, probingPath } from "./path-tag";
 import { standIn } from "./stand-in";
 
 /**
- * Opaque result of a wire call.
+ * Opaque result of a wire call, marked with the kind of the verb that made
+ * it: `"query"` for a verb that reads, `"mutation"` for one that writes. The
+ * mark is what lets an endpoint addressed with `.via()` read or write as the
+ * verb its closure calls does.
  *
  * As the endpoint is defined, its closure runs against a recorder and what it
  * returns is dropped; on a call, it runs against the client and hands back
@@ -14,8 +17,11 @@ import { standIn } from "./stand-in";
  */
 declare const WIRE: unique symbol;
 
-export interface WireCall {
-  readonly [WIRE]: true;
+/** Whether a verb reads (`"query"`) or writes (`"mutation"`). */
+export type WireKind = "query" | "mutation";
+
+export interface WireCall<TKind extends WireKind = WireKind> {
+  readonly [WIRE]: TKind;
 }
 
 /**
@@ -26,28 +32,41 @@ export interface WireCall {
  * sends no body. `path` writes a path with values put into it.
  */
 export interface HttpWire extends PathWriter {
-  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
-  post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall;
-  put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall;
-  patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall;
-  del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall;
-  head(path?: string, options?: MethodOptions<"head">): WireCall;
-  options(path?: string, variables?: unknown, options?: MethodOptions<"options">): WireCall;
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall<"query">;
+  post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall<"mutation">;
+  put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall<"mutation">;
+  patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall<"mutation">;
+  del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall<"mutation">;
+  head(path?: string, options?: MethodOptions<"head">): WireCall<"query">;
+  options(
+    path?: string,
+    variables?: unknown,
+    options?: MethodOptions<"options">,
+  ): WireCall<"query">;
   /** Ask with a body, as a read: the variables are the question. */
-  query(path?: string, body?: unknown, options?: MethodOptions<"query">): WireCall;
+  query(path?: string, body?: unknown, options?: MethodOptions<"query">): WireCall<"query">;
 }
 
 /** Wire surface offered to a server-sent-events endpoint's closure. */
 export interface StreamWire extends PathWriter {
-  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall<"query">;
 }
 
 /** Wire surface offered to a channel endpoint's closure. */
 export interface ChannelWire extends PathWriter {
-  connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall;
+  connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall<"query">;
 }
 
-export type HttpProbe<TVariables> = (http: HttpWire, variables: TVariables) => WireCall;
+/**
+ * An HTTP endpoint's closure. `TCall` is the call it returns, which carries
+ * the kind of its verb: a closure typed without one, or one that calls a
+ * reading verb on one path and a writing verb on another, leaves its
+ * endpoint to name its kind with `.reads()` or `.writes()`.
+ */
+export type HttpProbe<TVariables, TCall extends WireCall = WireCall> = (
+  http: HttpWire,
+  variables: TVariables,
+) => TCall;
 export type StreamProbe<TVariables> = (sse: StreamWire, variables: TVariables) => WireCall;
 export type ChannelProbe<TVariables> = (ws: ChannelWire, variables: TVariables) => WireCall;
 
@@ -62,19 +81,21 @@ export interface WireShape {
 
 const CHANNEL_METHOD: HttpMethod = "get";
 
-type WireMethod = HttpMethod | "connect";
-
-const WIRE_METHODS: ReadonlySet<string> = new Set<WireMethod>([
+/** Every verb an HTTP endpoint may be addressed with: named on the chain, or called by its closure. */
+export const HTTP_VERBS: readonly HttpMethod[] = [
   "get",
+  "head",
+  "options",
+  "query",
   "post",
   "put",
   "patch",
   "del",
-  "head",
-  "options",
-  "query",
-  "connect",
-]);
+];
+
+type WireMethod = HttpMethod | "connect";
+
+const WIRE_METHODS: ReadonlySet<string> = new Set<WireMethod>([...HTTP_VERBS, "connect"]);
 
 function isWireMethod(name: string): name is WireMethod {
   return WIRE_METHODS.has(name);

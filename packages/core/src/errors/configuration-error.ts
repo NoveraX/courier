@@ -194,6 +194,15 @@ export type ConfigurationErrorCode =
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
   /**
+   * A call's `.via()` closure called a verb of another kind than its endpoint
+   * has: a writing verb on an endpoint its verb made a read, a reading verb
+   * on one its verb made a write, or `.put()`, `.patch()` or `.del()` on one
+   * `.reads()` declared a read. The endpoint is defined from one branch of
+   * its closure, and every call keeps to what that branch said, or to what
+   * `.reads()` or `.writes()` named.
+   */
+  | "ENDPOINT_VERB_KIND"
+  /**
    * `.agent()` was given what cannot describe a tool: no description, an
    * access other than `read`, `write` or `destructive`, an option it does
    * not have, or a name a client cannot take.

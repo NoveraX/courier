@@ -20,10 +20,12 @@ export type {
   HttpAddressed,
   HttpAddressedAt,
   HttpBuilder,
+  HttpKindUnnamed,
   NeutralMethods,
   StreamAddressed,
   StreamBuilder,
   StreamHandler,
+  ViaAddressed,
 } from "./builder-types";
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";
@@ -62,6 +64,7 @@ export type {
   StreamProbe,
   StreamWire,
   WireCall,
+  WireKind,
 } from "./probe";
 export type {
   CourierRoutes,

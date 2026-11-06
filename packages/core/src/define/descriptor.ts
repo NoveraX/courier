@@ -34,6 +34,7 @@ export function resolveSchemas(state: BuilderState): SchemaMetadata {
        only decides whether inbound messages are validated. */
     ...(state.filled.includes("send") && { bidirectional: true as const }),
     ...((state.kind === "query" || state.kind === "mutation") && { type: state.kind }),
+    ...(state.kindNamed && { typeNamed: true as const }),
     ...(transport !== "http" && { transport }),
     ...(state.cache !== undefined && { cache: state.cache }),
     ...(state.defaults !== undefined && { defaults: state.defaults }),

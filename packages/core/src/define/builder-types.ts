@@ -19,7 +19,7 @@ import type {
   StreamEndpointOptions,
 } from "./options";
 import type { CheckedPath, PathParamNames, VariablesForPath, WithPathParams } from "./path-params";
-import type { ChannelProbe, HttpProbe, StreamProbe } from "./probe";
+import type { ChannelProbe, HttpProbe, StreamProbe, WireCall } from "./probe";
 
 /** Generator serving a stream from the defining process. */
 export type StreamHandler<TResponse, TVariables> = (
@@ -165,8 +165,12 @@ export interface HttpBuilder<TVariables, TVariablesOut, TExpose extends ExposeMa
    * Address it with a closure, for a path or a body the variables have to be
    * worked into.
    *
-   * The closure hides which verb it calls, so the endpoint is taken to write;
-   * `.reads()` says otherwise.
+   * The verb the closure calls says whether the endpoint reads or writes, as
+   * a verb named on the chain does. A closure that calls a reading verb on
+   * one path and a writing verb on another — or whose type does not say
+   * which it calls — names the endpoint's kind with `.reads()` or
+   * `.writes()`, and is no endpoint until it does. Every call keeps to the
+   * kind: a closure that reads when it is defined cannot write on a call.
    *
    * The closure runs once as the endpoint is defined, with stand-ins for the
    * variables, to learn its method and path; then on every call and on every
@@ -174,11 +178,20 @@ export interface HttpBuilder<TVariables, TVariablesOut, TExpose extends ExposeMa
    * sends the request. It describes the request and nothing more: a counter
    * it bumps, a line it logs or a token it fetches runs each of those times,
    * which is a middleware's work.
+   *
+   * @example
+   * ```ts
+   * endpoint.variables<{ year: number }>().via((http, { year }) => http.get(http.path`reports/${year}`)); // a read
+   * endpoint
+   *   .variables<{ q: string; long: boolean }>()
+   *   .via((http, v) => (v.long ? http.post("search", v) : http.get("search", v)))
+   *   .reads();
+   * ```
    */
-  via(
-    probe: HttpProbe<TVariablesOut>,
+  via<TCall extends WireCall>(
+    probe: HttpProbe<TVariablesOut, TCall>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation", never, TExpose>;
+  ): ViaAddressed<TCall, TVariables, TVariablesOut, TExpose>;
   /**
    * Let a browser call the endpoint through the application's proxy — or,
    * with `false`, refuse it there whatever its group or API says. An
@@ -288,7 +301,8 @@ export interface HttpAddressed<
    * endpoint a query: it may be cached, the query hooks accept it, and the
    * proxy will serve it over GET. An endpoint addressed with `.put()`,
    * `.patch()` or `.del()` changes what it addresses and is refused with
-   * `READS_ON_CHANGING_VERB`.
+   * `READS_ON_CHANGING_VERB`, and a call that has a declared read's closure
+   * call one of them is refused with `ENDPOINT_VERB_KIND`.
    */
   reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams, TExpose>;
   /**
@@ -349,6 +363,45 @@ export interface HttpAddressed<
   expose<const TOpen extends ExposeArgs = []>(
     ...open: TOpen
   ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, ExposeMarkFor<TOpen>>;
+}
+
+/* The kind a closure's call carries: that of each verb it may call. */
+type KindOfCall<TCall> = TCall extends WireCall<infer TKind> ? TKind : never;
+
+/**
+ * What `.via()` gives for a closure that returns `TCall`: the endpoint, of
+ * the kind its verb says — or, for a closure that may call a reading verb
+ * and a writing one, or whose type does not say which, an endpoint that has
+ * yet to name its kind.
+ */
+export type ViaAddressed<
+  TCall extends WireCall,
+  TVariables,
+  TVariablesOut,
+  TExpose extends ExposeMark,
+> = 0 extends 1 & TCall
+  ? HttpKindUnnamed<TVariables, TVariablesOut, TExpose>
+  : [TCall] extends [never]
+    ? HttpKindUnnamed<TVariables, TVariablesOut, TExpose>
+    : [KindOfCall<TCall>] extends ["query"]
+      ? HttpAddressed<void, TVariables, TVariablesOut, "query", never, TExpose>
+      : [KindOfCall<TCall>] extends ["mutation"]
+        ? HttpAddressed<void, TVariables, TVariablesOut, "mutation", never, TExpose>
+        : HttpKindUnnamed<TVariables, TVariablesOut, TExpose>;
+
+/**
+ * A `.via()` endpoint whose closure may call a reading verb on one path and
+ * a writing verb on another, or whose type does not say which it calls. It
+ * is no endpoint until `.reads()` or `.writes()` names its kind: placed in
+ * a group as it is, its `kind` says why it does not fit.
+ */
+export interface HttpKindUnnamed<TVariables, TVariablesOut, TExpose extends ExposeMark = ExposeMark>
+  extends Omit<HttpEndpoint<void, TVariables, "mutation", TVariablesOut, TExpose>, "kind"> {
+  readonly kind: "a .via() closure that calls a reading verb and a writing one names its kind with .reads() or .writes()";
+  /** A read, whichever verb a call takes — never `.put()`, `.patch()` or `.del()`. */
+  reads(): HttpAddressed<void, TVariables, TVariablesOut, "query", never, TExpose>;
+  /** A write, whichever verb a call takes. */
+  writes(): HttpAddressed<void, TVariables, TVariablesOut, "mutation", never, TExpose>;
 }
 
 /** The variables `.defaults()` may fill in: any of those a call passes. */

@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
-import type { InferResponse } from "../src/define/marker";
-import type { ChannelProbe, HttpProbe, StreamProbe } from "../src/define/probe";
+import type { InferKind, InferResponse } from "../src/define/marker";
+import type { ChannelProbe, HttpProbe, HttpWire, StreamProbe } from "../src/define/probe";
 import type { Middleware } from "../src/middleware/types";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
@@ -351,11 +351,24 @@ describe("wire surfaces", () => {
       readonly id: string;
     }
 
-    const byId: HttpProbe<Vars> = (http, vars) => http.get(":id", vars);
+    const byId = (http: HttpWire, vars: Vars) => http.get(":id", vars);
     const getUser = api.endpoint.variables<Vars>().via(byId).response(UserSchema);
 
     expect(getUser.method).toBe("get");
     expect(getUser.path).toBe(":id");
+    expectTypeOf<InferKind<typeof getUser>>().toEqualTypeOf<"query">();
+  });
+
+  it("names the kind of a closure whose type does not say its verb", () => {
+    interface Vars {
+      readonly id: string;
+    }
+
+    const byId: HttpProbe<Vars> = (http, vars) => http.get(":id", vars);
+    const getUser = api.endpoint.variables<Vars>().via(byId).reads().response(UserSchema);
+
+    expect(getUser.kind).toBe("query");
+    expectTypeOf<InferKind<typeof getUser>>().toEqualTypeOf<"query">();
   });
 
   it("types a stream closure lifted out of the chain", () => {

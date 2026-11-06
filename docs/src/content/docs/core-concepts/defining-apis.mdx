@@ -39,7 +39,7 @@ A group may hold groups of its own, under `groups`, to any depth: `caller.billin
 
 `courier()` returns three heads and `extend`. Which head you start from declares what the endpoint is, not just what it returns:
 
-- **`endpoint`** — an HTTP endpoint. The verb that addresses it decides whether it reads or writes: `get`, `head`, `options` and `query` read, and are proxied as a `GET` a CDN can cache; `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
+- **`endpoint`** — an HTTP endpoint. The verb that addresses it — named on the chain, or called by a `.via()` closure — decides whether it reads or writes: `get`, `head`, `options` and `query` read, and are proxied as a `GET` a CDN can cache; `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
 - **`stream`** — server-sent events.
 - **`channel`** — a WebSocket channel.
 
@@ -63,6 +63,21 @@ endpoint.post("").variables(CreateUserSchema).response(UserSchema)
 `.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`, `options`, `query`), and `path`, which [puts a value into the path](/docs/advanced/path-params#a-value-in-a-closures-path) as text — and optionally `vars` (the variables).
 
 The closure runs once as the endpoint is defined, with stand-ins for the variables, to learn the method and path it addresses. It then runs on every call and on every attempt a retry makes, with the call's own variables and a client that sends the request; a stream's or a channel's closure runs each time a subscription opens. So it describes the request and nothing more: a counter it bumps, a line it logs or a token it fetches would run each of those times, the stand-ins included. Work that belongs to a call is [middleware's](/docs/middleware/overview).
+
+A closure reads or writes as the verb it calls does: one that calls `http.get` is a read — retried, cacheable, taken by the query hooks — and one that calls `http.post` is a write. A closure that calls a reading verb on one path and a writing verb on another names the endpoint's kind with `.reads()` or `.writes()`; until it does, it is no endpoint, and a group refuses it with that reason. Every call keeps to the kind: the endpoint is defined from the path its closure took with stand-ins, so a call on which the closure calls a verb of the other kind is refused with `ConfigurationError("ENDPOINT_VERB_KIND")` before anything is sent.
+
+```ts
+const { endpoint } = courier()
+
+// A long question goes in a body, a short one in the address: either way, a read
+endpoint
+  .variables<{ q: string; tags: string[] }>()
+  .via((http, v) => (v.tags.length > 20 ? http.post("search", v) : http.get("search", v)))
+  .reads()
+
+// A GET that changes something is a write: sent once, its answer never kept
+endpoint.get("unsubscribe").variables<{ token: string }>().writes()
+```
 
 A base can carry what a whole vendor surface shares, so no endpoint repeats it:
 

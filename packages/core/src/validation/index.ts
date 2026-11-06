@@ -21,6 +21,12 @@ export interface SchemaMetadata {
   variables?: StandardSchemaV1;
   /** Endpoint type — "query" enables GET proxy, "mutation" requires POST */
   type?: "query" | "mutation";
+  /**
+   * Whether `.reads()` or `.writes()` named the type, rather than the verb
+   * that addresses the endpoint: a closure whose verb decided it calls verbs
+   * of that kind alone on every call.
+   */
+  typeNamed?: true;
   /** Cache hints for proxy GET responses */
   cache?: CacheConfig;
   /**

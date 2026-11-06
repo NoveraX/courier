@@ -5,21 +5,8 @@ import { assertServedTopicKey, withTopicKey } from "./channel-topic";
 import { kindFor, sealHandler } from "./descriptor";
 import { makeAddressed } from "./make-addressed";
 import type { AnyEndpointOptions, TopicKeyReader } from "./options";
-import type { AnyProbe } from "./probe";
-import { probeWire } from "./probe";
+import { type AnyProbe, HTTP_VERBS, type HttpWire, probeWire } from "./probe";
 import { type AnyBuilder, refinements } from "./refinements";
-
-/** Every verb that may begin a chain, plus the one a channel connects with. */
-const VERBS: readonly HttpMethod[] = [
-  "get",
-  "head",
-  "options",
-  "query",
-  "post",
-  "put",
-  "patch",
-  "del",
-];
 
 /**
  * An endpoint that has not yet said where it is.
@@ -38,36 +25,36 @@ const VERBS: readonly HttpMethod[] = [
  */
 export function makeBuilder(state: BuilderState): AnyBuilder {
   const next = (updated: BuilderState): AnyBuilder => makeBuilder(updated);
+  /* The verb decides the kind, whether named on the chain or called by a closure. */
   const address = (
     method: HttpMethod,
     path: string,
+    probe: AnyProbe,
     options: AnyEndpointOptions,
-    terminal: string = method,
+    where: string,
   ): AnyBuilder => {
-    assertServedTopicKey(state, terminal);
-    assertNoFragment(path, `.${terminal}(${JSON.stringify(path)})`);
+    assertNoFragment(path, where);
     return makeAddressed(
       { ...state, kind: kindFor(state.kind, method) },
-      {
-        method,
-        path,
-        /* A HEAD's second argument is its fetch options, not its variables:
-           handed them, `{ body }` or `{ prefixUrl }` shaped the request.
-           The variables it was forwarded fill its path and query instead. */
-        probe: ((w: Record<string, (...a: unknown[]) => unknown>, v: unknown) =>
-          method === "head" ? w.head?.(path) : w[method]?.(path, v)) as unknown as AnyProbe,
-        served: false,
-      },
+      { method, path, probe, served: false },
       options,
     );
   };
+  /* A HEAD's second argument is its fetch options, not its variables: handed
+     them, `{ body }` or `{ prefixUrl }` shaped the request. The variables it
+     was forwarded fill its path and query instead. */
+  const verb =
+    (method: HttpMethod, terminal: string = method) =>
+    (path = "", options = {}) => {
+      assertServedTopicKey(state, terminal);
+      const probe = (w: HttpWire, v: unknown) =>
+        method === "head" ? w.head(path) : w[method](path, v);
+      return address(method, path, probe, options, `.${terminal}(${JSON.stringify(path)})`);
+    };
 
   const verbs: AnyBuilder = {};
-  for (const method of VERBS) {
-    verbs[method] = (path = "", options: AnyEndpointOptions = {}) => address(method, path, options);
-  }
-  verbs.connect = (path = "", options: AnyEndpointOptions = {}) =>
-    address("get", path, options, "connect");
+  for (const method of HTTP_VERBS) verbs[method] = verb(method);
+  verbs.connect = verb("get", "connect");
 
   /* An HTTP endpoint describes its answer only once a verb has said there is
      one, so of its slots only `.variables()` — which a closure has to be
@@ -88,17 +75,16 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
     ...available,
     ...keyed,
     ...verbs,
+    /* Every call keeps to the kind the closure's verb gives here, so one that reads now writes on no call. */
     via: (probe: AnyProbe, options: AnyEndpointOptions = {}) => {
       assertServedTopicKey(state, "via");
-      const shape = probeWire(probe);
-      assertNoFragment(shape.path, `The path ${JSON.stringify(shape.path)} that .via() addresses`);
-      /* The closure hides its verb, so the endpoint is taken to write until
-         `.reads()` says otherwise — a write served over a cacheable GET is the
-         dangerous mistake, not the reverse. */
-      return makeAddressed(
-        { ...state, kind: state.kind === "query" ? "mutation" : state.kind },
-        { method: shape.method, path: shape.path, probe, served: false },
+      const { method, path } = probeWire(probe);
+      return address(
+        method,
+        path,
+        probe,
         options,
+        `The path ${JSON.stringify(path)} that .via() addresses`,
       );
     },
     implement: (handler: AnyProbe, options: AnyEndpointOptions = {}) =>

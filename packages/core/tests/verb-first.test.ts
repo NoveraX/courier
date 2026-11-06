@@ -56,13 +56,14 @@ describe("the verb that addresses an endpoint", () => {
     expect(meta(search).type).toBe("query");
   });
 
-  it("assumes a closure writes, since a cacheable write is the dangerous mistake", () => {
+  it("reads or writes as the verb a closure calls does", () => {
     const computed = endpoint
       .variables<{ ids: string[] }>()
       .via((http, vars) => http.get(`items/${vars.ids.join(",")}`));
 
-    expect(computed.kind).toBe("mutation");
-    expect(computed.reads().kind).toBe("query");
+    expect(computed.kind).toBe("query");
+    expect(computed.writes().kind).toBe("mutation");
+    expect(endpoint.via((http) => http.post("items")).kind).toBe("mutation");
   });
 
   it("keeps a stream and a channel their own kind, whatever the verb underneath", () => {

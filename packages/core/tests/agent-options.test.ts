@@ -107,9 +107,13 @@ describe(".agent()", () => {
     function typedOut(): void {
       // @ts-expect-error an endpoint that writes is not a read to an agent
       endpoint.post("orders").agent({ description: "Create", access: "read" });
-      // @ts-expect-error a closure is taken to write until it says it reads
-      endpoint.via((http) => http.get("x")).agent({ description: "X", access: "read" });
+      // @ts-expect-error a closure that writes is not a read to an agent
+      endpoint.via((http) => http.post("x")).agent({ description: "X", access: "read" });
     }
+    expect(
+      endpoint.via((http) => http.get("x")).agent({ description: "X", access: "read" }).options
+        .agent,
+    ).toMatchObject({ access: "read" });
     expect(typedOut).toBeTypeOf("function");
     expect(
       endpoint.del("orders/:id").agent({ description: "Cancel", access: "destructive" }).options

@@ -1,12 +1,14 @@
+import { HTTP_VERBS } from "../define/probe";
+import { ConfigurationError } from "../errors/configuration-error";
 import { isHTTPError } from "../errors/http-error";
 import type { HttpClient } from "../http-client/index";
-import type { BoundMethodOptions, GroupOptions } from "../http-client/types";
+import type { BoundMethodOptions, GroupOptions, HttpMethods } from "../http-client/types";
 import type { MiddlewareResponse } from "../middleware/types";
 import type { StudioHooks } from "../studio";
 import type { SchemaMetadata } from "../validation";
 import type { TimingState } from "./execute-studio";
 import { validateResponse } from "./execute-validation";
-import { isHeaders } from "./helpers";
+import { isHeaders, isReadingMethod } from "./helpers";
 import type { SharingCall } from "./shared-answer";
 
 export type InnerExecuteDeps = {
@@ -45,15 +47,18 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
   let response: Awaited<ReturnType<typeof deps.endpoint>>;
   try {
     response = await deps.endpoint(
-      deps.instance.createMethods(
-        {
-          ...(deps.forwardVariables ? { variables: vars } : {}),
-          ...deps.baseOptions,
-          headers: deps.middlewareHeaders,
-          stream: deps.stream,
-          ...(deps.hasStudio && { call: sharingCall(deps) }),
-        },
-        deps.endpointGroupOptions,
+      keptToKind(
+        deps.instance.createMethods(
+          {
+            ...(deps.forwardVariables ? { variables: vars } : {}),
+            ...deps.baseOptions,
+            headers: deps.middlewareHeaders,
+            stream: deps.stream,
+            ...(deps.hasStudio && { call: sharingCall(deps) }),
+          },
+          deps.endpointGroupOptions,
+        ),
+        deps.schema,
       ),
       vars,
     );
@@ -101,6 +106,37 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
     response: { status, data, headers },
     tRespValidation,
   };
+}
+
+/**
+ * The client a call's closure is handed, held to the kind of its endpoint.
+ *
+ * An endpoint is defined from the one branch of its closure that the probe
+ * took, so a closure that reads there could write on a call, and go out
+ * retried and cached as a read. Every call keeps to the kind its verb gave
+ * the endpoint; `.reads()` lets a read post too, never put, patch or delete;
+ * `.writes()` lets a write call any verb.
+ */
+function keptToKind(methods: HttpMethods, schema: SchemaMetadata | undefined): HttpMethods {
+  const kind = schema?.type;
+  const named = schema?.typeNamed === true;
+  if (kind === undefined || (kind === "mutation" && named)) return methods;
+  const kept: HttpMethods = { ...methods };
+  for (const verb of HTTP_VERBS) {
+    const reads = isReadingMethod(verb);
+    if (kind === "mutation" ? !reads : reads || (named && verb === "post")) continue;
+    kept[verb] = () => {
+      throw new ConfigurationError(
+        "ENDPOINT_VERB_KIND",
+        `[courier] the closure called .${verb}() on an endpoint ${
+          named
+            ? ".reads() declared a read, which never calls .put(), .patch() or .del()"
+            : `its verb made a ${kind === "query" ? "read" : "write"}: a closure that calls a reading verb and a writing one names the kind with .reads() or .writes()`
+        }`,
+      );
+    };
+  }
+  return kept;
 }
 
 /* The call as the requests it shares know it: its Studio id, and where it notes whose request answered it. */

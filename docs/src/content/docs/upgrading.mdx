@@ -1,6 +1,6 @@
-export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads.", updated: "2026-11-05" }
+export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, and the kind of a .via() endpoint.", updated: "2026-11-06" }
 
-This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, and how the proxy reads a request body. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
+This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, and whether an endpoint addressed with `.via()` reads or writes. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
 
 ## Call Errors
 
@@ -132,6 +132,19 @@ The proxy reads a request body as it arrives, holds it to the limits `createHand
 | A redirect from the upstream followed by an upload or a stream body under Node 22 and 24 | the call fails as a network error: they are sent with `redirect: "error"`, so fetch keeps no copy of them; a `redirect` the caller sets is kept |
 | The mock reading a body by itself | the server's own stream and parser, to the same limits |
 
+## Endpoints Addressed with .via()
+
+An endpoint addressed with `.via()` reads or writes as the verb its closure calls does, as one addressed with a verb on the chain does — see [Defining APIs](/docs/core-concepts/defining-apis).
+
+| 0.4 | Now |
+|---|---|
+| A closure that calls `http.get`, `head`, `options` or `query` — a write until `.reads()` said otherwise | a read: retried, cacheable with `.cache()`, taken by `useQuery`, routed to a page as a read and offered to an agent as one |
+| `.via(closure).reads()` for such a closure | `.via(closure)`: `.reads()` changes nothing |
+| A GET that changes something — read as it was addressed | `.writes()`: sent once per call, its answer never kept, carried by the proxy as a POST |
+| A closure that calls a reading verb on one path and a writing verb on another — a write | no endpoint until `.reads()` or `.writes()` names its kind; a group refuses it with that reason |
+| A closure typed `HttpProbe<Variables>` — a write | its type no longer says which verb it calls: leave its return type to be inferred, or name the kind with `.reads()` or `.writes()` |
+| A call on which a declared read's closure called `.put()`, `.patch()` or `.del()`, sent and retried as a read | `ConfigurationError` `ENDPOINT_VERB_KIND` before anything is sent; so is a call whose closure calls a verb of the other kind than the one the endpoint was defined with |
+
 ## Related
 
 - [NetworkError, TimeoutError & AbortError](/docs/api/call-errors) — the errors a call rejects with
@@ -139,3 +152,4 @@ The proxy reads a request body as it arrives, holds it to the limits `createHand
 - [Streams & Channels](/docs/advanced/realtime) — a client's connection, its states and its codes
 - [Replication Guide](/docs/deployment/replication) — a user's connections on every replica
 - [createHandler](/docs/api/api-route) — the limits a request body is held to
+- [Defining APIs](/docs/core-concepts/defining-apis) — how an endpoint's kind is decided

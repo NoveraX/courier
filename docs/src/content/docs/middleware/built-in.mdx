@@ -1,4 +1,4 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-06" }
 
 Courier ships six production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
@@ -141,7 +141,7 @@ retryMiddleware({
 
 ### Writes are sent once — unless they carry a key
 
-An endpoint that writes — a `post`, `put`, `patch` or `del` not declared a read with `.reads()`, or a `.via()` endpoint, which counts as a write until `.reads()` says otherwise — is not retried by default. A write whose answer was lost may already have been carried out, and sending it again can charge a card twice.
+An endpoint that writes — a `post`, `put`, `patch` or `del`, named on the chain or called by a `.via()` closure, that `.reads()` did not declare a read, or any endpoint `.writes()` declared a write — is not retried by default. A write whose answer was lost may already have been carried out, and sending it again can charge a card twice.
 
 An endpoint that declares an `idempotencyKey` is retried: each call sends one key in that header, the same on every attempt, and an upstream that deduplicates by it applies the write once however many times it arrives.
 

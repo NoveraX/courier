@@ -1,4 +1,4 @@
-export const metadata = { title: "MCP Server", description: "Offer your API's endpoints to AI agents as MCP tools — from the definition your typed client is built from, through the same middleware, schemas and Studio as your app.", mode: "both", updated: "2026-10-27" }
+export const metadata = { title: "MCP Server", description: "Offer your API's endpoints to AI agents as MCP tools — from the definition your typed client is built from, through the same middleware, schemas and Studio as your app.", mode: "both", updated: "2026-11-06" }
 
 ## One definition, one more client
 
@@ -49,7 +49,7 @@ npm install @noverax/courier-mcp
 | `title` | A name for people, which a client shows in place of the tool's. |
 | `limit` | How often a caller may call it: `{ maxCalls, window }`, at most `maxCalls` calls in any `window` milliseconds. See [How often an agent may call](#how-often-an-agent-may-call). |
 
-An endpoint that writes cannot be offered as a read: the type of `access` excludes `"read"` after `.post()`, `.put()`, `.patch()`, `.del()` and `.via()`, and the server refuses to start on one written in plain JavaScript. A read sent over POST says so with `.reads()` first. `.agent()` is named on an HTTP endpoint, after its verb — it describes that one endpoint, so a base made with `courier()` does not pass it on.
+An endpoint that writes cannot be offered as a read: the type of `access` excludes `"read"` after `.post()`, `.put()`, `.patch()` and `.del()`, after a `.via()` closure that calls one, and after `.writes()`, and the server refuses to start on one written in plain JavaScript. A read sent over POST says so with `.reads()` first. `.agent()` is named on an HTTP endpoint, after its verb — it describes that one endpoint, so a base made with `courier()` does not pass it on.
 
 `.agent(false)` keeps an endpoint from every agent, whatever the project's policy offers — a payout, an export of every customer:
 

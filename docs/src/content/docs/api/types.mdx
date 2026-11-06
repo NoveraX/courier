@@ -137,40 +137,51 @@ does nothing else:
 
 ```ts
 interface HttpWire {
-  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall
-  post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall
-  put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall
-  patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall
-  del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall
-  head(path?: string, options?: MethodOptions<"head">): WireCall
-  options(path?: string, variables?: unknown, options?: MethodOptions<"options">): WireCall
-  query(path?: string, body?: unknown, options?: MethodOptions<"query">): WireCall
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall<"query">
+  post(path?: string, body?: unknown, options?: MethodOptions<"post">): WireCall<"mutation">
+  put(path?: string, body?: unknown, options?: MethodOptions<"put">): WireCall<"mutation">
+  patch(path?: string, body?: unknown, options?: MethodOptions<"patch">): WireCall<"mutation">
+  del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall<"mutation">
+  head(path?: string, options?: MethodOptions<"head">): WireCall<"query">
+  options(path?: string, variables?: unknown, options?: MethodOptions<"options">): WireCall<"query">
+  query(path?: string, body?: unknown, options?: MethodOptions<"query">): WireCall<"query">
   /** A path with values put into it, each sent as text: http.path`reports/${year}` */
   path(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
 interface StreamWire {
-  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall
+  get(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall<"query">
   path(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
 interface ChannelWire {
-  connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall
+  connect(path?: string, variables?: unknown, options?: MethodOptions<"get">): WireCall<"query">
   path(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
-type HttpProbe<Variables> = (http: HttpWire, variables: Variables) => WireCall
+type WireKind = "query" | "mutation"
+/** What a verb hands back — opaque, marked with whether it reads ("query") or writes ("mutation"). */
+interface WireCall<Kind extends WireKind = WireKind> {}
+
+type HttpProbe<Variables, Call extends WireCall = WireCall> = (http: HttpWire, variables: Variables) => Call
 type StreamProbe<Variables> = (sse: StreamWire, variables: Variables) => WireCall
 type ChannelProbe<Variables> = (ws: ChannelWire, variables: Variables) => WireCall
 ```
 
+The mark is how `.via()` knows whether its endpoint reads or writes. A closure lifted out of the chain keeps it when its return type is left to be inferred:
+
 ```ts
-import type { HttpProbe } from "@noverax/courier/define"
+import type { HttpProbe, HttpWire } from "@noverax/courier/define"
 
-const byId: HttpProbe<{ id: string }> = (http, vars) => http.get(":id", vars)
+const byId = (http: HttpWire, vars: { id: string }) => http.get(":id", vars)
+const getById = endpoint.variables<{ id: string }>().via(byId).response<User>() // a read
 
-const getById = endpoint.variables<{ id: string }>().via(byId).response<User>()
+// Typed HttpProbe<Variables>, a closure no longer says which verb it calls, so its endpoint does
+const byIdTyped: HttpProbe<{ id: string }> = (http, vars) => http.get(":id", vars)
+const getByIdTyped = endpoint.variables<{ id: string }>().via(byIdTyped).reads().response<User>()
 ```
+
+`ViaAddressed<Call, …>` is what `.via()` gives for a closure returning `Call`. For a closure that calls a reading verb on one path and a writing verb on another, or one whose type does not say, it is an `HttpKindUnnamed` — no endpoint until `.reads()` or `.writes()` names its kind, and refused by a group with that reason.
 
 ## Response Types
 

@@ -175,8 +175,18 @@ In a project, or in a workspace from any of its packages, it moves every one of 
 
 - each range raised where each manifest writes it, in the same kind of range: `^0.4.0` to `^0.5.0`, `0.4.0` to `0.5.0`, `~0.4` to `~0.5`. A range of another kind is left as written, and the plan says why;
 - the breaking changes of each release it crosses, each with where its notes say what to write instead;
-- one install at the workspace's root, with your package manager. When it fails, the manifests and the lockfile are put back as they were;
+- your code carried over the releases it crosses, file by file, the script blocks of Vue, Svelte and Astro components among them;
+- one install at the workspace's root, with your package manager. When it fails, the manifests, the lockfile and your code are put back as they were;
 - then the types of what it changed are checked.
+
+What it changes in your code is what the code says for certain, through the names it imports from Courier's packages:
+
+| Release | Changed for you |
+|---|---|
+| 0.4.0 | `@noverax/courier-studio-core/config` imported from `@noverax/courier-build/config`, its mocks loader from `@noverax/courier-studio-core/mocks`, and `@noverax/courier-build` added beside Studio's runtime |
+| 0.5.0 | the realtime errors imported from `@noverax/courier/realtime`, 0.4's realtime `TimeoutError` as `RealtimeTimeoutError`, `SSESubscription` as `Subscription`; `sendAuthRequired(connections, id, ms)` as `await connections.requireAuth(id, { timeoutMs: ms })` in an async function; `retryOn: [0, …]` as `["network", "timeout", …]`; `isHTTPError(error) && error.status === 0` as `isNetworkError(error) \|\| isTimeoutError(error)` |
+
+A renamed name is renamed at every reference only where the file binds it once and nothing takes the new name; otherwise it is imported under its old name, with `as`. A name your module exports keeps the name it exports. Where the meaning depends on your code — a body's own `code` may be `"TIMEOUT"`, an upstream may answer 499, a registry's call may be on another object — the plan lists it under **Left to you**, at its line, with what to write instead: `cancelPrevious` given as a list, `data.code`, status 499, `new HTTPError({ status: 0 })`, a platform's `AbortError`, `onError` typed with `HTTPError`, a `retryOn` function, 0.4's `connections` and `sseConnections` calls, the client's `ws.heartbeat` and `ws.maxMessageSize`, a pub/sub adapter of your own and an `allowedHosts` entry with a scheme. A change that would not parse is left out, and the file named.
 
 Run it with `@latest`: it knows the changes up to its own release, and refuses a newer one. It also refuses a release that does not publish one of your packages, or that needs a newer Node.js than the one running. It asks the registry through your package manager, so your registry, proxy and credentials hold.
 

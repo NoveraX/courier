@@ -6,8 +6,9 @@
  * direct call to the mock gives it: the form a direct call sends for the
  * record. It holds one to its limits as it holds a form — over its upload
  * limit refused with 413, its text over the limit JSON is held to with 413,
- * a file of a type it does not take with 415 — and one that does not parse
- * with 400, as a Courier server refuses it.
+ * a file of a type the mock's or the route's own types leave out with the
+ * 415 a form's file gets — and one that does not parse with 400, as a
+ * Courier server refuses it.
  */
 import { createCaller, createProxyCaller, HTTPError } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
@@ -15,6 +16,7 @@ import { RECORD_UPLOAD_TYPE, routesOf } from "@noverax/courier/internal";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+import type { NetworkConfig } from "../src/types";
 
 const { endpoint } = courier();
 
@@ -35,7 +37,7 @@ function reportsApi(baseURL: string) {
       reports: defineGroup({
         prefix: "/reports",
         endpoints: {
-          create: endpoint.post("").variables<Report>().response<unknown>(),
+          create: endpoint.post("").variables<Report | FormData>().response<unknown>(),
           note: endpoint
             .post("/note")
             .variables<{ title: string; pages: number }>()
@@ -107,6 +109,13 @@ const report = ({ coverBytes = 8, title = "Q3 report" } = {}): Report => ({
 
 const failureOf = (call: Promise<unknown>) => call.catch((error: unknown) => error);
 
+/* How a call was refused: its status, and the body the mock answered it with. */
+async function refusalOf(call: Promise<unknown>): Promise<{ status: number; data: unknown }> {
+  const failure = await failureOf(call);
+  if (!(failure instanceof HTTPError)) throw new Error("The call was not refused");
+  return { status: failure.status, data: failure.data };
+}
+
 /* A record upload written by hand, its parts in the order given. */
 function recordUpload(...parts: [name: string, value: string][]): RequestInit {
   const written = parts.map(
@@ -166,20 +175,37 @@ describe("a record that holds a file, through the proxy to a mock", () => {
     expect(handled).toBe(0);
   });
 
-  it("holding a file of a type the mock does not take is refused 415, as a form is", async () => {
-    server.networkState.mergeConfig({ uploads: { accept: ["image/*"] } });
-
-    const failure = await failureOf(proxied().reports.create(report()));
-
-    expect(failure).toMatchObject({
-      status: 415,
-      data: {
-        success: false,
-        message: "q3.pdf (application/pdf) is not a type the mock takes: image/*",
+  it.each<[string, Partial<NetworkConfig>]>([
+    ["the mock's", { uploads: { accept: ["image/*"] } }],
+    [
+      "its route's own",
+      {
+        routeOverrides: [
+          { routeId: "reports:create", enabled: true, uploads: { accept: ["image/*"] } },
+        ],
       },
-    });
-    expect(handled).toBe(0);
-  });
+    ],
+  ])(
+    "holding a file of a type %s types leave out is refused 415, as a form's file is",
+    async (_, config) => {
+      server.networkState.mergeConfig(config);
+      const form = new FormData();
+      form.append("cover", report().cover);
+
+      const fromRecord = await refusalOf(proxied().reports.create(report()));
+      const fromForm = await refusalOf(proxied().reports.create(form));
+
+      expect(fromRecord).toEqual(fromForm);
+      expect(fromRecord).toEqual({
+        status: 415,
+        data: {
+          success: false,
+          message: "q3.pdf (application/pdf) is not a type the mock takes: image/*",
+        },
+      });
+      expect(handled).toBe(0);
+    },
+  );
 });
 
 describe("a record upload written by hand", () => {

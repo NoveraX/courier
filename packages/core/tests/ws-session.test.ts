@@ -159,6 +159,42 @@ describe("createSession", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("lifts the deadline an earlier request set, for a later one with none", () => {
+    vi.useFakeTimers();
+    const socket = createFakeSocket();
+    const session = createSession(socket);
+    session.admit(OK);
+
+    session.requireAuth(30_000);
+    session.requireAuth(0);
+    vi.advanceTimersByTime(30_000);
+
+    expect(socket.sent.slice(1)).toEqual([
+      { type: "reauth_required", timeoutMs: 30_000 },
+      { type: "reauth_required", timeoutMs: 0 },
+    ]);
+    expect(socket.closed).toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([
+    [30_000, 1_000],
+    [1_000, 30_000],
+  ])("holds the connection to its last request's deadline: %i, then %i", (first, last) => {
+    vi.useFakeTimers();
+    const socket = createFakeSocket();
+    const session = createSession(socket);
+    session.admit(OK);
+
+    session.requireAuth(first);
+    session.requireAuth(last);
+    vi.advanceTimersByTime(last - 1);
+    expect(socket.closed).toBeUndefined();
+    vi.advanceTimersByTime(1);
+
+    expect(socket.closed).toMatchObject({ code: 4401 });
+  });
+
   it("keeps no timer once the socket closed, and asks nothing of a closed one", () => {
     vi.useFakeTimers();
     const socket = createFakeSocket();

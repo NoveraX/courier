@@ -44,7 +44,10 @@ export interface DisconnectOptions {
 
 /** How long connections asked for their credentials again have to send them. */
 export interface RequireAuthOptions {
-  /** Milliseconds; the handler's `authRequiredTimeoutMs` when not given, 0 for no deadline */
+  /**
+   * Milliseconds; the handler's `authRequiredTimeoutMs` when not given, 0 for
+   * no deadline. It replaces the deadline an earlier request set, and 0 lifts it.
+   */
   timeoutMs?: number | undefined;
 }
 

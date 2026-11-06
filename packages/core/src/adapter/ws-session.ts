@@ -25,7 +25,8 @@ export interface WSSession {
   close(why: SessionClose): void;
   /**
    * Ask the client for its credentials again; unless they are taken within
-   * `timeoutMs` the connection is closed. 0 sets no deadline.
+   * `timeoutMs` the connection is closed. The deadline replaces the one an
+   * earlier request set, and 0 sets none: it lifts the earlier one.
    * @returns The function that lifts the deadline
    */
   requireAuth(timeoutMs: number): () => void;
@@ -100,8 +101,8 @@ export function createSession(ws: WebSocketLike, onClose?: (code: number) => voi
     requireAuth(timeoutMs) {
       if (closing) return () => undefined;
       tell({ type: "reauth_required", timeoutMs });
-      if (timeoutMs <= 0) return () => undefined;
       lift();
+      if (timeoutMs <= 0) return () => undefined;
       const timer = setTimeout(() => session.close({ kind: "reauth-timeout" }), timeoutMs);
       deadline = timer;
       return () => {

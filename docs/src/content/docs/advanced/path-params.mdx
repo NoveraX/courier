@@ -1,4 +1,4 @@
-export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with :param and {param}, a {+param} that keeps its slashes, filled from the variables or pathOptions, a colon sent as written for Google-style methods, and values a closure puts into its path.", mode: "both", updated: "2026-10-27" }
+export const metadata = { title: "Path Parameters", description: "Dynamic URL segments with :param and {param}, a {+param} that keeps its slashes, filled from the variables or pathOptions, a colon sent as written for Google-style methods, and values a closure puts into its path.", mode: "both", updated: "2026-11-06" }
 
 ## Basic syntax
 
@@ -51,7 +51,7 @@ export const articles = defineGroup({
 })
 ```
 
-Variables that fill no parameter by name — a form, a raw body, a list — are not checked, and neither are the parameters of a group's prefix, which `pathOptions` may supply (see below).
+Variables that fill no parameter by name — a form, a raw body, a list — are not checked, and neither are the parameters of a group's prefix, which `pathOptions` may supply (see below). Variables that may be either are read member by member: in `FormData | { bookId: string; title: string }` the form fills `:bookId` from its own field, and the record names it, so both may be passed; a record in the union that leaves a parameter out is refused.
 
 ## How a path is read
 

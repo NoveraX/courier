@@ -146,9 +146,14 @@ type NotFields = RawBody | FormData | readonly unknown[] | string | number | boo
 
 type MissingFrom<TNames extends string, TVariables> = unknown extends TVariables
   ? never
-  : [NonNullable<TVariables>] extends [NotFields]
-    ? never
-    : Exclude<TNames, keyof NonNullable<TVariables>>;
+  : MissingFromEach<TNames, NonNullable<TVariables>>;
+
+/* Each member of a union is read on its own: a form among them fills the
+   parameters by names its type does not know, and a record beside it names
+   each of them, or the parameters it leaves out are missing. */
+type MissingFromEach<TNames extends string, TMember> = TMember extends NotFields
+  ? never
+  : Exclude<TNames, keyof TMember>;
 
 // biome-ignore lint/suspicious/noConfusingVoidType: the builder marks variables not declared yet with `void`
 type Undeclared<TVariables> = [TVariables] extends [void] ? true : false;

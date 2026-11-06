@@ -44,7 +44,7 @@ import {
   askCourier,
   explorerPart,
   LOCAL_MODEL,
-  takeIconOffer,
+  seeIconsGoIn,
   vsiconsCopy,
 } from "./editor-shots/extra-scenes.mjs";
 import {
@@ -83,14 +83,17 @@ const ONLY = env.SHOTS ? new Set(env.SHOTS.split(",")) : undefined;
 /* Whether any of these shots is to be taken. */
 const wanted = (...shots) => !ONLY || shots.some((shot) => ONLY.has(shot));
 
-/* One editor's shots, the editor closed after them. */
+/* One editor's shots, the editor closed after them: each takes the window, what sizes it and what brings it to the front. */
 async function inEditor(profile, size, develop, shots) {
   const { app, page } = await openEditor(profile, size, develop);
   try {
-    await shots(page, (bounds) =>
-      app.evaluate(({ BrowserWindow }, next) => {
-        BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, ...next });
-      }, bounds),
+    await shots(
+      page,
+      (bounds) =>
+        app.evaluate(({ BrowserWindow }, next) => {
+          BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, ...next });
+        }, bounds),
+      () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.focus()),
     );
   } finally {
     await app.close();
@@ -137,7 +140,7 @@ for (const { name, theme } of THEMES) {
         await openStudioTab(page);
         await shoot(page, `studio-tab-${name}`);
       });
-    if (vsicons && wanted("icons")) await inEditor(extras, WIDE, develop, takeIconOffer);
+    if (vsicons && wanted("icons")) await inEditor(extras, WIDE, develop, seeIconsGoIn);
     if (wanted("icons", "chat"))
       await inEditor(extras, CHAT_SIZE, develop, async (page) => {
         if (vsicons && wanted("icons"))

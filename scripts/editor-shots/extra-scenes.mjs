@@ -34,21 +34,20 @@ export function vsiconsCopy(root) {
 }
 
 /**
- * Take the offer of Courier's icons, which comes once the editor opens a
- * Courier project with vscode-icons in use, and wait for the icons to go in.
+ * See Courier's icons go into vscode-icons, the icon theme in use, as the
+ * editor first opens the shots' profile — no question first — and wait
+ * for the message that says so, with its button to take them out. The
+ * window the user is in says it, so the window comes to the front first.
  *
  * @param {import("@playwright/test").Page} page - VS Code's window
+ * @param {unknown} _resize - What sizes the window, which this scene leaves as it is
+ * @param {() => Promise<unknown>} focus - What brings the window to the front
  */
-export async function takeIconOffer(page) {
-  const show = page
-    .locator(".notification-toast .monaco-button", { hasText: "Show Icons" })
-    .first();
-  await show.waitFor({ timeout: 60_000 });
-  await show.click();
-  await page
-    .locator(".notification-toast", { hasText: "Courier's icons are in" })
-    .first()
-    .waitFor({ timeout: 30_000 });
+export async function seeIconsGoIn(page, _resize, focus) {
+  await focus();
+  const told = page.locator(".notification-toast", { hasText: "are in vscode-icons now" }).first();
+  await told.waitFor({ timeout: 60_000 });
+  await told.locator(".monaco-button", { hasText: "Take Them Out" }).waitFor();
 }
 
 /**

@@ -102,7 +102,7 @@ Every setup in a project without Courier adds `courier.config.ts`, the list of y
 npx @noverax/create-courier --openapi https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. In a terminal, pick it as your API and give its URL or file: a URL that is none, or a file that is not there, is asked for again. The setup sends the server no credentials: where it answers 401 or 403, the setup says to download the specification and import its file. See [Import an API](/docs/studio/import-api).
+Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. In a terminal, pick it as your API and give its URL or file: a URL that is none, or a file that is not there, is asked for again. The setup sends the server no credentials: where it answers 401 or 403, the setup says to download the specification and import its file. An address with a user or a password in it, which Studio reads nothing from, is refused before anything is installed, with `SPEC_CREDENTIALS_IN_URL`: import its file, or set Courier up without the import, then run `npx @noverax/courier-studio import <address> --basic-env USER_VARIABLE:PASSWORD_VARIABLE`, which reads the two from those environment variables. See [Import an API](/docs/studio/import-api).
 
 Behind a corporate proxy, npm installs through the proxy its own settings or `HTTPS_PROXY` name, and the specification is fetched through it once `NODE_USE_ENV_PROXY=1` is set — see [Proxies & Certificates](/docs/advanced/proxies-and-certificates#create-courier).
 
@@ -142,7 +142,7 @@ With `--json` the command asks nothing, and writes one JSON document to standard
 | `warnings` | Programs that write the types the added files read, such as `astro sync`, that failed |
 | `typecheck` | `clean`, `errors` with their `lines`, `unchecked` with its `reason`, or `no-typescript` |
 | `undone` | For a run that failed part way: the files it `removed` and `putBack`, and those it `kept`, each with why |
-| `error` | Its `code` and `message`: `CONFIRMATION_REQUIRED`, `DECLINED`, `GIT_DIRTY`, `NODE_TOO_OLD` or `REFUSED` for a refusal, which changed nothing; `INSTALL_FAILED`, `INSTALL_TIMED_OUT`, `CANCELLED`, `FILE_APPEARED`, `FILE_CHANGED`, `WRITE_FAILED`, `PATH_OUTSIDE_PROJECT`, `IMPORT_FAILED`, `GENERATOR_FAILED`, `TYPECHECK_FAILED` or `UNEXPECTED_ERROR` for a failure |
+| `error` | Its `code` and `message`: `CONFIRMATION_REQUIRED`, `DECLINED`, `GIT_DIRTY`, `NODE_TOO_OLD`, `SPEC_CREDENTIALS_IN_URL` or `REFUSED` for a refusal, which changed nothing; `INSTALL_FAILED`, `INSTALL_TIMED_OUT`, `CANCELLED`, `FILE_APPEARED`, `FILE_CHANGED`, `WRITE_FAILED`, `PATH_OUTSIDE_PROJECT`, `IMPORT_FAILED`, `GENERATOR_FAILED`, `TYPECHECK_FAILED` or `UNEXPECTED_ERROR` for a failure |
 
 `npx @noverax/courier-cli setup --json` writes the same document, its `command` naming it.
 

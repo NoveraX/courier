@@ -113,6 +113,7 @@ describe("setupChoices", () => {
       "./no-such-spec.json",
       "https://",
       "ftp://example.com/spec",
+      "https://ana:pw@example.com/spec.json",
       spec,
       false,
       "plugin",
@@ -126,6 +127,9 @@ describe("setupChoices", () => {
       expect.stringMatching(/^There is no \.\/no-such-spec\.json here, at /),
       "No URL can be read from https://",
       "A URL to import from starts with https:// or http://",
+      expect.stringMatching(
+        /^It carries a user or a password in its address, which Studio refuses with SPEC_CREDENTIALS_IN_URL: .* import https:\/\/example\.com\/spec\.json --basic-env/,
+      ),
     ]);
   });
 

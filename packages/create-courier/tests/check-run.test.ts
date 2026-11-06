@@ -1,7 +1,8 @@
 import { join, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { checkRun } from "../src/check-run";
+import { SetupRefusal } from "../src/apply/setup-refusal";
+import { checkRun, specificationProblem } from "../src/check-run";
 import { projectWith, removeProjects } from "./recipes/project-fixture";
 
 afterAll(removeProjects);
@@ -50,6 +51,28 @@ describe("checkRun", () => {
     expect(() => checkRun({ openapi: "ftp://example.com/openapi.json" })).toThrow(
       "--openapi: a URL to import from starts with https:// or http://",
     );
+  });
+
+  it("refuses an address with a user or a password in it before anything is installed, as Studio does, naming it without them", () => {
+    /* Made up for the test. */
+    const password = "pw-made-up-41c7";
+    let refusal: unknown;
+    try {
+      checkRun({ openapi: `https://ana:${password}@specs.example/pets.json` });
+    } catch (error) {
+      refusal = error;
+    }
+
+    expect(refusal).toBeInstanceOf(SetupRefusal);
+    expect(refusal).toMatchObject({
+      code: "SPEC_CREDENTIALS_IN_URL",
+      message:
+        "--openapi: it carries a user or a password in its address, which Studio refuses with SPEC_CREDENTIALS_IN_URL: import its file, or set Courier up without the import, then run npx @noverax/courier-studio import https://specs.example/pets.json --basic-env USER_VARIABLE:PASSWORD_VARIABLE, which reads the two from those environment variables",
+    });
+    expect(specificationProblem("https://ana@specs.example/pets.json")).toMatch(
+      /^it carries a user or a password in its address/,
+    );
+    expect(specificationProblem(`https://ana:${password}@`)).not.toContain(password);
   });
 
   it("refuses a specification file that is not there, naming where it looked", () => {

@@ -1,12 +1,23 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { urlWithoutSecrets } from "@noverax/courier/internal";
 
+import { SetupRefusal } from "./apply/setup-refusal";
 import type { CreateRun } from "./create-run";
+
+/* Whether a URL names a user or a password before its host, which Studio reads no specification from. */
+function carriesCredentials(spec: string): boolean {
+  if (!/^https?:\/\//i.test(spec) || !URL.canParse(spec)) return false;
+  const url = new URL(spec);
+  return url.username !== "" || url.password !== "";
+}
 
 /**
  * What is wrong with a specification to import, as it was given: a URL
- * that is none, or a file that is not there. A relative path is read from
- * where the command runs; `-` is standard input.
+ * that is none, one with a user or a password in it, which Studio refuses
+ * to read from, or a file that is not there. A relative path is read from
+ * where the command runs; `-` is standard input. An address is named with
+ * its credentials cut.
  *
  * @param spec - The specification: a URL, a file, or `-`
  * @returns What is wrong, or `undefined` where nothing is
@@ -18,8 +29,10 @@ import type { CreateRun } from "./create-run";
 export function specificationProblem(spec: string): string | undefined {
   if (spec === "") return "it names no URL or file";
   if (spec === "-") return undefined;
+  if (carriesCredentials(spec))
+    return `it carries a user or a password in its address, which Studio refuses with SPEC_CREDENTIALS_IN_URL: import its file, or set Courier up without the import, then run npx @noverax/courier-studio import ${urlWithoutSecrets(spec)} --basic-env USER_VARIABLE:PASSWORD_VARIABLE, which reads the two from those environment variables`;
   if (/^https?:\/\//i.test(spec))
-    return URL.canParse(spec) ? undefined : `no URL can be read from ${spec}`;
+    return URL.canParse(spec) ? undefined : `no URL can be read from ${urlWithoutSecrets(spec)}`;
   if (/^[a-z][a-z\d+.-]*:\/\//i.test(spec))
     return "a URL to import from starts with https:// or http://";
   return existsSync(resolve(spec)) ? undefined : `there is no ${spec} here, at ${resolve(spec)}`;
@@ -31,9 +44,11 @@ export function specificationProblem(spec: string): string | undefined {
  * takes its place; the example's mock without the example, without
  * Studio, which runs it, or beside an import; an import without Studio,
  * which runs it; a specification that is no URL or a file that is not
- * there; and an API's name with no import to give it to.
+ * there, or an address with a user or a password in it; and an API's
+ * name with no import to give it to. Nothing is installed by then.
  *
  * @param run - What the command line asked for
+ * @throws {SetupRefusal} `SPEC_CREDENTIALS_IN_URL` for an address with a user or a password in it, as Studio refuses it
  * @throws {Error} Naming the option to change
  * @example
  * ```ts
@@ -62,5 +77,8 @@ export function checkRun(run: CreateRun): void {
   if (run.studio === false)
     throw new Error("--openapi imports with Studio's command: leave out --no-studio");
   const problem = specificationProblem(openapi);
-  if (problem !== undefined) throw new Error(`--openapi: ${problem}`);
+  if (problem === undefined) return;
+  if (carriesCredentials(openapi))
+    throw new SetupRefusal("SPEC_CREDENTIALS_IN_URL", `--openapi: ${problem}`);
+  throw new Error(`--openapi: ${problem}`);
 }

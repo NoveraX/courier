@@ -5,6 +5,8 @@
  * gives it, and the ids follow github-slugger's on words a heading could
  * hold.
  */
+import { fileURLToPath } from "node:url"
+
 import { compile } from "@mdx-js/mdx"
 import GithubSlugger from "github-slugger"
 import type { Element, Root } from "hast"
@@ -14,6 +16,9 @@ import { describe, expect, it } from "vitest"
 
 import { docPages } from "@/site/content/docs-files"
 import { pageHeadings } from "@/site/content/page-headings"
+
+/* The pages, found from this test wherever the run starts. */
+const PAGES = fileURLToPath(new URL("../../src/content/docs", import.meta.url))
 
 const HEADING_TAGS = new Set(["h2", "h3", "h4", "h5", "h6"])
 /* Compiling every page as the site does is seconds of work, and more on a busy machine: no
@@ -42,7 +47,7 @@ describe("a page's headings", () => {
   it("have the ids the site renders them with, on every page", {
     timeout: EVERY_PAGE_MS,
   }, async () => {
-    const pages = docPages()
+    const pages = docPages(PAGES)
     for (const page of pages) {
       const read = pageHeadings(page.source).map((heading) => heading.id)
       expect(read, page.slug.join("/")).toEqual(await renderedIds(page.source))

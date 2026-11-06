@@ -4,13 +4,13 @@
  * copies it from the page holds the block the commands recognise.
  */
 import fs from "node:fs"
-import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 import { describe, expect, it } from "vitest"
 
 import { AGENT_RULES } from "../../../packages/create-courier/src/agent-rules/rules-text"
 
-const PAGE = path.join(process.cwd(), "src/content/docs/agents/docs.mdx")
+const PAGE = fileURLToPath(new URL("../../src/content/docs/agents/docs.mdx", import.meta.url))
 
 describe("Docs for Your Agent", () => {
   it("shows Courier's block for AGENTS.md as the commands write it", () => {

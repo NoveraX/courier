@@ -11,6 +11,7 @@
  */
 import fs from "node:fs"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { runInNewContext } from "node:vm"
 
 import ts from "typescript"
@@ -23,7 +24,9 @@ import { SECTION_ICONS } from "@/site/layout/section-icon"
 
 import nextConfig from "../../next.config"
 
-const CONTENT = path.join(process.cwd(), "src/site/content")
+/* The site's folders, found from this test wherever the run starts. */
+const CONTENT = fileURLToPath(new URL("../../src/site/content", import.meta.url))
+const PAGES = fileURLToPath(new URL("../../src/content/docs", import.meta.url))
 /* What the docs package's build reads the docs with. */
 const ENTRIES = ["docs-files.ts", "docs-nav.ts", "page-markdown.ts", "llms.ts", "search-index.ts"]
 
@@ -55,7 +58,7 @@ describe("the modules the docs are read as text with", () => {
 
 describe("a page's metadata, read from its source", () => {
   it("is what its export holds, on every page", () => {
-    const pages = docPages()
+    const pages = docPages(PAGES)
     for (const page of pages) {
       const lines = page.source.split("\n")
       const range = metadataLines(lines)

@@ -84,6 +84,7 @@ Where `retryOn` says nothing:
 | 501 and every other status | no | the same request would be refused again |
 | Its own time running out — a `TimeoutError` | no | a slow upstream would only be made slower; name `"timeout"` in `retryOn` to retry it |
 | A response that fails its schema, a middleware that throws | never | whatever `retryOn` says |
+| A redirect an upload cannot follow — one refused under Node 22 and 24, one more than 20 hops in, one to another scheme — a `NetworkError` | never | the upstream would answer it with the same redirect, whatever `retryOn` says |
 
 Give `retryOn` the statuses of answers, `"network"` for a request that got no answer, `"timeout"` for one whose time ran out — or a test of why the attempt failed:
 

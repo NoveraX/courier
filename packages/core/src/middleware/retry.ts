@@ -53,7 +53,10 @@ import type {
  * it once, or its request certainly never left: its host had no address or
  * refused the connection. `mutations: true` retries every write, `false`
  * none. A call whose body is a stream, which cannot be sent twice, is sent
- * once.
+ * once, and so is an upload a redirect it cannot follow failed — one Node
+ * 22's and 24's fetch is told to refuse, one more than 20 hops in, one to
+ * another scheme — whatever `retryOn` says: the upstream would answer it
+ * with the same redirect.
  *
  * @param options - How many attempts, how far apart, within what time, and which failures deserve one
  * @returns The middleware, to place on a source or an endpoint

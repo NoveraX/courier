@@ -12,9 +12,16 @@
  * it, for a redirect it may have to follow, unless it is told to follow
  * none (see `fetchCopies`). There an upload follows no redirect: one fails
  * it, as a network error does, unless the caller set `redirect` itself.
+ *
+ * A redirect the upload cannot follow — one fetch was told to refuse, one
+ * more than 20 hops in, one to another scheme than HTTP's — fails it once:
+ * the upstream would answer a second attempt with the same redirect, so a
+ * retry policy does not send it again.
  */
 
+import { NetworkError } from "../errors/network-error";
 import { FETCH_COPIES } from "./fetch-copies";
+import { unrepeatable } from "./unrepeatable";
 import type { UploadSource } from "./upload-source";
 
 const REDIRECTS: ReadonlySet<number> = new Set([301, 302, 303, 307, 308]);
@@ -66,32 +73,53 @@ export async function sendUpload(
   const follows = !refuses && source.replayable && (init.redirect ?? "follow") === "follow";
   /* Followed by hand, or not at all: fetch's own following goes to any origin. */
   const manual = follows || (withinOrigin && !refuses);
+  const redirect = refuses ? "error" : manual ? "manual" : init.redirect;
   const origin = new URL(url).origin;
   let hop: Hop = { url, method: init.method, headers: new Headers(init.headers), withBody: true };
 
   for (let count = 0; ; count++) {
-    const response = await send(hop.url, {
-      ...init,
-      method: hop.method,
-      headers: hop.headers,
-      body: hop.withBody ? wrap(source.open()) : null,
-      redirect: refuses ? "error" : manual ? "manual" : init.redirect,
-      duplex: "half",
-    } as RequestInit);
+    let response: Response;
+    try {
+      response = await send(hop.url, {
+        ...init,
+        method: hop.method,
+        headers: hop.headers,
+        body: hop.withBody ? wrap(source.open()) : null,
+        redirect,
+        duplex: "half",
+      } as RequestInit);
+    } catch (error) {
+      throw redirect === "error" && isRefusedRedirect(error) ? cannotFollow(error) : error;
+    }
     const location = follows && REDIRECTS.has(response.status) && response.headers.get("location");
     if (!location) return response;
     if (withinOrigin && new URL(location, hop.url).origin !== origin) return response;
 
     await response.body?.cancel();
-    if (count === MAX_REDIRECTS) throw new TypeError("Too many redirects");
+    if (count === MAX_REDIRECTS) throw cannotFollow(new TypeError("Too many redirects"));
     hop = nextHop(hop, response.status, location);
   }
+}
+
+/* What Node's fetch rejects a request with for a redirect it was told to refuse: its cause says
+   so, and names no code, which tells it apart from a connection that failed on the way. */
+function isRefusedRedirect(error: unknown): boolean {
+  return (
+    error instanceof TypeError &&
+    error.cause instanceof Error &&
+    error.cause.message === "unexpected redirect"
+  );
+}
+
+/* A redirect the upload cannot follow, failing it as a network error does, and only once. */
+function cannotFollow(cause: unknown): NetworkError {
+  return unrepeatable(new NetworkError({ cause }));
 }
 
 function nextHop(hop: Hop, status: number, location: string): Hop {
   const target = new URL(location, hop.url);
   if (target.protocol !== "http:" && target.protocol !== "https:") {
-    throw new TypeError(`Redirect to an unsupported scheme: ${target.protocol}`);
+    throw cannotFollow(new TypeError(`Redirect to an unsupported scheme: ${target.protocol}`));
   }
   const headers = new Headers(hop.headers);
   const toGet = status === 303 ? hop.method !== "HEAD" : status <= 302 && hop.method === "POST";

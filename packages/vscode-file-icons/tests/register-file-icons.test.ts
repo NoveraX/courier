@@ -208,14 +208,36 @@ describe("Courier's icons as the extension starts", () => {
     expect(logged).toEqual([["info", "vscode-icons is not installed."]]);
   });
 
-  it("are not put into a theme that takes no icons", async () => {
+  it("are not put into a theme that takes no icons, and the log says once which ones take them", async () => {
     settings.set("workbench.iconTheme", "vs-seti");
+    const registration = await started();
 
-    await started();
+    extensionListeners.fire();
+    await registration.settled();
 
     expect(settings.has("vsicons.associations.files")).toBe(false);
     expect(settings.has("material-icon-theme.files.associations")).toBe(false);
     expect(shown.infos).toEqual([]);
+    expect(logged).toEqual([
+      [
+        "info",
+        "The icon theme in use takes no custom icons: Courier's icons show in Material Icon Theme and vscode-icons.",
+      ],
+    ]);
+  });
+
+  it("tell the walkthrough whether they are in the icon theme in use", async () => {
+    settings.set("workbench.iconTheme", "vscode-icons");
+    await started();
+    const before = executed.filter(([name]) => name === "setContext");
+
+    await registered.get("courier.fileIcons.remove")?.();
+
+    expect(before).toEqual([["setContext", "courier.fileIconsInTheme", true]]);
+    expect(executed.filter(([name]) => name === "setContext")).toEqual([
+      ["setContext", "courier.fileIconsInTheme", true],
+      ["setContext", "courier.fileIconsInTheme", false],
+    ]);
   });
 });
 
@@ -339,6 +361,25 @@ describe("the file icon commands", () => {
       `Courier's icons are out of the file icon themes. "Courier: Show Courier's Icons in the File Icon Theme" puts them back.`,
       `Courier's icons are in vscode-icons. "Courier: Remove Courier's Icons from the File Icon Theme" takes them out.`,
     ]);
+  });
+
+  it("point to the icon themes that take them, in the editor's own picker, when the one in use takes none", async () => {
+    settings.set("workbench.iconTheme", "vs-seti");
+    settings.set("courier.fileIcons.automatic", false);
+    const registration = await started();
+    asked.buttons.push("Choose a File Icon Theme");
+
+    await registered.get("courier.fileIcons.show")?.();
+    await registration.settled();
+
+    expect(shown.infos).toEqual([
+      "The icon theme in use takes no custom icons. Courier's icons show in Material Icon Theme and vscode-icons: choose one of them, and they go in.",
+    ]);
+    expect(shown.buttons).toEqual([["Choose a File Icon Theme"]]);
+    expect(executed).toContainEqual(["workbench.action.selectIconTheme"]);
+    expect(settings.has("courier.fileIcons.automatic")).toBe(false);
+    expect(settings.has("vsicons.associations.files")).toBe(false);
+    expect(settings.has("material-icon-theme.files.associations")).toBe(false);
   });
 
   it("are settled once the change a command asked for is made", async () => {

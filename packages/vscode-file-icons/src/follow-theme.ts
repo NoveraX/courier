@@ -6,6 +6,7 @@ import { AUTOMATIC, automatic, SHOW_ICONS } from "./icons-choice";
 import { iconsLog } from "./icons-log";
 import type { PutInNotice } from "./put-in-notice";
 import { notHere, themeInUse } from "./theme-reach";
+import { TAKES_NONE } from "./where-icons-show";
 
 /** What following the icon theme in use needs. */
 export interface Following {
@@ -18,8 +19,9 @@ export interface Following {
 }
 
 /**
- * Courier's icons for the icon theme in use, when it is one that takes
- * them. In it already, nothing to do; running elsewhere than here, said
+ * Courier's icons for the icon theme in use. A theme that takes none —
+ * VS Code's own Seti among them — said once in the log, with those that
+ * do; in it already, nothing to do; running elsewhere than here, said
  * once in the log; while the user lets them go in by themselves — the
  * default, until they take them out — carried over without a word from
  * the other theme they are in, or put in where they are in no theme yet
@@ -34,7 +36,11 @@ export interface Following {
  */
 export async function followThemeInUse({ icons, notice, told }: Following): Promise<void> {
   const theme = themeInUse();
-  if (!theme || hasCourierIcons(theme)) return;
+  if (!theme) {
+    logOnce(told, TAKES_NONE);
+    return;
+  }
+  if (hasCourierIcons(theme)) return;
   const { label, extension } = ICON_THEMES[theme];
   if (!vscode.extensions.getExtension(extension)) {
     logOnce(told, notHere(theme));

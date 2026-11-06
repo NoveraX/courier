@@ -5,7 +5,7 @@ import { applyIcons, keepIconsCurrent, removeIcons, themesHoldingIcons } from ".
 import { changesInTurn } from "./changes-in-turn";
 import { type Following, followThemeInUse } from "./follow-theme";
 import { showHere, tellHiddenHere } from "./hidden-here";
-import { type CourierIcons, ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
+import { type CourierIcons, ICON_THEMES } from "./icon-files";
 import { profileOf } from "./icon-users";
 import {
   AUTOMATIC,
@@ -19,6 +19,7 @@ import { MATERIAL_FILES, MATERIAL_FOLDERS } from "./material-icons";
 import { putInNotice } from "./put-in-notice";
 import { themeInUse } from "./theme-reach";
 import { VSICONS_FILES, VSICONS_FOLDERS } from "./vscode-icons";
+import { inThemeContext, pointToIconThemes } from "./where-icons-show";
 
 /* The settings that say Courier's icons are in a theme — which Settings Sync brings from the user's other machines. */
 const ASSOCIATIONS = [MATERIAL_FILES, MATERIAL_FOLDERS, VSICONS_FILES, VSICONS_FOLDERS];
@@ -65,7 +66,17 @@ export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRe
     dir: join(context.extensionPath, "media", "icons"),
     profile: profileOf(context.globalState),
   };
-  const { inTurn, settled } = changesInTurn();
+  const { inTurn: queue, settled } = changesInTurn();
+  const inTheme = inThemeContext();
+  /* After each change, the walkthrough hears whether the icons are in the theme in use. */
+  const inTurn = (what: string, change: () => Promise<unknown>) =>
+    queue(what, async () => {
+      try {
+        return await change();
+      } finally {
+        await inTheme.tell();
+      }
+    });
   const remove = () =>
     inTurn("Courier could not take its file icons out", async () => {
       await setAutomatic(false);
@@ -74,11 +85,15 @@ export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRe
         `Courier's icons are out of the file icon themes. "${SHOW_ICONS}" puts them back.`,
       );
     });
-  const show = async () => {
-    const theme = await chooseTheme();
-    if (!theme) return;
-    await inTurn("Courier could not put its file icons in", async () => {
+  /* The user's yes: into the theme in use, and into each one picked from now on — Seti's users told which take them. */
+  const show = () =>
+    inTurn("Courier could not put its file icons in", async () => {
       await setAutomatic(true);
+      const theme = themeInUse();
+      if (!theme) {
+        pointToIconThemes();
+        return;
+      }
       const why = await applyIcons(icons, theme);
       if (why) void vscode.window.showWarningMessage(why);
       else
@@ -86,7 +101,6 @@ export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRe
           `Courier's icons are in ${ICON_THEMES[theme].label}. "Courier: Remove Courier's Icons from the File Icon Theme" takes them out.`,
         );
     });
-  };
   const keep = () =>
     inTurn("Courier could not keep its file icons current", () => keepIconsCurrent(icons));
   const notice = putInNotice(context.globalState, () => void remove());
@@ -149,24 +163,4 @@ export function registerFileIcons(context: vscode.ExtensionContext): FileIconsRe
     { dispose: () => clearTimeout(settling) },
   );
   return Object.assign(registered, { ready, settled });
-}
-
-/* The theme in use, when it takes Courier's icons; else one of those installed, as the user picks. */
-async function chooseTheme(): Promise<IconTheme | undefined> {
-  const inUse = themeInUse();
-  if (inUse) return inUse;
-  const installed = ICON_THEME_IDS.filter((theme) =>
-    vscode.extensions.getExtension(ICON_THEMES[theme].extension),
-  );
-  if (installed.length === 0) {
-    void vscode.window.showInformationMessage(
-      "Courier's icons show in Material Icon Theme and vscode-icons, the icon themes that take custom icons; install one of them to see them.",
-    );
-    return undefined;
-  }
-  const picked = await vscode.window.showQuickPick(
-    installed.map((theme) => ({ label: ICON_THEMES[theme].label, theme })),
-    { title: "Show Courier's icons in" },
-  );
-  return picked?.theme;
 }

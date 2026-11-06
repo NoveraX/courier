@@ -67,7 +67,7 @@ A list of vscode-icons associations in a folder's own settings takes the place o
 
 In a workspace you have not trusted, the folder vscode-icons reads custom icons from comes from your own settings alone: the workspace cannot choose where Courier's icons are written. A theme that does not run beside the extension takes no icons from it, and is said so — in a remote window, one installed on the remote machine only; install it on this computer too, and VS Code runs it here.
 
-Other icon themes take no custom icons; VS Code's own Seti among them.
+Other icon themes take no custom icons, VS Code's own Seti among them, and the log says so. With one of them in use, **Courier: Show Courier's Icons in the File Icon Theme** opens the editor's **File Icon Theme** picker: choose Material Icon Theme or vscode-icons there — or install one — and the icons go in as soon as you do. The extension never changes the icon theme you use.
 
 ## Commands
 

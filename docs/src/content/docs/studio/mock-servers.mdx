@@ -1,4 +1,4 @@
-export const metadata = { title: "Mock servers", description: "Declare mock servers in courier.mocks.ts for Studio to generate and run, point a proxy caller at them, and add them from Studio.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Mock servers", description: "Declare mock servers in courier.mocks.ts for Studio to generate and run, point a proxy caller at them, and add them from Studio.", mode: "both", updated: "2026-11-06" }
 
 ## Install
 
@@ -108,7 +108,7 @@ A mock stands in for the API itself, where a direct caller goes, and also for a 
 
 | Route | For | As a Courier proxy serves it |
 | --- | --- | --- |
-| `GET`/`POST /api/request` | an HTTP call | the endpoint named by `_s`, `_g` and `_m` in the query; a cached read's variables in `_v`, any other call's in the JSON or form body |
+| `GET`/`POST /api/request` | an HTTP call | the endpoint named by `_s`, `_g` and `_m` in the query; a cached read's variables in `_v`, any other call's in the body: JSON, a form, or the record upload of a record that holds a file |
 | `GET /api/sse` | a stream | the stream's events, the variables in `_v` |
 | `/api/ws` (WebSocket) | a channel | every channel a caller subscribes to, on one socket, each by its topic |
 
@@ -132,7 +132,8 @@ A mock reads a body as a Courier server does, at every path it serves:
 
 - JSON: `application/json` or any `+json` type. A body sent with no type, or as plain text, is read as JSON when it is JSON, as `fetch` sends a JSON string it is given no type for.
 - A form, `multipart/form-data` or URL-encoded: its fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. The handler's `ctx.variables` is typed so — `MockFormFields`, from `@noverax/courier-mock/testing` — and a mock client given a form in a test, URL-encoded too, hands it over the same way, so one handler serves both.
-- A file sent as the whole body, as a direct call made with a `Blob`, an `ArrayBuffer` or a typed array sends it: the handler gets a `Blob` of its type. A path that gives values of its own (`PUT /files/:id`) is refused such a body with 400, since raw bytes have no fields to hold them; send the file in a form there. The proxy route takes JSON or a form only, as a Courier proxy does.
+- A record that holds a file, as a proxy client sends one to `/api/request`: a record upload, `multipart/vnd.courier.variables` — see [File Upload](/docs/advanced/upload#a-file-among-the-variables). It is read as a Courier server reads one, to the same limits, and handed to the handler as the form a direct call sends for that record, so a handler reads the same fields and files whichever way the call came.
+- A file sent as the whole body, as a direct call made with a `Blob`, an `ArrayBuffer` or a typed array sends it: the handler gets a `Blob` of its type. A path that gives values of its own (`PUT /files/:id`) is refused such a body with 400, since raw bytes have no fields to hold them; send the file in a form there. The proxy route takes JSON, a form or a record upload only, as a Courier proxy does.
 
 A file's name is kept as it was sent, `../` and all: the mock writes no file. A generated create, update or replace keeps each file in its record as its name, type and size. The mock reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
 

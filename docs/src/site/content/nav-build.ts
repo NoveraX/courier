@@ -88,6 +88,8 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Session Files", href: "/docs/studio/session-files" },
       { title: "Contract Drift", href: "/docs/studio/contract-drift" },
       { title: "VS Code Extension", href: "/docs/studio/editor" },
+      { title: "Courier File Icons", href: "/docs/studio/file-icons" },
+      { title: "VS Code Extension Reference", href: "/docs/studio/editor-reference" },
       { title: "How Studio Loads the Project", href: "/docs/studio/project-loading" },
       { title: "Host a Public Demo", href: "/docs/studio/public-demo" },
     ],

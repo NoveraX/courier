@@ -7,6 +7,13 @@
  * that links to the new one, for a reader the page cannot send on.
  */
 export const MOVED_ANCHORS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "/docs/studio/editor": {
+    snippets: "/docs/studio/editor-reference#snippets",
+    "commands-and-settings": "/docs/studio/editor-reference#commands-and-settings",
+    "how-a-call-is-found": "/docs/studio/editor-reference#how-a-call-is-found",
+    "from-studio-to-the-code": "/docs/studio/editor-reference#from-studio-to-the-code",
+    "what-stays-on-your-machine": "/docs/studio/editor-reference#what-stays-on-your-machine",
+  },
   "/docs/advanced/upload": {
     "where-the-proxy-keeps-an-upload": "/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload",
     "sending-an-upload-on-as-it-arrives":

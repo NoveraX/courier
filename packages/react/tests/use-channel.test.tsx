@@ -2,7 +2,12 @@
  * @vitest-environment jsdom
  */
 
-import { ForbiddenError, type WSChannel } from "@noverax/courier/realtime";
+import {
+  ConnectionError,
+  ForbiddenError,
+  RealtimeValidationError,
+  type WSChannel,
+} from "@noverax/courier/realtime";
 import { createMockWSChannel } from "@noverax/courier/testing";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -307,6 +312,64 @@ describe("useChannel", () => {
     // StrictMode dev double-mount must not produce a phantom channel
     expect(channelFn).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("useChannel whose factory throws", () => {
+  /* What reached the page uncaught: the window's error event, or Node's own where jsdom passes it on. */
+  function heardUncaught(): { thrown: unknown[]; stop: () => void } {
+    const thrown: unknown[] = [];
+    const onWindow = (event: ErrorEvent) => {
+      thrown.push(event.error);
+      event.preventDefault();
+    };
+    const onProcess = (error: unknown) => thrown.push(error);
+    window.addEventListener("error", onWindow);
+    process.on("uncaughtException", onProcess);
+    return {
+      thrown,
+      stop: () => {
+        window.removeEventListener("error", onWindow);
+        process.off("uncaughtException", onProcess);
+      },
+    };
+  }
+
+  it.each([
+    [
+      "a RealtimeValidationError, as a path parameter left empty gets",
+      () => new RealtimeValidationError('The path parameter "room" is empty', []),
+      RealtimeValidationError,
+      'The path parameter "room" is empty',
+    ],
+    [
+      "a failure of its own",
+      () => new TypeError("room is not a string"),
+      ConnectionError,
+      "TypeError: room is not a string",
+    ],
+  ])(
+    "reports %s as the channel's error, and shows it disconnected",
+    async (_what, failure, kind, message) => {
+      const uncaught = heardUncaught();
+      const onError = vi.fn();
+      const channelFn: ChannelFn = () => {
+        throw failure();
+      };
+      try {
+        const { result } = renderHook(() => useChannel(channelFn, "chat", "room", { onError }), {
+          wrapper,
+        });
+        await waitFor(() => expect(result.current.status).toBe("disconnected"));
+
+        expect(result.current.error).toBeInstanceOf(kind);
+        expect(result.current.error?.message).toBe(message);
+        expect(onError).toHaveBeenCalledTimes(1);
+        expect(uncaught.thrown).toEqual([]);
+      } finally {
+        uncaught.stop();
+      }
+    },
+  );
 });
 
 describe("useChannel's status", () => {

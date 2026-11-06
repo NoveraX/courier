@@ -1,4 +1,9 @@
-import { createLogger, isConfigurationError } from "@noverax/courier";
+import {
+  ConnectionError,
+  createLogger,
+  isConfigurationError,
+  RealtimeError,
+} from "@noverax/courier";
 import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
 /* A namespace import, not named hooks: the package entry is reachable from
    Server Components, and Next.js refuses to build a server module that names
@@ -41,7 +46,9 @@ interface ChannelState<TReceive> {
  * wait for it and go out once it does, 100 at most; one past them, or sent
  * while no channel is on its way, is dropped with a warning, and `send`
  * answers `false`. `reconnect` joins the channel again at once — or anew,
- * once its server ended it — and clears `error`.
+ * once its server ended it — and clears `error`. A channel that cannot be
+ * made at all — a path parameter left empty — reports why as `error` and
+ * reads `disconnected`.
  *
  * @param channel - Factory that creates a WSChannel (injected by createGroupHooks)
  * @param group - API group name
@@ -135,9 +142,8 @@ export function useChannel<TSend, TReceive>(
       try {
         ch = channel(group, method, vars);
       } catch (error) {
-        if (!isConfigurationError(error)) throw error;
         pendingRef.current = null;
-        fail(error);
+        fail(openFailure(error));
         report("disconnected");
         return;
       }
@@ -176,4 +182,10 @@ export function useChannel<TSend, TReceive>(
 
 function emptyChannel<TReceive>(key: string): ChannelState<TReceive> {
   return { key, lastMessage: undefined, error: undefined };
+}
+
+/* What kept a channel from being made, as its error: one of Courier's as it is, anything else as the connection's. */
+function openFailure(error: unknown): ChannelError {
+  if (error instanceof RealtimeError || isConfigurationError(error)) return error;
+  return new ConnectionError(String(error));
 }

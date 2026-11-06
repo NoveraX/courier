@@ -64,8 +64,9 @@ export interface SubscriptionResult<TData> {
 
 /**
  * What a channel reports as its error: a `RealtimeError` from the server, or
- * the `ConfigurationError` that kept the channel from opening at all, such as
- * a proxy without `proxyPath.ws`.
+ * what kept the channel from opening at all — the `ConfigurationError` of a
+ * proxy without `proxyPath.ws`, the `RealtimeValidationError` of a path
+ * parameter left empty, or any other failure as a `ConnectionError`.
  */
 export type ChannelError = RealtimeError | ConfigurationError;
 
@@ -78,7 +79,7 @@ export type CourierChannelOptions<TReceive, TVariables> = WithVariables<TVariabl
    * Called when the server refuses a message, a handler fails, or the
    * channel ends with a reason — with the `RealtimeError`, whose `code`
    * tells them apart (4403 forbidden, 4422 invalid, …) — or when the channel
-   * cannot be opened at all, with the `ConfigurationError` that says why
+   * cannot be opened at all, with the error that says why
    */
   onError?: ((error: ChannelError) => void) | undefined;
   /** Called on connection status changes */

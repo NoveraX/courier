@@ -1,4 +1,4 @@
-export const metadata = { title: "Streams & Channels", description: "Follow a server-sent event stream, keep a query up to date from one, and send on a WebSocket channel from React components.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Streams & Channels", description: "Follow a server-sent event stream, keep a query up to date from one, and send on a WebSocket channel from React components.", mode: "both", updated: "2026-11-06" }
 
 ## Following a stream
 
@@ -89,7 +89,7 @@ export function Room({ room }: { room: string }) {
 `send` returns a value, and an effect may only return its cleanup, so call it in a block: `useEffect(() => { send(message) }, [send, message])`.
 </Callout>
 
-`error` holds the last error on the channel: a `RealtimeError` whose `code` tells a refused message, a failed handler and a channel ended with a reason apart, or the `ConfigurationError` that kept the channel from opening. It is cleared when the channel connects again. `reconnect()` joins the channel again at once, as it does a stream: one its server ended — `4401` once a token expired — is joined anew, its messages read as before. Like a stream, a channel starts over — `lastMessage`, `error`, and `status` as `connecting` — when its method or variables change.
+`error` holds the last error on the channel: a `RealtimeError` whose `code` tells a refused message, a failed handler and a channel ended with a reason apart, or what kept the channel from opening — the `ConfigurationError` of a proxy without `proxyPath.ws`, the `RealtimeValidationError` of a path parameter left empty while its value loads, any other failure as a `ConnectionError` — with `status` `disconnected`, and nothing thrown to the page. It is cleared when the channel connects again. `reconnect()` joins the channel again at once, as it does a stream: one its server ended — `4401` once a token expired — is joined anew, its messages read as before. Like a stream, a channel starts over — `lastMessage`, `error`, and `status` as `connecting` — when its method or variables change.
 
 A proxy caller opens its channels at `proxyPath.ws`, which has no default: see [createProxyQueryCaller](/docs/api/create-proxy-query-caller).
 

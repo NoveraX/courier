@@ -16,7 +16,7 @@ import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { importAuthHeaders } from "./import-auth-headers";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
-import { declaredSpecRead, refuseCredentials } from "./parse-credentials";
+import { declaredSpecRead, refuseCredentials, refusedElsewhere } from "./parse-credentials";
 import type { ProjectReads } from "./project-state/types";
 import { type RequestWork, requestWork, type WorkedResponse } from "./request-work";
 import { sendRouteFailure } from "./route-failure";
@@ -57,10 +57,11 @@ const DEMO_PUBLIC_ONLY =
 
 /**
  * Mount `POST /api/apis/parse`. A caller with the project's token has Studio
- * read a file of the project, or a URL on whatever the project allows, with
- * the credentials the environment variables it names hold; a caller
- * without it — on a public demo or not — has it read the text as pasted, or
- * a URL on the public internet, with none. An import courier.config
+ * read a file of the project, or a URL on whatever the project allows —
+ * with the credentials the environment variables it names hold, from the
+ * machine Studio runs on; a caller without it — on a public demo or not —
+ * has it read the text as pasted, or a URL on the public internet, with
+ * none. An import courier.config
  * declares is read by its name, from its URL with its auth, so the page
  * needs neither. Every text is read in a process of its own, within a
  * budget, and the work stops once the caller goes away. A demo's visitor is
@@ -88,6 +89,8 @@ export function registerParseRoute(app: ParseRouteApp, deps: ParseRouteDeps): vo
       refuseCredentials(res, deps.demo);
       return;
     }
+    /* Nor does a page on another machine, though it holds the token. */
+    if (given.auth !== undefined && refusedElsewhere(req, res)) return;
     const work = requestWork(res);
     try {
       const body =

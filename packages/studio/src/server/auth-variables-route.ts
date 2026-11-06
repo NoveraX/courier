@@ -7,6 +7,7 @@ import { isRecord } from "@noverax/courier-cli/devkit";
 
 import { IMPORT_AUTH_LIMITS, isVariableName } from "./import-auth";
 import { variableValue } from "./import-auth-headers";
+import { refusedElsewhere } from "./parse-credentials";
 import type { JsonResponse, RouteRequest } from "./route-types";
 
 /** The part of Studio's Express app the route is mounted on. */
@@ -22,7 +23,9 @@ const MAX_NAMES = IMPORT_AUTH_LIMITS.headers + 2;
  * variables an import's auth names, it answers whether Studio's environment
  * — its process's, which takes the project's `.env*` files in — sets each
  * one. A value is never answered, and the route is open only to a page
- * with the project's token, as every route the token guard does not list.
+ * with the project's token, as every route the token guard does not list,
+ * on the machine Studio runs on: another machine's page is refused 403
+ * `NOT_LOCAL_PEER`, as it is a read with credentials.
  *
  * @param app - The Studio server's Express app
  * @param env - The environment the variables are looked up in
@@ -36,6 +39,8 @@ export function registerAuthVariablesRoute(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): void {
   app.post("/api/apis/auth-variables", (req, res) => {
+    /* Whether a variable is set is the environment's to tell, as its value is. */
+    if (refusedElsewhere(req, res)) return;
     const names = namesOf(req.body);
     if (names === null) {
       res.status(400).json({

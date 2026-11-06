@@ -7,13 +7,17 @@
 import { urlWithoutSecrets } from "@noverax/courier/internal";
 
 import { DEMO_CREDENTIALS_REFUSAL } from "./demo/demo-refusals";
+import { isLocalPeer } from "./mocks-edit/is-local-peer";
 import { readDeclarations } from "./project-state/read-declarations";
 import type { ProjectReads } from "./project-state/types";
-import type { JsonResponse } from "./route-types";
+import type { JsonResponse, RouteRequest } from "./route-types";
 import type { SpecRead } from "./validate-body";
 
 const CREDENTIALS_REFUSAL =
   "Studio sends a specification's credentials only for a page opened from the link it printed in its terminal, which carries this project's token.";
+
+const ELSEWHERE_REFUSAL =
+  "Studio reads its environment for a specification's credentials only for a page on the machine it runs on. Import the specification there, or run courier-studio import with --bearer-env, --basic-env or --header-env on that machine.";
 
 /** What a declared import is looked up in, and whom the route reads for. */
 export interface DeclaredSpecDeps {
@@ -38,6 +42,29 @@ export interface DeclaredSpecDeps {
 export function refuseCredentials(res: JsonResponse, demo: boolean): void {
   if (demo) res.status(403).json({ error: DEMO_CREDENTIALS_REFUSAL, code: "STUDIO_DEMO_REFUSED" });
   else res.status(401).json({ error: CREDENTIALS_REFUSAL, code: "STUDIO_TOKEN_REQUIRED" });
+}
+
+/**
+ * Refuse a page on another machine — a phone, a laptop on the same network
+ * — what Studio's environment holds: it is the shell Studio was started
+ * from, every key and token of it and not only the project's `.env*` files,
+ * and the page names the host a credential goes to. So Studio sends a
+ * variable, and says whether one is set, only for a page on the machine it
+ * runs on, as it edits project files only for one; it is refused 403
+ * `NOT_LOCAL_PEER`, even with the project's token.
+ *
+ * @param req - The request, whose peer says which machine sent it
+ * @param res - What the refusal is answered on
+ * @returns `true` once refused
+ * @example
+ * ```ts
+ * if (body.auth !== undefined && refusedElsewhere(req, res)) return;
+ * ```
+ */
+export function refusedElsewhere(req: RouteRequest, res: JsonResponse): boolean {
+  if (isLocalPeer(req.socket?.remoteAddress)) return false;
+  res.status(403).json({ error: ELSEWHERE_REFUSAL, code: "NOT_LOCAL_PEER" });
+  return true;
 }
 
 /**

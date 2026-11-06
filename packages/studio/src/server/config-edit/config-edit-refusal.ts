@@ -10,6 +10,8 @@ export type ConfigEditRefusalCode =
   | "LIST_SHAPE"
   /** The name the generated source is imported under is taken in the config. */
   | "NAME_IN_USE"
+  /** The import's address carries a secret, which the config would keep in the repository. */
+  | "SECRET_IN_FROM"
   /** The config changed after the change was shown. */
   | "CONFIG_CHANGED"
   /** The planned text did not read back as the change it was meant to be. */

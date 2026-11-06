@@ -233,3 +233,31 @@ describe("declaring an import in courier.config.ts through Studio", () => {
     expect(config()).toBe(CONFIG);
   });
 });
+
+describe("declaring an import whose address carries a secret", () => {
+  /* Made up for the test. */
+  const KEY = "k3y-made-up-9f2c";
+  const SECRET_URL = {
+    ...IMPORT,
+    importType: "url",
+    specUrl: `https://specs.example/petstore.json?api_key=${KEY}`,
+  };
+
+  it("leaves the entry to the developer, shown without the secret, and writes nothing", async () => {
+    const url = await start(project());
+    const written = await post(url, "/api/apis/write", SECRET_URL);
+
+    const preview = await post(url, "/api/apis/declare/preview", SECRET_URL);
+    const applied = await post(url, "/api/apis/declare/apply", { ...SECRET_URL, baseHash: "" });
+
+    expect(written.status).toBe(200);
+    expect(JSON.stringify(written.body.declaration)).toContain(
+      "https://specs.example/petstore.json",
+    );
+    expect(JSON.stringify(written.body.declaration)).not.toContain(KEY);
+    expect(preview.body).toMatchObject({ status: "manual", code: "SECRET_IN_FROM" });
+    expect(JSON.stringify(preview.body)).not.toContain(KEY);
+    expect(applied.body).toMatchObject({ status: "manual", code: "SECRET_IN_FROM" });
+    expect(config()).toBe(CONFIG);
+  });
+});

@@ -1,3 +1,6 @@
+import type { CourierImportEntry } from "@noverax/courier/config";
+import { urlWithoutSecrets } from "@noverax/courier/internal";
+
 import { formatImportSnippet } from "./format-import-snippet";
 import type { ImportDeclarationParts } from "./import-declaration-parts";
 import type { ImportDeclaration } from "./write-types";
@@ -19,7 +22,7 @@ export function declarationText(name: string, parts: ImportDeclarationParts): Im
     importLine: `import { ${parts.source.binding} } from ${JSON.stringify(parts.source.specifier)};`,
     entry: binding === name ? `${binding},` : `${JSON.stringify(name)}: ${binding},`,
   };
-  const importEntry = parts.importEntry && formatImportSnippet(name, parts.importEntry);
+  const importEntry = parts.importEntry && formatImportSnippet(name, shownEntry(parts.importEntry));
   return {
     configFile: parts.configFile,
     ...(parts.sourcesModule && source && { sourcesFile: parts.sourcesModule.file }),
@@ -27,4 +30,9 @@ export function declarationText(name: string, parts: ImportDeclarationParts): Im
     importEntry,
     ...(parts.leftOut > 0 && { leftOut: parts.leftOut }),
   };
+}
+
+/* Lines a page and a terminal show: an address's secrets cut, as the developer writes them in from the environment. */
+function shownEntry(entry: CourierImportEntry): CourierImportEntry {
+  return entry.importType === "url" ? { ...entry, from: urlWithoutSecrets(entry.from) } : entry;
 }

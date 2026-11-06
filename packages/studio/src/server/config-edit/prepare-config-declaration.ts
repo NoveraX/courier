@@ -1,3 +1,5 @@
+import { urlWithoutSecrets } from "@noverax/courier/internal";
+
 import type { LoadedCourierConfig } from "../config-loader";
 import { declarationText } from "../declaration-text";
 import { type ImportDeclarationParts, importDeclarationParts } from "../import-declaration-parts";
@@ -66,6 +68,8 @@ export function prepareConfigDeclaration(
   const parts = importDeclarationParts({ name, body, loaded, root });
   if (!parts) return null;
   const declaration = declarationText(name, parts);
+  const secret = secretInFrom(parts);
+  if (secret) return { name, parts, declaration, baseHash: "", plan: secret };
   const reads = readAll(parts, root);
   if (reads instanceof ConfigEditRefusal) {
     return { name, parts, declaration, baseHash: "", plan: reads };
@@ -88,6 +92,16 @@ export function prepareConfigDeclaration(
 export function combinedHash(reads: readonly { baseHash: string }[]): string {
   if (reads.length === 1) return reads[0]?.baseHash ?? "";
   return sha256Hex(reads.map((read) => read.baseHash).join(":"));
+}
+
+/* An address with a secret in it is left to the developer, who writes the secret in from the environment. */
+function secretInFrom({ importEntry }: ImportDeclarationParts): ConfigEditRefusal | undefined {
+  if (importEntry?.importType !== "url") return undefined;
+  if (urlWithoutSecrets(importEntry.from) === importEntry.from) return undefined;
+  return new ConfigEditRefusal(
+    "SECRET_IN_FROM",
+    "The import's address carries a secret, which courier.config.ts would keep in your repository, so Studio leaves the entry to you: build its from with the secret read from an environment variable, such as process.env.SPEC_API_KEY, or, when the host takes the secret in a header, give it as the import's auth.",
+  );
 }
 
 /* The module the source is listed in, when it is not the config, then the config. */

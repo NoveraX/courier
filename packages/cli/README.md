@@ -179,7 +179,7 @@ In a project, or in a workspace from any of its packages, it moves every one of 
 - each range raised where each manifest writes it, in the same kind of range: `^0.4.0` to `^0.5.0`, `0.4.0` to `0.5.0`, `~0.4` to `~0.5`. A range of another kind is left as written, and the plan says why;
 - the breaking changes of each release it crosses, each with where its notes say what to write instead;
 - your code carried over the releases it crosses, file by file, the script blocks of Vue, Svelte and Astro components among them;
-- Courier's block in `AGENTS.md` brought up to date between its markers, in the file of the workspace's root and of each package that lists Courier, where the file holds the block: one without it is left alone;
+- Courier's block in `AGENTS.md` brought up to date between its markers, in the file of the workspace's root and of each package that lists Courier, where the file holds the block: one without it is left alone. Where no manifest lists `@noverax/courier-docs`, the plan names `courier-cli setup --agents-md`, which installs the docs and writes the block;
 - one install at the workspace's root, with your package manager. When it fails, the manifests, the lockfile and your code are put back as they were;
 - then the types of what it changed are checked.
 

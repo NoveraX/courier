@@ -18,6 +18,7 @@ import { isRecord } from "../util/is-record";
 import { agentRulesEdits } from "./agent-rules-edits";
 import { migrateCode } from "./codemod/run-migrations";
 import { projectCode } from "./codemod/source-files";
+import { docsNote } from "./docs-note";
 import { manifestEdits } from "./manifest-edits";
 import { additionsOf } from "./package-needs";
 import { courierPackages } from "./project-packages";
@@ -131,7 +132,7 @@ export async function runUpgrade(
     typescript: undefined,
     manual: [...(code?.manual ?? []), ...(rules?.manual ?? [])],
     next: nextSteps(manager),
-    leftOut: [],
+    leftOut: docsNote(packages, to),
     prepare: [],
     agentRules: rules === undefined || rules.files.length === 0 ? undefined : rules.files,
   };

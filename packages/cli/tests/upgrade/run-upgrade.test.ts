@@ -235,6 +235,26 @@ describe("runUpgrade", () => {
     expect(readFileSync(join(repeated, "AGENTS.md"), "utf8")).toBe(`${stale}${stale}`);
   });
 
+  it("names the command that points the editor's agent at the docs, where no manifest lists them", async () => {
+    const without = await upgrade(shop(), { "dry-run": true });
+    const listed = shop({
+      "package.json": manifest({
+        name: "shop",
+        dependencies: { "@noverax/courier": "^0.4.0" },
+        devDependencies: { "@noverax/courier-docs": "^0.4.0" },
+      }),
+    });
+    const withDocs = await upgrade(listed, { "dry-run": true });
+
+    expect(without.plan?.plan.leftOut).toEqual([
+      expect.stringContaining(
+        "is not in the project: npx @noverax/courier-cli setup --agents-md, in the package that uses Courier, installs it",
+      ),
+    ]);
+    expect(without.plan?.plan.edits.map(({ path }) => path)).toEqual(["package.json"]);
+    expect(withDocs.plan?.plan.leftOut).toEqual([]);
+  });
+
   it("says the project is at the release already where every range is", async () => {
     const root = projectWith({
       "package.json": manifest({ dependencies: { "@noverax/courier": "^0.5.0" } }),

@@ -86,7 +86,7 @@ export async function readUpload(
   try {
     upload =
       config?.uploadMode === "stream"
-        ? await sentOn(body, boundary, limits, record, defaults)
+        ? await sentOn(body, boundary, limits, config, record, defaults)
         : await kept(body, boundary, limits, config, record);
   } catch (error) {
     if (error instanceof BodyError) return refusedBody(error);
@@ -113,10 +113,7 @@ async function kept(
   config: HandlerConfig | undefined,
   record: boolean,
 ): Promise<HeldUpload> {
-  const hold = new UploadHold({
-    memoryBytes: config?.totalUploadMemoryBytes ?? UPLOAD_ROOM.MEMORY_BYTES,
-    diskBytes: config?.totalUploadDiskBytes ?? UPLOAD_ROOM.DISK_BYTES,
-  });
+  const hold = holdFor(config);
   const store = storeFor(config, hold);
   try {
     if (record) {
@@ -139,19 +136,40 @@ async function sentOn(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
+  config: HandlerConfig | undefined,
   record: boolean,
   defaults: Readonly<Record<string, unknown>> | undefined,
 ): Promise<HeldUpload> {
-  const { options, upload, stop } = record
-    ? await streamedRecord(body, boundary, limits, defaults)
-    : await streamedForm(body, boundary, limits);
-  return {
-    options,
-    variables: upload,
-    release: async () => {
-      if (!upload.locked) await stop();
-    },
-  };
+  /* A record's text is held while its form is sent on, so it is taken out of the room every
+     upload shares, as a kept form's text is; a form's text goes on as it arrives. */
+  const hold = record ? holdFor(config) : undefined;
+  try {
+    const { options, upload, stop } = record
+      ? await streamedRecord(body, boundary, limits, defaults, hold)
+      : await streamedForm(body, boundary, limits);
+    return {
+      options,
+      variables: upload,
+      release: async () => {
+        try {
+          if (!upload.locked) await stop();
+        } finally {
+          hold?.release();
+        }
+      },
+    };
+  } catch (error) {
+    hold?.release();
+    throw error;
+  }
+}
+
+/* An upload's part of the room every upload of the process shares. */
+function holdFor(config: HandlerConfig | undefined): UploadHold {
+  return new UploadHold({
+    memoryBytes: config?.totalUploadMemoryBytes ?? UPLOAD_ROOM.MEMORY_BYTES,
+    diskBytes: config?.totalUploadDiskBytes ?? UPLOAD_ROOM.DISK_BYTES,
+  });
 }
 
 /* On disk past its share of memory where the runtime has a disk and the handler allows it. */

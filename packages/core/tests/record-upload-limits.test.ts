@@ -198,13 +198,38 @@ describe("a record upload", () => {
     expect((await again).status).toBe(200);
   });
 
-  it("counts its record's text, which has no disk to go to, against the room in memory", async () => {
-    const handlePost = await proxyTo(holding, { totalUploadMemoryBytes: 1_000 });
+  it.each([
+    ["kept", {}],
+    ["sent on as it arrives", { uploadMode: "stream" } as const],
+  ])(
+    "counts its record's text, which has no disk to go to, against the room in memory, %s",
+    async (_, config) => {
+      const handlePost = await proxyTo(holding, { totalUploadMemoryBytes: 1_000, ...config });
 
-    const refused = await (await sent(handlePost, request(recordBody(10, "x".repeat(2_000)))))
-      .answer;
+      const refused = await (await sent(handlePost, request(recordBody(10, "x".repeat(2_000)))))
+        .answer;
+
+      expect(refused.status).toBe(503);
+      expect(await refused.json()).toMatchObject({ code: "UPLOAD_CAPACITY_REACHED" });
+    },
+  );
+
+  it("sent on as it arrives holds its record's text in that room until its call has its answer", async () => {
+    const handlePost = await proxyTo(holding, {
+      uploadMode: "stream",
+      totalUploadMemoryBytes: 3_000,
+    });
+    const body = () => recordBody(10, "x".repeat(2_000));
+
+    const first = (await sent(handlePost, request(body()))).answer;
+    const refused = await (await sent(handlePost, request(body()))).answer;
+    for (const res of held.splice(0)) res.end("{}");
 
     expect(refused.status).toBe(503);
+    expect((await first).status).toBe(200);
+    const again = (await sent(handlePost, request(body()))).answer;
+    for (const res of held.splice(0)) res.end("{}");
+    expect((await again).status).toBe(200);
   });
 
   it("sent on as it arrives is read no faster than the upstream takes it, none of it kept", async () => {

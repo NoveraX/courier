@@ -5,6 +5,7 @@ import { type MultipartParts, multipartParts } from "./multipart-parts";
 import type { FormLimits } from "./read-form";
 import { malformedRecord, type RecordSlots, recordOf } from "./read-record";
 import { type OutgoingPart, type StreamedForm, sending } from "./streamed-form";
+import type { UploadHold } from "./upload-hold";
 
 /**
  * Read a record upload's options and record, and hand on the form the record
@@ -16,6 +17,7 @@ import { type OutgoingPart, type StreamedForm, sending } from "./streamed-form";
  * @param boundary - Its boundary
  * @param limits - The most parts, header bytes and text it may hold
  * @param defaults - The fields written ahead of the record's own: its source's `defaultBody`
+ * @param hold - The upload's part of the room every upload shares, which its text is taken from
  * @returns The options, the upload and what stops it
  * @throws BodyError `BODY_MALFORMED` for an upload whose record does not parse; a part out of
  *   place fails the upload as it is sent
@@ -29,9 +31,10 @@ export async function streamedRecord(
   boundary: string,
   limits: FormLimits,
   defaults: Readonly<Record<string, unknown>> = {},
+  hold?: UploadHold,
 ): Promise<StreamedForm> {
   const parts = multipartParts(body, boundary, limits);
-  const fields = new TextFields(limits.maxFieldBytes);
+  const fields = new TextFields(limits.maxFieldBytes, hold);
   let options: string | undefined;
   let record: RecordSlots;
   try {

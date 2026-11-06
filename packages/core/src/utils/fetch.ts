@@ -10,10 +10,11 @@ import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
 import { isFormData, normalizeHttpMethod } from "./helpers";
-import { sendWithUploadProgress, trackDownload } from "./progress";
+import { trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
+import { uploadWithoutProgress } from "./upload-without-progress";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   /** What the request sends; absent, nothing unless `json` is given. */
@@ -123,17 +124,29 @@ export async function coreFetch(
   const sendOnce = (sendSignal: AbortSignal | undefined): Promise<Response> => {
     const sent = sendSignal === undefined ? init : { ...init, signal: sendSignal };
     if (transport) return transport(fullUrl, sent);
+    /* Loaded with the first call that reports an upload or sends a device's file:
+       a page that does neither never loads XMLHttpRequest's sending. */
     if (requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))) {
-      return sendWithUploadProgress(
-        fullUrl,
-        { ...sent, body: requestBody },
-        onUploadProgress ?? ignoreProgress,
-        { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
+      return import("./upload-progress").then(
+        ({ sendWithUploadProgress }) =>
+          sendWithUploadProgress(
+            fullUrl,
+            { ...sent, body: requestBody },
+            onUploadProgress ?? ignoreProgress,
+            { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
+          ),
+        (cause: unknown) => {
+          uploadWithoutProgress(requestBody, cause);
+          return sendPlainly(sent);
+        },
       );
     }
-    /* Handed over as it is, a form or a Blob — under Node 22 and 24 a stream too — is copied
-       whole by Node's fetch for as long as it is sent; sent as the stream of its bytes, it is
-       read as it goes out. A streamed upload goes with the content type that names its boundary. */
+    return sendPlainly(sent);
+  };
+  /* Handed over as it is, a form or a Blob — under Node 22 and 24 a stream too — is copied
+     whole by Node's fetch for as long as it is sent; sent as the stream of its bytes, it is
+     read as it goes out. A streamed upload goes with the content type that names its boundary. */
+  const sendPlainly = (sent: typeof init): Promise<Response> => {
     const streamed =
       requestBody == null
         ? undefined

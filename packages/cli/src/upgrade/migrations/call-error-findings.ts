@@ -1,5 +1,5 @@
 import { type AstNode, isNode, nameOf, walk } from "../codemod/ast";
-import { boundImport, textOf } from "../codemod/imported-calls";
+import { boundOnce, textOf, valueImport } from "../codemod/imported-calls";
 import type { Finding, Migration } from "../migration";
 
 const ROOT = new Set(["@noverax/courier"]);
@@ -76,16 +76,24 @@ function comparison(node: AstNode): Finding | undefined {
 export const CALL_ERROR_FINDINGS: Migration = {
   id: "0.5.0/call-error-findings",
   title: "finds the call errors of 0.4 the code checks",
+  mentions: ["status", "code", "HTTPError", "DOMException"],
   migrate(file) {
     const findings: Finding[] = [];
-    const httpError = boundImport(file.program, ROOT, "HTTPError");
+    const httpError = valueImport(file.program, ROOT, "HTTPError");
+    /* Whether the file's HTTPError is the import, for certain: asked only where a check names it. */
+    let bound: boolean | undefined;
+    const isBound = () => {
+      bound ??= httpError !== undefined && boundOnce(file.program, httpError);
+      return bound;
+    };
     walk(file.program, ({ node }) => {
       const found = comparison(node);
       if (found !== undefined) findings.push(found);
       if (
         node.type === "NewExpression" &&
         httpError !== undefined &&
-        nameOf(node.callee) === httpError.local
+        nameOf(node.callee) === httpError.local &&
+        isBound()
       ) {
         const text = textOf(file, node);
         if (/\bstatus\s*:\s*0\b/.test(text))
@@ -110,8 +118,8 @@ export const CALL_ERROR_FINDINGS: Migration = {
       if (
         node.type === "Property" &&
         nameOf(node.key) === "onError" &&
-        httpError !== undefined &&
-        /:\s*HTTPError\b/.test(textOf(file, node.value))
+        /:\s*HTTPError\b/.test(textOf(file, node.value)) &&
+        isBound()
       )
         findings.push({
           at: node.start,

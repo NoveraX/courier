@@ -110,6 +110,14 @@ function clientOption(
 export const REALTIME_FINDINGS: Migration = {
   id: "0.5.0/realtime-findings",
   title: "finds the realtime calls of 0.4 the code makes",
+  mentions: [
+    "disconnect",
+    "ByMeta",
+    "heartbeat",
+    "maxMessageSize",
+    "allowedHosts",
+    "PubSubAdapter",
+  ],
   migrate(file) {
     const findings: Finding[] = [];
     walk(file.program, ({ node, ancestors }) => {

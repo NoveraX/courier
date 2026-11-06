@@ -26,6 +26,7 @@ const TO_MOCKS: Readonly<Record<string, string>> = Object.fromEntries(
 export const STUDIO_CORE_CONFIG: Migration = {
   id: "0.4.0/studio-core-config",
   title: "loads the config from @noverax/courier-build/config",
+  mentions: [FROM],
   migrate(file) {
     const edits = moveModule(file, { from: FROM, to: TO, elsewhere: TO_MOCKS });
     const needs = edits.some((edit) => edit.text.includes(TO));

@@ -1,8 +1,9 @@
 import type { ManualStep, PlannedEdit } from "@noverax/create-courier/engine";
+import { parseSync } from "oxc-parser";
 
-import { parseSource } from "../../source/parse-source";
 import type { Finding, Migration, PackageNeed, TextEdit } from "../migration";
-import { programOf } from "./ast";
+import { type AstNode, programOf } from "./ast";
+import { mentions } from "./mentions";
 import { type CodePiece, codePieces, type ProjectCode } from "./source-files";
 import { applyEdits, lineAt } from "./text-edits";
 
@@ -31,26 +32,58 @@ interface PieceResult {
   readonly titles: string[];
 }
 
-/* Run each migration on the text the one before left: a change that leaves the piece unparsable is dropped, and said. */
+/* A piece's parse: its first problem, and its tree, which oxc builds only when a migration asks for it. */
+interface PieceParse {
+  readonly problem: { readonly message: string; readonly at: number } | null;
+  readonly program: () => AstNode;
+}
+
+function parsePiece(piece: CodePiece, text: string): PieceParse {
+  const parsed = parseSync(`piece${piece.parseAs}`, text);
+  const [first] = parsed.errors;
+  let program: AstNode | undefined;
+  return {
+    problem:
+      first === undefined ? null : { message: first.message, at: first.labels[0]?.start ?? 0 },
+    program: () => {
+      program ??= programOf(parsed.program);
+      return program;
+    },
+  };
+}
+
+/*
+ * Run each migration on the text the one before left. A migration whose
+ * words the text does not write is passed over; the piece is parsed for
+ * the first that has any, and again only after a change, which must
+ * parse: that tree is the next migration's. A change that would not
+ * parse is dropped, and said.
+ */
 function migratePiece(piece: CodePiece, migrations: readonly Migration[]): PieceResult {
   const result: PieceResult = { text: piece.text, findings: [], needs: [], titles: [] };
   let text = piece.text;
+  let parsed: PieceParse | undefined;
   for (const migration of migrations) {
-    const parsed = parseSource(`piece${piece.parseAs}`, text);
+    if (!mentions(text, migration.mentions)) continue;
+    parsed ??= parsePiece(piece, text);
     if (parsed.problem !== null) {
-      const what = `it does not parse, so ${migration.title} was left to you: ${parsed.problem.message}`;
-      result.findings.push({ at: parsed.problem.offset ?? 0, what, instead: [] });
+      const what = `it does not parse, so the upgrade left it as written: ${parsed.problem.message}`;
+      result.findings.push({ at: parsed.problem.at, what, instead: [] });
       break;
     }
-    const done = migration.migrate({ path: piece.path, text, program: programOf(parsed.program) });
+    const done = migration.migrate({ path: piece.path, text, program: parsed.program() });
     const after = done.edits.length === 0 ? text : applyEdits(text, done.edits);
-    if (after !== text && parseSource(`piece${piece.parseAs}`, after).problem !== null) {
-      result.findings.push({
-        at: 0,
-        what: `the change that ${migration.title} would not parse, so it was left to you`,
-        instead: [],
-      });
-      continue;
+    if (after !== text) {
+      const reparsed = parsePiece(piece, after);
+      if (reparsed.problem !== null) {
+        result.findings.push({
+          at: 0,
+          what: `the change that ${migration.title} would not parse, so it was left to you`,
+          instead: [],
+        });
+        continue;
+      }
+      parsed = reparsed;
     }
     for (const finding of result.findings.splice(0))
       result.findings.push({ ...finding, at: shifted(finding.at, done.edits) });
@@ -67,10 +100,10 @@ function migratePiece(piece: CodePiece, migrations: readonly Migration[]): Piece
 /**
  * Carry the project's code over: each file that names Courier's packages,
  * each of its pieces — a module, or a component's script block — through
- * each migration in order. A file the migrations change becomes a change
- * of the plan; what they find and leave to the person becomes a step, at
- * its line; a file left unread, or a walk stopped at its limit, is said
- * as a step too.
+ * each migration in order whose words it writes. A file the migrations
+ * change becomes a change of the plan; what they find and leave to the
+ * person becomes a step, at its line; a file left unread, or a walk
+ * stopped at its limit, is said as a step too.
  *
  * @param code - The project's code, as the walk read it
  * @param migrations - The migrations of the releases crossed, in order

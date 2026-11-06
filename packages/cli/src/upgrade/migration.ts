@@ -51,6 +51,13 @@ export interface Migration {
   /** What it carries over, in a few words, for the plan. */
   readonly title: string;
   /**
+   * The words a file writes wherever this migration has something to do
+   * in it: the names, properties and modules it looks for. A file that
+   * writes none of them, as they are or spelled with escapes, is not
+   * parsed for it.
+   */
+  readonly mentions: readonly string[];
+  /**
    * Its changes to one file, and its findings: a pure function of the
    * file's text, which the upgrade runs on each file that names
    * Courier's packages.

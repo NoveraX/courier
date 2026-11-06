@@ -22,6 +22,7 @@ const SIMPLE = new Set(["Identifier", "MemberExpression", "ThisExpression", "Cal
 export const SEND_AUTH_REQUIRED: Migration = {
   id: "0.5.0/send-auth-required",
   title: "asks for credentials again with connections.requireAuth()",
+  mentions: ["sendAuthRequired"],
   migrate(file) {
     const named = boundImport(file.program, ROOT, "sendAuthRequired");
     if (named === undefined) return { edits: [], findings: [], packages: [] };

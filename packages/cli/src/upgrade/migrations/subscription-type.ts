@@ -10,6 +10,7 @@ const REALTIME = "@noverax/courier/realtime";
 export const SUBSCRIPTION_TYPE: Migration = {
   id: "0.5.0/subscription-type",
   title: "names a stream's subscription Subscription",
+  mentions: ["SSESubscription"],
   migrate: (file) => ({
     edits: moveImports(file, [
       { from: REALTIME, name: "SSESubscription", to: REALTIME, as: "Subscription" },

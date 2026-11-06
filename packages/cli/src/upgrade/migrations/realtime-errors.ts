@@ -22,5 +22,6 @@ const MOVES: readonly MovedName[] = [
 export const REALTIME_ERRORS: Migration = {
   id: "0.5.0/realtime-errors",
   title: "imports the realtime errors from @noverax/courier/realtime",
+  mentions: MOVES.map((move) => move.name),
   migrate: (file) => ({ edits: moveImports(file, MOVES), findings: [], packages: [] }),
 };

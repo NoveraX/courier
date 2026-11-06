@@ -10,6 +10,7 @@ import type { Finding, Migration } from "../migration";
 export const CANCEL_PREVIOUS_LIST: Migration = {
   id: "0.4.0/cancel-previous-list",
   title: "finds cancelPrevious given as a list",
+  mentions: ["cancelPrevious"],
   migrate(file) {
     const findings: Finding[] = [];
     walk(file.program, ({ node }) => {

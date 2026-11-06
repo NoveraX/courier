@@ -9,7 +9,8 @@ import { type AstNode, isNode, nameOf, type Visited, walk } from "./ast";
 export type IdentifierRole = "reference" | "binding" | "name";
 
 /** An identifier of a name, where it is and what it stands for. */
-export interface Occurrence extends Visited {
+export interface Occurrence {
+  readonly node: AstNode;
   readonly role: IdentifierRole;
   /** Where one identifier is both a name and a reference: `{ x }` in an object, `export { x }`. */
   readonly shorthand?: "property" | "export" | undefined;
@@ -101,10 +102,32 @@ function exportRole(
   return { role: "reference", ...(shorthand ? { shorthand: "export" as const } : {}) };
 }
 
+/* Each tree's identifiers by name, found in one walk the first time a name of the tree is asked for: a tree is never changed, so it stays true. */
+const INDEXES = new WeakMap<AstNode, ReadonlyMap<string, readonly Occurrence[]>>();
+
+function indexOf(program: AstNode): ReadonlyMap<string, readonly Occurrence[]> {
+  const known = INDEXES.get(program);
+  if (known !== undefined) return known;
+  const index = new Map<string, Occurrence[]>();
+  walk(program, (visited) => {
+    const { type } = visited.node;
+    if (type !== "Identifier" && type !== "JSXIdentifier") return;
+    const name = nameOf(visited.node);
+    if (name === undefined) return;
+    const occurrence = { node: visited.node, ...roleOf(visited) };
+    const found = index.get(name);
+    if (found === undefined) index.set(name, [occurrence]);
+    else found.push(occurrence);
+  });
+  INDEXES.set(program, index);
+  return index;
+}
+
 /**
  * Every identifier of a name in a file's tree — JSX's components among
  * them — with what each stands for: a reference to a binding of the name,
- * a binding, or the name of something else.
+ * a binding, or the name of something else. The tree is walked once, the
+ * first time any name of it is asked for.
  *
  * @param program - The file's tree
  * @param name - The name
@@ -114,10 +137,6 @@ function exportRole(
  * occurrencesOf(program, "TimeoutError").filter((each) => each.role === "binding").length; // 1: its import
  * ```
  */
-export function occurrencesOf(program: AstNode, name: string): Occurrence[] {
-  const found: Occurrence[] = [];
-  walk(program, (visited) => {
-    if (nameOf(visited.node) === name) found.push({ ...visited, ...roleOf(visited) });
-  });
-  return found;
+export function occurrencesOf(program: AstNode, name: string): readonly Occurrence[] {
+  return indexOf(program).get(name) ?? [];
 }

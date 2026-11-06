@@ -6,6 +6,40 @@ import { type NamedImport, namedImports } from "./imports";
 import { removalEdits } from "./specifier-lists";
 
 /**
+ * The name a file gives a module's export it imports as a value.
+ *
+ * @param program - The file's tree
+ * @param modules - The modules that export it
+ * @param name - The export's name
+ * @returns The import, or `undefined` where the file has none such
+ * @example
+ * ```ts
+ * valueImport(program, new Set(["@noverax/courier"]), "isHTTPError")?.local; // "isHTTPError"
+ * ```
+ */
+export function valueImport(
+  program: AstNode,
+  modules: ReadonlySet<string>,
+  name: string,
+): NamedImport | undefined {
+  return namedImports(program, modules).find(
+    (each) => each.kind === "import" && each.imported === name && !each.typeOnly,
+  );
+}
+
+/**
+ * Whether a file binds an import's name nowhere else — so every
+ * reference of the name is to the import, for certain.
+ *
+ * @param program - The file's tree
+ * @param named - The import
+ * @returns Whether the import is the name's one binding
+ */
+export function boundOnce(program: AstNode, named: NamedImport): boolean {
+  return occurrencesOf(program, named.local).filter((each) => each.role === "binding").length === 1;
+}
+
+/**
  * The name a file gives a module's export, where it imports it as a value
  * and binds that name nowhere else — so every call of the name is a call
  * of the export, for certain.
@@ -24,12 +58,8 @@ export function boundImport(
   modules: ReadonlySet<string>,
   name: string,
 ): NamedImport | undefined {
-  const named = namedImports(program, modules).find(
-    (each) => each.kind === "import" && each.imported === name && !each.typeOnly,
-  );
-  if (named === undefined) return undefined;
-  const bindings = occurrencesOf(program, named.local).filter((each) => each.role === "binding");
-  return bindings.length === 1 ? named : undefined;
+  const named = valueImport(program, modules, name);
+  return named !== undefined && boundOnce(program, named) ? named : undefined;
 }
 
 /**
@@ -43,7 +73,7 @@ export function callsOf(program: AstNode, local: string): Visited[] {
   const calls: Visited[] = [];
   walk(program, (visited) => {
     if (visited.node.type === "CallExpression" && nameOf(visited.node.callee) === local)
-      calls.push(visited);
+      calls.push({ ...visited, ancestors: [...visited.ancestors] });
   });
   return calls;
 }

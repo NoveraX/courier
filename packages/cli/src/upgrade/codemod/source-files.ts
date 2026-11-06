@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 
 import { UPGRADE_LIMITS } from "../limits";
+import { mentions } from "./mentions";
 
 /** A piece of a file's code an upgrade reads: a module whole, or a script block of a component's file. */
 export interface CodePiece {
@@ -78,7 +79,7 @@ export function projectCode(root: string): ProjectCode {
           continue;
         }
         const text = readFileSync(join(root, path), "utf8");
-        if (text.includes(COURIER)) files.push({ path, text });
+        if (mentions(text, [COURIER])) files.push({ path, text });
       }
     }
     return true;

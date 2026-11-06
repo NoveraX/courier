@@ -1,6 +1,6 @@
 import { type AstNode, isNode, nameOf, type Visited, walk } from "../codemod/ast";
 import { occurrencesOf } from "../codemod/identifier-roles";
-import { boundImport, droppedImport, textOf } from "../codemod/imported-calls";
+import { boundOnce, droppedImport, textOf, valueImport } from "../codemod/imported-calls";
 import { namedImports } from "../codemod/imports";
 import { addedToDeclaration } from "../codemod/specifier-lists";
 import type { Migration, SourceFile, TextEdit } from "../migration";
@@ -93,7 +93,7 @@ function bare({ ancestors, key }: Visited): boolean {
 /* The import's changes: the two names in isHTTPError's place where every use was such a check, beside it otherwise. */
 function importEdits(
   file: SourceFile,
-  named: NonNullable<ReturnType<typeof boundImport>>,
+  named: NonNullable<ReturnType<typeof valueImport>>,
   checks: number,
 ): TextEdit[] {
   const have = new Set(namedImports(file.program, ROOT).map((each) => each.imported));
@@ -120,8 +120,9 @@ function importEdits(
 export const HTTP_ERROR_STATUS_ZERO: Migration = {
   id: "0.5.0/http-error-status-zero",
   title: "tells a request that got no answer by isNetworkError() and isTimeoutError()",
+  mentions: ["isHTTPError"],
   migrate(file) {
-    const named = boundImport(file.program, ROOT, "isHTTPError");
+    const named = valueImport(file.program, ROOT, "isHTTPError");
     if (named === undefined) return { edits: [], findings: [], packages: [] };
     const edits: TextEdit[] = [];
     walk(file.program, (visited) => {
@@ -131,7 +132,9 @@ export const HTTP_ERROR_STATUS_ZERO: Migration = {
       const text = !at.inChain && bare(visited) ? check : `(${check})`;
       edits.push({ start: at.start, end: visited.node.end, text });
     });
-    if (edits.length === 0) return { edits, findings: [], packages: [] };
+    /* The checks are the import's for certain only where the file binds its name nowhere else. */
+    if (edits.length === 0 || !boundOnce(file.program, named))
+      return { edits: [], findings: [], packages: [] };
     return {
       edits: [...edits, ...importEdits(file, named, edits.length)],
       findings: [],

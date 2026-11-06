@@ -10,6 +10,7 @@ import { SUBSCRIPTION_TYPE } from "../../../src/upgrade/migrations/subscription-
 const FINDS_REPORT: Migration = {
   id: "test/finds-report",
   title: "finds report()",
+  mentions: ["report"],
   migrate(file) {
     const findings: Array<{ at: number; what: string; instead: string[] }> = [];
     walk(file.program, ({ node }) => {
@@ -24,6 +25,7 @@ const FINDS_REPORT: Migration = {
 const BREAKS: Migration = {
   id: "test/breaks",
   title: "breaks the file",
+  mentions: ["AuthError"],
   migrate: () => ({ edits: [{ start: 0, end: 0, text: "import {" }], findings: [], packages: [] }),
 };
 
@@ -75,7 +77,7 @@ report(new RealtimeTimeoutError());
 
   it("drops a change that would not parse, and says a file it cannot parse was left to the person", () => {
     const unparsable = migrateCode(
-      code([{ path: "src/b.ts", text: 'import { from "@noverax/courier";\n' }]),
+      code([{ path: "src/b.ts", text: 'import { AuthError from "@noverax/courier";\n' }]),
       [REALTIME_ERRORS],
     );
     const broken = migrateCode(
@@ -85,12 +87,33 @@ report(new RealtimeTimeoutError());
 
     expect(unparsable.edits).toEqual([]);
     expect(unparsable.manual[0]?.what).toMatch(
-      /^line 1: it does not parse, so imports the realtime errors/,
+      /^line 1: it does not parse, so the upgrade left it as written: /,
     );
     expect(broken.edits).toEqual([]);
     expect(broken.manual[0]?.what).toBe(
       "line 1: the change that breaks the file would not parse, so it was left to you",
     );
+  });
+
+  it("passes over a migration whose words a file does not write, and parses no file that writes none", () => {
+    const untouched: Migration = {
+      id: "test/untouched",
+      title: "is never run",
+      mentions: ["sendAuthRequired"],
+      migrate: () => {
+        throw new Error("run on a file that writes none of its words");
+      },
+    };
+
+    const migrated = migrateCode(
+      code([
+        { path: "src/a.ts", text: 'import { AuthError } from "@noverax/courier";\n' },
+        { path: "src/b.ts", text: 'import { from "@noverax/courier";\n' },
+      ]),
+      [untouched, FINDS_REPORT],
+    );
+
+    expect(migrated).toEqual({ edits: [], manual: [], needs: [] });
   });
 
   it("names the files left unread, and a walk that stopped at its limit", () => {

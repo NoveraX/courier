@@ -39,6 +39,7 @@ const AS_FUNCTION = new Set(["ArrowFunctionExpression", "FunctionExpression"]);
 export const RETRY_ON_ZERO: Migration = {
   id: "0.5.0/retry-on-zero",
   title: "retries a request that got no answer as network and timeout",
+  mentions: ["retryOn"],
   migrate(file) {
     const middleware = boundImport(file.program, MIDDLEWARE, "retryMiddleware");
     const quote = quoteOf(file.program, file.text);

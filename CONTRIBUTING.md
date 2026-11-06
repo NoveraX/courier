@@ -99,7 +99,11 @@ Seven of them are easy to skip by accident and worth understanding:
   one is put on its side as it is added; a module a page needs never lies in
   an area, and a page's code takes what only a server does from the server's
   registry of capabilities rather than by importing
-  it.
+  it. Beside the core's,
+  `packages/core/entry-exports.json` lists the values and types `/client`
+  and `/server` offer, for the upgrade that moves an import from one entry
+  to another; a test holds the list to the entries, so a name added to one
+  goes into it in the same change.
 - `npm run check:page-dates` asks every docs page whose text your branch
   changed for its date: the `updated` field of the page's metadata, which
   the site shows on the page and hands to search engines, must be no older

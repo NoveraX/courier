@@ -81,6 +81,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@clack/prompts": "1.8.1",
     "@noverax/courier": "0.4.0",
     "citty": "^0.2.2"
   }

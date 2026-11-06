@@ -1,75 +1,54 @@
-import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 
 import { CancelledError } from "../cancelled-error";
-import type { Choice, Questions } from "./questions";
+import type { Questions } from "./questions";
 
-/** Where a question is read from, and where it is asked. */
+/** Where a question is read from, and where it is drawn. */
 export interface QuestionStreams {
   readonly input: Readable;
   readonly output: Writable;
 }
 
-/* A reply, read: the answer it gives, or what to ask again with. */
-type Reading<TAnswer> = { readonly answer: TAnswer } | { readonly again: string };
+/* What each of clack's questions is given beside its own options. */
+interface Asking {
+  readonly input: Readable;
+  readonly output: Writable;
+  readonly signal: AbortSignal;
+}
 
-/* Ask until a reply reads as an answer; Ctrl+C, or the input closing, cancels the command. */
-function ask<TAnswer>(
-  question: string,
-  read: (reply: string) => Reading<TAnswer>,
+/* clack, loaded the first time a question is asked: a run that asks nothing never loads it. */
+const clack = () => import("@clack/prompts");
+
+/*
+ * Ask one question, its input's end cancelling it as Ctrl+D ends it,
+ * which clack would otherwise wait past.
+ */
+async function asked<TAnswer>(
   { input, output }: QuestionStreams,
+  ask: (asking: Asking) => Promise<TAnswer>,
 ): Promise<TAnswer> {
-  return new Promise((resolve, reject) => {
-    const reader = createInterface({ input, output });
-    let interrupted = false;
-    let taken: { value: TAnswer } | undefined;
-    reader.on("SIGINT", () => {
-      interrupted = true;
-      reader.close();
-    });
-    reader.on("close", () =>
-      taken ? resolve(taken.value) : reject(new CancelledError(interrupted)),
-    );
-    const take = (reply: string) => {
-      const reading = read(reply.trim());
-      if ("again" in reading) {
-        reader.question(reading.again, take);
-        return;
-      }
-      taken = { value: reading.answer };
-      reader.close();
-    };
-    reader.question(question, take);
-  });
+  const ended = new AbortController();
+  const onEnd = () => ended.abort();
+  input.once("end", onEnd);
+  try {
+    return await ask({ input, output, signal: ended.signal });
+  } finally {
+    input.off("end", onEnd);
+  }
 }
 
-function yesOrNo(reply: string, initial: boolean): Reading<boolean> {
-  if (reply === "") return { answer: initial };
-  if (/^y(es)?$/i.test(reply)) return { answer: true };
-  if (/^no?$/i.test(reply)) return { answer: false };
-  return { again: "Answer y or n: " };
-}
-
-function picked<TValue extends string>(
-  reply: string,
-  choices: readonly Choice<TValue>[],
-  initial: TValue,
-): Reading<TValue> {
-  if (reply === "") return { answer: initial };
-  const at = /^\d+$/.test(reply) ? Number(reply) - 1 : -1;
-  const choice = choices[at];
-  return choice === undefined
-    ? { again: `Pick a number from 1 to ${choices.length}: ` }
-    : { answer: choice.value };
+/* What a cancelled question throws: Ctrl+C or Escape stops the run as a shell stops a command it interrupts; the input's end, as one whose input closed. */
+function cancelled({ signal }: Asking): CancelledError {
+  return new CancelledError(!signal.aborted);
 }
 
 /**
- * The questions a run asks at the terminal, by line: a yes or a no as
- * `y` or `n`, one of a list by its number, a line of text. They are
- * asked on standard error, so that what the command prints on standard
- * output stays its own.
+ * The questions a run asks at the terminal, drawn by clack: a yes or a
+ * no, one of a list picked with the arrows, a line of text checked as it
+ * is given. They are drawn on standard error, so that what the command
+ * prints on standard output stays its own.
  *
- * @param streams - Where to ask them (default: the terminal, on standard error)
+ * @param streams - Where to ask them (default: the terminal, drawn on standard error)
  * @returns The questions
  * @example
  * ```ts
@@ -81,34 +60,35 @@ export function terminalQuestions(
 ): Questions {
   return {
     confirm: (message, initial) =>
-      ask(
-        `${message} ${initial ? "[Y/n]" : "[y/N]"} `,
-        (reply) => yesOrNo(reply, initial),
-        streams,
-      ),
-    select(message, choices, initial) {
-      const at = Math.max(
-        0,
-        choices.findIndex((choice) => choice.value === initial),
-      );
-      const list = choices.map(
-        (choice, index) =>
-          `  ${String(index + 1).padStart(2)}  ${choice.label}${choice.hint ? `  ${choice.hint}` : ""}`,
-      );
-      return ask(
-        `${message}\n${list.join("\n")}\nPick a number [${at + 1}]: `,
-        (reply) => picked(reply, choices, choices[at]?.value ?? initial),
-        streams,
-      );
-    },
+      asked(streams, async (asking) => {
+        const { confirm, isCancel } = await clack();
+        const answer = await confirm({ ...asking, message, initialValue: initial });
+        if (isCancel(answer)) throw cancelled(asking);
+        return answer;
+      }),
+    select: (message, choices, initial) =>
+      asked(streams, async (asking) => {
+        const { select, isCancel } = await clack();
+        /* clack types an option by its value: as a plain string, it takes it whatever the choice's type. */
+        const options = choices.map(({ value, label, hint }) => ({
+          value: String(value),
+          label,
+          ...(hint === undefined ? {} : { hint }),
+        }));
+        const answer = await select({ ...asking, message, options, initialValue: initial });
+        if (isCancel(answer)) throw cancelled(asking);
+        const choice = choices.find((each) => each.value === answer);
+        if (choice === undefined)
+          throw new Error(`"${message}" was answered with none of its choices`);
+        return choice.value;
+      }),
     text: (message, check) =>
-      ask(
-        `${message} `,
-        (reply) => {
-          const problem = check(reply);
-          return problem === undefined ? { answer: reply } : { again: `${problem}. ${message} ` };
-        },
-        streams,
-      ),
+      asked(streams, async (asking) => {
+        const { text, isCancel } = await clack();
+        const validate = (line: string | undefined) => check((line ?? "").trim());
+        const answer = await text({ ...asking, message, validate });
+        if (isCancel(answer)) throw cancelled(asking);
+        return answer.trim();
+      }),
   };
 }

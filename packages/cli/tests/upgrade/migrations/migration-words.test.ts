@@ -53,6 +53,12 @@ export { RateLimitError, ForbiddenError } from "@noverax/courier";
 import { TimeoutError } from "@noverax/courier/realtime";`,
   `import { sendAuthRequired } from "@noverax/courier";
 const asked = sendAuthRequired(registry, id);`,
+  `import { courier } from "@noverax/courier/define";
+import type { HttpProbe } from "@noverax/courier/define";
+const { endpoint } = courier();
+const byId: HttpProbe<{ id: string }> = (http, vars) => http.get(":id", vars);
+export const report = endpoint.via((http) => http.get("reports")).reads();
+export const read = endpoint.via((http) => http.get("a"));`,
   `if (error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE") {}
 const messages = { PROXY_VARIABLE_NOT_SERIALIZABLE: "That cannot be sent" };`,
 ];

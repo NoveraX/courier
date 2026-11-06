@@ -2,6 +2,7 @@ import type { Release } from "./migration";
 import { CALL_ERROR_FINDINGS } from "./migrations/call-error-findings";
 import { CANCEL_PREVIOUS_LIST } from "./migrations/cancel-previous-list";
 import { HTTP_ERROR_STATUS_ZERO } from "./migrations/http-error-status-zero";
+import { HTTP_PROBE_TYPE } from "./migrations/http-probe-type";
 import { REALTIME_ERRORS } from "./migrations/realtime-errors";
 import { REALTIME_FINDINGS } from "./migrations/realtime-findings";
 import { RETRY_ON_ZERO } from "./migrations/retry-on-zero";
@@ -9,6 +10,7 @@ import { SEND_AUTH_REQUIRED } from "./migrations/send-auth-required";
 import { STUDIO_CORE_CONFIG } from "./migrations/studio-core-config";
 import { SUBSCRIPTION_TYPE } from "./migrations/subscription-type";
 import { VARIABLE_NOT_ENCODABLE } from "./migrations/variable-not-encodable";
+import { VIA_KIND } from "./migrations/via-kind";
 import { compareVersions, parseVersion, releaseLine, type Version } from "./versions";
 
 const DOCS = "https://courier.noverax.cloud/docs";
@@ -88,6 +90,10 @@ export const RELEASES: readonly Release[] = [
           "A record that holds a file is sent as a form: deploy the client and the server together",
         docs: `${UPGRADING}#variables`,
       },
+      {
+        title: "A .via() endpoint reads or writes as the verb its closure calls",
+        docs: `${UPGRADING}#endpoints-addressed-with-via`,
+      },
     ],
     migrations: [
       REALTIME_ERRORS,
@@ -98,6 +104,8 @@ export const RELEASES: readonly Release[] = [
       CALL_ERROR_FINDINGS,
       REALTIME_FINDINGS,
       VARIABLE_NOT_ENCODABLE,
+      VIA_KIND,
+      HTTP_PROBE_TYPE,
     ],
   },
 ];

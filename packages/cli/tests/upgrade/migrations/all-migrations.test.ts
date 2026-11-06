@@ -23,6 +23,28 @@ export async function revoke(id: string, error: unknown) {
 }
 `;
 
+/* Code written for 0.4 whose endpoints' kinds and variables' code 0.5.0 changed. */
+const OLD_KINDS = `import { isConfigurationError } from "@noverax/courier";
+import { courier, defineGroup } from "@noverax/courier/define";
+import type { HttpProbe } from "@noverax/courier/define";
+
+const { endpoint } = courier();
+const byId: HttpProbe<{ id: string }> = (http, vars) => http.get(":id", vars);
+
+export const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    get: endpoint.variables<{ id: string }>().via(byId).response<User>(),
+    report: endpoint.variables<{ year: number }>().via((http, { year }) => http.get(http.path\`reports/\${year}\`)).reads(),
+    export: endpoint.via((http) => http.get("export")).retry({ retryOn: [0] }),
+  },
+});
+
+export function refused(error: unknown) {
+  return isConfigurationError(error) && error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE";
+}
+`;
+
 describe("every migration together", () => {
   it("carries code written for 0.3 and 0.4 over, and changes nothing the second time", () => {
     const once = migrateCode(
@@ -48,5 +70,28 @@ describe("every migration together", () => {
     ]);
     expect(twice.edits).toEqual([]);
     expect(twice.manual).toEqual(once.manual);
+  });
+
+  it("carries 0.4's endpoints and variables' code over, finds the kinds left to the person, and changes nothing the second time", () => {
+    const run = (text: string) =>
+      migrateCode({ files: [{ path: "src/api.ts", text }], unread: [], stopped: false }, ALL);
+    const once = run(OLD_KINDS);
+    const after = once.edits[0]?.after ?? "";
+    const twice = run(after);
+
+    expect(after).toContain(
+      `report: endpoint.variables<{ year: number }>().via((http, { year }) => http.get(http.path\`reports/\${year}\`)),`,
+    );
+    expect(after).toContain('.retry({ retryOn: ["network", "timeout"] })');
+    expect(after).toContain('error.code === "VARIABLE_NOT_ENCODABLE"');
+    const reads = (line: number) =>
+      expect.stringMatching(
+        new RegExp(`^line ${line}: its closure calls a reading verb, so the endpoint reads,`),
+      );
+    const typed = expect.stringMatching(/^line 6: HttpProbe<Variables> no longer says which verb/);
+    expect(once.manual.map((step) => step.what)).toEqual([reads(13), typed]);
+    expect(twice.edits).toEqual([]);
+    /* The second time, the read whose .reads() went names no kind, as 0.4's code without one does. */
+    expect(twice.manual.map((step) => step.what)).toEqual([reads(12), reads(13), typed]);
   });
 });

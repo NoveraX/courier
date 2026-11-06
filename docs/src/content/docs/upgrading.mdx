@@ -65,7 +65,6 @@ A request's headers are put together in one place, which refuses a value no requ
 | `sseConnections.disconnect(id, reason)` | `await sseConnections.disconnect(id)`, or a selector |
 | `sseConnections.disconnectAll(reason)` | `sseConnections.disconnectAll()` |
 | `sseConnections.broadcastToMeta(predicate, event)` | `sseConnections.broadcastToMeta({ userId }, event)` |
-| `WSClusterOptions` | `ClusterOptions`, which both handlers take |
 | A pub/sub adapter of your own | implements `state`, `onStateChange()` and `stats()`, takes a subscription without waiting on its server, queues what is published while it is not ready within bounds, and rejects `publish()` and `subscribe()` only once disconnected; the adapters Courier ships need nothing done |
 | Handlers of one process sharing `createMemoryPubSub()`, which delivered nothing | `createMemoryBus()`, each handler on `bus.replica(name)`; `createMemoryPubSub()` is one replica alone |
 

@@ -5,6 +5,7 @@ import { type ClusterMessage, readClusterMessage } from "./cluster-message";
 import { createClusterSigner } from "./cluster-signature";
 import { createPubSubChannels } from "./pubsub-channels";
 import { createReplayGuard } from "./replay-guard";
+import { warnUnsignedCommands } from "./ws-cluster-secret";
 import type { CheckedCommand, ConnectionCommand } from "./ws-connection-command";
 
 /**
@@ -42,7 +43,8 @@ export interface ClusterControlOptions {
  * each of which acts on it once, near the time it was sent, and only once
  * it has read it as one it knows — signed by the cluster when there is a
  * secret. What it refuses is logged on one line, never acted on; a newer
- * replica's command is skipped.
+ * replica's command is skipped. Without a secret, the log says once for
+ * the adapter that its commands are taken unsigned.
  *
  * @param options - The adapter, the secret, what to do with a command, the log
  * @returns The channel
@@ -56,6 +58,7 @@ export interface ClusterControlOptions {
 export function createClusterControl(options: ClusterControlOptions): ClusterControl {
   const { pubsub, run, refusals, channel = CONTROL_CHANNEL } = options;
   const signer = options.secret === undefined ? undefined : createClusterSigner(options.secret);
+  if (!signer) warnUnsignedCommands(pubsub);
   const replay = createReplayGuard({ windowMs: WINDOW_MS, capacity: SEEN_IDS });
   const channels = createPubSubChannels(pubsub);
 

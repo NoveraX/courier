@@ -9,6 +9,7 @@
 import { format } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createHandler } from "../src/adapter";
 import { CONTROL_CHANNEL } from "../src/adapter/cluster-control";
 import { createClusterSigner } from "../src/adapter/cluster-signature";
 import { createWSHandler } from "../src/adapter/handle-ws";
@@ -233,5 +234,28 @@ describe("a cluster with a secret", () => {
 
   it("is refused shorter than 32 bytes, when the handler is made", () => {
     expect(() => createWSHandler({ cluster: { secret: "short" } })).toThrow(ConfigurationError);
+  });
+});
+
+describe("a cluster with no secret", () => {
+  const unsigned = () => warned.filter((line) => line.includes("taken unsigned"));
+
+  it("says once for its adapter that commands are taken unsigned, however many handlers share it", async () => {
+    const pubsub = createMemoryBus().replica("a");
+
+    handlers.push(createWSHandler({ pubsub }), createWSHandler({ pubsub }));
+    await createHandler({ pubsub }).shutdownSSE({ drainMs: 0 });
+
+    expect(unsigned()).toHaveLength(1);
+    expect(unsigned()[0]).toContain("cluster: { secret }");
+  });
+
+  it("says nothing of it with a secret, or with no adapter", () => {
+    handlers.push(
+      createWSHandler({ pubsub: createMemoryBus().replica("a"), cluster: { secret: SECRET } }),
+      createWSHandler({}),
+    );
+
+    expect(unsigned()).toEqual([]);
   });
 });

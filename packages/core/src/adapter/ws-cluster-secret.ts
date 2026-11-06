@@ -1,8 +1,15 @@
 import { ConfigurationError } from "../errors";
+import { createLogger } from "../logger";
+import type { PubSubAdapter } from "../realtime/adapters";
 import type { ClusterOptions } from "./ws-types";
 
 /** The shortest cluster secret taken, in bytes: an HMAC-SHA-256 key no shorter than its digest. */
 const MIN_SECRET_BYTES = 32;
+
+const log = createLogger("Cluster");
+
+/* Each adapter is named once, however many handlers share it: a WebSocket and an SSE handler do. */
+const unsignedOver = new WeakSet<PubSubAdapter>();
 
 /**
  * The cluster's secret, checked: what signs the commands replicas send each
@@ -37,4 +44,25 @@ export function clusterSecretOf(
     );
   }
   return secret;
+}
+
+/**
+ * Say once for an adapter that the commands replicas send each other over
+ * it are taken unsigned: whoever can publish on its channels — anything
+ * else its Redis reaches — can close any connection, or ask every one for
+ * its credentials again. What the replicas do is the same either way:
+ * signing stays the cluster's choice.
+ *
+ * @param pubsub - The adapter the commands travel over
+ * @example
+ * ```ts
+ * if (secret === undefined) warnUnsignedCommands(pubsub);
+ * ```
+ */
+export function warnUnsignedCommands(pubsub: PubSubAdapter): void {
+  if (unsignedOver.has(pubsub)) return;
+  unsignedOver.add(pubsub);
+  log.warn(
+    `Commands between replicas are taken unsigned: whoever can publish on the pub/sub adapter's channels can close any connection. Give every replica the same cluster: { secret } of ${MIN_SECRET_BYTES} bytes or more — \`openssl rand -hex 32\` makes one.`,
+  );
 }

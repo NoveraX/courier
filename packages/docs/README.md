@@ -20,11 +20,7 @@ Every page of [courier.noverax.cloud/docs](https://courier.noverax.cloud/docs/in
 
 ## Point your agent at it
 
-Add to `AGENTS.md`, at your project's root:
-
-```markdown
-Before writing code that uses an `@noverax/*` package, read the relevant page in `node_modules/@noverax/courier-docs/docs/`: `index.md` lists them all, and they match the installed version.
-```
+Add Courier's block to `AGENTS.md`, at your project's root: [Docs for Your Agent](https://courier.noverax.cloud/docs/agents/docs#point-your-agent-at-them) has it as it stands, and Studio brings it up to date as it starts.
 
 ## Or serve it over MCP
 

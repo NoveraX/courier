@@ -13,6 +13,7 @@ import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { studioAddressFile } from "./editor/studio-address-file";
 import { finalErrors } from "./final-errors";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
+import { keepAgentRules } from "./keep-agent-rules";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { createAgentCalls } from "./mcp/agent-calls";
 import { createLifecycleCoordinator } from "./mock-manager";
@@ -167,6 +168,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
 
   undoUnfinishedImportWrites(root);
+  /* A public demo writes nothing of the project's. */
+  if (!demo) keepAgentRules(root);
 
   const http = {
     project,

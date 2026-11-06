@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Standalone Server",
   description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
-  updated: "2026-11-05",
+  updated: "2026-11-06",
 }
 
 ## Installation
@@ -178,7 +178,7 @@ const server = await createCourierServer({
 })
 ```
 
-`onConnect` runs once the client has said who it is: `request` is the upgrade request with the headers of the client's `auth` frame — what a browser cannot put on a WebSocket handshake — and `auth` is the client's `ws.auth`; see [Who a connection is](/docs/advanced/realtime#who-a-connection-is). What it returns is the connection's metadata, and it types `meta` in the hooks written after it — `authorize`, `authorizeMessage`, `onReauth`, `onDisconnect`, `onError` — so `meta.userId` above is a string. Return an object, or nothing for a connection with no metadata; anything else refuses the connection, as a throw does. `ConnectionMeta<T>` names that type, for a hook declared apart from the options.
+`onConnect` runs once the client has said who it is: `request` is the upgrade request with the headers of the client's `auth` frame — what a browser cannot put on a WebSocket handshake — and `auth` is the client's `ws.auth`; see [Who a connection is](/docs/advanced/realtime-connections#who-a-connection-is). What it returns is the connection's metadata, and it types `meta` in the hooks written after it — `authorize`, `authorizeMessage`, `onReauth`, `onDisconnect`, `onError` — so `meta.userId` above is a string. Return an object, or nothing for a connection with no metadata; anything else refuses the connection, as a throw does. `ConnectionMeta<T>` names that type, for a hook declared apart from the options.
 
 <Callout variant="tip" title="Reject connections">
   Throw from `onConnect` to refuse a WebSocket connection: the server closes it with code `4401` and the reason "Connection rejected", which each channel and subscription on it reads as an `AuthError`, and the client does not reconnect. Throw a `RealtimeError` to say it yourself — `ForbiddenError("Banned")` closes it with `4403` and "Banned". Throw from `onSSEConnect` to refuse a stream: it is answered `403` "Connection rejected", which the client reads as a `ForbiddenError`. Anything else you threw is logged on the server, on one line, and never sent, since it may carry a connection string or a token. `onConnect` and `onReauth` have `middlewareTimeoutMs` to settle; one that has not closes the connection with `1011`, which the client retries.

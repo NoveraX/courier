@@ -6,7 +6,13 @@
  * redirect of the site's can. The section's old place keeps a sentence
  * that links to the new one, for a reader the page cannot send on.
  */
-export const MOVED_ANCHORS: Readonly<Record<string, Readonly<Record<string, string>>>> = {}
+export const MOVED_ANCHORS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "/docs/advanced/realtime": {
+    "connection-options": "/docs/advanced/realtime-connections#connection-options",
+    "staying-connected": "/docs/advanced/realtime-connections#staying-connected",
+    "who-a-connection-is": "/docs/advanced/realtime-connections#who-a-connection-is",
+  },
+}
 
 /**
  * The anchors of a docs page whose sections moved, with where each went.

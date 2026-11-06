@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-06" }
 
 ## Import
 
@@ -60,7 +60,7 @@ export const q = createProxyQueryCaller(routes.api, {
 The `options` argument is a `ProxyCallerOptions` (same shape as [`createProxyCaller`](/docs/api/create-proxy-caller)). Notable fields:
 
 - `proxyPath` — per-transport endpoint paths. `http` and `sse` have built-in defaults; `ws` is mandatory for `useChannel` and has no default. The routes do not say it: it depends on where the page is served.
-- `ws` — options of the socket `useChannel` opens: the token, the reconnect backoff and the queue limits — see [Connection options](/docs/advanced/realtime#connection-options).
+- `ws` — options of the socket `useChannel` opens: the token, the reconnect backoff and the queue limits — see [Connection options](/docs/advanced/realtime-connections#connection-options).
 
 The routes are what the hooks are typed from, and all they know of the API: see [Exposing Endpoints](/docs/proxy-mode/expose). A hook asked for an endpoint they do not name — from JavaScript, or past a cast — fails with `ConfigurationError("ENDPOINT_NOT_IN_ROUTES")` before anything is sent, since the proxy would refuse it.
 

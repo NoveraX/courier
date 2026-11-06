@@ -46,6 +46,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Middleware", href: "/docs/advanced/middleware" },
       { title: "Streaming", href: "/docs/advanced/streaming" },
       { title: "Streams & Channels", href: "/docs/advanced/realtime" },
+      { title: "Realtime Connections", href: "/docs/advanced/realtime-connections" },
       { title: "Path Parameters", href: "/docs/advanced/path-params" },
       { title: "Encoding", href: "/docs/advanced/encoding" },
       { title: "File Upload", href: "/docs/advanced/upload" },

@@ -83,7 +83,7 @@ type WSAuthParams = Record<string, unknown>
 - `headers` — default headers merged into every request and stream, and sent in the first frame of every socket its channels open, which the proxy reads as the socket's own — a browser cannot put them on a WebSocket's handshake.
 - `onError` — global error handler invoked on every `HTTPError`.
 - `onSuccess` — global success handler invoked on every successful response.
-- `ws` — options of the sockets this caller's channels and push subscriptions open; see [Connection options](/docs/advanced/realtime#connection-options).
+- `ws` — options of the sockets this caller's channels and push subscriptions open; see [Connection options](/docs/advanced/realtime-connections#connection-options).
 
 <Callout variant="warning" title="WS has no default path">
 `proxyPath.ws` has **no built-in default**. Calling a WS endpoint without it throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)`. In runtimes that cannot host WebSocket upgrades in-process (Next.js App Router, Cloudflare Workers, Vercel Edge, AWS Lambda), point this at a running [`@noverax/courier-server`](/docs/deployment/standalone-server) instance.

@@ -281,7 +281,7 @@ A stream:
 A channel, on every socket it opens and every reconnect:
 
 - On a server, they go on the socket's handshake, taken from the request being served when the channel is opened. A socket is kept to that request: one request's channels share it, and two users' channels never share one. A channel that has not found that request in 15 s — a framework's request context that never answers — ends with a `ConnectionError`: the request is found once, as the channel is opened, and waiting longer would not find it.
-- In a browser, the platform sends the session's cookies on the handshake itself, as it sends them with a call. A page cannot put a header on a WebSocket's handshake, so the bearer and the API's headers go in the socket's first frame, which the server reads as the handshake's own — see [Who a connection is](/docs/advanced/realtime#who-a-connection-is).
+- In a browser, the platform sends the session's cookies on the handshake itself, as it sends them with a call. A page cannot put a header on a WebSocket's handshake, so the bearer and the API's headers go in the socket's first frame, which the server reads as the handshake's own — see [Who a connection is](/docs/advanced/realtime-connections#who-a-connection-is).
 - In a React Native app, the platform sends its cookies on the handshake, and the bearer and the API's headers go on it beside them.
 - A channel the proxy relays is opened upstream with the session of the browser that subscribed, the headers `allowedHeaders` lets through and those the middleware set, as a relayed call is. One user's subscriptions share an upstream socket; no two users' do.
 

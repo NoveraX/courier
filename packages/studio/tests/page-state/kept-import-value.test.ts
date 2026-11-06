@@ -46,15 +46,17 @@ function pageState() {
   return { db: studio.db, pages: createPageState(studio.db) };
 }
 
-/* A page's socket, as `bindPageState` uses one: what it is sent, and what goes to the other pages. */
+/* A page's socket, as `bindPageState` uses one: what it is sent, and what goes to the other pages, all of them or a room's. */
 function page() {
   const handlers = new Map<string, (raw: unknown) => void>();
   const sent: unknown[] = [];
   const toOthers: unknown[] = [];
+  const others = { emit: (_event: string, payload: unknown) => void toOthers.push(payload) };
   const socket = {
     emit: (_event: string, payload: unknown) => void sent.push(payload),
     on: (event: string, handler: (raw: unknown) => void) => void handlers.set(event, handler),
-    broadcast: { emit: (_event: string, payload: unknown) => void toOthers.push(payload) },
+    broadcast: others,
+    to: () => others,
   };
   return { socket: socket as unknown as Socket, handlers, sent, toOthers };
 }
@@ -83,11 +85,11 @@ describe("an address with a user and a password, in the import left unfinished",
   it("an older Studio kept is not sent to a page as it connects", () => {
     const { pages } = pageState();
     pages.write("apis.import", { source: "url", content: WITH_CREDENTIALS[4] });
-    const withoutToken = page();
+    const withToken = page();
 
-    bindPageState(withoutToken.socket, pages, false);
+    bindPageState(withToken.socket, pages, true);
 
-    expect(withoutToken.sent).toEqual([{ writable: false, state: { "apis.import": {} } }]);
+    expect(withToken.sent).toEqual([{ writable: true, state: { "apis.import": {} } }]);
   });
 });
 

@@ -29,8 +29,8 @@ function split(text: string): { head: string; body: string } {
   return { head: text.slice(0, at), body: text.slice(at + 2) };
 }
 
-function read(page: string, section?: string, offset?: number) {
-  const outcome = readPage(docs, { page, section, offset });
+function read(page: string, section?: string, offset?: number, from: Docs = docs) {
+  const outcome = readPage(from, { page, section, offset });
   if (!outcome.ok) throw new Error(outcome.message);
   return split(outcome.text);
 }
@@ -45,11 +45,17 @@ describe("a page", () => {
   });
 
   it("is read in pieces when it is long, which put together are the page — every page", () => {
-    for (const page of docs.pages.values()) {
+    /* A page longer than two reads, made of one the docs have: none of theirs may be that long. */
+    const quick = docs.pages.get("quick-start");
+    if (quick === undefined) throw new Error("The docs have no quick-start page");
+    const times = Math.ceil((2.5 * DOCS_LIMITS.readChars) / quick.markdown.length);
+    const long = { ...quick, id: "long", markdown: `${quick.markdown}\n`.repeat(times) };
+    const withLong: Docs = { ...docs, pages: new Map([...docs.pages, ["long", long]]) };
+    for (const page of withLong.pages.values()) {
       let offset = 0;
       let whole = "";
       for (let piece = 0; piece < 100; piece += 1) {
-        const { head, body } = read(page.id, undefined, offset);
+        const { head, body } = read(page.id, undefined, offset, withLong);
         expect(body.length, page.id).toBeLessThanOrEqual(DOCS_LIMITS.readChars);
         whole += body;
         const next = /read on with offset (\d+)$/.exec(head)?.[1];
@@ -59,7 +65,7 @@ describe("a page", () => {
       }
       expect(whole, page.id).toBe(page.markdown);
     }
-    expect(read("studio/import-api").head).toMatch(/read on with offset \d+$/);
+    expect(read("long", undefined, undefined, withLong).head).toMatch(/read on with offset \d+$/);
   });
 
   it("is found by its address under /docs and on the site, .md and #anchor too", () => {

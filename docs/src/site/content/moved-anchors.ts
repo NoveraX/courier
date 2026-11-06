@@ -7,6 +7,13 @@
  * that links to the new one, for a reader the page cannot send on.
  */
 export const MOVED_ANCHORS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "/docs/studio/import-api": {
+    "which-files-studio-changes": "/docs/studio/import-files#which-files-studio-changes",
+    "how-studio-formats-the-files": "/docs/studio/import-files#how-studio-formats-the-files",
+    "specifications-on-a-private-network":
+      "/docs/studio/import-access#specifications-on-a-private-network",
+    "specifications-behind-auth": "/docs/studio/import-access#specifications-behind-auth",
+  },
   "/docs/studio/editor": {
     snippets: "/docs/studio/editor-reference#snippets",
     "commands-and-settings": "/docs/studio/editor-reference#commands-and-settings",

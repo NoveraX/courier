@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-
-import { LIMITS } from "../src/adapter/limits";
 import { courier } from "../src/define/courier";
+import { LIMITS } from "../src/limits";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";

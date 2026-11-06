@@ -14,10 +14,10 @@
  * client's length.
  */
 
+import { LIMITS } from "../limits";
 import { BodyError } from "./body-error";
 import { declaredLength } from "./declared-length";
 import { discardBody } from "./discard-body";
-import { LIMITS } from "./limits";
 import { readChunk } from "./read-chunk";
 
 /** What a request body is held to while it is read. */

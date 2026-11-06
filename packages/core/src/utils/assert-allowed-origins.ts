@@ -1,5 +1,5 @@
 import { ConfigurationError } from "../errors";
-import { parseUrl } from "../utils/parse-url";
+import { parseUrl } from "./parse-url";
 
 const WEB_SCHEMES = new Set(["http:", "https:"]);
 

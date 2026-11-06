@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { LIMITS } from "../src/adapter/limits";
+import { LIMITS } from "../src/limits";
 import { acquireConnection, clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { WSClientSocket, WSCloseEventLike } from "../src/realtime/ws/ws-types";
 

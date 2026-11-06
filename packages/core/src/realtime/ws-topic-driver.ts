@@ -1,4 +1,4 @@
-import { LIMITS } from "../adapter/limits";
+import { LIMITS } from "../limits";
 import { createLogger } from "../logger";
 import { acquireConnection, type ConnectionLease, leaseWhenFound } from "./caller-ws";
 import { RealtimeError } from "./errors";

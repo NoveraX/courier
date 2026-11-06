@@ -1,8 +1,8 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
-import { LIMITS } from "./adapter/limits";
 import { closeWithNotice } from "./adapter/ws-close";
 import { shutdownClose } from "./adapter/ws-shutdown";
+import { LIMITS } from "./limits";
 import { createLogger } from "./logger";
 import { toWebRequest } from "./node-request";
 import type { WebSocketLike } from "./realtime/adapters";

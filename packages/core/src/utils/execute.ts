@@ -1,9 +1,7 @@
-import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
-import { buildErrorResponse } from "./execute-response";
 import { callInstruments } from "./execute-studio";
-import { resolveCallTarget } from "./execute-target";
+import { type CallRefusal, type CallRequest, resolveCallTarget } from "./execute-target";
 import { prepareAndRun } from "./prepare-and-run";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 
@@ -12,10 +10,11 @@ import { parseRequestPayload, type RequestPayloadInput } from "./request-payload
  * direct caller both end here.
  *
  * The call names its source, group and method. It is refused with a 400
- * when they name nothing, when its variables have no form on the wire, or —
- * over the proxy — when its options or its endpoint are not the browser's
- * to use. Otherwise its variables are validated, it runs through the
- * source's and the endpoint's middleware, and its answer is built.
+ * when they name nothing, or when its variables have no form on the wire;
+ * the proxy refuses what is not a browser's to use first, with
+ * `executeWireRequest`. Otherwise its variables are validated, it runs
+ * through the source's and the endpoint's middleware, and its answer is
+ * built.
  *
  * @param sources - The registered sources
  * @param requestPayload - The call: source, group, method, variables and options
@@ -43,21 +42,31 @@ export async function executeRequest(
   requestPayload: RequestPayloadInput,
   context?: Context,
 ): Promise<unknown> {
-  const { source, group, method, variables, options: given } = parseRequestPayload(requestPayload);
+  return executeCall(sources, parseRequestPayload(requestPayload), context);
+}
 
-  /* A request that arrived over the proxy is untrusted, so it keeps only the
-     options `parseWireOptions` names. A server-side caller runs in this
-     process, already chose the destination, and keeps the full set. */
-  let options = given;
-  if (context?.proxyMethod !== undefined) {
-    const accepted = parseWireOptions(given);
-    if (!accepted.ok) return buildErrorResponse(context, 400, accepted.reason);
-    options = accepted.options;
-  }
-
+/**
+ * Run a call read from its payload against the registered sources, after
+ * `refuse` has had its say on the endpoint it found.
+ *
+ * @param sources - The registered sources
+ * @param call - The call: source, group, method, variables and options
+ * @param context - Where the call came from
+ * @param refuse - What refuses a found call where it came from, when anything does
+ * @returns What `executeRequest` returns for the call
+ * @example
+ * ```ts
+ * await executeCall(sources, { source: "api", group: "users", method: "list", variables: undefined, options: undefined }, context);
+ * ```
+ */
+export async function executeCall(
+  sources: Sources,
+  call: CallRequest,
+  context: Context | undefined,
+  refuse?: CallRefusal,
+): Promise<unknown> {
   const { studio, timing } = callInstruments(context?.studioRequestId);
-  const call = { source, group, method, variables, options };
-  const resolution = resolveCallTarget(sources, call, context);
+  const resolution = resolveCallTarget(sources, call, context, refuse);
   if ("refusal" in resolution) return resolution.refusal;
   return prepareAndRun(resolution.target, studio, timing, context);
 }

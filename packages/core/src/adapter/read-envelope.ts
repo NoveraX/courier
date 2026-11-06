@@ -1,8 +1,8 @@
+import { LIMITS } from "../limits";
 import { RECORD_UPLOAD_TYPE } from "../utils/record-upload";
 import { discardBody } from "./discard-body";
 import { type EnvelopeResult, refusedBody } from "./envelope-result";
 import type { HandlerConfig } from "./handler-config";
-import { LIMITS } from "./limits";
 import { parseJsonEnvelope } from "./parse-envelope";
 import { readBodyText } from "./read-body-text";
 import { readUpload } from "./read-upload";

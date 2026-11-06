@@ -10,9 +10,9 @@
  * chain, so a concern declared once holds wherever the endpoint is reachable.
  */
 
-import { LIMITS } from "../adapter/limits";
 import type { Sources } from "../define/types";
 import type { BaseOptions, Context } from "../http-client/types";
+import { LIMITS } from "../limits";
 import { composeMiddleware } from "../middleware";
 import { sessionFor } from "../session/call-session";
 import { sessionTargetOf } from "../session/session-target";

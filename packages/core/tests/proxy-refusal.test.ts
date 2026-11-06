@@ -6,10 +6,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { executeWireRequest, type WireContext } from "../src/adapter/execute-wire-request";
 import { resolveSSEEndpoint } from "../src/adapter/sse-resolve";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import type { Context } from "../src/http-client/types";
-import { executeRequest } from "../src/utils/execute";
 import { proxyRefusal } from "../src/utils/proxy-refusal";
 
 const { endpoint, stream } = courier();
@@ -35,14 +34,14 @@ const api = defineApi({
 
 /* What the proxy itself answers a call from a page with. */
 async function proxyAnswer(group: string, method: string, proxyMethod: "GET" | "POST") {
-  const response = (await executeRequest(
+  const response = (await executeWireRequest(
     { api } as never,
     { source: "api", group, method } as never,
     {
       res: new Response(),
       proxyMethod,
       req: new Request("https://app.example.com/api/request", { method: proxyMethod }),
-    } as Context & { res: Response },
+    } as WireContext & { res: Response },
   )) as Response;
   const body: unknown = await response.json();
   return { status: response.status, message: Reflect.get(Object(body), "message") as unknown };

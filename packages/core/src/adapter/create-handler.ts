@@ -2,12 +2,12 @@ import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
-import { executeRequest } from "../utils/execute";
 import { assertBodyOptions } from "./assert-body-options";
 import type { ConnectResult } from "./connection-meta";
 import { discardBody } from "./discard-body";
 import { gateEntry } from "./entry-gate";
 import type { ExecuteFn } from "./execute-fn";
+import { executeWireRequest } from "./execute-wire-request";
 import { createGetHandler } from "./handle-get";
 import { createPostHandler } from "./handle-post";
 import { createSSEHandler } from "./handle-sse";
@@ -69,7 +69,7 @@ export function createHandler(config?: HandlerConfig): AdapterHandler {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
   }
   const execute: ExecuteFn = (request, payload, proxyMethod, proxyReceiveAt, requestId) =>
-    executeRequest(servedSources(config?.sources), payload, {
+    executeWireRequest(servedSources(config?.sources), payload, {
       req: request,
       res: new Response(),
       proxyMethod,

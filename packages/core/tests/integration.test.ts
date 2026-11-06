@@ -4,6 +4,7 @@
  * defineApi/defineGroup/endpoint → executeRequest → HttpClient → fetch (mocked) → response
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { executeWireRequest } from "../src/adapter/execute-wire-request";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { executeRequest } from "../src/utils/execute";
@@ -371,7 +372,7 @@ describe("integration: HTTP-semantic proxy", () => {
   it("rejects GET proxy for a write", async () => {
     // `create` is a mutation, so it must not be reachable over a cacheable GET
     try {
-      await executeRequest(
+      await executeWireRequest(
         sources,
         {
           source: "api",
@@ -403,7 +404,7 @@ describe("integration: HTTP-semantic proxy", () => {
       },
     });
 
-    const result = await executeRequest(
+    const result = await executeWireRequest(
       { api: queryApi },
       {
         source: "api",
@@ -432,7 +433,7 @@ describe("integration: HTTP-semantic proxy", () => {
       },
     });
 
-    const result = await executeRequest(
+    const result = await executeWireRequest(
       { api: queryApi },
       {
         source: "api",
@@ -463,7 +464,7 @@ describe("integration: HTTP-semantic proxy", () => {
       },
     });
 
-    const response = (await executeRequest(
+    const response = (await executeWireRequest(
       { api: cachedApi },
       {
         source: "api",
@@ -501,7 +502,7 @@ describe("integration: HTTP-semantic proxy", () => {
       },
     });
 
-    const response = (await executeRequest(
+    const response = (await executeWireRequest(
       { api: taggedApi },
       {
         source: "api",
@@ -537,7 +538,7 @@ describe("integration: HTTP-semantic proxy", () => {
       },
     });
 
-    const response = (await executeRequest(
+    const response = (await executeWireRequest(
       { api: cachedApi },
       {
         source: "api",

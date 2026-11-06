@@ -1,6 +1,6 @@
+import { LIMITS } from "../limits";
 import type { SSEEvent } from "../realtime/types";
 import { formatSSEEvent } from "./format-sse";
-import { LIMITS } from "./limits";
 import { safeSend } from "./sse-stream-lifecycle";
 
 const ENCODER = new TextEncoder();

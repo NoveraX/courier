@@ -1,4 +1,4 @@
-import { LIMITS } from "./limits";
+import { LIMITS } from "../limits";
 
 /** The values a WebSocket server of the protocol keeps when its options name nothing. */
 export interface WSDefaults {

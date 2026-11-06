@@ -1,9 +1,9 @@
+import { LIMITS } from "../limits";
 import type { StreamedUpload } from "../utils/streamed-upload";
 import { BodyError } from "./body-error";
 import { discardBody } from "./discard-body";
 import { type EnvelopeResult, refusedBody } from "./envelope-result";
 import type { HandlerConfig } from "./handler-config";
-import { LIMITS } from "./limits";
 import { boundaryOf } from "./multipart/boundary-of";
 import { diskStore } from "./multipart/disk-store";
 import type { FileStore } from "./multipart/file-store";

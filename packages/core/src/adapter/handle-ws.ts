@@ -1,9 +1,9 @@
+import { LIMITS } from "../limits";
 import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import type { ConnectResult } from "./connection-meta";
-import { LIMITS } from "./limits";
 import { assertListedSettings } from "./runtime-policy";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
 import { createIPTracker } from "./ws-ip-tracker";

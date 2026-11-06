@@ -9,9 +9,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { executeWireRequest, type WireContext } from "../src/adapter/execute-wire-request";
 import { courier, defineApi } from "../src/define/index";
 import { HTTPError } from "../src/errors";
-import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 
 const { channel, endpoint, stream } = courier();
@@ -35,10 +35,10 @@ const sources = { api };
 
 /** A request as the proxy hands it over: the wire options travel in `options`. */
 function wireCall(options: unknown) {
-  return executeRequest(
+  return executeWireRequest(
     sources,
     { source: "api", method: "getById", variables: { id: "7" }, options } as never,
-    { proxyMethod: "GET" } as Context,
+    { proxyMethod: "GET" } as WireContext,
   );
 }
 
@@ -142,10 +142,10 @@ describe("proxy boundary — a server-side caller keeps the full option set", ()
  */
 describe("proxy boundary — a transport is not a verb", () => {
   function callOverHttp(method: string) {
-    return executeRequest(
+    return executeWireRequest(
       sources,
       { source: "api", method, variables: {} } as never,
-      { proxyMethod: "POST" } as Context,
+      { proxyMethod: "POST" } as WireContext,
     );
   }
 
@@ -175,10 +175,10 @@ describe("proxy boundary — a transport is not a verb", () => {
   });
 
   it("still serves an ordinary HTTP endpoint", async () => {
-    await executeRequest(
+    await executeWireRequest(
       sources,
       { source: "api", method: "getById", variables: { id: "7" } } as never,
-      { proxyMethod: "GET" } as Context,
+      { proxyMethod: "GET" } as WireContext,
     );
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);

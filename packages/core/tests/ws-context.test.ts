@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LIMITS } from "../src/adapter/limits";
 import { buildContext } from "../src/adapter/ws-context";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
 import { createSession } from "../src/adapter/ws-session";
 import { createServerTopicManager } from "../src/adapter/ws-topics";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
+import { LIMITS } from "../src/limits";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";

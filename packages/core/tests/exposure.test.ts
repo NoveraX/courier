@@ -8,9 +8,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { executeWireRequest, type WireContext } from "../src/adapter/execute-wire-request";
 import { exposureOf, isExposedToWire } from "../src/adapter/exposure";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../src/validation";
 
@@ -40,14 +40,14 @@ function apiWith(options: { source?: boolean; publicGroup?: boolean; adminGroup?
 
 /** A request shaped exactly as the browser's proxy client sends it. */
 async function fromBrowser(api: unknown, group: string, method: string) {
-  const response = (await executeRequest(
+  const response = (await executeWireRequest(
     { api } as never,
     { source: "api", group, method } as never,
     {
       res: new Response(),
       proxyMethod: "GET",
       req: new Request("https://app.example.com/api/request"),
-    } as Context & { res: Response },
+    } as WireContext & { res: Response },
   )) as Response;
 
   return { status: response.status, body: await response.text() };

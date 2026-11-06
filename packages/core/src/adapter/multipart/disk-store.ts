@@ -1,4 +1,4 @@
-import { LIMITS } from "../limits";
+import { LIMITS } from "../../limits";
 import type { FileStore } from "./file-store";
 import { GatheredFile } from "./gathered-file";
 import type { MultipartPart } from "./multipart-parts";

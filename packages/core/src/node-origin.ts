@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 
-import { isLocalAddress } from "./adapter/peer-address";
+import { isLocalAddress } from "./utils/local-address";
 
 /**
  * The scheme and host a Node request was addressed to, as its client saw them.

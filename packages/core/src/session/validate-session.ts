@@ -1,5 +1,5 @@
-import { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 import { ConfigurationError } from "../errors/configuration-error";
+import { assertAllowedOrigins } from "../utils/assert-allowed-origins";
 import { isRecord } from "../utils/is-record";
 import { cookieNameProblem } from "./cookie-names";
 import { csrfSourceProblem } from "./csrf-source";

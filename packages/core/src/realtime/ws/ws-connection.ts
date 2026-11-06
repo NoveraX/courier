@@ -1,4 +1,4 @@
-import { LIMITS } from "../../adapter/limits";
+import { LIMITS } from "../../limits";
 import { createLogger } from "../../logger";
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
 import { backoffDelay, hintedDelay, resolveBackoff } from "../backoff";

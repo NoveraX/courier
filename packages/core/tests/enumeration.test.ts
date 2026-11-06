@@ -6,9 +6,9 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { executeWireRequest, type WireContext } from "../src/adapter/execute-wire-request";
 import { resolveSSEEndpoint } from "../src/adapter/sse-resolve";
 import { courier, defineApi } from "../src/define/index";
-import type { Context } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 
 const { endpoint, stream } = courier();
@@ -33,10 +33,10 @@ const sources = { publicApi, adminApi };
 /** What a proxy caller is told. */
 async function overWire(source: string, method: string): Promise<string> {
   try {
-    const res = (await executeRequest(
+    const res = (await executeWireRequest(
       sources,
       { source, method, variables: {}, options: {} } as never,
-      { proxyMethod: "POST", fromWire: true } as Context,
+      { proxyMethod: "POST", fromWire: true } as WireContext,
     )) as Response;
     return `${res.status} ${((await res.json()) as { message: string }).message}`;
   } catch (error) {

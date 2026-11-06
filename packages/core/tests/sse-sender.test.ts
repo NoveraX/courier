@@ -10,9 +10,8 @@
  * grows without bound.
  */
 import { describe, expect, it, vi } from "vitest";
-
-import { LIMITS } from "../src/adapter/limits";
 import { createSSESender } from "../src/adapter/sse-sender";
+import { LIMITS } from "../src/limits";
 
 /** A stream whose reader never reads, with the byte-sized queue the handler uses. */
 function unreadStream(onSlow = vi.fn()) {

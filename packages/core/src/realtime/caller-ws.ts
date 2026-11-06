@@ -1,4 +1,4 @@
-import { LIMITS } from "../adapter/limits";
+import { LIMITS } from "../limits";
 import { createLogger } from "../logger";
 import { CLIENT_LIMITS } from "./client-limits";
 import { ConnectionError, RealtimeError } from "./errors";

@@ -4,7 +4,6 @@ import type { CallOptions, Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import { resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse } from "./execute-response";
-import { refuseWireCall } from "./wire-refusal";
 
 /**
  * What variables may be: named values, a list, a JSON scalar, form data or a
@@ -39,6 +38,29 @@ export interface CallTarget extends CallRequest {
 /** The target of a call, or the answer that refuses it. */
 export type CallResolution = { target: CallTarget } | { refusal: unknown };
 
+/** A call whose endpoint was found, as a rule of where it came from reads it. */
+export interface ResolvedCall {
+  /** The source as it sits in the registry */
+  dataSource: unknown;
+  group: unknown;
+  method: unknown;
+  /** The endpoint's metadata, when it has any */
+  schema: CallTarget["schema"];
+  /** The call's options, as its payload gave them */
+  options: CallRequest["options"];
+  /** The endpoint's own options */
+  endpointOptions: CallTarget["endpointOptions"];
+  /** The endpoint as a refusal names it, `[api][admin][purge]` */
+  endpoint: string;
+}
+
+/**
+ * Why a call may not run where it came from — the status and message it is
+ * answered with — or `undefined` when it may: the proxy's rules for a
+ * browser's call, which the proxy hands its calls.
+ */
+export type CallRefusal = (call: ResolvedCall) => { status: number; message: string } | undefined;
+
 /**
  * Find the source and the endpoint a call names, or refuse it.
  *
@@ -52,6 +74,7 @@ export type CallResolution = { target: CallTarget } | { refusal: unknown };
  * @param sources - The registered sources
  * @param call - The call, as its payload names it
  * @param context - The call's context, when it has one
+ * @param refuse - What refuses a found call where it came from, when anything does
  * @returns The target, or the error answer the call gets instead
  *
  * @example
@@ -65,17 +88,18 @@ export function resolveCallTarget(
   sources: Sources,
   call: CallRequest,
   context?: Context,
+  refuse?: CallRefusal,
 ): CallResolution {
   const { source, group, method, variables, options } = call;
-  const refuse = (status: number, message: string): CallResolution => ({
+  const refused = (status: number, message: string): CallResolution => ({
     refusal: buildErrorResponse(context, status, message),
   });
   /* A request that leaves a name out is malformed, not a guess at one. */
   if (typeof source !== "string" || source === "") {
-    return refuse(400, "[source] is required: the call names no source");
+    return refused(400, "[source] is required: the call names no source");
   }
   if (typeof method !== "string" || method === "") {
-    return refuse(400, "[method] is required: the call names no endpoint");
+    return refused(400, "[method] is required: the call names no endpoint");
   }
   const dataSource = Object.hasOwn(sources, source) ? sources[source] : undefined;
 
@@ -85,10 +109,10 @@ export function resolveCallTarget(
 
   if (!dataSource) {
     const fromWire = context?.proxyMethod !== undefined;
-    return refuse(400, fromWire ? notFound : `[${source}]: source not found`);
+    return refused(400, fromWire ? notFound : `[${source}]: source not found`);
   }
   if (variables !== undefined && variables !== null && !SENDABLE.has(typeof variables)) {
-    return refuse(400, "[variables] must be a JSON value or a request body");
+    return refused(400, "[variables] must be a JSON value or a request body");
   }
 
   const {
@@ -98,27 +122,25 @@ export function resolveCallTarget(
     options: endpointOptions,
     httpMethod,
   } = resolveEndpoint(dataSource, group, method);
-  if (typeof endpoint !== "function") return refuse(400, notFound);
+  if (typeof endpoint !== "function") return refused(400, notFound);
 
-  if (context?.proxyMethod !== undefined) {
-    const refused = refuseWireCall({
-      dataSource,
-      group,
-      method,
-      schema,
-      stream: options?.stream,
-      proxyMethod: context.proxyMethod,
-      sensitiveVariables: endpointOptions?.sensitiveVariables === true,
-      endpoint: named,
-    });
-    if (refused) return refuse(refused.status, refused.message);
-  }
+  /* Asked before the transport is: a stream the rule hides is unknown, not "served over SSE". */
+  const ruled = refuse?.({
+    dataSource,
+    group,
+    method,
+    schema,
+    options,
+    endpointOptions,
+    endpoint: named,
+  });
+  if (ruled) return refused(ruled.status, ruled.message);
 
   /* A stream or a channel is reached by opening one, not by asking for it
      over HTTP. Without this an ordinary POST ran a channel's implementation
      factory, which expects a socket to talk to and has none. */
   if (schema?.transport && schema.transport !== "http") {
-    return refuse(
+    return refused(
       400,
       `[${String(method)}]: endpoint is served over ${schema.transport}, not HTTP`,
     );

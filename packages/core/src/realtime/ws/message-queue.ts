@@ -1,5 +1,5 @@
-import { LIMITS } from "../../adapter/limits";
 import { ConfigurationError } from "../../errors/configuration-error";
+import { LIMITS } from "../../limits";
 
 export interface MessageQueueConfig {
   /** Max messages a connection keeps to send, for all its subscriptions together (default 100) */

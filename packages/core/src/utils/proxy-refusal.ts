@@ -1,6 +1,6 @@
 import { isExposedToWire } from "../adapter/exposure";
+import { refuseWireCall, type WireRefusal } from "../adapter/wire-refusal";
 import { resolveEndpoint } from "./execute-resolve";
-import { refuseWireCall, type WireRefusal } from "./wire-refusal";
 
 /** A call a stand-in for the proxy received: the endpoint it names, and how it came. */
 export interface StandInCall {

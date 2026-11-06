@@ -1,20 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type * as ExecuteModule from "../src/utils/execute";
+import type * as ExecuteModule from "../src/adapter/execute-wire-request";
 
-vi.mock("../src/utils/execute", async (importOriginal) => {
+vi.mock("../src/adapter/execute-wire-request", async (importOriginal) => {
   const actual = await importOriginal<typeof ExecuteModule>();
   return {
     ...actual,
-    executeRequest: vi.fn(),
+    executeWireRequest: vi.fn(),
   };
 });
 
 import { createHandler, requireSources } from "../src/adapter";
+import { executeWireRequest } from "../src/adapter/execute-wire-request";
 import { isConfigurationError } from "../src/errors";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
-import { executeRequest } from "../src/utils/execute";
 
-const mockExecuteRequest = vi.mocked(executeRequest);
+const mockExecuteRequest = vi.mocked(executeWireRequest);
 
 /** Seed the global sources registry and create a zero-arg handler. */
 function setupHandler(sources: unknown = {}) {
@@ -241,7 +241,7 @@ describe("createHandler", () => {
       expect(payload.group).toBeUndefined();
     });
 
-    it("provides context with res to executeRequest", async () => {
+    it("provides context with res to executeWireRequest", async () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handleGet } = setupHandler({ api: {} });

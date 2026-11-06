@@ -8,15 +8,13 @@
 import { format } from "node:util";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { createHandler } from "../src/adapter";
+import { executeWireRequest, type WireContext } from "../src/adapter/execute-wire-request";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import { courier, defineApi } from "../src/define/index";
 import type { Sources } from "../src/define/types";
-import type { Context } from "../src/http-client/types";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
-import { executeRequest } from "../src/utils/execute";
 import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 
 const { endpoint, channel, stream } = courier();
@@ -27,14 +25,14 @@ const api = defineApi({
 });
 
 async function fromPage(method: string) {
-  const response = (await executeRequest(
+  const response = (await executeWireRequest(
     { api } as never,
     { source: "api", method } as never,
     {
       res: new Response(),
       proxyMethod: "POST",
       req: new Request("https://app.example.com/api/request", { method: "POST" }),
-    } as Context & { res: Response },
+    } as WireContext & { res: Response },
   )) as Response;
   return { status: response.status, body: await response.text() };
 }

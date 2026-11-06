@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { executeWireRequest } from "../src/adapter/execute-wire-request";
 import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
 import { defineMiddleware } from "../src/middleware/index";
-import { executeRequest } from "../src/utils/execute";
 import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";
 
 const UserSchema = z.object({ id: z.string(), email: z.string() });
@@ -128,7 +128,7 @@ describe("proxy routing follows the head", () => {
   });
 
   it("serves a query over a GET proxy request", async () => {
-    const result = await executeRequest(
+    const result = await executeWireRequest(
       { api },
       { source: "api", group: "users", method: "getAll" },
       { proxyMethod: "GET" },
@@ -139,7 +139,7 @@ describe("proxy routing follows the head", () => {
 
   it("refuses a mutation over a GET proxy request", async () => {
     await expect(
-      executeRequest(
+      executeWireRequest(
         { api },
         { source: "api", group: "users", method: "create", variables: { email: "a@b.c" } },
         { proxyMethod: "GET" },
@@ -152,7 +152,7 @@ describe("proxy routing follows the head", () => {
   it("serves a mutation over a POST proxy request", async () => {
     fetchSpy.mockResolvedValue(jsonResponse({ id: "1", email: "a@b.c" }));
 
-    const result = await executeRequest(
+    const result = await executeWireRequest(
       { api },
       { source: "api", group: "users", method: "create", variables: { email: "a@b.c" } },
       { proxyMethod: "POST" },
@@ -162,7 +162,7 @@ describe("proxy routing follows the head", () => {
   });
 
   it("serves a query over GET even when the vendor requires a POST upstream", async () => {
-    const result = await executeRequest(
+    const result = await executeWireRequest(
       { api },
       { source: "api", group: "users", method: "search", variables: { q: "a" } },
       { proxyMethod: "GET" },

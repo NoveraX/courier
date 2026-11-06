@@ -1,5 +1,5 @@
-import { isLocalAddress } from "../adapter/peer-address";
 import { ConfigurationError } from "../errors/configuration-error";
+import { isLocalAddress } from "../utils/local-address";
 import { parseUrl } from "../utils/parse-url";
 
 /* Names only a private network resolves: mDNS, the ICANN private-use TLD,

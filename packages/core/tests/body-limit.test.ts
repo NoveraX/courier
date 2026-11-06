@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createPostHandler } from "../src/adapter/handle-post";
 import type { HandlerConfig } from "../src/adapter/handler-config";
-import { LIMITS } from "../src/adapter/limits";
+import { LIMITS } from "../src/limits";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const hooks = () =>

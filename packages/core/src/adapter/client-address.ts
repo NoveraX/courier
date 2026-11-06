@@ -1,6 +1,7 @@
 import { parseAddress, plainAddress } from "../utils/ip-address";
+import { isLocalAddress } from "../utils/local-address";
 import { type AddressTrust, deploymentTrust } from "./address-trust";
-import { isLocalAddress, peerAddressOf } from "./peer-address";
+import { peerAddressOf } from "./peer-address";
 
 /** Reads one of the request's headers, all its values joined, or nothing. */
 export type HeaderOf = (name: string) => string | null | undefined;

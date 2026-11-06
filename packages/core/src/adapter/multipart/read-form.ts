@@ -1,4 +1,4 @@
-import { LIMITS } from "../limits";
+import { LIMITS } from "../../limits";
 import { boundaryOf } from "./boundary-of";
 import type { FileStore } from "./file-store";
 import { isOptionsPart, TextFields } from "./form-fields";

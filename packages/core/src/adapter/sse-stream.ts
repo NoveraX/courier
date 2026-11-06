@@ -1,3 +1,4 @@
+import { LIMITS } from "../limits";
 import { createLogger } from "../logger";
 import { checkResponse } from "../realtime/check-response";
 import { describeFailure } from "../realtime/describe-failure";
@@ -7,7 +8,6 @@ import type { SSEContext } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
 import { anySignal } from "../utils/any-signal";
 import { SSE_HEARTBEAT } from "./format-sse";
-import { LIMITS } from "./limits";
 import { createSSESender } from "./sse-sender";
 import {
   cleanupSSEStream,

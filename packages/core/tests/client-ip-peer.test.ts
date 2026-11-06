@@ -9,8 +9,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { isLocalAddress, rememberPeerAddress } from "../src/adapter/peer-address";
+import { rememberPeerAddress } from "../src/adapter/peer-address";
 import { extractClientIP } from "../src/adapter/ws-ip-tracker";
+import { isLocalAddress } from "../src/utils/local-address";
 
 function requestFrom(peer: string | undefined, headers: Record<string, string> = {}): Request {
   const request = new Request("http://app.local/api/ws", { headers });

@@ -1,6 +1,6 @@
+import { LIMITS } from "../limits";
 import { anySignal } from "../utils/any-signal";
 import { timeoutSignal } from "../utils/timeout-signal";
-import { LIMITS } from "./limits";
 
 /**
  * Combine request abort signal + shutdown signal + optional TTL into a single AbortSignal.

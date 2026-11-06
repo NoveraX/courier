@@ -16,9 +16,9 @@
  * process, already decides the destination, and keeps the full option set.
  */
 
+import { LIMITS } from "../limits";
 import { isRecord } from "../utils/is-record";
 import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
-import { LIMITS } from "./limits";
 
 /** Options a proxy client may set. Everything else is refused. */
 export interface WireOptions {

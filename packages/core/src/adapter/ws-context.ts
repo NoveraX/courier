@@ -1,4 +1,5 @@
 import type { Sources } from "../define/types";
+import { LIMITS } from "../limits";
 import { createLogger } from "../logger";
 import type { RefusalLog } from "../logger/refusal-log";
 import type { WebSocketLike } from "../realtime/adapters";
@@ -6,7 +7,6 @@ import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId, PLAYGROUND_RID_PARAM, playgroundRidOf, studioHooks } from "../studio";
 import { randomId } from "../utils/random-id";
-import { LIMITS } from "./limits";
 import { servedSources } from "./served-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
 import { createBucket, type RateLimitBucket } from "./ws-rate-limit";

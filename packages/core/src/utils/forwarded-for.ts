@@ -1,6 +1,7 @@
 import { type AddressTrust, deploymentTrust } from "../adapter/address-trust";
-import { isLocalAddress, peerAddressOf } from "../adapter/peer-address";
+import { peerAddressOf } from "../adapter/peer-address";
 import { parseAddress, plainAddress } from "./ip-address";
+import { isLocalAddress } from "./local-address";
 
 /* The hops carried on, the nearest kept: no application stands behind more proxies, and what a
    user writes stands left of theirs. Eight of the longest, with `unknown` before them and the

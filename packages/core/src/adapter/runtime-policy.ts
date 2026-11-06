@@ -31,7 +31,7 @@
 
 import { ConfigurationError } from "../errors";
 import { createLogger } from "../logger";
-import { originEntryProblem } from "./assert-allowed-origins";
+import { originEntryProblem } from "../utils/assert-allowed-origins";
 import { type HostNames, hostNamesOf } from "./host-names";
 import {
   NOT_SET,

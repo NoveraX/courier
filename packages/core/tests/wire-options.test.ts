@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { LIMITS } from "../src/adapter/limits";
 import { parseWireOptions, parseWireOptionsJson } from "../src/adapter/wire-options";
+import { LIMITS } from "../src/limits";
 
 /** The reason text a refusal carries, or "" when the input was accepted. */
 function reasonOf(result: ReturnType<typeof parseWireOptions>): string {

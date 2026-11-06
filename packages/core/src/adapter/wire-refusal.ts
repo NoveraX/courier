@@ -1,6 +1,6 @@
-import { isExposedToWire } from "../adapter/exposure";
-import { warnNotExposed } from "../adapter/not-exposed";
 import type { SchemaMetadata } from "../validation";
+import { isExposedToWire } from "./exposure";
+import { warnNotExposed } from "./not-exposed";
 
 /** A call that arrived over the proxy, as far as deciding whether it may run. */
 export interface WireCall {

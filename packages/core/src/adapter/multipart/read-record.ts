@@ -1,3 +1,4 @@
+import { LIMITS } from "../../limits";
 import { isFieldRecord } from "../../utils/body-kind";
 import { defineOwn } from "../../utils/define-own";
 import { isRecord } from "../../utils/is-record";
@@ -5,7 +6,6 @@ import { RECORD_PART } from "../../utils/record-upload";
 import { reviveWithoutPrototypeKeys } from "../../utils/safe-json";
 import type { FilePlace } from "../../utils/variables-encoding";
 import { BodyError } from "../body-error";
-import { LIMITS } from "../limits";
 import { boundaryOf } from "./boundary-of";
 import type { FileStore } from "./file-store";
 import { isOptionsPart, TextFields } from "./form-fields";

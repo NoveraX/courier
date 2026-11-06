@@ -18,7 +18,6 @@
  */
 
 export { addressTrust, deploymentTrust } from "../adapter/address-trust";
-export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 export { BodyError } from "../adapter/body-error";
 export { clientAddress, requestClientAddress } from "../adapter/client-address";
 export { discardBody } from "../adapter/discard-body";
@@ -106,6 +105,7 @@ export {
   proxyStreamingFactories,
 } from "../transport";
 export { anySignal } from "../utils/any-signal";
+export { assertAllowedOrigins } from "../utils/assert-allowed-origins";
 export { executeRequest } from "../utils/execute";
 export { absentAs } from "../utils/execute-validation";
 export { forwardedChain, forwardedFor } from "../utils/forwarded-for";

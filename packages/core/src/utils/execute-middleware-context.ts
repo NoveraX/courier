@@ -5,6 +5,7 @@ import { namedHeadersOf } from "./execute-resolve";
 import { forwardedRequestHeaders } from "./forwarded-request-headers";
 import { headersToObject } from "./helpers";
 import { mergeHeaders } from "./merge-headers";
+import { agentOf } from "./one-users-call";
 import { randomId } from "./random-id";
 
 export interface MiddlewareContextInput {
@@ -62,6 +63,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     signal,
   } = input;
   const { req: nextRequest, headers: nextHeaders } = context || {};
+  const agent = agentOf(context);
   const mergedNextHeaders = {
     ...headersToObject(nextRequest?.headers),
     ...headersToObject(nextHeaders),
@@ -106,7 +108,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     kind,
     signal,
     ...(input.purpose && { purpose: input.purpose }),
-    ...(context?.agent && { agent: context.agent }),
+    ...(agent && { agent }),
     ...(idempotencyKey && { idempotencyKey }),
     _requestId: requestId || undefined,
     _forwarded: forwarded,

@@ -15,6 +15,7 @@ import { defineMiddleware } from "../src/middleware/define";
 import type { MiddlewareContext } from "../src/middleware/types";
 import { studioHooks } from "../src/studio";
 import { executeRequest } from "../src/utils/execute";
+import { agentCallContext } from "../src/utils/one-users-call";
 
 const { endpoint } = courier();
 
@@ -175,7 +176,7 @@ describe("a call made for an agent", () => {
     await executeRequest(
       { shop },
       { source: "shop", method: "order", variables: { id: "1" } },
-      { agent },
+      agentCallContext(undefined, agent),
     );
     await executeRequest({ shop }, { source: "shop", method: "order", variables: { id: "1" } });
 
@@ -189,7 +190,7 @@ describe("a call made for an agent", () => {
     await executeRequest(
       { shop },
       { source: "shop", method: "order", variables: { id: "1" } },
-      { agent },
+      agentCallContext(undefined, agent),
     );
     await executeRequest({ shop }, { source: "shop", method: "order", variables: { id: "1" } });
 

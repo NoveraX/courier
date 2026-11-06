@@ -1,6 +1,6 @@
 import type { AgentCall, AgentClient } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import { executeRequest } from "@noverax/courier/internal";
+import { agentCallContext, executeRequest } from "@noverax/courier/internal";
 
 import type { ToolOutcome } from "../protocol/served-tool";
 import type { AgentTool } from "./agent-tool";
@@ -22,8 +22,12 @@ export interface ToolRun {
 /**
  * Call a tool's endpoint the way the application calls it: through its
  * source's and its own middleware, its schemas and Studio, with `ctx.agent`
- * saying which agent asked. The call carries no request being served, so
- * no browser's session reaches the API through an agent.
+ * saying which agent asked. The call is the server's own, made for the
+ * agent: it takes nothing of the request it arrived on, whatever the
+ * application lends — no session, no forwarded header, no chain of
+ * addresses — nor what a DOM on the server's global object keeps, and no
+ * newer call cancels it, so no browser's session reaches the API through
+ * an agent.
  *
  * @param tool - The tool
  * @param args - Its arguments, as the client sent them
@@ -50,7 +54,7 @@ export async function runTool(
     const data = await executeRequest(
       run.sources,
       { ...tool.target, variables: variablesOf(tool, args), options: { signal: run.signal } },
-      { agent, defaultTimeout: run.timeoutMs },
+      agentCallContext({ defaultTimeout: run.timeoutMs }, agent),
     );
     return { ok: true, data };
   } catch (error) {

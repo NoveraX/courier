@@ -6,7 +6,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isOneUsersCall } from "../../../src/browser/utils/one-users-call";
+import type { AgentCall } from "../../../src/agent/types";
+import {
+  agentCallContext,
+  agentOf,
+  isOneUsersCall,
+} from "../../../src/browser/utils/one-users-call";
 import { courier, defineApi } from "../../../src/define/index";
 import { AbortError } from "../../../src/errors";
 import { createCaller } from "../../../src/index";
@@ -59,9 +64,19 @@ afterEach(() => {
 });
 
 describe("a call in a page", () => {
-  it("is one user's, whatever its context says", () => {
+  it("is one user's, whatever its context says", async () => {
+    const { serverCallContext } = await vi.importActual<
+      typeof import("../../../src/utils/one-users-call")
+    >("../../../src/utils/one-users-call");
+
     expect(isOneUsersCall()).toBe(true);
-    expect(isOneUsersCall({ serverCall: true })).toBe(true);
+    expect(isOneUsersCall(serverCallContext(undefined))).toBe(true);
+  });
+
+  it("is made for no agent, and marks none", () => {
+    const agent: AgentCall = { tool: "orders_cancel", access: "destructive" };
+
+    expect(agentOf(agentCallContext(undefined, agent))).toBeUndefined();
   });
 
   it("cancels the older read through the root's caller, the server's", async () => {

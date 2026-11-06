@@ -3,7 +3,7 @@ import type { SessionCapability } from "../capabilities/session";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Context } from "../http-client/types";
 import { isReactNative } from "../utils/is-react-native";
-import { isOneUsersCall } from "../utils/one-users-call";
+import { agentOf, isOneUsersCall } from "../utils/one-users-call";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
 import { namesRequest } from "./names-request";
@@ -59,12 +59,12 @@ export interface CallSession {
  * The request being served is asked for synchronously, before the call
  * first waits — some frameworks know it only until then — and read when the
  * answer is awaited. A caller that named a request in its context is served
- * from it alone; any other call, from the request the registered adapters
- * say is being served, when one is — on a server that put a DOM on its
- * global object too. With none, a browser sends its own cookies and an app
- * the ones it kept; a call of the server's caller, a server's, carries no
- * session then. What a server reads of a request is the server's to lend —
- * a page imports none of it.
+ * from it alone; an agent's call, from nothing; any other call, from the
+ * request the registered adapters say is being served, when one is — on a
+ * server that put a DOM on its global object too. With none, a browser
+ * sends its own cookies and an app the ones it kept; a call of the
+ * server's caller, a server's, carries no session then. What a server
+ * reads of a request is the server's to lend — a page imports none of it.
  *
  * @param context - The call's context
  * @param target - The call's API and endpoint, as the session reads it
@@ -80,6 +80,9 @@ export function sessionFor(
   target: SessionTarget,
 ): CallSession | Promise<CallSession | undefined> | undefined {
   if (target.session === undefined && target.forward === undefined) return undefined;
+  /* An agent's call is the MCP server's own, made for the agent: nothing of a request being
+     served, nor of a page, is the agent's to send. */
+  if (agentOf(context)) return undefined;
   if (context !== undefined && namesRequest(context)) {
     return Promise.resolve().then(() => serverSession(target).contextSession(context, target));
   }

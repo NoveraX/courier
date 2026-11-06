@@ -105,7 +105,7 @@ async function runHeld(
     ...target,
     mode: context?.mode ?? (context?.proxyMethod ? "proxy" : "direct"),
     middlewareCount: middlewares.length,
-    agent: context?.agent,
+    agent: middlewareCtx.agent,
     idempotencyKey: middlewareCtx.idempotencyKey,
   });
 

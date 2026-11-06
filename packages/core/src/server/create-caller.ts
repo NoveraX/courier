@@ -10,7 +10,7 @@ import type {
   GroupRecord,
 } from "../define";
 import { getSourceName } from "../define/api";
-import type { Context } from "../http-client/types";
+import { serverCallContext } from "../utils/one-users-call";
 import { assertServerOptions } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 
@@ -58,6 +58,5 @@ export function createCaller(
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
   assertServerOptions(source, getSourceName(source) ?? "api");
   provideServerCapabilities();
-  const context: Context = { ...defaults.context, serverCall: true };
-  return directClient(source, { ...defaults, context });
+  return directClient(source, { ...defaults, context: serverCallContext(defaults.context) });
 }

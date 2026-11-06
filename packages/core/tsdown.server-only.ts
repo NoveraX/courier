@@ -9,7 +9,8 @@ import type { TsdownPlugin } from "tsdown";
  * for, the word Studio is sent as an API is defined, the reading of what
  * a server lends the calls of its process, an upload sent without its
  * progress, which a page's form, holding no device's file, never refuses,
- * and whether a call is one user's, as every call of a page is.
+ * and whether a call is one user's, as every call of a page is, with the
+ * marks the server's own calls carry, which a page reads none of.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.

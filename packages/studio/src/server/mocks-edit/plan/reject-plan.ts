@@ -9,7 +9,7 @@ const log = createLogger("Studio");
  * hold up is a defect in Studio, not in the user's file, so it is logged
  * in full; the user is left the snippet to add by hand.
  *
- * @param plan - What the plan claimed
+ * @param plan - The file the plan edits, and the mocks it declares or changes
  * @param problem - What the check found
  * @throws {MocksEditRefusal} `INTERNAL_PLAN_REJECTED`, always
  *
@@ -19,9 +19,12 @@ const log = createLogger("Studio");
  * // logs the defect and throws INTERNAL_PLAN_REJECTED
  * ```
  */
-export function rejectPlan(plan: PlannedInsertion, problem: string): never {
+export function rejectPlan(
+  plan: Pick<PlannedInsertion, "fileName"> & { entries: readonly { key: string }[] },
+  problem: string,
+): never {
   const keys = plan.entries.map((entry) => entry.key).join(", ");
-  log.error(`The planned edit of ${plan.fileName} adding ${keys} failed its check: ${problem}`);
+  log.error(`The planned edit of ${plan.fileName} for ${keys} failed its check: ${problem}`);
   throw new MocksEditRefusal(
     "INTERNAL_PLAN_REJECTED",
     `Studio could not verify its edit of ${plan.fileName} (${problem}), so it changed nothing.`,

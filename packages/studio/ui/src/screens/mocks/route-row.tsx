@@ -32,6 +32,8 @@ interface RouteRowProps {
   serverUrl: string;
   slowMs: number;
   onToggle: () => void;
+  /** Adds the route to the mock, for one its server answers. */
+  onAddToMock?: (() => void) | undefined;
 }
 
 /**
@@ -48,7 +50,7 @@ interface RouteRowProps {
  * ```
  */
 export function RouteRow(props: RouteRowProps): React.ReactNode {
-  const { route, open, stacked, serverUrl, slowMs, onToggle } = props;
+  const { route, open, stacked, serverUrl, slowMs, onToggle, onAddToMock } = props;
   const Caret = open ? ChevronDown : ChevronRight;
   const method = route.httpMethod.toUpperCase();
   const avg = !route.hits ? "—" : route.avgLatency >= 1 ? formatDuration(route.avgLatency) : "<1ms";
@@ -129,7 +131,14 @@ export function RouteRow(props: RouteRowProps): React.ReactNode {
           </>
         )}
       </button>
-      {open && <RouteDetail route={route} serverUrl={serverUrl} stacked={stacked} />}
+      {open && (
+        <RouteDetail
+          route={route}
+          serverUrl={serverUrl}
+          stacked={stacked}
+          onAddToMock={onAddToMock}
+        />
+      )}
     </div>
   );
 }

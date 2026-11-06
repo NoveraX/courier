@@ -95,7 +95,7 @@ describe("auditInsertedCode", () => {
     );
     expect(logged).toHaveLength(1);
     expect(logged[0]).toContain(
-      "The planned edit of courier.mocks.ts adding api failed its check: the edited file has 4 statements of its own where it had 3",
+      "The planned edit of courier.mocks.ts for api failed its check: the edited file has 4 statements of its own where it had 3",
     );
   });
 

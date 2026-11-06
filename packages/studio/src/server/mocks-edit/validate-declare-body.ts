@@ -33,7 +33,16 @@ function readMocks(value: unknown): Checked<MockDeclaration[]> {
   return { ok: true, value: mocks };
 }
 
-function readHashes(body: Readonly<Record<string, unknown>>): Checked<[string | null, string]> {
+/**
+ * The hashes of the preview a request to make an edit confirms: the file
+ * the plan started from, `null` for one it creates, and the file it writes.
+ *
+ * @param body - The request's fields
+ * @returns The two hashes, or why they cannot be read
+ */
+export function readHashes(
+  body: Readonly<Record<string, unknown>>,
+): Checked<[string | null, string]> {
   const { baseHash, planDigest } = body;
   if (baseHash !== null && (typeof baseHash !== "string" || !SHA256_HEX.test(baseHash))) {
     return { ok: false, message: "baseHash must be null or 64 lowercase hex characters" };

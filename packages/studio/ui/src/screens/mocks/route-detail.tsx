@@ -1,4 +1,4 @@
-import { Copy } from "lucide-react";
+import { Copy, ListPlus } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
@@ -40,10 +40,13 @@ export function RouteDetail({
   route,
   serverUrl,
   stacked,
+  onAddToMock,
 }: {
   route: MockRouteEntry;
   serverUrl: string;
   stacked: boolean;
+  /** Adds the route to the mock, for one its server answers. */
+  onAddToMock?: (() => void) | undefined;
 }): React.ReactNode {
   const url = mockRouteUrl(serverUrl, route.fullPath);
   const schema = Object.entries(route.responseSchema ?? {});
@@ -59,6 +62,16 @@ export function RouteDetail({
         <p className="text-small text-fg-muted">
           {ANSWERED_BY[route.source](`${route.group}.${route.endpoint}`)}
         </p>
+        {route.source === "upstream" && onAddToMock && (
+          <button
+            type="button"
+            onClick={onAddToMock}
+            className="flex h-7 w-fit cursor-pointer items-center gap-1.5 rounded-card border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-10"
+          >
+            <ListPlus aria-hidden="true" className="size-3.25" />
+            Add to mock
+          </button>
+        )}
         <div className="flex h-8 items-center gap-2 rounded-card border border-line bg-inset pr-1 pl-2.5 font-mono text-small pointer-coarse:h-11">
           <span className="min-w-0 flex-1 truncate">{url}</span>
           <button

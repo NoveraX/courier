@@ -16,6 +16,8 @@ interface RoutesListProps {
   slowMs: number;
   /** Opens a route by its key, or closes the one open. */
   onOpen: (key: string | undefined) => void;
+  /** Adds a route its server answers to the mock; absent where the mock cannot be changed. */
+  onAddToMock?: ((route: MockRouteEntry) => void) | undefined;
 }
 
 /**
@@ -36,6 +38,7 @@ export function RoutesList({
   serverUrl,
   slowMs,
   onOpen,
+  onAddToMock,
 }: RoutesListProps): React.ReactNode {
   const listRef = useRef<HTMLElement>(null);
   /* Until the list is measured the window's width stands in for it, so a phone never draws the columns first. */
@@ -77,6 +80,7 @@ export function RoutesList({
             serverUrl={serverUrl}
             slowMs={slowMs}
             onToggle={() => onOpen(isOpen ? undefined : key)}
+            {...(onAddToMock && { onAddToMock: () => onAddToMock(route) })}
           />
         );
       })}

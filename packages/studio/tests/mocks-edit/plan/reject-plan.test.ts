@@ -44,7 +44,7 @@ describe("rejectPlan", () => {
     );
     expect(logged).toHaveLength(1);
     expect(logged[0]).toContain(
-      "The planned edit of courier.mocks.ts adding api, billing failed its check: something did not hold",
+      "The planned edit of courier.mocks.ts for api, billing failed its check: something did not hold",
     );
   });
 });

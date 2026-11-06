@@ -62,7 +62,9 @@ export const read = endpoint.via((http) => http.get("a"));`,
   `if (error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE") {}
 const messages = { PROXY_VARIABLE_NOT_SERIALIZABLE: "That cannot be sent" };`,
   `import { defineConfig } from "@noverax/courier/config";
-export default defineConfig({ imports: { pets: { importType: "url", pinHash: "abc" } } });`,
+export default defineConfig({
+  imports: { pets: { importType: "url", from: "https://ana:pw@specs.example/pets.json", pinHash: "abc" } },
+});`,
 ];
 
 /* Each piece of code, and each with one of its lines left out: what a migration finds in one, it finds where its words are. */

@@ -8,6 +8,59 @@ import { memoryRateLimitStore } from "../../src/adapter/rate-limit/memory-store"
 
 const TWO_A_MINUTE = { requests: 2, window: 60_000 };
 
+/* The entries a store's map handed out to its walks since this was last cleared. */
+let walked = 0;
+
+/* A map that counts each entry a walk of it is handed, kept by a store in place of its own:
+   what a call costs is read as the callers it looked at, a count the same however busy the
+   machine running the test is, where a clock is not. */
+class WalkCountingMap<K, V> extends Map<K, V> {
+  override entries(): MapIterator<[K, V]> {
+    return counted(super.entries());
+  }
+
+  override keys(): MapIterator<K> {
+    return counted(super.keys());
+  }
+
+  override values(): MapIterator<V> {
+    return counted(super.values());
+  }
+
+  override [Symbol.iterator](): MapIterator<[K, V]> {
+    return this.entries();
+  }
+
+  override forEach(each: (value: V, key: K, map: Map<K, V>) => void, thisArg?: unknown): void {
+    super.forEach((value, key, map) => {
+      walked += 1;
+      each.call(thisArg, value, key, map);
+    });
+  }
+}
+
+/* The map's own iterator, counting each entry it hands out. */
+function counted<T>(iterator: MapIterator<T>): MapIterator<T> {
+  const next = iterator.next.bind(iterator);
+  iterator.next = () => {
+    const step = next();
+    if (step.done !== true) walked += 1;
+    return step;
+  };
+  return iterator;
+}
+
+/* A store remembering `maxCallers` at once, whose map counts its walks: the store makes its
+   map as it is made, so the map is stubbed for that moment alone. */
+function storeCountingWalks(maxCallers: number) {
+  vi.stubGlobal("Map", WalkCountingMap);
+  try {
+    return memoryRateLimitStore({ maxCallers });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(0);
@@ -57,35 +110,21 @@ describe("memoryRateLimitStore", () => {
     expect(store.take("a", TWO_A_MINUTE)).toMatchObject({ allowed: true, remaining: 1 });
   });
 
-  it("forgets the longest-idle caller as fast as it counts a call, however many callers it remembers", () => {
-    const store = memoryRateLimitStore();
-    const remembered = 100_000;
-    for (let n = 0; n < remembered; n += 1) store.take(`caller ${n}`, TWO_A_MINUTE);
-    const known = Array.from({ length: 400 }, (_, n) => `caller ${remembered - 400 + n}`);
-    let newcomers = 0;
-
-    /* The fastest of a few rounds: a pause to collect garbage, or the store's own sweep of the
-       callers whose budget is whole, measures neither kind of call. */
-    const fastest = (calls: () => void): number => {
-      let best = Number.POSITIVE_INFINITY;
-      for (let round = 0; round < 5; round += 1) {
-        const started = performance.now();
-        calls();
-        best = Math.min(best, performance.now() - started);
-      }
-      return best;
-    };
-    const ofKnown = fastest(() => {
-      for (const key of known) store.take(key, TWO_A_MINUTE);
-    });
-    const ofNew = fastest(() => {
-      for (let n = 0; n < known.length; n += 1) {
-        newcomers += 1;
-        store.take(`newcomer ${newcomers}`, TWO_A_MINUTE);
-      }
+  it("forgets the longest-idle caller by looking at it alone, however many callers it remembers", () => {
+    const walks = [1_000, 100_000].map((remembered) => {
+      const store = storeCountingWalks(remembered);
+      for (let n = 0; n < remembered; n += 1) store.take(`caller ${n}`, TWO_A_MINUTE);
+      const newcomers = Array.from({ length: 101 }, (_, n) => {
+        walked = 0;
+        store.take(`newcomer ${n}`, TWO_A_MINUTE);
+        return walked;
+      });
+      /* The middle newcomer's walk: the sweep of the callers whose budget is whole, made once
+         in many calls, falls in one newcomer's call at most. */
+      return newcomers.sort((a, b) => a - b)[50];
     });
 
-    expect(ofNew / ofKnown).toBeLessThan(10);
+    expect(walks).toEqual([1, 1]);
   });
 });
 

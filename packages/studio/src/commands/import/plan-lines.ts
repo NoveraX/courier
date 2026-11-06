@@ -47,7 +47,7 @@ export function counted(count: number, one: string, many: string): string {
  * specification came from, and what the specification holds.
  *
  * @param name - The import's name
- * @param from - Where the specification came from, as the person gave it
+ * @param from - Where the specification came from: a file as the person gave it, an address with its secret parameters cut
  * @param spec - The specification
  * @param selected - The endpoints picked, by group, when not every one is
  * @returns The line, and one for each operation the import leaves out

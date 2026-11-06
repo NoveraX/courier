@@ -256,6 +256,27 @@ describe("courier-studio import", { timeout: 60_000 }, () => {
     expect(read("courier.config.ts")).toContain(`from: "${url}"`);
   });
 
+  it("names an address with a key in its query with the key cut, on every line it prints", async () => {
+    const key = "k3y-made-up-5150";
+    const server: Server = createServer((req, res) => {
+      const keyed = new URL(req.url ?? "/", "http://x").searchParams.get("api_key") === key;
+      res.statusCode = keyed ? 200 : 401;
+      res.setHeader("content-type", "application/json");
+      res.end(keyed ? petStore() : "{}");
+    });
+    await new Promise<void>((listening) => server.listen(0, "127.0.0.1", listening));
+    const address = server.address();
+    const url = `http://127.0.0.1:${typeof address === "object" && address ? address.port : 0}/openapi.json?api_key=${key}`;
+
+    const run = await studioImport([url, "--dry-run"]).finally(() => server.close());
+
+    expect(run.status, run.output).toBe(0);
+    expect(run.stdout).toContain(
+      "/openapi.json?api_key=[redacted]: OpenAPI 3, 4 endpoints in 2 groups",
+    );
+    expect(run.output).not.toContain(key);
+  });
+
   it("reads standard input for -, and with --no-declare only writes the files and gives the lines to add", async () => {
     const run = await studioImport(["-", "--yes", "--no-declare", "--name", "pets"], petStore());
 

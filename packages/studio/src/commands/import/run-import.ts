@@ -1,6 +1,6 @@
 import { existsSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import { styleFor, type TerminalStyle } from "@noverax/courier/internal";
+import { styleFor, type TerminalStyle, urlWithoutSecrets } from "@noverax/courier/internal";
 import { closeFormatProcesses, loadProjectEnv } from "@noverax/courier-cli/devkit";
 import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
@@ -17,7 +17,7 @@ import { declareImport } from "./declare-import";
 import { type ImportRun, importRequest } from "./import-request";
 import { loadProjectOnce } from "./load-project-once";
 import { planLines, specLines } from "./plan-lines";
-import { readSpecInput } from "./read-spec-input";
+import { readSpecInput, type SpecInput } from "./read-spec-input";
 import { routesLines } from "./routes-lines";
 import { usageLines, writtenLines } from "./written-lines";
 
@@ -50,6 +50,12 @@ function planShown(
     ...planLines(planned.plan, style),
     ...(declaration ? ["", thenDeclared(declaration), ...declarationLines(declaration)] : []),
   ];
+}
+
+/* An address is named with its secret parameters cut, as the declaration's lines name its from. */
+function shownFrom(given: string, input: SpecInput): string {
+  if (given === "-") return "standard input";
+  return input.url === undefined ? given : urlWithoutSecrets(input.url);
 }
 
 function thenDeclared(declaration: ImportDeclaration): string {
@@ -97,7 +103,7 @@ async function importInto(
   const deps = { project, projectRoot: root };
   const found = await withImportsLock(() => planImportWrite(body, deps));
   const planned = run.declare === false ? { ...found, declaration: undefined } : found;
-  print(planShown(given === "-" ? "standard input" : given, body, planned, style));
+  print(planShown(shownFrom(given, input), body, planned, style));
   if (run["dry-run"] === true) return 0;
   const interactive =
     given !== "-" && process.stdin.isTTY === true && process.stderr.isTTY === true;

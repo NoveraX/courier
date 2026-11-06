@@ -46,4 +46,11 @@ export const CLIENT_LIMITS = {
 
   /** Most of a refusal's body a stream reads for what the server said: a Courier server's is far shorter (64 KiB) */
   SSE_REFUSAL_MAX_BYTES: 65_536,
+
+  /**
+   * Longest line, and longest event, a stream reads, in characters: a
+   * server that never ends one would otherwise hold the client's memory for
+   * as long as it sends (1 MiB of text)
+   */
+  SSE_MAX_EVENT_LENGTH: 1_048_576,
 } as const;

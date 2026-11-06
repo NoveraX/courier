@@ -1,5 +1,6 @@
+import { CLIENT_LIMITS } from "../client-limits";
 import type { SSEEvent } from "../types";
-import { readSSELines } from "./sse-lines";
+import { EventTooLarge, readSSELines } from "./sse-lines";
 
 /** Raw parsed SSE event with string data (before JSON parsing) */
 export type RawSSEEvent = SSEEvent<string>;
@@ -24,10 +25,13 @@ const WHOLE_NUMBER = /^\d+$/;
  * a block. A block dispatches an event only when it sent `data`, but one that
  * sets only an `id` or a `retry` still says so, since both change how a
  * client reconnects. A block the stream ends in the middle of is discarded,
- * its `id` too: the event it began may have lost part of its data.
+ * its `id` too: the event it began may have lost part of its data. A line or
+ * a block longer than `SSE_MAX_EVENT_LENGTH` ends the read: no blank line may
+ * ever come.
  *
  * @param stream - Response body from fetch
  * @returns The blocks, in order; a heartbeat is a block that says nothing
+ * @throws EventTooLarge for a line or a block that runs past its bound
  * @example
  * ```ts
  * for await (const frame of parseSSEFrames(response.body)) {
@@ -59,6 +63,7 @@ export async function* parseSSEFrames(
  *
  * @param stream - Response body from fetch (ReadableStream<Uint8Array>)
  * @returns Async generator yielding RawSSEEvent or null
+ * @throws ConnectionError of code 1009 for a line or an event longer than 1 MiB of text
  * @example
  * ```ts
  * for await (const event of parseSSEStream(response.body)) {
@@ -79,6 +84,7 @@ function createBlock() {
   let id: string | undefined;
   let retry: number | undefined;
   let said = false;
+  let length = 0;
 
   return {
     /** Whether the block has any line at all, a comment included. */
@@ -87,6 +93,9 @@ function createBlock() {
     },
     take(line: string): void {
       said = true;
+      /* Its text as the stream sent it, each line's end counted. */
+      length += line.length + 1;
+      if (length > CLIENT_LIMITS.SSE_MAX_EVENT_LENGTH) throw new EventTooLarge();
       if (line.startsWith(":")) return;
       const colon = line.indexOf(":");
       const field = colon === -1 ? line : line.slice(0, colon);

@@ -5,6 +5,7 @@ import { fromErrorCode, RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
 import type { SSEConnectionCtx } from "./sse-connection";
+import { EventTooLarge } from "./sse-lines";
 import { openStream } from "./sse-open";
 
 const log = createLogger("SSE");
@@ -30,7 +31,8 @@ export interface ConnectionProgress {
  * though the server had finished it.
  *
  * @returns How it ended — a failure, too, when the server answered with
- *   something other than an event stream
+ *   something other than an event stream, or sent a line or an event past
+ *   what the client reads
  * @throws SSEResponseError when the server refuses the request
  * @throws ConnectionError when it did not open in time
  */
@@ -71,6 +73,10 @@ export async function readConnection<TData>(
       if (end) return end;
     }
     return "dropped";
+  } catch (error) {
+    if (!(error instanceof EventTooLarge)) throw error;
+    log.error("An SSE event ran past what the client reads, not reconnecting", error);
+    return error;
   } finally {
     clearTimeout(silence);
     if (ctx.current === connection) ctx.current = undefined;

@@ -1,9 +1,10 @@
 /**
  * The options only a server reads — the user's session, what it forwards,
- * the header lists beside a session — are checked where a server takes an
- * API up: its sources registered, a handler made with them, the server's
- * caller made. Always, `NODE_ENV` or not, since a bundler replaces it in a
- * server's build too. A page's definition carries none of the checks.
+ * the header lists beside a session, how an endpoint is offered to agents —
+ * are checked where a server takes an API up: its sources registered, a
+ * handler made with them, the server's caller made. Always, `NODE_ENV` or
+ * not, since a bundler replaces it in a server's build too. A page's
+ * definition carries none of the checks.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -72,5 +73,19 @@ describe("the options only a server reads", () => {
     vi.stubEnv("NODE_ENV", "production");
 
     expect(refusalOf(() => createCaller(accounts())).code).toBe("SESSION_HEADER_CONFLICT");
+  });
+
+  it("are refused as the sources are registered for an endpoint no agent's tool can be made of", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const orders = defineApi({
+      name: "orders",
+      baseURL: "https://api.example.com",
+      endpoints: { list: endpoint.get("orders").agent({ access: "read" } as never) },
+    });
+
+    const refusal = refusalOf(() => registerSources({ orders }));
+
+    expect(refusal.code).toBe("AGENT_OPTIONS_INVALID");
+    expect(refusal.message).toContain('.agent() on GET "orders" needs a description');
   });
 });

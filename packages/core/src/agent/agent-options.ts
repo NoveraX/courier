@@ -1,3 +1,4 @@
+import type { AgentMark } from "../define/agent-mark";
 import { ConfigurationError } from "../errors/configuration-error";
 import { isRecord } from "../utils/is-record";
 import type { AgentAccess, AgentLimit, AgentOptions } from "./types";
@@ -79,4 +80,28 @@ function refuse(where: string, problem: string): never {
     "AGENT_OPTIONS_INVALID",
     `[courier] .agent() on ${where} ${problem}.`,
   );
+}
+
+const read = new WeakMap<AgentMark, AgentOptions | false>();
+
+/**
+ * How an endpoint is offered to agents, checked: what its `.agent()` was
+ * given, read once and kept. A server reads it as it takes the API up, and
+ * an MCP server as it lists the endpoint's tool.
+ *
+ * @param mark - The endpoint's `agent` option, absent where `.agent()` was not named
+ * @returns The options, checked and frozen; `false`; or `undefined` without a mark
+ * @throws ConfigurationError `AGENT_OPTIONS_INVALID` when they cannot describe a tool
+ * @example
+ * ```ts
+ * agentOptionsOf(endpoint.options.agent)?.access; // "read"
+ * ```
+ */
+export function agentOptionsOf(mark: AgentMark | undefined): AgentOptions | false | undefined {
+  if (mark === undefined) return undefined;
+  const known = read.get(mark);
+  if (known !== undefined) return known;
+  const options = agentOptions(mark.given, mark.where);
+  read.set(mark, options);
+  return options;
 }

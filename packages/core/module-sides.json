@@ -24,6 +24,7 @@
   },
   "serverAreas": {
     "adapter/": "The proxy and the realtime servers: requests, bodies, uploads, limits of rate, the cluster",
+    "agent/": "How an endpoint is offered to agents, checked, and the project's policy for them",
     "server/": "What a server lends the calls of its process, and the server entry",
     "studio/": "Studio's view of the calls, where Studio is attached",
     "transport/in-process/": "Streams a server serves its own callers without leaving the process",

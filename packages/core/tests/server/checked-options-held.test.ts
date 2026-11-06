@@ -15,6 +15,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { agentOptionsOf } from "../../src/agent/agent-options";
 import { createCaller as createPageCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
@@ -154,6 +155,29 @@ describe("an API a server took up", () => {
     }).toThrow(TypeError);
 
     expect(await sentBy(api)).toEqual({ tenant: undefined, address: undefined });
+  });
+
+  it("holds how each endpoint is offered to agents, so none is offered otherwise later", () => {
+    const api = defineApi({
+      name: "orders",
+      baseURL: upstream.url,
+      endpoints: {
+        list: endpoint.get("orders").agent({ description: "The orders", access: "read" }),
+        cancel: endpoint.post("orders/:id/cancel"),
+      },
+    });
+    createCaller(api);
+    const wider = endpoint
+      .post("orders/:id/cancel")
+      .agent({ description: "Cancel an order", access: "destructive" }).options.agent;
+
+    expect(() => Object.assign(api.list.options, { agent: wider })).toThrow(TypeError);
+    expect(() => Object.assign(api.cancel.options, { agent: wider })).toThrow(TypeError);
+    expect(agentOptionsOf(api.list.options.agent)).toEqual({
+      description: "The orders",
+      access: "read",
+    });
+    expect(api.cancel.options.agent).toBeUndefined();
   });
 
   it("names an unset option to `in` alone: its keys and its JSON are as they were", () => {

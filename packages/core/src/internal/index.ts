@@ -34,6 +34,7 @@ export { closeOf, closeWithNotice, isSendableCloseCode, noticeOf } from "../adap
 export { WS_DEFAULTS } from "../adapter/ws-defaults";
 export { frameCredentials, frameHeadersOver } from "../adapter/ws-frame-credentials";
 export { authOkFrame, readFirstFrame } from "../adapter/ws-handshake";
+export { agentOptionsOf } from "../agent/agent-options";
 export {
   adoptListenOrigin,
   DEV_SERVER_ORIGIN_ENV,

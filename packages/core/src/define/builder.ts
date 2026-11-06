@@ -1,9 +1,9 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import type { AgentOptions } from "../agent/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
 import { idempotencyHeader } from "../utils/idempotency-header";
 import type { AnswerStage, CacheConfig } from "../validation";
+import type { AgentMark } from "./agent-mark";
 import { assertEndpointSession } from "./assert-endpoint-session";
 import type { EndpointKind } from "./marker";
 import type {
@@ -35,8 +35,8 @@ export interface BuilderState {
   readonly meta: Readonly<Record<string, unknown>>;
   /** What a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader | undefined;
-  /** How the endpoint is offered to AI agents, from `.agent()`; `false` keeps it from every one. */
-  readonly agent?: AgentOptions | false | undefined;
+  /** How the endpoint is offered to agents, from `.agent()`, as a server reads and checks it. */
+  readonly agent?: AgentMark | undefined;
   /** Whether a browser may call it through the proxy, from `.expose()`; unset, its group or API says. */
   readonly expose?: boolean | undefined;
   /** Whether a newer call cancels its call in flight, from `.cancelPrevious()`; unset, its groups, client or API say. */

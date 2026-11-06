@@ -1,5 +1,5 @@
 import { type AgentOptions, ConfigurationError } from "@noverax/courier";
-import type { PlacedEndpoint } from "@noverax/courier/internal";
+import { agentOptionsOf, type PlacedEndpoint } from "@noverax/courier/internal";
 import type { JSONSchemaFallback } from "@noverax/courier/openapi";
 
 import type { AgentDecision } from "../policy/agent-decision";
@@ -52,7 +52,7 @@ export function nameTools(
     decided.forEach((placed, at) => {
       const { decision } = placed;
       if (!decision.offered || (decision.by === "marked") !== marked) return;
-      const agent = placed.endpoint.options.agent;
+      const agent = agentOptionsOf(placed.endpoint.options.agent);
       const tool =
         marked && agent
           ? markedTool(placed, agent, prefixed, fallback)

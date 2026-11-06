@@ -1,7 +1,7 @@
-import type { AgentOptions } from "../agent/types";
 import type { Middleware, MiddlewareContext, RetryFailure } from "../middleware/types";
 import type { EndpointSession } from "../session/types";
 import type { CacheConfig } from "../validation";
+import type { AgentMark } from "./agent-mark";
 
 /** How an endpoint reads against a collection, used by mocks and codegen. */
 export type OperationKind =
@@ -205,10 +205,11 @@ export interface ResolvedEndpointOptions {
   /** Reads the key a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader;
   /**
-   * How it is offered to AI agents, from `.agent()`. Absent, the project's
-   * policy decides; `false`, no agent reaches it whatever the policy says.
+   * How it is offered to agents, from `.agent()`, as a server reads it:
+   * `agentOptionsOf` checks it. Absent, the project's policy decides;
+   * `false`, no agent reaches it whatever the policy says.
    */
-  readonly agent?: AgentOptions | false;
+  readonly agent?: AgentMark;
   /** Whether a newer call cancels its call in flight, from `.cancelPrevious()`. */
   readonly cancelPrevious?: boolean;
 }

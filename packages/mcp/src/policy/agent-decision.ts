@@ -1,5 +1,5 @@
 import type { AgentAccess } from "@noverax/courier";
-import type { PlacedEndpoint } from "@noverax/courier/internal";
+import { agentOptionsOf, type PlacedEndpoint } from "@noverax/courier/internal";
 
 import type { AgentPattern } from "./agent-pattern";
 import type { CheckedPolicy } from "./checked-policy";
@@ -60,7 +60,7 @@ export function decideEndpoint(
     return { offered: false, by: "kind" };
   const denied = firstMatch(policy.deny, path);
   if (denied !== undefined) return { offered: false, by: "deny", pattern: denied };
-  const marked = endpoint.options.agent;
+  const marked = agentOptionsOf(endpoint.options.agent);
   if (marked === false) return { offered: false, by: "opted-out" };
   const access = marked?.access ?? impliedAccess(endpoint);
   if (RANK[access] > RANK[policy.access]) return { offered: false, by: "ceiling", access };

@@ -1,3 +1,5 @@
+import { agentOptionsOf } from "../agent/agent-options";
+import type { AgentMark } from "../define/agent-mark";
 import { getSourceName } from "../define/api";
 import type { AnySource } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
@@ -28,6 +30,7 @@ interface EndpointRead {
   readonly owner: object;
   readonly at: string;
   readonly list: unknown;
+  readonly agent: unknown;
   /** What was read of them now; nothing where a server holds them already */
   readonly read: readonly ReadOption[];
 }
@@ -41,31 +44,34 @@ const NO_OPTIONS: object = Object.freeze({});
 
 /**
  * Check, where a server takes an API up, the options a server reads: the
- * user's `session`, what it `forward`s, and that no header list carries
- * cookies past the session. A server refuses an API that cannot work as
- * written before its first call, whatever `NODE_ENV` says — a bundler
- * replaces `NODE_ENV` in a server's build too. Each option is read once,
- * into a copy of its data, and the checks read the copy alone: what each
- * option is first — data, a list of names — then what they mean together.
- * The copy is what a server holds: in place of the session, `forward` and
- * the header lists of the API and its endpoints, frozen to its depths, so
- * a change made through the API later fails where it is made rather than
- * sending what no check read; an option the API does not name is held
- * unset, so none is set later. The objects the API was given stay their
- * owner's. An option in options its user froze, where no copy can take its
- * place, passes only where it is frozen to its depths as well. Only data
- * passes the check — objects of plain data and lists of strings — so the
- * copy holds all of it. A server knows what it holds by the objects it
- * took up, the API's options and each endpoint's: options put in their
- * place, and an endpoint the API is given later, are checked as these are
- * before a call takes them (`heldForCall`). A page carries none of this:
- * it reads its session's `bearer`, `csrf` and `allowHttp` itself, and
- * checks, as each call goes, only where the session is sent.
+ * user's `session`, what it `forward`s, that no header list carries
+ * cookies past the session, and how each endpoint is offered to agents. A
+ * server refuses an API that cannot work as written before its first call,
+ * whatever `NODE_ENV` says — a bundler replaces `NODE_ENV` in a server's
+ * build too. Each option is read once, into a copy of its data, and the
+ * checks read the copy alone: what each option is first — data, a list of
+ * names — then what they mean together. The copy is what a server holds:
+ * in place of the session, `forward` and the header lists of the API and
+ * its endpoints, and of how each endpoint is offered to agents, frozen to
+ * its depths, so a change made through the API later fails where it is
+ * made rather than sending, or offering, what no check read; an option the
+ * API does not name is held unset, so none is set later. The objects the
+ * API was given stay their owner's. An option in options its user froze,
+ * where no copy can take its place, passes only where it is frozen to its
+ * depths as well. Only data passes the check — objects of plain data and
+ * lists of strings — so the copy holds all of it. A server knows what it
+ * holds by the objects it took up, the API's options and each endpoint's:
+ * options put in their place, and an endpoint the API is given later, are
+ * checked as these are before a call takes them (`heldForCall`). A page
+ * carries none of this: it reads its session's `bearer`, `csrf` and
+ * `allowHttp` itself, and checks, as each call goes, only where the
+ * session is sent.
  *
  * @param api - The API
  * @param where - Its name, for the errors
  * @throws ConfigurationError `SESSION_OPTIONS_INVALID`, `SESSION_INSECURE_TRANSPORT`,
- *   `SESSION_HEADER_CONFLICT`, `FORWARD_OPTIONS_INVALID` or `HEADER_LIST_INVALID`
+ *   `SESSION_HEADER_CONFLICT`, `FORWARD_OPTIONS_INVALID`, `HEADER_LIST_INVALID` or
+ *   `AGENT_OPTIONS_INVALID`
  * @example
  * ```ts
  * assertServerOptions(api, "accounts");
@@ -123,6 +129,7 @@ function takeUp(
     ...(before === undefined ? [[where, list] as const] : []),
     ...endpoints.map(({ at, list: listed }) => [at, listed] as const),
   ] as ReadonlyArray<readonly [string, readonly string[] | undefined]>);
+  for (const { agent } of endpoints) agentOptionsOf(agent as AgentMark | undefined);
   holdInPlace([...own, ...endpoints.flatMap(({ read }) => read)]);
   const taken: TakenUp = before ?? {
     session: session as SessionOptions | undefined,
@@ -173,15 +180,16 @@ function endpointsBeside(
   return found;
 }
 
-/* An endpoint's header list, as a server holds it — read once, and checked for what it is, where
-   it holds nothing of it yet. */
+/* An endpoint's header list and how it is offered to agents, as a server holds them — read once,
+   and the list checked for what it is, where it holds nothing of them yet. */
 function readEndpointOptions([owner, at]: [object, string]): EndpointRead {
   if (heldLists.has(owner)) {
-    return { owner, at, list: heldLists.get(owner), read: [] };
+    return { owner, at, list: heldLists.get(owner), agent: undefined, read: [] };
   }
   const list = readOption(owner, "allowedHeaders", "HEADER_LIST_INVALID", ".headers()", at);
+  const agent = readOption(owner, "agent", "AGENT_OPTIONS_INVALID", ".agent()", at);
   assertHeaderList(list);
-  return { owner, at, list: list.copy, read: [list] };
+  return { owner, at, list: list.copy, agent: agent.copy, read: [list, agent] };
 }
 
 /* A header list is data a server reads as written: a list of names, not a Set or a Map. */

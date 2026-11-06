@@ -1,12 +1,14 @@
 /**
  * `.agent()`: an endpoint offered to AI agents keeps what it was offered as,
- * checked where it was written; a call an MCP server makes for an agent
+ * frozen, and a server checks it as it takes the API up, naming where it was
+ * written — a page carries none of it; a call an MCP server makes for an agent
  * carries `ctx.agent` through the endpoint's middleware and tells Studio the
  * tool, while the application's own calls carry neither.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { agentOptionsOf } from "../src/agent/agent-options";
 import type { AgentCall } from "../src/agent/types";
 import { courier, defineApi } from "../src/define";
 import { defineMiddleware } from "../src/middleware/define";
@@ -23,12 +25,12 @@ describe(".agent()", () => {
       .agent({ description: "  One order by its id  ", access: "read", title: "Order" })
       .response(z.object({ id: z.string() }));
 
-    expect(order.options.agent).toEqual({
+    expect(agentOptionsOf(order.options.agent)).toEqual({
       description: "One order by its id",
       access: "read",
       title: "Order",
     });
-    expect(Object.isFrozen(order.options.agent)).toBe(true);
+    expect(Object.isFrozen(agentOptionsOf(order.options.agent))).toBe(true);
     expect(endpoint.get("orders/:id").options.agent).toBeUndefined();
   });
 
@@ -44,7 +46,9 @@ describe(".agent()", () => {
     ];
 
     for (const given of refused) {
-      expect(() => endpoint.get("orders").agent(given as never)).toThrow(
+      expect(() =>
+        agentOptionsOf(endpoint.get("orders").agent(given as never).options.agent),
+      ).toThrow(
         expect.objectContaining({
           code: "AGENT_OPTIONS_INVALID",
           message: expect.stringContaining('GET "orders"'),
@@ -52,16 +56,21 @@ describe(".agent()", () => {
       );
     }
     expect(
-      endpoint.get("orders").agent({ description: "Lists", access: "read", name: "list-orders_2" })
-        .options.agent,
+      agentOptionsOf(
+        endpoint
+          .get("orders")
+          .agent({ description: "Lists", access: "read", name: "list-orders_2" }).options.agent,
+      ),
     ).toMatchObject({ name: "list-orders_2" });
   });
 
   it("keeps an endpoint from every agent with false, and says so where an object is refused", () => {
     const payouts = endpoint.post("payouts").agent(false);
 
-    expect(payouts.options.agent).toBe(false);
-    expect(() => endpoint.post("refunds").agent(true as never)).toThrow(
+    expect(agentOptionsOf(payouts.options.agent)).toBe(false);
+    expect(() =>
+      agentOptionsOf(endpoint.post("refunds").agent(true as never).options.agent),
+    ).toThrow(
       expect.objectContaining({
         code: "AGENT_OPTIONS_INVALID",
         message: expect.stringContaining("or false"),
@@ -85,12 +94,15 @@ describe(".agent()", () => {
       { maxCalls: 3, window: 60_000, per: "agent" },
     ];
 
-    const offered = refund.options.agent;
+    const offered = agentOptionsOf(refund.options.agent);
     expect(offered).toMatchObject({ limit: { maxCalls: 3, window: 60_000 } });
     expect(offered !== false && Object.isFrozen(offered?.limit)).toBe(true);
     for (const limit of refused) {
       expect(() =>
-        endpoint.post("orders").agent({ description: "Places", access: "write", limit } as never),
+        agentOptionsOf(
+          endpoint.post("orders").agent({ description: "Places", access: "write", limit } as never)
+            .options.agent,
+        ),
       ).toThrow(
         expect.objectContaining({
           code: "AGENT_OPTIONS_INVALID",
@@ -102,7 +114,7 @@ describe(".agent()", () => {
 
   it("offers an endpoint that writes as a read only once it says it reads", () => {
     const search = endpoint.post("search").reads().agent({ description: "Search", access: "read" });
-    expect(search.options.agent).toMatchObject({ access: "read" });
+    expect(agentOptionsOf(search.options.agent)).toMatchObject({ access: "read" });
 
     function typedOut(): void {
       // @ts-expect-error an endpoint that writes is not a read to an agent
@@ -111,13 +123,17 @@ describe(".agent()", () => {
       endpoint.via((http) => http.post("x")).agent({ description: "X", access: "read" });
     }
     expect(
-      endpoint.via((http) => http.get("x")).agent({ description: "X", access: "read" }).options
-        .agent,
+      agentOptionsOf(
+        endpoint.via((http) => http.get("x")).agent({ description: "X", access: "read" }).options
+          .agent,
+      ),
     ).toMatchObject({ access: "read" });
     expect(typedOut).toBeTypeOf("function");
     expect(
-      endpoint.del("orders/:id").agent({ description: "Cancel", access: "destructive" }).options
-        .agent,
+      agentOptionsOf(
+        endpoint.del("orders/:id").agent({ description: "Cancel", access: "destructive" }).options
+          .agent,
+      ),
     ).toMatchObject({ access: "destructive" });
   });
 });

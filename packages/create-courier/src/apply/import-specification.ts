@@ -11,12 +11,21 @@ function shown(spec: string): string {
   return /^https?:\/\//i.test(spec) ? urlWithoutSecrets(spec) : spec;
 }
 
+/* Studio's import says a server that wants credentials answered 401 or 403. */
+const REFUSED = /\banswered 40[13]\b/;
+
+/* What to do where the server wanted credentials, which the setup sends none of. */
+const CREDENTIALS =
+  "; the server asked for credentials, which the setup sends none of: download the specification, and import its file";
+
 /**
  * Import a specification into the project with Studio's own command, as
  * installed there: the typed code written and the API declared in
  * `courier.config.ts`. A relative path is read from where the person ran
  * this command. Node runs Studio's command itself, never through a shell:
- * the specification is the person's text.
+ * the specification is the person's text. Where the server asks for
+ * credentials, answering 401 or 403, the failure says what to do: the
+ * setup sends none.
  *
  * @param root - The project's folder
  * @param spec - The specification: a URL or a file
@@ -44,9 +53,20 @@ export async function importSpecification(
     );
   const cli = join(dirname(manifest), "lib", "cli.js");
   const args = ["import", spec, "--yes", "--cwd", root, ...(name ? ["--name", name] : [])];
+  let refused = false;
+  /* Each line is shown where it would show, and read for a server that refused to answer. */
   const result = await runTool([process.execPath, cli, ...args], {
     cwd: process.cwd(),
-    output: { kind: "show", on },
+    input: "inherit",
+    output: {
+      kind: "lines",
+      line: (line, stream) => {
+        refused ||= REFUSED.test(line);
+        (on === "stdout" && stream === "stdout" ? process.stdout : process.stderr).write(
+          `${line}\n`,
+        );
+      },
+    },
     deadlineMs: SETUP_LIMITS.importMs,
     signal,
   });
@@ -58,5 +78,8 @@ export async function importSpecification(
     result,
     SETUP_LIMITS.importMs,
   );
-  throw new SetupFailure("IMPORT_FAILED", `Studio's import: ${failed}`);
+  throw new SetupFailure(
+    "IMPORT_FAILED",
+    `Studio's import: ${failed}${refused ? CREDENTIALS : ""}`,
+  );
 }

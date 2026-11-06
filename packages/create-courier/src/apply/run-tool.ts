@@ -23,7 +23,12 @@ export interface ToolOptions {
   /** Where it runs. */
   readonly cwd: string;
   readonly output: ToolOutput;
-  /** Whether the person at the terminal can answer it: a generator run without questions cannot. */
+  /**
+   * Whether it reads the command's standard input — the person at the
+   * terminal, or what was piped in. A program whose output is shown does,
+   * unless it is a generator run without questions; one whose output is
+   * read does not, unless it is told to.
+   */
   readonly input?: "inherit" | "ignore";
   /** Variables it runs with beside the command's own. */
   readonly env?: Readonly<Record<string, string>>;
@@ -86,8 +91,9 @@ function stopTree(child: ChildProcess): void {
 
 /* Shown output goes to the terminal's, or to standard error by its descriptor; read output comes through pipes. */
 function stdioOf(options: ToolOptions): StdioOptions {
-  const { output, input = "inherit" } = options;
-  if (output.kind !== "show") return ["ignore", "pipe", "pipe"];
+  const { output } = options;
+  if (output.kind !== "show") return [options.input ?? "ignore", "pipe", "pipe"];
+  const input = options.input ?? "inherit";
   return output.on === "stdout" ? [input, "inherit", "inherit"] : [input, 2, 2];
 }
 

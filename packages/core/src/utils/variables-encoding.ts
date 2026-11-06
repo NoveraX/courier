@@ -5,12 +5,15 @@
  *
  * A record — named values — goes as JSON, unless one of its fields holds a
  * file: then as a form, written as OpenAPI writes `multipart/form-data` by
- * default. A string is a field; a number, a boolean or a date is a field of
- * its text; an object is a field of its JSON; a `Blob` or a `File` is a file,
- * bytes are a file of their own; a list is a part for each item. What no form
- * of the request carries is refused, with where it sits and not what it holds:
- * a file deeper than a field or a list's item, a stream inside a record, a
- * `Set` or a `Map`, which JSON writes as `{}`.
+ * default. Each field is written as JSON writes it inside the record, which is
+ * what a proxy call carries: its `toJSON` asked first; a string is a field; a
+ * finite number or a boolean is a field of its text; an object is a field of
+ * its JSON; a `Blob` or a `File` is a file, bytes are a file of their own; a
+ * list is a part for each item; what JSON leaves out or writes as `null` — a
+ * function, `NaN`, a date that is no date — is no part. What no form of the
+ * request carries is refused, with where it sits and not what it holds: a file
+ * deeper than a field or a list's item, a stream inside a record, a `Set` or a
+ * `Map`, which JSON writes as `{}`, a `BigInt`, which it does not write.
  */
 
 import { ConfigurationError } from "../errors/configuration-error";
@@ -64,6 +67,12 @@ function blobOf(value: unknown): Blob | undefined {
 /* Why a stream is refused anywhere but as the whole body. */
 const NO_STREAM_PART = "a form's part is no stream; send it as the body";
 
+/* What JSON writes for a value, its `toJSON` asked first: an object's, or a BigInt's given one. */
+function jsonValueOf(value: unknown, key: string): unknown {
+  const toJSON: unknown = Reflect.get(Object(value), "toJSON");
+  return typeof toJSON === "function" ? Reflect.apply(toJSON, value, [key]) : value;
+}
+
 /** Why a file is refused where a request sends its variables in its address. */
 export const ADDRESS_HOLDS_TEXT = "an address holds text; send a file with a verb that has a body";
 
@@ -76,8 +85,9 @@ function refuse(at: string, what: string, instead: string): never {
 
 /**
  * Refuse what JSON would lose from a value: binary data, which it writes as
- * `{}` or as numbered fields, and a `Set` or a `Map`, which it writes as `{}`.
- * A value with a `toJSON` of its own is written as that says, and not looked into.
+ * `{}` or as numbered fields, a `Set` or a `Map`, which it writes as `{}`, and
+ * a `BigInt`, which it refuses to write. A value with a `toJSON` of its own
+ * is written as that says, and not looked into.
  *
  * @param value - The value
  * @param at - Where it sits, for the message: `variables.meta`
@@ -98,6 +108,10 @@ export function assertJsonValue(
   if (isFile(value)) refuse(at, "binary data", binary);
   if (value instanceof Set) refuse(at, "a Set", "JSON writes it as {}; send a list");
   if (value instanceof Map) refuse(at, "a Map", "JSON writes it as {}; send an object");
+  if (typeof value === "bigint" && typeof jsonValueOf(value, "") === "bigint") {
+    /* JSON writes none, unless a toJSON of the program's own does. */
+    refuse(at, "a BigInt", "send it as text");
+  }
   if (typeof value !== "object" || value === null || seen.has(value)) return;
   if (typeof Reflect.get(value, "toJSON") === "function") return;
   seen.add(value);
@@ -125,8 +139,9 @@ export function holdsFile(record: Record<string, unknown>): boolean {
 }
 
 /**
- * The parts of the form a record goes as, in the order of its fields: a
- * field `undefined` or `null` is left out, as a form has no such value.
+ * The parts of the form a record goes as, in the order of its fields, each
+ * value as JSON writes it inside the record: a field JSON leaves out or
+ * writes as `null` is left out, as a form has no such value.
  *
  * @param record - The variables, a file in one of their fields
  * @param fileOf - What is a file, at its place; a `Blob` or bytes unless given
@@ -149,10 +164,12 @@ export function formEntries(
   const entries: FormEntry<unknown>[] = [];
   const add = (name: string, value: unknown, at: FilePlace, path: string): void => {
     const file = fileOf(value, at);
-    const part = file === undefined ? textOf(value, path) : file;
+    const part = file === undefined ? textOf(value, path, String(at[1] ?? name)) : file;
     if (part !== undefined) entries.push({ name, value: part, at });
   };
-  for (const [name, value] of Object.entries(record)) {
+  for (const [name, field] of Object.entries(record)) {
+    /* A field's toJSON says, as JSON asks it, whether it is a list; a file has none. */
+    const value = jsonValueOf(field, name);
     if (!Array.isArray(value)) {
       add(name, value, [name], `variables.${name}`);
       continue;
@@ -164,14 +181,14 @@ export function formEntries(
   return entries;
 }
 
-/* A value as a form's text part. */
-function textOf(value: unknown, at: string): string | undefined {
-  if (value === undefined || value === null) return undefined;
-  if (isStream(value)) refuse(at, "a stream", NO_STREAM_PART);
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value !== "object") return String(value);
+/* A value as a form's text part: as JSON writes it inside the record, its toJSON asked
+   with its key, a string without its quotes; nothing for what JSON leaves out or writes as
+   `null` — a function, `NaN`, a date that is no date. */
+function textOf(value: unknown, at: string, key: string): string | undefined {
   assertJsonValue(value, at, "a form sends an object as JSON; give the file a field of its own");
-  return JSON.stringify(value);
+  const json = JSON.stringify({ [key]: value }).slice(JSON.stringify(key).length + 2, -1);
+  if (json === "" || json === "null") return undefined;
+  return json[0] === '"' ? String(JSON.parse(json)) : json;
 }
 
 /* Bytes as a Blob takes them: a view over shared memory is copied out, any other kept. */

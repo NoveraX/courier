@@ -201,7 +201,12 @@ describe("a failure in the caller's own code", () => {
   });
 
   it("rejects with the serializer's TypeError, not as a network failure", async () => {
-    const error = await rejection(createCaller(api()).send({ amount: 10n }));
+    const amount = {
+      toJSON(): never {
+        throw new TypeError("the amount cannot be written");
+      },
+    };
+    const error = await rejection(createCaller(api()).send({ amount }));
 
     expect(error).toBeInstanceOf(TypeError);
     expect(upstream.received).toEqual([]);

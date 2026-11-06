@@ -160,7 +160,7 @@ A call's variables are written into its request by one set of rules, in a direct
 | 0.4 | Now |
 |---|---|
 | A direct call's record whose field held a `Blob`, a `File` or bytes, sent as JSON: `{"file":{}}` | sent as a multipart form, each field a part |
-| A `Set` or a `Map` in the variables, sent as `{}` | `ConfigurationError` `VARIABLE_NOT_ENCODABLE`, naming where it sits, before anything is sent |
+| A `Set` or a `Map` in the variables, sent as `{}`; a `BigInt`, a `TypeError` from `JSON.stringify` | `ConfigurationError` `VARIABLE_NOT_ENCODABLE`, naming where it sits, before anything is sent |
 | A file in a read's variables, sent in its address as `{}` | `VARIABLE_NOT_ENCODABLE` |
 | A read's `FormData`, its fields left out of its address | its text fields sent in the address; a file in it is `VARIABLE_NOT_ENCODABLE` |
 | `error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE"` | `error.code === "VARIABLE_NOT_ENCODABLE"`, from a direct call and from a proxy call alike |

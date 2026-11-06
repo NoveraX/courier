@@ -192,6 +192,12 @@ describe("a record that holds a file, through the proxy", () => {
       "variables.body",
     ],
     ["a Set", { cover: new Blob(["b"]), tags: new Set(["a"]) }, "variables.tags"],
+    ["a BigInt", { cover: new Blob(["b"]), value: 12n }, "variables.value is a BigInt"],
+    [
+      "a BigInt in an object",
+      { cover: new Blob(["b"]), meta: { value: 12n } },
+      "variables.meta.value is a BigInt",
+    ],
   ])("refuses %s before anything is sent", async (_, record, said) => {
     expect(() => buildPostPayload(record, {})).toThrow(
       expect.objectContaining({
@@ -199,6 +205,56 @@ describe("a record that holds a file, through the proxy", () => {
         message: expect.stringContaining(said),
       }),
     );
+  });
+});
+
+describe("a BigInt", () => {
+  it("is refused on a page as in a direct call, where it sits, JSON or form alike", async () => {
+    const api = await apiWith({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+    registerSources({ api });
+    const page = createProxyCaller(routesOf(api, "api")) as unknown as {
+      books: { save: (variables: unknown) => Promise<unknown> };
+    };
+    const refusalOf = (call: Promise<unknown> | undefined) =>
+      call?.catch((error: unknown) => error);
+
+    const refusals = [
+      await refusalOf(page.books.save({ meta: { value: 12n } })),
+      await refusalOf(page.books.save({ cover: new Blob(["b"]), value: 12n })),
+      await refusalOf(directly(api).save?.({ cover: new Blob(["b"]), value: 12n })),
+    ];
+
+    expect(refusals).toEqual([
+      expect.objectContaining({
+        code: "VARIABLE_NOT_ENCODABLE",
+        message: expect.stringContaining("variables.meta.value is a BigInt"),
+      }),
+      expect.objectContaining({ message: expect.stringContaining("variables.value is a BigInt") }),
+      expect.objectContaining({ message: expect.stringContaining("variables.value is a BigInt") }),
+    ]);
+    expect(got).toHaveLength(0);
+  });
+
+  it("is written as a toJSON of the program's own says, through the proxy as directly", async () => {
+    const api = await apiWith({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+    Object.defineProperty(BigInt.prototype, "toJSON", {
+      configurable: true,
+      value(this: bigint) {
+        return this.toString();
+      },
+    });
+    try {
+      await directly(api).save?.({ cover: new Blob(["b"]), value: 12n });
+      await throughProxy(api, "save", { cover: new Blob(["b"]), value: 12n });
+    } finally {
+      Reflect.deleteProperty(BigInt.prototype, "toJSON");
+    }
+
+    expect(got[0]?.parts).toEqual([
+      ["cover", "blob", "application/octet-stream", "b"],
+      ["value", undefined, undefined, "12"],
+    ]);
+    expect(got[1]?.parts).toEqual(got[0]?.parts);
   });
 });
 
@@ -402,6 +458,13 @@ describe("records of any shape", () => {
   it("reach the upstream through the proxy as a direct call sends them, kept or sent on", async () => {
     const pick = seededIntegers(20_261_106);
     const api = await apiWith({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+    class Stamp {
+      constructor(readonly text: string) {}
+      toJSON(): string {
+        return this.text;
+      }
+    }
+    /* Values JSON writes otherwise than their own way: by their toJSON, as null, or not at all. */
     const scalar = (): unknown =>
       [
         `t${pick(100)}`,
@@ -411,7 +474,13 @@ describe("records of any shape", () => {
         null,
         undefined,
         new Date(Date.UTC(2026, pick(12), 1)),
-      ][pick(7)];
+        new Stamp(`s${pick(100)}`),
+        () => "made-up-source",
+        Number.NaN,
+        Number.NEGATIVE_INFINITY,
+        new Date(Number.NaN),
+        Symbol("s"),
+      ][pick(13)];
     const file = (): Blob =>
       pick(2) === 0
         ? new File([`f${pick(100)}`], `f${pick(9)}.bin`, { type: "application/x-test" })

@@ -93,7 +93,7 @@ const books = defineGroup({
 // → POST /books/b7/cover, a form: the field title=Dune and the file cover
 ```
 
-The path's parameters are filled from the record and left out of the form, as they are from a `FormData`'s fields. Each field is written as OpenAPI writes `multipart/form-data` by default: a string as a field; a number, a boolean or a date as a field of its text; an object as a field of its JSON; a `Blob` or a `File` as a file, with the `File`'s name and type; bytes as a file of their own; a list as a part for each item. A field that is `undefined` or `null` is left out. A record that holds no file goes as JSON. A source's `bodySerializer` writes the JSON body, so a record that holds a file goes as a form whatever it is.
+The path's parameters are filled from the record and left out of the form, as they are from a `FormData`'s fields. Each field is written as OpenAPI writes `multipart/form-data` by default, its value as JSON writes it in the record a proxy call carries, so a direct call and a proxy call send the same parts: a value's own `toJSON` is asked first, so a date is its ISO string; a string is a field; a finite number or a boolean is a field of its text; an object is a field of its JSON; a `Blob` or a `File` is a file, with the `File`'s name and type; bytes are a file of their own; a list is a part for each item. A field JSON leaves out or writes as `null` — `undefined`, `null`, a function, `NaN` or `Infinity`, a date that is no date — is left out: a function's source is never sent. A record that holds no file goes as JSON. A source's `bodySerializer` writes the JSON body, so a record that holds a file goes as a form whatever it is.
 
 What no form of the request carries is refused before anything is sent, with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE` and whose message names where the value sits, not what it holds:
 
@@ -103,6 +103,7 @@ What no form of the request carries is refused before anything is sent, with a `
 | `{ body: stream }` | a form's part is no stream: send the stream as the whole body |
 | `[file]` | a list has no field names: send an object |
 | `{ tags: new Set(…) }`, `{ seen: new Map(…) }` | JSON writes either as `{}`, in a body or in an address |
+| `{ id: 12n }` | JSON writes no `BigInt`: send it as text, or give `BigInt` a `toJSON` of your own |
 | a file in the variables of a `get`, `head`, `options` or `del` | those send their variables in the address, which holds text |
 
 A read sends a `FormData`'s text fields in its address, as a browser sends a form whose method is GET; a file in it is refused the same way.

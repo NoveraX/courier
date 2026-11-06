@@ -113,6 +113,71 @@ describe("a record that holds a file", () => {
     ]);
   });
 
+  it("writes each field as JSON writes it inside the record, which is what a proxy call carries", async () => {
+    class Stamp {
+      constructor(readonly text: string) {}
+      toJSON(): string {
+        return this.text;
+      }
+    }
+    class Listed {
+      constructor(readonly items: string[]) {}
+      toJSON(): string[] {
+        return this.items;
+      }
+    }
+    const api = await client({ save: endpoint.post("save").variables<Record<string, unknown>>() });
+
+    await api.save?.({
+      cover: new Blob(["png"]),
+      publishedAt: new Stamp("2026-01-02T03:04:05.000Z"),
+      price: new Stamp("12.50"),
+      tags: new Listed(["a", "b"]),
+      onDone: function onDone() {
+        return "made-up-secret-in-source";
+      },
+      count: Number.NaN,
+      limit: Number.POSITIVE_INFINITY,
+      when: new Date("not a date"),
+      mark: Symbol("mark"),
+      list: [1, Number.NaN, () => 1, "x"],
+    });
+
+    const parts = (await sentParts()).map(({ name, text }) => [name, text]);
+    expect(parts).toEqual([
+      ["cover", "png"],
+      ["publishedAt", "2026-01-02T03:04:05.000Z"],
+      ["price", "12.50"],
+      ["tags", "a"],
+      ["tags", "b"],
+      ["list", "1"],
+      ["list", "x"],
+    ]);
+    expect(new TextDecoder().decode(bodies[0]?.bytes)).not.toContain("made-up-secret-in-source");
+  });
+
+  it.each([
+    ["beside a file", { cover: new Blob(["png"]), value: 12n }, "variables.value is a BigInt"],
+    [
+      "in an object beside a file",
+      { cover: new Blob(["png"]), meta: { value: 12n } },
+      "variables.meta.value is a BigInt",
+    ],
+    ["in a body of JSON", { meta: { value: 12n } }, "variables.meta.value is a BigInt"],
+  ])(
+    "refuses a BigInt %s, which JSON does not write, where it sits",
+    async (_, variables, said) => {
+      const api = await client({
+        save: endpoint.post("save").variables<Record<string, unknown>>(),
+      });
+
+      const refusal = await refusalOf(api.save?.(variables));
+
+      expect(refusal.message).toContain(said);
+      expect(refusal.message).not.toContain("12");
+    },
+  );
+
   it("goes as a form for a QUERY too, which asks with a body", async () => {
     const api = await client({ find: endpoint.query("find").variables<{ image: Blob }>() });
 

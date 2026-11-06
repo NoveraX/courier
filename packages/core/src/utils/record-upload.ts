@@ -43,22 +43,15 @@ export function recordUpload(
   options: Record<string, unknown>,
 ): { body: Blob; contentType: string } {
   const files = formEntries(record).filter((entry) => typeof entry.value !== "string");
-  const text: RecordText = { variables: withoutFiles(record), files: files.map(({ at }) => at) };
+  const text: RecordText = { variables: record, files: files.map(({ at }) => at) };
   const form = new FormData();
   form.append("_options", JSON.stringify(options));
-  form.append(RECORD_PART, JSON.stringify(text));
+  /* `null` where each file sits: in a field, or an item of a list there, as formEntries found them. */
+  form.append(
+    RECORD_PART,
+    JSON.stringify(text, (_, value: unknown) => (isFile(value) ? null : value)),
+  );
   for (const { name, value } of files) form.append(name, value);
   const { blob, contentType } = encodeMultipart(form, RECORD_UPLOAD_TYPE);
   return { body: blob, contentType };
-}
-
-/* The record with `null` where a form takes a file: in a field, or an item of a list there. */
-function withoutFiles(record: Record<string, unknown>): Record<string, unknown> {
-  const nullForFile = (value: unknown): unknown => (isFile(value) ? null : value);
-  return Object.fromEntries(
-    Object.entries(record).map(([name, value]) => [
-      name,
-      Array.isArray(value) ? value.map(nullForFile) : nullForFile(value),
-    ]),
-  );
 }

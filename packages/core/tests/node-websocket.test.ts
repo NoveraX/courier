@@ -21,7 +21,7 @@ import {
   type WebSocketUpgradeOptions,
 } from "../src/node";
 import type { WebSocketLike } from "../src/realtime/adapters";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame } from "./helpers/fake-socket";
 
 let server: Server | undefined;

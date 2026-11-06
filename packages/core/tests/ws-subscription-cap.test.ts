@@ -15,7 +15,7 @@ import type { Sources } from "../src/define/types";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { decodeMessage, encodeMessage, type WSMessage } from "../src/realtime/ws/ws-protocol";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame } from "./helpers/fake-socket";
 
 const { channel } = courier();

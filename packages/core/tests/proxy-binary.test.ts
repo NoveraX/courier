@@ -17,7 +17,7 @@ import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError, HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { readWireBody } from "../src/utils/wire-body";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 

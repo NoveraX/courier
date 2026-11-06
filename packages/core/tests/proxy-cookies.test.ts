@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { courier, defineApi } from "../src/define/index";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type ProxyServer, startProxyServer } from "./helpers/proxy-server";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 

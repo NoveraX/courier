@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { stream } = courier();
 

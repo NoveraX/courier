@@ -13,14 +13,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
+import {
+  _resetServerCapabilitiesForTests,
+  provideServerCapability,
+} from "../src/capabilities/registry";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
 import { createFetch } from "../src/fetch";
 import { retryMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
-import { IN_PROCESS_PROXY } from "../src/proxy-caller/in-process-proxy";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { inProcessRoute } from "../src/server/in-process-route";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { startUpstream } from "./helpers/middleware-upstream";
 
 /* Made up, and joined at run time so no literal sits in the source for a secret scanner. */
@@ -38,7 +42,7 @@ function sentHeaders(): Headers {
 afterEach(() => {
   fetchSpy.mockClear();
   vi.unstubAllGlobals();
-  Reflect.deleteProperty(globalThis, IN_PROCESS_PROXY);
+  _resetServerCapabilitiesForTests();
   _resetSourcesForTests();
 });
 
@@ -112,10 +116,12 @@ describe("a header value no request can carry", () => {
 
   it("is refused on a proxy client's call the proxy serves in this process", async () => {
     const api = apiWith();
-    registerSources({ api });
     const proxy = createHandler();
     const handled = vi.spyOn(proxy, "handle");
-    Reflect.set(globalThis, IN_PROCESS_PROXY, () => proxy);
+    provideServerCapability("inProcessProxy", {
+      route: (proxyPath, source) => inProcessRoute(proxyPath, source, () => proxy),
+    });
+    registerSources({ api });
     const client = createProxyCaller(routesOf(api, "api")) as unknown as ProxyClient;
 
     await refusal(client.with({ headers: { "x-api-key": `${SECRET}\nX-Injected: 1` } }).read());

@@ -13,7 +13,7 @@ import { courier, defineApi, defineGroup } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { parseWSTopic } from "../src/realtime/ws-address";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { createTestClient } from "../src/testing/create-test-client";
 import { streamRequest } from "../src/transport/direct/stream-request";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";

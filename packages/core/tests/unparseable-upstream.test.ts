@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();

@@ -19,7 +19,7 @@ import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { RealtimeError } from "../src/realtime/errors";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame } from "./helpers/fake-socket";
 import { settle } from "./helpers/ws-server";
 

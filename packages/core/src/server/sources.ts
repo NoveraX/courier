@@ -26,10 +26,10 @@
  * as `studioHooks` and `app-origin`.
  */
 
-import { provideInProcessProxy } from "./adapter/provide-in-process-proxy";
-import { stampSourceKeys } from "./define/stamp-source-keys";
-import type { Sources } from "./define/types";
-import { ConfigurationError } from "./errors/configuration-error";
+import { stampSourceKeys } from "../define/stamp-source-keys";
+import type { Sources } from "../define/types";
+import { ConfigurationError } from "../errors/configuration-error";
+import { provideInProcessProxy } from "./provide-in-process-proxy";
 
 const SOURCES_KEY = Symbol.for("courier.sources");
 

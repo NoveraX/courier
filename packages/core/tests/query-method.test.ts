@@ -13,7 +13,7 @@ import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createFetch } from "../src/fetch";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { isReadingMethod, sendsVariablesInQuery } from "../src/utils/helpers";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";

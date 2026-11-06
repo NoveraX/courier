@@ -8,7 +8,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { withoutEmptyFiles } from "../src/http-client/body-builder";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 
 describe("a multipart field holding several files", () => {

@@ -15,7 +15,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { retryMiddleware } from "../src/middleware";
 import { webIncomingRequest, withIncomingRequest } from "../src/node";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { endpoint, stream } = courier();
 

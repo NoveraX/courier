@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 
 const { endpoint } = courier();

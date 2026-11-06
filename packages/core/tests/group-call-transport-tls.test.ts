@@ -29,7 +29,7 @@ import { defineGroup } from "../src/define/group";
 import type { SourceDispatcher } from "../src/http-client/source-transport";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type IssuedCertificate, testCertificates } from "./helpers/test-certificates";
 
 const { endpoint, stream, channel } = courier();

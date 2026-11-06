@@ -15,7 +15,7 @@ import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
 import { defineMiddleware } from "../src/middleware";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const { channel } = courier();

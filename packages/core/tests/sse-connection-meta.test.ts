@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { stream } = courier();
 const STREAM_URL = "http://127.0.0.1/api/sse?_s=api&_m=feed";

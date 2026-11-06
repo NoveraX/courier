@@ -24,7 +24,7 @@ import { fetchFailure } from "../src/http-client/transport-failure";
 import { defineMiddleware } from "../src/middleware";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();

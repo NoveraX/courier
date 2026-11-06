@@ -9,7 +9,7 @@ import { courier } from "../src/define/courier";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
 import { buildProxySSEUrl } from "../src/realtime/sse-address";
 import { type SSEContext, tracked } from "../src/realtime/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 afterEach(() => {
   _resetSourcesForTests();

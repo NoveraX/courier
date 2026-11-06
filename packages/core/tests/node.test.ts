@@ -7,7 +7,7 @@ import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
 import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "../src/node";
 import { buildProxySSEUrl } from "../src/realtime/sse-address";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 function mockIncomingMessage(opts: {
   host?: string | string[] | undefined;

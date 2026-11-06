@@ -19,7 +19,7 @@ import { courier, defineApi, defineGroup, multipartBody } from "../src/define/in
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { buildPostPayload } from "../src/proxy-caller/post-payload";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { RECORD_UPLOAD_TYPE } from "../src/utils/record-upload";
 import { readParts } from "./helpers/multipart-fixtures";
 import { seededIntegers } from "./helpers/seeded-random";

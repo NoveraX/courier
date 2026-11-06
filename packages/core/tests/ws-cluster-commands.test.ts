@@ -18,7 +18,7 @@ import { ConfigurationError } from "../src/errors";
 import type { PubSubAdapter } from "../src/realtime/adapters";
 import { createMemoryBus, type MemoryBus } from "../src/realtime/memory-bus";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 
 const SECRET = "a-cluster-secret-of-32-bytes-or-more";

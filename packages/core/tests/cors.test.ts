@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { courier, defineApi } from "../src/define/index";
 import { sendWebResponse, toWebRequest } from "../src/node";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const PAGE = "https://admin.example.com";
 let upstream: Server;

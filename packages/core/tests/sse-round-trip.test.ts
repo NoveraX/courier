@@ -16,7 +16,7 @@ import { executeSSE } from "../src/realtime/caller-sse";
 import { ForbiddenError, RealtimeError, RealtimeValidationError } from "../src/realtime/errors";
 import { buildProxySSEUrl } from "../src/realtime/sse-address";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { stream } = courier();
 

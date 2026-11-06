@@ -6,7 +6,7 @@ import { createWSHandler } from "../../src/adapter/handle-ws";
 import type { WSHandler, WSHandlerConfig } from "../../src/adapter/ws-types";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../../src/node";
 import { clearWSConnectionPool } from "../../src/realtime/caller-ws";
-import { _resetSourcesForTests, registerSources } from "../../src/sources";
+import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 
 /** A real HTTP server answering WebSocket upgrades with Courier's handler. */
 export interface ServedWS {

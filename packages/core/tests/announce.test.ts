@@ -3,7 +3,7 @@ import { announceHosting, announceWhenRegistered, consumeAnnouncements } from ".
 import { bufferedAnnouncementCount, resetAnnouncements } from "../src/announce/test-support";
 import { setAppOrigin } from "../src/app-origin";
 import { defineApi } from "../src/define";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const fakeApi = defineApi({ baseURL: "http://example.com", groups: {} });
 

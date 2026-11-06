@@ -22,7 +22,7 @@ import {
 } from "../src/errors";
 import { authMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { ValidationError } from "../src/validation";
 import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";
 

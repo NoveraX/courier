@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 
 import { defineApi, getSourceName } from "../src/define";
-import { registerSources } from "../src/sources";
+import { registerSources } from "../src/server/sources";
 
 describe("registerSources", () => {
   it("refuses a key that contradicts the name given to defineApi", () => {

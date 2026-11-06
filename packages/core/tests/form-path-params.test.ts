@@ -13,7 +13,7 @@ import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";
 
 const { endpoint } = courier();

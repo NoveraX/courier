@@ -18,7 +18,7 @@ import { attachWebSocketUpgrade, type UpgradeServer } from "../../src/node";
 import { clearWSConnectionPool } from "../../src/realtime/caller-ws";
 import type { WSCredentials } from "../../src/realtime/ws/ws-credentials";
 import { executeWSChannel } from "../../src/realtime/ws-channel-client";
-import { _resetSourcesForTests, registerSources } from "../../src/sources";
+import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 
 const { channel } = courier();
 

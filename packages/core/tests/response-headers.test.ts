@@ -13,7 +13,7 @@ import { createHandler } from "../src/adapter";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { buildResponse } from "../src/utils/execute-response";
 
 const PROXY = { res: new Response() };

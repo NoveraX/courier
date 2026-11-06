@@ -9,7 +9,7 @@
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";
 
-import { _resetSourcesForTests } from "../../core/src/sources";
+import { _resetSourcesForTests } from "../../core/src/server/sources";
 import { courierPlugin, courierSSEHandler, courierWSHandler } from "../src";
 
 describe("the Fastify plugin and handler factories", () => {

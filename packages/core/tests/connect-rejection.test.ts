@@ -17,7 +17,7 @@ import { sendWebResponse, toWebRequest } from "../src/node";
 import { AuthError, ForbiddenError, type RealtimeError } from "../src/realtime/errors";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 const { stream, channel } = courier();

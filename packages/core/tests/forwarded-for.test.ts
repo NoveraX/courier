@@ -16,7 +16,7 @@ import { createHandler } from "../src/adapter";
 import { rememberPeerAddress } from "../src/adapter/peer-address";
 import { courier, defineApi } from "../src/define/index";
 import { sendWebResponse, toWebRequest } from "../src/node";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const SPOOFED = {
   "x-forwarded-for": "6.6.6.6",

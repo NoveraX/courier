@@ -21,7 +21,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
 import { defineMiddleware } from "../src/middleware/define";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { fetchWithinOrigin } from "../src/utils/fetch-within-origin";
 
 const withKey = defineMiddleware("server-key", "before", (ctx) => {

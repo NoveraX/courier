@@ -11,7 +11,7 @@ import { courier, defineApi } from "@noverax/courier/define";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { _resetSourcesForTests } from "../../core/src/sources";
+import { _resetSourcesForTests } from "../../core/src/server/sources";
 import { echo, startUpstream, type Upstream } from "../../core/tests/helpers/upstream";
 import { type CourierPluginOptions, courierPlugin } from "../src/index";
 

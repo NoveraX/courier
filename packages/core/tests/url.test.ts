@@ -9,7 +9,7 @@ import { courier, defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware/define";
 import { retryMiddleware } from "../src/middleware/retry";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { compileUrl, resolveBasePath } from "../src/utils/url";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 

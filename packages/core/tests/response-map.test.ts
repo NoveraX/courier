@@ -18,7 +18,7 @@ import { HTTPError, isHTTPError } from "../src/errors";
 import { defineMiddleware, retryMiddleware } from "../src/middleware/index";
 import { toOpenAPI } from "../src/openapi";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { startUpstream, type Upstream } from "./helpers/middleware-upstream";
 
 const { endpoint } = courier();

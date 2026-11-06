@@ -10,7 +10,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 import { type ProxyServer, startProxyServer } from "./helpers/proxy-server";
 

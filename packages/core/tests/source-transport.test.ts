@@ -25,7 +25,7 @@ import type {
 } from "../src/http-client/source-transport";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { coreFetch } from "../src/utils/fetch";
 
 const { endpoint, stream, channel } = courier();

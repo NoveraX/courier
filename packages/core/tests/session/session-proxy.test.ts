@@ -14,7 +14,7 @@ import { createHandler } from "../../src/adapter";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { sendWebResponse, toWebRequest } from "../../src/node";
-import { _resetSourcesForTests, registerSources } from "../../src/sources";
+import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 let upstream: Upstream;

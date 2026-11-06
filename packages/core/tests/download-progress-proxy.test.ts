@@ -16,7 +16,7 @@ import { routesOf } from "../src/define/routes-of";
 import type { DownloadProgress } from "../src/http-client/types";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { trackDownload } from "../src/utils/progress";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 

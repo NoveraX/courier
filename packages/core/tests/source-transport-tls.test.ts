@@ -28,7 +28,7 @@ import { defineGroup } from "../src/define/group";
 import type { BaseOptions } from "../src/http-client/types";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type ForwardProxy, startForwardProxy } from "./helpers/forward-proxy";
 import { testCertificates } from "./helpers/test-certificates";
 

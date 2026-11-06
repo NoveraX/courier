@@ -13,7 +13,7 @@ import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { ConfigurationError } from "../src/errors";
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { createMemoryConnectionLeases } from "../src/realtime/memory-leases";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const handlers: WSHandler[] = [];

@@ -1,5 +1,5 @@
 import { probeOptions } from "../define/probe";
-import { getSources } from "../sources";
+import { getSources } from "../server/sources";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { HandlerConfig } from "./handler-config";
 import type { ProxyRouting } from "./read-routing";

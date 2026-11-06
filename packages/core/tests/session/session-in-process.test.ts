@@ -9,9 +9,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { courier, defineApi } from "../../src/define";
 import { routesOf } from "../../src/define/routes-of";
 import { createProxyCaller } from "../../src/proxy-caller";
+import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { registerRequestContext } from "../../src/session/request-context";
-import { _resetSourcesForTests, registerSources } from "../../src/sources";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 const { endpoint } = courier();

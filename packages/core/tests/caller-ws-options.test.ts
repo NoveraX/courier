@@ -22,7 +22,7 @@ import { routesOf } from "../src/define/routes-of";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { settle } from "./helpers/ws-server";
 
 const { channel } = courier();

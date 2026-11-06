@@ -5,7 +5,7 @@ import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
 import { defineMiddleware } from "../src/middleware";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const { endpoint, stream } = courier();

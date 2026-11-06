@@ -10,7 +10,7 @@ import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import type { PubSubAdapter } from "../src/realtime/adapters";
 import { createMemoryBus } from "../src/realtime/memory-bus";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 beforeEach(() => {

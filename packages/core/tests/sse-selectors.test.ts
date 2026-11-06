@@ -15,7 +15,7 @@ import type { HandlerConfig } from "../src/adapter/handler-config";
 import { courier } from "../src/define/courier";
 import type { PubSubAdapter } from "../src/realtime/adapters";
 import { createMemoryBus } from "../src/realtime/memory-bus";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const SECRET = "a-cluster-secret-of-32-bytes-or-more";
 const SSE_CONTROL = "courier:sse:control";

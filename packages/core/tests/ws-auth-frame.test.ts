@@ -10,7 +10,7 @@ import { courier } from "../src/define/courier";
 import { defineMiddleware } from "../src/middleware/define";
 import type { WSCredentials } from "../src/realtime/ws/ws-credentials";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 const { channel } = courier();

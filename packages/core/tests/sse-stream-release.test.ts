@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createHandler } from "../src/adapter";
 import { LIMITS } from "../src/adapter/limits";
 import { courier } from "../src/define/courier";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { stream } = courier();
 

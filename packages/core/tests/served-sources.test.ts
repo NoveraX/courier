@@ -11,7 +11,7 @@ import { createHandler } from "../src/adapter";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import { courier, defineApi, getSourceName } from "../src/define";
 import type { Sources } from "../src/define/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { endpoint } = courier();
 

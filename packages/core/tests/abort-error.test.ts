@@ -16,7 +16,7 @@ import { AbortError, isAbortError, isRequestFailure, TimeoutError } from "../src
 import { createFetch } from "../src/fetch";
 import { retryMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";

@@ -12,7 +12,7 @@ import { courier, defineApi, type Sources } from "@noverax/courier/define";
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { _resetSourcesForTests } from "../../core/src/sources";
+import { _resetSourcesForTests } from "../../core/src/server/sources";
 import { startUpstream, type Upstream } from "../../core/tests/helpers/upstream";
 import { apiRoute } from "../src/api-route";
 import { sseRoute } from "../src/sse-route";

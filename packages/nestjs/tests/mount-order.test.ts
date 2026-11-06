@@ -9,7 +9,7 @@
 import { createServer } from "node:http";
 import { describe, expect, it } from "vitest";
 
-import { _resetSourcesForTests } from "../../core/src/sources";
+import { _resetSourcesForTests } from "../../core/src/server/sources";
 import { courierMiddleware, courierSSEMiddleware, courierWSAttach } from "../src/index";
 
 describe("the NestJS middleware factories", () => {

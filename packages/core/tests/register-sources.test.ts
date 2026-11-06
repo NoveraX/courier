@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { courier, defineApi } from "../src/define/index";
 import { ConfigurationError } from "../src/errors/configuration-error";
-import { _resetSourcesForTests, getSources, registerSources } from "../src/sources";
+import { _resetSourcesForTests, getSources, registerSources } from "../src/server/sources";
 
 const { endpoint } = courier();
 

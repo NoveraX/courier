@@ -23,7 +23,7 @@ import type {
 import { createMemoryBus } from "../src/realtime/memory-bus";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame, createFakeSocket, type FakeSocket } from "./helpers/fake-socket";
 
 const joined: boolean[] = [];

@@ -18,7 +18,7 @@ import { createHandler } from "../../src/adapter/create-handler";
 import type { HandlerConfig } from "../../src/adapter/handler-config";
 import { courier, defineApi, defineGroup } from "../../src/define/index";
 import { sendWebResponse, toWebRequest } from "../../src/node";
-import { registerSources } from "../../src/sources";
+import { registerSources } from "../../src/server/sources";
 
 const MB = 1024 * 1024;
 const collect = (globalThis as { gc?: () => void }).gc;

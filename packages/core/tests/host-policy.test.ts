@@ -14,7 +14,7 @@ import type { HandlerConfig } from "../src/adapter/handler-config";
 import { isHostAccepted } from "../src/adapter/host-policy";
 import { courier, defineApi } from "../src/define/index";
 import { sendWebResponse, toWebRequest } from "../src/node";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 describe("isHostAccepted", () => {

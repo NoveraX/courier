@@ -23,7 +23,7 @@ import {
 } from "../src/define/index";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();

@@ -17,7 +17,7 @@ import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { studioHooks } from "../src/studio";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 

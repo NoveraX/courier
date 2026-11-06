@@ -11,7 +11,7 @@ import { isOriginAccepted, isOriginAllowed } from "../src/adapter/origin-policy"
 import { courier, defineApi, defineGroup } from "../src/define";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import { sendWebResponse, toWebRequest } from "../src/node";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const APP = "https://app.example.com";

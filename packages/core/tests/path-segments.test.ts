@@ -13,7 +13,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { HTTPError } from "../src/errors";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();

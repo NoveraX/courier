@@ -1,5 +1,5 @@
 import { createRefusalLog } from "../logger/refusal-log";
-import { prepareSources } from "../sources";
+import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import type { ConnectResult } from "./connection-meta";
 import { LIMITS } from "./limits";

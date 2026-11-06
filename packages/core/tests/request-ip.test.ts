@@ -20,8 +20,8 @@ import { createHandler } from "../src/adapter";
 import { rememberPeerAddress } from "../src/adapter/peer-address";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import type { ForwardOptions } from "../src/session/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 const { endpoint } = courier();
 

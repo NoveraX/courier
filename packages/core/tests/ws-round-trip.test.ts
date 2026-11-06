@@ -21,7 +21,7 @@ import { ForbiddenError, RealtimeError, RealtimeValidationError } from "../src/r
 import type { WSChannelContext, WSContext } from "../src/realtime/types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { channel } = courier();
 const settle = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms));

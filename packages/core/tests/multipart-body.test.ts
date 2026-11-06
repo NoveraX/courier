@@ -18,7 +18,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup, multipartBody } from "../src/define/index";
 import { toOpenAPI } from "../src/openapi";
 import { buildPostPayload } from "../src/proxy-caller/post-payload";
-import { _resetSourcesForTests } from "../src/sources";
+import { _resetSourcesForTests } from "../src/server/sources";
 import { type StreamedUpload, streamedUpload } from "../src/utils/streamed-upload";
 import { formOf } from "../src/utils/variables-encoding";
 import { chunked, readParts } from "./helpers/multipart-fixtures";

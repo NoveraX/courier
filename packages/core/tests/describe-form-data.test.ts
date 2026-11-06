@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { courier, defineApi } from "../src/define/index";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { studioHooks } from "../src/studio";
 import { describeFormData } from "../src/studio/describe-form-data";
 

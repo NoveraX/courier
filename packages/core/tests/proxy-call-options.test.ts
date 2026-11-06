@@ -14,7 +14,7 @@ import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();

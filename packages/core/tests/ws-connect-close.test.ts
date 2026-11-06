@@ -12,7 +12,7 @@ import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { defineApi } from "../src/define";
 import type { WebSocketLike } from "../src/realtime/adapters";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame } from "./helpers/fake-socket";
 
 const ADDRESS = { "X-Forwarded-For": "203.0.113.7" };

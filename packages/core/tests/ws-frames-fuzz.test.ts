@@ -14,7 +14,7 @@ import { courier } from "../src/define/courier";
 import type { Sources } from "../src/define/types";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 import { randomFrame, randomText, randomValue } from "./helpers/random-frames";
 import { seededRandom } from "./helpers/seeded-random";

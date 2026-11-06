@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
-import { _resetSourcesForTests } from "../src/sources";
+import { _resetSourcesForTests } from "../src/server/sources";
 import { type RenderMemo, registerRenderMemo } from "../src/utils/render-memo";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 

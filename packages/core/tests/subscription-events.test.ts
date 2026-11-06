@@ -23,7 +23,7 @@ import { AuthError } from "../src/realtime/errors";
 import type { CloseInfo, OpenInfo, Subscription } from "../src/realtime/subscription-types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { channel } = courier();
 

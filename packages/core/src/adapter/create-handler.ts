@@ -1,5 +1,5 @@
 import { createRefusalLog } from "../logger/refusal-log";
-import { prepareSources } from "../sources";
+import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
 import { executeRequest } from "../utils/execute";
 import { assertBodyOptions } from "./assert-body-options";

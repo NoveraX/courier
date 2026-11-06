@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 

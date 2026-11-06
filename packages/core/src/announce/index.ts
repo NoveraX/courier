@@ -15,7 +15,7 @@ import { getAppOrigin } from "../app-origin";
 import type { AnySource } from "../define";
 import type { Sources } from "../define/types";
 import { discoverAppOrigin, type ServerOrigin } from "../discover-app-origin";
-import { getSources, onSourcesChange } from "../sources";
+import { getSources, onSourcesChange } from "../server/sources";
 
 /** Transports a runtime claims it can serve for the listed sources */
 export type RuntimeTransport = "http" | "sse" | "ws";

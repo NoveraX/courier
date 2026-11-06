@@ -10,7 +10,7 @@ import { registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { _resetSourcesForTests } from "../../core/src/sources";
+import { _resetSourcesForTests } from "../../core/src/server/sources";
 
 import { courierHandler, courierSSEHandler, courierWSHandler } from "../src/index";
 

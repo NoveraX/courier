@@ -7,7 +7,7 @@ import type { Sources } from "../src/define/types";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 import { authFrame } from "./helpers/fake-socket";
 

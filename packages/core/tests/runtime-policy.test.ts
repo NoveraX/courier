@@ -23,7 +23,7 @@ import {
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier, defineApi } from "../src/define/index";
 import type { WebSocketLike } from "../src/realtime/adapters";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { seededIntegers } from "./helpers/seeded-random";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 

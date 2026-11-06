@@ -17,7 +17,7 @@ import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import type { Middleware } from "../src/middleware/types";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { endpoint, stream } = courier();
 

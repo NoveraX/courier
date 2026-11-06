@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSHandler } from "../src/adapter/ws-types";
-import { _resetSourcesForTests } from "../src/sources";
+import { _resetSourcesForTests } from "../src/server/sources";
 import { createFakeSocket } from "./helpers/fake-socket";
 
 const handlers: WSHandler[] = [];

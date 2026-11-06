@@ -6,7 +6,7 @@
 import { courier, defineApi } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { _resetSourcesForTests } from "../../core/src/sources";
+import { _resetSourcesForTests } from "../../core/src/server/sources";
 import { echo, startUpstream, type Upstream } from "../../core/tests/helpers/upstream";
 import { courierHandler } from "../src/index";
 

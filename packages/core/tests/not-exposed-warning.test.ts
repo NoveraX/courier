@@ -15,7 +15,7 @@ import { courier, defineApi } from "../src/define/index";
 import type { Sources } from "../src/define/types";
 import type { Context } from "../src/http-client/types";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { executeRequest } from "../src/utils/execute";
 import { authFrame, createFakeSocket } from "./helpers/fake-socket";
 

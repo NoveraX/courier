@@ -12,7 +12,7 @@ import { courier, defineApi } from "../../src/define/index";
 import { routesOf } from "../../src/define/routes-of";
 import { headerVariablesMiddleware } from "../../src/middleware";
 import { createProxyCaller } from "../../src/proxy-caller";
-import { _resetSourcesForTests, registerSources } from "../../src/sources";
+import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import { isValidationError } from "../../src/validation";
 import { type EchoServer, startEchoServer } from "../helpers/echo-server";
 import { type ProxyServer, startProxyServer } from "../helpers/proxy-server";

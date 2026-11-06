@@ -8,7 +8,7 @@ import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { createRefusalLog } from "../src/logger/refusal-log";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 beforeEach(() => {
   registerSources({} as Parameters<typeof registerSources>[0]);

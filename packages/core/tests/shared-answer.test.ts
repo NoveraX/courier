@@ -14,7 +14,7 @@ import { z } from "zod";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
-import { _resetSourcesForTests } from "../src/sources";
+import { _resetSourcesForTests } from "../src/server/sources";
 import { studioHooks } from "../src/studio";
 import { type RenderMemo, registerRenderMemo } from "../src/utils/render-memo";
 import { startUpstream, type Upstream } from "./helpers/upstream";

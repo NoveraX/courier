@@ -16,7 +16,7 @@ import { z } from "zod";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 
 const { endpoint } = courier();
 let upstream: Server | undefined;

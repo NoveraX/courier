@@ -11,7 +11,7 @@ vi.mock("../src/utils/execute", async (importOriginal) => {
 
 import { createHandler, requireSources } from "../src/adapter";
 import { isConfigurationError } from "../src/errors";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { executeRequest } from "../src/utils/execute";
 
 const mockExecuteRequest = vi.mocked(executeRequest);

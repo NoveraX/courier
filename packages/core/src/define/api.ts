@@ -1,8 +1,7 @@
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { BaseOptions } from "../http-client/types";
 import { assertSessionApi } from "../session/assert-session-api";
-import { studioHooks } from "../studio";
-import { isDevelopment } from "../utils/development";
+import { announceSource } from "./announce-source";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type { ExposeMark } from "./marker";
@@ -216,10 +215,7 @@ export function defineApi(
   assertTransportOptions(rest, "source");
   assertCancelPrevious(rest.cancelPrevious, `API "${sourceName}"`);
 
-  // Dev-only: notify studio of source (re)creation for HMR hot reload
-  if (isDevelopment()) {
-    studioHooks.onSourceDefined?.(result, config.baseURL ?? "");
-  }
+  announceSource(result, config.baseURL ?? "");
 
   return result;
 }

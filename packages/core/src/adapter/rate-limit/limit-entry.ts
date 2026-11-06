@@ -1,5 +1,5 @@
 import type { StudioHooks } from "../../studio/hooks";
-import { studioRequestIdOf } from "../../studio/studio-request-id";
+import { studioRequestIdOf } from "../../utils/studio-request-id";
 import { discardBody } from "../discard-body";
 import { announceProxyCall } from "../proxy-call-events";
 import { readRouting } from "../read-routing";

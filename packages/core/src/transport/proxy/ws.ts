@@ -7,7 +7,7 @@ import type { CallerWSOptions, WSConnectionConfig } from "../../realtime/ws/ws-t
 import { buildWSTopic } from "../../realtime/ws-address";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
-import { PLAYGROUND_RID_PARAM } from "../../studio/studio-request-id";
+import { PLAYGROUND_RID_PARAM } from "../../utils/studio-request-id";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 
 export interface ProxyWSDefaults {

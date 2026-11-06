@@ -16,7 +16,7 @@ import { createCaller } from "../src/caller";
 import {
   _resetServerCapabilitiesForTests,
   provideServerCapability,
-} from "../src/capabilities/registry";
+} from "../src/capabilities/provide-server-capability";
 import { courier, defineApi } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { ConfigurationError } from "../src/errors";
@@ -42,7 +42,7 @@ function sentHeaders(): Headers {
 afterEach(() => {
   fetchSpy.mockClear();
   vi.unstubAllGlobals();
-  _resetServerCapabilitiesForTests();
+  _resetServerCapabilitiesForTests("inProcessProxy");
   _resetSourcesForTests();
 });
 

@@ -13,13 +13,13 @@ import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
+import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import { directStreamingFactories } from "../src/transport/direct-streaming";
 
 const { channel, stream } = courier();
 
-const HOOKS_KEY = Symbol.for("courier.studio.hooks");
-const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
+const hooks: StudioHooks = studioHooks;
 
 let server: Server | undefined;
 let wss: WebSocketServer | undefined;

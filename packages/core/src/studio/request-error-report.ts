@@ -1,26 +1,13 @@
 import { HTTPError, NetworkError, TimeoutError } from "../errors";
 import type { Context } from "../http-client/types";
-import type { RequestFailureKind, StudioHooks } from "../studio";
-import { failureCause } from "../studio/failure-cause";
+import { isCancellation } from "../utils/abort";
+import { callerLeft } from "../utils/caller-left";
+import type { FailureReport, TimingState } from "../utils/execute-studio";
+import { estimateResponseSize, headersToObject } from "../utils/helpers";
 import { ValidationError } from "../validation";
-import { isCancellation } from "./abort";
-import { callerLeft } from "./caller-left";
-import { proxyTimingOf, type TimingState } from "./execute-studio";
-import { estimateResponseSize, headersToObject } from "./helpers";
-
-/** What Studio needs to describe a request that failed. */
-export interface FailureReport {
-  requestId: string;
-  dt: Partial<StudioHooks>;
-  /** The request's timings so far; absent when Studio is not attached. */
-  timing?: TimingState | undefined;
-  /** How many middleware wrapped the call. */
-  middlewareCount?: number | undefined;
-  /** The call's signal, so a cancellation with a reason of its own is told apart. */
-  signal?: AbortSignal | undefined;
-  /** The call's context, carrying a proxied call's incoming request. */
-  context?: Context | undefined;
-}
+import { proxyTimingOf } from "./call-report";
+import { failureCause } from "./failure-cause";
+import type { RequestFailureKind } from "./hooks";
 
 /**
  * Say which way a request failed.

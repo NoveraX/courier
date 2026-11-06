@@ -10,12 +10,7 @@ import { applyCacheHeaders } from "./cache-headers";
 import { handleExecuteError } from "./execute-error";
 import { executeInner, type InnerExecuteDeps } from "./execute-inner";
 import { buildResponse } from "./execute-response";
-import {
-  emitRequestEnd,
-  injectTimingHeaders,
-  type StudioContext,
-  type TimingState,
-} from "./execute-studio";
+import type { StudioContext, TimingState } from "./execute-studio";
 import { validateVariables } from "./execute-validation";
 
 /** A call ready to run: its endpoint, its middleware and how to answer it. */
@@ -84,7 +79,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
     if (result.status < 200 || result.status > 299) throw new HTTPError(result);
 
     if (studio.hasStudio) {
-      emitRequestEnd(studio, result, ctx.headers, timing, tMiddlewareTotal, context);
+      studio.report?.requestEnd(studio, result, ctx.headers, timing, tMiddlewareTotal, context);
     }
 
     const relayed = [
@@ -102,7 +97,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
     );
 
     if (context?.proxyMethod && response instanceof Response && studio.hasStudio) {
-      injectTimingHeaders(response, studio.requestId, timing.t0);
+      studio.report?.timingHeaders(response, studio.requestId, timing.t0);
     }
     if (context?.proxyMethod === "GET" && schema?.cache && response instanceof Response) {
       applyCacheHeaders(response, schema, ctx.headers, ctx.request);
@@ -118,6 +113,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       handleExecuteError(error, {
         requestId: studio.requestId,
         dt: studio.dt,
+        report: studio.report,
         context,
         rawData: call.answer.rawData,
         namedHeaders: call.answer.namedHeaders,

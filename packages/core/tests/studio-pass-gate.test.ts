@@ -16,7 +16,7 @@ import { createHandler } from "../src/adapter";
 import { redeemStudioPass, takeStudioPass } from "../src/adapter/studio-pass-gate";
 import { courier, defineApi } from "../src/define/index";
 import { studioHooks } from "../src/studio";
-import { STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "../src/studio/studio-pass";
+import { STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "../src/utils/studio-pass";
 
 const { endpoint, stream } = courier();
 const PASS = "P".repeat(43);

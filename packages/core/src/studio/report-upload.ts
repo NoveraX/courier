@@ -1,5 +1,5 @@
 import type { UploadProgress } from "../http-client/types";
-import { studioHooks } from "./singleton";
+import type { StudioHooks } from "./hooks";
 
 /** The endpoint an upload is for, as Studio names its row. */
 export interface UploadCall {
@@ -16,21 +16,23 @@ export interface UploadCall {
  * with the endpoint it is for, so a row can show the upload even before the
  * call's other events reach it; the last step also reports completion.
  *
+ * @param hooks - The hooks Studio listens on
  * @param onUploadProgress - The caller's own callback
  * @param call - The request id and the endpoint the upload is for
  * @returns The callback to hand the transport
  * @example
  * ```ts
- * options.onUploadProgress = reportingUploads(options.onUploadProgress, { requestId, source: "api", method: "upload" });
+ * options.onUploadProgress = reportingUploads(hooks, options.onUploadProgress, { requestId, source: "api", method: "upload" });
  * ```
  */
 export function reportingUploads(
+  hooks: StudioHooks,
   onUploadProgress: (progress: UploadProgress) => void,
   call: UploadCall,
 ): (progress: UploadProgress) => void {
   return (progress) => {
     onUploadProgress(progress);
-    studioHooks.onUploadProgress?.({
+    hooks.onUploadProgress?.({
       ...call,
       loaded: progress.transferredBytes,
       total: progress.totalBytes,
@@ -38,7 +40,7 @@ export function reportingUploads(
       timestamp: Date.now(),
     });
     if (progress.percent >= 1) {
-      studioHooks.onUploadComplete?.({ requestId: call.requestId, timestamp: Date.now() });
+      hooks.onUploadComplete?.({ requestId: call.requestId, timestamp: Date.now() });
     }
   };
 }

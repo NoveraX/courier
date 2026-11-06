@@ -1,6 +1,6 @@
+import { studioHooksHere } from "../capabilities/studio-hooks";
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
-import { studioHooks } from "../studio";
 import { filterResponseHeaders } from "./merge-headers";
 import { setCookiesOf } from "./set-cookies";
 import { toWireAnswer } from "./wire-answer";
@@ -120,7 +120,7 @@ export const buildErrorResponse = (
 ): unknown => {
   const announced = requestId ?? context?.studioRequestId;
   if (announced !== undefined) {
-    studioHooks.onRequestError?.({
+    studioHooksHere().onRequestError?.({
       id: announced,
       error: { type: "http", status, message },
       timestamp: Date.now(),

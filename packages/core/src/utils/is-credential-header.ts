@@ -1,4 +1,4 @@
-import { STUDIO_PASS_HEADER } from "../studio/studio-pass";
+import { STUDIO_PASS_HEADER } from "./studio-pass";
 
 /* Headers that carry a credential by their name alone — Studio's one-time pass
    among them, which the proxy takes off before anything records a request. */

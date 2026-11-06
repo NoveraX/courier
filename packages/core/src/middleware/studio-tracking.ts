@@ -1,4 +1,4 @@
-import { studioHooks } from "../studio";
+import { studioHooksHere } from "../capabilities/studio-hooks";
 import type { Middleware } from "./types";
 
 /** Emit onMiddlewareExit event with self-time and per-phase breakdown */
@@ -12,7 +12,7 @@ export function emitExit(
   rawBeforeTime: number,
   rawAfterTime: number,
 ): void {
-  const dt = studioHooks;
+  const dt = studioHooksHere();
   if (!dt.onMiddlewareExit) return;
 
   const wallTime = performance.now() - t0;

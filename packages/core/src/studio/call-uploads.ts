@@ -1,12 +1,6 @@
-import { reportingUploads, uploadProgressOf } from "../studio/report-upload";
-import type { StudioContext } from "./execute-studio";
-
-/** The endpoint a call is for, as the call was made. */
-interface CallNames {
-  source: unknown;
-  group: unknown;
-  method: unknown;
-}
+import type { CallNames } from "../capabilities/studio";
+import type { StudioContext } from "../utils/execute-studio";
+import { reportingUploads, uploadProgressOf } from "./report-upload";
 
 /**
  * A call's options, with its upload progress reported to Studio too.
@@ -33,7 +27,7 @@ export function withStudioUploads<TOptions extends object>(
   if (!studio.hasStudio || !onUploadProgress || !studio.dt.onUploadProgress) return options;
   return {
     ...options,
-    onUploadProgress: reportingUploads(onUploadProgress, {
+    onUploadProgress: reportingUploads(studio.dt, onUploadProgress, {
       requestId: studio.requestId,
       source: nameOf(call.source),
       group: nameOf(call.group),

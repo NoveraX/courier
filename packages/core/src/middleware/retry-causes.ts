@@ -1,4 +1,4 @@
-import { CERTIFICATE_VERDICTS } from "../studio/network-failure";
+import { CERTIFICATE_VERDICTS } from "../errors/network-failure";
 import { RETRY_DEFAULTS } from "./retry-defaults";
 import type { RetryFailure } from "./types";
 

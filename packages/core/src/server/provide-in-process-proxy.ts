@@ -1,6 +1,6 @@
 import { type AdapterHandler, createHandler } from "../adapter/create-handler";
 import type { InProcessProxyCapability } from "../capabilities/in-process-proxy";
-import { provideServerCapability } from "../capabilities/registry";
+import { provideServerCapability } from "../capabilities/provide-server-capability";
 import { inProcessRoute } from "./in-process-route";
 
 let handler: AdapterHandler | undefined;

@@ -1,5 +1,6 @@
-import { generateRequestId, studioHooks } from "../../studio";
+import { serverCapability } from "../../capabilities/registry";
 import type { StreamStatusEvent } from "../../studio/hooks-stream";
+import { byteLength, safeStringify, truncatePreview } from "./message-preview";
 import { streamStatusEvent } from "./stream-status";
 import type { Reconnect } from "./watch-connection";
 
@@ -70,15 +71,17 @@ export interface StreamInstrumentation {
  *   caller already has a tracking ID it needs to correlate with (e.g. the
  *   Studio Playground returning the requestId to the UI before the stream
  *   starts), pass it here so all subsequent stream:* events use the same id
- *   instead of an auto-generated one. Falls back to `generateRequestId()`.
+ *   instead of an auto-generated one. Falls back to a new id from Studio.
  */
 export function beginStream(
   meta: StreamMeta,
   externalRequestId?: string,
 ): StreamInstrumentation | null {
-  if (!studioHooks.onStreamOpen) return null;
+  const studio = serverCapability("studio");
+  const hooks = studio?.hooks;
+  if (studio === undefined || hooks?.onStreamOpen === undefined) return null;
 
-  let requestId = externalRequestId ?? generateRequestId();
+  let requestId = externalRequestId ?? studio.requestId();
   let startTime = Date.now();
   let seq = 0;
   let totalBytes = 0;
@@ -88,7 +91,7 @@ export function beginStream(
 
   /* stream:open with the entry's id: again with the same id, the store merges what is new into it. */
   const announce = (): void =>
-    studioHooks.onStreamOpen?.({
+    hooks.onStreamOpen?.({
       requestId,
       source: meta.source,
       group: meta.group,
@@ -114,7 +117,7 @@ export function beginStream(
       const json = safeStringify(data);
       const dataSize = byteLength(json);
       totalBytes += dataSize;
-      studioHooks.onStreamMessage?.({
+      hooks.onStreamMessage?.({
         requestId,
         seq: ++seq,
         eventType,
@@ -131,7 +134,7 @@ export function beginStream(
     },
     reopen() {
       if (!closed) return;
-      requestId = generateRequestId();
+      requestId = studio.requestId();
       startTime = Date.now();
       seq = 0;
       totalBytes = 0;
@@ -143,7 +146,7 @@ export function beginStream(
     emitClose(reason) {
       if (closed) return;
       closed = true;
-      studioHooks.onStreamClose?.({
+      hooks.onStreamClose?.({
         requestId,
         reason,
         eventCount: seq,
@@ -154,14 +157,14 @@ export function beginStream(
     },
     emitStatus(status, reconnect) {
       if (closed) return;
-      studioHooks.onStreamStatus?.(streamStatusEvent(requestId, status, reconnect));
+      hooks.onStreamStatus?.(streamStatusEvent(requestId, status, reconnect));
     },
     emitError(error) {
       if (closed) return;
       const message = error instanceof Error ? error.message : String(error);
-      studioHooks.onStreamError?.({ requestId, error: message, timestamp: Date.now() });
+      hooks.onStreamError?.({ requestId, error: message, timestamp: Date.now() });
       closed = true;
-      studioHooks.onStreamClose?.({
+      hooks.onStreamClose?.({
         requestId,
         reason: "error",
         eventCount: seq,
@@ -171,51 +174,4 @@ export function beginStream(
       });
     },
   };
-}
-
-/**
- * Stringify arbitrary data safely. Handles BigInt, circular references,
- * and Symbols which would otherwise throw or be silently dropped by
- * native JSON.stringify.
- */
-export function safeStringify(data: unknown): string {
-  if (data == null) return "";
-  if (typeof data === "string") return data;
-  try {
-    return JSON.stringify(data, replacer);
-  } catch {
-    return String(data);
-  }
-}
-
-function replacer(_key: string, value: unknown): unknown {
-  if (typeof value === "bigint") return `${value}n`;
-  if (typeof value === "symbol") return value.toString();
-  if (value instanceof Map) return Object.fromEntries(value);
-  if (value instanceof Set) return Array.from(value);
-  return value;
-}
-
-/** Byte length of a string in UTF-8 encoding (not char count) */
-function byteLength(str: string): number {
-  if (typeof TextEncoder !== "undefined") {
-    return new TextEncoder().encode(str).length;
-  }
-  // Fallback for environments without TextEncoder
-  return Buffer.byteLength(str, "utf8");
-}
-
-/**
- * Truncate a string preview at a UTF-8-safe byte boundary.
- * Avoids splitting multi-byte characters (e.g. emojis) which would
- * produce invalid UTF-8 sequences and break studio JSON parsing.
- */
-function truncatePreview(str: string, maxBytes: number): string {
-  if (byteLength(str) <= maxBytes) return str;
-  // Walk back from maxBytes until we find a valid char boundary
-  let end = Math.min(str.length, maxBytes);
-  while (end > 0 && byteLength(str.slice(0, end)) > maxBytes) {
-    end--;
-  }
-  return `${str.slice(0, end)}…`;
 }

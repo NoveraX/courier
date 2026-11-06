@@ -20,6 +20,7 @@ import { sendWebResponse, toWebRequest } from "../../src/node";
 import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { registerRequestContext } from "../../src/session/request-context";
+import { studioHooks } from "../../src/studio";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 let upstream: Upstream;
@@ -95,6 +96,30 @@ afterEach(() => {
 });
 
 describe("a server's write that finds no double-submit token", () => {
+  it("tells Studio of the token's request as one the session makes, within the write's own time", async () => {
+    const { incoming } = userRequest("POST", { cookie: "sid=s1", "sec-fetch-site": "same-origin" });
+    serving = incoming;
+    const events: Array<{ event: string; id: string; method?: string; purpose?: string }> = [];
+    studioHooks.onRequestStart = (event) => events.push({ ...event, event: "start" });
+    studioHooks.onRequestEnd = (event) => events.push({ event: "end", id: event.id });
+    try {
+      await createCaller(api).rename({ name: "Ada" });
+    } finally {
+      studioHooks.onRequestStart = undefined;
+      studioHooks.onRequestEnd = undefined;
+    }
+
+    const [write, token] = events;
+    expect(write).toMatchObject({ event: "start", method: "rename" });
+    expect(write?.purpose).toBeUndefined();
+    expect(token).toMatchObject({ event: "start", method: "csrf token", purpose: "csrf-token" });
+    expect(token?.id).not.toBe(write?.id);
+    expect(events.slice(2)).toEqual([
+      { event: "end", id: token?.id },
+      { event: "end", id: write?.id },
+    ]);
+  });
+
   it("asks for it with the user's session while a page is served, and hands it to the browser", async () => {
     const { incoming, handed } = userRequest("POST", {
       cookie: "sid=s1; theme=dark",

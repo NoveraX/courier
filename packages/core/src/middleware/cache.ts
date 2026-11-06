@@ -1,5 +1,5 @@
+import { studioHooksHere } from "../capabilities/studio-hooks";
 import { createLogger } from "../logger";
-import { studioHooks } from "../studio";
 import { cloneData } from "../utils/clone-data";
 import { fetchingMiss, type MissesInFlight, waitForMiss } from "./cache-in-flight";
 import { cacheKey } from "./cache-key";
@@ -93,7 +93,7 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
 
   // Wraps because it may short-circuit (cache hit) or store (post-fetch)
   return defineMiddleware("cache", "wrap", async (ctx, next) => {
-    const dt = studioHooks;
+    const dt = studioHooksHere();
     /* The request Studio shows, so a hit marks the request it served. */
     const requestId = ctx._requestId ?? `${ctx.source}:${ctx.group ?? ""}:${ctx.method}`;
 

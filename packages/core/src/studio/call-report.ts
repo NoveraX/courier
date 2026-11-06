@@ -1,0 +1,133 @@
+import type { CallAnswer } from "../capabilities/studio";
+import type { Context } from "../http-client/types";
+import { agentShown } from "../utils/agent-shown";
+import type { RequestStart, StudioContext, TimingState } from "../utils/execute-studio";
+import { estimateResponseSize, headersToObject, normalizeHttpMethod } from "../utils/helpers";
+import { describeVariables } from "./describe-form-data";
+
+/**
+ * Emit onRequestStart event if studio is active.
+ *
+ * The verb and whether the endpoint reads or writes go with it: a request
+ * that fails before it is sent — its variables refused, a middleware thrown —
+ * never reports them later, and was shown as a GET query.
+ */
+export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void {
+  const { source, group, method, variables, schema } = start;
+  dCtx.dt.onRequestStart?.({
+    id: dCtx.requestId,
+    source: String(source),
+    group: group ? String(group) : undefined,
+    method: String(method),
+    /* Studio receives events as JSON, where a FormData or a stream would arrive as `{}`. */
+    variables: describeVariables(variables),
+    mode: start.mode,
+    middlewareCount: start.middlewareCount,
+    hasValidation: { variables: !!schema?.variables, response: !!schema?.response },
+    ...(start.httpMethod && { httpMethod: start.httpMethod }),
+    ...(schema?.type && { endpointType: schema.type }),
+    ...(start.purpose && { purpose: start.purpose }),
+    ...(start.agent && { agent: agentShown(start.agent) }),
+    ...(start.idempotencyKey && { idempotencyKey: start.idempotencyKey }),
+    timestamp: Date.now(),
+  });
+}
+
+/** How a proxied call's time split between the proxy's own work and the upstream. */
+export interface ProxySplit {
+  clientToProxy: number;
+  proxyToBackend: number;
+  backendToProxy: number;
+  proxyToClient: number;
+}
+
+/**
+ * How a call the proxy received spent its time: the proxy's own work around
+ * the fetch, and the fetch itself. The browser measures the legs to and from
+ * the proxy, so they are left at 0 here.
+ *
+ * @param context - The call's context; only a proxied one has a receive time
+ * @param timing - The call's timings
+ * @param total - How long the call ran
+ * @returns The split, or `undefined` for a call the proxy did not receive
+ * @example
+ * ```ts
+ * proxyTimingOf(context, timing, performance.now() - timing.t0);
+ * ```
+ */
+export function proxyTimingOf(
+  context: Context | undefined,
+  timing: TimingState,
+  total: number,
+): ProxySplit | undefined {
+  if (context?.proxyReceiveAt == null) return undefined;
+  return {
+    clientToProxy: 0,
+    proxyToBackend: total - timing.tFetch,
+    backendToProxy: timing.tFetch,
+    proxyToClient: 0,
+  };
+}
+
+/** Emit onRequestEnd event with timing data + optional proxy timing */
+export function emitRequestEnd(
+  dCtx: StudioContext,
+  result: CallAnswer,
+  requestHeaders: Headers,
+  timing: TimingState,
+  tMiddlewareTotal: number,
+  context: Context | undefined,
+): void {
+  const tTotal = performance.now() - timing.t0;
+
+  // Non-overlapping middleware self-time (exclude fetch + response validation)
+  const tMiddleware =
+    tMiddlewareTotal > 0
+      ? Math.max(0, tMiddlewareTotal - timing.tFetch - timing.tRespValidation)
+      : 0;
+  const tValidation = timing.tVarValidation + timing.tRespValidation;
+
+  const proxyTiming = proxyTimingOf(context, timing, tTotal);
+
+  dCtx.dt.onRequestEnd?.({
+    id: dCtx.requestId,
+    status: result.status,
+    data: result.data,
+    size: estimateResponseSize(result.data, result.headers),
+    headers: headersToObject(result.headers) ?? {},
+    requestHeaders: headersToObject(requestHeaders) ?? {},
+    timing: {
+      total: tTotal,
+      middleware: tMiddleware,
+      fetch: timing.tFetch,
+      validation: tValidation,
+    },
+    proxyTiming,
+    ...(timing.shared && { shared: timing.shared }),
+    timestamp: Date.now(),
+  });
+}
+
+/** Attach fetch instrumentation hook to http client */
+export function attachFetchHook(
+  instance: { onBeforeFetch?: (method: string, url: string) => void },
+  dCtx: StudioContext,
+  timing: TimingState,
+): void {
+  instance.onBeforeFetch = (httpMethod, fullUrl) => {
+    timing.sent = true;
+    dCtx.dt.onHttpFetchStart?.({
+      requestId: dCtx.requestId,
+      url: fullUrl,
+      method: normalizeHttpMethod(httpMethod),
+      timestamp: Date.now(),
+    });
+  };
+}
+
+/** Inject timing headers for browser-side network measurement */
+export function injectTimingHeaders(response: Response, requestId: string, t0: number): void {
+  const tTotal = performance.now() - t0;
+  response.headers.set("Server-Timing", `courier;dur=${tTotal.toFixed(1)}`);
+  response.headers.set("X-Courier-Rid", requestId);
+}

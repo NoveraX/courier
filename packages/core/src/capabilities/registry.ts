@@ -1,8 +1,6 @@
-import { createLogger } from "../logger";
 import { servesOneUser } from "../utils/serves-one-user";
 import type { InProcessProxyCapability } from "./in-process-proxy";
-
-const log = createLogger("Server");
+import type { StudioCapability } from "./studio";
 
 /**
  * What a server lends the calls made in its process, one slot each: the
@@ -13,12 +11,14 @@ const log = createLogger("Server");
 export interface ServerCapabilities {
   /** The proxy of this process, which a proxy caller on its server reaches without leaving it */
   readonly inProcessProxy: InProcessProxyCapability;
+  /** Studio's view of the calls, where Studio is attached */
+  readonly studio: StudioCapability;
 }
 
 /** The name of one slot of {@link ServerCapabilities}. */
 export type ServerCapabilityName = keyof ServerCapabilities;
 
-type Slots = { -readonly [TName in ServerCapabilityName]?: ServerCapabilities[TName] };
+export type Slots = { -readonly [TName in ServerCapabilityName]?: ServerCapabilities[TName] };
 
 /* Kept on the global object, as the sources are: a bundler may load the core
    twice in one process — a Next.js application's routes and its
@@ -32,7 +32,16 @@ function isSlots(value: unknown): value is Slots {
   return typeof value === "object" && value !== null;
 }
 
-function slots(): Slots {
+/**
+ * The slots of the process, made the first time anything reads or fills one.
+ *
+ * @returns The slots
+ * @example
+ * ```ts
+ * capabilitySlots().session;
+ * ```
+ */
+export function capabilitySlots(): Slots {
   const existing: unknown = Reflect.get(globalThis, REGISTRY);
   if (isSlots(existing)) return existing;
   const created: Slots = {};
@@ -58,40 +67,5 @@ export function serverCapability<TName extends ServerCapabilityName>(
   name: TName,
 ): ServerCapabilities[TName] | undefined {
   if (servesOneUser()) return undefined;
-  return slots()[name];
-}
-
-/**
- * Lend the calls of this process a server's implementation of one
- * capability. The first one provided stays: providing the same one again
- * changes nothing, and another one — a second copy of the core loaded
- * beside the first — is left out, so a module loaded later cannot take a
- * slot the server filled.
- *
- * @param name - The capability
- * @param capability - The server's implementation of it
- * @example
- * ```ts
- * provideServerCapability("inProcessProxy", { route: inProcessRoute });
- * ```
- */
-export function provideServerCapability<TName extends ServerCapabilityName>(
-  name: TName,
-  capability: ServerCapabilities[TName],
-): void {
-  const held = slots();
-  const current = held[name];
-  if (current === undefined) {
-    held[name] = capability;
-    return;
-  }
-  if (current !== capability) log.debug(`${name} was provided already; the first one stays`);
-}
-
-/**
- * Empty every slot again. Only test harnesses use it, to isolate one
- * case's server from the next one's; a server never needs it.
- */
-export function _resetServerCapabilitiesForTests(): void {
-  Reflect.deleteProperty(globalThis, REGISTRY);
+  return capabilitySlots()[name];
 }

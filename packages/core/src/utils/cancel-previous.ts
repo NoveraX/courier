@@ -1,5 +1,5 @@
+import { studioHooksHere } from "../capabilities/studio-hooks";
 import { AbortError } from "../errors/abort-error";
-import { studioHooks } from "../studio";
 
 export const supportsAbortController = typeof globalThis.AbortController === "function";
 
@@ -109,8 +109,9 @@ function cancel(holder: Holder, key: string): AbortError {
   if (holder.cancelled) return holder.cancelled;
   const cancelled = new AbortError({ code: "SUPERSEDED" });
   holder.cancelled = cancelled;
-  studioHooks.onCallSuperseded?.({ key, timestamp: Date.now() });
-  studioHooks.onRequestAbort?.({ id: key, reason: "superseded", timestamp: Date.now() });
+  const studio = studioHooksHere();
+  studio.onCallSuperseded?.({ key, timestamp: Date.now() });
+  studio.onRequestAbort?.({ id: key, reason: "superseded", timestamp: Date.now() });
   holder.controller.abort(cancelled);
   return cancelled;
 }

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { isNetworkFailure } from "../src/studio/network-failure";
+import { isNetworkFailure } from "../src/errors/network-failure";
 import { NETWORK_FAILURES, OTHER_FAILURES } from "./helpers/network-failures";
 
 describe("isNetworkFailure", () => {

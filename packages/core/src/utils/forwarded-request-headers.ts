@@ -1,7 +1,7 @@
 import { isRequestId, REQUEST_ID_HEADER } from "../session/request-id";
-import { STUDIO_PASS_HEADER } from "../studio/studio-pass";
 import { keepBrowserCredentials } from "./keep-browser-credentials";
 import { filterHeaders } from "./merge-headers";
+import { STUDIO_PASS_HEADER } from "./studio-pass";
 
 type HeadersInput = HeadersInit | Record<string, string | undefined>;
 

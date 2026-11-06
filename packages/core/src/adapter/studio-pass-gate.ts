@@ -1,5 +1,5 @@
-import { isStudioPassShape, STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "../studio/studio-pass";
 import { isDevelopment } from "../utils/development";
+import { isStudioPassShape, STUDIO_PASS_HEADER, STUDIO_PASS_REDEEMER } from "../utils/studio-pass";
 
 /**
  * Take Studio's pass off a request, so nothing past the proxy's gate — the

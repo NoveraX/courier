@@ -9,9 +9,8 @@ import { isCancellation } from "./abort";
 import { answeredMessage } from "./answered-message";
 import { answerCallerLeft, callerLeft } from "./caller-left";
 import { cancellation } from "./cancellation";
-import { type FailureReport, reportRequestError } from "./execute-error-report";
 import { buildResponse, type InternalResponse } from "./execute-response";
-import { injectTimingHeaders } from "./execute-studio";
+import type { FailureReport } from "./execute-studio";
 
 const log = createLogger("Proxy");
 
@@ -114,7 +113,7 @@ export type ErrorHandlerCtx = FailureReport & {
 export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknown {
   const answersWithResponse = ctx.context?.res instanceof Response;
   if (error instanceof ValidationError) {
-    reportRequestError(error, ctx, answersWithResponse ? 422 : undefined);
+    ctx.report?.requestError(error, ctx, answersWithResponse ? 422 : undefined);
     return timed(ctx, {
       status: 422,
       headers: new Headers(),
@@ -138,11 +137,11 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
      that asked for a Response is answered with one, unless it cancelled. */
   const cancelled = isCancellation(error) || ctx.signal?.aborted === true;
   if (!fromWire && (!answersWithResponse || cancelled || isRequestFailure(error))) {
-    reportRequestError(error, ctx, error instanceof HTTPError ? error.status : undefined);
+    ctx.report?.requestError(error, ctx, error instanceof HTTPError ? error.status : undefined);
     throw cancelled ? cancellation(ctx.signal, error) : error;
   }
   if (callerLeft(ctx.context)) {
-    reportRequestError(error, ctx, undefined);
+    ctx.report?.requestError(error, ctx, undefined);
     return answerCallerLeft(error, ctx.context, ctx.rawData);
   }
   const unsent = fromWire ? unsentUpload(error, ctx.variables) : undefined;
@@ -155,7 +154,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
         ? unansweredUpstream(error)
         : (tokenMissing(error) ?? serverFailure(error, ctx.context));
 
-  reportRequestError(error, ctx, responseResult.status);
+  ctx.report?.requestError(error, ctx, responseResult.status);
   return timed(ctx, {
     ...responseResult,
     throw: new HTTPError(responseResult),
@@ -175,7 +174,7 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
 function refusedUpload({ status, message, code }: EnvelopeRefusal, ctx: ErrorHandlerCtx): unknown {
   const answer = { status, headers: new Headers(), data: { success: false, message, code } };
   const refusal = new HTTPError(answer);
-  reportRequestError(refusal, ctx, status);
+  ctx.report?.requestError(refusal, ctx, status);
   return timed(ctx, { ...answer, throw: refusal, rawData: ctx.rawData });
 }
 
@@ -187,7 +186,7 @@ function timed(ctx: ErrorHandlerCtx, response: InternalResponse): unknown {
   const answer = buildResponse(ctx.context, response);
   const t0 = ctx.timing?.t0 ?? 0;
   if (ctx.context?.proxyMethod && answer instanceof Response && t0 > 0) {
-    injectTimingHeaders(answer, ctx.requestId, t0);
+    ctx.report?.timingHeaders(answer, ctx.requestId, t0);
   }
   return answer;
 }

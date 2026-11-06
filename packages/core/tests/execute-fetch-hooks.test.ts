@@ -12,12 +12,12 @@ import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
+import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const { endpoint } = courier();
 
-const HOOKS_KEY = Symbol.for("courier.studio.hooks");
-const hooks = (globalThis as Record<symbol, unknown>)[HOOKS_KEY] as StudioHooks;
+const hooks: StudioHooks = studioHooks;
 
 let server: Server | undefined;
 

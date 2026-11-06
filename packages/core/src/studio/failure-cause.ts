@@ -1,7 +1,7 @@
 import { isRequestFailure, NetworkError, TimeoutError } from "../errors";
 import { CourierError } from "../errors/courier-error";
+import { isNetworkFailure } from "../errors/network-failure";
 import { causeOf, platformCause } from "../http-client/transport-failure";
-import { isNetworkFailure } from "./network-failure";
 
 /* Deeper than any chain a program builds on purpose; a deeper one is cut, as the log cuts it. */
 const DEEPEST = 16;

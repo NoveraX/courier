@@ -1,4 +1,6 @@
+import { provideServerCapability } from "../capabilities/provide-server-capability";
 import type { StudioHooks } from "./hooks";
+import { createStudioReport } from "./studio-report";
 
 /**
  * Global hooks object shared via `Symbol.for` to survive bundler module duplication.
@@ -22,3 +24,8 @@ export function generateRequestId(): string {
   g[COUNTER_KEY] = count + 1;
   return `req_${Date.now().toString(36)}_${count.toString(36)}`;
 }
+
+/* The hooks and the calls' view of them are lent together: whatever sets a
+   hook has loaded this module, and a page, which loads none of Studio,
+   tells it nothing. */
+provideServerCapability("studio", createStudioReport(studioHooks, generateRequestId));

@@ -6,8 +6,8 @@ import type { TsdownPlugin } from "tsdown";
  * of the same name under `src/browser/` takes: the terminal logger, the
  * chain of addresses a request came through, the check of `forward`, the
  * hook Node prints an `HTTPError` through, the words a failure is answered
- * with, the sending of an upload as a stream, and the refusal of one the
- * proxy sent on as it arrived.
+ * with, the sending of an upload as a stream, the refusal of one the proxy
+ * sent on as it arrived, and the word Studio is sent as an API is defined.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -21,6 +21,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/send-streamed",
   "adapter/unsent-upload",
   "utils/attempt-expiry",
+  "define/announce-source",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

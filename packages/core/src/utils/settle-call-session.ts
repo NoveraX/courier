@@ -2,8 +2,8 @@ import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import type { CallSession } from "../session/call-session";
 import { type CallRunner, primeCsrfToken } from "./csrf-prime";
-import { type FailureReport, reportRequestError } from "./execute-error-report";
 import { buildErrorResponse } from "./execute-response";
+import type { FailureReport } from "./execute-studio";
 import type { CallTarget } from "./execute-target";
 
 const log = createLogger("Session");
@@ -71,7 +71,7 @@ async function toldIfFailed<TValue>(
   try {
     return await work;
   } catch (error) {
-    if (told !== undefined) reportRequestError(error, told, undefined);
+    told?.report?.requestError(error, told, undefined);
     throw error;
   }
 }

@@ -7,10 +7,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type AdapterHandler, createHandler } from "../../src/adapter/create-handler";
-import {
-  _resetServerCapabilitiesForTests,
-  serverCapability,
-} from "../../src/capabilities/registry";
+import { _resetServerCapabilitiesForTests } from "../../src/capabilities/provide-server-capability";
+import { serverCapability } from "../../src/capabilities/registry";
 import { courier, defineApi } from "../../src/define";
 import { inProcessRoute } from "../../src/server/in-process-route";
 import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
@@ -36,7 +34,7 @@ function proxySeeing(seen: Request[]): () => AdapterHandler {
 
 afterEach(() => {
   _resetSourcesForTests();
-  _resetServerCapabilitiesForTests();
+  _resetServerCapabilitiesForTests("inProcessProxy");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

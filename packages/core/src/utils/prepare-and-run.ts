@@ -8,17 +8,10 @@ import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from ".
 import { namedHeadersOf } from "./execute-resolve";
 import { runCall } from "./execute-run";
 import { applyCallSession, startCallSession } from "./execute-session";
-import {
-  attachFetchHook,
-  callInstruments,
-  emitRequestStart,
-  type StudioContext,
-  type TimingState,
-} from "./execute-studio";
+import { callInstruments, type StudioContext, type TimingState } from "./execute-studio";
 import type { CallTarget } from "./execute-target";
 import { idempotencyHeader } from "./idempotency-header";
 import { settleCallSession } from "./settle-call-session";
-import { withStudioUploads } from "./studio-uploads";
 
 /* The endpoint's own options — timeout, middleware, retry — are applied
    here, around the options the call itself gave. A call a newer one is to
@@ -52,7 +45,7 @@ async function runHeld(
   const pendingSession = startCallSession(target, context);
   const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
   const instance = clientForCall(dataSource, context, schema?.type, hold);
-  if (studio.hasStudio) attachFetchHook(instance, studio, timing);
+  if (studio.hasStudio) studio.report?.watchFetch(instance, studio, timing);
 
   const {
     rawData = false,
@@ -63,14 +56,12 @@ async function runHeld(
     cancelPrevious: _cancelPrevious,
     ...baseOptions
   } = target.options ?? {};
-  let callOptions = withStudioUploads(
-    withCallerSignal(
-      withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
-      context?.req,
-    ),
-    studio,
-    { source, group, method },
+  const bounded = withCallerSignal(
+    withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
+    context?.req,
   );
+  let callOptions =
+    studio.report?.callUploads(bounded, studio, { source, group, method }) ?? bounded;
   /* A newer call cancels this one through its hold, in its middleware's waits too. */
   if (hold) {
     const own = callOptions.signal;
@@ -106,7 +97,7 @@ async function runHeld(
   /* Told before the session settles: a write that asks for its token first
      shows that request within its own time, and one the session refuses
      ends with the refusal rather than never showing. */
-  emitRequestStart(studio, {
+  studio.report?.requestStart(studio, {
     ...target,
     mode: context?.mode ?? (context?.proxyMethod ? "proxy" : "direct"),
     middlewareCount: middlewares.length,
@@ -125,7 +116,14 @@ async function runHeld(
     signal,
     run: runPrime,
     told: studio.hasStudio
-      ? { requestId: studio.requestId, dt: studio.dt, timing, context, signal }
+      ? {
+          requestId: studio.requestId,
+          dt: studio.dt,
+          report: studio.report,
+          timing,
+          context,
+          signal,
+        }
       : undefined,
   });
   if ("refused" in settled) return settled.refused;

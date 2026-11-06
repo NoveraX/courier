@@ -1,4 +1,4 @@
-import { studioHooks } from "../studio";
+import { studioHooksHere } from "../capabilities/studio-hooks";
 import { runAfter, runBefore, runWrap } from "./phase-runners";
 import { emitExit, propagateInner } from "./studio-tracking";
 import type { Middleware, MiddlewareContext, MiddlewareResponse, NextFn } from "./types";
@@ -8,7 +8,7 @@ export function composeMiddleware(
 ): (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse> {
   if (middlewares.length === 0) return (_ctx, next) => next();
 
-  const dt = studioHooks;
+  const dt = studioHooksHere();
   const totalCount = middlewares.length;
 
   return (ctx, next) => {

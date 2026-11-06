@@ -1,8 +1,7 @@
 /**
  * The registry a server lends its capabilities through: what the server
- * provides is found by the calls of its process, the first implementation
- * of a slot stays, and a page or an app finds nothing whatever lies on its
- * global object.
+ * provides is found by the calls of its process, and a page or an app
+ * finds nothing whatever lies on its global object.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -10,8 +9,8 @@ import type { InProcessProxyCapability } from "../../src/capabilities/in-process
 import {
   _resetServerCapabilitiesForTests,
   provideServerCapability,
-  serverCapability,
-} from "../../src/capabilities/registry";
+} from "../../src/capabilities/provide-server-capability";
+import { serverCapability } from "../../src/capabilities/registry";
 
 const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
 
@@ -20,21 +19,10 @@ function capability(): InProcessProxyCapability {
 }
 
 afterEach(() => {
-  _resetServerCapabilitiesForTests();
+  _resetServerCapabilitiesForTests("inProcessProxy");
   vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
-
-/* The debug lines the server's log prints. */
-function debugLines(): string[][] {
-  vi.stubEnv("COURIER_LOG_LEVEL", "debug");
-  const lines: string[][] = [];
-  vi.spyOn(console, "debug").mockImplementation((...args: unknown[]) => {
-    lines.push(args.map(String));
-  });
-  return lines;
-}
 
 describe("serverCapability", () => {
   it("answers undefined for a capability nothing provided", () => {
@@ -77,28 +65,5 @@ describe("serverCapability", () => {
     vi.stubGlobal("navigator", { product: "ReactNative" });
 
     expect(serverCapability("inProcessProxy")).toBeUndefined();
-  });
-});
-
-describe("provideServerCapability", () => {
-  it("keeps the first implementation when another one is provided, and says so once", () => {
-    const printed = debugLines();
-    const first = capability();
-    provideServerCapability("inProcessProxy", first);
-    provideServerCapability("inProcessProxy", capability());
-
-    expect(serverCapability("inProcessProxy")).toBe(first);
-    expect(printed).toHaveLength(1);
-    expect(printed[0]?.join(" ")).toContain("inProcessProxy was provided already");
-  });
-
-  it("changes nothing, and says nothing, when the same implementation is provided again", () => {
-    const printed = debugLines();
-    const provided = capability();
-    provideServerCapability("inProcessProxy", provided);
-    provideServerCapability("inProcessProxy", provided);
-
-    expect(serverCapability("inProcessProxy")).toBe(provided);
-    expect(printed).toEqual([]);
   });
 });

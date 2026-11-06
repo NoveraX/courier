@@ -1,6 +1,10 @@
 import { afterAll, describe, expect, it } from "vitest";
 
-import { codePieces, projectCode } from "../../../src/upgrade/codemod/source-files";
+import {
+  codePieces,
+  projectCode,
+  writtenByStudio,
+} from "../../../src/upgrade/codemod/source-files";
 import { UPGRADE_LIMITS } from "../../../src/upgrade/limits";
 import { projectWith, removeProjects } from "../../helpers/temp-project";
 
@@ -39,6 +43,29 @@ describe("projectCode", () => {
       { path: "src/huge.ts", why: "it is 2.0 MiB, past the 2 MiB an upgrade reads" },
     ]);
     expect(code.stopped).toBe(false);
+  });
+});
+
+describe("writtenByStudio", () => {
+  it("is a file whose first line is Studio's header, as Studio reads it", () => {
+    const header = (json: string) => `// @courier-generated ${json}`;
+    const hash = "0123456789abcdef".repeat(4);
+
+    expect(writtenByStudio(`${header(`{"import":"pets","sha256":"${hash}"}`)}\n${NAMES}`)).toBe(
+      true,
+    );
+    expect(writtenByStudio(`${header(`{"import":"pets","sha256":"${hash}"}`)}\r\n${NAMES}`)).toBe(
+      true,
+    );
+    expect(writtenByStudio(header(`{"import":"pets","sha256":"${hash}"}`))).toBe(true);
+    expect(writtenByStudio(`${header(`{"import":"pets"}`)}\n${NAMES}`)).toBe(false);
+    expect(
+      writtenByStudio(`${header(`{"import":"pets","sha256":"${hash.toUpperCase()}"}`)}\n`),
+    ).toBe(false);
+    expect(writtenByStudio(`${header("{import: pets}")}\n${NAMES}`)).toBe(false);
+    expect(writtenByStudio(`${NAMES}${header(`{"import":"pets","sha256":"${hash}"}`)}\n`)).toBe(
+      false,
+    );
   });
 });
 

@@ -116,6 +116,35 @@ report(new RealtimeTimeoutError());
     expect(migrated).toEqual({ edits: [], manual: [], needs: [] });
   });
 
+  it("leaves a file Studio wrote to Studio, naming one a migration has something for", () => {
+    const signed = `// @courier-generated {"import":"pets","sha256":"${"0".repeat(64)}"}\n// Courier Studio wrote this file. It keeps your edits to endpoints when it updates the file.\n`;
+    const old = 'import { AuthError } from "@noverax/courier";\nreport(new AuthError());\n';
+
+    const migrated = migrateCode(
+      code([
+        { path: "src/courier/pets.ts", text: `${signed}${old}` },
+        {
+          path: "src/courier/owners.ts",
+          text: `${signed}import { courier } from "@noverax/courier/define";\n`,
+        },
+        { path: "src/courier/copied.ts", text: `// @courier-generated {"import":"pets"}\n${old}` },
+      ]),
+      [REALTIME_ERRORS, FINDS_REPORT],
+    );
+
+    expect(migrated.edits.map((edit) => edit.path)).toEqual(["src/courier/copied.ts"]);
+    expect(migrated.manual).toEqual([
+      {
+        file: "src/courier/pets.ts",
+        what: expect.stringMatching(
+          /^Studio wrote it, so the upgrade left it as it is: Regenerate files, in the import's Manage/,
+        ),
+        lines: [],
+      },
+      { file: "src/courier/copied.ts", what: "line 3: report() is gone", lines: ["log()"] },
+    ]);
+  });
+
   it("names the files left unread, and a walk that stopped at its limit", () => {
     const migrated = migrateCode(
       { files: [], unread: [{ path: "src/huge.ts", why: "it is 3 MiB" }], stopped: true },

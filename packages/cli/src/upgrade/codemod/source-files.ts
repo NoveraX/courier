@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 
+import { isRecord } from "../../util/is-record";
 import { UPGRADE_LIMITS } from "../limits";
 import { mentions } from "./mentions";
 
@@ -86,6 +87,41 @@ export function projectCode(root: string): ProjectCode {
   };
   const stopped = !walkDir("", 0);
   return { files, unread, stopped };
+}
+
+/* The first line of a file Studio wrote, before the import it belongs to and the hash of what Studio wrote below. */
+const STUDIO_MARK = "// @courier-generated ";
+const HEX_64 = /^[0-9a-f]{64}$/;
+
+/**
+ * Whether Studio wrote a file: its first line is Studio's header, read as
+ * Studio reads it — the import the file belongs to, and the SHA-256 of
+ * what Studio wrote below, by which it tells the person's edits from its
+ * own.
+ *
+ * @param text - The file's text
+ * @returns Whether it is
+ * @example
+ * ```ts
+ * writtenByStudio(`// @courier-generated {"import":"pets","sha256":"${hash}"}\n…`); // true
+ * ```
+ */
+export function writtenByStudio(text: string): boolean {
+  const end = text.indexOf("\n");
+  const first = (end === -1 ? text : text.slice(0, end)).replace(/\r$/, "");
+  if (!first.startsWith(STUDIO_MARK)) return false;
+  let header: unknown;
+  try {
+    header = JSON.parse(first.slice(STUDIO_MARK.length));
+  } catch {
+    return false;
+  }
+  return (
+    isRecord(header) &&
+    typeof header.import === "string" &&
+    typeof header.sha256 === "string" &&
+    HEX_64.test(header.sha256)
+  );
 }
 
 /* `lang="ts"` on a script tag, or TypeScript's own `lang='tsx'`. */

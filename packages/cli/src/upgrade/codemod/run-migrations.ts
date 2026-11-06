@@ -4,8 +4,12 @@ import { parseSync } from "oxc-parser";
 import type { Finding, Migration, PackageNeed, TextEdit } from "../migration";
 import { type AstNode, programOf } from "./ast";
 import { mentions } from "./mentions";
-import { type CodePiece, codePieces, type ProjectCode } from "./source-files";
+import { type CodePiece, codePieces, type ProjectCode, writtenByStudio } from "./source-files";
 import { applyEdits, lineAt } from "./text-edits";
+
+/* Studio keeps the person's edits to an endpoint by its code's hash, so a change the upgrade made to its file would read as theirs. */
+const LEFT_TO_STUDIO =
+  "Studio wrote it, so the upgrade left it as it is: Regenerate files, in the import's Manage, writes it as this release's Studio does and keeps your edits to its endpoints";
 
 /** What migrations do to a project's code: each file's change, what is left to the person, and the packages the changes need. */
 export interface MigratedCode {
@@ -103,7 +107,8 @@ function migratePiece(piece: CodePiece, migrations: readonly Migration[]): Piece
  * each migration in order whose words it writes. A file the migrations
  * change becomes a change of the plan; what they find and leave to the
  * person becomes a step, at its line; a file left unread, or a walk
- * stopped at its limit, is said as a step too.
+ * stopped at its limit, is said as a step too. A file Studio wrote is
+ * left to Studio, and said where a migration has something for it.
  *
  * @param code - The project's code, as the walk read it
  * @param migrations - The migrations of the releases crossed, in order
@@ -132,6 +137,11 @@ export function migrateCode(code: ProjectCode, migrations: readonly Migration[])
       text: result.text,
     }));
     const after = applyEdits(file.text, pieceEdits);
+    if (writtenByStudio(file.text)) {
+      if (after !== file.text || pieces.some(({ result }) => result.findings.length > 0))
+        manual.push({ file: file.path, what: LEFT_TO_STUDIO, lines: [] });
+      continue;
+    }
     for (const { piece, result } of pieces) {
       for (const finding of result.findings) {
         const line = lineAt(after, shifted(piece.offset, pieceEdits) + finding.at);

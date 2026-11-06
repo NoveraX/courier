@@ -31,3 +31,13 @@ Before writing code that uses an `@noverax/*` package, read the relevant page in
 ```
 
 In a monorepo, name the `node_modules` beside the package that uses Courier.
+
+## Over the network
+
+An agent that fetches pages rather than reading files gets the same Markdown from this site:
+
+- every docs page at its address with `.md` after it: [/docs/quick-start.md](/docs/quick-start.md);
+- every docs page at its own address too, to a request whose `Accept` asks for `text/markdown` — named outright, and counting for more than `text/html`, as nextjs.org reads it. A shared cache keeps only the page, never that answer, so one between the agent and the site may answer with the page: the address with `.md` after it is Markdown whatever is asked;
+- [/llms.txt](/llms.txt), every page by section with what it covers, and [/llms-full.txt](/llms-full.txt), the whole documentation in one file.
+
+The site serves the documentation of the latest release; the package, that of the version you install.

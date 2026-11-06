@@ -20,12 +20,23 @@ const nextConfig: NextConfig = {
   /* Next.js otherwise writes its own guidance files into the project on
      every dev start; the site's tree holds only its own sources. */
   agentRules: false,
+  async rewrites() {
+    return {
+      /* A docs page as Markdown at its own address, to a request the proxy marked as asking for
+         it by its Accept; the header is the proxy's MARKDOWN_ASKED. */
+      beforeFiles: [
+        {
+          source: "/docs/:path+",
+          has: [{ type: "header", key: "x-docs-markdown", value: "1" }],
+          destination: "/markdown/:path+",
+        },
+      ],
+      /* A docs page as Markdown, at its own address with .md after it. */
+      afterFiles: [{ source: "/docs/:path+.md", destination: "/markdown/:path+" }],
+    }
+  },
   /* A page that moved keeps its old address, so a link published to it still arrives; the
      docs' own address is the first page's, for good, so search engines index that page alone. */
-  /* A docs page as Markdown, at its own address with .md after it. */
-  async rewrites() {
-    return [{ source: "/docs/:path+.md", destination: "/markdown/:path+" }]
-  },
   async redirects() {
     return [
       { source: "/docs", destination: "/docs/introduction", permanent: true },

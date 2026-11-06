@@ -49,7 +49,7 @@ export function llmsIndex(
     "",
     `The whole documentation as one Markdown file: ${siteUrl}/llms-full.txt`,
     "",
-    "Every docs page is served as Markdown too, at its address with .md after it, as the links below are.",
+    "Every docs page is served as Markdown too, at its address with .md after it, as the links below are — and at its own address to a request whose Accept asks for text/markdown.",
     "",
     ...sections.flatMap((section) => [section, ""]),
   ].join("\n")

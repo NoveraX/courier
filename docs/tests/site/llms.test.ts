@@ -37,7 +37,7 @@ describe("llms.txt", () => {
 
   it("says every docs page is served as Markdown too", () => {
     expect(text.split("\n")[6]).toBe(
-      "Every docs page is served as Markdown too, at its address with .md after it, as the links below are."
+      "Every docs page is served as Markdown too, at its address with .md after it, as the links below are — and at its own address to a request whose Accept asks for text/markdown."
     )
   })
 

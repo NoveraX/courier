@@ -31,13 +31,13 @@ A Next.js app, with a small Express backend the live examples call.
 | Route | What it is |
 |-------|------------|
 | `/` | The landing page |
-| `/docs/<section>/<page>` | The documentation, written in MDX under `src/content/docs` |
+| `/docs/<section>/<page>` | The documentation, written in MDX under `src/content/docs`; to a request whose `Accept` asks for Markdown, the page's Markdown, which says it varies by `Accept` and stays out of shared caches: `src/proxy.ts` marks the request, and `next.config.ts` rewrites it |
 | `/docs/examples/<name>` | Live examples, each calling the Express backend through Courier |
 | `/reference` | The API reference, read from the documentation's API pages |
 | `/studio` | Courier Studio's page |
 | `/mcp` | The MCP server's page |
 | `/privacy`, `/privacy/consent` | The privacy notice, and the consent to analytics a reader gives by choosing Accept, written in MDX under `src/content/legal` |
-| `/docs/<section>/<page>.md` | A docs page as Markdown, for language models and agents; its `Link` header names the page as canonical |
+| `/docs/<section>/<page>.md` | A docs page as Markdown, for language models and agents; its `Link` header names the page as canonical. `@noverax/courier-docs` ships the same, page for page, for each release |
 | `/llms.txt`, `/llms-full.txt` | Every page for language models: an index linking each page's Markdown, and the whole documentation as one file; kept out of search results |
 | `/search-index.json` | What search finds — every docs page and export — fetched once a page is idle rather than carried in each page |
 | `/og/<page>` | Each page's social card, drawn from its title and description when the site is built; the home page's is `/opengraph-image` |

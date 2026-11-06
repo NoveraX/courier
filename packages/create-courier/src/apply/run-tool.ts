@@ -10,7 +10,11 @@ export type ToolOutput =
   /** Shown as it comes, as an install's progress is: on the terminal's output, or on standard error while standard output carries the JSON report. */
   | { readonly kind: "show"; readonly on: "stdout" | "stderr" }
   /** Read a line at a time, as a type check's errors are. */
-  | { readonly kind: "lines"; readonly line: (line: string) => void }
+  | {
+      readonly kind: "lines";
+      /** Each line, and the stream it came on: a program's answer on standard output, its warnings on standard error. */
+      readonly line: (line: string, stream: "stdout" | "stderr") => void;
+    }
   /** Kept out of sight; its end is kept for a failure to show. */
   | { readonly kind: "quiet" };
 
@@ -104,9 +108,11 @@ function stdioOf(options: ToolOptions): StdioOptions {
  */
 export function runTool(command: readonly string[], options: ToolOptions): Promise<ToolResult> {
   const { program, args, shell } = spawnable(command);
-  const line = options.output.kind === "lines" ? options.output.line : undefined;
+  const lines = options.output.kind === "lines" ? options.output.line : undefined;
+  const on = (stream: "stdout" | "stderr") =>
+    lines === undefined ? undefined : (line: string) => lines(line, stream);
   /* One reader for each stream, so a line half-printed on one never runs into the other's. */
-  const readers = [new ToolOutputReader(line), new ToolOutputReader(line)] as const;
+  const readers = [new ToolOutputReader(on("stdout")), new ToolOutputReader(on("stderr"))] as const;
   const tail = () => readers.map((reader) => reader.tail).join("");
   return new Promise((done, fail) => {
     if (options.signal?.aborted) {

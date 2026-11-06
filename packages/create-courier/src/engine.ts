@@ -9,6 +9,7 @@
 export { changedByEdits } from "./apply/apply-plan";
 export { runTool, type ToolOptions, type ToolResult, toolFailure } from "./apply/run-tool";
 export { type FailureCode, SetupFailure } from "./apply/setup-failure";
+export { SetupRefusal } from "./apply/setup-refusal";
 export { type Changes, type Done, transact } from "./apply/transaction";
 export { type Touched, typecheckTouched } from "./apply/typecheck";
 export { withJsonStrings } from "./edit/json-strings";

@@ -2,6 +2,7 @@ import { createLogger } from "@noverax/courier";
 import { styleFor } from "@noverax/courier/internal";
 
 import { SetupFailure } from "./apply/setup-failure";
+import { SetupRefusal } from "./apply/setup-refusal";
 import { CancelledError } from "./cancelled-error";
 import { type JsonReport, jsonReport } from "./report/json-report";
 import { textReport } from "./report/text-report";
@@ -84,9 +85,11 @@ async function outcome(
     const message = error instanceof Error ? error.message : String(error);
     if (json !== undefined) {
       if (error instanceof SetupFailure) json.stopped("failed", error.code, message);
+      else if (error instanceof SetupRefusal) json.stopped("refused", error.code, message);
       else if (isRefusal(error)) json.stopped("refused", "REFUSED", message);
       else json.stopped("failed", "UNEXPECTED_ERROR", message);
-    } else if (error instanceof SetupFailure || isRefusal(error)) log.error(message);
+    } else if (error instanceof SetupFailure || error instanceof SetupRefusal || isRefusal(error))
+      log.error(message);
     else log.error(error instanceof Error && error.stack !== undefined ? error.stack : message);
     return 1;
   }

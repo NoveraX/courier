@@ -164,6 +164,36 @@ Where a file is not in a shape it knows, it shows the lines to add instead. It d
 
 <br />
 
+## Upgrade: a new release of Courier
+
+```bash
+npx @noverax/courier-cli@latest upgrade --dry-run  # show what it changes
+npx @noverax/courier-cli@latest upgrade            # make the changes, once you say yes
+```
+
+In a project, or in a workspace from any of its packages, it moves every one of Courier's packages to a new release at once:
+
+- each range raised where each manifest writes it, in the same kind of range: `^0.4.0` to `^0.5.0`, `0.4.0` to `0.5.0`, `~0.4` to `~0.5`. A range of another kind is left as written, and the plan says why;
+- the breaking changes of each release it crosses, each with where its notes say what to write instead;
+- one install at the workspace's root, with your package manager. When it fails, the manifests and the lockfile are put back as they were;
+- then the types of what it changed are checked.
+
+Run it with `@latest`: it knows the changes up to its own release, and refuses a newer one. It also refuses a release that does not publish one of your packages, or that needs a newer Node.js than the one running. It asks the registry through your package manager, so your registry, proxy and credentials hold.
+
+| Option | Description |
+|---|---|
+| `--dry-run` | Show the plan, and change nothing |
+| `--yes`, `-y` | Upgrade without asking |
+| `--allow-dirty` | Upgrade with `--yes` where git has changes not committed, which it otherwise refuses |
+| `--to <version>` | The release to move to (default: the registry's latest) |
+| `--from <version>` | Read the project as on this release, where its packages were moved by hand (default: the oldest installed) |
+| `--no-install` | Make the changes, and name the install command |
+| `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |
+| `--cwd <dir>` | The project, or a package of its workspace (default: the working directory) |
+| `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing |
+
+<br />
+
 ## In CI
 
 Check the module in the job that checks your code, after the install:

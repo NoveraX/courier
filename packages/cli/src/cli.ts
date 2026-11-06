@@ -7,6 +7,7 @@ import { runMain } from "citty";
 import { cliVersion } from "./cli-version";
 import { ROUTES_ARGS, routesCommand } from "./commands/routes-command";
 import { SETUP_ARGS, setupCommand } from "./commands/setup-command";
+import { UPGRADE_ARGS, upgradeCommand } from "./commands/upgrade-command";
 
 const log = createLogger("CLI");
 
@@ -42,6 +43,14 @@ const COMMANDS: readonly Command[] = [
     args: SETUP_ARGS,
     run: (rawArgs, showUsage) => void runMain(setupCommand, { rawArgs, showUsage }),
   },
+  {
+    name: "upgrade",
+    description: "Move the project to a new release of Courier",
+    summary:
+      "Move the project to a new release of Courier: every one of its packages raised at once in the workspace's manifests, the breaking changes of each release it crosses shown, and one install, undone with the changes when it fails",
+    args: UPGRADE_ARGS,
+    run: (rawArgs, showUsage) => void runMain(upgradeCommand, { rawArgs, showUsage }),
+  },
 ];
 
 /* Help in Courier's own layout and colours, which follow the terminal, as Courier's other commands do. */
@@ -57,6 +66,10 @@ function printHelp(): void {
       { command: "courier-cli routes", description: "Write courier.routes.ts from the marks" },
       { command: "courier-cli routes --check", description: "Fail when it is out of date, in CI" },
       { command: "courier-cli setup", description: "Move the pages to Courier's routes plugin" },
+      {
+        command: "npx @noverax/courier-cli@latest upgrade",
+        description: "Move the project to Courier's latest release",
+      },
     ],
   };
   console.log(formatHelp(help, styleFor(process.stdout)));

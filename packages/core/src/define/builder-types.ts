@@ -292,6 +292,21 @@ export interface HttpAddressed<
    */
   reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams, TExpose>;
   /**
+   * Declare a read-shaped call to be a write.
+   *
+   * A GET that changes something — an unsubscribe link, a trigger, a token
+   * it spends — is otherwise retried, cached and shared as a read is.
+   * Declared a write, it is sent once per call, its answer is never kept,
+   * the mutation hooks take it and the proxy carries it as a POST; the
+   * upstream still gets the verb it was addressed with.
+   *
+   * @example
+   * ```ts
+   * unsubscribe: endpoint.get("unsubscribe").variables<{ token: string }>().writes(),
+   * ```
+   */
+  writes(): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation", TParams, TExpose>;
+  /**
    * Offer the endpoint to AI agents, as a tool of the application's MCP
    * server — or, with `false`, keep it from every agent whatever the
    * project's `agents` policy offers. An endpoint that names neither is

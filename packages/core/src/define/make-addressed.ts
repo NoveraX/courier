@@ -1,7 +1,7 @@
 import { agentOptions } from "../agent/agent-options";
-import { ConfigurationError } from "../errors/configuration-error";
+import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
-import { isReadingMethod } from "../utils/helpers";
+import { isReadingMethod, normalizeHttpMethod } from "../utils/helpers";
 import type { CacheConfig } from "../validation";
 import type { BuilderState } from "./builder";
 import { withValue } from "./builder";
@@ -21,8 +21,11 @@ export interface Wire {
 
 /** How a message names an endpoint: `GET ":id"`, `DELETE "files/:id"`. */
 function addressOf(wire: Wire): string {
-  return `${wire.method === "del" ? "DELETE" : wire.method.toUpperCase()} "${wire.path}"`;
+  return `${normalizeHttpMethod(wire.method)} "${wire.path}"`;
 }
+
+/* The verbs that change what they address; no declaration makes one a read. */
+const CHANGING_VERBS: ReadonlySet<string> = new Set(["put", "patch", "del"]);
 
 /**
  * An endpoint that has said where it is.
@@ -41,9 +44,6 @@ function addressOf(wire: Wire): string {
  * makeAddressed(state, { method: "get", path: ":id", probe, served: false }, {});
  * ```
  */
-/* The verbs that change what they address; no declaration makes one a read. */
-const CHANGING_VERBS: ReadonlySet<string> = new Set(["put", "patch", "del"]);
-
 export function makeAddressed(
   state: BuilderState,
   wire: Wire,
@@ -51,26 +51,47 @@ export function makeAddressed(
 ): AnyBuilder {
   const next = (updated: BuilderState): AnyBuilder => makeAddressed(updated, wire, options);
   const endpoint = sealAt(state, wire, options);
+  const where = addressOf(wire);
+  /* `.reads()` and `.writes()` name the kind, which every call then keeps to. */
+  const declared = (kind: "query" | "mutation"): AnyBuilder =>
+    next({ ...state, kind, kindNamed: true });
+  /* What a read alone takes, refused where it was named on an endpoint that is none. */
+  const readOnly = (method: string, code: ConfigurationErrorCode, why: string): void => {
+    if (state.kind === "query") return;
+    const named = `[courier] ${method} was named on`;
+    /* A closure's verb, even a reading one, leaves the endpoint taken to write. */
+    const how = isReadingMethod(wire.method) ? ".via()" : `.${wire.method}()`;
+    throw new ConfigurationError(
+      code,
+      state.kind !== "mutation"
+        ? `${named} a stream or a channel: only an HTTP read takes it.`
+        : state.kindNamed
+          ? `${named} an endpoint declared a write with .writes(): ${why}.`
+          : `${named} an endpoint addressed with ${how}, which writes: ${why}. Declare a read with .reads() first.`,
+    );
+  };
 
   const methods: AnyBuilder = {
-    ...refinements(state, next, addressOf(wire)),
+    ...refinements(state, next, where),
     cache: (config: CacheConfig) => {
-      if (state.kind !== "query") {
-        throw new ConfigurationError(
-          "CACHE_ON_WRITE",
-          `[courier] .cache() was named on an endpoint addressed with .${wire.method}(), which ` +
-            "writes — remove it, or declare the endpoint a read with .reads()",
-        );
-      }
+      readOnly(".cache()", "CACHE_ON_WRITE", "a write's answer is never kept");
       return next(withValue(state, "cache", config));
     },
     /* Only `true` turns it on, as `.expose()` opens only for `true`. */
     cancelPrevious: (cancel: unknown = true) => {
-      if (state.kind !== "query") {
-        throw new ConfigurationError("CANCEL_PREVIOUS_ON_WRITE", notARead(state, wire));
-      }
+      readOnly(
+        ".cancelPrevious()",
+        "CANCEL_PREVIOUS_ON_WRITE",
+        "a cancelled write has usually been applied",
+      );
       return next({ ...state, cancelPrevious: cancel === true });
     },
+    agent: (given: unknown) => next({ ...state, agent: agentOptions(given, where) }),
+    defaults: (values: unknown) =>
+      next({
+        ...state,
+        defaults: { ...state.defaults, ...variableDefaults(values, where) },
+      }),
     reads: () => {
       if (CHANGING_VERBS.has(wire.method)) {
         throw new ConfigurationError(
@@ -80,32 +101,13 @@ export function makeAddressed(
             "A read that sends a body is addressed with .post().",
         );
       }
-      return next({ ...state, kind: "query" });
+      return declared("query");
     },
-    agent: (given: unknown) => next({ ...state, agent: agentOptions(given, addressOf(wire)) }),
-    defaults: (values: unknown) =>
-      next({
-        ...state,
-        defaults: { ...state.defaults, ...variableDefaults(values, addressOf(wire)) },
-      }),
+    writes: () => declared("mutation"),
   };
 
   for (const [name, method] of Object.entries(methods)) {
     Object.defineProperty(endpoint, name, { value: method, enumerable: false });
   }
   return endpoint;
-}
-
-/* Why `.cancelPrevious()` cannot be named on an endpoint that is no read. */
-function notARead(state: BuilderState, wire: Wire): string {
-  const named = "[courier] .cancelPrevious() was named on";
-  if (state.kind !== "mutation") {
-    return `${named} a stream or a channel, which no newer call cancels.`;
-  }
-  /* A closure's verb, even a reading one, leaves the endpoint taken to write. */
-  const how = isReadingMethod(wire.method) ? ".via()" : `.${wire.method}()`;
-  return (
-    `${named} an endpoint addressed with ${how}, which writes: a cancelled write has ` +
-    "usually been applied. Declare a read with .reads() first."
-  );
 }

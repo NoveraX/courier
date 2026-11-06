@@ -97,13 +97,16 @@ describe("an endpoint that writes", () => {
     expect(given.options.cancelPrevious).toBe(false);
   });
 
-  it("names a closure, and a stream, for what they are", () => {
+  it("names a closure, a declared write and a stream for what they are", () => {
     // @ts-expect-error a closure is taken to write until .reads() says otherwise
     const closure = () => endpoint.via((http) => http.get("orders")).cancelPrevious();
+    // @ts-expect-error a GET declared a write is no read
+    const declared = () => endpoint.get("orders").writes().cancelPrevious();
     // @ts-expect-error a stream has no .cancelPrevious()
     const streamed = () => stream.get("feed").cancelPrevious();
 
     expect(closure).toThrow(/addressed with \.via\(\).*\.reads\(\)/);
+    expect(declared).toThrow(/declared a write with \.writes\(\)/);
     expect(streamed).toThrow(/a stream or a channel/);
   });
 });

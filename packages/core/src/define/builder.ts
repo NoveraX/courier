@@ -18,6 +18,8 @@ type SlotName = "response" | "variables" | "send";
 /** Everything a builder has accumulated so far. Never mutated in place. */
 export interface BuilderState {
   readonly kind: EndpointKind;
+  /** Whether `.reads()` or `.writes()` named the kind, rather than the verb that addresses it. */
+  readonly kindNamed?: true | undefined;
   readonly schemas: Readonly<Partial<Record<SlotName, StandardSchemaV1>>>;
   readonly filled: readonly SlotName[];
   /** Middleware of the base the endpoint was built from; `inherit: false` drops it. */

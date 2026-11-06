@@ -2,10 +2,24 @@
  * The project tooling Courier Studio and the CLI share: reading and writing
  * a project's files without leaving it, formatting them as the project
  * does, its `.env` files, its tsconfig and module conventions, the processes
- * long work runs in, and the routes module. Studio imports it from here, so
- * both write the same bytes. It is Courier's own, not a public API: its
- * shape follows what Studio needs, release to release.
+ * long work runs in, the routes module, and Courier's block in AGENTS.md,
+ * as `create-courier` writes it. Studio imports it from here, so both write
+ * the same bytes. It is Courier's own, not a public API: its shape follows
+ * what Studio needs, release to release.
  */
+export {
+  AGENT_FILE_MAX_BYTES,
+  AGENT_RULES,
+  AGENT_RULES_BEGIN,
+  AGENT_RULES_END,
+  type AgentFile,
+  type AgentRulesUpdate,
+  agentRulesProblem,
+  readAgentFile,
+  updateAgentRules,
+  updatedAgentRules,
+  withAgentRules,
+} from "@noverax/create-courier/agent-rules";
 export { createProjectEnv, DOTENV_ARG, loadProjectEnv, type ProjectEnv } from "./project-env";
 export { findFormatters, type ProjectFormatters } from "./project-format/find-formatters";
 export { formatProjectFiles } from "./project-format/format-project-files";

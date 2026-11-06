@@ -1,7 +1,12 @@
 /**
- * How the queue behind an SSE subscription ends: finished, failed, or left
- * early by its reader.
+ * How the queue behind a subscription ends: finished, failed, or left early
+ * by its reader; and that it lets go of each event its reader took, as a
+ * subscription quiet after a burst would hold them for good.
  */
+import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 import { createEventQueue } from "../src/realtime/sse/event-queue";
@@ -57,5 +62,22 @@ describe("createEventQueue", () => {
     await iterator.return?.();
 
     await expect(iterator.next()).resolves.toEqual({ value: undefined, done: true });
+  });
+});
+
+describe("the queue's memory", () => {
+  it("lets go of each event its reader took", () => {
+    const tsx = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
+    const script = join(__dirname, "fixtures/event-queue-after-reading.ts");
+
+    const run = spawnSync(process.execPath, ["--expose-gc", "--import", tsx, script], {
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+
+    expect(run.status, run.stderr).toBe(0);
+    const { held, size, left } = JSON.parse(run.stdout) as Record<string, number>;
+    expect([held, size], "the control: all held before they are read").toEqual([1000, 0]);
+    expect(left, "the last one read may still be the reader's").toBeLessThanOrEqual(1);
   });
 });

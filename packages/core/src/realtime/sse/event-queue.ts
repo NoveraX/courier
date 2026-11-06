@@ -89,6 +89,8 @@ export function createEventQueue<TData>(
   function dequeue(): StreamEvent<TData> | undefined {
     if (count === 0) return undefined;
     const value = ring[head];
+    /* Read, it is the reader's: a queue quiet after a burst would hold it for good. */
+    ring[head] = undefined;
     head = (head + 1) % capacity;
     count--;
     if (count === 0 && droppedBehind > 0) {

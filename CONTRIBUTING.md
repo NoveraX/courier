@@ -64,7 +64,10 @@ Six of them are easy to skip by accident and worth understanding:
   raises the budget in `scripts/browser-bundles/scenarios.mjs`, saying why
   in its commit. It fails too when a page takes a core module only a
   server runs, or Node, an edge runtime or React Native takes its browser
-  stand-in (below).
+  stand-in (below), and when what Next.js's edge runtime may take of the
+  core reads a Node API off the global `process` — anything but
+  `process.env` — which Next.js's build of a middleware refuses or warns
+  of: such code reads it off `globalThis.process`, checking for it.
 - `npm run check:page-dates` asks every docs page whose text your branch
   changed for its date: the `updated` field of the page's metadata, which
   the site shows on the page and hands to search engines, must be no older

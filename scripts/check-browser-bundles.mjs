@@ -15,11 +15,14 @@
  *    HTTP lacks, is called where its module does not check for it first.
  *
  * And the direct caller, built for Node, an edge runtime and React Native,
- * takes those modules as they are, never the browser's stand-ins.
+ * takes those modules as they are, never the browser's stand-ins; what
+ * Next.js's edge runtime may take of the core — each entry but Node's own —
+ * reads no Node API off the global `process` but `process.env`: Next.js's
+ * build of a middleware refuses one, or warns of it.
  *
  * Requires a build first. Exits 1 with each breach.
  */
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { builtinModules, createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
 import { argv } from "node:process";
@@ -27,6 +30,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 import { newerApiCalls } from "./browser-bundles/newer-api-calls.mjs";
+import { GLOBAL_PROCESS, processReads } from "./browser-bundles/process-reads.mjs";
 import { PROVIDED, SCENARIOS } from "./browser-bundles/scenarios.mjs";
 import { serverOnlyModules } from "./browser-bundles/server-only-modules.mjs";
 import { sidesTaken } from "./browser-bundles/sides-taken.mjs";
@@ -36,13 +40,13 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const KIB = 1024;
 const SERVER_ONLY = serverOnlyModules(join(ROOT, "packages/core/lib"));
 
+/* Next.js's edge runtime, as it resolves a package: a middleware's, and an edge route's. */
+const NEXT_EDGE = { platform: "neutral", conditions: ["edge-light", "worker", "browser"] };
+
 /* Where code runs on a server or in an app, as their bundlers resolve a package: none of them a page. */
 const RUNTIMES = [
   { name: "Node", options: { platform: "node" } },
-  {
-    name: "Next.js's edge runtime",
-    options: { platform: "neutral", conditions: ["edge-light", "worker", "browser"] },
-  },
+  { name: "Next.js's edge runtime", options: NEXT_EDGE },
   {
     name: "Cloudflare Workers",
     options: { platform: "neutral", conditions: ["workerd", "worker", "browser"] },
@@ -141,6 +145,30 @@ function runtimeBreaches(esbuild, work) {
   });
 }
 
+/* The Node APIs read off the global `process` by what Next.js's edge runtime may take of the
+   core: each entry but Node's own, whole. */
+function edgeBreaches(esbuild, work) {
+  const { exports } = JSON.parse(readFileSync(join(ROOT, "packages/core/package.json"), "utf8"));
+  const code = Object.keys(exports)
+    .filter((path) => path !== "./package.json" && path !== "./node")
+    .map((path, at) => `export * as entry${at} from "@noverax/courier${path.slice(1)}";`)
+    .join("\n");
+  const { result } = build(
+    esbuild,
+    work,
+    { name: "the core on the edge", code },
+    {
+      ...NEXT_EDGE,
+      splitting: false,
+      define: { "process.env.NODE_ENV": '"production"', process: GLOBAL_PROCESS },
+    },
+  );
+  return processReads(result.outputFiles[0]?.text ?? "").map(
+    (read) =>
+      `${read.module} reads ${read.api}, which Next.js's build of a middleware refuses or warns of: read it off globalThis.process`,
+  );
+}
+
 function main() {
   const esbuild = createRequire(join(ROOT, "package.json"))("esbuild");
   const work = join(ROOT, "node_modules/.cache/courier-browser-bundles");
@@ -150,6 +178,7 @@ function main() {
   const breaches = [
     ...SCENARIOS.flatMap((scenario) => breachesOf(esbuild, work, scenario)),
     ...runtimeBreaches(esbuild, work),
+    ...edgeBreaches(esbuild, work),
   ];
   rmSync(work, { recursive: true, force: true });
   const unique = [...new Set(breaches)];

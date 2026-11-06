@@ -34,7 +34,10 @@ export function fetchCopies(version: string | undefined): FetchCopies {
   return { forms: true, streams: !(major >= 8) };
 }
 
-/** What this runtime's own `fetch` copies. */
-export const FETCH_COPIES: FetchCopies = fetchCopies(
-  typeof process === "undefined" ? undefined : process.versions?.undici,
-);
+/**
+ * What this runtime's own `fetch` copies. Its undici is read off
+ * `globalThis.process`, as code an edge runtime may take reads Node's APIs:
+ * Next.js refuses to build `process.versions` into a middleware, even after
+ * `typeof process` is checked.
+ */
+export const FETCH_COPIES: FetchCopies = fetchCopies(globalThis.process?.versions?.undici);

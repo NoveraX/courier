@@ -22,7 +22,7 @@ const SWEPT = new Set<string>();
  * ```
  */
 export function folderPrefix(disk: NodeDisk): string {
-  return `courier-upload-${hostTag(disk.os.hostname())}-${process.pid}-`;
+  return `courier-upload-${hostTag(disk.os.hostname())}-${globalThis.process.pid}-`;
 }
 
 /**
@@ -68,12 +68,12 @@ export async function sweepStaleUploads(
   olderThanMs: number,
 ): Promise<number> {
   const host = hostTag(disk.os.hostname());
+  const own = globalThis.process.pid;
   let removed = 0;
   for (const entry of await disk.fs.promises.readdir(parent, { withFileTypes: true })) {
     const owner = OWNED.exec(entry.name);
     const pid = Number(owner?.[2]);
-    if (!entry.isDirectory() || owner?.[1] !== host || pid === process.pid || isAlive(pid))
-      continue;
+    if (!entry.isDirectory() || owner?.[1] !== host || pid === own || isAlive(pid)) continue;
     if (await removeIfOld(disk, disk.path.join(parent, entry.name), olderThanMs)) removed += 1;
   }
   if (removed > 0)
@@ -96,7 +96,7 @@ async function removeIfOld(disk: NodeDisk, folder: string, olderThanMs: number):
 /* Whether a process is still there; one of another user's answers EPERM, and is. */
 function isAlive(pid: number): boolean {
   try {
-    process.kill(pid, 0);
+    globalThis.process.kill(pid, 0);
     return true;
   } catch (error) {
     return !(

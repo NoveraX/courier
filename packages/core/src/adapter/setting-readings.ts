@@ -164,8 +164,9 @@ function quoted(text: string): string {
    own, which would throw again when made one; where the runtime has none, its kind stands for it. */
 function thrownText(value: unknown): string {
   if (typeof value === "string") return value;
-  if (typeof process !== "undefined" && typeof process.getBuiltinModule === "function") {
-    const { inspect } = process.getBuiltinModule("node:util");
+  const node = globalThis.process;
+  if (typeof node?.getBuiltinModule === "function") {
+    const { inspect } = node.getBuiltinModule("node:util");
     return inspect(value, { depth: 2, breakLength: Number.POSITIVE_INFINITY });
   }
   try {

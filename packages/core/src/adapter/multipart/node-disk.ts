@@ -34,15 +34,15 @@ export function nodeDisk(): NodeDisk | undefined {
   return found ?? undefined;
 }
 
+/* Off globalThis: Next.js refuses to build a read of the global `process` into a middleware. */
 function lookUp(): NodeDisk | undefined {
-  if (typeof process === "undefined" || typeof process.getBuiltinModule !== "function") {
-    return undefined;
-  }
-  const fs = process.getBuiltinModule("node:fs");
+  const node = globalThis.process;
+  if (typeof node?.getBuiltinModule !== "function") return undefined;
+  const fs = node.getBuiltinModule("node:fs");
   if (typeof fs?.openAsBlob !== "function") return undefined;
   return {
     fs,
-    os: process.getBuiltinModule("node:os"),
-    path: process.getBuiltinModule("node:path"),
+    os: node.getBuiltinModule("node:os"),
+    path: node.getBuiltinModule("node:path"),
   };
 }

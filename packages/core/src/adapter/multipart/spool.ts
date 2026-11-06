@@ -147,7 +147,7 @@ function tellNoFolder(parent: string, error: unknown): void {
 function removeAtExit(disk: NodeDisk): void {
   if (removedAtExit) return;
   removedAtExit = true;
-  process.once("exit", () => {
+  globalThis.process.once("exit", () => {
     for (const folder of LIVE) {
       try {
         disk.fs.rmSync(folder, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 });

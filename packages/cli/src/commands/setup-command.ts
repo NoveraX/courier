@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
-import { runSetupCommand, setUpRoutes } from "@noverax/create-courier/setup";
+import { runSetupCommand } from "@noverax/create-courier/engine";
+import { setUpRoutes } from "@noverax/create-courier/setup";
 import { type ArgsDef, defineCommand } from "citty";
 
 import { cliVersion } from "../cli-version";

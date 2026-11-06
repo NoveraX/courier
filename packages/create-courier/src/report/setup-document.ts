@@ -3,6 +3,7 @@ import type { TypecheckOutcome } from "../apply/typecheck";
 import type { ChangedLine } from "../edit/line-diff";
 import type { GitState } from "../preflight/git-state";
 import type { ManualStep, NextStep } from "../recipes/recipe-types";
+import type { UpgradeView } from "./setup-report";
 
 /** The plan, as the JSON document gives it. */
 export interface PlanDocument {
@@ -40,6 +41,8 @@ export interface PlanDocument {
   };
   readonly manual: readonly ManualStep[];
   readonly next: readonly NextStep[];
+  /** What an upgrade moves: the releases, each package's range, the breaking changes it crosses; `null` for a setup. */
+  readonly upgrade: UpgradeView | null;
 }
 
 /** How a run ended, as a program reads it. */

@@ -8,6 +8,8 @@
  * - `fail` writes nothing and ends with status 1, as an unreachable
  *   registry leaves an install;
  * - `fail-after-writing` writes as `ok` does, then ends with status 1;
+ * - `lock` writes the lockfile of what package.json lists, as `npm
+ *   install` does with no package named;
  * - `hang=<file>` writes that file, outside the project, and waits until
  *   it is stopped.
  */
@@ -32,7 +34,13 @@ function write() {
 }
 
 if (behaviour === "ok") write();
-else if (behaviour === "fail") process.exitCode = 1;
+else if (behaviour === "lock") {
+  const listed = JSON.parse(readFileSync("package.json", "utf8")).dependencies ?? {};
+  writeFileSync(
+    "package-lock.json",
+    `${JSON.stringify({ lockfileVersion: 3, listed }, null, 2)}\n`,
+  );
+} else if (behaviour === "fail") process.exitCode = 1;
 else if (behaviour === "fail-after-writing") {
   write();
   process.exitCode = 1;

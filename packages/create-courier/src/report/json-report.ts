@@ -23,7 +23,7 @@ export interface JsonReport extends SetupReport {
   document(exitCode: number): string;
 }
 
-function planDocument({ title, plan, configured, git }: PlanView): PlanDocument {
+function planDocument({ title, plan, configured, git, upgrade }: PlanView): PlanDocument {
   return {
     title,
     configured: configured
@@ -46,6 +46,7 @@ function planDocument({ title, plan, configured, git }: PlanView): PlanDocument 
     },
     manual: plan.manual,
     next: plan.next,
+    upgrade: upgrade ?? null,
   };
 }
 

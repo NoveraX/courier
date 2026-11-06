@@ -73,6 +73,7 @@ describe("jsonReport", () => {
         },
         manual: [],
         next: [{ command: "npm run dev", what: "starts the app" }],
+        upgrade: null,
       },
       notes: [],
       written: ["courier.config.ts"],

@@ -4,8 +4,14 @@ import type { ManualStep, RecipeEdit } from "../recipe-types";
 import { nextRoutesEdit } from "./next-routes";
 import { astroRoutesEdit, nuxtRoutesEdit, viteRoutesEdit } from "./routes-plugin";
 
+/** A framework Courier's plugin builds the pages' routes in for. */
+export type RoutesFramework = Extract<
+  FrameworkId,
+  "next" | "nuxt" | "sveltekit" | "astro" | "react-router" | "remix" | "solid-start"
+>;
+
 /** The frameworks Courier's plugin builds the pages' routes in for. */
-export const ROUTES_FRAMEWORKS = [
+export const ROUTES_FRAMEWORKS: readonly RoutesFramework[] = [
   "next",
   "nuxt",
   "sveltekit",
@@ -13,10 +19,7 @@ export const ROUTES_FRAMEWORKS = [
   "react-router",
   "remix",
   "solid-start",
-] as const satisfies readonly FrameworkId[];
-
-/** A framework Courier's plugin builds the pages' routes in for. */
-export type RoutesFramework = (typeof ROUTES_FRAMEWORKS)[number];
+];
 
 /**
  * Whether Courier's plugin builds a framework's routes in: the setup adds

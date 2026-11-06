@@ -7,6 +7,7 @@ import type { GitState } from "../preflight/git-state";
 import type { ConfiguredSources } from "../project/configured-sources";
 import { failureLines } from "./failure-lines";
 import type { SetupEnd, SetupReport } from "./setup-report";
+import { upgradeLines } from "./upgrade-lines";
 
 /* What the config declares, and what the plan does about it. */
 function configuredLine(configured: ConfiguredSources, changes: boolean): string {
@@ -116,8 +117,11 @@ export function textReport(
       ]);
     },
     note: (lines) => print(["", ...lines]),
-    plan({ title, plan, configured, git }) {
-      const lead = configured ? [configuredLine(configured, changesAnything(plan))] : [];
+    plan({ title, plan, configured, git, upgrade }) {
+      const lead = [
+        ...(configured ? [configuredLine(configured, changesAnything(plan))] : []),
+        ...(upgrade ? upgradeLines(upgrade, style) : []),
+      ];
       const lines = [...planLines(title, plan, style, lead), ...gitLines(git, style)];
       print([...(madeProject ? [""] : []), ...lines]);
     },

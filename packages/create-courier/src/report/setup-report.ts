@@ -6,6 +6,36 @@ import type { GitState } from "../preflight/git-state";
 import type { ConfiguredSources } from "../project/configured-sources";
 import type { NextStep } from "../recipes/recipe-types";
 
+/** A package of the project's, as an upgrade moves it in one of its manifests. */
+export interface UpgradedPackage {
+  /** The manifest, relative to the root: `package.json`, `apps/web/package.json`. */
+  readonly manifest: string;
+  readonly name: string;
+  /** The field that lists it: `dependencies`, `devDependencies`, `peerDependencies` or `optionalDependencies`. */
+  readonly field: string;
+  /** Its range, as written. */
+  readonly from: string;
+  /** Its range as the upgrade writes it; `undefined` where it is left as written. */
+  readonly to: string | undefined;
+  /** Why it is left as written, where it is. */
+  readonly why?: string | undefined;
+}
+
+/** A breaking change of a release an upgrade crosses, and where its notes say what to write instead. */
+export interface UpgradeNote {
+  readonly release: string;
+  readonly title: string;
+  readonly docs: string;
+}
+
+/** What an upgrade shows beside its plan: the release it moves from and to, each package's range, and the breaking changes it crosses. */
+export interface UpgradeView {
+  readonly from: string;
+  readonly to: string;
+  readonly packages: readonly UpgradedPackage[];
+  readonly notes: readonly UpgradeNote[];
+}
+
 /** The plan, as a run shows it before anything is asked or changed. */
 export interface PlanView {
   /** Its first line: what is set up where, with what. */
@@ -15,6 +45,8 @@ export interface PlanView {
   readonly configured?: ConfiguredSources | undefined;
   /** What git says of the project's changes; none for a project the run created. */
   readonly git?: GitState | undefined;
+  /** What an upgrade moves, where the plan is one. */
+  readonly upgrade?: UpgradeView | undefined;
 }
 
 /** A new project, as a run that creates one shows it before it makes anything. */

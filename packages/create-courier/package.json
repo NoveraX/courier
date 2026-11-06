@@ -49,12 +49,20 @@
       "types": "./lib/set-up-routes.d.ts",
       "import": "./lib/set-up-routes.js",
       "default": "./lib/set-up-routes.js"
+    },
+    "./engine": {
+      "types": "./lib/engine.d.ts",
+      "import": "./lib/engine.js",
+      "default": "./lib/engine.js"
     }
   },
   "typesVersions": {
     "*": {
       "setup": [
         "./lib/set-up-routes.d.ts"
+      ],
+      "engine": [
+        "./lib/engine.d.ts"
       ]
     }
   },

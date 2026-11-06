@@ -10,6 +10,9 @@
  * variables was refused. Variables that name the parameters are taken, and
  * ones that leave one out are refused, without the DOM library and with it;
  * a body of its own, which fills no parameter by name, is taken beside them.
+ * A record given to `multipartBody` is a form there too: a form typed `any`
+ * had made its first signature take every argument, and a record came back
+ * typed as itself.
  */
 import { join, resolve } from "node:path";
 import ts from "typescript";
@@ -93,16 +96,25 @@ export const domBodies = defineGroup({
 });
 `;
 
+/* A record written as a form, whose methods are there wherever the form is declared or not. */
+const FORM = `
+import { multipartBody } from "@noverax/courier/define";
+
+multipartBody({ title: "Dune" }).append("note", "hi");
+`;
+
 describe("a path's parameters, checked against the variables", () => {
   it("are checked where neither the DOM library nor Node's types are declared", () => {
     /* The project has no DOM library: a form is a name it does not know. */
     const noDom =
       "\n// @ts-expect-error no DOM library is declared\nexport type Form = FormData;\n";
 
-    expect(problemsWith(["lib.es2023.d.ts"], noDom + BYTES)).toEqual([]);
+    expect(problemsWith(["lib.es2023.d.ts"], noDom + BYTES + FORM)).toEqual([]);
   }, 60_000);
 
   it("are checked with the DOM library, as they were", () => {
-    expect(problemsWith(["lib.es2023.d.ts", "lib.dom.d.ts"], BYTES + DOM_BODIES)).toEqual([]);
+    expect(problemsWith(["lib.es2023.d.ts", "lib.dom.d.ts"], BYTES + DOM_BODIES + FORM)).toEqual(
+      [],
+    );
   }, 60_000);
 });

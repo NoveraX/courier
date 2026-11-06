@@ -3,6 +3,7 @@ import { isRawBody } from "../utils/body-kind";
 import { isFormData } from "../utils/helpers";
 import { isStreamedUpload, type StreamedUpload } from "../utils/streamed-upload";
 import { multipartForm } from "../utils/variables-encoding";
+import type { Declared } from "./declared";
 
 /**
  * Encode fields as a `multipart/form-data` body, a file among them or not,
@@ -31,7 +32,11 @@ import { multipartForm } from "../utils/variables-encoding";
  * // multipart/form-data, with a cover or without one
  * ```
  */
-export function multipartBody<TForm extends FormData | StreamedUpload>(form: TForm): TForm;
+export function multipartBody<TForm extends Declared<FormData> | StreamedUpload>(
+  form: TForm,
+): TForm;
+/* `Declared`: a project with no FormData declared reads it as `any`, which made
+   the signature above take every argument, a record typed back as itself. */
 export function multipartBody(fields: Record<string, unknown>): FormData;
 export function multipartBody(fields: unknown): FormData | StreamedUpload {
   if (isFormData(fields) || isStreamedUpload(fields)) return fields;

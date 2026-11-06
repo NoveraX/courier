@@ -12,24 +12,22 @@ import { measured } from "./metrics.mjs";
 
 /** Connections the handler is measured with. */
 const CONNECTIONS = 10_000;
+/** How long the probe may run in all: longer than any of its steps, each of which has its own deadline. */
+const PROBE_MS = 300_000;
 
 /**
  * Measure the WebSocket handler's own cost.
  *
  * @param {{ repo: string }} fixture - The repository, whose built core is measured
  * @returns {Promise<import("./metrics.mjs").Measured[]>} The figures
+ * @throws {Error} Why the probe gave no figures: the step it gave up on, or the time it ran out of
  * @example
  * ```js
  * await measureRealtime({ repo });
  * ```
  */
 export async function measureRealtime({ repo }) {
-  const out = execFileSync(
-    process.execPath,
-    ["--expose-gc", join(import.meta.dirname, "realtime-probe.mjs"), String(CONNECTIONS)],
-    { cwd: repo, encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
-  );
-  const seen = JSON.parse(out.trim().split("\n").at(-1) ?? "{}");
+  const seen = probe(repo);
   const of = `${seen.connections} connections`;
   return [
     measured("realtime.admit", seen.admitMs, "ms", 3_000, { note: `${of}, onConnect each` }),
@@ -50,4 +48,35 @@ export async function measureRealtime({ repo }) {
     }),
     measured("realtime.destroy", seen.destroyMs, "ms", 2_000, { note: of }),
   ];
+}
+
+/* What the probe saw: its last line, which names the step it gave up on when it saw nothing. */
+function probe(repo) {
+  let out;
+  try {
+    out = execFileSync(
+      process.execPath,
+      ["--expose-gc", join(import.meta.dirname, "realtime-probe.mjs"), String(CONNECTIONS)],
+      { cwd: repo, encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: PROBE_MS },
+    );
+  } catch (error) {
+    if (error.code === "ETIMEDOUT") {
+      throw new Error(`The realtime probe was stopped after ${PROBE_MS / 1000} s`);
+    }
+    out = error.stdout ?? "";
+  }
+  const seen = lastLine(out);
+  if (typeof seen?.failed === "string") throw new Error(seen.failed);
+  if (seen?.broadcast === undefined) {
+    throw new Error("The realtime probe ended with no figures: what it wrote is above");
+  }
+  return seen;
+}
+
+function lastLine(out) {
+  try {
+    return JSON.parse(out.trim().split("\n").at(-1) ?? "");
+  } catch {
+    return undefined;
+  }
 }

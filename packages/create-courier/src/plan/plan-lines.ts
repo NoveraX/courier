@@ -12,9 +12,24 @@ function fileLine(file: PlannedFile, width: number, style: TerminalStyle): strin
   return `  ${style.yellow("!")} ${path}  ${style.dim("a file of yours is here: kept, see below")}`;
 }
 
-/* A package the project has on another release line, which the setup leaves as it is. */
+/* A version's major and minor, as a number that orders lines: 0.4.2 before 0.5.0. */
+function lineOrder(version: string): number {
+  const [, major = "0", minor = "0"] = /(\d+)\.(\d+)/.exec(version) ?? [];
+  return Number(major) * 100_000 + Number(minor);
+}
+
+/*
+ * A package the project has on another release line, which the setup
+ * leaves as it is, and what brings the two to one: the upgrade, for a
+ * project on an older line; this command's latest, for a newer one.
+ */
 function otherReleaseLine(other: Plan["otherReleases"][number], style: TerminalStyle): string {
-  return `  ${style.yellow("!")} ${other.name} ${other.has}  ${style.dim(`kept: the files Courier adds are written for ${other.wants}`)}`;
+  const older = lineOrder(other.has) < lineOrder(other.wants);
+  const then = older
+    ? "npx @noverax/courier-cli@latest upgrade moves the project to it"
+    : "npx @noverax/create-courier@latest writes them for the project's";
+  const note = `kept: the files Courier adds are written for ${other.wants}; ${then}`;
+  return `  ${style.yellow("!")} ${other.name} ${other.has}  ${style.dim(note)}`;
 }
 
 /* A package the project names as a peer or an optional one, which nothing installed. */

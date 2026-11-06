@@ -163,6 +163,17 @@ endpoint
 // → POST /customers  Body: email=ada%40example.com&metadata%5Bplan%5D=pro
 ```
 
+An API that takes only `multipart/form-data` gets a body `multipartBody` writes: a form whether a file is among the fields or not, each field written as a direct call writes a record that holds a file — see [An API that takes only a form](/docs/advanced/upload#an-api-that-takes-only-a-form):
+
+```ts
+import { courier, multipartBody } from "@noverax/courier/define"
+
+endpoint
+  .variables<{ title: string; cover?: Blob }>()
+  .via((http, fields) => http.post("covers", undefined, { body: multipartBody(fields) }))
+// → POST /covers  Body: multipart/form-data, a cover among its parts or not
+```
+
 A read writes its variables into the query in OpenAPI's default style, `form` exploded: a list repeats its name and an object's properties become names of their own. A parameter declared in another style — Stripe's `deepObject` filters, a comma- or pipe-joined list — is written by `formQuery`, which takes the same encodings as `formBody` and leaves out a field that is `undefined` or `null`:
 
 ```ts

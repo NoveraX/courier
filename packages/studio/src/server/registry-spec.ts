@@ -4,7 +4,6 @@
 
 import { createLogger } from "@noverax/courier";
 import type { CourierImportEntry } from "@noverax/courier/config";
-import { urlWithoutSecrets } from "@noverax/courier/internal";
 import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { messageOf, readProjectText } from "@noverax/courier-cli/devkit";
 import type { ImportStateEntry } from "../apis/imports-state";
@@ -12,6 +11,7 @@ import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
 import { importAuthHeaders } from "./import-auth-headers";
+import { namedAddress } from "./named-address";
 import { readFetchedSpec } from "./read-fetched-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";
@@ -78,8 +78,8 @@ export async function fetchSpecRaw(
       return await fetchSpec(specUrl, allowlist, { headers, signal });
     } catch (err) {
       if (signal?.aborted) return null;
-      /* Said of the address without the credentials it may carry. */
-      const shown = urlWithoutSecrets(specUrl);
+      /* Said of the address as the parser reads it, without the credentials it may carry. */
+      const shown = namedAddress(specUrl) ?? "an address that is not a URL";
       log.warn(`Studio could not fetch the spec from ${shown}`, err);
       if (err instanceof SpecHostsUnavailableError) {
         sendRouteFailure(res, err, `Failed to fetch spec from ${shown}`);

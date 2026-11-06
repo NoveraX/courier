@@ -1,5 +1,6 @@
 import { addressKindHere } from "./address-kind-here";
 import type { Capacity } from "./capacity";
+import { namedUrl } from "./named-address";
 import { readInterfaces } from "./own-addresses";
 import { PUBLIC_SPEC_MAX_BYTES, SPEC_MAX_BYTES } from "./read-spec-body";
 import { SpecFetchError } from "./spec-fetch-error";
@@ -101,7 +102,8 @@ const PUBLIC_ONLY =
  * A URL Studio refuses is the request's fault: its error is `refused`.
  * Everything that goes wrong once a request is sent is the host's — no
  * answer, an error status, a redirect Studio cannot follow, a body cut off,
- * too large or unreadable — and its error names the URL. An aborted fetch
+ * too large or unreadable — and its error names the URL, as the parser
+ * read it and without its secrets, never as it was typed. An aborted fetch
  * stops where it is.
  *
  * @param url - The URL the developer asked Studio to read
@@ -134,6 +136,7 @@ async function fetchWithin(
 ): Promise<string> {
   const deadline = Date.now() + limits.deadlineMs;
   let current = specUrl(url);
+  const asked = namedUrl(current);
   const { origin } = current;
   let loopback = reach === "project";
   const hosts: PrivateHosts = reach === "public" ? { refused: publicOnly } : { listed: allowlist };
@@ -142,12 +145,12 @@ async function fetchWithin(
     if (remaining <= 0)
       throw new SpecFetchError(
         "SPEC_TIMEOUT",
-        `${url} did not answer within ${limits.deadlineMs / 1000} s.`,
-        { url },
+        `${asked} did not answer within ${limits.deadlineMs / 1000} s.`,
+        { url: asked },
       );
     const answer: SpecAnswer = await requestSpec(
       current,
-      hopPolicy(current, loopback, hosts, hop === 0 ? null : url),
+      hopPolicy(current, loopback, hosts, hop === 0 ? null : asked),
       remaining,
       {
         headers: current.origin === origin ? headers : {},
@@ -164,20 +167,23 @@ async function fetchWithin(
     loopback &&=
       answer.remoteAddress !== null &&
       addressKindHere(answer.remoteAddress, readInterfaces()) === "loopback";
-    current = redirectTarget(answer.location, current, url);
+    current = redirectTarget(answer.location, current, asked);
   }
-  throw new SpecFetchError("SPEC_REDIRECTS", `${url} redirects more than ${MAX_REDIRECTS} times.`, {
-    url,
-  });
+  throw new SpecFetchError(
+    "SPEC_REDIRECTS",
+    `${asked} redirects more than ${MAX_REDIRECTS} times.`,
+    { url: asked },
+  );
 }
 
-/* The URL the developer gave: one Studio cannot fetch is the request's fault. */
+/* The URL the developer gave: one Studio cannot fetch is the request's fault. One it cannot
+   parse is not named, and the parser's error, which repeats it, is not kept. */
 function specUrl(url: string): URL {
   let parsed: URL;
   try {
     parsed = new URL(url);
-  } catch (cause) {
-    throw new SpecFetchError("SPEC_URL_INVALID", `${url} is not a URL.`, { cause, url });
+  } catch {
+    throw new SpecFetchError("SPEC_URL_INVALID", "The address is not a URL.");
   }
   if (!WEB_PROTOCOLS.has(parsed.protocol)) {
     throw new SpecFetchError("SPEC_URL_INVALID", "Spec URL must use http:// or https:// protocol", {
@@ -187,31 +193,33 @@ function specUrl(url: string): URL {
   /* A credential in the address goes wherever the address is written down — the config, a log, a
      page — so it is refused here, before anything is sent; the import's auth carries it instead. */
   if (parsed.username !== "" || parsed.password !== "") {
+    const named = namedUrl(parsed);
     throw new SpecFetchError(
       "SPEC_CREDENTIALS_IN_URL",
-      `${url} carries a user or a password in its address. Give them as the import's auth, read from the environment, and the address without them.`,
-      { url },
+      `${named} carries a user or a password in its address. Give them as the import's auth, read from the environment, and the address without them.`,
+      { url: named },
     );
   }
   return parsed;
 }
 
-/* Where a server redirects: a target Studio cannot follow is that server's fault. */
+/* Where a server redirects: a target Studio cannot follow is that server's fault. The parser's
+   error is not kept: it repeats the hop's address, its secrets and all. */
 function redirectTarget(location: string, from: URL, asked: string): URL {
   let target: URL;
   try {
     target = new URL(location, from);
-  } catch (cause) {
+  } catch {
     throw new SpecFetchError(
       "SPEC_REDIRECT_INVALID",
-      `${from.href} redirects to "${location}", which is not a URL.`,
-      { cause, url: asked },
+      `${namedUrl(from)} redirects to "${location}", which is not a URL.`,
+      { url: asked },
     );
   }
   if (!WEB_PROTOCOLS.has(target.protocol)) {
     throw new SpecFetchError(
       "SPEC_REDIRECT_INVALID",
-      `${from.href} redirects to ${target.href}, which is not an http:// or https:// URL, so Studio does not follow it.`,
+      `${namedUrl(from)} redirects to ${namedUrl(target)}, which is not an http:// or https:// URL, so Studio does not follow it.`,
       { url: asked },
     );
   }

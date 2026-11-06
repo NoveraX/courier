@@ -330,3 +330,55 @@ describe("fetchSpec", () => {
     });
   });
 });
+
+describe("what fetchSpec says of the address it was given", () => {
+  /* Made up for the test; a URL parser drops a line break inside an address, a reading word by word stops at one. */
+  it.each([
+    ["inside the password", "https://ana:pa\nss-made-up-77@api.test/openapi.json"],
+    ["inside the user", "https://an\na:pw-made-up-77@api.test/openapi.json"],
+  ])(
+    "names an address with a line break %s as parsed, without its user or password",
+    async (_, address) => {
+      const refusal = await fetchSpec(address, NOTHING_LISTED).catch((err: unknown) => err);
+
+      expect(refusal).toMatchObject({
+        code: "SPEC_CREDENTIALS_IN_URL",
+        message: expect.stringMatching(
+          /^https:\/\/api\.test\/openapi\.json carries a user or a password/,
+        ),
+        context: { url: "https://api.test/openapi.json" },
+      });
+      expect(String((refusal as Error).message)).not.toMatch(/made-up-77|ana|an\n|\n/);
+    },
+  );
+
+  it("names no address it cannot parse, and keeps none of the parser's error", async () => {
+    const address = "https://ana:pw-made-up-77@api.test:99999/openapi.json";
+
+    const refusal = await fetchSpec(address, NOTHING_LISTED).catch((err: unknown) => err);
+
+    expect(refusal).toMatchObject({
+      code: "SPEC_URL_INVALID",
+      message: "The address is not a URL.",
+    });
+    expect((refusal as Error).cause).toBeUndefined();
+    expect(JSON.stringify(refusal, Object.getOwnPropertyNames(refusal))).not.toContain(
+      "made-up-77",
+    );
+  });
+
+  it("names the address it gave up on as parsed, a key a line break splits cut whole", async () => {
+    const base = await serve((path) => ({ status: 302, location: `${path}x` }));
+
+    const refusal = await fetchSpec(
+      `${base}/spec.json?api_key=k3y\nmade-up-5150`,
+      NOTHING_LISTED,
+    ).catch((err: unknown) => err);
+
+    expect(refusal).toMatchObject({
+      code: "SPEC_REDIRECTS",
+      message: `${base}/spec.json?api_key=[redacted] redirects more than 5 times.`,
+    });
+    expect((refusal as Error).message).not.toContain("made-up-5150");
+  });
+});

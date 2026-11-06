@@ -14,8 +14,8 @@
  *    Safari 15.4, Chrome 97, Firefox 104 — nor one a page served over plain
  *    HTTP lacks, is called where its module does not check for it first.
  *
- * And the direct caller, built for Node, an edge runtime and React Native,
- * takes those modules as they are, never the browser's stand-ins; what
+ * And the core, built for Node, an edge runtime and React Native, takes
+ * those modules as they are, never the browser's stand-ins; what
  * Next.js's edge runtime may take of the core — each entry but Node's own —
  * reads no Node API off the global `process` but `process.env`: Next.js's
  * build of a middleware refuses one, or warns of it.
@@ -129,11 +129,13 @@ function breachesOf(esbuild, work, scenario) {
   return breaches;
 }
 
-/* What a server or an app takes in place of the server's own modules: the browser's stand-ins. */
+/* What a server or an app takes in place of the server's own modules: the browser's stand-ins.
+   The root offers both sides, so it reaches every one of those modules. */
+const UNIVERSAL = { name: "the core's root", code: 'export * from "@noverax/courier";' };
+
 function runtimeBreaches(esbuild, work) {
-  const direct = SCENARIOS.find((scenario) => scenario.name === "direct caller");
   return RUNTIMES.flatMap((runtime) => {
-    const { result } = build(esbuild, work, direct, { ...runtime.options, splitting: false });
+    const { result } = build(esbuild, work, UNIVERSAL, { ...runtime.options, splitting: false });
     const { server, browser } = sidesTaken(Object.keys(result.metafile.inputs), SERVER_ONLY);
     const missing = SERVER_ONLY.filter((module) => !server.includes(module));
     return [

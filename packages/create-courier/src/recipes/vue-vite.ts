@@ -14,7 +14,7 @@ const DIR = "src/courier";
 
 function caller(ctx: RecipeContext): RecipeFile {
   const path = `${DIR}/caller.ts`;
-  const content = `import { createCaller } from "@noverax/courier";
+  const content = `import { createCaller } from "@noverax/courier/client";
 
 import { api } from "${importSpecifier(path, `${DIR}/api.ts`, ctx.extension)}";
 

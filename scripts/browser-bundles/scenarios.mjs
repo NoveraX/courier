@@ -24,12 +24,12 @@ export const SCENARIOS = [
   { name: "definitions", code: `${DEFINE}\nconsole.log(api);`, budget: [20.8, 8.1] },
   {
     name: "direct caller",
-    code: `${DEFINE}\nimport { createCaller } from "@noverax/courier";\ncreateCaller(api).users.getAll().then(console.log);`,
+    code: `${DEFINE}\nimport { createCaller } from "@noverax/courier/client";\ncreateCaller(api).users.getAll().then(console.log);`,
     budget: [102.5, 36.1],
   },
   {
     name: "proxy caller with its routes",
-    code: `import { createProxyCaller } from "@noverax/courier";\n${ROUTES}\ncreateProxyCaller(apiRoutes).users.getAll().then(console.log);`,
+    code: `import { createProxyCaller } from "@noverax/courier/client";\n${ROUTES}\ncreateProxyCaller(apiRoutes).users.getAll().then(console.log);`,
     budget: [45.6, 16.5],
   },
   {

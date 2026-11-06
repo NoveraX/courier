@@ -57,13 +57,13 @@ export function proxyCaller(ctx: RecipeContext, dir: string): RecipeFile {
 export const courier = createProxyCaller(`;
   const content =
     ctx.routes === "plugin"
-      ? `import { createProxyCaller } from "@noverax/courier";
+      ? `import { createProxyCaller } from "@noverax/courier/client";
 import { routes } from "@noverax/courier/routes";
 
 ${routesRegister(ctx, path)}
 ${tail}routes.api);
 `
-      : `import { createProxyCaller } from "@noverax/courier";
+      : `import { createProxyCaller } from "@noverax/courier/client";
 
 import { apiRoutes } from "${importSpecifier(path, ROUTES_MODULE, ctx.extension)}";
 

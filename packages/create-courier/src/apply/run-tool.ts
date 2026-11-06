@@ -27,7 +27,8 @@ export interface ToolOptions {
    * Whether it reads the command's standard input — the person at the
    * terminal, or what was piped in. A program whose output is shown does,
    * unless it is a generator run without questions; one whose output is
-   * read does not, unless it is told to.
+   * read does not, unless it is told to. One that reads no terminal runs
+   * in a process group of its own, on POSIX, which a stop takes whole.
    */
   readonly input?: "inherit" | "ignore";
   /** Variables it runs with beside the command's own. */
@@ -73,13 +74,47 @@ export function toolFailure(
   return `${named} failed (exit ${result.status})`;
 }
 
-/* Stop a program and what it started: Windows ends a process tree with taskkill, others take a signal, then a harder one. */
-function stopTree(child: ChildProcess): void {
-  if (child.pid === undefined || child.exitCode !== null) return;
+/*
+ * Whether a program runs in a process group of its own, which a signal
+ * stops whole: on POSIX, one that reads no terminal. One that reads the
+ * person's terminal stays in its group, where the terminal's Ctrl+C
+ * reaches the program and all it started; Windows stops a tree as it is.
+ */
+function ownGroup(options: ToolOptions): boolean {
+  if (process.platform === "win32") return false;
+  const input = options.input ?? (options.output.kind === "show" ? "inherit" : "ignore");
+  return input === "ignore" || process.stdin.isTTY !== true;
+}
+
+/* The signals that stop the process: Ctrl+C at the terminal, and a stop asked of it. */
+const STOPS = ["SIGINT", "SIGTERM"] as const;
+
+/* A signal to a process group, which may be gone with all it held. */
+function signalGroup(pid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(-pid, signal);
+  } catch {
+    /* Nothing of it is left. */
+  }
+}
+
+/*
+ * Stop a program, then harder after a grace: Windows ends its tree with
+ * taskkill; a group of its own takes the signals whole, what the program
+ * started among it; else the program alone takes them.
+ */
+function stopTree(child: ChildProcess, group: boolean): void {
+  const { pid } = child;
+  if (pid === undefined) return;
+  if (group) {
+    signalGroup(pid, "SIGTERM");
+    setTimeout(() => signalGroup(pid, "SIGKILL"), SETUP_LIMITS.killGraceMs).unref();
+    return;
+  }
+  if (child.exitCode !== null) return;
   if (process.platform === "win32") {
-    spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" }).on(
-      "error",
-      () => child.kill(),
+    spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore" }).on("error", () =>
+      child.kill(),
     );
     return;
   }
@@ -99,8 +134,14 @@ function stdioOf(options: ToolOptions): StdioOptions {
 
 /**
  * Run a program in the project, within its time: past it — or once the
- * person cancels — it is stopped with what it started, and the result
- * says why. What it prints is shown as it comes, read a line at a time,
+ * person cancels — it is stopped, and the result says why. A program that
+ * reads no terminal is stopped with all it started: on POSIX it runs in a
+ * process group of its own, which takes the signal, and while it runs the
+ * process's own Ctrl+C or SIGTERM stops the group first, then ends the
+ * process as it would have, unless the run takes the signal itself. One
+ * that reads the person's terminal, an install in it, takes the signal
+ * itself, and npm and its like pass it on to the scripts they run; the
+ * terminal's Ctrl+C reaches all of it. What it prints is shown as it comes, read a line at a time,
  * or kept out of sight with its end kept; nothing it prints is held whole.
  *
  * @param command - The program and its arguments
@@ -126,15 +167,32 @@ export function runTool(command: readonly string[], options: ToolOptions): Promi
       return;
     }
     const env = options.env === undefined ? undefined : { ...process.env, ...options.env };
-    const child = spawn(program, args, { cwd: options.cwd, stdio: stdioOf(options), shell, env });
+    const group = ownGroup(options);
+    const child = spawn(program, args, {
+      cwd: options.cwd,
+      stdio: stdioOf(options),
+      shell,
+      env,
+      detached: group,
+    });
     let stopped: ToolResult["stopped"];
     const stop = (why: NonNullable<ToolResult["stopped"]>) => {
       stopped ??= why;
-      stopTree(child);
+      stopTree(child, group);
     };
     const timer = setTimeout(() => stop("deadline"), options.deadlineMs);
     const onAbort = () => stop("cancelled");
     options.signal?.addEventListener("abort", onAbort, { once: true });
+    /* A group of its own hears no Ctrl+C of the terminal's: a stop the process is asked for stops the group first. */
+    let taken: NodeJS.Signals | undefined;
+    const onStop = STOPS.map((name) => {
+      const listener = () => {
+        taken ??= name;
+        stop("cancelled");
+      };
+      return { name, listener };
+    });
+    if (group) for (const { name, listener } of onStop) process.on(name, listener);
     [child.stdout, child.stderr].forEach((stream, at) => {
       const decoder = new StringDecoder("utf8");
       const reader = readers[at === 0 ? 0 : 1];
@@ -147,6 +205,7 @@ export function runTool(command: readonly string[], options: ToolOptions): Promi
     const settle = () => {
       clearTimeout(timer);
       options.signal?.removeEventListener("abort", onAbort);
+      if (group) for (const { name, listener } of onStop) process.off(name, listener);
     };
     child.on("error", (error) => {
       settle();
@@ -155,6 +214,9 @@ export function runTool(command: readonly string[], options: ToolOptions): Promi
     child.on("close", (status) => {
       settle();
       done({ status: status ?? 1, ...(stopped ? { stopped } : {}), tail: tail() });
+      /* A stop nothing else here takes ends the process, as it would have ended it with no program running. */
+      if (taken !== undefined && process.listenerCount(taken) === 0)
+        process.kill(process.pid, taken);
     });
   });
 }

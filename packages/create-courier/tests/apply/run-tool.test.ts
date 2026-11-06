@@ -12,6 +12,30 @@ function node(script: string): string[] {
 
 const FOREVER = "setInterval(() => {}, 60_000);";
 
+/* A program that starts one that sleeps, says its pid, and sleeps itself. */
+const SPAWNS_SLEEPER = `const { spawn } = require("node:child_process");
+const sleeper = spawn(process.execPath, ["-e", ${JSON.stringify(FOREVER)}], { stdio: "ignore" });
+console.log(sleeper.pid);
+${FOREVER}`;
+
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/* Whether a process is gone within a second of its signal. */
+async function gone(pid: number): Promise<boolean> {
+  for (let waited = 0; waited < 1_000; waited += 50) {
+    if (!alive(pid)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return !alive(pid);
+}
+
 describe("runTool", () => {
   it("reads a program's output a line at a time, both streams, and tells its exit status", async () => {
     const lines: string[] = [];
@@ -78,6 +102,70 @@ describe("runTool", () => {
     expect(result.stopped).toBe("cancelled");
     expect(late).toEqual({ status: 1, stopped: "cancelled", tail: "" });
   });
+
+  it.skipIf(process.platform === "win32")(
+    "stops what a program started too, past its time and once the person cancels",
+    async () => {
+      const started: number[] = [];
+      const run = (options: { deadlineMs: number; signal?: AbortSignal }, cancel?: () => void) =>
+        runTool(node(SPAWNS_SLEEPER), {
+          cwd: process.cwd(),
+          output: {
+            kind: "lines",
+            line: (line) => {
+              started.push(Number(line));
+              cancel?.();
+            },
+          },
+          ...options,
+        });
+      const cancel = new AbortController();
+
+      try {
+        const late = await run({ deadlineMs: 1_000 });
+        const cancelled = await run({ deadlineMs: 30_000, signal: cancel.signal }, () =>
+          cancel.abort(),
+        );
+
+        expect([late.stopped, cancelled.stopped]).toEqual(["deadline", "cancelled"]);
+        expect(started).toHaveLength(2);
+        expect(await Promise.all(started.map(gone))).toEqual([true, true]);
+      } finally {
+        for (const pid of started) if (alive(pid)) process.kill(pid, "SIGKILL");
+      }
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "stops a program and all it started when the process is asked to stop, the run taking the signal",
+    async () => {
+      const started: number[] = [];
+      /* The run's own listener, as a transaction's: with it, the stop is the run's to end. */
+      const ours = () => undefined;
+      process.on("SIGTERM", ours);
+
+      try {
+        const result = await runTool(node(SPAWNS_SLEEPER), {
+          cwd: process.cwd(),
+          output: {
+            kind: "lines",
+            line: (line) => {
+              started.push(Number(line));
+              process.emit("SIGTERM");
+            },
+          },
+          deadlineMs: 30_000,
+        });
+
+        expect(result.stopped).toBe("cancelled");
+        expect(process.listenerCount("SIGTERM")).toBe(1);
+        expect(await Promise.all(started.map(gone))).toEqual([true]);
+      } finally {
+        process.off("SIGTERM", ours);
+        for (const pid of started) if (alive(pid)) process.kill(pid, "SIGKILL");
+      }
+    },
+  );
 
   it("shows a program's output on standard error where standard output carries the JSON document", () => {
     const runner = fileURLToPath(new URL("../../src/apply/run-tool.ts", import.meta.url));

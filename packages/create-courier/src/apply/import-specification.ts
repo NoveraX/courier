@@ -57,7 +57,8 @@ export async function importSpecification(
   /* Each line is shown where it would show, and read for a server that refused to answer. */
   const result = await runTool([process.execPath, cli, ...args], {
     cwd: process.cwd(),
-    input: "inherit",
+    /* A specification piped in is read from standard input; any other leaves it alone. */
+    input: spec === "-" ? "inherit" : "ignore",
     output: {
       kind: "lines",
       line: (line, stream) => {

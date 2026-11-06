@@ -1,16 +1,11 @@
-import { isNode, nameOf, walk } from "../codemod/ast";
+import { nameOf, walk } from "../codemod/ast";
 import { boundImport } from "../codemod/imported-calls";
+import { keyOf } from "../codemod/literals";
 import type { Finding, Migration } from "../migration";
 
 const CONFIG = new Set(["@noverax/courier/config"]);
 const PIN_REFUSED =
   "Studio hashes a specification that holds a file's bytes anew, so it refuses a pin of one with 409 SPEC_PIN_MISMATCH: import the specification again, then pin the hash the error names";
-
-/* A key's name, as an identifier or as a string. */
-function keyOf(key: unknown): string | undefined {
-  if (isNode(key) && key.type === "Literal" && typeof key.value === "string") return key.value;
-  return nameOf(key);
-}
 
 /**
  * 0.5.0: Studio's parser marks a string that holds a file's bytes, so the

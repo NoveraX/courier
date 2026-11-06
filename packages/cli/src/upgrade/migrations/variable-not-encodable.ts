@@ -1,6 +1,6 @@
-import { isRecord } from "../../util/is-record";
-import { type AstNode, isNode, nameOf, walk } from "../codemod/ast";
+import { type AstNode, nameOf, walk } from "../codemod/ast";
 import { textOf } from "../codemod/imported-calls";
+import { stringOf } from "../codemod/literals";
 import type { Finding, Migration, TextEdit } from "../migration";
 
 const OLD = "PROXY_VARIABLE_NOT_SERIALIZABLE";
@@ -17,16 +17,6 @@ const KEYED = new Set([
   "TSAbstractMethodDefinition",
 ]);
 const RENAME_FIELD = `${OLD} is ${NEW} now, from a direct call and a proxy call alike: a field named for it is renamed with every read of it`;
-
-/* The text of a string, or of a template with nothing put in it. */
-function stringOf(node: AstNode): string | undefined {
-  if (node.type === "Literal") return typeof node.value === "string" ? node.value : undefined;
-  if (node.type !== "TemplateLiteral" || !Array.isArray(node.quasis)) return undefined;
-  if (!Array.isArray(node.expressions) || node.expressions.length > 0) return undefined;
-  const [quasi] = node.quasis;
-  const cooked = isNode(quasi) && isRecord(quasi.value) ? quasi.value.cooked : undefined;
-  return typeof cooked === "string" ? cooked : undefined;
-}
 
 /* Whether a node names a field where it is: a key, a member read by it, an enum's member. */
 function namesField(parent: AstNode | undefined, key: string): boolean {

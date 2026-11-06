@@ -171,6 +171,16 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 
 <br />
 
+## Docs for your editor's agent
+
+```bash
+npx @noverax/create-courier --agents-md
+```
+
+Installs `@noverax/courier-docs`, the docs of the Courier you install, and writes Courier's block into `AGENTS.md`, which points your editor's agent at them in `node_modules`: a new file, the block at the end of yours, or the block brought up to date between its markers, nothing else in the file changed. A file that is a link, larger than 1 MiB or whose markers are repeated is left as it is, and the plan names what to add. `npx @noverax/courier-cli setup --agents-md` does the same in a project set up already. See [Create Courier](https://courier.noverax.cloud/docs/create-courier#docs-for-your-editors-agent).
+
+<br />
+
 ## Options
 
 | Option | |
@@ -183,6 +193,7 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 | `--no-studio` | Leave Studio out, and with it the example's mock, which Studio runs |
 | `--no-mocks` | Leave the example's mock out |
 | `--mcp` | Offer the API's reads to AI agents in your editor |
+| `--agents-md` | Point your editor's agent at the docs of the Courier you install: Courier's block in `AGENTS.md`, and `@noverax/courier-docs` |
 | `--routes <mode>` | `plugin`: pages take their routes from Courier's plugin for the app's build; `file`: from `courier.routes.ts` (default: `plugin`, or `file` where the project keeps one) |
 | `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |
 | `--no-install` | Write the files and name the install commands |
@@ -191,7 +202,7 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 | `--dry-run` | Show the plan, and change nothing |
 | `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing |
 
-In a terminal it asks first, each question with the answer it takes on Enter: your API — the example, a specification to import, or none yet — Studio, the example's mock, agents over MCP, and where pages take their routes from, where there is a choice. Each option above answers its question.
+In a terminal it asks first, each question with the answer it takes on Enter: your API — the example, a specification to import, or none yet — Studio, the example's mock, agents over MCP, the docs for your editor's agent, no unless you say so, and where pages take their routes from, where there is a choice. Each option above answers its question.
 
 Run without a terminal to answer — in CI, by an agent — it asks nothing, takes those answers, and changes nothing unless `--yes` is passed, and with `--yes` it leaves a project whose changes git has not committed as it is, unless `--allow-dirty` is passed too.
 

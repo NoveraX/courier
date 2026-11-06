@@ -12,8 +12,9 @@ import {
   type PackageManagerName,
   packageManager,
 } from "../project/package-manager";
+import { setupChoices } from "../questions/setup-choices";
+import { isRoutesFramework } from "../recipes/edits/framework-routes";
 import type { SetupIO } from "../setup-io";
-import { wantsMcp } from "../wants-mcp";
 import { generatorFor } from "./generators";
 import { prepareTemplate } from "./prepare-template";
 
@@ -79,7 +80,10 @@ export async function createProject(root: string, run: CreateRun, io: SetupIO): 
   const name = packageNameOf(root);
   const manager = packageManager(managerName(run));
   const framework = await frameworkToCreate(run, io);
-  const mcp = await wantsMcp(run, io);
+  const choices = await setupChoices(run, io, {
+    configured: false,
+    routes: isRoutesFramework(framework.id),
+  });
   const generator = generatorFor(framework.id, name, manager.name);
   const how = generator
     ? `npx --yes ${generator.args.join(" ")}`
@@ -111,7 +115,12 @@ export async function createProject(root: string, run: CreateRun, io: SetupIO): 
       ...run,
       framework: framework.id,
       "package-manager": manager.name,
-      mcp,
+      example: choices.example,
+      openapi: choices.openapi,
+      studio: choices.studio,
+      mocks: choices.mocks,
+      mcp: choices.mcp,
+      routes: choices.routes,
       yes: true,
       fresh: true,
     },

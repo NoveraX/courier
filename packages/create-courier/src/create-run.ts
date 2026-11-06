@@ -3,6 +3,8 @@ export interface CreateRun {
   /** The project's folder, or the new project's to create. */
   dir?: string | undefined;
   framework?: string | undefined;
+  /** The example API, with a page that calls it: `--no-example` sets Courier up without an API yet. */
+  example?: boolean | undefined;
   openapi?: string | undefined;
   name?: string | undefined;
   studio?: boolean | undefined;

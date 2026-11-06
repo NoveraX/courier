@@ -33,6 +33,25 @@ describe("checkRun", () => {
     expect(() => checkRun({ studio: false, mocks: false })).not.toThrow();
   });
 
+  it("refuses the example beside an import, which takes its place, and the mock without the example", () => {
+    expect(() => checkRun({ example: true, openapi: "https://example.com/openapi.json" })).toThrow(
+      "--example adds the example API, and --openapi imports yours in its place: give one of the two",
+    );
+    expect(() => checkRun({ example: false, mocks: true })).toThrow(
+      "--mocks adds the example's mock: leave out --no-example",
+    );
+    expect(() => checkRun({ example: false })).not.toThrow();
+  });
+
+  it("refuses a URL that is none, and one read otherwise than over HTTP", () => {
+    expect(() => checkRun({ openapi: "https://" })).toThrow(
+      "--openapi: no URL can be read from https://",
+    );
+    expect(() => checkRun({ openapi: "ftp://example.com/openapi.json" })).toThrow(
+      "--openapi: a URL to import from starts with https:// or http://",
+    );
+  });
+
   it("refuses a specification file that is not there, naming where it looked", () => {
     expect(() => checkRun({ openapi: "./no-such-spec.json" })).toThrow(
       new Error(

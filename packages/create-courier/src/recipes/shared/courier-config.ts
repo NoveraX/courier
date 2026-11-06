@@ -4,6 +4,7 @@ import { STUDIO_DEFAULT_PORT } from "../../project/ports";
 import { importSpecifier } from "../import-specifier";
 
 import type { RecipeContext, RecipeFile } from "../recipe-types";
+import { addsExample } from "./wired";
 
 /** How the config and the mocks name the example API: its module's `api`, or one `createApi` builds. */
 export interface ExampleSource {
@@ -110,16 +111,15 @@ export function courierConfig(
     path === "courier.config.ts"
       ? "lists your APIs for the app, Studio and agents"
       : "lists your APIs: the server registers them from here";
-  const sources =
-    ctx.choices.openapi !== undefined
-      ? "{}"
-      : `{ ${source.name === "api" ? "api" : `api: ${source.expression}`} }`;
-  const example =
-    ctx.choices.openapi !== undefined
-      ? ""
-      : `\nimport { ${source.name} } from "${importSpecifier(path, api, ctx.extension)}";\n`;
+  const example = addsExample(ctx);
+  const sources = example
+    ? `{ ${source.name === "api" ? "api" : `api: ${source.expression}`} }`
+    : "{}";
+  const imported = example
+    ? `\nimport { ${source.name} } from "${importSpecifier(path, api, ctx.extension)}";\n`
+    : "";
   const content = `import { defineConfig } from "@noverax/courier/config";
-${example}
+${imported}
 ${listComment(path)}
 export default defineConfig({
   sources: ${sources},${studioBlock(ctx)}${agentsBlock(ctx)}

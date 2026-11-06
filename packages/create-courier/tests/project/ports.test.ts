@@ -8,7 +8,7 @@ import { projectWith, removeProjects } from "../recipes/project-fixture";
 
 afterAll(removeProjects);
 
-const CHOICES = { studio: true, mocks: true, mcp: false };
+const CHOICES = { example: true, studio: true, mocks: true, mcp: false };
 
 describe("portsOf", () => {
   it("keeps the ports a project set up before names in Courier's files", async () => {

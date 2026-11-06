@@ -15,7 +15,9 @@ Run it in the project's folder:
   ]}
 />
 
-It prints the plan and asks before it changes anything:
+In a terminal it asks first, each question with the answer it takes on Enter: your API — the example, a specification to import by its URL or file, or none yet; Studio, which an import needs; the example's mock, which Studio runs; whether to offer the API's reads to [AI agents](#ai-agents), no unless you say so; and, where your framework has Courier's plugin and the project writes no routes module, where pages take their routes from. A flag answers each: `--example` or `--no-example`, `--openapi`, `--studio` or `--no-studio`, `--mocks` or `--no-mocks`, `--mcp` or `--no-mcp`, `--routes`. With `--yes`, `--dry-run` or `--json`, or without a terminal, it asks nothing, and sets up the example, Studio and its mock, without agents, the routes from the plugin.
+
+Then it prints the plan, and asks before it changes anything:
 
 ```text
 Set Courier up in shop (Next.js 16.4.0, npm)
@@ -60,7 +62,7 @@ Point it at a folder that does not exist yet, and name the framework:
 npx @noverax/create-courier shop --framework next
 ```
 
-It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages with your package manager, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, and whether to offer the API to [AI agents](#ai-agents), all before it makes anything.
+It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages with your package manager, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, then the setup's questions, all before it makes anything.
 
 A project it creates is moved to TypeScript 6 where its template came with an older one. A project you already have keeps the TypeScript it has, and the plan says how to move when you are ready: the command to run, and what TypeScript 6 deprecates that your `tsconfig.json` sets — `moduleResolution: "node"`, `baseUrl`, `downlevelIteration` — with what to write instead. Courier's entries resolve under `"moduleResolution": "node"` meanwhile; see [an existing project](/docs/installation#an-existing-project).
 
@@ -100,7 +102,7 @@ Every setup in a project without Courier adds `courier.config.ts`, the list of y
 npx @noverax/create-courier --openapi https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. See [Import an API](/docs/studio/import-api).
+Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. In a terminal, pick it as your API and give its URL or file: a URL that is none, or a file that is not there, is asked for again. See [Import an API](/docs/studio/import-api).
 
 Behind a corporate proxy, npm installs through the proxy its own settings or `HTTPS_PROXY` name, and the specification is fetched through it once `NODE_USE_ENV_PROXY=1` is set — see [Proxies & Certificates](/docs/advanced/proxies-and-certificates#create-courier).
 
@@ -142,6 +144,7 @@ With `--json` the command asks nothing, and writes one JSON document to standard
 |---|---|
 | `[dir]` | The project's folder, or a new one to create (default: the working directory) |
 | `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
+| `--no-example` | Set Courier up with no API yet: no example API, page, mock or hooks. `--example` beside `--openapi` is refused |
 | `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
 | `--name <name>` | The imported API's name (default: from the specification) |
 | `--no-studio` | Leave Studio out, and with it the example's mock, which Studio runs |

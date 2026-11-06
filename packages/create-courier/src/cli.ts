@@ -40,6 +40,11 @@ const ARGS = {
     valueHint: "name",
     description: `${FRAMEWORKS.map((framework) => framework.id).join(", ")} (default: found in package.json)`,
   },
+  example: {
+    type: "boolean",
+    description:
+      "Add an example API with a page that calls it; --no-example to set Courier up with no API yet",
+  },
   openapi: {
     type: "string",
     valueHint: "spec",

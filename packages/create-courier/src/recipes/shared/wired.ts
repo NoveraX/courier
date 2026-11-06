@@ -4,8 +4,8 @@ import type { ManualStep, RecipeContext, RecipeFile } from "../recipe-types";
 
 /**
  * Whether the setup adds the example — its API, page, mock and hooks:
- * not with a specification to import in its place, nor in a project whose
- * config declares APIs already.
+ * not where the person has no API yet, nor with a specification to import
+ * in its place, nor in a project whose config declares APIs already.
  *
  * @param ctx - The project, and what is set up in it
  * @returns Whether it does
@@ -15,7 +15,7 @@ import type { ManualStep, RecipeContext, RecipeFile } from "../recipe-types";
  * ```
  */
 export function addsExample(ctx: Pick<RecipeContext, "choices" | "configured">): boolean {
-  return ctx.choices.openapi === undefined && ctx.configured === undefined;
+  return ctx.choices.example && ctx.choices.openapi === undefined && ctx.configured === undefined;
 }
 
 /**

@@ -75,8 +75,9 @@ export async function applyPlan(
       afterWrites: installing
         ? async (signal) => {
             await prepare(ctx, plan, io.report, signal);
-            if (run.openapi !== undefined)
-              await importSpecification(root, run.openapi, run.name, signal, io.toolOutput);
+            const { openapi, name } = ctx.choices;
+            if (openapi !== undefined)
+              await importSpecification(root, openapi, name, signal, io.toolOutput);
           }
         : undefined,
     },

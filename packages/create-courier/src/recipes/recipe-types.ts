@@ -4,6 +4,8 @@ import type { Project } from "../project/read-project";
 
 /** What the person asked the command to set up. */
 export interface SetupChoices {
+  /** The example API, with a page that calls it, its query hooks and mock: not beside an import, nor where the person has none yet. */
+  readonly example: boolean;
   /** Studio: its package, the app's connection to it in development, and a script that starts it. */
   readonly studio: boolean;
   /** The example API's mock, which Studio runs, so the app answers before it has a backend. */

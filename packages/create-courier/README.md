@@ -102,7 +102,7 @@ Point it at a folder that does not exist yet, and name the framework:
 npx @noverax/create-courier shop --framework next
 ```
 
-It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, and whether to offer the API to AI agents over MCP, all before it makes anything.
+It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, then the setup's questions, all before it makes anything.
 
 <br />
 
@@ -177,9 +177,10 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 |---|---|
 | `[dir]` | The project's folder, or a new one to create (default: the working directory) |
 | `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
+| `--no-example` | Set Courier up with no API yet: no example API, page, mock or hooks |
 | `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
 | `--name <name>` | The imported API's name (default: from the specification) |
-| `--no-studio` | Leave Studio out |
+| `--no-studio` | Leave Studio out, and with it the example's mock, which Studio runs |
 | `--no-mocks` | Leave the example's mock out |
 | `--mcp` | Offer the API's reads to AI agents in your editor |
 | `--routes <mode>` | `plugin`: pages take their routes from Courier's plugin for the app's build; `file`: from `courier.routes.ts` (default: `plugin`, or `file` where the project keeps one) |
@@ -190,7 +191,9 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 | `--dry-run` | Show the plan, and change nothing |
 | `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing |
 
-Run without a terminal to answer — in CI, by an agent — it changes nothing unless `--yes` is passed, and with `--yes` it leaves a project whose changes git has not committed as it is, unless `--allow-dirty` is passed too.
+In a terminal it asks first, each question with the answer it takes on Enter: your API — the example, a specification to import, or none yet — Studio, the example's mock, agents over MCP, and where pages take their routes from, where there is a choice. Each option above answers its question.
+
+Run without a terminal to answer — in CI, by an agent — it asks nothing, takes those answers, and changes nothing unless `--yes` is passed, and with `--yes` it leaves a project whose changes git has not committed as it is, unless `--allow-dirty` is passed too.
 
 <br />
 

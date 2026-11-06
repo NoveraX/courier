@@ -12,11 +12,11 @@ import { importExtension } from "./project/module-style";
 import { managerFor } from "./project/package-manager";
 import { portsOf } from "./project/ports";
 import { readProject } from "./project/read-project";
-import type { Recipe, RecipeContext, RecipeFile, SetupChoices } from "./recipes/recipe-types";
+import { setupChoices } from "./questions/setup-choices";
+import type { Recipe, RecipeContext, RecipeFile } from "./recipes/recipe-types";
 import { addsMock } from "./recipes/shared/wired";
-import { routesAsked, routesModeOf } from "./routes-mode";
+import { routesChoice, routesModeOf } from "./routes-mode";
 import type { SetupIO } from "./setup-io";
-import { wantsMcp } from "./wants-mcp";
 
 /* What a plan that changes nothing says: what is left to the person is listed above it. */
 function doneLine(plan: Plan, configured: boolean): string {
@@ -38,18 +38,6 @@ function exampleFiles(
   if (ctx.configured === undefined) return [];
   const choices = { ...ctx.choices, studio: true, mocks: true };
   return framework.recipe({ ...ctx, configured: undefined, choices }).files;
-}
-
-async function choicesOf(run: CreateRun, io: SetupIO): Promise<SetupChoices> {
-  const mcp = await wantsMcp(run, io);
-  return {
-    studio: run.studio !== false,
-    mocks: run.mocks !== false,
-    mcp,
-    openapi: run.openapi,
-    name: run.name,
-    routes: routesAsked(run.routes),
-  };
 }
 
 /**
@@ -77,8 +65,12 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
   const framework = frameworkOf(project, run.framework);
   const manager = managerFor(root, run["package-manager"]);
   const version = project.version(framework.marker);
-  const choices = await choicesOf(run, io);
   const configured = configuredSources(project);
+  const choices = await setupChoices(run, io, {
+    configured: configured !== undefined,
+    /* A project set up already keeps where its pages take their routes from. */
+    routes: configured === undefined && routesChoice(project, framework),
+  });
   const ports = await portsOf(project, choices, addsMock({ choices, configured }));
   const ctx: RecipeContext = {
     project,
@@ -97,7 +89,7 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
   /* A project this run created has no changes of the person's for the setup's to be mixed with. */
   const git = run.fresh === true ? undefined : await gitState(root);
   io.report.plan({ title, plan, configured, git });
-  if (!changesAnything(plan) && run.openapi === undefined) {
+  if (!changesAnything(plan) && choices.openapi === undefined) {
     const said = doneLine(plan, configured !== undefined);
     io.report.end({ kind: "unchanged", said, next: plan.next });
     return 0;

@@ -155,6 +155,19 @@ describe("nextRecipe", () => {
     expect(step?.lines.at(-1)).toBe("};");
   });
 
+  it("adds no example where the person has no API yet: a config that lists none, and no page, mock or hooks", () => {
+    const recipe = nextRecipe(contextOf(app(), "next", { example: false }));
+    const paths = recipe.files.map((file) => file.path);
+
+    expect(paths).not.toContain("src/courier/api.ts");
+    expect(paths).not.toContain("courier.mocks.ts");
+    expect(paths).not.toContain("src/app/courier/page.tsx");
+    expect(paths).not.toContain("src/courier/query.ts");
+    expect(recipe.files.find((file) => file.path === "courier.config.ts")?.content).toContain(
+      "sources: {},",
+    );
+  });
+
   it("adds neither Studio's files nor its script without Studio", () => {
     const recipe = nextRecipe(contextOf(app(), "next", { studio: false }));
 

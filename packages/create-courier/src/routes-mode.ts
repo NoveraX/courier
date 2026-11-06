@@ -18,6 +18,23 @@ function keepsRoutesFile(project: Project): boolean {
 }
 
 /**
+ * Whether pages may take their routes from either place, for the person
+ * to choose: a framework Courier has a plugin for, in a project that
+ * writes no routes module yet.
+ *
+ * @param project - The project
+ * @param framework - Its framework
+ * @returns Whether the choice is the person's
+ * @example
+ * ```ts
+ * routesChoice(project, frameworkById("express")); // false: its pages take them from courier.routes.ts
+ * ```
+ */
+export function routesChoice(project: Project, framework: Framework): boolean {
+  return isRoutesFramework(framework.id) && !keepsRoutesFile(project);
+}
+
+/**
  * What `--routes` asks for: `plugin`, `file`, or nothing.
  *
  * @param asked - The value the command line gave, if any

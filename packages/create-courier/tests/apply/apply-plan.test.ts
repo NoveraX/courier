@@ -56,9 +56,13 @@ function tree(root: string, dir = ""): Record<string, string> {
   return found;
 }
 
-/* Plan the React app's setup, then carry it out with the package manager given. */
+/* Plan the React app's setup — an import in place of the example, where the run names one — then carry it out with the package manager given. */
 async function setUp(root: string, behaviour: string, run: CreateRun = {}, before?: () => void) {
-  const ctx = { ...contextOf(root, "vite"), manager: fakeManager(behaviour) };
+  const { openapi } = run;
+  const ctx = {
+    ...contextOf(root, "vite", openapi === undefined ? {} : { openapi }),
+    manager: fakeManager(behaviour),
+  };
   const plan = buildPlan(ctx, reactViteRecipe(ctx));
   before?.();
   const ends: SetupEnd[] = [];

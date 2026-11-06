@@ -58,30 +58,36 @@ export const k = endpoint.via((http) => { if (x) return http.get("k"); return; }
     expect(kept.findings).toEqual([]);
   });
 
-  it("finds an endpoint that names no kind where its closure calls a reading verb, or verbs of both kinds", () => {
+  it("declares the write 0.4 took an endpoint for whose closure calls verbs of both kinds, and finds one that names no kind and reads now", () => {
     const { text, findings } = migrateWith(
       VIA_KIND,
       `${HEAD}
 export const read = endpoint.via((http) => http.get("a"));
-export const both = endpoint.variables<V>().via((http, v) => (v.long ? http.post("s", v) : http.get("s", v)));
+export const both = endpoint.variables<V>().via((http, v) => (v.long ? http.post("s", v) : http.get("s", v))).response<R>();
 export const write = endpoint.via((http, v) => http.post("b", v));
 export const named = endpoint.via((http) => http.get("c")).writes();
 export const group = defineGroup({ prefix: "x", endpoints: { d: endpoint.via((http) => http.options("d")) } });
 const base = endpoint.via((http) => http.get("e"));
 export const later = base.reads();
 export const wrapped = wrap(endpoint.via((http) => http.get("f")));
+const mixed = endpoint.via((http, v) => (v.long ? http.post("g", v) : http.get("g", v)));
+export const declared = mixed.reads();
 `,
     );
 
-    expect(text).not.toContain(".reads().");
+    expect(text).toContain(
+      '.via((http, v) => (v.long ? http.post("s", v) : http.get("s", v))).writes().response<R>();',
+    );
+    expect(text).toContain(
+      'const mixed = endpoint.via((http, v) => (v.long ? http.post("g", v) : http.get("g", v)));',
+    );
+    expect(text.match(/\.writes\(\)/g)).toHaveLength(2);
     expect(findings.map((finding) => [finding.line, finding.instead])).toEqual([
       [4, [".via(…).writes()"]],
-      [5, [".via(…).reads()", ".via(…).writes()"]],
       [8, [".via(…).writes()"]],
     ]);
     expect(findings[0]?.what).toMatch(
       /^its closure calls a reading verb, so the endpoint reads, where 0.4 took it for a write/,
     );
-    expect(findings[1]?.what).toMatch(/a write until now, names its kind/);
   });
 });

@@ -37,6 +37,7 @@ export const users = defineGroup({
     get: endpoint.variables<{ id: string }>().via(byId).response<User>(),
     report: endpoint.variables<{ year: number }>().via((http, { year }) => http.get(http.path\`reports/\${year}\`)).reads(),
     export: endpoint.via((http) => http.get("export")).retry({ retryOn: [0] }),
+    search: endpoint.via((http, v) => (v.long ? http.post("search", v) : http.get("search", v))),
   },
 });
 
@@ -83,6 +84,7 @@ describe("every migration together", () => {
       `report: endpoint.variables<{ year: number }>().via((http, { year }) => http.get(http.path\`reports/\${year}\`)),`,
     );
     expect(after).toContain('.retry({ retryOn: ["network", "timeout"] })');
+    expect(after).toContain('http.get("search", v))).writes(),');
     expect(after).toContain('error.code === "VARIABLE_NOT_ENCODABLE"');
     const reads = (line: number) =>
       expect.stringMatching(

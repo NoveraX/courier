@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -35,6 +35,38 @@ function repository(files: Readonly<Record<string, string>>): string {
 }
 
 describe("gitState", () => {
+  it.skipIf(process.platform === "win32")(
+    "runs no fsmonitor the repository's config names",
+    async () => {
+      const root = repository({ "package.json": "{}\n" });
+      const ran = join(root, ".git", "fsmonitor-ran");
+      const hook = join(root, ".git", "fsmonitor-hook");
+      writeFileSync(hook, `#!/bin/sh\ntouch "${ran}"\n`, { mode: 0o755 });
+      git(root, "config", "core.fsmonitor", hook);
+
+      expect(await gitState(root)).toEqual({ kind: "clean" });
+      expect(existsSync(ran)).toBe(false);
+    },
+  );
+
+  it("tells a folder outside a repository whatever language git speaks", async () => {
+    const outside = projectWith({ "package.json": "{}\n" });
+    const was = { LANGUAGE: process.env.LANGUAGE, LC_ALL: process.env.LC_ALL };
+    process.env.LANGUAGE = "de";
+    process.env.LC_ALL = "de_DE.UTF-8";
+
+    try {
+      expect(await gitState(outside, "git")).toMatchObject({
+        kind: "unknown",
+        why: "it is not in a git repository, so there is no history to go back to",
+      });
+    } finally {
+      for (const [name, value] of Object.entries(was))
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+    }
+  });
+
   it("is clean where everything is committed", async () => {
     expect(await gitState(repository({ "package.json": "{}\n" }))).toEqual({ kind: "clean" });
   });

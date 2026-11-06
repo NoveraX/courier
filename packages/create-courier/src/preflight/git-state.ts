@@ -17,7 +17,10 @@ const PATHS_NAMED = 5;
  * Whether the project has changes git has not committed: its own folder's
  * files, those git does not track among them. git is asked without taking
  * its index's lock — a status another program runs at the same moment is
- * not refused for it — within its time.
+ * not refused for it — within its time; without the fsmonitor a
+ * repository's config may name, so no hook of the repository's runs and
+ * no daemon is left behind; and in the C locale, so that what it says of
+ * a folder outside a repository reads the same in any language.
  *
  * @param root - The project's folder
  * @param git - The program, `git` from the PATH
@@ -30,12 +33,22 @@ const PATHS_NAMED = 5;
 export async function gitState(root: string, git = "git"): Promise<GitState> {
   const paths: string[] = [];
   let count = 0;
-  const command = [git, "-c", "core.quotePath=false", "status", "--porcelain=v1", "--", "."];
+  const command = [
+    git,
+    "-c",
+    "core.quotePath=false",
+    "-c",
+    "core.fsmonitor=false",
+    "status",
+    "--porcelain=v1",
+    "--",
+    ".",
+  ];
   let result: Awaited<ReturnType<typeof runTool>>;
   try {
     result = await runTool(command, {
       cwd: root,
-      env: { GIT_OPTIONAL_LOCKS: "0" },
+      env: { GIT_OPTIONAL_LOCKS: "0", LC_ALL: "C" },
       output: {
         kind: "lines",
         line(line) {

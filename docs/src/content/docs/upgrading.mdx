@@ -179,6 +179,16 @@ An endpoint addressed with `.via()` reads or writes as the verb its closure call
 | A closure typed `HttpProbe<Variables>` — a write | its type no longer says which verb it calls: leave its return type to be inferred, or name the kind with `.reads()` or `.writes()` |
 | A call on which a declared read's closure called `.put()`, `.patch()` or `.del()`, sent and retried as a read | `ConfigurationError` `ENDPOINT_VERB_KIND` before anything is sent; so is a call whose closure calls a verb of the other kind than the one the endpoint was defined with |
 
+## create-courier and courier-cli
+
+`create-courier` and `courier-cli setup` check the project before they change it, and set up the example's mock only with Studio, which runs it — see [Create Courier](/docs/create-courier).
+
+| 0.4 | Now |
+|---|---|
+| `create-courier` on any Node.js 22 | Node.js 22.13 or later, which Studio and its mock need: an older one is refused as the command starts |
+| `--yes` in a project whose changes git has not committed, which went ahead | `create-courier --yes` and `courier-cli setup --yes` change nothing there; `--allow-dirty` goes ahead as before. In a terminal the plan names those changes, and you answer |
+| `--no-studio`, which wrote the example's mock all the same | no mock without Studio, the plan saying why; `--mocks` beside `--no-studio`, `--openapi` or `--no-example` is refused |
+
 ## Related
 
 - [NetworkError, TimeoutError & AbortError](/docs/api/call-errors) — the errors a call rejects with

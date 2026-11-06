@@ -24,6 +24,19 @@ const RECIPE: Recipe = {
 };
 
 describe("buildPlan", () => {
+  it("says the example comes without its mock where Studio is left out, under the plan's title", () => {
+    const root = projectWith({ "package.json": manifest({}), "tsconfig.json": "{}" });
+    const without = buildPlan(contextOf(root, "typescript", { studio: false }), RECIPE);
+    const withStudio = buildPlan(contextOf(root, "typescript"), RECIPE);
+    const said = "The example has no mock without Studio, which runs it: it calls your backend.";
+
+    expect(without.leftOut).toEqual([said]);
+    expect(withStudio.leftOut).toEqual([]);
+    expect(planLines("Set Courier up in app", without, createTerminalStyle(0, false))[1]).toBe(
+      said,
+    );
+  });
+
   it("adds a package the project lists as a peer but has not installed, and says why", () => {
     const root = projectWith({
       "package.json": JSON.stringify({

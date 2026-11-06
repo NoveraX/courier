@@ -53,12 +53,10 @@ const ARGS = {
   },
   studio: {
     type: "boolean",
-    default: true,
     description: "Set Courier Studio up; --no-studio to leave it out",
   },
   mocks: {
     type: "boolean",
-    default: true,
     description: "Run the example API's mock with Studio; --no-mocks to leave it out",
   },
   mcp: {

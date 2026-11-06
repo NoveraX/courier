@@ -5,6 +5,7 @@ import type {
   RecipeContext,
   RecipeFile,
 } from "../recipes/recipe-types";
+import { addsExample } from "../recipes/shared/wired";
 import { scriptsEdit } from "./package-scripts";
 import { packagesOfFiles } from "./packages-of-files";
 import {
@@ -62,6 +63,8 @@ export interface Plan {
   readonly typescript: { readonly from?: string | undefined; readonly to: string } | undefined;
   readonly manual: readonly ManualStep[];
   readonly next: readonly NextStep[];
+  /** What the setup leaves out that the person might look for, and why, a sentence each. */
+  readonly leftOut: readonly string[];
   /** Programs of the project's to run once the packages are installed: they write the types the added files read. */
   readonly prepare: NonNullable<Recipe["prepare"]>;
 }
@@ -124,9 +127,13 @@ export function buildPlan(
       ...(tsconfigStep ? [tsconfigStep] : []),
     ],
     next: recipe.next,
+    leftOut: addsExample(ctx) && !ctx.choices.studio ? [NO_MOCK] : [],
     prepare: recipe.prepare ?? [],
   };
 }
+
+/* Why the example comes without its mock where Studio is left out. */
+const NO_MOCK = "The example has no mock without Studio, which runs it: it calls your backend.";
 
 function unique(specs: readonly string[]): string[] {
   return [...new Set(specs)];

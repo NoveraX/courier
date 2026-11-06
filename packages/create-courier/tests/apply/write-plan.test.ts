@@ -33,6 +33,7 @@ function planOf(edits: readonly PlannedEdit[]): Plan {
     typescript: undefined,
     manual: [],
     next: [],
+    leftOut: [],
     prepare: [],
   };
 }

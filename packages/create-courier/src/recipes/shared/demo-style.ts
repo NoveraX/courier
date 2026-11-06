@@ -20,9 +20,9 @@ export const DEMO_CSS = `.courier-demo { box-sizing: border-box; max-width: 36re
 
 /**
  * The sentence a demo page shows when the API does not answer: start the
- * mock, or name the backend.
+ * mock, or name the backend — only that where the setup adds no mock.
  *
- * @param studio - The command that starts Studio, and with it the mock
+ * @param studio - The command that starts Studio, and with it the mock; none without a mock
  * @param variable - The environment variable the API's address is read from
  * @returns The sentence, after "Could not load users: …."
  * @example
@@ -30,6 +30,8 @@ export const DEMO_CSS = `.courier-demo { box-sizing: border-box; max-width: 36re
  * unreachableHint("npm run studio", "API_URL");
  * ```
  */
-export function unreachableHint(studio: string, variable: string): string {
-  return `Start the mock with <code>${studio}</code>, or set ${variable} to your backend.`;
+export function unreachableHint(studio: string | undefined, variable: string): string {
+  return studio === undefined
+    ? `Set ${variable} to your backend.`
+    : `Start the mock with <code>${studio}</code>, or set ${variable} to your backend.`;
 }

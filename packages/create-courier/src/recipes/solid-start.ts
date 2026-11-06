@@ -10,7 +10,7 @@ import { proxyStart } from "./shared/proxy-start";
 import { proxyScripts, registerModule, sortParts, studioAttach } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
 import { solidDemo } from "./shared/solid-demo";
-import { addsExample, type ServerNeeds } from "./shared/wired";
+import { addsExample, addsMock, type ServerNeeds } from "./shared/wired";
 
 const DIR = "src/courier";
 
@@ -68,7 +68,7 @@ export function solidStartRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
       ...files,
       ...(example
         ? [proxyCaller(ctx, DIR), solidDemo(ctx, "src/routes/courier.tsx", `${DIR}/caller.ts`)]

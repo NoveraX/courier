@@ -13,6 +13,7 @@ import { managerFor } from "./project/package-manager";
 import { portsOf } from "./project/ports";
 import { readProject } from "./project/read-project";
 import type { Recipe, RecipeContext, RecipeFile, SetupChoices } from "./recipes/recipe-types";
+import { addsMock } from "./recipes/shared/wired";
 import { routesAsked, routesModeOf } from "./routes-mode";
 import type { SetupIO } from "./setup-io";
 import { wantsMcp } from "./wants-mcp";
@@ -26,15 +27,16 @@ function doneLine(plan: Plan, configured: boolean): string {
 
 /*
  * The example's files, as the recipe writes them in a project without
- * Courier, for the plan to install what those an earlier setup added
- * need: in a project set up already, the recipe adds no example.
+ * Courier — its mock among them, which Studio runs — for the plan to
+ * install what those an earlier setup added need: in a project set up
+ * already, the recipe adds no example.
  */
 function exampleFiles(
   ctx: RecipeContext,
   framework: { readonly recipe: (ctx: RecipeContext) => Recipe },
 ): readonly RecipeFile[] {
   if (ctx.configured === undefined) return [];
-  const choices = { ...ctx.choices, mocks: true };
+  const choices = { ...ctx.choices, studio: true, mocks: true };
   return framework.recipe({ ...ctx, configured: undefined, choices }).files;
 }
 
@@ -77,7 +79,7 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
   const version = project.version(framework.marker);
   const choices = await choicesOf(run, io);
   const configured = configuredSources(project);
-  const ports = await portsOf(project, choices, choices.openapi === undefined && !configured);
+  const ports = await portsOf(project, choices, addsMock({ choices, configured }));
   const ctx: RecipeContext = {
     project,
     manager,

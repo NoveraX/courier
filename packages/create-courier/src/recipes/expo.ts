@@ -8,7 +8,7 @@ import { expoScreen } from "./shared/expo-screen";
 import { studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
-import { addsExample } from "./shared/wired";
+import { addsExample, addsMock } from "./shared/wired";
 
 /* The app's own folder, `src/` in Expo's template, and the router's pages in it. */
 function layoutOf(ctx: RecipeContext): { dir: string; pages: string } {
@@ -85,7 +85,7 @@ export function expoRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, dir, reach) : []),
       courierConfig(ctx, api, builtSource(ctx)),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, api, builtSource(ctx))] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, api, builtSource(ctx))] : []),
       ...(example
         ? [
             address(ctx, dir),

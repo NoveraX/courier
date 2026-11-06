@@ -3,6 +3,7 @@ import type { RecipeContext, RecipeFile } from "../recipe-types";
 import { DEMO_CSS } from "./demo-style";
 import { ROUTES_MODULE } from "./example-routes";
 import { routesRegister } from "./routes-register";
+import { addsMock } from "./wired";
 
 /** The demo page's words, the same in every framework. */
 export const DEMO_TEXT = {
@@ -72,8 +73,9 @@ ${tail}apiRoutes);
 }
 
 /**
- * The sentence a demo shows when the API does not answer, as plain text
- * with the command in it.
+ * The sentence a demo shows when the API does not answer, as plain text:
+ * start the mock with the command that starts Studio, or name the
+ * backend — only that where the setup adds no mock.
  *
  * @param ctx - The project, and what is set up in it
  * @param variable - The environment variable the API's address is read from
@@ -84,5 +86,7 @@ ${tail}apiRoutes);
  * ```
  */
 export function unreachableText(ctx: RecipeContext, variable: string): string {
-  return `Start the mock with ${ctx.manager.run("studio")}, or set ${variable} to your backend.`;
+  return addsMock(ctx)
+    ? `Start the mock with ${ctx.manager.run("studio")}, or set ${variable} to your backend.`
+    : `Set ${variable} to your backend.`;
 }

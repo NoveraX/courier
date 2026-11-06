@@ -37,6 +37,7 @@ const PLAN: Plan = {
   typescript: undefined,
   manual: [],
   next: [],
+  leftOut: [],
   prepare: [],
 };
 

@@ -24,6 +24,7 @@ const PLAN: Plan = {
   typescript: undefined,
   manual: [],
   next: [{ command: "npm run dev", what: "starts the app" }],
+  leftOut: [],
   prepare: [],
 };
 
@@ -73,6 +74,7 @@ describe("jsonReport", () => {
         },
         manual: [],
         next: [{ command: "npm run dev", what: "starts the app" }],
+        leftOut: [],
         upgrade: null,
       },
       notes: [],

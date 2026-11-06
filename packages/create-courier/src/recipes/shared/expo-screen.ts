@@ -1,6 +1,6 @@
 import { importSpecifier } from "../import-specifier";
 import type { RecipeContext, RecipeFile } from "../recipe-types";
-import { DEMO_TEXT, EMAIL_FROM_NAME } from "./demo-parts";
+import { DEMO_TEXT, EMAIL_FROM_NAME, unreachableText } from "./demo-parts";
 
 /**
  * A screen that shows Courier at work in an Expo app: the users the API
@@ -52,8 +52,7 @@ function Users({ ink }: { ink: string }) {
   if (users.error) {
     return (
       <Text style={styles.alert}>
-        Could not load users: {users.error.message}. Start the mock with ${ctx.manager.run("studio")}, or set
-        EXPO_PUBLIC_API_URL to your backend.
+        Could not load users: {users.error.message}. ${unreachableText(ctx, "EXPO_PUBLIC_API_URL")}
       </Text>
     );
   }

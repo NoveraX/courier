@@ -5,9 +5,10 @@ import type { CreateRun } from "./create-run";
 
 /**
  * Refuse, before anything is asked or changed, what the command line asks
- * for and the command cannot follow: an import without Studio, which runs
- * it; a specification file that is not there; and an API's name with no
- * import to give it to.
+ * for and the command cannot follow: the example's mock without Studio,
+ * which runs it, or beside an import, which takes the example's place; an
+ * import without Studio, which runs it; a specification file that is not
+ * there; and an API's name with no import to give it to.
  *
  * @param run - What the command line asked for
  * @throws {Error} Naming the option to change
@@ -17,12 +18,18 @@ import type { CreateRun } from "./create-run";
  * ```
  */
 export function checkRun(run: CreateRun): void {
+  if (run.mocks === true && run.studio === false)
+    throw new Error("--mocks adds the example's mock, which Studio runs: leave out --no-studio");
   const { openapi } = run;
   if (openapi === undefined) {
     if (run.name !== undefined)
       throw new Error("--name names the API --openapi imports: give the two together");
     return;
   }
+  if (run.mocks === true)
+    throw new Error(
+      "--mocks adds the example's mock, and --openapi imports your API in the example's place: leave out --mocks",
+    );
   if (run.studio === false)
     throw new Error("--openapi imports with Studio's command: leave out --no-studio");
   const local = !/^https?:\/\//i.test(openapi) && openapi !== "-";

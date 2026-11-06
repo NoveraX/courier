@@ -10,7 +10,14 @@ import { courierPackages } from "./shared/packages";
 import { proxyScripts, sortParts } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
 import { vueDemo } from "./shared/vue-demo";
-import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
+import {
+  addsExample,
+  addsMock,
+  needsWhat,
+  type ServerNeeds,
+  servingFile,
+  startFile,
+} from "./shared/wired";
 
 /*
  * Nuxt 4 keeps the app in `app/` and code both sides use in `shared/`, which
@@ -128,7 +135,7 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, dir, portableServerReach(ctx)) : []),
       courierConfig(ctx, `${dir}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
       ...(plugin && "content" in plugin ? [plugin] : []),
       route,
       ...(example ? [proxyCaller(ctx, dir), vueDemo(ctx, `${app}pages/courier.vue`, caller)] : []),

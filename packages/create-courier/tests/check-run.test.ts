@@ -22,6 +22,17 @@ describe("checkRun", () => {
     );
   });
 
+  it("refuses the example's mock without Studio, which runs it, and beside an import, which takes the example's place", () => {
+    expect(() => checkRun({ mocks: true, studio: false })).toThrow(
+      "--mocks adds the example's mock, which Studio runs: leave out --no-studio",
+    );
+    expect(() => checkRun({ mocks: true, openapi: "https://example.com/openapi.json" })).toThrow(
+      "--mocks adds the example's mock, and --openapi imports your API in the example's place: leave out --mocks",
+    );
+    expect(() => checkRun({ studio: false })).not.toThrow();
+    expect(() => checkRun({ studio: false, mocks: false })).not.toThrow();
+  });
+
   it("refuses a specification file that is not there, naming where it looked", () => {
     expect(() => checkRun({ openapi: "./no-such-spec.json" })).toThrow(
       new Error(

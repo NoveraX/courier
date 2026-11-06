@@ -14,8 +14,24 @@ import type { ManualStep, RecipeContext, RecipeFile } from "../recipe-types";
  * addsExample(ctx); // false where courier.config.ts lists the project's APIs
  * ```
  */
-export function addsExample(ctx: RecipeContext): boolean {
+export function addsExample(ctx: Pick<RecipeContext, "choices" | "configured">): boolean {
   return ctx.choices.openapi === undefined && ctx.configured === undefined;
+}
+
+/**
+ * Whether the setup adds the example's mock: with the example, where
+ * Studio, which runs the mock, is set up, and unless `--no-mocks` leaves
+ * it out.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns Whether it does
+ * @example
+ * ```ts
+ * addsMock(ctx); // false with --no-studio
+ * ```
+ */
+export function addsMock(ctx: Pick<RecipeContext, "choices" | "configured">): boolean {
+  return addsExample(ctx) && ctx.choices.studio && ctx.choices.mocks;
 }
 
 /** What the server's start still lacks, as the project's code reads. */

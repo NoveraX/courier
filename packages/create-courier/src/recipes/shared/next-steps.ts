@@ -3,7 +3,7 @@ import type { ExampleReach } from "./example-api";
 
 import { ROUTES_COMMAND, STUDIO_COMMAND } from "./recipe-parts";
 import { wantsRoutes } from "./wants-routes";
-import { addsExample } from "./wired";
+import { addsMock } from "./wired";
 
 /**
  * The step that starts Studio — and with it the example's mock — where
@@ -18,7 +18,7 @@ import { addsExample } from "./wired";
  */
 export function studioStep(ctx: RecipeContext): NextStep[] {
   if (!ctx.choices.studio) return [];
-  const mock = ctx.choices.mocks && addsExample(ctx);
+  const mock = addsMock(ctx);
   const own = ctx.project.manifest.scripts.studio;
   const kept = own !== undefined && own !== STUDIO_COMMAND;
   const what = `starts Courier Studio on port ${ctx.ports.studio}${mock ? `, and the mock API on port ${ctx.ports.mock}` : ""}${kept ? `; your own studio script is kept as it is` : ""}`;

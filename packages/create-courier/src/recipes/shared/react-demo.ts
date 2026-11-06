@@ -5,6 +5,7 @@ import { DEMO_TEXT } from "./demo-parts";
 import { DEMO_CSS, unreachableHint } from "./demo-style";
 import { ROUTES_MODULE } from "./example-routes";
 import { routesRegister } from "./routes-register";
+import { addsMock } from "./wired";
 
 /**
  * `query.ts`: React Query hooks for the example API, typed from it. Through
@@ -83,7 +84,10 @@ export interface ReactDemoPlace {
  * ```
  */
 export function reactDemo(ctx: RecipeContext, place: ReactDemoPlace): RecipeFile {
-  const hint = unreachableHint(ctx.manager.run("studio"), place.variable);
+  const hint = unreachableHint(
+    addsMock(ctx) ? ctx.manager.run("studio") : undefined,
+    place.variable,
+  );
   /* React 19 moves a <title> rendered anywhere into the document's head. */
   const title =
     (majorOf(ctx.project.version("react")) ?? 19) >= 19

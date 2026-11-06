@@ -9,7 +9,14 @@ import { courierPackages } from "./shared/packages";
 import { proxyScripts, type RecipePart, registerModule, sortParts } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
 import { svelteDemo } from "./shared/svelte-demo";
-import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
+import {
+  addsExample,
+  addsMock,
+  needsWhat,
+  type ServerNeeds,
+  servingFile,
+  startFile,
+} from "./shared/wired";
 
 const DIR = "src/lib/courier";
 
@@ -69,7 +76,7 @@ export function svelteKitRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
       route,
       ...(example
         ? [

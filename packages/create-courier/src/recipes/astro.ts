@@ -10,7 +10,14 @@ import { devStep, routesStep, studioStep, viteReach } from "./shared/next-steps"
 import { courierPackages } from "./shared/packages";
 import { proxyScripts, type RecipePart, registerModule, sortParts } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
-import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
+import {
+  addsExample,
+  addsMock,
+  needsWhat,
+  type ServerNeeds,
+  servingFile,
+  startFile,
+} from "./shared/wired";
 
 const DIR = "src/courier";
 
@@ -103,7 +110,7 @@ export function astroRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
       route,
       ...(example
         ? [proxyCaller(ctx, DIR), astroDemo(ctx, "src/pages/courier.astro", `${DIR}/caller.ts`)]

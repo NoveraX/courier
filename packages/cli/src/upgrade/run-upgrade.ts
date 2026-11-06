@@ -126,6 +126,7 @@ export async function runUpgrade(
     typescript: undefined,
     manual: code?.manual ?? [],
     next: nextSteps(manager),
+    leftOut: [],
     prepare: [],
   };
   const git = await gitState(root);

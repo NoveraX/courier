@@ -3,7 +3,7 @@ import { courierConfig, courierMocks, PLAIN_SOURCE, passOnConfig } from "./couri
 import { exampleApi } from "./example-api";
 import { htmlDemo } from "./html-demo";
 import { portableServerReach } from "./next-steps";
-import { addsExample } from "./wired";
+import { addsExample, addsMock } from "./wired";
 
 /** Where a server keeps Courier's modules, unless it keeps its code at the root. */
 export const SERVER_DIR = "src/courier";
@@ -52,7 +52,7 @@ export function serverFiles(ctx: RecipeContext, dir: string): RecipeFile[] {
     ...(example ? exampleApi(ctx, dir, portableServerReach(ctx)) : []),
     courierConfig(ctx, api, PLAIN_SOURCE, list),
     passOnConfig(ctx, list),
-    ...(example && ctx.choices.mocks ? [courierMocks(ctx, api)] : []),
+    ...(addsMock(ctx) ? [courierMocks(ctx, api)] : []),
     ...(example ? htmlDemo(ctx, dir) : []),
   ];
 }

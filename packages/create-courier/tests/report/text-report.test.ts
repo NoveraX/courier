@@ -14,6 +14,7 @@ const PLAN: Plan = {
   typescript: undefined,
   manual: [{ file: "next.config.ts", what: "Wrap the config", lines: ["withCourier(config)"] }],
   next: [{ command: "npm run dev", what: "starts the app" }],
+  leftOut: [],
   prepare: [],
 };
 

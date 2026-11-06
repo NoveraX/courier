@@ -46,6 +46,7 @@ function planDocument({ title, plan, configured, git, upgrade }: PlanView): Plan
     },
     manual: plan.manual,
     next: plan.next,
+    leftOut: plan.leftOut,
     upgrade: upgrade ?? null,
   };
 }

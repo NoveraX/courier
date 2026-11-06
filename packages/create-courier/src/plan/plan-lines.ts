@@ -140,6 +140,7 @@ export function planLines(
   return [
     style.bold(title),
     ...lead,
+    ...plan.leftOut,
     "",
     ...(plan.files.length > 0 ? ["Files"] : []),
     ...plan.files.map((file) => fileLine(file, width, style)),

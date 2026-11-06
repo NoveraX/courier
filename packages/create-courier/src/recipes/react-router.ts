@@ -17,7 +17,7 @@ import { proxyStart } from "./shared/proxy-start";
 import { reactDemo, reactQuery } from "./shared/react-demo";
 import { proxyScripts, sortParts, studioAttach } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
-import { addsExample, type ServerNeeds } from "./shared/wired";
+import { addsExample, addsMock, type ServerNeeds } from "./shared/wired";
 
 const DIR = "app/courier";
 const ROUTES = "app/routes.ts";
@@ -156,7 +156,7 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, true)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
       ...files,
       ...(example ? [reactQuery(ctx, DIR, "proxy"), reactDemo(ctx, page)] : []),
     ],

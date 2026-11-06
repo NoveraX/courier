@@ -8,7 +8,7 @@ import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { viteDevStep, vitePage } from "./shared/vite-page";
 import { vueDemo } from "./shared/vue-demo";
-import { addsExample } from "./shared/wired";
+import { addsExample, addsMock } from "./shared/wired";
 
 const DIR = "src/courier";
 
@@ -55,7 +55,7 @@ export function vueViteRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, DIR, viteReach(ctx, false)) : []),
       courierConfig(ctx, `${DIR}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${DIR}/api.ts`)] : []),
       ...(example
         ? [
             caller(ctx),

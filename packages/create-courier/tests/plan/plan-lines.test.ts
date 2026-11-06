@@ -15,6 +15,7 @@ function planWith(otherReleases: Plan["otherReleases"]): Plan {
     typescript: undefined,
     manual: [],
     next: [],
+    leftOut: [],
     prepare: [],
   };
 }

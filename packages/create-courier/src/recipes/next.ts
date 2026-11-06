@@ -12,7 +12,14 @@ import { courierPackages } from "./shared/packages";
 import { reactDemo, reactQuery } from "./shared/react-demo";
 import { proxyScripts } from "./shared/recipe-parts";
 import { routesPluginParts } from "./shared/routes-register";
-import { addsExample, needsWhat, type ServerNeeds, servingFile, startFile } from "./shared/wired";
+import {
+  addsExample,
+  addsMock,
+  needsWhat,
+  type ServerNeeds,
+  servingFile,
+  startFile,
+} from "./shared/wired";
 
 /* `src/` when the app router lives there, as create-next-app sets it up by default. */
 function baseOf(ctx: RecipeContext): string {
@@ -140,7 +147,7 @@ export function nextRecipe(ctx: RecipeContext): Recipe {
     files: [
       ...(example ? exampleApi(ctx, dir, serverReach(ctx)) : []),
       courierConfig(ctx, `${dir}/api.ts`),
-      ...(example && ctx.choices.mocks ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
+      ...(addsMock(ctx) ? [courierMocks(ctx, `${dir}/api.ts`)] : []),
       proxy,
       ...(example ? [reactQuery(ctx, dir, "proxy"), reactDemo(ctx, page)] : []),
       ...parts.filter((part): part is RecipeFile => "content" in part),

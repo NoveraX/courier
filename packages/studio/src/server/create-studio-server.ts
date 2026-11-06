@@ -168,8 +168,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
 
   undoUnfinishedImportWrites(root);
-  /* A public demo writes nothing of the project's. */
-  if (!demo) keepAgentRules(root);
+  /* After the start, which it never holds up; a public demo writes nothing of the project's. */
+  if (!demo) setImmediate(keepAgentRules, root);
 
   const http = {
     project,

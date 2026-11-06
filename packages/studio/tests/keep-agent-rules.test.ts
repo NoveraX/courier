@@ -1,10 +1,10 @@
 /**
  * Courier's block in a project's AGENTS.md, as Studio starts: brought up
  * to date where it is there, the rest of the file as it was; a file without
- * it, which is the person's, left alone; and one whose markers repeat left
- * as it is, the log saying why.
+ * it, which is the person's, left alone; and one whose markers repeat, or
+ * that cannot be written, left as it is, one line of the log saying why.
  */
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AGENT_RULES, AGENT_RULES_BEGIN, AGENT_RULES_END } from "@noverax/courier-cli/devkit";
@@ -64,6 +64,30 @@ describe("Courier's block in AGENTS.md as Studio starts", () => {
     keepAgentRules(root);
 
     expect(readFileSync(AGENTS(), "utf8")).toBe(repeated);
-    expect(logged.join("")).toContain(`${AGENTS()} was left as it is: `);
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toContain(`${AGENTS()} was left as it is: `);
   });
+
+  /* A folder that takes no new file: the block is written beside the file and renamed in. Its
+     owner's permissions are what stop the write, which root's would not. */
+  it.skipIf(process.getuid?.() === 0)(
+    "leaves a file it cannot write as it is, and the log says why",
+    () => {
+      writeFileSync(
+        AGENTS(),
+        `${OLD}
+`,
+      );
+      chmodSync(root, 0o555);
+      try {
+        keepAgentRules(root);
+      } finally {
+        chmodSync(root, 0o755);
+      }
+
+      expect(readFileSync(AGENTS(), "utf8")).toBe(`${OLD}\n`);
+      expect(logged).toHaveLength(1);
+      expect(logged[0]).toContain(`${AGENTS()} was left as it is: it could not be written`);
+    },
+  );
 });

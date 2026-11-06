@@ -30,6 +30,7 @@ const planted = {
   ambientSession: vi.fn(),
   relayCookies: vi.fn(),
   forwardedFor: vi.fn(),
+  servesRequest: vi.fn(),
 };
 
 function api() {

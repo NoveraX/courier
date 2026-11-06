@@ -1,8 +1,9 @@
+import type { InProcessRoute } from "../capabilities/in-process-proxy";
 import { serverCapability } from "../capabilities/registry";
 import { assertCancelPrevious } from "../define/assert-cancel-previous";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { layerHeaders } from "../utils/layer-headers";
-import { servesOneUser } from "../utils/serves-one-user";
+import { isOneUsersCall } from "../utils/one-users-call";
 import { assertJsonValue } from "../utils/variables-encoding";
 import { assertCarriable } from "./assert-carriable";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
@@ -50,12 +51,14 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
 
   return (source, options) => {
     const callSignal = options?.signal instanceof AbortSignal ? options.signal : undefined;
+    const inProcess = () => serverCapability("inProcessProxy")?.route(proxyPath, source);
 
     async function send(
       endpoint: string,
       variables: unknown,
       signal: AbortSignal | undefined,
       kind: ProxyEndpointKind | undefined,
+      found?: InProcessRoute,
     ): Promise<unknown> {
       assertCarriable(variables);
       const upload = isFormData(variables) || isRecordUpload(variables);
@@ -64,7 +67,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       /* Found before the call first waits, as some frameworks know the
          request being served only until then. What finding it fails with —
          a render a framework stops — is the call's failure, as it came. */
-      const route = serverCapability("inProcessProxy")?.route(proxyPath, source);
+      const route = found ?? inProcess();
       const served = route ? await route.incoming : undefined;
       // Lazy resolution: in SSR contexts the caller may be constructed in
       // Node where `globalThis.location` is undefined; resolving here guarantees
@@ -143,9 +146,13 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       const own = options?.cancelPrevious;
       assertCancelPrevious(own, "A call");
       const cancels = (own ?? routeCancelPrevious ?? clientCancelPrevious) === true;
-      if (!cancels || !isRead(kind) || !servesOneUser()) {
+      if (!cancels || !isRead(kind) || !isOneUsersCall()) {
         return send(endpoint, variables, callSignal, kind);
       }
+      /* A call the proxy in process answers is a server's own, which serves many users: none is
+         held. No request is being served here, so finding the route waits on nothing. */
+      const route = inProcess();
+      if (route !== undefined) return send(endpoint, variables, callSignal, kind, route);
       return calls.run(`${source}:${endpoint}`, callSignal, (signal) =>
         send(endpoint, variables, signal, kind),
       );

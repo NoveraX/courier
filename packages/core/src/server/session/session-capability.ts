@@ -1,7 +1,7 @@
 import type { SessionCapability } from "../../capabilities/session";
 import type * as Forwarded from "../../utils/forwarded-for";
 import type * as Relay from "./relay";
-import { captureIncomingRequest } from "./request-providers";
+import { captureIncomingRequest, requestBeingServed } from "./request-providers";
 import type * as ServerSession from "./server-session";
 
 let session: Promise<typeof ServerSession> | undefined;
@@ -54,4 +54,5 @@ export const SERVER_SESSION: SessionCapability = {
   relayCookies: async (upstream, served, toResponse) =>
     (await relayPart()).relayCookies(upstream, served, toResponse),
   forwardedFor: async (request) => (await forwardedPart()).forwardedFor(request),
+  servesRequest: requestBeingServed,
 };

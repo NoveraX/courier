@@ -7,8 +7,9 @@ import type { TsdownPlugin } from "tsdown";
  * hook Node prints an `HTTPError` through, the words a failure is answered
  * with, the sending of an upload as a stream, the time an attempt runs
  * for, the word Studio is sent as an API is defined, the reading of what
- * a server lends the calls of its process, and an upload sent without its
- * progress, which a page's form, holding no device's file, never refuses.
+ * a server lends the calls of its process, an upload sent without its
+ * progress, which a page's form, holding no device's file, never refuses,
+ * and whether a call is one user's, as every call of a page is.
  * The package's `imports` field sends a bundler that builds for the
  * browser to `lib/browser/`, and everything else — Node, Edge, React
  * Native — to the modules themselves.
@@ -22,6 +23,7 @@ export const SERVER_ONLY_MODULES = [
   "define/announce-source",
   "capabilities/registry",
   "utils/upload-without-progress",
+  "utils/one-users-call",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

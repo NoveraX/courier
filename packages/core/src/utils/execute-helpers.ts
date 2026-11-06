@@ -8,7 +8,7 @@ import {
   supportsAbortController,
 } from "./cancel-previous";
 import type { CallTarget } from "./execute-target";
-import { servesOneUser } from "./serves-one-user";
+import { isOneUsersCall } from "./one-users-call";
 
 /* The calls holding each endpoint of a source, which every client of it shares. */
 const holdsBySource = new WeakMap<object, EndpointHolds>();
@@ -47,7 +47,7 @@ export function holdOf(target: CallTarget, context?: Context): EndpointHold | un
   const held =
     nearest === true &&
     supportsAbortController &&
-    servesOneUser() &&
+    isOneUsersCall(context) &&
     context?.proxyMethod === undefined &&
     target.schema?.type === "query";
   if (!held) return undefined;

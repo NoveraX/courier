@@ -101,6 +101,25 @@ async function firstOf(
   return undefined;
 }
 
+/**
+ * Whether a request is being served as a call starts, as the registered
+ * providers say: one answers with it, or with a promise — Next.js's does,
+ * inside a request and out — and so counts as serving one.
+ *
+ * @returns `true` while a provider answers
+ * @example
+ * ```ts
+ * const shared = !requestBeingServed();
+ * ```
+ */
+export function requestBeingServed(): boolean {
+  const found = captureIncomingRequest();
+  /* Asked only whether one answers: the call that reads the request asks again, and fails with
+     what that fails with. */
+  if (found !== undefined && isPromise(found)) found.catch(ignoredFailure);
+  return found !== undefined;
+}
+
 /* The answers after the one that decided are not needed; a failure among
    them must not surface as an unhandled rejection. */
 function settleRest(answers: readonly Promise<unknown>[], decided: number): void {
@@ -124,5 +143,5 @@ export function isPromise(
 }
 
 function ignoredFailure(error: unknown): void {
-  log.debug("A request context provider failed after another one answered", error);
+  log.debug("A request context provider failed where its answer was not needed", error);
 }

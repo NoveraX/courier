@@ -14,7 +14,7 @@
  * is sent once unless asked.
  */
 
-import { createCaller } from "@noverax/courier";
+import { createCaller } from "@noverax/courier/client";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";

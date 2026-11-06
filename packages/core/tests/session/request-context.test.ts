@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { withIncomingRequest } from "../../src/node-request-context";
 import { registerRequestContext } from "../../src/server/session/request-context";
-import { captureIncomingRequest } from "../../src/server/session/request-providers";
+import {
+  captureIncomingRequest,
+  requestBeingServed,
+} from "../../src/server/session/request-providers";
 import type { IncomingRequest, RequestContextProvider } from "../../src/session/incoming-request";
 
 const removals: Array<() => void> = [];
@@ -88,5 +91,42 @@ describe("captureIncomingRequest", () => {
 
     expect(found).toBe(given);
     expect(captureIncomingRequest()).toBe(ambient);
+  });
+});
+
+describe("requestBeingServed", () => {
+  it("says none is served where no adapter answers", () => {
+    register(() => undefined);
+
+    expect(requestBeingServed()).toBe(false);
+  });
+
+  it("says one is served while an adapter answers with it", () => {
+    register(() => request("GET"));
+
+    expect(requestBeingServed()).toBe(true);
+  });
+
+  it("counts an adapter that answers only later as serving one, and lets its failure pass unseen", async () => {
+    let unhandled = 0;
+    const count = () => {
+      unhandled += 1;
+    };
+    process.on("unhandledRejection", count);
+    try {
+      register(() => Promise.reject(new Error("render stopped")));
+
+      expect(requestBeingServed()).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    } finally {
+      process.off("unhandledRejection", count);
+    }
+
+    expect(unhandled).toBe(0);
+  });
+
+  it("says one is served inside withIncomingRequest, and none after it", () => {
+    expect(withIncomingRequest(request("GET"), () => requestBeingServed())).toBe(true);
+    expect(requestBeingServed()).toBe(false);
   });
 });

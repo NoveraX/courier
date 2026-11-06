@@ -22,6 +22,7 @@ import { routesOf } from "../src/define/routes-of";
 import { AbortError, ConfigurationError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint, stream } = courier();
@@ -244,6 +245,7 @@ describe("cancelPrevious on a proxy client given its routes", () => {
   beforeEach(() => {
     const source = api();
     registerSources({ orders: source });
+    asBrowserPage();
     const handler = createHandler();
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);

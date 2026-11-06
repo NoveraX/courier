@@ -10,6 +10,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { createHandler } from "../../src/adapter";
 import { rememberPeerAddress } from "../../src/adapter/peer-address";
+import { createCaller as createPageCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { routesOf } from "../../src/define/routes-of";
@@ -35,6 +36,16 @@ function api(session: boolean) {
     baseURL: upstream.url,
     ...(session && { session: { cookies: ["sid"] } }),
     endpoints: { me: endpoint.get("me") },
+  });
+}
+
+/* An API whose session a page keeps: its writes carry the double-submit token from its cookie. */
+function accounts() {
+  return defineApi({
+    name: "accounts",
+    baseURL: upstream.url,
+    session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+    endpoints: { rename: endpoint.post("me/name").variables<{ name: string }>() },
   });
 }
 
@@ -96,18 +107,20 @@ describe("a server with a DOM shim", () => {
     expect(upstream.seen[0]?.headers.cookie).toBe(`sid=${SID}`);
   });
 
-  it("keeps a page's session for a call no request is being served for, as a jsdom test makes", async () => {
+  it("keeps a page's session for a page's caller's call no request is being served for, as a jsdom test makes", async () => {
     Reflect.set(globalThis, "document", { cookie: "csrftoken=t0k3n" });
-    const accounts = defineApi({
-      name: "accounts",
-      baseURL: upstream.url,
-      session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
-      endpoints: { rename: endpoint.post("me/name").variables<{ name: string }>() },
-    });
 
-    await createCaller(accounts).rename({ name: "Ada" });
+    await createPageCaller(accounts()).rename({ name: "Ada" });
 
     expect(upstream.seen[0]?.headers["x-csrftoken"]).toBe("t0k3n");
+  });
+
+  it("takes no session the DOM keeps for the server's caller's call no request is being served for", async () => {
+    Reflect.set(globalThis, "document", { cookie: "csrftoken=t0k3n" });
+
+    await createCaller(accounts()).rename({ name: "Ada" });
+
+    expect(upstream.seen[0]?.headers["x-csrftoken"]).toBeUndefined();
   });
 
   it("carries on the addresses that request came through", async () => {

@@ -10,6 +10,7 @@ import type {
   GroupRecord,
 } from "../define";
 import { getSourceName } from "../define/api";
+import type { Context } from "../http-client/types";
 import { assertServerOptions } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 
@@ -19,7 +20,10 @@ import { provideServerCapabilities } from "./provide-server-capabilities";
  * user's session from the request its context names —
  * `createCaller(api, { context: { req } })` — or from the request a
  * registered adapter serves. The options only a server reads — `session`,
- * `forward`, the header lists — are checked as the caller is made.
+ * `forward`, the header lists — are checked as the caller is made. Its
+ * calls are a server's, wherever no request is being served too — a job's,
+ * a warm-up's: none is held for a newer call to cancel, and none takes a
+ * session a DOM on the server's global object keeps.
  *
  * @example
  * ```ts
@@ -54,5 +58,6 @@ export function createCaller(
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
   assertServerOptions(source, getSourceName(source) ?? "api");
   provideServerCapabilities();
-  return directClient(source, defaults);
+  const context: Context = { ...defaults.context, serverCall: true };
+  return directClient(source, { ...defaults, context });
 }

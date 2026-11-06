@@ -42,6 +42,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/capabilities/registry": "src/browser/capabilities/registry.ts",
       "utils/upload-without-progress": "src/utils/upload-without-progress.ts",
       "browser/utils/upload-without-progress": "src/browser/utils/upload-without-progress.ts",
+      "utils/one-users-call": "src/utils/one-users-call.ts",
+      "browser/utils/one-users-call": "src/browser/utils/one-users-call.ts",
     });
   });
 });

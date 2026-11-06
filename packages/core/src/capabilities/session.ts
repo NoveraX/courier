@@ -52,4 +52,12 @@ export interface SessionCapability {
    * @returns The chain, once read; `undefined` when nothing recorded an address
    */
   forwardedFor(request: Request): Promise<string | undefined>;
+  /**
+   * Whether a request is being served as a call starts, as the registered
+   * adapters say — or may be, where one answers only later: a call made
+   * then is that request's user's.
+   *
+   * @returns `true` while one is
+   */
+  servesRequest(): boolean;
 }

@@ -1,4 +1,4 @@
-export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Deduplication & Abort", description: "Identical reads in flight share one request, a newer search cancels the one it replaces, and any call can be aborted with a signal.", mode: "both", updated: "2026-11-07" }
 
 ## Overview
 
@@ -114,7 +114,7 @@ A value other than `true` or `false` given to an API, a group or a client throws
 <Callout variant="info" title="Where it runs">
 A newer call cancels an older one where one user is: in a browser page, or in a React Native app, for a direct call and a proxy client alike. A Web Worker has no page, and calls made in one are not cancelled.
 
-On a server the option has no effect — for direct calls, for a proxy client and for requests arriving at the proxy: there, calls from different users reach the same endpoint, and one user's search would cancel another's.
+On a server the option has no effect — for direct calls, for a proxy client and for requests arriving at the proxy — save in the one case below: calls from different users reach the same endpoint there, and one user's search would cancel another's. A server that put a DOM on its global object for a library is a server still: a call made while a request is being served cancels none, and neither does any call of the server's caller, `createCaller` from `@noverax/courier/server`, nor of a proxy client that reaches the proxy in process. A call made there where no request is being served — a job's, a warm-up's — through the caller from `@noverax/courier/client`, or through a proxy client that goes to its proxy over HTTP, is taken for one user's, as in a page; give a job's calls `.with({ cancelPrevious: false })`, or make them with the server's caller.
 </Callout>
 
 <Callout variant="info" title="In the query hooks">

@@ -17,6 +17,7 @@ import { routesOf } from "../src/define/routes-of";
 import { AbortError } from "../src/errors";
 import { createProxyCaller, type ProxyCallerOptions } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 import { isUpstream } from "./helpers/is-upstream";
 
 const { endpoint } = courier();
@@ -91,7 +92,7 @@ const KEPT = ["answered", "answered"];
 beforeEach(() => {
   registerSources({ api, all: allReads });
   /* A browser: where one user is, a newer call may cancel an older one. */
-  vi.stubGlobal("document", {});
+  asBrowserPage();
 });
 
 afterEach(() => {

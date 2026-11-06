@@ -60,7 +60,7 @@ type CallerWSOptions = {
 type WSAuthParams = Record<string, unknown>
 ```
 
-`cancelPrevious` turns on, for every read this caller makes, a newer call cancelling the older call of the same read still in flight — where the endpoint and its groups say nothing; it decides over the API's own. It runs in a browser or a React Native app; on a server it has no effect. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
+`cancelPrevious` turns on, for every read this caller makes, a newer call cancelling the older call of the same read still in flight — where the endpoint and its groups say nothing; it decides over the API's own. It runs in a browser or a React Native app; on a server it has no effect, and the server's caller's calls cancel none of each other, a server's with a DOM on its global object too. See [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 
 - `ws` — options of the sockets this caller's channels and push subscriptions open; see [Connection options](/docs/advanced/realtime-connections#connection-options).
 

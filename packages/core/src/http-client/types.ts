@@ -285,6 +285,13 @@ export type Context = RequestContext & {
   /** A direct caller's own `cancelPrevious`, for a call, an endpoint and groups that say nothing */
   defaultCancelPrevious?: boolean | undefined;
   /**
+   * Set by the server's caller on each of its calls, a server's, made for
+   * many users: none is held for a newer call to cancel, whatever the call,
+   * its endpoint and its groups say, and none takes a session a DOM on the
+   * server's global object keeps. A page's bundle reads it nowhere.
+   */
+  serverCall?: true | undefined;
+  /**
    * The request being served, as an adapter describes it for the session —
    * where it can hand the browser a cookie, and what its framework asks of
    * `fetch`. Set, it is read before `req` and `headers`.

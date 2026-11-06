@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { ConfigurationError, TimeoutError } from "../src/errors";
+import { createCaller as createRootCaller } from "../src/index";
 import { cacheMiddleware } from "../src/middleware/cache";
 import type { MiddlewareContext, WrapHandler } from "../src/middleware/types";
 import { subscribeSSE } from "../src/realtime/sse";
@@ -151,6 +152,19 @@ describe("cancelling the previous call in React Native", () => {
 
     const first = rejection(client.slow.with({ signal: controller.signal })());
     const second = client.slow.with({ signal: controller.signal })();
+
+    expect(isCancellation(await first)).toBe(true);
+    await expect(second).resolves.toEqual({ ok: true });
+  });
+});
+
+describe("cancelling the previous call in React Native, through the root's caller", () => {
+  it("cancels a superseded read, though the root's caller is the server's", async () => {
+    vi.stubGlobal("fetch", nativeFetch());
+    const client = createRootCaller(api());
+
+    const first = rejection(client.slow());
+    const second = client.slow();
 
     expect(isCancellation(await first)).toBe(true);
     await expect(second).resolves.toEqual({ ok: true });

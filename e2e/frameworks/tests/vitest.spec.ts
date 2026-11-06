@@ -43,14 +43,14 @@ test("a test gets the routes under Node and under jsdom, beside the config", () 
   expect(run.status).toBe(0);
 });
 
-test("under jsdom, a test takes the core's server side, and a page's call keeps the page's session", () => {
+test("under jsdom, a test takes the core's server side: a page's call keeps the page's session, the server's caller's none", () => {
   const run = spawnSync(process.execPath, [...VITEST, "run", "src/sides.test.ts"], {
     cwd: APP_ROOT,
     env: QUIET,
     encoding: "utf8",
   });
 
-  expect(`${run.stdout}${run.stderr}`).toMatch(/Tests\s+2 passed/);
+  expect(`${run.stdout}${run.stderr}`).toMatch(/Tests\s+3 passed/);
   expect(run.status).toBe(0);
 });
 

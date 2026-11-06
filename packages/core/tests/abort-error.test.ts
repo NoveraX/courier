@@ -17,6 +17,7 @@ import { createFetch } from "../src/fetch";
 import { retryMiddleware } from "../src/middleware/index";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
+import { asBrowserPage } from "./helpers/browser-page";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";
@@ -182,7 +183,7 @@ describe("a proxy client's call", () => {
   });
 
   it("superseded by a newer call of its endpoint rejects with an AbortError SUPERSEDED", async () => {
-    vi.stubGlobal("document", {});
+    asBrowserPage();
     const client = createProxyCaller(routesOf(api, "api")) as unknown as {
       search: (variables: { q: string }) => Promise<unknown>;
     };

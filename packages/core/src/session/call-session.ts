@@ -3,9 +3,10 @@ import type { SessionCapability } from "../capabilities/session";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Context } from "../http-client/types";
 import { isReactNative } from "../utils/is-react-native";
-import { servesOneUser } from "../utils/serves-one-user";
+import { isOneUsersCall } from "../utils/one-users-call";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
+import { namesRequest } from "./names-request";
 import type * as NativeSession from "./native-session";
 import { overSecureTransport } from "./one-user-transport";
 import type { SessionTarget } from "./session-target";
@@ -61,8 +62,9 @@ export interface CallSession {
  * from it alone; any other call, from the request the registered adapters
  * say is being served, when one is — on a server that put a DOM on its
  * global object too. With none, a browser sends its own cookies and an app
- * the ones it kept. What a server reads of a request is the server's to
- * lend — a page imports none of it.
+ * the ones it kept; a call of the server's caller, a server's, carries no
+ * session then. What a server reads of a request is the server's to lend —
+ * a page imports none of it.
  *
  * @param context - The call's context
  * @param target - The call's API and endpoint, as the session reads it
@@ -83,7 +85,7 @@ export function sessionFor(
   }
   const served = serverCapability("session")?.ambientSession(target);
   if (served !== undefined) return served;
-  return servesOneUser() ? oneUserSession(target) : undefined;
+  return isOneUsersCall(context) ? oneUserSession(target) : undefined;
 }
 
 /**
@@ -142,13 +144,6 @@ export function sameRequestContext(
   if (session.incoming === undefined) return context;
   if (context !== undefined && namesRequest(context)) return context;
   return { ...context, incoming: session.incoming };
-}
-
-/* A caller's context names the request it serves, or the proxy's own. */
-function namesRequest(context: Context): boolean {
-  return (
-    context.incoming !== undefined || context.req !== undefined || context.headers !== undefined
-  );
 }
 
 let native: Promise<typeof NativeSession> | undefined;

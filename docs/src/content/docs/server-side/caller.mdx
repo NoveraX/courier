@@ -1,4 +1,4 @@
-export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-11-06" }
+export const metadata = { title: "createCaller", description: "Factory function for server-side calls — call your backend directly from any server runtime.", mode: "direct", updated: "2026-11-07" }
 
 ## API signature
 
@@ -20,7 +20,8 @@ type CallerDefaults = {
   // Request timeout in milliseconds
   timeout?: number
   // Whether a newer call of a read cancels the older one in flight — in a
-  // browser or an app alone: on a server it has no effect
+  // browser or an app alone: on a server, even one that put a DOM on its
+  // global object, it has no effect
   cancelPrevious?: boolean
   // Headers sent with every request
   headers?: Record<string, string>
@@ -38,7 +39,7 @@ type CallerDefaults = {
 }
 ```
 
-These defaults are merged with per-request options. Per-request headers are merged (not replaced). The default `timeout` is the least specific: a timeout given for the call wins, then the endpoint's own `.timeout()`, then the default.
+These defaults are merged with per-request options. Per-request headers are merged (not replaced). The default `timeout` is the least specific: a timeout given for the call wins, then the endpoint's own `.timeout()`, then the default. Where `cancelPrevious` cancels a call, and which say decides, is in [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 
 ```ts title="lib/caller.ts"
 import { createCaller } from "@noverax/courier"

@@ -76,11 +76,8 @@ export function makeBuilder(state: BuilderState): AnyBuilder {
      every endpoint made from it. A stream or a channel has no verb to
      choose, so it keeps every slot. */
   const all = refinements(state, next);
-  const { variables, use, headers, timeout, retry, meta, expose } = all;
-  const available =
-    state.kind === "query" || state.kind === "mutation"
-      ? { variables, use, headers, timeout, retry, meta, expose }
-      : all;
+  const { response, send, ...beforeVerb } = all;
+  const available = state.kind === "query" || state.kind === "mutation" ? beforeVerb : all;
   /* Only a channel has subscribers to share a topic. */
   const keyed =
     state.kind === "channel"

@@ -1,0 +1,32 @@
+export const metadata = { title: "Host a Public Demo", description: "Run Studio as a demo of your API on a public address: what a visitor sees and may do, the limits each visitor is held to, and how Studio counts visitors behind a proxy, a CDN or a DDoS filter.", mode: "both", updated: "2026-11-06" }
+
+Studio can show your project to people who do not have it: a demo of your API on a public address. Run it from code with `demo`:
+
+```ts
+import { createStudioServer } from "@noverax/courier-studio/server"
+
+createStudioServer({
+  host: "0.0.0.0",
+  port: 6280,
+  demo: { resetsAt: Date.now() + 60 * 60_000 },
+  extraCorsOrigins: ["https://demo.example.com"],
+})
+```
+
+A visitor — a page opened without the token — sees everything Studio shows, the credentials of live traffic redacted, and may also send from the Playground and drive the mocks: start and stop them, set their latency and failures, apply scenarios, change their data. Limits keep one visitor from crowding out the rest, counted every ten seconds for each page, for each visitor's address — so opening more pages does not widen a share — and for all visitors together:
+
+- **Playground:** ten calls from a page, twenty from an address and sixty from all, with four open at once from a page.
+- **Mocks:** twenty commands and five starts or stops from a page, thirty and ten from an address; a seed of up to 200 records, records added to a collection only while it holds fewer than a thousand, and a latency of up to ten seconds.
+- **Studio's API:** twenty requests from an address and sixty from all, of any kind that sends something; of the large ones, with a body past 256 KB — a specification read, its code generated, a log exported — two at work at once for all and one for an address, while the page's everyday requests count by their rate alone. A large request counts until the work it set going has ended, even once its visitor hangs up, which stops that work; a visitor that sends nothing for ten seconds while its request comes in, or reads nothing of its answer, is cut off.
+- **The page itself:** six hundred requests from an address, six thousand from all; ten sockets open for an address and two hundred in all, ten opened every ten seconds for an address and forty in all; a thousand connections at most, each closed when its request's headers take more than ten seconds.
+- **Size:** nothing larger than 64 KB at a time from a visitor; a socket reads no message larger than 512 KB, and each page is sent the newest 2 MB of each log as it connects.
+
+Past a limit, the visitor is told which one and when to try again: a request is answered with 429 and `Retry-After`. A visitor's clears stay in their own page, and their Playground history is their own. Studio still writes no file: importing an API, generating mocks and saving a session answer that the demo does not, and nothing every visitor sees is cleared. A visitor's import reads a specification pasted, or fetched from the public internet only — never from the machine Studio runs on or its network, its host's name looked up from the name servers this machine uses, asked directly — and it checks no import for updates, previews no change to an import or to `courier.config.ts`, and is shown none of the project's code. Studio fetches four specifications at once for all its visitors, holding 32 MB of them between them and giving each 15 s, and reads, generates or compares each in a process of its own within 20 s and 256 MB of heap, 512 MB for the whole process, two at once, a specification read being at most 15 MB — some 8 MB of JSON; past that a visitor is told Studio is busy, with 503, or that the specification is too large, with 413. A demo's Studio needs about 1.5 GB of memory at the most: its own, and up to 512 MB for each of the two visitors' jobs it runs at once. The page opened with the token keeps every right.
+
+<Callout variant="warning" title="Behind a proxy that reports the visitor">
+Studio counts a visitor by the address the proxy in front of it reports last in `X-Forwarded-For`, believed only from a proxy on this machine or a private network. Traefik, Caddy and nginx's usual configuration send it. Behind a proxy that does not, every visitor shares the proxy's address and its limits.
+
+Behind a CDN or a DDoS filter as well, name its addresses or ranges in `trustedProxies`, such as `demo: { trustedProxies: ["198.51.100.0/24", "2001:db8::/32"] }`: Studio reads past their entries to the address the first of them saw. The proxy in front of Studio must pass those entries on rather than replace them with the filter's address, as Traefik does for the addresses in its entry point's `forwardedHeaders.trustedIPs` and Caddy for its `trusted_proxies`. A filter that also names the visitor in a header of its own — DDoS-Guard's `DDG-Connecting-IP`, Cloudflare's `CF-Connecting-IP` — needs no change to that proxy: name the header in `addressHeader` too, and Studio reads it from every request that came through the filter, and from no other. Name only your own proxies and your provider's published ranges: Studio believes whatever address they report.
+</Callout>
+
+The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. Search engines leave the demo out of their results, as they do any Studio: every answer says `X-Robots-Tag: noindex, nofollow`, and its `robots.txt` lets a crawler read that. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/master/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.

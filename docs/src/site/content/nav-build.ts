@@ -77,6 +77,8 @@ export const BUILD_SECTIONS: NavSection[] = [
     label: "Studio",
     items: [
       { title: "Studio", href: "/docs/studio/overview" },
+      { title: "Inspector and Playground", href: "/docs/studio/inspector" },
+      { title: "What Studio Keeps", href: "/docs/studio/storage" },
       { title: "Import an API", href: "/docs/studio/import-api" },
       { title: "Mock Servers", href: "/docs/studio/mock-servers" },
       { title: "Network Conditions", href: "/docs/studio/network-conditions" },
@@ -85,6 +87,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Contract Drift", href: "/docs/studio/contract-drift" },
       { title: "VS Code Extension", href: "/docs/studio/editor" },
       { title: "How Studio Loads the Project", href: "/docs/studio/project-loading" },
+      { title: "Host a Public Demo", href: "/docs/studio/public-demo" },
     ],
   },
   {

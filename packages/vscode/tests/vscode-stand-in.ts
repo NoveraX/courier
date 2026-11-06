@@ -178,8 +178,18 @@ const configurationListeners = new Set<
 /** What the code showed the user, and the pages it opened. */
 export const shown = { warnings: [] as string[], infos: [] as string[], opened: [] as string[] };
 
-/** What the code showed as errors, the picks a test makes for the user, and the buttons they press. */
-export const asked = { errors: [] as string[], picks: [] as unknown[], buttons: [] as string[] };
+/**
+ * What the code showed as errors, the picks a test makes for the user, the
+ * buttons they press, and what they type into each input box, in turn —
+ * `undefined` to give up — with what an input box refused of it.
+ */
+export const asked = {
+  errors: [] as string[],
+  picks: [] as unknown[],
+  buttons: [] as string[],
+  typed: [] as (string | undefined)[],
+  refused: [] as string[],
+};
 
 /** What the code wrote to its log, level and line. */
 export const logged: [string, string][] = [];
@@ -212,6 +222,15 @@ export const window = {
   showQuickPick: async <TItem>(items: readonly TItem[]) => {
     const wanted = asked.picks.shift();
     return items.find((item) => JSON.stringify(item).includes(String(wanted)));
+  },
+  /* VS Code takes no value its check refuses: the user types again, or gives up. */
+  showInputBox: async (options?: { validateInput?: (value: string) => string | undefined }) => {
+    for (let typed = asked.typed.shift(); typed !== undefined; typed = asked.typed.shift()) {
+      const problem = options?.validateInput?.(typed);
+      if (problem === undefined) return typed;
+      asked.refused.push(problem);
+    }
+    return undefined;
   },
 };
 

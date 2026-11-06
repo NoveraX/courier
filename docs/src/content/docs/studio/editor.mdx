@@ -128,7 +128,7 @@ With no Studio running, the view offers to start one; in a workspace without Cou
 
 | Command | What it does |
 | --- | --- |
-| **Courier: Import an API…** | Runs `courier-studio import` on an OpenAPI, Swagger or Postman document, from an address or a file of the project's |
+| **Courier: Import an API…** | Runs `courier-studio import` on an OpenAPI, Swagger or Postman document, from an address or a file of the project's. For an address behind auth it asks the kind — a bearer token, a user and a password, or headers — and the environment variables that hold them, and runs the command with their names alone: [Specifications behind auth](/docs/studio/import-api#specifications-behind-auth) |
 | **Courier: Show OpenAPI Document…** | Opens a source's OpenAPI document, as Studio writes it from your config, in an editor tab |
 | **Courier: Check API Changes…** | Runs `courier-studio diff` against a branch, a tag or a commit, and reports what the change breaks |
 

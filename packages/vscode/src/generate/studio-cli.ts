@@ -21,6 +21,28 @@ export function shellWord(word: string, platform: NodeJS.Platform = process.plat
 }
 
 /**
+ * The line a terminal runs one of Courier Studio's commands with: by the
+ * package's full name, so npx runs the project's own copy, each argument
+ * whole.
+ *
+ * @param args - The command and its arguments: `["import", spec]`
+ * @param platform - The platform the terminal runs on
+ * @returns The line
+ * @example
+ * ```ts
+ * studioCommandLine(["import", "https://api.example/openapi.json"]); // → "npx @noverax/courier-studio import https://api.example/openapi.json"
+ * ```
+ */
+export function studioCommandLine(
+  args: readonly string[],
+  platform: NodeJS.Platform = process.platform,
+): string {
+  return ["npx", "@noverax/courier-studio", ...args]
+    .map((word) => shellWord(word, platform))
+    .join(" ");
+}
+
+/**
  * Run one of Courier Studio's commands for a project in a terminal of its
  * own — by the package's full name, so npx runs the project's own copy —
  * where it shows its plan and asks before it writes.
@@ -43,8 +65,6 @@ export function runStudioCommand(
     cwd: project.root,
     iconPath: new vscode.ThemeIcon("terminal"),
   });
-  terminal.sendText(
-    ["npx", "@noverax/courier-studio", ...args].map((word) => shellWord(word)).join(" "),
-  );
+  terminal.sendText(studioCommandLine(args));
   terminal.show();
 }

@@ -3,13 +3,15 @@ import * as vscode from "vscode";
 import { chooseProject } from "../commands/project-commands";
 import type { CourierCore } from "../core/courier-core";
 import { fetchOpenApi } from "../studio/studio-api";
+import { askCredentials } from "./import-credentials";
 import { runStudioCommand } from "./studio-cli";
 
 /**
  * The commands that run Courier Studio's own: import an API from an
- * OpenAPI, Swagger or Postman specification, by its address or its file;
- * show a source as an OpenAPI document, and save it; and report what a
- * change to the API breaks, against a git ref.
+ * OpenAPI, Swagger or Postman specification, by its address — with the
+ * environment variables that hold its credentials, when it has some — or
+ * its file; show a source as an OpenAPI document, and save it; and report
+ * what a change to the API breaks, against a git ref.
  *
  * @param core - The extension's core
  * @returns What unregisters them
@@ -75,7 +77,9 @@ async function importApi(core: CourierCore): Promise<void> {
             })
           )?.[0]?.fsPath
         : undefined;
-  if (spec) runStudioCommand(project, "Import API", ["import", spec]);
+  if (!spec) return;
+  const credentials = how?.by === "url" ? await askCredentials() : [];
+  if (credentials) runStudioCommand(project, "Import API", ["import", spec, ...credentials]);
 }
 
 async function showOpenApi(core: CourierCore): Promise<void> {

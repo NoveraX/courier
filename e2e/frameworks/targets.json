@@ -45,17 +45,19 @@
   {
     "id": "next-15-turbopack",
     "app": "next",
-    "overlays": ["next-middleware"],
+    "overlays": ["next-middleware", "next-bundle"],
     "build": ["npx", "next", "build", "--turbopack"],
     "dev": ["npx", "next", "dev", "--turbopack"],
-    "packages": ["core", "build", "next"],
+    "bundle": "turbopack",
+    "packages": ["core", "build", "next", "react"],
     "install": {
-      "next": "15",
-      "react": "19",
-      "react-dom": "19",
+      "next": "15.5.29",
+      "react": "19.3.1",
+      "react-dom": "19.3.1",
       "@types/react": "19",
       "@types/node": "24",
-      "typescript": "6"
+      "typescript": "6",
+      "@tanstack/react-query": "5.107.0"
     }
   },
   {
@@ -65,29 +67,31 @@
     "bundle": "turbopack",
     "packages": ["core", "build", "next", "react"],
     "install": {
-      "next": "16",
-      "react": "19",
-      "react-dom": "19",
+      "next": "16.4.5",
+      "react": "19.3.1",
+      "react-dom": "19.3.1",
       "@types/react": "19",
       "@types/node": "24",
       "typescript": "6",
-      "@tanstack/react-query": "5"
+      "@tanstack/react-query": "5.107.0"
     }
   },
   {
     "id": "next-16-webpack",
     "app": "next",
-    "overlays": ["next-proxy"],
+    "overlays": ["next-proxy", "next-bundle"],
     "build": ["npx", "next", "build", "--webpack"],
     "dev": ["npx", "next", "dev", "--webpack"],
-    "packages": ["core", "build", "next"],
+    "bundle": "webpack",
+    "packages": ["core", "build", "next", "react"],
     "install": {
-      "next": "16",
-      "react": "19",
-      "react-dom": "19",
+      "next": "16.4.5",
+      "react": "19.3.1",
+      "react-dom": "19.3.1",
       "@types/react": "19",
       "@types/node": "24",
-      "typescript": "6"
+      "typescript": "6",
+      "@tanstack/react-query": "5.107.0"
     }
   },
   {

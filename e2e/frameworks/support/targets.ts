@@ -34,10 +34,14 @@ export interface Target {
    */
   readonly dev?: readonly string[];
   /**
-   * The bundler whose build of a page `bundle.spec.ts` holds to its budget:
-   * the application gets a page for each scenario `check:browser` measures
+   * The bundler whose build of a page `bundle.spec.ts` holds to a budget:
+   * the application gets a page for each scenario `check:browser` measures,
+   * held to the budget `scenarios.mjs` keeps under the target's id. Such a
+   * target installs a release of Next.js, React and React Query, not a
+   * range, so each run measures what the last one did; a new release goes
+   * in a commit of its own, with what it measures
    */
-  readonly bundle?: "turbopack" | undefined;
+  readonly bundle?: "turbopack" | "webpack" | undefined;
   /** Courier's packages it installs, packed as the registry would ship them */
   readonly packages: readonly string[];
   /** What it installs from npm, by name and range */
@@ -104,11 +108,15 @@ export function targetOf(id: string | undefined): Target {
 
 function isTarget(value: unknown): value is Target {
   if (typeof value !== "object" || value === null) return false;
-  const { id, app, packages, install, overlays, build, dev } = value as Record<string, unknown>;
+  const { id, app, packages, install, overlays, build, dev, bundle } = value as Record<
+    string,
+    unknown
+  >;
   return (
     typeof id === "string" &&
     typeof app === "string" &&
     KINDS.has(app) &&
+    (bundle === undefined || bundle === "turbopack" || bundle === "webpack") &&
     isStrings(packages) &&
     (overlays === undefined || isStrings(overlays)) &&
     (build === undefined || isStrings(build)) &&

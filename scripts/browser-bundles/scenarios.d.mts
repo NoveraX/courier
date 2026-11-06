@@ -1,11 +1,17 @@
-/** The bundlers a page's start is measured under, each with a budget of its own. */
-export type Bundler = "esbuild" | "webpack" | "vite" | "turbopack";
+/** The bundlers `check:browser` measures a page's start under, each with a budget of its own. */
+export type Bundler = "esbuild" | "webpack" | "vite";
 
-/** One page a scenario builds: its code, and its budget at start per bundler, minified and gzipped, in KiB. */
+/**
+ * The framework matrix's targets `bundle.spec.ts` measures a page's start
+ * on, by id: each a release of Next.js and a bundler, with a budget of its own.
+ */
+export type MeasuredTarget = "next-16" | "next-15-turbopack" | "next-16-webpack";
+
+/** One page a scenario builds: its code, and its budget at start per bundler and per target measured, minified and gzipped, in KiB. */
 export interface Scenario {
   readonly name: string;
   readonly code: string;
-  readonly budget: Readonly<Record<Bundler, readonly [number, number]>>;
+  readonly budget: Readonly<Record<Bundler | MeasuredTarget, readonly [number, number]>>;
 }
 
 /** Each scenario a page builds. */

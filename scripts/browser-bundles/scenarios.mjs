@@ -8,8 +8,19 @@
  * the two each on their own. A budget set by that rule only comes down:
  * where the rule would raise one, it stays. A change that grows a page
  * past one either earns its bytes, and the budget is raised here with the
- * reason in the commit, or is made smaller. Turbopack's is measured by the
- * framework matrix's Next.js application, under the same rule.
+ * reason in the commit, or is made smaller.
+ *
+ * The framework matrix measures a page as Next.js builds it on three
+ * targets, each with a budget under its id, by the same rule: Next.js 16
+ * with Turbopack and with webpack, and Next.js 15 with Turbopack. Each
+ * installs a release of Next.js, React and React Query rather than a
+ * range. Turbopack then builds the same bytes on every machine, so a run
+ * measures what the last one did; webpack's build of the same releases can
+ * come out some tens of bytes apart on another machine — up to 69 gzipped
+ * so far — which the rule's 1 % of room covers. Should CI ever measure
+ * more, the budget goes up as any budget does: in a commit of its own
+ * that says why. A new release goes in a commit of its own, with what it
+ * measures.
  */
 
 const DEFINE = `import { courier, defineApi, defineGroup } from "@noverax/courier/define";
@@ -32,7 +43,9 @@ export const SCENARIOS = [
       esbuild: [12.3, 5.1],
       webpack: [12.1, 5],
       vite: [12.2, 5],
-      turbopack: [16.8, 6.8],
+      "next-16": [16.5, 6.7],
+      "next-15-turbopack": [19.5, 7.4],
+      "next-16-webpack": [16, 6.5],
     },
   },
   {
@@ -42,7 +55,9 @@ export const SCENARIOS = [
       esbuild: [84.4, 30],
       webpack: [86.5, 29.8],
       vite: [84, 29.6],
-      turbopack: [88.3, 31.2],
+      "next-16": [85.8, 30.8],
+      "next-15-turbopack": [100.9, 33.9],
+      "next-16-webpack": [82.8, 29.5],
     },
   },
   {
@@ -52,7 +67,9 @@ export const SCENARIOS = [
       esbuild: [40.9, 15.3],
       webpack: [39, 14.4],
       vite: [37.8, 14.1],
-      turbopack: [44.3, 16.3],
+      "next-16": [42.3, 15.7],
+      "next-15-turbopack": [48.6, 17.1],
+      "next-16-webpack": [40.3, 15.1],
     },
   },
   {
@@ -62,7 +79,9 @@ export const SCENARIOS = [
       esbuild: [44.2, 16.6],
       webpack: [41.9, 15.5],
       vite: [41.4, 15.4],
-      turbopack: [46.7, 17.2],
+      "next-16": [44.7, 16.8],
+      "next-15-turbopack": [51.1, 18.1],
+      "next-16-webpack": [42.9, 16.1],
     },
   },
   {
@@ -72,7 +91,9 @@ export const SCENARIOS = [
       esbuild: [89.5, 31.9],
       webpack: [91.3, 31.6],
       vite: [88.7, 31.1],
-      turbopack: [92.5, 32.6],
+      "next-16": [90.1, 32.1],
+      "next-15-turbopack": [105.4, 35.9],
+      "next-16-webpack": [87.1, 31.1],
     },
   },
 ];

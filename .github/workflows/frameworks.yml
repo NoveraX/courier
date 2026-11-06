@@ -24,7 +24,10 @@ on:
         type: string
         default: ""
   # Each version is a range that resolves to its newest release, so a new
-  # release of a framework is checked within the week, whatever changes here
+  # release of a framework is checked within the week, whatever changes here;
+  # the three Next.js versions a page is measured on install a release of
+  # Next.js, React and React Query of their own, which moves in a commit of
+  # its own, with what it measures
   schedule:
     - cron: "0 5 * * 1"
 

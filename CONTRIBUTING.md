@@ -239,16 +239,28 @@ npm run test:frameworks -- --dev nuxt-4
 `COURIER_BROWSERS` picks the engines either check runs in, such as
 `COURIER_BROWSERS=chromium,webkit`.
 
-The Next.js 16 application gets a page for each scenario `check:browser`
-measures too, and `bundle.spec.ts` holds what Turbopack loads of Courier at
-start on each to the scenario's `turbopack` budget, reading the chunks a
+Three Next.js applications get a page for each scenario `check:browser`
+measures too — Next.js 16 with Turbopack and with webpack, and Next.js 15
+with Turbopack — and `bundle.spec.ts` holds what each loads of Courier at
+start to the scenario's budget under the target's id, reading the chunks a
 prerendered page names through their source maps, so React and React Query
-count as the application's own.
+count as the application's own. A chunk without a source map stops it,
+unless it is a copy of a file Next.js ships built that the spec names.
 
 CI runs one job for each version on every push and pull request, and again
 every week: a version is a range that resolves to its newest release, so a
-framework's new release is checked even when nothing here changes. A version
-Courier starts to support goes into `targets.json`.
+framework's new release is checked even when nothing here changes. The three
+versions a page is measured on are the exception: each installs a release of
+Next.js, React and React Query, since a range would move what a page
+measures from one run to the next, and a newer release goes in a commit of
+its own, with what it measures. Turbopack then builds the same bytes on
+every machine; webpack's build of the same releases can come out some tens
+of bytes apart on another, up to 69 gzipped so far, which the budget rule's
+1 % of room covers. Should CI ever measure more, the budget goes up as any
+budget does: in a commit of its own that says why.
+`next-15`, with webpack, and `next-16-cache-components`, with Turbopack, keep
+to the newest releases of Next.js 15 and 16. A version Courier starts to
+support goes into `targets.json`.
 
 ## Commits
 

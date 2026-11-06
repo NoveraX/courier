@@ -2,6 +2,28 @@ export const metadata = { title: "Upgrading from 0.4", description: "What change
 
 This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, how variables are written into a request, and whether an endpoint addressed with `.via()` reads or writes. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
 
+## Run the Upgrade
+
+```bash
+npx @noverax/courier-cli@latest upgrade --dry-run  # show what it changes
+npx @noverax/courier-cli@latest upgrade            # make the changes, once you say yes
+```
+
+In a project, or in a workspace from any of its packages, it moves every one of Courier's packages to the new release at once: each range raised in the kind of range it is written in — one of another kind is left as written, and the plan says why — and one install with your package manager. The plan comes first, with each section of this page the upgrade crosses. When the install fails, or you press Ctrl+C, the manifests, the lockfile and your code are put back as they were; once it is done, the types of what it changed are checked. With `--yes` it goes ahead without asking, and refuses a project whose changes git has not committed unless `--allow-dirty` is passed. Run it with `@latest`: it knows the changes up to its own release, and refuses to move to a newer one.
+
+It changes your code only where the code says for certain what it means: through the names a file imports from Courier's packages, the script blocks of Vue, Svelte and Astro components among the files.
+
+| 0.4 | Changed to |
+|---|---|
+| `AuthError`, `ForbiddenError`, `RateLimitError`, `fromErrorCode` and `isRealtimeError` from `@noverax/courier` | the same names from `@noverax/courier/realtime` |
+| `TimeoutError`, 0.4's realtime timeout, from either entry | `RealtimeTimeoutError` from `@noverax/courier/realtime` |
+| `SSESubscription` | `Subscription` |
+| `sendAuthRequired(connections, id, ms)` as a statement of an async function | `await connections.requireAuth(id, { timeoutMs: ms })` |
+| `0` in `retryOn`, of `retryMiddleware` or of an endpoint's `.retry()` | `"network"` and `"timeout"` |
+| `isHTTPError(error) && error.status === 0`, where the file binds `isHTTPError` only by its import | `isNetworkError(error) \|\| isTimeoutError(error)`, the two imported in place of `isHTTPError`, or beside it where the file still uses it |
+
+A renamed name is renamed at every reference only where the file binds it once and nothing takes the new name; otherwise it is imported under its old name, with `as`. What it finds and cannot change for certain, it lists at its line with what to write instead: a check of status 499 or of `error.data.code`, `new HTTPError({ status: 0 })`, a platform's `AbortError`, `onError` typed with `HTTPError`, a `retryOn` function, a `sendAuthRequired()` whose value is used or that is outside an async function, 0.4's calls of `connections` and `sseConnections`, the client's `ws.heartbeat` and `ws.maxMessageSize`, a pub/sub adapter of your own, and an `allowedHosts` entry with a scheme. Code it cannot read for certain — a name taken through a namespace import, a call through a variable — it neither changes nor lists, and the other rows of this page are yours to check against your code and your deployment.
+
 ## Call Errors
 
 A call that got no successful answer rejects with an `HTTPError` when an answer came, a `NetworkError` when none did and a `TimeoutError` when its time ran out, and a cancelled call with Courier's `AbortError` — see [NetworkError, TimeoutError & AbortError](/docs/api/call-errors).

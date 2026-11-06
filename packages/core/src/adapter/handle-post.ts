@@ -7,6 +7,7 @@ import { errorResponse } from "./parse";
 import { announceProxyCall } from "./proxy-call-events";
 import { readEnvelope } from "./read-envelope";
 import { readRouting } from "./read-routing";
+import { recordDefaults } from "./record-defaults";
 
 /**
  * Create the proxy's POST entry point.
@@ -40,7 +41,7 @@ export function createPostHandler(
     }
 
     const call = announceProxyCall(dt, "POST", routing, studioRequestIdOf(request.headers));
-    const read = await readEnvelope(request, config);
+    const read = await readEnvelope(request, config, recordDefaults(config, routing));
     if (!read.ok) {
       call.refused(read.status, read.message);
       return errorResponse(read.status, read.message, read.code, read.retryAfter);

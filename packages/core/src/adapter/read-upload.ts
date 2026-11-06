@@ -47,6 +47,7 @@ interface HeldUpload {
  * @param contentType - Its `Content-Type`, which names the boundary
  * @param config - The handler's limits and how it holds uploads
  * @param record - Whether the body is a record upload, `multipart/vnd.courier.variables`
+ * @param defaults - The fields such an upload sent on as it arrives is written with ahead of its own
  * @returns The envelope and the `release` that lets go of what the upload
  *   holds, or why it is refused
  *
@@ -60,6 +61,7 @@ export async function readUpload(
   contentType: string,
   config: HandlerConfig | undefined,
   record = false,
+  defaults?: Readonly<Record<string, unknown>>,
 ): Promise<EnvelopeResult> {
   let boundary: string;
   try {
@@ -84,7 +86,7 @@ export async function readUpload(
   try {
     upload =
       config?.uploadMode === "stream"
-        ? await sentOn(body, boundary, limits, record)
+        ? await sentOn(body, boundary, limits, record, defaults)
         : await kept(body, boundary, limits, config, record);
   } catch (error) {
     if (error instanceof BodyError) return refusedBody(error);
@@ -138,12 +140,11 @@ async function sentOn(
   boundary: string,
   limits: FormLimits,
   record: boolean,
+  defaults: Readonly<Record<string, unknown>> | undefined,
 ): Promise<HeldUpload> {
-  const { options, upload, stop } = await (record ? streamedRecord : streamedForm)(
-    body,
-    boundary,
-    limits,
-  );
+  const { options, upload, stop } = record
+    ? await streamedRecord(body, boundary, limits, defaults)
+    : await streamedForm(body, boundary, limits);
   return {
     options,
     variables: upload,

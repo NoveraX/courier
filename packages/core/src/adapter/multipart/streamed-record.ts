@@ -15,6 +15,7 @@ import { type OutgoingPart, type StreamedForm, sending } from "./streamed-form";
  * @param body - The upload's bytes, held to its size and length
  * @param boundary - Its boundary
  * @param limits - The most parts, header bytes and text it may hold
+ * @param defaults - The fields written ahead of the record's own: its source's `defaultBody`
  * @returns The options, the upload and what stops it
  * @throws BodyError `BODY_MALFORMED` for an upload whose record does not parse; a part out of
  *   place fails the upload as it is sent
@@ -27,6 +28,7 @@ export async function streamedRecord(
   body: ReadableStream<Uint8Array<ArrayBuffer>>,
   boundary: string,
   limits: FormLimits,
+  defaults: Readonly<Record<string, unknown>> = {},
 ): Promise<StreamedForm> {
   const parts = multipartParts(body, boundary, limits);
   const fields = new TextFields(limits.maxFieldBytes);
@@ -50,18 +52,20 @@ export async function streamedRecord(
     await parts.return();
     throw error;
   }
-  return sending(options, recordParts(record, parts), parts);
+  return sending(options, recordParts(record, parts, defaults), parts);
 }
 
-/* The parts of the form a record goes as: its fields' text, and at each place the file the body brings there. */
+/* The parts of the form a record goes as: its fields' text, and at each place the file the body
+   brings there; the defaults under them first, as a direct call merges its source's defaultBody. */
 async function* recordParts(
   record: RecordSlots,
   parts: MultipartParts,
+  defaults: Readonly<Record<string, unknown>>,
 ): AsyncGenerator<OutgoingPart, void, undefined> {
   const places = new Set(record.places.map((place) => JSON.stringify(place)));
   const fileAt = (value: unknown, at: FilePlace): FilePlace | undefined =>
     value === null && places.has(JSON.stringify(at)) ? at : undefined;
-  for (const { name, value } of formEntries(record.variables, fileAt)) {
+  for (const { name, value } of formEntries({ ...defaults, ...record.variables }, fileAt)) {
     if (typeof value === "string") {
       yield { name, text: value };
       continue;

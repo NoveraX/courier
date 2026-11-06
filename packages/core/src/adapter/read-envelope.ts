@@ -22,6 +22,7 @@ export type { EnvelopeResult } from "./envelope-result";
  *
  * @param request - The proxy request
  * @param config - The handler's limits
+ * @param defaults - The fields a record upload sent on as it arrives is written with ahead of its own
  * @returns The envelope, or why it is refused
  *
  * @example
@@ -33,13 +34,16 @@ export type { EnvelopeResult } from "./envelope-result";
 export async function readEnvelope(
   request: Request,
   config?: HandlerConfig,
+  defaults?: Readonly<Record<string, unknown>>,
 ): Promise<EnvelopeResult> {
   const contentType = request.headers.get("content-type") ?? "";
   /* Media types are case-insensitive (RFC 9110). */
   const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
 
   if (mediaType === "multipart/form-data") return readUpload(request, contentType, config);
-  if (mediaType === RECORD_UPLOAD_TYPE) return readUpload(request, contentType, config, true);
+  if (mediaType === RECORD_UPLOAD_TYPE) {
+    return readUpload(request, contentType, config, true, defaults);
+  }
   if (mediaType !== "application/json") {
     discardBody(request);
     return { ok: false, status: 415, message: "Unsupported Content-Type" };

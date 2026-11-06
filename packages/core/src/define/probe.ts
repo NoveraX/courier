@@ -134,7 +134,7 @@ export interface WireCallRecord {
  * ```
  */
 export function recordWireCall(
-  probe: AnyProbe,
+  probe: AnyProbe | ((...args: never[]) => unknown),
   variables: unknown,
   path: PathWriter["path"] = probingPath,
 ): WireCallRecord {
@@ -196,7 +196,7 @@ export function recordWireCall(
  * // → { body: URLSearchParams { … } }
  * ```
  */
-export function probeOptions(probe: AnyProbe): unknown {
+export function probeOptions(probe: AnyProbe | ((...args: never[]) => unknown)): unknown {
   try {
     return recordWireCall(probe, standIn()).options;
   } catch {

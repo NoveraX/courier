@@ -15,7 +15,7 @@ import { createHandler } from "../src/adapter/create-handler";
 import type { HandlerConfig } from "../src/adapter/handler-config";
 import { readRecordUpload } from "../src/adapter/multipart/read-record";
 import { createCaller } from "../src/caller";
-import { courier, defineApi, defineGroup } from "../src/define/index";
+import { courier, defineApi, defineGroup, multipartBody } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
 import { buildPostPayload } from "../src/proxy-caller/post-payload";
@@ -56,7 +56,7 @@ async function partsOf(req: IncomingMessage): Promise<Part[]> {
 }
 
 /** The API, in front of an upstream that keeps the parts of each form it gets. */
-async function apiWith(endpoints: Record<string, unknown>) {
+async function apiWith(endpoints: Record<string, unknown>, options: Record<string, unknown> = {}) {
   upstream = createServer((req, res) => {
     void partsOf(req).then((parts) => {
       got.push({ url: req.url ?? "", parts });
@@ -67,6 +67,7 @@ async function apiWith(endpoints: Record<string, unknown>) {
   await new Promise<void>((resolve) => upstream?.listen(0, "127.0.0.1", resolve));
   const { port } = upstream.address() as AddressInfo;
   return defineApi({
+    ...options,
     name: "api",
     baseURL: `http://127.0.0.1:${port}`,
     expose: true,
@@ -205,6 +206,47 @@ describe("a record that holds a file, through the proxy", () => {
         message: expect.stringContaining(said),
       }),
     );
+  });
+});
+
+describe("a source's defaultBody", () => {
+  const record = () => ({ title: "Dune", cover: cover() });
+
+  it("is under the record in the form the upstream gets, kept or sent on, as directly", async () => {
+    const api = await apiWith(
+      { save: endpoint.post("save").variables<Record<string, unknown>>() },
+      { defaultBody: { apiVersion: "v2", title: "default" } },
+    );
+
+    await directly(api).save?.(record());
+    await throughProxy(api, "save", record());
+    await throughProxy(api, "save", record(), { uploadMode: "stream" });
+
+    /* The record's title in the place the default's held, as an object spread puts it. */
+    expect(got[0]?.parts).toEqual([
+      ["apiVersion", undefined, undefined, "v2"],
+      ["title", undefined, undefined, "Dune"],
+      ["cover", "cover.png", "image/png", "png"],
+    ]);
+    expect(got[1]?.parts).toEqual(got[0]?.parts);
+    expect(got[2]?.parts).toEqual(got[0]?.parts);
+  });
+
+  it("is under none of a closure's own body, sent on as directly", async () => {
+    const api = await apiWith(
+      {
+        named: endpoint
+          .variables<Record<string, unknown>>()
+          .via((http, fields) => http.post("named", undefined, { body: multipartBody(fields) })),
+      },
+      { defaultBody: { apiVersion: "v2" } },
+    );
+
+    await directly(api).named?.(record());
+    await throughProxy(api, "named", record(), { uploadMode: "stream" });
+
+    expect(got[0]?.parts.map(([name]) => name)).toEqual(["title", "cover"]);
+    expect(got[1]?.parts).toEqual(got[0]?.parts);
   });
 });
 

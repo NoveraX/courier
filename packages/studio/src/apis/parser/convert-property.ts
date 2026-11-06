@@ -6,7 +6,7 @@ import { componentIdentifier, declaredComponentName } from "./component-identifi
 import { expandPointer } from "./pointer-refs";
 import { isComposite, soleMember, withoutNull } from "./property-forms";
 import { readConstraints } from "./read-constraints";
-import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
+import { convertSchema, enumValues, holdsBytes, normalizeTypeArray } from "./schema-conversion";
 import { asNode, fieldOf, isNode, listAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedSchema, ParsedSchemaProperty } from "./types";
 
@@ -87,6 +87,7 @@ export function convertProperty(
     /* An inline object keeps its own shape rather than flattening. */
     shape: node.properties ? convertSchema(`${name}Object`, node, spec) : undefined,
     valueType: mapValueType(node, name, spec),
+    ...(holdsBytes(node) ? { binary: true as const } : {}),
   };
 }
 

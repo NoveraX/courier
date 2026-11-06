@@ -64,7 +64,8 @@ describe("computeSpecHash", () => {
   it.each([
     [
       "packages/studio/tests/fixtures/generator/kitchen-sink.json",
-      "b546741a2b9043367c0fbe7c5be128ea",
+      /* Hashed anew since the parser marks a string that holds a file's bytes. */
+      "f1f375edd26f2aad6ba9a725c697b95c",
     ],
     ["e2e/fixtures/specs/billing.v1.json", "503217d1531b3e5aa795c24ebea41e43"],
     ["e2e/fixtures/specs/billing.v2.json", "40a641e75d50499e28b7c2b7440b0bb0"],

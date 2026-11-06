@@ -205,6 +205,12 @@ export interface ParsedSchema {
   valueType?: ParsedSchema | undefined;
   /** What a primitive or a list may hold beyond its type. */
   constraints?: SchemaConstraints | undefined;
+  /**
+   * Set for a string that holds a file's bytes: OpenAPI 3.0's `format:
+   * binary`, or 3.1's `contentMediaType` without a `contentEncoding`, which
+   * would make it text. A multipart form sends such a value as a file.
+   */
+  binary?: true | undefined;
 }
 
 export interface ParsedSchemaProperty {
@@ -238,6 +244,11 @@ export interface ParsedSchemaProperty {
   requiredInDirection?: boolean | undefined;
   /** What a primitive or a list may hold beyond its type. */
   constraints?: SchemaConstraints | undefined;
+  /**
+   * Set for a property that holds a file's bytes, as `ParsedSchema.binary`
+   * says; its `format` stays as the specification writes it.
+   */
+  binary?: true | undefined;
 }
 
 export type SpecFormat =

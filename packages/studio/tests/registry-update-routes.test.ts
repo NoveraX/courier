@@ -340,6 +340,13 @@ describe("updating a declared import as its entry says", () => {
 
     expect(checked.status).toBe(409);
     expect(field(checked.body, "code")).toBe("SPEC_PIN_MISMATCH");
+    /* Both hashes, so the pin can be moved to the specification at hand. */
+    const named =
+      /hashes to ([0-9a-f]{32}), but its pinHash in courier\.config is ([0-9a-f]{32})/.exec(
+        String(field(checked.body, "error")),
+      );
+    expect(named?.[2]).toBe("0".repeat(32));
+    expect(named?.[1]).not.toBe(named?.[2]);
     expect(JSON.stringify(field(all.body, "results"))).toContain("pinHash");
     expect(preview.status).toBe(409);
     expect(field(preview.body, "code")).toBe("SPEC_PIN_MISMATCH");

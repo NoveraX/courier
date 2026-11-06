@@ -1,6 +1,6 @@
-export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, variables, and the kind of a .via() endpoint.", updated: "2026-11-06" }
+export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, variables, the kind of a .via() endpoint, and Studio's imports.", updated: "2026-11-06" }
 
-This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, how variables are written into a request, and whether an endpoint addressed with `.via()` reads or writes. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
+This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, how variables are written into a request, whether an endpoint addressed with `.via()` reads or writes, and what Studio writes for an import. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
 
 ## Run the Upgrade
 
@@ -189,6 +189,14 @@ An endpoint addressed with `.via()` reads or writes as the verb its closure call
 | `--yes` in a project whose changes git has not committed, which went ahead | `create-courier --yes` and `courier-cli setup --yes` change nothing there; `--allow-dirty` goes ahead as before. In a terminal the plan names those changes, and you answer |
 | `--no-studio`, which wrote the example's mock all the same | no mock without Studio, the plan saying why; `--mocks` beside `--no-studio`, `--openapi` or `--no-example` is refused |
 
+## Studio Imports
+
+What Studio writes from an imported specification, and the hash it keeps of one — see [Import an API](/docs/studio/import-api).
+
+| 0.4 | Now |
+|---|---|
+| A specification that holds a file's bytes — `format: binary`, or OpenAPI 3.1's `contentMediaType` — hashed as it was parsed | hashed anew, as the parser marks such a file now: **Manage** shows the import as changed once, and a URL import's `pinHash` is refused with `409` `SPEC_PIN_MISMATCH`, whose message names the pinned hash and the new one. Import the specification again, then pin the new hash |
+
 ## Related
 
 - [NetworkError, TimeoutError & AbortError](/docs/api/call-errors) — the errors a call rejects with
@@ -197,3 +205,4 @@ An endpoint addressed with `.via()` reads or writes as the verb its closure call
 - [Replication Guide](/docs/deployment/replication) — a user's connections on every replica
 - [createHandler](/docs/api/api-route) — the limits a request body is held to
 - [Defining APIs](/docs/core-concepts/defining-apis) — how an endpoint's kind is decided
+- [Import an API](/docs/studio/import-api) — what Studio writes for an operation, and an import's `pinHash`

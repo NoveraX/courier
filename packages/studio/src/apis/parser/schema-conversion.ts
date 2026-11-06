@@ -90,11 +90,36 @@ export function convertSchema(name: string, raw: SpecNode, spec?: SpecNode): Par
     return { name, type: "array", items, description, ...(constraints && { constraints }) };
   }
   if (type === "object" || schema.properties) return convertObjectSchema(name, schema, spec);
+  const bytes = holdsBytes(schema) ? { binary: true as const } : {};
   if (isPrimitiveType(type)) {
     const constraints = readConstraints(schema, type);
-    return { name, type, description, ...(constraints && { constraints }) };
+    return { name, type, description, ...(constraints && { constraints }), ...bytes };
   }
-  return { name, type: "any", description };
+  return { name, type: "any", description, ...bytes };
+}
+
+/**
+ * Whether a schema says it holds a file's bytes: a string of OpenAPI 3.0's
+ * `format: binary`, or one OpenAPI 3.1 gives a `contentMediaType` and no
+ * `contentEncoding` — `base64` would make it text. Under 3.1 such a schema
+ * may leave its type out.
+ *
+ * @param schema - The schema as written in the specification, without its `null`
+ * @returns `true` for a file's bytes
+ * @example
+ * ```ts
+ * holdsBytes({ type: "string", contentMediaType: "image/png" }); // → true
+ * holdsBytes({ type: "string", contentMediaType: "image/png", contentEncoding: "base64" }); // → false
+ * ```
+ */
+export function holdsBytes(schema: SpecNode): boolean {
+  const type = textAt(schema, "type");
+  if (type === "string" && textAt(schema, "format") === "binary") return true;
+  return (
+    (type === undefined || type === "string") &&
+    textAt(schema, "contentMediaType") !== undefined &&
+    fieldOf(schema, "contentEncoding") === undefined
+  );
 }
 
 /**

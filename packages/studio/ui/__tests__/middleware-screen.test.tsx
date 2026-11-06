@@ -11,7 +11,7 @@
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import type { ScannedSource } from "@/features/apis/types-generate";
 import { useStudioStore } from "@/store";
 import type { MiddlewareEntry, RequestEntry } from "@/store/types";
 import { requestEntry } from "./request-entry-fixture";
@@ -172,10 +172,110 @@ describe("the Middleware page", () => {
   });
 
   it("says no call ran through middleware yet", async () => {
-    useStudioStore.setState({ requests: [requestEntry({ id: "plain" })] });
+    useStudioStore.setState({ requests: [requestEntry({ id: "plain" })], scanSources: [] });
 
     await openShell("/middleware");
 
     expect(screen.getByText("No call has run through middleware yet")).toBeTruthy();
+  });
+});
+
+function scanned(
+  name: string,
+  endpoints: Array<[string, Array<{ name: string; layer: "api" | "retry" | "endpoint" }>]>,
+): ScannedSource {
+  return {
+    name,
+    baseURL: `https://${name}.example`,
+    filePath: `src/api/${name}.ts`,
+    isImported: false,
+    hasClient: true,
+    groups: [
+      {
+        name: "orders",
+        prefix: "/orders",
+        filePath: `src/api/${name}.ts`,
+        endpoints: endpoints.map(([method, chain]) => ({
+          name: method,
+          analysis: {
+            hasResponseType: false,
+            hasVariablesType: false,
+            hasValidation: false,
+            httpMethod: "get",
+            path: method,
+            type: "query",
+            ...(chain.length > 0 && { middleware: chain }),
+          },
+        })),
+      },
+    ],
+  };
+}
+
+describe("the Middleware page's coverage, from the definitions", () => {
+  beforeEach(() => {
+    useStudioStore.setState({
+      requests: [],
+      scanSources: [
+        scanned("shop", [
+          [
+            "list",
+            [
+              { name: "audit", layer: "api" },
+              { name: "tenant", layer: "endpoint" },
+            ],
+          ],
+          [
+            "place",
+            [
+              { name: "audit", layer: "api" },
+              { name: "retry", layer: "retry" },
+            ],
+          ],
+          ["ping", []],
+        ]),
+        scanned("status", [["health", [{ name: "audit", layer: "endpoint" }]]]),
+      ],
+    });
+  });
+
+  const coverage = () => within(screen.getByRole("region", { name: "Coverage" }));
+  /* Each middleware's row: the ones that say how many endpoints they cover. */
+  const rowsShown = () =>
+    coverage()
+      .getAllByRole("button", { name: / of \d+/ })
+      .map((row) => row.textContent);
+
+  it("counts each middleware's endpoints before any call ran through it", async () => {
+    await openShell("/middleware");
+
+    expect(rowsShown()).toEqual([
+      expect.stringMatching(/^audit.*API.*2 of 4/),
+      expect.stringMatching(/^retry.*\.retry\(\).*1 of 4/),
+      expect.stringMatching(/^audit.*endpoint.*1 of 4/),
+      expect.stringMatching(/^tenant.*endpoint.*1 of 4/),
+      expect.stringMatching(/^No middleware.*1 of 4/),
+    ]);
+    expect(screen.queryByText("No call has run through middleware yet")).toBeNull();
+  });
+
+  it("opens the endpoints a middleware covers, each with its chain in order", async () => {
+    await openShell("/middleware");
+
+    await settle(() =>
+      fireEvent.click(coverage().getAllByRole("button", { name: /^audit.*API/ })[0] as HTMLElement),
+    );
+
+    const listed = within(screen.getByRole("list", { name: "Endpoints audit covers" }));
+    expect(listed.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+      "GETshop.orders.listaudittenant",
+      "GETshop.orders.placeauditretry",
+    ]);
+  });
+
+  it("narrows the count to one source", async () => {
+    await openShell("/middleware?source=status");
+
+    expect(rowsShown()).toEqual([expect.stringMatching(/^audit.*endpoint.*1 of 1/)]);
   });
 });

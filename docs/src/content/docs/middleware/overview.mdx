@@ -1,4 +1,4 @@
-export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Courier — and where a call's chain comes from.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Middleware Overview", description: "Koa-style onion model middleware for intercepting, transforming, and controlling every request in Courier — and where a call's chain comes from.", mode: "both", updated: "2026-11-06" }
 
 ## How Middleware Works
 
@@ -178,6 +178,8 @@ courier({ middleware })          the base the endpoint was built from, and every
   ▼
 request ──▶ upstream
 ```
+
+Studio's **Middleware** page reads this chain from the definitions, before any call runs. Its **Coverage** table names every middleware declared anywhere in an API — on the API, by an endpoint's `.retry()`, or by its base and its `.use()` — with how many endpoints it covers, and lists the endpoints that run through none. A row opens the endpoints it covers, each with its chain in this order; the session's calls through each middleware are counted beside it, and the table narrows to one source.
 
 On the way in, each middleware's `before` runs, and an `async` one is awaited before the next begins; on the way out, each `after` runs from the innermost to the outermost. A `wrap` handler holds everything after it in its `next()`, so what it does before `next()` runs on the way in, and what it does after on the way out.
 

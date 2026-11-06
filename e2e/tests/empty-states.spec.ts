@@ -54,7 +54,6 @@ const NOTICES = [
   ["/waterfall", "Waiting for requests"],
   ["/analytics", "No completed requests yet"],
   ["/audit", "No requests to audit"],
-  ["/middleware", "No call has run through middleware yet"],
   ["/compare", "Compare needs two finished requests"],
   ["/mocks", "No mock servers yet"],
   ["/mocks/routes", "No mock servers yet"],
@@ -78,4 +77,13 @@ test("puts each page's notice in the middle of the space the page leaves it", as
     expect(placement?.aboveBottom, `${path}: above the bottom`).toBeLessThanOrEqual(48);
     await tab.close();
   }
+});
+
+/* The Middleware page reads its coverage from the definitions, so a project with endpoints is never empty there. */
+test("shows on the Middleware page the endpoints no middleware covers, before any call", async ({
+  page,
+}) => {
+  await page.goto(new URL("/middleware", studio.link).href);
+
+  await expect(page.locator("main").getByText("No middleware", { exact: true })).toBeVisible();
 });

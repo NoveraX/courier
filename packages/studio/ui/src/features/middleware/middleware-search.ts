@@ -7,11 +7,13 @@ export interface MiddlewareSearch {
   view?: "chain" | undefined;
   /** The request whose chain is traced — named apart from the inspector's `req`, which shares the address. */
   trace?: string | undefined;
+  /** The one source the coverage counts, rather than every one. */
+  source?: string | undefined;
 }
 
 /**
  * Read the Middleware page's parameters from its address: the chain view,
- * and the request it traces.
+ * the request it traces, and the source its coverage counts.
  *
  * @param raw - The address's parameters
  * @returns The page's parameters
@@ -24,5 +26,6 @@ export function validateMiddlewareSearch(raw: Record<string, unknown>): Middlewa
   const search: MiddlewareSearch = {};
   if (raw.view === "chain") search.view = "chain";
   if (typeof raw.trace === "string" && raw.trace) search.trace = raw.trace;
+  if (typeof raw.source === "string" && raw.source) search.source = raw.source;
   return search;
 }

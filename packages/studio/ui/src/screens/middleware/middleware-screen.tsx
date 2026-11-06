@@ -6,13 +6,16 @@ import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { Skeleton } from "@/design/skeleton";
 import { endpointImpact } from "@/features/middleware/endpoint-impact";
+import { middlewareCoverage } from "@/features/middleware/middleware-coverage";
 import type { MiddlewareSearch, MiddlewareView } from "@/features/middleware/middleware-search";
 import { middlewareOverview, traced } from "@/features/middleware/middleware-stats";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useCatalog } from "@/hooks/use-catalog";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
 import { ChainView } from "./chain-view";
+import { CoverageTable } from "./coverage-table";
 import { ImpactTable } from "./impact-table";
 import { MiddlewareCards } from "./middleware-cards";
 import type { MiddlewareLook } from "./middleware-look";
@@ -34,11 +37,21 @@ function NoMiddleware(): React.ReactNode {
   );
 }
 
+function NoCallYet(): React.ReactNode {
+  return (
+    <p className="m-0 rounded-sheet border border-dashed border-line px-4.5 py-3.5 text-control text-fg-subtle">
+      What each middleware costs, and every call's chain step by step, show here once a call runs
+      through it.
+    </p>
+  );
+}
+
 /**
- * The Middleware page: what the session's middleware costs — its share
- * of the calls' time, each middleware's calls, time, failures and headers,
- * the endpoints it weighs on most — and the chain inspector, one call
- * traced through every step.
+ * The Middleware page: which endpoints each middleware covers, read from
+ * the definitions before any call; what the session's middleware costs —
+ * its share of the calls' time, each middleware's calls, time, failures
+ * and headers, the endpoints it weighs on most — and the chain inspector,
+ * one call traced through every step.
  *
  * @returns The page
  * @example
@@ -56,6 +69,8 @@ export function MiddlewareScreen(): React.ReactNode {
   const looks = new Map<string, MiddlewareLook>(
     overview.stats.map((s, i) => [s.name, lookOf(s.name, i, s.phase)]),
   );
+  const coverage = middlewareCoverage(useCatalog(), overview.stats, search.source);
+  const declared = coverage.rows.length + coverage.uncovered.length > 0;
   const view: MiddlewareView = search.view ?? "overview";
   /* Opening a chain or switching the view is a step the browser's Back undoes; picking another call in the chain is not. */
   const go = (next: MiddlewareSearch, step = false): void =>
@@ -63,7 +78,7 @@ export function MiddlewareScreen(): React.ReactNode {
       search: (prev) => ({ ...inspectorOf(prev), ...next }),
       replace: !step,
     });
-  const trace = (id: string): void => go({ view: "chain", trace: id }, true);
+  const trace = (id: string): void => go({ view: "chain", trace: id, source: search.source }, true);
   const traceMiddleware = (name: string): void => {
     const ran = calls.filter((r) => r.middlewareEntries.some((e) => e.name === name));
     const failed = ran.find((r) =>
@@ -91,13 +106,29 @@ export function MiddlewareScreen(): React.ReactNode {
             options={VIEWS}
             value={view}
             onChange={(v) =>
-              go({ view: v === "chain" ? "chain" : undefined, trace: search.trace }, true)
+              go(
+                {
+                  view: v === "chain" ? "chain" : undefined,
+                  trace: search.trace,
+                  source: search.source,
+                },
+                true,
+              )
             }
           />
         </div>
       </header>
       {loading.requests && <MiddlewareSkeleton />}
-      {!loading.requests && !chosen && <NoMiddleware />}
+      {!loading.requests && !chosen && !declared && <NoMiddleware />}
+      {!loading.requests && view === "overview" && declared && (
+        <CoverageTable
+          coverage={coverage}
+          looks={looks}
+          source={search.source}
+          onSource={(source) => go({ ...search, source })}
+        />
+      )}
+      {!loading.requests && !chosen && declared && <NoCallYet />}
       {chosen && view === "overview" && (
         <>
           <OverheadHero overview={overview} looks={looks} />
@@ -110,7 +141,7 @@ export function MiddlewareScreen(): React.ReactNode {
           calls={calls}
           chosen={chosen}
           looks={looks}
-          onChoose={(id) => go({ view: "chain", trace: id })}
+          onChoose={(id) => go({ view: "chain", trace: id, source: search.source })}
           onInspect={open}
         />
       )}

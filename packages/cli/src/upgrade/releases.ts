@@ -1,4 +1,7 @@
 import type { Release } from "./migration";
+import { REALTIME_ERRORS } from "./migrations/realtime-errors";
+import { STUDIO_CORE_CONFIG } from "./migrations/studio-core-config";
+import { SUBSCRIPTION_TYPE } from "./migrations/subscription-type";
 import { compareVersions, parseVersion, releaseLine, type Version } from "./versions";
 
 const DOCS = "https://courier.noverax.cloud/docs";
@@ -35,7 +38,7 @@ export const RELEASES: readonly Release[] = [
         docs: `${DOCS}/proxy-mode/expose#the-routes`,
       },
     ],
-    migrations: [],
+    migrations: [STUDIO_CORE_CONFIG],
   },
   {
     version: "0.5.0",
@@ -74,7 +77,7 @@ export const RELEASES: readonly Release[] = [
         docs: `${UPGRADING}#request-bodies-and-uploads`,
       },
     ],
-    migrations: [],
+    migrations: [REALTIME_ERRORS, SUBSCRIPTION_TYPE],
   },
 ];
 

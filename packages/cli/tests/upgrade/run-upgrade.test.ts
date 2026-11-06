@@ -114,6 +114,43 @@ describe("runUpgrade", () => {
     expect(plan?.upgrade?.notes.map((note) => note.release)).not.toContain("0.4.0");
   });
 
+  it("carries the code over the releases it crosses, and adds the package moved code needs", async () => {
+    const root = projectWith({
+      "package.json": manifest({
+        name: "shop",
+        dependencies: { "@noverax/courier": "^0.3.1" },
+        devDependencies: { "@noverax/courier-studio-core": "^0.3.1" },
+      }),
+      "node_modules/@noverax/courier/package.json": manifest({ version: "0.3.1" }),
+      "scripts/load.ts":
+        'import { loadCourierConfig } from "@noverax/courier-studio-core/config";\n',
+      "src/live.ts":
+        'import { AuthError, createCaller } from "@noverax/courier";\nnew AuthError();\n',
+    });
+
+    const { status, plan } = await upgrade(root, {});
+
+    expect(status).toBe(0);
+    expect(readFileSync(join(root, "scripts/load.ts"), "utf8")).toBe(
+      'import { loadCourierConfig } from "@noverax/courier-build/config";\n',
+    );
+    expect(readFileSync(join(root, "src/live.ts"), "utf8")).toBe(
+      'import { createCaller } from "@noverax/courier";\nimport { AuthError } from "@noverax/courier/realtime";\nnew AuthError();\n',
+    );
+    expect(read(root, "package.json")).toMatchObject({
+      devDependencies: {
+        "@noverax/courier-studio-core": "^0.5.0",
+        "@noverax/courier-build": "^0.5.0",
+      },
+    });
+    expect(plan?.upgrade?.packages).toContainEqual(
+      expect.objectContaining({ name: "@noverax/courier-build", added: true, to: "^0.5.0" }),
+    );
+    expect(plan?.upgrade?.notes.map((note) => note.release)).toEqual(
+      expect.arrayContaining(["0.4.0", "0.5.0"]),
+    );
+  });
+
   it("raises the packages of every manifest in the workspace, from one of its packages", async () => {
     const root = shop({
       "apps/web/package.json": manifest({ dependencies: { "@noverax/courier-react": "~0.4.0" } }),

@@ -15,7 +15,10 @@ import {
 } from "@noverax/create-courier/engine";
 
 import { isRecord } from "../util/is-record";
+import { migrateCode } from "./codemod/run-migrations";
+import { projectCode } from "./codemod/source-files";
 import { manifestEdits } from "./manifest-edits";
+import { additionsOf } from "./package-needs";
 import { courierPackages } from "./project-packages";
 import { managerRegistry, type Registry } from "./registry";
 import { releasesBetween } from "./releases";
@@ -105,19 +108,23 @@ export async function runUpgrade(
   const manager = reach.manager(root, run["package-manager"]);
   const { from, to } = await upgradeVersions(run, reach.registry(root, manager), packages, own);
   const target = formatVersion(to);
-  const manifests = manifestEdits(root, packages, to);
-  const notes = releasesBetween(from, to).flatMap((release) =>
+  const releases = releasesBetween(from, to);
+  const migrations = releases.flatMap((release) => release.migrations);
+  const code = migrations.length === 0 ? undefined : migrateCode(projectCode(root), migrations);
+  const additions = additionsOf(workspace, packages, code?.needs ?? [], target);
+  const manifests = manifestEdits(root, packages, to, additions);
+  const notes = releases.flatMap((release) =>
     release.notes.map((note) => ({ release: release.version, ...note })),
   );
   const plan: Plan = {
     files: [],
-    edits: manifests.edits,
+    edits: [...manifests.edits, ...(code?.edits ?? [])],
     dependencies: [],
     devDependencies: [],
     otherReleases: [],
     notInstalled: [],
     typescript: undefined,
-    manual: [],
+    manual: code?.manual ?? [],
     next: nextSteps(manager),
     prepare: [],
   };

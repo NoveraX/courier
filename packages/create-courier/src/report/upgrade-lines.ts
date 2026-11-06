@@ -21,6 +21,8 @@ export function upgradeLines(view: UpgradeView, style: TerminalStyle): string[] 
   const packages = view.packages.map((each) => {
     const where = each.manifest === "package.json" ? "" : `  ${style.dim(each.manifest)}`;
     const name = each.name.padEnd(width);
+    if (each.added === true)
+      return `  ${style.green("+")} ${name}  ${style.bold(each.to ?? "")}  ${style.dim("added: code the upgrade changes imports it")}${where}`;
     if (each.to === undefined)
       return `  ${style.yellow("!")} ${name}  ${each.from}  ${style.dim(`left as written: ${each.why ?? ""}`)}${where}`;
     return `  ${style.yellow("~")} ${name}  ${each.from} → ${style.bold(each.to)}${where}`;

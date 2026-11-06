@@ -19,6 +19,8 @@ export interface UpgradedPackage {
   readonly to: string | undefined;
   /** Why it is left as written, where it is. */
   readonly why?: string | undefined;
+  /** Whether the upgrade adds it: code it changed imports it. */
+  readonly added?: boolean | undefined;
 }
 
 /** A breaking change of a release an upgrade crosses, and where its notes say what to write instead. */

@@ -6,6 +6,7 @@ import {
   withJsonStrings,
 } from "@noverax/create-courier/engine";
 
+import type { Additions } from "./package-needs";
 import type { CourierPackage } from "./project-packages";
 import { bumpRange } from "./range-bump";
 import { formatVersion, type Version } from "./versions";
@@ -37,6 +38,7 @@ function withRanges(
  * @param root - The workspace's folder
  * @param packages - Courier's packages, as its manifests list them
  * @param target - The release to move to
+ * @param additions - The packages the migrated code needs, by manifest and field, added beside the rest
  * @returns The manifests' changes, and the packages as the plan shows them
  * @example
  * ```ts
@@ -47,11 +49,18 @@ export function manifestEdits(
   root: string,
   packages: readonly CourierPackage[],
   target: Version,
+  additions: Additions = new Map(),
 ): ManifestEdits {
   const shown: Array<UpgradeView["packages"][number]> = [];
   const edits: PlannedEdit[] = [];
-  for (const manifest of [...new Set(packages.map((each) => each.manifest))]) {
+  const manifests = new Set([...packages.map((each) => each.manifest), ...additions.keys()]);
+  for (const manifest of manifests) {
     const ranges = new Map<string, Record<string, string>>();
+    for (const [field, added] of additions.get(manifest) ?? []) {
+      ranges.set(field, { ...added });
+      for (const [name, to] of Object.entries(added))
+        shown.push({ manifest, name, field, from: "", to, added: true });
+    }
     for (const each of packages.filter((listed) => listed.manifest === manifest)) {
       const bump = bumpRange(each.range, target);
       const base = { manifest, name: each.name, field: each.field, from: each.range };

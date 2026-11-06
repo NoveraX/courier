@@ -1,3 +1,5 @@
+import type { AstNode } from "./codemod/ast";
+
 /** A change to a file's text: its span replaced by new text. */
 export interface TextEdit {
   readonly start: number;
@@ -15,18 +17,20 @@ export interface Finding {
   readonly instead: readonly string[];
 }
 
-/** A package code a migration wrote needs: one the release moved an import to. */
+/** A package the code a migration wrote needs: one the release moved an import to. */
 export interface PackageNeed {
   readonly name: string;
-  /** Whether it is needed only while developing: for a config the build reads, not for the app. */
-  readonly dev: boolean;
+  /** The package whose field it is listed in beside: a manifest that lists that one as a dependency lists this one so. */
+  readonly beside: string;
 }
 
-/** A file of the project's code, as a migration reads it. */
+/** A file of the project's code, as a migration reads it: a module, or a script block of a component's file. */
 export interface SourceFile {
   /** Relative to the workspace's root, `/`-separated. */
   readonly path: string;
   readonly text: string;
+  /** Its tree, as oxc parsed the text. */
+  readonly program: AstNode;
 }
 
 /** What a migration does to one file: its changes, what it leaves to the person, and the packages its changes need. */

@@ -45,5 +45,16 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@noverax/courier-mcp": "0.4.0"
+  },
+  "peerDependencies": {
+    "@noverax/courier": "^0.4.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@noverax/courier": "*"
   }
 }

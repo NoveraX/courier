@@ -8,10 +8,10 @@ import { urlWithoutSecrets } from "@noverax/courier/internal";
 import type { ProjectRoot } from "@noverax/courier-cli/devkit";
 import { messageOf, readProjectText } from "@noverax/courier-cli/devkit";
 import type { ImportStateEntry } from "../apis/imports-state";
-import { authHeaders } from "./auth-headers";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
+import { importAuthHeaders } from "./import-auth-headers";
 import { readFetchedSpec } from "./read-fetched-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";
@@ -135,7 +135,10 @@ export async function checkSingleSource(
   const specUrl = entry.from;
 
   try {
-    const raw = await fetchSpec(specUrl, allowlist, { headers: authHeaders(entry.auth), signal });
+    const raw = await fetchSpec(specUrl, allowlist, {
+      headers: importAuthHeaders(entry.auth),
+      signal,
+    });
     const { hash } = await readFetchedSpec(specUrl, raw, { signal, maxBytes: 0 });
     checkPinnedSpecHash(name, entry, hash);
     return { changed: hash !== state?.specHash, latestHash: hash };

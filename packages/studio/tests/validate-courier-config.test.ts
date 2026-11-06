@@ -164,7 +164,17 @@ describe("validateCourierConfig on imports", () => {
     [
       "auth with no token",
       { ...URL_IMPORT, auth: { type: "bearer" } },
-      "courier.config.imports.x.auth is an object, not a bearer, basic or header auth",
+      'courier.config.imports.x.auth.token must be a string or { env: "NAME" }',
+    ],
+    [
+      "auth that names no environment variable",
+      { ...URL_IMPORT, auth: { type: "bearer", token: { env: "1-TOKEN" } } },
+      "courier.config.imports.x.auth.token names no environment variable: a name is letters, digits and _, not starting with a digit, up to 256 characters.",
+    ],
+    [
+      "auth that sets a header framing the request",
+      { ...URL_IMPORT, auth: { type: "header", headers: { Host: { env: "SPEC_HOST" } } } },
+      "courier.config.imports.x.auth.headers.Host frames the request itself, so an import's auth cannot set it.",
     ],
   ])("rejects %s, naming the field", (_label, entry, message) => {
     expect(rejectionOf(withImport(entry))).toMatchObject({ code: "CONFIG_INVALID", message });

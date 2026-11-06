@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import type { AuthDraft } from "@/features/apis/import-auth-draft";
 import { INITIAL_IMPORT_STATE } from "@/features/apis/initial-import-state";
 import { consentFor, toggleConfirmed } from "@/features/apis/plan-consent";
 import { readPlanRefusal } from "@/features/apis/plan-refusal";
@@ -14,7 +15,7 @@ import {
   toggleGroupReducer,
   writeGeneratedFiles,
 } from "./import-actions";
-import { keptImport, useKeptImport } from "./kept-import";
+import { openedImport, useKeepImport, useKeptImport } from "./kept-import";
 
 export interface UseImportReturn {
   state: ImportState;
@@ -25,6 +26,8 @@ export interface UseImportReturn {
   close: () => void;
   setSource: (source: ImportSource) => void;
   setContent: (content: string) => void;
+  /** The auth an address is read with, as the user fills it in. */
+  setAuth: (auth: AuthDraft) => void;
   parse: () => Promise<void>;
   toggleEndpoint: (group: string, endpoint: string) => void;
   toggleGroup: (groupName: string) => void;
@@ -59,25 +62,13 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
   const [open, setOpen] = useState(false);
   const settings = useStudioStore((s) => s.settings);
 
-  /* An import left unfinished opens again with what was typed, unless another source is asked for. */
   const openWizard = useCallback((source?: ImportSource) => {
-    const kept = useKeptImport.getState().kept;
-    const resume = kept !== null && (source === undefined || source === kept.source);
-    setState({
-      ...INITIAL_IMPORT_STATE,
-      source: resume ? kept.source : (source ?? "url"),
-      content: resume ? kept.content : "",
-      fromTraffic: resume && kept.fromTraffic === true,
-    });
+    setState(openedImport(source));
     setError(null);
     setOpen(true);
   }, []);
 
-  /* What is typed is kept until a write ends the import. */
-  useEffect(() => {
-    if (open)
-      useKeptImport.setState({ kept: keptImport(state.source, state.content, state.fromTraffic) });
-  }, [open, state.source, state.content, state.fromTraffic]);
+  useKeepImport(open, state);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -94,11 +85,16 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
     setError(null);
   }, []);
 
+  const setAuth = useCallback((auth: AuthDraft) => {
+    setState((s) => ({ ...s, auth }));
+    setError(null);
+  }, []);
+
   const parse = useCallback(async () => {
     setParsing(true);
     setError(null);
     try {
-      const spec = await parseSpec(state.source, state.content);
+      const spec = await parseSpec(state.source, state.content, state.auth);
       const sourceUrl = state.source === "url" ? state.content : undefined;
       const patch = buildPostParseState(spec, settings, sourceUrl);
       setState((s) => ({ ...s, ...patch }));
@@ -107,7 +103,7 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
     } finally {
       setParsing(false);
     }
-  }, [state.source, state.content, settings]);
+  }, [state.source, state.content, state.auth, settings]);
 
   const preview = useCallback(async () => {
     if (!state.spec) return;
@@ -151,6 +147,7 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
     close,
     setSource,
     setContent,
+    setAuth,
     parse,
     toggleEndpoint: useCallback(
       (g: string, e: string) => setState((s) => toggleEndpointReducer(s, g, e)),

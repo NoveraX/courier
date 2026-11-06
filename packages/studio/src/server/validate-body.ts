@@ -5,8 +5,11 @@
  * Keeps validation at the system boundary — internal code can trust the shapes.
  */
 
+import type { CourierImportAuth } from "@noverax/courier/config";
+
 import type { GenerateOptions, ParsedSpec } from "../apis";
 import { readGenerateOptions } from "./generate-options-guard";
+import { ImportAuthError, readImportAuth } from "./import-auth";
 import { isParsedSpec } from "./parsed-spec-guard";
 import type { JsonResponse } from "./route-types";
 
@@ -38,15 +41,25 @@ export function isString(v: unknown): v is string {
 
 // ── Parse route ──────────────────────────────────────────────────────────────
 
-const PARSE_SOURCES = ["url", "raw", "file"] as const;
+const PARSE_SOURCES = ["url", "raw", "file", "import"] as const;
 
 type ParseSource = (typeof PARSE_SOURCES)[number];
 
-/** What `POST /api/apis/parse` reads: a URL, the text itself, or a file of the project. */
+/**
+ * What `POST /api/apis/parse` reads: a URL, the text itself, a file of the
+ * project, or the specification of an import courier.config declares, by
+ * its name.
+ */
 export interface ParseBody {
   source: ParseSource;
+  /** The URL, the text, the file's path, or the import's name. */
   content: string;
+  /** For a URL: what it is fetched with, each credential named by the environment variable that holds it. */
+  auth?: CourierImportAuth | undefined;
 }
+
+/** A parse request as Studio reads it: a declared import is read as its URL. */
+export type SpecRead = ParseBody & { source: Exclude<ParseSource, "import"> };
 
 function isParseSource(value: unknown): value is ParseSource {
   return PARSE_SOURCES.some((source) => source === value);
@@ -68,7 +81,15 @@ export function validateParseBody(body: unknown, res: JsonResponse): ParseBody |
   if (!isObject(body)) return reject(res, "body");
   if (!isParseSource(body.source)) return reject(res, "source");
   if (!isString(body.content)) return reject(res, "content");
-  return { source: body.source, content: body.content };
+  if (body.auth === undefined) return { source: body.source, content: body.content };
+  if (body.source !== "url") return reject(res, "auth");
+  try {
+    return { source: body.source, content: body.content, auth: readImportAuth(body.auth, true) };
+  } catch (err) {
+    if (!(err instanceof ImportAuthError)) throw err;
+    res.status(400).json({ error: err.message, code: err.code });
+    return null;
+  }
 }
 
 // ── Generate route ──────────────────────────────────────────────────────────

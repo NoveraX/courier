@@ -15,11 +15,29 @@ export type CourierImportGroupBy = "tag" | "path" | "single";
 /** Generated client mode */
 export type CourierImportGenerateClient = "direct" | "proxy" | "both" | "none";
 
-/** Auth payload used to fetch private specs */
+/**
+ * A secret named by the environment variable that holds it, read when it is
+ * needed: the config holds the variable's name, never the value. Studio and
+ * `courier-studio` read the variable from their own environment, which takes
+ * the project's `.env*` files in, and say a variable is not set by its name.
+ */
+export interface CourierSecretRef {
+  /** The environment variable that holds the secret: letters, digits and `_`, not starting with a digit. */
+  env: string;
+}
+
+/** A secret an import's auth sends: as the config computes it, or a reference to the variable that holds it. */
+export type CourierSecretValue = string | CourierSecretRef;
+
+/**
+ * Auth payload used to fetch private specs. Each secret may be a reference
+ * to the environment, `{ env: "ORDERS_SPEC_TOKEN" }` — what Studio writes,
+ * so no value is written into the config — or a string the config computes.
+ */
 export type CourierImportAuth =
-  | { type: "bearer"; token: string }
-  | { type: "basic"; username: string; password: string }
-  | { type: "header"; headers: Record<string, string> };
+  | { type: "bearer"; token: CourierSecretValue }
+  | { type: "basic"; username: CourierSecretValue; password: CourierSecretValue }
+  | { type: "header"; headers: Record<string, CourierSecretValue> };
 
 /**
  * Endpoints of a specification, named by any of these: an endpoint is

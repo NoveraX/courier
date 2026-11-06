@@ -3,6 +3,7 @@
  * All requests go through the Vite dev server proxy → Express backend.
  */
 
+import type { ImportAuthRefs } from "@/features/apis/import-auth-draft";
 import type {
   EndpointInventory,
   GeneratedFile,
@@ -14,8 +15,57 @@ import { post } from "@/lib/api-client";
 
 // ── Parse ───────────────────────────────────────────────────────────────────
 
-export function parseSpecFromUrl(url: string): Promise<ParsedSpec> {
-  return post("/api/apis/parse", { source: "url", content: url });
+/**
+ * Have Studio read a specification from a URL, with the auth whose
+ * credentials the environment variables it names hold.
+ *
+ * @param url - Where the specification is
+ * @param auth - What it is read with; none for a public one
+ * @returns The specification, parsed
+ * @example
+ * ```ts
+ * await parseSpecFromUrl(url, { type: "bearer", token: { env: "ORDERS_SPEC_TOKEN" } });
+ * ```
+ */
+export function parseSpecFromUrl(url: string, auth?: ImportAuthRefs): Promise<ParsedSpec> {
+  return post("/api/apis/parse", { source: "url", content: url, ...(auth && { auth }) });
+}
+
+/**
+ * Have Studio read the specification of an import courier.config declares,
+ * from the URL and with the auth the config gives it.
+ *
+ * @param name - The import, as courier.config names it
+ * @returns The specification, parsed
+ * @example
+ * ```ts
+ * await parseDeclaredSpec("orders");
+ * ```
+ */
+export function parseDeclaredSpec(name: string): Promise<ParsedSpec> {
+  return post("/api/apis/parse", { source: "import", content: name });
+}
+
+/** Whether Studio's environment sets a variable an import's auth names. */
+export interface AuthVariable {
+  name: string;
+  set: boolean;
+}
+
+/**
+ * Ask Studio which of the variables an import's auth names its environment
+ * sets; their values are never answered.
+ *
+ * @param names - The variables
+ * @returns Each variable, set or not
+ * @example
+ * ```ts
+ * await authVariables(["ORDERS_SPEC_TOKEN"]); // → [{ name: "ORDERS_SPEC_TOKEN", set: true }]
+ * ```
+ */
+export async function authVariables(names: string[]): Promise<AuthVariable[]> {
+  const answer = await post<{ variables: AuthVariable[] }>("/api/apis/auth-variables", { names });
+  return answer.variables;
 }
 
 export function parseSpecFromRaw(content: string): Promise<ParsedSpec> {

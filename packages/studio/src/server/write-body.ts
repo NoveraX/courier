@@ -1,5 +1,7 @@
+import type { CourierImportAuth } from "@noverax/courier/config";
 import { isRecord } from "@noverax/courier-cli/devkit";
 import { readGenerateOptions } from "./generate-options-guard";
+import { ImportAuthError, readImportAuth } from "./import-auth";
 import { isParsedSpec } from "./parsed-spec-guard";
 import type { WriteBody } from "./write-types";
 
@@ -30,6 +32,8 @@ export function readWriteBody(value: unknown): WriteBody | null {
   if (value.origin !== undefined && (value.origin !== "traffic" || importType !== "raw"))
     return null;
   if (value.planDigest !== undefined && typeof value.planDigest !== "string") return null;
+  const auth = authOf(value.auth, importType);
+  if (auth === null) return null;
   const confirm = value.confirm;
   if (
     confirm !== undefined &&
@@ -44,7 +48,23 @@ export function readWriteBody(value: unknown): WriteBody | null {
     ...(importType !== undefined && { importType }),
     ...(value.origin === "traffic" && { origin: "traffic" as const }),
     ...(typeof value.specUrl === "string" && { specUrl: value.specUrl }),
+    ...(auth !== undefined && { auth }),
     ...(typeof value.planDigest === "string" && { planDigest: value.planDigest }),
     ...(confirm !== undefined && { confirm }),
   };
+}
+
+/* A URL import's auth, its credentials named by the environment variables that hold them: `null` for any other. */
+function authOf(
+  raw: unknown,
+  importType: string | undefined,
+): CourierImportAuth | undefined | null {
+  if (raw === undefined) return undefined;
+  if (importType !== "url") return null;
+  try {
+    return readImportAuth(raw, true);
+  } catch (err) {
+    if (err instanceof ImportAuthError) return null;
+    throw err;
+  }
 }

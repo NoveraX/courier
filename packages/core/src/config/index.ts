@@ -52,6 +52,8 @@ export type {
   CourierImportValidation,
   CourierRawImport,
   CourierRuntimeConfig,
+  CourierSecretRef,
+  CourierSecretValue,
   CourierServerConfig,
   CourierStudioConfig,
   CourierUrlImport,

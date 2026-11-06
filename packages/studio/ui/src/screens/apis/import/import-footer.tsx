@@ -2,6 +2,7 @@ import { ArrowRight, Download } from "lucide-react";
 import type { UseConfigDeclare } from "@/apis/use-config-declare";
 import type { UseImportReturn } from "@/apis/use-import";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
+import { authLacks } from "@/features/apis/import-auth-draft";
 import type { ImportState, ImportStep } from "@/features/apis/types";
 import { DeclareActions } from "./declare-actions";
 import { FooterAction } from "./footer-action";
@@ -19,8 +20,13 @@ function writeLabel({ consent, generatedFiles }: ImportState): string {
   return consent.plan.blocked.length > 0 ? "Try again" : "Write as allowed";
 }
 
+/* What an address's auth still lacks before Studio can read with it. */
+function lacking(state: ImportState): string | null {
+  return state.source === "url" ? authLacks(state.auth) : null;
+}
+
 function noteOf(state: ImportState): string {
-  if (state.step === "import") return "OpenAPI 3.x · Swagger 2.0 · Postman";
+  if (state.step === "import") return lacking(state) ?? "OpenAPI 3.x · Swagger 2.0 · Postman";
   if (state.step === "select")
     return `${countSelectedEndpoints(state.selectedEndpoints)} endpoints will be generated`;
   if (state.step === "options")
@@ -70,7 +76,7 @@ export function ImportFooter({
           icon={ArrowRight}
           busy={parsing}
           tone="next"
-          disabled={!state.content.trim() || parsing}
+          disabled={!state.content.trim() || parsing || lacking(state) !== null}
           onClick={() => void wizard.parse()}
         />
       )}

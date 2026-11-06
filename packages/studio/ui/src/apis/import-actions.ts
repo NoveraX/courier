@@ -6,6 +6,7 @@ import { generateCode, parseSpecFromRaw, parseSpecFromUrl } from "@/apis/client"
 import { type ImportBody, writeFiles } from "@/apis/client-file-changes";
 import { deriveSourceName } from "@/features/apis/derive-source-name";
 import { buildDefaultOptions, selectAllEndpoints } from "@/features/apis/helpers";
+import { type AuthDraft, authRefsOf, NO_AUTH } from "@/features/apis/import-auth-draft";
 import { consentBody } from "@/features/apis/plan-consent";
 import type { GenerateOptions, ImportState, ParsedSpec } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
@@ -16,8 +17,9 @@ import type { Settings } from "@/store/types-ui";
 export async function parseSpec(
   source: "url" | "raw" | "file",
   content: string,
+  auth: AuthDraft = NO_AUTH,
 ): Promise<ParsedSpec> {
-  return source === "url" ? parseSpecFromUrl(content) : parseSpecFromRaw(content);
+  return source === "url" ? parseSpecFromUrl(content, authRefsOf(auth)) : parseSpecFromRaw(content);
 }
 
 export function buildPostParseState(
@@ -60,8 +62,8 @@ export async function writeGeneratedFiles(state: ImportState): Promise<unknown> 
 
 /**
  * The import as the wizard sends it to Studio: the spec, where it came
- * from, and the options with the endpoints picked. Writing it and declaring
- * it in courier.config both send it.
+ * from and the auth it was read with, and the options with the endpoints
+ * picked. Writing it and declaring it in courier.config both send it.
  *
  * @param state - The wizard's state
  * @returns The request body
@@ -73,11 +75,13 @@ export async function writeGeneratedFiles(state: ImportState): Promise<unknown> 
  */
 export function importBody(state: ImportState): ImportBody {
   if (!state.spec) throw new Error("No spec to write");
+  const auth = state.source === "url" ? authRefsOf(state.auth) : undefined;
   return {
     sourceName: state.options.sourceName,
     spec: state.spec,
     specUrl: state.source === "url" ? state.content : "",
     importType: state.source,
+    ...(auth !== undefined && { auth }),
     ...(state.source === "raw" && state.fromTraffic && { origin: "traffic" as const }),
     options: { ...state.options, selectedEndpoints: state.selectedEndpoints },
   };

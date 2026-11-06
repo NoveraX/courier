@@ -157,6 +157,7 @@ It takes a URL, a file, or `-` for standard input, and names the import after th
 - `--out`, `--validation`, `--group-by`, `--client`, `--no-types`, `--no-schemas`, `--no-comments` and `--auth-middleware` are the wizard's options, with its defaults.
 - `--no-declare` writes the files only, and prints the lines to add to `courier.config.ts` — each under the file it goes in, when the config takes its `sources` from a module.
 - A URL is fetched by the wizard's rules — see [Specifications on a private network](/docs/studio/import-api#specifications-on-a-private-network).
+- `--bearer-env ORDERS_SPEC_TOKEN`, `--basic-env SPEC_USER:SPEC_PASSWORD` or `--header-env "X-Api-Key=ORDERS_API_KEY,X-Tenant=TENANT_ID"` name the environment variables a specification behind auth is read with, one kind at a time, and the import's entry records the same names — see [Specifications behind auth](/docs/studio/import-api#specifications-behind-auth). The command takes no credential itself, which would stay in the shell's history.
 - The project needs a `courier.config.ts`: without one, the command prints the config to start from. Its variables are read first, as Studio reads them — `--dotenv` names the files.
 
 It exits 0 once the import is written and declared, or its plan shown with `--dry-run`, and 1 when it writes nothing or something fails.
@@ -196,7 +197,7 @@ export default defineConfig({
 - Studio reads the list only when a fetch would reach such a host, from `courier.config` as it is on disk at that moment: a host a save has just added or removed counts.
 - While `courier.config` does not load, no private host is reached, not even one the last config that loaded named: the request is refused with 409 `CONFIG_NOT_LOADING`, and with 503 while Studio is still loading the config. A project without a config is told to create one and name the host there.
 - List hosts literally. An entry is the host the URL names, in any case — `gitlab.internal` allows it on any port, `10.0.0.7:8080` on that port only — an IPv6 address may be written with or without brackets, and a name in other letters than ASCII as it is written. An entry written as a URL, with a path, or ending in a dot never names a host: the config does not load, and its error names the entry. A URL that names no port has its scheme's default, so `gitlab.internal:443` allows `https://gitlab.internal`. A host computed from something Studio does not watch, such as an environment variable or a file the config reads, is taken as of the last load, and one computed in a module Node runs itself as of the last time Node ran it.
-- An address that carries a user or a password, `https://ana:pw@specs.example/openapi.json`, is refused with 400 `SPEC_CREDENTIALS_IN_URL` before anything is sent, by Import API, `courier-studio import` and the update checks alike: an address is written into `courier.config.ts`, logs and the page, so give the credentials as the import's `auth` instead. Every message and log line names an address with its secret parameters cut, `?api_key=[redacted]`, and the wizard keeps no address that carries one in an import left unfinished.
+- An address that carries a user or a password, `https://ana:pw@specs.example/openapi.json`, is refused with 400 `SPEC_CREDENTIALS_IN_URL` before anything is sent, by Import API, `courier-studio import` and the update checks alike: an address is written into `courier.config.ts`, logs and the page, so give the credentials as the import's [`auth`](/docs/studio/import-api#specifications-behind-auth) instead. Every message and log line names an address with its secret parameters cut, `?api_key=[redacted]`, and the wizard keeps no address that carries one in an import left unfinished.
 - `0.0.0.0` and `::`, which mean every interface, are never reached, even when listed.
 - A name answered with an address of 198.18.0.0/15, as a fake-IP proxy such as Clash, Surge or sing-box answers every name, is reached as the name it was: the proxy takes it to that host. Such an address written out in a URL, or in a redirect, names no host, and is reached only when the list names it.
 - Every hop is checked as it connects: a host name is resolved once, every address it resolves to must pass, and the connection goes to one of those; a redirect is followed only once its target passes the same check, up to five redirects.
@@ -205,3 +206,32 @@ export default defineConfig({
 - All of the above is for a page opened from the link Studio printed in its terminal, which carries the project's token. For a page or process without it — a machine on the network Studio was bound to with `--host 0.0.0.0`, a visitor of a [public demo](/docs/studio/overview#host-a-public-demo) — Studio fetches from public addresses only, whatever `studio.allowedSpecHosts` names, and never through the proxy, looking a host's name up from the name servers this machine uses, asked directly, rather than from its hosts file, and refusing one answered with an address of 198.18.0.0/15, which a fake-IP proxy could take to any host it reaches — a name that does not resolve is answered as one that resolves to a private address, 400, naming the host and none of its addresses; it reads no file of the project, refusing before it looks at the path — 401 `STUDIO_TOKEN_REQUIRED`, or 403 `STUDIO_DEMO_REFUSED` for a demo's visitor — so the answer is the same whether the file is there or not, and checks no import for updates. Such a fetch may take 15 s and read 16 MB; Studio runs four of them at once and holds 32 MB of their bodies between them, and answers more with 503 `STUDIO_BUSY` until one ends.
 - A fetch stops once the page that asked for it goes away.
 - Studio reads every specification — pasted, fetched, from a file or by a check for updates — in a process of its own, so a large one holds up nothing else Studio does, and one stopped or failing leaves Studio running; for a page without the token it generates code and compares specifications there too. Such work may take two minutes, as many at once as this machine has cores but one, up to four, the rest waiting their turn; for a page without the token, 20 seconds and 256 MB of heap, its process 512 MB in all — JSON of some 15 MB, YAML of a few, the code of 60,000 operations — with two at once, and more answered 503 `STUDIO_BUSY`. Work past its budget is answered 413 `SPEC_WORK_LIMIT`.
+
+## Specifications behind auth
+
+A specification its host serves only with a token, a password or a key is read with the import's `auth`. Each credential is named by the environment variable that holds it: Studio reads the variable as it fetches, from its own environment — the process's, and the project's `.env*` files, read again when one is saved, as for the config ([What runs](/docs/reading-your-project#what-runs)). The value reaches no page, request, log or `courier.config.ts`.
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { orders } from "./src/api/orders/source"
+
+export default defineConfig({
+  sources: { orders },
+  imports: {
+    orders: {
+      importType: "url",
+      type: "openapi",
+      from: "https://specs.example.com/orders.json",
+      auth: { type: "bearer", token: { env: "ORDERS_SPEC_TOKEN" } },
+      outputDir: "src/api",
+      sourceName: "orders",
+    },
+  },
+})
+```
+
+- **In the wizard.** For a URL, **Authentication** picks None, Bearer, Basic or Header, and each field takes a variable's name — `ORDERS_SPEC_TOKEN` — saying **set** or **not set** as Studio's environment has it. A variable that is not set is named in the error before anything is sent. **Add to courier.config.ts** writes the same names into the import's entry, and an import left unfinished keeps them.
+- **The kinds.** `{ type: "bearer", token }` sends `Authorization: Bearer`, `{ type: "basic", username, password }` sends `Authorization: Basic`, and `{ type: "header", headers: { "X-Api-Key": … } }` sends each header named, up to 32. A credential is `{ env: "NAME" }`, or a string the config computes itself, such as `process.env.ORDERS_SPEC_TOKEN` read in the config; the wizard and the command line write names only. A header that frames the request — `Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Proxy-Authorization` and the like — is refused, and so is a value with a line break or a character no header carries, each by its field and never by its value.
+- **Where it goes.** To `from`'s own origin only, never to a host it redirects to, from the wizard, `courier-studio import`, the update checks and **Manage**. Manage reads a declared import by its name, so a page never holds its auth, and the APIs page shows its address with secret parameters cut. An update check whose variable is not set says so on the import's card.
+- **Whom for.** A page opened from the link Studio printed in its terminal, which carries the project's token. A page without it is refused 401 `STUDIO_TOKEN_REQUIRED`, or 403 `STUDIO_DEMO_REFUSED` for a demo's visitor — it would have Studio send its environment's secrets to a host it names — and is not told which variables are set.

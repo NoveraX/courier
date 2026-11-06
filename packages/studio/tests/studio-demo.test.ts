@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
 import {
+  DEMO_CREDENTIALS_REFUSAL,
   DEMO_FILE_REFUSAL,
   DEMO_SHARED_REFUSAL,
   DEMO_TOKEN_REFUSAL,
@@ -330,6 +331,7 @@ describe("the demo's API", () => {
     "/api/apis/manage/inventory",
     "/api/apis/manage/preview",
     "/api/apis/update/preview",
+    "/api/apis/auth-variables",
     "/api/editor/sites",
   ])("reads nothing past what it shows for a visitor at %s, and says why", async (path) => {
     const response = await post(path, undefined, { name: "pets" });
@@ -518,6 +520,22 @@ describe("a specification a visitor imports", () => {
     expect(visitor.status).toBe(403);
     expect(await visitor.json()).toEqual({ error: DEMO_FILE_REFUSAL, code: "STUDIO_DEMO_REFUSED" });
     expect(host.status).toBe(400);
+  });
+
+  it("is never read with a credential of the host's", async () => {
+    const asked = {
+      source: "url",
+      content: "https://specs.example/orders.json",
+      auth: { type: "bearer", token: { env: "COURIER_TEST_DEMO_TOKEN" } },
+    };
+
+    const visitor = await post("/api/apis/parse", undefined, asked);
+
+    expect(visitor.status).toBe(403);
+    expect(await visitor.json()).toEqual({
+      error: DEMO_CREDENTIALS_REFUSAL,
+      code: "STUDIO_DEMO_REFUSED",
+    });
   });
 
   it("is never fetched from this machine, from which the host may fetch it", async () => {

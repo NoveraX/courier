@@ -2,7 +2,7 @@
  * Shared types for apis write routes.
  */
 
-import type { CourierImportType } from "@noverax/courier/config";
+import type { CourierImportAuth, CourierImportType } from "@noverax/courier/config";
 import type { GenerateOptions, ParsedSpec } from "../apis";
 
 /**
@@ -14,6 +14,8 @@ export interface WriteBody {
   sourceName: string;
   spec: ParsedSpec;
   specUrl?: string;
+  /** For a URL: what it was read with, each credential named by its environment variable, declared with the import. */
+  auth?: CourierImportAuth;
   importType?: CourierImportType;
   /** `traffic` for a specification Studio read from the calls it recorded, pasted as raw. */
   origin?: "traffic";

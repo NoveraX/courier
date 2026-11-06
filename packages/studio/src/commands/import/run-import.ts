@@ -9,6 +9,7 @@ import { withImportsLock } from "../../server/imports-lock";
 import type { ConfigFailure } from "../../server/project-state/types";
 import { type ImportWritePlan, planImportWrite, writeImport } from "../../server/write-import";
 import type { ImportDeclaration, WriteBody } from "../../server/write-types";
+import { authFromFlags } from "./auth-flags";
 import { askYesNo, consentTo } from "./consent";
 import { declarationFiles } from "./declaration-files";
 import { declarationLines } from "./declaration-lines";
@@ -91,7 +92,7 @@ async function importInto(
   const project = await loadProjectOnce(root);
   const { failure, running } = project.snapshot();
   if (failure || running === null) return refuseConfig(failure, root);
-  const input = await readSpecInput(given, project, root);
+  const input = await readSpecInput(given, project, root, process.stdin, authFromFlags(run));
   const body = importRequest(input, run, running.config);
   const deps = { project, projectRoot: root };
   const found = await withImportsLock(() => planImportWrite(body, deps));

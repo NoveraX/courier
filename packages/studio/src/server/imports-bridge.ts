@@ -7,6 +7,7 @@
  */
 
 import type { CourierImportEntry } from "@noverax/courier/config";
+import { urlWithoutSecrets } from "@noverax/courier/internal";
 import { DEFAULT_OPTIONS } from "../apis/generator/types";
 import { type ImportStateEntry, type ImportsState, loadImportsState } from "../apis/imports-state";
 import type { ImportCheck, UpdateChecks } from "./update-checks";
@@ -22,6 +23,7 @@ export interface ImportsSnapshot {
 /** Wire shape consumed by the Studio UI registry views */
 export interface ImportSummary {
   name: string;
+  /** Where a URL import is read from, without the credentials its address may carry. */
   specUrl: string;
   importType: "url" | "file" | "raw";
   outputDir: string;
@@ -75,7 +77,8 @@ export function summarizeImports(
     seen.add(name);
     out.push({
       name,
-      specUrl: entry.importType === "url" ? entry.from : "",
+      /* Shown to every page, a page without the token too: Manage reads the import by its name. */
+      specUrl: entry.importType === "url" ? urlWithoutSecrets(entry.from) : "",
       importType: entry.importType,
       outputDir: entry.outputDir,
       options: extractOptions(entry),

@@ -1,8 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import { ClipboardPaste, Globe, Link2, Upload } from "lucide-react";
 import { useState } from "react";
+import type { AuthDraft } from "@/features/apis/import-auth-draft";
 import type { ImportSource } from "@/features/apis/types";
 import { cn } from "@/lib/utils";
+import { ImportAuthFields } from "./import-auth-fields";
 import { SpecDropzone } from "./spec-dropzone";
 
 const SOURCES: readonly { value: ImportSource; label: string; sub: string; icon: LucideIcon }[] = [
@@ -14,29 +16,35 @@ const SOURCES: readonly { value: ImportSource; label: string; sub: string; icon:
 interface SpecSourceStepProps {
   source: ImportSource;
   content: string;
+  /** The auth an address is read with. */
+  auth: AuthDraft;
   error: string | null;
   onSourceChange: (source: ImportSource) => void;
   onContentChange: (content: string) => void;
+  onAuthChange: (auth: AuthDraft) => void;
 }
 
 /**
- * The Import step: where the spec comes from — a URL, a file or a paste —
- * and the spec itself, with why Studio could not read it when it could
- * not. On a phone the three sources are rows, one over another.
+ * The Import step: where the spec comes from — a URL, with the auth it is
+ * read with, a file or a paste — and the spec itself, with why Studio could
+ * not read it when it could not. On a phone the three sources are rows,
+ * one over another.
  *
- * @param props - Where the spec comes from, the spec, Studio's error, and what changing them does
+ * @param props - Where the spec comes from, the spec, its auth, Studio's error, and what changing them does
  * @returns The step
  * @example
  * ```tsx
- * <SpecSourceStep source="url" content={url} error={null} onSourceChange={setSource} onContentChange={setContent} />
+ * <SpecSourceStep source="url" content={url} auth={NO_AUTH} error={null} onSourceChange={setSource} onContentChange={setContent} onAuthChange={setAuth} />
  * ```
  */
 export function SpecSourceStep({
   source,
   content,
+  auth,
   error,
   onSourceChange,
   onContentChange,
+  onAuthChange,
 }: SpecSourceStepProps): React.ReactNode {
   const [fileName, setFileName] = useState<string | null>(null);
   return (
@@ -92,6 +100,7 @@ export function SpecSourceStep({
           />
         </label>
       )}
+      {source === "url" && <ImportAuthFields auth={auth} onChange={onAuthChange} />}
       {source === "file" && (
         <SpecDropzone
           fileName={fileName}

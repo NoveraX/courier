@@ -15,6 +15,7 @@ vi.mock("@/design/code/code-lines", async () => {
 import type { UseConfigDeclare } from "@/apis/use-config-declare";
 import type { UseImportReturn } from "@/apis/use-import";
 import { type ConfigDeclare, readConfigDeclare } from "@/features/apis/config-declare";
+import { NO_AUTH } from "@/features/apis/import-auth-draft";
 import { settleWrite } from "@/features/apis/settle-write";
 import type { ImportDeclaration, ImportState } from "@/features/apis/types";
 import type { DiffHunk } from "@/features/mocks/wizard/wire-types";
@@ -37,6 +38,7 @@ const PREVIEWED: ImportState = {
   step: "preview",
   source: "url",
   content: "https://specs.example/pets.json",
+  auth: NO_AUTH,
   fromTraffic: false,
   spec: null,
   options: {
@@ -404,6 +406,7 @@ function wizardOn(state: ImportState): UseImportReturn {
     close: vi.fn(),
     setSource: vi.fn(),
     setContent: vi.fn(),
+    setAuth: vi.fn(),
     parse: action,
     toggleEndpoint: vi.fn(),
     toggleGroup: vi.fn(),

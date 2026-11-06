@@ -100,7 +100,7 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
         : source.fromTraffic
           ? readTrafficAndLoadInventory(source.name)
           : source.importType === "url" && source.specUrl
-            ? fetchSpecAndLoadInventory(source.name, source.specUrl)
+            ? fetchSpecAndLoadInventory(source.name)
             : undefined;
       if (!loading) {
         setStep("reupload");

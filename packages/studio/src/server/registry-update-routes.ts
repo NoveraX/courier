@@ -9,9 +9,9 @@ import type { CourierUrlImport } from "@noverax/courier/config";
 import { projectRootAt } from "@noverax/courier-cli/devkit";
 import { hasSpecChanged, type ImportsState } from "../apis";
 import type { ApisRouteApp, ApisRouteDeps } from "./apis-routes";
-import { authHeaders } from "./auth-headers";
 import { checkPinnedSpecHash } from "./check-pinned-spec-hash";
 import { checkedResponse } from "./checked-response";
+import { importAuthHeaders } from "./import-auth-headers";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { readDeclarations } from "./project-state/read-declarations";
 import { readFetchedSpec } from "./read-fetched-spec";
@@ -96,7 +96,7 @@ async function checkOne(
   try {
     const allowlist = specHostAllowlist(project, projectRoot);
     const raw = await fetchSpecRaw(entry.from, answer, allowlist, projectRootAt(projectRoot), {
-      headers: authHeaders(entry.auth),
+      headers: importAuthHeaders(entry.auth),
       signal,
     });
     /* An empty body is text too: it fails as a specification below, and the route answers. */

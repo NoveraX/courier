@@ -22,3 +22,8 @@ export const DEMO_SHARED_REFUSAL =
 export const DEMO_FILE_REFUSAL =
   "This is a shared demo, so Studio reads no file of its own for a visitor. " +
   "Paste the specification, or give its public URL.";
+
+/** A credential is the host's, sent for no visitor. */
+export const DEMO_CREDENTIALS_REFUSAL =
+  "This is a shared demo, so Studio sends no credential for a visitor. " +
+  "Give the public URL of a specification, or paste it.";

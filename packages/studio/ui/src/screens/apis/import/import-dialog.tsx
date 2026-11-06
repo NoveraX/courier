@@ -29,9 +29,11 @@ function StepBody({
       <SpecSourceStep
         source={state.source}
         content={state.content}
+        auth={state.auth}
         error={error}
         onSourceChange={wizard.setSource}
         onContentChange={wizard.setContent}
+        onAuthChange={wizard.setAuth}
       />
     );
   if (state.step === "select" && state.spec)

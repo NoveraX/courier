@@ -1,17 +1,17 @@
 import type { CourierConfig } from "@noverax/courier/config";
-
 import { deriveSourceName } from "@/features/apis/derive-source-name";
 import { type ParsedSpec, parseSpec } from "../../apis";
 import { resolveBaseURL } from "../../apis/resolve-base-url";
 import { refuseUnsendable } from "../../server/refuse-unsendable";
 import { specTypeOf } from "../../server/spec-type-of";
 import type { WriteBody } from "../../server/write-types";
+import type { AuthFlags } from "./auth-flags";
 import { type ImportFlags, importOptions } from "./import-options";
 import type { SpecInput } from "./read-spec-input";
 import { checkDeclaredSelectors, selectedBy } from "./selection";
 
 /** What `import` was told on the command line, beside the specification. */
-export interface ImportRun extends ImportFlags {
+export interface ImportRun extends ImportFlags, AuthFlags {
   name?: string | undefined;
   yes?: boolean | undefined;
   "dry-run"?: boolean | undefined;
@@ -54,6 +54,7 @@ export function importRequest(input: SpecInput, run: ImportRun, config: CourierC
     spec,
     importType: input.importType,
     ...(input.url !== undefined && { specUrl: input.url }),
+    ...(input.auth !== undefined && { auth: input.auth }),
     options: { ...options, selectedEndpoints: selectedBy(spec, options) },
   };
 }

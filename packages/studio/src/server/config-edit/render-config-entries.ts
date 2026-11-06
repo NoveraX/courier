@@ -1,4 +1,9 @@
-import type { CourierImportEntry, CourierImportSelector } from "@noverax/courier/config";
+import type {
+  CourierImportAuth,
+  CourierImportEntry,
+  CourierImportSelector,
+  CourierSecretValue,
+} from "@noverax/courier/config";
 
 import { quoteString } from "../mocks-edit/plan/quote-string";
 import type { FileStyle } from "../mocks-edit/plan/types";
@@ -15,6 +20,7 @@ const FIELDS = [
   "importType",
   "type",
   "from",
+  "auth",
   "outputDir",
   "sourceName",
   "validation",
@@ -28,7 +34,7 @@ const FIELDS = [
   "exclude",
 ] as const;
 
-type FieldValue = string | boolean | CourierImportSelector;
+type FieldValue = string | boolean | CourierImportSelector | { auth: CourierImportAuth };
 
 /**
  * A key as the config writes it: bare when it is an identifier, quoted in
@@ -126,6 +132,11 @@ function fieldsOf(entry: CourierImportEntry): Array<[string, FieldValue]> {
       if (selector !== undefined) fields.push([key, selector]);
       continue;
     }
+    if (key === "auth") {
+      if (entry.importType === "url" && entry.auth !== undefined)
+        fields.push([key, { auth: entry.auth }]);
+      continue;
+    }
     const value: unknown = key in entry ? Reflect.get(entry, key) : undefined;
     if (typeof value === "string" || typeof value === "boolean") fields.push([key, value]);
   }
@@ -135,5 +146,21 @@ function fieldsOf(entry: CourierImportEntry): Array<[string, FieldValue]> {
 function valueText(value: FieldValue, style: FileStyle): string {
   if (typeof value === "string") return quoteString(value, style.quote);
   if (typeof value === "boolean") return String(value);
+  if ("auth" in value) return authText(value.auth, style);
   return selectorText(value, (text) => quoteString(text, style.quote));
+}
+
+/* An import's auth as the config writes it: each credential the environment variable that holds it. */
+function authText(auth: CourierImportAuth, style: FileStyle): string {
+  const quoted = (text: string): string => quoteString(text, style.quote);
+  const secret = (value: CourierSecretValue): string =>
+    typeof value === "string" ? quoted(value) : `{ env: ${quoted(value.env)} }`;
+  if (auth.type === "bearer") return `{ type: ${quoted("bearer")}, token: ${secret(auth.token)} }`;
+  if (auth.type === "basic") {
+    return `{ type: ${quoted("basic")}, username: ${secret(auth.username)}, password: ${secret(auth.password)} }`;
+  }
+  const headers = Object.entries(auth.headers).map(
+    ([name, value]) => `${configKey(name, style)}: ${secret(value)}`,
+  );
+  return `{ type: ${quoted("header")}, headers: { ${headers.join(", ")} } }`;
 }

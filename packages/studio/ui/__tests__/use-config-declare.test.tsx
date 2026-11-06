@@ -16,6 +16,7 @@ vi.mock("@/apis/client-config-declare", () => ({
 
 import { applyConfigDeclare, previewConfigDeclare } from "@/apis/client-config-declare";
 import { useConfigDeclare } from "@/apis/use-config-declare";
+import { NO_AUTH } from "@/features/apis/import-auth-draft";
 import type { ImportState, ParsedSpec } from "@/features/apis/types";
 
 const SPEC: ParsedSpec = {
@@ -34,6 +35,7 @@ const WRITTEN: ImportState = {
   step: "declare",
   source: "url",
   content: "https://specs.example/pets.json",
+  auth: NO_AUTH,
   fromTraffic: false,
   spec: SPEC,
   options: {

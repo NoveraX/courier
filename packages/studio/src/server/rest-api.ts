@@ -6,6 +6,7 @@ import express from "express";
 import { apiErrors } from "./api-errors";
 import { apiNotFound } from "./api-not-found";
 import { type ApisRouteDeps, registerApisRoutes } from "./apis-routes";
+import { registerAuthVariablesRoute } from "./auth-variables-route";
 import { registerConfigDeclareRoutes } from "./config-declare-routes";
 import type { ConfigEditDeps } from "./config-edit/declare-alone";
 import { type ContractRouteDeps, registerContractRoutes } from "./contract-drift/contract-routes";
@@ -119,6 +120,7 @@ export function registerRestApi(
 
   const holdsToken = (req: RouteRequest) => token.matches(req.get?.(TOKEN_HEADER));
   registerParseRoute(app, { ...apis, holdsToken, demo: demo !== undefined });
+  registerAuthVariablesRoute(app);
   registerApisRoutes(app, { ...apis, holdsToken });
   registerSessionRoutes(app, sessions);
   registerSessionFileRoutes(app, sessions);

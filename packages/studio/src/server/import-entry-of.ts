@@ -32,7 +32,14 @@ export function importEntryOf(
     sourceName: options.sourceName,
     ...codegenChoices(options),
   };
-  if (body.importType === "url") return { importType: "url", from: body.specUrl ?? "", ...base };
+  if (body.importType === "url") {
+    return {
+      importType: "url",
+      from: body.specUrl ?? "",
+      ...(body.auth && { auth: body.auth }),
+      ...base,
+    };
+  }
   return body.importType === "raw"
     ? { importType: "raw", ...base }
     : { importType: "file", ...base };

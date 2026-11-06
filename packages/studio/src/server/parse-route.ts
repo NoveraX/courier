@@ -14,7 +14,9 @@ import { DEMO_FILE_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_SPEC } from "./demo/demo-rest-guard";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
+import { importAuthHeaders } from "./import-auth-headers";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
+import { declaredSpecRead, refuseCredentials } from "./parse-credentials";
 import type { ProjectReads } from "./project-state/types";
 import { type RequestWork, requestWork, type WorkedResponse } from "./request-work";
 import { sendRouteFailure } from "./route-failure";
@@ -22,7 +24,7 @@ import type { JsonResponse, RouteRequest } from "./route-types";
 import { SpecFetchError } from "./spec-fetch-error";
 import { specHostAllowlist } from "./spec-host-allowlist";
 import { readSpecInProcess } from "./spec-jobs/read-spec-in-process";
-import { type ParseBody, validateParseBody } from "./validate-body";
+import { type SpecRead, validateParseBody } from "./validate-body";
 
 /** What the route answers on: JSON it builds, or the specification's JSON as its process wrote it. */
 export interface ParseResponse extends JsonResponse, WorkedResponse {
@@ -55,12 +57,15 @@ const DEMO_PUBLIC_ONLY =
 
 /**
  * Mount `POST /api/apis/parse`. A caller with the project's token has Studio
- * read a file of the project, or a URL on whatever the project allows; a
- * caller without it — on a public demo or not — has it read the text as
- * pasted, or a URL on the public internet. Every text is read in a process
- * of its own, within a budget, and the work stops once the caller goes away.
- * A demo's visitor is read a specification no larger, as JSON, than it can
- * send back to have its code generated.
+ * read a file of the project, or a URL on whatever the project allows, with
+ * the credentials the environment variables it names hold; a caller
+ * without it — on a public demo or not — has it read the text as pasted, or
+ * a URL on the public internet, with none. An import courier.config
+ * declares is read by its name, from its URL with its auth, so the page
+ * needs neither. Every text is read in a process of its own, within a
+ * budget, and the work stops once the caller goes away. A demo's visitor is
+ * read a specification no larger, as JSON, than it can send back to have
+ * its code generated.
  *
  * @param app - The Studio server's Express app
  * @param deps - The project, and whom the route reads for
@@ -71,15 +76,25 @@ const DEMO_PUBLIC_ONLY =
  */
 export function registerParseRoute(app: ParseRouteApp, deps: ParseRouteDeps): void {
   app.post("/api/apis/parse", async (req, res) => {
-    const body = validateParseBody(req.body, res);
-    if (!body) return;
+    const given = validateParseBody(req.body, res);
+    if (!given) return;
     const trusted = deps.holdsToken(req);
-    if (!trusted && body.source === "file") {
+    if (!trusted && given.source === "file") {
       refuseFile(res, deps.demo);
+      return;
+    }
+    /* A caller without the token would have Studio send its environment's secrets to a host it names. */
+    if (!trusted && given.auth !== undefined) {
+      refuseCredentials(res, deps.demo);
       return;
     }
     const work = requestWork(res);
     try {
+      const body =
+        given.source === "import"
+          ? await work.hold(declaredSpecRead(given.content, trusted, res, deps))
+          : { ...given, source: given.source };
+      if (body === null) return;
       const json = await work.hold(readSpec(body, trusted, work, deps));
       res.setHeader("content-type", "application/json; charset=utf-8");
       res.end(json);
@@ -97,19 +112,20 @@ function refuseFile(res: JsonResponse, demo: boolean): void {
 }
 
 async function readSpec(
-  { source, content }: ParseBody,
+  body: SpecRead,
   trusted: boolean,
   { signal }: RequestWork,
   deps: ParseRouteDeps,
 ): Promise<string> {
-  const text = await specText({ source, content }, trusted, signal, deps);
+  const { source, content } = body;
+  const text = await specText(body, trusted, signal, deps);
   const url = source === "url" ? content : undefined;
   const maxBytes = deps.demo && !trusted ? DEMO_MAX_SPEC : MAX_MESSAGE_BYTES;
   return readSpecInProcess({ text, url }, { trusted, signal, maxBytes });
 }
 
 async function specText(
-  { source, content }: ParseBody,
+  { source, content, auth }: SpecRead,
   trusted: boolean,
   signal: AbortSignal,
   { project, projectRoot, demo }: ParseRouteDeps,
@@ -117,6 +133,7 @@ async function specText(
   if (source === "raw") return content;
   if (source === "file") return readProjectText(projectRootAt(projectRoot), content);
   return fetchSpec(content, specHostAllowlist(project, projectRoot), {
+    headers: importAuthHeaders(auth),
     reach: trusted ? "project" : "public",
     ...(demo && { publicOnly: DEMO_PUBLIC_ONLY }),
     signal,

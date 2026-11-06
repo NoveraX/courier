@@ -4,6 +4,7 @@
  * answers a plan it will not apply unasked with 409 and the plan.
  */
 
+import type { ImportAuthRefs } from "@/features/apis/import-auth-draft";
 import type {
   GenerateOptions,
   ManagePreviewResult,
@@ -20,6 +21,8 @@ export interface ImportBody {
   spec: ParsedSpec;
   specUrl: string;
   importType: string;
+  /** For a URL: the auth it is read with, declared in courier.config as the variables it names. */
+  auth?: ImportAuthRefs;
   /** `traffic` for a specification Studio read from the calls it recorded. */
   origin?: "traffic";
   options: GenerateOptions;

@@ -65,6 +65,21 @@ export const IMPORT_ARGS = {
     description:
       "Keep the specification's descriptions as comments; --no-comments to leave them out",
   },
+  "bearer-env": {
+    type: "string",
+    valueHint: "VARIABLE",
+    description: "Read a URL with the bearer token this environment variable holds",
+  },
+  "basic-env": {
+    type: "string",
+    valueHint: "USER:PASSWORD",
+    description: "Read a URL with the user and password these environment variables hold",
+  },
+  "header-env": {
+    type: "string",
+    valueHint: "Header=VARIABLE,…",
+    description: "Read a URL with headers whose values these environment variables hold",
+  },
   "auth-middleware": {
     type: "boolean",
     description: "Add middleware that sends the credentials the specification names",

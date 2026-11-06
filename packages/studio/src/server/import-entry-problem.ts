@@ -1,5 +1,7 @@
 import { isRecord } from "@noverax/courier-cli/devkit";
 
+import { ImportAuthError, readImportAuth } from "./import-auth";
+
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
 const SPEC_TYPES: ReadonlySet<unknown> = new Set([
   "openapi",
@@ -54,20 +56,23 @@ function selectorProblem(entry: Record<string, unknown>, key: string): string | 
   return list === undefined ? null : `${key}.${list} is not a list of strings`;
 }
 
-function isAuth(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  if (value.type === "bearer") return typeof value.token === "string";
-  if (value.type === "basic")
-    return typeof value.username === "string" && typeof value.password === "string";
-  if (value.type !== "header" || !isRecord(value.headers)) return false;
-  return Object.values(value.headers).every((header) => typeof header === "string");
+/* What is wrong with an import's auth: a secret of no shape, a variable named wrong, a header no request carries. */
+function authProblem(auth: unknown): string | null {
+  if (auth === undefined) return null;
+  try {
+    readImportAuth(auth, false);
+    return null;
+  } catch (err) {
+    if (err instanceof ImportAuthError) return err.message;
+    throw err;
+  }
 }
 
 /* The fields only a URL import carries: where to fetch, how, and what to accept. */
 function urlProblem(entry: Record<string, unknown>): string | null {
   if (!isWebUrl(entry.from)) return `from is ${kindOf(entry.from)}, not an http or https URL`;
   return (
-    optionalProblem(entry, "auth", isAuth, "a bearer, basic or header auth") ??
+    authProblem(entry.auth) ??
     optionalProblem(entry, "pinHash", (v) => typeof v === "string", "a spec hash")
   );
 }

@@ -1,8 +1,9 @@
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import type { CourierImportType } from "@noverax/courier/config";
+import type { CourierImportAuth, CourierImportType } from "@noverax/courier/config";
 
 import { fetchSpec } from "../../server/fetch-spec";
+import { importAuthHeaders } from "../../server/import-auth-headers";
 import type { ProjectReads } from "../../server/project-state/types";
 import { SPEC_MAX_BYTES } from "../../server/read-spec-body";
 import { specHostAllowlist } from "../../server/spec-host-allowlist";
@@ -15,6 +16,8 @@ export interface SpecInput {
   importType: CourierImportType;
   /** Where it was fetched from, for a URL. */
   url?: string | undefined;
+  /** What it was fetched with, each credential named by its environment variable. */
+  auth?: CourierImportAuth | undefined;
 }
 
 const MB = 1024 * 1024;
@@ -58,7 +61,8 @@ async function readStream(input: AsyncIterable<Buffer | string>): Promise<string
  * @param project - The project, whose config names the private hosts allowed
  * @param root - The project root
  * @param stdin - Where `-` reads from
- * @returns The specification's text, how it was given and its URL
+ * @param auth - What a URL is fetched with; only a URL is
+ * @returns The specification's text, how it was given, its URL and its auth
  * @throws {Error} When the file is missing, not a file or too large
  * @throws {SpecFetchError} When the URL is refused or cannot be fetched
  * @example
@@ -71,9 +75,17 @@ export async function readSpecInput(
   project: ProjectReads,
   root: string,
   stdin: AsyncIterable<Buffer | string> = process.stdin,
+  auth?: CourierImportAuth,
 ): Promise<SpecInput> {
+  const url = URL_PATTERN.test(given);
+  if (auth !== undefined && !url) {
+    throw new Error(
+      "--bearer-env, --basic-env and --header-env are for a specification read from a URL",
+    );
+  }
   if (given === "-") return { raw: await readStream(stdin), importType: "raw" };
-  if (!URL_PATTERN.test(given)) return { raw: readSpecFile(resolve(given)), importType: "file" };
-  const raw = await fetchSpec(given, specHostAllowlist(project, root));
-  return { raw, importType: "url", url: given };
+  if (!url) return { raw: readSpecFile(resolve(given)), importType: "file" };
+  const headers = importAuthHeaders(auth);
+  const raw = await fetchSpec(given, specHostAllowlist(project, root), { headers });
+  return { raw, importType: "url", url: given, ...(auth !== undefined && { auth }) };
 }

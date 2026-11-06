@@ -9,6 +9,7 @@ import type { ProxyPath } from "@noverax/courier";
 import type { ChainStep } from "@noverax/courier/internal";
 import type { SchemaField } from "@noverax/courier-studio-core";
 
+import type { AuthDraft } from "@/features/apis/import-auth-draft";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
 import type { ParsedSpec } from "./types-parsed-spec";
 
@@ -222,6 +223,8 @@ export interface ImportState {
   step: ImportStep;
   source: ImportSource;
   content: string;
+  /** For an address: the auth it is read with, each credential named by the variable that holds it. */
+  auth: AuthDraft;
   /** The raw specification was read from the calls Studio recorded: the import stays tied to them. */
   fromTraffic: boolean;
   spec: ParsedSpec | null;

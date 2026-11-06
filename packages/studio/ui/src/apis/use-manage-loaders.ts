@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { fetchInventory, parseSpecFromRaw, parseSpecFromUrl } from "@/apis/client";
+import { fetchInventory, parseDeclaredSpec, parseSpecFromRaw } from "@/apis/client";
 import { refusedWhateverTheSpec } from "@/apis/refused-whatever-the-spec";
 import type { EndpointInventory, ManageStep, ParsedSpec } from "@/features/apis/types";
 import { readTrafficDocument } from "@/features/explorer/traffic-document";
@@ -20,7 +20,8 @@ interface LoaderDeps {
 /** Each loads the inventory and says whether it did; one that did not says why above the spec. */
 interface InventoryLoaders {
   loadInventory: (name: string, parsedSpec: ParsedSpec) => Promise<boolean>;
-  fetchSpecAndLoadInventory: (name: string, specUrl: string) => Promise<boolean>;
+  /** Read the specification of the import courier.config declares, from its URL with its auth. */
+  fetchSpecAndLoadInventory: (name: string) => Promise<boolean>;
   readTrafficAndLoadInventory: (name: string) => Promise<boolean>;
 }
 
@@ -54,8 +55,7 @@ export function useInventoryLoaders(deps: LoaderDeps): InventoryLoaders {
     [load],
   );
   const fetchSpecAndLoadInventory = useCallback(
-    (name: string, specUrl: string) =>
-      load(name, () => parseSpecFromUrl(specUrl), "Failed to fetch spec"),
+    (name: string) => load(name, () => parseDeclaredSpec(name), "Failed to fetch spec"),
     [load],
   );
   const readTrafficAndLoadInventory = useCallback(

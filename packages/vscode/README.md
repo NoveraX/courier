@@ -179,7 +179,7 @@ Studio's audit reads the requests it recorded; the extension marks its findings 
 
 ## Courier's file icons
 
-With Material Icon Theme or vscode-icons in use in a Courier project, [Courier File Icons](https://github.com/NoveraX/courier/tree/master/packages/vscode-file-icons) offers once to show Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read — one click, no reload. The folder is drawn in each theme's own style. From then on they follow you: into the other theme when you pick it, onto your other machines through Settings Sync, into remote windows, across updates, each profile as its own settings say, and out again everywhere with **Courier: Remove Courier's Icons from the File Icon Theme**.
+With Material Icon Theme or vscode-icons in use, [Courier File Icons](https://github.com/NoveraX/courier/tree/master/packages/vscode-file-icons) puts Courier's own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder into it as the editor starts — in any workspace, through the settings those themes read, no reload — and says so once, with **Take Them Out**. The folder is drawn in each theme's own style. From then on they follow you: into the other theme when you pick it, onto your other machines through Settings Sync, into remote windows, across updates, each profile as its own settings say, and out again everywhere — staying out until you show them again — with **Take Them Out** or **Courier: Remove Courier's Icons from the File Icon Theme**. VS Code's own Seti takes no custom icons: with it in use, **Courier: Show Courier's Icons in the File Icon Theme** opens the editor's **File Icon Theme** picker, where you choose one that does.
 
 This extension installs Courier File Icons with it. Icon themes run where the editor's window runs, and so does Courier File Icons, beside them — on this computer in a remote window too, while this extension runs where your code is.
 
@@ -236,7 +236,7 @@ From Studio the other way round: each call site in **Called from** opens in your
 | `courier.audit.diagnostics` | Mark the audit's findings at the calls they concern (default: on) |
 | `courier.notifications.failures` | Tell with a notification when a call fails while you work, at most once a minute per endpoint (default: off) |
 | `courier.agents.mcpServers` | Offer VS Code's agent each project's MCP servers (default: on) |
-| `courier.fileIcons.offer` | Offer once to put Courier's icons into the icon theme in use (default: on) — a setting of Courier File Icons |
+| `courier.fileIcons.automatic` | Put Courier's icons into the icon theme in use by themselves, and into each one you pick (default: on); off once you take them out, on again once you show them, read from your user settings only — a setting of Courier File Icons |
 | `courier.studio.url` | Studio's address, when it runs for a project outside this workspace — on this machine, in your user settings |
 
 <br />

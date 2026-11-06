@@ -5,11 +5,11 @@ import type { LoadedCourierConfig } from "../config-loader";
 import type { ExclusiveContext } from "../exclusive-context";
 import { failureOf } from "../project-state/failure-of";
 import type { ConfigFailure } from "../project-state/types";
+import type { MocksEditRequest } from "./edit-intent";
 import { hashMocksFile } from "./hash-mocks-file";
 import type { MocksEditContext } from "./mocks-edit-context";
-import { prepareEdit } from "./prepare-edit";
 import { readyOutcome } from "./ready-outcome";
-import type { DeclareApplyResult, MockDeclaration } from "./types";
+import type { DeclareApplyResult } from "./types";
 
 const log = createLogger("Studio");
 
@@ -25,23 +25,23 @@ const log = createLogger("Studio");
  *
  * @param ctx - The running Studio, and the latest load's failure
  * @param tx - The edit's hold on the reload chain
- * @param requests - The mocks asked for
+ * @param request - The edit asked for
  * @returns A stale result carrying the new plan
  *
  * @example
  * ```ts
- * if (written === "changed") return staleAfterSave(ctx, tx, body.mocks);
+ * if (written === "changed") return staleAfterSave(ctx, tx, request);
  * ```
  */
 export async function staleAfterSave(
   ctx: MocksEditContext,
   tx: ExclusiveContext,
-  requests: readonly MockDeclaration[],
+  request: MocksEditRequest,
 ): Promise<DeclareApplyResult> {
   const root = realpathSync(ctx.projectRoot);
   const loadFailure = runsDisk(tx.current(), root) ? null : await reloadHere(tx, root);
   const state = { running: tx.current(), failure: loadFailure ?? ctx.project.snapshot().failure };
-  const fresh = await prepareEdit(ctx, state, requests);
+  const fresh = await request.prepare(state);
   return {
     status: "stale",
     plan: fresh.status === "prepared" ? await readyOutcome(ctx, fresh) : fresh,

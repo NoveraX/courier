@@ -26,22 +26,56 @@ export function rejectionOf(
   file: string,
   root: string,
 ): string | null {
-  const { mocks, config } = after;
+  const loadedProblem = loadedFileProblem(after, file, root);
+  if (loadedProblem) return loadedProblem;
+  for (const request of requests) {
+    const problem = requestProblem(request, after);
+    if (problem) return problem;
+  }
+  return keptProblem(before, after);
+}
+
+/**
+ * Whether a load of the edited files loaded the file written: it loads,
+ * and is the very file Studio wrote.
+ *
+ * @param after - The load of the edited files
+ * @param file - The mocks file written: its path in the project root, which has no link to resolve
+ * @param root - The project root, symlinks resolved, for messages
+ * @returns Why it did not, or `null` when it did
+ */
+export function loadedFileProblem(
+  after: LoadedCourierConfig,
+  file: string,
+  root: string,
+): string | null {
+  const { mocks } = after;
   if (mocks.error !== null)
     return `the mocks file does not load: ${describeError(mocks.error, root)}`;
   if (mocks.file !== file) {
     return `Studio loaded ${mocks.file ? shown(mocks.file, root) : "no mocks file"} rather than ${shown(file, root)}`;
   }
-  for (const request of requests) {
-    const problem = requestProblem(request, after);
-    if (problem) return problem;
-  }
+  return null;
+}
+
+/**
+ * Whether an edit kept what it does not touch: every mock declared before,
+ * and the config's sources as they were.
+ *
+ * @param before - What Studio ran before the edit
+ * @param after - The load of the edited files
+ * @returns What it lost, or `null` when it lost nothing
+ */
+export function keptProblem(
+  before: LoadedCourierConfig,
+  after: LoadedCourierConfig,
+): string | null {
   const lost = Object.keys(before.mocks.entries).filter(
-    (key) => !Object.hasOwn(mocks.entries, key),
+    (key) => !Object.hasOwn(after.mocks.entries, key),
   );
   if (lost.length > 0) return `the edit would drop ${lost.join(", ")}`;
   const sourcesBefore = Object.keys(before.config.sources).sort().join(",");
-  if (Object.keys(config.sources).sort().join(",") !== sourcesBefore) {
+  if (Object.keys(after.config.sources).sort().join(",") !== sourcesBefore) {
     return "the config's sources changed while Studio was editing";
   }
   return null;

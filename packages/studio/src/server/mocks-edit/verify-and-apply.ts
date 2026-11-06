@@ -4,7 +4,6 @@ import { describeError } from "../describe-error";
 import type { ExclusiveContext } from "../exclusive-context";
 import { describeEntry } from "../mock-manager/describe-entry";
 import type { PreparedEdit } from "./prepare-edit";
-import { rejectionOf } from "./rejection-of";
 import { restartWarning } from "./restart-warning";
 import type { DeclareApplyResult } from "./types";
 import { undoEdit } from "./undo-edit";
@@ -29,7 +28,7 @@ export async function verifyAndApply(
   written: Written,
   restarting: readonly string[],
 ): Promise<DeclareApplyResult> {
-  const { root, target, input } = prepared;
+  const { root, target, intent } = prepared;
   let loaded: LoadedCourierConfig;
   try {
     loaded = await tx.load();
@@ -41,15 +40,15 @@ export async function verifyAndApply(
       written.leftoverPath,
     );
   }
-  const rejection = rejectionOf(prepared.loaded, loaded, input.requests, target.path, root);
+  const rejection = intent.rejection(prepared.loaded, loaded);
   if (rejection) return undoEdit(tx, prepared, rejection, written.leftoverPath);
   tx.apply(loaded);
   if (tx.current() !== loaded) {
     const reason = "the edited files loaded, but Studio could not run them; the terminal says why";
     return undoEdit(tx, prepared, reason, written.leftoverPath);
   }
-  const keys = input.requests.map((request) => request.key);
-  log.info(`Studio added ${keys.join(", ")} to ${target.relative}`);
+  const keys = [...intent.keys];
+  log.info(`Studio ${intent.did} ${target.relative}`);
   const warnings = [...restartWarning(restarting), ...(await describeProblems(loaded, keys, root))];
   if (written.leftover) warnings.push(leftoverWarning(written.leftover, target.relative));
   return { status: "applied", target: target.relative, keys, warnings };

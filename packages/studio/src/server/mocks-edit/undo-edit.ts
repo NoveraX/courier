@@ -3,7 +3,6 @@ import { createLogger } from "@noverax/courier";
 import type { ExclusiveContext } from "../exclusive-context";
 import { insertedLines } from "./inserted-lines";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
-import { buildMocksSnippet } from "./plan/mocks-snippet";
 import type { PreparedEdit } from "./prepare-edit";
 import { removeCreatedMocksFile } from "./remove-created-mocks-file";
 import { replaceMocksFile } from "./replace-mocks-file";
@@ -45,7 +44,7 @@ export function undoEdit(
     target: target.relative,
     creates: plan.creates,
     reason: told,
-    snippet: buildMocksSnippet(prepared.input),
+    snippet: prepared.intent.snippet,
   };
 }
 

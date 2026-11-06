@@ -6,33 +6,49 @@ import { checkConfigNotShadowed } from "./check-config-not-shadowed";
 import { checkLoadedState } from "./check-loaded-state";
 import { checkNoHiddenKeys } from "./check-no-hidden-keys";
 import { declarationState } from "./declaration-state";
+import { declareIntent } from "./declare-intent";
+import type { EditIntent } from "./edit-intent";
 import { formattedCreation } from "./formatted-creation";
 import { inspectMocksTarget, type MocksTarget } from "./inspect-mocks-target";
 import { manualOutcome } from "./manual-outcome";
 import type { MocksEditContext } from "./mocks-edit-context";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
 import { planMocksEdit } from "./plan/plan-mocks-edit";
-import type { MocksPlan, PlanInput } from "./plan/types";
+import type { PlanInput } from "./plan/types";
 import { planInputFor } from "./plan-input";
 import { probeMockPackage } from "./probe-mock-package";
 import { type LoadState, runningState } from "./running-state";
 import { snippetInputFromDisk } from "./snippet-input-from-disk";
-import type { InvalidOutcome, ManualOutcome, MockDeclaration } from "./types";
+import type { InvalidOutcome, ManualOutcome, MockDeclaration, TextEdit } from "./types";
 import { validateDeclarations } from "./validate-declarations";
 
-/** An edit planned against what Studio runs and what is on disk, ready to show or write. */
+/** The mocks file as an edit writes it, and the insertions that produce it. */
+export interface PlannedFile {
+  /** The whole file as written. */
+  text: string;
+  /** The pure insertions that turn the file before the edit into `text`, ascending. */
+  edits: readonly TextEdit[];
+  /** Whether the edit creates the file. */
+  creates: boolean;
+}
+
+/**
+ * An edit of the mocks file planned against what Studio runs and what is
+ * on disk, ready to show or write — declaring mocks, or adding endpoints
+ * to one, as its intent says.
+ */
 export interface PreparedEdit {
   status: "prepared";
   /** The project root, symlinks resolved. */
   root: string;
   loaded: LoadedCourierConfig;
   target: MocksTarget;
-  input: PlanInput;
-  plan: MocksPlan;
+  plan: PlannedFile;
   /** How a created file was formatted; `null` for an edit. */
   formatting: PlanFormatting | null;
   baseHash: string | null;
   planDigest: string;
+  intent: EditIntent;
 }
 
 /**
@@ -88,5 +104,23 @@ async function planned(
   await checkConfigNotShadowed(root, target.configName, target.relative, plan.configSpecifier);
   const baseHash = target.kind === "existing" ? target.hash : null;
   const planDigest = sha256Hex(plan.text);
-  return { status: "prepared", ...planning, plan, formatting, baseHash, planDigest };
+  const intent = declareIntent(ctx, {
+    root,
+    loaded,
+    target,
+    input,
+    formatting,
+    creates: plan.creates,
+  });
+  return {
+    status: "prepared",
+    root,
+    loaded,
+    target,
+    plan,
+    formatting,
+    baseHash,
+    planDigest,
+    intent,
+  };
 }

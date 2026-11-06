@@ -2,11 +2,11 @@ import { viteStudioEdit } from "./edits/studio-browser";
 import { importSpecifier } from "./import-specifier";
 import type { Recipe, RecipeContext, RecipeFile } from "./recipe-types";
 import { courierConfig, courierMocks } from "./shared/courier-config";
-import { DEMO_TEXT } from "./shared/demo-parts";
 import { exampleApi } from "./shared/example-api";
 import { devStep, studioStep, viteReach } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
+import { viteDevStep, vitePage } from "./shared/vite-page";
 import { vueDemo } from "./shared/vue-demo";
 import { addsExample } from "./shared/wired";
 
@@ -24,37 +24,16 @@ export const courier = createCaller(api);
   return { path, content, purpose: "your API's client for the browser" };
 }
 
-/* A page of its own, beside the app's: Vite serves every HTML file in the project's root while you develop. */
-function demoEntry(): RecipeFile[] {
+/* A page of its own, beside the app's, and the module that renders it. */
+function demoEntry(ctx: RecipeContext): RecipeFile[] {
   const main = `${DIR}/main.ts`;
-  const html = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light dark" />
-    <title>${DEMO_TEXT.title}</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/${main}"></script>
-  </body>
-</html>
-`;
   const entry = `import { createApp } from "vue";
 
 import CourierPage from "./CourierPage.vue";
 
 createApp(CourierPage).mount("#app");
 `;
-  return [
-    {
-      path: "courier.html",
-      content: html,
-      purpose: "a page of its own that shows Courier at work",
-    },
-    { path: main, content: entry, purpose: "renders that page" },
-  ];
+  return [vitePage(ctx, "app", main), { path: main, content: entry, purpose: "renders that page" }];
 }
 
 /**
@@ -81,7 +60,7 @@ export function vueViteRecipe(ctx: RecipeContext): Recipe {
         ? [
             caller(ctx),
             vueDemo(ctx, `${DIR}/CourierPage.vue`, `${DIR}/caller.ts`, "VITE_API_URL"),
-            ...demoEntry(),
+            ...demoEntry(ctx),
           ]
         : []),
     ],
@@ -89,6 +68,6 @@ export function vueViteRecipe(ctx: RecipeContext): Recipe {
     ...courierPackages(ctx, { runtime: false }),
     scripts: studioScripts(ctx),
     manual: [],
-    next: [...studioStep(ctx), devStep(ctx, example ? "/courier.html" : undefined)],
+    next: [...studioStep(ctx), example ? viteDevStep(ctx) : devStep(ctx, undefined)],
   };
 }

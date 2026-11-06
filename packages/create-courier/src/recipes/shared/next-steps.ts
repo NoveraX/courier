@@ -124,6 +124,22 @@ export function viteReach(ctx: RecipeContext, proxied: boolean): ExampleReach {
 }
 
 /**
+ * The script that starts the app while you develop: `dev`, else the one
+ * the project starts with in its place.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @returns The script's name; `dev` where the project has none of them
+ * @example
+ * ```ts
+ * devScript(ctx); // "start:dev" in a NestJS app
+ * ```
+ */
+export function devScript(ctx: RecipeContext): string {
+  const scripts = ctx.project.manifest.scripts;
+  return ["dev", "start:dev", "start"].find((name) => scripts[name] !== undefined) ?? "dev";
+}
+
+/**
  * The step that starts the app — its `dev` script, or the one it starts
  * with while you develop — and where to look.
  *
@@ -136,10 +152,8 @@ export function viteReach(ctx: RecipeContext, proxied: boolean): ExampleReach {
  * ```
  */
 export function devStep(ctx: RecipeContext, page: string | undefined): NextStep {
-  const scripts = ctx.project.manifest.scripts;
-  const script = ["dev", "start:dev", "start"].find((name) => scripts[name] !== undefined) ?? "dev";
   return {
-    command: ctx.manager.run(script),
+    command: ctx.manager.run(devScript(ctx)),
     what:
       page === undefined
         ? "starts the app"

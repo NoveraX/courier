@@ -1,0 +1,254 @@
+AgentAccess: export type AgentAccess = "read" | "write" | "destructive";
+AgentCall: interface AgentCall
+AgentCall.access: readonly access: AgentAccess;
+AgentCall.client: readonly client?: AgentClient | undefined;
+AgentCall.principal: readonly principal?: unknown;
+AgentCall.tool: readonly tool: string;
+AgentClient: interface AgentClient
+AgentClient.name: readonly name: string;
+AgentClient.version: readonly version?: string | undefined;
+AnswerStage: export type AnswerStage = (data: unknown, answer: { readonly headers: Headers; readonly status: number; }) => unknown;
+CacheConfig: interface CacheConfig
+CacheConfig.revalidate: revalidate?: number | undefined;
+CacheConfig.tags: tags?: string[] | undefined;
+CacheHooks: interface CacheHooks
+CacheHooks.onCacheHit: onCacheHit?: ((event: { age: number; key: string; requestId: string; timestamp: number; }) => void) | undefined;
+CacheHooks.onCacheInvalidate: onCacheInvalidate?: ((event: { key: string; reason: string; timestamp: number; }) => void) | undefined;
+CacheHooks.onCacheMiss: onCacheMiss?: ((event: { key: string; requestId: string; timestamp: number; }) => void) | undefined;
+CacheHooks.onCacheStore: onCacheStore?: ((event: { key: string; requestId: string; timestamp: number; ttl: number; }) => void) | undefined;
+CallAnswer: interface CallAnswer
+CallAnswer.data: data: unknown;
+CallAnswer.headers: headers: Headers;
+CallAnswer.status: status: number;
+CallNames: interface CallNames
+CallNames.group: group: unknown;
+CallNames.method: method: unknown;
+CallNames.source: source: unknown;
+CallPurpose: export type CallPurpose = "csrf-token";
+CallSession: interface CallSession
+CallSession.carries: readonly carries: boolean;
+CallSession.fetchInit: readonly fetchInit?: Readonly<RequestInit> | undefined;
+CallSession.headers: readonly headers: ReadonlyArray<readonly [ string, string ]>;
+CallSession.incoming: readonly incoming?: IncomingRequest | undefined;
+CallSession.learnsFrom: readonly learnsFrom?: string | undefined;
+CallSession.options: readonly options?: SessionOptions | undefined;
+CallSession.partition: readonly partition?: string | undefined;
+CallSession.primeFrom: readonly primeFrom?: string | undefined;
+CallSession.refusal: readonly refusal?: string | undefined;
+CallSession.renewsPartition: readonly renewsPartition?: boolean | undefined;
+CallSession.toResponse: readonly toResponse: boolean;
+Context: export type Context = RequestContext & { defaultCancelPrevious?: boolean | undefined; defaultTimeout?: number | undefined; incoming?: IncomingRequest | undefined; mode?: "direct" | "proxy" | undefined; proxyMethod?: "GET" | "POST" | undefined; proxyReceiveAt?: number | undefined; studioRequestId?: string | undefined; unsentUpload?: ((error: unknown, variables: unknown) => HTTPError | undefined) | undefined; };
+CookieAttributes: interface CookieAttributes
+CookieAttributes.domain: domain?: string | undefined;
+CookieAttributes.expires: expires?: string | undefined;
+CookieAttributes.httpOnly: httpOnly?: boolean | undefined;
+CookieAttributes.maxAge: maxAge?: number | undefined;
+CookieAttributes.partitioned: partitioned?: boolean | undefined;
+CookieAttributes.path: path?: string | undefined;
+CookieAttributes.priority: priority?: "Low" | "Medium" | "High" | undefined;
+CookieAttributes.sameSite: sameSite?: "Strict" | "Lax" | "None" | undefined;
+CookieAttributes.secure: secure?: boolean | undefined;
+CourierError: class CourierError<TCode = string> extends Error
+CourierError.code: code: TCode;
+CourierError.constructor: constructor(message: string, options: CourierErrorOptions<TCode>): inferred;
+CourierError.context: context: Record<string, unknown>;
+CourierErrorOptions: interface CourierErrorOptions<TCode>
+CourierErrorOptions.cause: cause?: unknown;
+CourierErrorOptions.code: code: TCode;
+CourierErrorOptions.context: context?: Record<string, unknown> | undefined;
+CsrfOptions: interface CsrfOptions
+CsrfOptions.cookie: cookie: string;
+CsrfOptions.from: from?: string | undefined;
+CsrfOptions.header: header: string;
+FailureCause: interface FailureCause
+FailureCause.code: code?: string;
+FailureCause.message: message: string;
+FailureReport: interface FailureReport
+FailureReport.context: context?: Context | undefined;
+FailureReport.dt: dt: Partial<StudioHooks>;
+FailureReport.middlewareCount: middlewareCount?: number | undefined;
+FailureReport.report: report?: StudioCapability | undefined;
+FailureReport.requestId: requestId: string;
+FailureReport.signal: signal?: AbortSignal | undefined;
+FailureReport.timing: timing?: TimingState | undefined;
+ForwardOptions: interface ForwardOptions
+ForwardOptions.clientAddress: clientAddress?: boolean | string | readonly string[] | undefined;
+ForwardOptions.headers: headers?: readonly string[] | undefined;
+ForwardOptions.locale: locale?: boolean | undefined;
+ForwardOptions.requestId: requestId?: boolean | string | readonly string[] | undefined;
+ForwardOptions.trace: trace?: boolean | undefined;
+ForwardOptions.userAgent: userAgent?: boolean | undefined;
+HTTPError: class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR">
+HTTPError.constructor: constructor(response: HttpResponse<TData>, options: { cause?: unknown; message?: string; }): inferred;
+HTTPError.data: data: TData;
+HTTPError.headers: headers: Headers;
+HTTPError.status: status: number;
+HeaderReader: interface HeaderReader
+HeaderReader.get: get(name: string): string | null;
+HttpFetchHooks: interface HttpFetchHooks
+HttpFetchHooks.onHttpFetchEnd: onHttpFetchEnd?: ((event: { duration: number; requestId: string; status: number; timestamp: number; }) => void) | undefined;
+HttpFetchHooks.onHttpFetchError: onHttpFetchError?: ((event: { message: string; requestId: string; status?: number; timestamp: number; }) => void) | undefined;
+HttpFetchHooks.onHttpFetchStart: onHttpFetchStart?: ((event: { method: string; requestId: string; timestamp: number; url: string; }) => void) | undefined;
+HttpResponse: type HttpResponse<TData = unknown>
+HttpResponse.data: data: TData;
+HttpResponse.headers: headers: Headers;
+HttpResponse.status: status: number;
+InProcessProxyCapability: interface InProcessProxyCapability
+InProcessProxyCapability.route: route(proxyPath: ProxyPath | undefined, source: string): InProcessRoute | undefined;
+InProcessRoute: interface InProcessRoute
+InProcessRoute.incoming: readonly incoming: IncomingRequest | Promise<IncomingRequest | undefined> | undefined;
+InProcessRoute.transport: transport(served: IncomingRequest | undefined): (url: string, init: RequestInit) => Promise<Response>;
+InProcessRoute.url: readonly url: string;
+IncomingRequest: interface IncomingRequest
+IncomingRequest.clientAddress: readonly clientAddress?: string | undefined;
+IncomingRequest.fetchInit: readonly fetchInit?: Readonly<RequestInit> | undefined;
+IncomingRequest.headers: readonly headers: HeaderReader;
+IncomingRequest.key: readonly key: object;
+IncomingRequest.method: readonly method?: string | undefined;
+IncomingRequest.origin: readonly origin?: string | undefined;
+IncomingRequest.setCookie: readonly setCookie?: ((cookie: RelayedCookie) => true | string) | undefined;
+MiddlewareHooks: interface MiddlewareHooks
+MiddlewareHooks.onMiddlewareEnter: onMiddlewareEnter?: ((event: { index: number; name: string; phase: string; requestId: string; timestamp: number; totalCount: number; }) => void) | undefined;
+MiddlewareHooks.onMiddlewareError: onMiddlewareError?: ((event: { error: string; index: number; name: string; phase: string; requestId: string; timestamp: number; }) => void) | undefined;
+MiddlewareHooks.onMiddlewareExit: onMiddlewareExit?: ((event: { afterDuration: number; beforeDuration: number; duration: number; headersAdded: string[]; index: number; name: string; phase: string; requestId: string; timestamp: number; }) => void) | undefined;
+ProxyHooks: interface ProxyHooks
+ProxyHooks.onProxyClientTiming: onProxyClientTiming?: ((event: { download: number; networkLatency: number; requestId: string; timestamp: number; totalRoundTrip: number; }) => void) | undefined;
+ProxyHooks.onProxyOriginReject: onProxyOriginReject?: ((event: { origin: string; timestamp: number; }) => void) | undefined;
+ProxyHooks.onProxyParse: onProxyParse?: ((event: { group: string | undefined; method: string; requestId: string | undefined; source: string; timestamp: number; variables: unknown; }) => void) | undefined;
+ProxyHooks.onProxyReceive: onProxyReceive?: ((event: { group: string | undefined; method: string; proxyMethod: "GET" | "POST"; requestId: string | undefined; source: string; timestamp: number; }) => void) | undefined;
+ProxyHooks.onProxyRespond: onProxyRespond?: ((event: { group: string | undefined; method: string; proxyMethod: "GET" | "POST"; requestId: string | undefined; source: string; status: number; timestamp: number; }) => void) | undefined;
+ProxyPath: type ProxyPath
+ProxyPath.http: http?: string | undefined;
+ProxyPath.sse: sse?: string | undefined;
+ProxyPath.ws: ws?: string | undefined;
+RelayedCookie: interface RelayedCookie
+RelayedCookie.cookie: readonly cookie: SetCookie;
+RelayedCookie.header: readonly header: string;
+RequestContext: type RequestContext
+RequestContext.headers: headers?: Headers | undefined;
+RequestContext.req: req?: Request | undefined;
+RequestContext.res: res?: Response | undefined;
+RequestFailureKind: export type RequestFailureKind = "http" | "validation" | "network" | "timeout" | "aborted" | "unknown";
+RequestLifecycleHooks: interface RequestLifecycleHooks
+RequestLifecycleHooks.onAnswer: onAnswer?: ((event: { data: unknown; requestId: string; timestamp: number; }) => void) | undefined;
+RequestLifecycleHooks.onRequestAbort: onRequestAbort?: ((event: { id: string; reason: "superseded" | "manual" | "timeout"; timestamp: number; }) => void) | undefined;
+RequestLifecycleHooks.onRequestEnd: onRequestEnd?: ((event: { data: unknown; headers: Record<string, string>; id: string; proxyTiming?: { backendToProxy: number; clientToProxy: number; proxyToBackend: number; proxyToClient: number; } | undefined; requestHeaders: Record<string, string>; shared?: SharedAnswer | undefined; size: number; status: number; timestamp: number; timing: { fetch: number; middleware: number; total: number; validation: number; }; }) => void) | undefined;
+RequestLifecycleHooks.onRequestError: onRequestError?: ((event: { data?: unknown; error: { cause?: FailureCause | undefined; message: string; status?: number | undefined; type: RequestFailureKind; }; headers?: Record<string, string>; id: string; proxyTiming?: { backendToProxy: number; clientToProxy: number; proxyToBackend: number; proxyToClient: number; }; requestHeaders?: Record<string, string>; shared?: SharedAnswer | undefined; size?: number; status?: number | undefined; timestamp: number; timing?: { fetch: number; middleware: number; total: number; validation: number; }; }) => void) | undefined;
+RequestLifecycleHooks.onRequestStart: onRequestStart?: ((event: { agent?: { access: "read" | "write" | "destructive"; client?: string; tool: string; }; endpointType?: "query" | "mutation"; group: string | undefined; hasValidation: { response: boolean; variables: boolean; }; httpMethod?: string; id: string; idempotencyKey?: string; method: string; middlewareCount: number; mode: "direct" | "proxy" | "webhook"; purpose?: "csrf-token"; source: string; timestamp: number; variables: unknown; }) => void) | undefined;
+RequestStart: interface RequestStart
+RequestStart.agent: agent?: AgentCall | undefined;
+RequestStart.group: group: unknown;
+RequestStart.httpMethod: httpMethod: string | undefined;
+RequestStart.idempotencyKey: idempotencyKey?: string | undefined;
+RequestStart.method: method: unknown;
+RequestStart.middlewareCount: middlewareCount: number;
+RequestStart.mode: mode: "direct" | "proxy";
+RequestStart.purpose: purpose?: CallPurpose | undefined;
+RequestStart.schema: schema: SchemaMetadata | undefined;
+RequestStart.source: source: unknown;
+RequestStart.variables: variables: unknown;
+SchemaMetadata: interface SchemaMetadata
+SchemaMetadata.bidirectional: bidirectional?: true;
+SchemaMetadata.cache: cache?: CacheConfig;
+SchemaMetadata.defaults: defaults?: Readonly<Record<string, unknown>>;
+SchemaMetadata.expose: expose?: boolean;
+SchemaMetadata.map: map?: readonly AnswerStage[];
+SchemaMetadata.receive: receive?: StandardSchemaV1;
+SchemaMetadata.response: response?: StandardSchemaV1;
+SchemaMetadata.transport: transport?: Transport;
+SchemaMetadata.type: type?: "query" | "mutation";
+SchemaMetadata.typeNamed: typeNamed?: true;
+SchemaMetadata.variables: variables?: StandardSchemaV1;
+ServerCapabilities: interface ServerCapabilities
+ServerCapabilities.inProcessProxy: readonly inProcessProxy: InProcessProxyCapability;
+ServerCapabilities.session: readonly session: SessionCapability;
+ServerCapabilities.studio: readonly studio: StudioCapability;
+SessionCapability: interface SessionCapability
+SessionCapability.ambientSession: ambientSession(target: SessionTarget): Promise<CallSession | undefined> | undefined;
+SessionCapability.contextSession: contextSession(context: Context, target: SessionTarget): Promise<CallSession | undefined>;
+SessionCapability.forwardedFor: forwardedFor(request: Request): Promise<string | undefined>;
+SessionCapability.relayCookies: relayCookies(upstream: Headers | undefined, session: CallSession, toResponse: boolean): Promise<string[]>;
+SessionCapability.servesRequest: servesRequest(): boolean;
+SessionOptions: interface SessionOptions
+SessionOptions.allowHttp: allowHttp?: boolean | undefined;
+SessionOptions.allowedOrigins: allowedOrigins?: readonly string[] | undefined;
+SessionOptions.bearer: bearer?: string | undefined;
+SessionOptions.cookies: cookies?: readonly string[] | undefined;
+SessionOptions.csrf: csrf?: CsrfOptions | undefined;
+SessionOptions.relay: relay?: boolean | undefined;
+SessionTarget: interface SessionTarget
+SessionTarget.api: readonly api?: object | undefined;
+SessionTarget.credentials: readonly credentials?: RequestCredentials | undefined;
+SessionTarget.endpoint: readonly endpoint?: object | undefined;
+SessionTarget.forward: readonly forward?: ForwardOptions | undefined;
+SessionTarget.name: readonly name: string;
+SessionTarget.session: readonly session?: SessionOptions | undefined;
+SessionTarget.unguarded: readonly unguarded: boolean;
+SessionTarget.unsafeMethod: readonly unsafeMethod: boolean;
+SessionTarget.url: readonly url?: string | undefined;
+SessionTarget.writes: readonly writes: boolean;
+SetCookie: interface SetCookie extends CookieAttributes
+SetCookie.name: name: string;
+SetCookie.value: value: string;
+SharedAnswer: interface SharedAnswer
+SharedAnswer.by: readonly by: "flight" | "render";
+SharedAnswer.with: readonly with?: string | undefined;
+SourceDefinedHooks: interface SourceDefinedHooks
+SourceDefinedHooks.onSourceDefined: onSourceDefined?: ((source: unknown, baseURL: string) => void) | undefined;
+StreamHooks: interface StreamHooks
+StreamHooks.onStreamClose: onStreamClose?: ((event: { duration: number; eventCount: number; reason: "complete" | "error" | "disconnect" | "shutdown" | "max_lifetime" | "slow_consumer"; requestId: string; timestamp: number; totalBytes: number; }) => void) | undefined;
+StreamHooks.onStreamError: onStreamError?: ((event: { error: string; requestId: string; timestamp: number; }) => void) | undefined;
+StreamHooks.onStreamMessage: onStreamMessage?: ((event: { dataPreview?: string | undefined; dataSize: number; eventType: string | undefined; requestId: string; seq: number; timestamp: number; }) => void) | undefined;
+StreamHooks.onStreamOpen: onStreamOpen?: ((event: { group: string | undefined; method: string; mode: "direct" | "proxy"; requestHeaders?: Record<string, string>; requestId: string; responseHeaders?: Record<string, string>; source: string; timestamp: number; transport: "sse" | "ws"; }) => void) | undefined;
+StreamHooks.onStreamStatus: onStreamStatus?: ((event: StreamStatusEvent) => void) | undefined;
+StreamStatusEvent: interface StreamStatusEvent
+StreamStatusEvent.cause: cause?: FailureCause | undefined;
+StreamStatusEvent.failures: failures?: number | undefined;
+StreamStatusEvent.openedBefore: openedBefore?: boolean | undefined;
+StreamStatusEvent.requestId: requestId: string;
+StreamStatusEvent.retryIn: retryIn?: number | undefined;
+StreamStatusEvent.status: status: "connecting" | "open" | "reconnecting";
+StreamStatusEvent.timestamp: timestamp: number;
+StudioCapability: interface StudioCapability
+StudioCapability.callUploads: callUploads<TOptions extends object>(options: TOptions, studio: StudioContext, call: CallNames): TOptions;
+StudioCapability.hooks: readonly hooks: StudioHooks;
+StudioCapability.proxyClientTiming: proxyClientTiming(response: Response, t0: number, tHeaders: number): void;
+StudioCapability.proxyUploads: proxyUploads(options: Record<string, unknown>): Record<string, unknown>;
+StudioCapability.requestEnd: requestEnd(studio: StudioContext, answer: CallAnswer, requestHeaders: Headers, timing: TimingState, tMiddlewareTotal: number, context: Context | undefined): void;
+StudioCapability.requestError: requestError(error: unknown, report: FailureReport, status: number | undefined): void;
+StudioCapability.requestId: requestId(): string;
+StudioCapability.requestStart: requestStart(studio: StudioContext, start: RequestStart): void;
+StudioCapability.timingHeaders: timingHeaders(response: Response, requestId: string, t0: number): void;
+StudioCapability.watchFetch: watchFetch(instance: { onBeforeFetch?: (method: string, url: string) => void; }, studio: StudioContext, timing: TimingState): void;
+StudioContext: type StudioContext
+StudioContext.dt: dt: StudioHooks;
+StudioContext.hasStudio: hasStudio: boolean;
+StudioContext.report: report: StudioCapability | undefined;
+StudioContext.requestId: requestId: string;
+StudioHooks: interface StudioHooks extends RequestLifecycleHooks, MiddlewareHooks, ValidationHooks, HttpFetchHooks, ProxyHooks, CacheHooks, SupersedeHooks, UploadHooks, StreamHooks, WSPlaygroundHooks, SourceDefinedHooks
+SupersedeHooks: interface SupersedeHooks
+SupersedeHooks.onCallSuperseded: onCallSuperseded?: ((event: { key: string; timestamp: number; }) => void) | undefined;
+TCode: TCode
+TCode: TCode = string
+TData: TData = unknown
+TData: TData = unknown
+TOptions: TOptions extends object
+TimingState: type TimingState
+TimingState.sent: sent?: boolean | undefined;
+TimingState.shared: shared?: SharedAnswer | undefined;
+TimingState.t0: t0: number;
+TimingState.tFetch: tFetch: number;
+TimingState.tRespValidation: tRespValidation: number;
+TimingState.tVarValidation: tVarValidation: number;
+Transport: export type Transport = "http" | "sse" | "ws";
+UploadHooks: interface UploadHooks
+UploadHooks.onUploadComplete: onUploadComplete?: ((event: { requestId: string; timestamp: number; }) => void) | undefined;
+UploadHooks.onUploadProgress: onUploadProgress?: ((event: { group?: string | undefined; loaded: number; method?: string | undefined; percentage: number; requestId: string; source?: string | undefined; timestamp: number; total: number; }) => void) | undefined;
+ValidationHooks: interface ValidationHooks
+ValidationHooks.onValidationFail: onValidationFail?: ((event: { duration: number; issues: readonly unknown[]; requestId: string; target: "variables" | "response" | "receive"; timestamp: number; }) => void) | undefined;
+ValidationHooks.onValidationPass: onValidationPass?: ((event: { duration: number; requestId: string; target: "variables" | "response" | "receive"; timestamp: number; }) => void) | undefined;
+ValidationHooks.onValidationStart: onValidationStart?: ((event: { requestId: string; target: "variables" | "response" | "receive"; timestamp: number; }) => void) | undefined;
+WSPlaygroundHooks: interface WSPlaygroundHooks
+WSPlaygroundHooks.onWSTrack: onWSTrack?: ((event: { connectionId: string; requestId: string; topic: string; }) => void) | undefined;
+WSPlaygroundHooks.onWSUntrack: onWSUntrack?: ((event: { requestId: string; }) => void) | undefined;
+WSPlaygroundHooks.sendWSMessage: sendWSMessage?: ((connectionId: string, topic: string, data: unknown) => boolean) | undefined;

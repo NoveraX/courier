@@ -9,8 +9,8 @@ const CONTROL_CHARACTER = /\p{Cc}/u;
 const MAX_SOURCE_LENGTH = 200;
 const MAX_PORT = 65535;
 const MAX_SEED_COUNT = 1000;
-/* An endpoint by name: `group.method`, or the method alone outside any group. */
-const ENDPOINT_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,63}(\.[A-Za-z_$][A-Za-z0-9_$]{0,63})?$/;
+/* An endpoint by name: `group.method` — a group inside a group named by its path, `billing.invoices.list` — or the method alone outside any group. */
+const ENDPOINT_NAME = /^[A-Za-z_$][A-Za-z0-9_$]{0,63}(\.[A-Za-z_$][A-Za-z0-9_$]{0,63}){0,7}$/;
 const MAX_FIXTURES_LENGTH = 200;
 
 /**
@@ -25,7 +25,13 @@ function isIntegerUpTo(value: number, max: number): boolean {
   return Number.isSafeInteger(value) && value >= 1 && value <= max;
 }
 
-function keyProblem(key: string): string | null {
+/**
+ * What is wrong with a mock's key, as it is written unquoted into the mocks file, or `null`.
+ *
+ * @param key - The key
+ * @returns The problem, or `null`
+ */
+export function keyProblem(key: string): string | null {
   if (!KEY_PATTERN.test(key)) {
     return "a key must be an identifier of 1 to 64 letters, digits, _ or $ that does not start with a digit";
   }
@@ -63,20 +69,13 @@ function seedCountProblem(seedCount: number): string | null {
 }
 
 /**
- * What is wrong with one field's value on its own, whatever the project
- * holds: a key that cannot be written as a property name, a source a file
- * cannot hold, a port or seed count out of range.
+ * What is wrong with the endpoints a mock answers, by name, or `null`:
+ * names that are no endpoint name, one named twice, or none at all.
  *
- * @param declaration - A declaration of the right shape
- * @param field - The field to check
- * @returns Why the value cannot be declared, or `null` when it can
- * @example
- * ```ts
- * valueProblem({ key: "users", source: "users", port: 70000, seedCount: 20, autoStart: true }, "port");
- * // "a port must be an integer from 1 to 65535"
- * ```
+ * @param endpoints - The names, or `undefined` for a mock that answers every endpoint
+ * @returns The problem, or `null`
  */
-function endpointsProblem(endpoints: readonly string[] | undefined): string | null {
+export function endpointsProblem(endpoints: readonly string[] | undefined): string | null {
   if (endpoints === undefined) return null;
   if (endpoints.length === 0) return "a mock that answers some endpoints names at least one";
   const bad = endpoints.find((name) => !ENDPOINT_NAME.test(name) || isInheritedName(name));
@@ -105,6 +104,20 @@ function fixturesProblem(fixtures: string | undefined): string | null {
   return null;
 }
 
+/**
+ * What is wrong with one field's value on its own, whatever the project
+ * holds: a key that cannot be written as a property name, a source a file
+ * cannot hold, a port or seed count out of range.
+ *
+ * @param declaration - A declaration of the right shape
+ * @param field - The field to check
+ * @returns Why the value cannot be declared, or `null` when it can
+ * @example
+ * ```ts
+ * valueProblem({ key: "users", source: "users", port: 70000, seedCount: 20, autoStart: true }, "port");
+ * // "a port must be an integer from 1 to 65535"
+ * ```
+ */
 export function valueProblem(declaration: MockDeclaration, field: RuledField): string | null {
   switch (field) {
     case "key":

@@ -350,6 +350,15 @@ describe("the endpoints a mock answers and its recordings file", () => {
     ).toEqual([]);
   });
 
+  it("takes the endpoint of a group inside a group, named by the group's path", () => {
+    expect(
+      validateDeclarations(
+        [request({ endpoints: ["billing.invoices.list", "billing.get"] })],
+        STATE,
+      ),
+    ).toEqual([]);
+  });
+
   it("refuses no endpoints, a name that is not one, and a name given twice", () => {
     const fields = (endpoints: string[]) =>
       validateDeclarations([request({ endpoints })], STATE).map((e) => e.message);
@@ -359,6 +368,9 @@ describe("the endpoints a mock answers and its recordings file", () => {
       '"orders.refund;" is not an endpoint name, such as orders.refund',
     ]);
     expect(fields(["health", "health"])).toEqual(['"health" is named twice']);
+    expect(fields(["a.b.c.d.e.f.g.h.i"])).toEqual([
+      '"a.b.c.d.e.f.g.h.i" is not an endpoint name, such as orders.refund',
+    ]);
   });
 
   it("refuses a recordings file outside the project, absolute, or not a .har", () => {

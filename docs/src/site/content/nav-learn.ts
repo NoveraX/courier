@@ -1,12 +1,10 @@
-import { BookOpen, Box, Layers, Puzzle, Rocket, Shield, Zap } from "lucide-react"
-
 import type { NavSection } from "./nav-types"
 
 /** The sections that teach Courier: what it is, how to start, its concepts, the framework guides, React Query, middleware and validation. */
 export const LEARN_SECTIONS: NavSection[] = [
   {
+    id: "introduction",
     label: "Introduction",
-    icon: BookOpen,
     defaultOpen: true,
     items: [
       { title: "What is Courier?", href: "/docs/introduction" },
@@ -15,8 +13,8 @@ export const LEARN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "getting-started",
     label: "Getting Started",
-    icon: Rocket,
     defaultOpen: true,
     items: [
       { title: "Installation", href: "/docs/installation" },
@@ -28,8 +26,8 @@ export const LEARN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "core-concepts",
     label: "Core Concepts",
-    icon: Puzzle,
     items: [
       { title: "Defining APIs", href: "/docs/core-concepts/defining-apis" },
       { title: "Caller & Proxy", href: "/docs/core-concepts/caller" },
@@ -40,8 +38,8 @@ export const LEARN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "frameworks",
     label: "Framework Guides",
-    icon: Box,
     defaultOpen: true,
     items: [
       { title: "Overview", href: "/docs/frameworks/overview" },
@@ -61,8 +59,8 @@ export const LEARN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "react-query",
     label: "React Query",
-    icon: Zap,
     items: [
       { title: "Setup", href: "/docs/react-query/setup" },
       { title: "useQuery", href: "/docs/react-query/use-query" },
@@ -72,8 +70,8 @@ export const LEARN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "middleware",
     label: "Middleware",
-    icon: Layers,
     items: [
       { title: "Overview", href: "/docs/middleware/overview" },
       { title: "Built-in Middleware", href: "/docs/middleware/built-in" },
@@ -81,8 +79,8 @@ export const LEARN_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "validation",
     label: "Validation",
-    icon: Shield,
     items: [
       { title: "Standard Schema", href: "/docs/validation/standard-schema" },
       { title: "Zod Integration", href: "/docs/validation/zod" },

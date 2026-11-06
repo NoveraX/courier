@@ -1,12 +1,10 @@
-import { Bot, Cloud, Globe, LockKeyhole, Monitor, Server, Settings, TestTube } from "lucide-react"
-
 import type { NavSection } from "./nav-types"
 
 /** The sections about building with Courier: proxy mode, server-side calls, AI agents, security, the advanced topics, testing, Studio and deployment. */
 export const BUILD_SECTIONS: NavSection[] = [
   {
+    id: "proxy-mode",
     label: "Proxy Mode",
-    icon: Globe,
     items: [
       { title: "Overview", href: "/docs/proxy-mode/overview" },
       { title: "createProxyCaller", href: "/docs/proxy-mode/proxy-caller" },
@@ -15,8 +13,8 @@ export const BUILD_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "server-side",
     label: "Server-Side",
-    icon: Server,
     items: [
       { title: "Overview", href: "/docs/server-side/overview" },
       { title: "createCaller", href: "/docs/server-side/caller" },
@@ -25,8 +23,8 @@ export const BUILD_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "agents",
     label: "AI Agents",
-    icon: Bot,
     items: [
       { title: "MCP Server", href: "/docs/agents/overview" },
       { title: "In Your Editor", href: "/docs/agents/editor" },
@@ -35,13 +33,13 @@ export const BUILD_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "security",
     label: "Security",
-    icon: LockKeyhole,
     items: [{ title: "Security Model", href: "/docs/security/overview" }],
   },
   {
+    id: "advanced",
     label: "Advanced",
-    icon: Settings,
     items: [
       { title: "Middleware", href: "/docs/advanced/middleware" },
       { title: "Streaming", href: "/docs/advanced/streaming" },
@@ -60,8 +58,8 @@ export const BUILD_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "testing",
     label: "Testing",
-    icon: TestTube,
     items: [
       { title: "Test Client", href: "/docs/testing/test-client" },
       { title: "Mocking Responses", href: "/docs/testing/mocking" },
@@ -71,8 +69,8 @@ export const BUILD_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "studio",
     label: "Studio",
-    icon: Monitor,
     items: [
       { title: "Studio", href: "/docs/studio/overview" },
       { title: "Import an API", href: "/docs/studio/import-api" },
@@ -86,8 +84,8 @@ export const BUILD_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "deployment",
     label: "Deployment",
-    icon: Cloud,
     items: [
       { title: "Overview", href: "/docs/deployment/overview" },
       { title: "Standalone Server", href: "/docs/deployment/standalone-server" },

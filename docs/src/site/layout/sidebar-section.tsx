@@ -4,6 +4,7 @@ import Link from "next/link"
 
 import { cn } from "@/site/cn"
 import type { NavSection } from "@/site/content/docs-nav"
+import { SectionIcon } from "./section-icon"
 
 interface SidebarSectionProps {
   section: NavSection
@@ -25,7 +26,6 @@ interface SidebarSectionProps {
  * ```
  */
 export function SidebarSection({ section, current, open, onToggle }: SidebarSectionProps) {
-  const { icon: Icon } = section
   const active = section.items.some((item) => item.href === current)
   return (
     <div className="mt-2.5">
@@ -41,7 +41,7 @@ export function SidebarSection({ section, current, open, onToggle }: SidebarSect
             active ? "border-brand/30 bg-brand/12 text-brand" : "border-line bg-panel text-fg-muted"
           )}
         >
-          <Icon aria-hidden="true" className="size-3" />
+          <SectionIcon id={section.id} className="size-3" />
         </span>
         <span className="flex-1 text-small font-semibold tracking-[-0.01em] text-fg">
           {section.label}

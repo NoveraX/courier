@@ -1,4 +1,4 @@
-import { SITE_URL } from "@/site/site-url"
+import { SITE_URL } from "../site-url"
 import { jsxCells, jsxObjects, jsxRows, jsxText } from "./jsx-literals"
 import { metadataLines } from "./source-metadata"
 

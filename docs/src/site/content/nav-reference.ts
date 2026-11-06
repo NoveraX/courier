@@ -1,5 +1,3 @@
-import { Code2, Play } from "lucide-react"
-
 import type { NavSection } from "./nav-types"
 
 /**
@@ -11,8 +9,8 @@ export const API_SECTION = "API Reference"
 /** The reference sections: the API's functions, one page each, and the runnable examples. */
 export const REFERENCE_SECTIONS: NavSection[] = [
   {
+    id: "api",
     label: API_SECTION,
-    icon: Code2,
     items: [
       { title: "defineApi", href: "/docs/api/define" },
       { title: "defineGroup / endpoint", href: "/docs/api/define-group" },
@@ -34,8 +32,8 @@ export const REFERENCE_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "examples",
     label: "Examples",
-    icon: Play,
     items: [
       { title: "Basic", href: "/docs/examples/basic", description: "Simple GET/POST requests" },
       { title: "CRUD", href: "/docs/examples/crud", description: "Create, read, update, delete" },

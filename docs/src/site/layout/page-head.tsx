@@ -5,6 +5,7 @@ import type { NavSection } from "@/site/content/docs-nav"
 import { formatPageDate } from "@/site/content/page-dates"
 import { ModeBadge } from "@/site/mdx/mode-badge"
 import { PageActions } from "./page-actions"
+import { SectionIcon } from "./section-icon"
 
 interface PageHeadProps {
   meta: DocMeta
@@ -30,14 +31,13 @@ interface PageHeadProps {
  * ```
  */
 export function PageHead({ meta, section, minutes, page }: PageHeadProps) {
-  const SectionIcon = section?.icon
   return (
     <header>
       {/* DocSearch files the page under the section DocSearch-lvl0 names, and
           leaves the trail itself out of the page's text. */}
-      {section && SectionIcon && (
+      {section && (
         <p className="DocSearch-skip m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
-          <SectionIcon aria-hidden="true" className="size-3.25 text-brand" />
+          <SectionIcon id={section.id} className="size-3.25 text-brand" />
           <span className="DocSearch-lvl0">{section.label}</span>
           <ChevronRight aria-hidden="true" className="size-3" />
           <span className="text-fg-muted">{meta.title}</span>

@@ -9,6 +9,7 @@ import type { RefObject } from "react"
 import { cn } from "@/site/cn"
 import { docsNav } from "@/site/content/docs-nav"
 import { useReturnFocus } from "@/site/use-return-focus"
+import { SectionIcon } from "./section-icon"
 import { ThemeSwitch } from "./theme-switch"
 import { useHeadings } from "./use-headings"
 
@@ -78,10 +79,10 @@ export function MobileDrawer({ open, onOpenChange, returnTo }: MobileDrawerProps
             </nav>
           )}
           <nav aria-label="Documentation">
-            {docsNav.map(({ label, icon: Icon, items }) => (
+            {docsNav.map(({ id, label, items }) => (
               <div key={label} className="mb-3.5">
                 <p className="m-0 mb-1.5 flex items-center gap-2 text-label font-semibold text-fg">
-                  <Icon aria-hidden="true" className="size-3.75 text-fg-muted" />
+                  <SectionIcon id={id} className="size-3.75 text-fg-muted" />
                   {label}
                 </p>
                 {items.map((item) => (

@@ -2,11 +2,12 @@ import type { LucideIcon } from "lucide-react"
 import { BookOpen, Clock } from "lucide-react"
 
 import { docsNav } from "@/site/content/docs-nav"
+import { SECTION_ICONS } from "@/site/layout/section-icon"
 import type { SearchGroup } from "./search-types"
 import { RECENT_GROUP } from "./search-view"
 
 const NAV_ICONS: ReadonlyMap<string, LucideIcon> = new Map(
-  docsNav.map((section) => [section.label, section.icon])
+  docsNav.map((section) => [section.label, SECTION_ICONS[section.id]])
 )
 
 /**

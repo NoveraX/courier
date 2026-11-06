@@ -3,7 +3,7 @@ import { LEARN_SECTIONS } from "./nav-learn"
 import { REFERENCE_SECTIONS } from "./nav-reference"
 import type { NavContext, NavItem, NavSection } from "./nav-types"
 
-export type { NavContext, NavItem, NavSection } from "./nav-types"
+export type { NavContext, NavItem, NavSection, SectionId } from "./nav-types"
 
 /** Every section of the docs' navigation, in the order the sidebar lists them. */
 export const docsNav: NavSection[] = [...LEARN_SECTIONS, ...BUILD_SECTIONS, ...REFERENCE_SECTIONS]

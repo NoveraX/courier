@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import type { GitState } from "../../src/preflight/git-state";
 import { goAhead } from "../../src/preflight/go-ahead";
+import type { Questions } from "../../src/questions/questions";
 import type { SetupEnd } from "../../src/report/setup-report";
 import { textReport } from "../../src/report/text-report";
+import { scripted } from "../questions/scripted-questions";
 
 const WORDS = {
   question: "Set Courier up?",
@@ -13,12 +15,12 @@ const WORDS = {
 };
 const DIRTY: GitState = { kind: "dirty", paths: ["src/app.ts"], count: 1 };
 
-/* Where a run that cannot ask ends, as it tells it. */
-function unattended() {
+/* Where a run ends, as it tells it: one that cannot ask, or one whose questions a test answers. */
+function unattended(questions?: Questions) {
   const ends: SetupEnd[] = [];
   const text = textReport(createTerminalStyle(0, false), () => undefined);
   const io = {
-    interactive: false,
+    questions,
     toolOutput: "stdout" as const,
     report: {
       ...text,
@@ -62,5 +64,15 @@ describe("goAhead", () => {
     expect(await goAhead({}, clean.io, WORDS, { kind: "clean" })).toBe(false);
     expect(dirty.ends[0]).toMatchObject({ code: "GIT_DIRTY" });
     expect(clean.ends[0]).toMatchObject({ code: "CONFIRMATION_REQUIRED", said: WORDS.unasked });
+  });
+
+  it("asks the person at a terminal, a project git has changes in too, and says why where they say no", async () => {
+    const yes = scripted([true]);
+    const no = unattended(scripted([false]));
+
+    expect(await goAhead({}, unattended(yes).io, WORDS, DIRTY)).toBe(true);
+    expect(await goAhead({}, no.io, WORDS, { kind: "clean" })).toBe(false);
+    expect(yes.asked).toEqual([{ kind: "confirm", message: "Set Courier up?", initial: true }]);
+    expect(no.ends).toEqual([{ kind: "refused", code: "DECLINED", said: WORDS.declined }]);
   });
 });

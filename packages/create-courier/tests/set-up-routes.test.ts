@@ -64,7 +64,7 @@ function terminal() {
   return {
     printed,
     terminal: {
-      interactive: false,
+      questions: undefined,
       report: textReport(createTerminalStyle(0, false), (lines) => printed.push(...lines)),
       toolOutput: "stdout" as const,
     },

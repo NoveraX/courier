@@ -38,7 +38,7 @@ async function planNow(root: string, openapi?: string): Promise<Plan> {
   const report = textReport(createTerminalStyle(0, false), () => undefined);
   const run = { "dry-run": true, mcp: false, ...(openapi === undefined ? {} : { openapi }) };
   await addCourier(root, run, {
-    interactive: false,
+    questions: undefined,
     toolOutput: "stdout",
     report: {
       ...report,

@@ -75,7 +75,7 @@ async function setUp(root: string, behaviour: string, run: CreateRun = {}, befor
     ctx,
     plan,
     { yes: true, ...run },
-    { interactive: false, report, toolOutput: "stdout" },
+    { questions: undefined, report, toolOutput: "stdout" },
   );
   return { status, end: ends.at(-1), printed: printed.join("\n") };
 }

@@ -4,6 +4,7 @@ import { styleFor } from "@noverax/courier/internal";
 import { SetupFailure } from "./apply/setup-failure";
 import { SetupRefusal } from "./apply/setup-refusal";
 import { CancelledError } from "./cancelled-error";
+import { terminalQuestions } from "./questions/terminal-questions";
 import { type JsonReport, jsonReport } from "./report/json-report";
 import { textReport } from "./report/text-report";
 import type { SetupIO } from "./setup-io";
@@ -48,7 +49,10 @@ export async function runSetupCommand(
 ): Promise<number> {
   const json = command.json ? jsonReport(command.command, command.version) : undefined;
   const io: SetupIO = {
-    interactive: !command.json && process.stdin.isTTY === true && process.stderr.isTTY === true,
+    questions:
+      !command.json && process.stdin.isTTY === true && process.stderr.isTTY === true
+        ? terminalQuestions()
+        : undefined,
     report:
       json ??
       textReport(styleFor(process.stdout), (lines) =>

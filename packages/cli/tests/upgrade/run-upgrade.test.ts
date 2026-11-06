@@ -85,7 +85,7 @@ async function upgrade(
   };
   const status = await runUpgrade(
     { cwd: root, yes: true, ...run },
-    { interactive: false, report, toolOutput: "stdout" },
+    { questions: undefined, report, toolOutput: "stdout" },
     own,
     { registry: registryOf(versions), manager: () => fakeManager(install) },
   );

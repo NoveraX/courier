@@ -63,7 +63,7 @@ async function upgradeWith(root: string, behaviour: string) {
       plan: PLAN,
       install: { when: "after", commands: [[process.execPath, FAKE, behaviour, "prod"]] },
     },
-    { interactive: false, report, toolOutput: "stdout" },
+    { questions: undefined, report, toolOutput: "stdout" },
   );
   return { result, end: ends.at(-1) };
 }

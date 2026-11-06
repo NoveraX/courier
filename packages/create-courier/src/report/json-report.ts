@@ -90,7 +90,7 @@ function statusOf(end: SetupEnd | undefined): {
  * @example
  * ```ts
  * const report = jsonReport("create-courier", "0.5.0");
- * process.stdout.write(report.document(await createCourier(run, { interactive: false, report, toolOutput: "stderr" })));
+ * process.stdout.write(report.document(await createCourier(run, { questions: undefined, report, toolOutput: "stderr" })));
  * ```
  */
 export function jsonReport(command: string, version: string): JsonReport {

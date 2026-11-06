@@ -1,4 +1,3 @@
-import { askYesNo } from "../prompt";
 import type { SetupIO } from "../setup-io";
 import type { GitState } from "./git-state";
 
@@ -44,7 +43,7 @@ export async function goAhead(
   words: GoAheadWords,
   git?: GitState,
 ): Promise<boolean> {
-  const unattended = run.yes === true || !io.interactive;
+  const unattended = run.yes === true || io.questions === undefined;
   if (git?.kind === "dirty" && unattended && run["allow-dirty"] !== true) {
     io.report.end({
       kind: "refused",
@@ -54,11 +53,11 @@ export async function goAhead(
     return false;
   }
   if (run.yes === true) return true;
-  if (!io.interactive) {
+  if (io.questions === undefined) {
     io.report.end({ kind: "refused", code: "CONFIRMATION_REQUIRED", said: words.unasked });
     return false;
   }
-  if (await askYesNo(words.question, true)) return true;
+  if (await io.questions.confirm(words.question, true)) return true;
   io.report.end({ kind: "refused", code: "DECLINED", said: words.declined });
   return false;
 }

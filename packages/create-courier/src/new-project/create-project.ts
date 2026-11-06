@@ -12,7 +12,6 @@ import {
   type PackageManagerName,
   packageManager,
 } from "../project/package-manager";
-import { askChoice } from "../prompt";
 import type { SetupIO } from "../setup-io";
 import { wantsMcp } from "../wants-mcp";
 import { generatorFor } from "./generators";
@@ -23,16 +22,17 @@ const CREATABLE = FRAMEWORKS.filter((framework) => framework.id !== "remix");
 
 async function frameworkToCreate(run: CreateRun, io: SetupIO): Promise<Framework> {
   if (run.framework !== undefined) return frameworkById(run.framework);
-  if (!io.interactive) {
+  if (io.questions === undefined) {
     throw new Error(
       `Name the framework to create the project with: --framework ${CREATABLE.map((framework) => framework.id).join("|")}`,
     );
   }
-  const at = await askChoice(
+  const id = await io.questions.select(
     "Create it with which framework?",
-    CREATABLE.map((framework) => framework.label),
+    CREATABLE.map((framework) => ({ value: framework.id, label: framework.label })),
+    CREATABLE[0]?.id ?? "next",
   );
-  return CREATABLE[at] ?? CREATABLE[0] ?? frameworkById("next");
+  return frameworkById(id);
 }
 
 function managerName(run: CreateRun): PackageManagerName {

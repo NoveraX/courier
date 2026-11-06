@@ -1,5 +1,4 @@
 import type { CreateRun } from "./create-run";
-import { askYesNo } from "./prompt";
 import type { SetupIO } from "./setup-io";
 
 /**
@@ -19,6 +18,9 @@ import type { SetupIO } from "./setup-io";
  */
 export async function wantsMcp(run: CreateRun, io: SetupIO): Promise<boolean> {
   if (run.mcp !== undefined) return run.mcp;
-  if (!io.interactive || run.yes === true || run["dry-run"] === true) return false;
-  return askYesNo("Offer the API's reads to AI agents in your editor, over MCP?", false);
+  if (io.questions === undefined || run.yes === true || run["dry-run"] === true) return false;
+  return io.questions.confirm(
+    "Offer the API's reads to AI agents in your editor, over MCP?",
+    false,
+  );
 }

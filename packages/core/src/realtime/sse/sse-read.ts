@@ -1,14 +1,11 @@
 import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
-import { layerHeaders } from "../../utils/layer-headers";
-import { fingerprintOf } from "../credentials-fingerprint";
 import type { StreamFailure } from "../describe-failure";
-import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
+import { fromErrorCode, RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
 import { parseSSEFrames, type RawSSEEvent, type SSEFrame } from "./parse-sse";
 import type { SSEConnectionCtx } from "./sse-connection";
-import { eventStreamOf, refusal } from "./sse-response";
-import type { SSEConnectInit } from "./sse-types";
+import { openStream } from "./sse-open";
 
 const log = createLogger("SSE");
 const INTERNAL_ERROR = 5000;
@@ -27,13 +24,15 @@ export interface ConnectionProgress {
 /**
  * Read one connection until it ends.
  *
- * The connection has its own abort: a server that falls silent for longer
- * than `heartbeatTimeout` is dropped and reconnected, while the subscription
- * goes on — it does not end as though the server had finished it.
+ * The connection has its own abort: one that does not open in time, or a
+ * server that falls silent for longer than `heartbeatTimeout`, is dropped
+ * and reconnected, while the subscription goes on — it does not end as
+ * though the server had finished it.
  *
  * @returns How it ended — a failure, too, when the server answered with
  *   something other than an event stream
  * @throws SSEResponseError when the server refuses the request
+ * @throws ConnectionError when it did not open in time
  */
 export async function readConnection<TData>(
   ctx: SSEConnectionCtx<TData>,
@@ -54,24 +53,9 @@ export async function readConnection<TData>(
   };
 
   try {
-    const opened = await ctx.config.beforeConnect?.();
-    const refused = sameAsRefused(ctx, opened);
-    if (refused) return refused;
-    const send = ctx.config.fetch ?? fetch;
-    const response = await send(ctx.url, {
-      ...opened?.init,
-      headers: layerHeaders(opened?.headers, requestHeaders(ctx)),
-      signal: connection.signal,
-    });
-    if (!response.ok) throw await refusal(response);
-    const body = eventStreamOf(response);
-    if (body instanceof ConnectionError) {
-      await response.body?.cancel();
-      log.error("SSE response is not an event stream, not reconnecting", body);
-      return body;
-    }
+    const body = await openStream(ctx, connection);
+    if (body instanceof RealtimeError) return body;
 
-    ctx.config.onResponse?.(response);
     /* Accepted: a later 401 is a refusal of its own, with its own attempt. */
     ctx.refused = undefined;
     progress.openedAt = performance.now();
@@ -94,30 +78,6 @@ export async function readConnection<TData>(
     /* Releases the socket when the read stopped at an end-of-stream event. */
     connection.abort();
   }
-}
-
-/*
- * The credentials of the connection being opened, against those the server
- * last refused with 401: the same again end the stream with that refusal,
- * as the server would answer them; others are the one attempt it allows.
- * Only the session's headers are compared — what a token is carried in.
- */
-function sameAsRefused<TData>(
-  ctx: SSEConnectionCtx<TData>,
-  opened: SSEConnectInit | undefined,
-): RealtimeError | undefined {
-  ctx.opened = fingerprintOf(opened?.headers ?? {});
-  const { refused } = ctx;
-  if (refused === undefined || refused.retried) return undefined;
-  if (refused.fingerprint === ctx.opened) return refused.error;
-  refused.retried = true;
-  return undefined;
-}
-
-function requestHeaders<TData>(ctx: SSEConnectionCtx<TData>): Record<string, string> {
-  const headers: Record<string, string> = { Accept: "text/event-stream", ...ctx.config.headers };
-  if (ctx.lastEventId) headers["Last-Event-ID"] = ctx.lastEventId;
-  return headers;
 }
 
 /**

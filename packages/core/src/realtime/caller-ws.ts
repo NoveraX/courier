@@ -1,5 +1,6 @@
 import { LIMITS } from "../adapter/limits";
 import { createLogger } from "../logger";
+import { CLIENT_LIMITS } from "./client-limits";
 import { ConnectionError, RealtimeError } from "./errors";
 import { createWSConnection } from "./ws/ws-connection";
 import type { WSConnection, WSConnectionConfig } from "./ws/ws-types";
@@ -104,8 +105,11 @@ export function acquireConnection(
 
 /**
  * Take the shared connection once its options are found — on a server,
- * whose session the socket opens with. Options that cannot be found, or a
- * URL no connection opens, are what the subscription fails with.
+ * whose session the socket opens with. Options that cannot be found, or
+ * are not found in the time a socket has to open, or a URL no connection
+ * opens, are what the subscription fails with: they are found once, as the
+ * call is made, so waiting longer would not find them, and options found
+ * after that open nothing.
  *
  * @param url - The WebSocket URL
  * @param config - The options, still being found
@@ -120,13 +124,22 @@ export async function leaseWhenFound(
   url: string,
   config: Promise<Partial<WSConnectionConfig> | undefined>,
 ): Promise<ConnectionLease | RealtimeError> {
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_resolve, reject) => {
+    deadline = setTimeout(
+      () => reject(new Error("its options were not found in time")),
+      CLIENT_LIMITS.WS_CONNECT_TIMEOUT_MS,
+    );
+  });
   try {
-    return acquireConnection(url, await config);
+    return acquireConnection(url, await Promise.race([config, late]));
   } catch (error) {
     log.warn("A socket could not be opened", error);
     if (error instanceof RealtimeError) return error;
     const reason = error instanceof Error ? error.message : String(error);
     return new ConnectionError(`The socket could not be opened: ${reason}`);
+  } finally {
+    clearTimeout(deadline);
   }
 }
 

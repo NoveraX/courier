@@ -53,9 +53,11 @@ export interface SubscribeSSEOptions {
    * Asked before every connection — the first and each reconnect — for what
    * it is opened with besides `headers`: the headers of the user's session,
    * as they are now, and what `fetch` is given. A rejection is a failed
-   * connection, retried as a dropped one is. A stream the server refuses
-   * with 401 is opened once more when what this gives has changed since —
-   * a token renewed meanwhile; the same again ends it with an `AuthError`.
+   * connection, retried as a dropped one is; so is an answer that comes
+   * too late for the 15 s a connection has to open, its request and the
+   * server's answer included. A stream the server refuses with 401 is
+   * opened once more when what this gives has changed since — a token
+   * renewed meanwhile; the same again ends it with an `AuthError`.
    */
   beforeConnect?: (() => SSEConnectInit | Promise<SSEConnectInit>) | undefined;
   /** Sends each connection's request in place of the platform's `fetch`: the source's own. */

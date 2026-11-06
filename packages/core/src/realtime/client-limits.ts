@@ -5,7 +5,11 @@
  * page loads when it first opens a stream.
  */
 export const CLIENT_LIMITS = {
-  /** How long a socket may take to open, its credentials asked for included (15 s) */
+  /**
+   * How long a socket may take to open, its credentials asked for included,
+   * and a channel's socket options to be found — whose session it opens
+   * with, on a server (15 s)
+   */
   WS_CONNECT_TIMEOUT_MS: 15_000,
 
   /** How long a server may take to admit a connection, or to take credentials sent again (15 s) */
@@ -32,4 +36,14 @@ export const CLIENT_LIMITS = {
    * otherwise: a Courier server comments every 25 s (45 s)
    */
   SSE_SILENCE_TIMEOUT_MS: 45_000,
+
+  /**
+   * How long a stream may take to open, as a socket may: what
+   * `beforeConnect` gives it, its request, and the server's answer, a
+   * refusal's body included (15 s)
+   */
+  SSE_CONNECT_TIMEOUT_MS: 15_000,
+
+  /** Most of a refusal's body a stream reads for what the server said: a Courier server's is far shorter (64 KiB) */
+  SSE_REFUSAL_MAX_BYTES: 65_536,
 } as const;

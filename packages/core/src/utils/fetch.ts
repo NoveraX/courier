@@ -9,7 +9,7 @@ import { holdsDeviceFiles } from "./device-files";
 import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
-import { normalizeHttpMethod } from "./helpers";
+import { isFormData, normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { sendStreamed } from "./send-streamed";
@@ -101,6 +101,9 @@ export async function coreFetch(
       requestHeaders.set("content-type", "application/json");
     }
   }
+  /* A form goes under its encoding's content type, which names the boundary its parts end at,
+     whichever way it is sent: one the source, the call or a middleware set would name none. */
+  if (isFormData(requestBody)) requestHeaders.delete("content-type");
 
   assertAbsoluteUrl(fullUrl);
   const expiry = timeout ? attemptExpiry(timeout, requestBody) : undefined;

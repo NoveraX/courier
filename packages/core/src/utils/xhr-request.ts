@@ -60,10 +60,7 @@ function send(
     xhr.open(init.method.toUpperCase(), url);
     xhr.responseType = "arraybuffer";
     xhr.withCredentials = init.credentials === "include";
-    for (const [key, value] of init.headers) {
-      /* The browser writes a multipart body's content type, with its boundary. */
-      if (!(body instanceof FormData && key === "content-type")) xhr.setRequestHeader(key, value);
-    }
+    for (const [key, value] of init.headers) xhr.setRequestHeader(key, value);
 
     const onAbort = () => xhr.abort();
     signal?.addEventListener("abort", onAbort, { once: true });

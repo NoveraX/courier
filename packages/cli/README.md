@@ -151,11 +151,14 @@ In a Next.js, Nuxt, SvelteKit, Astro, React Router, Remix or SolidStart app Cour
 
 Where a file is not in a shape it knows, it shows the lines to add instead. It deletes nothing: once the pages run on the plugin, `courier.routes.ts` and the `routes` script that writes it are yours to remove. These are the changes `create-courier` makes in a new project, so a project set up either way ends the same.
 
+In a terminal it asks too whether to point your editor's agent at the docs of the Courier you install, where that would change anything: `@noverax/courier-docs` installed, and Courier's block written into `AGENTS.md`, as `create-courier --agents-md` writes it — see [Create Courier](https://courier.noverax.cloud/docs/create-courier#docs-for-your-editors-agent). `--agents-md` says yes without asking; with `--yes`, or without a terminal, no block is written unless it is passed. For a framework Courier has no plugin for, the docs are all it sets up.
+
 | Option | Description |
 |---|---|
 | `--dry-run` | Show the plan, and change nothing |
 | `--yes`, `-y` | Make the changes without asking |
 | `--allow-dirty` | Make them with `--yes` where git has changes not committed, which it otherwise refuses |
+| `--agents-md` | Point your editor's agent at the docs of the Courier you install: Courier's block in `AGENTS.md`, and `@noverax/courier-docs`; `--no-agents-md` leaves them out without asking |
 | `--no-install` | Make the changes, and name the install command |
 | `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing; the document is the one `create-courier --json` writes |
 | `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix` or `solid-start` (default: found in `package.json`) |

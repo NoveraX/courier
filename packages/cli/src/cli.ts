@@ -37,9 +37,9 @@ const COMMANDS: readonly Command[] = [
   },
   {
     name: "setup",
-    description: "Build the pages' routes in with Courier's plugin",
+    description: "Build the pages' routes in with Courier's plugin, and point agents at the docs",
     summary:
-      "Move the project to the routes Courier's plugin for its build gives the pages: the plugin in the build's config, each module that takes courier.routes.ts moved to @noverax/courier/routes, with the config registered there, and the plugin installed",
+      "Move the project to the routes Courier's plugin for its build gives the pages: the plugin in the build's config, each module that takes courier.routes.ts moved to @noverax/courier/routes, with the config registered there, and the plugin installed — and, where you agree, point your editor's agent at the docs of the Courier you install, with Courier's block in AGENTS.md",
     args: SETUP_ARGS,
     run: (rawArgs, showUsage) => void runMain(setupCommand, { rawArgs, showUsage }),
   },

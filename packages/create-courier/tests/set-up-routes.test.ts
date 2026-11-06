@@ -4,17 +4,19 @@
  * leaves — the plugin in the build's config, the client on the plugin's
  * routes, Studio kept from writing courier.routes.ts again.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createTerminalStyle } from "@noverax/courier/internal";
 import { afterAll, describe, expect, it } from "vitest";
 
+import { AGENT_RULES } from "../src/agent-rules";
 import { FileJournal } from "../src/apply/file-journal";
 import { writePlan } from "../src/apply/write-plan";
 import { frameworkById } from "../src/frameworks";
 import { buildPlan } from "../src/plan/build-plan";
 import { textReport } from "../src/report/text-report";
 import { setUpRoutes } from "../src/set-up-routes";
+import { scripted } from "./questions/scripted-questions";
 import { contextOf, manifest, projectWith, removeProjects } from "./recipes/project-fixture";
 
 afterAll(removeProjects);
@@ -57,6 +59,16 @@ function fileModeApp(listed: boolean): string {
   const plan = buildPlan(ctx, recipe);
   writePlan(new FileJournal(root), root, plan);
   return root;
+}
+
+/* An Express app Courier is set up in: its config declares an API. */
+function expressApp(): string {
+  return projectWith({
+    "package.json": manifest({ express: "^5.1.0" }),
+    "tsconfig.json": "{}",
+    "courier.config.ts":
+      'import { api } from "./src/courier/api";\n\nexport default defineConfig({ sources: { api } });\n',
+  });
 }
 
 function terminal() {
@@ -120,11 +132,8 @@ describe("setUpRoutes", () => {
     expect(read(root, "src/lib/courier/caller.ts")).toBe(before);
   });
 
-  it("refuses a framework Courier has no plugin for, and a project whose config declares no API", async () => {
-    const express = projectWith({
-      "package.json": manifest({ express: "^5.1.0" }),
-      "tsconfig.json": "{}",
-    });
+  it("refuses a framework Courier has no plugin for, where nothing asks for the docs, and a project whose config declares no API", async () => {
+    const express = expressApp();
     const bare = projectWith({
       "package.json": manifest({ "@sveltejs/kit": "^3.0.0" }),
       "tsconfig.json": "{}",
@@ -136,5 +145,41 @@ describe("setUpRoutes", () => {
     await expect(setUpRoutes(bare, {}, terminal().terminal)).rejects.toThrow(
       "courier.config.ts declares no API yet",
     );
+  });
+
+  it("points the editor's agent at the docs where asked, alone for a framework with no plugin", async () => {
+    const root = expressApp();
+    const shown = terminal();
+
+    const status = await setUpRoutes(
+      root,
+      { yes: true, install: false, "agents-md": true },
+      shown.terminal,
+    );
+
+    expect(status).toBe(0);
+    expect(read(root, "AGENTS.md")).toBe(`${AGENT_RULES}\n`);
+    expect(shown.printed.join("\n")).toContain(
+      "Point your editor's agent at Courier's docs in app (Express",
+    );
+    expect(shown.printed.join("\n")).toMatch(/@noverax\/courier-docs/);
+  });
+
+  it("asks of the docs beside the routes, where a terminal answers, and plans both", async () => {
+    const root = fileModeApp(false);
+    const questions = scripted([true, false]);
+    const shown = terminal();
+
+    const status = await setUpRoutes(root, {}, { ...shown.terminal, questions });
+
+    expect(questions.asked.map(({ message }) => message)).toEqual([
+      "Point your editor's agent at the docs of the Courier you install, in AGENTS.md?",
+      "Make the changes?",
+    ]);
+    expect(status).toBe(1);
+    expect(shown.printed.join("\n")).toContain(
+      "Build the pages' routes in with Courier's plugin, and point your editor's agent at Courier's docs in app",
+    );
+    expect(existsSync(join(root, "AGENTS.md"))).toBe(false);
   });
 });

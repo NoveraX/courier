@@ -97,4 +97,33 @@ describe("courier-cli setup", () => {
       "Courier has no plugin for Express's build",
     );
   });
+
+  it("points the editor's agent at the docs with --agents-md, where Courier has no plugin too", async () => {
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "shop", dependencies: { express: "^5.1.0" } }),
+    );
+
+    await runCommand(setupCommand, {
+      rawArgs: ["--cwd", dir, "--yes", "--no-install", "--agents-md"],
+    });
+
+    expect(process.exitCode).toBe(0);
+    expect(printed).toContain("Point your editor's agent at Courier's docs in shop");
+    expect(read("AGENTS.md")).toContain("<!-- BEGIN:courier-agent-rules -->");
+  });
+
+  it("names the files of the agents' rules in the JSON document's plan", async () => {
+    await runCommand(setupCommand, {
+      rawArgs: ["--cwd", dir, "--json", "--dry-run", "--agents-md"],
+    });
+
+    const { plan } = JSON.parse(printed);
+    expect(plan.agentRules[0]).toEqual({ path: "AGENTS.md", state: "create" });
+    expect(plan.agentRules.map((file: { state: string }) => file.state)).toEqual([
+      "create",
+      "create",
+    ]);
+    expect(existsSync(join(dir, "AGENTS.md"))).toBe(false);
+  });
 });

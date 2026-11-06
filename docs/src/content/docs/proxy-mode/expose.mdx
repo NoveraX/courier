@@ -1,4 +1,4 @@
-export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-05" }
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-06" }
 
 ## Overview
 
@@ -124,6 +124,8 @@ export const client = createProxyCaller(routes.api)
 | Parcel | [`@noverax/parcel-transformer-courier`](https://github.com/NoveraX/courier/tree/master/packages/parcel-transformer#readme), in `.parcelrc` |
 
 Each needs `@noverax/courier-build` installed beside it: a dev dependency, or a dependency in a Next.js app, whose `next start` loads `next.config`. The [framework guides](/docs/frameworks/overview) show the line for each, and [the engine's README](https://github.com/NoveraX/courier/tree/master/packages/build#readme) its options. `npx @noverax/create-courier` sets the plugin up in a new project, and `npx @noverax/courier-cli setup` moves a project that takes `courier.routes.ts` to it.
+
+A frontend in a folder of its own names the server's config to its plugin: `courierRoutes({ config: "../server/courier.config.ts" })`.
 
 The plugin reads the config in a process of its own each time one of its inputs changes, never in your bundler's, and it fails a page's bundle that would import `courier.config.ts` itself, so no definition of yours ships with a page by accident.
 

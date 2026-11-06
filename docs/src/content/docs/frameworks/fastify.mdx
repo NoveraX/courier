@@ -1,4 +1,4 @@
-export const metadata = { title: "Fastify", description: "Fastify server adapter using courierPlugin for hosting the Courier proxy route.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "Fastify", description: "Fastify server adapter using courierPlugin for hosting the Courier proxy route.", mode: "proxy", updated: "2026-11-06" }
 
 The `@noverax/courier-fastify` adapter provides a Fastify plugin that registers the Courier proxy route.
 
@@ -176,7 +176,7 @@ Add the hook on the root instance, where it runs for every route whichever plugi
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Fastify server into Studio with a single `attachRuntime()` call. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the app's own `registerSources()` call registers them. Studio's Playground sends its proxy calls to the app's origin, which in development the app learns from the server itself — the socket the first request to a Courier route arrived on — so open a page that calls your API before the first Playground call. Where Studio cannot see the server, set `courier.config.ts.runtime.appOrigin` or the `COURIER_APP_URL` env var — see [How the app learns its origin](/docs/api/config#app-origin).
+Wire your Fastify server into Studio with one `attachRuntime()` call, in development alone — [Connect the server](/docs/studio/overview#connect-the-server) says what it does. The Playground sends its proxy calls to the app's origin, which the app learns from the first request a Courier route serves, or from `runtime.appOrigin` in `courier.config.ts` or `COURIER_APP_URL` where Studio cannot see the server: see [How the app learns its origin](/docs/api/config#app-origin).
 
 ```ts title="server.ts"
 import Fastify from "fastify"
@@ -204,10 +204,6 @@ Alternatively, set `COURIER_APP_URL` instead of passing `appOrigin` explicitly:
 COURIER_APP_URL=http://localhost:3001 node server.js
 ```
 
-<Callout variant="warning" title="No magic default">
-There is no `localhost:3001` auto-fallback. Until the config, the environment or the server itself names the origin, a Playground call in proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer to [how the app learns its origin](/docs/api/config#app-origin). The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
-</Callout>
-
 ## Client-side setup
 
 On the client, point your caller to this server's proxy URL. Choose the guide for your frontend:
@@ -217,7 +213,7 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 - [Next.js](/docs/frameworks/nextjs) — full-stack with `apiRoute` and `createProxyQueryCaller`
 - [Nuxt](/docs/frameworks/nuxt) — full-stack with `courierHandler` and `createProxyCaller`
 
-The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it — the guide for your frontend shows the line, and a frontend in a folder of its own names the server's config, `courierRoutes({ config: "../server/courier.config.ts" })` — or from `courier.routes.ts`, which `npx @noverax/courier-cli routes` writes for a frontend without one. See [Exposing Endpoints](/docs/proxy-mode/expose):
+The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it, or from `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose#the-routes):
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"

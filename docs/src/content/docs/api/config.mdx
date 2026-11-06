@@ -101,6 +101,8 @@ In development, with no `appOrigin`, `COURIER_APP_URL` or `APP_URL`, the app lea
 
 Set `COURIER_APP_URL` where Studio cannot see the server — Deno, Cloudflare Workers, a server on a UNIX socket, or an app that routes by the name it is reached at — to the address the app's own process reaches its proxy route at: in a container, the container's own address and port, not the port the host publishes; behind a tunnel, the local address, not the public one, which would send the Playground's calls and their credentials through the tunnel's provider.
 
+No origin is guessed: with a custom port, a Docker host, HTTPS or a reverse proxy in the way, a guess would send the Playground's calls nowhere, without a word. Until the config, the environment or the server itself names it, a Playground call in proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")`, which points here. Studio shows each runtime with the origin it reports — the server's, and the page's for the browser's — in the sidebar's project card, and the Playground sends proxy calls there.
+
 ## agents
 
 What the project offers to AI agents as MCP tools. The server in your editor, Studio and `courier-studio diff` read it here; an application's own MCP endpoint takes it as `createMcpHandler({ agents: config.agents })`. Left out, the endpoints marked `.agent()` are offered and nothing else.

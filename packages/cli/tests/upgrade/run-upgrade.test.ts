@@ -6,6 +6,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  AGENT_RULES,
+  AGENT_RULES_BEGIN,
+  AGENT_RULES_END,
+} from "@noverax/create-courier/agent-rules";
 import type { PackageManager, PlanView, SetupEnd } from "@noverax/create-courier/engine";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -195,6 +200,39 @@ describe("runUpgrade", () => {
     expect(end).toMatchObject({ kind: "failed", code: "INSTALL_FAILED" });
     expect(readFileSync(join(root, "package.json"), "utf8")).toBe(before);
     expect(readFileSync(join(root, "package-lock.json"), "utf8")).toBe("{}\n");
+  });
+
+  it("brings Courier's block in AGENTS.md up to date with the packages, where a file holds one", async () => {
+    const stale = `# Rules\n\n${AGENT_RULES_BEGIN}\nRead the docs.\n${AGENT_RULES_END}\n`;
+    const root = shop({ "AGENTS.md": stale });
+
+    const { status, plan } = await upgrade(root, {});
+
+    expect(status).toBe(0);
+    expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe(`# Rules\n\n${AGENT_RULES}\n`);
+    expect(plan?.plan.agentRules).toEqual([{ path: "AGENTS.md", state: "update" }]);
+  });
+
+  it("leaves the block alone where Courier is at the release already, and names markers that repeat", async () => {
+    const stale = `${AGENT_RULES_BEGIN}\nRead the docs.\n${AGENT_RULES_END}\n`;
+    const current = projectWith({
+      "package.json": manifest({ dependencies: { "@noverax/courier": "^0.5.0" } }),
+      "AGENTS.md": stale,
+    });
+    const repeated = shop({ "AGENTS.md": `${stale}${stale}` });
+
+    const atRelease = await upgrade(current, {});
+    const shown = await upgrade(repeated, { "dry-run": true });
+
+    expect(atRelease.end).toMatchObject({ kind: "unchanged" });
+    expect(readFileSync(join(current, "AGENTS.md"), "utf8")).toBe(stale);
+    expect(shown.plan?.plan.manual).toContainEqual({
+      file: "AGENTS.md",
+      what: "It holds Courier's BEGIN marker more than once, so Courier's block in it was left as it is: keep one pair of its markers, BEGIN before END, for the upgrade and Studio to keep it up to date",
+      lines: [],
+    });
+    expect(shown.plan?.plan.agentRules).toEqual([{ path: "AGENTS.md", state: "kept" }]);
+    expect(readFileSync(join(repeated, "AGENTS.md"), "utf8")).toBe(`${stale}${stale}`);
   });
 
   it("says the project is at the release already where every range is", async () => {

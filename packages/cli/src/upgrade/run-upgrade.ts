@@ -15,6 +15,7 @@ import {
 } from "@noverax/create-courier/engine";
 
 import { isRecord } from "../util/is-record";
+import { agentRulesEdits } from "./agent-rules-edits";
 import { migrateCode } from "./codemod/run-migrations";
 import { projectCode } from "./codemod/source-files";
 import { manifestEdits } from "./manifest-edits";
@@ -75,10 +76,11 @@ function nextSteps(manager: PackageManager): NextStep[] {
  * Upgrade Courier in a project: find its workspace and every one of
  * Courier's packages its manifests list, the release it is on and the one
  * to move to, and show the plan — each package's range raised, the
- * breaking changes of each release it crosses — then, once the person
- * agrees or with `--yes`, write the ranges and install them with one
- * command at the workspace's root, undone together when the install
- * fails; then check the types of what changed.
+ * breaking changes of each release it crosses, the code carried over,
+ * and Courier's block in AGENTS.md brought up to date where a file holds
+ * it — then, once the person agrees or with `--yes`, write the ranges and
+ * install them with one command at the workspace's root, undone together
+ * when the install fails; then check the types of what changed.
  *
  * @param run - What the command line asked for
  * @param io - Where to tell what it does, and whether to ask
@@ -116,18 +118,22 @@ export async function runUpgrade(
   const notes = releases.flatMap((release) =>
     release.notes.map((note) => ({ release: release.version, ...note })),
   );
+  /* Courier's block in AGENTS.md goes with an upgrade that moves anything; Studio brings it up to date as it starts. */
+  const moves = manifests.edits.length > 0 || (code?.edits.length ?? 0) > 0;
+  const rules = moves ? agentRulesEdits(root, packages) : undefined;
   const plan: Plan = {
     files: [],
-    edits: [...manifests.edits, ...(code?.edits ?? [])],
+    edits: [...manifests.edits, ...(code?.edits ?? []), ...(rules?.edits ?? [])],
     dependencies: [],
     devDependencies: [],
     otherReleases: [],
     notInstalled: [],
     typescript: undefined,
-    manual: code?.manual ?? [],
+    manual: [...(code?.manual ?? []), ...(rules?.manual ?? [])],
     next: nextSteps(manager),
     leftOut: [],
     prepare: [],
+    agentRules: rules === undefined || rules.files.length === 0 ? undefined : rules.files,
   };
   const git = await gitState(root);
   const upgrade = { from: formatVersion(from), to: target, packages: manifests.packages, notes };

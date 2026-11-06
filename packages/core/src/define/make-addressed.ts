@@ -2,7 +2,7 @@ import { agentOptions } from "../agent/agent-options";
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
 import { normalizeHttpMethod } from "../utils/helpers";
-import type { CacheConfig } from "../validation";
+import type { AnswerStage, CacheConfig } from "../validation";
 import type { BuilderState } from "./builder";
 import { withValue } from "./builder";
 import { sealAt } from "./descriptor";
@@ -84,6 +84,7 @@ export function makeAddressed(
       );
       return next({ ...state, cancelPrevious: cancel === true });
     },
+    map: (stage: AnswerStage) => next({ ...state, maps: [...(state.maps ?? []), stage] }),
     agent: (given: unknown) => next({ ...state, agent: agentOptions(given, where) }),
     defaults: (values: unknown) =>
       next({

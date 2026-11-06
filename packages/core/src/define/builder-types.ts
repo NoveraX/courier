@@ -224,18 +224,55 @@ export interface HttpAddressed<
   TKind extends "query" | "mutation",
   TParams extends string = never,
   TExpose extends ExposeMark = ExposeMark,
+  TMapped extends boolean = false,
 > extends HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut, TExpose>,
-    NeutralMethods<HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>> {
+    NeutralMethods<
+      HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose, TMapped>
+    > {
+  /**
+   * The answer as the upstream sends it, checked by the schema when one is
+   * given. Named before `.map()`, which maps what it checked.
+   */
   response<T>(
-    schema?: StandardSchemaV1<unknown, T>,
+    ...schema: TMapped extends true
+      ? [refused: ResponseAfterMap]
+      : [schema?: StandardSchemaV1<unknown, T>]
   ): HttpAddressed<T, TVariables, TVariablesOut, TKind, TParams, TExpose>;
+  /**
+   * Map the answer, once its schema has checked it, to what the call
+   * resolves to — unwrap an envelope, read a header beside the data, build
+   * the caller's own type. Several stages run in the order they are named,
+   * each on what the one before gave, and the call is typed with what the
+   * last gives. They run where the call is made: on the server for a
+   * browser's call through the proxy, so the page gets what they gave.
+   *
+   * A stage may be asynchronous, and what it throws fails the call as it is
+   * thrown — an `HTTPError` that carries the answer turns an envelope that
+   * says it failed into a failed call. A streamed answer is its reader's,
+   * so no stage runs on it. OpenAPI, the mocks and Studio describe the
+   * answer the upstream sends, as the schema does.
+   *
+   * @example
+   * ```ts
+   * endpoint
+   *   .get(":id")
+   *   .response(Envelope(User))
+   *   .map((envelope, answer) => {
+   *     if (envelope.success) return envelope.data;
+   *     throw new HTTPError({ ...answer, data: envelope });
+   *   });
+   * ```
+   */
+  map<TOut>(
+    stage: AnswerMap<TResponse, TOut>,
+  ): HttpAddressed<Awaited<TOut>, TVariables, TVariablesOut, TKind, TParams, TExpose, true>;
   /**
    * What the caller passes. Each of the path's `:name` parameters is taken
    * from it, so variables that leave one out are refused here.
    */
   variables<TIn, TOut = TIn>(
     ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
-  ): HttpAddressed<TResponse, TIn, TOut, TKind, TParams, TExpose>;
+  ): HttpAddressed<TResponse, TIn, TOut, TKind, TParams, TExpose, TMapped>;
   /**
    * What the endpoint sends for variables a call leaves out — a page size, a
    * grouping the API asks for — so a call may leave them out. The call's own
@@ -260,7 +297,8 @@ export interface HttpAddressed<
     TVariablesOut,
     TKind,
     TParams,
-    TExpose
+    TExpose,
+    TMapped
   >;
   /**
    * How long the answer keeps.
@@ -270,7 +308,7 @@ export interface HttpAddressed<
    */
   cache(
     config: CacheArg<TKind>,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose, TMapped>;
   /**
    * Let a newer call of this read cancel its call still in flight — a
    * search as the user types, where only the last answer matters — whatever
@@ -293,7 +331,7 @@ export interface HttpAddressed<
    */
   cancelPrevious(
     ...cancel: CancelPreviousArgs<TKind>
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose, TMapped>;
   /**
    * Declare a write-shaped call to be a read.
    *
@@ -304,7 +342,7 @@ export interface HttpAddressed<
    * `READS_ON_CHANGING_VERB`, and a call that has a declared read's closure
    * call one of them is refused with `ENDPOINT_VERB_KIND`.
    */
-  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams, TExpose>;
+  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams, TExpose, TMapped>;
   /**
    * Declare a read-shaped call to be a write.
    *
@@ -319,7 +357,15 @@ export interface HttpAddressed<
    * unsubscribe: endpoint.get("unsubscribe").variables<{ token: string }>().writes(),
    * ```
    */
-  writes(): HttpAddressed<TResponse, TVariables, TVariablesOut, "mutation", TParams, TExpose>;
+  writes(): HttpAddressed<
+    TResponse,
+    TVariables,
+    TVariablesOut,
+    "mutation",
+    TParams,
+    TExpose,
+    TMapped
+  >;
   /**
    * Offer the endpoint to AI agents, as a tool of the application's MCP
    * server — or, with `false`, keep it from every agent whatever the
@@ -345,7 +391,7 @@ export interface HttpAddressed<
     options:
       | AgentOptions<TKind extends "query" ? AgentAccess : Exclude<AgentAccess, "read">>
       | false,
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose>;
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, TExpose, TMapped>;
   /**
    * Let a browser call the endpoint through the application's proxy — or,
    * with `false`, refuse it there whatever its group or API says. An
@@ -362,7 +408,34 @@ export interface HttpAddressed<
    */
   expose<const TOpen extends ExposeArgs = []>(
     ...open: TOpen
-  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams, ExposeMarkFor<TOpen>>;
+  ): HttpAddressed<
+    TResponse,
+    TVariables,
+    TVariablesOut,
+    TKind,
+    TParams,
+    ExposeMarkFor<TOpen>,
+    TMapped
+  >;
+}
+
+/** What a `.map()` stage is told of the answer besides its data. */
+export interface AnswerHead {
+  /** The answer's status. */
+  readonly status: number;
+  /** The answer's headers. */
+  readonly headers: Headers;
+}
+
+/**
+ * A `.map()` stage: what it maps the answer's data to, once the schema
+ * before it checked the data and every stage before it ran.
+ */
+export type AnswerMap<TData, TOut> = (data: TData, answer: AnswerHead) => TOut | Promise<TOut>;
+
+/** What a type error names when `.response()` follows `.map()`. */
+export interface ResponseAfterMap {
+  readonly ".response() describes the answer before .map() maps it: name it first": true;
 }
 
 /* The kind a closure's call carries: that of each verb it may call. */

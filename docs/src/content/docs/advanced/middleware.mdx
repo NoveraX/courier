@@ -1,4 +1,4 @@
-export const metadata = { title: "Middleware", description: "Intercept, transform, and observe every request with composable middleware functions.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Middleware", description: "Intercept, transform, and observe every request with composable middleware functions.", mode: "both", updated: "2026-11-06" }
 
 ## Overview
 
@@ -212,17 +212,13 @@ const auth = defineMiddleware("auth", "before", async (ctx) => {
 
 ### Response transformation
 
-Unwrap API envelopes so your components receive clean data:
+An `after` handler sees an answer once the endpoint's schema has checked it and its `.map()` stages have run, so data it changes is data the caller's type does not know of. An envelope is unwrapped where the endpoint is described instead: the schema checks the envelope, a stage hands on its data, and the caller is typed with it — see [Mapping the answer](/docs/core-concepts/defining-apis#mapping-the-answer). An `after` handler suits what every answer shares and no type describes, such as a header to report:
 
-```ts title="middleware/unwrap.ts"
+```ts title="middleware/served-by.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-const unwrapEnvelope = defineMiddleware("unwrap-envelope", "after", (_ctx, response) => {
-  // Many APIs wrap responses in { data: ..., meta: ... }
-  const body = response.data
-  if (body && typeof body === "object" && "data" in body) {
-    return { ...response, data: body.data }
-  }
+const servedBy = defineMiddleware("served-by", "after", (ctx, response) => {
+  console.info(`${ctx.source}.${ctx.method} served by ${response.headers.get("x-served-by") ?? "?"}`)
   return response
 })
 ```

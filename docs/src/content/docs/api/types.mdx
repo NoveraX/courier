@@ -183,6 +183,21 @@ const getByIdTyped = endpoint.variables<{ id: string }>().via(byIdTyped).reads()
 
 `ViaAddressed<Call, …>` is what `.via()` gives for a closure returning `Call`. For a closure that calls a reading verb on one path and a writing verb on another, or one whose type does not say, it is an `HttpKindUnnamed` — no endpoint until `.reads()` or `.writes()` names its kind, and refused by a group with that reason.
 
+### Answer Stages
+
+What `.map()` takes. Name these to write a stage once and map the answers of several endpoints with it — see [Mapping the answer](/docs/core-concepts/defining-apis#mapping-the-answer):
+
+```ts
+/** What a stage is told of the answer besides its data */
+interface AnswerHead {
+  readonly status: number
+  readonly headers: Headers
+}
+
+/** A stage: the data the schema checked, or the stage before gave, mapped to what the next one gets */
+type AnswerMap<Data, Out> = (data: Data, answer: AnswerHead) => Out | Promise<Out>
+```
+
 ## Response Types
 
 ### HttpResponse

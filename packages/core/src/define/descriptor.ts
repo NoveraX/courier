@@ -28,6 +28,7 @@ export function resolveSchemas(state: BuilderState): SchemaMetadata {
   const transport = TRANSPORT_BY_KIND[state.kind];
   return {
     ...(response !== undefined && { response }),
+    ...(state.maps !== undefined && { map: state.maps }),
     ...(variables !== undefined && { variables }),
     ...(send !== undefined && { receive: send }),
     /* Declaring the slot is what makes a channel bidirectional; a schema on it

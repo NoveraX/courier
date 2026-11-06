@@ -39,8 +39,13 @@ export function toolSchemasOf(
   endpoint: PlacedEndpoint,
   fallback?: JSONSchemaFallback,
 ): ToolSchemas {
-  const { variables, defaults } = endpoint.schemas;
-  const outputSchema = standardJsonSchema(endpoint.schemas.response, "output", fallback);
+  const { variables, defaults, map } = endpoint.schemas;
+  /* The response schema checks the answer the upstream sends; a `.map()` stage then gives the
+     tool's result, which the schema no longer describes. */
+  const outputSchema =
+    map === undefined
+      ? standardJsonSchema(endpoint.schemas.response, "output", fallback)
+      : undefined;
   const input = standardJsonSchema(variables, "input", fallback);
   if (input === undefined) {
     return {

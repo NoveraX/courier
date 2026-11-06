@@ -101,6 +101,10 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
     data = result.validated;
     tRespValidation = result.duration;
   }
+  /* Then each stage `.map()` named, in turn, on what the schema checked. */
+  if (!deps.stream) {
+    for (const stage of deps.schema?.map ?? []) data = await stage(data, { status, headers });
+  }
 
   return {
     response: { status, data, headers },

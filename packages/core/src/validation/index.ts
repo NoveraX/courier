@@ -15,9 +15,23 @@ export interface CacheConfig {
 /** Transport mode for an endpoint */
 export type Transport = "http" | "sse" | "ws";
 
+/**
+ * A stage an answer passes through after its schema, from `.map()`: what it
+ * maps the data to, told the answer's status and headers.
+ */
+export type AnswerStage = (
+  data: unknown,
+  answer: { readonly status: number; readonly headers: Headers },
+) => unknown;
+
 /** Schema metadata attached to an endpoint function */
 export interface SchemaMetadata {
   response?: StandardSchemaV1;
+  /**
+   * The stages the answer passes through, in order, once `response` has
+   * checked it: what the last gives is what the call resolves to.
+   */
+  map?: readonly AnswerStage[];
   variables?: StandardSchemaV1;
   /** Endpoint type — "query" enables GET proxy, "mutation" requires POST */
   type?: "query" | "mutation";

@@ -242,6 +242,53 @@ The call's own value wins, and a variable sent as `undefined` counts as left out
 
 Studio's Playground starts the endpoint with its defaults set and lists each as the default it is, the OpenAPI document gives each its `default` and no longer requires it, and an agent's tool shows it the same way.
 
+### Mapping the answer
+
+`.map()` maps an endpoint's answer to what its call resolves to, once the response schema has checked it: unwrap an envelope, read a header beside the data, build a type of your own. A stage is handed the data and the answer's `status` and `headers`, and returns what the next stage — or the caller — gets. Several run in the order they are named, an asynchronous one too, and the call is typed with what the last one gives:
+
+```ts
+const { endpoint } = courier()
+
+endpoint
+  .get("users")
+  .response<Array<{ id: string }>>()
+  .map((users, answer) => ({ users, total: Number(answer.headers.get("x-total-count")) }))
+// caller.users.page() → Promise<{ users: { id: string }[]; total: number }>
+```
+
+The stages run where the call is made — on the server for a browser's call through the proxy, so the page gets what they gave and nothing they left out. `.raw` keeps the answer's status and headers beside the mapped data, an `after` middleware sees the mapped data, and a kept answer is the mapped one. A streamed answer (`stream: true`) is its reader's, so no stage runs on it. OpenAPI, the mocks and Studio describe the answer as the upstream sends it, as the schema does; an agent's tool returns what the stages gave, so it names no output schema. `.response()` comes before `.map()`: named after it, the schema would check what no stage gave, and the chain refuses it.
+
+#### An envelope around every answer
+
+An API that wraps each answer — `{ success: true, data }`, or `{ success: false, error }` — is unwrapped where its endpoints are described. The envelope's schema checks the answer, and one stage hands on the data or fails the call with an `HTTPError` that carries the envelope:
+
+```ts
+import { HTTPError } from "@noverax/courier"
+import { type AnswerHead, courier } from "@noverax/courier/define"
+import { z } from "zod"
+
+const Envelope = <T extends z.ZodType>(data: T) =>
+  z.discriminatedUnion("success", [
+    z.object({ success: z.literal(true), data }),
+    z.object({ success: z.literal(false), error: z.object({ code: z.string(), message: z.string() }) }),
+  ])
+
+type Envelope<T> = { success: true; data: T } | { success: false; error: { code: string; message: string } }
+
+function unwrap<T>(envelope: Envelope<T>, answer: AnswerHead): T {
+  if (envelope.success) return envelope.data
+  throw new HTTPError({ ...answer, data: envelope }, { message: envelope.error.message })
+}
+
+const User = z.object({ id: z.string(), name: z.string() })
+const { endpoint } = courier()
+
+const getUser = endpoint.get("users/:id").response(Envelope(User)).map(unwrap)
+// caller.users.get({ id }) → Promise<{ id: string; name: string }>
+```
+
+An envelope that says the call failed fails it. A direct caller's promise rejects with the `HTTPError`, its `status` the answer's own — `200` — and its `data` the envelope. A browser's call through the proxy is answered `502`, as any answer the proxy could not use is, with the envelope as the error's `data`. A retry policy decides on it as on any `HTTPError`: a `200` is not retried.
+
 ### One call per slot
 
 `.variables()`, `.response()` and `.send()` each fill a slot, and a slot takes one schema or type: a second call would replace the first. It type-checks, but throws `ConfigurationError("SLOT_ALREADY_SET")` as soon as the module defining the endpoint loads, naming the slot and the endpoint:
@@ -268,6 +315,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.writes()` | a write addressed with a reading verb — a GET that changes something, such as an unsubscribe link: sent once per call, its answer never kept, taken by the mutation hooks, and carried by the proxy as a POST while the upstream gets its own verb |
 | `.cancelPrevious(cancel?)` | whether a newer call of this read cancels its call still in flight — a search as the user types; `false` keeps every call whatever its group, client or API says. Offered on a read alone — see [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on) |
 | `.defaults(values)` | what an HTTP endpoint sends for variables a call leaves out — see [Default variables](#default-variables) |
+| `.map(stage)` | what an HTTP endpoint's call resolves to, mapped from the answer its schema checked — see [Mapping the answer](#mapping-the-answer) |
 | `.agent({ description, access })` | offers the endpoint to AI agents as a tool of your MCP server — named on an HTTP endpoint after its verb, and not passed on by a base; see [MCP Server](/docs/agents/overview) |
 
 A verb also takes options for that endpoint alone:

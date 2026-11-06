@@ -134,6 +134,11 @@ describe("a tool's schemas", () => {
         .variables<{ limit: number }>()
         .defaults({ limit: 5 })
         .agent(read("L")),
+      byMapped: endpoint
+        .get("counts")
+        .response(z.object({ n: z.number() }))
+        .map((answer) => answer.n)
+        .agent(read("M")),
     },
   });
   const byName = buildCatalog({ api }).byName;
@@ -151,6 +156,10 @@ describe("a tool's schemas", () => {
       properties: { n: { type: "number" } },
     });
     expect([tool?.wrapsValue, tool?.takesVariables]).toEqual([false, true]);
+  });
+
+  it("says nothing of what comes back once .map() maps it: the schema checks the answer before", () => {
+    expect(byName.get("byMapped")?.outputSchema).toBeUndefined();
   });
 
   it("wraps variables that are no object as { value }, and keeps a choice of objects as it is", () => {

@@ -1,4 +1,4 @@
-export const metadata = { title: "Custom Middleware", description: "Write your own middleware to intercept requests, modify headers, transform responses, and handle errors.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Custom Middleware", description: "Write your own middleware to intercept requests, modify headers, transform responses, and handle errors.", mode: "both", updated: "2026-11-06" }
 
 ## Writing a Middleware
 
@@ -92,17 +92,14 @@ A retry policy's `deadline` does this for its attempts and the waits between the
 
 ### Transform the response
 
-An `after` handler receives the response and returns it, changed or not:
+An `after` handler receives the response and returns it, changed or not. It sees the data the endpoint's schema checked and its `.map()` stages gave, so a change it makes to the data is one the caller's type does not know of: unwrap an envelope with [`.map()`](/docs/core-concepts/defining-apis#mapping-the-answer) where the endpoint is described. An `after` handler suits what every answer shares and no type describes:
 
-```ts title="lib/middleware/unwrap.ts"
+```ts title="lib/middleware/served-by.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-// Unwrap a { data, meta } API envelope
-export const unwrapMiddleware = defineMiddleware("unwrap", "after", (_ctx, response) => {
-  const body = response.data
-  if (body && typeof body === "object" && "data" in body) {
-    return { ...response, data: body.data }
-  }
+// Report which upstream server answered each call
+export const servedByMiddleware = defineMiddleware("served-by", "after", (ctx, response) => {
+  console.info(`${ctx.source}.${ctx.method} served by ${response.headers.get("x-served-by") ?? "?"}`)
   return response
 })
 ```
@@ -221,13 +218,13 @@ Use `composeMiddleware` to bundle multiple middleware into a reusable unit. It r
 import { composeMiddleware, defineMiddleware } from "@noverax/courier/middleware"
 import { errorReporter } from "./error-reporter"
 import { timingMiddleware } from "./timing"
-import { unwrapMiddleware } from "./unwrap"
+import { servedByMiddleware } from "./served-by"
 
 // Single middleware that applies all three
 export const productionMiddleware = defineMiddleware(
   "production",
   "wrap",
-  composeMiddleware([errorReporter, timingMiddleware, unwrapMiddleware]),
+  composeMiddleware([errorReporter, timingMiddleware, servedByMiddleware]),
 )
 ```
 

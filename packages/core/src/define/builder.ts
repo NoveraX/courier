@@ -4,7 +4,7 @@ import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
 import { assertEndpointSession } from "../session/assert-session-api";
 import { idempotencyHeader } from "../utils/idempotency-header";
-import type { CacheConfig } from "../validation";
+import type { AnswerStage, CacheConfig } from "../validation";
 import type { EndpointKind } from "./marker";
 import type {
   AnyEndpointOptions,
@@ -22,6 +22,8 @@ export interface BuilderState {
   readonly kindNamed?: true | undefined;
   readonly schemas: Readonly<Partial<Record<SlotName, StandardSchemaV1>>>;
   readonly filled: readonly SlotName[];
+  /** What `.map()` passes the answer through after its schema, in order. */
+  readonly maps?: readonly AnswerStage[] | undefined;
   /** Middleware of the base the endpoint was built from; `inherit: false` drops it. */
   readonly baseMiddleware: readonly Middleware[];
   /** Middleware the endpoint added itself with `.use()`. */

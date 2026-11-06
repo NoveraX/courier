@@ -10,6 +10,8 @@ export type { TransportOptions } from "../http-client/transport-options";
 export type { WebBody, WebCredentials } from "../http-client/web-types";
 export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";
 export type {
+  AnswerHead,
+  AnswerMap,
   ChannelAddressed,
   ChannelBuilder,
   ChannelDuplexHandler,
@@ -22,6 +24,7 @@ export type {
   HttpBuilder,
   HttpKindUnnamed,
   NeutralMethods,
+  ResponseAfterMap,
   StreamAddressed,
   StreamBuilder,
   StreamHandler,

@@ -39,6 +39,7 @@ async function planNow(root: string, openapi?: string): Promise<Plan> {
   const run = { "dry-run": true, mcp: false, ...(openapi === undefined ? {} : { openapi }) };
   await addCourier(root, run, {
     interactive: false,
+    toolOutput: "stdout",
     report: {
       ...report,
       plan(view) {

@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runTool, toolFailure } from "../../src/apply/run-tool";
@@ -75,6 +77,27 @@ describe("runTool", () => {
 
     expect(result.stopped).toBe("cancelled");
     expect(late).toEqual({ status: 1, stopped: "cancelled", tail: "" });
+  });
+
+  it("shows a program's output on standard error where standard output carries the JSON document", () => {
+    const runner = fileURLToPath(new URL("../../src/apply/run-tool.ts", import.meta.url));
+    const script = `
+      import { runTool } from ${JSON.stringify(runner)};
+      await runTool([process.execPath, "-e", "console.log('installing')"], {
+        cwd: process.cwd(), output: { kind: "show", on: "stderr" }, deadlineMs: 30000,
+      });`;
+
+    const result = spawnSync(
+      process.execPath,
+      ["--import", "tsx", "--input-type=module", "-e", script],
+      {
+        encoding: "utf8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("installing");
   });
 
   it("refuses with the program's name when it cannot be started", async () => {

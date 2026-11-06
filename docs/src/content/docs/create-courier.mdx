@@ -112,6 +112,30 @@ npx @noverax/create-courier --mcp
 
 Writes `agents: { offer: "reads" }` into the config — every read is offered to agents, a write once you mark it `.agent()` — describes the example's reads with `.agent()`, and adds `.mcp.json`, which Claude Code reads, so your editor's agent can call your API through the same middleware as your app. An imported API's reads are offered the same way, each described by its specification's summary. In a project set up before, it adds the policy to the config you have, unless the config says already what agents may call. In a terminal, it asks, for a project you have and for one it creates; with `--yes`, or without a terminal, it leaves agents out unless `--mcp` is passed. See [What agents may call](/docs/agents/overview#what-agents-may-call).
 
+## In CI and for agents
+
+```bash
+npx @noverax/create-courier --json --dry-run
+```
+
+With `--json` the command asks nothing, and writes one JSON document to standard output as it ends; the install and the other programs it runs write to standard error. `--yes` and `--dry-run` mean what they mean without it: with neither, the document holds the plan and the status `refused`.
+
+| Field | |
+|---|---|
+| `schemaVersion` | `1`. Within it, fields are only ever added |
+| `status` | `applied`, `unchanged`, `dry-run`, `refused` or `failed` |
+| `exitCode` | What the command exits with: 0, or 1 for a refusal or a failure |
+| `newProject` | The project it created, where it created one: its `name`, `framework` and how it was made |
+| `plan` | Its `title`; the `files`, each with its `path`, `state` (`create`, `same`, `courier` or `kept`) and `purpose`; the `edits`, with the `lines` each removes and adds; the `packages`; what is left to you, `manual`; what to run, `next`; what git says, `git`; and the APIs your config declares, `configured` |
+| `written`, `changed` | The files it added, and the files of yours it changed |
+| `install` | Whether the install ran, and its commands: those left to you with `--no-install` |
+| `warnings` | Programs that write the types the added files read, such as `astro sync`, that failed |
+| `typecheck` | `clean`, `errors` with their `lines`, `unchecked` with its `reason`, or `no-typescript` |
+| `undone` | For a run that failed part way: the files it `removed` and `putBack`, and those it `kept`, each with why |
+| `error` | Its `code` and `message`: `CONFIRMATION_REQUIRED`, `DECLINED`, `GIT_DIRTY`, `NODE_TOO_OLD` or `REFUSED` for a refusal, which changed nothing; `INSTALL_FAILED`, `INSTALL_TIMED_OUT`, `CANCELLED`, `FILE_APPEARED`, `FILE_CHANGED`, `WRITE_FAILED`, `PATH_OUTSIDE_PROJECT`, `IMPORT_FAILED`, `GENERATOR_FAILED`, `TYPECHECK_FAILED` or `UNEXPECTED_ERROR` for a failure |
+
+`npx @noverax/courier-cli setup --json` writes the same document, its `command` naming it.
+
 ## Options
 
 | Option | |
@@ -129,5 +153,6 @@ Writes `agents: { offer: "reads" }` into the config — every read is offered to
 | `--yes`, `-y` | Go ahead without asking |
 | `--allow-dirty` | Go ahead with `--yes` where git has changes not committed |
 | `--dry-run` | Show the plan, and change nothing |
+| `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing |
 
 It needs Node.js 22.13 or later, which Studio and its mock need too, and a project with a `tsconfig.json`: Courier is typed end to end.

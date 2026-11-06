@@ -1,10 +1,8 @@
 import { resolve } from "node:path";
-import { createLogger } from "@noverax/courier";
-import { styleFor } from "@noverax/courier/internal";
-import { type SetupIO, setUpRoutes, textReport } from "@noverax/create-courier/setup";
+import { runSetupCommand, setUpRoutes } from "@noverax/create-courier/setup";
 import { type ArgsDef, defineCommand } from "citty";
 
-const log = createLogger("Setup");
+import { cliVersion } from "../cli-version";
 
 /** The `setup` command's options. */
 export const SETUP_ARGS = {
@@ -35,6 +33,11 @@ export const SETUP_ARGS = {
     description: "Go ahead with --yes where git has changes not committed",
   },
   "dry-run": { type: "boolean", description: "Show the plan, and change nothing" },
+  json: {
+    type: "boolean",
+    description:
+      "Report the plan and what was done as one JSON document on standard output, asking nothing",
+  },
 } as const satisfies ArgsDef;
 
 /**
@@ -55,18 +58,12 @@ export const setupCommand = defineCommand({
   args: SETUP_ARGS,
   async run({ args }) {
     const root = resolve(args.cwd ?? process.cwd());
-    const io: SetupIO = {
-      interactive: process.stdin.isTTY === true && process.stderr.isTTY === true,
-      report: textReport(styleFor(process.stdout), (lines) =>
-        process.stdout.write(`${lines.join("\n")}\n`),
-      ),
+    const command = {
+      command: "courier-cli setup",
+      version: cliVersion(),
+      logScope: "Setup",
+      json: args.json === true,
     };
-    try {
-      process.exitCode = await setUpRoutes(root, args, io);
-    } catch (error) {
-      /* One line naming the problem, and a failing status. */
-      log.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    }
+    process.exitCode = await runSetupCommand(command, (io) => setUpRoutes(root, args, io));
   },
 });

@@ -74,13 +74,16 @@ function transaction(
       checkEditsCurrent(root, plan.edits);
       if (run.install !== false) {
         snapshot = snapshotManifests(root);
-        await install(root, installCommands(ctx.manager, plan), signal);
+        const commands = installCommands(ctx.manager, plan);
+        await install(root, commands, signal, io.toolOutput);
+        io.report.installed(commands);
       }
       writePlan(journal, root, plan);
       io.report.wrote({ written: journal.written, changed: journal.changed });
       if (run.install === false) return undefined;
       await prepare(ctx, plan, io.report, signal);
-      if (run.openapi !== undefined) await importSpecification(root, run.openapi, run.name, signal);
+      if (run.openapi !== undefined)
+        await importSpecification(root, run.openapi, run.name, signal, io.toolOutput);
       if (signal.aborted) throw new SetupFailure("CANCELLED", "The setup was cancelled");
       return undefined;
     } catch (error) {

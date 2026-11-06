@@ -66,6 +66,7 @@ function terminal() {
     terminal: {
       interactive: false,
       report: textReport(createTerminalStyle(0, false), (lines) => printed.push(...lines)),
+      toolOutput: "stdout" as const,
     },
   };
 }

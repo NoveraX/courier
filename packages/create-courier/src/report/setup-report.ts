@@ -75,6 +75,8 @@ export interface SetupReport {
   /** What was put right in a new project, or done to it, in the person's words. */
   note(lines: readonly string[]): void;
   plan(view: PlanView): void;
+  /** The install ran, with these commands, and held. */
+  installed(commands: ReadonlyArray<readonly string[]>): void;
   wrote(view: WrittenView): void;
   /** A program that writes the types the added files read failed: what failed, and its last lines. */
   prepareFailed(said: string, lines: readonly string[]): void;

@@ -29,7 +29,14 @@ function run(args: readonly string[]) {
     encoding: "utf8",
     env: { ...process.env, NO_COLOR: "1", npm_config_user_agent: "" },
   });
-  return { status: result.status, out: `${result.stdout}${result.stderr}` };
+  return { status: result.status, out: `${result.stdout}${result.stderr}`, stdout: result.stdout };
+}
+
+/* The command run with --json: its exit status, and the one document standard output carries. */
+function runJson(args: readonly string[]) {
+  const { status, stdout } = run(["--json", ...args]);
+  const document: unknown = JSON.parse(stdout);
+  return { status, document };
 }
 
 const NEXT = {
@@ -89,6 +96,58 @@ describe("create-courier", () => {
     expect(status).toBe(1);
     expect(out).toContain("Nothing was changed: run it again with --yes");
     expect(existsSync(join(root, "courier.config.ts"))).toBe(false);
+  }, 60_000);
+
+  it("reports the plan as one JSON document on standard output with --json, and asks nothing", () => {
+    const root = projectWith(NEXT);
+
+    const dry = runJson([root, "--dry-run", "--no-mcp"]);
+    const unasked = runJson([root, "--no-mcp"]);
+    const refused = runJson([
+      projectWith({ "package.json": manifest({ next: "16.4.0" }) }),
+      "--yes",
+    ]);
+
+    expect(dry.status).toBe(0);
+    expect(dry.document).toMatchObject({
+      schemaVersion: 1,
+      command: "create-courier",
+      status: "dry-run",
+      plan: {
+        title: "Set Courier up in app (Next.js 16.4.0, npm)",
+        files: expect.arrayContaining([
+          { path: "src/instrumentation.ts", state: "create", purpose: expect.any(String) },
+        ]),
+      },
+    });
+    expect(unasked.status).toBe(1);
+    expect(unasked.document).toMatchObject({
+      status: "refused",
+      error: { code: "CONFIRMATION_REQUIRED" },
+    });
+    expect(existsSync(join(root, "courier.config.ts"))).toBe(false);
+    expect(refused.document).toMatchObject({
+      status: "refused",
+      error: { code: "REFUSED", message: expect.stringContaining("no tsconfig.json") },
+    });
+  }, 60_000);
+
+  it("reports what it wrote, and the install commands left to run, with --json --yes --no-install", () => {
+    const root = projectWith(NEXT);
+
+    const { status, document } = runJson([root, "--yes", "--no-install", "--no-mcp"]);
+
+    expect(status).toBe(0);
+    expect(document).toMatchObject({
+      status: "applied",
+      exitCode: 0,
+      written: expect.arrayContaining(["courier.config.ts", "src/instrumentation.ts"]),
+      changed: expect.arrayContaining(["package.json"]),
+      install: {
+        ran: false,
+        commands: [expect.arrayContaining(["npm", "install"]), expect.any(Array)],
+      },
+    });
   }, 60_000);
 
   it("refuses with --yes where git has changes not committed, and goes ahead with --allow-dirty", () => {

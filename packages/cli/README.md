@@ -157,6 +157,7 @@ Where a file is not in a shape it knows, it shows the lines to add instead. It d
 | `--yes`, `-y` | Make the changes without asking |
 | `--allow-dirty` | Make them with `--yes` where git has changes not committed, which it otherwise refuses |
 | `--no-install` | Make the changes, and name the install command |
+| `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing; the document is the one `create-courier --json` writes |
 | `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix` or `solid-start` (default: found in `package.json`) |
 | `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |
 | `--cwd <dir>` | The project's root (default: the working directory) |

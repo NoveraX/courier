@@ -16,6 +16,8 @@ export type FailureCode =
   | "PATH_OUTSIDE_PROJECT"
   /** Studio's import of the specification failed. */
   | "IMPORT_FAILED"
+  /** A framework's generator, or a step after its template's install, failed in making a new project. */
+  | "GENERATOR_FAILED"
   /** Something the run did not expect went wrong: its error says what, with its stack. */
   | "UNEXPECTED_ERROR";
 

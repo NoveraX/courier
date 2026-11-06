@@ -18,6 +18,7 @@ const WHAT_NOW: Readonly<Record<FailureCode, string | undefined>> = {
   PATH_OUTSIDE_PROJECT:
     "Put the file in place of the link, or move the link out of the way, and run the command again.",
   IMPORT_FAILED: "Check the specification and where it is, and run the command again.",
+  GENERATOR_FAILED: "Put right what stopped it, then run the command again in an empty folder.",
   UNEXPECTED_ERROR: undefined,
 };
 

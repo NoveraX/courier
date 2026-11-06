@@ -22,6 +22,7 @@ function shown(spec: string): string {
  * @param spec - The specification: a URL or a file
  * @param name - The API's name, when not taken from the specification
  * @param signal - Stops the import once the person cancels
+ * @param on - Where Studio's output shows: the terminal's, or standard error beside the JSON document
  * @throws {SetupFailure} `IMPORT_FAILED` when Studio is not installed or its import fails, `CANCELLED` when stopped
  * @example
  * ```ts
@@ -33,6 +34,7 @@ export async function importSpecification(
   spec: string,
   name: string | undefined,
   signal?: AbortSignal,
+  on: "stdout" | "stderr" = "stdout",
 ): Promise<void> {
   const manifest = resolveInProject(root, "@noverax/courier-studio/package.json");
   if (manifest === undefined)
@@ -44,7 +46,7 @@ export async function importSpecification(
   const args = ["import", spec, "--yes", "--cwd", root, ...(name ? ["--name", name] : [])];
   const result = await runTool([process.execPath, cli, ...args], {
     cwd: process.cwd(),
-    output: { kind: "show", on: "stdout" },
+    output: { kind: "show", on },
     deadlineMs: SETUP_LIMITS.importMs,
     signal,
   });

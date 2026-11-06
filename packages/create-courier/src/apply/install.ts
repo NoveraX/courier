@@ -32,21 +32,23 @@ export function installCommands(manager: PackageManager, plan: Plan): string[][]
  * @param root - The project's folder
  * @param commands - The commands
  * @param signal - Stops the install once the person cancels
+ * @param on - Where its output shows: the terminal's, or standard error beside the JSON document
  * @throws {SetupFailure} `INSTALL_FAILED`, `INSTALL_TIMED_OUT` or `CANCELLED`, naming the command
  * @example
  * ```ts
- * await install(project.root, installCommands(manager, plan), signal);
+ * await install(project.root, installCommands(manager, plan), signal, io.toolOutput);
  * ```
  */
 export async function install(
   root: string,
   commands: readonly string[][],
   signal?: AbortSignal,
+  on: "stdout" | "stderr" = "stdout",
 ): Promise<void> {
   for (const command of commands) {
     const result = await runTool(command, {
       cwd: root,
-      output: { kind: "show", on: "stdout" },
+      output: { kind: "show", on },
       deadlineMs: SETUP_LIMITS.installMs,
       signal,
     });

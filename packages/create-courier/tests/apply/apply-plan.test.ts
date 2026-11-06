@@ -71,7 +71,12 @@ async function setUp(root: string, behaviour: string, run: CreateRun = {}, befor
       text.end(end);
     },
   };
-  const status = await applyPlan(ctx, plan, { yes: true, ...run }, { interactive: false, report });
+  const status = await applyPlan(
+    ctx,
+    plan,
+    { yes: true, ...run },
+    { interactive: false, report, toolOutput: "stdout" },
+  );
   return { status, end: ends.at(-1), printed: printed.join("\n") };
 }
 

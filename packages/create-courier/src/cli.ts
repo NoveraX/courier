@@ -1,18 +1,13 @@
 #!/usr/bin/env node
 
-import { createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 
-import { CancelledError } from "./cancelled-error";
 import { createCourier } from "./create";
 import { createCourierVersion } from "./create-courier-version";
 import { FRAMEWORKS } from "./frameworks";
 import { nodeTooOld } from "./preflight/node-version";
-import { textReport } from "./report/text-report";
-import type { SetupIO } from "./setup-io";
-
-const log = createLogger("Create");
+import { runSetupCommand } from "./run-setup-command";
 
 const SUMMARY =
   "Set Courier up in one command, in your project or a new one: your typed API, the route the browser calls it through, Studio and mock data";
@@ -92,6 +87,11 @@ const ARGS = {
     description: "Go ahead with --yes where git has changes not committed",
   },
   "dry-run": { type: "boolean", description: "Show the plan, and change nothing" },
+  json: {
+    type: "boolean",
+    description:
+      "Report the plan and what was done as one JSON document on standard output, asking nothing",
+  },
 } as const satisfies ArgsDef;
 
 async function printHelp(): Promise<void> {
@@ -111,29 +111,19 @@ const main = defineCommand({
   meta: { name: "create-courier", version: createCourierVersion(), description: SUMMARY },
   args: ARGS,
   async run({ args }) {
-    const old = nodeTooOld();
-    if (old !== undefined) {
-      log.error(`${old}. Install a newer Node.js from https://nodejs.org, and run it again.`);
-      process.exitCode = 1;
-      return;
-    }
-    const io: SetupIO = {
-      interactive: process.stdin.isTTY === true && process.stderr.isTTY === true,
-      report: textReport(styleFor(process.stdout), (lines) =>
-        process.stdout.write(`${lines.join("\n")}\n`),
-      ),
+    const command = {
+      command: "create-courier",
+      version: createCourierVersion(),
+      logScope: "Create",
+      json: args.json === true,
+      cannotRun: () => {
+        const old = nodeTooOld();
+        return old === undefined
+          ? undefined
+          : `${old}. Install a newer Node.js from https://nodejs.org, and run it again`;
+      },
     };
-    try {
-      process.exitCode = await createCourier(args, io);
-    } catch (error) {
-      if (error instanceof CancelledError) {
-        process.stderr.write(`\n${error.message}.\n`);
-        process.exitCode = error.status;
-        return;
-      }
-      log.error(error instanceof Error ? error.message : String(error));
-      process.exitCode = 1;
-    }
+    process.exitCode = await runSetupCommand(command, (io) => createCourier(args, io));
   },
 });
 

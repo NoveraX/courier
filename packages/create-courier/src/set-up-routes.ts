@@ -17,6 +17,7 @@ import type { SetupIO } from "./setup-io";
 
 export type { SetupReport } from "./report/setup-report";
 export { textReport } from "./report/text-report";
+export { runSetupCommand, type SetupCommand } from "./run-setup-command";
 export type { SetupIO } from "./setup-io";
 
 /** What the command line asked of the routes' setup. */

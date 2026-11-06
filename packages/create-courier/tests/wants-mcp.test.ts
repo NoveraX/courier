@@ -6,7 +6,11 @@ import type { SetupIO } from "../src/setup-io";
 import { wantsMcp } from "../src/wants-mcp";
 
 function terminalThat(interactive: boolean): SetupIO {
-  return { interactive, report: textReport(styleFor(undefined), () => undefined) };
+  return {
+    interactive,
+    report: textReport(styleFor(undefined), () => undefined),
+    toolOutput: "stdout",
+  };
 }
 
 describe("wantsMcp", () => {

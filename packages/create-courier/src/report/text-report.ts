@@ -121,6 +121,8 @@ export function textReport(
       const lines = [...planLines(title, plan, style, lead), ...gitLines(git, style)];
       print([...(madeProject ? [""] : []), ...lines]);
     },
+    /* The person watched the install as it ran. */
+    installed: () => undefined,
     wrote({ written, changed }) {
       const files = `${written.length} ${written.length === 1 ? "file" : "files"}`;
       const changes = changed.length > 0 ? `, and changed ${changed.join(", ")}` : "";

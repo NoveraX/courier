@@ -2,6 +2,7 @@ import { basename, dirname } from "node:path";
 
 import { addCourier } from "../add-courier";
 import { runTool, toolFailure } from "../apply/run-tool";
+import { SetupFailure } from "../apply/setup-failure";
 import type { CreateRun } from "../create-run";
 import { FRAMEWORKS, type Framework, frameworkById } from "../frameworks";
 import { SETUP_LIMITS } from "../limits";
@@ -93,16 +94,17 @@ export async function createProject(root: string, run: CreateRun, io: SetupIO): 
     const command = ["npx", "--yes", ...generator.args];
     const result = await runTool(command, {
       cwd: dirname(root),
-      output: { kind: "show", on: "stdout" },
+      output: { kind: "show", on: io.toolOutput },
       input: "ignore",
       deadlineMs: SETUP_LIMITS.generatorMs,
     });
     if (result.status !== 0 || result.stopped !== undefined)
-      throw new Error(
+      throw new SetupFailure(
+        "GENERATOR_FAILED",
         `${framework.label}'s generator: ${toolFailure(command, result, SETUP_LIMITS.generatorMs)}; nothing of Courier's was added`,
       );
   }
-  await prepareTemplate({ root, name, framework: framework.id, manager, generator }, io.report);
+  await prepareTemplate({ root, name, framework: framework.id, manager, generator }, io);
   return addCourier(
     root,
     {

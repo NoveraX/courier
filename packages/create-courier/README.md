@@ -188,6 +188,7 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 | `--yes`, `-y` | Set Courier up without asking |
 | `--allow-dirty` | Go ahead with `--yes` where git has changes not committed |
 | `--dry-run` | Show the plan, and change nothing |
+| `--json` | Report the plan and what was done as one JSON document on standard output, asking nothing |
 
 Run without a terminal to answer — in CI, by an agent — it changes nothing unless `--yes` is passed, and with `--yes` it leaves a project whose changes git has not committed as it is, unless `--allow-dirty` is passed too.
 

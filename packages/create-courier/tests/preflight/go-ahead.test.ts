@@ -19,6 +19,7 @@ function unattended() {
   const text = textReport(createTerminalStyle(0, false), () => undefined);
   const io = {
     interactive: false,
+    toolOutput: "stdout" as const,
     report: {
       ...text,
       end(end: SetupEnd) {

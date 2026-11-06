@@ -1,5 +1,6 @@
 import { createLogger } from "@noverax/courier";
 import { cutText } from "@noverax/courier/internal";
+import { maskEnvironmentValues } from "@noverax/courier-build/config";
 
 import type { UpdateChecks } from "../update-checks";
 import { type ConfigStatusPayload, configStatusOf } from "./config-status";
@@ -16,10 +17,10 @@ const log = createLogger("Studio");
  * starting there are no lists yet, and only the status is sent.
  *
  * The status is sent even when the lists cannot be built: the UI must still
- * learn how the config loads. A config that failed is told whole to a page
- * with Studio's token, and with what could be a credential cut from its
- * error's text to any other: a config that throws as it loads can say
- * anything it held.
+ * learn how the config loads. A config that failed is told to every page
+ * with the environment's values masked in its error's text, whole otherwise
+ * to a page with Studio's token, and with what could be a credential cut to
+ * any other: a config that throws as it loads can say anything it held.
  *
  * Synchronous on purpose, and it must stay so: the UI takes the order its
  * packets arrive in as the order of the project's states, and socket.io
@@ -55,5 +56,6 @@ export function sendProject(
 
 function statusWithoutSecrets(status: ConfigStatusPayload): ConfigStatusPayload {
   if (status.state !== "failed") return status;
-  return { ...status, error: { ...status.error, message: cutText(status.error.message) } };
+  const message = cutText(maskEnvironmentValues(status.error.message));
+  return { ...status, error: { ...status.error, message } };
 }

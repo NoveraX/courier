@@ -10,7 +10,11 @@ export {
   type ProjectFramework,
   projectFramework,
 } from "./frameworks";
-export { type ImportProjectFileOptions, importProjectFile } from "./import-project-file";
+export {
+  type ImportProjectFileOptions,
+  importProjectFile,
+  settledDefault,
+} from "./import-project-file";
 export {
   findConfigFile,
   findConfigFileAt,

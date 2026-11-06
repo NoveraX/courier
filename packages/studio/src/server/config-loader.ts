@@ -14,8 +14,7 @@ import { ConfigurationError } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
 import type { TransformCache } from "@noverax/courier-build/config";
-import { ConfigLoadError, findConfigFileAt } from "@noverax/courier-build/config";
-import { messageOf } from "@noverax/courier-cli/devkit";
+import { configLoadError, findConfigFileAt } from "@noverax/courier-build/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { evaluateCourierFiles } from "./evaluate-courier-files";
@@ -143,13 +142,14 @@ export async function loadCourierConfig(
   try {
     evaluated = await evaluateCourierFiles(configFile, loadable(mocks), observed.cache);
   } catch (err) {
-    /* The loader's own words say where the load failed and what to do. */
-    const said = err instanceof ConfigLoadError ? `${err.message} ${err.hint}` : messageOf(err);
-    throw new ConfigLoaderError("CONFIG_INVALID", `Failed to load courier.config: ${said}`, {
-      cause: err,
-      context: { cwd: projectRoot },
-      depHashes,
-    });
+    /* The loader's own words say where the load failed and what to do. Whatever else failed is
+       said the same way, so nothing the project's code wrote goes on unmasked. */
+    const failure = configLoadError(err, { entry: configFile });
+    throw new ConfigLoaderError(
+      "CONFIG_INVALID",
+      `Failed to load courier.config: ${failure.message} ${failure.hint}`,
+      { cause: failure, context: { cwd: projectRoot }, depHashes },
+    );
   }
   const { config } = evaluated;
   validateCourierConfig(config, configFile, depHashes);

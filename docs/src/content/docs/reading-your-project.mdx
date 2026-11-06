@@ -1,4 +1,4 @@
-export const metadata = { title: "How Courier Reads Your Project", description: "What runs when the CLI, Studio, a bundler plugin or a mock server reads courier.config, which variables it has, and how the modules a framework's server answers itself — server-only, $env, astro:env — are answered outside that framework's build.", updated: "2026-11-05" }
+export const metadata = { title: "How Courier Reads Your Project", description: "What runs when the CLI, Studio, a bundler plugin or a mock server reads courier.config, which variables it has, and how the modules a framework's server answers itself — server-only, $env, astro:env — are answered outside that framework's build.", updated: "2026-11-06" }
 
 ## What runs
 
@@ -16,7 +16,7 @@ export const metadata = { title: "How Courier Reads Your Project", description: 
 
 A variable the process was started with wins over every file, and the first file to set a variable wins over the later ones.
 
-Every reading runs your modules as your server would, and outside it. Keep the modules `courier.config.ts` imports to what defines your APIs: a module that connects to a database or calls a service when it is imported does so on every reading.
+A config may export a promise of what it defines, as one that awaits its setup does: every reading waits for it as part of the load, and one that rejects fails the load as code that throws does. Every reading runs your modules as your server would, and outside it. Keep the modules `courier.config.ts` imports to what defines your APIs: a module that connects to a database or calls a service when it is imported does so on every reading.
 
 ## The definitions phase
 

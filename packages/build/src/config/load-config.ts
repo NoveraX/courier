@@ -197,7 +197,7 @@ export function projectTransformCache(projectRoot: string): TransformCache | und
  * How one config file is loaded: the loader's options, what runs just before
  * the config's code does, and how long it may take; see `importProjectFile`.
  */
-export interface LoadConfigFileOptions extends ImportProjectFileOptions {}
+export interface LoadConfigFileOptions extends Omit<ImportProjectFileOptions, "default"> {}
 
 /**
  * Load one config file, found by whatever means the caller chose — the
@@ -226,14 +226,7 @@ export async function loadCourierConfigFile(
      watcher above all — observe the canonical path. */
   const configFile = realpathSync(file);
 
-  const namespace = await importProjectFile(configFile, options);
-  /* What the loader's import hands back with `default: true`: the default export, or the namespace. */
-  const named: unknown = isObjectLike(namespace) ? Reflect.get(namespace, "default") : undefined;
-  const config: unknown = named ?? namespace;
+  const config = await importProjectFile(configFile, { ...options, default: true });
 
   return { config: config as CourierConfig, configFile };
-}
-
-function isObjectLike(value: unknown): value is object {
-  return (typeof value === "object" && value !== null) || typeof value === "function";
 }

@@ -1,10 +1,22 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { describeError } from "../src/server/describe-error";
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("describeError", () => {
+  it("masks the values of the environment: every page shows the line, and the log writes it", () => {
+    vi.stubEnv("PROBE_API_KEY", "FAKE-0000-PROBE-SECRET");
+
+    expect(
+      describeError(new Error("cannot reach db.invalid with key FAKE-0000-PROBE-SECRET")),
+    ).toBe("cannot reach db.invalid with key [redacted]");
+  });
+
   it("folds a multi-line loader message onto one line, with paths relative to the root", () => {
     const error = new Error("ParseError: Unexpected token  \n /app/courier.mocks.ts:3:2");
 

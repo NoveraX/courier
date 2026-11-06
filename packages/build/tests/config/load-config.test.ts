@@ -362,3 +362,47 @@ describe("loadCourierConfigFile — around the config's code", () => {
     expect(Object.keys(config.sources ?? {})).toEqual(["first"]);
   });
 });
+
+describe("loadCourierConfigFile — a config exported as a promise", () => {
+  /* A key no environment holds, put there for the test alone. */
+  const KEY = "FAKE-0000-PROBE-SECRET";
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("hands back the config the promise settles to, as the runtime's loader does", async () => {
+    writeConfig("courier.config.mjs", `export default Promise.resolve({ sources: {} });\n`);
+
+    const { config } = await loadCourierConfigFile(join(dir, "courier.config.mjs"));
+
+    expect(config).toEqual({ sources: {} });
+  });
+
+  it("fails as the config's code failing, with the environment's values masked, when the promise rejects", async () => {
+    vi.stubEnv("PROBE_API_KEY", KEY);
+    writeConfig(
+      "courier.config.mjs",
+      `export default new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("cannot reach db.invalid with key " + process.env.PROBE_API_KEY)), 20),
+      );\n`,
+    );
+
+    const failure: unknown = await loadCourierConfigFile(join(dir, "courier.config.mjs")).catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toMatchObject({ name: "ConfigLoadError", code: "EVALUATION_FAILED" });
+    expect(String(failure)).toContain("cannot reach db.invalid with key [redacted]");
+    expect(JSON.stringify(failure, Object.getOwnPropertyNames(failure))).not.toContain(KEY);
+    expect(String((failure as Error).cause)).not.toContain(KEY);
+  });
+
+  it("gives the promise no more time than the load", async () => {
+    writeConfig("courier.config.mjs", `export default new Promise(() => {});\n`);
+
+    await expect(
+      loadCourierConfigFile(join(dir, "courier.config.mjs"), { timeoutMs: 50 }),
+    ).rejects.toMatchObject({ code: "LOAD_TIMED_OUT" });
+  });
+});

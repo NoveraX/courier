@@ -12,6 +12,7 @@ import type { AnySource } from "@noverax/courier/define";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LoadedCourierConfig } from "../../src/server/config-loader";
+import { failureOf } from "../../src/server/project-state/failure-of";
 import { sendProject } from "../../src/server/project-state/send-project";
 import type { ProjectSnapshot } from "../../src/server/project-state/types";
 import { createUpdateChecks } from "../../src/server/update-checks";
@@ -24,6 +25,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -41,6 +43,19 @@ function loadedWith(config: CourierConfig): LoadedCourierConfig {
 
 function snapshotOf(running: LoadedCourierConfig): ProjectSnapshot {
   return { revision: 1, starting: false, running, loadedAt: 1_000, failure: null };
+}
+
+/* Pages in the two rooms a status goes to, and what each room was sent. */
+function pagesByRoom() {
+  const rooms = new Map<string, unknown[]>();
+  const pages = {
+    emit: vi.fn(),
+    to: (room: string) => ({
+      emit: (_event: string, payload: unknown) =>
+        rooms.set(room, [...(rooms.get(room) ?? []), payload]),
+    }),
+  };
+  return { rooms, pages };
 }
 
 function recorder() {
@@ -127,6 +142,53 @@ describe("sendProject", () => {
       }),
     ]);
     expect(pages.emit).not.toHaveBeenCalled();
+  });
+
+  it("masks the values of the environment in a failed config's text, for every page", () => {
+    vi.stubEnv("PROBE_API_KEY", "FAKE-0000-PROBE-SECRET");
+    const { rooms, pages } = pagesByRoom();
+    const failure = failureOf(
+      new Error("cannot reach db.invalid with key FAKE-0000-PROBE-SECRET"),
+      root,
+    );
+
+    sendProject(
+      pages,
+      { revision: 2, starting: true, running: null, loadedAt: null, failure },
+      root,
+      createUpdateChecks(),
+    );
+
+    for (const room of ["pages:token", "pages:read-only"]) {
+      expect(JSON.stringify(rooms.get(room))).toContain(
+        "cannot reach db.invalid with key [redacted]",
+      );
+      expect(JSON.stringify(rooms.get(room))).not.toContain("FAKE-0000-PROBE-SECRET");
+    }
+  });
+
+  it("masks the values of the environment for a page without the token, whatever wrote the text", () => {
+    vi.stubEnv("PROBE_API_KEY", "FAKE-0000-PROBE-SECRET");
+    const { rooms, pages } = pagesByRoom();
+    const failure = {
+      code: "UNKNOWN" as const,
+      message: "courier.config.ts threw: key FAKE-0000-PROBE-SECRET refused",
+      at: 2_000,
+      cause: new Error("refused"),
+    };
+
+    sendProject(
+      pages,
+      { revision: 2, starting: true, running: null, loadedAt: null, failure },
+      root,
+      createUpdateChecks(),
+    );
+
+    expect(rooms.get("pages:read-only")).toEqual([
+      expect.objectContaining({
+        error: { code: "UNKNOWN", message: "courier.config.ts threw: key [redacted] refused" },
+      }),
+    ]);
   });
 
   it("still sends the status when the lists cannot be built, and says why", () => {

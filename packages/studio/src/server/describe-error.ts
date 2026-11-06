@@ -1,15 +1,17 @@
+import { maskEnvironmentValues } from "@noverax/courier-build/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { pathScrubber } from "./machine-paths";
 import { machineSpellings } from "./machine-spellings";
 
 /**
  * An error as one line a page shows: its message with line breaks folded,
- * since the loader's messages span lines, and no path named as it is on
- * this machine — every page sees it, a page without the project's token
- * too. A path in the project is named relative to it, the project root
- * itself as "the project root", any other path under the home directory
- * from `~` and under the temporary directory from `<temp>`. The terminal
- * log keeps the error whole.
+ * since the loader's messages span lines, the environment's values masked
+ * as a load error masks them, and no path named as it is on this machine —
+ * every page sees it, a page without the project's token too, and the log
+ * writes it. A path in the project is named relative to it, the project
+ * root itself as "the project root", any other path under the home
+ * directory from `~` and under the temporary directory from `<temp>`. The
+ * terminal log keeps the error whole otherwise.
  *
  * @param error - What was thrown
  * @param root - The project root, when paths in it should be named relative to it
@@ -23,5 +25,8 @@ import { machineSpellings } from "./machine-spellings";
  */
 export function describeError(error: unknown, root?: string): string {
   const scrub = pathScrubber(machineSpellings({ project: root === undefined ? [] : [root] }));
-  return scrub(messageOf(error)).replace(/\s+/g, " ").trim();
+  /* Paths first: a variable that holds one, as NVM_DIR does, names a place and no secret. */
+  return maskEnvironmentValues(scrub(messageOf(error)))
+    .replace(/\s+/g, " ")
+    .trim();
 }

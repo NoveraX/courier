@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { createLogger } from "@noverax/courier";
 import type { TransformCache } from "@noverax/courier-build/config";
+import { settledDefault } from "@noverax/courier-build/config";
 import { createModuleCache } from "./create-module-cache";
 import { type CourierModuleCache, loadCourierEntry } from "./load-courier-entry";
 import { withFreshJson } from "./with-fresh-json";
@@ -117,7 +118,12 @@ async function evaluateBoth(
   transformCache: TransformCache,
 ): Promise<EvaluatedCourierFiles> {
   const cache = createModuleCache();
-  const config = await defaultExport(await loadCourierEntry(configFile, cache, transformCache));
+  /* As the runtime's loader hands it back: a promise the config exports settled, and its
+     rejection a load error as the config's code throwing is. */
+  const config = await settledDefault(await loadCourierEntry(configFile, cache, transformCache), {
+    entry: configFile,
+    cache,
+  });
   forgetUnfinished(cache);
   if (mocksFile === null) return { config, mocksError: null };
   try {
@@ -127,15 +133,6 @@ async function evaluateBoth(
     log.debug(`${mocksFile} did not load; the config loads without it`, mocksError);
     return { config, mocksError };
   }
-}
-
-/* What the runtime's loader, `import(file, { default: true })`, hands back:
-   the namespace's default, or the namespace itself when that is nullish, a
-   promise among them settled. */
-async function defaultExport(namespace: unknown): Promise<unknown> {
-  if (!isObjectLike(namespace)) return namespace;
-  const value: unknown = Reflect.get(namespace, "default");
-  return value ?? namespace;
 }
 
 /* jiti registers a module before evaluating it and marks it loaded only once
@@ -158,8 +155,4 @@ function putBack(held: ReadonlyMap<string, NodeModule | undefined>): void {
     if (module === undefined) Reflect.deleteProperty(NODE_REQUIRE_CACHE, file);
     else NODE_REQUIRE_CACHE[file] = module;
   }
-}
-
-function isObjectLike(value: unknown): value is object {
-  return (typeof value === "object" && value !== null) || typeof value === "function";
 }

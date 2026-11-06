@@ -4,8 +4,7 @@ import type { TsdownPlugin } from "tsdown";
 /**
  * The modules only a server runs whose place in a page's bundle a module
  * of the same name under `src/browser/` takes: the terminal logger, the
- * chain of addresses a request came through, the hook Node prints an
- * `HTTPError` through, the words a failure is answered
+ * hook Node prints an `HTTPError` through, the words a failure is answered
  * with, the sending of an upload as a stream, the refusal of one the proxy
  * sent on as it arrived, the word Studio is sent as an API is defined,
  * the reading of what a server lends the calls of its process, and an
@@ -17,7 +16,6 @@ import type { TsdownPlugin } from "tsdown";
  */
 export const SERVER_ONLY_MODULES = [
   "logger/server",
-  "utils/forwarded-for",
   "errors/http-error-inspect",
   "utils/answered-message",
   "utils/send-streamed",

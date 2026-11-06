@@ -28,8 +28,6 @@ describe("the stand-ins of the modules only a server runs", () => {
     expect(serverOnlyEntries()).toEqual({
       "logger/server": "src/logger/server.ts",
       "browser/logger/server": "src/browser/logger/server.ts",
-      "utils/forwarded-for": "src/utils/forwarded-for.ts",
-      "browser/utils/forwarded-for": "src/browser/utils/forwarded-for.ts",
       "errors/http-error-inspect": "src/errors/http-error-inspect.ts",
       "browser/errors/http-error-inspect": "src/browser/errors/http-error-inspect.ts",
       "utils/answered-message": "src/utils/answered-message.ts",

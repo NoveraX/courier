@@ -5,7 +5,8 @@ import type { SessionTarget } from "../session/session-target";
 /**
  * What a server lends a call that keeps the user's `session` or
  * `forward`s a request's headers: the session read from the request being
- * served, and the cookies an answer sets carried on to that request's user.
+ * served, the cookies an answer sets carried on to that request's user,
+ * and the addresses a call made for that request carries on.
  */
 export interface SessionCapability {
   /**
@@ -42,4 +43,13 @@ export interface SessionCapability {
     session: CallSession,
     toResponse: boolean,
   ): Promise<string[]>;
+  /**
+   * The `X-Forwarded-For` a call made on behalf of a request carries
+   * upstream: the chain the proxies in front of the server recorded, with
+   * the address the request came from.
+   *
+   * @param request - The request the call is made for
+   * @returns The chain, once read; `undefined` when nothing recorded an address
+   */
+  forwardedFor(request: Request): Promise<string | undefined>;
 }

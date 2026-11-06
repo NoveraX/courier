@@ -1,10 +1,12 @@
 import type { SessionCapability } from "../../capabilities/session";
+import type * as Forwarded from "../../utils/forwarded-for";
 import type * as Relay from "./relay";
 import { captureIncomingRequest } from "./request-providers";
 import type * as ServerSession from "./server-session";
 
 let session: Promise<typeof ServerSession> | undefined;
 let relay: Promise<typeof Relay> | undefined;
+let forwarded: Promise<typeof Forwarded> | undefined;
 
 /* Loaded with the first call that reads a request, not with the module
    that lends them: the root's caller lends the server's part wherever it
@@ -26,6 +28,14 @@ function relayPart(): Promise<typeof Relay> {
   return relay;
 }
 
+function forwardedPart(): Promise<typeof Forwarded> {
+  forwarded ??= import("../../utils/forwarded-for").catch((cause: unknown) => {
+    forwarded = undefined;
+    throw cause;
+  });
+  return forwarded;
+}
+
 /**
  * The server's session for the calls of its process. The request being
  * served is asked for as the call starts; what the session gives the call
@@ -43,4 +53,5 @@ export const SERVER_SESSION: SessionCapability = {
   },
   relayCookies: async (upstream, served, toResponse) =>
     (await relayPart()).relayCookies(upstream, served, toResponse),
+  forwardedFor: async (request) => (await forwardedPart()).forwardedFor(request),
 };

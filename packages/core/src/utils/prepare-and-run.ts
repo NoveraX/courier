@@ -3,7 +3,11 @@ import { anySignal } from "./any-signal";
 import type { EndpointHold } from "./cancel-previous";
 import { clientForCall, holdOf } from "./execute-helpers";
 import type { InnerExecuteDeps } from "./execute-inner";
-import { buildMiddlewareContext } from "./execute-middleware-context";
+import {
+  buildMiddlewareContext,
+  carryForwardedFor,
+  forwardedChainOf,
+} from "./execute-middleware-context";
 import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from "./execute-options";
 import { namedHeadersOf } from "./execute-resolve";
 import { runCall } from "./execute-run";
@@ -129,6 +133,8 @@ async function runHeld(
   if ("refused" in settled) return settled.refused;
   const { session, primed } = settled;
   callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
+  const chain = forwardedChainOf(context);
+  if (chain !== undefined) carryForwardedFor(middlewareCtx.headers, await chain);
 
   const inner: PreparedInner = {
     endpoint: target.endpoint as PreparedInner["endpoint"],

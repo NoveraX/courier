@@ -1,7 +1,7 @@
+import { serverCapability } from "../capabilities/registry";
 import type { Context } from "../http-client/types";
 import type { CallPurpose, MiddlewareContext } from "../middleware/types";
 import { namedHeadersOf } from "./execute-resolve";
-import { forwardedFor } from "./forwarded-for";
 import { forwardedRequestHeaders } from "./forwarded-request-headers";
 import { headersToObject } from "./helpers";
 import { mergeHeaders } from "./merge-headers";
@@ -33,8 +33,9 @@ export interface MiddlewareContextInput {
  * Build the context every middleware of a call sees.
  *
  * The headers start from those the incoming request carries and the source
- * or the endpoint names, with the caller's own on top, and an
- * `x-forwarded-for` chain where nothing set one.
+ * or the endpoint names, with the caller's own on top. The
+ * `x-forwarded-for` chain goes on once the session has put its own, by
+ * {@link carryForwardedFor}.
  *
  * @param input - The call, the source it resolved to, and what the caller gave
  * @returns The middleware context
@@ -88,14 +89,6 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
       forwarded.delete(name);
     },
   );
-  /* Set only where nothing already did: a source that names the header takes
-     the caller's copy, and server code that sets one keeps its own. */
-  const chain = nextRequest && !newHeaders.has("x-forwarded-for") && forwardedFor(nextRequest);
-  if (chain) {
-    newHeaders.set("x-forwarded-for", chain);
-    /* The chain is the proxy's own default, which the API's `forward` may write otherwise. */
-    forwarded.add("x-forwarded-for");
-  }
   /* One key per call, set before any middleware: every attempt a retry makes
      carries it, so the upstream applies the write once. A caller's own key —
      server code's, or the browser's through the proxy — is kept. */
@@ -118,4 +111,41 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     _requestId: requestId || undefined,
     _forwarded: forwarded,
   };
+}
+
+/**
+ * The `X-Forwarded-For` a call made on behalf of the request its context
+ * names carries upstream, as the server reads it off that request. A page
+ * serves no request, and lends none.
+ *
+ * @param context - The call's context
+ * @returns The chain, once read; `undefined` for a call that names no request, or where no server lends one
+ * @example
+ * ```ts
+ * const chain = forwardedChainOf(context);
+ * if (chain !== undefined) carryForwardedFor(middlewareCtx.headers, await chain);
+ * ```
+ */
+export function forwardedChainOf(
+  context: Context | undefined,
+): Promise<string | undefined> | undefined {
+  const request = context?.req;
+  return request === undefined ? undefined : serverCapability("session")?.forwardedFor(request);
+}
+
+/**
+ * Put a request's `X-Forwarded-For` chain on a call made for it, where
+ * nothing set the header: a source that names it takes the caller's copy,
+ * server code that sets one keeps its own, and the API's `forward` may
+ * write it otherwise — so the chain goes on after the session's headers.
+ *
+ * @param headers - The headers the call is sent with
+ * @param chain - The chain, when anything recorded an address
+ * @example
+ * ```ts
+ * carryForwardedFor(middlewareCtx.headers, forwardedFor(request));
+ * ```
+ */
+export function carryForwardedFor(headers: Headers, chain: string | undefined): void {
+  if (chain && !headers.has("x-forwarded-for")) headers.set("x-forwarded-for", chain);
 }

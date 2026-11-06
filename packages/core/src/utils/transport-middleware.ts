@@ -16,10 +16,11 @@ import { LIMITS } from "../limits";
 import { composeMiddleware } from "../middleware";
 import { sessionFor } from "../session/call-session";
 import { sessionTargetOf } from "../session/session-target";
-import { buildMiddlewareContext } from "./execute-middleware-context";
+import { buildMiddlewareContext, carryForwardedFor } from "./execute-middleware-context";
 import { resolveMiddlewareChain } from "./execute-options";
 import { resolveEndpoint } from "./execute-resolve";
 import { applyCallSession } from "./execute-session";
+import { forwardedFor } from "./forwarded-for";
 
 export interface TransportMiddlewareInput {
   /** Which transport is asking, so the context reports it accurately. */
@@ -79,6 +80,7 @@ export async function runTransportMiddleware(input: TransportMiddlewareInput): P
     name: [source, group, method].filter(Boolean).join("."),
   });
   applyCallSession(await sessionFor(context, target), middlewareCtx, {}, undefined);
+  carryForwardedFor(middlewareCtx.headers, forwardedFor(request));
 
   const sourceMiddleware = (dataSource.options as { middleware?: unknown } | undefined)
     ?.middleware as Parameters<typeof composeMiddleware>[0] | undefined;

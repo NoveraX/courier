@@ -4,8 +4,10 @@
  * imports none of it — on a server it takes the session the server lent,
  * and where nothing lent one, a call that names the request it serves is
  * refused rather than sent without the credentials its code counts on.
+ * The addresses such a call carries on are the server's to read as well.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { rememberPeerAddress } from "../../src/adapter/peer-address";
 import { createCaller as createPageCaller } from "../../src/caller";
 import { _resetServerCapabilitiesForTests } from "../../src/capabilities/provide-server-capability";
 import { defineApi } from "../../src/define/api";
@@ -18,6 +20,7 @@ import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-up
 
 /* Made up, and joined at run time so no literal sits in the source for a secret scanner. */
 const SID = ["k3Vq", "9xLp", "2Zw"].join("");
+const USER = "198.51.100.23";
 const { endpoint } = courier();
 let upstream: Upstream;
 
@@ -33,6 +36,15 @@ function api(session = true) {
 /* The request a browser sent the application, its session cookie on it. */
 function userRequest(): Request {
   return new Request("https://app.example.com/account", { headers: { cookie: `sid=${SID}` } });
+}
+
+/* The user's request, through a proxy on this machine that appended the address it saw. */
+function proxiedRequest(): Request {
+  const request = new Request("https://app.example.com/account", {
+    headers: { "x-forwarded-for": USER },
+  });
+  rememberPeerAddress(request, "127.0.0.1");
+  return request;
 }
 
 beforeAll(async () => {
@@ -113,6 +125,42 @@ describe("a call that names the request it serves", () => {
 
     expect(upstream.seen).toHaveLength(1);
     expect(upstream.seen[0]?.headers.cookie).toBeUndefined();
+  });
+});
+
+describe("the addresses a call made for a request carries on", () => {
+  it("are the chain the server reads off the request, from a server's caller", async () => {
+    await createCaller(api(false), { context: { req: proxiedRequest() } }).me();
+
+    expect(upstream.seen[0]?.headers["x-forwarded-for"]).toBe(`${USER}, 127.0.0.1`);
+  });
+
+  it("are the user's address alone where the API's forward writes the header", async () => {
+    const accounts = defineApi({
+      name: "accounts",
+      baseURL: upstream.url,
+      forward: { clientAddress: ["x-forwarded-for"] },
+      endpoints: { me: endpoint.get("me") },
+    });
+
+    await createCaller(accounts, { context: { req: proxiedRequest() } }).me();
+
+    expect(upstream.seen[0]?.headers["x-forwarded-for"]).toBe(USER);
+  });
+
+  it("are the server's chain from a page's caller once a server lent its part", async () => {
+    createCaller(api(false));
+
+    await createPageCaller(api(false), { context: { req: proxiedRequest() } }).me();
+
+    expect(upstream.seen[0]?.headers["x-forwarded-for"]).toBe(`${USER}, 127.0.0.1`);
+  });
+
+  it("are none from a page's caller where no server lends its part", async () => {
+    await createPageCaller(api(false), { context: { req: proxiedRequest() } }).me();
+
+    expect(upstream.seen).toHaveLength(1);
+    expect(upstream.seen[0]?.headers["x-forwarded-for"]).toBeUndefined();
   });
 });
 

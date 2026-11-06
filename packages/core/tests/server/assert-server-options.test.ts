@@ -61,6 +61,22 @@ describe("the options only a server reads", () => {
     );
   });
 
+  it("are refused for a cookie in the API's own header list as the sources are registered, in production too", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const api = defineApi({
+      name: "accounts",
+      baseURL: "https://api.example.com",
+      session: { cookies: ["sid"] },
+      allowedHeaders: ["cookie"],
+      endpoints: { me: endpoint.get("me") },
+    });
+
+    const refusal = refusalOf(() => registerSources({ accounts: api }));
+
+    expect(refusal.code).toBe("SESSION_HEADER_CONFLICT");
+    expect(refusal.message).toMatch(/^accounts: "cookie" in its headers carries cookies/);
+  });
+
   it("are refused as a handler is made with the sources", () => {
     vi.stubEnv("NODE_ENV", "production");
 

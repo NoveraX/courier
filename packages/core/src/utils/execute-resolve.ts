@@ -1,9 +1,9 @@
+import { getEndpoint } from "../define/endpoint-entry";
 import { groupOptionsOf } from "../define/group-options-of";
 import { groupChain } from "../define/group-tree";
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { GroupOptions } from "../http-client/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
-import { getEndpoint } from "./execute-helpers";
 import { normalizeHttpMethod } from "./helpers";
 
 /** The group an endpoint sits in, with the settings it takes from every group above it. */

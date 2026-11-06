@@ -197,7 +197,21 @@ function isOwned(view: Uint8Array): view is Uint8Array<ArrayBuffer> {
  * ```
  */
 export function formOf(record: Record<string, unknown>): FormData | undefined {
-  if (!holdsFile(record)) return undefined;
+  return holdsFile(record) ? multipartForm(record) : undefined;
+}
+
+/**
+ * The form a record goes as, whether a file is among its fields or not.
+ *
+ * @param record - The variables
+ * @returns The form, its parts as `formEntries` writes them
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a value no part carries
+ * @example
+ * ```ts
+ * multipartForm({ title: "T", pages: 3 }).get("pages"); // → "3"
+ * ```
+ */
+export function multipartForm(record: Record<string, unknown>): FormData {
   const form = new FormData();
   for (const { name, value } of formEntries(record)) form.append(name, value);
   return form;

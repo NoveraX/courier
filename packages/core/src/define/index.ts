@@ -57,6 +57,7 @@ export type {
   InferVariables,
   InferVariablesOut,
 } from "./marker";
+export { multipartBody } from "./multipart-body";
 export type { PathFragmentRefused, PathParamNames, PathParamsMissing } from "./path-params";
 export type { PathWriter } from "./path-tag";
 export type {

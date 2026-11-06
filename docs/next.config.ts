@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
      repository rather than from npm. */
   output: "standalone",
   outputFileTracingRoot: path.join(import.meta.dirname, ".."),
+  /* The docs pages' MDX, which the site reads from a folder its caller may name, so the tracing
+     cannot follow the reads to it by itself. */
+  outputFileTracingIncludes: { "/**": ["./src/content/docs/**/*.mdx"] },
   /* A shared build server renders a page's first batch slower than a
      developer's machine; a page that runs out of time fails the build. */
   staticPageGenerationTimeout: 180,

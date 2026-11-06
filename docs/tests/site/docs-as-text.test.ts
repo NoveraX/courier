@@ -4,7 +4,10 @@
  * The modules that read and write them import only Node's own modules and
  * one another; every page's metadata, read from its source, is what its
  * export holds; and every section of the navigation keeps a lasting id,
- * which its icon in the site's layout is found by.
+ * which its icon in the site's layout is found by. The folder they read
+ * is their caller's to name, so the server's file tracing passes over the
+ * reads, which would otherwise take in the whole project, and next.config
+ * names the docs' MDX for it.
  */
 import fs from "node:fs"
 import path from "node:path"
@@ -17,6 +20,8 @@ import { docPages } from "@/site/content/docs-files"
 import { docsNav } from "@/site/content/docs-nav"
 import { metadataLines } from "@/site/content/source-metadata"
 import { SECTION_ICONS } from "@/site/layout/section-icon"
+
+import nextConfig from "../../next.config"
 
 const CONTENT = path.join(process.cwd(), "src/site/content")
 /* What the docs package's build reads the docs with. */
@@ -65,6 +70,18 @@ describe("a page's metadata, read from its source", () => {
       })
     }
     expect(pages.length).toBeGreaterThan(100)
+  })
+})
+
+describe("the reads of the docs' files", () => {
+  it("are passed over by the server's file tracing, which is told of the docs' MDX instead", () => {
+    const source = fs.readFileSync(path.join(CONTENT, "docs-files.ts"), "utf8")
+    const reads = [...source.matchAll(/fs\.\w+Sync\(([^)]*)/g)].map((read) => read[1] ?? "")
+    const followed = reads.filter((args) => !args.startsWith("/*turbopackIgnore: true*/"))
+
+    expect(reads.length).toBeGreaterThan(3)
+    expect(followed).toEqual([])
+    expect(nextConfig.outputFileTracingIncludes).toEqual({ "/**": ["./src/content/docs/**/*.mdx"] })
   })
 })
 

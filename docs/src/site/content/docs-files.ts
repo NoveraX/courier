@@ -6,6 +6,9 @@ import { sourceMetadata } from "./source-metadata"
 /** Where the docs pages' MDX is: under the site's folder, where the site is built and served from. */
 export const CONTENT_DIR = path.join(process.cwd(), "src/content/docs")
 
+/* The reads below take the folder their caller names, which the server's file tracing cannot
+   follow; it passes over them, and next.config names the site's own folder for it instead. */
+
 /** A docs page as text: where it is, its MDX source, and what its metadata says of it. */
 export interface DocPage {
   /** The path segments of its address under `/docs`. */
@@ -16,7 +19,7 @@ export interface DocPage {
 }
 
 function slugsIn(dir: string, prefix: readonly string[]): string[][] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+  return fs.readdirSync(/*turbopackIgnore: true*/ dir, { withFileTypes: true }).flatMap((entry) => {
     if (entry.isDirectory()) return slugsIn(path.join(dir, entry.name), [...prefix, entry.name])
     return entry.name.endsWith(".mdx") ? [[...prefix, entry.name.slice(0, -".mdx".length)]] : []
   })
@@ -34,7 +37,7 @@ function slugsIn(dir: string, prefix: readonly string[]): string[][] {
  * ```
  */
 export function docSlugs(dir: string = CONTENT_DIR): string[][] {
-  return fs.existsSync(dir) ? slugsIn(dir, []) : []
+  return fs.existsSync(/*turbopackIgnore: true*/ dir) ? slugsIn(dir, []) : []
 }
 
 /**
@@ -51,7 +54,9 @@ export function docSlugs(dir: string = CONTENT_DIR): string[][] {
 export function docSource(slug: readonly string[], dir: string = CONTENT_DIR): string | null {
   if (slug.some((part) => part === ".." || part.includes("/") || part.includes("\\"))) return null
   const file = path.join(dir, `${slug.join("/")}.mdx`)
-  return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null
+  return fs.existsSync(/*turbopackIgnore: true*/ file)
+    ? fs.readFileSync(/*turbopackIgnore: true*/ file, "utf8")
+    : null
 }
 
 /**

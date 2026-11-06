@@ -8,15 +8,21 @@ describe("0.5.0: retryOn's 0", () => {
     const { text } = migrateWith(
       RETRY_ON_ZERO,
       `import { retryMiddleware } from "@noverax/courier/middleware";
-import { endpoint } from "@noverax/courier/define";
+import { courier } from "@noverax/courier/define";
+const { endpoint } = courier();
+const cached = courier({ middleware: [] });
 const retry = retryMiddleware({ limit: 3, retryOn: [0, 503] });
 const users = endpoint.get("users").retry({ retryOn: [503, 0, "timeout"] });
+const orders = cached.endpoint.get("orders").retry({ retryOn: [0] });
 const other = somethingElse.retry({ retryOn: [0] });
 `,
     );
 
     expect(text).toContain('retryMiddleware({ limit: 3, retryOn: ["network", "timeout", 503] })');
     expect(text).toContain('.retry({ retryOn: [503, "network", "timeout"] })');
+    expect(text).toContain(
+      'cached.endpoint.get("orders").retry({ retryOn: ["network", "timeout"] })',
+    );
     expect(text).toContain("somethingElse.retry({ retryOn: [0] })");
   });
 

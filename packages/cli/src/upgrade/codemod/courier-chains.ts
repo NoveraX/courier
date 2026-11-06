@@ -1,4 +1,5 @@
 import { type AstNode, isNode, nameOf } from "./ast";
+import { courierHeadOf } from "./courier-heads";
 import { namedImports, sourceOf } from "./imports";
 
 /**
@@ -27,9 +28,10 @@ function rootOf(node: unknown): string | undefined {
 }
 
 /**
- * Whether a call is of a method on a chain that starts from a value
- * imported from one of Courier's modules — an endpoint builder's
- * `.retry()` — so the method is Courier's for certain.
+ * Whether a call is of a method on a chain that starts from a head of
+ * `courier()`, or from a value imported from one of Courier's modules —
+ * an endpoint builder's `.retry()` — so the method is Courier's for
+ * certain.
  *
  * @param program - The file's tree
  * @param call - The call
@@ -37,13 +39,14 @@ function rootOf(node: unknown): string | undefined {
  * @returns Whether it is
  * @example
  * ```ts
- * isCourierMethod(program, call, "retry"); // true for endpoint.get("users").retry({ limit: 3 })
+ * isCourierMethod(program, call, "retry"); // true for const { endpoint } = courier(); endpoint.get("users").retry({ limit: 3 })
  * ```
  */
 export function isCourierMethod(program: AstNode, call: AstNode, method: string): boolean {
   const { callee } = call;
   if (!isNode(callee) || callee.type !== "MemberExpression" || nameOf(callee.property) !== method)
     return false;
+  if (courierHeadOf(program, callee.object) !== undefined) return true;
   const root = rootOf(callee.object);
   if (root === undefined) return false;
   return namedImports(program, courierModules(program)).some(

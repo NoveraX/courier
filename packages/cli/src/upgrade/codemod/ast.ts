@@ -122,6 +122,23 @@ export function nameOf(node: unknown): string | undefined {
 }
 
 /**
+ * A node without the parentheses written around it, which oxc keeps as
+ * nodes of their own.
+ *
+ * @param node - The node
+ * @returns The node inside the parentheses, or the node itself
+ * @example
+ * ```ts
+ * unparenthesized(arrow.body); // the ConditionalExpression of (http, v) => (v.a ? http.get("a") : http.head("b"))
+ * ```
+ */
+export function unparenthesized(node: unknown): unknown {
+  let at = node;
+  while (isNode(at) && at.type === "ParenthesizedExpression") at = at.expression;
+  return at;
+}
+
+/**
  * A program as the codemods read it: oxc's tree, checked to be one.
  *
  * @param program - What oxc gave for the file

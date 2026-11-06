@@ -243,6 +243,7 @@ describe("a record upload the proxy cannot restore", () => {
         ["cover", "png", "c.png"],
       ],
     ],
+    ["ends after its options, holding no record", [["_options", "{}"]]],
     [
       "holds no JSON where its record goes",
       [

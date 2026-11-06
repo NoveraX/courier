@@ -139,7 +139,8 @@ export async function readRecord(
     }
     first = false;
   }
-  if (record === undefined || filled !== record.places.length) {
+  if (record === undefined) throw malformedRecord(`holds no ${RECORD_PART} part after its options`);
+  if (filled !== record.places.length) {
     throw malformedRecord("ended before the files its record names");
   }
   return { options, variables: record.variables };

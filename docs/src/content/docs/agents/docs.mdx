@@ -1,0 +1,33 @@
+export const metadata = { title: "Docs for Your Agent", description: "Courier's documentation for the version your project installs, as Markdown the agent in your editor reads from node_modules — with no network, and nothing older from memory.", mode: "both", updated: "2026-11-06" }
+
+## The docs of the version you install
+
+What the agent in your editor knows of Courier may be older than the Courier your project installs: an option renamed, a default changed, a page that moved. `@noverax/courier-docs` holds the documentation of the version it is released with — every page of this site, as the Markdown the site serves at the page's address with `.md` after it — for the agent to read from your project, with no network:
+
+```bash
+npm install --save-dev @noverax/courier-docs
+```
+
+It is released with every other Courier package, at the same version, so updating Courier updates the docs the agent reads.
+
+## What the folder holds
+
+The pages are in `node_modules/@noverax/courier-docs/docs/`, one Markdown file a page, where the site has them: `core-concepts/caller.md` is [/docs/core-concepts/caller](/docs/core-concepts/caller).
+
+| File | What it holds |
+| --- | --- |
+| `index.md` | Every page by section, each with a link to its file and what it covers: where an agent starts |
+| `<page>.md` | A page, as the site serves it as Markdown: its title and description on top, its code as written |
+| `manifest.json` | The version the docs are for, and each page's title, section and address on the site, with its headings, their anchors and the lines they are on |
+
+A link in a page to `/docs/<page>#<anchor>` names `<page>.md` in the folder and one of its headings: `manifest.json` lists each heading with the anchor the site gives it.
+
+## Point your agent at them
+
+Agents read `AGENTS.md`, at your project's root, when they start. Tell yours where the docs are:
+
+```markdown title="AGENTS.md"
+Before writing code that uses an `@noverax/*` package, read the relevant page in `node_modules/@noverax/courier-docs/docs/`: `index.md` lists them all, and they match the installed version.
+```
+
+In a monorepo, name the `node_modules` beside the package that uses Courier.

@@ -30,6 +30,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "In Your Editor", href: "/docs/agents/editor" },
       { title: "In Your App", href: "/docs/agents/app" },
       { title: "Studio for Your Agent", href: "/docs/agents/studio" },
+      { title: "Docs for Your Agent", href: "/docs/agents/docs" },
     ],
   },
   {

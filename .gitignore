@@ -3,6 +3,8 @@ node_modules/
 
 # Build output
 packages/*/lib/
+# The docs package's pages, written from the site's MDX when it builds
+packages/docs/docs/
 packages/**/dist/
 *.tsbuildinfo
 *.tgz

@@ -1,4 +1,4 @@
-export const metadata = { title: "Installation", description: "Add @noverax/courier to your project — works with any JavaScript framework.", updated: "2026-11-04" }
+export const metadata = { title: "Installation", description: "Add @noverax/courier to your project — works with any JavaScript framework.", updated: "2026-11-06" }
 
 <Callout variant="tip" title="In one command">
 `npx @noverax/create-courier` installs what your framework needs and sets it up: the route, the config, Studio and a mock. See [Create Courier](/docs/create-courier). This page installs each package by hand.
@@ -172,6 +172,19 @@ npm install --save-dev @noverax/courier-cli
 `npx @noverax/courier-cli routes` writes the module; with `--check`, it writes
 nothing and fails when the module is out of date. See
 [the routes as a file](/docs/proxy-mode/expose#the-routes-as-a-file).
+
+## The docs, for your editor's agent
+
+The agent in your editor may know an older Courier than the one you install.
+`@noverax/courier-docs` holds the documentation of the version it is
+released with, as the Markdown this site serves, for the agent to read from
+`node_modules` with no network:
+
+```bash
+npm install --save-dev @noverax/courier-docs
+```
+
+See [Docs for Your Agent](/docs/agents/docs).
 
 ## Requirements
 

@@ -10,6 +10,16 @@
       "dependsOn": ["^build", "@noverax/courier-studio-ui#build"],
       "outputs": ["lib/**", "ui/dist/**"]
     },
+    "@noverax/courier-docs#build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/docs/src/content/docs/**",
+        "$TURBO_ROOT$/docs/src/site/content/**",
+        "$TURBO_ROOT$/docs/src/site/site-url.ts"
+      ],
+      "outputs": ["docs/**"]
+    },
     "@noverax/courier-studio-ui#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "src/routeTree.gen.ts"]

@@ -1,0 +1,49 @@
+{
+  "name": "@noverax/courier-docs",
+  "version": "0.4.0",
+  "description": "Courier's documentation for the version a project installs, as Markdown an editor's agent reads offline: one file a page, an index of them all, and a manifest of their sections",
+  "keywords": [
+    "courier",
+    "docs",
+    "documentation",
+    "markdown",
+    "offline",
+    "typescript",
+    "api"
+  ],
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/docs"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/agents/docs",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsx scripts/bundle-docs.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

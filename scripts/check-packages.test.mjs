@@ -61,4 +61,11 @@ describe("packageProblems", () => {
       "@noverax/courier-studio: ui/dist/index.html is not in the tarball",
     ]);
   });
+
+  it("requires the docs package's pages, their index and manifest, which no manifest field names", () => {
+    expect(packageProblems({ name: "@noverax/courier-docs" }, ["README.md"])).toEqual([
+      "@noverax/courier-docs: docs/index.md is not in the tarball",
+      "@noverax/courier-docs: docs/manifest.json is not in the tarball",
+    ]);
+  });
 });

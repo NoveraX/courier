@@ -25,7 +25,10 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 /** Files a package needs at run time that no manifest field names. */
-const RUNTIME_FILES = new Map([["@noverax/courier-studio", ["ui/dist/index.html"]]]);
+const RUNTIME_FILES = new Map([
+  ["@noverax/courier-studio", ["ui/dist/index.html"]],
+  ["@noverax/courier-docs", ["docs/index.md", "docs/manifest.json"]],
+]);
 
 /* Paths no tarball carries: sources, tests, local state and editor files. */
 const FORBIDDEN =

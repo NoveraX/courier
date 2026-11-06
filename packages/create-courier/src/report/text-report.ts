@@ -3,6 +3,7 @@ import type { TerminalStyle } from "@noverax/courier/internal";
 import type { TypecheckOutcome } from "../apply/typecheck";
 import { changesAnything, type Plan } from "../plan/build-plan";
 import { manualLines, nextLines, planLines } from "../plan/plan-lines";
+import type { GitState } from "../preflight/git-state";
 import type { ConfiguredSources } from "../project/configured-sources";
 import { failureLines } from "./failure-lines";
 import type { SetupEnd, SetupReport } from "./setup-report";
@@ -14,6 +15,20 @@ function configuredLine(configured: ConfiguredSources, changes: boolean): string
   const named = names.length > 0 ? ` (${names.join(", ")}${more ? ", and more" : ""})` : "";
   const then = changes ? " The plan adds no example, only what the project lacks." : "";
   return `Courier is set up here already: ${path} declares ${count}${named}.${then}`;
+}
+
+/* What git says of the project, under the plan: changes of the person's not committed, or that nothing was checked. */
+function gitLines(git: GitState | undefined, style: TerminalStyle): string[] {
+  if (git === undefined || git.kind === "clean") return [];
+  if (git.kind === "unknown") return [style.dim(`Not checked against git: ${git.why}.`), ""];
+  const more = git.count > git.paths.length ? `, and ${git.count - git.paths.length} more` : "";
+  const changes = `${git.count} ${git.count === 1 ? "change" : "changes"}`;
+  return [
+    style.yellow(
+      `! git has ${changes} here not committed: ${git.paths.join(", ")}${more}. Commit them first, and git shows the setup's changes apart from yours.`,
+    ),
+    "",
+  ];
 }
 
 /* What is left to the person, and what to run next. */
@@ -101,9 +116,10 @@ export function textReport(
       ]);
     },
     note: (lines) => print(["", ...lines]),
-    plan({ title, plan, configured }) {
+    plan({ title, plan, configured, git }) {
       const lead = configured ? [configuredLine(configured, changesAnything(plan))] : [];
-      print([...(madeProject ? [""] : []), ...planLines(title, plan, style, lead)]);
+      const lines = [...planLines(title, plan, style, lead), ...gitLines(git, style)];
+      print([...(madeProject ? [""] : []), ...lines]);
     },
     wrote({ written, changed }) {
       const files = `${written.length} ${written.length === 1 ? "file" : "files"}`;

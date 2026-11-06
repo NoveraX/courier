@@ -2,6 +2,7 @@ import type { Undone } from "../apply/file-journal";
 import type { FailureCode } from "../apply/setup-failure";
 import type { TypecheckOutcome } from "../apply/typecheck";
 import type { Plan } from "../plan/build-plan";
+import type { GitState } from "../preflight/git-state";
 import type { ConfiguredSources } from "../project/configured-sources";
 import type { NextStep } from "../recipes/recipe-types";
 
@@ -12,6 +13,8 @@ export interface PlanView {
   readonly plan: Plan;
   /** The APIs the project's config declares already, where it declares any. */
   readonly configured?: ConfiguredSources | undefined;
+  /** What git says of the project's changes; none for a project the run created. */
+  readonly git?: GitState | undefined;
 }
 
 /** A new project, as a run that creates one shows it before it makes anything. */
@@ -59,7 +62,7 @@ export type SetupEnd =
     };
 
 /** Why a run changed nothing. */
-export type RefusalCode = "CONFIRMATION_REQUIRED" | "DECLINED";
+export type RefusalCode = "CONFIRMATION_REQUIRED" | "DECLINED" | "GIT_DIRTY";
 
 /**
  * Where a run tells what it does, as it does it: lines for a person, or

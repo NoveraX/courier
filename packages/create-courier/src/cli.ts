@@ -8,6 +8,7 @@ import { CancelledError } from "./cancelled-error";
 import { createCourier } from "./create";
 import { createCourierVersion } from "./create-courier-version";
 import { FRAMEWORKS } from "./frameworks";
+import { nodeTooOld } from "./preflight/node-version";
 import { textReport } from "./report/text-report";
 import type { SetupIO } from "./setup-io";
 
@@ -86,6 +87,10 @@ const ARGS = {
     description: "Install the packages; --no-install to only write the files",
   },
   yes: { type: "boolean", alias: "y", description: "Set Courier up without asking (-y)" },
+  "allow-dirty": {
+    type: "boolean",
+    description: "Go ahead with --yes where git has changes not committed",
+  },
   "dry-run": { type: "boolean", description: "Show the plan, and change nothing" },
 } as const satisfies ArgsDef;
 
@@ -106,6 +111,12 @@ const main = defineCommand({
   meta: { name: "create-courier", version: createCourierVersion(), description: SUMMARY },
   args: ARGS,
   async run({ args }) {
+    const old = nodeTooOld();
+    if (old !== undefined) {
+      log.error(`${old}. Install a newer Node.js from https://nodejs.org, and run it again.`);
+      process.exitCode = 1;
+      return;
+    }
     const io: SetupIO = {
       interactive: process.stdin.isTTY === true && process.stderr.isTTY === true,
       report: textReport(styleFor(process.stdout), (lines) =>

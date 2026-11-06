@@ -30,6 +30,10 @@ export const SETUP_ARGS = {
     description: "Install Courier's plugin; --no-install to only make the changes",
   },
   yes: { type: "boolean", alias: "y", description: "Make the changes without asking (-y)" },
+  "allow-dirty": {
+    type: "boolean",
+    description: "Go ahead with --yes where git has changes not committed",
+  },
   "dry-run": { type: "boolean", description: "Show the plan, and change nothing" },
 } as const satisfies ArgsDef;
 

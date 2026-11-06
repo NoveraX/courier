@@ -3,12 +3,13 @@ import { basename } from "node:path";
 import { applyPlan } from "./apply/apply-plan";
 import { frameworkOf } from "./framework-of";
 import { buildPlan, changesAnything } from "./plan/build-plan";
+import { gitState } from "./preflight/git-state";
+import { goAhead } from "./preflight/go-ahead";
 import { configuredSources } from "./project/configured-sources";
 import { importExtension } from "./project/module-style";
 import { managerFor } from "./project/package-manager";
 import { MOCK_DEFAULT_PORT, STUDIO_DEFAULT_PORT } from "./project/ports";
 import { readProject } from "./project/read-project";
-import { askYesNo } from "./prompt";
 import { isRoutesFramework } from "./recipes/edits/framework-routes";
 import type { RecipeContext } from "./recipes/recipe-types";
 import { routesSetupRecipe } from "./routes-setup/routes-setup-recipe";
@@ -26,6 +27,8 @@ export interface RoutesSetupRun {
   /** `false` to write the changes and name the install commands. */
   install?: boolean | undefined;
   yes?: boolean | undefined;
+  /** Go ahead with `--yes` where git has changes not committed. */
+  "allow-dirty"?: boolean | undefined;
   "dry-run"?: boolean | undefined;
 }
 
@@ -85,7 +88,8 @@ export async function setUpRoutes(root: string, run: RoutesSetupRun, io: SetupIO
   const plan = buildPlan(ctx, routesSetupRecipe(ctx, framework.id));
   const name = project.manifest.name ?? basename(root);
   const title = `Build the pages' routes in with Courier's plugin in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`;
-  io.report.plan({ title, plan });
+  const git = await gitState(root);
+  io.report.plan({ title, plan, git });
   if (!changesAnything(plan)) {
     const said =
       plan.manual.length > 0
@@ -98,19 +102,12 @@ export async function setUpRoutes(root: string, run: RoutesSetupRun, io: SetupIO
     io.report.end({ kind: "dry-run" });
     return 0;
   }
-  if (run.yes !== true) {
-    if (!io.interactive) {
-      io.report.end({
-        kind: "refused",
-        code: "CONFIRMATION_REQUIRED",
-        said: "Nothing was changed: run it again with --yes to make the changes, or --dry-run to only show the plan.",
-      });
-      return 1;
-    }
-    if (!(await askYesNo("Make the changes?", true))) {
-      io.report.end({ kind: "refused", code: "DECLINED", said: "Nothing was changed." });
-      return 1;
-    }
-  }
+  const words = {
+    question: "Make the changes?",
+    unasked:
+      "Nothing was changed: run it again with --yes to make the changes, or --dry-run to only show the plan.",
+    declined: "Nothing was changed.",
+  };
+  if (!(await goAhead(run, io, words, git))) return 1;
   return applyPlan(ctx, plan, run, io, DONE);
 }

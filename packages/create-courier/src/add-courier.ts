@@ -5,12 +5,13 @@ import { applyPlan } from "./apply/apply-plan";
 import type { CreateRun } from "./create-run";
 import { frameworkOf } from "./framework-of";
 import { buildPlan, changesAnything, type Plan } from "./plan/build-plan";
+import { gitState } from "./preflight/git-state";
+import { goAhead } from "./preflight/go-ahead";
 import { configuredSources } from "./project/configured-sources";
 import { importExtension } from "./project/module-style";
 import { managerFor } from "./project/package-manager";
 import { portsOf } from "./project/ports";
 import { readProject } from "./project/read-project";
-import { askYesNo } from "./prompt";
 import type { Recipe, RecipeContext, RecipeFile, SetupChoices } from "./recipes/recipe-types";
 import { routesAsked, routesModeOf } from "./routes-mode";
 import type { SetupIO } from "./setup-io";
@@ -91,7 +92,9 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
   const plan = buildPlan(ctx, withAgents(ctx, framework.recipe(ctx)), exampleFiles(ctx, framework));
   const name = project.manifest.name ?? basename(root);
   const title = `Set Courier up in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`;
-  io.report.plan({ title, plan, configured });
+  /* A project this run created has no changes of the person's for the setup's to be mixed with. */
+  const git = run.fresh === true ? undefined : await gitState(root);
+  io.report.plan({ title, plan, configured, git });
   if (!changesAnything(plan) && run.openapi === undefined) {
     const said = doneLine(plan, configured !== undefined);
     io.report.end({ kind: "unchanged", said, next: plan.next });
@@ -101,19 +104,12 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
     io.report.end({ kind: "dry-run" });
     return 0;
   }
-  if (run.yes !== true) {
-    if (!io.interactive) {
-      io.report.end({
-        kind: "refused",
-        code: "CONFIRMATION_REQUIRED",
-        said: "Nothing was changed: run it again with --yes to set Courier up, or --dry-run to only show the plan.",
-      });
-      return 1;
-    }
-    if (!(await askYesNo("Set Courier up?", true))) {
-      io.report.end({ kind: "refused", code: "DECLINED", said: "Nothing was changed." });
-      return 1;
-    }
-  }
+  const words = {
+    question: "Set Courier up?",
+    unasked:
+      "Nothing was changed: run it again with --yes to set Courier up, or --dry-run to only show the plan.",
+    declined: "Nothing was changed.",
+  };
+  if (!(await goAhead(run, io, words, git))) return 1;
   return applyPlan(ctx, plan, run, io);
 }

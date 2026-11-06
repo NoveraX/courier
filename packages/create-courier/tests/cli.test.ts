@@ -4,7 +4,7 @@
  * names the commands instead.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
@@ -89,6 +89,29 @@ describe("create-courier", () => {
     expect(status).toBe(1);
     expect(out).toContain("Nothing was changed: run it again with --yes");
     expect(existsSync(join(root, "courier.config.ts"))).toBe(false);
+  }, 60_000);
+
+  it("refuses with --yes where git has changes not committed, and goes ahead with --allow-dirty", () => {
+    const root = projectWith(NEXT);
+    const git = (...args: string[]) =>
+      spawnSync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.com", ...args], {
+        cwd: root,
+      });
+    git("init", "--quiet");
+    git("add", "-A");
+    git("-c", "commit.gpgsign=false", "commit", "--quiet", "--no-verify", "-m", "start");
+    writeFileSync(join(root, "src/app/page.tsx"), "export default function Home() { return 1; }\n");
+
+    const refused = run([root, "--yes", "--no-install", "--no-mcp"]);
+    const nothing = existsSync(join(root, "courier.config.ts"));
+    const allowed = run([root, "--yes", "--no-install", "--no-mcp", "--allow-dirty"]);
+
+    expect(refused.status).toBe(1);
+    expect(refused.out).toContain("! git has 1 change here not committed: src/app/page.tsx.");
+    expect(refused.out).toContain("Commit or stash them, or run it again with --allow-dirty.");
+    expect(nothing).toBe(false);
+    expect(allowed.status).toBe(0);
+    expect(existsSync(join(root, "courier.config.ts"))).toBe(true);
   }, 60_000);
 
   it("writes the files, the script and Courier's plugin with --yes, names the installs with --no-install, and has nothing left to do the second time", () => {

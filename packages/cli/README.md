@@ -155,6 +155,7 @@ Where a file is not in a shape it knows, it shows the lines to add instead. It d
 |---|---|
 | `--dry-run` | Show the plan, and change nothing |
 | `--yes`, `-y` | Make the changes without asking |
+| `--allow-dirty` | Make them with `--yes` where git has changes not committed, which it otherwise refuses |
 | `--no-install` | Make the changes, and name the install command |
 | `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix` or `solid-start` (default: found in `package.json`) |
 | `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |

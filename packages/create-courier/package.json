@@ -37,7 +37,7 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "sideEffects": false,
   "bin": {

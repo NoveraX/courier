@@ -5,12 +5,13 @@ import { runTool, toolFailure } from "../apply/run-tool";
 import type { CreateRun } from "../create-run";
 import { FRAMEWORKS, type Framework, frameworkById } from "../frameworks";
 import { SETUP_LIMITS } from "../limits";
+import { goAhead } from "../preflight/go-ahead";
 import {
   invokingManager,
   type PackageManagerName,
   packageManager,
 } from "../project/package-manager";
-import { askChoice, askYesNo } from "../prompt";
+import { askChoice } from "../prompt";
 import type { SetupIO } from "../setup-io";
 import { wantsMcp } from "../wants-mcp";
 import { generatorFor } from "./generators";
@@ -49,20 +50,12 @@ function packageNameOf(root: string): string {
   );
 }
 
-async function agreed(run: CreateRun, io: SetupIO): Promise<boolean> {
-  if (run.yes === true) return true;
-  if (!io.interactive) {
-    io.report.end({
-      kind: "refused",
-      code: "CONFIRMATION_REQUIRED",
-      said: "Nothing was created: run it again with --yes to create it, or --dry-run to only show the plan.",
-    });
-    return false;
-  }
-  if (await askYesNo("Create it, and set Courier up in it?", true)) return true;
-  io.report.end({ kind: "refused", code: "DECLINED", said: "Nothing was created." });
-  return false;
-}
+const CREATE_WORDS = {
+  question: "Create it, and set Courier up in it?",
+  unasked:
+    "Nothing was created: run it again with --yes to create it, or --dry-run to only show the plan.",
+  declined: "Nothing was created.",
+};
 
 /**
  * Create a new project in a folder with nothing in it yet — with the
@@ -95,7 +88,7 @@ export async function createProject(root: string, run: CreateRun, io: SetupIO): 
     io.report.end({ kind: "dry-run" });
     return 0;
   }
-  if (!(await agreed(run, io))) return 1;
+  if (!(await goAhead(run, io, CREATE_WORDS))) return 1;
   if (generator) {
     const command = ["npx", "--yes", ...generator.args];
     const result = await runTool(command, {

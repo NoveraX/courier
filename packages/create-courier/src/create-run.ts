@@ -13,6 +13,8 @@ export interface CreateRun {
   "package-manager"?: string | undefined;
   install?: boolean | undefined;
   yes?: boolean | undefined;
+  /** Go ahead with `--yes` where git has changes not committed. */
+  "allow-dirty"?: boolean | undefined;
   "dry-run"?: boolean | undefined;
   /** Set by the command itself once it has created the project, never by the command line. */
   fresh?: boolean | undefined;

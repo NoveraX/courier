@@ -186,15 +186,16 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 | `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's) |
 | `--no-install` | Write the files and name the install commands |
 | `--yes`, `-y` | Set Courier up without asking |
+| `--allow-dirty` | Go ahead with `--yes` where git has changes not committed |
 | `--dry-run` | Show the plan, and change nothing |
 
-Run without a terminal to answer — in CI, by an agent — it changes nothing unless `--yes` is passed.
+Run without a terminal to answer — in CI, by an agent — it changes nothing unless `--yes` is passed, and with `--yes` it leaves a project whose changes git has not committed as it is, unless `--allow-dirty` is passed too.
 
 <br />
 
 ## Requirements
 
-Node.js 22 or later, and a project with a `tsconfig.json`: Courier is typed end to end. A project without TypeScript gets `typescript@^6` as a dev dependency.
+Node.js 22.13 or later, which Studio and its mock need too, and a project with a `tsconfig.json`: Courier is typed end to end. A project without TypeScript gets `typescript@^6` as a dev dependency.
 
 <br />
 

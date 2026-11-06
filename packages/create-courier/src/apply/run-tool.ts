@@ -21,6 +21,8 @@ export interface ToolOptions {
   readonly output: ToolOutput;
   /** Whether the person at the terminal can answer it: a generator run without questions cannot. */
   readonly input?: "inherit" | "ignore";
+  /** Variables it runs with beside the command's own. */
+  readonly env?: Readonly<Record<string, string>>;
   /** How long it may run before it is stopped. */
   readonly deadlineMs: number;
   /** Stops it early, once the person cancels. */
@@ -111,7 +113,8 @@ export function runTool(command: readonly string[], options: ToolOptions): Promi
       done({ status: 1, stopped: "cancelled", tail: "" });
       return;
     }
-    const child = spawn(program, args, { cwd: options.cwd, stdio: stdioOf(options), shell });
+    const env = options.env === undefined ? undefined : { ...process.env, ...options.env };
+    const child = spawn(program, args, { cwd: options.cwd, stdio: stdioOf(options), shell, env });
     let stopped: ToolResult["stopped"];
     const stop = (why: NonNullable<ToolResult["stopped"]>) => {
       stopped ??= why;

@@ -17,6 +17,7 @@ import { setupChoices } from "./questions/setup-choices";
 import type { Recipe, RecipeContext, RecipeFile } from "./recipes/recipe-types";
 import { addsMock } from "./recipes/shared/wired";
 import { routesChoice, routesModeOf } from "./routes-mode";
+import { withSecretImport } from "./secret-import";
 import type { SetupIO } from "./setup-io";
 
 /* What a plan that changes nothing says: what is left to the person is listed above it. */
@@ -85,7 +86,7 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
     configured,
     routes: routesModeOf(project, framework, choices.routes),
   };
-  const recipe = withAgentDocs(ctx, withAgents(ctx, framework.recipe(ctx)));
+  const recipe = withSecretImport(ctx, withAgentDocs(ctx, withAgents(ctx, framework.recipe(ctx))));
   const plan = buildPlan(ctx, recipe, exampleFiles(ctx, framework));
   const name = project.manifest.name ?? basename(root);
   const title = `Set Courier up in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`;

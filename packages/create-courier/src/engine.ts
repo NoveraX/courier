@@ -15,6 +15,7 @@ export { type Touched, typecheckTouched } from "./apply/typecheck";
 export { withJsonStrings } from "./edit/json-strings";
 export { type ChangedLine, changedLines } from "./edit/line-diff";
 export { frameworkOf } from "./framework-of";
+export { type ImportFrom, importFrom, secretsPrefix } from "./import-address";
 export type { Plan, PlannedEdit, PlannedFile } from "./plan/build-plan";
 export { type GitState, gitState } from "./preflight/git-state";
 export { type GoAheadRun, type GoAheadWords, goAhead } from "./preflight/go-ahead";

@@ -1,4 +1,4 @@
-import { REDACTED, urlWithoutSecrets } from "@noverax/courier/internal";
+import { importFrom, secretsPrefix } from "@noverax/create-courier/engine";
 
 import { type AstNode, isNode, nameOf, walk } from "../codemod/ast";
 import { boundImport } from "../codemod/imported-calls";
@@ -10,56 +10,6 @@ const CREDENTIALS =
   "Studio refuses a specification's address with a user or a password in it, with 400 SPEC_CREDENTIALS_IN_URL: take them out of from, and give them as the import's auth, each read from an environment variable, which courier-studio import names with --basic-env USER_VARIABLE:PASSWORD_VARIABLE";
 const SECRET =
   "The import's address carries a secret, which courier.config.ts keeps in your repository, and Studio declares such an import no more: courier-studio import --yes and Add to courier.config.ts leave its entry to you. Read the secret from an environment variable, or give it as the import's auth where the host takes it in a header";
-const AUTHORITY = /^([a-z][a-z0-9+.-]{0,31}:\/\/)([^/?#]*)/i;
-/* A secret cut from the address: a parameter's value, by its name, or a value with none. */
-const CUT = new RegExp(`([?&#])([^=&#]{1,128})=${escaped(REDACTED)}|${escaped(REDACTED)}`, "g");
-
-function escaped(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/* An address without the user and the password before its host, the rest as the config writes it. */
-function withoutUserinfo(address: string): string {
-  const parts = AUTHORITY.exec(address);
-  if (parts === null) return address;
-  const [whole, scheme = "", authority = ""] = parts;
-  return `${scheme}${authority.slice(authority.lastIndexOf("@") + 1)}${address.slice(whole.length)}`;
-}
-
-/* Text as a template literal writes it: its backticks, backslashes and `${` escaped. */
-function inTemplate(text: string): string {
-  return text.replace(/[`\\]|\$\{/g, (found) => `\\${found}`);
-}
-
-/* A name an environment variable may take, in capitals: `api-key` → `API_KEY`. */
-function variablePart(text: string): string {
-  return text
-    .replace(/[^A-Za-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toUpperCase();
-}
-
-/* `from` as the instead writes it: as given, or as a template that reads each secret from a variable named for the import. */
-function fromLine(bare: string, prefix: string): string {
-  const shown = urlWithoutSecrets(bare);
-  if (shown === bare) return `from: ${JSON.stringify(bare)},`;
-  const parts = shown.split(CUT);
-  let text = "";
-  let unnamed = 0;
-  for (let at = 0; at < parts.length; at += 3) {
-    text += inTemplate(parts[at] ?? "");
-    if (at + 1 >= parts.length) break;
-    const [lead, name] = [parts[at + 1], parts[at + 2]];
-    const named = name === undefined ? "" : variablePart(name);
-    const variable =
-      named === ""
-        ? `${prefix}_SECRET${unnamed++ === 0 ? "" : `_${unnamed}`}`
-        : `${prefix}_${named}`;
-    const param = name === undefined ? "" : `${inTemplate(name)}=`;
-    text += `${lead ?? ""}${param}\${process.env.${variable}}`;
-  }
-  return `from: \`${text}\`,`;
-}
 
 /* The import a `from` declares, `imports: { name: { from } }` inside the config: its name, and whether its entry gives an auth. */
 function importOf(ancestors: readonly AstNode[]): { name: string; auth: boolean } | undefined {
@@ -99,21 +49,18 @@ export const IMPORT_CREDENTIALS: Migration = {
         return;
       const url = new URL(address);
       if (url.protocol !== "https:" && url.protocol !== "http:") return;
-      const bare = withoutUserinfo(address);
-      const prefix = /^[A-Z]/.test(variablePart(entry.name))
-        ? `${variablePart(entry.name)}_SPEC`
-        : "SPEC";
-      const from = fromLine(bare, prefix);
+      const from = importFrom(address, entry.name);
       if (url.username !== "" || url.password !== "") {
+        const prefix = secretsPrefix(entry.name);
         const auth = `auth: { type: "basic", username: { env: "${prefix}_USER" }, password: { env: "${prefix}_PASSWORD" } },`;
         findings.push({
           at: node.start,
           what: CREDENTIALS,
-          instead: entry.auth ? [from] : [from, auth],
+          instead: entry.auth ? [from.line] : [from.line, auth],
         });
       }
-      if (urlWithoutSecrets(bare) !== bare)
-        findings.push({ at: node.start, what: SECRET, instead: [from] });
+      if (from.variables.length > 0)
+        findings.push({ at: node.start, what: SECRET, instead: [from.line] });
     });
     return { edits: [], findings, packages: [] };
   },

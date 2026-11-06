@@ -157,7 +157,7 @@ Writes `courier.routes.ts` in place of the plugin: the routes the page's client 
 npx @noverax/create-courier --openapi https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code written, the API declared in `courier.config.ts`. An address with a user or a password in it is refused before anything is installed, with `SPEC_CREDENTIALS_IN_URL`, as Studio refuses it: import its file, or set Courier up without the import, then run `npx @noverax/courier-studio import <address> --basic-env USER_VARIABLE:PASSWORD_VARIABLE`.
+Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code written, the API declared in `courier.config.ts`. An address with a user or a password in it is refused before anything is installed, with `SPEC_CREDENTIALS_IN_URL`, as Studio refuses it: import its file, or set Courier up without the import, then run `npx @noverax/courier-studio import <address> --basic-env USER_VARIABLE:PASSWORD_VARIABLE`. An address with a secret parameter is imported, and its entry, which Studio declares nowhere, is left to you: its `from` reads the secret from the environment variable the plan names.
 
 <br />
 

@@ -179,7 +179,7 @@ describe("an endpoint in the source catalogue", () => {
     );
   }, 30_000);
 
-  it("says how a stream is carried and which middleware its source runs", async () => {
+  it("says how a stream is carried and the middleware it runs through", async () => {
     const config = [
       `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
       `import { defineMiddleware } from "@noverax/courier/middleware";`,
@@ -204,7 +204,7 @@ describe("an endpoint in the source catalogue", () => {
     expect(endpoints.find((e) => e.name === "ticks")?.analysis).toMatchObject({
       path: "sse",
       transport: "sse",
-      middleware: ["stamp"],
+      middleware: [{ name: "stamp", layer: "api" }],
     });
     expect(endpoints.find((e) => e.name === "list")?.analysis).not.toHaveProperty("transport");
   }, 30_000);

@@ -1,4 +1,5 @@
 import type { ProxyPath } from "@noverax/courier";
+import type { ChainStep } from "@noverax/courier/internal";
 import type { SchemaField } from "@noverax/courier-studio-core";
 import type { AgentMark, PageMark } from "@/features/apis/types";
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types";
@@ -35,7 +36,10 @@ export interface CatalogEndpoint {
   hasResponseSchema: boolean;
   path?: string;
   httpMethod?: string;
+  /** The names of the middleware a call runs through, in order: from the definitions, or as calls showed them. */
   middleware?: string[];
+  /** The middleware a call runs through, each with where it is declared, as the definitions give it. */
+  chain?: ChainStep[];
   /** Default variables stub from schema introspection */
   variablesStub?: Record<string, unknown>;
   /** The fields the variables schema declares, with their types and whether each is required */

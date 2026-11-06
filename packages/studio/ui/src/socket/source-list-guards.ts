@@ -1,3 +1,4 @@
+import type { ChainStep } from "@noverax/courier/internal";
 import type { SchemaField } from "@noverax/courier-studio-core";
 import type {
   ScannedEndpoint,
@@ -24,6 +25,7 @@ const HTTP_METHODS: ReadonlySet<unknown> = new Set([
 const ENDPOINT_TYPES: ReadonlySet<unknown> = new Set(["query", "mutation", null]);
 const STREAM_TRANSPORTS: ReadonlySet<unknown> = new Set(["sse", "ws"]);
 const TRANSPORTS: ReadonlySet<string> = new Set(["http", "sse", "ws"]);
+const MIDDLEWARE_LAYERS: ReadonlySet<unknown> = new Set(["api", "retry", "endpoint"]);
 
 /**
  * Whether an entry of a `registry:updated` list is an import the UI can
@@ -122,7 +124,7 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     typeof analysis.hasVariablesType === "boolean" &&
     typeof analysis.hasValidation === "boolean" &&
     (analysis.transport === undefined || STREAM_TRANSPORTS.has(analysis.transport)) &&
-    (analysis.middleware === undefined || isListOf(analysis.middleware, isString)) &&
+    (analysis.middleware === undefined || isListOf(analysis.middleware, isChainStep)) &&
     (analysis.variablesStub === undefined || isPlainObject(analysis.variablesStub)) &&
     (analysis.variablesFields === undefined || isListOf(analysis.variablesFields, isSchemaField)) &&
     (analysis.variablesDefaults === undefined || isPlainObject(analysis.variablesDefaults)) &&
@@ -141,6 +143,7 @@ function isSchemaField(item: unknown): item is SchemaField {
   );
 }
 
-function isString(item: unknown): item is string {
-  return typeof item === "string";
+/* One middleware of an endpoint's chain: its name, and where it is declared. */
+function isChainStep(item: unknown): item is ChainStep {
+  return isPlainObject(item) && typeof item.name === "string" && MIDDLEWARE_LAYERS.has(item.layer);
 }

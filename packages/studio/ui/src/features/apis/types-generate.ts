@@ -6,6 +6,7 @@
  */
 
 import type { ProxyPath } from "@noverax/courier";
+import type { ChainStep } from "@noverax/courier/internal";
 import type { SchemaField } from "@noverax/courier-studio-core";
 
 import type { PlanConsent } from "@/features/apis/types-file-plan";
@@ -96,8 +97,8 @@ export interface EndpointAnalysis {
   type: "query" | "mutation" | null;
   /** How a stream or a channel is carried; absent for plain HTTP. */
   transport?: "sse" | "ws";
-  /** The source's middleware, in the order it runs. */
-  middleware?: string[];
+  /** The middleware a call to it runs through, outermost first, each with where it is declared. */
+  middleware?: ChainStep[];
   /** The variables its schema describes, with a placeholder for each field. */
   variablesStub?: Record<string, unknown>;
   /** The fields its variables schema declares, with their types and whether each is required. */

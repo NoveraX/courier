@@ -53,6 +53,7 @@ export type {
   StreamingFactories,
   WSChannelFactory,
 } from "../transport";
+export type { ChainStep, MiddlewareLayer } from "../utils/middleware-chain-of";
 export type { PathPiece } from "../utils/path-template";
 export type { StandInCall } from "../utils/proxy-refusal";
 export type { RenderMemo, RenderMemoProvider } from "../utils/render-memo";

@@ -30,7 +30,10 @@ function declared(
       httpMethod,
       path,
       type: httpMethod === "get" ? "query" : "mutation",
-      middleware: ["stamp-header", "timing-after"],
+      middleware: [
+        { name: "stamp-header", layer: "api" },
+        { name: "timing-after", layer: "api" },
+      ],
       ...extra,
     },
   };

@@ -47,7 +47,10 @@ function endpointsOf(endpoints: readonly ScannedEndpoint[]): Record<string, Cata
       httpMethod: analysis.httpMethod.toUpperCase(),
       origin: "scan",
       ...(analysis.transport && { transport: analysis.transport }),
-      ...(analysis.middleware?.length && { middleware: analysis.middleware }),
+      ...(analysis.middleware?.length && {
+        middleware: analysis.middleware.map((step) => step.name),
+        chain: analysis.middleware,
+      }),
       ...(analysis.variablesStub && { variablesStub: analysis.variablesStub }),
       ...(analysis.variablesFields && { variablesFields: analysis.variablesFields }),
       ...(analysis.variablesDefaults && { variablesDefaults: analysis.variablesDefaults }),

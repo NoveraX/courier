@@ -1,4 +1,5 @@
 import type { ProxyPath } from "@noverax/courier";
+import type { ChainStep } from "@noverax/courier/internal";
 
 import type { SchemaField } from "../schema-fields";
 
@@ -97,7 +98,8 @@ export interface SourceMap {
             type: "query" | "mutation" | undefined;
             hasVariablesSchema: boolean;
             hasResponseSchema: boolean;
-            middleware?: string[];
+            /** The middleware a call to it runs through, outermost first, each with where it is declared; absent for none */
+            middleware?: ChainStep[];
             path?: string;
             /** HTTP method (GET, POST, PUT, PATCH, DELETE) from endpoint probing */
             httpMethod?: string;

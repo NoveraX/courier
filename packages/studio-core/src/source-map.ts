@@ -1,5 +1,10 @@
-import type { Sources } from "@noverax/courier/define";
-import { eachGroup, groupOptionsOf } from "@noverax/courier/internal";
+import type { AnySource, Sources } from "@noverax/courier/define";
+import {
+  type ChainStep,
+  eachGroup,
+  groupOptionsOf,
+  middlewareChainOf,
+} from "@noverax/courier/internal";
 import type { SourceMap } from "./events";
 import { extractSchemaFields, extractSchemaStub } from "./schema-fields";
 import { isEndpoint, probeEndpoint } from "./source-map-probe";
@@ -29,19 +34,18 @@ export function extractSourceMap(sources: Sources, appOrigin?: string): SourceMa
   for (const [sourceName, source] of Object.entries(sources)) {
     const options = source.options;
     const groups: SourceMap[string]["groups"] = {};
-    const mwNames = extractMiddlewareNames(options);
 
     /* Extract grouped endpoints: every group, those inside others keyed by
        their path and at their prefixes joined in turn. */
     for (const placed of eachGroup(source)) {
       groups[placed.path] = {
         prefix: prefixOf(groupOptionsOf(placed.chain)),
-        endpoints: extractEndpoints(placed.group, mwNames),
+        endpoints: extractEndpoints(placed.group, chainsIn(source, placed.path)),
       };
     }
 
     /* Extract flat endpoints (top-level on source, supports mixed mode) */
-    const flatEndpoints = extractEndpoints(source as unknown as Record<string, unknown>, mwNames);
+    const flatEndpoints = extractEndpoints(source, chainsIn(source, ""));
     if (Object.keys(flatEndpoints).length > 0) {
       groups[""] = { prefix: "", endpoints: flatEndpoints };
     }
@@ -58,22 +62,26 @@ export function extractSourceMap(sources: Sources, appOrigin?: string): SourceMa
   return result;
 }
 
-/** Pull middleware function names from source options */
-export function extractMiddlewareNames(options: Record<string, unknown> | undefined): string[] {
-  if (!options || !Array.isArray(options.middleware)) return [];
-  return (options.middleware as Array<(...args: unknown[]) => unknown>).map(
-    (fn, i) => fn.name || `middleware[${i}]`,
-  );
+/* The middleware each endpoint of a group runs through, as a call builds it, by the endpoint's name. */
+function chainsIn(source: AnySource, groupPath: string): (name: string) => ChainStep[] {
+  return (name) => middlewareChainOf(source, groupPath, name);
 }
 
-/** Extract endpoint metadata from a group or source object */
+/**
+ * Extract endpoint metadata from a group or source object.
+ *
+ * @param obj - The group, or the source for its own endpoints
+ * @param chainOf - The middleware an endpoint of it runs through, by its name
+ * @returns Each endpoint's metadata, by its name
+ */
 export function extractEndpoints(
-  obj: Record<string, unknown>,
-  middlewareNames: string[],
+  obj: object,
+  chainOf: (name: string) => ChainStep[],
 ): SourceMap[string]["groups"][string]["endpoints"] {
   const endpoints: SourceMap[string]["groups"][string]["endpoints"] = {};
 
-  for (const [name, fn] of Object.entries(obj)) {
+  const members: Array<[string, unknown]> = Object.entries(obj);
+  for (const [name, fn] of members) {
     if (name === "options" || !isEndpoint(fn)) continue;
 
     const schema = (fn as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
@@ -84,12 +92,13 @@ export function extractEndpoints(
     const variablesFields = schema?.variables ? extractSchemaFields(schema.variables) : undefined;
 
     const transport = schema?.transport;
+    const middleware = chainOf(name);
 
     endpoints[name] = {
       type: schema?.type,
       hasVariablesSchema: !!schema?.variables,
       hasResponseSchema: !!schema?.response,
-      ...(middlewareNames.length > 0 && { middleware: middlewareNames }),
+      ...(middleware.length > 0 && { middleware }),
       ...(probed.path && { path: probed.path }),
       ...(httpMethod && { httpMethod }),
       ...(variablesStub && { variablesStub }),

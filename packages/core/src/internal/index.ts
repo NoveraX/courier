@@ -118,6 +118,7 @@ export {
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
 export { isLoopbackHostname } from "../utils/loopback-host";
+export { middlewareChainOf } from "../utils/middleware-chain-of";
 export { parseUrl } from "../utils/parse-url";
 export {
   encodePathValue,

@@ -62,7 +62,10 @@ const SOURCES: ScannedSource[] = [
           httpMethod: "post",
           path: "",
           type: "mutation",
-          middleware: ["auth", "logger"],
+          middleware: [
+            { name: "auth", layer: "api" },
+            { name: "logger", layer: "endpoint" },
+          ],
         }),
         endpoint("list"),
       ],

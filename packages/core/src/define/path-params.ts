@@ -1,5 +1,3 @@
-import type { RawBody } from "../utils/body-kind";
-
 type Lower =
   | "a"
   | "b"
@@ -138,22 +136,46 @@ export interface PathParamsMissing<TNames extends string> {
   readonly "declare each path parameter in the variables": TNames;
 }
 
-/* Variables that are not a record of fields — a list, a scalar, a raw body —
-   fill no parameter by name, and a form fills them by names its type does
-   not know: the path takes its parameters from them or from pathOptions,
-   unchecked. So do variables typed unknown. */
-type NotFields = RawBody | FormData | readonly unknown[] | string | number | boolean | bigint;
+/* A type a project declares neither the DOM library nor Node's types for —
+   `FormData`, `Blob` under TypeScript 6's default of `types: []` — is an
+   `any` to the declarations that name it, and a conditional type whose
+   `extends` names such an `any` is that `any` itself: every path's
+   parameters came out missing. Each is left out where it is not declared,
+   and the check holds there for what the project knows. Wrapped, the test
+   is no conditional on that `any`. */
+type Declared<T> = [0] extends [1 & T] ? never : T;
 
-type MissingFrom<TNames extends string, TVariables> = unknown extends TVariables
+/* Variables that are not a record of fields — a list, a scalar, a raw body
+   (`RawBody`'s members, each where it is declared) — fill no parameter by
+   name, and a form fills them by names its type does not know: the path
+   takes its parameters from them or from pathOptions, unchecked. So do
+   variables typed unknown. */
+type NotFields =
+  | Declared<Blob>
+  | Declared<ReadableStream>
+  | Declared<URLSearchParams>
+  | Declared<FormData>
+  | ArrayBuffer
+  | ArrayBufferView
+  | readonly unknown[]
+  | string
+  | number
+  | boolean
+  | bigint;
+
+type MissingFrom<TNames extends string, TVariables> = [unknown] extends [TVariables]
   ? never
   : MissingFromEach<TNames, NonNullable<TVariables>>;
 
 /* Each member of a union is read on its own: a form among them fills the
    parameters by names its type does not know, and a record beside it names
-   each of them, or the parameters it leaves out are missing. */
-type MissingFromEach<TNames extends string, TMember> = TMember extends NotFields
-  ? never
-  : Exclude<TNames, keyof TMember>;
+   each of them, or the parameters it leaves out are missing. The member is
+   compared wrapped, as `Declared` is. */
+type MissingFromEach<TNames extends string, TMember> = TMember extends unknown
+  ? [TMember] extends [NotFields]
+    ? never
+    : Exclude<TNames, keyof TMember>
+  : never;
 
 // biome-ignore lint/suspicious/noConfusingVoidType: the builder marks variables not declared yet with `void`
 type Undeclared<TVariables> = [TVariables] extends [void] ? true : false;

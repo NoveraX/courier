@@ -1,7 +1,8 @@
 import type { Terminal } from "../add-courier";
 import { install } from "../apply/install";
-import { runTool } from "../apply/run-tool";
+import { runTool, toolFailure } from "../apply/run-tool";
 import type { FrameworkId } from "../frameworks";
+import { SETUP_LIMITS } from "../limits";
 import type { PackageManager } from "../project/package-manager";
 import { writeExpressTemplate } from "./express-template";
 import { fixFreshProject } from "./fresh-fixes";
@@ -43,10 +44,15 @@ export async function prepareTemplate(template: NewTemplate, terminal: Terminal)
   } else if (generator?.install) await install(root, [manager.install()]);
   for (const step of generator?.afterInstall ?? []) {
     const command = manager.exec(step.bin, step.args);
-    const { status } = await runTool(command, root, false, "ignore");
-    if (status !== 0)
+    const result = await runTool(command, {
+      cwd: root,
+      output: { kind: "show", on: "stdout" },
+      input: "ignore",
+      deadlineMs: SETUP_LIMITS.installMs,
+    });
+    if (result.status !== 0 || result.stopped !== undefined)
       throw new Error(
-        `${command.join(" ")} failed (exit ${status}); nothing of Courier's was added`,
+        `${toolFailure(command, result, SETUP_LIMITS.installMs)}; nothing of Courier's was added`,
       );
     terminal.print(["", step.done]);
   }

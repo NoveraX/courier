@@ -1,6 +1,7 @@
+import { SETUP_LIMITS } from "../limits";
 import type { Plan } from "../plan/build-plan";
 import type { PackageManager } from "../project/package-manager";
-import { runTool } from "./run-tool";
+import { runTool, toolFailure } from "./run-tool";
 
 /**
  * The commands that install a plan's packages with the project's package
@@ -24,11 +25,12 @@ export function installCommands(manager: PackageManager, plan: Plan): string[][]
 }
 
 /**
- * Run the install commands in the project, its output in the terminal.
+ * Run the install commands in the project, one after another, their
+ * output in the terminal, each within the time an install may take.
  *
  * @param root - The project's folder
  * @param commands - The commands
- * @throws {Error} When one fails, naming it
+ * @throws {Error} When one fails or runs past its time, naming it
  * @example
  * ```ts
  * await install(project.root, installCommands(manager, plan));
@@ -36,7 +38,12 @@ export function installCommands(manager: PackageManager, plan: Plan): string[][]
  */
 export async function install(root: string, commands: readonly string[][]): Promise<void> {
   for (const command of commands) {
-    const { status } = await runTool(command, root, false);
-    if (status !== 0) throw new Error(`${command.join(" ")} failed (exit ${status})`);
+    const result = await runTool(command, {
+      cwd: root,
+      output: { kind: "show", on: "stdout" },
+      deadlineMs: SETUP_LIMITS.installMs,
+    });
+    if (result.status !== 0 || result.stopped !== undefined)
+      throw new Error(toolFailure(command, result, SETUP_LIMITS.installMs));
   }
 }

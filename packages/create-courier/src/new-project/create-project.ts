@@ -1,9 +1,10 @@
 import { basename, dirname } from "node:path";
 
 import { addCourier, type Terminal } from "../add-courier";
-import { runTool } from "../apply/run-tool";
+import { runTool, toolFailure } from "../apply/run-tool";
 import type { CreateRun } from "../create-run";
 import { FRAMEWORKS, type Framework, frameworkById } from "../frameworks";
+import { SETUP_LIMITS } from "../limits";
 import {
   invokingManager,
   type PackageManagerName,
@@ -99,15 +100,16 @@ export async function createProject(
   if (run["dry-run"] === true || !(await agreed(run, terminal)))
     return run["dry-run"] === true ? 0 : 1;
   if (generator) {
-    const { status } = await runTool(
-      ["npx", "--yes", ...generator.args],
-      dirname(root),
-      false,
-      "ignore",
-    );
-    if (status !== 0)
+    const command = ["npx", "--yes", ...generator.args];
+    const result = await runTool(command, {
+      cwd: dirname(root),
+      output: { kind: "show", on: "stdout" },
+      input: "ignore",
+      deadlineMs: SETUP_LIMITS.generatorMs,
+    });
+    if (result.status !== 0 || result.stopped !== undefined)
       throw new Error(
-        `${framework.label}'s generator failed (exit ${status}); nothing of Courier's was added`,
+        `${framework.label}'s generator: ${toolFailure(command, result, SETUP_LIMITS.generatorMs)}; nothing of Courier's was added`,
       );
   }
   await prepareTemplate({ root, name, framework: framework.id, manager, generator }, terminal);

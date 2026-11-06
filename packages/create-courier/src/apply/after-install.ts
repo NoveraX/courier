@@ -1,8 +1,12 @@
 import type { Terminal } from "../add-courier";
+import { SETUP_LIMITS } from "../limits";
 import type { Plan } from "../plan/build-plan";
 import type { RecipeContext } from "../recipes/recipe-types";
-import { runTool } from "./run-tool";
+import { runTool, toolFailure } from "./run-tool";
 import { type Touched, typecheckTouched } from "./typecheck";
+
+/* The lines of a failed program's output its warning ends with: why it failed, without the rest. */
+const PREPARE_LINES_SHOWN = 5;
 
 /**
  * Check the types of what the setup touched, and say how it went.
@@ -61,8 +65,17 @@ export async function reportTypes(
 export async function prepare(ctx: RecipeContext, plan: Plan, terminal: Terminal): Promise<void> {
   for (const { bin, args } of plan.prepare) {
     const command = ctx.manager.exec(bin, args);
-    const { status } = await runTool(command, ctx.project.root, true);
-    if (status !== 0)
-      terminal.print([terminal.style.yellow(`${command.join(" ")} failed (exit ${status})`)]);
+    const result = await runTool(command, {
+      cwd: ctx.project.root,
+      output: { kind: "quiet" },
+      deadlineMs: SETUP_LIMITS.prepareMs,
+    });
+    if (result.status !== 0 || result.stopped !== undefined) {
+      const said = result.tail.trimEnd().split("\n").slice(-PREPARE_LINES_SHOWN);
+      terminal.print([
+        terminal.style.yellow(toolFailure(command, result, SETUP_LIMITS.prepareMs)),
+        ...said.filter((line) => line.trim() !== "").map((line) => terminal.style.dim(`  ${line}`)),
+      ]);
+    }
   }
 }

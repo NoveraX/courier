@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 
+import { SETUP_LIMITS } from "../limits";
 import { resolveInProject } from "./resolve-in-project";
 import { runTool } from "./run-tool";
 
@@ -31,6 +32,11 @@ export async function importSpecification(
     );
   const cli = join(dirname(manifest), "lib", "cli.js");
   const args = ["import", spec, "--yes", "--cwd", root, ...(name ? ["--name", name] : [])];
-  const { status } = await runTool([process.execPath, cli, ...args], process.cwd(), false);
-  return status;
+  /* Node itself runs Studio's command, never a shell: the specification is the person's text. */
+  const { status, stopped } = await runTool([process.execPath, cli, ...args], {
+    cwd: process.cwd(),
+    output: { kind: "show", on: "stdout" },
+    deadlineMs: SETUP_LIMITS.importMs,
+  });
+  return stopped === undefined ? status : 1;
 }

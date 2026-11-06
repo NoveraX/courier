@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 
+import { SETUP_LIMITS } from "../limits";
 import { resolveBin } from "./resolve-in-project";
 import { runTool } from "./run-tool";
 import { baseProject, tsProjects } from "./ts-projects";
@@ -22,6 +23,8 @@ const TS_FILE = /\.[cm]?tsx?$/;
 const VUE_FILE = /\.vue$/;
 const ERROR = /^(.+?)\((\d+),\d+\): error TS\d+:/;
 const CHECK_DIR = "node_modules/.cache/create-courier";
+/* The error lines kept, of the files the setup touched and of the project as a whole: enough to show what is wrong. */
+const MAX_ERROR_LINES = 500;
 
 /* The same path whichever way the system spells it — /tmp and /private/tmp on macOS. */
 function canonical(path: string): string {
@@ -36,6 +39,8 @@ interface Findings {
   readonly listed: Set<string>;
   readonly errors: string[];
   readonly global: string[];
+  /** Whether a check ran past its time and was stopped. */
+  timedOut: boolean;
 }
 
 /* An error counts when it is in a file the setup added, or on a line it changed. */
@@ -43,16 +48,17 @@ function isOurs(path: string, line: number, touched: Touched): boolean {
   return touched.added.includes(path) || touched.changed.get(path)?.has(line) === true;
 }
 
-function read(output: string, root: string, touched: Touched, findings: Findings): void {
+/* Read TypeScript's output a line at a time, as it comes: the errors that count, kept within their bound, and the files it checked. */
+function lineReader(root: string, touched: Touched, findings: Findings): (line: string) => void {
   let keeping = false;
-  for (const line of output.split(/\r?\n/)) {
+  return (line) => {
     const error = ERROR.exec(line);
     if (error) {
       const at = error[1] ?? "";
       const path = (isAbsolute(at) ? relative(root, at) : at).replaceAll("\\", "/");
       keeping = isOurs(path, Number(error[2]), touched);
     } else if (/^error TS\d+:/.test(line)) {
-      findings.global.push(line);
+      if (findings.global.length < MAX_ERROR_LINES) findings.global.push(line);
       keeping = false;
     } else if (
       isAbsolute(line.trim()) &&
@@ -61,8 +67,8 @@ function read(output: string, root: string, touched: Touched, findings: Findings
       findings.listed.add(canonical(line.trim()));
       keeping = false;
     } else if (!line.startsWith(" ")) keeping = false;
-    if (keeping) findings.errors.push(line);
-  }
+    if (keeping && findings.errors.length < MAX_ERROR_LINES) findings.errors.push(line);
+  };
 }
 
 /* A tsconfig that checks the files no project of the project's includes, as the base project would. */
@@ -110,12 +116,16 @@ export async function typecheckTouched(root: string, touched: Touched): Promise<
   const checked = (path: string) =>
     TS_FILE.test(path) || (vueTsc !== undefined && VUE_FILE.test(path));
   const ours = [...touched.added, ...touched.changed.keys()].filter(checked);
-  const findings: Findings = { listed: new Set(), errors: [], global: [] };
+  const findings: Findings = { listed: new Set(), errors: [], global: [], timedOut: false };
   const projects = tsProjects(root);
   const check = async (project: string) => {
     const args = ["--noEmit", "--pretty", "false", "--listFiles", "-p", project];
-    const { output } = await runTool([process.execPath, tsc, ...args], root, true);
-    read(output, root, touched, findings);
+    const { stopped } = await runTool([process.execPath, tsc, ...args], {
+      cwd: root,
+      output: { kind: "lines", line: lineReader(root, touched, findings) },
+      deadlineMs: SETUP_LIMITS.typecheckMs,
+    });
+    if (stopped === "deadline") findings.timedOut = true;
   };
   for (const project of projects) await check(project);
   const uncovered = ours.filter((path) => !findings.listed.has(canonical(join(root, path))));
@@ -123,6 +133,10 @@ export async function typecheckTouched(root: string, touched: Touched): Promise<
     uncovered.length > 0 ? uncoveredConfig(root, baseProject(projects), uncovered) : undefined;
   if (extra !== undefined) await check(extra);
   if (findings.errors.length > 0) return { kind: "errors", lines: findings.errors };
+  if (findings.timedOut) {
+    const minutes = Math.round(SETUP_LIMITS.typecheckMs / 60_000);
+    return { kind: "unchecked", reason: `it was stopped after ${minutes} minutes` };
+  }
   const covered = ours.some((path) => findings.listed.has(canonical(join(root, path))));
   if (!covered && findings.global.length > 0)
     return { kind: "unchecked", reason: findings.global[0] ?? "" };

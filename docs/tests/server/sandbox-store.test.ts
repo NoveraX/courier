@@ -219,23 +219,75 @@ describe("any run of visitors' calls", () => {
   })
 })
 
-describe("the work of a call", () => {
-  it("stays the same however many visitors' data the store keeps", () => {
-    const visitors = 20_000
-    const clock = { now: 0 }
-    const store = storeOn(clock, { visitors, idleMs: 60_000, lifetimeMs: 600_000, inUseMs: 0 })
-    const ids = Array.from({ length: visitors }, () => store.change(undefined, () => 0).visitor)
-    const started = performance.now()
-    for (let call = 0; call < 100_000; call += 1) {
+/* The records a call goes through, as a map's iterators and its forEach hand them out: the work
+   of the calls `run` makes, counted rather than timed, whatever else runs on the machine. */
+function recordsVisited(run: () => void): number {
+  const iterators: { next: (this: unknown) => unknown } = Object.getPrototypeOf(new Map().keys())
+  const { next } = iterators
+  const { forEach } = Map.prototype
+  let visited = 0
+  iterators.next = function (this: unknown) {
+    visited += 1
+    return next.call(this)
+  }
+  Map.prototype.forEach = function (this: Map<unknown, unknown>, each, thisArg) {
+    forEach.call(this, (...args: Parameters<typeof each>) => {
+      visited += 1
+      each.apply(thisArg, args)
+    })
+  }
+  try {
+    run()
+  } finally {
+    iterators.next = next
+    Map.prototype.forEach = forEach
+  }
+  return visited
+}
+
+/* The records each of the same calls goes through in a store that keeps `visitors` visitors'
+   data, every one of them used in turn, and none idle long enough to go. */
+function perCall(visitors: number): number {
+  const calls = 4_000
+  const clock = { now: 0 }
+  const store = storeOn(clock, { visitors, idleMs: 60_000, lifetimeMs: 600_000, inUseMs: 0 })
+  const ids = Array.from({ length: visitors }, () => store.change(undefined, () => 0).visitor)
+  const visited = recordsVisited(() => {
+    for (let call = 0; call < calls; call += 1) {
       clock.now += 1
       const visitor = ids[(call * 7919) % visitors]
       if (call % 2 === 0) store.read(visitor)
       else store.change(visitor, (data) => data.nextUserId)
     }
-    const took = performance.now() - started
-    expect(store.size).toBe(visitors)
-    /* A store that went through every visitor's data on each call would take minutes here; one
-       whose work for a call is the same for any number of visitors takes milliseconds. */
-    expect(took).toBeLessThan(5_000)
+  })
+  expect(store.size).toBe(visitors)
+  return visited / calls
+}
+
+describe("the work of a call", () => {
+  it("counts every record a map's iterators and forEach hand out", () => {
+    const map = new Map([
+      [1, "one"],
+      [2, "two"],
+    ])
+    const seen: string[] = []
+    expect(recordsVisited(() => Array.from(map.keys()))).toBe(3)
+    expect(
+      recordsVisited(() =>
+        map.forEach((value) => {
+          seen.push(value)
+        })
+      )
+    ).toBe(2)
+    expect(seen).toEqual(["one", "two"])
+  })
+
+  it("stays the same however many visitors' data the store keeps", () => {
+    /* A store that went through every visitor's data on each call would go through a hundred
+       times as many records for the larger; one that looks only at the data unused the longest
+       goes through the same few. */
+    const few = perCall(50)
+    expect(perCall(5_000)).toBe(few)
+    expect(few).toBeLessThanOrEqual(2)
   })
 })

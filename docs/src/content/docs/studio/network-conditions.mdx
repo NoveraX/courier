@@ -1,4 +1,4 @@
-export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would and take uploads as a strict server does, from Studio's Network tab or in code, and halt a run on its own.", mode: "both", updated: "2026-10-08" }
+export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would and take uploads as a strict server does, from Studio's Network tab or in code, and halt a run on its own.", mode: "both", updated: "2026-11-06" }
 
 A mock can answer as a slow or unreliable network would, and take uploads as a server with limits does. It adds latency to its answers, caps how fast it sends them and how fast uploads arrive, refuses an upload over a size or of a type it does not take, and fails a share of calls with any HTTP error status, a timeout, a dropped connection or an upload cut off partway. Set the conditions in Studio's **Network** tab while the mock runs, or declare them with the mock in code. Stop conditions end a run on their own once it fails too often, grows too slow, or has run long enough.
 
@@ -41,18 +41,7 @@ Beside it are four live figures, each with a sparkline of the last minute:
 
 **Error rate** sets the share of answers the mock fails, from 0 to 100%. The **Fault mix** lists the faults those failures take and weighs them against each other. A weight is relative, and the percentage beside it is its share of the failures. **Add a fault** adds any fault from the list below, at a weight of 20; the cross beside a fault takes it out of the mix, down to the last one. Moving the rate or a weight, or changing the mix, makes the run Custom. A mix changed while nothing fails is kept for when a rate is set; **Stable** clears it.
 
-| Fault | The call gets |
-| --- | --- |
-| HTTP 500, 502, 504, 507 | that status at once |
-| HTTP 503 | a 503 at once, with `Retry-After: 5` |
-| HTTP 400, 403, 404, 409, 413, 415, 422 | that status at once |
-| HTTP 401 | a 401 at once, with `WWW-Authenticate: Bearer realm="mock"` — a challenge no browser answers with a sign-in prompt |
-| HTTP 429 | a 429 at once, with `Retry-After: 5` |
-| timeout | held until it times out, then a 408 |
-| reset | its connection dropped, with no answer |
-| interrupt | its connection dropped once half its body has arrived, so an upload fails partway. A call with no body is dropped as a reset drops it. |
-
-A status is answered with `{ "error": "HTTP 413 Content Too Large (simulated)" }`: the status, its reason, and the word Studio tells an injected fault from a handler's own error by.
+The list holds HTTP 400, 401, 403, 404, 409, 413, 415, 422, 429, 500, 502, 503, 504 and 507, timeout, reset and interrupt; each fails a call as [How a fault fails a call](#how-a-fault-fails-a-call) says.
 
 ### Latency
 
@@ -81,8 +70,8 @@ The **Uploads** card sets how the mock takes request bodies. Each setting goes t
 | Setting | What it does |
 | --- | --- |
 | **Upload speed**: Unlimited, 512 Kbps, 1.5 Mbps or 10 Mbps | The mock reads every request body no faster, a form, a file or JSON alike, so the app's upload progress moves as it would on that link: a 4 MB file at 1.5 Mbps takes about 22 s. |
-| **Size limit**: None, 100 KB, 1 MB or 5 MB | An upload over it, a form or a file, is answered 413 before it is read: `{ "error": "The upload is 3.2 MB, over the 1 MB the mock takes" }`. JSON keeps the mock's own limit for JSON, and no limit here raises `maxUploadBytes`, the most the mock reads. |
-| **File types** | Types as `<input accept>` lists them: a type (`application/pdf`), a family (`image/*`) or an extension (`.csv`), separated by commas. An upload holding a file of another type is answered 415: `{ "error": "notes.txt (text/plain) is not a type the mock takes: image/*, .pdf" }`. Empty takes any type. |
+| **Size limit**: None, 100 KB, 1 MB or 5 MB | An upload over it, a form or a file, is answered 413 before it is read, as [an upload the conditions refuse](#an-upload-the-conditions-refuse) is. JSON keeps the mock's own limit for JSON, and no limit here raises `maxUploadBytes`, the most the mock reads. |
+| **File types** | Types as `<input accept>` lists them: a type (`application/pdf`), a family (`image/*`) or an extension (`.csv`), separated by commas. An upload holding a file of another type is answered 415, as [an upload the conditions refuse](#an-upload-the-conditions-refuse) is. Empty takes any type. |
 
 The operating system takes the first part of an upload into its buffers at once, a couple of megabytes over `localhost`, so the app's progress runs that far ahead of what the mock has read, and the pace shows on a larger file. The mock's own log shows what it has read: a slow upload is in the **Logs** list as it arrives, its code `↑42%`, and its request sheet says it is uploading until the body is whole.
 
@@ -134,92 +123,16 @@ The **Observed** card shows the latest 60 answers:
 
 Studio keeps what the tab sets, the route overrides switched off included, and the scenario applied, in the project's database, `.courier/studio.db`. A mock that starts again, after **Restart**, a crash, a restart of Studio, or an edit of `courier.mocks.ts` that leaves the conditions it declares as they were, gets them back. An edit that declares other conditions is the newer word: the mock starts with those, and Studio forgets what it kept for it.
 
-## In code
-
-`network` sets the conditions a mock starts with:
-
-- `defineMockServer({ network })` in `courier.mocks.ts`, for a mock Studio runs.
-- `createMockServer({ network })` from `@noverax/courier-mock/server`, for a mock server of your own.
-- `createMockClient({ network })` from `@noverax/courier-mock/testing`, for a mock client in tests.
-
-```ts
-// src/api.ts
-import { courier, defineApi, defineGroup } from "@noverax/courier/define"
-
-type User = { id: number; name: string }
-
-const { endpoint } = courier()
-const users = defineGroup({
-  prefix: "users",
-  endpoints: {
-    getAll: endpoint.get("").response<User[]>(),
-    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
-    uploadAvatar: endpoint.post("avatar").variables<FormData>().response<User>(),
-  },
-})
-export const api = defineApi({ baseURL: "https://api.example.com", groups: { users } })
-```
-
-```ts
-// courier.mocks.ts
-import { defineMocks, defineMockServer } from "@noverax/courier-mock"
-import { api } from "./src/api"
-
-export default defineMocks({
-  api: defineMockServer({
-    source: api,
-    network: {
-      latency: "4g",
-      errorRate: 0.1,
-      faultWeights: [
-        { type: "503", weight: 3 },
-        { type: "timeout", weight: 1 },
-      ],
-      timeout: 5000,
-      uploads: { bandwidth: 1500, maxBytes: 5 * 1024 * 1024 },
-      routeOverrides: [
-        { routeId: "users:getById", enabled: true, errorRate: 0.5 },
-        {
-          routeId: "users:uploadAvatar",
-          enabled: true,
-          faultTypes: ["413", "interrupt"],
-          uploads: { maxBytes: 1024 * 1024, accept: ["image/png", "image/jpeg"] },
-        },
-      ],
-      stopConditions: {
-        enabled: true,
-        errorRateThreshold: 50,
-        errorRateDurationSecs: 30,
-        p99Threshold: 0,
-        p99DurationSecs: 60,
-        maxDurationMins: 10,
-      },
-    },
-  }),
-})
-```
-
-| Field | What it sets |
-| --- | --- |
-| `latency` | The delay before each answer: a number of ms, a profile, or a range `{ min, max, jitter }` in ms. The profiles are `"3g"` (300–900 ms, ± 150), `"4g"` (100–350, ± 60), `"wifi"` (15–60, ± 15) and `"fiber"` (1–8, ± 2). |
-| `distribution` | How a delay is drawn between `min` and `max`: `"uniform"` (the default), `"normal"` or `"log-normal"`. The jitter is added either way, and no delay goes below 0. |
-| `bandwidth` | A cap in kilobits a second. An answer waits as long as its JSON body takes to send at this rate, on top of the latency. 0 or unset is unlimited. |
-| `uploads` | `{ bandwidth?, maxBytes?, accept? }`: how the mock takes request bodies. `bandwidth` is the speed in kilobits a second the mock reads every body at, a form, a file or JSON alike. `maxBytes` is the largest form or file it takes; a larger one is answered 413 before it is read, and it cannot raise `maxUploadBytes`. `accept` lists the types of file it takes, as `<input accept>` does; an upload holding another is answered 415. Each left out is none. |
-| `errorRate` | The share of calls that fail, from 0 (none) to 1 (every one). |
-| `faultTypes` | The faults a failing call takes, each as likely: any error status from `"400"` to `"599"`, `"timeout"`, `"reset"` and `"interrupt"`. Unset, 500 and 503. |
-| `faultWeights` | `{ type, weight }` pairs, the weights relative to each other. When set, they are used in place of `faultTypes`. |
-| `timeout` | How long a `timeout` fault holds a call, in ms. A mock server holds it 30 000 ms unless set, or until the client gives up. A mock client waits this long, and fails at once unless set. |
-| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes?, uploads? }` for one route, named `"group:endpoint"`. Each field an enabled override sets is used for that route in place of the global one; a field it leaves unset stays the global one, and an `errorRate` of 0 keeps the route from failing whatever the global rate. Faults it names replace the global mix, and its `uploads` take `maxBytes` and `accept`, each in place of the global one; the upload speed stays the global one. An override with `enabled: false` keeps its settings and is not used. |
-| `stopConditions` | `{ enabled, errorRateThreshold, errorRateDurationSecs, p99Threshold, p99DurationSecs, maxDurationMins }`, every field given: thresholds in percent and ms, windows in seconds, the longest run in minutes. A threshold of 0 is off. |
-
-How each fault fails a call:
+## How a fault fails a call
 
 | Fault | A mock server | A mock client |
 | --- | --- | --- |
-| A status, `"400"` to `"599"` | answers it at once, with `{ "error": "HTTP 503 Service Unavailable (simulated)" }` and the headers a server sends with it: `WWW-Authenticate: Bearer realm="mock"` with a 401, `Retry-After: 5` with a 429 or a 503. A status outside 400–599 is answered 500. | throws an `HTTPError` with that status, the same body as its data, and the same headers |
+| A status, `"400"` to `"599"` | answers it at once, with `{ "error": "HTTP 503 Service Unavailable (simulated)" }` — the status, its reason, and the word Studio tells an injected fault from a handler's own error by — and the headers a server sends with it: `WWW-Authenticate: Bearer realm="mock"` with a 401, a challenge no browser answers with a sign-in prompt, `Retry-After: 5` with a 429 or a 503. A status outside 400–599 is answered 500. | throws an `HTTPError` with that status, the same body as its data, and the same headers |
 | `"timeout"` | holds the call for `timeout`, or until the client gives up, then answers 408 | waits `timeout` if set, then throws a 408 |
 | `"reset"` | drops the connection without an answer, or answers 502 to a call made with `app.request()` | throws a 502 |
-| `"interrupt"` | drops the connection once half the call's body has arrived, or at once for a call with no body; answers 502 to a call made with `app.request()` | throws a 502 before the handler runs |
+| `"interrupt"` | drops the connection once half the call's body has arrived, so an upload fails partway, or at once for a call with no body, as a reset drops it; answers 502 to a call made with `app.request()` | throws a 502 before the handler runs |
+
+## An upload the conditions refuse
 
 An upload the conditions refuse is answered as a server with limits answers it:
 
@@ -228,22 +141,6 @@ An upload the conditions refuse is answered as a server with limits answers it:
 | over `uploads.maxBytes` | 413 before the body is read, `{ "error": "The upload is 3.2 MB, over the 1 MB the mock takes" }`, the rest of the body taken off the connection so a browser still sending it hears the answer | throws an `HTTPError` 413 with the same body, measuring a form as it would travel, encoded |
 | holding a file `uploads.accept` does not list | 415, `{ "error": "notes.txt (text/plain) is not a type the mock takes: image/*" }` | throws an `HTTPError` 415 with the same body |
 
-A mock client applies faults, latency, its distribution, route overrides and the upload size limit and types to its HTTP calls. It has no wire, so neither `bandwidth` nor `uploads.bandwidth` applies, and neither do stop conditions, which halt a mock server's runs. Its streams and channels answer as they would with no conditions set.
+## In code
 
-### Change them while the server runs
-
-A mock server from `createMockServer` holds its conditions in `server.networkState`. `mergeConfig` changes the fields it names, `setConfig` replaces them all, and `setConfig(undefined)` clears them. `onHalt` hears when a stop condition ends a run, with the reason and how long the run lasted in ms. The run's settings are cleared by then, its route overrides switched off with their settings, and its stop conditions kept.
-
-```ts
-// mock-server.ts
-import { createMockServer } from "@noverax/courier-mock/server"
-
-const server = createMockServer({ port: 7002, network: { latency: { min: 50, max: 150 } } })
-server.mock("users", "getAll").resolves([])
-server.networkState.onHalt = ({ reason, durationMs }) => {
-  console.log(`Halted after ${durationMs} ms: ${reason}`)
-}
-await server.start()
-
-server.networkState.mergeConfig({ errorRate: 0.2, faultTypes: ["503"] })
-```
+`network` sets the conditions a mock starts with — in `courier.mocks.ts`, in a mock server of your own and in a mock client for tests. Its fields, what a mock client does with them and how to change them while the server runs are on [Network Conditions in Code](/docs/studio/network-conditions-in-code).

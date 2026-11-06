@@ -21,6 +21,10 @@ export const MOVED_ANCHORS: Readonly<Record<string, Readonly<Record<string, stri
     "from-studio-to-the-code": "/docs/studio/editor-reference#from-studio-to-the-code",
     "what-stays-on-your-machine": "/docs/studio/editor-reference#what-stays-on-your-machine",
   },
+  "/docs/studio/network-conditions": {
+    "change-them-while-the-server-runs":
+      "/docs/studio/network-conditions-in-code#change-them-while-the-server-runs",
+  },
   "/docs/advanced/upload": {
     "where-the-proxy-keeps-an-upload": "/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload",
     "sending-an-upload-on-as-it-arrives":

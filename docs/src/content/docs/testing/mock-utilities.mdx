@@ -1,4 +1,4 @@
-export const metadata = { title: "Mock Utilities", description: "Mock clients, record factories, and recording a real API into fixtures, from @noverax/courier-mock.", mode: "both", updated: "2026-10-09" }
+export const metadata = { title: "Mock Utilities", description: "Mock clients, record factories, and recording a real API into fixtures, from @noverax/courier-mock.", mode: "both", updated: "2026-11-06" }
 
 ## Mock client and factories
 
@@ -26,7 +26,7 @@ const all = await client.users.getAll() // three users
 history.length // 1
 ```
 
-`createMockClient({ network })` answers as a slow or failing network would: it fails a share of calls and delays the rest, with each route's own override applied, and refuses an upload over its size limit or of a type it does not take, with the status a mock server answers it with. See [Network conditions](/docs/studio/network-conditions#in-code) for every field, and how each fault fails a call.
+`createMockClient({ network })` answers as a slow or failing network would: it fails a share of calls and delays the rest, with each route's own override applied, and refuses an upload over its size limit or of a type it does not take, with the status a mock server answers it with. See [Network Conditions in Code](/docs/studio/network-conditions-in-code) for every field, and [Network Conditions](/docs/studio/network-conditions#how-a-fault-fails-a-call) for how each fault fails a call.
 
 ### Recording a real API
 

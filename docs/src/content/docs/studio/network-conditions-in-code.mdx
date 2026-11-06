@@ -1,0 +1,101 @@
+export const metadata = { title: "Network Conditions in Code", description: "The network field of a mock server and a mock client: every field it takes, what a mock client does with them, and how to change the conditions while the server runs.", mode: "both", updated: "2026-11-06" }
+
+The conditions of [Network Conditions](/docs/studio/network-conditions), set in code.
+
+`network` sets the conditions a mock starts with:
+
+- `defineMockServer({ network })` in `courier.mocks.ts`, for a mock Studio runs.
+- `createMockServer({ network })` from `@noverax/courier-mock/server`, for a mock server of your own.
+- `createMockClient({ network })` from `@noverax/courier-mock/testing`, for a mock client in tests.
+
+```ts
+// src/api.ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+type User = { id: number; name: string }
+
+const { endpoint } = courier()
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    uploadAvatar: endpoint.post("avatar").variables<FormData>().response<User>(),
+  },
+})
+export const api = defineApi({ baseURL: "https://api.example.com", groups: { users } })
+```
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  api: defineMockServer({
+    source: api,
+    network: {
+      latency: "4g",
+      errorRate: 0.1,
+      faultWeights: [
+        { type: "503", weight: 3 },
+        { type: "timeout", weight: 1 },
+      ],
+      timeout: 5000,
+      uploads: { bandwidth: 1500, maxBytes: 5 * 1024 * 1024 },
+      routeOverrides: [
+        { routeId: "users:getById", enabled: true, errorRate: 0.5 },
+        {
+          routeId: "users:uploadAvatar",
+          enabled: true,
+          faultTypes: ["413", "interrupt"],
+          uploads: { maxBytes: 1024 * 1024, accept: ["image/png", "image/jpeg"] },
+        },
+      ],
+      stopConditions: {
+        enabled: true,
+        errorRateThreshold: 50,
+        errorRateDurationSecs: 30,
+        p99Threshold: 0,
+        p99DurationSecs: 60,
+        maxDurationMins: 10,
+      },
+    },
+  }),
+})
+```
+
+| Field | What it sets |
+| --- | --- |
+| `latency` | The delay before each answer: a number of ms, a profile, or a range `{ min, max, jitter }` in ms. The profiles are `"3g"` (300–900 ms, ± 150), `"4g"` (100–350, ± 60), `"wifi"` (15–60, ± 15) and `"fiber"` (1–8, ± 2). |
+| `distribution` | How a delay is drawn between `min` and `max`: `"uniform"` (the default), `"normal"` or `"log-normal"`. The jitter is added either way, and no delay goes below 0. |
+| `bandwidth` | The **Download speed** cap, in kilobits a second — see [Latency](/docs/studio/network-conditions#latency). 0 or unset is unlimited. |
+| `uploads` | `{ bandwidth?, maxBytes?, accept? }`: the **Uploads** card's upload speed in kilobits a second, size limit in bytes and file types, as [Uploads](/docs/studio/network-conditions#uploads) tells them; `maxBytes` cannot raise `maxUploadBytes`. Each left out is none. |
+| `errorRate` | The share of calls that fail, from 0 (none) to 1 (every one). |
+| `faultTypes` | The faults a failing call takes, each as likely: any error status from `"400"` to `"599"`, `"timeout"`, `"reset"` and `"interrupt"`. Unset, 500 and 503. |
+| `faultWeights` | `{ type, weight }` pairs, the weights relative to each other. When set, they are used in place of `faultTypes`. |
+| `timeout` | How long a `timeout` fault holds a call, in ms. A mock server holds it 30 000 ms unless set, or until the client gives up. A mock client waits this long, and fails at once unless set. |
+| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes?, uploads? }` for one route, named `"group:endpoint"`, its `uploads` taking `maxBytes` and `accept`. An enabled override's fields take the place of the global ones as [Per-route overrides](/docs/studio/network-conditions#per-route-overrides) says; one with `enabled: false` keeps its settings and is not used. |
+| `stopConditions` | `{ enabled, errorRateThreshold, errorRateDurationSecs, p99Threshold, p99DurationSecs, maxDurationMins }`, every field given: thresholds in percent and ms, windows in seconds, the longest run in minutes. A threshold of 0 is off. |
+
+How each fault fails a call, and what an upload the conditions refuse is answered, from a mock server and from a mock client, are on [Network Conditions](/docs/studio/network-conditions#how-a-fault-fails-a-call).
+
+A mock client applies faults, latency, its distribution, route overrides and the upload size limit and types to its HTTP calls. It has no wire, so neither `bandwidth` nor `uploads.bandwidth` applies, and neither do stop conditions, which halt a mock server's runs. Its streams and channels answer as they would with no conditions set.
+
+## Change them while the server runs
+
+A mock server from `createMockServer` holds its conditions in `server.networkState`. `mergeConfig` changes the fields it names, `setConfig` replaces them all, and `setConfig(undefined)` clears them. `onHalt` hears when a stop condition ends a run, with the reason and how long the run lasted in ms. The run's settings are cleared by then, its route overrides switched off with their settings, and its stop conditions kept.
+
+```ts
+// mock-server.ts
+import { createMockServer } from "@noverax/courier-mock/server"
+
+const server = createMockServer({ port: 7002, network: { latency: { min: 50, max: 150 } } })
+server.mock("users", "getAll").resolves([])
+server.networkState.onHalt = ({ reason, durationMs }) => {
+  console.log(`Halted after ${durationMs} ms: ${reason}`)
+}
+await server.start()
+
+server.networkState.mergeConfig({ errorRate: 0.2, faultTypes: ["503"] })
+```

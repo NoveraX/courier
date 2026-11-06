@@ -35,20 +35,26 @@ async function auditMarks(file) {
   return [];
 }
 
+/* The extension's snippets, asked for again until the editor has read them, as the hints are. */
 async function snippetLabels() {
   const document = await vscode.workspace.openTextDocument({
     language: "typescript",
     content: "courier-",
   });
-  const list = await vscode.commands.executeCommand(
-    "vscode.executeCompletionItemProvider",
-    document.uri,
-    new vscode.Position(0, 8),
-  );
-  return (list?.items ?? [])
-    .map((item) => (typeof item.label === "string" ? item.label : item.label.label))
-    .filter((label) => label.startsWith("courier-"))
-    .sort();
+  for (let attempt = 0; attempt < 75; attempt++) {
+    const list = await vscode.commands.executeCommand(
+      "vscode.executeCompletionItemProvider",
+      document.uri,
+      new vscode.Position(0, 8),
+    );
+    const labels = (list?.items ?? [])
+      .map((item) => (typeof item.label === "string" ? item.label : item.label.label))
+      .filter((label) => label.startsWith("courier-"))
+      .sort();
+    if (labels.length > 0) return labels;
+    await sleep(200);
+  }
+  return [];
 }
 
 async function codeFeatures(folder, file) {

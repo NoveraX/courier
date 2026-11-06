@@ -78,6 +78,6 @@ function isEntry(value: unknown): value is PlaygroundHistoryEntry {
   const status = field("status");
   return (
     ["id", "rid", "source", "method"].every((key) => typeof field(key) === "string") &&
-    (status === "pending" || status === "success" || status === "error")
+    (status === "pending" || status === "success" || status === "error" || status === "cancelled")
   );
 }

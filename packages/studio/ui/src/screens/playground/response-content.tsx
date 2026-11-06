@@ -152,12 +152,14 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
     );
   }
   if (tab === "timing") return row ? <TimingTab request={row} /> : <Waiting text={reported} />;
+  /* A cancelled call reads as cancelled, though its request got as far as an answer: the cancel won. */
+  const request = entry.status === "cancelled" ? undefined : row;
   const answer = (
     <PayloadTab
-      view={row ? responseView(row) : entryPayloadView(entry)}
+      view={request ? responseView(request) : entryPayloadView(entry)}
       mode={payload.mode}
       onMode={payload.onMode}
-      whole={row ? requestWhole(row, "response") : undefined}
+      whole={request ? requestWhole(request, "response") : undefined}
       searchLabel="Find in the answer"
     />
   );

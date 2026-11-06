@@ -7,8 +7,9 @@ const NONE: ReadonlyMap<string, string> = new Map();
 
 /**
  * The answer of a run the runtime has not reported as a request — the
- * runtime refused it, or the report is still on its way — read from what
- * the run itself received: for one that got no answer, why.
+ * runtime refused it, or the report is still on its way — or of one that
+ * was cancelled, read from what the run itself received: for one that got
+ * no answer, why.
  *
  * @param entry - The run
  * @returns What the Body tab shows
@@ -18,6 +19,13 @@ const NONE: ReadonlyMap<string, string> = new Map();
  * ```
  */
 export function entryPayloadView(entry: PlaygroundHistoryEntry): PayloadView {
+  if (entry.status === "cancelled") {
+    return {
+      empty: { title: "Cancelled", detail: "The call was cancelled before an answer came." },
+      chips: [],
+      issues: NONE,
+    };
+  }
   if (entry.status === "error" && typeof entry.response === "string") {
     return { empty: { title: "The call failed", detail: entry.response }, chips: [], issues: NONE };
   }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
 
+import { cancelledRun } from "@/features/playground/cancelled-run";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import type { FormBodyField } from "@/features/playground/form-body";
 import { describeForm, wireForm } from "@/features/playground/form-body";
@@ -29,7 +30,8 @@ export interface RunInput {
  * The Playground's primary action and what runs it: Send for a call — a
  * form's files read first — Subscribe for a stream, Unsubscribe while one
  * is open, nothing while a call is in flight; ⌘↵ or Ctrl+Enter runs it too. A call in
- * flight can be cancelled. Run as server code switches to Direct mode and
+ * flight can be cancelled: the runtime stops it, and the run stays cancelled
+ * whatever arrives after. Run as server code switches to Direct mode and
  * runs the call there at once, where server code reaches every endpoint.
  *
  * @param input - The endpoint, the editors, the mode and what sets it, the body, the run shown and what follows a send
@@ -89,7 +91,7 @@ export function usePlaygroundRun(input: RunInput): {
   const cancel = useCallback(() => {
     if (shown?.status !== "pending") return;
     cancelServerStream(shown.rid);
-    updateEntry(shown.id, { status: "error", response: "Cancelled before an answer came" });
+    updateEntry(shown.id, cancelledRun(shown, Date.now()));
   }, [shown, updateEntry]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

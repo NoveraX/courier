@@ -24,9 +24,12 @@ type PlaygroundActions = Pick<
  * stamped on the entry at send time, so the history stays decoupled from
  * any server-assigned correlation id.
  *
- * An answer for an entry cleared from the history ("Clear") changes
- * nothing: the server drains its in-flight entry via `onUiDisconnect` on
- * the next socket teardown, so dropping it here leaks no state.
+ * They change a run only while it is pending: one that ended — cancelled,
+ * or stopped from the page — is final, and an answer that arrives after it
+ * does not take its place. An answer for an entry cleared from the history
+ * ("Clear") changes nothing: the server drains its in-flight entry via
+ * `onUiDisconnect` on the next socket teardown, so dropping it here leaks
+ * no state.
  *
  * @param set - The store's `set`
  * @returns The actions
@@ -55,8 +58,8 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
     setPlaygroundActiveResponse: (entry) => set({ playgroundActiveResponse: entry }),
     clearPlaygroundHistory: () => set({ playgroundHistory: [], playgroundActiveResponse: null }),
     appendPlaygroundChunk: (rid, chunk) =>
-      set((s) => {
-        const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => {
+      set((s) =>
+        patchRun(s, rid, (entry) => {
           /* Progress replaces the last; it is not kept as part of the answer. */
           if (chunk.kind === "upload-progress") {
             const { loaded, total, percentage } = chunk;
@@ -86,17 +89,20 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
             next.streamStatus = "streaming";
           }
           return next;
-        };
-        const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h));
-        const active =
-          s.playgroundActiveResponse?.rid === rid
-            ? patch(s.playgroundActiveResponse)
-            : s.playgroundActiveResponse;
-        return { playgroundHistory: updated, playgroundActiveResponse: active };
-      }),
+        }),
+      ),
     endPlayground: (rid, summary) =>
-      set((s) => {
-        const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => {
+      set((s) =>
+        patchRun(s, rid, (entry) => {
+          /* A call cancelled before its answer came; a stream stopped from the page simply ended. */
+          if (summary.cancelled && !entry.transport) {
+            return {
+              ...entry,
+              status: "cancelled",
+              duration: summary.durationMs,
+              upload: undefined,
+            };
+          }
           // A failing http-result keeps the "error" status rather than
           // flipping to success on the terminal end event.
           const errored =
@@ -108,28 +114,31 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
             duration: summary.durationMs,
             streamStatus: entry.transport ? (errored ? "error" : "complete") : entry.streamStatus,
           };
-        };
-        const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h));
-        const active =
-          s.playgroundActiveResponse?.rid === rid
-            ? patch(s.playgroundActiveResponse)
-            : s.playgroundActiveResponse;
-        return { playgroundHistory: updated, playgroundActiveResponse: active };
-      }),
+        }),
+      ),
     errorPlayground: (rid, error) =>
-      set((s) => {
-        const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => ({
+      set((s) =>
+        patchRun(s, rid, (entry) => ({
           ...entry,
           status: "error",
           response: error.message,
           streamStatus: entry.transport ? "error" : entry.streamStatus,
-        });
-        const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h));
-        const active =
-          s.playgroundActiveResponse?.rid === rid
-            ? patch(s.playgroundActiveResponse)
-            : s.playgroundActiveResponse;
-        return { playgroundHistory: updated, playgroundActiveResponse: active };
-      }),
+        })),
+      ),
+  };
+}
+
+/* Change the run a rid names, in the history and where it is shown — while it is pending: an ended run is final. */
+function patchRun(
+  s: StudioState,
+  rid: string,
+  patch: (entry: PlaygroundHistoryEntry) => PlaygroundHistoryEntry,
+): Pick<StudioState, "playgroundHistory" | "playgroundActiveResponse"> {
+  const apply = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry =>
+    entry.rid === rid && entry.status === "pending" ? patch(entry) : entry;
+  const active = s.playgroundActiveResponse;
+  return {
+    playgroundHistory: s.playgroundHistory.map(apply),
+    playgroundActiveResponse: active ? apply(active) : active,
   };
 }

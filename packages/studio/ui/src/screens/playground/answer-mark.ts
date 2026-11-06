@@ -12,8 +12,9 @@ export interface AnswerMark {
  * The mark a run's answer carries beside the Response switch, so it is
  * seen from the request: `···` while a call is in flight, then its status
  * code — amber when the answer broke the response schema, red from 400 —
- * or `ERR` when it failed without one; for a stream, `live` while it is
- * open, `closed` once it ended and `ERR` when it failed.
+ * `ERR` when it failed without one, or `cancelled` when it was cancelled
+ * before its answer came; for a stream, `live` while it is open, `closed`
+ * once it ended and `ERR` when it failed.
  *
  * @param entry - The run shown, if any
  * @param row - The request the run made, once the runtime reported it
@@ -30,6 +31,7 @@ export function answerMark(
   if (!entry) return undefined;
   if (entry.transport) return streamMark(entry);
   if (entry.status === "pending") return { text: "···", tone: "warn" };
+  if (entry.status === "cancelled") return { text: "cancelled", tone: "subtle" };
   const code = row?.statusCode ?? entry.statusCode;
   const text = code ? String(code) : entry.status === "error" ? "ERR" : "—";
   if (row && requestStateOf(row) === "validation_error") return { text, tone: "warn" };

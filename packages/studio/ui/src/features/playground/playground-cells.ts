@@ -58,11 +58,23 @@ function reasonOf(
   return code ? httpStatusText(code) : undefined;
 }
 
+/* A call cancelled before its answer came: cancelled, whatever the request it made reports — the cancel won. */
+function cancelledCells(entry: PlaygroundHistoryEntry): StatCell[] {
+  return [
+    statusCell("aborted", "Status", "Cancelled"),
+    entry.duration === undefined
+      ? { ...DASH, label: "Duration" }
+      : { label: "Duration", value: formatDuration(entry.duration), tone: "muted", mono: true },
+    { ...DASH, label: "Size" },
+  ];
+}
+
 function httpCells(
   entry: PlaygroundHistoryEntry,
   row: RequestEntry | undefined,
   slowMs: number,
 ): StatCell[] {
+  if (entry.status === "cancelled") return cancelledCells(entry);
   const state: RequestState = row
     ? requestStateOf(row)
     : entry.status === "error"

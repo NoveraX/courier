@@ -165,6 +165,8 @@ export interface PlaygroundEndSummary {
   durationMs: number;
   /** SSE event count (responder-dispatch.ts). Undefined for HTTP/WS. */
   count?: number;
+  /** Set by Studio's router alone, on the end of a run that was cancelled. */
+  cancelled?: true;
 }
 
 export interface PlaygroundHistoryEntry {
@@ -184,7 +186,8 @@ export interface PlaygroundHistoryEntry {
   headers: string;
   mode: "direct" | "proxy";
   timestamp: number;
-  status: "pending" | "success" | "error";
+  /** Where the run stands: `pending` until it ends; then final, `cancelled` for a call cancelled before its answer came. */
+  status: "pending" | "success" | "error" | "cancelled";
   statusCode?: number | undefined;
   duration?: number | undefined;
   response?: unknown;

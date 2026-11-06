@@ -11,10 +11,14 @@ import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 function statusOf(entry: PlaygroundHistoryEntry): {
-  tone: "ok" | "err" | "warn" | "brand";
+  tone: "ok" | "err" | "warn" | "brand" | "muted";
   code: string;
+  /** What the code stands for, where it is short for it. */
+  title?: string;
 } {
   if (entry.status === "pending") return { tone: entry.transport ? "brand" : "warn", code: "···" };
+  /* As the Requests list marks the request a cancel stopped. */
+  if (entry.status === "cancelled") return { tone: "muted", code: "ABRT", title: "Cancelled" };
   const tone = entry.status === "error" ? "err" : "ok";
   if (entry.transport) return { tone, code: "—" };
   return {
@@ -104,7 +108,16 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
                     {entry.group && <span className="text-fg-subtle">{entry.group}.</span>}
                     {entry.method}
                   </span>
-                  <span className={status.tone === "err" ? "text-err" : "text-ok"}>
+                  <span
+                    title={status.title}
+                    className={
+                      status.tone === "err"
+                        ? "text-err"
+                        : status.tone === "muted"
+                          ? "text-fg-subtle"
+                          : "text-ok"
+                    }
+                  >
                     {status.code}
                   </span>
                   <span className="text-right text-fg-subtle">

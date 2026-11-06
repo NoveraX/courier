@@ -15,7 +15,7 @@ Run it in the project's folder:
   ]}
 />
 
-In a terminal it asks first, each question with the answer it takes on Enter: your API — the example, a specification to import by its URL or file, or none yet; Studio, which an import needs; the example's mock, which Studio runs; whether to offer the API's reads to [AI agents](#ai-agents), no unless you say so; and, where your framework has Courier's plugin and the project writes no routes module, where pages take their routes from. A flag answers each: `--example` or `--no-example`, `--openapi`, `--studio` or `--no-studio`, `--mocks` or `--no-mocks`, `--mcp` or `--no-mcp`, `--routes`. With `--yes`, `--dry-run` or `--json`, or without a terminal, it asks nothing, and sets up the example, Studio and its mock, without agents, the routes from the plugin.
+In a terminal it asks first, each question with the answer it takes on Enter: your API — the example, a specification to import by its URL or file, or none yet; Studio, which an import needs; the example's mock, which Studio runs; whether to offer the API's reads to [AI agents](#ai-agents), no unless you say so; whether to point your editor's agent at [the docs of the Courier you install](#docs-for-your-editors-agent), no unless you say so, where that would change anything; and, where your framework has Courier's plugin and the project writes no routes module, where pages take their routes from. A flag answers each: `--example` or `--no-example`, `--openapi`, `--studio` or `--no-studio`, `--mocks` or `--no-mocks`, `--mcp` or `--no-mcp`, `--agents-md` or `--no-agents-md`, `--routes`. With `--yes`, `--dry-run` or `--json`, or without a terminal, it asks nothing, and sets up the example, Studio and its mock, without agents or their docs, the routes from the plugin.
 
 Then it prints the plan, and asks before it changes anything:
 
@@ -114,6 +114,14 @@ npx @noverax/create-courier --mcp
 
 Writes `agents: { offer: "reads" }` into the config — every read is offered to agents, a write once you mark it `.agent()` — describes the example's reads with `.agent()`, and adds `.mcp.json`, which Claude Code reads, so your editor's agent can call your API through the same middleware as your app. An imported API's reads are offered the same way, each described by its specification's summary. In a project set up before, it adds the policy to the config you have, unless the config says already what agents may call. In a terminal, it asks, for a project you have and for one it creates; with `--yes`, or without a terminal, it leaves agents out unless `--mcp` is passed. See [What agents may call](/docs/agents/overview#what-agents-may-call).
 
+## Docs for your editor's agent
+
+```bash
+npx @noverax/create-courier --agents-md
+```
+
+Installs `@noverax/courier-docs`, the docs of the Courier you install, and writes Courier's block into `AGENTS.md`, which agents read as they start: it points your editor's agent at the docs in `node_modules/@noverax/courier-docs/docs/`, so that it writes code for the version you have rather than for the one it remembers — see [Docs for Your Agent](/docs/agents/docs). A project without `AGENTS.md` gets one with the block; one you have gets the block at its end, after an empty line; in one that holds it, the block is brought up to date between its markers, `<!-- BEGIN:courier-agent-rules -->` and `<!-- END:courier-agent-rules -->`. Nothing outside them changes, the file's line ends and BOM included. `CLAUDE.md`, which Claude Code reads in place of `AGENTS.md`, gets the line `@AGENTS.md` at its end, or is written with it; a link from it to `AGENTS.md` reads the block already. A file that is a link, larger than 1 MiB or not UTF-8, or whose markers are repeated or out of order, is left as it is, and the plan names what to add. Both files are written with the rest of the setup, and undone with it. Delete the block, markers included, and nothing writes it again unless you pass `--agents-md` once more. In a terminal it asks, where the block would change anything; with `--yes`, or without a terminal, it writes none unless `--agents-md` is passed.
+
 ## In CI and for agents
 
 ```bash
@@ -128,7 +136,7 @@ With `--json` the command asks nothing, and writes one JSON document to standard
 | `status` | `applied`, `unchanged`, `dry-run`, `refused` or `failed` |
 | `exitCode` | What the command exits with: 0, or 1 for a refusal or a failure |
 | `newProject` | The project it created, where it created one: its `name`, `framework` and how it was made |
-| `plan` | Its `title`; the `files`, each with its `path`, `state` (`create`, `same`, `courier` or `kept`) and `purpose`; the `edits`, with the `lines` each removes and adds; the `packages`; what is left to you, `manual`; what to run, `next`; what it leaves out and why, `leftOut`; what git says, `git`; and the APIs your config declares, `configured` |
+| `plan` | Its `title`; the `files`, each with its `path`, `state` (`create`, `same`, `courier` or `kept`) and `purpose`; the `edits`, with the `lines` each removes and adds; the `packages`; what is left to you, `manual`; what to run, `next`; what it leaves out and why, `leftOut`; what git says, `git`; the APIs your config declares, `configured`; and, where you asked for Courier's block, `agentRules`: `AGENTS.md` and `CLAUDE.md`, each with its `path` and `state` (`create`, `append`, `update`, `same` or `kept`) |
 | `written`, `changed` | The files it added, and the files of yours it changed |
 | `install` | Whether the install ran, and its commands: those left to you with `--no-install` |
 | `warnings` | Programs that write the types the added files read, such as `astro sync`, that failed |
@@ -150,6 +158,7 @@ With `--json` the command asks nothing, and writes one JSON document to standard
 | `--no-studio` | Leave Studio out, and with it the example's mock, which Studio runs |
 | `--no-mocks` | Leave the example's mock out. `--mocks` beside `--no-studio` or `--openapi` is refused: the mock is the example's, and Studio runs it |
 | `--mcp` | Offer the API's reads to AI agents in your editor |
+| `--agents-md` | Point your editor's agent at the docs of the Courier you install: Courier's block in `AGENTS.md`, and `@noverax/courier-docs` |
 | `--routes <mode>` | `plugin`: pages take their routes from Courier's plugin for the app's build; `file`: from `courier.routes.ts` (default: `plugin`, or `file` where the project keeps one) |
 | `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's, or the one that started the command) |
 | `--no-install` | Write the files, and name the install commands |

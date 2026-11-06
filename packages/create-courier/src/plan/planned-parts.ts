@@ -117,7 +117,8 @@ export function plannedEdits(
     const made: RecipeEdit[] = [];
     const left: ManualStep[] = [];
     for (const edit of ofFile) {
-      const changed = changeKeepingLineEnds(after, edit.change);
+      const changed =
+        edit.ownLineEnds === true ? edit.change(after) : changeKeepingLineEnds(after, edit.change);
       if (changed === undefined) left.push(edit.manual);
       else {
         after = changed;
@@ -127,11 +128,12 @@ export function plannedEdits(
     if (made.length === 0) return left;
     const purpose = made.map((edit) => edit.purpose).join("; ");
     const change = (text: string) =>
-      made.reduce<string | undefined>(
-        (changed, edit) =>
-          changed === undefined ? undefined : changeKeepingLineEnds(changed, edit.change),
-        text,
-      );
+      made.reduce<string | undefined>((changed, edit) => {
+        if (changed === undefined) return undefined;
+        return edit.ownLineEnds === true
+          ? edit.change(changed)
+          : changeKeepingLineEnds(changed, edit.change);
+      }, text);
     const state = after === before ? "same" : "edit";
     return [{ path, purpose, state, before, after, change }, ...left];
   });

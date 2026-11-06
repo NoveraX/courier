@@ -48,6 +48,7 @@ function planDocument({ title, plan, configured, git, upgrade }: PlanView): Plan
     next: plan.next,
     leftOut: plan.leftOut,
     upgrade: upgrade ?? null,
+    agentRules: plan.agentRules ?? null,
   };
 }
 

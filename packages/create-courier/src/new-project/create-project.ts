@@ -80,9 +80,11 @@ export async function createProject(root: string, run: CreateRun, io: SetupIO): 
   const name = packageNameOf(root);
   const manager = packageManager(managerName(run));
   const framework = await frameworkToCreate(run, io);
+  /* A new project has neither the docs nor AGENTS.md: the block would change it. */
   const choices = await setupChoices(run, io, {
     configured: false,
     routes: isRoutesFramework(framework.id),
+    agentRules: true,
   });
   const generator = generatorFor(framework.id, name, manager.name);
   const how = generator
@@ -120,6 +122,7 @@ export async function createProject(root: string, run: CreateRun, io: SetupIO): 
       studio: choices.studio,
       mocks: choices.mocks,
       mcp: choices.mcp,
+      "agents-md": choices.agentRules,
       routes: choices.routes,
       yes: true,
       fresh: true,

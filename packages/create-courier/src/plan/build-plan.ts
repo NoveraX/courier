@@ -1,4 +1,5 @@
 import type {
+  AgentRulesFile,
   ManualStep,
   NextStep,
   Recipe,
@@ -67,6 +68,8 @@ export interface Plan {
   readonly leftOut: readonly string[];
   /** Programs of the project's to run once the packages are installed: they write the types the added files read. */
   readonly prepare: NonNullable<Recipe["prepare"]>;
+  /** What becomes of the files of the agents' rules, where the person asked for Courier's block in AGENTS.md. */
+  readonly agentRules?: readonly AgentRulesFile[] | undefined;
 }
 
 /**
@@ -129,6 +132,7 @@ export function buildPlan(
     next: recipe.next,
     leftOut: addsExample(ctx) && !ctx.choices.studio ? [NO_MOCK] : [],
     prepare: recipe.prepare ?? [],
+    agentRules: recipe.agentRules,
   };
 }
 

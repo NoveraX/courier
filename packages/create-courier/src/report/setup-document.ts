@@ -2,7 +2,7 @@ import type { Undone } from "../apply/file-journal";
 import type { TypecheckOutcome } from "../apply/typecheck";
 import type { ChangedLine } from "../edit/line-diff";
 import type { GitState } from "../preflight/git-state";
-import type { ManualStep, NextStep } from "../recipes/recipe-types";
+import type { AgentRulesFile, ManualStep, NextStep } from "../recipes/recipe-types";
 import type { UpgradeView } from "./setup-report";
 
 /** The plan, as the JSON document gives it. */
@@ -45,6 +45,12 @@ export interface PlanDocument {
   readonly leftOut: readonly string[];
   /** What an upgrade moves: the releases, each package's range, the breaking changes it crosses; `null` for a setup. */
   readonly upgrade: UpgradeView | null;
+  /**
+   * What becomes of the files of the agents' rules — AGENTS.md, which takes
+   * Courier's block, and the file that reads it in another editor's place —
+   * each with its path and state; `null` where the block was not asked for.
+   */
+  readonly agentRules: readonly AgentRulesFile[] | null;
 }
 
 /** How a run ended, as a program reads it. */

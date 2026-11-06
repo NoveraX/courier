@@ -12,6 +12,12 @@ export interface SetupChoices {
   readonly mocks: boolean;
   /** The example API's reads offered to AI agents over MCP, and the editor's entry that starts the server. */
   readonly mcp: boolean;
+  /**
+   * Courier's block in AGENTS.md, which points the agent in the editor at
+   * the docs of the Courier the project installs, and `@noverax/courier-docs`,
+   * which holds them: written only where the person agreed.
+   */
+  readonly agentRules: boolean;
   /** An OpenAPI, Swagger or Postman specification to import in place of the example API. */
   readonly openapi?: string | undefined;
   /** The imported API's name, when it is not to be taken from its specification. */
@@ -92,6 +98,25 @@ export interface RecipeEdit {
   readonly change: (text: string) => string | undefined;
   /** What the person adds where the command cannot. */
   readonly manual: ManualStep;
+  /**
+   * Whether the change keeps the file's line ends itself, so it is given
+   * the file as it is, CRLF and all: one that changes nothing outside its
+   * own lines, such as Courier's block in AGENTS.md.
+   */
+  readonly ownLineEnds?: boolean | undefined;
+}
+
+/**
+ * What a setup does with a file of the agents' rules: AGENTS.md, which
+ * takes Courier's block, and the file another editor's agent reads in its
+ * place, which takes a line that reads AGENTS.md. `create` adds the file,
+ * `append` adds to its end, `update` brings the block up to date in place,
+ * `same` finds it as the setup writes it, and `kept` leaves it as it is,
+ * with a step left to the person that says why.
+ */
+export interface AgentRulesFile {
+  readonly path: string;
+  readonly state: "create" | "append" | "update" | "same" | "kept";
 }
 
 /** A change to one of the project's own scripts, and why it is needed. */
@@ -128,4 +153,6 @@ export interface Recipe {
    * files are checked.
    */
   readonly prepare?: ReadonlyArray<{ readonly bin: string; readonly args: readonly string[] }>;
+  /** What becomes of the files of the agents' rules, where the person asked for Courier's block. */
+  readonly agentRules?: readonly AgentRulesFile[] | undefined;
 }

@@ -26,6 +26,7 @@ const PLAN: Plan = {
   next: [{ command: "npm run dev", what: "starts the app" }],
   leftOut: [],
   prepare: [],
+  agentRules: [{ path: "AGENTS.md", state: "append" }],
 };
 
 function documentOf(report: ReturnType<typeof jsonReport>, exitCode: number): unknown {
@@ -76,6 +77,7 @@ describe("jsonReport", () => {
         next: [{ command: "npm run dev", what: "starts the app" }],
         leftOut: [],
         upgrade: null,
+        agentRules: [{ path: "AGENTS.md", state: "append" }],
       },
       notes: [],
       written: ["courier.config.ts"],

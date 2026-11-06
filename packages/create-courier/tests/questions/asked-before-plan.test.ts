@@ -20,7 +20,7 @@ function nextApp(): string {
 describe("a setup in a terminal", () => {
   it("asks every question before it shows the plan, which follows the answers, and asks last to go ahead", async () => {
     const printed: string[] = [];
-    const questions = scripted(["example", false, false, "plugin", false]);
+    const questions = scripted(["example", false, false, true, "plugin", false]);
     const report = textReport(createTerminalStyle(0, false), (lines) => {
       printed.push(...lines);
     });
@@ -31,6 +31,7 @@ describe("a setup in a terminal", () => {
       "Your API?",
       "Set Courier Studio up, to watch your API's calls?",
       "Offer the API's reads to AI agents in your editor, over MCP?",
+      "Point your editor's agent at the docs of the Courier you install, in AGENTS.md?",
       "Where do pages take their routes from?",
       "Set Courier up?",
     ]);
@@ -40,6 +41,10 @@ describe("a setup in a terminal", () => {
       "The example has no mock without Studio, which runs it: it calls your backend.",
     );
     expect(plan).toContain("src/courier/api.ts");
+    expect(plan).toMatch(
+      /\+ AGENTS\.md +Courier's block, which points your editor's agent at the docs/,
+    );
+    expect(plan).toMatch(/@noverax\/courier-docs(@\S+)?/);
     expect(plan).not.toContain("courier.mocks.ts");
     expect(plan).toContain("Nothing was changed.");
   });

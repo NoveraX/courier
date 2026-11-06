@@ -23,8 +23,9 @@ const EXAMPLES = [
     description: "Set Courier up with your API in place of the example",
   },
   {
-    command: "create-courier --yes --mcp",
-    description: "Go ahead without asking, and offer the API's reads to agents over MCP",
+    command: "create-courier --yes --mcp --agents-md",
+    description:
+      "Go ahead without asking, offer the API's reads to agents over MCP, and point them at Courier's docs",
   },
 ] as const;
 
@@ -67,6 +68,11 @@ const ARGS = {
   mcp: {
     type: "boolean",
     description: "Offer the API's reads to AI agents in your editor, over MCP",
+  },
+  "agents-md": {
+    type: "boolean",
+    description:
+      "Point your editor's agent at the docs of the Courier you install: Courier's block in AGENTS.md, and @noverax/courier-docs",
   },
   routes: {
     type: "string",

@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 
+import { agentDocsWanted, withAgentDocs } from "./agent-docs";
 import { withAgents } from "./agents";
 import { applyPlan } from "./apply/apply-plan";
 import type { CreateRun } from "./create-run";
@@ -70,6 +71,7 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
     configured: configured !== undefined,
     /* A project set up already keeps where its pages take their routes from. */
     routes: configured === undefined && routesChoice(project, framework),
+    agentRules: agentDocsWanted(project),
   });
   const ports = await portsOf(project, choices, addsMock({ choices, configured }));
   const ctx: RecipeContext = {
@@ -83,7 +85,8 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
     configured,
     routes: routesModeOf(project, framework, choices.routes),
   };
-  const plan = buildPlan(ctx, withAgents(ctx, framework.recipe(ctx)), exampleFiles(ctx, framework));
+  const recipe = withAgentDocs(ctx, withAgents(ctx, framework.recipe(ctx)));
+  const plan = buildPlan(ctx, recipe, exampleFiles(ctx, framework));
   const name = project.manifest.name ?? basename(root);
   const title = `Set Courier up in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`;
   /* A project this run created has no changes of the person's for the setup's to be mixed with. */

@@ -11,6 +11,38 @@ export interface ChoicePlace {
   readonly configured: boolean;
   /** Whether the person picks where pages take their routes from: Courier's plugin or `courier.routes.ts`, neither set up yet. */
   readonly routes: boolean;
+  /** Whether pointing the editor's agent at the docs would change anything: the project lacks them, or AGENTS.md Courier's block. */
+  readonly agentRules: boolean;
+}
+
+/** The question that asks whether to point the editor's agent at the docs, as `create-courier` and `courier-cli setup` ask it. */
+export const AGENT_RULES_QUESTION =
+  "Point your editor's agent at the docs of the Courier you install, in AGENTS.md?";
+
+/**
+ * Whether to point the editor's agent at the docs: as `--agents-md` or
+ * `--no-agents-md` says, else as the person answers — asked only where
+ * it would change anything — and no where nobody is asked: the block is
+ * written only with their consent.
+ *
+ * @param said - What the command line says
+ * @param questions - What the person answers, if anyone is asked
+ * @param wanted - Whether it would change anything
+ * @returns Whether to write the block
+ * @throws {CancelledError} When the person cancels the question
+ * @example
+ * ```ts
+ * await agentRulesAnswer(run["agents-md"], questions, agentDocsWanted(project));
+ * ```
+ */
+export async function agentRulesAnswer(
+  said: boolean | undefined,
+  questions: Questions | undefined,
+  wanted: boolean,
+): Promise<boolean> {
+  if (said !== undefined) return said;
+  if (questions === undefined || !wanted) return false;
+  return questions.confirm(AGENT_RULES_QUESTION, false);
 }
 
 type Api = Pick<SetupChoices, "example" | "openapi">;
@@ -74,13 +106,14 @@ async function routesOf(
  * before anything is changed, each with the answer it takes without one.
  * Without a terminal, with `--yes` and with `--dry-run`, nothing is
  * asked, and those answers are taken: the example, Studio and its mock,
- * no MCP server, and the plugin where there is one.
+ * no MCP server, no block in AGENTS.md, and the plugin where there is one.
  *
  * The questions, in turn: the API — the example, an import of a
  * specification, whose URL or file is checked, or none yet — then
  * Studio, which an import needs; the example's mock, where there are
- * Studio and the example; agents over MCP; and where pages take their
- * routes from, where the project has a choice.
+ * Studio and the example; agents over MCP; the docs for the editor's
+ * agent, where the block would change anything; and where pages take
+ * their routes from, where the project has a choice.
  *
  * @param run - What the command line asked for
  * @param io - What the person at the terminal answers, if anyone can
@@ -89,7 +122,7 @@ async function routesOf(
  * @throws {CancelledError} When the person cancels a question
  * @example
  * ```ts
- * const choices = await setupChoices({ studio: false }, io, { configured: false, routes: true });
+ * const choices = await setupChoices({ studio: false }, io, { configured: false, routes: true, agentRules: true });
  * ```
  */
 export async function setupChoices(
@@ -120,11 +153,13 @@ export async function setupChoices(
           "Offer the API's reads to AI agents in your editor, over MCP?",
           false,
         ));
+  const agentRules = await agentRulesAnswer(run["agents-md"], questions, place.agentRules);
   return {
     ...api,
     studio,
     mocks,
     mcp,
+    agentRules,
     name: run.name,
     routes: await routesOf(run, questions, place),
   };

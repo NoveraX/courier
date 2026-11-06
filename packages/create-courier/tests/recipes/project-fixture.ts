@@ -40,7 +40,14 @@ export function contextOf(
   return {
     project,
     manager: packageManager("npm"),
-    choices: { example: true, studio: true, mocks: true, mcp: false, ...choices },
+    choices: {
+      example: true,
+      studio: true,
+      mocks: true,
+      mcp: false,
+      agentRules: false,
+      ...choices,
+    },
     extension: importExtension(root),
     version: project.version(marker),
     ports,

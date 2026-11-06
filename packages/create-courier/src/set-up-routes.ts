@@ -75,7 +75,14 @@ export async function setUpRoutes(root: string, run: RoutesSetupRun, io: SetupIO
   const ctx: RecipeContext = {
     project,
     manager,
-    choices: { example: false, studio: false, mocks: false, mcp: false, routes: "plugin" },
+    choices: {
+      example: false,
+      studio: false,
+      mocks: false,
+      mcp: false,
+      agentRules: false,
+      routes: "plugin",
+    },
     extension: importExtension(root),
     version,
     ports: { studio: STUDIO_DEFAULT_PORT, mock: MOCK_DEFAULT_PORT },

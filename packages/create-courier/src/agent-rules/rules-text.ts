@@ -1,3 +1,5 @@
+import { appendedText, withoutBom } from "./append-text";
+
 /** The line that opens Courier's block in AGENTS.md. */
 export const AGENT_RULES_BEGIN = "<!-- BEGIN:courier-agent-rules -->";
 
@@ -19,8 +21,6 @@ export const AGENT_RULES: string = [
   "Courier keeps this block up to date while it is here, and leaves the rest of this file alone. Delete the block, markers included, and nothing writes it again.",
   AGENT_RULES_END,
 ].join("\n");
-
-const BOM = "\uFEFF";
 
 /* Where the block stands in a text, its BOM left out: nowhere, between one pair of markers, or why its markers cannot be told apart. */
 type Place =
@@ -65,11 +65,6 @@ function placeOf(text: string): Place {
   return { kind: "block", start: opening.start, end: closing.end, eol };
 }
 
-/* A text's BOM, kept apart so that it stays where it is. */
-function split(text: string): { bom: string; body: string } {
-  return text.startsWith(BOM) ? { bom: BOM, body: text.slice(1) } : { bom: "", body: text };
-}
-
 /* A block's words, its spacing aside: one a formatter wrapped, or whose line ends it changed, reads as the same. */
 function wordsOf(text: string): string {
   return text.split(/\s+/).filter(Boolean).join(" ");
@@ -78,18 +73,6 @@ function wordsOf(text: string): string {
 /* The block, its lines ended as the file's are. */
 function blockWith(eol: string): string {
   return eol === "\n" ? AGENT_RULES : AGENT_RULES.split("\n").join(eol);
-}
-
-/* The block after a text with none, an empty line between: the text's own lines ended as they were. */
-function appended(body: string): string {
-  const at = body.indexOf("\n");
-  const eol = at > 0 && body[at - 1] === "\r" ? "\r\n" : "\n";
-  if (body === "") return `${blockWith(eol)}${eol}`;
-  let breaks = 0;
-  for (let end = body.length - 1; end >= 0 && (body[end] === "\n" || body[end] === "\r"); end--)
-    if (body[end] === "\n") breaks++;
-  const gap = breaks >= 2 ? "" : breaks === 1 ? eol : `${eol}${eol}`;
-  return `${body}${gap}${blockWith(eol)}${eol}`;
 }
 
 /**
@@ -105,7 +88,7 @@ function appended(body: string): string {
  * ```
  */
 export function agentRulesProblem(text: string): string | undefined {
-  const place = placeOf(split(text).body);
+  const place = placeOf(withoutBom(text).body);
   return place.kind === "broken" ? place.why : undefined;
 }
 
@@ -123,7 +106,7 @@ export function agentRulesProblem(text: string): string | undefined {
  * ```
  */
 export function updatedAgentRules(text: string): string | null {
-  const { bom, body } = split(text);
+  const { bom, body } = withoutBom(text);
   const place = placeOf(body);
   if (place.kind !== "block") return null;
   if (wordsOf(body.slice(place.start, place.end)) === wordsOf(AGENT_RULES)) return null;
@@ -145,9 +128,9 @@ export function updatedAgentRules(text: string): string | null {
  * ```
  */
 export function withAgentRules(text: string): string | undefined {
-  const { bom, body } = split(text);
+  const { bom, body } = withoutBom(text);
   const place = placeOf(body);
   if (place.kind === "broken") return undefined;
   if (place.kind === "block") return updatedAgentRules(text) ?? text;
-  return `${bom}${appended(body)}`;
+  return `${bom}${appendedText(body, AGENT_RULES)}`;
 }

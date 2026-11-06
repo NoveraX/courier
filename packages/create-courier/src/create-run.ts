@@ -10,6 +10,8 @@ export interface CreateRun {
   studio?: boolean | undefined;
   mocks?: boolean | undefined;
   mcp?: boolean | undefined;
+  /** Courier's block in AGENTS.md and the docs it points the editor's agent at: `--no-agents-md` leaves them out without asking. */
+  "agents-md"?: boolean | undefined;
   /** Where pages take their routes from: `plugin` or `file`. */
   routes?: string | undefined;
   "package-manager"?: string | undefined;

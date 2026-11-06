@@ -1,13 +1,14 @@
 {
   "name": "@noverax/courier-docs",
   "version": "0.4.0",
-  "description": "Courier's documentation for the version a project installs, as Markdown an editor's agent reads offline: one file a page, an index of them all, and a manifest of their sections",
+  "description": "Courier's documentation for the version a project installs, as Markdown an editor's agent reads offline — one file a page, an index of them all and a manifest of their sections — and as an MCP server over stdio that searches and reads them",
   "keywords": [
     "courier",
     "docs",
     "documentation",
     "markdown",
     "offline",
+    "mcp",
     "typescript",
     "api"
   ],
@@ -33,13 +34,17 @@
   "exports": {
     "./package.json": "./package.json"
   },
+  "bin": {
+    "courier-docs": "lib/cli.js"
+  },
   "files": [
+    "lib",
     "docs",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsx scripts/bundle-docs.ts",
+    "build": "tsx scripts/bundle-docs.ts && tsdown",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

@@ -32,6 +32,24 @@ Before writing code that uses an `@noverax/*` package, read the relevant page in
 
 In a monorepo, name the `node_modules` beside the package that uses Courier.
 
+## Search and read them as tools
+
+An agent that works through tools rather than files gets the same docs from an MCP server the package runs over stdio, offline:
+
+```bash
+claude mcp add courier-docs --scope project -- npx @noverax/courier-docs mcp
+```
+
+In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp.json`, as [In Your Editor](/docs/agents/editor#add-it-to-your-editor) shows for `courier-mcp`.
+
+| Tool | What it does |
+| --- | --- |
+| `docs_search` | The parts of the docs that answer a question — a feature, an export's name, an option, an error's code — best first: each the part of a page under one heading, with the lines that match, and at most two parts of one page. `limit` takes 1 to 10, 5 by default. |
+| `docs_read` | A page as Markdown, or the part of it under one heading, by its heading's words or its anchor: the page as `docs_search` or `docs_list` names it, or as a link in another page does, `/docs/<page>#<anchor>`. A page longer than 32,000 characters comes in pieces, each saying where the next one starts. |
+| `docs_list` | Every page by section, with what it covers. |
+
+Each answer names the version the docs are for.
+
 ## Over the network
 
 An agent that fetches pages rather than reading files gets the same Markdown from this site:

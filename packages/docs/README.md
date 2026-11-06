@@ -26,6 +26,16 @@ Add to `AGENTS.md`, at your project's root:
 Before writing code that uses an `@noverax/*` package, read the relevant page in `node_modules/@noverax/courier-docs/docs/`: `index.md` lists them all, and they match the installed version.
 ```
 
+## Or serve it over MCP
+
+An agent that works through tools rather than files can search and read the same docs through an MCP server the package runs over stdio, with no network:
+
+```bash
+claude mcp add courier-docs --scope project -- npx @noverax/courier-docs mcp
+```
+
+Its tools: `docs_search` finds the parts of the docs that answer a question, `docs_read` reads a page or the part of it under one heading, and `docs_list` lists every page by section.
+
 See [Docs for Your Agent](https://courier.noverax.cloud/docs/agents/docs).
 
 ## License

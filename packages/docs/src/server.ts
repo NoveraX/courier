@@ -1,10 +1,10 @@
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { createMcpServer, type McpServer, requestStates } from "@noverax/courier-mcp/internal";
 
 import { loadDocs } from "./docs";
 import { DOCS_LIMITS } from "./limits";
+import { packageVersion } from "./package-version";
 import { docsTools } from "./tools";
 
 /** Where the package keeps its docs: beside its code, as it is installed. */
@@ -14,15 +14,6 @@ const INSTRUCTIONS =
   "Courier's documentation for the version this project installs, read from the package with no network. " +
   "Find the part of it that answers a question with docs_search, then read that page, or the part under one heading, with docs_read; " +
   "docs_list lists every page by section.";
-
-/* The version this package is released at, from its own manifest. */
-function packageVersion(): string {
-  const manifest: unknown = createRequire(import.meta.url)("../package.json");
-  if (typeof manifest === "object" && manifest !== null && "version" in manifest) {
-    if (typeof manifest.version === "string") return manifest.version;
-  }
-  return "0.0.0";
-}
 
 /**
  * The docs' MCP server: three tools that only read the docs folder — a

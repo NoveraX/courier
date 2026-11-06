@@ -38,7 +38,7 @@ const TEXT = /(\.(md|mdx|ts|tsx|mts|cts|js|jsx|mjs|cjs|json|ya?ml|toml)|Dockerfi
 const LOCKFILE = /(^|\/)package-lock\.json$/;
 
 /* A bare command: the name alone, not the start of a longer one or a path. */
-const BARE = String.raw`(courier-studio|courier-mcp|courier-server|courier-cli|courier)(?![\w@/.-])`;
+const BARE = String.raw`(courier-studio|courier-mcp|courier-server|courier-cli|courier-docs|courier)(?![\w@/.-])`;
 /* What may stand between a runner and the command: spaces, a tag of highlighted code, flags. */
 const GAP = String.raw`(?:\s|<\/?[a-zA-Z][^>]*>)+`;
 const FLAGS = String.raw`(?:(?:(?!--package\b|-p\b)--?[\w-]+(?:=\S+)?|--)${GAP})*`;

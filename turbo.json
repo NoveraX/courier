@@ -18,7 +18,7 @@
         "$TURBO_ROOT$/docs/src/site/content/**",
         "$TURBO_ROOT$/docs/src/site/site-url.ts"
       ],
-      "outputs": ["docs/**"]
+      "outputs": ["docs/**", "lib/**"]
     },
     "@noverax/courier-studio-ui#build": {
       "dependsOn": ["^build"],

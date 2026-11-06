@@ -18,6 +18,7 @@
     "paths": {
       "@noverax/courier": ["./packages/core/src/index.ts"],
       "@noverax/courier/announce": ["./packages/core/src/announce/index.ts"],
+      "@noverax/courier/client": ["./packages/core/src/client/index.ts"],
       "@noverax/courier/config": ["./packages/core/src/config/index.ts"],
       "@noverax/courier/define": ["./packages/core/src/define/index.ts"],
       "@noverax/courier/fetch": ["./packages/core/src/fetch/index.ts"],
@@ -30,6 +31,7 @@
       "@noverax/courier/webhooks": ["./packages/core/src/webhooks/index.ts"],
       "@noverax/courier/realtime": ["./packages/core/src/realtime/index.ts"],
       "@noverax/courier/routes": ["./packages/core/src/routes/index.ts"],
+      "@noverax/courier/server": ["./packages/core/src/server/index.ts"],
       "@noverax/courier/testing": ["./packages/core/src/testing/index.ts"],
       "@noverax/courier-cli/devkit": ["./packages/cli/src/devkit.ts"],
       "@noverax/courier-mcp/internal": ["./packages/mcp/src/internal.ts"],

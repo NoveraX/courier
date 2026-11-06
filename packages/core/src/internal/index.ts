@@ -41,13 +41,10 @@ export {
   getAppOriginParsed,
   NEXT_ORIGIN_ENV,
 } from "../app-origin";
-export {
-  buildClientProxy,
-  createClientRoot,
-  RUNTIME_HOOKS,
-  shapeOfRoutes,
-  shapeOfSource,
-} from "../client";
+export { buildClientProxy } from "../client/proxy";
+export { RUNTIME_HOOKS } from "../client/proxy-members";
+export { createClientRoot } from "../client/root";
+export { shapeOfRoutes, shapeOfSource } from "../client/shape";
 export { isSecretVariableName } from "../config/secret-variable-name";
 export { isDefinedApi } from "../define/api";
 export { groupOptionsOf } from "../define/group-options-of";

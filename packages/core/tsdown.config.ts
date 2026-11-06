@@ -5,6 +5,8 @@ import { serverOnlyEntries, serverOnlyImports } from "./tsdown.server-only.ts";
 
 const entry = {
   index: "src/index.ts",
+  "client/index": "src/client/index.ts",
+  "server/index": "src/server/index.ts",
   "config/index": "src/config/index.ts",
   "define/index": "src/define/index.ts",
   "middleware/index": "src/middleware/index.ts",

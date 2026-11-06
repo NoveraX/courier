@@ -53,6 +53,16 @@
       "import": "./lib/index.js",
       "default": "./lib/index.js"
     },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "import": "./lib/client/index.js",
+      "default": "./lib/client/index.js"
+    },
+    "./server": {
+      "types": "./lib/server/index.d.ts",
+      "import": "./lib/server/index.js",
+      "default": "./lib/server/index.js"
+    },
     "./config": {
       "types": "./lib/config/index.d.ts",
       "import": "./lib/config/index.js",
@@ -136,6 +146,12 @@
   },
   "typesVersions": {
     "*": {
+      "client": [
+        "./lib/client/index.d.ts"
+      ],
+      "server": [
+        "./lib/server/index.d.ts"
+      ],
       "config": [
         "./lib/config/index.d.ts"
       ],

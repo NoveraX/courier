@@ -1,4 +1,4 @@
-import type { CallOptions } from "@noverax/courier";
+import type { CallOptions } from "@noverax/courier/client";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 

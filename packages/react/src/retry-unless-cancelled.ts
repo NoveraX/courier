@@ -1,4 +1,4 @@
-import { isAbortError } from "@noverax/courier";
+import { isAbortError } from "@noverax/courier/client";
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 /**

@@ -1,6 +1,6 @@
-import type { FlatClient, MixedClient, TypedClient } from "./client";
-import { buildClientProxy } from "./client";
+import { buildClientProxy } from "./client/proxy";
 import { shapeOfSource } from "./client/shape";
+import type { FlatClient, MixedClient, TypedClient } from "./client/types";
 import type {
   AnyDefinedApi,
   DefinedApi,

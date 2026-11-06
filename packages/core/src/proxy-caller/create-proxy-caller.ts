@@ -1,6 +1,6 @@
-import type { InferClient } from "../client";
-import { buildClientProxy } from "../client";
+import { buildClientProxy } from "../client/proxy";
 import { shapeOfSource } from "../client/shape";
+import type { InferClient } from "../client/types";
 import type { RoutedApi } from "../define/exposed-api";
 import type { CourierRoutes, RouteShape } from "../define/routes";
 import { composeBackend } from "../transport/compose-backend";

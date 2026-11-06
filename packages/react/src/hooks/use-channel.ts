@@ -3,7 +3,7 @@ import {
   createLogger,
   isConfigurationError,
   RealtimeError,
-} from "@noverax/courier";
+} from "@noverax/courier/client";
 import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
 /* A namespace import, not named hooks: the package entry is reachable from
    Server Components, and Next.js refuses to build a server module that names

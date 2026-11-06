@@ -1,4 +1,4 @@
-import type { CallerDefaults } from "@noverax/courier";
+import type { CallerDefaults } from "@noverax/courier/client";
 import type { DefinedApi } from "@noverax/courier/define";
 import { getSourceName } from "@noverax/courier/define";
 import {

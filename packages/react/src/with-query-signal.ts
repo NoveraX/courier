@@ -1,4 +1,4 @@
-import type { CallOptions } from "@noverax/courier";
+import type { CallOptions } from "@noverax/courier/client";
 import { anySignal } from "@noverax/courier/internal-client";
 
 /**

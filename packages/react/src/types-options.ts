@@ -6,7 +6,7 @@
  * hooks exposed by `QueryGroupClient`.
  */
 
-import type { WithOptions } from "@noverax/courier";
+import type { WithOptions } from "@noverax/courier/client";
 import type { ConnectionStatus, SSEEvent } from "@noverax/courier/realtime";
 import type {
   InfiniteData,

@@ -1,4 +1,4 @@
-import type { ProxyCallerOptions } from "@noverax/courier";
+import type { ProxyCallerOptions } from "@noverax/courier/client";
 import type { CourierRoutes, DefinedApi, RoutedApi, RouteShape } from "@noverax/courier/define";
 import {
   assertRoutes,

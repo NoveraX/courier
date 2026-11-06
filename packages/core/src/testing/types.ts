@@ -1,4 +1,4 @@
-import type { TypedClient } from "../client";
+import type { TypedClient } from "../client/types";
 import type { EndpointNamesAt, GroupAtPath, GroupPaths } from "../define/group-path-types";
 import type { AnyEndpoint, InferResponse, InferVariables } from "../define/marker";
 import type { DefinedApi } from "../define/types";

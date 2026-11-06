@@ -5,7 +5,7 @@
  * `useChannel` (WebSocket) hooks exposed by `QueryGroupClient`.
  */
 
-import type { ConfigurationError } from "@noverax/courier";
+import type { ConfigurationError } from "@noverax/courier/client";
 import type { ConnectionStatus, RealtimeError, SSEEvent } from "@noverax/courier/realtime";
 
 import type { WithVariables } from "./types-helpers";

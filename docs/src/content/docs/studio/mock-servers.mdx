@@ -66,21 +66,13 @@ export default defineMocks({
 - `source` is the source object the mock serves. Import it from where the config does, as above, or read it from the config — `import courierConfig from "./courier.config"`, then `source: courierConfig.sources.api` — as Studio's wizard writes it. That form needs a config whose default export is `defineConfig({ sources })`: a config that exports `sources` by name only loads, but a default import of it does not type-check. In a `"type": "module"` package whose tsconfig resolves modules as Node does (`node16` or `nodenext`), import `./courier.config.js` instead; TypeScript asks for the extension there, and the wizard writes it that way. Studio loads `courier.mocks.ts` together with the config, as one module graph, so a module both import runs once, and either way the mock holds the very source object the config declares.
 - The file may also be named `courier.mocks.mts`, `.cts`, `.js`, `.mjs` or `.cjs`. Studio looks for these names in that order, in the directory that holds `courier.config`, and loads the first it finds: a `courier.mocks.ts` there hides a `courier.mocks.js` beside it. A TypeScript file loads as it is, with extensionless imports and tsconfig path aliases; nothing else needs installing.
 - `port` is held exactly: when it is taken, Studio says so rather than moving the mock. Without one, Studio assigns the key a port from `studio.mockBasePort` (7001 by default), clear of the ports the project's other mocks were given. The mock takes that port, or the first free one above it, as it starts listening: the bind itself decides, with no check made beforehand, so two Studios starting their mocks at the same moment — a monorepo's dev task — never take the same port. A port the system keeps for itself is not free either: Windows keeps blocks of them for Hyper-V, WSL and Docker, and the mock moves past them. The key is assigned another when a mock declares its port, and after Studio restarts the mock can get another too. Set `port` to keep one.
-- A QUERY is answered as the read it is, its terms read from the body: at the collection root, the records — paged as the body asks, as a GET's query string asks — and at a record's path, that record. A GET declared at the same path is still answered by its own endpoint, and a QUERY never counts as a change to the store.
-- A `.head()` or `.options()` endpoint is answered by the endpoint that declares it, a HEAD at a GET's path included. CORS answers only a browser's preflight — an OPTIONS that names the method it asks to send — and lets every verb through, QUERY among them.
-- A group inside another is answered at both groups' prefixes in turn, from a collection of its own, and mocked by its path: `mock("billing.invoices", "list")`, `endpoints: ["billing.invoices.list"]`, `seed: { "billing.invoices": 50 }`. A group without a prefix of its own is answered at the paths its endpoints declare, where its client calls them.
-- The mock answers each group at its prefix, and — for a source whose `baseURL` has a path, such as `https://api.example.com/api/v3` — under that path too, so a client pointed at the mock with only the host swapped reaches it at `/api/v3/users` as one pointed at its bare URL does at `/users`.
 - `seed` sets how many records each collection starts with: `count` for every group (20 by default), and a number under a group's name for that group alone. `autoStart` defaults to `false`. A key set to `undefined` declares no mock, so one can be switched off in place.
-- The records are generated from each endpoint's response schema, and pass it: the bounds, integer and `multipleOf` checks, string and array lengths, formats (`email`, `url`, `uuid`, ISO dates and times, and the other common ones), `regex` patterns and prefixes that a Zod (v4 or v3) or Valibot schema declares all hold, so a typed client validating the responses accepts them. Field names pick realistic values where the schema allows one. **Add record** in Studio's Store adds one more record made the same way, under an id no record of the collection has; edit its cells from there.
-- A `{+name}` parameter takes the segments its value spans — Google's `v1/{+name}` answers `/v1/projects/p/operations/o` — after the routes that take a single segment, and after a route whose path goes on past a `{+name}` of its own, so Google's list `v2/{+parent}/services` answers before its get `v2/{+name}`, whichever is declared first. A `{name}` that text follows takes its part of the segment. A stream's and a channel's routes are tried in the same order as an HTTP endpoint's, text before a parameter and a parameter before a `{+name}`, whatever order declares them.
-- An endpoint whose path fixes a query value — OpenAI's specification writes `/responses?beta=true` beside `/responses` — answers a request at its path that carries the value, and its twin without the query answers the rest, each with its own schema; such an endpoint is not one of its collection's list, get or create. A stream or a channel whose path writes a query is answered the same way, at the path a direct client opens it at.
-- Each running mock is a process of its own that Studio starts: it loads the mocks file with Studio's loader, reusing the transforms Studio keeps, and serves that one mock on the port Studio chose.
-- A mock that fails — a definition Studio cannot read, a missing package, a taken port, a crash — is reported in Studio's terminal, and its status in the Mocks view gives the reason on hover or keyboard focus. A running mock whose edited definition cannot be read keeps serving the last one that could, and says so the same way. The mock's own request log appears in Studio's terminal too; `log: "silent"` turns it off.
-- A `courier.mocks.ts` that does not load — a syntax error, an import that cannot be resolved, no default export — leaves the config and its sources working, and the mocks keep serving the definitions that loaded last. Studio's terminal logs why, and a banner above the Mocks view says so until the file loads again.
 - `overrides` and `scenarios` are checked against `source`: `mock` takes the source's group and endpoint names and each endpoint's response type. Write a scenario with `defineScenario<typeof api>(...)` to have it checked the same way; one without the type argument fits every mock. An endpoint declared outside any group is mocked under the collection its path starts with, `mock("users", "listUsers")`; the types cannot check that name, so a mock under another collection is refused with a `MockTargetError` that names the right one. `scenarios` is an object keyed by each scenario's name, `{ empty: defineScenario("empty", …) }`, which is how Studio and the admin API name them; an array is refused with a `ScenarioConfigError` that spells the object out.
 - Four scenarios come with every mock, beside yours: `happy-path` puts nothing on top, so every route answers as declared, from its schema or its override; `empty` answers every list with no records; `server-error` fails every endpoint with a 500, 503 or 502; `slow-network` slows every read by 300–900 ms, with jitter. A mock starts on `happy-path`, so switching back to it turns any other off. One scenario is in force at a time: Studio's Scenarios tab switches them, and so does `POST /__admin/scenarios/<name>` on the mock.
 - Editing `courier.mocks.ts`, or a module it imports, restarts a running mock whose declaration changed, or something that declaration uses — a declaration beside it, an import and every module that import reaches, a statement of the file that declares nothing. The other mocks keep running, with their records: adding a mock does not restart the ones already running. A mocks file whose mocks Studio cannot tell apart — its keys spread in or computed, or a CommonJS file — restarts every running mock on each edit. `autoStart` applies when Studio first reads the definition, or when an edit turns it on — not again after you stop the mock.
 - A mock keeps its records in the project, in `.courier/mocks/` — one SQLite database per mock, saved shortly after each request and when the mock stops, and read when it starts — so what an app created is still there after the mock restarts, an edit that changes it included, and after Studio restarts. Nothing is set up by hand: the database and its schema are created on the first start, a database from an earlier Courier is brought up to date as it opens, and records are kept as JSON documents, so an API whose shapes change needs no migration. A save writes, in one transaction, only the records that changed. A database that cannot be read is kept beside the new one as `<name>.unreadable-<time>`. A collection the database holds nothing for starts from its seeds, and one the mock no longer serves is dropped. **Reset store** empties the store and seeds it again, and that is kept too. `persist: false` starts the mock from its seeds each time. The database is Node's built-in SQLite, in Node 22.13 and later; elsewhere a mock keeps its records only while it runs, and says so.
+
+Which route answers a request, what a mock's records are made from, and how mocks run and fail are on [How a Mock Answers](/docs/studio/mock-answers).
 
 ### Mock only some endpoints, or answer with recordings
 
@@ -129,49 +121,7 @@ On `/api/ws`, and on a channel's own path where a direct caller connects, a subs
 
 ### Uploads and large bodies
 
-A mock reads a body as a Courier server does, at every path it serves:
-
-- JSON: `application/json` or any `+json` type. A body sent with no type, or as plain text, is read as JSON when it is JSON, as `fetch` sends a JSON string it is given no type for.
-- A form, `multipart/form-data` or URL-encoded: its fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. The handler's `ctx.variables` is typed so — `MockFormFields`, from `@noverax/courier-mock/testing` — and a mock client given a form in a test, URL-encoded too, hands it over the same way, so one handler serves both.
-- A record that holds a file, as a proxy client sends one to `/api/request`: a record upload, `multipart/vnd.courier.variables` — see [File Upload](/docs/advanced/upload#a-file-among-the-variables). It is read as a Courier server reads one, to the same limits, and handed to the handler as the form a direct call sends for that record, so a handler reads the same fields and files whichever way the call came.
-- A file sent as the whole body, as a direct call made with a `Blob`, an `ArrayBuffer` or a typed array sends it: the handler gets a `Blob` of its type. A path that gives values of its own (`PUT /files/:id`) is refused such a body with 400, since raw bytes have no fields to hold them; send the file in a form there. The proxy route takes JSON, a form or a record upload only, as a Courier proxy does.
-
-A file's name is kept as it was sent, `../` and all: the mock writes no file. A generated create, update or replace keeps each file in its record as its name, type and size. The mock reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
-
-```ts
-// courier.mocks.ts
-import { courier, defineApi, defineGroup } from "@noverax/courier/define"
-import { defineMocks, defineMockServer } from "@noverax/courier-mock"
-
-const { endpoint } = courier()
-type Stored = { name: string; size: number }
-const api = defineApi({
-  baseURL: "https://api.example.com",
-  groups: {
-    files: defineGroup({
-      prefix: "files",
-      endpoints: { upload: endpoint.post("").variables<FormData>().response<Stored>() },
-    }),
-  },
-})
-
-export default defineMocks({
-  api: defineMockServer({
-    source: api,
-    maxUploadBytes: 50 * 1024 * 1024,
-    overrides: (mock) => {
-      mock("files", "upload").returns(({ variables }) => {
-        const file = variables.file
-        return file instanceof File ? { name: file.name, size: file.size } : { name: "", size: 0 }
-      })
-    },
-  }),
-})
-```
-
-A body over its limit is answered with 413 before it is all read, and the rest is taken off the connection, so a browser still sending it hears the answer. A form is parsed as it arrives by the parser a Courier server uses: its text fields together are held to `maxBodyBytes` and its parts to 1000, past either it is answered 413, and one that does not parse — a header named twice, a line that ends in a bare line feed, a part sent in `base64` — is answered 400, and so is a body whose client stopped sending it. A body that ends short of the length it declared is answered 413, as a Courier server behind a framework that cut it short answers it, a compressed one 415, and one whose next piece is more than 30 seconds coming 408. Each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size; the admin API's history shows it so too.
-
-To see how an app takes uploads that go wrong — a slow link, a file too large, a type the server does not take, a connection lost partway, any error status — give the mock upload conditions and faults: see [Uploads](/docs/studio/network-conditions#uploads).
+A mock reads a form, a record that holds a file and a file sent as the whole body, up to 1 MB of JSON and 10 MB of form or upload as a Courier server does, and answers a body past its limit with 413: see [Uploads and large bodies](/docs/studio/mock-answers#uploads-and-large-bodies).
 
 ### Slow and failing answers
 
@@ -197,36 +147,4 @@ defineMockServer({ source: api, idempotency: false }) // runs every write, keyed
 
 ## Add mocks from Studio
 
-**Generate mocks** in the Mocks view opens a wizard: pick the sources to mock — a source a mock already serves says which — set each mock's key, its port — assigned by Studio or fixed — its records per collection, whether it starts with Studio, which endpoints it answers — every one, or those ticked, the rest going to the source's own server — and whether its data is generated or recorded, then review. Studio shows the exact change to `courier.mocks.ts` as a diff, with what the diff does not show — that it creates the file, which running mocks it restarts, that a port is taken or assigned — and writes it on one click. It creates `courier.mocks.ts` when there is none (`courier.mocks.mts` beside a `courier.config.mts`), formatted as the project formats its code — with its Biome, ESLint and Prettier, as [the files of an import](/docs/studio/import-api#how-studio-formats-the-files) are — and changes an existing file only by inserting text, in the file's own style: the new entries in the object `defineMocks` takes, and the imports they need. It imports the config by its default export — or, for a config of named exports alone, as a namespace (`import * as courierConfig`) — and imports a `courier.config.ts` the way the project resolves modules: as `./courier.config.js` when the tsconfig, or a project it lists under `references`, resolves them as Node does (`node16` or `nodenext`) in a `"type": "module"` package, or when the config's or the mocks file's own relative imports end in `.js` or `.mjs`, and as `./courier.config` otherwise. A key another mock has, in any letter case, a port that is Studio's own or that another mock declares, or a source the config does not declare is marked on its field instead. A port Studio assigned to another mock may be taken: the review warns that the other mock moves to another port. **Generate mocks** is turned off, and says why, while Studio's first load of `courier.config` runs, while the config does not load, and while it is missing. During a later reload it stays on: the wizard waits for the reload before it plans the change, and answers `STUDIO_BUSY` when the reload outlasts that wait.
-
-Studio then loads the edited files and runs them only if they are the edit it meant: the mocks file loads, each new mock is a `defineMockServer()` definition serving the config's source, no mock declared before is gone, and the config's sources are unchanged. Otherwise it puts the file back, or removes the file it created, keeps running what it ran, and shows why, with the lines to add by hand once the cause is fixed. If the file was saved in the meantime, Studio keeps that save, and lists the lines it added for you to remove; so it does when it cannot put the file back. A save between the review and the click is caught too: Studio shows the change again, planned against the file as it stands.
-
-When Studio will not edit the file itself, it shows the lines to add by hand — or the whole file to create — with the reason. For the first five reasons below, the wizard plans the change again by itself when the project changes, or on **Check again**.
-
-| Code | Studio says |
-|---|---|
-| `STUDIO_STARTING` | Studio is still loading courier.config; try again in a moment. |
-| `STUDIO_BUSY` | Studio is still loading courier.config; try again in a moment. On the click, once it has waited 5 s longer than one load may take: Studio is still loading courier.config after *25 s*, so it did not change anything. Try again once it has loaded. |
-| `CONFIG_LOAD_FAILING` | courier.config does not load right now (*error*). Fix that first; Studio adds mocks only beside a config it can load. |
-| `MOCKS_LOAD_FAILING` | *courier.mocks.ts* does not load right now (*error*). Fix that first. |
-| `MOCKS_CHANGED_SINCE_LOAD` | *courier.mocks.ts* changed since Studio loaded it. Studio plans the edit once it has reloaded. |
-| `NO_CONFIG` | There is no courier.config in the project. Declare your sources there first. |
-| `CONFIG_SHADOWED` | *courier.config.js* sits beside *courier.config.ts*, so the import of "*./courier.config*" in *courier.mocks.ts* would load *courier.config.js*, not *courier.config.ts*, which Studio loads. Delete or move *courier.config.js* — most likely compiled output — then ask again. |
-| `MOCKS_JAVASCRIPT` | *courier.mocks.js* is JavaScript. Studio writes ES imports named as TypeScript resolves them, which a CommonJS file cannot take and Node does not always resolve, so it edits TypeScript mocks files only. |
-| `MOCKS_IS_LINK` | *courier.mocks.ts* is a symbolic link. Studio saves an edit by replacing the file, which would replace the link with a copy, so Studio edits only a regular file. |
-| `MOCKS_NOT_REGULAR` | *courier.mocks.ts* is a directory, so Studio cannot edit it as a mocks file. |
-| `MOCKS_HARD_LINKED` | *courier.mocks.ts* has *2* hard links. Studio saves an edit by replacing the file, which would part it from its other names, so it leaves the file to you. |
-| `MOCKS_NOT_OWNED` | *courier.mocks.ts* belongs to user *501*, but Studio runs as user *502*. An edited file would belong to user *502*, so Studio leaves it to its owner. |
-| `MOCKS_NOT_WRITABLE` | Studio may not write *courier.mocks.ts* (*EACCES*). Studio does not edit a file that is read-only to it. |
-| `MOCKS_TOO_LARGE` | *courier.mocks.ts* is *n* bytes, more than the 1048576 bytes (1 MiB) Studio edits. |
-| `MOCKS_GENERATED` | Line *n* of *courier.mocks.ts* marks the file as generated, so an edit would be lost when it is generated again. Change what generates it instead. (`@generated` or `DO NOT EDIT` in its first five lines.) |
-| `NOT_UTF8` | *courier.mocks.ts* is not valid UTF-8 text. Studio edits only text it can read in full, so it leaves this file as it is. |
-| `PARSE_ERROR` | *courier.mocks.ts* does not parse: *problem* |
-| `MOCKS_COMMONJS` | *courier.mocks.ts* exports with *module.exports* (line *n*); Studio edits only a mocks file that is an ES module. |
-| `MOCKS_NOT_LITERAL` | *courier.mocks.ts* does not export an object literal Studio can add to. Or it names what the file exports instead: the result of another call than `defineMocks`, more than one default export, a type, a variable not declared with `const`, or a getter, setter or method among the mocks. |
-| `MOCKS_KEYS_HIDDEN` | *courier.mocks.ts* (line *n*) spreads another object into the mocks, so Studio cannot see every key. Or a computed key, `__proto__`, or keys declared outside the object Studio would add to. |
-| `IMPORT_NAME_TAKEN` | *courier.mocks.ts* already declares defineMockServer on line *n*, so Studio cannot import defineMockServer from @noverax/courier-mock under that name. |
-| `MOCK_PACKAGE_UNLOADABLE` | Studio could not load @noverax/courier-mock in this project: *reason*. Install it with *npm install --save-dev @noverax/courier-mock hono @hono/node-server*, then ask again. (The command follows the project's lockfile.) |
-| `WRITE_FAILED` | Studio could not write *courier.mocks.ts* (*error*). |
-| `INTERNAL_PLAN_REJECTED` | Studio could not verify its edit of *courier.mocks.ts* (*problem*), so it changed nothing. |
-| `NOT_LOCAL_PEER` | Studio edits project files only for a browser on this machine. Add the mocks to your mocks file by hand, or open Studio on the machine it runs on. |
+**Generate mocks** in the Mocks view opens a wizard: pick the sources, the endpoints and the data to mock, and Studio shows the change to `courier.mocks.ts` as a diff and makes it — or, where it will not edit the file, shows the lines to add by hand. See [Add Mocks from Studio](/docs/studio/add-mocks).

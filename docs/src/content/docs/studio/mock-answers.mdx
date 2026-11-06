@@ -1,0 +1,68 @@
+export const metadata = { title: "How a Mock Answers", description: "The rules a mock server goes by beyond its declaration: which route answers a request — QUERY, HEAD and OPTIONS, nested groups, a baseURL's path, {+name} and a path that fixes a query — what its records are made from, how mocks run and fail, and what an upload reaches.", mode: "both", updated: "2026-11-06" }
+
+A mock server answers as its source declares; these are the rules it goes by beyond that. Declaring one is on [Mock Servers](/docs/studio/mock-servers).
+
+## Which route answers a request
+
+- A QUERY is answered as the read it is, its terms read from the body: at the collection root, the records — paged as the body asks, as a GET's query string asks — and at a record's path, that record. A GET declared at the same path is still answered by its own endpoint, and a QUERY never counts as a change to the store.
+- A `.head()` or `.options()` endpoint is answered by the endpoint that declares it, a HEAD at a GET's path included. CORS answers only a browser's preflight — an OPTIONS that names the method it asks to send — and lets every verb through, QUERY among them.
+- A group inside another is answered at both groups' prefixes in turn, from a collection of its own, and mocked by its path: `mock("billing.invoices", "list")`, `endpoints: ["billing.invoices.list"]`, `seed: { "billing.invoices": 50 }`. A group without a prefix of its own is answered at the paths its endpoints declare, where its client calls them.
+- The mock answers each group at its prefix, and — for a source whose `baseURL` has a path, such as `https://api.example.com/api/v3` — under that path too, so a client pointed at the mock with only the host swapped reaches it at `/api/v3/users` as one pointed at its bare URL does at `/users`.
+- A `{+name}` parameter takes the segments its value spans — Google's `v1/{+name}` answers `/v1/projects/p/operations/o` — after the routes that take a single segment, and after a route whose path goes on past a `{+name}` of its own, so Google's list `v2/{+parent}/services` answers before its get `v2/{+name}`, whichever is declared first. A `{name}` that text follows takes its part of the segment. A stream's and a channel's routes are tried in the same order as an HTTP endpoint's, text before a parameter and a parameter before a `{+name}`, whatever order declares them.
+- An endpoint whose path fixes a query value — OpenAI's specification writes `/responses?beta=true` beside `/responses` — answers a request at its path that carries the value, and its twin without the query answers the rest, each with its own schema; such an endpoint is not one of its collection's list, get or create. A stream or a channel whose path writes a query is answered the same way, at the path a direct client opens it at.
+
+## The records it answers with
+
+- The records are generated from each endpoint's response schema, and pass it: the bounds, integer and `multipleOf` checks, string and array lengths, formats (`email`, `url`, `uuid`, ISO dates and times, and the other common ones), `regex` patterns and prefixes that a Zod (v4 or v3) or Valibot schema declares all hold, so a typed client validating the responses accepts them. Field names pick realistic values where the schema allows one. **Add record** in Studio's Store adds one more record made the same way, under an id no record of the collection has; edit its cells from there.
+
+## How mocks run, and fail
+
+- Each running mock is a process of its own that Studio starts: it loads the mocks file with Studio's loader, reusing the transforms Studio keeps, and serves that one mock on the port Studio chose.
+- A mock that fails — a definition Studio cannot read, a missing package, a taken port, a crash — is reported in Studio's terminal, and its status in the Mocks view gives the reason on hover or keyboard focus. A running mock whose edited definition cannot be read keeps serving the last one that could, and says so the same way. The mock's own request log appears in Studio's terminal too; `log: "silent"` turns it off.
+- A `courier.mocks.ts` that does not load — a syntax error, an import that cannot be resolved, no default export — leaves the config and its sources working, and the mocks keep serving the definitions that loaded last. Studio's terminal logs why, and a banner above the Mocks view says so until the file loads again.
+
+## Uploads and large bodies
+
+A mock reads a body as a Courier server does, at every path it serves:
+
+- JSON: `application/json` or any `+json` type. A body sent with no type, or as plain text, is read as JSON when it is JSON, as `fetch` sends a JSON string it is given no type for.
+- A form, `multipart/form-data` or URL-encoded: its fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. The handler's `ctx.variables` is typed so — `MockFormFields`, from `@noverax/courier-mock/testing` — and a mock client given a form in a test, URL-encoded too, hands it over the same way, so one handler serves both.
+- A record that holds a file, as a proxy client sends one to `/api/request`: a record upload, `multipart/vnd.courier.variables` — see [File Upload](/docs/advanced/upload#a-file-among-the-variables). It is read as a Courier server reads one, to the same limits, and handed to the handler as the form a direct call sends for that record, so a handler reads the same fields and files whichever way the call came.
+- A file sent as the whole body, as a direct call made with a `Blob`, an `ArrayBuffer` or a typed array sends it: the handler gets a `Blob` of its type. A path that gives values of its own (`PUT /files/:id`) is refused such a body with 400, since raw bytes have no fields to hold them; send the file in a form there. The proxy route takes JSON, a form or a record upload only, as a Courier proxy does.
+
+A file's name is kept as it was sent, `../` and all: the mock writes no file. A generated create, update or replace keeps each file in its record as its name, type and size. The mock reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
+
+```ts
+// courier.mocks.ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+
+const { endpoint } = courier()
+type Stored = { name: string; size: number }
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  groups: {
+    files: defineGroup({
+      prefix: "files",
+      endpoints: { upload: endpoint.post("").variables<FormData>().response<Stored>() },
+    }),
+  },
+})
+
+export default defineMocks({
+  api: defineMockServer({
+    source: api,
+    maxUploadBytes: 50 * 1024 * 1024,
+    overrides: (mock) => {
+      mock("files", "upload").returns(({ variables }) => {
+        const file = variables.file
+        return file instanceof File ? { name: file.name, size: file.size } : { name: "", size: 0 }
+      })
+    },
+  }),
+})
+```
+
+A body over its limit is answered with 413 before it is all read, and the rest is taken off the connection, so a browser still sending it hears the answer. A form is parsed as it arrives by the parser a Courier server uses: its text fields together are held to `maxBodyBytes` and its parts to 1000, past either it is answered 413, and one that does not parse — a header named twice, a line that ends in a bare line feed, a part sent in `base64` — is answered 400, and so is a body whose client stopped sending it. A body that ends short of the length it declared is answered 413, as a Courier server behind a framework that cut it short answers it, a compressed one 415, and one whose next piece is more than 30 seconds coming 408. Each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size; the admin API's history shows it so too.
+
+To see how an app takes uploads that go wrong — a slow link, a file too large, a type the server does not take, a connection lost partway, any error status — give the mock upload conditions and faults: see [Uploads](/docs/studio/network-conditions#uploads).

@@ -1,8 +1,8 @@
 import { assertCancelPrevious } from "../define/assert-cancel-previous";
 import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { servesOneUser } from "../utils/serves-one-user";
+import { assertJsonValue } from "../utils/variables-encoding";
 import { assertCarriable } from "./assert-carriable";
-import { assertJsonVariables } from "./assert-json-variables";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
 import { inProcessRoute } from "./in-process";
 import { buildPostPayload } from "./post-payload";
@@ -57,7 +57,9 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       kind: ProxyEndpointKind | undefined,
     ): Promise<unknown> {
       assertCarriable(variables);
-      if (!isFormData(variables)) assertJsonVariables(variables);
+      if (!isFormData(variables)) {
+        assertJsonValue(variables, "variables", "a proxy call carries a file in a FormData");
+      }
       const { group, method } = parseEndpointKey(endpoint);
       /* Found before the call first waits, as some frameworks know the
          request being served only until then. What finding it fails with —

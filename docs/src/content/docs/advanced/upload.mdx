@@ -1,4 +1,4 @@
-export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "File Upload", description: "Upload files with FormData and real-time progress tracking via XHR.", mode: "both", updated: "2026-11-06" }
 
 ## Overview
 
@@ -69,6 +69,45 @@ const users = defineGroup({
   },
 })
 ```
+
+## A file among the variables
+
+A record of variables whose field holds a `File`, a `Blob` or bytes is sent as a multipart form, so an endpoint can name its fields and their types instead of taking a `FormData`:
+
+```ts title="api/books.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+const books = defineGroup({
+  prefix: "books",
+  endpoints: {
+    setCover: endpoint
+      .post(":bookId/cover")
+      .variables<{ bookId: string; title: string; cover: File }>()
+      .response<{ url: string }>(),
+  },
+})
+
+// caller.books.setCover({ bookId: "b7", title: "Dune", cover })
+// → POST /books/b7/cover, a form: the field title=Dune and the file cover
+```
+
+The path's parameters are filled from the record and left out of the form, as they are from a `FormData`'s fields. Each field is written as OpenAPI writes `multipart/form-data` by default: a string as a field; a number, a boolean or a date as a field of its text; an object as a field of its JSON; a `Blob` or a `File` as a file, with the `File`'s name and type; bytes as a file of their own; a list as a part for each item. A field that is `undefined` or `null` is left out. A record that holds no file goes as JSON. A source's `bodySerializer` writes the JSON body, so a record that holds a file goes as a form whatever it is.
+
+What no form of the request carries is refused before anything is sent, with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE` and whose message names where the value sits, not what it holds:
+
+| Variables | Why they are refused |
+|---|---|
+| `{ meta: { avatar: file } }` | a form sends an object as JSON, which keeps no file: give the file a field of its own |
+| `{ body: stream }` | a form's part is no stream: send the stream as the whole body |
+| `[file]` | a list has no field names: send an object |
+| `{ tags: new Set(…) }`, `{ seen: new Map(…) }` | JSON writes either as `{}`, in a body or in an address |
+| a file in the variables of a `get`, `head`, `options` or `del` | those send their variables in the address, which holds text |
+
+A read sends a `FormData`'s text fields in its address, as a browser sends a form whose method is GET; a file in it is refused the same way.
+
+A proxy call carries a file in a `FormData`: a record that holds one is refused there with the same code — see [Binary data outside FormData](#binary-data-outside-formdata).
 
 ## Raw binary bodies
 
@@ -260,7 +299,7 @@ Because the endpoint is in the URL, the proxy knows which call an upload is for 
 
 ## Binary data outside FormData <ModeBadge mode="proxy" />
 
-Variables other than a `FormData` travel to the proxy as JSON, which has no binary type: a `Blob`, `File`, `ArrayBuffer`, typed array or `ReadableStream` would arrive as `{}`. A proxy call whose variables hold one anywhere is therefore refused before it is sent, with a `ConfigurationError` whose `code` is `PROXY_VARIABLE_NOT_SERIALIZABLE` and whose message names the value. Send the file inside a `FormData`; a direct call from the server carries any body as it is.
+Variables other than a `FormData` travel to the proxy as JSON, which has no binary type: a `Blob`, `File`, `ArrayBuffer`, typed array or `ReadableStream` would arrive as `{}`. A proxy call whose variables hold one anywhere is therefore refused before it is sent, with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE` and whose message names where it sits. Send the file inside a `FormData`; a direct call from the server carries any body as it is.
 
 ```typescript
 // Refused in proxy mode: the Blob would reach the server as {}

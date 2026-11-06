@@ -148,11 +148,13 @@ export type ConfigurationErrorCode =
    */
   | "DOTTED_NAME"
   /**
-   * A proxy call's variables hold binary data — a Blob, an ArrayBuffer or a
-   * typed array — which JSON cannot carry to the proxy. It belongs in a
-   * FormData.
+   * A call's variables hold a value no request carries, named by where it
+   * sits: a `Set` or a `Map`, which JSON writes as `{}`; a file in a request
+   * that sends its variables in its address; a file deeper than a field of
+   * the variables or an item of a list there, which a form sends as JSON; a
+   * stream inside a record; binary data in a list.
    */
-  | "PROXY_VARIABLE_NOT_SERIALIZABLE"
+  | "VARIABLE_NOT_ENCODABLE"
   /** A client built from routes was asked for an endpoint they do not name, which the proxy refuses. */
   | "ENDPOINT_NOT_IN_ROUTES"
   /**

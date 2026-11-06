@@ -1,6 +1,6 @@
-export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, and the kind of a .via() endpoint.", updated: "2026-11-06" }
+export const metadata = { title: "Upgrading from 0.4", description: "What changed since 0.4 and what to write in its place: call errors and cancellations, retries, headers, realtime and its protocol, request bodies and uploads, variables, and the kind of a .via() endpoint.", updated: "2026-11-06" }
 
-This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, and whether an endpoint addressed with `.via()` reads or writes. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
+This release changes how a call fails, what a retry policy repeats, which headers a request carries, how realtime connects, how the proxy reads a request body, how variables are written into a request, and whether an endpoint addressed with `.via()` reads or writes. Each row pairs what 0.4 did, or what code written for it says, with what holds now. The pages each section links to describe the current API alone.
 
 ## Call Errors
 
@@ -131,6 +131,18 @@ The proxy reads a request body as it arrives, holds it to the limits `createHand
 | Any number of uploads kept at once | they share one room, 64 MB in memory (`totalUploadMemoryBytes`) and 1 GB on disk (`totalUploadDiskBytes`); past it an upload is answered `503` with `Retry-After` and `UPLOAD_CAPACITY_REACHED` |
 | A redirect from the upstream followed by an upload or a stream body under Node 22 and 24 | the call fails as a network error: they are sent with `redirect: "error"`, so fetch keeps no copy of them; a `redirect` the caller sets is kept |
 | The mock reading a body by itself | the server's own stream and parser, to the same limits |
+
+## Variables
+
+A call's variables are written into its request by one set of rules, in a direct call and on the server behind the proxy alike — see [A file among the variables](/docs/advanced/upload#a-file-among-the-variables).
+
+| 0.4 | Now |
+|---|---|
+| A direct call's record whose field held a `Blob`, a `File` or bytes, sent as JSON: `{"file":{}}` | sent as a multipart form, each field a part |
+| A `Set` or a `Map` in the variables, sent as `{}` | `ConfigurationError` `VARIABLE_NOT_ENCODABLE`, naming where it sits, before anything is sent |
+| A file in a read's variables, sent in its address as `{}` | `VARIABLE_NOT_ENCODABLE` |
+| A read's `FormData`, its fields left out of its address | its text fields sent in the address; a file in it is `VARIABLE_NOT_ENCODABLE` |
+| `error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE"` | `error.code === "VARIABLE_NOT_ENCODABLE"`, from a direct call and from a proxy call alike |
 
 ## Endpoints Addressed with .via()
 

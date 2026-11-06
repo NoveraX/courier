@@ -8,11 +8,14 @@
  * the call.
  */
 
+import { ADDRESS_HOLDS_TEXT, assertJsonValue } from "./variables-encoding";
+
 /**
  * Query entries for a set of variables.
  *
  * @param variables - Values to write; `undefined` and `null` are left out
  * @returns Key/value pairs in order, a key repeated for each list item
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a file, a `Set` or a `Map`, named by where it sits
  *
  * @example
  * ```ts
@@ -22,12 +25,16 @@
 export function toQueryEntries(variables: Record<string, unknown>): [string, string][] {
   const entries: [string, string][] = [];
   for (const [key, value] of Object.entries(variables)) {
+    const at = `variables.${key}`;
     if (Array.isArray(value)) {
-      for (const item of value) pushScalar(entries, key, item);
+      for (const [index, item] of value.entries())
+        pushScalar(entries, key, item, `${at}[${index}]`);
     } else if (isPlainObject(value)) {
-      for (const [field, inner] of Object.entries(value)) pushScalar(entries, field, inner);
+      for (const [field, inner] of Object.entries(value)) {
+        pushScalar(entries, field, inner, `${at}.${field}`);
+      }
     } else {
-      pushScalar(entries, key, value);
+      pushScalar(entries, key, value, at);
     }
   }
   return entries;
@@ -50,16 +57,20 @@ export function appendQuery(url: string, variables: Record<string, unknown>): st
   return `${url}${url.includes("?") ? "&" : "?"}${query}`;
 }
 
-function pushScalar(entries: [string, string][], key: string, value: unknown): void {
+function pushScalar(entries: [string, string][], key: string, value: unknown, at: string): void {
   if (value === undefined || value === null) return;
-  entries.push([key, scalarText(value)]);
+  entries.push([key, scalarText(value, at)]);
 }
 
-/** A value nested deeper than the form style reaches is sent as JSON. */
-function scalarText(value: unknown): string {
+/**
+ * A value nested deeper than the form style reaches is sent as JSON: one
+ * JSON would lose — a file, a `Set`, a `Map` — is refused, with where it sits.
+ */
+function scalarText(value: unknown, at: string): string {
   if (value instanceof Date) return value.toISOString();
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  if (typeof value !== "object") return String(value);
+  assertJsonValue(value, at, ADDRESS_HOLDS_TEXT);
+  return JSON.stringify(value);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

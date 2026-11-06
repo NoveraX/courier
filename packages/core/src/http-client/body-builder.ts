@@ -2,6 +2,12 @@ import { HTTPError } from "../errors";
 import { isFieldRecord, isRawBody, toBodyInit } from "../utils/body-kind";
 import { isFormData, normalizeHttpMethod, sendsVariablesInQuery } from "../utils/helpers";
 import { toQueryEntries } from "../utils/query-string";
+import {
+  ADDRESS_HOLDS_TEXT,
+  assertJsonValue,
+  formFields,
+  formOf,
+} from "../utils/variables-encoding";
 import type { FetchOptions, HttpMethod, SearchParamsSerializer } from "./types";
 import type { WebBody } from "./web-types";
 
@@ -10,8 +16,10 @@ export const toSearchParams = (
   serializer?: SearchParamsSerializer,
 ): string | URLSearchParams | undefined => {
   if (!variables || Object.keys(variables).length === 0) return undefined;
-  if (serializer) return serializer.stringify(variables);
-  return new URLSearchParams(toQueryEntries(variables));
+  if (!serializer) return new URLSearchParams(toQueryEntries(variables));
+  /* A serializer of the source's own writes what it is handed, so it is handed what an address holds. */
+  assertJsonValue(variables, "variables", ADDRESS_HOLDS_TEXT);
+  return serializer.stringify(variables);
 };
 
 /**
@@ -74,9 +82,14 @@ export const buildSearchParams = (
 /**
  * The body a write sends for its variables.
  *
- * Named fields are merged over `defaultBody` and serialized; form data and a
+ * Named fields are merged over `defaultBody`: one that holds a file sends
+ * them as a form, whatever the source's `bodySerializer`; any other is
+ * serialized, as JSON unless the source names its own way. Form data and a
  * raw body are sent as they are; a list or a JSON scalar is sent as JSON on
- * its own, since there is nothing to merge a default into.
+ * its own, since there is nothing to merge a default into. What JSON would
+ * lose is refused before anything is sent.
+ *
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a value no body carries
  */
 export const buildRequestBody = (
   variables: unknown,
@@ -90,24 +103,34 @@ export const buildRequestBody = (
     const streamed = typeof ReadableStream !== "undefined" && variables instanceof ReadableStream;
     return { body: toBodyInit(variables), ...(streamed && { duplex: "half" as const }) };
   }
-  if (variables !== undefined && !isFieldRecord(variables)) return { json: variables };
+  if (variables !== undefined && !isFieldRecord(variables)) {
+    assertJsonValue(variables, "variables", "a form carries a file in a field of an object");
+    return { json: variables };
+  }
 
-  const json = { ...defaultBody, ...variables };
-  if (Object.keys(json).length === 0) return undefined;
+  const fields = { ...defaultBody, ...variables };
+  if (Object.keys(fields).length === 0) return undefined;
 
-  if (bodySerializer) return { body: bodySerializer(json) };
-  return { json };
+  const form = formOf(fields);
+  if (form) return { body: form };
+  assertJsonValue(fields, "variables");
+  if (bodySerializer) return { body: bodySerializer(fields) };
+  return { json: fields };
 };
 
 /**
- * The named values a read puts in its query string.
+ * The named values a read puts in its query string: a record's, or a form's
+ * text fields.
  *
  * @throws HTTPError 400 for anything else — a list, a scalar or a body has no
  *   names to put there, and sending the request without it would answer a
  *   different question than the one asked
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a file in a form
  */
 function queryFields(method: HttpMethod, variables: unknown): Record<string, unknown> | undefined {
-  if (variables === undefined || isFormData(variables)) return undefined;
+  if (variables === undefined) return undefined;
+  /* A form's text fields are its query, as a browser sends a form whose method is GET. */
+  if (isFormData(variables)) return formFields(variables);
   if (isFieldRecord(variables)) return variables;
   throw new HTTPError({
     status: 400,

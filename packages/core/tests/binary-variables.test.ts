@@ -80,7 +80,7 @@ describe("a proxy call carrying binary variables", () => {
     const failure = await client.files.upload({ body }).catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(ConfigurationError);
-    expect((failure as ConfigurationError).code).toBe("PROXY_VARIABLE_NOT_SERIALIZABLE");
+    expect((failure as ConfigurationError).code).toBe("VARIABLE_NOT_ENCODABLE");
     expect((failure as Error).message).toContain("variables.body");
     expect(upstreamBodies).toHaveLength(0);
   });

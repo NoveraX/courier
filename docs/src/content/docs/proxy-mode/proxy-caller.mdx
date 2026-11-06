@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyCaller", description: "The browser-side factory that sends typed requests through your server proxy endpoint.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "createProxyCaller", description: "The browser-side factory that sends typed requests through your server proxy endpoint.", mode: "proxy", updated: "2026-11-06" }
 
 ## Overview
 
@@ -139,7 +139,7 @@ When sending FormData, Courier writes the call's options as an `_options` field 
 </Callout>
 
 <Callout variant="warning" title="Binary variables">
-JSON cannot carry a `Blob`, an `ArrayBuffer` or a typed array, so a proxy call whose plain-object variables hold one is refused with a `ConfigurationError` (`PROXY_VARIABLE_NOT_SERIALIZABLE`) before anything is sent. Put binary data in a FormData.
+JSON cannot carry a `Blob`, an `ArrayBuffer` or a typed array, so a proxy call whose plain-object variables hold one is refused with a `ConfigurationError` (`VARIABLE_NOT_ENCODABLE`) before anything is sent. Put binary data in a FormData.
 </Callout>
 
 ## Binary answers

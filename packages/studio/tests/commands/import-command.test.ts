@@ -277,6 +277,19 @@ describe("courier-studio import", { timeout: 60_000 }, () => {
     expect(run.output).not.toContain(key);
   });
 
+  it("refuses an address with a password however it was pasted, and never prints the password", async () => {
+    for (const given of [
+      " https://ana:pw-made-up-77@127.0.0.1:1/openapi.json",
+      "https:\\\\ana:pw-made-up-77@127.0.0.1:1/openapi.json",
+    ]) {
+      const run = await studioImport([given, "--dry-run"]);
+
+      expect(run.status, run.output).toBe(1);
+      expect(run.output).toContain("carries a user or a password in its address");
+      expect(run.output).not.toContain("pw-made-up-77");
+    }
+  });
+
   it("reads standard input for -, and with --no-declare only writes the files and gives the lines to add", async () => {
     const run = await studioImport(["-", "--yes", "--no-declare", "--name", "pets"], petStore());
 

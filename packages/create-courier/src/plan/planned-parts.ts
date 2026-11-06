@@ -114,19 +114,26 @@ export function plannedEdits(
     const ofFile = edits.filter((edit) => edit.path === path);
     if (before === undefined) return ofFile.map((edit) => edit.manual);
     let after = before;
-    const made: string[] = [];
+    const made: RecipeEdit[] = [];
     const left: ManualStep[] = [];
     for (const edit of ofFile) {
       const changed = changeKeepingLineEnds(after, edit.change);
       if (changed === undefined) left.push(edit.manual);
       else {
         after = changed;
-        made.push(edit.purpose);
+        made.push(edit);
       }
     }
     if (made.length === 0) return left;
-    const purpose = made.join("; ");
-    return [{ path, purpose, state: after === before ? "same" : "edit", before, after }, ...left];
+    const purpose = made.map((edit) => edit.purpose).join("; ");
+    const change = (text: string) =>
+      made.reduce<string | undefined>(
+        (changed, edit) =>
+          changed === undefined ? undefined : changeKeepingLineEnds(changed, edit.change),
+        text,
+      );
+    const state = after === before ? "same" : "edit";
+    return [{ path, purpose, state, before, after, change }, ...left];
   });
 }
 

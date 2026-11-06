@@ -24,6 +24,7 @@ const LOCKFILES: ReadonlyArray<readonly [string, PackageManagerName]> = [
   ["bun.lock", "bun"],
   ["bun.lockb", "bun"],
   ["package-lock.json", "npm"],
+  ["npm-shrinkwrap.json", "npm"],
 ];
 
 const NAMES: ReadonlySet<string> = new Set(["npm", "pnpm", "yarn", "bun"]);
@@ -58,6 +59,33 @@ function newest(dir: string, found: ReadonlyArray<readonly [string, PackageManag
   )[0];
 }
 
+/* The nearest folder at or above the project that holds a lockfile, as a workspace keeps it, and the lockfiles there. */
+function lockfilesNear(root: string) {
+  for (let current = resolve(root); ; current = dirname(current)) {
+    const found = LOCKFILES.filter(([lockfile]) => existsSync(join(current, lockfile)));
+    if (found.length > 0) return { dir: current, found };
+    if (dirname(current) === current) return undefined;
+  }
+}
+
+/**
+ * The lockfiles a project's installs write, by the rule its package
+ * manager is told by: every lockfile's name in the nearest folder at or
+ * above the project that holds one — the project's own, or its
+ * workspace's — and in the project's folder where none is above it.
+ *
+ * @param root - The project's folder
+ * @returns The paths, absolute, whether or not each is there yet
+ * @example
+ * ```ts
+ * lockfilePaths("/work/shop/apps/web"); // ["/work/shop/pnpm-lock.yaml", …] in a pnpm workspace
+ * ```
+ */
+export function lockfilePaths(root: string): string[] {
+  const dir = lockfilesNear(root)?.dir ?? resolve(root);
+  return LOCKFILES.map(([lockfile]) => join(dir, lockfile));
+}
+
 /**
  * The package manager a project installs with, told by its lockfile: the
  * nearest one at or above the project, where a workspace keeps it. A
@@ -77,17 +105,11 @@ export function projectManager(
   root: string,
   invoking: PackageManagerName | undefined = invokingManager(),
 ): PackageManagerName | undefined {
-  let current = resolve(root);
-  while (true) {
-    const found = LOCKFILES.filter(([lockfile]) => existsSync(join(current, lockfile)));
-    if (found.length === 1) return found[0]?.[1];
-    if (found.length > 1) {
-      return found.find(([, name]) => name === invoking)?.[1] ?? newest(current, found)?.[1];
-    }
-    const parent = dirname(current);
-    if (parent === current) return undefined;
-    current = parent;
-  }
+  const near = lockfilesNear(root);
+  if (near === undefined) return undefined;
+  const { dir, found } = near;
+  if (found.length === 1) return found[0]?.[1];
+  return found.find(([, name]) => name === invoking)?.[1] ?? newest(dir, found)?.[1];
 }
 
 /**

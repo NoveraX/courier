@@ -4,6 +4,7 @@ import type { TypecheckOutcome } from "../apply/typecheck";
 import { changesAnything, type Plan } from "../plan/build-plan";
 import { manualLines, nextLines, planLines } from "../plan/plan-lines";
 import type { ConfiguredSources } from "../project/configured-sources";
+import { failureLines } from "./failure-lines";
 import type { SetupEnd, SetupReport } from "./setup-report";
 
 /* What the config declares, and what the plan does about it. */
@@ -63,6 +64,8 @@ function endLines(end: SetupEnd, style: TerminalStyle): string[] {
       ];
     case "applied":
       return ["", style.green(end.said), ...closingLines(end.plan, style)];
+    case "failed":
+      return failureLines(end, style);
     case "dry-run":
     case "typecheck-failed":
       return [];

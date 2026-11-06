@@ -1,3 +1,5 @@
+import type { Undone } from "../apply/file-journal";
+import type { FailureCode } from "../apply/setup-failure";
 import type { TypecheckOutcome } from "../apply/typecheck";
 import type { Plan } from "../plan/build-plan";
 import type { ConfiguredSources } from "../project/configured-sources";
@@ -42,7 +44,19 @@ export type SetupEnd =
   /** It is set up: what the run says, and what is left to the person and to run next. */
   | { readonly kind: "applied"; readonly plan: Plan; readonly said: string }
   /** What was added does not type-check. */
-  | { readonly kind: "typecheck-failed" };
+  | { readonly kind: "typecheck-failed" }
+  /** The run stopped part way: why, and what undoing it did. */
+  | {
+      readonly kind: "failed";
+      readonly code: FailureCode;
+      /** What stopped it, in a sentence without its full stop. */
+      readonly said: string;
+      readonly undone: Undone;
+      /** The command that puts node_modules back as the lockfile says, where an install had begun. */
+      readonly reinstall?: string | undefined;
+      /** The error itself, where it was none the run expected: its stack is shown. */
+      readonly error?: Error | undefined;
+    };
 
 /** Why a run changed nothing. */
 export type RefusalCode = "CONFIRMATION_REQUIRED" | "DECLINED";

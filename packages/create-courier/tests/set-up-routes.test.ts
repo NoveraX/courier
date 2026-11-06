@@ -9,7 +9,8 @@ import { join } from "node:path";
 import { createTerminalStyle } from "@noverax/courier/internal";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { writePlannedEdits, writePlannedFiles } from "../src/apply/write-plan";
+import { FileJournal } from "../src/apply/file-journal";
+import { writePlan } from "../src/apply/write-plan";
 import { frameworkById } from "../src/frameworks";
 import { buildPlan } from "../src/plan/build-plan";
 import { textReport } from "../src/report/text-report";
@@ -54,8 +55,7 @@ function fileModeApp(listed: boolean): string {
   const recipe = frameworkById("sveltekit").recipe?.(ctx);
   if (recipe === undefined) throw new Error("no recipe");
   const plan = buildPlan(ctx, recipe);
-  writePlannedFiles(root, plan.files);
-  writePlannedEdits(root, plan.edits);
+  writePlan(new FileJournal(root), root, plan);
   return root;
 }
 

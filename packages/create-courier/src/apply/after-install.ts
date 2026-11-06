@@ -15,19 +15,27 @@ const PREPARE_LINES_SHOWN = 5;
  * @param ctx - The project, and what is set up in it
  * @param plan - The plan
  * @param report - Where to tell of one that fails
+ * @param signal - Stops them once the person cancels, which the setup then undoes
  * @example
  * ```ts
- * await prepare(ctx, plan, io.report);
+ * await prepare(ctx, plan, io.report, signal);
  * ```
  */
-export async function prepare(ctx: RecipeContext, plan: Plan, report: SetupReport): Promise<void> {
+export async function prepare(
+  ctx: RecipeContext,
+  plan: Plan,
+  report: SetupReport,
+  signal?: AbortSignal,
+): Promise<void> {
   for (const { bin, args } of plan.prepare) {
     const command = ctx.manager.exec(bin, args);
     const result = await runTool(command, {
       cwd: ctx.project.root,
       output: { kind: "quiet" },
       deadlineMs: SETUP_LIMITS.prepareMs,
+      signal,
     });
+    if (result.stopped === "cancelled" || signal?.aborted === true) return;
     if (result.status !== 0 || result.stopped !== undefined) {
       const said = toolFailure(command, result, SETUP_LIMITS.prepareMs);
       report.prepareFailed(said, result.tail.trimEnd().split("\n").slice(-PREPARE_LINES_SHOWN));

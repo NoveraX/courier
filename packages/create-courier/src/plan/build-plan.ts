@@ -34,6 +34,12 @@ export interface PlannedEdit {
   readonly state: "edit" | "same";
   readonly before: string;
   readonly after: string;
+  /**
+   * The change, made again to the file as something else left it: the
+   * install, which writes package.json too. `undefined` where its shape
+   * is no longer one the change knows.
+   */
+  readonly change: (text: string) => string | undefined;
 }
 
 /** What setting Courier up does to a project, worked out before anything changes. */

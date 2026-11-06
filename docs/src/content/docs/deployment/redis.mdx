@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Redis Adapters",
   description: "Scale Courier realtime across multiple replicas with Redis Pub/Sub, Streams, and Presence adapters.",
-  updated: "2026-11-05",
+  updated: "2026-11-06",
 }
 
 ## When You Need Redis
@@ -172,7 +172,7 @@ const store = createRedisRateLimitStore({
 courierHandler({ rateLimit: { requests: 300, window: 60_000, store } })
 ```
 
-One connection serves it, and it may be the one the Pub/Sub adapter publishes on. See [Rate limits](/docs/proxy-mode/overview#rate-limits).
+One connection serves it, and it may be the one the Pub/Sub adapter publishes on. See [Counts across replicas](/docs/proxy-mode/rate-limits#counts-across-replicas).
 
 ## Connection Leases
 

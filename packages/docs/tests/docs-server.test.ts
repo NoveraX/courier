@@ -5,7 +5,7 @@
  * cannot take refused with why; and a damaged docs folder said so, with
  * the server still up.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -13,6 +13,7 @@ import { type Connection, META } from "@noverax/courier-mcp/internal";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DOCS_LIMITS } from "../src/limits";
+import { MANIFEST_FILE } from "../src/manifest";
 import { docsServer } from "../src/server";
 import { type Bundled, bundled } from "./support/bundled";
 
@@ -31,6 +32,14 @@ afterAll(() => {
 });
 
 type Server = ReturnType<typeof docsServer>;
+
+/* How many pages the folder's manifest lists: the list answers with every one of them. */
+function manifestPages(): number {
+  const manifest = JSON.parse(readFileSync(join(folder.dir, MANIFEST_FILE), "utf8")) as {
+    pages: unknown[];
+  };
+  return manifest.pages.length;
+}
 
 /* A client's connection over stdio, opened with `initialize`. */
 async function opened(server: Server): Promise<Connection> {
@@ -94,13 +103,16 @@ describe("the docs server", () => {
   it("answers a search with the parts that match, as structured content", async () => {
     const server = docsServer(folder.dir);
     const { result } = await tool(server, await opened(server), "docs_search", {
-      query: "rate limits",
+      query: "browsers only",
       limit: 3,
     });
     const found = result.structuredContent as { version: string; results: unknown[] };
     expect(result.isError).toBe(false);
     expect(found.version).toBe("0.0.0-test");
-    expect(found.results[0]).toMatchObject({ page: "proxy-mode/overview", section: "Rate limits" });
+    expect(found.results[0]).toMatchObject({
+      page: "proxy-mode/rate-limits",
+      section: "Browsers only",
+    });
   });
 
   it("answers a read with the page's Markdown, and the list with every page by section", async () => {
@@ -110,7 +122,7 @@ describe("the docs server", () => {
     expect(text.startsWith("Courier 0.0.0-test docs · quick-start · Quick Start · ")).toBe(true);
     const { result } = await tool(server, connection, "docs_list", {});
     const sections = (result.structuredContent as { sections: { pages: unknown[] }[] }).sections;
-    expect(sections.flatMap((section) => section.pages)).toHaveLength(105);
+    expect(sections.flatMap((section) => section.pages)).toHaveLength(manifestPages());
   });
 
   it.each([

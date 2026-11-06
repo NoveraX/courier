@@ -50,7 +50,7 @@ describe("courier-docs mcp", () => {
     const { tools } = await client.listTools();
     const search = await client.callTool({
       name: "docs_search",
-      arguments: { query: "rate limits", limit: 3 },
+      arguments: { query: "browsers only", limit: 3 },
     });
     const read = await client.callTool({ name: "docs_read", arguments: { page: "quick-start" } });
     const server = client.getServerVersion();
@@ -65,7 +65,10 @@ describe("courier-docs mcp", () => {
     ]);
     const found = search.structuredContent as { version: string; results: unknown[] };
     expect(found.version).toBe(version);
-    expect(found.results[0]).toMatchObject({ page: "proxy-mode/overview", section: "Rate limits" });
+    expect(found.results[0]).toMatchObject({
+      page: "proxy-mode/rate-limits",
+      section: "Browsers only",
+    });
     const [first] = read.content as { type: string; text: string }[];
     expect(first?.text.startsWith(`Courier ${version} docs · quick-start · Quick Start · `)).toBe(
       true,

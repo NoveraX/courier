@@ -67,11 +67,11 @@ describe("a search", () => {
   });
 
   it("finds the part of a page under the heading that holds its words, with that part's address", () => {
-    const [hit] = index.search("rate limits", 5);
+    const [hit] = index.search("browsers only", 5);
     expect(hit).toMatchObject({
-      page: "proxy-mode/overview",
-      section: "Rate limits",
-      url: "https://courier.noverax.cloud/docs/proxy-mode/overview#rate-limits",
+      page: "proxy-mode/rate-limits",
+      section: "Browsers only",
+      url: "https://courier.noverax.cloud/docs/proxy-mode/rate-limits#browsers-only",
     });
   });
 

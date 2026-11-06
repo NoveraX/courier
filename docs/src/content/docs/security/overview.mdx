@@ -1,4 +1,4 @@
-export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-11-06" }
 
 ## What Courier secures, and what it leaves to your API
 
@@ -154,7 +154,7 @@ Subscribing, leaving and re-authenticating are counted apart from other messages
 | A page on another local port | Admitted while `allowedOrigins` is empty and the app is served locally | Never |
 | Hosts answered while `allowedHosts` is empty | The local machine's names and IP addresses | Every name |
 | The app's origin, for Studio's Playground | Taken, when not configured, from a request whose own `Host` is `localhost`, `127.0.0.1` or `[::1]` on the port the server accepted it on, sent from this machine, as far as the framework tells — see [`appOrigin`](/docs/api/config) | Never taken from a request |
-| Studio's Playground under `browsersOnly` | Let through on a one-time pass only Studio's runtime in the process serving the route redeems — see [Proxy mode](/docs/proxy-mode/overview#rate-limits) | Refused, as a script is: no pass is honoured |
+| Studio's Playground under `browsersOnly` | Let through on a one-time pass only Studio's runtime in the process serving the route redeems — see [Studio's Playground](/docs/proxy-mode/rate-limits#studios-playground) | Refused, as a script is: no pass is honoured |
 
 Courier counts as in development wherever `NODE_ENV` is not `production`, so set it on every server you deploy, a custom Node server included.
 

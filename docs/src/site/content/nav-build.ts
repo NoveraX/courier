@@ -10,6 +10,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "createProxyCaller", href: "/docs/proxy-mode/proxy-caller" },
       { title: "Exposing Endpoints", href: "/docs/proxy-mode/expose" },
       { title: "Server Handler", href: "/docs/proxy-mode/api-route" },
+      { title: "Rate Limits", href: "/docs/proxy-mode/rate-limits" },
     ],
   },
   {

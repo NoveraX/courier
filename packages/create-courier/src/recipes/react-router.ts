@@ -166,7 +166,7 @@ export function reactRouterRecipe(ctx: RecipeContext): Recipe {
       ...plugin.edits,
       ...(ctx.choices.studio ? [viteStudioEdit(ctx.project, "remix")] : []),
     ],
-    ...courierPackages(ctx, { adapter: "@noverax/courier-remix", react: true, proxy: true }),
+    ...courierPackages(ctx, { adapter: "@noverax/courier-remix", proxy: true }),
     scripts: proxyScripts(ctx),
     manual: [...manual, ...plugin.manual, ...routeConfigSteps(ctx)],
     next: [...studioStep(ctx), ...routesStep(ctx), devStep(ctx, example ? "/courier" : undefined)],

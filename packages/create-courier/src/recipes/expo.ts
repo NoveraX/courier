@@ -95,7 +95,7 @@ export function expoRecipe(ctx: RecipeContext): Recipe {
         : []),
     ],
     edits: tabbed ? expoTabEdits(tabs[0] ?? "", tabs[1] ?? "") : [],
-    ...courierPackages(ctx, { react: true, runtime: false }),
+    ...courierPackages(ctx, { runtime: false }),
     scripts: studioScripts(ctx),
     manual: [],
     next: [

@@ -6,6 +6,7 @@ import type {
   RecipeFile,
 } from "../recipes/recipe-types";
 import { scriptsEdit } from "./package-scripts";
+import { packagesOfFiles } from "./packages-of-files";
 import {
   listedNotInstalled,
   missingPackages,
@@ -75,13 +76,18 @@ export interface Plan {
  *
  * @param ctx - The project, and what is set up in it
  * @param recipe - What the framework's setup takes
+ * @param earlier - Files an earlier setup may have added that this one does not plan — the example's, in a project set up already — whose packages are installed where they are there
  * @returns The plan
  * @example
  * ```ts
  * buildPlan(ctx, nextRecipe(ctx)).files.filter((file) => file.state === "create");
  * ```
  */
-export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
+export function buildPlan(
+  ctx: RecipeContext,
+  recipe: Recipe,
+  earlier: readonly RecipeFile[] = [],
+): Plan {
   const { project } = ctx;
   const typescript = typescriptOf(project, ctx.fresh, (specs) => ctx.manager.add(specs, true));
   /* Moving to TypeScript 6 asks for changes in a tsconfig written for an older one. */
@@ -95,13 +101,20 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
     ...recipe.edits,
     ...scriptsEdit(recipe.scripts, recipe.rewrites ?? []),
   ]);
+  /* What Courier's files import, whichever run wrote them, is installed with what the recipe lists. */
+  const there = earlier
+    .map((file) => plannedFile(project, file))
+    .filter((file) => file.state === "same" || file.state === "courier");
+  const ofFiles = packagesOfFiles([...files, ...there], project.read);
+  const dependencies = unique([...recipe.dependencies, ...ofFiles.dependencies]);
+  const devDependencies = unique([...recipe.devDependencies, ...ofFiles.devDependencies]);
   return {
     files,
     edits: edits.filter((edit): edit is PlannedEdit => "after" in edit),
-    dependencies: missingPackages(project, recipe.dependencies),
-    devDependencies: missingPackages(project, recipe.devDependencies),
-    otherReleases: otherReleases(project, [...recipe.dependencies, ...recipe.devDependencies]),
-    notInstalled: listedNotInstalled(project, [...recipe.dependencies, ...recipe.devDependencies]),
+    dependencies: missingPackages(project, dependencies),
+    devDependencies: missingPackages(project, devDependencies),
+    otherReleases: otherReleases(project, [...dependencies, ...devDependencies]),
+    notInstalled: listedNotInstalled(project, [...dependencies, ...devDependencies]),
     typescript: typescript.install,
     manual: [
       ...files.filter((file) => file.state === "kept").map(keptStep),
@@ -113,6 +126,10 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
     next: recipe.next,
     prepare: recipe.prepare ?? [],
   };
+}
+
+function unique(specs: readonly string[]): string[] {
+  return [...new Set(specs)];
 }
 
 /**

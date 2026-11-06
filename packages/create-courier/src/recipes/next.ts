@@ -149,7 +149,6 @@ export function nextRecipe(ctx: RecipeContext): Recipe {
     /* `next start` loads next.config, which loads Courier's plugin. */
     ...courierPackages(ctx, {
       adapter: "@noverax/courier-next",
-      react: true,
       proxy: true,
       configAtStart: true,
     }),

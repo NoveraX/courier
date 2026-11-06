@@ -64,7 +64,7 @@ export function reactViteRecipe(ctx: RecipeContext): Recipe {
       ...(example ? [reactQuery(ctx, DIR, "direct"), reactDemo(ctx, page), ...demoEntry(ctx)] : []),
     ],
     edits: ctx.choices.studio ? [viteStudioEdit(ctx.project, "react")] : [],
-    ...courierPackages(ctx, { react: true, runtime: false }),
+    ...courierPackages(ctx, { runtime: false }),
     scripts: studioScripts(ctx),
     manual: [],
     next: [...studioStep(ctx), example ? viteDevStep(ctx) : devStep(ctx, undefined)],

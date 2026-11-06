@@ -11,7 +11,7 @@ import { managerFor } from "./project/package-manager";
 import { portsOf } from "./project/ports";
 import { readProject } from "./project/read-project";
 import { askYesNo } from "./prompt";
-import type { RecipeContext, SetupChoices } from "./recipes/recipe-types";
+import type { Recipe, RecipeContext, RecipeFile, SetupChoices } from "./recipes/recipe-types";
 import { routesAsked, routesModeOf } from "./routes-mode";
 import type { SetupIO } from "./setup-io";
 import { wantsMcp } from "./wants-mcp";
@@ -21,6 +21,20 @@ function doneLine(plan: Plan, configured: boolean): string {
   if (plan.manual.length > 0)
     return "Nothing here is for the command to change: the steps left to you are above.";
   return configured ? "Nothing is missing." : "Courier is set up here already.";
+}
+
+/*
+ * The example's files, as the recipe writes them in a project without
+ * Courier, for the plan to install what those an earlier setup added
+ * need: in a project set up already, the recipe adds no example.
+ */
+function exampleFiles(
+  ctx: RecipeContext,
+  framework: { readonly recipe: (ctx: RecipeContext) => Recipe },
+): readonly RecipeFile[] {
+  if (ctx.configured === undefined) return [];
+  const choices = { ...ctx.choices, mocks: true };
+  return framework.recipe({ ...ctx, configured: undefined, choices }).files;
 }
 
 async function choicesOf(run: CreateRun, io: SetupIO): Promise<SetupChoices> {
@@ -74,7 +88,7 @@ export async function addCourier(root: string, run: CreateRun, io: SetupIO): Pro
     configured,
     routes: routesModeOf(project, framework, choices.routes),
   };
-  const plan = buildPlan(ctx, withAgents(ctx, framework.recipe(ctx)));
+  const plan = buildPlan(ctx, withAgents(ctx, framework.recipe(ctx)), exampleFiles(ctx, framework));
   const name = project.manifest.name ?? basename(root);
   const title = `Set Courier up in ${name} (${framework.label} ${version ?? ""}, ${manager.name})`;
   io.report.plan({ title, plan, configured });

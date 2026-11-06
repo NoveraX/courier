@@ -1,7 +1,6 @@
 import { createCourierVersion } from "../../create-courier-version";
 import type { RecipeContext } from "../recipe-types";
 import { wantsRoutes } from "./wants-routes";
-import { addsExample } from "./wired";
 
 /**
  * One of Courier's packages as the command installs it: at the release it
@@ -30,8 +29,6 @@ export interface RecipePackages {
 export interface PackageNeeds {
   /** The framework's Courier package, if it has one. */
   readonly adapter?: string;
-  /** Whether the app renders with React, and so gets Courier's React Query hooks. */
-  readonly react?: boolean;
   /** Whether a server of the app's connects to Studio, which needs Studio's runtime at run time. */
   readonly runtime?: boolean;
   /**
@@ -49,27 +46,25 @@ export interface PackageNeeds {
 }
 
 /**
- * The packages Courier's setup installs: the core and Zod for the API, the
- * framework's adapter, the React bindings for a React app, Studio and the
+ * The packages Courier's setup installs for what was asked: the core, the
+ * framework's adapter, Zod for a specification's import, Studio and the
  * runtime a server connects to it with, what gives the routes where pages
  * call through the proxy — Courier's plugin for the build, or the CLI that
- * writes the routes module — the mock and what it runs on, and the MCP
- * server.
+ * writes the routes module — and the MCP server. What the example's files
+ * import — Zod, the React bindings, the mock — the plan reads from the
+ * files themselves.
  *
  * @param ctx - The project, and what is set up in it
  * @param needs - What the framework's setup needs
  * @returns The dependencies and the dev dependencies
  * @example
  * ```ts
- * courierPackages(ctx, { adapter: "@noverax/courier-next", react: true, proxy: true });
+ * courierPackages(ctx, { adapter: "@noverax/courier-next", proxy: true });
  * ```
  */
 export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): RecipePackages {
-  const { studio, mocks, mcp, openapi } = ctx.choices;
-  const { adapter, react = false, runtime = true, proxy = false, configAtStart = false } = needs;
-  const example = addsExample(ctx);
-  /* A project set up already has the API it calls, and its own way of calling it from React. */
-  const fresh = ctx.configured === undefined;
+  const { studio, mcp, openapi } = ctx.choices;
+  const { adapter, runtime = true, proxy = false, configAtStart = false } = needs;
   const routes = proxy && wantsRoutes(ctx);
   const plugin = routes && ctx.routes === "plugin";
   const build = courierPackage("@noverax/courier-build");
@@ -78,19 +73,14 @@ export function courierPackages(ctx: RecipeContext, needs: PackageNeeds): Recipe
       courierPackage("@noverax/courier"),
       ...(adapter ? [courierPackage(adapter)] : []),
       ...(plugin && configAtStart ? [build] : []),
-      ...(react && fresh
-        ? [courierPackage("@noverax/courier-react"), "@tanstack/react-query"]
-        : []),
-      ...(fresh || openapi !== undefined ? ["zod"] : []),
+      /* The code Studio's import writes types the API with Zod. */
+      ...(openapi !== undefined ? ["zod"] : []),
       ...(studio && runtime ? [courierPackage("@noverax/courier-studio-core")] : []),
     ],
     devDependencies: [
       ...(studio ? [courierPackage("@noverax/courier-studio")] : []),
       ...(plugin && !configAtStart ? [build] : []),
       ...(routes && !plugin ? [courierPackage("@noverax/courier-cli")] : []),
-      ...(mocks && example
-        ? [courierPackage("@noverax/courier-mock"), "hono", "@hono/node-server"]
-        : []),
       ...(mcp ? [courierPackage("@noverax/courier-mcp")] : []),
     ],
   };

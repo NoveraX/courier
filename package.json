@@ -103,6 +103,7 @@
     "check:packages": "node scripts/check-packages.mjs",
     "check:publish": "node scripts/check-publish.mjs",
     "check:browser": "node scripts/check-browser-bundles.mjs",
+    "check:graph": "node scripts/check-module-graph.mjs",
     "check:routes": "node scripts/check-routes.mjs",
     "check:page-dates": "node scripts/check-page-dates.mjs",
     "check:skipped": "node scripts/check-skipped-tests.mjs",

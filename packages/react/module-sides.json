@@ -1,0 +1,9 @@
+{
+  "pageEntries": {
+    ".": "The hooks and the provider a page renders, over the core's page entries"
+  },
+  "pagePackages": {
+    "@tanstack/react-query": "The query client the hooks are built on, the application's own",
+    "react": "The renderer the hooks run in, the application's own"
+  }
+}

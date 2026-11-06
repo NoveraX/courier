@@ -1,0 +1,49 @@
+{
+  "pageEntries": {
+    "./client": "What a page calls with: the callers, their errors, middleware",
+    "./define": "The definitions a page and its server share",
+    "./middleware": "The middleware an API's definition names",
+    "./routes": "The routes a proxy caller is made from",
+    "./fetch": "The plain fetch client",
+    "./internal-client": "What a client built on the core takes in a page",
+    "./realtime": "The clients of streams and channels a page opens, and their types"
+  },
+  "serverEntries": {
+    "./server": "What a server does with an API: its handlers, its caller, what an adapter registers",
+    "./node": "Node's requests, responses and sockets as the web's",
+    "./config": "What a project's courier.config.ts writes, which only Node reads: the CLI, Studio and the bundler plugins",
+    "./testing": "What tests run against",
+    "./openapi": "The OpenAPI document of an API",
+    "./webhooks": "Webhooks a server receives",
+    "./announce": "What a server tells Studio and the terminal of itself",
+    "./internal": "What the framework adapters and the MCP server take of the core",
+    "./internal-streams": "The streams Studio's Playground runs in process"
+  },
+  "sharedEntries": {
+    ".": "The root: a page's names and a server's together, its createCaller the server's"
+  },
+  "serverAreas": {
+    "adapter/": "The proxy and the realtime servers: requests, bodies, uploads, limits of rate, the cluster",
+    "server/": "What a server lends the calls of its process, and the server entry",
+    "studio/": "Studio's view of the calls, where Studio is attached",
+    "transport/in-process/": "Streams a server serves its own callers without leaving the process",
+    "terminal/": "What a terminal is shown",
+    "openapi/": "The OpenAPI document of an API",
+    "webhooks/": "Webhooks a server receives",
+    "announce/": "The banner a server prints as it starts",
+    "testing/": "What tests run against",
+    "node.js": "The Node entry",
+    "node-origin.js": "The address a Node server answers at",
+    "node-request.js": "A Node request as a web request",
+    "node-request-body.js": "A Node request's body as a stream",
+    "node-request-context.js": "The request a Node server serves",
+    "node-set-cookie.js": "Cookies on a Node response",
+    "node-websocket.js": "A Node server's WebSocket",
+    "socket-origin.js": "The address a socket server answers at",
+    "web-request-context.js": "The request a web server serves",
+    "discover-app-origin.js": "The address the application listens at"
+  },
+  "pagePackages": {
+    "@standard-schema/spec": "The types of the schemas a definition validates with, which the core depends on"
+  }
+}

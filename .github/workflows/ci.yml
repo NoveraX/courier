@@ -124,6 +124,11 @@ jobs:
       - name: Check published entry points
         run: npm run check:exports
 
+      # What a page's entries reach of the core, before any bundler drops a
+      # thing: no module only a server runs, and no built-in module of Node.
+      - name: Check what a page's entries reach
+        run: npm run check:graph
+
       # What a page takes from Courier, built as an app's bundler builds it:
       # no built-in module of Node, what loads at start within its budget, and
       # no browser API newer than the requirements name unless checked for.

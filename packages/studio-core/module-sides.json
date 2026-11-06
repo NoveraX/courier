@@ -1,0 +1,9 @@
+{
+  "serverEntries": {
+    ".": "The sources Studio serves, and what its server reads of them",
+    "./mocks": "The project's courier.mocks.ts, found and read from disk"
+  },
+  "sharedEntries": {
+    "./runtime": "Studio's runtime: the application's server runs it, and a page its dev server serves loads its browser file, which Studio's plugins load only into a development page. That file takes the core's root and its internal entries to run the Playground's calls as the page does, so the check of a page's modules does not walk it"
+  }
+}

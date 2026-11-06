@@ -34,11 +34,12 @@ npm run check:exports
 npm run check:docs
 npm run check:packages
 npm run check:publish
+npm run check:graph
 npm run check:browser
 npm run check:page-dates
 ```
 
-Six of them are easy to skip by accident and worth understanding:
+Seven of them are easy to skip by accident and worth understanding:
 
 - `npx tsc --noEmit` typechecks the **whole workspace as one program**, tests
   included. A per-package `typecheck` can pass while this fails, because the
@@ -68,6 +69,31 @@ Six of them are easy to skip by accident and worth understanding:
   core reads a Node API off the global `process` — anything but
   `process.env` — which Next.js's build of a middleware refuses or warns
   of: such code reads it off `globalThis.process`, checking for it.
+- `npm run check:graph` follows every module the page entries reach — the
+  core's `@noverax/courier/client`, `/define`, `/middleware`, `/routes`,
+  `/fetch`, `/internal-client` and `/realtime`, and `@noverax/courier-react`
+  — through the published `lib/`, as a page's bundler resolves it, a package
+  of the workspace imported by its name through its `exports`, but before
+  any bundler drops what is unused. It fails when one reaches a module of an
+  area only a server runs, a built-in module of Node, a package outside the
+  workspace that the importing package does not let a page take — so a
+  server's package, `ws` or `ioredis`, fails it whatever it is — a package
+  of the workspace with no `module-sides.json`, or a dynamic import, a
+  `require()`, a `require.resolve`, an `import.meta.resolve`, a
+  `require.ensure` or a `new URL(…, import.meta.url)` whose name no bundler
+  can tell, or an `import.meta.glob` of a pattern or a context of a folder —
+  `import.meta.webpackContext`, `require.context` — each of them, given a
+  path, followed as an import; and it lists the packages each entry takes.
+  Each package's `module-sides.json` puts every entry it exports on a side —
+  `pageEntries`, `serverEntries`, or `sharedEntries` for one that holds both,
+  as the core's root does — and names its server's areas, the packages its
+  page code may take (`pagePackages`) and any module whose computed import a
+  page may run (`computedImports`), each with why: a new dependency of a
+  page's code is a line there. An entry on no side fails the check, so a new
+  one is put on its side as it is added; a module a page needs never lies in
+  an area, and a page's code takes what only a server does from the server's
+  registry of capabilities rather than by importing
+  it.
 - `npm run check:page-dates` asks every docs page whose text your branch
   changed for its date: the `updated` field of the page's metadata, which
   the site shows on the page and hands to search engines, must be no older

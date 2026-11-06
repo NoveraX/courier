@@ -97,6 +97,7 @@ export function mountStudioHttp(
       replays: { run: parts.playgroundRouter.run, wholeBody: wholeBodyOf },
       agentCalls: parts.agentCalls,
       audit: auditInputsOf(project, root),
+      root,
     });
   }
   serveStudioUi(app);

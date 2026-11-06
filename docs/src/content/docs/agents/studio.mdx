@@ -1,4 +1,4 @@
-export const metadata = { title: "Studio for Your Agent", description: "Let the agent in your editor read what Studio recorded — the failed requests with their bodies, the audit's findings, the mocks — replay a request after a fix, and switch a mock's scenario, over MCP.", mode: "both", updated: "2026-10-26" }
+export const metadata = { title: "Studio for Your Agent", description: "Let the agent in your editor read what Studio recorded — the failed requests with their bodies, the audit's findings, the mocks — replay a request after a fix, and switch a mock's scenario, over MCP.", mode: "both", updated: "2026-11-06" }
 
 ## Debugging without copying
 
@@ -21,6 +21,7 @@ In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp
 | `replay_write` | Send a recorded write — such as `POST shop.orders.create` — again, once a person confirms it. It does again what the request did. |
 | `mocks` | The mock servers Studio runs: each one's id, the source it serves, its status and address, its scenarios and the active one, its network conditions. |
 | `mock_scenario` | Switch a mock to one of its scenarios, as the Mocks view does. |
+| `docs` | Where Courier's docs for the version the project installs are — the Markdown [`@noverax/courier-docs`](/docs/agents/docs) puts in `node_modules`, for the agent to read as files — with their index, 32,000 characters at a time, and whether they are for the project's Courier. In a project without them, how to install them, and where this site has them meanwhile. |
 
 The agent's own calls through [`courier-mcp`](/docs/agents/editor) show in the same list, marked with the tool they ran for — a call a person declined included — so the agent you code with can read what another agent did.
 

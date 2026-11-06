@@ -3,10 +3,13 @@
  * token, over HTTP and through `courier-studio mcp` over stdio — the
  * requests Studio recorded, one in full with its secrets replaced, its
  * audit of them, replays of a read and of a write a person confirms, the
- * mocks and their scenarios, and switching one.
+ * mocks and their scenarios, switching one, and where the docs are.
  */
+import { mkdtempSync, rmSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { PassThrough } from "node:stream";
 import {
@@ -158,6 +161,8 @@ const agentCalls = {
 
 let server: Server;
 let url: string;
+/* A project that installs no docs package: the docs tool answers with how to install it. */
+const root = mkdtempSync(join(tmpdir(), "courier-studio-mcp-"));
 
 beforeAll(async () => {
   const app = express();
@@ -177,12 +182,16 @@ beforeAll(async () => {
     replays,
     agentCalls,
     audit: { declared: () => [], runtimes: () => [] },
+    root,
   });
   server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/mcp`;
 });
-afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
+afterAll(async () => {
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  rmSync(root, { recursive: true, force: true });
+});
 
 const questions: string[] = [];
 
@@ -228,6 +237,7 @@ describe("Studio's MCP endpoint", () => {
       "replay_write",
       "mocks",
       "mock_scenario",
+      "docs",
     ]);
     expect(
       (all.structuredContent as { requests: { id: string }[] }).requests.map((r) => r.id),
@@ -291,6 +301,17 @@ describe("Studio's MCP endpoint", () => {
       scenario: "empty",
     });
     expect(unknown.isError).toBe(true);
+  });
+
+  it("tells an agent where Courier's docs are, or how to install them", async () => {
+    const client = await modern();
+
+    const docs = await client.callTool({ name: "docs", arguments: {} });
+
+    expect(docs.structuredContent).toMatchObject({
+      installed: false,
+      install: "npm install --save-dev @noverax/courier-docs",
+    });
   });
 
   it("answers no one without Studio's token", async () => {

@@ -32,7 +32,7 @@ const UNASKED = "send it again from Studio's inspector, with its Replay button";
  * @param deps - The token, and what the tools read and change
  * @example
  * ```ts
- * mountStudioMcp(app, { token, version: studioVersion(), requestLog, mocks, replays, agentCalls, audit });
+ * mountStudioMcp(app, { token, version: studioVersion(), requestLog, mocks, replays, agentCalls, audit, root });
  * ```
  */
 export function mountStudioMcp(

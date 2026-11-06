@@ -3,6 +3,7 @@ import { type ServedTool, type ToolSet, toolSet } from "@noverax/courier-mcp/int
 import type { RequestLog } from "../request-log";
 import type { AgentCalls } from "./agent-calls";
 import { auditTool, type StudioAuditInputs } from "./audit-tool";
+import { docsTool } from "./docs-tool";
 import { mockScenarioTool, mocksTool, type StudioMocks } from "./mock-tools";
 import type { StudioReplays } from "./replay-run";
 import { replayTool, replayWriteTool } from "./replay-tools";
@@ -18,19 +19,22 @@ export interface StudioToolDeps {
   readonly agentCalls: AgentCalls;
   /** What the audit reads besides the requests. */
   readonly audit: Pick<StudioAuditInputs, "declared" | "runtimes">;
+  /** The project's root, links resolved: where the docs it installs are found from. */
+  readonly root: string;
 }
 
 /**
  * Studio's views as an agent's tools: the requests it recorded, one of
- * them in full, its audit of them, the mocks it runs — and what an agent
- * may do: send a recorded read again, send a recorded write again once a
- * person confirms it, and switch a mock's scenario.
+ * them in full, its audit of them, the mocks it runs, where Courier's docs
+ * for the project's version are — and what an agent may do: send a
+ * recorded read again, send a recorded write again once a person confirms
+ * it, and switch a mock's scenario.
  *
- * @param deps - The request log, the mocks, the replays and the audit's inputs
+ * @param deps - The request log, the mocks, the replays, the audit's inputs and the project's root
  * @returns The tool set
  * @example
  * ```ts
- * const tools = studioTools({ requestLog, mocks: mockManager, replays, agentCalls, audit });
+ * const tools = studioTools({ requestLog, mocks: mockManager, replays, agentCalls, audit, root });
  * ```
  */
 export function studioTools(deps: StudioToolDeps): ToolSet {
@@ -47,6 +51,7 @@ export function studioTools(deps: StudioToolDeps): ToolSet {
     replayWriteTool(replays),
     mocksTool(deps.mocks),
     mockScenarioTool(deps.mocks),
+    docsTool(deps.root),
   ]);
 }
 

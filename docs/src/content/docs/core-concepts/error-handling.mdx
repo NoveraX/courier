@@ -1,4 +1,4 @@
-export const metadata = { title: "Error Handling", description: "Tell an error answer, a request that got no answer and one that ran out of time apart, with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "Error Handling", description: "Tell an error answer, a request that got no answer and one that ran out of time apart, with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-11-06" }
 
 ## What a Failed Call Rejects With
 
@@ -83,6 +83,18 @@ export default async function UserPage({ params }: { params: { id: string } }) {
     }
     throw error // Re-throw unexpected errors for error boundary
   }
+}
+```
+
+### Without try/catch
+
+A method's `.safe()` resolves to `{ data, error }` instead of rejecting: the data and no error, or no data and why the call failed. A cancelled call still rejects — see [Calling Without Throwing](/docs/api/call-errors#calling-without-throwing).
+
+```typescript
+async function showUser(id: string) {
+  const { data, error } = await caller.users.getById.safe({ id })
+  if (error) return report(error.code)
+  render(data)
 }
 ```
 

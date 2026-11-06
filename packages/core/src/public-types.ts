@@ -42,6 +42,7 @@ export type { AgentOffer, AgentPolicy } from "./agent/agent-policy";
 export type { AgentAccess, AgentCall, AgentClient, AgentLimit, AgentOptions } from "./agent/types";
 export type { CallerDefaults } from "./caller";
 export type {
+  CallResult,
   FlatClient,
   GroupClient,
   InferClient,
@@ -52,6 +53,7 @@ export type {
 export type { RetryEvent, RetryOptions, RetryTrigger } from "./define/options";
 export type {
   AbortErrorCode,
+  CallFailure,
   ConfigurationErrorCode,
   CourierErrorOptions,
   RequestFailure,

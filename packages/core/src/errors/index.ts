@@ -1,4 +1,5 @@
 export { AbortError, type AbortErrorCode, isAbortError } from "./abort-error";
+export { type CallFailure, isCallFailure } from "./call-failure";
 export {
   ConfigurationError,
   type ConfigurationErrorCode,

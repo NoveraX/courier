@@ -1,4 +1,4 @@
-export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-06" }
 
 A call that got no successful answer rejects with one of three errors, each telling what happened: an `HTTPError` holds an answer, a `NetworkError` says none came, a `TimeoutError` that the time ran out. None of them is ever the other dressed up: there is no `HTTPError` with status 0. A call that was cancelled rejects with an `AbortError`, which is no failure.
 
@@ -86,6 +86,27 @@ try {
 
 `isRequestFailure(error)` is true for all three, and `RequestFailure` names them together: it is what a caller's `onError` receives — `createCaller(api, { onError })`, `createProxyCaller(routes, { onError })`.
 
+## Calling Without Throwing
+
+Every HTTP endpoint's method has `.safe()`, which calls it as the method does and resolves to its data, or to why it failed, rather than rejecting:
+
+```ts
+import { isHTTPError } from "@noverax/courier"
+
+async function showUser(id: string) {
+  const { data, error } = await caller.users.getById.safe({ id })
+  if (error) {
+    if (isHTTPError(error) && error.status === 404) return showMissing()
+    return report(error.code)
+  }
+  render(data) // the user: `error === null` narrows it
+}
+```
+
+It resolves to `{ data, error: null }` or to `{ data: null, error }`, whose `error` is a `CallFailure`: a `RequestFailure` — an `HTTPError`, a `NetworkError` or a `TimeoutError` — a `ValidationError` for variables or an answer that failed their schema, or a `MissingTokenError`. `isCallFailure(error)` tells one apart in a `catch` as well. A cancelled call still rejects with its `AbortError`: nobody waits for its answer, so the code after it does not run as if one had come. A mistake in how the API is described or the call made — a `ConfigurationError` — rejects too, as a program's bug.
+
+`.safe()` goes with `.raw` and `.with()`: `caller.users.raw.getById.safe({ id })` resolves to the whole response. An endpoint at the root has it too, `caller.health.safe()`. A stream's and a channel's failures are their events, so they have none. A client given neither a source nor routes reaches an endpoint named `safe` through one that has them, as it does an endpoint named `call` or `bind`.
+
 ## Through the Proxy
 
 The browser's side and the server's side of a proxied call each fail by these rules. A browser that could not reach the proxy — offline, the server down — rejects with a `NetworkError`, and one whose `timeout` ran out with a `TimeoutError`. A browser call that was cancelled rejects with an `AbortError`, as a direct call does. When the server's side got no answer from the API, the proxy itself answers the browser, without naming the API's host: an `HTTPError` `502` with `data.code` `"UPSTREAM_UNREACHABLE"`, or `504` with `"UPSTREAM_TIMEOUT"` when the server's side ran out of time. The reason stays in the server's log.
@@ -93,6 +114,6 @@ The browser's side and the server's side of a proxied call each fail by these ru
 ## Related
 
 - [HTTPError](/docs/api/http-error) — an answer with an error status
-- [Error Handling Guide](/docs/core-concepts/error-handling) — patterns for handling them
+- [Error Handling Guide](/docs/core-concepts/error-handling) — patterns for handling them, `.safe()` among them
 - [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) — which failures a retry policy repeats
 - [Upgrading from 0.4](/docs/upgrading) — what to write in place of status 0 and 499

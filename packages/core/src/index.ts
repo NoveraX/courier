@@ -9,6 +9,7 @@ export {
 export { detectAppOrigin, getAppOrigin, setAppOrigin } from "./app-origin";
 export { createCaller } from "./caller";
 export { AbortError, isAbortError } from "./errors/abort-error";
+export { isCallFailure } from "./errors/call-failure";
 export { ConfigurationError, isConfigurationError } from "./errors/configuration-error";
 export { CourierError, isCourierError } from "./errors/courier-error";
 export { HTTPError, isHTTPError } from "./errors/http-error";

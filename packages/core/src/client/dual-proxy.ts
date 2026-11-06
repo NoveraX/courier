@@ -1,4 +1,5 @@
 import { GROUP_PATH_SEPARATOR } from "../define/group-tree";
+import { isCallFailure } from "../errors/call-failure";
 import { mergeCallOptions } from "./merge-call-options";
 import {
   type Callable,
@@ -28,8 +29,10 @@ interface Place {
  * also a runtime hook. `bind`, `call`, `apply` and `toString` otherwise
  * belong to the function; read as methods, they started a request. Without
  * a source, a method with one of those names is reached through a client
- * given the source or its routes. `raw` and `with` are always the
- * accessors: a source cannot declare a method or a group of either name.
+ * given the source or its routes, and so is one named `safe`, which an
+ * endpoint answers with its call that does not throw. `raw` and `with` are
+ * always the accessors: a source cannot declare a method or a group of
+ * either name.
  *
  * Without a shape every member is read as both, so a chain of any length
  * reaches the group its names spell.
@@ -59,7 +62,9 @@ function groupNode(
   const groupMemo = memo<Callable>();
   const accessorMemo = memo<Callable>();
   const method = (prop: string) =>
-    methodMemo(prop, () => (variables?: unknown) => backend(path, prop, variables, options, raw));
+    methodMemo(prop, () =>
+      withSafe((variables?: unknown) => backend(path, prop, variables, options, raw)),
+    );
   const group = (prop: string) =>
     groupMemo(prop, () =>
       groupNode(backend, { group: path, name: prop }, options, raw, own?.groups.get(prop), unknown),
@@ -83,6 +88,7 @@ function groupNode(
           groupNode(backend, place, mergeCallOptions(options, next), raw, own, unknown);
         return withFn;
       }
+      if (prop === "safe") return accessorMemo("safe", () => safeCall(callFlat));
       if (FUNCTION_MEMBERS.has(prop)) return Reflect.get(target, prop);
       return member(prop);
     },
@@ -91,4 +97,22 @@ function groupNode(
     },
     ...listing(() => (own ? [...own.groups.keys(), ...own.endpoints] : []), member),
   });
+}
+
+/* A method, with the call of it that does not throw what its caller expects. */
+function withSafe(call: Callable): Callable {
+  return Object.assign(call, { safe: safeCall(call) });
+}
+
+/* A call that settles with its data or its failure: what is no failure — a cancellation, a mistake
+   in the program — rejects, as the call does. One that throws before it is sent rejects too. */
+function safeCall(call: Callable): Callable {
+  return async (variables?: unknown) => {
+    try {
+      return { data: await call(variables), error: null };
+    } catch (error) {
+      if (isCallFailure(error)) return { data: null, error };
+      throw error;
+    }
+  };
 }

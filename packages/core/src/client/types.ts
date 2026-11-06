@@ -16,7 +16,7 @@ import type {
   WSChannelMethod,
 } from "./method-types";
 
-export type { EndpointResult, WithOptions } from "./method-types";
+export type { CallResult, EndpointResult, WithOptions } from "./method-types";
 
 /** Methods exposed on a group client (excludes 'options' from the group) */
 type GroupMethods<TGroup, TRaw extends boolean, TStream extends boolean> = {

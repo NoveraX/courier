@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
-import { CourierError } from "../errors";
+import { CourierError } from "../errors/courier-error";
 
 /** Symbol key for attaching schema metadata to endpoint functions */
 export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("courier.endpoint.schema");

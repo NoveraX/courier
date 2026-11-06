@@ -5,6 +5,7 @@ import type {
   InferSend,
   InferVariables,
 } from "../define/marker";
+import type { CallFailure } from "../errors/call-failure";
 import type { CallOptions, HttpResponse } from "../http-client/types";
 import type { Subscription, WSChannel } from "../realtime/subscription-types";
 
@@ -60,13 +61,35 @@ type Callable<TVariables, TReturn> = [TVariables] extends [undefined | void]
       ? (variables?: TVariables) => TReturn
       : (variables: TVariables) => TReturn;
 
+/**
+ * What `.safe()` resolves to: the call's data and no error, or no data and
+ * why the call failed. `error === null` narrows it to the data.
+ */
+export type CallResult<TData> = { data: TData; error: null } | { data: null; error: CallFailure };
+
 /** Typed method signature — adapts based on whether variables are required */
 export type EndpointMethod<
   TResponse,
   TVariables,
   TRaw extends boolean,
   TStream extends boolean = false,
-> = Callable<TVariables, Promise<EndpointResult<TResponse, TRaw, TStream>>>;
+> = Callable<TVariables, Promise<EndpointResult<TResponse, TRaw, TStream>>> & {
+  /**
+   * Call the endpoint without throwing what a caller expects: it resolves to
+   * the data, or to why the call failed — a `CallFailure`. A cancelled call
+   * rejects with its `AbortError` as the call itself does, since its caller
+   * stopped waiting, and so does a mistake in how the API is described or
+   * the call made.
+   *
+   * @example
+   * ```ts
+   * const { data, error } = await api.users.get.safe({ id });
+   * if (error) return report(error.code);
+   * use(data);
+   * ```
+   */
+  safe: Callable<TVariables, Promise<CallResult<EndpointResult<TResponse, TRaw, TStream>>>>;
+};
 
 /** Stream or push channel method — returns a Subscription (not a Promise) */
 export type SSEMethod<TResponse, TVariables> = Callable<TVariables, Subscription<TResponse>>;

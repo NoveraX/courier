@@ -1,9 +1,8 @@
 /**
  * A generated endpoint addressed by a closure — one whose answer is not
- * JSON, say — keeps the kind its verb gives it. A closure hides its verb,
- * so the builder takes it for a write unless the chain says it reads; a
- * GET generated without saying so was uncached and refused by the query
- * hooks, while a POST stays a write.
+ * JSON, say — keeps the kind its verb gives it: the verb the closure calls
+ * decides, as a verb named on the chain does, so a GET is a read and a POST
+ * a write with nothing written after the closure.
  */
 import { describe, expect, it } from "vitest";
 
@@ -52,12 +51,12 @@ describe("an endpoint generated with a closure", () => {
     expect(kindOf("exportReport")).toBe("mutation");
   });
 
-  it("says it reads right after its closure", () => {
+  it("leaves its kind to the verb its closure calls", () => {
     const source = generate()
       .map((file) => file.content)
       .join("\n");
 
-    expect(source).toMatch(/\.via\(\(http, vars\) => http\.get\([^)]*\)\)\.reads\(\)/);
-    expect(source).not.toMatch(/http\.post\([^)]*\)\)\.reads\(\)/);
+    expect(source).toMatch(/\.via\(\(http, vars\) => http\.get\([^)]*\)\)/);
+    expect(source).not.toMatch(/\.reads\(\)/);
   });
 });

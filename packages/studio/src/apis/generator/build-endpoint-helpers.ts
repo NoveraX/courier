@@ -16,11 +16,6 @@ export interface EndpointChain {
    * cannot address alone; it replaces the address.
    */
   closure: string | null;
-  /**
-   * Whether the endpoint reads. A closure hides its verb, so an endpoint
-   * addressed by one is taken to write unless the chain says it reads.
-   */
-  reads?: boolean;
   /** The schema validating the variables, when there is one. */
   variablesSchema: string | null;
   /**
@@ -73,7 +68,8 @@ export function buildEndpointChain(chain: EndpointChain): string {
   } else if (chain.variablesType && chain.variablesType !== "undefined") {
     text += `.variables<${chain.variablesType}>()`;
   }
-  if (chain.closure) text += `.via(${chain.closure})${chain.reads ? ".reads()" : ""}`;
+  /* The verb the closure calls says whether the endpoint reads, as a verb named on the chain does. */
+  if (chain.closure) text += `.via(${chain.closure})`;
 
   /* An answer whose type is not written is still an answer: left out, the
      call would resolve to `void` although it returns what the API sent. */

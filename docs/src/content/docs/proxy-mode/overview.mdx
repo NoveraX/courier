@@ -120,7 +120,7 @@ While the setting cannot be read, the route admits nothing:
 
 - the function threw, or returned something other than a list of strings;
 - an entry names no host;
-- the variable is set and names none — a template whose value was empty;
+- the variable is set and names none — a template whose value was empty, which read as unset would serve every name;
 - the list holds more than 1,000 entries, or the variable is longer than 64 KiB.
 
 Every request is then answered `500` with the code `SERVER_MISCONFIGURED`, localhost's included, and every socket is answered `auth_error` and closed with `1011`. The answer says nothing of why; the server's log names the setting, where it came from and what is wrong, once.
@@ -131,9 +131,9 @@ The WebSocket handlers take the same option. Behind a reverse proxy the host is 
 
 Every proxy route — GET, POST, SSE and WebSocket — refuses a request another site's page made, with `403 Origin not allowed`. This stops a third-party page from calling your API with your users' cookies:
 
-- Where the browser sends `Sec-Fetch-Site`, it decides. `same-origin` and `none` (the user typed the address) are served; `same-site` and `cross-site` are served only when their `Origin` is in `allowedOrigins`. An `<img>` or a link on another site carries no `Origin`, so it is refused.
+- Where the browser sends `Sec-Fetch-Site`, it decides. `same-origin` and `none` (the user typed the address) are served; `same-site` and `cross-site` are served only when their `Origin` is in `allowedOrigins`, so a page on a sibling subdomain is another site here. An `<img>` or a link on another site carries no `Origin`, so it is refused.
 - Where it does not — an older browser, or a site served over plain HTTP — the `Origin` must be the origin the request was sent to, or be listed.
-- A request with neither header is not a browser request from another page, and is served.
+- A request with neither header is not a browser request from another page — a server, a CDN, a script — and is served: it carries none of a user's cookies by itself.
 
 ```ts
 courierHandler({
@@ -144,7 +144,7 @@ courierHandler({
 
 The proxy route and `courier-server` read `allowedOrigins` as they read `allowedHosts`: a function in its place is called with the first request — by `courier-server` as it starts — and with neither, `COURIER_ALLOWED_ORIGINS` names the origins, comma-separated. While it cannot be read — an entry no browser sends among them — every request is answered `500`; see [Names known where the app runs](#names-known-where-the-app-runs). A WebSocket handler created on its own with `createWSHandler` reads them the same way when the first socket opens, and while they cannot be read every socket is answered `auth_error` and closed with `1011`.
 
-`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme on its default port; name the port to cover another, as in `*.example.com:8443`. Any scheme includes plain HTTP, and anyone on a visitor's network can answer for an HTTP name with a page of their own, which then calls the proxy with the visitor's cookies — so prefer `https://*.example.com` unless a page served over HTTP must call it.
+`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme on its default port; name the port to cover another, as in `*.example.com:8443`. Any scheme includes plain HTTP, and anyone on a visitor's network can answer for an HTTP name with a page of their own, which then calls the proxy with the visitor's cookies — so prefer `https://*.example.com` unless a page served over HTTP must call it. A pattern admits every host under it, whoever runs it: `https://*.vercel.app` admits every app any Vercel user deploys, and `*.com` every site, each reading what your users are answered — list the origins of your own deployments, or a pattern under a domain only you control.
 
 An entry is written as a browser sends an origin — no path, no trailing slash, the scheme's default port left out — since one written otherwise could never match. Such an entry stops the handler from being created, with `INVALID_ALLOWED_ORIGIN` naming the form to use. `null` is refused as well: every sandboxed frame and `data:` page sends it, whatever site it belongs to.
 
@@ -182,13 +182,13 @@ const whitelistedHeaders = [
 
 `Cookie` is not on the list. The browser sends every cookie of your application's origin, your own session among them, so a source or an endpoint that should receive them names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 
-`Authorization` goes on when a script set it — a `Bearer` token, or a scheme of the API's own. The browser also sends one by itself: once a user has answered your site's own login prompt — a staging site behind HTTP Basic authentication, an intranet signed in with Kerberos — every request to it carries `Basic`, `Digest`, `Negotiate` or `NTLM` credentials. Those are your site's, not the API's, so they stay behind, and the log names the API once. A source whose upstream takes the same credentials names `authorization`, in `allowedHeaders` or on one endpoint with `.headers([...])`, and receives them as the browser sent them.
+`Authorization` goes on when a script set it — a `Bearer` token, or a scheme of the API's own. The browser also sends one by itself: once a user has answered your site's own login prompt — a staging site behind HTTP Basic authentication, an intranet signed in with Kerberos — every request to it carries `Basic`, `Digest`, `Negotiate` or `NTLM` credentials. Those are your site's, not the API's, so they stay behind, and the log names the API once for each scheme. A source whose upstream takes the same credentials names `authorization`, in `allowedHeaders` or on one endpoint with `.headers([...])`, and receives them as the browser sent them.
 
-A forwarded header never replaces one your server sets. An API that sends a service token in its `headers` sends that token whatever `Authorization` the page wrote; the same holds for a `Referer`, an `X-Request-Id` or any other header the API's `headers`, its session, a middleware or an endpoint's closure set. The browser's copy goes on only where nothing on the server set one.
+A forwarded header never replaces one your server sets. An API that sends a service token in its `headers` sends that token whatever `Authorization` the page wrote; the same holds for a `Referer`, an `X-Request-Id` or any other header the API's `headers`, its session, a middleware or an endpoint's closure set. The browser's copy goes on only where nothing on the server set one. An `X-Request-Id` goes on only when it is one — a single word of up to 200 visible characters, none a quote or a backslash, as the ids nginx, Kong, AWS and Google Cloud write are — so a page cannot write what it likes into the API's logs.
 
 The headers that claim a client address — `X-Forwarded-For`, `X-Real-IP`, `Forwarded`, `X-Client-IP` — are not copied from the browser, which can write any of them. The proxy writes `X-Forwarded-For` itself from the connection it served — the socket's address on Node, the one SvelteKit, SolidStart, Astro, h3 or Hono's runtime reports elsewhere. Behind a reverse proxy on a loopback or private address, or one `COURIER_TRUSTED_PROXIES` names, the chain that proxy wrote is kept and its own address appended; a caller on a public address is the whole chain. Next.js, React Router and edge functions report no connection, and there the chain the proxy in front recorded goes on — Next.js writes the socket's address there itself where no proxy did. Either way the chain is kept from the right, where the proxies wrote it, so a long chain of the user's own cannot push their entries out. See [The user's address](/docs/deployment/overview#the-users-address). A platform that writes the header itself, such as a CDN that overwrites whatever the client sent, can have its copy forwarded by naming it: `allowedHeaders: ["x-forwarded-for"]`.
 
-The backend's answer is filtered the same way: the browser receives the headers that describe any answer — `ETag`, `Cache-Control`, `Last-Modified`, `Retry-After`, the rate-limit headers and a few more — and nothing the backend attached for itself.
+The backend's answer is filtered the same way: the browser receives the headers that describe any answer — `ETag`, `Cache-Control`, `Last-Modified`, `Retry-After`, the rate-limit headers, the request's `X-Request-Id` and a few more — and nothing the backend attached for itself.
 
 <Callout variant="tip" title="Custom headers">
 Need more? Name them with the `allowedHeaders` option in `defineApi()`, or on one endpoint with `.headers([...])`. A named header crosses the proxy both ways: from the browser to the backend, and from the backend's answer back to the browser — a `Location`, a `Link`, an `X-Total-Count`. Cookies are named the same way: `cookie` for the browser's, `set-cookie` for the backend's.

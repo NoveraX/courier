@@ -130,7 +130,7 @@ export const Forecast = z.object({
 
 ## How a call runs
 
-An agent's call goes where your app's own calls go: through the source's middleware and the endpoint's, its variables validated by its schema and its answer by its response schema, and into Studio's timeline marked **agent**, with the tool and the client that called it. There is no second path to forget to protect.
+An agent's call goes where your app's own calls go: through the source's middleware and the endpoint's, its variables validated by its schema and its answer by its response schema, and into Studio's timeline marked **agent**, with the tool and the client that called it, while the principal never leaves your server. There is no second path to forget to protect.
 
 What the agent is told:
 
@@ -143,7 +143,7 @@ What the agent is told:
 
 What the agent is told of an API it could not reach, or of your own code's failure, is cut short and cut the same way: an address shows no more than its scheme, host and port — not its path, its query or the credentials in it; a path written without a scheme keeps no query that sets a value, `/v4/user/42/hosts?[redacted]`; a header value or an argument the platform refused is not quoted; and no credential [Studio](/docs/studio/overview) cuts from an error's text before it leaves its page is told — a token after `Bearer`, a `password=`, a private key, a JWT, a provider's key. With Node's `fetch`, why a request got no answer is told in the words of Node, undici and OpenSSL, which name no header and no body of it. Your own code's message is told as you wrote it otherwise — a path, an e-mail address, an excerpt of an answer it quotes — so keep out of it what an agent may not read. A cause that is not a network failure — a driver's error, an SDK's — is left out, for nothing vouches for what its text holds.
 
-An agent's call carries no browser session: whatever a browser's cookies would give a user, an agent gets only what your middleware gives the principal it runs for.
+An agent's call carries no browser session — none of the request it arrived on, no cookie, no forwarded header: whatever a browser's cookies would give a user, an agent gets only what your middleware gives the principal it runs for.
 
 ## A person confirms what cannot be undone
 

@@ -19,45 +19,27 @@ This page follows the user's credentials through each layer. [User Sessions](/do
 
 ### The proxy serves only what you mark
 
-A page reaches an endpoint through the proxy only where a mark opens it: `.expose()` on the endpoint, or `expose` on its group or its API, the nearest deciding. Any other is answered as a name the source does not define, so an endpoint written for a cron job or an admin tool never runs for a page with your server's credentials, and a caller guessing names learns nothing of what exists. A page's client takes the routes Courier gives it from the marks — the names of the endpoints a page may call and how it reaches them, nothing of the API's definition. See [Exposing Endpoints](/docs/proxy-mode/expose).
+A page reaches an endpoint through the proxy only where a mark opens it — `.expose()` on the endpoint, or `expose` on its group or its API — and any other is answered as a name the source does not define. A page's client learns the routes alone, nothing of the API's definition. See [Exposing Endpoints](/docs/proxy-mode/expose).
 
 ### The proxy passes on only what it names
 
-The proxy forwards a short list of the browser's headers to the API, and adds those a source, a group or an endpoint names in `allowedHeaders` or `.headers()`. Three kinds stay behind unless named:
-
-- **Cookies.** The browser sends every cookie of your application's origin, its own session included, and forwarded whole they would reach whatever upstream a source points at — a third party's too. An API with a `session` gets the cookies its session names.
-- **The browser's own logins.** `Authorization` in `Basic`, `Digest`, `Negotiate` or `NTLM` answers your application's own login prompt, a staging site's for instance, and is dropped, with one warning per source and scheme. A `Bearer` token, or any scheme your scripts set, goes on.
-- **Client addresses.** `X-Forwarded-For`, `X-Real-IP`, `Forwarded` and the like can be written by any page. The proxy writes `X-Forwarded-For` itself: the connection's address, after the chain a proxy on the local machine, a private network or `COURIER_TRUSTED_PROXIES` recorded; where the framework does not report the connection, as Next.js does not, the chain the proxy in front recorded. See [The user's address](/docs/deployment/overview#the-users-address).
-
-What the browser forwards only fills in what your server leaves unset. A header the API sets in its `headers`, its session, a middleware or an endpoint's closure is the one the API receives, and the browser's copy is dropped: a page that writes its own `Authorization` or `Referer` cannot replace the service token or the `Referer` your upstream checks. An `X-Request-Id` goes on only when it is one — a single word of up to 200 visible characters, none a quote or a backslash, as the ids nginx, Kong, AWS and Google Cloud write are — so a page cannot write what it likes into the API's logs.
-
-The API's answer comes back with its own short list of headers — caching, rate limits, the request's id — and its cookies travel on a path of their own, described below.
+The proxy forwards the browser's headers on a short list and those named in `allowedHeaders` or `.headers()`. The rest stay behind: the browser's cookies, which would reach whatever upstream a source points at, but those an API's `session` names; the logins a browser sends by itself to your own site; and the headers that claim a client address. A header your server sets is the one the API receives, whatever the page wrote, and the API's cookies come back on a path of their own, described below. See [Header whitelisting](/docs/proxy-mode/overview#header-whitelisting) and [Cookies](/docs/proxy-mode/api-route#cookies).
 
 ### Only to the API's origin
 
-A call that carries the user's credentials from a server follows a redirect only while it stays on the API's origin; a redirect anywhere else is answered with as it came, an upload's included. A session is never sent over plain HTTP across the public internet: such a call fails with `SESSION_INSECURE_TRANSPORT`, unless the API is on the local machine or a private network, or its session sets `allowHttp`. The address a session asks for its double-submit token, `csrf.from`, is a path on the API's own origin, and an endpoint's path always stays under its API's `baseURL`.
+A call that carries the user's credentials from a server follows a redirect only while it stays on the API's origin; a redirect anywhere else is answered with as it came, an upload's included. A session goes over plain HTTP only to the local machine or a private network, unless it sets `allowHttp`. The address `csrf.from` names is a path on the API's own origin, and an endpoint's path always stays under its API's `baseURL`.
 
 ### Streams and channels
 
-A stream from a page asks the browser for its cookies with `credentials: "include"`; from a server, it carries the session read again on every reconnect, so a session the API renewed is the one the next connection sends.
-
-A browser cannot put headers on a WebSocket handshake, so a Courier client sends what proves who it is in the socket's first frame — the caller's `ws.auth`, and the headers it would otherwise send — never in the address, where it would reach access logs and browser history. On Node and React Native the same headers go on the handshake itself. Through the proxy, the upstream socket is opened for each user with that user's session, never shared between users.
+A stream carries the session as a call from the same place does, read again on every reconnect. A browser cannot put headers on a WebSocket handshake, so a Courier client sends what proves who it is in the socket's first frame, never in the address, where it would reach access logs and browser history. Through the proxy, the upstream socket is opened for each user with that user's session, never shared between users. See [Streams and channels](/docs/server-side/session#streams-and-channels) and [Who a connection is](/docs/advanced/realtime-connections#who-a-connection-is).
 
 ### React Native
 
-A React Native app keeps its cookies where no script reads them, and sends them to every call to their host whether the API describes a session or not. The cookies a page could read — the double-submit token, a bearer token the API did not set `HttpOnly` — Courier keeps from the answers of its own calls, for the host, domain and path they were set for and until they expire. A `Domain` of one label, such as `com`, would reach every other API of the app, and is not taken.
+A React Native app keeps its cookies where no script reads them, and sends them to every call to their host whether the API describes a session or not. The cookies a page could read — the double-submit token, a bearer token — Courier keeps from the answers of its own calls, for the host, domain and path they were set for, and a `Domain` of one label, such as `com`, is not taken. See [The user's session](/docs/frameworks/react-native#the-users-session).
 
 ## What reaches the browser
 
-An API's answer can renew the session, hand out a double-submit token, or sign the user out. On a server, Courier carries those cookies on — to the calls still to be made for the same request, and to the user's browser on your application's response — with these rules:
-
-- Only the cookies the session names, the double-submit cookie and the bearer cookie; any other cookie stays with the API.
-- `Path=/`, since the API's path names its own routes, not your pages.
-- A `Domain` only where it covers your application's host; otherwise the cookie stays with that host alone.
-- `Secure` where your application is served over HTTPS; on the local machine over plain HTTP, only where the API set it, as WebKit on Linux keeps no secure cookie there. Elsewhere it is dropped, and `SameSite=None` becomes `Lax`; a `__Host-` or `__Secure-` cookie, which cannot exist without it, is refused.
-- `session.relay: false` keeps even the session's own cookies within the request: the calls made for it still send them, and the browser is not handed them.
-
-A page that has already started streaming can no longer set a cookie, and the log says so. Where each framework can and cannot set one is on its page and in [User Sessions](/docs/server-side/session).
+An API's answer can renew the session, hand out a double-submit token, or sign the user out. On a server, Courier carries those cookies on — to the calls still to be made for the same request, and to the user's browser on your application's response — and only the cookies the session names, the double-submit cookie and the bearer cookie; any other cookie stays with the API. Each is made for your application's origin, for every path and `Secure` only where it can be, and `session.relay: false` keeps even the session's own cookies within the request. The rules, and where each framework can and cannot set a cookie, are in [The cookies the API sets](/docs/server-side/session#the-cookies-the-api-sets).
 
 ## Requests another site sets off
 
@@ -65,64 +47,42 @@ A page on another site can make the user's browser send your application a reque
 
 ### The proxy's origin rule
 
-Every call the proxy serves — GET, POST, a stream and a channel — is checked for where it comes from:
-
-- **`Sec-Fetch-Site`** decides wherever the browser sends it, which a current browser does on every request to a secure origin: `same-origin`, and `none` for what the user typed, pass; `same-site` and `cross-site` pass only from an origin in `allowedOrigins`. A page on a sibling subdomain is another site here.
-- **`Origin`** is compared with the origin the request was addressed to where the browser says nothing else.
-- **Neither header** means no browser made the request — a server, a CDN, a script — and it is served: it carries none of a user's cookies by itself.
-
-`allowedOrigins` takes exact origins, `https://*.example.com` for the subdomains of a host on one scheme and port, or `*.example.com` for them on any scheme. Any scheme includes plain HTTP, and anyone on a visitor's network can answer for an HTTP name with a page of their own, which then calls with the visitor's cookies — so write the scheme unless a page served over HTTP must call the application. A pattern admits every host under it, whoever runs it: `https://*.vercel.app` admits every app any Vercel user deploys, and `*.com` every site, each reading what your users are answered — list the origins of your own deployments, or a pattern under a domain only you control. With none configured, development also admits a page on another port of the local machine, while the app itself is served from that machine, so Studio can drive it. An app on any other address never admits one: a server started without `NODE_ENV` counts as in development, and a page on a visitor's own machine — a local tool, another dev server — is not the application's.
-
-`allowedHosts` names the hosts your application answers to. Without it, development answers only the local machine's names and IP addresses, so a name an attacker points at `127.0.0.1` — DNS rebinding — cannot reach a developer's server; production answers every name its operator set up. A request for any other host is answered `421` on every transport.
-
-Both lists can be known only where the application runs: a function in place of either is read with the first request, and `COURIER_ALLOWED_HOSTS` and `COURIER_ALLOWED_ORIGINS` name them where the code does not. A list that cannot be read closes the application rather than opening it: every request is answered `500`, and the log says why. So does a variable that is set and empty, which a template writes when its value was missing — read as unset, it would serve every name. See [Names known where the app runs](/docs/proxy-mode/overview#names-known-where-the-app-runs).
+Every call the proxy serves — GET, POST, a stream and a channel — is checked for where it comes from. `Sec-Fetch-Site` decides wherever the browser sends it, and `Origin` where it says nothing else: a page of your application's passes, a page of another site only from an origin in `allowedOrigins`, and a request with neither header, which no browser made, is served. `allowedHosts` names the hosts your application answers to, so a name an attacker points at a developer's server — DNS rebinding — is answered `421`. A list that cannot be read closes the application rather than opening it. The rules, the patterns a list takes and what each admits are in [Origin validation](/docs/proxy-mode/overview#origin-validation) and [Host validation](/docs/proxy-mode/overview#host-validation).
 
 A GET to the proxy reaches only an endpoint that reads, and the variables of an endpoint marked `sensitiveVariables` are refused in an address: such a call goes as POST.
 
 ### Writes made with the user's session
 
-Your server makes calls with the user's session while it serves a request, and a write made then acts for the user. It is made only when the request being served is one of your application's own: a form, a Server Action or a `fetch` that passes the origin rule above; a page the browser marks as your application's or as opened by the user, or, from a browser too old to say, one whose `Referer` is a page of yours. Anything else is refused with `403` before it reaches the API, and the log and Studio say why.
-
-- A sign-in is guarded too: the double-submit token it would carry, or ask for, vouches for it as a session would.
-- A write that does no harm when a stranger sets it off — signing out from a link — says so with `session: "unguarded"`.
-- A read sent over POST — a GraphQL query, an endpoint declared `.reads()` — is a read here, and a page another site linked to still loads with it. Declare an endpoint a read only when it changes nothing.
+Your server makes calls with the user's session while it serves a request, and a write made then acts for the user. It is made only when the request being served is one of your application's own — a form, a Server Action or a `fetch` that passes the origin rule above, or a page the browser marks as your application's or as opened by the user. Anything else is refused with `403` before it reaches the API, and the log and Studio say why. A sign-in is guarded too, a write that does no harm when a stranger sets it off says so with `session: "unguarded"`, and a read sent over POST is a read here. See [Writes another site sets off](/docs/server-side/session#writes-another-site-sets-off).
 
 ### Channels
 
-A channel's socket passes the origin rule as it opens, so a page on another site cannot open one with the user's cookies. Its first frame may add the headers a browser could not put on the handshake, and never those a browser or a proxy sets: `Cookie`, `Origin`, `Host`, `Referer`, `Forwarded`, `X-Forwarded-*`, `Sec-*`, `Proxy-*` and the headers that claim a client address. A frame's header names and values must be ones HTTP can carry, at most 64 of them; a frame that breaks those rules is refused, and the connection is closed with `4401`.
+A channel's socket passes the origin rule as it opens, so a page on another site cannot open one with the user's cookies. Its first frame may add the headers a browser could not put on the handshake, and never those a browser or a proxy sets — see [Who a connection is](/docs/advanced/realtime-connections#who-a-connection-is).
 
 ## AI agents
 
 An endpoint reaches an agent only when it is marked `.agent()` or the project's `agents` policy offers it, and then as an MCP tool whose call runs through the endpoint's middleware and schemas like any other — see [MCP Server](/docs/agents/overview).
 
-- **Nothing offered by default.** A project that sets no policy offers the endpoints marked `.agent()` alone. The policy lives in `courier.config.ts`, under review: a `deny` pattern wins over everything, `.agent(false)` over anything that would offer an endpoint, and an `access` ceiling over the endpoints' own marks. A server's start can narrow it — `--read-only`, `--deny` — and never widen it. `courier-mcp --list`, Studio and the pull request report show what is offered and why, and a pattern that names no endpoint is warned of.
-- **No browser session.** An agent's call carries none of the request it arrived on: no cookie, no forwarded header. It runs with what your middleware gives the principal `authorize` let in, and middleware tells it apart by `ctx.agent`.
-- **Callers you authorize.** `createMcpHandler` cannot be created without `authorize`. A tool `allow` keeps from a caller is answered as an unknown one, and a request from a browser page is served only from your app's origin or one of `allowedOrigins`.
-- **A tool's limit.** `.agent({ limit })` bounds how often a caller may call a tool — counted per caller with `limitPer` — and a call beyond it is refused before anything runs or anyone is asked.
-- **A person confirms what cannot be undone.** A `destructive` tool runs once the person at the client confirmed that exact call — and so does every write where the policy says `confirm: "write"`; the question goes to the person, out of the model's reach. A confirmation counts for one tool with the same arguments for five minutes, signed with `confirmSecret`. `allowDestructive` stands in for the person only where the client cannot ask one.
-- **What reaches the model.** An error answer's status and body, cut short; never a response header. A request that got no answer is told by the system's code and text — its host and port; a failure of your own code by its message, with a line for each network failure that caused it, and a cause that is not a network failure is left out. Neither tells an address's path, query or credentials, a header value the platform refused, or a credential Studio cuts from an error's text; your own message keeps the rest of what you wrote in it, a path without a scheme or an e-mail address among it. An answer longer than `maxResultChars` is refused.
-- **What Studio keeps.** An agent's calls show with the tool and the client; the principal never leaves your server. Studio's own MCP endpoint answers only with Studio's token, and replaces every credential and every body field named like a secret in what it hands an agent. Its `replay_write`, which sends a recorded write again, runs only once the person confirms the call shown to them — see [Studio for Your Agent](/docs/agents/studio#replaying-after-a-fix).
+- **Nothing offered by default.** The policy lives in `courier.config.ts`, under review, and a server's start can narrow it, never widen it — see [What agents may call](/docs/agents/overview#what-agents-may-call).
+- **No browser session.** An agent's call carries none of the request it arrived on, and runs with what your middleware gives the principal `authorize` let in.
+- **Callers you authorize.** `createMcpHandler` cannot be created without `authorize`, and `allow` keeps a tool from a caller as if it did not exist — see [In Your App](/docs/agents/app#who-may-call).
+- **Limits and confirmations.** A tool's limit refuses a call beyond it before anything runs, and a person confirms what cannot be undone, out of the model's reach — see [How often an agent may call](/docs/agents/overview#how-often-an-agent-may-call) and [A person confirms](/docs/agents/overview#a-person-confirms-what-cannot-be-undone).
+- **What reaches the model** is an answer, or an error cut short and cut of its credentials, never a response header — see [How a call runs](/docs/agents/overview#how-a-call-runs).
+- **What Studio keeps.** An agent's calls show with the tool and the client. Studio's own MCP endpoint answers only with Studio's token, hands an agent no credential, and sends a recorded write again only once the person confirms it — see [Studio for Your Agent](/docs/agents/studio#what-it-shows-and-to-whom).
 
 ## Webhooks
 
-A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/advanced/webhooks) checks each delivery before your handler sees it:
-
-- **Its size.** The body is counted as it arrives and refused at the chunk that crosses `maxBodyBytes` (1 MB by default), never held whole first.
-- **Its signature.** It is checked over the body exactly as it came, in time that does not depend on where it differs, under a secret read when the delivery comes. A webhook without a secret refuses every delivery rather than take an unsigned one.
-- **Its age.** Stripe's scheme and Standard Webhooks sign the time a delivery was sent; one older than five minutes is refused as a replay. GitHub's scheme and one of your own sign no time: keep the ids of the deliveries you have handled where a replay matters.
-- **Its body.** It must be JSON and pass the webhook's schema; a refusal tells the sender what failed and nothing more.
-
-Studio can have a delivery sent to your app — **Deliver again** in a delivery's inspector — and the app signs it, so the secret stays where it is. Only an app attached with the project's Studio token is asked, and it delivers only to a route its deliveries came to or to an address on its own machine.
+A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/advanced/webhooks) checks each delivery before your handler sees it: its size as it arrives, its signature over the body exactly as it came, its age where the scheme signs one, and its body against the webhook's schema. A webhook without a secret refuses every delivery rather than take an unsigned one, and Studio can have a delivery sent to your app, which the app signs, so the secret stays where it is. See [What a delivery passes](/docs/advanced/webhooks#what-a-delivery-passes).
 
 ## Caches
 
-`cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session, and says so once per endpoint. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line. In a browser or a React Native app, where the platform sends the cookies, a session's calls count as carrying it and are partitioned on the device.
+`cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
 
 ## What Courier writes down
 
-- **Its log.** An `HTTPError` carries the API's answer whole. Printed — by Courier's log, `console.error`, or Node's report of an uncaught error — it shows every header with each credential's value hidden: a cookie the API set keeps its name and attributes, an `Authorization` its scheme. `error.headers` still holds them all for the code that reads them. `COURIER_LOG_FORMAT=json` prints an error's name, message, code and status alone. Whatever Courier's server log writes — its own lines, a failure's text, the chain of errors under it — loses every credential first, by the rules of [`redact()`](/docs/api/redact). `logMiddleware` logs a failed call's status, never the answer it carried. A warning about something a client sent names it by what the server knows, never in the client's own words.
-- **An upload's files.** Under Node the proxy writes what an upload holds past `uploadMemoryBytes` to disk while its call runs, in a folder of the call's own in `uploadDirectory`: made with a name no one can guess, readable by the server's user alone, its files under numbers rather than the names the client sent, and removed once the call has its answer and when the process exits. A process stopped by a signal it does not handle — SIGTERM, SIGINT — runs no exit handler, and one killed outright runs nothing: a host that stops on a signal should catch it and call `process.exit()`, as `courier-server` does. What such a process left, the next one on the same host removes as it makes its first folder there, once the process that made a folder is gone and the folder is older than `bodyTimeoutMs`. See [where the proxy keeps an upload](/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload).
-- **Studio.** Studio keeps what it captured in `.courier/studio.db`, readable by your account alone, in a folder that keeps itself out of Git. The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf`, `api-key` or `signature` in it is written as `[redacted]` — a webhook's signature among them, which with its body would let anyone deliver it again. The inspector hides those values until asked, and a request copied as cURL or `fetch` leaves them out. An error's text, its cause and a request's address are shown whole to the page that holds Studio's token, and leave it — written down, exported, told to an agent or shown to a page without the token — with their credentials cut. Studio makes changes only for a page opened with the token in `.courier/studio-token` — see [Studio](/docs/studio/overview). A [session file](/docs/studio/session-files) shared for a bug report carries no credential either, and replaces every body field and query parameter named like a secret, listing each one before it is saved. To follow [contract drift](/docs/studio/contract-drift), Studio keeps the shape of each answer — its fields' names and JSON types, never a value.
+- **Its log.** An `HTTPError` carries the API's answer whole. Printed — by Courier's log, `console.error`, or Node's report of an uncaught error — it shows every header with each credential's value hidden, by the rules of [`redact()`](/docs/api/redact), and `error.headers` still holds them all for the code that reads them. Courier's server log loses every credential first — see [Logs](/docs/deployment/overview#logs) — and `COURIER_LOG_FORMAT=json` prints an error's name, message, code and status alone. `logMiddleware` logs a failed call's status, never the answer it carried, and a warning about something a client sent names it by what the server knows, never in the client's own words.
+- **An upload's files.** Under Node the proxy writes what an upload holds past `uploadMemoryBytes` to disk while its call runs, in a folder of the call's own that only the server's user may read, and removes it once the call has its answer — see [where the proxy keeps an upload](/docs/proxy-mode/uploads#where-the-proxy-keeps-an-upload).
+- **Studio.** Studio keeps what it captured in `.courier/studio.db`, readable by your account alone, with every credential header's value written as `[redacted]`. An error's text, its cause and a request's address leave the page that holds Studio's token — written down, exported, told to an agent or shown to a page without the token — with their credentials cut; see [No credential is kept](/docs/studio/storage#no-credential-is-kept). Studio makes changes only for a page opened with the token in `.courier/studio-token` — see [Start Studio](/docs/studio/overview#start-studio). A [session file](/docs/studio/session-files) shared for a bug report carries no credential either, and to follow [contract drift](/docs/studio/contract-drift) Studio keeps the shape of each answer, never a value.
 
 ## Limits at the edge
 
@@ -133,8 +93,8 @@ Studio can have a delivery sent to your app — **Deliver again** in a delivery'
 | A JSON body to the proxy | 1 MB | `maxBodyBytes` |
 | An upload to the proxy | 10 MB | `maxUploadBytes` |
 | Fields and files in one upload | 1000 | `maxUploadParts` |
-| What every upload keeps in memory at once — past it a file goes to disk, or the upload is refused with `503` | 64 MB | `totalUploadMemoryBytes` |
-| What every upload keeps on disk at once — past it an upload is refused with `503` | 1 GB | `totalUploadDiskBytes` |
+| What every upload keeps in memory at once | 64 MB | `totalUploadMemoryBytes` |
+| What every upload keeps on disk at once | 1 GB | `totalUploadDiskBytes` |
 | An upload's text fields, together | 1 MB | `maxBodyBytes` |
 | A pause between two pieces of a request body | 30 seconds, then `408` | `bodyIdleTimeoutMs` |
 | A request body's whole arrival | 5 minutes, then `408` | `bodyTimeoutMs` |
@@ -151,7 +111,7 @@ Subscribing, leaving and re-authenticating are counted apart from other messages
 
 | | Development | Production |
 | --- | --- | --- |
-| A page on another local port | Admitted while `allowedOrigins` is empty and the app is served locally | Never |
+| A page on another local port | Admitted while `allowedOrigins` is empty and the app is served locally, so Studio can drive it — see [Origin validation](/docs/proxy-mode/api-route#origin-validation) | Never |
 | Hosts answered while `allowedHosts` is empty | The local machine's names and IP addresses | Every name |
 | The app's origin, for Studio's Playground | Taken, when not configured, from a request whose own `Host` is `localhost`, `127.0.0.1` or `[::1]` on the port the server accepted it on, sent from this machine, as far as the framework tells — see [`appOrigin`](/docs/api/config) | Never taken from a request |
 | Studio's Playground under `browsersOnly` | Let through on a one-time pass only Studio's runtime in the process serving the route redeems — see [Studio's Playground](/docs/proxy-mode/rate-limits#studios-playground) | Refused, as a script is: no pass is honoured |

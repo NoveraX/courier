@@ -1,7 +1,6 @@
 import { createLogger } from "../logger";
-import { ConnectionError, RealtimeError } from "./errors";
-import { markFinal } from "./final-errors";
 import { OBSERVE_DATA, type ObservableChannel } from "./observe-data";
+import { endOf, type LifeObserver, OBSERVE_LIVES, SubscriptionLives } from "./observe-lives";
 import { shareRetry } from "./retry-of";
 import { DEFAULT_MAX_BUFFER_SIZE } from "./sse/event-queue";
 import type { SubscriptionDriver, SubscriptionSink } from "./subscription-driver";
@@ -28,6 +27,7 @@ export class SubscriptionHandle<TData> implements Subscription<TData>, Observabl
   readonly #driver: SubscriptionDriver<TData>;
   readonly #listeners = new SubscriptionListeners<TData>(log);
   readonly #inbox: SubscriptionInbox<TData>;
+  readonly #lives = new SubscriptionLives();
   #status: ConnectionStatus = "connecting";
   #life: Life = "live";
   #generation = 0;
@@ -98,6 +98,7 @@ export class SubscriptionHandle<TData> implements Subscription<TData>, Observabl
     }
     this.#life = "live";
     this.#inbox.renew(this.#listeners.of("data").size > 0);
+    this.#lives.began();
     this.#setStatus("connecting");
     this.#driver.reopen(this.#sinkFor(++this.#generation));
   };
@@ -108,6 +109,7 @@ export class SubscriptionHandle<TData> implements Subscription<TData>, Observabl
     this.#life = "closed";
     this.#generation++;
     if (live) this.#driver.close();
+    this.#lives.close(live);
     this.#setStatus("disconnected");
     this.#inbox.close();
     if (live) this.#emit("close", { reason: "closed" });
@@ -116,6 +118,10 @@ export class SubscriptionHandle<TData> implements Subscription<TData>, Observabl
 
   [OBSERVE_DATA](handler: (data: unknown, event: StreamEvent<unknown>) => void): () => void {
     return this.#inbox.observe(handler);
+  }
+
+  [OBSERVE_LIVES](observer: LifeObserver): () => void {
+    return this.#lives.watch(observer);
   }
 
   /* The sink of one life of the subscription: what an earlier life's driver still says is not heard. */
@@ -148,16 +154,14 @@ export class SubscriptionHandle<TData> implements Subscription<TData>, Observabl
     this.#inbox.end(error);
     const generation = this.#generation;
     /* Listeners hear a RealtimeError; the loop rejects with the error as it came. */
-    const failure =
-      error && (error instanceof RealtimeError ? error : new ConnectionError(error.message));
-    if (failure) {
-      markFinal(failure);
-      this.#emit("error", failure);
-    }
+    const info = endOf(error);
+    /* Watchers hear the end first: a listener told of it below may open a life of its own. */
+    this.#lives.ended(info);
+    if (info.reason === "failed") this.#emit("error", info.error);
     if (generation !== this.#generation) return;
     this.#setStatus("disconnected");
     if (generation !== this.#generation) return;
-    this.#emit("close", failure ? { reason: "failed", error: failure } : { reason: "completed" });
+    this.#emit("close", info);
   }
 
   /* A status reached while the subscription was being made is where it stands, with nobody yet to tell. */

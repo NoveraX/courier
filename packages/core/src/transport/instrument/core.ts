@@ -15,10 +15,14 @@ export interface StreamMeta {
   requestHeaders?: Record<string, string>;
 }
 
-/** Handle returned by `beginStream` for emitting lifecycle events */
+/**
+ * Handle returned by `beginStream` for emitting lifecycle events: of one
+ * Studio entry at a time, a new one for each time the stream opens again.
+ */
 export interface StreamInstrumentation {
-  requestId: string;
-  startTime: number;
+  /** The id of the entry now told of */
+  readonly requestId: string;
+  readonly startTime: number;
   /**
    * Emit stream:message for an event. `eventType` defaults to `"data"`
    * (server→client), matching the convention used by the WS adapter and
@@ -48,6 +52,12 @@ export interface StreamInstrumentation {
    * on `reconnecting`. Nothing more once the stream has closed.
    */
   emitStatus(status: StreamStatusEvent["status"], reconnect?: Reconnect): void;
+  /**
+   * Begin a new entry for the stream, once its last has closed: the server
+   * ended it, and it was opened again. The new entry has an id of its own
+   * and the request headers last sent; everything told after goes to it.
+   */
+  reopen(): void;
 }
 
 /**
@@ -68,28 +78,37 @@ export function beginStream(
 ): StreamInstrumentation | null {
   if (!studioHooks.onStreamOpen) return null;
 
-  const requestId = externalRequestId ?? generateRequestId();
-  const startTime = Date.now();
+  let requestId = externalRequestId ?? generateRequestId();
+  let startTime = Date.now();
   let seq = 0;
   let totalBytes = 0;
   let closed = false;
   let requestHeaders = meta.requestHeaders;
   let responseHeaders: Record<string, string> | undefined;
 
-  studioHooks.onStreamOpen({
-    requestId,
-    source: meta.source,
-    group: meta.group,
-    method: meta.method,
-    transport: meta.transport,
-    mode: meta.mode,
-    timestamp: startTime,
-    ...(meta.requestHeaders && { requestHeaders: meta.requestHeaders }),
-  });
+  /* stream:open with the entry's id: again with the same id, the store merges what is new into it. */
+  const announce = (): void =>
+    studioHooks.onStreamOpen?.({
+      requestId,
+      source: meta.source,
+      group: meta.group,
+      method: meta.method,
+      transport: meta.transport,
+      mode: meta.mode,
+      timestamp: startTime,
+      ...(requestHeaders && { requestHeaders }),
+      ...(responseHeaders && { responseHeaders }),
+    });
+
+  announce();
 
   return {
-    requestId,
-    startTime,
+    get requestId() {
+      return requestId;
+    },
+    get startTime() {
+      return startTime;
+    },
     emitMessage(data, eventType = "data") {
       if (closed) return;
       const json = safeStringify(data);
@@ -108,19 +127,18 @@ export function beginStream(
       if (closed) return;
       requestHeaders = patch.requestHeaders ?? requestHeaders;
       responseHeaders = patch.responseHeaders ?? responseHeaders;
-      // Re-emit stream:open with the same requestId so the store handler
-      // merges the new metadata into the existing entry.
-      studioHooks.onStreamOpen?.({
-        requestId,
-        source: meta.source,
-        group: meta.group,
-        method: meta.method,
-        transport: meta.transport,
-        mode: meta.mode,
-        timestamp: startTime,
-        ...(requestHeaders && { requestHeaders }),
-        ...(responseHeaders && { responseHeaders }),
-      });
+      announce();
+    },
+    reopen() {
+      if (!closed) return;
+      requestId = generateRequestId();
+      startTime = Date.now();
+      seq = 0;
+      totalBytes = 0;
+      closed = false;
+      /* What the last connection answered is not this one's. */
+      responseHeaders = undefined;
+      announce();
     },
     emitClose(reason) {
       if (closed) return;

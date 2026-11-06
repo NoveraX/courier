@@ -10,8 +10,9 @@ import { instrumentSSE, watchSubscription } from "./sse";
  * watched, not wrapped, so a channel whose `send` settles — the in-process
  * one does — keeps doing so for its caller.
  *
- * Reconnect cycles do not end its entry: the entry spans the channel's life,
- * not one socket's.
+ * Reconnect cycles do not end its entry: the entry spans a life of the
+ * channel, not one socket's — one the server ended and `reconnect()` opened
+ * again is a new entry.
  *
  * @param channel - The channel
  * @param meta - What Studio shows it as
@@ -25,12 +26,12 @@ export function instrumentWSChannel<TChannel extends Subscription<unknown>>(
 ): TChannel {
   const instr = beginStream(meta, externalRequestId);
   if (!instr) return channel;
-  const stop = watchSubscription(channel, instr, (data) => instr.emitMessage(data, "data"));
+  watchSubscription(channel, instr, (data) => instr.emitMessage(data, "data"));
   if (channel instanceof ChannelHandle) {
+    /* Every life's sends, each told to the entry of its life, until the application closes it. */
     const unsent = channel[OBSERVE_SENT]((data) => instr.emitMessage(data, "message"));
-    channel.on("close", () => {
-      unsent();
-      stop();
+    channel.on("close", (info) => {
+      if (info.reason === "closed") unsent();
     });
   }
   return channel;

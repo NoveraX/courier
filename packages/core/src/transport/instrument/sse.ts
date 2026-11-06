@@ -1,4 +1,5 @@
 import { observeData } from "../../realtime/observe-data";
+import { observeLives } from "../../realtime/observe-lives";
 import type { StreamEvent, Subscription } from "../../realtime/subscription-types";
 import { beginStream, type StreamInstrumentation, type StreamMeta } from "./core";
 import { watchConnection } from "./watch-connection";
@@ -8,7 +9,8 @@ import { watchConnection } from "./watch-connection";
  * stands as it changes — being opened, open, being opened again with why the
  * last one ended — and how it ended. It is watched, not wrapped: the caller
  * holds the subscription it was given, and when Studio's hooks are not
- * installed nothing is done at all.
+ * installed nothing is done at all. One the server ended and `reconnect()`
+ * opened again is a new entry, given what it delivers from then on.
  *
  * Lifecycle reasons:
  * - `complete` — the server finished it
@@ -34,7 +36,9 @@ export function instrumentSSE<TSubscription extends Subscription<unknown>>(
 
 /**
  * Tell Studio what a subscription delivers, how its connection stands, and
- * how it ended; stop watching once it has.
+ * how each of its lives ended: one the server ended may be opened again,
+ * and each time it is, its Studio entry is a new one. Watching ends with
+ * the subscription, once the application closes it.
  *
  * @param subscription - The subscription or channel
  * @param instr - Its Studio entry
@@ -44,18 +48,31 @@ export function watchSubscription(
   subscription: Subscription<unknown>,
   instr: StreamInstrumentation,
   onData: (data: unknown, event: StreamEvent<unknown>) => void,
+): void {
+  let stopLife = watchLife(subscription, instr, onData);
+  observeLives(subscription, {
+    ended: (info) => {
+      stopLife();
+      if (info.reason === "failed") instr.emitError(info.error);
+      else instr.emitClose(info.reason === "closed" ? "disconnect" : "complete");
+    },
+    began: () => {
+      instr.reopen();
+      stopLife = watchLife(subscription, instr, onData);
+    },
+  });
+}
+
+/* One life of a subscription: what it delivers and how its connection stands, until it ends. */
+function watchLife(
+  subscription: Subscription<unknown>,
+  instr: StreamInstrumentation,
+  onData: (data: unknown, event: StreamEvent<unknown>) => void,
 ): () => void {
   const unwatch = watchConnection(subscription, instr.emitStatus);
   const unobserve = observeData(subscription, onData);
-  const stop = (): void => {
+  return () => {
     unwatch();
     unobserve();
-    stopClose();
   };
-  const stopClose = subscription.on("close", (info) => {
-    stop();
-    if (info.reason === "failed") instr.emitError(info.error);
-    else instr.emitClose(info.reason === "closed" ? "disconnect" : "complete");
-  });
-  return stop;
 }

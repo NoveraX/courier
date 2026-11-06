@@ -22,6 +22,21 @@ const NEVER_CARRIED: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Whether no option may carry a header from one request to another,
+ * whatever it names: a session's credential, or a header of one connection.
+ *
+ * @param name - A header name
+ * @returns `true` for one never carried
+ * @example
+ * ```ts
+ * isNeverCarried("Cookie"); // true
+ * ```
+ */
+export function isNeverCarried(name: string): boolean {
+  return NEVER_CARRIED.has(name.toLowerCase());
+}
+
+/**
  * Headers that claim a client's address, every one an API reads it from —
  * `request-ip` reads them in this order. Copied from a request, they let
  * whoever wrote them choose the address an API believes, so they carry the

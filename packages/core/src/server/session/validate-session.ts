@@ -1,10 +1,11 @@
-import { ConfigurationError } from "../errors/configuration-error";
-import { assertAllowedOrigins } from "../utils/assert-allowed-origins";
-import { isRecord } from "../utils/is-record";
-import { cookieNameProblem } from "./cookie-names";
-import { csrfSourceProblem } from "./csrf-source";
+import { ConfigurationError } from "../../errors/configuration-error";
+import { cookieNameProblem } from "../../session/cookie-names";
+import { csrfSourceProblem } from "../../session/csrf-source";
+import { assertSecureTransport } from "../../session/transport";
+import { assertAllowedOrigins } from "../../utils/assert-allowed-origins";
+import { isRecord } from "../../utils/is-record";
+import { describe, isPlainObject } from "../plain-data";
 import { headerNameProblem } from "./header-names";
-import { assertSecureTransport } from "./transport";
 
 const CSRF_KEYS: ReadonlySet<string> = new Set(["cookie", "header", "from"]);
 const SESSION_KEYS: ReadonlySet<string> = new Set([
@@ -50,6 +51,9 @@ export function assertSessionOptions(
 function sessionProblem(session: unknown): string | undefined {
   if (!isRecord(session))
     return "is an object: { cookies, bearer, csrf, relay, allowedOrigins, allowHttp }";
+  if (!isPlainObject(session)) {
+    return `is plain data, { cookies, bearer, csrf, relay, allowedOrigins, allowHttp }, not ${describe(session)}`;
+  }
   const unknown = Object.keys(session).find((key) => !SESSION_KEYS.has(key));
   if (unknown !== undefined) return `has no option "${unknown}"`;
   const { cookies, bearer, csrf } = session;
@@ -81,6 +85,8 @@ function csrfProblem(csrf: unknown): string | undefined {
   if (csrf === undefined) return undefined;
   if (!isRecord(csrf))
     return 'csrf is { cookie, header, from? }, such as { cookie: "csrftoken", header: "x-csrftoken" }';
+  if (!isPlainObject(csrf))
+    return `csrf is plain data, { cookie, header, from? }, not ${describe(csrf)}`;
   const extra = Object.keys(csrf).find((key) => !CSRF_KEYS.has(key));
   if (extra !== undefined) return `csrf has no option "${extra}"`;
   return (

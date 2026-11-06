@@ -68,7 +68,7 @@ describe("what it refuses", () => {
   it("names what it received rather than throwing from internals", () => {
     expect(() => registerSources(null as never)).toThrow(/received null/);
     expect(() => registerSources([] as never)).toThrow(/received an array/);
-    expect(() => registerSources("api" as never)).toThrow(/received string/);
+    expect(() => registerSources("api" as never)).toThrow(/received a string/);
     expect(() => registerSources(new Map() as never)).toThrow(/received an instance of Map/);
     expect(() => registerSources(Promise.resolve({}) as never)).toThrow(
       /received a Promise — await it first/,

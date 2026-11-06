@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { ConfigurationError } from "../../src/errors/configuration-error";
-import { assertNoCookieHeaders } from "../../src/session/assert-no-cookie-headers";
+import { ConfigurationError } from "../../../src/errors/configuration-error";
+import { assertNoCookieHeaders } from "../../../src/server/session/assert-no-cookie-headers";
 
 describe("assertNoCookieHeaders", () => {
   it("passes a list without cookies", () => {

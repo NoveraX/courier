@@ -1,7 +1,8 @@
 /**
  * A Server Action is a server's own entry. Made alone, with nothing else of
  * the server registered in the process, it lends the calls it makes the
- * server's part: the user's session, read from the action's request.
+ * server's part — the user's session, read from the action's request — and
+ * checks the options only a server reads of its sources as it is made.
  */
 import { courier, defineApi } from "@noverax/courier/define";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +33,15 @@ const accounts = defineApi({
   endpoints: { me: endpoint.get("me") },
 });
 
+/* The same API, with a forward that would carry every cookie of the action's request. */
+const forwardingCookies = defineApi({
+  name: "accounts",
+  baseURL: "https://api.example.com",
+  session: { cookies: ["sid"] },
+  forward: { headers: ["cookie"] },
+  endpoints: { me: endpoint.get("me") },
+});
+
 beforeEach(() => {
   /* Nothing of the server lent yet, as in an application of Server Actions alone. */
   Reflect.deleteProperty(globalThis, REGISTRY);
@@ -53,5 +63,19 @@ describe("a Server Action made alone", () => {
 
     expect(sent).toHaveLength(1);
     expect(sent[0]?.get("cookie")).toBe(`sid=${SID}`);
+  });
+
+  it("refuses, as it is made, a forward that would carry the request's cookies", () => {
+    const fetched = vi.fn();
+    vi.stubGlobal("fetch", fetched);
+    let refused: unknown;
+    try {
+      createAction({ accounts: forwardingCookies }, "accounts");
+    } catch (error) {
+      refused = error;
+    }
+
+    expect(refused).toMatchObject({ code: "FORWARD_OPTIONS_INVALID" });
+    expect(fetched).not.toHaveBeenCalled();
   });
 });

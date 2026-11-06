@@ -3,6 +3,7 @@ import { isRequestId, REQUEST_ID_HEADER } from "../../session/request-id";
 import type { ForwardOptions } from "../../session/types";
 import { randomId } from "../../utils/random-id";
 import { addressHeaders } from "./forward-address";
+import { isNeverCarried } from "./header-names";
 import { requestIdFor } from "./request-state";
 
 /* version-traceid-parentid-flags, neither id all zeros, as W3C Trace Context writes it. */
@@ -30,8 +31,10 @@ export function forwardedHeaders(
   forward: ForwardOptions,
 ): Array<[string, string]> {
   const headers: Array<[string, string]> = [];
+  /* What no option carries is left out whatever the options name: a server checks them as it
+     takes the API up, and this holds should a check be got round. */
   const take = (name: string, value: string | null | undefined): void => {
-    if (value) headers.push([name, value]);
+    if (value && !isNeverCarried(name)) headers.push([name, value]);
   };
   if (forward.requestId) {
     const names = headerNames(forward.requestId, REQUEST_ID_HEADER);
@@ -59,10 +62,13 @@ function requestIdOf(incoming: IncomingRequest, names: readonly string[]): strin
   });
 }
 
-/* An option's header names, lower-cased and each once: `true` names the default. */
+/* An option's header names, lower-cased and each once: `true` names the default. A name no option
+   carries is left out here too, so the request is never read under it — not for its id either. */
 function headerNames(option: true | string | readonly string[], fallback: string): string[] {
   const names = option === true ? [fallback] : typeof option === "string" ? [option] : option;
-  return [...new Set(names.map((name) => name.toLowerCase()))];
+  return [...new Set(names.map((name) => name.toLowerCase()))].filter(
+    (name) => !isNeverCarried(name),
+  );
 }
 
 /* The request's trace context, when it carries a valid one. */

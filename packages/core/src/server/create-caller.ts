@@ -9,6 +9,8 @@ import type {
   EndpointRecord,
   GroupRecord,
 } from "../define";
+import { getSourceName } from "../define/api";
+import { assertServerOptions } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 
 /**
@@ -16,7 +18,8 @@ import { provideServerCapabilities } from "./provide-server-capabilities";
  * with the server's part lent to the process first. A call then reads the
  * user's session from the request its context names —
  * `createCaller(api, { context: { req } })` — or from the request a
- * registered adapter serves.
+ * registered adapter serves. The options only a server reads — `session`,
+ * `forward`, the header lists — are checked as the caller is made.
  *
  * @example
  * ```ts
@@ -49,6 +52,7 @@ export function createCaller(
 ): FlatClient<Record<never, never>>;
 
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
+  assertServerOptions(source, getSourceName(source) ?? "api");
   provideServerCapabilities();
   return directClient(source, defaults);
 }

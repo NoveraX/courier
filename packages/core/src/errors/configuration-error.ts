@@ -270,6 +270,8 @@ export type ConfigurationErrorCode =
   | "SESSION_HEADER_CONFLICT"
   /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
   | "FORWARD_OPTIONS_INVALID"
+  /** An API's `allowedHeaders`, or an endpoint's `.headers()`, is no list of header names, the data a server reads: a `Set`, say. */
+  | "HEADER_LIST_INVALID"
   /** A `cancelPrevious` given to an API, a group, a client or a call, or carried by routes, is neither `true` nor `false`. */
   | "CANCEL_PREVIOUS_INVALID"
   /** An endpoint's `.defaults()` is no object of data a request can carry. */

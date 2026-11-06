@@ -5,6 +5,7 @@ import { type SessionCredentials, sessionCredentials } from "../../session/sessi
 import type { SessionTarget } from "../../session/session-target";
 import { assertSecureTransport } from "../../session/transport";
 import type { SessionOptions } from "../../session/types";
+import { heldForCall } from "../assert-server-options";
 import { incomingFromContext } from "./context-incoming";
 import { forwardedHeaders } from "./forward-headers";
 import { onBehalfOf } from "./on-behalf";
@@ -35,16 +36,17 @@ const AMBIENT: Served = { admitted: false, toResponse: false };
  * ```
  */
 export function contextSession(context: Context, target: SessionTarget): CallSession | undefined {
+  const call = checked(target);
   /* An adapter's description, or the request a proxy request was made in
      process for, is the request the user made. */
   const described = context.incoming ?? onBehalfOf(context.req);
-  if (described !== undefined) return serverSession(described, target, AMBIENT);
+  if (described !== undefined) return serverSession(described, call, AMBIENT);
   const named = incomingFromContext(context);
   if (named === undefined) return undefined;
   /* A request the proxy serves has passed its origin rule already, the one
      the guard applies, with the proxy's own list of origins. */
   const admitted = context.proxyMethod !== undefined;
-  return serverSession(named, target, { admitted, toResponse: context.res instanceof Response });
+  return serverSession(named, call, { admitted, toResponse: context.res instanceof Response });
 }
 
 /**
@@ -60,7 +62,20 @@ export function contextSession(context: Context, target: SessionTarget): CallSes
  * ```
  */
 export function ambientSession(incoming: IncomingRequest, target: SessionTarget): CallSession {
-  return serverSession(incoming, target, AMBIENT);
+  return serverSession(incoming, checked(target), AMBIENT);
+}
+
+/* What only a server reads of an API is checked the first time the server lends a call of it the
+   session, whichever caller made the call — a page's on a server among them — and again only for
+   options the server did not take up, put in the place of those it did. The call carries what the
+   check read, held by the options' object, rather than what the call read of them before. */
+function checked(target: SessionTarget): SessionTarget {
+  const held = heldForCall(target);
+  if (held === undefined) return target;
+  const session = target.session === undefined ? undefined : held.session;
+  const forward = target.forward === undefined ? undefined : held.forward;
+  if (session === target.session && forward === target.forward) return target;
+  return { ...target, session, forward };
 }
 
 function serverSession(

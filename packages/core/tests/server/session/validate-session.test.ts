@@ -1,19 +1,25 @@
 /**
- * A session or a forward that could not work as written is refused where
- * the API is defined, with the reason, rather than misbehaving on a call.
+ * A session or a forward that could not work as written is refused where a
+ * server takes the API up, with the reason, rather than misbehaving on a
+ * call. A page never reads either, and carries none of the checks.
  */
 import { describe, expect, it } from "vitest";
 
-import { defineApi } from "../../src/define/api";
-import { courier } from "../../src/define/courier";
-import { defineGroup } from "../../src/define/group";
-import { ConfigurationError } from "../../src/errors/configuration-error";
+import { defineApi } from "../../../src/define/api";
+import { courier } from "../../../src/define/courier";
+import { defineGroup } from "../../../src/define/group";
+import { ConfigurationError } from "../../../src/errors/configuration-error";
+import { assertServerOptions } from "../../../src/server/assert-server-options";
 
 const { endpoint } = courier();
 const BASE = "https://api.example.com";
 
 function defineWith(options: Record<string, unknown>) {
-  return () => defineApi({ name: "accounts", baseURL: BASE, endpoints: {}, ...options } as never);
+  return () =>
+    assertServerOptions(
+      defineApi({ name: "accounts", baseURL: BASE, endpoints: {}, ...options } as never),
+      "accounts",
+    );
 }
 
 function failureOf(define: () => unknown): ConfigurationError {

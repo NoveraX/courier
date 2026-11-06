@@ -26,9 +26,12 @@
  * as `studioHooks` and `app-origin`.
  */
 
+import { getSourceName, setSourceName } from "../define/api";
 import { stampSourceKeys } from "../define/stamp-source-keys";
 import type { Sources } from "../define/types";
 import { ConfigurationError } from "../errors/configuration-error";
+import { assertServerOptions } from "./assert-server-options";
+import { describe } from "./plain-data";
 import { provideInProcessProxy } from "./provide-in-process-proxy";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 
@@ -51,16 +54,6 @@ function getRegistry(): SourcesRegistry {
   return g[SOURCES_KEY] as SourcesRegistry;
 }
 
-/** What the caller actually passed, for an error message that names it. */
-function describe(value: unknown): string {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "an array";
-  if (value instanceof Promise) return "a Promise — await it first";
-  if (typeof value !== "object") return typeof value;
-  const name: unknown = value.constructor?.name;
-  return typeof name === "string" && name !== "" ? `an instance of ${name}` : "an object";
-}
-
 /* An object literal or a module namespace, from any realm: a Map, a Promise
    or a class instance would be read as a registry holding no sources. */
 function isPlainRecord(value: unknown): value is Sources {
@@ -69,26 +62,36 @@ function isPlainRecord(value: unknown): value is Sources {
   return proto === null || Object.getPrototypeOf(proto) === null;
 }
 
+/* The key each API was first taken up under, the entry point that took it up there, and the name
+   its author left it before any key was stamped. */
+interface TakenUp {
+  readonly key: string;
+  readonly by: string;
+  readonly named: string | undefined;
+}
+
+let takenUp = new WeakMap<object, TakenUp>();
+
+const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
+
 /**
- * Check that `sources` is a dictionary of named sources, and make each key
- * its source's name, before anything serves them.
- *
- * Stamps each source's key onto the source object via `stampSourceKeys` so
- * `createCaller(api)` emits the same source name the server resolves, and
- * refuses a key that contradicts a name the author gave `defineApi`.
+ * Check that `sources` is a dictionary of named sources, and the options
+ * only a server reads of each — `session`, `forward`, the header lists —
+ * with `assertServerOptions`, leaving each source's name as it is: what
+ * an entry point needs whose calls name the key they go by.
  *
  * @param sources - The sources by key, as the caller handed them over
  * @param callee - The function they were handed to, named in the error
  * @param usage - How that function takes them, shown in the error
  * @throws ConfigurationError `SOURCES_NOT_A_RECORD` for anything but an object
- * @throws ConfigurationError `SOURCE_KEY_MISMATCH` when a key contradicts a name
+ * @throws ConfigurationError what `assertServerOptions` refuses a source's options with
  *
  * @example
  * ```ts
- * prepareSources({ api, billing }, "registerSources", "registerSources({ api, billing })");
+ * checkSources({ api }, "createAction", 'createAction({ api }, "api")');
  * ```
  */
-export function prepareSources(sources: Sources, callee: string, usage: string): void {
+export function checkSources(sources: Sources, callee: string, usage: string): void {
   /* Sources are read much later, at request time. Accepting a wrong value
      here reports the mistake as a missing endpoint somewhere else entirely —
      or, for null, as a bare TypeError thrown from inside the library. */
@@ -103,8 +106,69 @@ export function prepareSources(sources: Sources, callee: string, usage: string):
       ].join("\n"),
     );
   }
+  /* The options only a server reads are checked as a server takes the sources up. */
+  for (const [key, source] of Object.entries(sources)) assertServerOptions(source, key);
+}
 
+/**
+ * Check `sources` as `checkSources` does, and make each key its source's
+ * name, before anything serves them: the server resolves a call by the
+ * key, and `createCaller(api)` emits the same name.
+ *
+ * An API keeps the key the first entry point took it up under, and
+ * another key is refused, naming that entry point and its key. Only
+ * `registerSources`, which replaces the whole dictionary, may move an API
+ * it took up itself to another key, as a hot reload that renamed one
+ * does. A key no entry point took, a name the author gave `defineApi`, is
+ * the author's, and `stampSourceKeys` refuses a key that contradicts it.
+ *
+ * @param sources - The sources by key, as the caller handed them over
+ * @param callee - The function they were handed to, named in the error
+ * @param usage - How that function takes them, shown in the error
+ * @throws ConfigurationError `SOURCES_NOT_A_RECORD` for anything but an object
+ * @throws ConfigurationError `SOURCE_KEY_MISMATCH` when a key contradicts a name or another key
+ * @throws ConfigurationError what `assertServerOptions` refuses a source's options with
+ *
+ * @example
+ * ```ts
+ * prepareSources({ api, billing }, "registerSources", "registerSources({ api, billing })");
+ * ```
+ */
+export function prepareSources(sources: Sources, callee: string, usage: string): void {
+  checkSources(sources, callee, usage);
+  const moved: [object, TakenUp][] = [];
+  for (const [key, source] of Object.entries(sources)) {
+    const first = isObject(source) ? takenUp.get(source) : undefined;
+    if (first === undefined || first.key === key) continue;
+    if (callee === "registerSources" && first.by === callee) {
+      moved.push([source, first]);
+      continue;
+    }
+    throw new ConfigurationError(
+      "SOURCE_KEY_MISMATCH",
+      [
+        `[courier] ${callee} takes up as "${key}" an API that ${first.by} took up as "${first.key}" first.`,
+        "",
+        "The proxy and the routes module address a source by one key, so every entry point takes an",
+        `API up under the same one: use "${first.key}" in ${callee} too, or give it an API of its own.`,
+      ].join("\n"),
+    );
+  }
+  /* A key it moves to is held to the name the author left the API, not the one last stamped. */
+  for (const [source, first] of moved) {
+    if (first.named !== undefined) setSourceName(source, first.named);
+  }
+  const named = new Map<object, string | undefined>();
+  for (const source of Object.values(sources)) {
+    if (isObject(source)) named.set(source, getSourceName(source));
+  }
   stampSourceKeys(sources);
+  for (const [key, source] of Object.entries(sources)) {
+    if (!isObject(source)) continue;
+    const first = takenUp.get(source);
+    if (first === undefined) takenUp.set(source, { key, by: callee, named: named.get(source) });
+    else if (first.key !== key) takenUp.set(source, { ...first, key });
+  }
 }
 
 /**
@@ -160,4 +224,5 @@ export function _resetSourcesForTests(): void {
   registry.current = undefined;
   registry.generation = 0;
   registry.listeners.clear();
+  takenUp = new WeakMap();
 }

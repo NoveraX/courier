@@ -1,4 +1,4 @@
-import { ConfigurationError } from "../errors/configuration-error";
+import { ConfigurationError } from "../../errors/configuration-error";
 
 /**
  * Refuse, where the API is defined, a session beside a header list that

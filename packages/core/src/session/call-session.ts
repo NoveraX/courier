@@ -7,6 +7,7 @@ import { servesOneUser } from "../utils/serves-one-user";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
 import type * as NativeSession from "./native-session";
+import { overSecureTransport } from "./one-user-transport";
 import type { SessionTarget } from "./session-target";
 import type { SessionOptions } from "./types";
 
@@ -110,12 +111,14 @@ export function serverSession(target: Pick<SessionTarget, "name">): SessionCapab
 }
 
 /* A browser reads the cookies a page can; a React Native app keeps them from the API's answers,
-   with what a browser never loads. */
+   with what a browser never loads. Either sends its session only where nothing reads it on the way. */
 function oneUserSession(target: SessionTarget): CallSession | Promise<CallSession> | undefined {
   const session = target.session;
   if (session === undefined) return undefined;
-  if (!isReactNative()) return browserSession(target, session);
-  return nativePart().then((native) => native.nativeSession(target, session));
+  if (!isReactNative()) return overSecureTransport(target, browserSession(target, session));
+  return nativePart().then((native) =>
+    overSecureTransport(target, native.nativeSession(target, session)),
+  );
 }
 
 /**

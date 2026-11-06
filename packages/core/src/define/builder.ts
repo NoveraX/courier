@@ -2,9 +2,9 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { AgentOptions } from "../agent/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
-import { assertEndpointSession } from "../session/assert-session-api";
 import { idempotencyHeader } from "../utils/idempotency-header";
 import type { AnswerStage, CacheConfig } from "../validation";
+import { assertEndpointSession } from "./assert-endpoint-session";
 import type { EndpointKind } from "./marker";
 import type {
   AnyEndpointOptions,

@@ -72,7 +72,12 @@ export { decodeMessage, encodeMessage, PROTOCOL_VERSION } from "../realtime/ws/w
 export { buildDirectWSUrl, parseWSTopic } from "../realtime/ws-address";
 export { provideServerCapabilities } from "../server/provide-server-capabilities";
 export { addressedOrigin } from "../server/session/addressed-origin";
-export { getSourcesGeneration, onSourcesChange, prepareSources } from "../server/sources";
+export {
+  checkSources,
+  getSourcesGeneration,
+  onSourcesChange,
+  prepareSources,
+} from "../server/sources";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
 export { serverOriginOf } from "../socket-origin";
 export {

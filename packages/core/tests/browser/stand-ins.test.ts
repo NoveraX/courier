@@ -30,8 +30,6 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/logger/server": "src/browser/logger/server.ts",
       "utils/forwarded-for": "src/utils/forwarded-for.ts",
       "browser/utils/forwarded-for": "src/browser/utils/forwarded-for.ts",
-      "session/validate-forward": "src/session/validate-forward.ts",
-      "browser/session/validate-forward": "src/browser/session/validate-forward.ts",
       "errors/http-error-inspect": "src/errors/http-error-inspect.ts",
       "browser/errors/http-error-inspect": "src/browser/errors/http-error-inspect.ts",
       "utils/answered-message": "src/utils/answered-message.ts",

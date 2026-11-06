@@ -14,6 +14,7 @@ import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { ConfigurationError } from "../../src/errors/configuration-error";
+import { assertServerOptions } from "../../src/server/assert-server-options";
 import { parseUrl } from "../../src/utils/parse-url";
 
 const SOURCES = fileURLToPath(new URL("../../src/", import.meta.url));
@@ -109,17 +110,19 @@ describe("on a runtime without URL.parse and URL.canParse", () => {
   it("refuses the session over plain HTTP across the internet, as anywhere", () => {
     withoutUrlParse();
 
-    expect(refusalOf(() => accounts("http://api.example.com")).code).toBe(
-      "SESSION_INSECURE_TRANSPORT",
-    );
+    expect(
+      refusalOf(() => assertServerOptions(accounts("http://api.example.com"), "accounts")).code,
+    ).toBe("SESSION_INSECURE_TRANSPORT");
   });
 
   it("refuses an allowed origin that is not one, as anywhere", () => {
     withoutUrlParse();
 
-    expect(refusalOf(() => accounts("https://api.example.com", ["app.example.com"])).code).toBe(
-      "INVALID_ALLOWED_ORIGIN",
-    );
+    expect(
+      refusalOf(() =>
+        assertServerOptions(accounts("https://api.example.com", ["app.example.com"]), "accounts"),
+      ).code,
+    ).toBe("INVALID_ALLOWED_ORIGIN");
   });
 
   it("calls the API from a page on another site, and says once what the browser does", async () => {

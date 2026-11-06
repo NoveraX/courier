@@ -1,6 +1,7 @@
 import type { Sources } from "@noverax/courier/define";
 import {
   buildClientProxy,
+  checkSources,
   type ExecuteBackend,
   executeRequest,
   provideServerCapabilities,
@@ -88,8 +89,11 @@ export function createAction<TSources extends Sources, TKey extends string & key
   defaults: ActionDefaults = {},
 ): InferClient<TSources[TKey]> {
   /* A server's own entry: its calls take the user's session from the action's request, which no
-     other part of the server need have lent. */
+     other part of the server need have lent, and its sources are checked before the first call.
+     It takes none of them up: its calls go by the key it was given, and an API keeps the key it
+     was registered under. */
   provideServerCapabilities();
+  checkSources(sources, "createAction", 'createAction({ api }, "api")');
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     const incoming = await actionRequest();
     /* The session an API keeps is its own to take; `headers: false` turns

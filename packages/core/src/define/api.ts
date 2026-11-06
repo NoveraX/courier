@@ -1,6 +1,5 @@
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { BaseOptions } from "../http-client/types";
-import { assertSessionApi } from "../session/assert-session-api";
 import { announceSource } from "./announce-source";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
@@ -83,12 +82,15 @@ export function setSourceName(source: unknown, name: string): void {
  *
  * @param config - The source's options, with its `groups`, its flat `endpoints`, or both
  * @returns The source: its endpoints, with its options beside them under `options`
+ * A `session` and a `forward`, which only a server reads, are checked where
+ * a server takes the API up — its sources registered, a handler made, the
+ * server's caller made — so a page that imports the definition carries none
+ * of those checks.
+ *
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` for a flat endpoint
  *   named `options`, `raw` or `with`, or a group named `raw` or `with`;
- *   `SESSION_OPTIONS_INVALID`, `SESSION_INSECURE_TRANSPORT`,
- *   `SESSION_HEADER_CONFLICT` or `FORWARD_OPTIONS_INVALID` for a `session`
- *   or a `forward` that cannot work as written; `CANCEL_PREVIOUS_INVALID`
- *   for a `cancelPrevious` that is neither `true` nor `false`
+ *   `CANCEL_PREVIOUS_INVALID` for a `cancelPrevious` that is neither `true`
+ *   nor `false`
  *
  * @example
  * const { endpoint } = courier()
@@ -211,7 +213,6 @@ export function defineApi(
   // Store name for studio identification
   const sourceName = name ?? deriveSourceName(config.baseURL);
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
-  assertSessionApi(result, rest, sourceName);
   assertTransportOptions(rest, "source");
   assertCancelPrevious(rest.cancelPrevious, `API "${sourceName}"`);
 

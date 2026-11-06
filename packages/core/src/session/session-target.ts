@@ -7,6 +7,10 @@ const SAFE_VERBS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "TRAC
 
 /** A call as the session reads it: what its API keeps, and what its endpoint does. */
 export interface SessionTarget {
+  /** The API the call is made to, which a server checks the options it reads of */
+  readonly api?: object | undefined;
+  /** The options of the call's endpoint, which a server checks beside the API's before the call */
+  readonly endpoint?: object | undefined;
   /** The API's session, unless the endpoint takes none */
   readonly session?: SessionOptions | undefined;
   /** The API's forwarded headers, unless the endpoint takes none */
@@ -52,6 +56,8 @@ export function sessionTargetOf(input: SessionTargetInput): SessionTarget {
   const writes = input.kind === "mutation";
   const verb = input.httpMethod?.toUpperCase();
   return {
+    api: input.dataSource,
+    endpoint,
     session: endpoint?.session === false ? undefined : options?.session,
     forward: endpoint?.forward === false ? undefined : options?.forward,
     writes,

@@ -13,6 +13,7 @@ import { createCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
 import { courier } from "../../src/define/courier";
 import { HTTPError } from "../../src/errors/http-error";
+import { createCaller as createServerCaller } from "../../src/server/create-caller";
 import { registerRequestContext } from "../../src/server/session/request-context";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { studioHooks } from "../../src/studio";
@@ -267,16 +268,17 @@ describe("the cookies the API sets", () => {
 });
 
 describe("a session that cannot travel safely", () => {
-  it("is refused where the API is defined over plain HTTP across the internet", () => {
-    const define = () =>
-      defineApi({
-        name: "remote",
-        baseURL: "http://api.example.com",
-        session: { cookies: ["sid"] },
-        endpoints: {},
-      });
+  it("is refused where the server takes the API up, over plain HTTP across the internet", () => {
+    const remote = defineApi({
+      name: "remote",
+      baseURL: "http://api.example.com",
+      session: { cookies: ["sid"] },
+      endpoints: {},
+    });
 
-    expect(define).toThrow(/SESSION_INSECURE_TRANSPORT|plain HTTP across the public internet/);
+    expect(() => createServerCaller(remote)).toThrow(
+      /SESSION_INSECURE_TRANSPORT|plain HTTP across the public internet/,
+    );
   });
 
   it("is refused when a call is sent somewhere insecure, before anything is sent", async () => {

@@ -34,8 +34,9 @@ export function isPrivateHost(hostname: string): boolean {
 /**
  * Why a session may not be sent to an address — or `undefined` when it may:
  * over HTTPS, or to a private host, where nothing on the way listens in. An
- * address that is a path is the page's own origin, which the browser
- * decides for itself.
+ * address with no scheme of its own is read against the page's: a path
+ * stays on the page's own origin, which the browser decides for itself,
+ * and one that names a host takes the page's scheme.
  *
  * @param url - Where the call goes
  * @returns The reason, or `undefined`
@@ -43,11 +44,18 @@ export function isPrivateHost(hostname: string): boolean {
  * ```ts
  * insecureTransport("http://api.example.com"); // "http://api.example.com is reached over plain HTTP …"
  * insecureTransport("http://api:8080"); // undefined
+ * insecureTransport("//api.example.com"); // on a page served over HTTP: "http://api.example.com is reached …"
  * ```
  */
 export function insecureTransport(url: string | undefined): string | undefined {
-  const target = url === undefined ? undefined : parseUrl(url);
+  if (url === undefined) return undefined;
+  const absolute = parseUrl(url);
+  /* An address with no scheme of its own is read against the page's: one that stays on the page's
+     origin is a path there, and one that names a host, `//api.example.com`, takes the page's scheme. */
+  const page = absolute === undefined ? pageAddress() : undefined;
+  const target = absolute ?? (page === undefined ? undefined : parseUrl(url, page));
   if (target === undefined) return undefined;
+  if (page !== undefined && target.origin === parseUrl(page)?.origin) return undefined;
   if (target.protocol === "https:" || target.protocol === "wss:") return undefined;
   if (isPrivateHost(target.hostname)) return undefined;
   return `${target.origin} is reached over plain HTTP across the public internet, where anyone on the way could read the session`;
@@ -70,4 +78,11 @@ export function assertSecureTransport(target: { url?: string | undefined; name: 
     "SESSION_INSECURE_TRANSPORT",
     `${target.name}: ${insecure}. Reach it over HTTPS, or set session.allowHttp to send the session anyway`,
   );
+}
+
+/* The address of the page the code runs on, where there is one. */
+function pageAddress(): string | undefined {
+  const href: unknown = (Reflect.get(globalThis, "location") as { href?: unknown } | undefined)
+    ?.href;
+  return typeof href === "string" ? href : undefined;
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ConfigurationError } from "../../src/errors/configuration-error";
 import {
@@ -56,6 +56,20 @@ describe("insecureTransport", () => {
   it("leaves a path to the page's own origin", () => {
     expect(insecureTransport("/api")).toBeUndefined();
     expect(insecureTransport(undefined)).toBeUndefined();
+  });
+
+  it("reads an address with no scheme of its own against a page served over plain HTTP", () => {
+    vi.stubGlobal("location", new URL("http://app.example.com/account"));
+    try {
+      expect(insecureTransport("//api.example.com")).toContain(
+        "http://api.example.com is reached over plain HTTP",
+      );
+      expect(insecureTransport("//localhost:8080")).toBeUndefined();
+      expect(insecureTransport("/api")).toBeUndefined();
+      expect(insecureTransport("api/v1")).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

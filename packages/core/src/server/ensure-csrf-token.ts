@@ -5,6 +5,7 @@ import { csrfSource } from "../session/csrf-source";
 import { askForToken, askOnce, tokenCall } from "../utils/csrf-prime";
 import { callInstruments } from "../utils/execute-studio";
 import { prepareAndRun } from "../utils/prepare-and-run";
+import { assertServerOptions } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 import { captureIncomingRequest } from "./session/request-providers";
 import { cookieJarFor } from "./session/request-state";
@@ -33,8 +34,9 @@ import { cookieJarFor } from "./session/request-state";
  */
 export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   provideServerCapabilities();
-  const csrf = api.options.session?.csrf;
   const source = getSourceName(api) ?? "api";
+  assertServerOptions(api, source);
+  const csrf = api.options.session?.csrf;
   if (csrf?.from === undefined) {
     throw new ConfigurationError(
       "SESSION_OPTIONS_INVALID",

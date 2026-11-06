@@ -53,6 +53,8 @@ export { RateLimitError, ForbiddenError } from "@noverax/courier";
 import { TimeoutError } from "@noverax/courier/realtime";`,
   `import { sendAuthRequired } from "@noverax/courier";
 const asked = sendAuthRequired(registry, id);`,
+  `if (error.code === "PROXY_VARIABLE_NOT_SERIALIZABLE") {}
+const messages = { PROXY_VARIABLE_NOT_SERIALIZABLE: "That cannot be sent" };`,
 ];
 
 /* Each piece of code, and each with one of its lines left out: what a migration finds in one, it finds where its words are. */

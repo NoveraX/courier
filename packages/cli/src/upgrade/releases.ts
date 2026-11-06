@@ -8,6 +8,7 @@ import { RETRY_ON_ZERO } from "./migrations/retry-on-zero";
 import { SEND_AUTH_REQUIRED } from "./migrations/send-auth-required";
 import { STUDIO_CORE_CONFIG } from "./migrations/studio-core-config";
 import { SUBSCRIPTION_TYPE } from "./migrations/subscription-type";
+import { VARIABLE_NOT_ENCODABLE } from "./migrations/variable-not-encodable";
 import { compareVersions, parseVersion, releaseLine, type Version } from "./versions";
 
 const DOCS = "https://courier.noverax.cloud/docs";
@@ -82,6 +83,11 @@ export const RELEASES: readonly Release[] = [
         title: "Request bodies held to limits; uploads past 1 MB kept on disk",
         docs: `${UPGRADING}#request-bodies-and-uploads`,
       },
+      {
+        title:
+          "A record that holds a file is sent as a form: deploy the client and the server together",
+        docs: `${UPGRADING}#variables`,
+      },
     ],
     migrations: [
       REALTIME_ERRORS,
@@ -91,6 +97,7 @@ export const RELEASES: readonly Release[] = [
       HTTP_ERROR_STATUS_ZERO,
       CALL_ERROR_FINDINGS,
       REALTIME_FINDINGS,
+      VARIABLE_NOT_ENCODABLE,
     ],
   },
 ];

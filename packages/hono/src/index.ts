@@ -1,12 +1,12 @@
+import { announceWhenRegistered } from "@noverax/courier/announce";
+import { rememberPeerAddress } from "@noverax/courier/internal";
 import type {
   ConnectResult,
   HandlerConfig,
   WSHandlerConfig,
   WSHandlerDescriptor,
-} from "@noverax/courier";
-import { createHandler, createWSHandler } from "@noverax/courier";
-import { announceWhenRegistered } from "@noverax/courier/announce";
-import { rememberPeerAddress } from "@noverax/courier/internal";
+} from "@noverax/courier/server";
+import { createHandler, createWSHandler } from "@noverax/courier/server";
 import type { Context } from "hono";
 import { peerAddressOf } from "./peer-address";
 import { serverOriginOfHono } from "./server-origin";

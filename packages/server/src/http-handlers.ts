@@ -1,8 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-
-import type { AdapterHandler } from "@noverax/courier";
-import { createLogger } from "@noverax/courier";
 import { sendWebResponse, toWebRequest } from "@noverax/courier/node";
+import type { AdapterHandler } from "@noverax/courier/server";
+import { createLogger } from "@noverax/courier/server";
 
 import { exposeHeaders, handleCors } from "./cors";
 import { handleHealth } from "./health";

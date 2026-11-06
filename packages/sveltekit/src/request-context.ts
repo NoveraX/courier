@@ -1,10 +1,10 @@
+import { forwardedChain } from "@noverax/courier/internal";
 import {
   createLogger,
   type IncomingRequest,
   type RelayedCookie,
   type RequestContextProvider,
-} from "@noverax/courier";
-import { forwardedChain } from "@noverax/courier/internal";
+} from "@noverax/courier/server";
 
 import { svelteKitClientAddress } from "./client-address";
 
@@ -46,7 +46,7 @@ const providers = new WeakMap<() => SvelteKitServerEvent, RequestContextProvider
  * ```ts
  * // src/hooks.server.ts
  * import { getRequestEvent } from "$app/server";
- * import { registerRequestContext } from "@noverax/courier";
+ * import { registerRequestContext } from "@noverax/courier/server";
  * import { svelteKitRequestContext } from "@noverax/courier-sveltekit";
  *
  * registerRequestContext(svelteKitRequestContext(getRequestEvent));

@@ -1,4 +1,4 @@
-import { ConfigurationError } from "@noverax/courier";
+import { ConfigurationError } from "@noverax/courier/server";
 
 /** How much a pub/sub adapter holds while Redis is away. */
 export interface OutboundLimits {

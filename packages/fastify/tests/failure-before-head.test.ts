@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 /* A header value Web headers take and Node's own writeHead refuses. */
 const REFUSED_VALUE = `a${String.fromCharCode(0x7f)}b`;
 
-vi.mock("@noverax/courier", async (importOriginal) => ({
+vi.mock("@noverax/courier/server", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   createHandler: () => ({
     handle: async () => new Response("{}", { headers: { "x-refused": REFUSED_VALUE } }),

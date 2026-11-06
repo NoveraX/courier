@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { ConfigurationError } from "@noverax/courier";
 import type { LoggedEvent, LogPosition, TopicLog } from "@noverax/courier/realtime";
+import { ConfigurationError } from "@noverax/courier/server";
 import type { Redis } from "ioredis";
 
 import { defineScript, runScript } from "./redis-scripts";

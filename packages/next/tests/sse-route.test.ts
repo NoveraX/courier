@@ -1,10 +1,10 @@
-import type * as CourierModule from "@noverax/courier";
+import type * as CourierModule from "@noverax/courier/server";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockHandleSSE = vi.fn();
 
-vi.mock("@noverax/courier", async (importOriginal) => {
+vi.mock("@noverax/courier/server", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
@@ -32,7 +32,7 @@ vi.mock("@noverax/courier", async (importOriginal) => {
   };
 });
 
-import { createHandler, registerSources } from "@noverax/courier";
+import { createHandler, registerSources } from "@noverax/courier/server";
 import { sseRoute } from "../src/sse-route";
 
 const mockCreateHandler = vi.mocked(createHandler);

@@ -1,4 +1,4 @@
-import { CourierError } from "@noverax/courier";
+import { CourierError } from "@noverax/courier/server";
 
 /** Where the config lies, and the root Turbopack keeps to. */
 export interface ConfigOutsideRootContext extends Record<string, unknown> {

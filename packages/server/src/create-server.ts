@@ -1,11 +1,15 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-
-import type { ConnectResult } from "@noverax/courier";
-import { ConfigurationError, createHandler, createLogger, createWSHandler } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import { adoptListenOrigin } from "@noverax/courier/internal";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
+import type { ConnectResult } from "@noverax/courier/server";
+import {
+  ConfigurationError,
+  createHandler,
+  createLogger,
+  createWSHandler,
+} from "@noverax/courier/server";
 import type * as Ws from "ws";
 
 import {

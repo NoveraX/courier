@@ -1,10 +1,10 @@
+import { addressedOrigin, forwardedChain } from "@noverax/courier/internal";
 import {
   createLogger,
   type IncomingRequest,
   type RelayedCookie,
   type RequestContextProvider,
-} from "@noverax/courier";
-import { addressedOrigin, forwardedChain } from "@noverax/courier/internal";
+} from "@noverax/courier/server";
 
 import { type NextCookie, nextCookieOf } from "./next-cookie";
 
@@ -53,7 +53,7 @@ let nextHeaders: Promise<NextHeaders | undefined> | undefined;
  * @example
  * ```ts
  * // lib/api.server.ts — the module the pages call through
- * import { createProxyCaller, registerRequestContext } from "@noverax/courier";
+ * import { createProxyCaller, registerRequestContext } from "@noverax/courier/server";
  * import { nextRequestContext } from "@noverax/courier-next";
  * import { apiRoutes } from "../courier.routes";
  *

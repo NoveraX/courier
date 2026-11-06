@@ -1,7 +1,7 @@
-import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
-import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { serverOriginOf, toWebRequest } from "@noverax/courier/node";
+import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier/server";
+import { createHandler } from "@noverax/courier/server";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
 import { sendHijacked } from "./send-hijacked";

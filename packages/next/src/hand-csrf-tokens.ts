@@ -1,6 +1,6 @@
-import { ensureCsrfToken, type RelayedCookie } from "@noverax/courier";
 import type { AnyDefinedApi } from "@noverax/courier/define";
 import { webIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
+import { ensureCsrfToken, type RelayedCookie } from "@noverax/courier/server";
 import type { NextResponse } from "next/server.js";
 
 import { nextCookieOf } from "./next-cookie";

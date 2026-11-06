@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier";
-import { createHandler, createLogger } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import type { ServerOrigin } from "@noverax/courier/internal";
 import { sendWebResponse, serverOriginOf, toWebRequest } from "@noverax/courier/node";
+import type { AdapterHandler, ConnectResult, HandlerConfig } from "@noverax/courier/server";
+import { createHandler, createLogger } from "@noverax/courier/server";
 
 import { bodyNestParsed } from "./parsed-body";
 

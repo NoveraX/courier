@@ -1,6 +1,10 @@
-import { ConfigurationError, type HandlerConfig, type WSHandlerConfig } from "@noverax/courier";
 import { readAllowedHosts, readAllowedOrigins } from "@noverax/courier/internal";
 import { wsFrameLimit as frameLimitFor } from "@noverax/courier/node";
+import {
+  ConfigurationError,
+  type HandlerConfig,
+  type WSHandlerConfig,
+} from "@noverax/courier/server";
 import type { CourierServerOptions } from "./types";
 
 /**

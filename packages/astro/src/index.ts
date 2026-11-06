@@ -1,6 +1,6 @@
-import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { rememberPeerAddress } from "@noverax/courier/internal";
+import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier/server";
 
 import { astroClientAddress } from "./client-address";
 

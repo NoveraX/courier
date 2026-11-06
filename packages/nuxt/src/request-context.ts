@@ -1,6 +1,6 @@
-import { ConfigurationError, type IncomingRequest } from "@noverax/courier";
 import { forwardedChain } from "@noverax/courier/internal";
 import { nodeIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
+import { ConfigurationError, type IncomingRequest } from "@noverax/courier/server";
 
 import { type H3EventLike, isWebEvent, webEventAddress } from "./h3-event";
 

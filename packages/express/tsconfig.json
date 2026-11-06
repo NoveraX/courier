@@ -3,6 +3,7 @@
   "compilerOptions": {
     "paths": {
       "@noverax/courier": ["../core/src/index.ts"],
+      "@noverax/courier/server": ["../core/src/server/index.ts"],
       "@noverax/courier/define": ["../core/src/define/index.ts"],
       "@noverax/courier/node": ["../core/src/node.ts"]
     }

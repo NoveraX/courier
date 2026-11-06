@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { ConfigurationError, createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
+import { ConfigurationError, createLogger } from "@noverax/courier/server";
 import { unknownConfigKeys } from "@noverax/courier-build/config";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 import { listOption } from "./list-option";

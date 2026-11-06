@@ -1,10 +1,3 @@
-import type {
-  ConnectResult,
-  WebSocketLike,
-  WSHandlerConfig,
-  WSHandlerDescriptor,
-} from "@noverax/courier";
-import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
   DEFAULT_WS_MAX_MESSAGE_SIZE,
@@ -12,6 +5,13 @@ import {
   toWebRequest,
   wsFrameLimit,
 } from "@noverax/courier/node";
+import type {
+  ConnectResult,
+  WebSocketLike,
+  WSHandlerConfig,
+  WSHandlerDescriptor,
+} from "@noverax/courier/server";
+import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier/server";
 import type { FastifyRequest } from "fastify";
 
 const log = createLogger("Fastify");

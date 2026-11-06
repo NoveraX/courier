@@ -1,4 +1,4 @@
-import type { RelayedCookie } from "@noverax/courier";
+import type { RelayedCookie } from "@noverax/courier/server";
 
 /** A cookie as Next.js's `cookies().set()` and a response's `cookies.set()` take it. */
 export interface NextCookie {

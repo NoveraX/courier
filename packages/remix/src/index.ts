@@ -1,5 +1,5 @@
-import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
+import { type ConnectResult, createHandler, type HandlerConfig } from "@noverax/courier/server";
 
 /**
  * Create a Remix resource route handler for the courier proxy.

@@ -1,4 +1,4 @@
-import { CourierError } from "@noverax/courier";
+import { CourierError } from "@noverax/courier/server";
 
 /** The builder an app was found building with. */
 export interface UnsupportedBuilderContext extends Record<string, unknown> {

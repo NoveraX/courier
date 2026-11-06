@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { RateLimitDecision, RateLimitStore, RateLimitWindow } from "@noverax/courier";
+import type { RateLimitDecision, RateLimitStore, RateLimitWindow } from "@noverax/courier/server";
 import type { RedisRateLimitConfig } from "./types";
 
 /*

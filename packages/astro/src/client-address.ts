@@ -1,4 +1,4 @@
-import { createLogger } from "@noverax/courier";
+import { createLogger } from "@noverax/courier/server";
 
 const log = createLogger("Astro");
 

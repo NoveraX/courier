@@ -1,3 +1,4 @@
+import type { Sources } from "@noverax/courier/define";
 import type {
   AllowedOriginsSetting,
   ConnectionRegistry,
@@ -6,8 +7,7 @@ import type {
   SSEConnectionRegistry,
   WSHandlerConfig,
   WSHandlerStats,
-} from "@noverax/courier";
-import type { Sources } from "@noverax/courier/define";
+} from "@noverax/courier/server";
 
 /**
  * Options for `createCourierServer`: where it listens and what it serves,

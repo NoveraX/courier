@@ -1,5 +1,5 @@
-import type { IncomingRequest, RelayedCookie } from "@noverax/courier";
 import { webIncomingRequest, withIncomingRequest } from "@noverax/courier/node";
+import type { IncomingRequest, RelayedCookie } from "@noverax/courier/server";
 
 import { astroClientAddress } from "./client-address";
 

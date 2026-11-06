@@ -1,4 +1,4 @@
-import type { RuntimeSetting } from "@noverax/courier";
+import type { RuntimeSetting } from "@noverax/courier/server";
 
 /**
  * A list the command takes as a comma-separated flag, or from the config.

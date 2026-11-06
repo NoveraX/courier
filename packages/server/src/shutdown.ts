@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 
-import type { SSEConnectionRegistry, WSHandler } from "@noverax/courier";
-import { createLogger } from "@noverax/courier";
+import type { SSEConnectionRegistry, WSHandler } from "@noverax/courier/server";
+import { createLogger } from "@noverax/courier/server";
 
 const log = createLogger("Server");
 

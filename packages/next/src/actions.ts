@@ -1,10 +1,3 @@
-import {
-  type Context,
-  createLogger,
-  type IncomingRequest,
-  type InferClient,
-  type ValidationIssue,
-} from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import {
   buildClientProxy,
@@ -12,6 +5,13 @@ import {
   executeRequest,
   provideServerCapabilities,
 } from "@noverax/courier/internal";
+import {
+  type Context,
+  createLogger,
+  type IncomingRequest,
+  type InferClient,
+  type ValidationIssue,
+} from "@noverax/courier/server";
 
 import { nextIncomingRequest } from "./request-context";
 

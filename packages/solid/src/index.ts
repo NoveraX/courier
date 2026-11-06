@@ -1,12 +1,12 @@
+import { announceWhenRegistered } from "@noverax/courier/announce";
+import { rememberPeerAddress, serverOriginOf } from "@noverax/courier/internal";
 import {
   type ClientConnection,
   type ConnectResult,
   createHandler,
   type HandlerConfig,
   handleWhileConnected,
-} from "@noverax/courier";
-import { announceWhenRegistered } from "@noverax/courier/announce";
-import { rememberPeerAddress, serverOriginOf } from "@noverax/courier/internal";
+} from "@noverax/courier/server";
 
 export {
   type SolidStartServerEvent,

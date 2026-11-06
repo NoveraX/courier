@@ -1,7 +1,7 @@
-import type * as CourierModule from "@noverax/courier";
+import type * as CourierModule from "@noverax/courier/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@noverax/courier", async (importOriginal) => {
+vi.mock("@noverax/courier/server", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
@@ -29,9 +29,9 @@ vi.mock("@noverax/courier", async (importOriginal) => {
   };
 });
 
-import { createHandler, registerSources } from "@noverax/courier";
 import { type BufferedAnnouncement, consumeAnnouncements } from "@noverax/courier/announce";
 import { courier, defineApi, getSourceName } from "@noverax/courier/define";
+import { createHandler, registerSources } from "@noverax/courier/server";
 
 import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { courierHandler } from "../src/index";

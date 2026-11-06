@@ -1,6 +1,6 @@
-import type { ConnectResult, HandlerConfig } from "@noverax/courier";
-import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
+import type { ConnectResult, HandlerConfig } from "@noverax/courier/server";
+import { createHandler } from "@noverax/courier/server";
 /* Next.js has no exports map, so under Node resolution a module reaches this
    file only by its full name; bundlers accept either. */
 import type { NextRequest } from "next/server.js";

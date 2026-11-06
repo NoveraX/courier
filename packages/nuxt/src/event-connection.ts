@@ -1,4 +1,4 @@
-import type { ClientConnection } from "@noverax/courier";
+import type { ClientConnection } from "@noverax/courier/server";
 
 import { type H3EventLike, isWebEvent } from "./h3-event";
 

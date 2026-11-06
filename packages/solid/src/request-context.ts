@@ -1,5 +1,5 @@
-import type { IncomingRequest, RequestContextProvider } from "@noverax/courier";
 import { forwardedChain } from "@noverax/courier/internal";
+import type { IncomingRequest, RequestContextProvider } from "@noverax/courier/server";
 
 /** The parts of SolidStart's request event the session reads. */
 export interface SolidStartServerEvent {
@@ -39,7 +39,7 @@ const HANDED_BACK =
  * @example
  * ```ts
  * // src/entry-server.tsx
- * import { registerRequestContext } from "@noverax/courier";
+ * import { registerRequestContext } from "@noverax/courier/server";
  * import { solidStartRequestContext } from "@noverax/courier-solid";
  * import { getRequestEvent } from "solid-js/web";
  *

@@ -1,6 +1,6 @@
-import { createLogger } from "@noverax/courier";
 import { createRefusalLog } from "@noverax/courier/internal";
 import type { AdapterState, PubSubAdapter, PubSubEnvelope } from "@noverax/courier/realtime";
+import { createLogger } from "@noverax/courier/server";
 
 import { CONNECT_TIMEOUT_MS, DISCONNECT_TIMEOUT_MS } from "./adapter-deadlines";
 import { createOutboundQueue } from "./outbound-queue";

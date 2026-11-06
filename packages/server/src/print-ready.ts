@@ -1,11 +1,11 @@
 import { relative } from "node:path";
-import { createLogger } from "@noverax/courier";
 import {
   formatBanner,
   type OutputStream,
   readLogFormat,
   styleFor,
 } from "@noverax/courier/internal";
+import { createLogger } from "@noverax/courier/server";
 import { serverVersion } from "./server-version";
 
 const log = createLogger("CLI");

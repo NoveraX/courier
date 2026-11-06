@@ -1,6 +1,4 @@
 import type { Server } from "node:http";
-import type { ConnectResult, WSHandlerConfig, WSHandlerDescriptor } from "@noverax/courier";
-import { createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
   attachWebSocketUpgrade,
@@ -8,6 +6,8 @@ import {
   serverOriginOf,
   wsFrameLimit,
 } from "@noverax/courier/node";
+import type { ConnectResult, WSHandlerConfig, WSHandlerDescriptor } from "@noverax/courier/server";
+import { createWSHandler } from "@noverax/courier/server";
 
 /**
  * What `courierWSAttach` returns: the cleanup to call before closing the

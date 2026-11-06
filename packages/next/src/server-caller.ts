@@ -1,11 +1,3 @@
-import {
-  type CallerDefaults,
-  createCaller,
-  type FlatClient,
-  type MixedClient,
-  registerRequestContext,
-  type TypedClient,
-} from "@noverax/courier";
 import type {
   AnyDefinedApi,
   DefinedApi,
@@ -15,6 +7,14 @@ import type {
   GroupRecord,
 } from "@noverax/courier/define";
 import { type RenderMemoProvider, registerRenderMemo } from "@noverax/courier/internal";
+import {
+  type CallerDefaults,
+  createCaller,
+  type FlatClient,
+  type MixedClient,
+  registerRequestContext,
+  type TypedClient,
+} from "@noverax/courier/server";
 import * as React from "react";
 
 import { nextRequestContext } from "./request-context";

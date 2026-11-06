@@ -1,4 +1,4 @@
-import { CourierError } from "@noverax/courier";
+import { CourierError } from "@noverax/courier/server";
 
 /**
  * The app keeps `@noverax/courier` out of its server's bundle, through

@@ -1,4 +1,4 @@
-import type { WebSocketLike } from "@noverax/courier";
+import type { WebSocketLike } from "@noverax/courier/server";
 
 /** Minimal Hono WSContext shape — avoids importing hono/ws */
 export type HonoWSContext = {

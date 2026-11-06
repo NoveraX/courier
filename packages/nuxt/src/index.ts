@@ -1,6 +1,6 @@
-import type { ConnectResult, HandlerConfig } from "@noverax/courier";
-import { createHandler, handleWhileConnected } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
+import type { ConnectResult, HandlerConfig } from "@noverax/courier/server";
+import { createHandler, handleWhileConnected } from "@noverax/courier/server";
 
 import { connectionOf } from "./event-connection";
 import { serverOriginOfEvent } from "./event-origin";

@@ -1,7 +1,7 @@
-import type * as CourierModule from "@noverax/courier";
+import type * as CourierModule from "@noverax/courier/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@noverax/courier", async (importOriginal) => {
+vi.mock("@noverax/courier/server", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
   return {
     ...actual,
@@ -47,7 +47,7 @@ vi.mock("@noverax/courier", async (importOriginal) => {
   };
 });
 
-import { createHandler, createWSHandler, registerSources } from "@noverax/courier";
+import { createHandler, createWSHandler, registerSources } from "@noverax/courier/server";
 import { courierPlugin, courierSSEHandler, courierWSHandler } from "../src/index";
 
 const mockCreateHandler = vi.mocked(createHandler);

@@ -154,7 +154,9 @@ describe("the proxy caller of an import", () => {
     );
 
     expect(proxy).toContain('import { shopRoutes } from "../../../courier.routes";');
-    expect(proxy).toContain("export const shopProxyApi = createProxyCaller(shopRoutes);");
+    expect(proxy).toContain(
+      "export const shopProxyApi = /* @__PURE__ */ createProxyCaller(shopRoutes);",
+    );
     expect(first).toContain('"orders.listOrders": { type: "query" },');
     expect(first).not.toContain("health");
     expect(added).toContain('"orders.listOrders": { type: "query" },');

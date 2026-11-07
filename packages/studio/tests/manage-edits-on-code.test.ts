@@ -129,7 +129,7 @@ describe("rebuildBarrel", () => {
     "",
   ].join("\n");
   const HEAD =
-    'import { createCaller } from "@noverax/courier";\nimport { shop } from "./source";\n\nexport const shopApi = createCaller(shop);\n\n';
+    'import { createCaller } from "@noverax/courier/server";\nimport { shop } from "./source";\n\nexport const shopApi = createCaller(shop);\n\n';
   const schema = (...names: string[]) =>
     names
       .map((n) => `export type ${n} = { id?: string };\nexport const ${n}Schema = z.object({});\n`)

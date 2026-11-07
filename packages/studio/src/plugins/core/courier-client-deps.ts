@@ -1,9 +1,10 @@
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 
-/** Courier's modules a page imports: the callers, an API defined for a direct caller, the React hooks. */
+/** Courier's modules a page imports: the callers, from the root or the page's entry, an API defined for a direct caller, the React hooks. */
 const CLIENT_MODULES = [
   "@noverax/courier",
+  "@noverax/courier/client",
   "@noverax/courier/define",
   "@noverax/courier-react",
 ] as const;
@@ -20,7 +21,7 @@ const CLIENT_MODULES = [
  * @returns The modules that resolve from the app
  * @example
  * ```ts
- * courierClientDeps("/work/shop"); // ["@noverax/courier", "@noverax/courier/define", "@noverax/courier-react"]
+ * courierClientDeps("/work/shop"); // ["@noverax/courier", "@noverax/courier/client", …]
  * ```
  */
 export function courierClientDeps(root: string): string[] {

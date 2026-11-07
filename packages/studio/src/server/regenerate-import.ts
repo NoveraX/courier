@@ -5,6 +5,7 @@ import { createSpecDigest, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { ImportLayout } from "../apis/layout";
 import { renamedGroupFiles } from "../apis/manage/renamed-group-files";
+import { generatedForPageAlone } from "./generated-for-pages";
 import { generatedFromSpec } from "./generated-from-spec";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { ApplyReport } from "./import-files/apply-file-plan";
@@ -51,12 +52,12 @@ export async function planRegeneration(
 ): Promise<{ plan: FilePlan; leftBehind: string[] }> {
   const { root, name, layout, spec, options, entry } = regeneration;
   const importExtension = generatedImportExtension(root.path, layout);
+  const pageOnly = generatedForPageAlone(root.path, layout);
+  const project = { ...(importExtension && { importExtension }), ...(pageOnly && { pageOnly }) };
   const formatters = findFormatters(root.path);
   const generated = await formatProjectFiles(
     root.path,
-    generatedFromSpec(() =>
-      generateCode(spec, { ...options, ...(importExtension && { importExtension }) }, name),
-    ),
+    generatedFromSpec(() => generateCode(spec, { ...options, ...project }, name)),
     formatters,
   );
   /* A group Studio now names otherwise is written from the file its group was in. */

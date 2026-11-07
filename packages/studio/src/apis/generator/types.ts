@@ -40,6 +40,14 @@ export type GenerateOptions = CourierImportBase & {
    * import's declaration.
    */
   routesConfig?: string;
+  /**
+   * Whether a page alone loads the files: the package they go in is built
+   * with React or Vue that Vite builds, beside no server framework, so the
+   * barrel's direct caller is a page's. Decided by the packages the
+   * project's package.json lists, never persisted to the import's
+   * declaration.
+   */
+  pageOnly?: boolean;
 };
 
 /**
@@ -82,6 +90,8 @@ export interface ResolvedGenerateOptions {
   routesModule: string;
   /** Where the plugin gives the routes, the config's path from the project root; none where the routes module does. */
   routesConfig: string | undefined;
+  /** Whether a page alone loads the files, so the barrel's direct caller is a page's. */
+  pageOnly: boolean;
   include?: CourierImportBase["include"];
   exclude?: CourierImportBase["exclude"];
   transform?: CourierImportBase["transform"];
@@ -96,6 +106,7 @@ export type GenerationDefaults = Omit<
   | "importExtension"
   | "routesModule"
   | "routesConfig"
+  | "pageOnly"
   | "include"
   | "exclude"
   | "transform"
@@ -141,6 +152,7 @@ export function applyImportDefaults(
     importExtension: options.importExtension ?? "",
     routesModule: options.routesModule ?? "courier.routes.ts",
     routesConfig: options.routesConfig,
+    pageOnly: options.pageOnly === true,
     include: options.include,
     exclude: options.exclude,
     transform: options.transform,

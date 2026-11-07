@@ -195,6 +195,7 @@ describe("courierStudio() for Vite", () => {
     expect(server.config.optimizeDeps.include).toEqual(
       expect.arrayContaining([
         "@noverax/courier",
+        "@noverax/courier/client",
         "@noverax/courier/define",
         "@noverax/courier-react",
       ]),

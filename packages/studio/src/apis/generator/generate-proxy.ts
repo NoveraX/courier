@@ -20,7 +20,7 @@ const RUNS_AS: Readonly<Record<string, string>> = {
 /* The module's head where Courier's plugin gives the routes: `routes`, and the config registered for its type alone. */
 function pluginHead(options: ResolvedGenerateOptions, config: string): string[] {
   return [
-    'import { createProxyCaller } from "@noverax/courier";',
+    'import { createProxyCaller } from "@noverax/courier/client";',
     'import { routes } from "@noverax/courier/routes";',
     "",
     `import type config from "${specifierTo(options, config)}";`,
@@ -45,7 +45,11 @@ function pluginHead(options: ResolvedGenerateOptions, config: string): string[] 
  * proxy caller alone — not the source's upstream address, its middleware,
  * nor a schema. In the barrel, beside the direct caller and the schemas, a
  * browser importing it got all of them, since a bundler keeps a module
- * whose top level makes calls.
+ * whose top level makes calls. The proxy caller comes from the page's
+ * entry, `@noverax/courier/client`, the same caller the root gives, so the
+ * bundle holds none of the server's part the root takes along either. It is
+ * made pure, so a module that imports the proxy module and takes nothing of
+ * it carries none of it.
  *
  * @param spec - The parsed specification
  * @param options - The import's resolved options
@@ -70,7 +74,7 @@ export function generateProxyFile(
     const content = [
       ...pluginHead(options, options.routesConfig),
       ...callerDoc(spec, "PROXY"),
-      `export const ${name}ProxyApi = createProxyCaller(${read});`,
+      `export const ${name}ProxyApi = /* @__PURE__ */ createProxyCaller(${read});`,
       "",
     ].join("\n");
     return { path: options.layout.proxyFile, content };
@@ -78,12 +82,12 @@ export function generateProxyFile(
   /* Exported under the name courier.config keys the source by, which is the import's. */
   const routes = routesExportName(importName) ?? `${name}Routes`;
   const content = [
-    'import { createProxyCaller } from "@noverax/courier";',
+    'import { createProxyCaller } from "@noverax/courier/client";',
     "",
     `import { ${routes} } from "${specifierTo(options, options.routesModule)}";`,
     "",
     ...callerDoc(spec, "PROXY"),
-    `export const ${name}ProxyApi = createProxyCaller(${routes});`,
+    `export const ${name}ProxyApi = /* @__PURE__ */ createProxyCaller(${routes});`,
     "",
   ].join("\n");
   return { path: options.layout.proxyFile, content };

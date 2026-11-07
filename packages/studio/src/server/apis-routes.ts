@@ -8,6 +8,7 @@ import { formatProjectFiles } from "@noverax/courier-cli/devkit";
 import { diffSpecs, generateCode } from "../apis";
 import { answerFromProcess } from "./answer-from-process";
 import { errMsg } from "./fs-helpers";
+import { withPageAlone } from "./generated-for-pages";
 import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
@@ -85,7 +86,10 @@ export function registerApisRoutes(app: ApisRouteApp, deps: ApisRouteDeps): void
         );
         return;
       }
-      const options = withImportExtension(body.options, deps.projectRoot);
+      const options = withPageAlone(
+        withImportExtension(body.options, deps.projectRoot),
+        deps.projectRoot,
+      );
       const files = generateCode(
         body.spec,
         withRoutesModule(options, deps.project.snapshot().running),

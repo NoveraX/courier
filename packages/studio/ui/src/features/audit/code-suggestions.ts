@@ -104,7 +104,7 @@ export const api = defineApi({
 });
 `;
 
-export const PROXY_SUGGESTION = `import { createProxyCaller } from "@noverax/courier";
+export const PROXY_SUGGESTION = `import { createProxyCaller } from "@noverax/courier/client";
 import { apiRoutes } from "./courier.routes";
 
 // The routes Courier writes from the endpoints marked .expose(): the API's

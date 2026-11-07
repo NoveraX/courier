@@ -15,6 +15,7 @@ import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { isTopLevel } from "../apis/parser/top-level";
 import { checkDirOverlap } from "./check-dir-overlap";
 import { checkFormerFolder } from "./check-former-folder";
+import { generatedForPageAlone } from "./generated-for-pages";
 import { generatedFromSpec } from "./generated-from-spec";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { FilePlan } from "./import-files/file-plan-types";
@@ -116,7 +117,12 @@ export async function planManage(
     Object.entries(body.toAdd).filter(([, names]) => names.length > 0),
   );
   const importExtension = generatedImportExtension(root.path, layout);
-  const options = { ...declared, ...(importExtension && { importExtension }) };
+  const pageOnly = generatedForPageAlone(root.path, layout);
+  const options = {
+    ...declared,
+    ...(importExtension && { importExtension }),
+    ...(pageOnly && { pageOnly }),
+  };
   /* Formatted as the project formats its code before anything reads it, as a full write is. */
   const formatters = findFormatters(root.path);
   const added =

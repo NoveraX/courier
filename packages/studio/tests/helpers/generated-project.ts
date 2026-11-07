@@ -10,9 +10,11 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as courier from "@noverax/courier";
+import * as courierClient from "@noverax/courier/client";
 import * as courierDefine from "@noverax/courier/define";
 import { routesOf } from "@noverax/courier/internal";
 import * as courierMiddleware from "@noverax/courier/middleware";
+import * as courierServer from "@noverax/courier/server";
 import { routesExportName, routesModuleText } from "@noverax/courier-cli/devkit";
 import * as arktype from "arktype";
 import ts from "typescript";
@@ -27,6 +29,8 @@ const ROOT = fileURLToPath(
 /** The packages generated code imports, as the running process has them. */
 const PACKAGES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["@noverax/courier", courier],
+  ["@noverax/courier/client", courierClient],
+  ["@noverax/courier/server", courierServer],
   ["@noverax/courier/define", courierDefine],
   ["@noverax/courier/middleware", courierMiddleware],
   ["zod", zod],

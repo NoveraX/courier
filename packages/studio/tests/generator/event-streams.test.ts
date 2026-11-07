@@ -279,7 +279,9 @@ describe("through the proxy", () => {
     const strictest = { ...STRICT, noUnusedLocals: true, verbatimModuleSyntax: true };
 
     expect(proxyFile).toContain('import { shopRoutes } from "../../../courier.routes";');
-    expect(proxyFile).toContain("export const shopProxyApi = createProxyCaller(shopRoutes);");
+    expect(proxyFile).toContain(
+      "export const shopProxyApi = /* @__PURE__ */ createProxyCaller(shopRoutes);",
+    );
     expect(compileProject(dir, ["src/api/shop/proxy.ts"], strictest)).toEqual([]);
   }, 60_000);
 

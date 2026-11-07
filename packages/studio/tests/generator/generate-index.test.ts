@@ -4,7 +4,9 @@
  * source's upstream address, its headers, its schemas or anything else the
  * source module runs — even where every import is kept as written, as
  * `verbatimModuleSyntax` keeps them in a Vite project, and even when the
- * import has a direct caller too.
+ * import has a direct caller too. Each caller is made pure, so a page that
+ * takes a schema of the barrel takes no caller with it, nor the server's
+ * part a direct caller comes with.
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -124,11 +126,13 @@ describe("an import with both callers", () => {
     const index = files.find((file) => file.path === "src/api/shop/index.ts")?.content ?? "";
     const proxy = files.find((file) => file.path === "src/api/shop/proxy.ts")?.content ?? "";
 
-    expect(index).toContain("export const shopApi = createCaller(shop);");
+    expect(index).toContain("export const shopApi = /* @__PURE__ */ createCaller(shop);");
     expect(index).toContain("PetSchema");
     expect(index).not.toContain("ProxyApi");
     expect(proxy).toContain('import { shopRoutes } from "../../../courier.routes";');
-    expect(proxy).toContain("export const shopProxyApi = createProxyCaller(shopRoutes);");
+    expect(proxy).toContain(
+      "export const shopProxyApi = /* @__PURE__ */ createProxyCaller(shopRoutes);",
+    );
     expect(proxy).not.toContain("./source");
   });
 });
@@ -155,6 +159,51 @@ describe("a barrel for proxy mode only", () => {
     expect(bundle).toContain("createProxyCaller");
     expect(bundle).not.toContain("upstream.example");
     expect(bundle).not.toContain("defineApi");
+  });
+});
+
+describe("a barrel a page takes a schema of", () => {
+  const files = generateCode(
+    WITH_SCHEMA,
+    { type: "openapi", outputDir: "src/api", generateClient: "both" },
+    "shop",
+  );
+  const dir = writeProject("generate-index/schema", [...files, ...routesFiles(files, "shop")], {
+    "entry.ts": 'import { PetSchema } from "./src/api/shop";\n\nexport const schema = PetSchema;\n',
+  });
+
+  it("leaves the caller out of the page's bundle, and the server's part with it", async () => {
+    const result = await build({
+      entryPoints: [join(dir, "entry.ts")],
+      bundle: true,
+      format: "esm",
+      platform: "browser",
+      write: false,
+      metafile: true,
+      external: ["zod"],
+    });
+    const taken = Object.values(result.metafile.outputs).flatMap((output) =>
+      Object.entries(output.inputs)
+        .filter(([, input]) => input.bytesInOutput > 0)
+        .map(([path]) => path),
+    );
+
+    expect(taken.some((path) => path.endsWith("/schemas.ts"))).toBe(true);
+    expect(taken.filter((path) => /\/lib\/server\//.test(path))).toEqual([]);
+    expect(result.outputFiles.map((file) => file.text).join("\n")).not.toMatch(/createCaller/);
+  });
+
+  it("makes each caller pure", () => {
+    const callers = files.flatMap((file) =>
+      [...file.content.matchAll(/^export const \w+ = (.*)create(?:Proxy)?Caller\(/gm)].map(
+        ([, before]) => [file.path, before],
+      ),
+    );
+
+    expect(callers).toEqual([
+      ["src/api/shop/index.ts", "/* @__PURE__ */ "],
+      ["src/api/shop/proxy.ts", "/* @__PURE__ */ "],
+    ]);
   });
 });
 

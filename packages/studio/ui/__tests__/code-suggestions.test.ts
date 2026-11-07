@@ -195,4 +195,12 @@ describe("the direct-mode warning", () => {
       "createProxyCaller(apiRoutes",
     );
   });
+
+  it("takes the proxy caller from the page's entry, as page code does", () => {
+    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
+
+    expect(items.find((item) => item.id === "warn-unused-proxy")?.codeSuggestion).toContain(
+      'import { createProxyCaller } from "@noverax/courier/client";',
+    );
+  });
 });

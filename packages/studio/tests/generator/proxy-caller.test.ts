@@ -37,7 +37,9 @@ describe("a proxy caller's routes", () => {
     const proxy = fileOf({ generateClient: "proxy" }, "/proxy.ts");
 
     expect(proxy).toContain('import { petStoreRoutes } from "../../../courier.routes";');
-    expect(proxy).toContain("export const petStoreProxyApi = createProxyCaller(petStoreRoutes);");
+    expect(proxy).toContain(
+      "export const petStoreProxyApi = /* @__PURE__ */ createProxyCaller(petStoreRoutes);",
+    );
   });
 
   it("come from wherever the config puts the module, with the extension the project's imports carry", () => {
@@ -71,7 +73,9 @@ describe("a proxy caller's routes", () => {
     expect(proxy).toContain(
       'declare module "@noverax/courier/routes" {\n  interface Register {\n    config: typeof config;\n  }\n}',
     );
-    expect(proxy).toContain("export const petStoreProxyApi = createProxyCaller(routes.petStore);");
+    expect(proxy).toContain(
+      "export const petStoreProxyApi = /* @__PURE__ */ createProxyCaller(routes.petStore);",
+    );
     expect(proxy).not.toContain("courier.routes");
   });
 

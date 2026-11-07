@@ -32,7 +32,7 @@ function route(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   const path = "app/routes/api.request.ts";
   const config = importSpecifier(path, configPathOf(ctx), ctx.extension);
   const imports = needs.register
-    ? `import { registerSources } from "@noverax/courier";
+    ? `import { registerSources } from "@noverax/courier/server";
 import { courierHandler } from "@noverax/courier-remix";
 
 import config from "${config}";

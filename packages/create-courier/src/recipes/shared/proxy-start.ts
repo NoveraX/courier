@@ -38,7 +38,7 @@ function registerLines(ctx: RecipeContext, file: string): { lines: string[]; not
   const outside = listOutOfReach(ctx, file);
   const list = outside ? `${dir}/courier/config.ts` : object;
   const lines = [
-    'import { registerSources } from "@noverax/courier";',
+    'import { registerSources } from "@noverax/courier/server";',
     `import config from "${importSpecifier(file, list, ctx.extension)}";`,
     "",
     "registerSources(config.sources);",

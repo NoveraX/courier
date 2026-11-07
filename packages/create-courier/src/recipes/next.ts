@@ -46,7 +46,7 @@ function instrumentation(ctx: RecipeContext, base: string, needs: ServerNeeds): 
   const does = needs.register
     ? `registers the APIs courier.config.ts\n * lists, which the /api/request route serves${needs.studio ? ", and while you develop connects\n * the server to Courier Studio" : ""}`
     : "while you develop, connects the server\n * to Courier Studio";
-  const content = `${needs.register ? 'import { registerSources } from "@noverax/courier";\n\n' : ""}/**
+  const content = `${needs.register ? 'import { registerSources } from "@noverax/courier/server";\n\n' : ""}/**
  * Runs once as the server starts: ${does}.
  */
 export async function register() {${register}${studio}

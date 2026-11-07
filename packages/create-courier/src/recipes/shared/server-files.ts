@@ -84,11 +84,11 @@ if (process.env.NODE_ENV !== "production") {
  * @returns The line, or nothing where the APIs are registered elsewhere
  * @example
  * ```ts
- * serverHead({ register: true, studio: true }); // 'import { registerSources } from "@noverax/courier";\n'
+ * serverHead({ register: true, studio: true }); // 'import { registerSources } from "@noverax/courier/server";\n'
  * ```
  */
 export function serverHead(needs: { readonly register: boolean }): string {
-  return needs.register ? 'import { registerSources } from "@noverax/courier";\n' : "";
+  return needs.register ? 'import { registerSources } from "@noverax/courier/server";\n' : "";
 }
 
 /**

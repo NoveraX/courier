@@ -11,7 +11,9 @@ const EXTENSION = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 /* Files only a browser runs: a server's connection to Studio is never made there. */
 const CLIENT = /(?:^|\/)(?:instrumentation-client|[^/]*\.client)\.[^/]+$/;
 
-const CORE = (specifier: string) => specifier === "@noverax/courier";
+/* The modules that give registerSources: the core's root, as 0.4 imported it, and its entry for a server. */
+const CORE = (specifier: string) =>
+  specifier === "@noverax/courier" || specifier === "@noverax/courier/server";
 const RUNTIME = (specifier: string) =>
   /^@noverax\/courier-studio-core(?:\/runtime)?$/.test(specifier);
 

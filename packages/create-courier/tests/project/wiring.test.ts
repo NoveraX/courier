@@ -51,6 +51,20 @@ courier.registerSources(sources);
     expect(registeringFile(aliased)).toBe("src/hooks.server.ts");
   });
 
+  it("finds them registered by registerSources from the core's entry for a server", () => {
+    const project = projectOf(
+      {
+        "instrumentation.ts": `import { registerSources } from "@noverax/courier/server";
+import config from "./courier.config";
+registerSources(config.sources);
+`,
+      },
+      { next: "16.4.0" },
+    );
+
+    expect(registeringFile(project)).toBe("instrumentation.ts");
+  });
+
   it("follows the config to the module it passes its list on from", () => {
     const project = readProject(
       projectWith({

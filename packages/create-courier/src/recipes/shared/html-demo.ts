@@ -20,7 +20,7 @@ import { DEMO_CSS } from "./demo-style";
 export function htmlDemo(ctx: RecipeContext, dir: string): RecipeFile[] {
   const callerPath = `${dir}/server-caller.ts`;
   const pagePath = `${dir}/page.ts`;
-  const caller = `import { createCaller } from "@noverax/courier";
+  const caller = `import { createCaller } from "@noverax/courier/server";
 
 import { api } from "${importSpecifier(callerPath, `${dir}/api.ts`, ctx.extension)}";
 

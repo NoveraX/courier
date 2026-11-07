@@ -34,7 +34,7 @@ export function registerInside(
   if (scan === undefined || codeMatches(scan, REGISTER).length === 0) return undefined;
   const config = importSpecifier(path, configPathOf(ctx), ctx.extension);
   const lines = [
-    ...(needs.register ? ['import { registerSources } from "@noverax/courier";', ""] : []),
+    ...(needs.register ? ['import { registerSources } from "@noverax/courier/server";', ""] : []),
     "// inside register():",
     ...(needs.register
       ? [

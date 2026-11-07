@@ -114,7 +114,7 @@ export function registerModule(
   const studio = needs.studio ? studioAttach("import.meta.env.DEV", "") : "";
   if (!needs.register)
     return `/* While you develop, the server's calls show in Courier Studio. */\n${studio}\n`;
-  return `import { registerSources } from "@noverax/courier";
+  return `import { registerSources } from "@noverax/courier/server";
 
 import config from "${importSpecifier(path, configPathOf(ctx), ctx.extension)}";
 

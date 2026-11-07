@@ -40,7 +40,7 @@ function serverPlugin(ctx: RecipeContext, needs: ServerNeeds): RecipeFile {
   }`
     : "";
   const head = needs.register
-    ? `import { registerSources } from "@noverax/courier";
+    ? `import { registerSources } from "@noverax/courier/server";
 
 import config from "${importSpecifier(path, configPathOf(ctx), ctx.extension)}";
 

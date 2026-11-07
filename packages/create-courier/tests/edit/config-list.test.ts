@@ -141,6 +141,31 @@ export default defineNuxtConfig({
 `);
   });
 
+  it("adds the plugin to the config a const holds, made by defineConfig() and exported by its name", () => {
+    const held = `import { defineConfig } from 'vite'
+
+import viteReact from '@vitejs/plugin-react'
+
+const config = defineConfig({
+  plugins: [viteReact()],
+})
+
+export default config
+`;
+
+    expect(addToConfigList(held, plugin("react"))).toBe(`import { defineConfig } from 'vite'
+
+import viteReact from '@vitejs/plugin-react'
+import { courierStudio } from '@noverax/courier-studio/react'
+
+const config = defineConfig({
+  plugins: [viteReact(), courierStudio()],
+})
+
+export default config
+`);
+  });
+
   it("refuses a config it cannot read: no literal exported, two exports, a list built in code", () => {
     expect(addToConfigList("export default makeConfig()\n", plugin("react"))).toBeUndefined();
     expect(

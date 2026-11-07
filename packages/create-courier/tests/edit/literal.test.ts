@@ -42,6 +42,32 @@ describe("defaultExportLiteral", () => {
     expect(defaultExportLiteral(wrapped, ["withCourier"])?.open).toBe(wrapped.text.indexOf("{"));
     expect(defaultExportLiteral(more, ["withCourier"])).toBeUndefined();
   });
+
+  it("reads a const set to a known function's call, the one the file exports by name, as the call itself", () => {
+    const named = scanned("const config = defineConfig({ a: 1 });\nexport default config;");
+    const typed = scanned(
+      "const config: UserConfig = defineConfig({ a: 1 })\n\nexport default config\n",
+    );
+    const passed = scanned(
+      "const base = { a: 1 };\nconst config = defineConfig(base);\nexport default config;",
+    );
+
+    expect(defaultExportLiteral(named, ["defineConfig"])?.open).toBe(named.text.indexOf("{"));
+    expect(defaultExportLiteral(typed, ["defineConfig"])?.open).toBe(typed.text.indexOf("{"));
+    expect(defaultExportLiteral(passed, ["defineConfig"])?.open).toBe(passed.text.indexOf("{"));
+  });
+
+  it("reads such a const only for the functions it is given, and follows no call past it", () => {
+    const named = scanned("const config = defineConfig({ a: 1 });\nexport default config;");
+    const other = scanned("const config = other({ a: 1 });\nexport default config;");
+    const looped = scanned(
+      "const a = defineConfig(b);\nconst b = defineConfig(a);\nexport default a;",
+    );
+
+    expect(defaultExportLiteral(named, [])).toBeUndefined();
+    expect(defaultExportLiteral(other, ["defineConfig"])).toBeUndefined();
+    expect(defaultExportLiteral(looped, ["defineConfig"])).toBeUndefined();
+  });
 });
 
 describe("properties", () => {

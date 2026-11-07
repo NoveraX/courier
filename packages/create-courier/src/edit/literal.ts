@@ -13,15 +13,25 @@ function literalAt(scan: SourceScan, at: number): Literal | undefined {
   return (char === "{" || char === "[") && close !== undefined ? { open: at, close } : undefined;
 }
 
-/* The literal a top-level `const name` is set to, its type annotation skipped. */
-function constLiteral(scan: SourceScan, name: string): Literal | undefined {
+/* The literal a top-level `const name` is set to, its type annotation skipped: one written there, or what a call there to one of `callees` takes first — followed one call deep, so no `const` leads back to itself. */
+function constLiteral(
+  scan: SourceScan,
+  name: string,
+  callees: readonly string[] = [],
+): Literal | undefined {
   const found = codeMatches(
     scan,
     new RegExp(`(?:^|\\n)\\s*(?:export\\s+)?const\\s+${name}\\b`, "g"),
   );
   if (found.length !== 1 || found[0] === undefined) return undefined;
   const equals = scan.text.indexOf("=", found[0].index + found[0][0].length);
-  return equals === -1 ? undefined : literalAt(scan, nextCode(scan, equals + 1));
+  if (equals === -1) return undefined;
+  const at = nextCode(scan, equals + 1);
+  const callee = /^[A-Za-z_$][\w$]*/.exec(scan.text.slice(at))?.[0];
+  const open = callee === undefined ? -1 : nextCode(scan, at + callee.length);
+  return callee !== undefined && callees.includes(callee) && scan.text[open] === "("
+    ? argumentLiteral(scan, nextCode(scan, open + 1))
+    : literalAt(scan, at);
 }
 
 /* The literal a call's first argument gives: one written there, or a top-level `const` named there. */
@@ -37,7 +47,8 @@ function argumentLiteral(scan: SourceScan, at: number): Literal | undefined {
  * The literal a file's `export default` gives: one written there, the first
  * argument of a call to one of `callees` — `defineConfig({…})`, or a
  * `const` passed to it, `withCourier(nextConfig)` — or the one a
- * top-level `const` of the name it exports is set to.
+ * top-level `const` of the name it exports is set to: written there, or
+ * as the first argument of such a call, `const config = defineConfig({…})`.
  *
  * @param scan - The scanned file
  * @param callees - The functions whose first argument counts
@@ -59,7 +70,7 @@ export function defaultExportLiteral(
   const name = /^[A-Za-z_$][\w$]*/.exec(scan.text.slice(at))?.[0];
   if (name === undefined) return undefined;
   const after = nextCode(scan, at + name.length);
-  if (scan.text[after] !== "(") return constLiteral(scan, name);
+  if (scan.text[after] !== "(") return constLiteral(scan, name, callees);
   return callees.includes(name) ? argumentLiteral(scan, nextCode(scan, after + 1)) : undefined;
 }
 

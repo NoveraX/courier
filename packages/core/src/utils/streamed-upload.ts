@@ -1,3 +1,5 @@
+import { UNQUEUED } from "./own";
+
 /**
  * An upload the proxy sends on as it arrives: the call's variables when the
  * handler's `uploadMode` is `"stream"`.
@@ -45,7 +47,14 @@ const UPLOADS = new WeakSet<object>();
  * ```
  */
 export function streamedUpload(type: string, source: StreamedUploadSource): StreamedUpload {
-  const stream = new ReadableStream<Uint8Array<ArrayBuffer>>(source, { highWaterMark: 0 });
+  const stream = new ReadableStream<Uint8Array<ArrayBuffer>>(
+    {
+      __proto__: null,
+      pull: (controller) => source.pull(controller),
+      cancel: () => source.cancel?.(),
+    } as UnderlyingDefaultSource<Uint8Array<ArrayBuffer>>,
+    UNQUEUED,
+  );
   const upload = Object.assign(stream, { type });
   UPLOADS.add(upload);
   return upload;

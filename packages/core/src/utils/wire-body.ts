@@ -87,7 +87,7 @@ export async function readWireBody(response: Response): Promise<unknown> {
       return response.arrayBuffer();
     case BLOB_TYPE: {
       const blob = await response.blob();
-      return new Blob([blob], { type: blobTypeOf(response) });
+      return new Blob([blob], { type: blobTypeOf(response), endings: "transparent" });
     }
     case MULTIPART_TYPE:
       return response.formData();

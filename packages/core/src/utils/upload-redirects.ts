@@ -81,6 +81,7 @@ export async function sendUpload(
     let response: Response;
     try {
       response = await send(hop.url, {
+        __proto__: null,
         ...init,
         method: hop.method,
         headers: hop.headers,

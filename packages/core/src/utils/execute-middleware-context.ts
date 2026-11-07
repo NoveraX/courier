@@ -66,7 +66,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     idempotencyHeader: keyHeader,
     purpose,
   } = ownFields(input);
-  const { req: nextRequest, headers: nextHeaders } = context || {};
+  const { req: nextRequest, headers: nextHeaders } = ownFields(context);
   const agent = agentOf(context);
   const mergedNextHeaders = {
     ...headersToObject(nextRequest?.headers),

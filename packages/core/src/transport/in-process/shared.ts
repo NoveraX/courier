@@ -6,6 +6,7 @@ import { checkResponse } from "../../realtime/check-response";
 import { isChannelSchema } from "../../realtime/is-channel-schema";
 import type { SSEEvent } from "../../realtime/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
+import { REQUEST_MEMBERS } from "../../utils/request-members";
 import { type SchemaMetadata, validateSchema } from "../../validation";
 
 /**
@@ -19,7 +20,13 @@ export const SYNTHETIC_URL = "http://in-process.invalid/";
 
 /** Build a synthetic Request that only carries headers into middleware. */
 export function buildSyntheticRequest(headers: Record<string, string> | undefined): Request {
-  return new Request(SYNTHETIC_URL, { method: "GET", headers: headers ?? {} });
+  return new Request(SYNTHETIC_URL, {
+    __proto__: null,
+    ...REQUEST_MEMBERS,
+    redirect: "follow",
+    method: "GET",
+    headers: headers ?? {},
+  } as RequestInit);
 }
 
 /** Materialize a Headers object into a plain record (preserves last value per key). */

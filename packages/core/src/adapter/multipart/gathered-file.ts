@@ -66,7 +66,11 @@ export class GatheredFile {
    * @returns The file
    */
   file(name: string, type: string | undefined): File {
-    return new File(this.blobs(), name, { type: type ?? DEFAULT_PART_TYPE });
+    return new File(this.blobs(), name, {
+      type: type ?? DEFAULT_PART_TYPE,
+      endings: "transparent",
+      lastModified: Date.now(),
+    });
   }
 
   #flush(): void {

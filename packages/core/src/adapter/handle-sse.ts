@@ -11,6 +11,7 @@ import {
 } from "../studio";
 import { streamStatusEvent } from "../transport/instrument/stream-status";
 import type { StatusTeller } from "../transport/instrument/watch-connection";
+import { answerInit } from "../utils/answer-init";
 import { randomId } from "../utils/random-id";
 import { runTransportMiddleware, type TransportOpened } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
@@ -34,10 +35,7 @@ function headersToRecord(h: Headers): Record<string, string> {
 }
 
 function unavailable(message: string, retrySec: string): Response {
-  return Response.json(
-    { success: false, message },
-    { status: 503, headers: { "Retry-After": retrySec } },
-  );
+  return Response.json({ success: false, message }, answerInit(503, { "Retry-After": retrySec }));
 }
 
 /**
@@ -188,6 +186,6 @@ export function createSSEHandler(
       registerPlaygroundAbort,
     });
 
-    return new Response(stream, { headers: responseHeaders });
+    return new Response(stream, answerInit(200, responseHeaders));
   };
 }

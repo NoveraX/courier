@@ -117,9 +117,10 @@ function extendedValue(raw: string): string {
     at += 2;
   }
   try {
-    return new TextDecoder(charset === "utf-8" ? "utf-8" : "latin1", { fatal: true }).decode(
-      new Uint8Array(bytes),
-    );
+    return new TextDecoder(charset === "utf-8" ? "utf-8" : "latin1", {
+      fatal: true,
+      ignoreBOM: false,
+    }).decode(new Uint8Array(bytes));
   } catch {
     throw malformed("holds a filename* that is not UTF-8");
   }

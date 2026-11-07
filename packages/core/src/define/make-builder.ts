@@ -1,4 +1,5 @@
 import type { HttpMethod } from "../http-client/types";
+import { ownFields } from "../utils/own";
 import { assertNoFragment } from "./assert-no-fragment";
 import type { BuilderState } from "./builder";
 import { assertServedTopicKey, withTopicKey } from "./channel-topic";
@@ -23,7 +24,9 @@ import { type AnyBuilder, refinements } from "./refinements";
  * endpoint.get(":id"); // an addressed endpoint
  * ```
  */
-export function makeBuilder(state: BuilderState): AnyBuilder {
+export function makeBuilder(gathered: BuilderState): AnyBuilder {
+  /* What the builder gathered, read of its own: a part it was given none of is unset. */
+  const state = ownFields(gathered);
   const next = (updated: BuilderState): AnyBuilder => makeBuilder(updated);
   /* The verb decides the kind, whether named on the chain or called by a closure. */
   const address = (

@@ -1,4 +1,5 @@
 import { isBodilessStatus } from "../http-client/response";
+import { answerInit } from "./answer-init";
 import { toWireBody } from "./wire-body";
 
 /* Made when first needed, so an engine without TextEncoder still loads the client. */
@@ -30,14 +31,14 @@ export function toWireAnswer(
   data: unknown,
   rawData: boolean,
 ): Response {
-  if (isBodilessStatus(status)) return new Response(null, { status, headers });
+  if (isBodilessStatus(status)) return new Response(null, answerInit(status, headers));
 
   const wire = toWireBody(data);
   if (wire) {
     if (wire.contentType) headers.set("content-type", wire.contentType);
     headers.set("x-content-type-options", "nosniff");
     if (wire.size !== undefined) headers.set("content-length", String(wire.size));
-    return new Response(wire.body, { status, headers });
+    return new Response(wire.body, answerInit(status, headers));
   }
 
   /* JSON has no Headers, so the raw envelope carries them as a plain
@@ -50,5 +51,5 @@ export function toWireAnswer(
   /* Without a length the answer went out chunked, and a download progress
      bar in the browser never learned its total. */
   headers.set("content-length", String(bytes.byteLength));
-  return new Response(bytes, { status, headers });
+  return new Response(bytes, answerInit(status, headers));
 }

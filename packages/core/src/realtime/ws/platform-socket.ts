@@ -54,5 +54,10 @@ function optionsOf(
   headers: Readonly<Record<string, string>> | undefined,
   init: Readonly<Record<string, unknown>> | undefined,
 ): SourceSocketOptions {
-  return { ...init, ...(protocols && { protocols }), ...(headers && { headers }) };
+  return {
+    __proto__: null,
+    ...init,
+    ...(protocols && { protocols }),
+    ...(headers && { headers }),
+  } as SourceSocketOptions;
 }

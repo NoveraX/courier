@@ -1,6 +1,7 @@
 import { studioHooksHere } from "../capabilities/studio-hooks";
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
+import { answerInit } from "./answer-init";
 import { filterResponseHeaders } from "./merge-headers";
 import { ownFields } from "./own";
 import { setCookiesOf } from "./set-cookies";
@@ -47,10 +48,10 @@ export const buildResponse = (context: Context | undefined, answer: InternalResp
       });
       for (const [name, value] of Object.entries(STREAMED_ANSWER_HEADERS)) headers.set(name, value);
       return withUpstreamCookies(
-        new Response(response.data, {
-          status: response.status,
-          headers: withUpstreamLength(headers, response.headers),
-        }),
+        new Response(
+          response.data,
+          answerInit(response.status, withUpstreamLength(headers, response.headers)),
+        ),
         response.headers,
         response.namedHeaders,
       );

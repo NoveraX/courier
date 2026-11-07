@@ -1,4 +1,5 @@
 import { ONCE } from "../utils/own";
+import { REQUEST_MEMBERS } from "../utils/request-members";
 import { peerAddressOf, rememberPeerAddress } from "./peer-address";
 
 /**
@@ -17,12 +18,15 @@ export interface ClientConnection {
    a request the runtime made its own way — srvx's, which Nitro 3 serves
    SolidStart 2 with — passes for a Request but cannot be copied as one. */
 function withSignal(request: Request, signal: AbortSignal): Request {
-  const init: RequestInit & { duplex?: "half" } = {
+  const init = {
+    __proto__: null,
+    ...REQUEST_MEMBERS,
+    redirect: "follow",
     method: request.method,
     headers: request.headers,
     body: request.body,
     signal,
-  };
+  } as RequestInit & { duplex?: "half" };
   if (request.body) init.duplex = "half";
   const again = new Request(request.url, init);
   rememberPeerAddress(again, peerAddressOf(request));

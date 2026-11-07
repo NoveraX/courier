@@ -1,3 +1,4 @@
+import { UNQUEUED } from "../../utils/own";
 import { BodyError } from "../body-error";
 import { MultipartReader } from "./multipart-reader";
 import { type PartHeaders, parsePartHeaders } from "./part-headers";
@@ -118,6 +119,7 @@ class Parts implements MultipartParts {
     this.#current = state;
     const body = new ReadableStream<Uint8Array<ArrayBuffer>>(
       {
+        __proto__: null,
         pull: (controller) => {
           if (state.passedOver) {
             throw new Error("A part's body was read after the next part was asked for");
@@ -129,8 +131,8 @@ class Parts implements MultipartParts {
           });
           return state.reading;
         },
-      },
-      { highWaterMark: 0 },
+      } as UnderlyingDefaultSource<Uint8Array<ArrayBuffer>>,
+      UNQUEUED,
     );
     return { ...headers, body };
   }

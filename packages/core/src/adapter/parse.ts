@@ -1,3 +1,5 @@
+import { answerInit } from "../utils/answer-init";
+
 /**
  * The proxy's own refusal, as the JSON a proxy client reads.
  *
@@ -19,6 +21,8 @@ export function errorResponse(
   retryAfter?: number,
 ): Response {
   const body = code === undefined ? { success: false, message } : { success: false, message, code };
-  if (retryAfter === undefined) return Response.json(body, { status });
-  return Response.json(body, { status, headers: { "retry-after": String(retryAfter) } });
+  return Response.json(
+    body,
+    answerInit(status, retryAfter === undefined ? {} : { "retry-after": String(retryAfter) }),
+  );
 }

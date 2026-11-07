@@ -61,7 +61,7 @@ export class TextFields {
    *   passes the limit; the body's own refusal when it fails
    */
   async read(part: MultipartPart): Promise<string> {
-    const decoder = new TextDecoder("utf-8", { ignoreBOM: true });
+    const decoder = new TextDecoder("utf-8", { fatal: false, ignoreBOM: true });
     let text = "";
     for await (const piece of part.body) {
       this.#bytes += piece.byteLength;

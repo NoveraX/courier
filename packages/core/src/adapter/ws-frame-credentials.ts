@@ -1,6 +1,7 @@
 import { createLogger } from "../logger";
 import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import { isFieldRecord } from "../utils/body-kind";
+import { REQUEST_MEMBERS } from "../utils/request-members";
 import { peerAddressOf, rememberPeerAddress } from "./peer-address";
 
 const log = createLogger("WS");
@@ -107,7 +108,13 @@ export function withFrameHeaders(handshake: Request, frame: FrameCredentials): R
   const headers = frameHeadersOver(handshake.headers, frame);
   if (headers === undefined) return undefined;
   if (headers === handshake.headers) return handshake;
-  const request = new Request(handshake.url, { method: handshake.method, headers });
+  const request = new Request(handshake.url, {
+    __proto__: null,
+    ...REQUEST_MEMBERS,
+    redirect: "follow",
+    method: handshake.method,
+    headers,
+  } as RequestInit);
   rememberPeerAddress(request, peerAddressOf(handshake));
   return request;
 }

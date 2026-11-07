@@ -4,6 +4,7 @@ import { ConfigurationError } from "./errors/configuration-error";
 import type { WebBody } from "./http-client/web-types";
 import { addressedTo } from "./node-origin";
 import { nodeRequestBody } from "./node-request-body";
+import { REQUEST_MEMBERS } from "./utils/request-members";
 
 /**
  * Convert a Node.js IncomingMessage to a Web Standard Request.
@@ -55,10 +56,15 @@ export function toWebRequest(
     }
   }
 
-  const init: RequestInit & { duplex?: string } = {
+  /* On no prototype, as each request the core builds: what an init does not name, the platform
+     reads of Object.prototype. */
+  const init = {
+    __proto__: null,
+    ...REQUEST_MEMBERS,
+    redirect: "follow",
     ...(nodeReq.method !== undefined && { method: nodeReq.method }),
     headers,
-  };
+  } as RequestInit & { duplex?: string };
   if (nodeRes) init.signal = abortedWhenClientLeaves(nodeRes);
 
   if (nodeReq.method !== "GET" && nodeReq.method !== "HEAD") {
@@ -110,11 +116,12 @@ function uncopied(kept: WebBody | Uint8Array | null): WebBody | null {
     ? new Uint8Array(kept.buffer, kept.byteOffset, kept.byteLength)
     : new Uint8Array(kept);
   return new ReadableStream<Uint8Array>({
+    __proto__: null,
     start(controller) {
       controller.enqueue(bytes);
       controller.close();
     },
-  });
+  } as UnderlyingDefaultSource<Uint8Array>);
 }
 
 /*

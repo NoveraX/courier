@@ -28,6 +28,7 @@ export function trackDownload(
   let received = 0;
   const counted = response.body.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
+      __proto__: null,
       transform(chunk, controller) {
         received += chunk.byteLength;
         onProgress({
@@ -43,7 +44,7 @@ export function trackDownload(
         if (total > 0) return;
         onProgress({ percent: 1, transferredBytes: received, totalBytes: received });
       },
-    }),
+    } as Transformer<Uint8Array, Uint8Array>),
   );
   return new Response(counted, {
     status: response.status,

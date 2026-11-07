@@ -1,5 +1,6 @@
 import type { HttpMethod } from "../http-client/types";
 import { isReadingMethod } from "../utils/helpers";
+import { ownFields } from "../utils/own";
 import type { SchemaMetadata, Transport } from "../validation";
 import { ENDPOINT_SCHEMA } from "../validation";
 import type { BuilderState } from "./builder";
@@ -24,7 +25,7 @@ const TRANSPORT_BY_KIND: Record<EndpointKind, Transport> = {
  * field names the same messages from the server's side.
  */
 export function resolveSchemas(state: BuilderState): SchemaMetadata {
-  const { response, variables, send } = state.schemas;
+  const { response, variables, send } = ownFields(state.schemas);
   const transport = TRANSPORT_BY_KIND[state.kind];
   return {
     ...(response !== undefined && { response }),

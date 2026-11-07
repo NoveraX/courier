@@ -2,6 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { createLogger } from "../logger";
 import { generateRequestId, studioHooks } from "../studio";
+import { answerInit } from "../utils/answer-init";
 import { reportAnswer, reportRefusal, reportSchema, reportStart } from "./webhook-events";
 import { rememberRoute } from "./webhook-registry";
 
@@ -56,7 +57,7 @@ export function webhookStudio(name: string, request: Request): WebhookStudio {
     const answer = { error: message, ...(issues && { issues: issuesOf(issues) }) };
     start(undefined, undefined);
     if (attached) reportRefusal(id, request, { status, message, answer, timing: timing() });
-    return Response.json(answer, { status });
+    return Response.json(answer, answerInit(status));
   };
   return {
     start,
@@ -74,7 +75,7 @@ export function webhookStudio(name: string, request: Request): WebhookStudio {
         return refuse(500, "The webhook's handler failed");
       }
       const response =
-        answered instanceof Response ? answered : new Response(null, { status: 204 });
+        answered instanceof Response ? answered : new Response(null, answerInit(204));
       if (attached) reportAnswer(id, request, response, timing());
       return response;
     },

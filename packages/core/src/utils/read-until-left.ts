@@ -23,6 +23,7 @@ export function readUntilLeft(response: Response, signal: AbortSignal | undefine
   const reader = body.getReader();
   let output: ReadableStreamDefaultController<Uint8Array> | undefined;
   const stream = new ReadableStream<Uint8Array>({
+    __proto__: null,
     start(controller) {
       output = controller;
     },
@@ -35,7 +36,7 @@ export function readUntilLeft(response: Response, signal: AbortSignal | undefine
     cancel(reason: unknown) {
       return reader.cancel(reason);
     },
-  });
+  } as UnderlyingDefaultSource<Uint8Array>);
   signal.addEventListener(
     "abort",
     () => {

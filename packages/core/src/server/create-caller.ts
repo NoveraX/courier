@@ -11,6 +11,7 @@ import type {
 } from "../define";
 import { getSourceName } from "../define/api";
 import { serverCallContext } from "../utils/one-users-call";
+import { ownField } from "../utils/own";
 import { heldOptionsOf } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 
@@ -58,5 +59,8 @@ export function createCaller(
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
   heldOptionsOf(source, getSourceName(source) ?? "api");
   provideServerCapabilities();
-  return directClient(source, { ...defaults, context: serverCallContext(defaults.context) });
+  return directClient(source, {
+    ...defaults,
+    context: serverCallContext(ownField(defaults, "context")),
+  });
 }

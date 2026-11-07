@@ -39,8 +39,14 @@ export function sendAsStream(
   }
   if (source.replayable) headers.set("content-length", String(source.size));
 
-  return sendUpload(url, { ...init, headers }, source, (stream) => wrap(stream, source.size), {
-    withinOrigin,
-    fetch: send,
-  });
+  return sendUpload(
+    url,
+    { __proto__: null, ...init, headers } as typeof init,
+    source,
+    (stream) => wrap(stream, source.size),
+    {
+      withinOrigin,
+      fetch: send,
+    },
+  );
 }

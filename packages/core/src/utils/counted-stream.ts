@@ -1,4 +1,5 @@
 import type { UploadProgress } from "../http-client/types";
+import { UNQUEUED } from "./own";
 
 /** Bytes handed to the network at a time. */
 const CHUNK_BYTES = 64 * 1024;
@@ -48,6 +49,7 @@ export function countedStream(
 
   return new ReadableStream<Uint8Array>(
     {
+      __proto__: null,
       async pull(controller) {
         report();
         if (rest.byteLength === 0) {
@@ -68,7 +70,7 @@ export function countedStream(
         controller.enqueue(chunk);
       },
       cancel: (reason: unknown) => reader.cancel(reason),
-    },
-    { highWaterMark: 0 },
+    } as UnderlyingDefaultSource<Uint8Array>,
+    UNQUEUED,
   );
 }

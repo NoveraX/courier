@@ -27,6 +27,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/upload-without-progress",
   "utils/one-users-call",
   "studio/singleton",
+  "utils/request-members",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

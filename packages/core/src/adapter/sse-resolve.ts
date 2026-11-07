@@ -1,4 +1,5 @@
 import type { Sources } from "../define/types";
+import { answerInit } from "../utils/answer-init";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { parseWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
 import type { SchemaMetadata } from "../validation";
@@ -73,7 +74,7 @@ export async function resolveSSEVariables(
     if (!(error instanceof ValidationError)) throw error;
     return Response.json(
       { success: false, message: error.message, target: error.target, issues: error.issues },
-      { status: 422 },
+      answerInit(422),
     );
   }
 }

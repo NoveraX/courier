@@ -26,7 +26,7 @@ export type BodyText = { ok: true; text: string } | { ok: false; error: BodyErro
  */
 export async function readBodyText(request: Request, limits: BodyLimits): Promise<BodyText> {
   const reader = requestBodyStream(request, limits).getReader();
-  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
   const pieces: string[] = [];
   try {
     for (;;) {

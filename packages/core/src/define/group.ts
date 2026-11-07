@@ -1,5 +1,6 @@
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { GroupOptions } from "../http-client/types";
+import { ownFields } from "../utils/own";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoFragment } from "./assert-no-fragment";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
@@ -79,16 +80,15 @@ export function defineGroup<
 export function defineGroup(
   config: GroupOptions & { endpoints?: OwnEndpoints | undefined; groups?: OwnGroups | undefined },
 ): DefinedGroup | DefinedNestingGroup {
-  const { endpoints = {}, ...groupOptions } = config;
-  if (groupOptions.prefix) {
-    assertNoFragment(
-      groupOptions.prefix,
-      `The group prefix ${JSON.stringify(groupOptions.prefix)}`,
-    );
+  /* What the definition says, read of its own: an option it does not name is unset. */
+  const own = ownFields(config);
+  const { endpoints = {}, ...groupOptions } = own;
+  if (own.prefix) {
+    assertNoFragment(own.prefix, `The group prefix ${JSON.stringify(own.prefix)}`);
   }
   assertNoReservedName(endpoints, "group");
-  if (groupOptions.groups) assertNoReservedGroupName(groupOptions.groups);
+  if (own.groups) assertNoReservedGroupName(own.groups);
   assertTransportOptions(groupOptions, "group");
-  assertCancelPrevious(groupOptions.cancelPrevious, "A group");
+  assertCancelPrevious(own.cancelPrevious, "A group");
   return Object.assign({ options: groupOptions }, endpoints);
 }

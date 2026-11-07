@@ -89,10 +89,11 @@ function fromBytes(bytes: Uint8Array, contentType: string | null): UploadSource 
     replayable: true,
     open: () =>
       new ReadableStream<Uint8Array>({
+        __proto__: null,
         start(controller) {
           controller.enqueue(bytes);
           controller.close();
         },
-      }),
+      } as UnderlyingDefaultSource<Uint8Array>),
   };
 }

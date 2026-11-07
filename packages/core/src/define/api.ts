@@ -1,5 +1,6 @@
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { BaseOptions } from "../http-client/types";
+import { ownFields } from "../utils/own";
 import { announceSource } from "./announce-source";
 import { assertCancelPrevious } from "./assert-cancel-previous";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
@@ -203,20 +204,22 @@ export function defineApi(
     endpoints?: EndpointRecord | undefined;
   },
 ): DefinedApi | DefinedFlatApi | DefinedMixedApi {
-  const { endpoints, name, ...rest } = config;
+  /* What the definition says, read of its own: an option it does not name is unset. */
+  const own = ownFields(config);
+  const { endpoints, name, ...rest } = own;
   if (endpoints) assertNoReservedName(endpoints, "source");
-  if (rest.groups) assertNoReservedGroupName(rest.groups);
+  if (own.groups) assertNoReservedGroupName(own.groups);
   const result = endpoints
     ? Object.assign({ options: rest }, endpoints)
     : ({ options: rest } as DefinedApi);
 
   // Store name for studio identification
-  const sourceName = name ?? deriveSourceName(config.baseURL);
+  const sourceName = name ?? deriveSourceName(own.baseURL);
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
   assertTransportOptions(rest, "source");
-  assertCancelPrevious(rest.cancelPrevious, `API "${sourceName}"`);
+  assertCancelPrevious(own.cancelPrevious, `API "${sourceName}"`);
 
-  announceSource(result, config.baseURL ?? "");
+  announceSource(result, own.baseURL ?? "");
 
   return result;
 }

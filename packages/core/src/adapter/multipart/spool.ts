@@ -120,7 +120,11 @@ function written(disk: NodeDisk, path: string, handle: FileHandle): SpoolFile {
     async file(name, type) {
       await close();
       const blob = await disk.fs.openAsBlob(path);
-      return new File([blob], name, { type: type ?? DEFAULT_PART_TYPE });
+      return new File([blob], name, {
+        type: type ?? DEFAULT_PART_TYPE,
+        endings: "transparent",
+        lastModified: Date.now(),
+      });
     },
     abandon: close,
   };

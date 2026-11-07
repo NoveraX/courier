@@ -52,6 +52,7 @@ export function createSSEStream(
 
   return new ReadableStream(
     {
+      __proto__: null,
       async start(controller) {
         const sender = createSSESender(controller, () => {
           closeReason = "slow_consumer";
@@ -149,7 +150,7 @@ export function createSSEStream(
           cleanupSSEStream(undefined, opts, closeReason, registered),
         );
       },
-    },
+    } as UnderlyingDefaultSource<Uint8Array>,
     /* Sized in bytes: a one-chunk queue would count a healthy client that
        is a burst behind as one that stopped reading. Written out rather than
        as a ByteLengthQueuingStrategy, which the Edge Runtime does not have. */

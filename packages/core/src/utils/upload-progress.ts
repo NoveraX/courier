@@ -29,7 +29,12 @@ export async function sendWithUploadProgress(
 ): Promise<Response> {
   if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);
 
-  const request = { ...(init as RequestInit), method: init.method, body: init.body };
+  const request = {
+    __proto__: null,
+    ...(init as RequestInit),
+    method: init.method,
+    body: init.body,
+  } as typeof init;
   /* A page's service worker has no XMLHttpRequest either, and sends the body uncounted. */
   return (
     sendStreamed(url, request, { onProgress, withinOrigin, fetch: send }) ??

@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "node:http";
+import { UNQUEUED } from "./utils/own";
 
 /**
  * The body of a Node request as a Web stream that reads only on demand.
@@ -27,6 +28,7 @@ export function nodeRequestBody(nodeReq: IncomingMessage): ReadableStream<Uint8A
   let detach: (() => void) | undefined;
   return new ReadableStream<Uint8Array>(
     {
+      __proto__: null,
       pull(controller) {
         detach ??= feed(nodeReq, controller);
         nodeReq.resume();
@@ -35,10 +37,10 @@ export function nodeRequestBody(nodeReq: IncomingMessage): ReadableStream<Uint8A
         detach?.();
         nodeReq.resume();
       },
-    },
+    } as UnderlyingDefaultSource<Uint8Array>,
     /* Nothing is read ahead of a reader: a pull at construction would mark the
        request as consumed before anyone asked for it. */
-    { highWaterMark: 0 },
+    UNQUEUED,
   );
 }
 

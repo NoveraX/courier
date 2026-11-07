@@ -1,6 +1,7 @@
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
 import { normalizeHttpMethod } from "../utils/helpers";
+import { ownFields } from "../utils/own";
 import type { AnswerStage, CacheConfig } from "../validation";
 import { agentMark } from "./agent-mark";
 import type { BuilderState } from "./builder";
@@ -45,10 +46,12 @@ const CHANGING_VERBS: ReadonlySet<string> = new Set(["put", "patch", "del"]);
  * ```
  */
 export function makeAddressed(
-  state: BuilderState,
+  gathered: BuilderState,
   wire: Wire,
   options: AnyEndpointOptions,
 ): AnyBuilder {
+  /* What the builder gathered, read of its own: a part it was given none of is unset. */
+  const state = ownFields(gathered);
   const next = (updated: BuilderState): AnyBuilder => makeAddressed(updated, wire, options);
   const endpoint = sealAt(state, wire, options);
   const where = addressOf(wire);

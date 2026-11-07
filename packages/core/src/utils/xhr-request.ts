@@ -4,6 +4,7 @@ import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
 import { cancellation } from "./cancellation";
 import { isRecord } from "./is-record";
+import { ONCE } from "./own";
 import { platformError } from "./platform-error";
 
 const log = createLogger("Upload");
@@ -63,7 +64,7 @@ function send(
     for (const [key, value] of init.headers) xhr.setRequestHeader(key, value);
 
     const onAbort = () => xhr.abort();
-    signal?.addEventListener("abort", onAbort, { once: true });
+    signal?.addEventListener("abort", onAbort, ONCE);
     const settle = () => signal?.removeEventListener("abort", onAbort);
 
     xhr.upload.addEventListener("progress", (event) => {

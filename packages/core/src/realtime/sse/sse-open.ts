@@ -1,6 +1,7 @@
 import { createLogger } from "../../logger";
 import { layerHeaders } from "../../utils/layer-headers";
 import { ONCE } from "../../utils/own";
+import { REQUEST_MEMBERS } from "../../utils/request-members";
 import { CLIENT_LIMITS } from "../client-limits";
 import { fingerprintOf } from "../credentials-fingerprint";
 import { ConnectionError, type RealtimeError } from "../errors";
@@ -43,12 +44,14 @@ export async function openStream<TData>(
     /* What the request is, said of its own, as an HTTP call's is: the platform reads a field
        its init does not have from the init's prototype. */
     const request = send(ctx.url, {
+      __proto__: null,
+      ...REQUEST_MEMBERS,
       ...opened?.init,
       method: "GET",
       headers: layerHeaders(opened?.headers, requestHeaders(ctx)),
       body: null,
       signal,
-    });
+    } as RequestInit);
     const response = await within(signal, request, (answer) => {
       answer.body?.cancel().catch(() => undefined);
     });

@@ -56,3 +56,10 @@ export function ownField<T extends object, K extends keyof T>(
  * listener of the core's refuse to be added.
  */
 export const ONCE = { __proto__: null, once: true } as AddEventListenerOptions;
+
+/**
+ * The strategy of a stream that queues nothing ahead of its reader, as the
+ * platform reads it — its own alone: `Object.prototype.size`, given in the
+ * process, measures no chunk of the core's.
+ */
+export const UNQUEUED = { __proto__: null, highWaterMark: 0 } as QueuingStrategy<unknown>;

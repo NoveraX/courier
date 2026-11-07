@@ -15,6 +15,7 @@
  */
 
 import { LIMITS } from "../limits";
+import { UNQUEUED } from "../utils/own";
 import { BodyError } from "./body-error";
 import { declaredLength } from "./declared-length";
 import { discardBody } from "./discard-body";
@@ -90,6 +91,7 @@ export function requestBodyStream(
 
   return new ReadableStream<Uint8Array<ArrayBuffer>>(
     {
+      __proto__: null,
       /* What the headers alone refuse fails the stream before a byte is read;
          thrown from here, it would fail the stream's constructor instead. */
       start(controller) {
@@ -135,8 +137,8 @@ export function requestBodyStream(
       cancel() {
         if (!finished) handOn();
       },
-    },
-    { highWaterMark: 0 },
+    } as UnderlyingDefaultSource<Uint8Array<ArrayBuffer>>,
+    UNQUEUED,
   );
 }
 

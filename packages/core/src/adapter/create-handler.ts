@@ -2,6 +2,7 @@ import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
+import { answerInit } from "../utils/answer-init";
 import { ownFields } from "../utils/own";
 import { assertBodyOptions } from "./assert-body-options";
 import type { ConnectResult } from "./connection-meta";
@@ -74,8 +75,7 @@ export function createHandler(given?: HandlerConfig): AdapterHandler {
   const execute: ExecuteFn = (request, payload, proxyMethod, proxyReceiveAt, requestId) =>
     executeWireRequest(servedSources(config.sources), payload, {
       req: request,
-      /* Given headers of its own: the platform reads its init's, and a prototype's where it has none. */
-      res: new Response(null, { headers: {} }),
+      res: new Response(null, answerInit(200)),
       proxyMethod,
       mode: "proxy",
       proxyReceiveAt,

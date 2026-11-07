@@ -1,4 +1,5 @@
 import { isRecord } from "../utils/is-record";
+import { ownFields } from "../utils/own";
 
 /**
  * What `.agent()` was given, as it was given, and where it was written.
@@ -32,7 +33,7 @@ export function agentMark(given: unknown, where: string): AgentMark {
 
 function frozenCopy(value: unknown): unknown {
   if (!isRecord(value)) return value;
-  const { limit } = value;
+  const { limit } = ownFields(value);
   return Object.freeze({
     ...value,
     ...(isRecord(limit) && { limit: Object.freeze({ ...limit }) }),

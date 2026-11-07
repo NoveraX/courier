@@ -46,6 +46,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/one-users-call": "src/browser/utils/one-users-call.ts",
       "studio/singleton": "src/studio/singleton.ts",
       "browser/studio/singleton": "src/browser/studio/singleton.ts",
+      "utils/request-members": "src/utils/request-members.ts",
+      "browser/utils/request-members": "src/browser/utils/request-members.ts",
     });
   });
 });

@@ -1,3 +1,4 @@
+import { ownFields } from "../utils/own";
 import type { BuilderState } from "./builder";
 import { initialState } from "./builder";
 import type { Courier, CourierBaseConfig } from "./builder-types";
@@ -13,14 +14,14 @@ function inheritedFrom(
   config: CourierBaseConfig,
   parent?: Partial<BuilderState>,
 ): Partial<BuilderState> {
+  /* What a base says, read of its own; what it inherits names every part, set or not. */
+  const { middleware = [], allowedHeaders = [], timeout, retry, meta } = ownFields(config);
   return {
-    middleware: [...(parent?.middleware ?? []), ...(config.middleware ?? [])],
-    allowedHeaders: [...(parent?.allowedHeaders ?? []), ...(config.allowedHeaders ?? [])],
-    ...((config.timeout ?? parent?.timeout) !== undefined && {
-      timeout: config.timeout ?? parent?.timeout,
-    }),
-    ...((config.retry ?? parent?.retry) !== undefined && { retry: config.retry ?? parent?.retry }),
-    meta: { ...(parent?.meta ?? {}), ...(config.meta ?? {}) },
+    middleware: [...(parent?.middleware ?? []), ...middleware],
+    allowedHeaders: [...(parent?.allowedHeaders ?? []), ...allowedHeaders],
+    timeout: timeout ?? parent?.timeout,
+    retry: retry ?? parent?.retry,
+    meta: { ...parent?.meta, ...meta },
   };
 }
 

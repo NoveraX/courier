@@ -5,7 +5,7 @@ import { isRequestFailure, type RequestFailure } from "../../errors";
 import type { RequestContext } from "../../http-client/types";
 import { executeRequest } from "../../utils/execute";
 import { layerHeaders } from "../../utils/layer-headers";
-import { ownField } from "../../utils/own";
+import { ownField, ownFields } from "../../utils/own";
 import type { HTTPExecutor } from "../types";
 
 export interface DirectHTTPDefaults {
@@ -38,7 +38,7 @@ export function createDirectHTTPExecutor(
     onError: globalOnError,
     onSuccess: globalOnSuccess,
     cancelPrevious: defaultCancelPrevious,
-  } = defaults;
+  } = ownFields(defaults);
   assertCancelPrevious(defaultCancelPrevious, "A caller");
 
   /* The defaults are the least specific of their kind: carried beside the

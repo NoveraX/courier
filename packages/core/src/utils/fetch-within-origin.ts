@@ -47,7 +47,7 @@ export async function fetchWithinOrigin(
   if (inBrowserPage()) return send(url, init);
   const origin = new URL(url).origin;
   let target = url;
-  let request: RequestInit = { ...init, redirect: "manual" };
+  let request = { __proto__: null, ...init, redirect: "manual" } as RequestInit;
 
   for (let hops = 0; ; hops += 1) {
     const response = await send(target, request);
@@ -83,7 +83,7 @@ function redirected(request: RequestInit, status: number): RequestInit | undefin
   if (toGet) {
     const headers = new Headers(request.headers);
     for (const name of BODY_HEADERS) headers.delete(name);
-    return { ...request, method: "GET", body: null, headers };
+    return { __proto__: null, ...request, method: "GET", body: null, headers } as RequestInit;
   }
   return request.body instanceof ReadableStream ? undefined : request;
 }

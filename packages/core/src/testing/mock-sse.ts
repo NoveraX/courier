@@ -4,6 +4,7 @@ import type { SubscriptionSink } from "../realtime/subscription-driver";
 import { SubscriptionHandle } from "../realtime/subscription-handle";
 import type { Subscription } from "../realtime/subscription-types";
 import { abortableEvents } from "../utils/abortable-events";
+import { ONCE } from "../utils/own";
 import type { StreamGenerator } from "./types";
 
 const log = createLogger("Testing");
@@ -76,6 +77,6 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
       resolve();
     };
     const timer = setTimeout(wake, ms);
-    signal.addEventListener("abort", wake, { once: true });
+    signal.addEventListener("abort", wake, ONCE);
   });
 }

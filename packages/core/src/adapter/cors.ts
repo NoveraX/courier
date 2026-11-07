@@ -9,6 +9,7 @@
  * a user's data.
  */
 
+import { answerInit } from "../utils/answer-init";
 import { isOriginListed } from "./origin-policy";
 
 /** How long a browser may reuse a preflight's answer, in seconds. */
@@ -67,7 +68,7 @@ export function answerPreflight(
   });
   const requested = request.headers.get("Access-Control-Request-Headers");
   if (requested) headers.set("Access-Control-Allow-Headers", requested);
-  return new Response(null, { status: 204, headers });
+  return new Response(null, answerInit(204, headers));
 }
 
 /**

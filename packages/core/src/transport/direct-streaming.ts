@@ -2,6 +2,7 @@ import type { AnyDefinedApi } from "../define";
 import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { RequestContext } from "../http-client/types";
 import type { CallerWSOptions } from "../realtime/ws/ws-types";
+import { ownFields } from "../utils/own";
 import type { StreamingFactories } from "./compose-backend";
 import { assertDirectlyReachable } from "./direct/assert-reachable";
 import { channelAddress } from "./direct/channel-address";
@@ -43,7 +44,7 @@ export function directStreamingFactories(
     assertDirectlyReachable(source, group, method);
     channelAddress(source, options, group, method, variables);
   };
-  const { headers, ws, context } = defaults;
+  const { headers, ws, context } = ownFields(defaults);
   const sockets = { ws, headers };
   const sse = lazySSEFactory(async () =>
     (await import("./direct/sse")).createDirectSSEFactory(source, { headers }),

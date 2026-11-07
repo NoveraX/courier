@@ -13,6 +13,7 @@ import { isFormData, normalizeHttpMethod } from "./helpers";
 import { ownFields } from "./own";
 import { trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
+import { REQUEST_MEMBERS } from "./request-members";
 import { sendStreamed } from "./send-streamed";
 import type { SharingCall } from "./shared-answer";
 import { uploadWithoutProgress } from "./upload-without-progress";
@@ -114,7 +115,11 @@ export async function coreFetch(
   const expiry = timeout ? attemptExpiry(timeout, requestBody) : undefined;
   const finalSignal = signal && expiry ? anySignal([signal, expiry]) : (expiry ?? signal);
 
+  /* Each member the request's own: on no prototype, as a browser reads one an init does not
+     have of the init's prototype, and named on Node, which reads it of the objects it builds. */
   const init = {
+    __proto__: null,
+    ...REQUEST_MEMBERS,
     ...rest,
     method: normalizeHttpMethod(method),
     headers: requestHeaders,
@@ -126,7 +131,7 @@ export async function coreFetch(
   /* XMLHttpRequest reports an upload's progress, which fetch cannot, and
      reads a file a React Native form names by where it is, which expo/fetch refuses. */
   const sendOnce = (sendSignal: AbortSignal | undefined): Promise<Response> => {
-    const sent = sendSignal === undefined ? init : { ...init, signal: sendSignal };
+    const sent = sendSignal === undefined ? init : { ...init, signal: sendSignal, __proto__: null };
     if (transport) return transport(fullUrl, sent);
     /* Loaded with the first call that reports an upload or sends a device's file:
        a page that does neither never loads XMLHttpRequest's sending. */
@@ -135,7 +140,7 @@ export async function coreFetch(
         ({ sendWithUploadProgress }) =>
           sendWithUploadProgress(
             fullUrl,
-            { ...sent, body: requestBody },
+            sent as typeof sent & { body: WebBody },
             onUploadProgress ?? ignoreProgress,
             { withinOrigin: within, fetch: send },
           ),
@@ -154,11 +159,10 @@ export async function coreFetch(
     const streamed =
       requestBody == null
         ? undefined
-        : sendStreamed(
-            fullUrl,
-            { ...sent, body: requestBody },
-            { withinOrigin: within, fetch: send },
-          );
+        : sendStreamed(fullUrl, sent as typeof sent & { body: WebBody }, {
+            withinOrigin: within,
+            fetch: send,
+          });
     if (streamed) return streamed;
     return within ? fetchWithinOrigin(fullUrl, sent, send) : send(fullUrl, sent);
   };

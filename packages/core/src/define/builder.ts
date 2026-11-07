@@ -2,6 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
 import { idempotencyHeader } from "../utils/idempotency-header";
+import { ownFields } from "../utils/own";
 import type { AnswerStage, CacheConfig } from "../validation";
 import type { AgentMark } from "./agent-mark";
 import { assertEndpointSession } from "./assert-endpoint-session";
@@ -54,8 +55,8 @@ export function initialState(kind: EndpointKind, inherited: Partial<BuilderState
     baseMiddleware: inherited.middleware ?? [],
     middleware: [],
     allowedHeaders: inherited.allowedHeaders ?? [],
-    ...(inherited.timeout !== undefined && { timeout: inherited.timeout }),
-    ...(inherited.retry !== undefined && { retry: inherited.retry }),
+    timeout: inherited.timeout,
+    retry: inherited.retry,
     meta: inherited.meta ?? {},
   };
 }
@@ -126,10 +127,11 @@ export function resolveOptions(
   state: BuilderState,
   options: AnyEndpointOptions,
 ): ResolvedEndpointOptions {
-  const { inherit = true, tags = [], ...rest } = options;
+  const own = ownFields(options);
+  const { inherit = true, tags = [], ...rest } = own;
   /* Checked where the endpoint is defined, not on its first call. */
-  idempotencyHeader(rest.idempotencyKey);
-  assertEndpointSession(rest);
+  idempotencyHeader(own.idempotencyKey);
+  assertEndpointSession(own);
   return {
     middleware: inherit ? [...state.baseMiddleware, ...state.middleware] : state.middleware,
     allowedHeaders: state.allowedHeaders,

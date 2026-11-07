@@ -6,7 +6,7 @@ import type { StreamingFactories } from "./compose-backend";
 import { assertDirectlyReachable } from "./direct/assert-reachable";
 import { channelAddress } from "./direct/channel-address";
 import { streamRequest } from "./direct/stream-request";
-import { startStreamSession, withStreamSession } from "./direct/stream-session";
+import { startStreamSession, withStreamCall } from "./direct/stream-session";
 import { lazySSEFactory, lazyWSChannelFactory } from "./lazy-streams";
 
 /**
@@ -34,13 +34,14 @@ export function directStreamingFactories(
     context?: RequestContext | undefined;
   },
 ): Required<StreamingFactories> {
-  const streamRefused = (group: string, method: string, variables: unknown): void => {
+  type Refusal = (group: string, method: string, variables: unknown, options: unknown) => void;
+  const streamRefused: Refusal = (group, method, variables, options) => {
     assertDirectlyReachable(source, group, method);
-    streamRequest(source, group, method, variables);
+    streamRequest(source, options, group, method, variables);
   };
-  const channelRefused = (group: string, method: string, variables: unknown): void => {
+  const channelRefused: Refusal = (group, method, variables, options) => {
     assertDirectlyReachable(source, group, method);
-    channelAddress(source, group, method, variables);
+    channelAddress(source, options, group, method, variables);
   };
   const { headers, ws, context } = defaults;
   const sockets = { ws, headers };
@@ -53,14 +54,19 @@ export function directStreamingFactories(
   const wsPush = lazySSEFactory(async () =>
     (await import("./direct/ws")).createDirectWSPushFactory(source, sockets),
   );
-  /* Refused first; then the user's session is found as the call is made,
-     before the client that opens it is loaded. */
+  /* The source's options read once as the call is made: refused by them first, then the user's
+     session found for them, before the client that opens it with them is loaded. */
   const opening =
-    (check: typeof streamRefused) =>
+    (check: Refusal) =>
     (group: string, method: string, variables: unknown, options: Record<string, unknown>) => {
-      check(group, method, variables);
+      const read = source.options;
+      check(group, method, variables, read);
       assertTransportOptions(options, "call");
-      return withStreamSession(options, startStreamSession(source, group, method, context));
+      return withStreamCall(
+        options,
+        read,
+        startStreamSession(source, read, group, method, context),
+      );
     };
   const streamOptions = opening(streamRefused);
   const channelOptions = opening(channelRefused);

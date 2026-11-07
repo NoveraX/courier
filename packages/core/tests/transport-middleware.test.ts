@@ -73,7 +73,11 @@ function sourcesWith(options: {
 
 describe("runTransportMiddleware", () => {
   it("does nothing when neither the source nor the endpoint declares any", async () => {
-    await expect(run(sourcesWith({}))).resolves.toBeInstanceOf(Headers);
+    const sources = sourcesWith({});
+    const opened = await run(sources);
+
+    expect(opened.headers).toBeInstanceOf(Headers);
+    expect(opened.options).toBe((sources.api as { options: unknown }).options);
   });
 
   it("runs the middleware declared on the source", async () => {
@@ -106,13 +110,13 @@ describe("runTransportMiddleware", () => {
   });
 
   it("returns the headers the chain assembled", async () => {
-    const headers = await run(sourcesWith({ source: [stamper("x-tenant", "acme")] }));
+    const { headers } = await run(sourcesWith({ source: [stamper("x-tenant", "acme")] }));
 
     expect(headers.get("x-tenant")).toBe("acme");
   });
 
   it("carries a header an endpoint's own middleware set", async () => {
-    const headers = await run(sourcesWith({ endpointLevel: [stamper("x-scope", "read")] }));
+    const { headers } = await run(sourcesWith({ endpointLevel: [stamper("x-scope", "read")] }));
 
     expect(headers.get("x-scope")).toBe("read");
   });

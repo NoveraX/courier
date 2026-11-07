@@ -1,8 +1,14 @@
+/* The prototype of each object a copy holds: empty and frozen, so a read of a field the copy does
+   not have answers nothing, whatever `Object.prototype` is given in the process — and the object
+   stays one an engine reads as fast as an object literal, as one with no prototype is not. */
+const HELD: object = Object.freeze({ __proto__: null });
+
 /**
  * Whether a value is an object of plain data, as a server's options are:
- * one an object literal makes, or one with no prototype — a `Proxy` over
- * either among them. An instance of a class, or a `Map`, holds what no
- * check of its fields reads, and what no copy of them holds.
+ * one an object literal makes, one with no prototype, or a copy a server
+ * holds — a `Proxy` over any of them among them. An instance of a class,
+ * or a `Map`, holds what no check of its fields reads, and what no copy of
+ * them holds.
  *
  * @param value - The value
  * @returns Whether it is such an object
@@ -15,7 +21,7 @@
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false;
   const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  return prototype === Object.prototype || prototype === null || prototype === HELD;
 }
 
 /* What a copy holds in place of a value that is no data: what the value was, for the check that
@@ -29,7 +35,9 @@ class NotData {
 /**
  * A copy of options that are data, read once: each property of an object
  * of plain data and each item of a list is read one time, into an object
- * or a list of the copy's own, frozen. A value that is no data — an
+ * or a list of the copy's own, frozen. An object of the copy takes nothing
+ * of `Object.prototype`, so what a server reads of it is the copy's own,
+ * whatever that is given in the process. A value that is no data — an
  * instance of a class, a `Map`, a `Set`, a function — is not copied: the
  * copy holds what it was, which a check names as it refuses it. A check
  * that reads the copy alone passes what is then held, however the options
@@ -59,11 +67,9 @@ function copied(value: unknown, within: readonly object[]): unknown {
     return Object.freeze(items);
   }
   if (!isPlainObject(value)) return new NotData(describe(value));
-  const fields = Object.keys(value).map((key): [string, unknown] => [
-    key,
-    copied(value[key], inside),
-  ]);
-  return Object.freeze(Object.fromEntries(fields));
+  const fields: Record<string, unknown> = { __proto__: HELD };
+  for (const key of Object.keys(value)) fields[key] = copied(value[key], inside);
+  return Object.freeze(fields);
 }
 
 /**

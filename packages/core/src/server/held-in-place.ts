@@ -19,6 +19,9 @@ export interface ReadOption {
 /**
  * An option's value read once — by its getter, where it has one — into a
  * copy of its data, which the checks read and a server holds in its place.
+ * Options are data, read as they are: an option is the owner's own
+ * property alone, and one the owner does not have is unset, whatever its
+ * prototype answers.
  *
  * @param owner - The options it is one of
  * @param key - Its name in them
@@ -40,20 +43,17 @@ export function readOption(
 ): ReadOption {
   const own = Reflect.getOwnPropertyDescriptor(owner, key);
   const value: unknown =
-    own === undefined
-      ? (Reflect.get(owner, key) as unknown)
-      : "value" in own
-        ? (own.value as unknown)
-        : (own.get?.call(owner) as unknown);
+    own === undefined ? undefined : "value" in own ? own.value : own.get?.call(owner);
   return { owner, key, own, copy: dataCopy(value), code, name, at };
 }
 
 /**
  * Keep each option as the check read it: its copy in its place, not to be
  * set anew, and one its options do not name held unset, so none is set
- * later. One no copy can take the place of — in options their user froze
- * — passes only where it is fixed already, data frozen to its depths. All
- * are judged before any is held.
+ * later — options their user froze have none to set, and their prototype
+ * answers for none. One no copy can take the place of — in options their
+ * user froze — passes only where it is fixed already, data frozen to its
+ * depths. All are judged before any is held.
  *
  * @param options - The options the check passed, read once each
  * @throws ConfigurationError with an option's code, where it can change and no copy can take its place
@@ -71,11 +71,9 @@ export function holdInPlace(options: readonly ReadOption[]): void {
    still writable, as options their user sealed have — or, where none can, whether it is fixed. */
 function placeable(option: ReadOption): boolean {
   const { owner, own } = option;
-  if (own === undefined ? Object.isExtensible(owner) : own.configurable || own.writable) {
-    return true;
-  }
-  const fixedAlready = own === undefined ? option.copy === undefined : fixed(own, []);
-  if (fixedAlready) return false;
+  if (own === undefined) return Object.isExtensible(owner);
+  if (own.configurable || own.writable) return true;
+  if (fixed(own, [])) return false;
   throw new ConfigurationError(
     option.code,
     `${option.at}: ${option.key} can change in options its user froze or sealed, where a server cannot put a copy in its place: freeze ${option.key} to its depths too, as data, or leave the options unfrozen`,

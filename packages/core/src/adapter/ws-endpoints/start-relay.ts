@@ -23,6 +23,7 @@ import { watchConnection } from "../../transport/instrument/watch-connection";
 import { lazyChannel } from "../../transport/lazy-streams";
 import { layerHeaders } from "../../utils/layer-headers";
 import { sha256Hex } from "../../utils/sha256-hex";
+import type { TransportOpened } from "../../utils/transport-middleware";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
@@ -46,8 +47,10 @@ export interface RelayTarget {
 /**
  * Relay a subscription to a channel another server serves.
  *
- * The upstream is opened with the headers the subscription is relayed
- * with — the source's `headers`, then what the proxy sends on every call:
+ * The upstream is opened at the source's address with the headers the
+ * subscription is relayed with — of the source's options it was opened
+ * with, those its session was found for, whatever is put in their place
+ * since: the source's `headers`, then what the proxy sends on every call:
  * the request headers its policy lets through, the user's session and
  * `forward`, whatever the middleware set — as a relayed stream is — and
  * with the `WebSocket` class and connection options the channel's group or
@@ -65,11 +68,12 @@ export interface RelayTarget {
  * @param topic - The topic the client is subscribed under
  * @param target - The channel
  * @param variables - Its validated variables
- * @param headers - What the subscription's middleware and session produced
+ * @param opened - What the subscription's middleware and session produced, and the source's
+ *   options it was opened with
  * @param authorized - What the subscription was authorized as
  * @example
  * ```ts
- * startRelay(ctx, 'api.chat.room#{"room":"r1"}', { api, group: "chat", method: "room" }, { room: "r1" }, headers);
+ * startRelay(ctx, 'api.chat.room#{"room":"r1"}', { api, group: "chat", method: "room" }, { room: "r1" }, opened);
  * ```
  */
 export function startRelay(
@@ -77,11 +81,13 @@ export function startRelay(
   topic: string,
   target: RelayTarget,
   variables: unknown,
-  headers: Headers,
+  opened: TransportOpened,
   authorized?: AuthorizedSubscription,
 ): void {
-  const address = channelAddress(target.api, target.group, target.method, variables);
-  const options = upstreamOptions(target, layerHeaders(sourceHeadersOf(target.api), headers));
+  const { api, group, method } = target;
+  const address = channelAddress(api, opened.options, group, method, variables);
+  const sent = layerHeaders(sourceHeadersOf(opened.options), opened.headers);
+  const options = upstreamOptions(target, opened.options, sent);
   /* The channel client loads with the first relayed channel. */
   const upstream = lazyChannel(
     import("../../realtime/ws-channel-client").then(({ executeWSChannel }) =>
@@ -149,11 +155,12 @@ export function startRelay(
    credentials do not sit in the pool's keys. */
 async function upstreamOptions(
   { api, group }: RelayTarget,
+  source: unknown,
   sent: Record<string, string>,
 ): Promise<Partial<WSConnectionConfig>> {
   const shareKey = await sha256Hex(JSON.stringify(Object.entries(sent).sort()));
   const credentials = () => credentialsFor(sent, undefined);
-  const resolved = transportOf(api, group);
+  const resolved = transportOf(api, source, group);
   const transport = socketTransportOf(resolved);
   if (Object.keys(transport).length === 0) return { shareKey, credentials };
   const owner = `${transportOwnerOf(api)}${resolved.key && `:${resolved.key}`}`;

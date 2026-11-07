@@ -12,7 +12,7 @@ import {
 import { streamStatusEvent } from "../transport/instrument/stream-status";
 import type { StatusTeller } from "../transport/instrument/watch-connection";
 import { randomId } from "../utils/random-id";
-import { runTransportMiddleware } from "../utils/transport-middleware";
+import { runTransportMiddleware, type TransportOpened } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
 import { endpointName } from "./endpoint-name";
 import { SSE_HEADERS } from "./format-sse";
@@ -101,9 +101,9 @@ export function createSSEHandler(
     const requestId = playgroundRid ?? (studioHooks.onStreamOpen ? generateRequestId() : "");
     const dt = studioHooks;
 
-    let headers: Headers;
+    let opened: TransportOpened;
     try {
-      headers = await runTransportMiddleware({
+      opened = await runTransportMiddleware({
         transport: "sse",
         sources,
         source,
@@ -154,7 +154,7 @@ export function createSSEHandler(
       variables: variables ?? {},
       signal,
       lastEventId: request.headers.get("Last-Event-ID") ?? undefined,
-      headers,
+      headers: opened.headers,
     };
 
     const label = streamLabel({ source, group, method });
@@ -163,7 +163,7 @@ export function createSSEHandler(
       ? (status, reconnect) => dt.onStreamStatus?.(streamStatusEvent(requestId, status, reconnect))
       : undefined;
     const sseHandler = resolved.relayed
-      ? relayStream(resolved.api, group ?? "", method, tellStatus)
+      ? relayStream(resolved.api, opened.options, group ?? "", method, tellStatus)
       : (ctx: SSEContext) => eventsOf(resolved.endpoint, ctx, label);
     const stream = createSSEStream(sseHandler, sseCtx, {
       connectionId,

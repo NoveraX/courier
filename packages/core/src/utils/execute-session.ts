@@ -39,6 +39,7 @@ export function callSessionTarget(target: CallTarget): SessionTarget {
   const { source, group, method } = target;
   return sessionTargetOf({
     dataSource: target.dataSource,
+    options: target.sourceOptions,
     endpointOptions: target.endpointOptions,
     kind: target.schema?.type,
     httpMethod: target.httpMethod,
@@ -61,7 +62,7 @@ export function callSessionTarget(target: CallTarget): SessionTarget {
  * @returns The call's options, with the session's under them
  * @example
  * ```ts
- * callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
+ * callOptions = applyCallSession(session, middlewareCtx, callOptions, target.sourceOptions);
  * ```
  */
 export function applyCallSession<TOptions extends object>(

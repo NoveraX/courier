@@ -59,7 +59,7 @@ export async function primeCsrfToken(
 ): Promise<PrimedSession> {
   const { target, session } = call;
   const from = session.primeFrom ?? "";
-  const path = csrfSource(from, target.dataSource.options?.baseURL);
+  const path = csrfSource(from, target.sourceOptions?.baseURL);
   if (path === undefined) {
     warnOnce(
       from,
@@ -96,7 +96,7 @@ export async function primeCsrfToken(
  * ```
  */
 export function tokenCall(
-  target: Pick<CallTarget, "source" | "dataSource">,
+  target: Pick<CallTarget, "source" | "dataSource" | "sourceOptions">,
   path: string,
 ): CallTarget {
   return {
@@ -106,6 +106,7 @@ export function tokenCall(
     variables: undefined,
     options: undefined,
     dataSource: target.dataSource,
+    sourceOptions: target.sourceOptions,
     endpoint: (http: unknown) => (http as Pick<HttpMethods, "get">).get(path),
     endpointGroup: undefined,
     schema: undefined,

@@ -42,7 +42,7 @@ export async function executeDirectWSPush(
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
-  const headers = await runTransportMiddleware({
+  const { headers } = await runTransportMiddleware({
     transport: "ws",
     sources,
     source: payload.source,

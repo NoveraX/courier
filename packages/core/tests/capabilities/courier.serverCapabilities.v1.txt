@@ -182,6 +182,7 @@ SessionTarget.credentials: readonly credentials?: RequestCredentials | undefined
 SessionTarget.endpoint: readonly endpoint?: object | undefined;
 SessionTarget.forward: readonly forward?: ForwardOptions | undefined;
 SessionTarget.name: readonly name: string;
+SessionTarget.options: readonly options?: object | undefined;
 SessionTarget.session: readonly session?: SessionOptions | undefined;
 SessionTarget.unguarded: readonly unguarded: boolean;
 SessionTarget.unsafeMethod: readonly unsafeMethod: boolean;

@@ -67,8 +67,8 @@ describe("a .via() closure", () => {
     });
     expect(seen).toHaveLength(1);
 
-    const lobby = streamRequest(api, "", "events", { room: "lobby" });
-    const garden = streamRequest(api, "", "events", { room: "garden" });
+    const lobby = streamRequest(api, api.options, "", "events", { room: "lobby" });
+    const garden = streamRequest(api, api.options, "", "events", { room: "garden" });
 
     expect(seen.slice(1)).toEqual([{ room: "lobby" }, { room: "garden" }]);
     expect([lobby.url, garden.url]).toEqual([

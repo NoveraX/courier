@@ -130,7 +130,8 @@ describe("a group's transport", () => {
 
   it("is what the proxy relays the group's streams with", async () => {
     const { sent, send } = recording();
-    const relay = relayStream(payments(send), "settlement", "ticks");
+    const source = payments(send);
+    const relay = relayStream(source, source.options, "settlement", "ticks");
 
     const relayed: unknown[] = [];
     for await (const event of relay({

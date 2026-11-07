@@ -6,10 +6,11 @@ import { layerHeaders } from "../../utils/layer-headers";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
+import { fieldOf } from "./read-definition";
 import { transportOf } from "./source-transport";
 import { streamConnection } from "./stream-connection";
 import { streamRequest } from "./stream-request";
-import { streamSessionOf } from "./stream-session";
+import { streamCallOf } from "./stream-session";
 import { studioRequestIdOption } from "./studio-request-option";
 
 export interface DirectSSEDefaults {
@@ -33,7 +34,9 @@ function headersToRecord(h: Headers): Record<string, string> {
  *
  * Used by createCaller (universal mode) and createQueryCaller (React direct mode).
  * A stream this process serves with `.implement()` has no address at
- * `baseURL`, so calling one throws `DIRECT_CALL_TO_SERVED_ENDPOINT`.
+ * `baseURL`, so calling one throws `DIRECT_CALL_TO_SERVED_ENDPOINT`. A
+ * stream opens with the source's options its call read — where its session
+ * was found for — whatever is put in their place before it connects.
  *
  * Browser-side studio instrumentation: when studio hooks are installed, each
  * subscription emits stream:open / stream:message / stream:close / stream:error
@@ -50,7 +53,9 @@ export function createDirectSSEFactory(
 
   return function openStream(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
-    const request = streamRequest(api, group, method, variables);
+    const call = streamCallOf(options);
+    const source = call === undefined ? fieldOf(api, "options") : call.options;
+    const request = streamRequest(api, source, group, method, variables);
     // Compose the actual outbound headers (must mirror sse-connection.ts).
     // The fetch layer always adds `Accept: text/event-stream`; merging it
     // here means Studio sees the same headers the wire sees, not just the
@@ -75,8 +80,8 @@ export function createDirectSSEFactory(
       requestHeaders,
     };
     const instr = beginStream(meta, studioRequestIdOption(options));
-    const transport = transportOf(api, group, options);
-    const connection = streamConnection(api, streamSessionOf(options), transport);
+    const transport = transportOf(api, source, group, options);
+    const connection = streamConnection(source, call?.session, transport);
 
     const send = transport.fetch;
     const subscription = subscribeSSE(url, {

@@ -43,7 +43,7 @@ export function holdOf(target: CallTarget, context?: Context): EndpointHold | un
     target.endpointOptions?.cancelPrevious ??
     target.endpointGroup?.options.cancelPrevious ??
     context?.defaultCancelPrevious ??
-    target.dataSource.options?.cancelPrevious;
+    target.sourceOptions?.cancelPrevious;
   const held =
     nearest === true &&
     supportsAbortController &&
@@ -70,19 +70,19 @@ function holdsOf(dataSource: object): EndpointHolds {
  * It is built per call, because a call's context decides its headers and
  * path options, and the hold it carries is the call's own.
  *
- * @param dataSource - The source the call belongs to
+ * @param sourceOptions - The options of the source the call belongs to, as the call read them
  * @param context - The call's context, when it has one
  * @param kind - Whether the endpoint reads or writes, from its schema
  * @param hold - The call's hold on its endpoint, from `holdOf`
  * @returns A client for this call
  */
 export function clientForCall(
-  dataSource: { options?: BaseOptions },
+  sourceOptions: BaseOptions | undefined,
   context?: Context,
   kind?: "query" | "mutation",
   hold?: EndpointHold,
 ): HttpClient {
-  const client = new HttpClient(dataSource.options, context);
+  const client = new HttpClient(sourceOptions, context);
   client.kind = kind;
   client.hold = hold;
   return client;

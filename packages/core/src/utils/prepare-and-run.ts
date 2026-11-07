@@ -47,8 +47,11 @@ async function runHeld(
      only until then. What a provider fails with — a render a framework
      stops — is the call's failure, as it came. */
   const pendingSession = startCallSession(target, context);
-  const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
-  const instance = clientForCall(dataSource, context, schema?.type, hold);
+  const { source, group, method, variables, dataSource, sourceOptions, schema, endpointOptions } =
+    target;
+  /* Read once, after a server checked what the call takes — the request's and the answer's. */
+  const namedHeaders = namedHeadersOf(sourceOptions, endpointOptions);
+  const instance = clientForCall(sourceOptions, context, schema?.type, hold);
   if (studio.hasStudio) studio.report?.watchFetch(instance, studio, timing);
 
   const {
@@ -80,9 +83,9 @@ async function runHeld(
     variables,
     baseHeaders,
     context,
-    dataSource,
+    sourceOptions,
     requestId: studio.requestId,
-    endpointAllowedHeaders: endpointOptions?.allowedHeaders,
+    namedHeaders,
     kind: schema?.type,
     signal,
     idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
@@ -94,7 +97,7 @@ async function runHeld(
      retry policy is the outermost of the endpoint's own, so it re-runs them. */
   const middlewares = resolveMiddlewareChain(
     dataSource,
-    dataSource.options?.middleware,
+    sourceOptions?.middleware,
     endpointOptions,
   );
 
@@ -132,7 +135,7 @@ async function runHeld(
   });
   if ("refused" in settled) return settled.refused;
   const { session, primed } = settled;
-  callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
+  callOptions = applyCallSession(session, middlewareCtx, callOptions, sourceOptions);
   const chain = forwardedChainOf(context);
   if (chain !== undefined) carryForwardedFor(middlewareCtx.headers, await chain);
 
@@ -159,11 +162,7 @@ async function runHeld(
     context,
     session,
     primed,
-    answer: {
-      rawData,
-      stream,
-      namedHeaders: namedHeadersOf(dataSource, endpointOptions?.allowedHeaders),
-    },
+    answer: { rawData, stream, namedHeaders },
   });
 }
 

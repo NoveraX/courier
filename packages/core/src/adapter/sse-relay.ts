@@ -22,7 +22,9 @@ import { layerHeaders } from "../utils/layer-headers";
  * resumes from; through the `fetch` the stream's group or its source names,
  * given what their options give a request that stays open — the
  * `dispatcher` that carries a client certificate or a proxy, the group's
- * over the source's. As the proxy's calls do, it follows an upstream
+ * over the source's — of the source's options the stream was opened with,
+ * those the session it carries was found for, whatever is put in their
+ * place since. As the proxy's calls do, it follows an upstream
  * redirect only while it stays on the upstream's origin, so the source's
  * credentials never reach another host — a redirect elsewhere refuses the
  * stream — unless the source names a `redirect` mode of its own. Its events are handed on as they
@@ -34,18 +36,20 @@ import { layerHeaders } from "../utils/layer-headers";
  * leaves.
  *
  * @param api - The source the stream belongs to
+ * @param options - The source's options, as the stream was opened with them
  * @param group - The stream's group, empty for none
  * @param method - The stream's name
  * @param tell - What hears how the upstream connection stands, when Studio watches
  * @returns The handler, run as a served stream's is
  * @example
  * ```ts
- * const handler = relayStream(sources.openai, "", "events");
+ * const handler = relayStream(sources.weather, sources.weather.options, "", "events");
  * createSSEStream(handler, sseCtx, streamOptions);
  * ```
  */
 export function relayStream(
   api: object,
+  options: unknown,
   group: string,
   method: string,
   tell?: StatusTeller,
@@ -57,9 +61,9 @@ export function relayStream(
       import("../realtime/sse"),
       import("../realtime/sse/stream-data"),
     ]);
-    const request = streamRequest(api, group, method, ctx.variables);
-    const transport = transportOf(api, group);
-    const init = streamInitOf(api, transport);
+    const request = streamRequest(api, options, group, method, ctx.variables);
+    const transport = transportOf(api, options, group);
+    const init = streamInitOf(options, transport);
     const send = relayFetch(transport.fetch, init);
     const upstream = subscribeSSE(request.url, {
       headers: layerHeaders({ Accept: "text/event-stream" }, request.sourceHeaders, ctx.headers),

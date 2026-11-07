@@ -21,8 +21,10 @@ vi.mock("../../src/server/session/relay", async (importOriginal) => {
   return importOriginal();
 });
 
+const options = { baseURL: "https://api.example.com", session: { cookies: ["sid"] } };
 const target = sessionTargetOf({
-  dataSource: { options: { baseURL: "https://api.example.com", session: { cookies: ["sid"] } } },
+  dataSource: { options },
+  options,
   kind: "query",
   httpMethod: "GET",
   name: "accounts.me",

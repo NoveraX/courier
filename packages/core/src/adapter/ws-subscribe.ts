@@ -2,7 +2,7 @@ import { describeFailure } from "../realtime/describe-failure";
 import { isChannelSchema } from "../realtime/is-channel-schema";
 import { WS_CODE } from "../realtime/ws/ws-codes";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
-import { runTransportMiddleware } from "../utils/transport-middleware";
+import { runTransportMiddleware, type TransportOpened } from "../utils/transport-middleware";
 import { endpointName } from "./endpoint-name";
 import { authorizeSubscription } from "./ws-authorize-subscription";
 import type { WSSocketContext } from "./ws-context";
@@ -84,9 +84,9 @@ async function openSubscription(
   const subscribedTopic = subscriptionTopic(ctx, msg, topic, variables, resolved.topicKey);
   if (subscribedTopic === undefined) return;
 
-  let headers: Headers;
+  let opened: TransportOpened;
   try {
-    headers = await runTransportMiddleware({
+    opened = await runTransportMiddleware({
       transport: "ws",
       sources: ctx.sources,
       source: resolved.source,
@@ -140,7 +140,7 @@ async function openSubscription(
   try {
     if (!resolved.served) {
       const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
-      startRelay(ctx, subscribedTopic, target, variables, headers, authorized);
+      startRelay(ctx, subscribedTopic, target, variables, opened, authorized);
     } else if (isChannelSchema(resolved.schema)) {
       await startChannel(
         ctx,

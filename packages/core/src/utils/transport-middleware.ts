@@ -18,7 +18,7 @@ import { sessionFor } from "../session/call-session";
 import { sessionTargetOf } from "../session/session-target";
 import { buildMiddlewareContext, carryForwardedFor } from "./execute-middleware-context";
 import { resolveMiddlewareChain } from "./execute-options";
-import { resolveEndpoint } from "./execute-resolve";
+import { namedHeadersOf, resolveEndpoint } from "./execute-resolve";
 import { applyCallSession } from "./execute-session";
 import { forwardedFor } from "./forwarded-for";
 
@@ -37,54 +37,71 @@ export interface TransportMiddlewareInput {
   timeoutMs?: number;
 }
 
+/** What a stream or a channel is opened with, once its middleware ran. */
+export interface TransportOpened {
+  /** Headers the chain assembled, to hand to the endpoint */
+  readonly headers: Headers;
+  /**
+   * The source's options, read once as the stream was opened: what a relay
+   * opens the upstream at and with, as the session it carries was found for
+   */
+  readonly options: BaseOptions | undefined;
+}
+
 /**
- * Run the chain and return the headers it produced.
+ * Run the chain and return the headers it produced. The source's options
+ * are read once, and what the stream takes of them is checked, on a
+ * server, before the chain reads any of it.
  *
  * @param input - The call being opened, and the transport opening it
- * @returns Headers the chain assembled, to hand to the endpoint
+ * @returns The headers the chain assembled, and the options it read
  * @throws When a middleware rejects, or the chain outruns its deadline
  *
  * @example
  * ```ts
- * const headers = await runTransportMiddleware({
+ * const { headers } = await runTransportMiddleware({
  *   transport: "sse", sources, source, group, method, variables, request, requestId,
  * });
  * ```
  */
-export async function runTransportMiddleware(input: TransportMiddlewareInput): Promise<Headers> {
+export async function runTransportMiddleware(
+  input: TransportMiddlewareInput,
+): Promise<TransportOpened> {
   const { transport, sources, source, group, method, variables, request, requestId } = input;
 
   const dataSource = sources[source] as unknown as Record<string, unknown>;
+  const options = dataSource.options as BaseOptions | undefined;
   const { options: endpointOptions, schema } = resolveEndpoint(dataSource, group, method);
 
   const context: Context = { req: request, mode: "proxy" };
+  /* A stream reads: it carries the session and the forwarded headers as a
+     read over HTTP does, for the upstream a relayed stream is opened on —
+     asked for first, so a server checks them before anything reads them. */
+  const target = sessionTargetOf({
+    dataSource,
+    options,
+    endpointOptions,
+    kind: "query",
+    httpMethod: "GET",
+    name: [source, group, method].filter(Boolean).join("."),
+  });
+  const pending = sessionFor(context, target);
   const middlewareCtx = buildMiddlewareContext({
     source,
     group,
     method,
     variables,
     context,
-    dataSource,
+    sourceOptions: options,
     requestId,
     transport,
-    endpointAllowedHeaders: endpointOptions?.allowedHeaders,
+    namedHeaders: namedHeadersOf(options, endpointOptions),
     kind: schema?.type,
   });
-  /* A stream reads: it carries the session and the forwarded headers as a
-     read over HTTP does, for the upstream a relayed stream is opened on. */
-  const target = sessionTargetOf({
-    dataSource: dataSource as { options?: BaseOptions },
-    endpointOptions,
-    kind: "query",
-    httpMethod: "GET",
-    name: [source, group, method].filter(Boolean).join("."),
-  });
-  applyCallSession(await sessionFor(context, target), middlewareCtx, {}, undefined);
+  applyCallSession(await pending, middlewareCtx, {}, undefined);
   carryForwardedFor(middlewareCtx.headers, forwardedFor(request));
 
-  const sourceMiddleware = (dataSource.options as { middleware?: unknown } | undefined)
-    ?.middleware as Parameters<typeof composeMiddleware>[0] | undefined;
-  const middlewares = resolveMiddlewareChain(dataSource, sourceMiddleware, endpointOptions);
+  const middlewares = resolveMiddlewareChain(dataSource, options?.middleware, endpointOptions);
 
   if (middlewares.length > 0) {
     const timeoutMs = input.timeoutMs ?? LIMITS.MIDDLEWARE_TIMEOUT_MS;
@@ -99,7 +116,7 @@ export async function runTransportMiddleware(input: TransportMiddlewareInput): P
     );
   }
 
-  return middlewareCtx.headers;
+  return { headers: middlewareCtx.headers, options };
 }
 
 /** Reject when `promise` outruns `ms`, clearing the timer either way. */

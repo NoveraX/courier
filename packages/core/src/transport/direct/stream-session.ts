@@ -14,8 +14,16 @@ export interface StreamSession {
   readonly takes: string;
 }
 
-/* The session each stream call's options were handed with, beside what the caller set. */
-const sessions = new WeakMap<object, StreamSession>();
+/** What a stream or a channel a direct caller opens was made with, as its call read it. */
+export interface StreamCall {
+  /** The source's options, read once as the call was made: where it opens, and with what */
+  readonly options: BaseOptions | undefined;
+  /** What the user's session gives it; none for one that takes neither the session nor `forward` */
+  readonly session: StreamSession | undefined;
+}
+
+/* What each stream call's options were handed with, beside what the caller set. */
+const calls = new WeakMap<object, StreamCall>();
 
 /**
  * Start finding what the user's session gives a stream or a channel, as the
@@ -25,6 +33,7 @@ const sessions = new WeakMap<object, StreamSession>();
  * over HTTP does, and repeats no double-submit token.
  *
  * @param api - The source
+ * @param options - The source's options, as the call read them once
  * @param group - The endpoint's group, empty for none
  * @param method - The endpoint
  * @param context - The caller's context
@@ -32,11 +41,12 @@ const sessions = new WeakMap<object, StreamSession>();
  *   endpoint that takes neither the session nor `forward`
  * @example
  * ```ts
- * const session = startStreamSession(api, "chat", "room", defaults.context);
+ * const session = startStreamSession(api, api.options, "chat", "room", defaults.context);
  * ```
  */
 export function startStreamSession(
   api: object,
+  options: BaseOptions | undefined,
   group: string,
   method: string,
   context: Context | undefined,
@@ -47,7 +57,8 @@ export function startStreamSession(
     method,
   );
   const target = sessionTargetOf({
-    dataSource: api as { options?: BaseOptions },
+    dataSource: api,
+    options,
     endpointOptions,
     kind: "query",
     httpMethod: "GET",
@@ -70,36 +81,38 @@ export function startStreamSession(
 
 /**
  * The options a stream call is handed to the client that opens it with,
- * carrying its session.
+ * carrying what the call was made with: the source's options it read, and
+ * its session.
  *
  * @param options - The call's options
+ * @param sourceOptions - The source's options, as the call read them once
  * @param session - What its session gives it
- * @returns The options, with the session beside them
+ * @returns The options, with the call beside them
  * @example
  * ```ts
- * open(group, method, variables, withStreamSession(options, startStreamSession(api, group, method, context)));
+ * open(group, method, variables, withStreamCall(options, api.options, session));
  * ```
  */
-export function withStreamSession(
+export function withStreamCall(
   options: Record<string, unknown>,
+  sourceOptions: BaseOptions | undefined,
   session: StreamSession | undefined,
 ): Record<string, unknown> {
-  if (session === undefined) return options;
   const handed = { ...options };
-  sessions.set(handed, session);
+  calls.set(handed, { options: sourceOptions, session });
   return handed;
 }
 
 /**
- * The session a stream call was handed with, if it was.
+ * What a stream call was handed with: none for a stream its caller did not make.
  *
  * @param options - The call's options
- * @returns Its session, or `undefined`
+ * @returns What it was made with, or `undefined`
  * @example
  * ```ts
- * const session = streamSessionOf(options);
+ * const session = streamCallOf(options)?.session;
  * ```
  */
-export function streamSessionOf(options: Record<string, unknown>): StreamSession | undefined {
-  return sessions.get(options);
+export function streamCallOf(options: Record<string, unknown>): StreamCall | undefined {
+  return calls.get(options);
 }

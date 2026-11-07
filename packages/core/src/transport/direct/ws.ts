@@ -6,9 +6,10 @@ import { instrumentWSChannel, instrumentWSPush } from "../instrument";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
 import { channelAddress } from "./channel-address";
+import { fieldOf } from "./read-definition";
 import { type DirectSocketDefaults, directSocketOptions } from "./socket-config";
 import { transportOf } from "./source-transport";
-import { streamSessionOf } from "./stream-session";
+import { type StreamCall, streamCallOf } from "./stream-session";
 import { studioRequestIdOption } from "./studio-request-option";
 
 /**
@@ -40,9 +41,10 @@ export function createDirectWSChannelFactory(
 
   return function connectChannel(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
-    const { url, topic } = channelAddress(api, group, method, variables);
-    const transport = transportOf(api, group, options);
-    const socket = directSocketOptions(api, defaults, streamSessionOf(options), transport);
+    const { source, session } = madeWith(api, options);
+    const { url, topic } = channelAddress(api, source, group, method, variables);
+    const transport = transportOf(api, source, group, options);
+    const socket = directSocketOptions(source, defaults, session, transport);
     return instrumentWSChannel(
       executeWSChannel(url, topic, variables, socket),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
@@ -69,13 +71,26 @@ export function createDirectWSPushFactory(
 
   return function connectPush(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
-    const { url, topic } = channelAddress(api, group, method, variables);
-    const transport = transportOf(api, group, options);
-    const socket = directSocketOptions(api, defaults, streamSessionOf(options), transport);
+    const { source, session } = madeWith(api, options);
+    const { url, topic } = channelAddress(api, source, group, method, variables);
+    const transport = transportOf(api, source, group, options);
+    const socket = directSocketOptions(source, defaults, session, transport);
     return instrumentWSPush(
       executeWSPush(url, topic, variables, socket),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
       studioRequestIdOption(options),
     );
   };
+}
+
+/* The source's options a channel's call read — where its session was found for — and that
+   session; a channel its caller did not make reads the options as it connects. */
+function madeWith(
+  api: AnyDefinedApi,
+  options: Record<string, unknown>,
+): { source: unknown; session: StreamCall["session"] } {
+  const call = streamCallOf(options);
+  return call === undefined
+    ? { source: fieldOf(api, "options"), session: undefined }
+    : { source: call.options, session: call.session };
 }

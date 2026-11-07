@@ -30,23 +30,26 @@ export interface SocketTransport {
  * groups its path names, else from the source's.
  *
  * @param api - The source
+ * @param options - The source's options, as the call read them
  * @param group - The call's group path; empty for the source's own endpoints
  * @param call - The call's options, as `.with()` gave them; absent for a relay, which no caller's options reach
  * @returns The transport
  * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` for a `fetch` or a `webSocket` that is not a function, or a `dispatcher` that is no undici `Dispatcher`
  * @example
  * ```ts
- * transportOf(api, "settlement", { dispatcher: rotated }).connection.dispatcher === rotated; // → true
+ * transportOf(api, api.options, "settlement", { dispatcher: rotated }).connection.dispatcher === rotated; // → true
  * ```
  */
-export function transportOf(api: object, group: string, call?: object): ResolvedTransport {
+export function transportOf(
+  api: object,
+  options: unknown,
+  group: string,
+  call?: object,
+): ResolvedTransport {
   const chain = group === "" ? [] : groupChain(api, group);
   const groupOptions = chain?.length ? groupOptionsOf(chain) : undefined;
-  const source = fieldOf(api, "options");
-  return resolveTransport(typeof source === "object" && source !== null ? source : undefined, [
-    groupOptions,
-    call,
-  ]);
+  const source = typeof options === "object" && options !== null ? options : undefined;
+  return resolveTransport(source, [groupOptions, call]);
 }
 
 /**
@@ -54,19 +57,16 @@ export function transportOf(api: object, group: string, call?: object): Resolved
  * request that stays open takes from its source, as its calls are given
  * them, and its transport's `dispatcher`, `proxy`, `tls` and `client`.
  *
- * @param api - The source
- * @param transport - The stream's transport; the source's own when absent
+ * @param options - The source's options, as the stream's call read them
+ * @param transport - The stream's transport
  * @returns The options; empty when they set none
  * @example
  * ```ts
- * streamInitOf(defineApi({ baseURL, credentials: "include" })); // { credentials: "include" }
+ * streamInitOf(api.options, transportOf(api, api.options, "")); // { credentials: "include" }
  * ```
  */
-export function streamInitOf(
-  api: object,
-  transport: ResolvedTransport = transportOf(api, ""),
-): RequestInit {
-  return { ...picked(fieldOf(api, "options"), STREAM_REQUEST_INIT), ...transport.connection };
+export function streamInitOf(options: unknown, transport: ResolvedTransport): RequestInit {
+  return { ...picked(options, STREAM_REQUEST_INIT), ...transport.connection };
 }
 
 /**

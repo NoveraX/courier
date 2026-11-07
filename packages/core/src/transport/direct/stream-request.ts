@@ -21,9 +21,11 @@ export interface StreamRequest {
  * The request that opens a stream another server serves.
  *
  * It carries the source's `headers`, as every HTTP call does, so a stream of
- * an API that takes a key there is not refused with 401.
+ * an API that takes a key there is not refused with 401. Its address and
+ * its headers are those of the source's options the stream was made with.
  *
  * @param api - The source
+ * @param options - The source's options, as the stream's call read them
  * @param group - The stream's group's path, empty for none
  * @param method - The stream's name
  * @param variables - What it is called with; those its path does not take go in the query
@@ -31,22 +33,22 @@ export interface StreamRequest {
  * @throws RealtimeValidationError when a path parameter is missing or would change the route
  * @example
  * ```ts
- * streamRequest(api, "orders", "watch", { id: "o1", since: "2026" });
+ * streamRequest(api, api.options, "orders", "watch", { id: "o1", since: "2026" });
  * // → { url: "https://api.example.com/orders/o1/events?since=2026", sourceHeaders: { authorization: "Bearer …" } }
  * ```
  */
 export function streamRequest(
   api: object,
+  options: unknown,
   group: string,
   method: string,
   variables: unknown,
 ): StreamRequest {
-  const options = fieldOf(api, "options");
   const { definition, prefix } = placedEndpoint(api, group, method);
   const address = addressCall(definition, method, variables);
   return {
     url: buildDirectSSEUrl(textOf(options, "baseURL"), prefix, address.path, address.variables),
-    sourceHeaders: sourceHeadersOf(api),
+    sourceHeaders: sourceHeadersOf(options),
   };
 }
 
@@ -54,14 +56,14 @@ export function streamRequest(
  * The headers a source sends every call with, as its definition declares
  * them in `headers` — an API key, an `Authorization`.
  *
- * @param api - The source
+ * @param options - The source's options
  * @returns Its headers, under their lower-case names
  * @example
  * ```ts
- * sourceHeadersOf(defineApi({ baseURL, headers: { "X-Api-Key": key }, endpoints }));
+ * sourceHeadersOf(defineApi({ baseURL, headers: { "X-Api-Key": key }, endpoints }).options);
  * // → { "x-api-key": "…" }
  * ```
  */
-export function sourceHeadersOf(api: object): Record<string, string> {
-  return layerHeaders(fieldOf(fieldOf(api, "options"), "headers"));
+export function sourceHeadersOf(options: unknown): Record<string, string> {
+  return layerHeaders(fieldOf(options, "headers"));
 }

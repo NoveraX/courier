@@ -1,7 +1,6 @@
 import { serverCapability } from "../capabilities/registry";
 import type { Context } from "../http-client/types";
 import type { CallPurpose, MiddlewareContext } from "../middleware/types";
-import { namedHeadersOf } from "./execute-resolve";
 import { forwardedRequestHeaders } from "./forwarded-request-headers";
 import { headersToObject } from "./helpers";
 import { mergeHeaders } from "./merge-headers";
@@ -16,10 +15,12 @@ export interface MiddlewareContextInput {
   /** Headers the caller passed explicitly, if any. */
   baseHeaders?: unknown;
   context?: Context | undefined;
-  dataSource: Record<string, unknown>;
+  /** The source's options, as the call read them once */
+  sourceOptions: { headers?: HeadersInit | undefined } | undefined;
   requestId: string;
   transport?: "http" | "sse" | "ws" | undefined;
-  endpointAllowedHeaders?: readonly string[] | undefined;
+  /** The header names the source and the endpoint carry across the proxy, as `namedHeadersOf` reads them */
+  namedHeaders: readonly string[];
   /** Whether the endpoint reads or writes, from its schema. */
   kind?: "query" | "mutation" | undefined;
   /** Fires when the caller stops waiting for the call. */
@@ -44,7 +45,7 @@ export interface MiddlewareContextInput {
  * @example
  * ```ts
  * const ctx = buildMiddlewareContext({ source: "api", group: "users", method: "list",
- *   variables: undefined, dataSource, requestId: "" });
+ *   variables: undefined, sourceOptions: api.options, namedHeaders: [], requestId: "" });
  * ```
  */
 export function buildMiddlewareContext(input: MiddlewareContextInput): MiddlewareContext {
@@ -55,10 +56,10 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     variables,
     baseHeaders,
     context,
-    dataSource,
+    sourceOptions,
     requestId,
     transport,
-    endpointAllowedHeaders,
+    namedHeaders,
     kind,
     signal,
   } = input;
@@ -69,19 +70,14 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     ...headersToObject(nextHeaders),
   };
   const keyHeader = input.idempotencyHeader;
-  const allowedHeaders = namedHeadersOf(dataSource, [
-    ...(endpointAllowedHeaders ?? []),
-    ...(keyHeader ? [keyHeader] : []),
-  ]);
   /* The caller's own headers go on top of the ones it forwards. A header it
      set — a service token for a backend the end user may not reach — is its
      explicit choice, which the incoming request's copy must not replace;
      nor may that copy replace one the API sets in its `headers`. */
-  const ownHeaders = (dataSource.options as { headers?: HeadersInit } | undefined)?.headers;
   const newHeaders = forwardedRequestHeaders(
     mergedNextHeaders,
-    allowedHeaders,
-    ownHeaders,
+    keyHeader ? [...namedHeaders, keyHeader] : namedHeaders,
+    sourceOptions?.headers,
     String(source),
   );
   const forwarded = new Set(newHeaders.keys());

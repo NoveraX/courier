@@ -6,6 +6,7 @@ import { ConfigurationError } from "../errors/configuration-error";
 import { eachEndpoint } from "../openapi/endpoints";
 import type { SessionTarget } from "../session/session-target";
 import type { ForwardOptions, SessionOptions } from "../session/types";
+import { fieldOf } from "../transport/direct/read-definition";
 import { holdInPlace, type ReadOption, readOption } from "./held-in-place";
 import { describe } from "./plain-data";
 import { assertSessionApi } from "./session/assert-session-api";
@@ -14,6 +15,8 @@ import { assertSessionOptions } from "./session/validate-session";
 
 /** What a server holds of an API's options, as the check read them: what a call takes of them. */
 export interface HeldOptions {
+  /** The options they are held of, the object the server took up */
+  readonly options: object;
   readonly session: SessionOptions | undefined;
   readonly forward: ForwardOptions | undefined;
 }
@@ -69,6 +72,7 @@ const NO_OPTIONS: object = Object.freeze({});
  *
  * @param api - The API
  * @param where - Its name, for the errors
+ * @returns What the server holds of the API's options
  * @throws ConfigurationError `SESSION_OPTIONS_INVALID`, `SESSION_INSECURE_TRANSPORT`,
  *   `SESSION_HEADER_CONFLICT`, `FORWARD_OPTIONS_INVALID`, `HEADER_LIST_INVALID` or
  *   `AGENT_OPTIONS_INVALID`
@@ -77,21 +81,22 @@ const NO_OPTIONS: object = Object.freeze({});
  * assertServerOptions(api, "accounts");
  * ```
  */
-export function assertServerOptions(api: AnySource, where: string): void {
+export function assertServerOptions(api: AnySource, where: string): HeldOptions {
   const options: object = api.options ?? NO_OPTIONS;
+  const taken = takenUp.get(options);
   /* A server registers its sources again with each hot reload. */
-  if (takenUp.get(options)?.apis.has(api) === true) return;
-  takeUp(api, options, where, undefined);
+  return taken?.apis.has(api) === true ? taken : takeUp(api, options, where, undefined);
 }
 
 /**
  * What a server sends of an API's options on a call it lends the session:
- * what it holds of the options the API has now, checked beside the
- * options of the call's endpoint. Options it holds nothing of — put in
- * the place of those it took up, an endpoint's new ones, those of an
- * endpoint the API was given later — are checked and held first, and
- * refused as the first check refuses them. Options it took up are not
- * checked again: a call costs a server two lookups by the objects.
+ * what it holds of the options the call read, checked beside the options
+ * of the call's endpoint — the same objects, never read again. Options it
+ * holds nothing of — put in the place of those it took up, an endpoint's
+ * new ones, those of an endpoint the API was given later — are checked and
+ * held first, and refused as the first check refuses them. Options it took
+ * up are not checked again: a call costs a server two lookups by the
+ * objects.
  *
  * @param target - The call, as the session reads it
  * @returns What the server holds of the API's options; `undefined` for a call that names no API
@@ -104,7 +109,7 @@ export function assertServerOptions(api: AnySource, where: string): void {
 export function heldForCall(target: SessionTarget): HeldOptions | undefined {
   if (target.api === undefined) return undefined;
   const api = target.api as AnySource;
-  const options: object = api.options ?? NO_OPTIONS;
+  const options: object = target.options ?? NO_OPTIONS;
   const endpoint = target.endpoint ?? NO_OPTIONS;
   const taken = takenUp.get(options);
   if (taken?.endpoints.has(endpoint) === true) return taken;
@@ -132,6 +137,7 @@ function takeUp(
   for (const { agent } of endpoints) agentOptionsOf(agent as AgentMark | undefined);
   holdInPlace([...own, ...endpoints.flatMap(({ read }) => read)]);
   const taken: TakenUp = before ?? {
+    options,
     session: session as SessionOptions | undefined,
     forward: forward as ForwardOptions | undefined,
     endpoints: new WeakSet(),
@@ -157,7 +163,7 @@ function readApiOptions(options: object, where: string): ReadOption[] {
     "allowedHeaders",
     where,
   );
-  assertSessionOptions(session.copy, (options as { baseURL?: string }).baseURL, where);
+  assertSessionOptions(session.copy, fieldOf(options, "baseURL") as string | undefined, where);
   assertForwardOptions(forward.copy, where);
   assertHeaderList(list);
   return [session, forward, list];

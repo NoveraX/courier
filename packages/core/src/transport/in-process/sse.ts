@@ -64,7 +64,7 @@ export async function executeDirectSSE(
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
-  const headers = await runTransportMiddleware({
+  const { headers } = await runTransportMiddleware({
     transport: "sse",
     sources,
     source: payload.source,

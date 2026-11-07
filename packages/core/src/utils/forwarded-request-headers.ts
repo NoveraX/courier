@@ -36,7 +36,7 @@ const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
  */
 export function forwardedRequestHeaders(
   incoming: HeadersInput,
-  named: string[] | undefined,
+  named: readonly string[] | undefined,
   own: HeadersInit | undefined,
   source: string,
 ): Headers {

@@ -84,7 +84,11 @@ export function sessionFor(
      served, nor of a page, is the agent's to send. */
   if (agentOf(context)) return undefined;
   if (context !== undefined && namesRequest(context)) {
-    return Promise.resolve().then(() => serverSession(target).contextSession(context, target));
+    /* Asked now, so a server checks what the call takes before the call reads any of it; what
+       it refuses with — or that nothing here reads a request — is the call's as it awaits. */
+    return new Promise((resolve) => {
+      resolve(serverSession(target).contextSession(context, target));
+    });
   }
   const served = serverCapability("session")?.ambientSession(target);
   if (served !== undefined) return served;

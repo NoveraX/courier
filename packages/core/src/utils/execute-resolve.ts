@@ -120,27 +120,33 @@ function readSchema(endpoint: unknown): SchemaMetadata | undefined {
   return typeof schema === "object" && schema !== null ? schema : undefined;
 }
 
+/* Options that may name the headers they carry across the proxy. */
+type HeaderListed = { readonly allowedHeaders?: readonly string[] | undefined };
+
 /**
  * The header names an endpoint carries across the proxy, in both directions:
- * the source's `allowedHeaders` and the endpoint's own `.headers()`. An
- * endpoint may name headers beyond what the source does; neither list narrows
- * the other.
+ * the source's `allowedHeaders` and the endpoint's own `.headers()`, each
+ * read as the options have it of their own — what a prototype answers is
+ * no list of theirs — so on a server, once it checked them, as it holds
+ * them. An endpoint may name headers beyond what the source does; neither
+ * list narrows the other.
  *
- * @param dataSource - The source the endpoint belongs to
- * @param endpointAllowedHeaders - The names the endpoint declared
- * @returns The names, or `undefined` when neither declares any
+ * @param sourceOptions - The options of the source the endpoint belongs to
+ * @param endpointOptions - The endpoint's options
+ * @returns The names; none when neither declares any
  *
  * @example
  * ```ts
- * namedHeadersOf(source, ["x-total-count"]); // → ["x-api-version", "x-total-count"]
+ * namedHeadersOf(api.options, api.items.options); // → ["x-api-version", "x-total-count"]
  * ```
  */
 export function namedHeadersOf(
-  dataSource: Record<string, unknown>,
-  endpointAllowedHeaders: readonly string[] | undefined,
-): string[] | undefined {
-  const opts = dataSource.options as Record<string, unknown> | undefined;
-  const sourceAllowed = opts?.allowedHeaders as string[] | undefined;
-  if (!endpointAllowedHeaders?.length && !sourceAllowed?.length) return undefined;
-  return [...new Set([...(sourceAllowed ?? []), ...(endpointAllowedHeaders ?? [])])];
+  sourceOptions: HeaderListed | undefined,
+  endpointOptions: HeaderListed | undefined,
+): string[] {
+  return [...new Set([...listOf(sourceOptions), ...listOf(endpointOptions)])];
+}
+
+function listOf(options: HeaderListed | undefined): readonly string[] {
+  return (options && Object.hasOwn(options, "allowedHeaders") && options.allowedHeaders) || [];
 }

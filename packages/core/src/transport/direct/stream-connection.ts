@@ -28,23 +28,23 @@ export interface StreamConnection {
  * API. The cookies the stream's answer sets are kept as a call's: handed
  * on to the browser from a server, learned in a React Native app.
  *
- * @param api - The source
+ * @param options - The source's options, as the stream's call read them
  * @param session - What the user's session gives the stream
  * @param transport - The stream's transport: the call's, its group's or its source's
  * @returns How its connections open; `undefined` for a stream that takes
  *   no session, of an API whose options give a stream nothing
  * @example
  * ```ts
- * const connection = streamConnection(api, streamSessionOf(options), transportOf(api, group, options));
+ * const connection = streamConnection(api.options, session, transportOf(api, api.options, group, options));
  * subscribeSSE(url, { headers, beforeConnect: connection?.beforeConnect });
  * ```
  */
 export function streamConnection(
-  api: object,
+  options: unknown,
   session: StreamSession | undefined,
   transport: ResolvedTransport,
 ): StreamConnection | undefined {
-  const init = streamInitOf(api, transport);
+  const init = streamInitOf(options, transport);
   if (session === undefined && Object.keys(init).length === 0) return undefined;
   let connected: CallSession | undefined;
   return {

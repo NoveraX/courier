@@ -10,7 +10,7 @@ type HeadersInput = HeadersInit | Record<string, string | undefined>;
 
 export const filterHeaders = (
   incomingHeaders?: HeadersInput,
-  validHeaders: string[] = [],
+  validHeaders: readonly string[] = [],
 ): Headers => {
   /* Names are case-insensitive, and an allowlist is written by hand. */
   const allValidHeaders = new Set<string>([

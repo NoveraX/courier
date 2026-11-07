@@ -25,6 +25,12 @@ export interface CallRequest {
 /** A call, and the source and the endpoint it resolved to. */
 export interface CallTarget extends CallRequest {
   dataSource: AnySource;
+  /**
+   * The source's options, read once as the call is resolved: every place on
+   * the call's way takes these, and a server checks these, whatever is put
+   * in their place while the call is on its way
+   */
+  sourceOptions: AnySource["options"];
   endpoint: NonNullable<Resolved["endpoint"]>;
   endpointGroup: Resolved["endpointGroup"];
   schema: Resolved["schema"];
@@ -150,6 +156,7 @@ export function resolveCallTarget(
     ...call,
     variables: withVariableDefaults(schema?.defaults, call.variables),
     dataSource,
+    sourceOptions: dataSource.options,
     endpoint,
     endpointGroup,
     schema,

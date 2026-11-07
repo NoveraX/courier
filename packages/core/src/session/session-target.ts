@@ -9,6 +9,8 @@ const SAFE_VERBS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "TRAC
 export interface SessionTarget {
   /** The API the call is made to, which a server checks the options it reads of */
   readonly api?: object | undefined;
+  /** The API's options, as the call read them once: the object a server checks and holds what it reads of */
+  readonly options?: object | undefined;
   /** The options of the call's endpoint, which a server checks beside the API's before the call */
   readonly endpoint?: object | undefined;
   /** The API's session, unless the endpoint takes none */
@@ -31,7 +33,9 @@ export interface SessionTarget {
 
 /** What a call is resolved to, as far as the session reads it. */
 export interface SessionTargetInput {
-  readonly dataSource: { options?: BaseOptions | undefined };
+  readonly dataSource: object;
+  /** The API's options, as the call read them once */
+  readonly options: BaseOptions | undefined;
   readonly endpointOptions?: ResolvedEndpointOptions | undefined;
   readonly kind?: "query" | "mutation" | undefined;
   readonly httpMethod?: string | undefined;
@@ -47,16 +51,17 @@ export interface SessionTargetInput {
  * @returns What the session needs to know of it
  * @example
  * ```ts
- * sessionTargetOf({ dataSource: api, kind: "mutation", httpMethod: "DELETE", name: "api.items.remove" });
+ * sessionTargetOf({ dataSource: api, options: api.options, kind: "mutation", httpMethod: "DELETE", name: "api.items.remove" });
  * ```
  */
 export function sessionTargetOf(input: SessionTargetInput): SessionTarget {
-  const options = input.dataSource.options;
+  const { options } = input;
   const endpoint = input.endpointOptions;
   const writes = input.kind === "mutation";
   const verb = input.httpMethod?.toUpperCase();
   return {
     api: input.dataSource,
+    options,
     endpoint,
     session: endpoint?.session === false ? undefined : options?.session,
     forward: endpoint?.forward === false ? undefined : options?.forward,

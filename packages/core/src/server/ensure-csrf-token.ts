@@ -35,8 +35,9 @@ import { cookieJarFor } from "./session/request-state";
 export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   provideServerCapabilities();
   const source = getSourceName(api) ?? "api";
-  assertServerOptions(api, source);
-  const csrf = api.options.session?.csrf;
+  /* Read once, and what the server holds of it: the session's own, and its address. */
+  const { options: sourceOptions, session } = assertServerOptions(api, source);
+  const csrf = session?.csrf;
   if (csrf?.from === undefined) {
     throw new ConfigurationError(
       "SESSION_OPTIONS_INVALID",
@@ -46,9 +47,9 @@ export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   const incoming = await captureIncomingRequest();
   if (incoming === undefined) return false;
   if (cookieJarFor(incoming).has(csrf.cookie)) return true;
-  const path = csrfSource(csrf.from, api.options.baseURL);
+  const path = csrfSource(csrf.from, (sourceOptions as typeof api.options).baseURL);
   if (path === undefined) return false;
-  const call = tokenCall({ source, dataSource: api }, path);
+  const call = tokenCall({ source, dataSource: api, sourceOptions }, path);
   const { studio, timing } = callInstruments(undefined);
   await askOnce(incoming.key, `${source} ${path}`, () =>
     askForToken(prepareAndRun(call, studio, timing, { incoming }), path, "the page"),

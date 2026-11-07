@@ -110,7 +110,8 @@ describe("a group inside a group", () => {
   });
 
   it("opens a stream at the address its groups' prefixes make", () => {
-    const { url } = streamRequest(api("https://api.example/v1"), "billing.invoices", "watch", {});
+    const source = api("https://api.example/v1");
+    const { url } = streamRequest(source, source.options, "billing.invoices", "watch", {});
 
     expect(url).toBe("https://api.example/v1/billing/invoices/watch");
   });

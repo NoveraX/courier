@@ -34,19 +34,19 @@ const opened = new WeakMap<DirectSocketDefaults, WeakMap<object, Map<string, Soc
  * channels never share one, nor two channels that carry different
  * certificates or proxies.
  *
- * @param api - The source
+ * @param options - The source's options, as the channel's call read them
  * @param defaults - The caller's, the same object for all its channels
  * @param session - What the user's session gives the channel
  * @param transport - The channel's transport
  * @returns The options, once whose session it is has been found
  * @example
  * ```ts
- * const socket = directSocketOptions(api, defaults, session, transportOf(api, group, options));
+ * const socket = directSocketOptions(api.options, defaults, session, transportOf(api, api.options, group, options));
  * executeWSChannel(url, topic, variables, socket);
  * ```
  */
 export async function directSocketOptions(
-  api: object,
+  options: unknown,
   defaults: DirectSocketDefaults,
   session: StreamSession | undefined,
   transport: ResolvedTransport,
@@ -56,19 +56,19 @@ export async function directSocketOptions(
   const kind = `${session?.takes ?? ""}|${transport.key}`;
   const byOwner = memo(opened, defaults, () => new WeakMap<object, Map<string, SocketOptions>>());
   const byKind = memo(byOwner, owner, () => new Map<string, SocketOptions>());
-  if (!byKind.has(kind)) byKind.set(kind, optionsOf(api, defaults, session, transport));
+  if (!byKind.has(kind)) byKind.set(kind, optionsOf(options, defaults, session, transport));
   return byKind.get(kind);
 }
 
 function optionsOf(
-  api: object,
+  source: unknown,
   defaults: DirectSocketDefaults,
   session: StreamSession | undefined,
   resolved: ResolvedTransport,
 ): SocketOptions {
   const options = socketOptions(
     defaults.ws,
-    socketHeaders(defaults, sourceHeadersOf(api), session),
+    socketHeaders(defaults, sourceHeadersOf(source), session),
   );
   const transport = socketTransportOf(resolved);
   return Object.keys(transport).length === 0 ? options : { ...options, ...transport };

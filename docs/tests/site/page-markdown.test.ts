@@ -101,4 +101,27 @@ describe("literal JSX props", () => {
     expect(jsxObjects('items={[{ label: "x" }, { label: "y" }]}', "items")).toHaveLength(2)
     expect(jsxText('{ code: "a\\nb" }', "code")).toBe("a\nb")
   })
+
+  it("read a template literal as the text it holds, and none with a substitution in it", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a page's source, shown as text
+    const escaped = '{ code: `a\\nb "q"\\` \\${x}` }'
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a page's source, shown as text
+    const substituted = "{ code: `a ${b}` }"
+
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the text that source holds
+    expect(jsxText(escaped, "code")).toBe('a\nb "q"` ${x}')
+    expect(jsxText("{ code: `one\ntwo\\tthree` }", "code")).toBe("one\ntwo\tthree")
+    expect(jsxText(substituted, "code")).toBeUndefined()
+  })
+
+  it("read the tabbed code of a real page, every tab with its code", () => {
+    const source = readFileSync(
+      new URL("../../src/content/docs/proxy-mode/api-route.mdx", import.meta.url),
+      "utf8"
+    )
+    const items = jsxObjects(source.slice(source.indexOf("<CodeGroup")), "items")
+
+    expect(items.length).toBeGreaterThan(1)
+    for (const item of items) expect(jsxText(item, "code")).toMatch(/\bregisterSources\(/)
+  })
 })

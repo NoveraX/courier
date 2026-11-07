@@ -63,6 +63,42 @@ function stringValue(literal: string): string {
   return typeof parsed === "string" ? parsed : ""
 }
 
+/* The escapes a template literal writes as JSON does, and those that stand for the character after them. */
+const JSON_ESCAPES = new Set(['"', "\\", "/", "b", "f", "n", "r", "t", "u"])
+const PLAIN_ESCAPES = new Set(["`", "$", "'"])
+
+/*
+ * A template literal without substitutions holds what a double-quoted
+ * literal of the same text holds, so it is written as one and read as JSON
+ * reads it. One with a substitution, or with an escape JSON has no form
+ * for, holds no text that reads without running the page.
+ */
+function templateValue(literal: string): string | undefined {
+  let json = '"'
+  for (let i = 1; i < literal.length - 1; i++) {
+    const char = literal[i] ?? ""
+    if (char === "\\") {
+      i++
+      const escaped = literal[i] ?? ""
+      if (JSON_ESCAPES.has(escaped)) json += `\\${escaped}`
+      else if (PLAIN_ESCAPES.has(escaped)) json += escaped
+      else return undefined
+    } else if (char === "$" && literal[i + 1] === "{") return undefined
+    else if (char === '"') json += '\\"'
+    else if (char < " ") json += `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`
+    else json += char
+  }
+  try {
+    const parsed: unknown = JSON.parse(`${json}"`)
+    return typeof parsed === "string" ? parsed : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const DOUBLE_QUOTED = '"(?:[^"\\\\]|\\\\.)*"'
+const TEMPLATE = "`(?:[^`\\\\]|\\\\.)*`"
+
 function propArray(source: string, prop: string): string | null {
   const start = source.indexOf(`${prop}={`)
   if (start < 0) return null
@@ -73,17 +109,23 @@ function propArray(source: string, prop: string): string | null {
 /**
  * The string a key holds in an object literal's source.
  *
+ * A double-quoted literal and a template literal without substitutions
+ * are read alike: tabbed code is written either way.
+ *
  * @param object - The object literal's source
  * @param key - The key
  * @returns Its text, escapes read, or `undefined` when it holds no string
  * @example
  * ```ts
  * jsxText('{ label: "npm", code: "npm i" }', "code") // "npm i"
+ * jsxText("{ code: `a\\nb` }", "code") // "a\nb"
  * ```
  */
 export function jsxText(object: string, key: string): string | undefined {
-  const match = new RegExp(`\\b${key}:\\s*("(?:[^"\\\\]|\\\\.)*")`).exec(object)
-  return match?.[1] ? stringValue(match[1]) : undefined
+  const match = new RegExp(`\\b${key}:\\s*(${DOUBLE_QUOTED}|${TEMPLATE})`).exec(object)
+  const literal = match?.[1]
+  if (!literal) return undefined
+  return literal.startsWith("`") ? templateValue(literal) : stringValue(literal)
 }
 
 /**

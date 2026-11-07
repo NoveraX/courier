@@ -5,6 +5,7 @@ import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 
 import { BodyEncodingDemo, DefaultsDemo, SearchParamsDemo } from "./_components"
 
+// side="server"
 const sourceConfigCode = `import { defineApi } from "@noverax/courier/define"
 
 const encodedApi = defineApi({
@@ -41,6 +42,7 @@ const encodedApi = defineApi({
   defaultQueryParams: { format: "json" },
 })`
 
+// side="page"
 const bodyEncodingCode = `// Default (api): JSON body
 await caller.echo.send({ name: "John", role: "admin" })
 // POST /echo
@@ -53,6 +55,7 @@ await encodedCaller.echo.send({ name: "John", role: "admin" })
 // Content-Type: application/x-www-form-urlencoded;charset=UTF-8
 // Body: apiVersion=v2&name=John&role=admin`
 
+// side="server"
 const serverBodyCode = `// The same calls in a Server Action: the serializers run on the server either way,
 // and the API gets the same bytes
 "use server"
@@ -63,6 +66,7 @@ import { sources } from "@/api"
 await createAction(sources, "api").echo.send({ name: "John", role: "admin" })
 await createAction(sources, "encodedApi").echo.send({ name: "John", role: "admin" })`
 
+// side="page"
 const searchParamsCode = `// Custom searchParamsSerializer supports arrays
 await encodedCaller.echo.retrieve({
   tags: ["javascript", "react"],
@@ -71,6 +75,7 @@ await encodedCaller.echo.retrieve({
 // GET /echo?format=json&apiVersion=v2&tags%5B%5D=javascript&tags%5B%5D=react&page=1
 // — tags[]=javascript&tags[]=react, its brackets encoded`
 
+// side="page"
 const defaultsCode = `// A write: defaultBody in its body, defaultQueryParams in its query
 await encodedCaller.echo.send({ name: "John" })
 // POST /echo?format=json

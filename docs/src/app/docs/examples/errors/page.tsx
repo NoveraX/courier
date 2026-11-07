@@ -5,6 +5,7 @@ import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 
 import { CatchDemo, GuardDemo } from "./_components"
 
+// side="page"
 const catchCode = `import { HTTPError } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
@@ -18,6 +19,7 @@ try {
   }
 }`
 
+// side="server"
 const serverCatchCode = `// The same call in a Server Action: the same HTTPError, caught on the server
 "use server"
 
@@ -33,6 +35,7 @@ try {
   if (isHTTPError(error)) console.log(error.status, error.data)
 }`
 
+// side="page"
 const guardCode = `import { isHTTPError } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
@@ -48,15 +51,16 @@ try {
   }
 }`
 
-const globalCode = `import { createProxyCaller } from "@noverax/courier/client"
+// side="page"
+const globalCode = `import { createProxyCaller, isHTTPError } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api, {
-  // Called for every failed request
+  // Called for every failed request: an HTTP error, a network failure or a timeout
   onError: (error) => {
-    toast.error(\`Request failed: \${error.status}\`)
+    toast.error(\`Request failed: \${error.message}\`)
 
-    if (error.status === 401) {
+    if (isHTTPError(error) && error.status === 401) {
       router.push("/login")
     }
   },

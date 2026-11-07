@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { GroupInfo, GroupsDemo } from "./_components"
 
+// side="server"
 const definitionCode = `import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
 const { endpoint } = courier()
@@ -32,6 +33,7 @@ const api = defineApi({
   groups: { users, posts },
 })`
 
+// side="page"
 const usageCode = `import { q } from "@/lib/query"
 
 // Dot-notation — group name maps to the key in defineApi groups

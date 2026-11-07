@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { CancelPreviousDemo, ManualAbortDemo, SharedReadsDemo } from "./_components"
 
+// side="page"
 const manualAbortCode = `const controller = new AbortController()
 
 // Pass signal via .with() to cancel the request at any time
@@ -12,6 +13,7 @@ const promise = caller.misc.with({ signal: controller.signal }).slow()
 // Cancel the request
 controller.abort()`
 
+// side="page"
 const sharedReadsCode = `// Three components read the same list at the same moment
 const [header, sidebar, page] = await Promise.all([
   caller.users.getAll(),
@@ -21,6 +23,7 @@ const [header, sidebar, page] = await Promise.all([
 
 // One request reached the proxy; each call got a copy of its own`
 
+// side="page"
 const cancelPreviousCode = `import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 

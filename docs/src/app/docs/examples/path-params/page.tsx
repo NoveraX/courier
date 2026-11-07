@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { EncodedParamDemo, MixedParamsDemo, NestedParamsDemo, SimpleParamDemo } from "./_components"
 
+// side="both"
 const simpleCode = `// Method definition with :id placeholder
 getById: endpoint.get(":id").variables<{ id: number }>().response<User>()
 
@@ -11,6 +12,7 @@ getById: endpoint.get(":id").variables<{ id: number }>().response<User>()
 await caller.users.getById({ id: 1 })
 // → GET /users/1`
 
+// side="both"
 const nestedCode = `// Multiple path params in one URL
 getUserPost: endpoint.get(":id/posts/:postId").variables<{ id: number; postId: number }>().response<UserPostResponse>()
 
@@ -18,6 +20,7 @@ getUserPost: endpoint.get(":id/posts/:postId").variables<{ id: number; postId: n
 await caller.users.getUserPost({ id: 1, postId: 2 })
 // → GET /users/1/posts/2`
 
+// side="both"
 const mixedCode = `// Path params + query params work together
 // Variables matching :placeholders go into the URL path
 // Remaining variables go as query params
@@ -28,6 +31,7 @@ getAll: endpoint.get("").variables<{ page?: number; limit?: number }>().response
 await caller.users.getAll({ page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
 
+// side="page"
 const encodedCode = `// A value is encoded where it goes in the address: a space, &, / or %
 // cannot end the value or start another
 await caller.users.getAll({ search: "Ann & co / 50%" })

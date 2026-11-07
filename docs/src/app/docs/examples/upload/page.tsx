@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { ProgressUploadDemo, SimpleUploadDemo } from "./_components"
 
+// side="page"
 const simpleCode = `import { caller } from "@/lib/caller"
 
 const formData = new FormData()
@@ -13,6 +14,7 @@ formData.append("description", "My upload")
 // FormData is auto-detected — courier sends multipart/form-data
 const result = await caller.files.upload(formData)`
 
+// side="page"
 const progressCode = `import { smoothProgress } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
@@ -26,6 +28,7 @@ const result = await caller.files.with({
   }),
 }).upload(formData)`
 
+// side="server"
 const sourceCode = `import { courier, defineGroup } from "@noverax/courier/define"
 
 const { endpoint } = courier()

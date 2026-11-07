@@ -14,18 +14,22 @@ import { ServerAnswer } from "@/site/sandbox/server-answer"
 registerRequestContext(nextRequestContext)
 const caller = createCaller(api)
 
+// side="server"
 const setupCode = `// Direct mode — import source and create caller inline
 import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 const caller = createCaller(api)`
 
+// side="server"
 const fetchAllCode = `// Server Component — runs on the server, zero client JS
 const users = await caller.users.getAll()`
 
+// side="server"
 const fetchOneCode = `// Path params are passed as the variables object
 const user = await caller.users.getById({ id: 1 })`
 
+// side="server"
 const fetchPostsCode = `// Access any request group via dot-notation
 const posts = await caller.posts.getAll()`
 

@@ -6,6 +6,7 @@ import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 import { TimeoutDemo } from "./_components"
 import { CacheDemo, RetryDemo, ServerTimeoutDemo } from "./server-options"
 
+// side="page"
 const timeoutCode = `// How long the browser waits, in ms, via .with()
 // The /slow endpoint takes 3 seconds: the browser gives up first, and cancels its request
 try {
@@ -14,6 +15,7 @@ try {
   // TimeoutError: the call ran out of time in the browser
 }`
 
+// side="server"
 const actionTimeoutCode = `// The same timeout in a Server Action: it bounds the server's request to the API
 "use server"
 
@@ -23,6 +25,7 @@ import { sources } from "@/api"
 const action = createAction(sources, "api")
 await action.misc.with({ timeout: 1000 }).slow() // TimeoutError, on the server`
 
+// side="both"
 const serverTimeoutCode = `// How long the server waits for the API, and whether it asks again: the endpoint's own
 slowRetried: endpoint
   .get("slow")
@@ -32,6 +35,7 @@ slowRetried: endpoint
 await caller.misc.slowRetried()
 // → 504 after two attempts of a second each`
 
+// side="both"
 const retryCode = `// Asked again on the server: twice more on a 503, 300 ms after each attempt
 flaky: endpoint
   .get("error/:code")
@@ -41,6 +45,7 @@ flaky: endpoint
 await caller.misc.flaky({ code: 503 })
 // → 503 after three attempts`
 
+// side="both"
 const cacheCode = `// A read kept on the server for 30 s, a copy for each visitor
 import { cacheMiddleware } from "@noverax/courier/middleware"
 
@@ -51,21 +56,23 @@ cached: endpoint
 await caller.posts.cached() // the API answers, and its answer is kept
 await caller.posts.cached() // the cache answers: no request reaches the API`
 
+// side="server"
 const revalidateCode = `// Next.js revalidation — ISR-style caching
 const data = await caller.users.with({
   next: { revalidate: 60 },  // revalidate every 60 seconds
 }).getAll()
 
 // Tag-based revalidation
-const data = await caller.users.with({
+const tagged = await caller.users.with({
   next: { tags: ["users"] },
 }).getAll()
 
 // Then in a Server Action:
 import { revalidateTag } from "next/cache"
-revalidateTag("users")`
+revalidateTag("users", "max")`
 
-const globalDefaultsCode = `import { createProxyCaller } from "@noverax/courier/client"
+// side="page"
+const globalDefaultsCode = `import { createProxyCaller, isHTTPError } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // Set defaults for all requests
@@ -78,7 +85,7 @@ const caller = createProxyCaller(routes.api, {
 
   // Global error handler
   onError: (error) => {
-    if (error.status === 401) {
+    if (isHTTPError(error) && error.status === 401) {
       window.location.href = "/login"
     }
   },

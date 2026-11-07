@@ -11,6 +11,7 @@ import { UserList } from "./user-list"
 
 const action = createAction(sources, "api")
 
+// side="server"
 const actionCode = `// app/actions/actions.ts
 "use server"
 
@@ -30,6 +31,7 @@ export async function createUser(_prev: ActionState, formData: FormData) {
   return { success: true, data: user }
 }`
 
+// side="page"
 const formCode = `// app/actions/create-form.tsx
 "use client"
 
@@ -44,11 +46,12 @@ export function CreateUserForm() {
       <input name="name" required />
       <input name="email" type="email" required />
       <button type="submit" disabled={isPending}>Create</button>
-      {state.data && <pre>{JSON.stringify(state.data)}</pre>}
+      {state.data !== undefined && <pre>{JSON.stringify(state.data)}</pre>}
     </form>
   )
 }`
 
+// side="both"
 const deleteCode = `// Server action for delete + revalidation
 export async function deleteUser(_prev: ActionState, formData: FormData) {
   const id = Number(formData.get("id"))

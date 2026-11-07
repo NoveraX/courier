@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 import { SharedInstanceDemo } from "./_components"
 import { SINGLETON_SAMPLES } from "./singleton-samples"
 
+// side="page"
 const sharedCode = `// lib/query.ts: one instance, made once and imported everywhere
 export const q = createProxyQueryCaller(apiRoutes)
 

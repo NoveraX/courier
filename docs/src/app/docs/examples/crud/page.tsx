@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { CrudDemo, OperationsInfo } from "./_components"
 
+// side="page"
 const fullCode = `import { q } from "@/lib/query"
 
 // List
@@ -29,6 +30,7 @@ const remove = q.users.useMutation("remove", {
   onSuccess: () => refetch(),
 })`
 
+// side="page"
 const operationsCode = `// CREATE
 const create = q.users.useMutation("create", {
   onSuccess: () => refetch(),

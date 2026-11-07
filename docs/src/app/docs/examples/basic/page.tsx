@@ -4,11 +4,13 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { GetDemo, ManualDemo, PostDemo } from "./_components"
 
+// side="page"
 const getCode = `import { q } from "@/lib/query"
 
 // useQuery fetches on mount, and caches what it fetched
 const { data, isLoading, error } = q.users.useQuery("getAll")`
 
+// side="page"
 const postCode = `import { keys, q } from "@/lib/query"
 
 // invalidate: the list above is fetched again once the user is created
@@ -18,6 +20,7 @@ const { mutate, data, isPending } = q.users.useMutation("create", {
 
 mutate({ name: "Jane Doe", email: "jane@example.com", role: "user" })`
 
+// side="page"
 const manualCode = `import { q } from "@/lib/query"
 
 // enabled: false holds the query until refetch() runs it

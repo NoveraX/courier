@@ -5,6 +5,7 @@ import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 
 import { MiddlewareDemo, OnErrorDemo } from "./_components"
 
+// side="server"
 const middlewareConfigCode = `import { defineApi } from "@noverax/courier/define"
 import { authMiddleware, logMiddleware } from "@noverax/courier/middleware"
 import { defineMiddleware, isHTTPError } from "@noverax/courier/server"
@@ -34,6 +35,7 @@ const middlewareApi = defineApi({
   groups: { users, misc },
 })`
 
+// side="page"
 const middlewareExampleCode = `// The stamp adds _meta to what the API answered
 const data = await middlewareCaller.users.getAll()
 
@@ -46,6 +48,7 @@ const data = await middlewareCaller.users.getAll()
 //   _meta: { timestamp: "2026-11-07T12:00:00.000Z" }
 // }`
 
+// side="server"
 const serverExampleCode = `// The same call in a Server Action: the chain runs on the server either way
 "use server"
 
@@ -55,6 +58,7 @@ import { sources } from "@/api"
 const action = createAction(sources, "middlewareApi")
 const data = await action.users.getAll() // _meta, as through the proxy route`
 
+// side="server"
 const onErrorCode = `// The failures link tells a failure, then passes it on to the caller
 defineMiddleware("failures", "wrap", async (ctx, next) => {
   try {
@@ -65,6 +69,7 @@ defineMiddleware("failures", "wrap", async (ctx, next) => {
   }
 })`
 
+// side="server"
 const logCode = `// The built-in log middleware: one line a call, with its status and time
 import { logMiddleware } from "@noverax/courier/middleware"
 

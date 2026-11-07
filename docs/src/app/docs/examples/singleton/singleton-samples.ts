@@ -5,6 +5,7 @@
  * instances side by side, and direct mode.
  */
 export const SINGLETON_SAMPLES = {
+  // side="page"
   singleton: `// lib/query.ts — Single typed instance for the entire app
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import { routes } from "@noverax/courier/routes"
@@ -15,6 +16,7 @@ export const q = createProxyQueryCaller(routes.api)
 // - The group and endpoint names a page may call
 // - Response types and variable types per endpoint
 // q.group.useQuery("endpoint") — full autocompletion`,
+  // side="server"
   sources: `// api/index.ts — Define and export the API source
 import { defineApi } from "@noverax/courier/define"
 
@@ -28,6 +30,7 @@ export const api = defineApi({
     files,  // File upload endpoints
   },
 })`,
+  // side="server"
   methodType: `// How the builder chain drives the type system
 import { courier, defineGroup } from "@noverax/courier/define"
 
@@ -52,6 +55,7 @@ const users = defineGroup({
 // These types flow through the entire chain:
 // endpoint → defineGroup → defineApi → courier.config.ts → routes → createProxyQueryCaller
 // → q.group.useQuery("endpoint") → call site`,
+  // side="page"
   inference: `// Full type inference at call site — no manual types needed
 
 // useQuery infers Response type from the Endpoint definition
@@ -69,6 +73,7 @@ const users = await caller.users.getAll()
 // Dot-notation resolves the correct nested type
 const user = await caller.users.getById({ id: 1 })
 //    ^? User`,
+  // side="page"
   multiInstance: `// Multiple instances for different backends
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import { routes } from "@noverax/courier/routes"
@@ -88,6 +93,7 @@ export const externalQ = createProxyQueryCaller(routes.externalApi, {
 // Usage — each instance is fully typed independently
 const { data } = internalQ.users.useQuery("getAll")
 const { mutate } = externalQ.payments.useMutation("charge")`,
+  // side="server"
   direct: `// Direct mode — same type system, no proxy
 import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"

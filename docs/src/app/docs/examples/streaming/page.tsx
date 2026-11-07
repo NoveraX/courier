@@ -4,6 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { StreamDemo } from "./_components"
 
+// side="both"
 const streamConfigCode = `// Endpoint definition — return type is ReadableStream
 const misc = defineGroup({
   prefix: "misc",
@@ -27,6 +28,7 @@ while (true) {
   // Parse SSE: "data: {...}\\n\\n"
 }`
 
+// side="server"
 const backendCode = `// Express SSE endpoint
 router.get("/stream", (_req, res) => {
   res.setHeader("Content-Type", "text/event-stream")
@@ -46,6 +48,9 @@ router.get("/stream", (_req, res) => {
       res.end()
     }
   }, 500)
+
+  // A client that leaves before the end stops the timer too
+  res.on("close", () => clearInterval(interval))
 })`
 
 export const metadata = exampleMetadata("streaming")

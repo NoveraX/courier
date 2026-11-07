@@ -4,10 +4,12 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { NormalFetchDemo, RawFetchDemo } from "./_components"
 
+// side="page"
 const normalCode = `// Default — returns just the data
 const users = await caller.users.getAll()
 // → { data: [...], total: 3 }`
 
+// side="page"
 const rawDataCode = `// .raw accessor — returns { status, headers, data }
 const response = await caller.users.raw.getAll()
 
@@ -15,6 +17,7 @@ const response = await caller.users.raw.getAll()
 // response.headers → Headers { etag, vary, … }: those that describe the answer
 // response.data    → { data: [...], total: 3 }`
 
+// side="page"
 const typeCode = `// The .raw accessor changes what the call is typed to return
 const data = await caller.users.getAll()
 //    ^? { data: User[]; total: number }

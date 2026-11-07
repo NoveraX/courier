@@ -4,7 +4,7 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 
 import { CatchDemo, GuardDemo } from "./_components"
 
-const catchCode = `import { HTTPError } from "@noverax/courier"
+const catchCode = `import { HTTPError } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
 try {
@@ -17,7 +17,7 @@ try {
   }
 }`
 
-const guardCode = `import { isHTTPError } from "@noverax/courier"
+const guardCode = `import { isHTTPError } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
 try {
@@ -32,7 +32,7 @@ try {
   }
 }`
 
-const globalCode = `import { createProxyCaller } from "@noverax/courier"
+const globalCode = `import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api, {

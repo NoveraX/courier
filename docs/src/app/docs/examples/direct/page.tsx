@@ -14,7 +14,7 @@ registerRequestContext(nextRequestContext)
 const caller = createCaller(api)
 
 const setupCode = `// Direct mode — import source and create caller inline
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 const caller = createCaller(api)`

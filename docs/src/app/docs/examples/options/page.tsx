@@ -52,7 +52,7 @@ const data = await caller.users.with({
 import { revalidateTag } from "next/cache"
 revalidateTag("users")`
 
-const globalDefaultsCode = `import { createProxyCaller } from "@noverax/courier"
+const globalDefaultsCode = `import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // Set defaults for all requests

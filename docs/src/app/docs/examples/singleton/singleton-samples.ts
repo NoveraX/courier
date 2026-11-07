@@ -89,7 +89,7 @@ export const externalQ = createProxyQueryCaller(routes.externalApi, {
 const { data } = internalQ.users.useQuery("getAll")
 const { mutate } = externalQ.payments.useMutation("charge")`,
   direct: `// Direct mode — same type system, no proxy
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export const caller = createCaller(api)

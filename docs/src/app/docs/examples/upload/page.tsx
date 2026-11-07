@@ -13,7 +13,7 @@ formData.append("description", "My upload")
 // FormData is auto-detected — courier sends multipart/form-data
 const result = await caller.files.upload(formData)`
 
-const progressCode = `import { smoothProgress } from "@noverax/courier"
+const progressCode = `import { smoothProgress } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
 const formData = new FormData()

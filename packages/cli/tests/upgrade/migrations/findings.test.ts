@@ -66,4 +66,15 @@ handler.connections.disconnect(id);
 
     expect(findings.map((finding) => finding.line)).toEqual([1]);
   });
+
+  it("finds 0.4's call errors where the code takes HTTPError from one of the core's entries", () => {
+    const { findings } = migrateWith(
+      CALL_ERROR_FINDINGS,
+      `import { HTTPError } from "@noverax/courier/server";
+throw new HTTPError({ status: 0, data: {} });
+`,
+    );
+
+    expect(findings.map((finding) => finding.line)).toEqual([2]);
+  });
 });

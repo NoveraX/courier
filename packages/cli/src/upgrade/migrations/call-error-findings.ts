@@ -1,8 +1,7 @@
 import { type AstNode, isNode, nameOf, walk } from "../codemod/ast";
 import { boundOnce, textOf, valueImport } from "../codemod/imported-calls";
+import { CORE_MODULES } from "../entries/entry-names";
 import type { Finding, Migration } from "../migration";
-
-const ROOT = new Set(["@noverax/courier"]);
 
 /* `x.a.b`, of a member chain written plainly: the names, `x` first. */
 function memberPath(node: unknown): string[] | undefined {
@@ -79,7 +78,7 @@ export const CALL_ERROR_FINDINGS: Migration = {
   mentions: ["status", "code", "HTTPError", "DOMException"],
   migrate(file) {
     const findings: Finding[] = [];
-    const httpError = valueImport(file.program, ROOT, "HTTPError");
+    const httpError = valueImport(file.program, CORE_MODULES, "HTTPError");
     /* Whether the file's HTTPError is the import, for certain: asked only where a check names it. */
     let bound: boolean | undefined;
     const isBound = () => {

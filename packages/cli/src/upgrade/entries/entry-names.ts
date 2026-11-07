@@ -11,6 +11,17 @@ export const CORE_ENTRIES = {
   server: "@noverax/courier/server",
 } as const;
 
+/**
+ * The core's root and its two entries: each binds a name they share to
+ * one value, `createCaller` from the page's aside, so code that looks for
+ * such a name finds it from any of the three.
+ */
+export const CORE_MODULES: ReadonlySet<string> = new Set([
+  CORE_ROOT,
+  CORE_ENTRIES.client,
+  CORE_ENTRIES.server,
+]);
+
 /** Which of the core's entries: the page's, or the server's. */
 export type EntrySide = keyof typeof CORE_ENTRIES;
 

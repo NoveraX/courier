@@ -3,10 +3,8 @@ import { occurrencesOf } from "../codemod/identifier-roles";
 import { boundOnce, droppedImport, textOf, valueImport } from "../codemod/imported-calls";
 import { namedImports } from "../codemod/imports";
 import { addedToDeclaration } from "../codemod/specifier-lists";
+import { CORE_MODULES } from "../entries/entry-names";
 import type { Migration, SourceFile, TextEdit } from "../migration";
-
-const MODULE = "@noverax/courier";
-const ROOT = new Set([MODULE]);
 
 /* Places a `||` stands in without brackets: a condition, a value given or returned whole, another `||`. */
 const BARE = new Set([
@@ -96,7 +94,9 @@ function importEdits(
   named: NonNullable<ReturnType<typeof valueImport>>,
   checks: number,
 ): TextEdit[] {
-  const have = new Set(namedImports(file.program, ROOT).map((each) => each.imported));
+  const have = new Set(
+    namedImports(file.program, new Set([named.module])).map((each) => each.imported),
+  );
   const names = ["isNetworkError", "isTimeoutError"].filter((name) => !have.has(name));
   const left = occurrencesOf(file.program, named.local).filter(
     (each) => each.role === "reference",
@@ -106,7 +106,7 @@ function importEdits(
   if (left === checks) return droppedImport(file, named);
   const add = names.map((spec) => ({ spec, typeOnly: false }));
   const added =
-    add.length > 0 ? addedToDeclaration(file, "import", MODULE, add, new Set()) : undefined;
+    add.length > 0 ? addedToDeclaration(file, "import", named.module, add, new Set()) : undefined;
   return added === undefined ? [] : [added];
 }
 
@@ -115,14 +115,15 @@ function importEdits(
  * one whose time ran out with a `TimeoutError`, no longer with an
  * `HTTPError` of status 0. `isHTTPError(error) && error.status === 0`
  * reads `isNetworkError(error) || isTimeoutError(error)`, and the file
- * imports the two beside its other names from Courier.
+ * imports the two where it imports `isHTTPError` from: the core's root,
+ * or one of its entries.
  */
 export const HTTP_ERROR_STATUS_ZERO: Migration = {
   id: "0.5.0/http-error-status-zero",
   title: "tells a request that got no answer by isNetworkError() and isTimeoutError()",
   mentions: ["isHTTPError"],
   migrate(file) {
-    const named = valueImport(file.program, ROOT, "isHTTPError");
+    const named = valueImport(file.program, CORE_MODULES, "isHTTPError");
     if (named === undefined) return { edits: [], findings: [], packages: [] };
     const edits: TextEdit[] = [];
     walk(file.program, (visited) => {

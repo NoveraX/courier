@@ -42,4 +42,19 @@ if (isHTTPError(error) && error.status === 404) missing();
 
     expect(migrateWith(HTTP_ERROR_STATUS_ZERO, other).text).toBe(other);
   });
+
+  it("reads isHTTPError from the core's entries too, and adds the two to the import it came by", () => {
+    for (const entry of ["@noverax/courier/client", "@noverax/courier/server"]) {
+      const { text } = migrateWith(
+        HTTP_ERROR_STATUS_ZERO,
+        `import { isHTTPError } from "${entry}";
+if (isHTTPError(error) && error.status === 0) retry();
+`,
+      );
+
+      expect(text).toBe(`import { isNetworkError, isTimeoutError } from "${entry}";
+if (isNetworkError(error) || isTimeoutError(error)) retry();
+`);
+    }
+  });
 });

@@ -31,6 +31,8 @@ const BREAKS: Migration = {
 
 const code = (files: Array<{ path: string; text: string }>) => ({
   files,
+  paths: files.map((file) => file.path),
+  links: new Map<string, string>(),
   unread: [],
   stopped: false,
 });
@@ -147,7 +149,13 @@ report(new RealtimeTimeoutError());
 
   it("names the files left unread, and a walk that stopped at its limit", () => {
     const migrated = migrateCode(
-      { files: [], unread: [{ path: "src/huge.ts", why: "it is 3 MiB" }], stopped: true },
+      {
+        files: [],
+        paths: [],
+        links: new Map(),
+        unread: [{ path: "src/huge.ts", why: "it is 3 MiB", folder: false }],
+        stopped: true,
+      },
       [],
     );
 

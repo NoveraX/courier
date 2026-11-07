@@ -49,12 +49,24 @@ export function refused(error: unknown) {
 describe("every migration together", () => {
   it("carries code written for 0.3 and 0.4 over, and changes nothing the second time", () => {
     const once = migrateCode(
-      { files: [{ path: "src/a.ts", text: OLD }], unread: [], stopped: false },
+      {
+        files: [{ path: "src/a.ts", text: OLD }],
+        paths: ["src/a.ts"],
+        links: new Map(),
+        unread: [],
+        stopped: false,
+      },
       ALL,
     );
     const after = once.edits[0]?.after ?? "";
     const twice = migrateCode(
-      { files: [{ path: "src/a.ts", text: after }], unread: [], stopped: false },
+      {
+        files: [{ path: "src/a.ts", text: after }],
+        paths: ["src/a.ts"],
+        links: new Map(),
+        unread: [],
+        stopped: false,
+      },
       ALL,
     );
 
@@ -75,7 +87,16 @@ describe("every migration together", () => {
 
   it("carries 0.4's endpoints and variables' code over, finds the kinds left to the person, and changes nothing the second time", () => {
     const run = (text: string) =>
-      migrateCode({ files: [{ path: "src/api.ts", text }], unread: [], stopped: false }, ALL);
+      migrateCode(
+        {
+          files: [{ path: "src/api.ts", text }],
+          paths: ["src/api.ts"],
+          links: new Map(),
+          unread: [],
+          stopped: false,
+        },
+        ALL,
+      );
     const once = run(OLD_KINDS);
     const after = once.edits[0]?.after ?? "";
     const twice = run(after);

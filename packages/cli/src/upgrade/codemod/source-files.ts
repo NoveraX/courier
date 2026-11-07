@@ -1,9 +1,12 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 
 import { isRecord } from "../../util/is-record";
-import { UPGRADE_LIMITS } from "../limits";
 import { mentions } from "./mentions";
+import { type Unread, walkFolders } from "./source-walk";
+
+/** Which piece of its file a piece of code is: the module whole, a `<script>` block, or an Astro file's frontmatter. */
+export type PieceKind = "module" | "script" | "frontmatter";
 
 /** A piece of a file's code an upgrade reads: a module whole, or a script block of a component's file. */
 export interface CodePiece {
@@ -14,42 +17,33 @@ export interface CodePiece {
   readonly offset: number;
   /** The name oxc reads its language from: `.ts` for TypeScript, `.js` for JavaScript, `.tsx` with JSX. */
   readonly parseAs: string;
+  readonly kind: PieceKind;
 }
 
 /** The project's code an upgrade reads, and what it did not read. */
 export interface ProjectCode {
   /** The files that name Courier's packages, each with its text. */
   readonly files: ReadonlyArray<{ readonly path: string; readonly text: string }>;
-  /** Files left unread, and why: too large to read. */
-  readonly unread: ReadonlyArray<{ readonly path: string; readonly why: string }>;
+  /** Every file of code the walk read, Courier's or not: what an import of one may lead to. */
+  readonly paths: readonly string[];
+  /** Each link to a file or folder the walk read by its own path: the link, and that path. */
+  readonly links: ReadonlyMap<string, string>;
+  /** Files and folders left unread, and why. */
+  readonly unread: readonly Unread[];
   /** Whether the walk stopped at its limit of files, and what it read up to. */
   readonly stopped: boolean;
 }
 
-const CODE = new Set([
-  ".ts",
-  ".tsx",
-  ".mts",
-  ".cts",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-  ".vue",
-  ".svelte",
-  ".astro",
-]);
-/* Folders of installed packages and of what builds write: no code of the project's own. */
-const SKIPPED = new Set(["node_modules", "dist", "build", "out", "coverage", "storybook-static"]);
 /* Only a file that names one of Courier's packages has code a migration of Courier's changes. */
 const COURIER = "@noverax/";
 
 /**
- * The files of a project's code that name Courier's packages: walked from
- * the workspace's root, leaving out installed packages, what builds write
- * and folders whose names start with a dot, within the upgrade's limits —
- * a file too large is named as unread, and a walk that reaches its limit
- * of files says so.
+ * The files of a project's code that name Courier's packages, as
+ * {@link walkFolders} walks the workspace: installed packages, version
+ * control's folders and what builds write at a package's root left out,
+ * a link read by the path it leads to, within the upgrade's limits — what
+ * was left unread is named, and a walk that reaches its limit of files
+ * says so.
  *
  * @param root - The workspace's folder
  * @returns The files, and what was left unread
@@ -59,34 +53,13 @@ const COURIER = "@noverax/";
  * ```
  */
 export function projectCode(root: string): ProjectCode {
+  const walked = walkFolders(root);
   const files: Array<{ path: string; text: string }> = [];
-  const unread: Array<{ path: string; why: string }> = [];
-  let seen = 0;
-  const walkDir = (dir: string, depth: number): boolean => {
-    if (depth > UPGRADE_LIMITS.sourceDepth) return true;
-    for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
-      const path = dir === "" ? entry.name : `${dir}/${entry.name}`;
-      if (entry.isDirectory()) {
-        if (entry.name.startsWith(".") || SKIPPED.has(entry.name)) continue;
-        if (!walkDir(path, depth + 1)) return false;
-      } else if (entry.isFile() && CODE.has(extname(entry.name))) {
-        if (++seen > UPGRADE_LIMITS.sourceFiles) return false;
-        const { size } = statSync(join(root, path));
-        if (size > UPGRADE_LIMITS.sourceBytes) {
-          unread.push({
-            path,
-            why: `it is ${(size / 1024 / 1024).toFixed(1)} MiB, past the ${UPGRADE_LIMITS.sourceBytes / 1024 / 1024} MiB an upgrade reads`,
-          });
-          continue;
-        }
-        const text = readFileSync(join(root, path), "utf8");
-        if (mentions(text, [COURIER])) files.push({ path, text });
-      }
-    }
-    return true;
-  };
-  const stopped = !walkDir("", 0);
-  return { files, unread, stopped };
+  for (const path of walked.files) {
+    const text = readFileSync(join(root, path), "utf8");
+    if (mentions(text, [COURIER])) files.push({ path, text });
+  }
+  return { ...walked, files, paths: walked.files };
 }
 
 /* The first line of a file Studio wrote, before the import it belongs to and the hash of what Studio wrote below. */
@@ -146,12 +119,18 @@ function langOf(attributes: string): string {
 export function codePieces(path: string, text: string): CodePiece[] {
   const extension = extname(path);
   if (extension !== ".vue" && extension !== ".svelte" && extension !== ".astro")
-    return [{ path, text, offset: 0, parseAs: extension }];
+    return [{ path, text, offset: 0, parseAs: extension, kind: "module" }];
   const pieces: CodePiece[] = [];
   if (extension === ".astro") {
     const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
     if (front?.[1] !== undefined)
-      pieces.push({ path, text: front[1], offset: front[0].indexOf(front[1]), parseAs: ".ts" });
+      pieces.push({
+        path,
+        text: front[1],
+        offset: front[0].indexOf(front[1]),
+        parseAs: ".ts",
+        kind: "frontmatter",
+      });
   }
   for (const block of text.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
     const [whole, attributes = "", body = ""] = block;
@@ -161,6 +140,7 @@ export function codePieces(path: string, text: string): CodePiece[] {
       text: body,
       offset,
       parseAs: extension === ".astro" ? ".ts" : langOf(attributes),
+      kind: "script",
     });
   }
   return pieces;

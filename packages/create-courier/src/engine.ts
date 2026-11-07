@@ -41,6 +41,7 @@ export {
   type Project,
   readProject,
 } from "./project/read-project";
+export { type RouteList, routeList } from "./project/route-list";
 export { type TsconfigLevel, tsconfigProjects } from "./project/tsconfig-chain";
 export { isRoutesFramework } from "./recipes/edits/framework-routes";
 export type { ManualStep, NextStep } from "./recipes/recipe-types";

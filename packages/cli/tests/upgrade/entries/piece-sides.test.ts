@@ -796,6 +796,75 @@ describe("the side of a piece of code", () => {
     });
   });
 
+  it("tells TanStack Start's sides by its build: routes both sides', a route of server handlers and server functions the server's", () => {
+    const START = {
+      "@tanstack/react-start": "1.169.4",
+      "@tanstack/react-router": "1.170.46",
+      react: "19.0.0",
+      "react-dom": "19.0.0",
+    };
+    const sides = sidesOf({
+      "package.json": manifest({ dependencies: START, devDependencies: { vite: "8.0.0" } }),
+      "src/router.tsx":
+        'import { routeTree } from "./routeTree.gen";\nexport function getRouter() {\n  return routeTree;\n}\n',
+      "src/routeTree.gen.ts":
+        'import { Route as Index } from "./routes/index";\nimport { Route as Users } from "./routes/api/users";\nexport const routeTree = [Index, Users];\n',
+      "src/routes/index.tsx": `import { createFileRoute } from "@tanstack/react-router";\nimport { getUsers } from "../lib/users.functions";\nimport { label } from "../lib/shared";\nimport { flag } from "../lib/flags.client";\nimport { helper } from "./-lib/helper";\n${CORE}export const Route = createFileRoute("/")({ loader: () => getUsers(), component: () => [label, flag, helper] });\n`,
+      "src/routes/-lib/helper.ts": `import { createFileRoute } from "@tanstack/react-router";\n${CORE}export const helper = createFileRoute("/helper")({\n  server: { handlers: { GET: () => new Response("") } },\n});\n`,
+      "src/routes/api/users.ts": `import { createFileRoute } from "@tanstack/react-router";\nimport { db } from "../../lib/db.server";\n${CORE}export const Route = createFileRoute("/api/users")({\n  server: { handlers: { GET: () => new Response(String(db)) } },\n});\n`,
+      "src/lib/users.functions.ts": `import { createServerFn } from "@tanstack/react-start";\nimport { db } from "./db.server";\n${CORE}export const getUsers = createServerFn().handler(() => db);\n`,
+      "src/lib/db.server.ts": `${CORE}export const db = 1;\n`,
+      "src/lib/shared.ts": `${CORE}export const label = "shop";\n`,
+      "src/lib/flags.client.ts": `${CORE}export const flag = true;\n`,
+      "src/lib/request.ts": `import { getRequest } from "@tanstack/react-start/server";\n${CORE}export const at = () => getRequest().url;\n`,
+      "src/routes/-lib/account.functions.ts": `import { createServerFn } from "@tanstack/react-start";\n${CORE}export const getAccount = createServerFn().handler(() => 1);\n`,
+      "src/server.ts": CORE,
+    });
+
+    for (const file of [
+      "src/router.tsx",
+      "src/routes/index.tsx",
+      "src/routes/-lib/helper.ts",
+      "src/lib/shared.ts",
+    ])
+      expect(flags(sides.sideOf(file, 0))).toEqual([true, true, true]);
+    for (const file of [
+      "src/routes/api/users.ts",
+      "src/lib/users.functions.ts",
+      "src/lib/db.server.ts",
+      "src/lib/request.ts",
+      "src/routes/-lib/account.functions.ts",
+      "src/server.ts",
+    ])
+      expect(flags(sides.sideOf(file, 0))).toEqual([false, false, true]);
+    expect(flags(sides.sideOf("src/lib/flags.client.ts", 0))).toEqual([true, true, false]);
+    expect(sides.sideOf("src/routes/index.tsx", 0).startRoute).toBe(true);
+    for (const file of ["src/routes/-lib/account.functions.ts", "src/lib/shared.ts"])
+      expect(sides.sideOf(file, 0).startRoute).toBe(false);
+  });
+
+  it("leaves out of a page's reach what a TanStack Start route imports only for code its build takes out of a page", () => {
+    const sides = sidesOf({
+      "package.json": manifest({
+        dependencies: {
+          "@tanstack/react-start": "1.169.4",
+          react: "19.0.0",
+          "react-dom": "19.0.0",
+        },
+        devDependencies: { vite: "8.0.0" },
+      }),
+      "src/routes/db-user.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createServerFn } from "@tanstack/react-start";\nimport { db } from "../lib/db";\nimport { label } from "../lib/label";\nconst getDb = createServerFn().handler(async () => [db, await import("../lib/later")]);\nexport const Route = createFileRoute("/db")({ loader: () => getDb(), component: () => label });\n',
+      "src/lib/db.ts": `${CORE}export const db = 1;\n`,
+      "src/lib/later.ts": `${CORE}export const later = 1;\n`,
+      "src/lib/label.ts": `${CORE}export const label = "shop";\n`,
+    });
+
+    for (const file of ["src/lib/db.ts", "src/lib/later.ts"])
+      expect(flags(sides.sideOf(file, 0))).toEqual([false, false, true]);
+    expect(flags(sides.sideOf("src/lib/label.ts", 0))).toEqual([true, true, true]);
+  });
+
   it("gives every file of a server framework to the server", () => {
     const sides = sidesOf({
       "package.json": manifest({ dependencies: { express: "5.0.0" } }),

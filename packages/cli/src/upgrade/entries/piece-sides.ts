@@ -2,8 +2,11 @@ import type { ProjectCode } from "../codemod/source-files";
 import type { Workspace } from "../workspace";
 import type { PackageFrameworkId } from "./framework-roots";
 import { importGraph } from "./import-graph";
+import { isStartRoute } from "./path-rules";
 import { sideReaches } from "./side-reaches";
 import type { SideReach } from "./side-spread";
+import type { StartResolve } from "./start-calls";
+import type { StartNote } from "./start-imports";
 import { workspacePackages } from "./workspace-packages";
 
 /** Where a piece of code runs, as its framework's rules and the workspace's imports tell. */
@@ -18,6 +21,12 @@ export interface PieceSide {
   readonly incomplete: boolean;
   /** Its package's framework, where the upgrade knows it. */
   readonly framework: PackageFrameworkId | undefined;
+  /** Whether TanStack Start's router reads it as a route, whose `server`, `ssr` and `headers` Start's build of a page takes out of it. */
+  readonly startRoute?: boolean | undefined;
+  /** How its imports are followed into the modules they name, to what Start's compiler takes them for. */
+  readonly startResolve?: StartResolve | undefined;
+  /** Where a page may load it only through an import that a function Courier did not follow may take out of the page: the file that imports it, and the function. */
+  readonly pageUnfollowed?: StartNote | undefined;
   /** The package a page may load it through by its name alone, whose entry the graph could not follow to its code. */
   readonly pageThrough?: string | undefined;
   /** Whether its package's tsconfig keeps an import of types named one by one as a load of its module. */
@@ -82,7 +91,8 @@ function build(workspace: Workspace, code: ProjectCode): ProjectSides {
       ...graph.unreadGlobs.map(({ file, line }) => ({ file, what: `line ${line}: ${GLOB}` })),
     ],
     sideOf(path, piece) {
-      const framework = packages.placeOf(path).framework.id;
+      const place = packages.placeOf(path);
+      const framework = place.framework.id;
       const id = byFile.get(path)?.[piece];
       const unseen = code.stopped || id === undefined;
       return {
@@ -91,6 +101,9 @@ function build(workspace: Workspace, code: ProjectCode): ProjectSides {
         maybeServer: unseen || maybeServer.reached[id] === 1,
         incomplete: unseen || unseenBy(maybePage, id) || unseenBy(maybeServer, id),
         framework,
+        startRoute: isStartRoute(framework, place.local),
+        startResolve: (source, name) => graph.start.resolve(path, source, name),
+        pageUnfollowed: page[id ?? -1] === 1 ? undefined : graph.start.unfollowed.get(path),
         pageThrough: id === undefined ? undefined : through(id),
         keepsTypeImports: packages.keepsTypeImports(packages.packageOf(path)),
         serverVia: id === undefined ? undefined : viaServer(id),

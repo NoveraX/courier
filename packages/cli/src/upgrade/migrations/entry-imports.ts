@@ -21,6 +21,8 @@ import {
 } from "./entry-findings";
 import { rootLoads } from "./entry-loads";
 import { type Taken, takenBy } from "./entry-taken";
+import { startFinding, unfollowedImportFinding } from "./start-findings";
+import { narrowed, startKeeps } from "./start-keeps";
 
 const NOTHING: FileMigration = { edits: [], findings: [], packages: [] };
 const DECLARATIONS = new Set([
@@ -83,8 +85,11 @@ function sourceEdit(text: string, source: AstNode, side: EntrySide): TextEdit {
  * loads its piece of code: the page's where a page's bundle may have it
  * and the entry gives every name it takes — `createCaller`, which the
  * page's entry binds to a page's caller, only where no server may load
- * the piece — and the server's where only the server may. One that stays
- * is said where a page loads it for certain, or may through a package's
+ * the piece — and the server's where only the server may. In a module
+ * TanStack Start builds for both, an import whose names one side's build
+ * alone keeps — the other's takes the code that uses them out — is that
+ * side's. One that stays is said where a page loads it for certain, or
+ * may through a package's
  * name whose entry Courier could not follow, and so is a piece neither
  * side is told to load. An import of types alone, which no bundle loads,
  * moves to an entry that gives every type, with nothing said — `type` on
@@ -124,17 +129,31 @@ export const ENTRY_IMPORTS: Migration = {
         findings.push({ at: first.statement.start, ...untoldFinding(side, first.names) });
       return { edits, findings, packages: [] };
     }
+    /* Where Start builds the module for both sides: what each one's build keeps of a declaration's names. */
+    const keeps = startKeeps(side, file.program);
     for (const each of loads) {
-      const target = each.star ? undefined : targetOf(side, each.names);
+      const kept = keeps?.kept(each);
+      const own = kept === undefined ? side : narrowed(side, kept);
+      const target = each.star ? undefined : targetOf(own, each.names);
       const edit = target === undefined ? undefined : sourceEdit(file.text, each.source, target);
       if (edit !== undefined) edits.push(edit);
-      else if (side.page) {
-        const finding = findingOf(side, each);
+      else if (own.page) {
+        const told =
+          kept !== undefined && own === side
+            ? startFinding(kept, keeps?.unfollowed() ?? [])
+            : undefined;
+        const finding =
+          told === undefined ? findingOf(own, each) : { at: each.statement.start, ...told };
         if (finding !== undefined) findings.push(finding);
-      } else if (side.pageThrough !== undefined)
+      } else if (own.pageThrough !== undefined)
         findings.push({
           at: each.statement.start,
-          ...throughFinding(side.pageThrough, each.names),
+          ...throughFinding(own.pageThrough, each.names),
+        });
+      else if (own.pageUnfollowed !== undefined && each.names !== undefined)
+        findings.push({
+          at: each.statement.start,
+          ...unfollowedImportFinding(own.pageUnfollowed, each.names),
         });
     }
     return { edits, findings, packages: [] };

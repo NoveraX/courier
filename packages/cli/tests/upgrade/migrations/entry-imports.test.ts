@@ -47,6 +47,16 @@ const NEXT = {
   "scripts/seed.ts": 'import { createCaller } from "@noverax/courier";\n',
 };
 
+const START_PACKAGE = manifest({
+  dependencies: {
+    "@tanstack/react-start": "1.169.4",
+    "@tanstack/react-router": "1.170.46",
+    react: "19.0.0",
+    "react-dom": "19.0.0",
+  },
+  devDependencies: { vite: "8.0.0" },
+});
+
 describe("0.5.0: a page's imports and a server's", () => {
   it("takes a page's from @noverax/courier/client and a server's from /server, in the quotes they were written in", () => {
     const { after } = upgraded(NEXT);
@@ -511,6 +521,376 @@ describe("0.5.0: a page's imports and a server's", () => {
       expect(steps(file)).toEqual([
         expect.objectContaining({ what: expect.stringContaining("Courier knows no framework") }),
       ]);
+  });
+
+  it("moves TanStack Start's imports by its build: a route's to /client, a server route's and a server function's to /server", () => {
+    const files = {
+      "src/routes/index.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { isHTTPError } from "@noverax/courier";\nimport { getUsers } from "../lib/users.functions";\nimport { caller } from "../lib/shared";\nexport const Route = createFileRoute("/")({ loader: () => getUsers(), component: () => [isHTTPError, caller] });\n',
+      "src/routes/api/users.ts":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createHandler } from "@noverax/courier";\nexport const Route = createFileRoute("/api/users")({ server: { handlers: { GET: createHandler({}) } } });\n',
+      "src/lib/users.functions.ts":
+        'import { createServerFn } from "@tanstack/react-start";\nimport { registerSources } from "@noverax/courier";\nexport const getUsers = createServerFn().handler(() => registerSources);\n',
+      "src/lib/shared.ts":
+        'import { createCaller } from "@noverax/courier";\nexport const caller = createCaller;\n',
+    };
+    const { after, steps } = upgraded({
+      "package.json": manifest({
+        dependencies: {
+          "@tanstack/react-start": "1.169.4",
+          react: "19.0.0",
+          "react-dom": "19.0.0",
+        },
+        devDependencies: { vite: "8.0.0" },
+      }),
+      "src/router.tsx":
+        'import { Route } from "./routes/index";\nimport { Route as Users } from "./routes/api/users";\nexport const routes = [Route, Users];\n',
+      ...files,
+    });
+    const moved = (file: keyof typeof files, entry: string) =>
+      files[file].replace('"@noverax/courier"', `"@noverax/courier/${entry}"`);
+
+    expect(after("src/routes/index.tsx")).toBe(moved("src/routes/index.tsx", "client"));
+    expect(after("src/routes/api/users.ts")).toBe(moved("src/routes/api/users.ts", "server"));
+    expect(after("src/lib/users.functions.ts")).toBe(moved("src/lib/users.functions.ts", "server"));
+    expect(after("src/lib/shared.ts")).toBeUndefined();
+    expect(steps("src/lib/shared.ts")).toHaveLength(1);
+  });
+
+  it("takes to /server what a Start route uses only in code Start takes out of a page, and to /client what only <ClientOnly> renders", () => {
+    const files = {
+      "src/routes/account.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createServerFn } from "@tanstack/react-start";\nimport { createCaller } from "@noverax/courier";\nimport { isHTTPError } from "@noverax/courier";\nconst caller = createCaller({});\nconst getAccount = createServerFn().validator((input) => input).handler(() => caller);\nexport const Route = createFileRoute("/account")({ loader: () => getAccount(), component: () => isHTTPError });\n',
+      "src/routes/mixed.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createHandler, getSources } from "@noverax/courier";\nexport const Route = createFileRoute("/mixed")({\n  server: { handlers: { GET: createHandler({}) } },\n  headers: () => ({ "x-sources": String(getSources()) }),\n  component: () => null,\n});\n',
+      "src/routes/widget.tsx":
+        'import { createFileRoute, ClientOnly } from "@tanstack/react-router";\nimport { createCaller } from "@noverax/courier";\nexport const Route = createFileRoute("/widget")({ component: () => <ClientOnly fallback={null}>{String(createCaller({}))}</ClientOnly> });\n',
+    };
+    const { after, steps } = upgraded({ "package.json": START_PACKAGE, ...files });
+    const moved = (file: keyof typeof files, entry: string) =>
+      files[file].replaceAll('"@noverax/courier"', `"@noverax/courier/${entry}"`);
+
+    expect(after("src/routes/account.tsx")).toBe(
+      files["src/routes/account.tsx"]
+        .replace(
+          '{ createCaller } from "@noverax/courier"',
+          '{ createCaller } from "@noverax/courier/server"',
+        )
+        .replace(
+          '{ isHTTPError } from "@noverax/courier"',
+          '{ isHTTPError } from "@noverax/courier/client"',
+        ),
+    );
+    expect(after("src/routes/mixed.tsx")).toBe(moved("src/routes/mixed.tsx", "server"));
+    expect(after("src/routes/widget.tsx")).toBe(moved("src/routes/widget.tsx", "client"));
+    for (const file of Object.keys(files)) expect(steps(file)).toEqual([]);
+  });
+
+  it("takes Start's src/start.ts imports to the side whose function alone uses them", () => {
+    const start =
+      'import { createClientOnlyFn, createIsomorphicFn, createMiddleware, createServerOnlyFn, createStart } from "@tanstack/react-start";\nimport { registerSources } from "@noverax/courier";\nimport { createCaller } from "@noverax/courier";\nimport { ensureCsrfToken } from "@noverax/courier";\nimport { getSources } from "@noverax/courier";\nexport const sources = createIsomorphicFn().server(() => registerSources).client(() => createCaller);\nexport const pageCaller = createClientOnlyFn(() => createCaller);\nexport const csrf = createMiddleware().server(({ next }) => {\n  ensureCsrfToken;\n  return next();\n});\nexport const listed = createServerOnlyFn(() => getSources());\nexport const startInstance = createStart(() => ({ requestMiddleware: [csrf] }));\n';
+    const { after, steps } = upgraded({ "package.json": START_PACKAGE, "src/start.ts": start });
+
+    expect(after("src/start.ts")).toBe(
+      start
+        .replace(
+          '{ registerSources } from "@noverax/courier"',
+          '{ registerSources } from "@noverax/courier/server"',
+        )
+        .replace(
+          '{ createCaller } from "@noverax/courier"',
+          '{ createCaller } from "@noverax/courier/client"',
+        )
+        .replace(
+          '{ ensureCsrfToken } from "@noverax/courier"',
+          '{ ensureCsrfToken } from "@noverax/courier/server"',
+        )
+        .replace(
+          '{ getSources } from "@noverax/courier"',
+          '{ getSources } from "@noverax/courier/server"',
+        ),
+    );
+    expect(steps("src/start.ts")).toEqual([]);
+  });
+
+  it("keeps in the root a Start module's import whose names the page's build keeps beside the server's, and says what Start takes out of a page", () => {
+    const { after, steps } = upgraded({
+      "package.json": START_PACKAGE,
+      "src/routes/both.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createServerFn } from "@tanstack/react-start";\nimport { createCaller } from "@noverax/courier";\nconst getBoth = createServerFn().handler(() => createCaller({}));\nexport const Route = createFileRoute("/both")({ loader: () => [getBoth(), createCaller({})], component: () => null });\n',
+      "src/start.ts":
+        'import { createIsomorphicFn } from "@tanstack/react-start";\nimport { createHandler, isHTTPError } from "@noverax/courier";\nexport const handled = createIsomorphicFn().server(() => createHandler({}));\nexport const failed = isHTTPError;\n',
+    });
+
+    expect(after("src/routes/both.tsx")).toBeUndefined();
+    expect(steps("src/routes/both.tsx")).toEqual([
+      {
+        file: "src/routes/both.tsx",
+        what: "line 3: TanStack Start takes out of a page the code only the server runs — a server function's handler and validator, a route's server, ssr and headers, and what createServerOnlyFn, createIsomorphicFn().server() and createMiddleware().server() are given — but the page's build keeps createCaller, the server's caller as @noverax/courier gives it: the import stays in @noverax/courier, and the page's bundle takes the server's part with it",
+        lines: [
+          'import { createCaller } from "@noverax/courier/client"; // where only the page\'s code uses it',
+          'import { createCaller } from "@noverax/courier/server"; // where only code Start takes out of a page uses it',
+        ],
+      },
+    ]);
+    expect(after("src/start.ts")).toBeUndefined();
+    expect(steps("src/start.ts")).toEqual([
+      {
+        file: "src/start.ts",
+        what: "line 2: TanStack Start takes out of a page the code that uses createHandler, but the page's build keeps isHTTPError: the import stays in @noverax/courier, and the page's bundle takes the server's part with it",
+        lines: [
+          'import { isHTTPError } from "@noverax/courier/client";',
+          'import { createHandler } from "@noverax/courier/server"; // where only code Start takes out of a page uses it',
+        ],
+      },
+    ]);
+    for (const step of [...steps("src/routes/both.tsx"), ...steps("src/start.ts")])
+      expect(step.what).not.toMatch(/a page loads this file/);
+  });
+
+  it("follows a Start route's options in a variable, an alias of createServerFn and a module only a server function uses, as Start's build does", () => {
+    const files = {
+      "src/routes/opts.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createHandler } from "@noverax/courier";\nconst options = { server: { handlers: { GET: () => createHandler({}) } }, component: () => null };\nexport const Route = createFileRoute("/opts")(options);\n',
+      "src/routes/alias.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createServerFn } from "@tanstack/react-start";\nimport { createCaller } from "@noverax/courier";\nconst serverFn = createServerFn;\nconst getMe = serverFn().handler(() => createCaller({}));\nexport const Route = createFileRoute("/alias")({ loader: () => getMe(), component: () => null });\n',
+      "src/routes/db-user.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createServerFn } from "@tanstack/react-start";\nimport { db } from "../lib/db";\nconst getDb = createServerFn().handler(() => String(db));\nexport const Route = createFileRoute("/db-user")({ loader: () => getDb(), component: () => null });\n',
+      "src/lib/db.ts":
+        'import { createHandler } from "@noverax/courier";\nexport const db = createHandler({});\n',
+      "src/routes/exported.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createServerFn } from "@tanstack/react-start";\nimport { createCaller } from "@noverax/courier";\nexport const caller = createCaller({});\nconst getMe = createServerFn().handler(() => caller);\nexport const Route = createFileRoute("/exported")({ loader: () => getMe(), component: () => null });\n',
+    };
+    const { after, steps } = upgraded({ "package.json": START_PACKAGE, ...files });
+    const moved = (file: keyof typeof files) =>
+      files[file].replace('"@noverax/courier"', '"@noverax/courier/server"');
+
+    for (const file of ["src/routes/opts.tsx", "src/routes/alias.tsx", "src/lib/db.ts"] as const) {
+      expect(after(file)).toBe(moved(file));
+      expect(steps(file)).toEqual([]);
+    }
+    expect(after("src/routes/exported.tsx")).toBeUndefined();
+    expect(steps("src/routes/exported.tsx")).toEqual([
+      expect.objectContaining({
+        what: expect.stringMatching(
+          /but the page's build keeps createCaller, the server's caller as @noverax\/courier gives it/,
+        ),
+      }),
+    ]);
+  });
+
+  it("follows a function a Start route takes from another module of the project, as Start's compiler does, and keeps options another module gives, which Start's router does not follow", () => {
+    const files = {
+      "src/lib/start-fns.ts":
+        'export { createServerFn as serverFn } from "@tanstack/react-start";\n',
+      "src/lib/fns.ts":
+        'import { createMiddleware, createServerFn } from "@tanstack/react-start";\nconst auth = createMiddleware().server(({ next }) => next());\nexport const authed = createServerFn({ method: "GET" }).middleware([auth]);\n',
+      "src/lib/index.ts": 'export * from "./fns";\n',
+      "src/routes/elsewhere.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { serverFn } from "../lib/start-fns";\nimport { createCaller } from "@noverax/courier";\nconst getMe = serverFn().handler(() => createCaller({}));\nexport const Route = createFileRoute("/elsewhere")({ loader: () => getMe(), component: () => null });\n',
+      "src/routes/elsewhere-db.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { serverFn } from "../lib/start-fns";\nimport { db3 } from "../lib/db3";\nconst getDb = serverFn().handler(() => String(db3));\nexport const Route = createFileRoute("/elsewhere-db")({ loader: () => getDb(), component: () => null });\n',
+      "src/lib/db3.ts":
+        'import { createHandler } from "@noverax/courier";\nexport const db3 = createHandler({});\n',
+      "src/routes/authed-caller.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { authed } from "../lib/fns";\nimport { createCaller } from "@noverax/courier";\nconst getMe = authed.handler(() => createCaller({}));\nexport const Route = createFileRoute("/authed-caller")({ loader: () => getMe(), component: () => null });\n',
+      "src/routes/authed-db.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { authed } from "../lib/fns";\nimport { db4 } from "../lib/db4";\nconst getDb = authed.handler(() => String(db4));\nexport const Route = createFileRoute("/authed-db")({ loader: () => getDb(), component: () => null });\n',
+      "src/lib/db4.ts":
+        'import { createHandler } from "@noverax/courier";\nexport const db4 = createHandler({});\n',
+      "src/routes/barrel.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { authed } from "../lib";\nimport { createCaller } from "@noverax/courier";\nconst getMe = authed.handler(() => createCaller({}));\nexport const Route = createFileRoute("/barrel")({ loader: () => getMe(), component: () => null });\n',
+      "src/lib/options.ts":
+        'import { createHandler } from "@noverax/courier";\nexport const options = { server: { handlers: { GET: () => createHandler({}) } }, component: () => null };\n',
+      "src/routes/given.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { options } from "../lib/options";\nexport const Route = createFileRoute("/given")(options);\n',
+    };
+    const { after, steps } = upgraded({ "package.json": START_PACKAGE, ...files });
+    const moved = (file: keyof typeof files) =>
+      files[file].replace('"@noverax/courier"', '"@noverax/courier/server"');
+
+    for (const file of [
+      "src/routes/elsewhere.tsx",
+      "src/lib/db3.ts",
+      "src/routes/authed-caller.tsx",
+      "src/lib/db4.ts",
+      "src/routes/barrel.tsx",
+    ] as const) {
+      expect(after(file)).toBe(moved(file));
+      expect(steps(file)).toEqual([]);
+    }
+    expect(after("src/lib/options.ts")).toBeUndefined();
+    expect(steps("src/lib/options.ts")).toEqual([
+      expect.objectContaining({
+        what: expect.stringMatching(/but the page's build keeps createHandler/),
+      }),
+    ]);
+  });
+
+  it("follows a builder another module gives on with no from: by an export of its name, a declaration of it and its default", () => {
+    const route = (path: string, from: string, name: string) =>
+      `import { createFileRoute } from "@tanstack/react-router";\nimport ${name} from "${from}";\nimport { createCaller } from "@noverax/courier";\nconst getMe = protectedFn.handler(() => createCaller({}));\nexport const Route = createFileRoute("${path}")({ loader: () => getMe(), component: () => null });\n`;
+    const files = {
+      "src/lib/fns.ts":
+        'import { createMiddleware, createServerFn } from "@tanstack/react-start";\nconst auth = createMiddleware().server(({ next }) => next());\nexport const authed = createServerFn({ method: "GET" }).middleware([auth]);\n',
+      "src/lib/named.ts": 'import { authed } from "./fns";\nexport { authed as protectedFn };\n',
+      "src/lib/declared.ts":
+        'import { authed } from "./fns";\nexport const protectedFn = authed;\n',
+      "src/lib/default.ts": 'import { authed } from "./fns";\nexport default authed;\n',
+      "src/routes/named.tsx": route("/named", "../lib/named", "{ protectedFn }"),
+      "src/routes/declared.tsx": route("/declared", "../lib/declared", "{ protectedFn }"),
+      "src/routes/default.tsx": route("/default", "../lib/default", "protectedFn"),
+      "src/routes/db6-user.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { protectedFn } from "../lib/declared";\nimport { db6 } from "../lib/db6";\nconst getDb = protectedFn.handler(() => String(db6));\nexport const Route = createFileRoute("/db6")({ loader: () => getDb(), component: () => null });\n',
+      "src/lib/db6.ts":
+        'import { createHandler } from "@noverax/courier";\nexport const db6 = createHandler({});\n',
+    };
+    const { after, steps } = upgraded({ "package.json": START_PACKAGE, ...files });
+
+    for (const file of [
+      "src/routes/named.tsx",
+      "src/routes/declared.tsx",
+      "src/routes/default.tsx",
+      "src/lib/db6.ts",
+    ] as const) {
+      expect(after(file)).toBe(
+        files[file].replace('"@noverax/courier"', '"@noverax/courier/server"'),
+      );
+      expect(steps(file)).toEqual([]);
+    }
+  });
+
+  it("keeps a Start route's import of redact, which a page takes from the root, calls it no name of the server's, and takes one only the server's code uses to /server", () => {
+    const { after, steps } = upgraded({
+      "package.json": START_PACKAGE,
+      "src/routes/masked.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { redact } from "@noverax/courier";\nexport const Route = createFileRoute("/masked")({ component: () => String(redact("x")) });\n',
+      "src/routes/masked-api.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createHandler, redact } from "@noverax/courier";\nexport const Route = createFileRoute("/masked-api")({\n  server: { handlers: { GET: () => createHandler({}) } },\n  component: () => String(redact("x")),\n});\n',
+      "src/routes/masked-both.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { createHandler, isHTTPError, redact } from "@noverax/courier";\nexport const Route = createFileRoute("/masked-both")({\n  server: { handlers: { GET: () => createHandler({}) } },\n  component: () => String(isHTTPError(null) || redact("x")),\n});\n',
+      "src/routes/masked-log.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { redact } from "@noverax/courier";\nexport const Route = createFileRoute("/masked-log")({\n  server: { handlers: { GET: () => new Response(String(redact("x"))) } },\n});\n',
+    });
+
+    expect(after("src/routes/masked-log.tsx")).toContain(
+      'import { redact } from "@noverax/courier/server";',
+    );
+    expect(steps("src/routes/masked-log.tsx")).toEqual([]);
+    expect(after("src/routes/masked-both.tsx")).toBeUndefined();
+    expect(steps("src/routes/masked-both.tsx")).toEqual([
+      {
+        file: "src/routes/masked-both.tsx",
+        what: "line 2: TanStack Start takes out of a page the code that uses createHandler, but the page's build keeps isHTTPError, and redact, which @noverax/courier/client leaves out, so a page takes it from @noverax/courier: the import stays there",
+        lines: [
+          'import { isHTTPError } from "@noverax/courier/client";',
+          'import { redact } from "@noverax/courier"; // a page takes it from the root',
+          'import { createHandler } from "@noverax/courier/server"; // where only code Start takes out of a page uses it',
+        ],
+      },
+    ]);
+    expect(after("src/routes/masked.tsx")).toBeUndefined();
+    expect(steps("src/routes/masked.tsx")).toEqual([
+      {
+        file: "src/routes/masked.tsx",
+        what: "line 2: @noverax/courier/client leaves redact out, so a page takes it from @noverax/courier: the import stays there",
+        lines: [],
+      },
+    ]);
+    expect(after("src/routes/masked-api.tsx")).toBeUndefined();
+    expect(steps("src/routes/masked-api.tsx")).toEqual([
+      {
+        file: "src/routes/masked-api.tsx",
+        what: "line 2: TanStack Start takes out of a page the code that uses createHandler, but the page's build keeps redact, which @noverax/courier/client leaves out, so a page takes it from @noverax/courier: the import stays there",
+        lines: [
+          'import { redact } from "@noverax/courier"; // a page takes it from the root',
+          'import { createHandler } from "@noverax/courier/server"; // where only code Start takes out of a page uses it',
+        ],
+      },
+    ]);
+  });
+
+  it("gives the page's module of a file only a function Courier did not follow imports redact from the root", () => {
+    const { after, steps } = upgraded({
+      "package.json": START_PACKAGE,
+      "src/routes/masked-kit.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { authed } from "@acme/start-kit";\nimport { mask } from "../lib/mask";\nconst getMask = authed.handler(() => mask(null));\nexport const Route = createFileRoute("/masked-kit")({ loader: () => getMask(), component: () => null });\n',
+      "src/lib/mask.ts":
+        'import { isHTTPError, redact } from "@noverax/courier";\nexport const mask = (error: unknown) => (isHTTPError(error) ? redact("x") : "");\n',
+    });
+
+    expect(after("src/lib/mask.ts")).toBeUndefined();
+    expect(steps("src/lib/mask.ts")).toEqual([
+      {
+        file: "src/lib/mask.ts",
+        what: "line 1: Courier could not follow authed, which src/routes/masked-kit.tsx takes from @acme/start-kit, to a function of TanStack Start's, whose build may take the code that imports this file out of a page, so its import stays in @noverax/courier: if only that code imports this file, take isHTTPError and redact from @noverax/courier/server, and otherwise give the page its own module, with redact, which @noverax/courier/client leaves out, from @noverax/courier",
+        lines: [
+          'import { isHTTPError, redact } from "@noverax/courier/server"; // if only that code imports this file',
+          'import { isHTTPError } from "@noverax/courier/client"; // in the page\'s module',
+          'import { redact } from "@noverax/courier"; // in the page\'s module',
+        ],
+      },
+    ]);
+  });
+
+  it("says Courier could not follow a function from outside the project, where a route takes it and where only its handler imports a module, and keeps what Start does not follow either", () => {
+    const { after, steps } = upgraded({
+      "package.json": START_PACKAGE,
+      "src/lib/fns.ts":
+        'import { createServerFn } from "@tanstack/react-start";\nexport const authed = createServerFn({ method: "GET" });\n',
+      "src/routes/outside.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport { authed } from "@acme/start-kit";\nimport { createCaller } from "@noverax/courier";\nimport { db5 } from "../lib/db5";\nconst getMe = authed.handler(() => [createCaller({}), db5]);\nexport const Route = createFileRoute("/outside")({ loader: () => getMe(), component: () => null });\n',
+      "src/lib/db5.ts":
+        'import { createHandler } from "@noverax/courier";\nexport const db5 = createHandler({});\n',
+      "src/routes/ns-member.tsx":
+        'import { createFileRoute } from "@tanstack/react-router";\nimport * as fns from "../lib/fns";\nimport { createCaller } from "@noverax/courier";\nconst getMe = fns.authed.handler(() => createCaller({}));\nexport const Route = createFileRoute("/ns-member")({ loader: () => getMe(), component: () => null });\n',
+    });
+
+    expect(after("src/routes/outside.tsx")).toBeUndefined();
+    expect(steps("src/routes/outside.tsx")).toEqual([
+      {
+        file: "src/routes/outside.tsx",
+        what: "line 3: Courier could not follow authed, which this file takes from @acme/start-kit, to a function of TanStack Start's, whose build may take the code it is given out of a page, so the import stays in @noverax/courier: if only that code uses createCaller, take it from @noverax/courier/server, and otherwise give the page its own module",
+        lines: [
+          'import { createCaller } from "@noverax/courier/server"; // where only code Start takes out of a page uses it',
+          'import { createCaller } from "@noverax/courier/client"; // in the page\'s module',
+        ],
+      },
+    ]);
+    expect(after("src/lib/db5.ts")).toBeUndefined();
+    expect(steps("src/lib/db5.ts")).toEqual([
+      {
+        file: "src/lib/db5.ts",
+        what: "line 1: Courier could not follow authed, which src/routes/outside.tsx takes from @acme/start-kit, to a function of TanStack Start's, whose build may take the code that imports this file out of a page, so its import stays in @noverax/courier: if only that code imports this file, take createHandler from @noverax/courier/server, and otherwise give the page its own module",
+        lines: [
+          'import { createHandler } from "@noverax/courier/server"; // if only that code imports this file',
+        ],
+      },
+    ]);
+    expect(after("src/routes/ns-member.tsx")).toBeUndefined();
+    expect(steps("src/routes/ns-member.tsx")).toEqual([
+      expect.objectContaining({
+        what: expect.stringMatching(/but the page's build keeps createCaller/),
+      }),
+    ]);
+  });
+
+  it("takes Start's direct calls as its compiler does: a renamed one only as the value of a declaration at the module's top", () => {
+    const start =
+      'import { createServerOnlyFn as serverOnly } from "@tanstack/react-start";\nimport { getSources } from "@noverax/courier";\nimport { registerSources } from "@noverax/courier";\nexport const listed = serverOnly(() => getSources());\nexport function register() {\n  return serverOnly(() => registerSources);\n}\n';
+    const { after, steps } = upgraded({ "package.json": START_PACKAGE, "src/start.ts": start });
+
+    expect(after("src/start.ts")).toBe(
+      start.replace(
+        '{ getSources } from "@noverax/courier"',
+        '{ getSources } from "@noverax/courier/server"',
+      ),
+    );
+    expect(steps("src/start.ts")).toEqual([
+      expect.objectContaining({
+        what: expect.stringMatching(/^line 3: .*but the page's build keeps registerSources/),
+      }),
+    ]);
   });
 
   it("takes every file of a server framework to /server, and leaves the page's own names in the root", () => {

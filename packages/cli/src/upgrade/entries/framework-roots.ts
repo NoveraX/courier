@@ -1,8 +1,9 @@
 import type { FrameworkId, ServerId } from "@noverax/create-courier/engine";
 
 import type { PieceKind } from "../codemod/source-files";
-import { byPath } from "./path-rules";
+import { byPath, CLIENT_NAMED, isStartRoute, SERVER_NAMED, START } from "./path-rules";
 import { NONE, PAGE, SERVER, SPLIT } from "./root-kinds";
+import type { StartCode } from "./start-code";
 import { isToolConfig } from "./tool-configs";
 
 /** A framework a package's code runs on, as the upgrade tells it: one the setup knows, a server it tells beside a page, or `vite`, a page Vite builds beside a server whose framework no list knows. */
@@ -22,6 +23,8 @@ export interface PieceFacts {
   readonly exportsDefault: boolean;
   /** The names it exports, `*` for an `export *`; `undefined` where they are not read. */
   readonly exports?: readonly string[] | undefined;
+  /** What TanStack Start keeps of it to one side as it builds, where its record is read. */
+  readonly startCode?: StartCode | undefined;
 }
 
 /** What a framework's own rules say of a piece: a page's bundle starts from it, the server's code does, or the framework splits it between the two. */
@@ -172,10 +175,14 @@ export function rendersOnly(
  * Whether a page that imports a file takes none of its code: a module of
  * server functions, `"use server"`, under a framework that reads the
  * directive — Next.js and SolidStart give the page a reference to each of
- * its functions, which the server runs when the page calls it.
+ * its functions, which the server runs when the page calls it — and,
+ * under TanStack Start, a module of server functions, a route its router
+ * finds of server handlers alone and a module of `server-only`, whose
+ * code Start's compiler, router and import protection keep out of a page.
  *
  * @param framework - The importing piece's framework
- * @param to - The imported file: the directive it opens with
+ * @param to - The imported file: the directive it opens with, and what TanStack Start keeps of it to one side
+ * @param path - The imported file, as its package names it
  * @returns Whether the import carries none of the file's code to the page
  * @example
  * ```ts
@@ -184,8 +191,16 @@ export function rendersOnly(
  */
 export function takesReferencesOnly(
   framework: PackageFrameworkId | undefined,
-  to: { readonly directive: Directive | undefined | "unknown" },
+  to: {
+    readonly directive: Directive | undefined | "unknown";
+    readonly startCode?: StartCode | undefined;
+  },
+  path = "",
 ): boolean {
+  if (framework !== undefined && START.has(framework))
+    return to.startCode === "server-route"
+      ? isStartRoute(framework, path)
+      : to.startCode !== undefined && to.startCode !== "client-only";
   return (
     framework !== undefined && SERVER_FUNCTIONS.has(framework) && to.directive === "use server"
   );
@@ -195,11 +210,14 @@ export function takesReferencesOnly(
  * Whether a framework's build keeps a file out of one side's code by its
  * name: React Router and Remix leave a server module — `*.server.*`, or
  * one in a `.server/` folder — out of a page's bundle, and fail a build
- * whose page would take one, and a client module out of the server's.
+ * whose page would take one, and a client module out of the server's;
+ * TanStack Start's import protection does so for `*.server.*` and
+ * `*.client.*`, and for a module of `server-only` or `client-only`.
  *
  * @param framework - The framework of the piece that imports it
  * @param side - The side whose code it would be
  * @param path - The file, as its package names it
+ * @param startCode - What TanStack Start keeps of the file to one side, where its record is read
  * @returns Whether that side never takes the file
  * @example
  * ```ts
@@ -210,7 +228,12 @@ export function keptOut(
   framework: PackageFrameworkId | undefined,
   side: "page" | "server",
   path: string,
+  startCode?: StartCode,
 ): boolean {
+  if (framework !== undefined && START.has(framework))
+    return side === "page"
+      ? SERVER_NAMED.test(path) || startCode === "server-only"
+      : CLIENT_NAMED.test(path) || startCode === "client-only";
   if (framework === undefined || !MODULE_RULES.has(framework)) return false;
   return (side === "page" ? SERVER_MODULE : CLIENT_MODULE).test(path);
 }

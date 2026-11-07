@@ -42,15 +42,15 @@ export function sideEdges(
       ids.filter((id) => {
         const to = nodes[id];
         if (from === undefined || to === undefined || to.facts.kind === "frontmatter") return false;
-        if (keptOut(from.framework.id, "page", to.facts.path)) return false;
-        return !takesReferencesOnly(from.framework.id, to.record);
+        if (keptOut(from.framework.id, "page", to.facts.path, to.record.startCode)) return false;
+        return !takesReferencesOnly(from.framework.id, to.record, to.facts.path);
       }),
     toServer: (from, ids) =>
       ids.filter((id) => {
         const to = nodes[id];
         if (to === undefined || (to.facts.kind === "script" && to.path.endsWith(".astro")))
           return false;
-        if (keptOut(from.framework.id, "server", to.facts.path)) return false;
+        if (keptOut(from.framework.id, "server", to.facts.path, to.record.startCode)) return false;
         return !rendersOnly(from.framework.id, from.facts, {
           path: to.path,
           directive: directiveOf(to.path),

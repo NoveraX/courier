@@ -14,8 +14,17 @@ export interface TakenName {
   readonly type: boolean;
 }
 
-/* Names as a sentence lists them: `a`, `a and b`, `a, b and c`. */
-function listed(names: readonly string[]): string {
+/**
+ * Names as a sentence lists them.
+ *
+ * @param names - The names
+ * @returns `a`, `a and b`, `a, b and c`
+ * @example
+ * ```ts
+ * listed(["createCaller", "isHTTPError"]); // "createCaller and isHTTPError"
+ * ```
+ */
+export function listed(names: readonly string[]): string {
   return names.length < 2
     ? (names[0] ?? "")
     : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;

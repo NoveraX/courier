@@ -129,8 +129,9 @@ const ON_H3 = ["nuxt", "@solidjs/start", "@analogjs/platform", ...TANSTACK_START
  * beside the one its page is built with: those the command sets Courier
  * up in, and those the upgrade tells a package's sides by besides —
  * Koa, hapi and Elysia, and h3 and Nitro, built to be the server of a
- * page's framework: Nuxt's, SolidStart's, Analog's. Studio tells a
- * package by the same servers, from `@noverax/courier-build`'s list.
+ * page's framework: Nuxt's, SolidStart's, TanStack Start's, Analog's.
+ * Studio tells a package by the same servers, from
+ * `@noverax/courier-build`'s list.
  */
 export const SERVER_FRAMEWORKS: readonly ServerFramework[] = [
   setUpServer("nestjs"),

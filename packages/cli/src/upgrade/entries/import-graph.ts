@@ -8,6 +8,7 @@ import { type GlobIn, globFiles } from "./glob-imports";
 import { basesOf, resolverOf } from "./import-resolution";
 import type { GlobLoad } from "./meta-loads";
 import { type ModuleRecord, moduleRecord, type PieceRecord } from "./module-records";
+import { type StartGraph, startGraph, startWorkspace } from "./start-imports";
 import { isToolConfig, toolRecord } from "./tool-configs";
 import { type UnreadNode, unreadNodes } from "./unread-nodes";
 import type { WorkspacePackages } from "./workspace-packages";
@@ -39,13 +40,8 @@ type ReadRecord = Extract<ModuleRecord, { readonly pieces: readonly PieceRecord[
 const GLOB_TESTS = 2_000_000;
 
 /* The list a map keeps under a key, made where there is none yet. */
-function listed(map: Map<string, number[]>, key: string): number[] {
-  const known = map.get(key);
-  if (known !== undefined) return known;
-  const made: number[] = [];
-  map.set(key, made);
-  return made;
-}
+const listed = (map: Map<string, number[]>, key: string): number[] =>
+  map.get(key) ?? (map.set(key, []).get(key) as number[]);
 
 /** The workspace's pieces of code, each with where its imports lead, and what the graph could not read. */
 export interface ImportGraph {
@@ -55,6 +51,8 @@ export interface ImportGraph {
   readonly unread: readonly UnreadNode[];
   /** Each `import.meta.glob` that takes what is not a literal, by its file and line: what it loads is not read. */
   readonly unreadGlobs: ReadonlyArray<{ readonly file: string; readonly line: number }>;
+  /** What the graph read of TanStack Start's pieces: what a file's import of a name is to Start's compiler, and the files a page may load only through an import a function Courier did not follow may drop. */
+  readonly start: Pick<StartGraph, "resolve" | "unfollowed">;
 }
 
 /**
@@ -81,8 +79,9 @@ export function importGraph(
   packages: WorkspacePackages,
 ): ImportGraph {
   const paths = new Set(code.paths);
+  const keep = startWorkspace(code.paths, packages);
   const records = code.paths.map((path) =>
-    isToolConfig(path) ? toolRecord(path) : moduleRecord(workspace.root, path),
+    isToolConfig(path) ? toolRecord(path) : moduleRecord(workspace.root, path, keep),
   );
   const unparsed = records.flatMap((record) => ("unreadable" in record ? [record] : []));
   const unread = unreadNodes(workspace.root, code, unparsed, packages);
@@ -95,6 +94,7 @@ export function importGraph(
     frameworkOf: (dir: string) => packages.frameworkOf(dir).id,
   };
   const resolve = resolverOf(input);
+  const start = startGraph(records, resolve);
   /* The files a piece's globs load, matched against the walk's files sorted once, the first time a glob asks. */
   let globIn: GlobIn | undefined;
   const budget = { left: GLOB_TESTS };
@@ -129,7 +129,9 @@ export function importGraph(
     const { path } = record;
     const dir = packages.packageOf(path);
     for (const piece of record.pieces) {
-      const imports = piece.imports.map((specifier) => resolve(path, specifier));
+      const { framework, local } = packages.placeOf(path);
+      const sided = start.targets(path, piece, framework.id, local);
+      const imports = piece.imports.map((specifier) => sided(resolve(path, specifier), specifier));
       const globs = globbed(path, piece.globs);
       const alone = new Set(piece.defaultAlone);
       const filesBy = (whole: boolean) =>
@@ -139,7 +141,6 @@ export function importGraph(
       const run = new Set([...filesBy(false), ...globs.files]);
       const requires = piece.requires.map((specifier) => resolve(path, specifier));
       const made = piece.madeUp.map((prefix) => madeUp(path, dir, prefix));
-      const { framework, local } = packages.placeOf(path);
       const id = nodes.length;
       nodes.push({
         path,
@@ -149,6 +150,7 @@ export function importGraph(
           directive: piece.directive,
           exportsDefault: piece.exportsDefault,
           exports: piece.exports,
+          startCode: piece.startCode,
         },
         record: piece,
         framework,
@@ -181,5 +183,5 @@ export function importGraph(
         )
       : [],
   );
-  return { nodes, byFile, byPackage, unread: unread.nodes, unreadGlobs };
+  return { nodes, byFile, byPackage, unread: unread.nodes, unreadGlobs, start };
 }

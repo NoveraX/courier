@@ -2,11 +2,13 @@ import { closeSync, lstatSync, openSync, readFileSync, readSync } from "node:fs"
 import { join } from "node:path";
 import { parseSync } from "oxc-parser";
 
-import { programOf } from "../codemod/ast";
-import { codePieces, type PieceKind } from "../codemod/source-files";
+import { type AstNode, programOf } from "../codemod/ast";
+import { type CodePiece, codePieces, type PieceKind } from "../codemod/source-files";
 import { lineAt } from "../codemod/text-edits";
 import type { Directive } from "./framework-roots";
 import { type GlobLoad, metaLoads } from "./meta-loads";
+import { type StartCode, startCodeOf } from "./start-code";
+import { type StartText, type StartTree, startRecordOf } from "./start-exports";
 
 /** What a piece of code loads, as the graph of imports reads it. */
 export interface PieceRecord {
@@ -27,6 +29,12 @@ export interface PieceRecord {
   readonly globs: readonly GlobLoad[];
   /** Where an `import.meta.glob` takes what is not a literal, which Vite does not build: its offset in the piece, its line in the file once the file is read. */
   readonly unreadGlobs: readonly number[];
+  /** What TanStack Start keeps of it to one side as it builds: its server functions, a route of server handlers alone, a module of one side's marker. */
+  readonly startCode?: StartCode | undefined;
+  /** For a piece that imports Start's or Router's packages, what the graph reads its sides by as Start builds it: its tree, what it loads beside its imports — the modules its `new URL()` names — and whether it makes a route. */
+  readonly startTree?: StartTree | undefined;
+  /** Its text, where its workspace builds with Start and it exports something, for the graph to read what it exports by once an import comes to it. */
+  readonly startText?: StartText | undefined;
 }
 
 /** A file of code as the graph reads it: its pieces, or that it could not be read whole, and the directive it opens with. */
@@ -76,7 +84,7 @@ function dynamicSpecifier(
 }
 
 /* A piece's record, from oxc's record of its module: the tree, which costs more than the parse itself to hand over, is asked for only where a call of import.meta's is not told from its own text. */
-function pieceRecord(kind: PieceKind, parseAs: string, text: string): PieceRecord | undefined {
+function pieceRecord({ kind, parseAs, text }: CodePiece, keep: boolean): PieceRecord | undefined {
   const parsed = parseSync(`piece${parseAs}`, text);
   if (parsed.errors.length > 0) return undefined;
   const { staticImports, staticExports, dynamicImports, importMetas } = parsed.module;
@@ -105,8 +113,11 @@ function pieceRecord(kind: PieceKind, parseAs: string, text: string): PieceRecor
       alone.set(written.literal, false);
     } else madeUp.push(written.prefix);
   }
-  /* Each call of import.meta's is read from its own text: the tree costs more than the parse, the larger the file the more. */
-  const meta = metaLoads({ text, parseAs, metas: importMetas }, () => programOf(parsed.program));
+  /* Each call of import.meta's is read from its own text: the tree costs more than the parse, the larger the file the more, and is read once, where asked for. */
+  let tree: AstNode | undefined;
+  const program = () => (tree ??= programOf(parsed.program));
+  const meta = metaLoads({ text, parseAs, metas: importMetas }, program);
+  const keepAs = keep && staticExports.length > 0 ? parseAs : undefined;
   for (const url of meta.urls) {
     imports.push(url);
     alone.set(url, false);
@@ -129,6 +140,8 @@ function pieceRecord(kind: PieceKind, parseAs: string, text: string): PieceRecor
     defaultAlone: [...alone].flatMap(([specifier, only]) => (only ? [specifier] : [])),
     globs: meta.globs,
     unreadGlobs: meta.unread,
+    startCode: startCodeOf(values, text),
+    ...startRecordOf(text, values, program, meta.urls, keepAs),
   };
 }
 
@@ -142,18 +155,19 @@ function pieceRecord(kind: PieceKind, parseAs: string, text: string): PieceRecor
  *
  * @param root - The workspace's folder
  * @param path - The file, relative to the root
+ * @param keep - Whether its workspace builds with TanStack Start, so that a piece that exports something keeps its text
  * @returns Its record
  * @example
  * ```ts
  * moduleRecord(root, "src/app/page.tsx"); // { path, pieces: [{ kind: "module", imports: ["@/lib/api"], … }] }
  * ```
  */
-export function moduleRecord(root: string, path: string): ModuleRecord {
+export function moduleRecord(root: string, path: string, keep = false): ModuleRecord {
   if (TYPES_ONLY.test(path)) return { path, pieces: [] };
   const text = readFileSync(join(root, path), "utf8");
   const pieces: PieceRecord[] = [];
   for (const piece of codePieces(path, text)) {
-    const record = pieceRecord(piece.kind, piece.parseAs, piece.text);
+    const record = pieceRecord(piece, keep);
     if (record === undefined) return { path, unreadable: true, directive: directiveOf(text) };
     const lines = record.unreadGlobs.map((at) => lineAt(text, piece.offset + at));
     pieces.push({ ...record, unreadGlobs: lines });

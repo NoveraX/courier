@@ -150,7 +150,7 @@ export const startInstance = createStart(() => ({
 }))
 ```
 
-Keep TanStack Start's own `createCsrfMiddleware` in the list: once `src/start.ts` is there, TanStack Start no longer adds it to your server functions itself. The cookies the API sets reach the browser on the response TanStack Start prepares, a redirect's and an error's too. A page streams: a cookie set after its first part was sent cannot reach the browser, and with `requestContext()` the log says so.
+Keep TanStack Start's own `createCsrfMiddleware` in the list: once `src/start.ts` is there, TanStack Start no longer adds it to your server functions itself. A page that writes later gets its double-submit token with the page from `createMiddleware().server(csrfTokenMiddleware(api))` in its route's `server.middleware`. The cookies the API sets reach the browser on the response TanStack Start prepares, a redirect's and an error's too. A page streams: a cookie set after its first part was sent cannot reach the browser, and with `requestContext()` the log says so.
 
 <br />
 
@@ -177,6 +177,10 @@ From `/react` and `/solid`: a caller for server code whose calls carry the sessi
 ### `requestContext()`
 
 From `/react` and `/solid`: the server part of a request middleware, for `createMiddleware().server(…)`, that serves every request with its session at hand.
+
+### `csrfTokenMiddleware(...apis)`
+
+From `/react` and `/solid`: the server part of a request middleware, for `createMiddleware().server(…)` on a page's route, that hands each API's double-submit token to the browser with the page where the request does not carry it.
 
 ### `tanstackStartRequestContext`
 

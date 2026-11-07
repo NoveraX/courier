@@ -1,7 +1,9 @@
 import "@tanstack/react-start/server-only";
+import type { AnyDefinedApi } from "@noverax/courier/define";
 import type { RequestContextProvider } from "@noverax/courier/server";
 import { appendResponseHeader, getRequest } from "@tanstack/react-start/server";
 
+import { csrfTokenMiddlewareOver } from "./csrf-token-middleware";
 import { startRequestContext } from "./request-context";
 import { type RequestMiddlewareServer, requestContextOver } from "./request-context-middleware";
 import { type CreateServerCaller, serverCallerOver } from "./server-caller";
@@ -102,3 +104,32 @@ export const createServerCaller: CreateServerCaller = serverCallerOver(tanstackS
 export const requestContext: () => RequestMiddlewareServer = requestContextOver(
   tanstackStartRequestContext,
 );
+
+/**
+ * The server part of a request middleware that hands each API's
+ * double-submit token to the browser with the page, where the request does
+ * not carry it, for `createMiddleware().server(…)` — on the routes of the
+ * pages that write later, from the browser or as they render. The token
+ * is asked for once, with the user's session, through the API's
+ * middleware, and the calls the request makes after it send it at once.
+ * A request that carries the token asks nothing.
+ *
+ * @param apis - The APIs whose `session.csrf.from` names where each hands its token out
+ * @returns The middleware's server part
+ * @example
+ * ```ts
+ * // src/routes/account.tsx
+ * import { createMiddleware } from "@tanstack/react-start";
+ * import { csrfTokenMiddleware } from "@noverax/courier-tanstack-start/react";
+ * import { api } from "../api";
+ *
+ * const csrfTokens = createMiddleware().server(csrfTokenMiddleware(api));
+ *
+ * export const Route = createFileRoute("/account")({
+ *   server: { middleware: [csrfTokens] },
+ *   component: Account,
+ * });
+ * ```
+ */
+export const csrfTokenMiddleware: (...apis: AnyDefinedApi[]) => RequestMiddlewareServer =
+  csrfTokenMiddlewareOver(tanstackStartRequestContext);

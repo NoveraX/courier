@@ -112,6 +112,32 @@ A page streams, and its headers leave with its first part. A cookie the API sets
 
 Await in the loader what may renew the session, so the page waits for it. The user's address a call forwards is the connection's, after the chain a local proxy recorded. See [User Sessions](/docs/server-side/session).
 
+## The double-submit token
+
+An API whose `session.csrf` names where it hands its token out is asked for it before a write that finds none. A page whose writes come later — from the browser, through the proxy — can have the token handed to the browser with the page instead, as Django's `ensure_csrf_cookie` does. Give the page's route the middleware:
+
+```tsx title="src/routes/account.tsx"
+import { createFileRoute } from "@tanstack/react-router"
+import { createMiddleware } from "@tanstack/react-start"
+import { csrfTokenMiddleware } from "@noverax/courier-tanstack-start/react"
+
+import { api } from "../api"
+
+const csrfTokens = createMiddleware().server(csrfTokenMiddleware(api))
+
+export const Route = createFileRoute("/account")({
+  server: { middleware: [csrfTokens] },
+  component: Account,
+})
+```
+
+- A request that carries the token asks nothing. Otherwise the token is asked for once, with the user's session and through the API's middleware, and reaches the browser with the page; the calls the same request makes after it send it at once.
+- Each API is asked for its own: `csrfTokenMiddleware(api, billing)`.
+- TanStack Start drops a route's `server` from the browser's code, and the middleware with it.
+- A write goes through without the middleware too, since one that finds no token asks for it first: the middleware is for the browser to hold the token before its first write, and for a write the browser sends past the proxy.
+
+See [When there is no token yet](/docs/server-side/session#when-there-is-no-token-yet).
+
 ## Server functions
 
 A server function is TanStack Start's own typed call from the browser to the server, its input validated with `.inputValidator()`. Call your API from its handler through `createServerCaller`, as above.

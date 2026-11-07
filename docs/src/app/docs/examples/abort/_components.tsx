@@ -4,9 +4,12 @@ import { isAbortError, isHTTPError } from "@noverax/courier"
 import { useRef, useState } from "react"
 
 import { caller } from "@/lib/caller"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
+
+const SLOW = ["api.misc.slow"]
 
 export function ManualAbortDemo() {
   const controller = useRef<AbortController | null>(null)
@@ -44,7 +47,18 @@ export function ManualAbortDemo() {
           />
         </>
       }
-      result={<ResponseView data={data} error={error} pending={loading} />}
+      result={
+        <div className="flex flex-col gap-3">
+          <ResponseView data={data} error={error} pending={loading} />
+          <p className="m-0 text-[11.5px] leading-[1.5] text-fg-subtle">
+            Cancelled, the request gets no answer, so the site&apos;s server has none to tell its
+            side in: it stops its own request to the API as the browser leaves. Chrome records the
+            cancelled request below; Safari records none. Your browser&apos;s developer tools show
+            it under Network as cancelled.
+          </p>
+        </div>
+      }
+      inspector={<RequestInspector calls={SLOW} />}
     />
   )
 }
@@ -96,6 +110,7 @@ export function SharedReadsDemo() {
         </>
       }
       result={<ResponseView data={counted} pending={loading} />}
+      inspector={<RequestInspector calls={["api.users.getAll"]} />}
     />
   )
 }
@@ -139,6 +154,7 @@ export function CancelPreviousDemo() {
         </>
       }
       result={<ResponseView data={data} pending={pending > 0} />}
+      inspector={<RequestInspector calls={SLOW} />}
     />
   )
 }

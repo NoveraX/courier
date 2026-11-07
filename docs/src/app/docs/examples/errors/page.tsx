@@ -13,7 +13,7 @@ try {
   if (error instanceof HTTPError) {
     console.log(error.status)  // 404
     console.log(error.data)    // { success: false, message: "..." }
-    console.log(error.headers) // Headers object
+    console.log(error.headers) // Headers: the answer's own
   }
 }`
 
@@ -58,7 +58,7 @@ export default function ErrorsExamplesPage() {
     <ExamplePage name="errors">
       <ExampleSection
         title="HTTPError — Catch & Inspect"
-        description="HTTPError provides status, data, and headers. Select an error code and trigger it."
+        description="HTTPError provides status, data, and headers. Select an error code and trigger it: the request below shows which leg answered with the error — here the API, its answer passed on by the route. This site's server names each call in X-Courier-Rid, so the id error.headers holds is the one the request shows."
         code={catchCode}
         learnMore={{ href: "/docs/core-concepts/error-handling", label: "Error handling docs" }}
       >

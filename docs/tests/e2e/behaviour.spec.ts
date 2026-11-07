@@ -8,7 +8,8 @@
 import { answerTo, expect, sandbox, test } from "./support/fixtures"
 import { expectNoSecrets, inspectorOf, newestRequest, proxyTimings } from "./support/inspector"
 
-test("answers each error a page asks for, caught as an HTTPError", async ({ page }) => {
+test("answers each error a page asks for, caught as an HTTPError", async ({ page, context }) => {
+  const timings = proxyTimings(page)
   await page.goto("/docs/examples/errors")
   const caught = sandbox(page, "caller.misc.error({ code })")
   await caught.getByLabel("code", { exact: true }).selectOption("422")
@@ -17,12 +18,20 @@ test("answers each error a page asks for, caught as an HTTPError", async ({ page
   expect((await answer).status()).toBe(422)
   await expect(caught).toContainText('"name": "HTTPError"')
   await expect(caught).toContainText("Intentional 422 error")
+  const rid = (await answer).headers()["x-courier-rid"] ?? ""
+  await expect(caught).toContainText(`"x-courier-rid": "${rid}"`)
+  const told = newestRequest(inspectorOf(caught))
+  await expect(told).toContainText("API (demo): GET /error/422 → 422")
+  await expect(told).toContainText(`X-Courier-Rid: ${rid}`)
 
   const guard = sandbox(page, "isHTTPError(error)")
   const forbidden = answerTo(page, "api.misc.error")
   await guard.getByRole("button", { name: "Trigger a 403" }).click()
   expect((await forbidden).status()).toBe(403)
   await expect(guard).toContainText('"isHttpError": true')
+  await expect(newestRequest(inspectorOf(guard))).toContainText("GET /error/403 → 403")
+  await expect(inspectorOf(guard)).not.toContainText("/error/422")
+  await expectNoSecrets(page, context, timings)
 })
 
 test("runs the middleware source's chain link by link, its error caught past it", async ({
@@ -63,6 +72,7 @@ test("runs the middleware source's chain link by link, its error caught past it"
 
 test("cancels a slow call, shares three reads, and cancels a call with the next", async ({
   page,
+  browserName,
 }) => {
   await page.goto("/docs/examples/abort")
   const manual = sandbox(page, "caller.misc.with({ signal }).slow()")
@@ -71,11 +81,19 @@ test("cancels a slow call, shares three reads, and cancels a call with the next"
   await started
   await manual.getByRole("button", { name: "Cancel" }).click()
   await expect(manual).toContainText("Aborted: Cancel stopped the request")
+  /* Chromium records a request the page cancelled; WebKit records none. */
+  if (browserName === "chromium") {
+    await expect(newestRequest(inspectorOf(manual))).toContainText(
+      "no answer reached the browser — cancelled or failed after"
+    )
+  }
 
   const shared = sandbox(page, "Promise.all([users.getAll(), users.getAll(), users.getAll()])")
   await shared.getByRole("button", { name: "Read the users three times" }).click()
   await expect(shared).toContainText('"calls": 3')
   await expect(shared).toContainText('"requests": 1')
+  await expect(inspectorOf(shared).getByRole("group")).toHaveCount(1)
+  await expect(newestRequest(inspectorOf(shared))).toContainText("GET /users → 200")
 
   const previous = sandbox(page, "caller.misc.with({ cancelPrevious: true }).slow()")
   const again = previous.getByRole("button", { name: "Call, then call again" })
@@ -85,6 +103,8 @@ test("cancels a slow call, shares three reads, and cancels a call with the next"
   await expect(previous).toContainText("cancelled 1")
   await expect(previous).toContainText("This response was delayed by 3 seconds")
   await expect(previous).toContainText("in flight 0")
+  await expect(inspectorOf(previous).getByRole("group")).toHaveCount(1)
+  await expect(newestRequest(inspectorOf(previous))).toContainText("GET /slow → 200")
 })
 
 test("times out a call that answers later than its timeout, and not one that answers sooner", async ({

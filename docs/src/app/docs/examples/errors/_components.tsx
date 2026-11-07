@@ -4,6 +4,7 @@ import { isHTTPError } from "@noverax/courier"
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -16,7 +17,14 @@ interface Caught {
   status: number
   message: string
   data: unknown
+  /** Two of the headers the route answered with: its body's type, and the id it gave the call. */
+  headers: Record<string, string | null>
 }
+
+/* The headers of a refusal the sandbox shows: none of them a credential. */
+const SHOWN_HEADERS = ["content-type", "x-courier-rid"]
+
+const ERRORS = ["api.misc.error"]
 
 export function CatchDemo() {
   const [code, setCode] = useState<number>(404)
@@ -34,6 +42,7 @@ export function CatchDemo() {
         status: failure.status,
         message: failure.message,
         data: failure.data,
+        headers: Object.fromEntries(SHOWN_HEADERS.map((name) => [name, failure.headers.get(name)])),
       })
     } finally {
       setLoading(false)
@@ -49,6 +58,7 @@ export function CatchDemo() {
         </>
       }
       result={<ResponseView data={caught ?? undefined} status={caught?.status} pending={loading} />}
+      inspector={<RequestInspector calls={ERRORS} />}
     />
   )
 }
@@ -82,6 +92,7 @@ export function GuardDemo() {
         <RunButton loading={loading} label="Trigger a 403" onClick={() => void trigger()} />
       }
       result={<ResponseView data={result ?? undefined} status={result?.status} pending={loading} />}
+      inspector={<RequestInspector calls={ERRORS} />}
     />
   )
 }

@@ -154,6 +154,28 @@ Keep TanStack Start's own `createCsrfMiddleware` in the list: once `src/start.ts
 
 <br />
 
+## With Frontend
+
+Add the routes plugin beside TanStack Start's, so every page and the server that renders it get the routes a proxy client may call, built from `courier.config.ts`. It runs on `@noverax/courier-build`, which only the build needs:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+```ts
+// vite.config.ts
+import { courierRoutes } from "@noverax/courier-tanstack-start/plugin"
+import { tanstackStart } from "@tanstack/react-start/plugin/vite"
+import viteReact from "@vitejs/plugin-react"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [tanstackStart(), viteReact(), courierRoutes()] })
+```
+
+An app built with Rsbuild takes `courierRoutes()` from `@noverax/courier-tanstack-start/rsbuild` into `rsbuild.config.ts` beside TanStack Start's Rsbuild plugin. Then pair with `createProxyCaller(routes.api)` from `@noverax/courier/client`, the config registered once so `routes` is typed from it — see [Exposing Endpoints](https://courier.noverax.cloud/docs/proxy-mode/expose).
+
+<br />
+
 ## Cancelled calls
 
 When the browser cancels a call — an aborted upload, a query it no longer needs, a stream it closes — the proxy stops its own upstream request. TanStack Start's dev server, `vite preview` and Nitro end the request's signal when the client leaves.
@@ -169,6 +191,10 @@ The handlers of the route the proxy's calls go to: a read over `GET`, a write ov
 ### `sseRoute(config?)`
 
 The handlers of the route the proxy's streams are opened at: a stream over `GET`, a preflight over `OPTIONS`, and 405 for any other method.
+
+### `courierRoutes(options?)`
+
+From `/plugin` for Vite and `/rsbuild` for Rsbuild: the plugin that builds the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. Under Rsbuild's dev server, `/rsbuild` names a page's scripts by their content, as a build does, so a page loaded after an edit never runs an old copy an engine kept of them; an app that names its scripts itself keeps its names, and one that writes them to disk keeps there those of the last two builds alone. `config` names the config file when it is not the one found from the root.
 
 ### `createServerCaller(api, defaults?)`
 

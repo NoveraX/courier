@@ -8,5 +8,7 @@ export default defineConfig({
     index: "src/index.ts",
     react: "src/react.ts",
     solid: "src/solid.ts",
+    plugin: "src/plugin.ts",
+    rsbuild: "src/rsbuild.ts",
   },
 });

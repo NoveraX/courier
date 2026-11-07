@@ -52,6 +52,55 @@ TanStack Start drops a route's `server` from the code it sends the browser, so n
 
 The user's address that a call forwards is the address of the connection the request came on. The servers TanStack Start runs on — its dev server, `vite preview`, Nitro — keep Node's request with it, and the chain a local proxy recorded in `X-Forwarded-For` is kept before it.
 
+## The client
+
+Courier's plugin gives the page its routes, built from the endpoints you mark `.expose()`. It runs on `@noverax/courier-build`, which only the build needs:
+
+```bash
+npm install --save-dev @noverax/courier-build
+```
+
+```ts title="vite.config.ts"
+import { courierRoutes } from "@noverax/courier-tanstack-start/plugin"
+import { tanstackStart } from "@tanstack/react-start/plugin/vite"
+import viteReact from "@vitejs/plugin-react"
+import { defineConfig } from "vite"
+
+export default defineConfig({ plugins: [tanstackStart(), viteReact(), courierRoutes()] })
+```
+
+An app TanStack Start builds with Rsbuild takes the plugin from `/rsbuild`:
+
+```ts title="rsbuild.config.ts"
+import { courierRoutes } from "@noverax/courier-tanstack-start/rsbuild"
+import { defineConfig } from "@rsbuild/core"
+import { pluginReact } from "@rsbuild/plugin-react"
+import { tanstackStart } from "@tanstack/react-start/plugin/rsbuild"
+
+export default defineConfig({ plugins: [pluginReact(), tanstackStart(), courierRoutes()] })
+```
+
+Pair with `createProxyCaller` on the client, given those routes, in a module that registers the config, so they are typed from it — see [Exposing Endpoints](/docs/proxy-mode/expose):
+
+```ts title="src/caller.ts"
+import { createProxyCaller } from "@noverax/courier/client"
+import { routes } from "@noverax/courier/routes"
+
+import type config from "../courier.config"
+
+declare module "@noverax/courier/routes" {
+  interface Register {
+    config: typeof config
+  }
+}
+
+// The routes name the key this source has in your `sources` map —
+// it is what the proxy addresses, and it travels as `?_s=<name>`.
+export const caller = createProxyCaller(routes.api)
+```
+
+The caller sends to `/api/request` and `/api/sse` on the page's own origin, the routes above.
+
 ## Cancelled calls
 
 When the browser cancels a call — an aborted upload, a query it no longer needs, a stream it closes — the proxy stops its own upstream request. TanStack Start's servers end the request's signal when the client leaves, in development and in production alike.

@@ -114,6 +114,7 @@ export const client = createProxyCaller(routes.api)
 | Next.js, under Turbopack or webpack | `withCourier(nextConfig)` from `@noverax/courier-next/plugin`, in `next.config` |
 | Nuxt | `courierRoutesModule` from `@noverax/courier-nuxt/plugin`, in `modules` |
 | SvelteKit, React Router, Remix, SolidStart | `courierRoutes()` from the framework package's `/plugin`, in `vite.config`'s `plugins` |
+| TanStack Start | `courierRoutes()` from `@noverax/courier-tanstack-start/plugin` in `vite.config`'s `plugins`, or from `/rsbuild` in `rsbuild.config`'s |
 | Astro | `courierRoutesIntegration()` from `@noverax/courier-astro/plugin`, in `integrations` |
 | Vite and Vitest | `courierRoutes()` from `@noverax/courier-build/vite` |
 | webpack, Rspack, Rsbuild | `@noverax/courier-build/webpack`, `/rspack` and `/rsbuild` |

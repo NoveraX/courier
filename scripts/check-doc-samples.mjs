@@ -4,7 +4,8 @@
  * Fail when a TypeScript sample of the docs or a README does not compile
  * against the packages as they are built.
  *
- * Each ts or tsx fence becomes a module of its own. A sample may leave out
+ * Each ts or tsx fence, and each TypeScript tab of tabbed code, becomes a
+ * module of its own. A sample may leave out
  * what is not its point — the reader's own `users` group, a helper, an
  * import — so names it uses without declaring them are not reported, and
  * the reader's own modules (`@/…`, relative paths) are typed as anything. A
@@ -17,6 +18,10 @@
  * year after it took three, and a signature, an option list and a return
  * type each drifted the same way.
  *
+ * A sample also imports the core's entry its side takes: a page
+ * `@noverax/courier/client`, a server `@noverax/courier/server` — see
+ * `scripts/sample-entries.mjs`.
+ *
  * Exits 1 with a list of places when found.
  */
 
@@ -28,6 +33,7 @@ import { fileURLToPath } from "node:url";
 
 import { extractSamples, importHeader, samplePages } from "./doc-samples.mjs";
 import { placeSamples } from "./page-modules.mjs";
+import { entryProblems } from "./sample-entries.mjs";
 import { isOmission, samplesLeavingOut } from "./sample-omissions.mjs";
 
 const require = createRequire(import.meta.url);
@@ -207,9 +213,11 @@ function main() {
       page: relative(ROOT, page),
     })),
   );
-  const problems = checkSamples(samples);
+  const problems = [...checkSamples(samples), ...entryProblems(samples)];
   if (problems.length === 0) {
-    console.log(`check-doc-samples: all ${samples.length} samples compile`);
+    console.log(
+      `check-doc-samples: all ${samples.length} samples compile, each from its side's entries`,
+    );
     return;
   }
   console.error(`check-doc-samples: ${problems.length} problem(s) in ${samples.length} samples\n`);

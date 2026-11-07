@@ -5,7 +5,7 @@ import { csrfSource } from "../session/csrf-source";
 import { askForToken, askOnce, tokenCall } from "../utils/csrf-prime";
 import { callInstruments } from "../utils/execute-studio";
 import { prepareAndRun } from "../utils/prepare-and-run";
-import { assertServerOptions } from "./assert-server-options";
+import { heldOptionsOf } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 import { captureIncomingRequest } from "./session/request-providers";
 import { cookieJarFor } from "./session/request-state";
@@ -36,7 +36,7 @@ export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   provideServerCapabilities();
   const source = getSourceName(api) ?? "api";
   /* Read once, and what the server holds of it: the session's own, and its address. */
-  const { options: sourceOptions, session } = assertServerOptions(api, source);
+  const { options: sourceOptions, session } = heldOptionsOf(api, source);
   const csrf = session?.csrf;
   if (csrf?.from === undefined) {
     throw new ConfigurationError(

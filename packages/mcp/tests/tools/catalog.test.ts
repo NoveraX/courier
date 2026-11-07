@@ -3,6 +3,7 @@
  * the declarations that stop a server before a model ever sees them.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { prepareSources } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -96,6 +97,36 @@ describe("a catalog", () => {
       expect.objectContaining({ code: "AGENT_READ_ON_WRITE" }),
     );
     expect(() => buildCatalog({ long })).toThrow(/more than the 64 a client takes/);
+  });
+});
+
+describe("a catalog of sources a server took up", () => {
+  it("offers an endpoint the API was given after, by its mark as the server holds it, read once", () => {
+    const shop = defineApi({
+      name: "shop",
+      baseURL: "https://s.example",
+      endpoints: { items: endpoint.get("items") },
+    });
+    prepareSources({ shop }, "a test", "prepareSources({ shop })");
+    const extra = endpoint.get("extra").agent(read("Reads the extra"));
+    let reads = 0;
+    const options = new Proxy(extra.options, {
+      get(target, key, receiver) {
+        if (key === "agent") reads += 1;
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    Object.assign(shop, { extra: Object.assign(extra, { options }) });
+    prepareSources({ shop }, "a test", "prepareSources({ shop })");
+    reads = 0;
+
+    const { tools } = buildCatalog({ shop });
+
+    expect(tools.map((tool) => [tool.name, tool.agent.description, tool.offeredBy])).toEqual([
+      ["extra", "Reads the extra", "marked"],
+    ]);
+    expect(reads).toBe(1);
+    expect(Object.getOwnPropertyDescriptor(extra.options, "agent")?.writable).toBe(false);
   });
 });
 

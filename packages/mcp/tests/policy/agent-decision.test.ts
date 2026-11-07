@@ -4,7 +4,7 @@
  * pattern, `offer` — the first rule that speaks deciding it.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { eachEndpoint } from "@noverax/courier/internal";
+import { agentOptionsOf, eachEndpoint } from "@noverax/courier/internal";
 import { describe, expect, it } from "vitest";
 
 import { decideEndpoint, impliedAccess } from "../../src/policy/agent-decision";
@@ -37,7 +37,8 @@ function decided(agents: unknown): Record<string, unknown> {
   const policy = checkedPolicy(agents);
   return Object.fromEntries(
     [...eachEndpoint(shop)].map((placed) => {
-      const decision = decideEndpoint(placed, `shop.${placed.id}`, policy);
+      const marked = agentOptionsOf(placed.options.agent);
+      const decision = decideEndpoint(placed, `shop.${placed.id}`, policy, marked);
       return [placed.id, decision.offered ? `${decision.by} ${decision.access}` : decision.by];
     }),
   );
@@ -97,7 +98,8 @@ describe("the policy's decision", () => {
   it("has a person confirm from the access confirm names", () => {
     const policy = checkedPolicy({ offer: "all", confirm: "write" });
     const confirms = [...eachEndpoint(shop)].flatMap((placed) => {
-      const decision = decideEndpoint(placed, `shop.${placed.id}`, policy);
+      const marked = agentOptionsOf(placed.options.agent);
+      const decision = decideEndpoint(placed, `shop.${placed.id}`, policy, marked);
       return decision.offered && decision.confirm ? [placed.id] : [];
     });
 

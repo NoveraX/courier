@@ -7,7 +7,7 @@
  * refuses them. Options it took up are not checked again, however many
  * calls take them.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller as createPageCaller } from "../../src/caller";
 import { defineApi } from "../../src/define/api";
@@ -15,6 +15,7 @@ import { courier } from "../../src/define/courier";
 import { withIncomingRequest } from "../../src/node-request-context";
 import { createCaller } from "../../src/server/create-caller";
 import { assertSessionApi } from "../../src/server/session/assert-session-api";
+import { _resetSourcesForTests, registerSources } from "../../src/server/sources";
 import type { IncomingRequest } from "../../src/session/incoming-request";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
@@ -40,6 +41,10 @@ afterAll(async () => {
 beforeEach(() => {
   upstream.seen.length = 0;
   vi.mocked(assertSessionApi).mockClear();
+});
+
+afterEach(() => {
+  _resetSourcesForTests();
 });
 
 /* An API whose options are given as a test writes them, whatever their type says. */
@@ -165,6 +170,36 @@ describe("an endpoint an API is given after a server took it up", () => {
       message: expect.stringMatching(/^accounts\.extra: "cookie" in its headers/),
     });
     expect(upstream.seen).toEqual([]);
+  });
+
+  it("is checked and held where the API's sources are registered again", () => {
+    const api = apiWith({ session: { cookies: ["sid"] } });
+    createCaller(api);
+    const extra = endpoint.get("extra").agent({ description: "Reads the extra", access: "read" });
+    Object.assign(api, { extra });
+    registerSources({ accounts: api });
+    const options = extra.options as unknown as Record<string, unknown>;
+
+    expect(Object.getOwnPropertyDescriptor(options, "agent")).toMatchObject({
+      writable: false,
+      configurable: false,
+    });
+    expect(() => {
+      options.agent = { description: "Deletes the extra", access: "destructive" };
+    }).toThrow(TypeError);
+  });
+
+  it("is refused where the API's sources are registered again, before any call of it", () => {
+    const api = apiWith({ session: { cookies: ["sid"] } });
+    registerSources({ accounts: api });
+    Object.assign(api, { extra: endpoint.get("extra").headers(["cookie"]) });
+
+    expect(() => registerSources({ accounts: api })).toThrow(
+      expect.objectContaining({
+        code: "SESSION_HEADER_CONFLICT",
+        message: expect.stringMatching(/^accounts\.extra: "cookie" in its headers/),
+      }),
+    );
   });
 });
 

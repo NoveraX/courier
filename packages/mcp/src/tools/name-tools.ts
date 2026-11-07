@@ -1,5 +1,5 @@
 import { type AgentOptions, ConfigurationError } from "@noverax/courier";
-import { agentOptionsOf, type PlacedEndpoint } from "@noverax/courier/internal";
+import type { PlacedEndpoint } from "@noverax/courier/internal";
 import type { JSONSchemaFallback } from "@noverax/courier/openapi";
 
 import type { AgentDecision } from "../policy/agent-decision";
@@ -14,6 +14,8 @@ export interface DecidedEndpoint {
   readonly source: string;
   /** Its call under its source: `shop.orders.cancel`. */
   readonly path: string;
+  /** Its `.agent()`, checked, as the catalog read it once */
+  readonly marked: AgentOptions | false | undefined;
   readonly decision: AgentDecision;
 }
 
@@ -34,7 +36,7 @@ export interface NamedTools {
  * @param prefixed - Whether names lead with their source, as when several are served
  * @param fallback - A converter for schemas whose library has no Standard JSON Schema
  * @returns The tools by the endpoint's index, and why an offered one has none
- * @throws ConfigurationError `AGENT_READ_ON_WRITE`, `AGENT_TOOL_NAME_TAKEN` or `AGENT_OPTIONS_INVALID` for a marked tool
+ * @throws ConfigurationError `AGENT_READ_ON_WRITE` or `AGENT_TOOL_NAME_TAKEN` for a marked tool
  * @example
  * ```ts
  * nameTools(decided, false, undefined).tools.get(0)?.name; // "orders_get"
@@ -52,7 +54,7 @@ export function nameTools(
     decided.forEach((placed, at) => {
       const { decision } = placed;
       if (!decision.offered || (decision.by === "marked") !== marked) return;
-      const agent = agentOptionsOf(placed.endpoint.options.agent);
+      const agent = placed.marked;
       const tool =
         marked && agent
           ? markedTool(placed, agent, prefixed, fallback)

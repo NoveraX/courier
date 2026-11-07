@@ -1,5 +1,5 @@
-import type { AgentAccess } from "@noverax/courier";
-import { agentOptionsOf, type PlacedEndpoint } from "@noverax/courier/internal";
+import type { AgentAccess, AgentOptions } from "@noverax/courier";
+import type { PlacedEndpoint } from "@noverax/courier/internal";
 
 import type { AgentPattern } from "./agent-pattern";
 import type { CheckedPolicy } from "./checked-policy";
@@ -45,22 +45,23 @@ const RANK: Readonly<Record<AgentAccess, number>> = { read: 0, write: 1, destruc
  * @param endpoint - The endpoint, as its API places it
  * @param path - Its call under its source: `shop.orders.cancel`
  * @param policy - The project's policy, checked
+ * @param marked - Its `.agent()`, checked, as the catalog read it once
  * @returns The decision
  * @example
  * ```ts
- * decideEndpoint(endpoint, "billing.invoices.void", policy); // { offered: false, by: "deny", pattern: "billing.**" }
+ * decideEndpoint(endpoint, "billing.invoices.void", policy, undefined); // { offered: false, by: "deny", pattern: "billing.**" }
  * ```
  */
 export function decideEndpoint(
   endpoint: PlacedEndpoint,
   path: string,
   policy: CheckedPolicy,
+  marked: AgentOptions | false | undefined,
 ): AgentDecision {
   if (endpoint.kind === "stream" || endpoint.kind === "channel")
     return { offered: false, by: "kind" };
   const denied = firstMatch(policy.deny, path);
   if (denied !== undefined) return { offered: false, by: "deny", pattern: denied };
-  const marked = agentOptionsOf(endpoint.options.agent);
   if (marked === false) return { offered: false, by: "opted-out" };
   const access = marked?.access ?? impliedAccess(endpoint);
   if (RANK[access] > RANK[policy.access]) return { offered: false, by: "ceiling", access };

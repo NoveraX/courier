@@ -64,11 +64,12 @@ const NO_OPTIONS: object = Object.freeze({});
  * depths as well. Only data passes the check — objects of plain data and
  * lists of strings — so the copy holds all of it. A server knows what it
  * holds by the objects it took up, the API's options and each endpoint's:
- * options put in their place, and an endpoint the API is given later, are
- * checked as these are before a call takes them (`heldForCall`). A page
- * carries none of this: it reads its session's `bearer`, `csrf` and
- * `allowHttp` itself, and checks, as each call goes, only where the
- * session is sent.
+ * options put in their place are checked as these are before a call takes
+ * them (`heldForCall`), and an endpoint the API is given later as well, or
+ * here first, where its sources are registered again or another way in
+ * takes the API up whole. A page carries none of this: it reads its
+ * session's `bearer`, `csrf` and `allowHttp` itself, and checks, as each
+ * call goes, only where the session is sent.
  *
  * @param api - The API
  * @param where - Its name, for the errors
@@ -82,9 +83,27 @@ const NO_OPTIONS: object = Object.freeze({});
  * ```
  */
 export function assertServerOptions(api: AnySource, where: string): HeldOptions {
+  return takeUp(api, api.options ?? NO_OPTIONS, where, undefined);
+}
+
+/**
+ * What a server holds of an API's options, the API taken up first where
+ * the server took none of them up with it — as a server's caller does,
+ * made for each request as it may be, or `ensureCsrfToken`: an endpoint
+ * the API was given since it is checked as its call takes it.
+ *
+ * @param api - The API
+ * @param where - Its name, for the errors
+ * @returns What the server holds of the API's options
+ * @throws ConfigurationError what `assertServerOptions` refuses options with
+ * @example
+ * ```ts
+ * heldOptionsOf(api, "accounts").session?.csrf;
+ * ```
+ */
+export function heldOptionsOf(api: AnySource, where: string): HeldOptions {
   const options: object = api.options ?? NO_OPTIONS;
   const taken = takenUp.get(options);
-  /* A server registers its sources again with each hot reload. */
   return taken?.apis.has(api) === true ? taken : takeUp(api, options, where, undefined);
 }
 
@@ -127,8 +146,10 @@ function takeUp(
   called: readonly [object, string] | undefined,
 ): TakenUp {
   const before = takenUp.get(options);
+  const beside = endpointsBeside(api, where, before, called);
+  if (before?.apis.has(api) === true && beside.size === 0) return before;
   const own = before === undefined ? readApiOptions(options, where) : [];
-  const endpoints = [...endpointsBeside(api, where, before, called)].map(readEndpointOptions);
+  const endpoints = [...beside].map(readEndpointOptions);
   const [session, forward, list] = own.map(({ copy }) => copy);
   assertSessionApi(before === undefined ? session : before.session, [
     ...(before === undefined ? [[where, list] as const] : []),

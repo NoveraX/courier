@@ -18,6 +18,7 @@ import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-up
 /* The check got round where a server takes an API up, and where a call takes its options. */
 vi.mock("../../src/server/assert-server-options", () => ({
   assertServerOptions: () => undefined,
+  heldOptionsOf: () => undefined,
   heldForCall: () => undefined,
 }));
 

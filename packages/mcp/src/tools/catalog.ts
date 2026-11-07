@@ -1,5 +1,5 @@
 import type { Sources } from "@noverax/courier/define";
-import { eachEndpoint } from "@noverax/courier/internal";
+import { agentOptionsOf, eachEndpoint, type PlacedEndpoint } from "@noverax/courier/internal";
 import type { JSONSchemaFallback } from "@noverax/courier/openapi";
 
 import { type AgentDecision, decideEndpoint } from "../policy/agent-decision";
@@ -78,7 +78,9 @@ export function buildCatalog(sources: Sources, options: CatalogOptions = {}): Ca
       const path = `${source}.${endpoint.id}`;
       paths.push(path);
       if (served.has(source)) {
-        decided.push({ endpoint, source, path, decision: decideEndpoint(endpoint, path, policy) });
+        const marked = agentOptionsOf(markOf(endpoint));
+        const decision = decideEndpoint(endpoint, path, policy, marked);
+        decided.push({ endpoint, source, path, marked, decision });
       }
     }
   }
@@ -103,4 +105,10 @@ export function buildCatalog(sources: Sources, options: CatalogOptions = {}): Ca
     policy,
     warnings: catalogWarnings(policy, paths, leftOut, offered.length),
   };
+}
+
+/* An endpoint's `.agent()` as a server that took its API up holds it: its options' own, read
+   once — a prototype answers for none. */
+function markOf({ options }: PlacedEndpoint): PlacedEndpoint["options"]["agent"] {
+  return Object.hasOwn(options, "agent") ? options.agent : undefined;
 }

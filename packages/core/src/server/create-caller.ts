@@ -11,7 +11,7 @@ import type {
 } from "../define";
 import { getSourceName } from "../define/api";
 import { serverCallContext } from "../utils/one-users-call";
-import { assertServerOptions } from "./assert-server-options";
+import { heldOptionsOf } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 
 /**
@@ -56,7 +56,7 @@ export function createCaller(
 ): FlatClient<Record<never, never>>;
 
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
-  assertServerOptions(source, getSourceName(source) ?? "api");
+  heldOptionsOf(source, getSourceName(source) ?? "api");
   provideServerCapabilities();
   return directClient(source, { ...defaults, context: serverCallContext(defaults.context) });
 }

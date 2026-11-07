@@ -21,13 +21,13 @@ function replacer(_key: string, value: unknown): unknown {
   return value;
 }
 
-/** Byte length of a string in UTF-8 encoding (not char count) */
+/**
+ * Byte length of a string in UTF-8 encoding (not char count), by the
+ * `TextEncoder` every runtime Courier supports has. A page's code names no
+ * global of Node: Parcel would bring in a polyfill for one.
+ */
 export function byteLength(str: string): number {
-  if (typeof TextEncoder !== "undefined") {
-    return new TextEncoder().encode(str).length;
-  }
-  // Fallback for environments without TextEncoder
-  return Buffer.byteLength(str, "utf8");
+  return new TextEncoder().encode(str).length;
 }
 
 /**

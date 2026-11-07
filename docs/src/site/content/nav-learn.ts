@@ -57,6 +57,7 @@ export const LEARN_SECTIONS: NavSection[] = [
       { title: "Remix & React Router", href: "/docs/frameworks/remix" },
       { title: "SolidStart", href: "/docs/frameworks/solid-start" },
       { title: "SvelteKit", href: "/docs/frameworks/sveltekit" },
+      { title: "TanStack Start", href: "/docs/frameworks/tanstack-start" },
     ],
   },
   {

@@ -239,6 +239,29 @@ describe("checkSamples", () => {
           "",
         ].join("\n"),
       },
+      {
+        page: "file-route.mdx",
+        line: 160,
+        jsx: false,
+        code: [
+          'import { createFileRoute } from "@tanstack/react-router"',
+          'import { apiRoute } from "@noverax/courier-tanstack-start"',
+          "",
+          'export const Route = createFileRoute("/api/request")({ server: { handlers: apiRoute() } })',
+          "",
+        ].join("\n"),
+      },
+      {
+        page: "wrong-handler.mdx",
+        line: 170,
+        jsx: false,
+        code: [
+          'import { createFileRoute } from "@tanstack/react-router"',
+          "",
+          'export const Route = createFileRoute("/api/request")({ server: { handlers: { GET: 42 } } })',
+          "",
+        ].join("\n"),
+      },
     ]);
   }, 60_000);
 
@@ -250,6 +273,11 @@ describe("checkSamples", () => {
     expect(problems.filter((problem) => problem.startsWith("frameworks/solid-start.mdx"))).toEqual(
       [],
     );
+  });
+
+  it("names a file route's path as the reader's generated route tree does, and checks its handlers", () => {
+    expect(problems.filter((problem) => problem.startsWith("file-route.mdx"))).toEqual([]);
+    expect(problems).toContainEqual(expect.stringMatching(/^wrong-handler\.mdx:172 TS2322 /));
   });
 
   it("leaves out a Vite variable the reader declares, though a sample loaded Next.js's types", () => {

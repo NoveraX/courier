@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@noverax/courier": ["../core/src/index.ts"],
+      "@noverax/courier/client": ["../core/src/client/index.ts"],
+      "@noverax/courier/server": ["../core/src/server/index.ts"],
+      "@noverax/courier/internal": ["../core/src/internal/index.ts"],
+      "@noverax/courier/define": ["../core/src/define/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "tsdown.config.ts"]
+}

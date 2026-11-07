@@ -63,6 +63,7 @@ export const ENTRIES = [
   "@noverax/courier-remix",
   "@noverax/courier-solid",
   "@noverax/courier-sveltekit",
+  "@noverax/courier-tanstack-start",
   "@noverax/courier-astro",
   "@noverax/courier-build/vite",
   "@noverax/courier-build/webpack",
@@ -74,6 +75,29 @@ export const ENTRIES = [
   "@noverax/courier-build/metro",
   "@noverax/courier-build",
 ];
+
+/**
+ * What the route tree TanStack Router generates in the reader's app declares:
+ * every path one of their file routes names, and TanStack Start's options on
+ * a route, `server` among them. Without it `createFileRoute` takes no path.
+ */
+const ROUTE_TREE = [
+  'import type { AnyRoute } from "@tanstack/router-core";',
+  'import type {} from "@tanstack/react-start";',
+  "",
+  'declare module "@tanstack/router-core" {',
+  "  interface FileRoutesByPath {",
+  "    [path: string]: {",
+  "      id: string;",
+  "      path: string;",
+  "      fullPath: string;",
+  "      preLoaderRoute: AnyRoute;",
+  "      parentRoute: AnyRoute;",
+  "    };",
+  "  }",
+  "}",
+  "",
+].join("\n");
 
 export const OPTIONS = {
   strict: true,
@@ -102,12 +126,14 @@ export function checkSamples(samples) {
   mkdirSync(OUT, { recursive: true });
   const app = join(OUT, "app-modules.d.ts");
   writeFileSync(app, 'declare module "@/*";\ndeclare module "~/*";\ndeclare module "*.css";\n');
+  const routeTree = join(OUT, "route-tree.d.ts");
+  writeFileSync(routeTree, ROUTE_TREE);
   const files = placeSamples(samples, OUT);
   for (const [file, sample] of files) {
     const module = /^\s*(import|export)\s/m.test(sample.code) ? "" : "\nexport {};\n";
     writeFileSync(file, sample.code + module);
   }
-  const roots = [...files.keys(), app];
+  const roots = [...files.keys(), app, routeTree];
   const { shifts, routed } = addMissingImports(roots, exportedNames());
   const problems = [];
   const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS));

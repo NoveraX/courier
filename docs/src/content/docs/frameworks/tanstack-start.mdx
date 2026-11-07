@@ -1,0 +1,57 @@
+export const metadata = { title: "TanStack Start", description: "Serve Courier's proxy from TanStack Start's server routes, for React and for Solid, with @noverax/courier-tanstack-start.", mode: "proxy", updated: "2026-11-07" }
+
+`@noverax/courier-tanstack-start` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call from two server routes of a TanStack Start app: the calls go to one, reads over `GET` and writes over `POST`, and the streams of server-sent events to the other. It works with TanStack Start for React and for Solid.
+
+## Install
+
+```bash
+npm install @noverax/courier-tanstack-start @noverax/courier
+```
+
+## The proxy routes
+
+A proxy client sends its calls to `/api/request` and opens its streams at `/api/sse`, unless its `proxyPath` names others. Each is a server route:
+
+```ts title="src/routes/api/request.ts"
+import { createFileRoute } from "@tanstack/react-router"
+import { apiRoute } from "@noverax/courier-tanstack-start"
+
+export const Route = createFileRoute("/api/request")({ server: { handlers: apiRoute() } })
+```
+
+```ts title="src/routes/api/sse.ts"
+import { createFileRoute } from "@tanstack/react-router"
+import { sseRoute } from "@noverax/courier-tanstack-start"
+
+export const Route = createFileRoute("/api/sse")({ server: { handlers: sseRoute() } })
+```
+
+A Solid app imports `createFileRoute` from `@tanstack/solid-router`; the routes are the same.
+
+The handlers read the APIs the server registered. Register them once, in a module only the server loads, such as the server entry:
+
+```ts title="src/server.ts"
+import handler from "@tanstack/react-start/server-entry"
+import { registerSources } from "@noverax/courier/server"
+
+import { sources } from "./api"
+
+registerSources(sources)
+
+export default handler
+```
+
+A Solid app takes the handler from `@tanstack/solid-start/server-entry`. A route can be given its APIs itself instead: `apiRoute({ sources })`.
+
+TanStack Start drops a route's `server` from the code it sends the browser, so neither the routes nor your APIs' definitions reach a page.
+
+- `apiRoute()` answers a read over `GET`, a write over `POST`, and the preflight of a page on another origin that `allowedOrigins` lists over `OPTIONS`: `apiRoute({ allowedOrigins: ["https://admin.example.com"] })`.
+- `sseRoute()` answers a stream over `GET` and a preflight over `OPTIONS`.
+- Any other method is answered with `405` and an `Allow` header. TanStack Start would otherwise render your app's page for a method a route has no handler for.
+- The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `apiRoute({ maxUploadBytes: 50 * 1024 * 1024 })`.
+
+The user's address that a call forwards is the address of the connection the request came on. The servers TanStack Start runs on — its dev server, `vite preview`, Nitro — keep Node's request with it, and the chain a local proxy recorded in `X-Forwarded-For` is kept before it.
+
+## Cancelled calls
+
+When the browser cancels a call — an aborted upload, a query it no longer needs, a stream it closes — the proxy stops its own upstream request. TanStack Start's servers end the request's signal when the client leaves, in development and in production alike.

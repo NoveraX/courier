@@ -618,6 +618,23 @@ See [`@noverax/courier-solid`](./packages/solid) for the session and cancelled c
 
 </details>
 
+<details>
+<summary><img src="https://api.iconify.design/simple-icons/tanstack.svg?color=%238a8f98" height="16" align="center" />&nbsp;&nbsp;<strong>TanStack Start</strong> — server routes, for React and for Solid</summary>
+
+<br />
+
+```ts
+// src/routes/api/request.ts
+import { createFileRoute } from "@tanstack/react-router"
+import { apiRoute } from "@noverax/courier-tanstack-start"
+
+export const Route = createFileRoute("/api/request")({ server: { handlers: apiRoute() } })
+```
+
+Streams have a route of their own, `sseRoute()` at `src/routes/api/sse.ts`. See [`@noverax/courier-tanstack-start`](./packages/tanstack-start) for registering your APIs and cancelled calls.
+
+</details>
+
 <a id="react"></a>
 <details>
 <summary><img src="https://api.iconify.design/logos/react.svg" height="16" align="center" />&nbsp;&nbsp;<strong>React</strong> — Vite or any bundler, with React Query</summary>
@@ -1117,6 +1134,7 @@ mock("users", "getAll").resolves([]).once()          // the next call only
 | [`@noverax/courier-remix`](./packages/remix) | React Router and Remix resource route | [![npm](https://img.shields.io/npm/v/@noverax/courier-remix?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-remix) |
 | [`@noverax/courier-solid`](./packages/solid) | SolidStart API route and the user's session | [![npm](https://img.shields.io/npm/v/@noverax/courier-solid?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-solid) |
 | [`@noverax/courier-sveltekit`](./packages/sveltekit) | SvelteKit endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-sveltekit?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-sveltekit) |
+| [`@noverax/courier-tanstack-start`](./packages/tanstack-start) | TanStack Start server routes, for React and for Solid | [![npm](https://img.shields.io/npm/v/@noverax/courier-tanstack-start?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-tanstack-start) |
 | [`@noverax/courier-server`](./packages/server) | Standalone HTTP, SSE and WebSocket server | [![npm](https://img.shields.io/npm/v/@noverax/courier-server?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-server) |
 | [`@noverax/courier-redis`](./packages/redis) | Redis Pub/Sub, presence and Streams across replicas | [![npm](https://img.shields.io/npm/v/@noverax/courier-redis?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-redis) |
 

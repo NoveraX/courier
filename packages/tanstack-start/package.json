@@ -1,0 +1,70 @@
+{
+  "name": "@noverax/courier-tanstack-start",
+  "version": "0.4.0",
+  "description": "TanStack Start adapter for Courier: server routes that proxy typed calls to any backend, with the user's session in server functions, loaders and routes",
+  "keywords": [
+    "courier",
+    "tanstack",
+    "tanstack-start",
+    "tanstack-router",
+    "react",
+    "solid",
+    "ssr",
+    "server-functions",
+    "proxy",
+    "bff",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "session"
+  ],
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/tanstack-start"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/tanstack-start",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@noverax/courier": "^0.4.0"
+  },
+  "devDependencies": {
+    "@noverax/courier": "*"
+  }
+}

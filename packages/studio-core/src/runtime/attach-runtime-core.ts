@@ -5,7 +5,12 @@
 
 import { createLogger, getAppOrigin, getSources } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
-import { createKeptBodies, KEPT_BODY_BYTES, studioHooks } from "@noverax/courier/internal";
+import {
+  createKeptBodies,
+  KEPT_BODY_BYTES,
+  nodeEnvironment,
+  studioHooks,
+} from "@noverax/courier/internal";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle } from "./attach-runtime-types";
@@ -135,7 +140,7 @@ async function attachFresh(
 
   // ── Dev-only: studio observability + Studio /runtime socket ───────────
 
-  const isProduction = typeof process !== "undefined" && process.env?.NODE_ENV === "production";
+  const isProduction = nodeEnvironment() === "production";
   if (!isProduction) {
     const bus = new EventBus();
     const resolveSourceName = createSourceNameResolver(getSources);

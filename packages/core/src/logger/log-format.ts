@@ -1,3 +1,5 @@
+import { environmentVariable } from "../utils/environment";
+
 /** How log lines are written, and the raw value when it was not one Courier knows. */
 export interface LogFormat {
   /** One JSON object per line, rather than text for a person. */
@@ -19,7 +21,7 @@ export interface LogFormat {
  * ```
  */
 export function readLogFormat(): LogFormat {
-  const raw = globalThis.process?.env?.COURIER_LOG_FORMAT;
+  const raw = environmentVariable("COURIER_LOG_FORMAT");
   if (raw === undefined) return { json: false };
   const value = raw.trim().toLowerCase();
   if (value === "" || value === "text") return { json: false };

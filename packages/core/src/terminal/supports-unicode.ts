@@ -1,3 +1,5 @@
+import { ownEnvironment } from "../utils/environment";
+
 /** The environment variables the decision reads. */
 type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -19,7 +21,7 @@ type Environment = Readonly<Record<string, string | undefined>>;
  * ```
  */
 export function supportsUnicode(
-  env: Environment = globalThis.process?.env ?? {},
+  env: Environment = ownEnvironment(),
   platform: string | undefined = globalThis.process?.platform,
 ): boolean {
   if (platform !== "win32") return env.TERM !== "linux";

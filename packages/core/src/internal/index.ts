@@ -112,6 +112,7 @@ export {
 } from "../transport";
 export { anySignal } from "../utils/any-signal";
 export { assertAllowedOrigins } from "../utils/assert-allowed-origins";
+export { environmentVariable, nodeEnvironment, writtenOrOwn } from "../utils/environment";
 export { executeRequest } from "../utils/execute";
 export { absentAs } from "../utils/execute-validation";
 export { forwardedChain, forwardedFor } from "../utils/forwarded-for";

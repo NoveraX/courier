@@ -49,6 +49,7 @@
 import { ConfigurationError } from "./errors";
 import type { ResolveOrigin } from "./proxy-caller";
 import { isDevelopment } from "./utils/development";
+import { environmentVariable } from "./utils/environment";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 const g = globalThis as Record<symbol, unknown>;
@@ -218,9 +219,8 @@ export function getAppOriginParsed(): ResolveOrigin {
  * **conservative** so we never produce a wrong-but-plausible value.
  */
 export function detectAppOrigin(): string | undefined {
-  if (typeof process === "undefined" || !process.env) return undefined;
   for (const name of ORIGIN_ENVS) {
-    const value = process.env[name];
+    const value = environmentVariable(name);
     if (typeof value === "string" && value.length > 0) return value;
   }
   return undefined;

@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { environmentVariable } from "../utils/environment";
 import {
   type AddressRange,
   inRange,
@@ -91,9 +92,8 @@ let cached: { key: string; trust: AddressTrust } | undefined;
  * ```
  */
 export function deploymentTrust(): AddressTrust {
-  const env = typeof process === "undefined" ? undefined : process.env;
-  const list = env?.COURIER_TRUSTED_PROXIES ?? "";
-  const header = env?.COURIER_CLIENT_ADDRESS_HEADER ?? "";
+  const list = environmentVariable("COURIER_TRUSTED_PROXIES") ?? "";
+  const header = environmentVariable("COURIER_CLIENT_ADDRESS_HEADER") ?? "";
   const key = `${list}\n${header}`;
   if (cached?.key === key) return cached.trust;
   const { trust, invalid } = addressTrust(list.split(","), header);

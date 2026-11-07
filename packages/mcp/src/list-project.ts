@@ -1,3 +1,4 @@
+import { nodeEnvironment } from "@noverax/courier/internal";
 import type { Narrowing } from "./policy/checked-policy";
 import { checkSourceNames } from "./project/check-source-names";
 import { loadEnvFiles } from "./project/load-env-files";
@@ -36,7 +37,7 @@ export async function listProject(options: ListedProject): Promise<Catalog> {
   const { loadCourierConfig } = await import("@noverax/courier-build/config");
   const loaded = await loadCourierConfig({
     cwd: options.root,
-    projectTransforms: process.env.NODE_ENV !== "production",
+    projectTransforms: nodeEnvironment() !== "production",
   });
   const sources = loaded?.config.sources;
   checkSourceNames(sources, options.root, options.only);

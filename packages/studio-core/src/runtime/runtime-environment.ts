@@ -4,6 +4,7 @@ import {
   STUDIO_DEFAULT_PORT,
   STUDIO_DEFAULT_URL,
 } from "@noverax/courier/config";
+import { environmentVariable, writtenOrOwn } from "@noverax/courier/internal";
 
 const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 
@@ -19,12 +20,11 @@ export function detectBrowser(): boolean {
  */
 export function detectDefaultRuntimeId(isBrowser: boolean): string {
   if (isBrowser) return "browser";
-  if (typeof process === "undefined" || !process.env) return "server";
-  const env = process.env;
-  if (env.NEXT_RUNTIME === "nodejs") return "next-server";
-  if (env.NEXT_RUNTIME === "edge") return "next-edge";
-  if (env.NEXT_RUNTIME) return `next-${env.NEXT_RUNTIME}`;
-  if (env.__NUXT__) return "nuxt-server";
+  const nextRuntime = environmentVariable("NEXT_RUNTIME");
+  if (nextRuntime === "nodejs") return "next-server";
+  if (nextRuntime === "edge") return "next-edge";
+  if (nextRuntime) return `next-${nextRuntime}`;
+  if (environmentVariable("__NUXT__")) return "nuxt-server";
   return "server";
 }
 
@@ -60,7 +60,10 @@ export function resolveStudioUrl(configured?: ConfiguredStudioAddress): string {
   if (typeof slot === "string" && slot.length > 0) return slot;
   /* A plain member access, so that bundlers inlining `process.env.X` into the
      browser — Next.js's `env`, webpack's DefinePlugin — can replace it. */
-  const env = typeof process !== "undefined" ? process.env.COURIER_STUDIO_URL : undefined;
+  const env = writtenOrOwn(
+    "COURIER_STUDIO_URL",
+    typeof process !== "undefined" ? process.env.COURIER_STUDIO_URL : undefined,
+  );
   if (env) return env;
   if (configured?.host === undefined && configured?.port === undefined) return STUDIO_DEFAULT_URL;
   return formatStudioUrl(

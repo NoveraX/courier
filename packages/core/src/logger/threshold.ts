@@ -1,3 +1,4 @@
+import { environmentVariable } from "../utils/environment";
 import type { LogLevel } from "./types";
 
 const LEVEL_RANK: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
@@ -24,7 +25,7 @@ export interface Threshold {
  * @returns The rank below which lines are dropped; an unknown value keeps `info` and is reported back
  */
 export function readThreshold(): Threshold {
-  const raw = globalThis.process?.env?.COURIER_LOG_LEVEL;
+  const raw = environmentVariable("COURIER_LOG_LEVEL");
   if (raw === undefined || raw.trim() === "") return { rank: LEVEL_RANK.info };
   const rank = THRESHOLD_RANK.get(raw.trim().toLowerCase());
   return rank === undefined ? { rank: LEVEL_RANK.info, unrecognised: raw } : { rank };

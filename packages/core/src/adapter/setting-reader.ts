@@ -1,3 +1,4 @@
+import { environmentVariable } from "../utils/environment";
 import {
   NOT_SET,
   RUNTIME_SETTING_LIMITS,
@@ -28,7 +29,7 @@ export function settingReader<TValue>(
   const values = new Map<string, SettingReading<TValue>>();
 
   const fromVariable = (): SettingReading<TValue> => {
-    const value = globalThis.process?.env?.[variable];
+    const value = environmentVariable(variable);
     if (value === undefined) return NOT_SET;
     const kept = values.get(value);
     if (kept !== undefined) return kept;

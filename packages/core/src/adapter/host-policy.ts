@@ -21,6 +21,7 @@
  * application rather than opening it.
  */
 
+import { nodeEnvironment } from "../utils/environment";
 import { parseUrl } from "../utils/parse-url";
 import { type HostNames, isHostNamed } from "./host-names";
 import { type AllowedHostsSetting, readAllowedHosts, reportUnreadSetting } from "./runtime-policy";
@@ -98,7 +99,7 @@ export function isHostServed(
   if (name === undefined) return false;
   if (isAlwaysServed(name)) return true;
   if (hosts !== undefined) return isHostNamed(name, hosts);
-  return process.env.NODE_ENV === "production";
+  return nodeEnvironment() === "production";
 }
 
 /** The host name alone, as the URL parser normalizes it, or nothing for a malformed host. */

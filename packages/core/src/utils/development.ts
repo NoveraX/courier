@@ -1,3 +1,5 @@
+import { nodeEnvironment } from "./environment";
+
 /**
  * Whether this runs outside production, as `NODE_ENV` says.
  *
@@ -14,5 +16,5 @@
  * ```
  */
 export function isDevelopment(): boolean {
-  return typeof process !== "undefined" && process.env.NODE_ENV !== "production";
+  return typeof process !== "undefined" && nodeEnvironment() !== "production";
 }

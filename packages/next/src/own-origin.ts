@@ -1,4 +1,4 @@
-import { NEXT_ORIGIN_ENV, type ServerOrigin } from "@noverax/courier/internal";
+import { environmentVariable, NEXT_ORIGIN_ENV, type ServerOrigin } from "@noverax/courier/internal";
 
 /**
  * Where a Next.js server listens. Next records it as its server starts —
@@ -21,6 +21,6 @@ export function ownOrigin(request: Request): ServerOrigin {
 
 /* Edge routes run where `process` may be missing, or its env empty. */
 function recordedOrigin(): string | undefined {
-  const recorded = typeof process === "undefined" ? undefined : process.env?.[NEXT_ORIGIN_ENV];
+  const recorded = environmentVariable(NEXT_ORIGIN_ENV);
   return recorded ? recorded : undefined;
 }

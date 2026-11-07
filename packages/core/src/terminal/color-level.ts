@@ -1,3 +1,5 @@
+import { ownEnvironment } from "../utils/environment";
+
 /** The part of a Node, Bun or Deno output stream the colour decision reads. */
 export interface OutputStream {
   readonly isTTY?: boolean;
@@ -38,7 +40,7 @@ const FORCED = new Map<string, ColorLevel>([
  * ```
  */
 export function colorLevel(stream: OutputStream | undefined): ColorLevel {
-  const env = globalThis.process?.env;
+  const env = ownEnvironment();
   const forced = env?.FORCE_COLOR;
   if (forced !== undefined) {
     const level = FORCED.get(forced) ?? 0;

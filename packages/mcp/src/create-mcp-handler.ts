@@ -1,6 +1,10 @@
 import { type AgentPolicy, ConfigurationError, createLogger } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import { assertAllowedOrigins, prepareSources } from "@noverax/courier/internal";
+import {
+  assertAllowedOrigins,
+  environmentVariable,
+  prepareSources,
+} from "@noverax/courier/internal";
 import type { JSONSchemaFallback } from "@noverax/courier/openapi";
 
 import { checkedPolicy } from "./policy/checked-policy";
@@ -165,7 +169,7 @@ function checked<TPrincipal>(options: McpHandlerOptions<TPrincipal>): void {
 
 /* The version npm started the application with; an edge runtime has no `process` to say. */
 function applicationVersion(): string {
-  return (typeof process === "undefined" ? undefined : process.env.npm_package_version) ?? "0.0.0";
+  return environmentVariable("npm_package_version") ?? "0.0.0";
 }
 
 function secretOf(given: string | undefined): Uint8Array {

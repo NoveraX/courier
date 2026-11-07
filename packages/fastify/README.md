@@ -92,9 +92,9 @@ npm install @noverax/courier-fastify @noverax/courier fastify
 
 ## Usage
 
-```ts
+```ts side="server"
 import Fastify from "fastify"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./api/sources"
 
@@ -185,8 +185,8 @@ What `courierWSHandler()` returns carries the handler's `connections` — to sen
 
 ## With Frontend
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // The routes Courier's plugin builds from the endpoints you mark .expose():

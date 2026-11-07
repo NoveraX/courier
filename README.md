@@ -186,8 +186,8 @@ export default defineConfig({ sources })
 
 **2 — Call it from the server.** Any runtime with `fetch`: Node.js, Bun, Deno, Cloudflare Workers.
 
-```ts
-import { createCaller } from "@noverax/courier"
+```ts side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "./api/sources"
 
 const caller = createCaller(api)
@@ -264,9 +264,9 @@ Every framework is typed from the same definition, so the editor knows your API 
 
 **1. Proxy route** — single route handles all endpoints:
 
-```ts
+```ts side="server"
 // instrumentation.ts — registers your sources once, at startup
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 
 export async function register() {
   const { sources } = await import("./api/sources")
@@ -335,9 +335,9 @@ export default function UsersPage() {
 
 **4. Server Components** — direct backend calls, no proxy hop:
 
-```tsx
+```tsx side="server"
 // app/users/page.tsx
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api/sources"
 
 const caller = createCaller(api)
@@ -352,11 +352,11 @@ export default async function UsersPage() {
 
 **5. Server Actions** — type-safe form handling with revalidation:
 
-```ts
+```ts side="server"
 // app/users/actions.ts
 "use server"
 import { revalidatePath } from "next/cache"
-import { isHTTPError, isValidationError } from "@noverax/courier"
+import { isHTTPError, isValidationError } from "@noverax/courier/server"
 import { type ActionState, createAction } from "@noverax/courier-next"
 import { sources } from "@/api/sources"
 
@@ -419,9 +419,9 @@ export default courierHandler({ sources })
 
 **2. Composable** — use with any state management, with the routes Courier's module builds in — `modules: [courierRoutesModule]` from `@noverax/courier-nuxt/plugin` in `nuxt.config.ts` — and the config registered in the module, as in the Next.js section:
 
-```ts
+```ts side="page"
 // composables/useCaller.ts
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export function useCaller() {
@@ -455,9 +455,9 @@ const { data: users, status } = await useAsyncData("users", () =>
 
 **4. Server-side** — direct calls in Nitro:
 
-```ts
+```ts side="server"
 // server/api/dashboard.ts
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "~/api/sources"
 
 const caller = createCaller(api)
@@ -478,9 +478,9 @@ export default defineEventHandler(async () => {
 
 **1. Endpoint** — sources registered once, in the server hooks:
 
-```ts
+```ts side="server"
 // src/hooks.server.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "$lib/api"
 
 registerSources(sources)
@@ -497,9 +497,9 @@ export const POST = handler
 
 **2. A component** — the core caller, typed from the routes Courier's plugin builds — `courierRoutes()` from `@noverax/courier-sveltekit/plugin` in `vite.config.ts` — with the config registered in the module, as in the Next.js section:
 
-```ts
+```ts side="page"
 // lib/caller.ts
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api)
@@ -534,10 +534,10 @@ The [`@noverax/courier-sveltekit`](./packages/sveltekit) README shows the sessio
 
 <br />
 
-```ts
+```ts side="server"
 // src/middleware.ts
 import { defineMiddleware } from "astro:middleware"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "./api"
 
 registerSources(sources)
@@ -569,9 +569,9 @@ The route renders on demand, so it needs a server adapter — `npx astro add nod
 
 <br />
 
-```ts
+```ts side="server"
 // app/routes/api.request.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-remix"
 import { sources } from "~/api"
 
@@ -597,9 +597,9 @@ React Router 7 serves only the routes `app/routes.ts` lists — add `route("api/
 
 <br />
 
-```ts
+```ts side="server"
 // src/entry-server.tsx
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "~/api"
 
 registerSources(sources)
@@ -692,9 +692,9 @@ export default function App() {
 
 The core caller is framework-agnostic — use it with `ref`, `reactive`, or any Vue composable. It takes the routes `courierRoutes()` from `@noverax/courier-build/vite` builds in, in `vite.config.ts`, with the config registered in the module, as in the Next.js section.
 
-```ts
+```ts side="page"
 // composables/useCaller.ts
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api)
@@ -740,9 +740,9 @@ async function createUser(name: string, email: string) {
 
 An app calls its API the way a page does in direct mode — the typed client, the React Query hooks, server-sent events, WebSocket channels, uploads with their progress — at an absolute address:
 
-```ts
+```ts side="page"
 // src/client.ts
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/client"
 import { createQueryCaller } from "@noverax/courier-react"
 import { QueryClient } from "@tanstack/react-query"
 import { shop } from "./api"

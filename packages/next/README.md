@@ -101,9 +101,9 @@ npm install @noverax/courier-next @noverax/courier next
 
 Register sources in `instrumentation.ts`, then create a single catch-all route that handles all Courier endpoints:
 
-```ts
+```ts side="server"
 // instrumentation.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 
 export async function register() {
   const { sources } = await import("@/api/sources")
@@ -174,9 +174,9 @@ declare module "@noverax/courier/routes" {
 }
 ```
 
-```tsx
+```tsx side="page"
 "use client"
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const shop = createProxyCaller(routes.shop)
@@ -275,9 +275,9 @@ type ActionState<T> = {
 }
 ```
 
-```ts
+```ts side="server"
 "use server"
-import { HTTPError, isValidationError } from "@noverax/courier"
+import { HTTPError, isValidationError } from "@noverax/courier/server"
 import type { ActionState } from "@noverax/courier-next"
 import { action } from "@/lib/actions"
 

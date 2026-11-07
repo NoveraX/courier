@@ -120,8 +120,8 @@ export const api = defineApi({
 
 **Direct mode** — works anywhere with `fetch`:
 
-```ts
-import { createCaller } from "@noverax/courier"
+```ts side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "./api/sources"
 
 const caller = createCaller(api)
@@ -135,8 +135,8 @@ const user = await caller.users.getById({ id: "1" })
 
 **Proxy mode** — browser → server → backend:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // The routes Courier's plugin builds from the endpoints you mark .expose():
@@ -276,8 +276,8 @@ A streamed answer passes the upstream's body and content type through, from your
 
 Courier logs through `createLogger`, which your own server code can use too:
 
-```ts
-import { createLogger } from "@noverax/courier"
+```ts side="server"
+import { createLogger } from "@noverax/courier/server"
 
 const log = createLogger("Billing")
 
@@ -309,8 +309,8 @@ On a terminal the level is a symbol in its colour — `●` info, `▲` warn, `�
 
 Before a server writes a line down, the line and the error under it lose every credential they carry: a token after `Bearer`, a `password=` pair, the password in a connection string, a header value the platform repeated as it refused it. An error that carries none prints as the error it is; one that does prints as a copy without it. `redact()` cuts the same way, for what your own code sends elsewhere:
 
-```ts
-import { redact } from "@noverax/courier"
+```ts side="server"
+import { redact } from "@noverax/courier/server"
 
 Sentry.captureException(redact(error)) // the copy carries no token, password or secret header
 ```
@@ -323,8 +323,8 @@ A refusal the application meant — `onConnect`, `onReauth`, `authorize`, `autho
 
 The `createHandler` function returns a Web Standard handler. All official adapters use it internally:
 
-```ts
-import { createHandler, registerSources } from "@noverax/courier"
+```ts side="server"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { sources } from "./api/sources"
 
 registerSources(sources)
@@ -350,7 +350,7 @@ The package's entry points, each loaded only where it is imported:
 
 ### `@noverax/courier` — Main
 
-```ts
+```ts root="the root's exports: both entries' names"
 import {
   createCaller,          // Universal factory — call endpoints directly from any runtime
   createProxyCaller,     // Proxy factory — browser → server → backend
@@ -367,7 +367,7 @@ import {
 
 What a page or an app calls an API with, and none of the server's part: a page that imports from here loads less than one that imports the same names from the root. `redact` is the root's and the server's, so no bundler keeps its rules on a page that only calls.
 
-```ts
+```ts side="page"
 import {
   createCaller,          // A direct caller: a page's calls carry the cookies the browser sends
   createProxyCaller,     // Proxy factory — browser → server → backend
@@ -379,7 +379,7 @@ import {
 
 ### `@noverax/courier/server` — A Server's Side
 
-```ts
+```ts side="server"
 import {
   createCaller,          // The server's caller: the user's session from the request a call serves
   createHandler,         // Web Standard adapter handler for server frameworks

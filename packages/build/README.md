@@ -89,8 +89,8 @@ declare module "@noverax/courier/routes" {
 
 A page then takes the routes of the API it calls, and its client reaches exactly the endpoints that API opens to a page:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const shop = createProxyCaller(routes.shop)

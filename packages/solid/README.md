@@ -92,9 +92,9 @@ npm install @noverax/courier-solid @noverax/courier @solidjs/start
 
 ## Usage
 
-```ts
+```ts side="server"
 // src/entry-server.tsx
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "~/api"
 
 registerSources(sources)
@@ -121,9 +121,9 @@ Solid Start renders the page for a method the route does not export, so `PUT`, `
 
 An API that keeps the user's session describes it in `defineApi`, and every call a page's `query`, a server function, an action or an API route makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else. SolidStart keeps that request itself; register its `getRequestEvent` once:
 
-```tsx
+```tsx side="server"
 // src/entry-server.tsx
-import { registerRequestContext } from "@noverax/courier"
+import { registerRequestContext } from "@noverax/courier/server"
 import { solidStartRequestContext } from "@noverax/courier-solid"
 import { getRequestEvent } from "solid-js/web"
 
@@ -170,8 +170,8 @@ declare module "@noverax/courier/routes" {
 
 Then pair with `createProxyCaller` on the client:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // What a page may call of the source registered as `api` in your `sources` map:

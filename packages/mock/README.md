@@ -180,8 +180,8 @@ A mock stands in for the API itself, where a direct caller goes, and also for a 
 
 A mock built from a source refuses at these routes what that API's own proxy refuses — an endpoint it keeps from a page, a GET to anything but a read, or to a read whose variables stay out of the address — with the proxy's status and its body, `{ "success": false, "message": … }`, so a page that works against the mock is not refused once it calls the proxy, and reads a refusal as the proxy writes it.
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const mock = "http://localhost:7001"

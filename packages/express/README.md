@@ -92,9 +92,9 @@ npm install @noverax/courier-express @noverax/courier express
 
 ## Usage
 
-```ts
+```ts side="server"
 import express from "express"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./api/sources"
 
@@ -182,8 +182,8 @@ The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`mult
 
 Pair with `createProxyCaller` on the client:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // The routes Courier's plugin builds from the endpoints you mark .expose():

@@ -94,9 +94,9 @@ npm install @noverax/courier-nestjs @noverax/courier @nestjs/common
 
 Register as NestJS middleware:
 
-```ts
+```ts side="server"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./api/sources"
 
@@ -207,8 +207,8 @@ export class AppModule implements NestModule, BeforeApplicationShutdown {
 
 ## With Frontend
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // The routes Courier's plugin builds from the endpoints you mark .expose():

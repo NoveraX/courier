@@ -92,9 +92,9 @@ npm install @noverax/courier-sveltekit @noverax/courier @sveltejs/kit
 
 ## Usage
 
-```ts
+```ts side="server"
 // src/hooks.server.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "$lib/api"
 
 registerSources(sources)
@@ -161,8 +161,8 @@ declare module "@noverax/courier/routes" {
 
 Then pair with `createProxyCaller` on the client:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // What a page may call of the source registered as `api` in your `sources` map:
@@ -186,10 +186,10 @@ When the browser cancels a call — an aborted upload, a query it no longer need
 
 An API that keeps the user's session describes it in `defineApi`, and every call a hook, a `load` function, a form action or an endpoint makes carries the session of the request being served — the cookies the session names and nothing else of your application's — once the request can be found:
 
-```ts
+```ts side="server"
 // src/hooks.server.ts — SvelteKit 2.20 and later
 import { getRequestEvent } from "$app/server"
-import { registerRequestContext } from "@noverax/courier"
+import { registerRequestContext } from "@noverax/courier/server"
 import { svelteKitRequestContext } from "@noverax/courier-sveltekit"
 
 registerRequestContext(svelteKitRequestContext(getRequestEvent))

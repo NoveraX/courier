@@ -92,9 +92,9 @@ npm install @noverax/courier-hono @noverax/courier hono
 
 ## Usage
 
-```ts
+```ts side="server"
 import { Hono } from "hono"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 
@@ -184,8 +184,8 @@ Hono uses Web Standard `Request`/`Response` natively, so the adapter simply pass
 
 ## With Frontend
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // The routes Courier's plugin builds from the endpoints you mark .expose():

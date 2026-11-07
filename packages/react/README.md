@@ -138,10 +138,10 @@ function Users() {
 }
 ```
 
-Every hook types its error as `Error`, as TanStack Query does: an `HTTPError` for an error answer, but a `ValidationError` for an answer that fails its schema, a `ConfigurationError` for a client set up wrongly, or the reason a call was cancelled with. Narrow it with the guards from `@noverax/courier`:
+Every hook types its error as `Error`, as TanStack Query does: an `HTTPError` for an error answer, but a `ValidationError` for an answer that fails its schema, a `ConfigurationError` for a client set up wrongly, or the reason a call was cancelled with. Narrow it with the guards from `@noverax/courier/client`:
 
-```tsx
-import { isHTTPError } from "@noverax/courier"
+```tsx side="page"
+import { isHTTPError } from "@noverax/courier/client"
 
 function User({ id }: { id: string }) {
   const { data, error } = q.users.useQuery("getById", { variables: { id } })

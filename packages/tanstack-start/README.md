@@ -100,7 +100,7 @@ export const Route = createFileRoute("/api/sse")({ server: { handlers: sseRoute(
 
 A Solid app imports `createFileRoute` from `@tanstack/solid-router`. Register your APIs once, in a module only the server loads:
 
-```ts
+```ts side="server"
 // src/server.ts
 import handler from "@tanstack/react-start/server-entry"
 import { registerSources } from "@noverax/courier/server"

@@ -95,10 +95,10 @@ The proxy answers each call as it arrives, so its route renders on demand, and t
 
 ## Usage
 
-```ts
+```ts side="server"
 // src/middleware.ts
 import { defineMiddleware } from "astro:middleware"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "./api"
 
 registerSources(sources)
@@ -193,8 +193,8 @@ declare module "@noverax/courier/routes" {
 
 Then pair with `createProxyCaller` on the client:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // What a page may call of the source registered as `api` in your `sources` map:

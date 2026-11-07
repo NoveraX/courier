@@ -94,9 +94,9 @@ Remix continues as React Router 7's framework mode, which is what `npx create-re
 
 ## Usage
 
-```ts
+```ts side="server"
 // app/routes/api.request.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-remix"
 import { sources } from "~/api"
 
@@ -183,8 +183,8 @@ declare module "@noverax/courier/routes" {
 
 Then pair with `createProxyCaller` on the client:
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // What a page may call of the source registered as `api` in your `sources` map:

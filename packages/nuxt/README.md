@@ -94,9 +94,9 @@ npm install @noverax/courier-nuxt @noverax/courier
 
 Register sources in a Nitro server plugin, then create a server route:
 
-```ts
+```ts side="server"
 // server/plugins/courier.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "~/api/sources"
 
 export default defineNitroPlugin(() => registerSources(sources))
@@ -157,9 +157,9 @@ declare module "@noverax/courier/routes" {
 
 Then use `createProxyCaller` in a composable:
 
-```ts
+```ts side="page"
 // composables/useCaller.ts
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // What a page may call of the source registered as `api`, and how. The API
@@ -206,9 +206,9 @@ The same route serves SSE streams: point `proxyPath.sse` at it too. WebSocket ch
 
 Call endpoints directly in Nitro routes:
 
-```ts
+```ts side="server"
 // server/api/dashboard.ts
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "~/api/sources"
 
 const caller = createCaller(api)

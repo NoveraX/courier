@@ -65,8 +65,8 @@ declare module "@noverax/courier/routes" {
 }
 ```
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const shop = createProxyCaller(routes.shop)

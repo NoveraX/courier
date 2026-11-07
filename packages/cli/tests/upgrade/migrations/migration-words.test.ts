@@ -4,6 +4,7 @@ import { parseSource } from "../../../src/source/parse-source";
 import { programOf } from "../../../src/upgrade/codemod/ast";
 import { mentions } from "../../../src/upgrade/codemod/mentions";
 import { RELEASES } from "../../../src/upgrade/releases";
+import { UNTOLD } from "./migrate-with";
 
 const MIGRATIONS = RELEASES.flatMap((release) => release.migrations);
 
@@ -78,7 +79,8 @@ function done(text: string) {
   if (parsed.problem !== null) return undefined;
   const program = programOf(parsed.program);
   return MIGRATIONS.map((migration) => {
-    const { edits, findings } = migration.migrate({ path: "file.ts", text, program });
+    const file = { path: "file.ts", text, program, kind: "module" as const, piece: 0 };
+    const { edits, findings } = migration.migrate(file, UNTOLD);
     return { migration, acts: edits.length > 0 || findings.length > 0 };
   });
 }

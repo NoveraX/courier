@@ -19,6 +19,7 @@ import { agentRulesEdits } from "./agent-rules-edits";
 import { migrateCode } from "./codemod/run-migrations";
 import { projectCode } from "./codemod/source-files";
 import { docsNote } from "./docs-note";
+import { projectSides } from "./entries/piece-sides";
 import { manifestEdits } from "./manifest-edits";
 import { additionsOf } from "./package-needs";
 import { courierPackages } from "./project-packages";
@@ -113,7 +114,9 @@ export async function runUpgrade(
   const target = formatVersion(to);
   const releases = releasesBetween(from, to);
   const migrations = releases.flatMap((release) => release.migrations);
-  const code = migrations.length === 0 ? undefined : migrateCode(projectCode(root), migrations);
+  const read = migrations.length === 0 ? undefined : projectCode(root);
+  const code =
+    read === undefined ? undefined : migrateCode(read, migrations, projectSides(workspace, read));
   const additions = additionsOf(workspace, packages, code?.needs ?? [], target);
   const manifests = manifestEdits(root, packages, to, additions);
   const notes = releases.flatMap((release) =>

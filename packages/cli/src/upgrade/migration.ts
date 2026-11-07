@@ -1,4 +1,6 @@
 import type { AstNode } from "./codemod/ast";
+import type { PieceKind } from "./codemod/source-files";
+import type { PieceSide } from "./entries/piece-sides";
 
 /** A change to a file's text: its span replaced by new text. */
 export interface TextEdit {
@@ -31,6 +33,17 @@ export interface SourceFile {
   readonly text: string;
   /** Its tree, as oxc parsed the text. */
   readonly program: AstNode;
+  /** Which piece of the file it is, and its index among them, as `codePieces` gives them. */
+  readonly kind: PieceKind;
+  readonly piece: number;
+}
+
+/** What a migration reads of the whole workspace beside a file, worked out once for a run. */
+export interface ProjectView {
+  /** Where a piece of a file runs: a page's bundle, the server's code, or neither that the workspace tells. */
+  sideOf(path: string, piece: number): PieceSide;
+  /** What telling the sides could not read, as steps of the plan: none where no side was asked. */
+  notes?(): ReadonlyArray<{ readonly file: string; readonly what: string }>;
 }
 
 /** What a migration does to one file: its changes, what it leaves to the person, and the packages its changes need. */
@@ -59,10 +72,10 @@ export interface Migration {
   readonly mentions: readonly string[];
   /**
    * Its changes to one file, and its findings: a pure function of the
-   * file's text, which the upgrade runs on each file that names
-   * Courier's packages.
+   * file's text and of what the workspace tells of it, which the upgrade
+   * runs on each file that names Courier's packages.
    */
-  readonly migrate: (file: SourceFile) => FileMigration;
+  readonly migrate: (file: SourceFile, project: ProjectView) => FileMigration;
 }
 
 /** A breaking change of a release, and where its notes say what to write instead. */

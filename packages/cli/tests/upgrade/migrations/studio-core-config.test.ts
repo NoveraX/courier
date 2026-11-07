@@ -4,13 +4,19 @@ import { parseSource } from "../../../src/source/parse-source";
 import { programOf } from "../../../src/upgrade/codemod/ast";
 import { applyEdits } from "../../../src/upgrade/codemod/text-edits";
 import { STUDIO_CORE_CONFIG } from "../../../src/upgrade/migrations/studio-core-config";
+import { UNTOLD } from "./migrate-with";
 
 function migrate(text: string) {
-  const done = STUDIO_CORE_CONFIG.migrate({
-    path: "scripts/x.ts",
-    text,
-    program: programOf(parseSource("x.ts", text).program),
-  });
+  const done = STUDIO_CORE_CONFIG.migrate(
+    {
+      path: "scripts/x.ts",
+      text,
+      program: programOf(parseSource("x.ts", text).program),
+      kind: "module",
+      piece: 0,
+    },
+    UNTOLD,
+  );
   return { text: applyEdits(text, done.edits), packages: done.packages };
 }
 

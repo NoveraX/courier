@@ -1,9 +1,8 @@
 import type { ManualStep, PlannedEdit } from "@noverax/create-courier/engine";
-import { parseSync } from "oxc-parser";
 
-import type { Finding, Migration, PackageNeed, TextEdit } from "../migration";
-import { type AstNode, programOf } from "./ast";
+import type { Finding, Migration, PackageNeed, ProjectView, TextEdit } from "../migration";
 import { mentions } from "./mentions";
+import { type PieceParse, parsePiece } from "./piece-parse";
 import { type CodePiece, codePieces, type ProjectCode, writtenByStudio } from "./source-files";
 import { applyEdits, lineAt } from "./text-edits";
 
@@ -36,26 +35,6 @@ interface PieceResult {
   readonly titles: string[];
 }
 
-/* A piece's parse: its first problem, and its tree, which oxc builds only when a migration asks for it. */
-interface PieceParse {
-  readonly problem: { readonly message: string; readonly at: number } | null;
-  readonly program: () => AstNode;
-}
-
-function parsePiece(piece: CodePiece, text: string): PieceParse {
-  const parsed = parseSync(`piece${piece.parseAs}`, text);
-  const [first] = parsed.errors;
-  let program: AstNode | undefined;
-  return {
-    problem:
-      first === undefined ? null : { message: first.message, at: first.labels[0]?.start ?? 0 },
-    program: () => {
-      program ??= programOf(parsed.program);
-      return program;
-    },
-  };
-}
-
 /*
  * Run each migration on the text the one before left. A migration whose
  * words the text does not write is passed over; the piece is parsed for
@@ -63,7 +42,12 @@ function parsePiece(piece: CodePiece, text: string): PieceParse {
  * parse: that tree is the next migration's. A change that would not
  * parse is dropped, and said.
  */
-function migratePiece(piece: CodePiece, migrations: readonly Migration[]): PieceResult {
+function migratePiece(
+  piece: CodePiece,
+  index: number,
+  migrations: readonly Migration[],
+  project: ProjectView,
+): PieceResult {
   const result: PieceResult = { text: piece.text, findings: [], needs: [], titles: [] };
   let text = piece.text;
   let parsed: PieceParse | undefined;
@@ -75,7 +59,14 @@ function migratePiece(piece: CodePiece, migrations: readonly Migration[]): Piece
       result.findings.push({ at: parsed.problem.at, what, instead: [] });
       break;
     }
-    const done = migration.migrate({ path: piece.path, text, program: parsed.program() });
+    const file = {
+      path: piece.path,
+      text,
+      program: parsed.program(),
+      kind: piece.kind,
+      piece: index,
+    };
+    const done = migration.migrate(file, project);
     const after = done.edits.length === 0 ? text : applyEdits(text, done.edits);
     if (after !== text) {
       const reparsed = parsePiece(piece, after);
@@ -112,13 +103,18 @@ function migratePiece(piece: CodePiece, migrations: readonly Migration[]): Piece
  *
  * @param code - The project's code, as the walk read it
  * @param migrations - The migrations of the releases crossed, in order
+ * @param project - What the workspace tells of each file beside its text
  * @returns The changes, the steps left to the person, and the packages the changes need
  * @example
  * ```ts
- * migrateCode(projectCode(root), releases.flatMap((release) => release.migrations));
+ * migrateCode(code, releases.flatMap((release) => release.migrations), projectSides(workspace, code));
  * ```
  */
-export function migrateCode(code: ProjectCode, migrations: readonly Migration[]): MigratedCode {
+export function migrateCode(
+  code: ProjectCode,
+  migrations: readonly Migration[],
+  project: ProjectView,
+): MigratedCode {
   const edits: PlannedEdit[] = [];
   const manual: ManualStep[] = code.unread.map(({ path, why }) => ({
     file: path,
@@ -127,9 +123,9 @@ export function migrateCode(code: ProjectCode, migrations: readonly Migration[])
   }));
   const needs: Array<{ path: string; need: PackageNeed }> = [];
   for (const file of code.files) {
-    const pieces = codePieces(file.path, file.text).map((piece) => ({
+    const pieces = codePieces(file.path, file.text).map((piece, index) => ({
       piece,
-      result: migratePiece(piece, migrations),
+      result: migratePiece(piece, index, migrations, project),
     }));
     const pieceEdits = pieces.map(({ piece, result }) => ({
       start: piece.offset,
@@ -165,6 +161,7 @@ export function migrateCode(code: ProjectCode, migrations: readonly Migration[])
       change: (text) => (text === before ? after : undefined),
     });
   }
+  for (const { file, what } of project.notes?.() ?? []) manual.push({ file, what, lines: [] });
   if (code.stopped)
     manual.push({
       file: ".",

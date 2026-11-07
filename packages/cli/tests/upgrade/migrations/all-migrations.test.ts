@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { migrateCode } from "../../../src/upgrade/codemod/run-migrations";
 import { RELEASES } from "../../../src/upgrade/releases";
+import { UNTOLD } from "./migrate-with";
 
 const ALL = RELEASES.flatMap((release) => release.migrations);
 
@@ -57,6 +58,7 @@ describe("every migration together", () => {
         stopped: false,
       },
       ALL,
+      UNTOLD,
     );
     const after = once.edits[0]?.after ?? "";
     const twice = migrateCode(
@@ -68,6 +70,7 @@ describe("every migration together", () => {
         stopped: false,
       },
       ALL,
+      UNTOLD,
     );
 
     expect(after).toContain('import { loadCourierConfig } from "@noverax/courier-build/config";');
@@ -96,6 +99,7 @@ describe("every migration together", () => {
           stopped: false,
         },
         ALL,
+        UNTOLD,
       );
     const once = run(OLD_KINDS);
     const after = once.edits[0]?.after ?? "";

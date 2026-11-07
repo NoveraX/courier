@@ -5,6 +5,7 @@ import { migrateCode } from "../../../src/upgrade/codemod/run-migrations";
 import type { Migration } from "../../../src/upgrade/migration";
 import { REALTIME_ERRORS } from "../../../src/upgrade/migrations/realtime-errors";
 import { SUBSCRIPTION_TYPE } from "../../../src/upgrade/migrations/subscription-type";
+import { UNTOLD } from "../migrations/migrate-with";
 
 /* A migration that finds each call of report(), and changes nothing. */
 const FINDS_REPORT: Migration = {
@@ -46,11 +47,11 @@ let stream: SSESubscription;
 report(new TimeoutError());
 `;
 
-    const migrated = migrateCode(code([{ path: "src/a.ts", text }]), [
-      REALTIME_ERRORS,
-      SUBSCRIPTION_TYPE,
-      FINDS_REPORT,
-    ]);
+    const migrated = migrateCode(
+      code([{ path: "src/a.ts", text }]),
+      [REALTIME_ERRORS, SUBSCRIPTION_TYPE, FINDS_REPORT],
+      UNTOLD,
+    );
 
     expect(migrated.edits).toHaveLength(1);
     expect(
@@ -72,7 +73,11 @@ report(new RealtimeTimeoutError());
   it("migrates a component's script blocks in place, and leaves the rest of its file as written", () => {
     const vue = `<template><p>{{ x }}</p></template>\n<script setup lang="ts">\nimport { AuthError } from "@noverax/courier";\n</script>\n`;
 
-    const [edit] = migrateCode(code([{ path: "src/App.vue", text: vue }]), [REALTIME_ERRORS]).edits;
+    const [edit] = migrateCode(
+      code([{ path: "src/App.vue", text: vue }]),
+      [REALTIME_ERRORS],
+      UNTOLD,
+    ).edits;
 
     expect(edit?.after).toBe(vue.replace('"@noverax/courier"', '"@noverax/courier/realtime"'));
   });
@@ -81,10 +86,12 @@ report(new RealtimeTimeoutError());
     const unparsable = migrateCode(
       code([{ path: "src/b.ts", text: 'import { AuthError from "@noverax/courier";\n' }]),
       [REALTIME_ERRORS],
+      UNTOLD,
     );
     const broken = migrateCode(
       code([{ path: "src/c.ts", text: 'import { AuthError } from "@noverax/courier";\n' }]),
       [BREAKS],
+      UNTOLD,
     );
 
     expect(unparsable.edits).toEqual([]);
@@ -113,6 +120,7 @@ report(new RealtimeTimeoutError());
         { path: "src/b.ts", text: 'import { from "@noverax/courier";\n' },
       ]),
       [untouched, FINDS_REPORT],
+      UNTOLD,
     );
 
     expect(migrated).toEqual({ edits: [], manual: [], needs: [] });
@@ -132,6 +140,7 @@ report(new RealtimeTimeoutError());
         { path: "src/courier/copied.ts", text: `// @courier-generated {"import":"pets"}\n${old}` },
       ]),
       [REALTIME_ERRORS, FINDS_REPORT],
+      UNTOLD,
     );
 
     expect(migrated.edits.map((edit) => edit.path)).toEqual(["src/courier/copied.ts"]);
@@ -157,6 +166,7 @@ report(new RealtimeTimeoutError());
         stopped: true,
       },
       [],
+      UNTOLD,
     );
 
     expect(migrated.manual.map((step) => step.file)).toEqual(["src/huge.ts", "."]);

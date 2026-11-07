@@ -1,6 +1,7 @@
 import type { Release } from "./migration";
 import { CALL_ERROR_FINDINGS } from "./migrations/call-error-findings";
 import { CANCEL_PREVIOUS_LIST } from "./migrations/cancel-previous-list";
+import { ENTRY_IMPORTS } from "./migrations/entry-imports";
 import { HTTP_ERROR_STATUS_ZERO } from "./migrations/http-error-status-zero";
 import { HTTP_PROBE_TYPE } from "./migrations/http-probe-type";
 import { IMPORT_CREDENTIALS } from "./migrations/import-credentials";
@@ -129,6 +130,8 @@ export const RELEASES: readonly Release[] = [
       HTTP_PROBE_TYPE,
       PIN_HASH,
       IMPORT_CREDENTIALS,
+      /* Last: the others look for names in the root, and this one moves them to the entries. */
+      ENTRY_IMPORTS,
     ],
   },
 ];

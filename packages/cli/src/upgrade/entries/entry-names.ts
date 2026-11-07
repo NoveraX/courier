@@ -20,6 +20,8 @@ export interface EntryExports {
   readonly types: ReadonlySet<string>;
   /** The values it binds to another value than the root does: an import of one, moved to it, takes another function. */
   readonly otherThanRoot: ReadonlySet<string>;
+  /** The values it leaves to the root, which its side takes from there: `redact`, which the page's entry leaves out. */
+  readonly rootOnly: ReadonlySet<string>;
 }
 
 function isStrings(list: unknown): list is string[] {
@@ -28,8 +30,8 @@ function isStrings(list: unknown): list is string[] {
 
 /* An entry of the list, held to its shape: the list is the core's, and a list of another shape is a bug of the build, not of a project. */
 function exportsOf(entry: unknown, name: string): EntryExports {
-  const { values, types, otherThanRoot = {} } = isRecord(entry) ? entry : {};
-  if (!isStrings(values) || !isStrings(types) || !isRecord(otherThanRoot))
+  const { values, types, otherThanRoot = {}, rootOnly = {} } = isRecord(entry) ? entry : {};
+  if (!isStrings(values) || !isStrings(types) || !isRecord(otherThanRoot) || !isRecord(rootOnly))
     throw new TypeError(
       `The core's entry-exports.json gives ${name} in a shape the upgrade does not read`,
     );
@@ -37,6 +39,7 @@ function exportsOf(entry: unknown, name: string): EntryExports {
     values: new Set(values),
     types: new Set(types),
     otherThanRoot: new Set(Object.keys(otherThanRoot)),
+    rootOnly: new Set(Object.keys(rootOnly)),
   };
 }
 
@@ -86,4 +89,39 @@ export function entryTakes(side: EntrySide, name: string): boolean {
  */
 export function bindsOtherwise(side: EntrySide, name: string): boolean {
   return ENTRY_EXPORTS[side].otherThanRoot.has(name);
+}
+
+/**
+ * Whether an entry leaves a name to the root, which its side takes from
+ * there: the page's entry leaves `redact` out, so a page takes it from
+ * the root, and the server from either.
+ *
+ * @param side - The entry
+ * @param name - The name
+ * @returns Whether its side takes the name from the root
+ * @example
+ * ```ts
+ * leftToRoot("client", "redact"); // true
+ * ```
+ */
+export function leftToRoot(side: EntrySide, name: string): boolean {
+  return ENTRY_EXPORTS[side].rootOnly.has(name);
+}
+
+/**
+ * Whether the root gives a name as a type alone: an entry gives it among
+ * its types, and neither among its values.
+ *
+ * @param name - The name
+ * @returns Whether an import of it takes a type, written with `type` or not
+ * @example
+ * ```ts
+ * isTypeOnly("CallOptions"); // true
+ * ```
+ */
+export function isTypeOnly(name: string): boolean {
+  return (
+    !VALUES.has(name) &&
+    (ENTRY_EXPORTS.client.types.has(name) || ENTRY_EXPORTS.server.types.has(name))
+  );
 }

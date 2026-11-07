@@ -109,11 +109,15 @@ test("cancels a slow call, shares three reads, and cancels a call with the next"
 
 test("times out a call that answers later than its timeout, and not one that answers sooner", async ({
   page,
+  browserName,
 }) => {
   await page.goto("/docs/examples/options")
   const timed = sandbox(page, "caller.misc.with({ timeout }).slow()")
   await timed.getByRole("button", { name: "Fetch /slow" }).click()
   await expect(timed).toContainText(/timed out/i)
+  if (browserName === "chromium") {
+    await expect(newestRequest(inspectorOf(timed))).toContainText("no answer reached the browser")
+  }
   /* Given up at its timeout, well before the three seconds the endpoint takes to answer. */
   const waited = Number(/(\d+) ms/.exec((await timed.textContent()) ?? "")?.[1])
   expect(waited).toBeLessThan(2000)
@@ -122,6 +126,7 @@ test("times out a call that answers later than its timeout, and not one that ans
   await timed.getByRole("button", { name: "Fetch /slow" }).click()
   expect((await answered).status()).toBe(200)
   await expect(timed).toContainText("This response was delayed by 3 seconds")
+  await expect(newestRequest(inspectorOf(timed))).toContainText("GET /slow → 200")
 })
 
 test("reads a stream chunk by chunk to its end, each when it came", async ({ page, context }) => {

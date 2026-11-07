@@ -4,6 +4,7 @@ import { isHTTPError } from "@noverax/courier"
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -49,6 +50,7 @@ export function TimeoutDemo() {
         </>
       }
       result={<ResponseView data={data} error={error} responseTime={elapsed} pending={loading} />}
+      inspector={<RequestInspector calls={["api.misc.slow"]} />}
     />
   )
 }

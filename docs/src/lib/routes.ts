@@ -12,8 +12,11 @@ const apiEndpoints = {
   "echo.send": { type: "mutation" },
   "files.upload": { type: "mutation" },
   "misc.error": { type: "query" },
+  "misc.flaky": { type: "query" },
   "misc.slow": { type: "query" },
+  "misc.slowRetried": { type: "query" },
   "misc.stream": { type: "query" },
+  "posts.cached": { type: "query" },
   "posts.create": { type: "mutation" },
   "posts.getAll": { type: "query" },
   "posts.getById": { type: "query" },
@@ -45,7 +48,9 @@ export const encodedApiRoutes: CourierRoutes<Sources["encodedApi"], typeof encod
 
 const middlewareApiEndpoints = {
   "misc.error": { type: "query" },
+  "misc.flaky": { type: "query" },
   "misc.slow": { type: "query" },
+  "misc.slowRetried": { type: "query" },
   "misc.stream": { type: "query" },
   "users.create": { type: "mutation" },
   "users.getAll": { type: "query" },

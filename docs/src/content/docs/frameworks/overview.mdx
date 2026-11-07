@@ -40,6 +40,7 @@ An API that keeps a `session` gets the user's session with every call server cod
 | React Router | `export const middleware = [requestContext()]` | 7, 8 |
 | Remix | `app.use(requestContext())` from `@noverax/courier-express`, before Remix's handler | 2 |
 | SolidStart | `registerRequestContext(solidStartRequestContext(getRequestEvent))` | 1, 2 |
+| TanStack Start | `createServerCaller(api)`, or `createMiddleware().server(requestContext())` in `src/start.ts` | 1, for React and Solid |
 | Express | `app.use(requestContext())` | 4, 5 |
 | Fastify | `app.addHook("onRequest", requestContext())` | 4, 5 |
 | Hono | `app.use(requestContext())` | 4 |

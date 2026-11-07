@@ -62,7 +62,7 @@ const renderedRoutes = (catalogModule: string) =>
   ({ path: "/routes", rendered: true, proxied: true, catalogModule }) as const;
 
 /* What Vite and the dev servers built on it print once they serve: `Local:`, or Astro's `Local`. */
-const SERVING = /Local/;
+export const SERVING = /Local/;
 
 const production = (port: number): Record<string, string> => ({
   NODE_ENV: "production",
@@ -198,6 +198,20 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     dev: { command: ["npx", "remix", "vite:dev"], ready: SERVING },
   },
   "solid-start": {
+    /* It serves the routes the SvelteKit application has, so the same checks drive it. */
+    spec: "forms.spec.ts",
+    apiUrlModule: "src/lib/api-url.ts",
+    build: ["npx", "vite", "build"],
+    serve: {
+      start: () => ["node", ".output/server/index.mjs"],
+      env: production,
+      ready: /Listening on/i,
+    },
+    address: onLocalhost,
+    routesPage: renderedRoutes("src/lib/catalog.ts"),
+    dev: { command: ["npx", "vite", "dev"], ready: SERVING },
+  },
+  "tanstack-start": {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
     spec: "forms.spec.ts",
     apiUrlModule: "src/lib/api-url.ts",

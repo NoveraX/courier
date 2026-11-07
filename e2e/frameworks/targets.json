@@ -300,6 +300,52 @@
     }
   },
   {
+    "id": "tanstack-start-react",
+    "app": "tanstack-start",
+    "overlays": ["tanstack-start-react", "tanstack-start-react-vite"],
+    "packages": ["core", "build", "tanstack-start"],
+    "install": {
+      "@tanstack/react-start": "1",
+      "@tanstack/react-router": "1",
+      "react": "19",
+      "react-dom": "19",
+      "@vitejs/plugin-react": "6",
+      "vite": "8",
+      "nitro": "latest"
+    }
+  },
+  {
+    "id": "tanstack-start-react-rsbuild",
+    "app": "tanstack-start",
+    "overlays": ["tanstack-start-react", "tanstack-start-rsbuild"],
+    "build": ["npx", "rsbuild", "build"],
+    "dev": ["npx", "rsbuild", "dev"],
+    "serve": ["npx", "rsbuild", "preview"],
+    "packages": ["core", "build", "tanstack-start"],
+    "install": {
+      "@tanstack/react-start": "1",
+      "@tanstack/react-router": "1",
+      "react": "19",
+      "react-dom": "19",
+      "@rsbuild/core": "2",
+      "@rsbuild/plugin-react": "2"
+    }
+  },
+  {
+    "id": "tanstack-start-solid",
+    "app": "tanstack-start",
+    "overlays": ["tanstack-start-solid"],
+    "packages": ["core", "build", "tanstack-start"],
+    "install": {
+      "@tanstack/solid-start": "1",
+      "@tanstack/solid-router": "1",
+      "solid-js": "1",
+      "vite-plugin-solid": "2",
+      "vite": "8",
+      "nitro": "latest"
+    }
+  },
+  {
     "id": "nestjs-10",
     "app": "nestjs",
     "packages": ["core", "nestjs"],

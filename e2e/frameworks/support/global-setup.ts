@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { freePort } from "../../support/free-port";
 import { startProcess } from "../../support/process";
 import { startApi } from "./api";
-import { APPS, type AppSettings, type Serving } from "./apps";
+import { APPS, type AppSettings, SERVING, type Serving } from "./apps";
 import { startAttacker } from "./attacker";
 import { prepare, TELEMETRY_OFF } from "./prepare";
 import { type Target, targetOf } from "./targets";
@@ -40,7 +40,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const root = await prepare(target, api.url, { build: !UNDER_DEV });
   mkdirSync(LOGS, { recursive: true });
   const log = join(LOGS, `${target.id}${UNDER_DEV ? "-dev" : ""}.log`);
-  const serving = UNDER_DEV ? devServing(target, settings) : settings.serve;
+  const serving = UNDER_DEV ? devServing(target, settings) : builtServing(target, settings);
   const app =
     serving === undefined
       ? undefined
@@ -60,6 +60,17 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     await app?.stop();
     await attacker.close();
     await api.close();
+  };
+}
+
+/* The build, as the version serves it: by its bundler's preview server where it names one. */
+function builtServing(target: Target, settings: AppSettings): Serving | undefined {
+  const command = target.serve;
+  if (command === undefined || settings.serve === undefined) return settings.serve;
+  return {
+    start: (port) => [...command, "--host", "127.0.0.1", "--port", String(port)],
+    env: settings.serve.env,
+    ready: SERVING,
   };
 }
 

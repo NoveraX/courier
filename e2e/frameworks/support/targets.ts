@@ -13,6 +13,7 @@ export type AppKind =
   | "react-router"
   | "remix"
   | "solid-start"
+  | "tanstack-start"
   | "nestjs"
   | "spa"
   | "angular"
@@ -33,6 +34,12 @@ export interface Target {
    * version starts it otherwise than its template does
    */
   readonly dev?: readonly string[];
+  /**
+   * How its build is served, before the host and the port, where the
+   * version serves it otherwise than its template does: its bundler's own
+   * preview server, which says where it serves as Vite's does
+   */
+  readonly serve?: readonly string[];
   /**
    * The bundler whose build of a page `bundle.spec.ts` holds to a budget:
    * the application gets a page for each scenario `check:browser` measures,
@@ -62,6 +69,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "react-router",
   "remix",
   "solid-start",
+  "tanstack-start",
   "nestjs",
   "spa",
   "angular",
@@ -108,7 +116,7 @@ export function targetOf(id: string | undefined): Target {
 
 function isTarget(value: unknown): value is Target {
   if (typeof value !== "object" || value === null) return false;
-  const { id, app, packages, install, overlays, build, dev, bundle } = value as Record<
+  const { id, app, packages, install, overlays, build, dev, serve, bundle } = value as Record<
     string,
     unknown
   >;
@@ -121,6 +129,7 @@ function isTarget(value: unknown): value is Target {
     (overlays === undefined || isStrings(overlays)) &&
     (build === undefined || isStrings(build)) &&
     (dev === undefined || isStrings(dev)) &&
+    (serve === undefined || isStrings(serve)) &&
     typeof install === "object" &&
     install !== null &&
     Object.values(install).every((range) => typeof range === "string")

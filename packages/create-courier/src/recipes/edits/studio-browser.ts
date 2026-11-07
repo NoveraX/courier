@@ -7,6 +7,7 @@ import {
   integrationEdit,
   NUXT_CONFIGS,
   RSBUILD_CONFIGS,
+  VITE_CONFIG,
   VITE_CONFIGS,
 } from "./config-integration";
 
@@ -36,7 +37,7 @@ const VITE_ENTRIES = ["vite", "react", "vue", "sveltekit", "remix", "solid"];
  */
 export function viteStudioEdit(project: Project, entry: string): RecipeEdit {
   return studioEdit({
-    path: firstExisting(project, VITE_CONFIGS),
+    path: firstExisting(project, VITE_CONFIGS, VITE_CONFIG),
     purpose: "connects the browser to Studio while you develop",
     callees: ["defineConfig"],
     property: "plugins",

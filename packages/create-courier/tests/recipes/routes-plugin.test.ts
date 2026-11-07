@@ -4,8 +4,10 @@ import { readProject } from "../../src/project/read-project";
 import {
   astroRoutesEdit,
   nuxtRoutesEdit,
+  rsbuildRoutesEdit,
   viteRoutesEdit,
 } from "../../src/recipes/edits/routes-plugin";
+import { rsbuildStudioStep, viteStudioEdit } from "../../src/recipes/edits/studio-browser";
 import { manifest, projectWith, removeProjects } from "./project-fixture";
 
 afterAll(removeProjects);
@@ -79,5 +81,59 @@ describe("nuxtRoutesEdit", () => {
     expect(edit.change(text)).toBe(
       "import { courierRoutesModule } from '@noverax/courier-nuxt/plugin'\n\nexport default defineNuxtConfig({\n  modules: ['@nuxt/eslint', courierRoutesModule],\n})\n",
     );
+  });
+});
+
+describe("the config Vite or Rsbuild reads", () => {
+  const VITE = ["js", "mjs", "ts", "cjs", "mts", "cts"].map((each) => `vite.config.${each}`);
+  const RSBUILD = ["ts", "js", "mts", "mjs", "cts", "cjs"].map((each) => `rsbuild.config.${each}`);
+  const COMMONJS =
+    'const { defineConfig } = require("vite");\n\nmodule.exports = defineConfig({ plugins: [] });\n';
+  const ESM = "export default { plugins: [] };\n";
+  const page = "https://courier.example/docs/rsbuild";
+
+  it("edits, or names in its step, the config of every name the tool reads", () => {
+    for (const name of VITE) {
+      const project = projectOf({
+        [name]: name.endsWith("js") && name.includes(".c") ? COMMONJS : ESM,
+      });
+      const routes = viteRoutesEdit(project, "@noverax/courier-solid/plugin");
+
+      expect([routes.path, routes.manual?.file, viteStudioEdit(project, "react").path]).toEqual([
+        name,
+        name,
+        name,
+      ]);
+    }
+    for (const name of RSBUILD) {
+      const project = projectOf({ [name]: ESM });
+      const routes = rsbuildRoutesEdit(project, "@noverax/courier-tanstack-start/rsbuild");
+
+      expect([routes.path, routes.manual?.file, rsbuildStudioStep(project, page).file]).toEqual([
+        name,
+        name,
+        name,
+      ]);
+    }
+  });
+
+  it("names a config written with module.exports in a step, as no edit writes into one", () => {
+    const edit = viteRoutesEdit(
+      projectOf({ "vite.config.cjs": COMMONJS }),
+      "@noverax/courier-solid/plugin",
+    );
+
+    expect(edit.change(COMMONJS)).toBeUndefined();
+    expect(edit.manual?.file).toBe("vite.config.cjs");
+  });
+
+  it("takes the config the tool reads first where a project has two, and Vite's in TypeScript where it has none", () => {
+    const vite = projectOf({ "vite.config.ts": ESM, "vite.config.js": ESM });
+    const rsbuild = projectOf({ "rsbuild.config.js": ESM, "rsbuild.config.ts": ESM });
+
+    expect(viteRoutesEdit(vite, "@noverax/courier-solid/plugin").path).toBe("vite.config.js");
+    expect(rsbuildStudioStep(rsbuild, page).file).toBe("rsbuild.config.ts");
+    expect(viteStudioEdit(projectOf({}), "react").path).toBe("vite.config.ts");
+    expect(rsbuildStudioStep(projectOf({}), page).file).toBe("rsbuild.config.ts");
   });
 });

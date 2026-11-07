@@ -10,31 +10,32 @@ import type { RecipeEdit } from "../recipe-types";
  *
  * @param project - The project
  * @param paths - The candidates, in order
- * @returns The first that exists; the first candidate when none does
+ * @param fallback - The file named where none is there: the first candidate, unless another is given
+ * @returns The first that exists; the fallback when none does
  * @example
  * ```ts
  * firstExisting(project, ["vite.config.ts", "vite.config.js"]); // "vite.config.js" in a JavaScript config
  * ```
  */
-export function firstExisting(project: Project, paths: readonly string[]): string {
-  return paths.find((path) => project.exists(path)) ?? paths[0] ?? "";
+export function firstExisting(
+  project: Project,
+  paths: readonly string[],
+  fallback = paths[0] ?? "",
+): string {
+  return paths.find((path) => project.exists(path)) ?? fallback;
 }
 
-/** The names a Vite config may have, in the order the setup looks for them. */
-export const VITE_CONFIGS = [
-  "vite.config.ts",
-  "vite.config.mts",
-  "vite.config.js",
-  "vite.config.mjs",
-];
+/** The names a Vite config may have, in the order Vite 8 looks for them: of two, the one it reads comes first. */
+export const VITE_CONFIGS = ["js", "mjs", "ts", "cjs", "mts", "cts"].map(
+  (extension) => `vite.config.${extension}`,
+);
+/** The Vite config the setup names where a project has none. */
+export const VITE_CONFIG = "vite.config.ts";
 
-/** The names an Rsbuild config may have, in the order the setup looks for them. */
-export const RSBUILD_CONFIGS = [
-  "rsbuild.config.ts",
-  "rsbuild.config.mts",
-  "rsbuild.config.js",
-  "rsbuild.config.mjs",
-];
+/** The names an Rsbuild config may have, in the order Rsbuild 2 looks for them: of two, the one it reads comes first. */
+export const RSBUILD_CONFIGS = ["ts", "js", "mts", "mjs", "cts", "cjs"].map(
+  (extension) => `rsbuild.config.${extension}`,
+);
 
 /**
  * Whether Rsbuild builds the app rather than Vite: its config is there,

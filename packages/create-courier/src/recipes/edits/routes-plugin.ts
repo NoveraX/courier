@@ -7,6 +7,7 @@ import {
   integrationEdit,
   NUXT_CONFIGS,
   RSBUILD_CONFIGS,
+  VITE_CONFIG,
   VITE_CONFIGS,
 } from "./config-integration";
 
@@ -45,7 +46,7 @@ function routesEdit(integration: Omit<Integration, "purpose" | "what">): RecipeE
  */
 export function viteRoutesEdit(project: Project, from: string): RecipeEdit {
   return routesEdit({
-    path: firstExisting(project, VITE_CONFIGS),
+    path: firstExisting(project, VITE_CONFIGS, VITE_CONFIG),
     callees: ["defineConfig"],
     property: "plugins",
     name: "courierRoutes",

@@ -35,34 +35,51 @@ const COMPONENT = "<CodeGroup";
  * // → [{ line: 1, jsx: false, listing: false, flat: true, code: "const a = 1\n", file: undefined }]
  */
 export function codeGroupSamples(text) {
+  return componentsOf(text).flatMap((component) => tabsOf(text, component));
+}
+
+/**
+ * Where a page writes tabbed code outside its fences: each component, from
+ * its tag to its end, whose code is no prose of the page.
+ *
+ * @param {string} text - The page
+ * @returns {Array<[number, number]>} Each component's start and end, offsets of the text
+ * @example
+ * codeGroupSpans('Intro\n<CodeGroup items={[]} />\n'); // → [[6, 30]]
+ */
+export function codeGroupSpans(text) {
+  return componentsOf(text).map(({ start, element }) => [start, start + element.getEnd()]);
+}
+
+/* Each tabbed code component a page writes outside its fences: where it opens, and its element as parsed from there. */
+function componentsOf(text) {
   const fenced = [...text.matchAll(FENCE)].map((match) => [
     match.index,
     match.index + match[0].length,
   ]);
-  const samples = [];
+  const components = [];
   for (
     let start = text.indexOf(COMPONENT);
     start >= 0;
     start = text.indexOf(COMPONENT, start + 1)
   ) {
     if (fenced.some(([from, to]) => start >= from && start < to)) continue;
-    samples.push(...tabsAt(text, start));
+    const source = ts.createSourceFile(
+      "tabs.tsx",
+      text.slice(start),
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TSX,
+    );
+    const element = elementAtStart(source, source);
+    if (element) components.push({ start, source, element });
   }
-  return samples;
+  return components;
 }
 
-/* The TypeScript tabs of the component that opens at `start`. */
-function tabsAt(text, start) {
-  const rest = text.slice(start);
-  const source = ts.createSourceFile(
-    "tabs.tsx",
-    rest,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  const element = elementAtStart(source, source);
-  const items = element ? propArray(element, "items") : undefined;
+/* The TypeScript tabs of a component. */
+function tabsOf(text, { start, source, element }) {
+  const items = propArray(element, "items");
   return (items?.elements ?? []).flatMap((item) => {
     if (!ts.isObjectLiteralExpression(item)) return [];
     const code = literal(item, "code");

@@ -20,7 +20,8 @@
  *
  * A sample also imports the core's entry its side takes: a page
  * `@noverax/courier/client`, a server `@noverax/courier/server` — see
- * `scripts/sample-entries.mjs`.
+ * `scripts/sample-entries.mjs` — and the prose beside the samples names
+ * that entry too, never the root — see `scripts/prose-entries.mjs`.
  *
  * Exits 1 with a list of places when found.
  */
@@ -33,6 +34,7 @@ import { fileURLToPath } from "node:url";
 
 import { extractSamples, importHeader, samplePages } from "./doc-samples.mjs";
 import { placeSamples } from "./page-modules.mjs";
+import { proseProblems } from "./prose-entries.mjs";
 import { entryProblems } from "./sample-entries.mjs";
 import { isOmission, samplesLeavingOut } from "./sample-omissions.mjs";
 
@@ -207,13 +209,14 @@ function addMissingImports(roots, exported, files) {
 }
 
 function main() {
-  const samples = samplePages(ROOT).flatMap((page) =>
-    extractSamples(readFileSync(page, "utf8")).map((sample) => ({
-      ...sample,
-      page: relative(ROOT, page),
-    })),
+  const pages = samplePages(ROOT).map((page) => ({
+    page: relative(ROOT, page),
+    text: readFileSync(page, "utf8"),
+  }));
+  const samples = pages.flatMap(({ page, text }) =>
+    extractSamples(text).map((sample) => ({ ...sample, page })),
   );
-  const problems = [...checkSamples(samples), ...entryProblems(samples)];
+  const problems = [...checkSamples(samples), ...entryProblems(samples), ...proseProblems(pages)];
   if (problems.length === 0) {
     console.log(
       `check-doc-samples: all ${samples.length} samples compile, each from its side's entries`,

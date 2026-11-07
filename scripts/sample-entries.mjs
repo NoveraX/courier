@@ -37,8 +37,8 @@ const ENTRY_EXPORTS = JSON.parse(
 );
 /* The names `/client` binds otherwise than the root does: the page's `createCaller`. */
 const OTHER_THAN_ROOT = new Set(Object.keys(ENTRY_EXPORTS["./client"].otherThanRoot));
-/* The values a page takes from the root alone, as `redact`: `/client` leaves them out, and `/server` has them for a server. */
-const ROOT_ONLY = new Set(Object.keys(ENTRY_EXPORTS["./client"].rootOnly));
+/** The values a page takes from the root alone, as `redact`: `/client` leaves them out, and `/server` has them for a server. */
+export const ROOT_ONLY = new Set(Object.keys(ENTRY_EXPORTS["./client"].rootOnly));
 
 const NAMES = {
   [CLIENT]: new Set([...ENTRY_EXPORTS["./client"].values, ...ENTRY_EXPORTS["./client"].types]),

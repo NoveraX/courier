@@ -15,6 +15,14 @@ export { type Touched, typecheckTouched } from "./apply/typecheck";
 export { withJsonStrings } from "./edit/json-strings";
 export { type ChangedLine, changedLines } from "./edit/line-diff";
 export { frameworkOf } from "./framework-of";
+export {
+  detectFramework,
+  detectFrameworks,
+  type FrameworkId,
+  SERVER_FRAMEWORKS,
+  type ServerFramework,
+  type ServerId,
+} from "./frameworks";
 export { type ImportFrom, importFrom, secretsPrefix } from "./import-address";
 export type { Plan, PlannedEdit, PlannedFile } from "./plan/build-plan";
 export { type GitState, gitState } from "./preflight/git-state";
@@ -26,7 +34,14 @@ export {
   type PackageManager,
   type PackageManagerName,
 } from "./project/package-manager";
-export { manifestOf, type PackageManifest, readProject } from "./project/read-project";
+export { aliasTargets } from "./project/path-aliases";
+export {
+  manifestOf,
+  type PackageManifest,
+  type Project,
+  readProject,
+} from "./project/read-project";
+export { type TsconfigLevel, tsconfigProjects } from "./project/tsconfig-chain";
 export { isRoutesFramework } from "./recipes/edits/framework-routes";
 export type { ManualStep, NextStep } from "./recipes/recipe-types";
 export type { PlanView, SetupEnd, SetupReport, UpgradeView } from "./report/setup-report";

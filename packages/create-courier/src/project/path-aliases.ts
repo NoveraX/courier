@@ -18,7 +18,10 @@ interface Alias {
 
 /** How the project resolves a specifier that is not relative. */
 interface Aliases {
-  readonly aliases: readonly Alias[];
+  /** The tsconfig's `paths`. */
+  readonly paths: readonly Alias[];
+  /** The `#` subpaths package.json maps to the project's own files, each to the first path its conditions give. */
+  readonly imports: readonly Alias[];
   /** The folder bare specifiers are read from, where the tsconfig names a `baseUrl`. */
   readonly baseUrl: string | undefined;
 }
@@ -35,21 +38,21 @@ function levelsOf(project: Project): ReturnType<typeof tsconfigChain> {
 }
 
 /* `paths`, read against `baseUrl` where one is set, else against the tsconfig that names them. */
-function tsconfigAliases(project: Project): Aliases {
+function tsconfigAliases(project: Project): Pick<Aliases, "paths" | "baseUrl"> {
   const levels = levelsOf(project);
   const pathsLevel = levels.find((level) => isRecord(level.options.paths));
   const baseLevel = levels.find((level) => typeof level.options.baseUrl === "string");
   const baseUrl = baseLevel ? resolve(baseLevel.dir, String(baseLevel.options.baseUrl)) : undefined;
   const from = baseUrl ?? pathsLevel?.dir ?? project.root;
-  const paths = pathsLevel && isRecord(pathsLevel.options.paths) ? pathsLevel.options.paths : {};
-  const aliases = Object.entries(paths).map(([key, targets]) => ({
+  const written = pathsLevel && isRecord(pathsLevel.options.paths) ? pathsLevel.options.paths : {};
+  const paths = Object.entries(written).map(([key, targets]) => ({
     key,
     base: from,
     targets: (Array.isArray(targets) ? targets : []).filter(
       (target): target is string => typeof target === "string",
     ),
   }));
-  return { aliases, baseUrl };
+  return { paths, baseUrl };
 }
 
 /* A package.json `imports` value: a path, or the first path its conditions give, its types aside. */
@@ -82,11 +85,7 @@ function packageImports(project: Project): Alias[] {
 function aliasesOf(project: Project): Aliases {
   const known = cache.get(project);
   if (known) return known;
-  const fromTsconfig = tsconfigAliases(project);
-  const aliases = {
-    ...fromTsconfig,
-    aliases: [...fromTsconfig.aliases, ...packageImports(project)],
-  };
+  const aliases = { ...tsconfigAliases(project), imports: packageImports(project) };
   cache.set(project, aliases);
   return aliases;
 }
@@ -125,12 +124,46 @@ function isCode(project: Project, path: string): boolean {
   );
 }
 
+/* The targets of the aliases given that a specifier matches, and its path from the `baseUrl`. */
+function targetsOf(project: Project, specifier: string, aliases: readonly Alias[]): string[] {
+  const { baseUrl } = aliasesOf(project);
+  const plain = specifier.replace(EXTENSION, "");
+  const mapped = aliases.flatMap(({ key, base, targets }) => {
+    const star = captured(key, specifier) ?? captured(key, plain);
+    if (star === undefined) return [];
+    return targets.map((target) => resolve(base, withStars(target, star)).replace(EXTENSION, ""));
+  });
+  const fromBase = baseUrl === undefined ? [] : [resolve(baseUrl, plain)];
+  return [...new Set([...mapped, ...fromBase])];
+}
+
+/**
+ * Where a specifier that is not relative may lead, as the project's
+ * tsconfig resolves it: a `paths` key — read through what the tsconfig
+ * extends, against its `baseUrl` — or a path from the `baseUrl`. Each is
+ * an absolute path without its extension, in the project or out of it: a
+ * workspace's tsconfig may map an alias to another of its packages.
+ * Whether a file is there is the caller's to see, and so is a
+ * package.json `imports` key, whose conditions give each side its own.
+ *
+ * @param project - The project
+ * @param specifier - The specifier, as a file of the project's writes it
+ * @returns The paths it may lead to, without extension; none for a package
+ * @example
+ * ```ts
+ * aliasTargets(project, "@acme/shared/api"); // ["/work/packages/shared/src/api"] where paths maps "@acme/shared/*" there
+ * ```
+ */
+export function aliasTargets(project: Project, specifier: string): string[] {
+  return targetsOf(project, specifier, aliasesOf(project).paths);
+}
+
 /**
  * The files of the project's own a specifier that is not relative may
- * name, as the project's tooling resolves it: a tsconfig `paths` key —
- * read through what the tsconfig extends, against its `baseUrl` — a
- * package.json `imports` key, or a path from the `baseUrl`, where a file
- * of code is there.
+ * name, as the project's tooling resolves it: the targets
+ * {@link aliasTargets} gives inside the project, and the first path a
+ * package.json import's conditions give — a path from the `baseUrl` only
+ * where a file of code is there.
  *
  * @param project - The project
  * @param specifier - The specifier, as a file of the project's writes it
@@ -141,14 +174,13 @@ function isCode(project: Project, path: string): boolean {
  * ```
  */
 export function aliasedFiles(project: Project, specifier: string): string[] {
-  const { aliases, baseUrl } = aliasesOf(project);
-  const plain = specifier.replace(EXTENSION, "");
-  const mapped = aliases.flatMap(({ key, base, targets }) => {
-    const star = captured(key, specifier) ?? captured(key, plain);
-    if (star === undefined) return [];
-    return targets.flatMap((target) => bare(project, resolve(base, withStars(target, star))) ?? []);
+  const { paths, imports, baseUrl } = aliasesOf(project);
+  const fromBase =
+    baseUrl === undefined ? undefined : resolve(baseUrl, specifier.replace(EXTENSION, ""));
+  const inside = targetsOf(project, specifier, [...paths, ...imports]).flatMap((target) => {
+    const path = bare(project, target);
+    if (path === undefined || (target === fromBase && !isCode(project, path))) return [];
+    return [path];
   });
-  const fromBase = baseUrl === undefined ? undefined : bare(project, resolve(baseUrl, plain));
-  const based = fromBase !== undefined && isCode(project, fromBase) ? [fromBase] : [];
-  return [...new Set([...mapped, ...based].map((path) => posix.normalize(path)))];
+  return [...new Set(inside.map((path) => posix.normalize(path)))];
 }

@@ -24,6 +24,11 @@ export type FrameworkId =
   | "fastify"
   | "hono"
   | "express"
+  | "koa"
+  | "hapi"
+  | "elysia"
+  | "h3"
+  | "nitro"
   | "react"
   | "vue";
 
@@ -44,9 +49,16 @@ export interface FrameworkMarker {
    * listed, as for a worker a bundler builds.
    */
   readonly runsWith?: boolean;
+  /**
+   * Whether it runs a server alone, which a package may list beside the
+   * framework its page is built with: such a package is told by its
+   * server, which comes before the page's in the list, and is not a
+   * page's alone. The same servers as the upgrade's, in create-courier.
+   */
+  readonly server?: boolean;
 }
 
-/** The frameworks, the ones built on others first: a Next.js app lists React too. */
+/** The frameworks, the ones built on others first: a Next.js app lists React too; a server before a page Vite builds. */
 export const FRAMEWORK_MARKERS: readonly FrameworkMarker[] = [
   { id: "next", label: "Next.js", marker: "next" },
   { id: "nuxt", label: "Nuxt", marker: "nuxt" },
@@ -56,10 +68,15 @@ export const FRAMEWORK_MARKERS: readonly FrameworkMarker[] = [
   { id: "remix", label: "Remix", marker: "@remix-run/dev" },
   { id: "solid-start", label: "SolidStart", marker: "@solidjs/start" },
   { id: "expo", label: "Expo", marker: "expo" },
-  { id: "nestjs", label: "NestJS", marker: "@nestjs/core" },
-  { id: "fastify", label: "Fastify", marker: "fastify" },
-  { id: "hono", label: "Hono", marker: "hono", runsWith: true },
-  { id: "express", label: "Express", marker: "express" },
+  { id: "nestjs", label: "NestJS", marker: "@nestjs/core", server: true },
+  { id: "fastify", label: "Fastify", marker: "fastify", server: true },
+  { id: "hono", label: "Hono", marker: "hono", runsWith: true, server: true },
+  { id: "express", label: "Express", marker: "express", server: true },
+  { id: "koa", label: "Koa", marker: "koa", server: true },
+  { id: "hapi", label: "hapi", marker: "@hapi/hapi", server: true },
+  { id: "elysia", label: "Elysia", marker: "elysia", server: true },
+  { id: "h3", label: "h3", marker: "h3", server: true },
+  { id: "nitro", label: "Nitro", marker: "nitro", server: true },
   { id: "react", label: "React with Vite", marker: "vite", also: "react" },
   { id: "vue", label: "Vue with Vite", marker: "vite", also: "vue" },
 ];

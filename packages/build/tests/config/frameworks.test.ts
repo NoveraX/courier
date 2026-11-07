@@ -46,6 +46,23 @@ describe("detectFramework", () => {
     expect(detectFramework(listed({ devDependencies: { hono: "4" } }))?.label).toBe("Hono");
   });
 
+  it("tells a server a page built with Vite runs beside before the page, as it tells Express", () => {
+    const servers: Array<[string, string]> = [
+      ["Koa", "koa"],
+      ["hapi", "@hapi/hapi"],
+      ["Elysia", "elysia"],
+      ["h3", "h3"],
+      ["Nitro", "nitro"],
+    ];
+    for (const [label, server] of servers)
+      expect(
+        detectFramework(
+          listed({ dependencies: { [server]: "1", react: "19" }, devDependencies: { vite: "7" } }),
+        )?.label,
+      ).toBe(label);
+    expect(detectFramework(listed({ dependencies: { nuxt: "4", h3: "1" } }))?.label).toBe("Nuxt");
+  });
+
   it("tells none where the project lists no framework it knows", () => {
     expect(detectFramework(listed({ dependencies: { vite: "7" } }))).toBeUndefined();
   });

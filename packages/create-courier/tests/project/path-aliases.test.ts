@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { configObjectPath } from "../../src/project/config-file";
-import { aliasedFiles } from "../../src/project/path-aliases";
+import { aliasedFiles, aliasTargets } from "../../src/project/path-aliases";
 import { readProject } from "../../src/project/read-project";
 import { projectWith, removeProjects } from "../recipes/project-fixture";
 
@@ -115,5 +115,41 @@ describe("configObjectPath", () => {
     expect(configObjectPath(projectOf({ ...files, "tsconfig.json": "{}" }))).toBe(
       "courier.config.ts",
     );
+  });
+});
+
+describe("aliasTargets", () => {
+  it("gives a target outside the project too, as a workspace maps an alias to another of its packages", () => {
+    const project = projectOf({
+      "tsconfig.json":
+        '{ "compilerOptions": { "baseUrl": ".", "paths": { "@acme/shared/*": ["../../packages/shared/src/*"] } } }',
+    });
+    const outside = join(project.root, "../../packages/shared/src/api");
+
+    expect(aliasTargets(project, "@acme/shared/api.js")).toEqual([
+      outside,
+      join(project.root, "@acme/shared/api"),
+    ]);
+    expect(aliasedFiles(project, "@acme/shared/api.js")).toEqual([]);
+  });
+
+  it("leaves a package.json import to the caller, which reads its conditions, and gives a recipe the first path", () => {
+    const project = readProject(
+      projectWith({
+        "package.json": JSON.stringify({
+          imports: {
+            "#db": { node: "./src/db.node.ts", types: "./src/db.d.ts", default: "./src/db.ts" },
+            "#env": [{ worker: "./src/env.worker.ts" }, "./src/env.ts"],
+            "#lib": { node: "some-package", default: "./src/lib.ts" },
+          },
+        }),
+      }),
+    );
+
+    expect(aliasTargets(project, "#db")).toEqual([]);
+    expect(aliasTargets(project, "#env")).toEqual([]);
+    expect(aliasedFiles(project, "#db")).toEqual(["src/db.node"]);
+    expect(aliasedFiles(project, "#env")).toEqual(["src/env.worker"]);
+    expect(aliasedFiles(project, "#lib")).toEqual([]);
   });
 });

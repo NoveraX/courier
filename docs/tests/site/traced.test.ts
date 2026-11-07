@@ -58,7 +58,9 @@ describe("a call made on the server", () => {
   })
 
   it("is made and answered untraced with the inspector off", async () => {
-    const { answer, trace } = await traced("render", () => caller.users.getById({ id: 1 }), false)
+    const { answer, trace } = await traced("render", () => caller.users.getById({ id: 1 }), {
+      on: false,
+    })
     expect(answer.data?.name).toBe("Alice Johnson")
     expect(trace).toBeUndefined()
   })

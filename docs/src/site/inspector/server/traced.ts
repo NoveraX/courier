@@ -1,3 +1,5 @@
+import { isCourierError } from "@noverax/courier/server"
+
 import { answerOf, type ServerAnswer } from "../../sandbox/server-call"
 import type { CallSite, CallTrace } from "../trace"
 import { requestInspection } from "./inspection"
@@ -13,6 +15,33 @@ export interface TracedAnswer<TData> {
   readonly trace?: CallTrace | undefined
 }
 
+/** How a traced call is made. */
+export interface TracedOptions {
+  /**
+   * What a failure of Courier's own — no answer, or none in time — comes
+   * to: thrown, as any other failure is (the default), or told as the
+   * call's answer, its trace kept, as a sandbox shows it.
+   */
+  readonly failures?: "throw" | "answer" | undefined
+  /** Whether the inspector is on: the site's setting, unless a test says. */
+  readonly on?: boolean | undefined
+}
+
+/* What the call came to: its data or the API's refusal, and a failure of Courier's own told as one
+   where the call asks. */
+async function settled<TData>(
+  call: () => Promise<TData>,
+  failures: TracedOptions["failures"]
+): Promise<ServerAnswer<TData>> {
+  try {
+    return await answerOf(call())
+  } catch (failure) {
+    if (failures !== "answer" || !isCourierError(failure)) throw failure
+    /* Its kind alone: its message may name the API's own address, which the trace leaves out too. */
+    return { error: `${failure.name}: no answer from the API`, status: 0 }
+  }
+}
+
 /**
  * Make a call on the site's server — as a page renders, or in a Server
  * Action — and trace it as the proxy route traces its calls: each request
@@ -21,9 +50,9 @@ export interface TracedAnswer<TData> {
  *
  * @param site - Where the call is made
  * @param call - The call
- * @param on - Whether the inspector is on: the site's setting, unless a test says
+ * @param options - What a failure of Courier's own comes to, and whether the inspector is on
  * @returns What the call came to, and its trace
- * @throws Whatever the call failed with that is no answer of the API's
+ * @throws Whatever the call failed with that is no answer of the API's, unless told as one
  * @example
  * ```ts
  * const users = await traced("render", () => caller.users.getAll())
@@ -32,10 +61,10 @@ export interface TracedAnswer<TData> {
 export async function traced<TData>(
   site: Exclude<CallSite, "proxy">,
   call: () => Promise<TData>,
-  on = INSPECTING
+  { failures = "throw", on = INSPECTING }: TracedOptions = {}
 ): Promise<TracedAnswer<TData>> {
-  if (!on) return { answer: await answerOf(call()) }
+  if (!on) return { answer: await settled(call, failures) }
   recordCalls()
-  const { value: answer, log } = await withCallLog(() => answerOf(call()))
+  const { value: answer, log } = await withCallLog(() => settled(call, failures))
   return { answer, trace: serverTraceOf(log, site) }
 }

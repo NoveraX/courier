@@ -1,6 +1,7 @@
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
+import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 
 import { MiddlewareDemo, OnErrorDemo } from "./_components"
 
@@ -45,6 +46,15 @@ const data = await middlewareCaller.users.getAll()
 //   _meta: { timestamp: "2026-11-07T12:00:00.000Z" }
 // }`
 
+const serverExampleCode = `// The same call in a Server Action: the chain runs on the server either way
+"use server"
+
+import { createAction } from "@noverax/courier-next"
+import { sources } from "@/api"
+
+const action = createAction(sources, "middlewareApi")
+const data = await action.users.getAll() // _meta, as through the proxy route`
+
 const onErrorCode = `// The failures link tells a failure, then passes it on to the caller
 defineMiddleware("failures", "wrap", async (ctx, next) => {
   try {
@@ -84,6 +94,15 @@ export default function MiddlewareExamplesPage() {
         title="Response Transformation"
         description="Middleware can transform responses: the stamp adds _meta to every answer that is a record."
         code={middlewareExampleCode}
+        server={{
+          code: serverExampleCode,
+          sandbox: (
+            <ServerRunSandbox
+              label="action.users.getAll() — on the server"
+              runs={[{ button: "Fetch users on the server", name: "middleware.users" }]}
+            />
+          ),
+        }}
       >
         <MiddlewareDemo />
       </ExampleSection>

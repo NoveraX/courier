@@ -1,6 +1,7 @@
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
+import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 
 import { BodyEncodingDemo, DefaultsDemo, SearchParamsDemo } from "./_components"
 
@@ -52,6 +53,16 @@ await encodedCaller.echo.send({ name: "John", role: "admin" })
 // Content-Type: application/x-www-form-urlencoded;charset=UTF-8
 // Body: apiVersion=v2&name=John&role=admin`
 
+const serverBodyCode = `// The same calls in a Server Action: the serializers run on the server either way,
+// and the API gets the same bytes
+"use server"
+
+import { createAction } from "@noverax/courier-next"
+import { sources } from "@/api"
+
+await createAction(sources, "api").echo.send({ name: "John", role: "admin" })
+await createAction(sources, "encodedApi").echo.send({ name: "John", role: "admin" })`
+
 const searchParamsCode = `// Custom searchParamsSerializer supports arrays
 await encodedCaller.echo.retrieve({
   tags: ["javascript", "react"],
@@ -90,6 +101,18 @@ export default function EncodingExamplesPage() {
         title="Body Encoding"
         description="Compare JSON (default) vs URL-encoded body. Both send the same data to the echo endpoint, which answers with the type and the bytes it was sent: rawBody."
         code={bodyEncodingCode}
+        server={{
+          code: serverBodyCode,
+          sandbox: (
+            <ServerRunSandbox
+              label="action.echo.send — on the server"
+              runs={[
+                { button: "JSON, on the server", name: "encoding.json" },
+                { button: "URL-encoded, on the server", name: "encoding.form" },
+              ]}
+            />
+          ),
+        }}
       >
         <BodyEncodingDemo />
       </ExampleSection>

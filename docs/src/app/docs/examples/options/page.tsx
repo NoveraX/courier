@@ -1,6 +1,7 @@
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
+import { ServerRunSandbox } from "@/site/sandbox/server-run-sandbox"
 
 import { TimeoutDemo } from "./_components"
 import { CacheDemo, RetryDemo, ServerTimeoutDemo } from "./server-options"
@@ -12,6 +13,15 @@ try {
 } catch (error) {
   // TimeoutError: the call ran out of time in the browser
 }`
+
+const actionTimeoutCode = `// The same timeout in a Server Action: it bounds the server's request to the API
+"use server"
+
+import { createAction } from "@noverax/courier-next"
+import { sources } from "@/api"
+
+const action = createAction(sources, "api")
+await action.misc.with({ timeout: 1000 }).slow() // TimeoutError, on the server`
 
 const serverTimeoutCode = `// How long the server waits for the API, and whether it asks again: the endpoint's own
 slowRetried: endpoint
@@ -84,6 +94,16 @@ export default function OptionsExamplesPage() {
         description="The /slow endpoint takes 3 seconds. Set a shorter timeout to trigger a timeout error: the browser gives up, and cancels its request — Chrome records it below, cancelled; Safari records none."
         code={timeoutCode}
         learnMore={{ href: "/docs/advanced/options", label: "Options docs" }}
+        server={{
+          code: actionTimeoutCode,
+          sandbox: (
+            <ServerRunSandbox
+              label="action.misc.with({ timeout }).slow() — on the server"
+              runs={[{ button: "Fetch /slow on the server", name: "options.slow" }]}
+              choice={{ label: "timeout (ms)", options: [1000, 2000, 5000] }}
+            />
+          ),
+        }}
       >
         <TimeoutDemo />
       </ExampleSection>

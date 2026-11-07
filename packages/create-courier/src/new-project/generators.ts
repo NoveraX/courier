@@ -23,6 +23,7 @@ const SPECS = {
   astro: "create-astro@5",
   reactRouter: "create-react-router@8",
   solid: "create-solid@0.12",
+  tanstack: "@tanstack/cli@0.72",
   expo: "create-expo-app@5",
   nest: "@nestjs/cli@12",
   hono: "create-hono@0.19",
@@ -113,6 +114,23 @@ export function generatorFor(
     case "solid-start":
       return {
         args: [SPECS.solid, dir, "--solidstart", "--v2", "--ts", "-t", "basic"],
+        install: true,
+      };
+    case "tanstack-start-react":
+    case "tanstack-start-solid":
+      return {
+        args: [
+          SPECS.tanstack,
+          "create",
+          dir,
+          "--framework",
+          framework === "tanstack-start-react" ? "React" : "Solid",
+          "--package-manager",
+          manager,
+          "--blank",
+          "--no-install",
+          "--yes",
+        ],
         install: true,
       };
     case "expo":

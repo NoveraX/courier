@@ -6,6 +6,7 @@ import {
   type Integration,
   integrationEdit,
   NUXT_CONFIGS,
+  RSBUILD_CONFIGS,
   VITE_CONFIGS,
 } from "./config-integration";
 
@@ -51,6 +52,31 @@ export function viteRoutesEdit(project: Project, from: string): RecipeEdit {
     item: "courierRoutes()",
     from,
     also: VITE_PLUGINS,
+  });
+}
+
+/**
+ * The edit that builds the pages' routes in for an app Rsbuild builds:
+ * `courierRoutes()` in the config's `plugins`, from the framework's
+ * `/rsbuild` entry.
+ *
+ * @param project - The project
+ * @param from - The framework's entry: `@noverax/courier-tanstack-start/rsbuild`
+ * @returns The edit
+ * @example
+ * ```ts
+ * rsbuildRoutesEdit(project, "@noverax/courier-tanstack-start/rsbuild").path; // "rsbuild.config.ts"
+ * ```
+ */
+export function rsbuildRoutesEdit(project: Project, from: string): RecipeEdit {
+  return routesEdit({
+    path: firstExisting(project, RSBUILD_CONFIGS),
+    callees: ["defineConfig"],
+    property: "plugins",
+    name: "courierRoutes",
+    item: "courierRoutes()",
+    from,
+    also: ["@noverax/courier-build/rsbuild"],
   });
 }
 

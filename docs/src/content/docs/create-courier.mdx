@@ -1,4 +1,4 @@
-export const metadata = { title: "Create Courier", description: "Set Courier up in one command, in your project or a new one: the typed API, the route the browser calls it through, Studio and mock data.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Create Courier", description: "Set Courier up in one command, in your project or a new one: the typed API, the route the browser calls it through, Studio and mock data.", mode: "both", updated: "2026-11-07" }
 
 `@noverax/create-courier` sets Courier up in one command. It finds your framework, shows what it is about to do, and once you agree writes the files, installs the packages with your package manager and type-checks what it added. You get a working page at `/courier` before you have a backend: the example API answers from a mock that Studio runs. In a React or Vue app that Vite builds, the page is `/courier.html`, which Vite serves while `npm run dev` runs; opened from disk, it says so.
 
@@ -76,6 +76,7 @@ A project it creates is moved to TypeScript 6 where its template came with an ol
 | Astro | `src/pages/api/request.ts`, on demand, registered from the middleware | Courier's integration and Studio's in `astro.config` |
 | React Router, Remix | `app/routes/api.request.ts` | the routes in `app/routes.ts`; Courier's plugin and Studio's in `vite.config` |
 | SolidStart | `src/routes/api/request.ts` | Courier's plugin and Studio's in `vite.config` |
+| TanStack Start, for React or Solid | `src/routes/api/request.ts`, registered from `src/server.ts` | Courier's plugin and Studio's in `vite.config` — under Rsbuild, Courier's in `rsbuild.config`, and Studio connected to the server alone; the app built once, which writes its routes' types, before the check |
 | React with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
 | Vue with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
 | Expo | no server: the app calls your API directly | a Courier tab in the template's tabs |

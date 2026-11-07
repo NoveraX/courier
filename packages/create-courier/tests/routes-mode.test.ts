@@ -68,7 +68,7 @@ describe("routesModeOf", () => {
 
   it("refuses --routes plugin for a framework Courier has no plugin for, naming those it has one for", () => {
     expect(() => routesModeOf(nextApp(), frameworkById("express"), "plugin")).toThrow(
-      "--routes plugin: Courier builds the routes in with a plugin for Next.js, Nuxt, SvelteKit, Astro, React Router, Remix, SolidStart, not for Express",
+      "--routes plugin: Courier builds the routes in with a plugin for Next.js, Nuxt, SvelteKit, Astro, React Router, Remix, SolidStart, TanStack Start for React, TanStack Start for Solid, not for Express",
     );
   });
 });

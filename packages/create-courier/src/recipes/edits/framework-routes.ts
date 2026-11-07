@@ -1,13 +1,27 @@
 import type { FrameworkId } from "../../frameworks";
 import type { Project } from "../../project/read-project";
 import type { ManualStep, RecipeEdit } from "../recipe-types";
+import { buildsWithRsbuild } from "./config-integration";
 import { nextRoutesEdit } from "./next-routes";
-import { astroRoutesEdit, nuxtRoutesEdit, viteRoutesEdit } from "./routes-plugin";
+import {
+  astroRoutesEdit,
+  nuxtRoutesEdit,
+  rsbuildRoutesEdit,
+  viteRoutesEdit,
+} from "./routes-plugin";
 
 /** A framework Courier's plugin builds the pages' routes in for. */
 export type RoutesFramework = Extract<
   FrameworkId,
-  "next" | "nuxt" | "sveltekit" | "astro" | "react-router" | "remix" | "solid-start"
+  | "next"
+  | "nuxt"
+  | "sveltekit"
+  | "astro"
+  | "react-router"
+  | "remix"
+  | "solid-start"
+  | "tanstack-start-react"
+  | "tanstack-start-solid"
 >;
 
 /** The frameworks Courier's plugin builds the pages' routes in for. */
@@ -19,6 +33,8 @@ export const ROUTES_FRAMEWORKS: readonly RoutesFramework[] = [
   "react-router",
   "remix",
   "solid-start",
+  "tanstack-start-react",
+  "tanstack-start-solid",
 ];
 
 /**
@@ -98,5 +114,10 @@ export function routesPluginOf(
         viteRoutesEdit(project, "@noverax/courier-solid/plugin"),
         "Build the pages' routes in: add the plugin to the config's vite.plugins",
       );
+    case "tanstack-start-react":
+    case "tanstack-start-solid":
+      return buildsWithRsbuild(project)
+        ? rsbuildRoutesEdit(project, "@noverax/courier-tanstack-start/rsbuild")
+        : viteRoutesEdit(project, "@noverax/courier-tanstack-start/plugin");
   }
 }

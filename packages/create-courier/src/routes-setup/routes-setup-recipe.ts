@@ -18,6 +18,8 @@ const ADAPTERS: Readonly<Record<RoutesFramework, string>> = {
   "react-router": "@noverax/courier-remix",
   remix: "@noverax/courier-remix",
   "solid-start": "@noverax/courier-solid",
+  "tanstack-start-react": "@noverax/courier-tanstack-start",
+  "tanstack-start-solid": "@noverax/courier-tanstack-start",
 };
 
 /* The routes module no page takes once its importers take the plugin's: the person's to delete. */

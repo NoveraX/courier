@@ -1,6 +1,14 @@
-export const metadata = { title: "TanStack Start", description: "Serve Courier's proxy from TanStack Start's server routes and carry the user's session in server functions, loaders and routes, for React and for Solid, with @noverax/courier-tanstack-start.", mode: "proxy", updated: "2026-11-07" }
+export const metadata = { title: "TanStack Start", description: "Serve Courier's proxy from TanStack Start's server routes and carry the user's session in server functions, loaders and routes, for React and for Solid, with @noverax/courier-tanstack-start.", mode: "proxy", updated: "2026-11-11" }
 
 `@noverax/courier-tanstack-start` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call from two server routes of a TanStack Start app: the calls go to one, reads over `GET` and writes over `POST`, and the streams of server-sent events to the other. Every call your server code makes — a server function, a server route, a page while the server renders it — carries the user's session. It works with TanStack Start for React and for Solid.
+
+## In one command
+
+```bash
+npx @noverax/create-courier
+```
+
+In a TanStack Start app, for React or for Solid, it adds what this page sets up by hand — the proxy route, the server entry that registers your APIs, Courier's plugin and Studio's in `vite.config` — with a typed example API, its mock, and a page at `/courier`. It builds the app once before it checks the types of what it added: TanStack Start writes the types of the app's routes as it builds. An app Rsbuild builds gets Courier's plugin in `rsbuild.config` instead — see [Rsbuild](#rsbuild). See [Create Courier](/docs/create-courier).
 
 ## Install
 
@@ -192,6 +200,18 @@ See [When there is no token yet](/docs/server-side/session#when-there-is-no-toke
 A server function is TanStack Start's own typed call from the browser to the server, its input validated with `.inputValidator()`. Call your API from its handler through `createServerCaller`, as above.
 
 Courier adds no wrapper for them. TanStack Start's compiler turns each `createServerFn()` into a call where your module declares it, so a function a package declared for you would not be one.
+
+## Rsbuild
+
+TanStack Start builds with Rsbuild as well as with Vite, and all of this page holds for an app Rsbuild builds, with Courier's plugin from `/rsbuild`, as [The client](#the-client) shows. A module the browser loads that takes `/react` or `/solid` stops Rsbuild's build too, which refuses the Node modules of TanStack Start's server code in a page.
+
+Under Rsbuild's dev server, the plugin from `/rsbuild` names a page's scripts by their content, as a build does. A TanStack Start page preloads its scripts as modules, and an engine may run a preloaded module again from its memory, whatever the server answers — WebKit does, on a reload too — so under a name that never changes, a page loaded after you mark an endpoint `.expose()` would run the routes from before. An app that names its scripts itself, in `output.filename.js`, keeps its names. A dev server that writes its files to disk, with `dev.writeToDisk`, keeps there those of the last two builds alone, as it keeps them in memory.
+
+`npx @noverax/create-courier` tells such an app by its `rsbuild.config`, or by `@rsbuild/core` where the app lists no Vite:
+
+- it adds Courier's plugin to the config's `plugins`, and builds the app with `rsbuild build` before it checks the types;
+- its example API reads the API's address from `PUBLIC_API_URL`, which Rsbuild builds in from `.env`;
+- Studio has no plugin for Rsbuild, so only the app's server connects to it, from `src/server.ts`: the calls your pages make through the proxy show there as the server's, and the browser itself does not connect.
 
 ## TanStack Start for Solid
 

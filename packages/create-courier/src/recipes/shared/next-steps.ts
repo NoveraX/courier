@@ -124,6 +124,27 @@ export function viteReach(ctx: RecipeContext, proxied: boolean): ExampleReach {
 }
 
 /**
+ * How code Rsbuild builds reaches the example API: `PUBLIC_API_URL`, which
+ * Rsbuild reads from `.env` and builds in, else the mock Studio runs. Read
+ * through `?.`, as Vite's is.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @param proxied - Whether the browser calls it through the app's route
+ * @returns The reach
+ * @example
+ * ```ts
+ * rsbuildReach(ctx, true).variable; // "PUBLIC_API_URL"
+ * ```
+ */
+export function rsbuildReach(ctx: RecipeContext, proxied: boolean): ExampleReach {
+  return {
+    baseUrl: `import.meta.env?.PUBLIC_API_URL ?? "http://localhost:${ctx.ports.mock}"`,
+    variable: "PUBLIC_API_URL",
+    proxied,
+  };
+}
+
+/**
  * The script that starts the app while you develop: `dev`, else the one
  * the project starts with in its place.
  *

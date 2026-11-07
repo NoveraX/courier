@@ -12,6 +12,7 @@ import { reactViteRecipe } from "./recipes/react-vite";
 import type { Recipe, RecipeContext } from "./recipes/recipe-types";
 import { solidStartRecipe } from "./recipes/solid-start";
 import { svelteKitRecipe } from "./recipes/sveltekit";
+import { tanstackStartReactRecipe, tanstackStartSolidRecipe } from "./recipes/tanstack-start";
 import { vueViteRecipe } from "./recipes/vue-vite";
 
 /** The frameworks the command sets Courier up in. */
@@ -23,6 +24,8 @@ export type FrameworkId =
   | "react-router"
   | "remix"
   | "solid-start"
+  | "tanstack-start-react"
+  | "tanstack-start-solid"
   | "expo"
   | "nestjs"
   | "fastify"
@@ -64,6 +67,18 @@ export const FRAMEWORKS: readonly Framework[] = [
   },
   { id: "remix", label: "Remix", marker: "@remix-run/dev", recipe: reactRouterRecipe },
   { id: "solid-start", label: "SolidStart", marker: "@solidjs/start", recipe: solidStartRecipe },
+  {
+    id: "tanstack-start-react",
+    label: "TanStack Start for React",
+    marker: "@tanstack/react-start",
+    recipe: tanstackStartReactRecipe,
+  },
+  {
+    id: "tanstack-start-solid",
+    label: "TanStack Start for Solid",
+    marker: "@tanstack/solid-start",
+    recipe: tanstackStartSolidRecipe,
+  },
   { id: "expo", label: "Expo", marker: "expo", recipe: expoRecipe },
   { id: "nestjs", label: "NestJS", marker: "@nestjs/core", recipe: nestRecipe },
   { id: "fastify", label: "Fastify", marker: "fastify", recipe: fastifyRecipe },
@@ -105,8 +120,9 @@ function setUpServer(id: Extract<ServerId, FrameworkId>): ServerFramework {
   return { id, label, marker, ...(runsWith === undefined ? {} : { runsWith }) };
 }
 
-/* The page frameworks that run on h3 and Nitro themselves, by the package that tells each: Nuxt, SolidStart, and Analog, whose server routes Nitro and h3 run. */
-const ON_H3 = ["nuxt", "@solidjs/start", "@analogjs/platform"];
+/* The page frameworks that run on h3 and Nitro themselves, by the package that tells each: Nuxt, SolidStart, TanStack Start where it is hosted with Nitro, and Analog, whose server routes Nitro and h3 run. */
+const TANSTACK_START = ["@tanstack/react-start", "@tanstack/solid-start"];
+const ON_H3 = ["nuxt", "@solidjs/start", "@analogjs/platform", ...TANSTACK_START];
 
 /**
  * The frameworks that run a server alone, which a package may list

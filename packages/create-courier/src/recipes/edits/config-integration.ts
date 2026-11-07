@@ -28,6 +28,32 @@ export const VITE_CONFIGS = [
   "vite.config.mjs",
 ];
 
+/** The names an Rsbuild config may have, in the order the setup looks for them. */
+export const RSBUILD_CONFIGS = [
+  "rsbuild.config.ts",
+  "rsbuild.config.mts",
+  "rsbuild.config.js",
+  "rsbuild.config.mjs",
+];
+
+/**
+ * Whether Rsbuild builds the app rather than Vite: its config is there,
+ * or the app lists `@rsbuild/core` and not Vite.
+ *
+ * @param project - The project
+ * @returns Whether it does
+ * @example
+ * ```ts
+ * buildsWithRsbuild(project); // true in a TanStack Start app made with `--build-tool rsbuild`
+ * ```
+ */
+export function buildsWithRsbuild(project: Project): boolean {
+  return (
+    RSBUILD_CONFIGS.some((path) => project.exists(path)) ||
+    (project.lists("@rsbuild/core") && !project.lists("vite"))
+  );
+}
+
 /** The names an Astro config may have. */
 export const ASTRO_CONFIGS = [
   "astro.config.mjs",

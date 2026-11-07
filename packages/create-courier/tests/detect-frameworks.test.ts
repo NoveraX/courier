@@ -84,6 +84,33 @@ describe("detectFrameworks", () => {
     expect(ids(listing({ koa: "^3.0.0" }, { vite: "^7.1.0" }))).toEqual(["koa"]);
   });
 
+  it("tells Nitro and its h3 under TanStack Start as its own, for React and Solid, and a server beside it apart", () => {
+    expect(
+      ids(
+        listing(
+          { "@tanstack/react-start": "^1.169.0", nitro: "^3.0.0", react: "19.2.0" },
+          { vite: "^8.0.0" },
+        ),
+      ),
+    ).toEqual(["tanstack-start-react"]);
+    expect(
+      ids(
+        listing(
+          {
+            "@tanstack/solid-start": "^1.169.0",
+            h3: "^2.0.0",
+            nitro: "^3.0.0",
+            "solid-js": "^1.9.0",
+          },
+          { vite: "^8.0.0" },
+        ),
+      ),
+    ).toEqual(["tanstack-start-solid"]);
+    expect(
+      ids(listing({ "@tanstack/react-start": "^1.169.0", express: "^5.1.0", react: "19.2.0" })),
+    ).toEqual(["tanstack-start-react", "express"]);
+  });
+
   it("sets Courier up in none of the servers it only tells", () => {
     expect(detectFramework(listing({ koa: "^3.0.0" }))).toBeUndefined();
     expect(

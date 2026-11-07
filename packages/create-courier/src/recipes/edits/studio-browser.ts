@@ -1,11 +1,12 @@
 import type { Project } from "../../project/read-project";
-import type { RecipeEdit } from "../recipe-types";
+import type { ManualStep, RecipeEdit } from "../recipe-types";
 import {
   ASTRO_CONFIGS,
   firstExisting,
   type Integration,
   integrationEdit,
   NUXT_CONFIGS,
+  RSBUILD_CONFIGS,
   VITE_CONFIGS,
 } from "./config-integration";
 
@@ -44,6 +45,27 @@ export function viteStudioEdit(project: Project, entry: string): RecipeEdit {
     from: `@noverax/courier-studio/${entry}`,
     also: VITE_ENTRIES.map((each) => `@noverax/courier-studio/${each}`),
   });
+}
+
+/**
+ * The step that tells the person, in an app Rsbuild builds, that Studio
+ * has no plugin to connect the browser with: only the app's server
+ * connects to it.
+ *
+ * @param project - The project
+ * @param page - The page that says what Courier does under Rsbuild
+ * @returns The step, at the app's Rsbuild config
+ * @example
+ * ```ts
+ * rsbuildStudioStep(project, "https://courier.noverax.cloud/docs/frameworks/tanstack-start#rsbuild").file; // "rsbuild.config.ts"
+ * ```
+ */
+export function rsbuildStudioStep(project: Project, page: string): ManualStep {
+  return {
+    file: firstExisting(project, RSBUILD_CONFIGS),
+    what: `Studio has no plugin for Rsbuild, so the browser does not connect to it, only the app's server: see ${page}`,
+    lines: [],
+  };
 }
 
 /**

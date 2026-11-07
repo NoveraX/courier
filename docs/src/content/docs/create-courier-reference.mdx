@@ -1,4 +1,4 @@
-export const metadata = { title: "Create Courier Reference", description: "Every option of npx @noverax/create-courier, the JSON document it writes with --json for CI and for agents, and how long each program it runs may take.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Create Courier Reference", description: "Every option of npx @noverax/create-courier, the JSON document it writes with --json for CI and for agents, and how long each program it runs may take.", mode: "both", updated: "2026-11-07" }
 
 `npx @noverax/create-courier`, item by item. What it does for you, and what it will not do, is on [Create Courier](/docs/create-courier).
 
@@ -7,7 +7,7 @@ export const metadata = { title: "Create Courier Reference", description: "Every
 | Option | |
 |---|---|
 | `[dir]` | The project's folder, or a new one to create (default: the working directory) |
-| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
+| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `tanstack-start-react`, `tanstack-start-solid`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
 | `--no-example` | Set Courier up with no API yet: no example API, page, mock or hooks. `--example` beside `--openapi` is refused |
 | `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
 | `--name <name>` | The imported API's name (default: from the specification) |
@@ -45,4 +45,4 @@ With `--json` the command asks nothing, and writes one JSON document to standard
 
 ## How long a program may run
 
-Each program the setup runs has its time: 20 minutes for an install or a framework's generator, 5 minutes for Studio's import, for TypeScript's check and for a program like `astro sync`.
+Each program the setup runs has its time: 20 minutes for an install or a framework's generator, 5 minutes for Studio's import, for TypeScript's check and for a program like `astro sync` or the build that writes a TanStack Start app's route types.

@@ -226,11 +226,30 @@ describe("checkSamples", () => {
         jsx: false,
         code: "const caller = createProxyCaller(routes.api)\nconst user = await caller.users.getById({ id: 5 })\n",
       },
+      {
+        page: "frameworks/solid-start.mdx",
+        line: 150,
+        jsx: false,
+        code: [
+          'import { registerRequestContext } from "@noverax/courier/server"',
+          'import { solidStartRequestContext } from "@noverax/courier-solid"',
+          'import { getRequestEvent } from "solid-js/web"',
+          "",
+          "registerRequestContext(solidStartRequestContext(getRequestEvent))",
+          "",
+        ].join("\n"),
+      },
     ]);
   }, 60_000);
 
   it("takes the routes Courier's plugin builds as the reader's config types them, which no sample shows", () => {
     expect(problems.filter((problem) => problem.startsWith("plugin-routes.mdx"))).toEqual([]);
+  });
+
+  it("leaves out what SolidStart's types add to the request event of solid-js, which it does not load", () => {
+    expect(problems.filter((problem) => problem.startsWith("frameworks/solid-start.mdx"))).toEqual(
+      [],
+    );
   });
 
   it("leaves out a Vite variable the reader declares, though a sample loaded Next.js's types", () => {

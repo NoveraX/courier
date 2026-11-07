@@ -29,6 +29,13 @@ const PLATFORM = [
     text: /'websocket'/,
     reason: "@fastify/websocket's route option",
   },
+  ...["frameworks/solid-start.mdx", "server-side/session.mdx", "packages/solid/README.md"].map(
+    (page) => ({
+      page,
+      text: /SolidStartServerEvent/,
+      reason: "SolidStart's types, which add its response to the RequestEvent of solid-js/web",
+    }),
+  ),
 ];
 
 /**

@@ -51,6 +51,14 @@ test("lists the users, creates one, and finds it in the list fetched again", asy
   await expectNoSecrets(page, context, timings)
 })
 
+test("links to the page's own code on GitHub", async ({ page }) => {
+  await page.goto("/docs/examples/basic")
+  await expect(page.getByRole("link", { name: "This page's code, on GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/NoveraX/courier/tree/master/docs/src/app/docs/examples/basic"
+  )
+})
+
 test("holds a query until its button runs it", async ({ page, context }) => {
   const timings = proxyTimings(page)
   await page.goto("/docs/examples/basic")

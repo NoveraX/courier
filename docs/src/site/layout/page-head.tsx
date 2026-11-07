@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Clock } from "lucide-react"
+import { CalendarDays, ChevronRight, Clock, Code2 } from "lucide-react"
 
 import type { DocMeta } from "@/site/content/doc-module"
 import type { NavSection } from "@/site/content/docs-nav"
@@ -11,6 +11,8 @@ interface PageHeadProps {
   meta: DocMeta
   /** The navigation section the page is in, when it is in one. */
   section: NavSection | undefined
+  /** Where the page's own code is kept, for a page that runs code: a live examples page. */
+  source?: string | undefined
   /** How long the page takes to read, when it is written as text. */
   minutes?: number | undefined
   /** The page as Markdown, for its actions, when it is written as text. */
@@ -30,7 +32,7 @@ interface PageHeadProps {
  * <PageHead meta={meta} section={section} minutes={4} page={{ fileName: "quick-start.md", markdown }} />
  * ```
  */
-export function PageHead({ meta, section, minutes, page }: PageHeadProps) {
+export function PageHead({ meta, section, minutes, page, source }: PageHeadProps) {
   return (
     <header>
       {/* DocSearch files the page under the section DocSearch-lvl0 names, and
@@ -66,6 +68,12 @@ export function PageHead({ meta, section, minutes, page }: PageHeadProps) {
           </span>
         )}
         {meta.mode && <ModeBadge mode={meta.mode} />}
+        {source && (
+          <a href={source} className="flex items-center gap-1.5 text-brand hover:underline">
+            <Code2 aria-hidden="true" className="size-3.25" />
+            This page&apos;s code, on GitHub
+          </a>
+        )}
       </div>
     </header>
   )

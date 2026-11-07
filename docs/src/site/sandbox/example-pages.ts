@@ -1,4 +1,5 @@
 import type { DocMeta } from "@/site/content/doc-module"
+import { REPOSITORY_URL } from "@/site/seo/site-identity"
 
 /** Every examples page, by the last segment of its address: its title, what it shows and its mode. */
 export const EXAMPLE_PAGES = {
@@ -89,3 +90,18 @@ export const EXAMPLE_PAGES = {
 
 /** An examples page, by the last segment of its address. */
 export type ExampleName = keyof typeof EXAMPLE_PAGES
+
+/**
+ * Where an examples page's code is kept: the page's own folder of the
+ * repository, on GitHub — its page and every sandbox it runs.
+ *
+ * @param name - The page, by the last segment of its address
+ * @returns The folder's address
+ * @example
+ * ```ts
+ * exampleSource("basic") // "https://github.com/NoveraX/courier/tree/master/docs/src/app/docs/examples/basic"
+ * ```
+ */
+export function exampleSource(name: ExampleName): string {
+  return `${REPOSITORY_URL}/tree/master/docs/src/app/docs/examples/${name}`
+}

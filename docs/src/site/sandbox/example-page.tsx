@@ -8,7 +8,7 @@ import { DocsToc } from "@/site/layout/docs-toc"
 import { PageHead } from "@/site/layout/page-head"
 import { JsonLd } from "@/site/seo/json-ld"
 import { docsGraph } from "@/site/seo/structured-data/page-graphs"
-import { EXAMPLE_PAGES, type ExampleName } from "./example-pages"
+import { EXAMPLE_PAGES, type ExampleName, exampleSource } from "./example-pages"
 
 interface ExamplePageProps {
   /** The page, by the last segment of its address. */
@@ -18,8 +18,9 @@ interface ExamplePageProps {
 
 /**
  * An examples page: its head — its title, description and mode, as the
- * examples' list gives them — its examples, each with code and a sandbox
- * that runs it, the pages around it, and its outline.
+ * examples' list gives them, and the link to its own code — its examples,
+ * each with code and a sandbox that runs it, the pages around it, and its
+ * outline.
  *
  * @param props - The page's name, and its examples
  * @returns The page
@@ -35,7 +36,11 @@ export function ExamplePage({ name, children }: ExamplePageProps) {
     <>
       <JsonLd graph={docsGraph({ path: href, title, description }, coreVersion())} />
       <main id="main-content" className="DocSearch-content min-w-0 max-w-[820px] pt-10 pb-27.5">
-        <PageHead meta={{ title, description, mode }} section={findNavContext(href)?.section} />
+        <PageHead
+          meta={{ title, description, mode }}
+          section={findNavContext(href)?.section}
+          source={exampleSource(name)}
+        />
         <article
           data-article=""
           className="flex flex-col gap-4 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-[0.87em] [&_:not(pre)>code]:text-brand"

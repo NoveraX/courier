@@ -9,8 +9,8 @@
  * Each call comes from an address of its own, so that no budget refuses
  * one before the backend has looked for its route.
  */
-import { createHandler, registerSources } from "@noverax/courier"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { apiRoutes, encodedApiRoutes, middlewareApiRoutes } from "@/lib/routes"

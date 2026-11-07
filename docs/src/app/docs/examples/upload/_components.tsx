@@ -1,6 +1,6 @@
 "use client"
 
-import { smoothProgress } from "@noverax/courier"
+import { smoothProgress } from "@noverax/courier/client"
 import Link from "next/link"
 import { useState } from "react"
 

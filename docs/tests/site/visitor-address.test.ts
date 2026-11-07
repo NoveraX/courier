@@ -9,7 +9,7 @@
  * header they send. Each call's budget, as the backend tells it through
  * the proxy route, shows whom it was counted as.
  */
-import { createHandler, registerSources } from "@noverax/courier"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { EXAMPLES_PROXY } from "@/app/api/request/examples-proxy"

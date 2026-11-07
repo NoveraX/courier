@@ -1,4 +1,4 @@
-import { createCaller, registerRequestContext } from "@noverax/courier"
+import { createCaller, registerRequestContext } from "@noverax/courier/server"
 import { nextRequestContext } from "@noverax/courier-next"
 import { api } from "@/api"
 import { BrowserCalls } from "@/site/inspector/browser-calls"

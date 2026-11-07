@@ -1,6 +1,6 @@
 "use client"
 
-import { isAbortError, isHTTPError } from "@noverax/courier"
+import { isAbortError, isHTTPError } from "@noverax/courier/client"
 import { useRef, useState } from "react"
 
 import { caller } from "@/lib/caller"

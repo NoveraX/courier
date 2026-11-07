@@ -1,6 +1,6 @@
 "use client"
 
-import { isHTTPError, smoothProgress, type UploadProgress } from "@noverax/courier"
+import { isHTTPError, smoothProgress, type UploadProgress } from "@noverax/courier/client"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { labCaller } from "./lab-api"

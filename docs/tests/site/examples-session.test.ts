@@ -7,7 +7,7 @@
  * visitor's later calls — and a page on another site cannot make a change
  * with it.
  */
-import { createHandler, registerSources } from "@noverax/courier"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { createDemoApp } from "../../server/app"

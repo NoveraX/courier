@@ -1,4 +1,4 @@
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 
 import { apiRoutes, middlewareApiRoutes } from "@/lib/routes"
 

@@ -3,7 +3,7 @@ import {
   type RateLimitDecision,
   type RateLimitStore,
   type RateLimitWindow,
-} from "@noverax/courier"
+} from "@noverax/courier/server"
 import type { Request, RequestHandler, Response } from "express"
 import { addressKey, UNKNOWN_ADDRESS } from "./address-key"
 import type { DemoLimits } from "./limits"

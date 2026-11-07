@@ -6,14 +6,14 @@
  * the budget; spent on one path, it is spent on the other. The budgets are
  * small here, and refill too slowly to matter while the test runs.
  */
+import { withWebRequestContext } from "@noverax/courier/node"
 import {
   createCaller,
   createHandler,
   isHTTPError,
   registerSources,
   type TypedClient,
-} from "@noverax/courier"
-import { withWebRequestContext } from "@noverax/courier/node"
+} from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { EXAMPLES_PROXY } from "@/app/api/request/examples-proxy"

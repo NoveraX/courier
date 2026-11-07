@@ -10,7 +10,7 @@ import { once } from "node:events"
 import { createServer, type Server } from "node:http"
 import type { AddressInfo } from "node:net"
 
-import { createHandler, registerSources } from "@noverax/courier"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { EXAMPLES_PROXY, examplesProxy } from "@/app/api/request/examples-proxy"

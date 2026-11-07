@@ -1,4 +1,4 @@
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { apiRoute } from "@noverax/courier-next"
 import { sources } from "@/api"
 import { requestInspection } from "@/site/inspector/server/inspection"

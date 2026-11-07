@@ -1,4 +1,4 @@
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/client"
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 
 const { endpoint } = courier()

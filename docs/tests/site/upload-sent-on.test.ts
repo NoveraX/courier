@@ -9,7 +9,7 @@
 import { setFlagsFromString } from "node:v8"
 import { runInNewContext } from "node:vm"
 
-import { createHandler, registerSources } from "@noverax/courier"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { EXAMPLES_PROXY } from "@/app/api/request/examples-proxy"

@@ -1,4 +1,4 @@
-import type { HandlerConfig } from "@noverax/courier"
+import type { HandlerConfig } from "@noverax/courier/server"
 
 import { DEMO_LIMITS, type DemoLimits, uploadRequestBytes } from "../../../../server/limits"
 

@@ -1,4 +1,4 @@
-import { type HTTPError, isHTTPError } from "@noverax/courier"
+import { type HTTPError, isHTTPError } from "@noverax/courier/server"
 
 /** What a call made on the server came to: its data, or the refusal it was answered with. */
 export type ServerAnswer<TData> =

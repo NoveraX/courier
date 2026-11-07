@@ -8,7 +8,7 @@
  * the backend takes it; an upload is sent on as it arrives, and refused
  * once it is larger than the example takes.
  */
-import { createHandler, registerSources } from "@noverax/courier"
+import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { EXAMPLES_PROXY } from "@/app/api/request/examples-proxy"

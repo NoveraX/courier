@@ -5,6 +5,7 @@ import { type SessionCredentials, sessionCredentials } from "../../session/sessi
 import type { SessionTarget } from "../../session/session-target";
 import { assertSecureTransport } from "../../session/transport";
 import type { SessionOptions } from "../../session/types";
+import { ownFields } from "../../utils/own";
 import { incomingFromContext } from "./context-incoming";
 import { forwardedHeaders } from "./forward-headers";
 import { onBehalfOf } from "./on-behalf";
@@ -35,16 +36,17 @@ const AMBIENT: Served = { admitted: false, toResponse: false };
  * ```
  */
 export function contextSession(context: Context, target: SessionTarget): CallSession | undefined {
+  const own = ownFields(context);
   /* An adapter's description, or the request a proxy request was made in
      process for, is the request the user made. */
-  const described = context.incoming ?? onBehalfOf(context.req);
+  const described = own.incoming ?? onBehalfOf(own.req);
   if (described !== undefined) return serverSession(described, target, AMBIENT);
-  const named = incomingFromContext(context);
+  const named = incomingFromContext(own);
   if (named === undefined) return undefined;
   /* A request the proxy serves has passed its origin rule already, the one
      the guard applies, with the proxy's own list of origins. */
-  const admitted = context.proxyMethod !== undefined;
-  return serverSession(named, target, { admitted, toResponse: context.res instanceof Response });
+  const admitted = own.proxyMethod !== undefined;
+  return serverSession(named, target, { admitted, toResponse: own.res instanceof Response });
 }
 
 /**

@@ -1,3 +1,5 @@
+import { ownFields } from "../utils/own";
+
 /** The attributes of a cookie the browser acts on, as `Set-Cookie` names them. */
 export interface CookieAttributes {
   domain?: string | undefined;
@@ -55,7 +57,8 @@ export function parseSetCookie(header: string): SetCookie | undefined {
   const value = pair.slice(at + 1).trim();
   if (!TOKEN.test(name) || CONTROL.test(value)) return undefined;
 
-  const cookie: SetCookie = { name, value };
+  /* Its attributes are what the header set alone: none a prototype answers for. */
+  const cookie: SetCookie = ownFields({ name, value });
   for (const attribute of attributes) readAttribute(cookie, attribute);
   return cookie;
 }
@@ -94,16 +97,29 @@ function domainOf(value: string): string | undefined {
  * ```
  */
 export function serializeSetCookie(cookie: SetCookie): string {
-  const parts = [`${cookie.name}=${cookie.value}`];
-  if (cookie.domain !== undefined) parts.push(`Domain=${cookie.domain}`);
-  if (cookie.path !== undefined) parts.push(`Path=${cookie.path}`);
-  if (cookie.expires !== undefined) parts.push(`Expires=${cookie.expires}`);
-  if (cookie.maxAge !== undefined) parts.push(`Max-Age=${cookie.maxAge}`);
-  if (cookie.secure) parts.push("Secure");
-  if (cookie.httpOnly) parts.push("HttpOnly");
-  if (cookie.sameSite !== undefined) parts.push(`SameSite=${cookie.sameSite}`);
-  if (cookie.partitioned) parts.push("Partitioned");
-  if (cookie.priority !== undefined) parts.push(`Priority=${cookie.priority}`);
+  const {
+    name,
+    value,
+    domain,
+    path,
+    expires,
+    maxAge,
+    secure,
+    httpOnly,
+    sameSite,
+    partitioned,
+    priority,
+  } = ownFields(cookie);
+  const parts = [`${name}=${value}`];
+  if (domain !== undefined) parts.push(`Domain=${domain}`);
+  if (path !== undefined) parts.push(`Path=${path}`);
+  if (expires !== undefined) parts.push(`Expires=${expires}`);
+  if (maxAge !== undefined) parts.push(`Max-Age=${maxAge}`);
+  if (secure) parts.push("Secure");
+  if (httpOnly) parts.push("HttpOnly");
+  if (sameSite !== undefined) parts.push(`SameSite=${sameSite}`);
+  if (partitioned) parts.push("Partitioned");
+  if (priority !== undefined) parts.push(`Priority=${priority}`);
   return parts.join("; ");
 }
 

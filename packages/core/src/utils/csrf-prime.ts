@@ -5,6 +5,7 @@ import { csrfSource } from "../session/csrf-source";
 import { cancellation } from "./cancellation";
 import { callSessionTarget } from "./execute-session";
 import type { CallTarget } from "./execute-target";
+import { ONCE } from "./own";
 import { setCookiesOf } from "./set-cookies";
 
 const log = createLogger("Session");
@@ -189,7 +190,7 @@ function unlessAborted<TValue>(
   if (signal.aborted) return Promise.reject(cancellation(signal));
   return new Promise<TValue>((resolve, reject) => {
     const stop = (): void => reject(cancellation(signal));
-    signal.addEventListener("abort", stop, { once: true });
+    signal.addEventListener("abort", stop, ONCE);
     work.then(resolve, reject).finally(() => signal.removeEventListener("abort", stop));
   });
 }

@@ -1,4 +1,5 @@
 import { createLogger } from "../../logger";
+import { ONCE } from "../../utils/own";
 import { CLIENT_LIMITS } from "../client-limits";
 import { ConnectionError } from "../errors";
 
@@ -129,7 +130,7 @@ async function textOf(
   const letGo = () => {
     reader.cancel().catch(() => undefined);
   };
-  signal.addEventListener("abort", letGo, { once: true });
+  signal.addEventListener("abort", letGo, ONCE);
   if (signal.aborted) letGo();
   const decoder = new TextDecoder();
   let text = "";

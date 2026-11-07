@@ -4,6 +4,7 @@ import { defineMiddleware } from "../middleware/define";
 import type * as RetryPolicies from "../middleware/retry-policies";
 import type { Middleware } from "../middleware/types";
 import { anySignal } from "./any-signal";
+import { ownField } from "./own";
 
 /* The policies' code, loaded with the first call whose endpoint has one. */
 let retryPolicies: Promise<typeof RetryPolicies> | undefined;
@@ -29,8 +30,13 @@ export function resolveMiddlewareChain(
   sourceMiddleware: readonly Middleware[] | undefined,
   endpointOptions: ResolvedEndpointOptions | undefined,
 ): Middleware[] {
-  const retry = endpointOptions?.retry ? [endpointPolicy(source, endpointOptions.retry)] : [];
-  return [...(sourceMiddleware ?? []), ...retry, ...(endpointOptions?.middleware ?? [])];
+  const policy = ownField(endpointOptions, "retry");
+  const retry = policy ? [endpointPolicy(source, policy)] : [];
+  return [
+    ...(sourceMiddleware ?? []),
+    ...retry,
+    ...(ownField(endpointOptions, "middleware") ?? []),
+  ];
 }
 
 function endpointPolicy(source: object, options: RetryOptions): Middleware {
@@ -62,8 +68,8 @@ export function withEndpointTimeout<T extends Partial<BoundMethodOptions>>(
   endpointOptions: ResolvedEndpointOptions | undefined,
   callerDefault?: number,
 ): T {
-  if (baseOptions.timeout !== undefined) return baseOptions;
-  const timeout = endpointOptions?.timeout ?? callerDefault;
+  if (ownField(baseOptions, "timeout") !== undefined) return baseOptions;
+  const timeout = ownField(endpointOptions, "timeout") ?? callerDefault;
   return timeout === undefined ? baseOptions : { ...baseOptions, timeout };
 }
 
@@ -83,6 +89,6 @@ export function withCallerSignal<T extends Partial<BoundMethodOptions>>(
   request: Request | undefined,
 ): T {
   if (!request) return baseOptions;
-  const own = baseOptions.signal;
+  const own = ownField(baseOptions, "signal");
   return { ...baseOptions, signal: own ? anySignal([own, request.signal]) : request.signal };
 }

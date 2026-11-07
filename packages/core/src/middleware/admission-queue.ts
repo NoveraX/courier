@@ -1,6 +1,7 @@
 /** Lets callers through at a bounded rate, one at a time, in the order they asked. */
 
 import { cancellation } from "../utils/cancellation";
+import { ONCE } from "../utils/own";
 
 export interface AdmissionQueue {
   /**
@@ -78,7 +79,7 @@ export function createAdmissionQueue(limit: number, windowMs: number): Admission
           leave(waiter);
           if (signal) reject(cancellation(signal));
         }
-        signal?.addEventListener("abort", cancel, { once: true });
+        signal?.addEventListener("abort", cancel, ONCE);
         waiting.push(waiter);
         if (timer === undefined) admitDue();
       });

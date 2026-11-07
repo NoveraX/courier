@@ -1,3 +1,5 @@
+import { ownField } from "../../utils/own";
+
 /**
  * The Studio row a stream asks to be shown under, from the options it was
  * opened with. Studio names one when it opens the stream itself — a replay,
@@ -14,6 +16,6 @@
 export function studioRequestIdOption(
   options: Record<string, unknown> | undefined,
 ): string | undefined {
-  const id = options?.studioRequestId;
+  const id = ownField(options, "studioRequestId");
   return typeof id === "string" ? id : undefined;
 }

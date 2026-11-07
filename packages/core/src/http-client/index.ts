@@ -1,7 +1,8 @@
 import type { EndpointHold } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
-import { bindMethod } from "./bind-method";
+import { ownFields } from "../utils/own";
+import { bindMethod, boundParts } from "./bind-method";
 import type { RequestOptions } from "./call-transport";
 import { httpPath } from "./http-path";
 import { overlayHeaders, withoutConnectionHeaders } from "./request-headers";
@@ -80,7 +81,7 @@ export class HttpClient {
       timeout,
       headers,
       ...baseFetchInit
-    } = options || {};
+    } = ownFields(options);
 
     this.responseType = responseType;
     this.responseParser = responseParser;
@@ -104,7 +105,8 @@ export class HttpClient {
     url: string,
     options: RequestOptions = {},
   ): Promise<Response> {
-    const { prefixUrl: overridePrefixUrl, withinOrigin, fetch: send, ...fetchOptions } = options;
+    const own = ownFields(options);
+    const { prefixUrl: overridePrefixUrl, withinOrigin, fetch: send, ...fetchOptions } = own;
 
     const effectivePrefixUrl = overridePrefixUrl !== undefined ? overridePrefixUrl : this.prefixUrl;
     let fullUrl = url;
@@ -139,8 +141,8 @@ export class HttpClient {
     return coreFetch(method, fullUrl, {
       ...this.baseFetchInit,
       ...fetchOptions,
-      headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, fetchOptions.headers)),
-      timeout: fetchOptions.timeout ?? this.baseTimeout,
+      headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, own.headers)),
+      timeout: own.timeout ?? this.baseTimeout,
       withinOrigin: withinOrigin === true || this.context?.proxyMethod !== undefined,
       /* A group's or a call's own `fetch` sends in place of the source's. */
       ...((send ?? this.sourceFetch) && { fetch: send ?? this.sourceFetch }),
@@ -163,15 +165,17 @@ export class HttpClient {
       fetchRequest: this.fetchRequest.bind(this),
     };
 
+    /* Read once for every verb. */
+    const bound = boundParts(options, groupOptions);
     return {
-      get: bindMethod(deps, "get", options, groupOptions),
-      post: bindMethod(deps, "post", options, groupOptions),
-      put: bindMethod(deps, "put", options, groupOptions),
-      patch: bindMethod(deps, "patch", options, groupOptions),
-      del: bindMethod(deps, "del", options, groupOptions),
-      head: bindMethod(deps, "head", options, groupOptions),
-      options: bindMethod(deps, "options", options, groupOptions),
-      query: bindMethod(deps, "query", options, groupOptions),
+      get: bindMethod(deps, "get", bound),
+      post: bindMethod(deps, "post", bound),
+      put: bindMethod(deps, "put", bound),
+      patch: bindMethod(deps, "patch", bound),
+      del: bindMethod(deps, "del", bound),
+      head: bindMethod(deps, "head", bound),
+      options: bindMethod(deps, "options", bound),
+      query: bindMethod(deps, "query", bound),
       path: httpPath,
     };
   }

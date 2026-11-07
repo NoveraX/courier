@@ -1,4 +1,5 @@
 import type { UploadProgress } from "../http-client/types";
+import { ownField } from "../utils/own";
 import type { StudioHooks } from "./hooks";
 
 /** The endpoint an upload is for, as Studio names its row. */
@@ -58,7 +59,10 @@ export function reportingUploads(
 export function uploadProgressOf(
   options: object | undefined,
 ): ((progress: UploadProgress) => void) | undefined {
-  const callback: unknown = options ? Reflect.get(options, "onUploadProgress") : undefined;
+  const callback: unknown = ownField(
+    options as Record<string, unknown> | undefined,
+    "onUploadProgress",
+  );
   return typeof callback === "function"
     ? (progress: UploadProgress) => {
         Reflect.apply(callback, undefined, [progress]);

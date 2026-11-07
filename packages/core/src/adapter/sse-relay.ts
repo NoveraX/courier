@@ -12,6 +12,7 @@ import { streamRequest } from "../transport/direct/stream-request";
 import { type StatusTeller, watchConnection } from "../transport/instrument/watch-connection";
 import { fetchWithinOrigin } from "../utils/fetch-within-origin";
 import { layerHeaders } from "../utils/layer-headers";
+import { ownField } from "../utils/own";
 
 /**
  * The handler that relays a stream another server serves.
@@ -85,6 +86,6 @@ export function relayStream(
 /* What opens each upstream connection: the source's own redirect mode when it names one,
    as its calls keep it; else every hop stays on the upstream's origin. */
 function relayFetch(send: PlatformFetch | undefined, init: RequestInit): PlatformFetch | undefined {
-  if (init.redirect !== undefined) return send;
+  if (ownField(init, "redirect") !== undefined) return send;
   return (url, request) => fetchWithinOrigin(url, request, send);
 }

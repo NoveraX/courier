@@ -2,6 +2,7 @@ import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
 import { executeCall } from "../utils/execute";
 import { buildErrorResponse } from "../utils/execute-response";
+import { ownField } from "../utils/own";
 import { parseRequestPayload, type RequestPayloadInput } from "../utils/request-payload";
 import { unsentUpload } from "./unsent-upload";
 import { parseWireOptions } from "./wire-options";
@@ -54,9 +55,9 @@ export async function executeWireRequest(
       group: found.group,
       method: found.method,
       schema: found.schema,
-      stream: found.options?.stream,
+      stream: ownField(found.options, "stream"),
       proxyMethod: context.proxyMethod,
-      sensitiveVariables: found.endpointOptions?.sensitiveVariables === true,
+      sensitiveVariables: ownField(found.endpointOptions, "sensitiveVariables") === true,
       endpoint: found.endpoint,
     }),
   );

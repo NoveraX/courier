@@ -1,3 +1,4 @@
+import { ONCE } from "../utils/own";
 import { peerAddressOf, rememberPeerAddress } from "./peer-address";
 
 /**
@@ -63,7 +64,7 @@ export async function handleWhileConnected(
 
   const controller = new AbortController();
   const abort = () => controller.abort();
-  request.signal.addEventListener("abort", abort, { once: true });
+  request.signal.addEventListener("abort", abort, ONCE);
   connection.once("close", abort);
   if (request.signal.aborted || connection.destroyed) abort();
 

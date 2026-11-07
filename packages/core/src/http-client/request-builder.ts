@@ -1,3 +1,4 @@
+import { ownField, ownFields } from "../utils/own";
 import { buildBody, buildSearchParams } from "./body-builder";
 import { stripPathParams } from "./path-params";
 import { overlayHeaders } from "./request-headers";
@@ -5,6 +6,7 @@ import type {
   FetchOptions,
   HttpMethod,
   MethodParameters,
+  OptionsWithSearchParams,
   SearchParamsSerializer,
   SimpleOptions,
 } from "./types";
@@ -30,8 +32,9 @@ function buildHeadOptions(
   newSearchParameters: Record<string, unknown>,
   deps: RequestBuilderDeps,
 ): Partial<FetchOptions> {
-  const { headers: optionHeaders, ...otherArgumentOptions } =
-    (arguments_[1] as SimpleOptions) || {};
+  const { headers: optionHeaders, ...otherArgumentOptions } = ownFields(
+    arguments_[1] as SimpleOptions | undefined,
+  );
 
   return {
     ...otherArgumentOptions,
@@ -61,10 +64,10 @@ function buildStandardOptions(
   newSearchParameters: Record<string, unknown>,
   deps: RequestBuilderDeps,
 ): Partial<FetchOptions> {
-  const searchParameters =
-    arguments_[2] && "searchParams" in arguments_[2] ? arguments_[2].searchParams : undefined;
-
-  const { headers: optionHeaders, ...otherArgumentOptions } = arguments_[2] || {};
+  const { headers: optionHeaders, ...otherArgumentOptions } = ownFields(
+    arguments_[2] as OptionsWithSearchParams | undefined,
+  );
+  const searchParameters = ownField(otherArgumentOptions, "searchParams");
 
   /* The variables a closure passes are the body, or a read's query; one
      that passes none leaves the call's own variables to be. Passed on
@@ -74,7 +77,7 @@ function buildStandardOptions(
   const query = { ...searchParameters, ...newSearchParameters };
 
   return {
-    ...otherArgumentOptions,
+    ...(otherArgumentOptions as Partial<FetchOptions>),
     ...boundFetchOptions,
     ...prefixUrlOverride,
     /* Written by the endpoint's author, not received from a browser, so the
@@ -98,9 +101,8 @@ function buildStandardOptions(
 
 /** Whether a closure's options carry the request body themselves. */
 function namesItsBody(options: object): boolean {
-  return (
-    ("body" in options && options.body != null) || ("json" in options && options.json !== undefined)
-  );
+  const named = options as { body?: unknown; json?: unknown };
+  return ownField(named, "body") != null || ownField(named, "json") !== undefined;
 }
 
 /** Build fetch options based on HTTP method */

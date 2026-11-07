@@ -2,9 +2,9 @@
  * Options are data, which a server reads as they are: their own properties
  * alone. What a prototype answers for one they do not have — a prototype
  * of the user's, or `Object.prototype` that code elsewhere in the process
- * changed — is no option of theirs, before the check or after it; and what
- * a server holds of the options it checked has no prototype to answer for
- * it at all.
+ * changed — is no option of theirs, before the check or after it; and
+ * what it holds of the options it checked it reads the same way, its own
+ * fields alone.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

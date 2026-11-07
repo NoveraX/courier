@@ -1,4 +1,5 @@
 import { cancellation } from "../utils/cancellation";
+import { ONCE } from "../utils/own";
 
 /**
  * Wait, unless the caller stops waiting first.
@@ -20,7 +21,7 @@ export async function pause(ms: number, signal: AbortSignal | undefined): Promis
   if (signal?.aborted) throw cancellation(signal);
   await new Promise<void>((resolve) => {
     const timer = setTimeout(finish, ms);
-    signal?.addEventListener("abort", finish, { once: true });
+    signal?.addEventListener("abort", finish, ONCE);
     function finish(): void {
       clearTimeout(timer);
       signal?.removeEventListener("abort", finish);
@@ -54,7 +55,7 @@ export function waitUnlessStopped<T>(
   if (signal.aborted) return Promise.reject(cancellation(signal));
   return new Promise<T>((resolve, reject) => {
     const stop = (): void => reject(cancellation(signal));
-    signal.addEventListener("abort", stop, { once: true });
+    signal.addEventListener("abort", stop, ONCE);
     Promise.resolve(value)
       .finally(() => signal.removeEventListener("abort", stop))
       .then(resolve, reject);

@@ -1,12 +1,18 @@
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import type { CallSession } from "../session/call-session";
-import { type CallRunner, primeCsrfToken } from "./csrf-prime";
+import type * as CsrfPrime from "./csrf-prime";
+import type { CallRunner } from "./csrf-prime";
 import { buildErrorResponse } from "./execute-response";
 import type { FailureReport } from "./execute-studio";
 import type { CallTarget } from "./execute-target";
 
 const log = createLogger("Session");
+
+/* The token's request, loaded with the first write that asks for one first: a page whose writes
+   find their token, or that keeps none, never loads it. A load that failed is tried again by the
+   next such write. */
+let primes: Promise<typeof CsrfPrime> | undefined;
 
 /** A call whose session is being settled. */
 export interface SettleCall {
@@ -49,8 +55,14 @@ export async function settleCallSession(
   if (found?.refusal !== undefined) return refuse(call, found.refusal);
   if (found?.primeFrom === undefined) return { session: found, primed: [] };
   const { target, context, run } = call;
+  primes ??= import("./csrf-prime").catch((cause: unknown) => {
+    primes = undefined;
+    throw cause;
+  });
   const settled = await toldIfFailed(
-    primeCsrfToken({ target, context, session: found, run }, call.signal),
+    primes.then(({ primeCsrfToken }) =>
+      primeCsrfToken({ target, context, session: found, run }, call.signal),
+    ),
     call.told,
   );
   const refusal = settled.session?.refusal;

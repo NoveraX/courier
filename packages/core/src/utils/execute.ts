@@ -2,6 +2,7 @@ import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
 import { callInstruments } from "./execute-studio";
 import { type CallRefusal, type CallRequest, resolveCallTarget } from "./execute-target";
+import { ownFields } from "./own";
 import { prepareAndRun } from "./prepare-and-run";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 
@@ -65,8 +66,11 @@ export async function executeCall(
   context: Context | undefined,
   refuse?: CallRefusal,
 ): Promise<unknown> {
-  const { studio, timing } = callInstruments(context?.studioRequestId);
-  const resolution = resolveCallTarget(sources, call, context, refuse);
+  /* Its context, read as its own fields alone however the call came: the target holds the call's
+     own options so. */
+  const own = context && ownFields(context);
+  const { studio, timing } = callInstruments(own?.studioRequestId);
+  const resolution = resolveCallTarget(sources, call, own, refuse);
   if ("refusal" in resolution) return resolution.refusal;
-  return prepareAndRun(resolution.target, studio, timing, context);
+  return prepareAndRun(resolution.target, studio, timing, own);
 }

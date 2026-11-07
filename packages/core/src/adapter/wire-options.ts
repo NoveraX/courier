@@ -18,6 +18,7 @@
 
 import { LIMITS } from "../limits";
 import { isRecord } from "../utils/is-record";
+import { ownField } from "../utils/own";
 import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 
 /** Options a proxy client may set. Everything else is refused. */
@@ -67,14 +68,14 @@ export function parseWireOptions(raw: unknown): WireOptionsResult {
 
   const options: WireOptions = {};
   for (const key of BOOLEAN_KEYS) {
-    const value = raw[key];
+    const value = ownField(raw, key);
     if (value === undefined) continue;
     if (typeof value !== "boolean")
       return { ok: false, reason: `options.${key} must be a boolean` };
     options[key] = value;
   }
 
-  const { timeout } = raw;
+  const timeout = ownField(raw, "timeout");
   if (timeout !== undefined) {
     if (typeof timeout !== "number" || !Number.isFinite(timeout) || timeout <= 0) {
       return { ok: false, reason: "options.timeout must be a positive number of milliseconds" };

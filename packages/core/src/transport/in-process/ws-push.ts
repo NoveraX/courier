@@ -7,6 +7,7 @@ import type { SSEEvent, WSContext } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
+import { ONCE } from "../../utils/own";
 import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
@@ -56,7 +57,7 @@ export async function executeDirectWSPush(
   const ownAC = new AbortController();
   if (options.signal) {
     if (options.signal.aborted) ownAC.abort();
-    else options.signal.addEventListener("abort", () => ownAC.abort(), { once: true });
+    else options.signal.addEventListener("abort", () => ownAC.abort(), ONCE);
   }
 
   const baseTopic = streamLabel(payload);

@@ -1,4 +1,5 @@
 import type { SetCookie } from "../../session/set-cookie";
+import { ownFields } from "../../utils/own";
 import { parseUrl } from "../../utils/parse-url";
 
 /** A cookie made for the application's origin, or why none could be. */
@@ -40,7 +41,7 @@ export function cookieForApp(cookie: SetCookie, origin: string | undefined): App
     return { refused: `${cookie.name} needs a secure origin, and ${origin} is not one` };
   }
 
-  const made: SetCookie = { ...cookie, path: "/", secure };
+  const made: SetCookie = ownFields({ ...cookie, path: "/", secure });
   const host = app?.hostname;
   const keepsDomain =
     !cookie.name.startsWith("__Host-") && host !== undefined && covers(cookie.domain, host);

@@ -1,5 +1,6 @@
 import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
+import { ONCE, ownFields } from "../../utils/own";
 import type { StreamFailure } from "../describe-failure";
 import { fromErrorCode, RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
@@ -44,7 +45,7 @@ export async function readConnection<TData>(
   ctx.current = connection;
   ctx.heardAt = undefined;
   const stop = () => connection.abort();
-  ctx.controller.signal.addEventListener("abort", stop, { once: true });
+  ctx.controller.signal.addEventListener("abort", stop, ONCE);
   let silence: ReturnType<typeof setTimeout> | undefined;
   const expectMore = () => {
     clearTimeout(silence);
@@ -94,9 +95,9 @@ export async function readConnection<TData>(
  * @returns The end the block announced, if it announced one
  */
 function take<TData>(ctx: SSEConnectionCtx<TData>, frame: SSEFrame): ConnectionEnd | undefined {
-  if (frame.id !== undefined) ctx.lastEventId = frame.id;
-  if (frame.retry !== undefined) ctx.serverRetryMs = frame.retry;
-  const { event } = frame;
+  const { id, retry, event } = ownFields(frame);
+  if (id !== undefined) ctx.lastEventId = id;
+  if (retry !== undefined) ctx.serverRetryMs = retry;
   if (!event) return undefined;
   if (event.event?.startsWith(SSE_CONTROL_EVENTS.prefix)) return controlEnd(event);
   deliver(ctx, event);

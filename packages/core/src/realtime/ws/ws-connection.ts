@@ -1,6 +1,7 @@
 import { LIMITS } from "../../limits";
 import { createLogger } from "../../logger";
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
+import { ownFields } from "../../utils/own";
 import { backoffDelay, hintedDelay, resolveBackoff } from "../backoff";
 import { CLIENT_LIMITS } from "../client-limits";
 import { fromErrorCode } from "../errors";
@@ -38,7 +39,9 @@ const DEFAULT_MAX_BUFFERED = 1_048_576;
  * conn.send("chat:room", { text: "hello" });
  * conn.close();
  */
-export function createWSConnection(config: WSConnectionConfig): WSConnection {
+export function createWSConnection(given: WSConnectionConfig): WSConnection {
+  /* The connection's settings, as each part of it reads them: their own. */
+  const config = ownFields(given);
   assertAbsoluteUrl(config.url);
   const backoff = resolveBackoff(config.backoff);
   const notices = new Set<string>();

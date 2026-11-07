@@ -1,4 +1,5 @@
 import { cancellation } from "./cancellation";
+import { ONCE } from "./own";
 import { readUntilLeft } from "./read-until-left";
 import type { SharingCall } from "./shared-answer";
 
@@ -61,7 +62,7 @@ export function shareFlight(
   return new Promise<Response>((resolve, reject) => {
     const waiter: Waiter = { resolve, reject, signal, call, settled: false };
     flight.waiters.add(waiter);
-    signal?.addEventListener("abort", () => leave(key, flight, waiter), { once: true });
+    signal?.addEventListener("abort", () => leave(key, flight, waiter), ONCE);
   });
 }
 

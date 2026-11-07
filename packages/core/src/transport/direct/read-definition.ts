@@ -1,3 +1,5 @@
+import { ownField } from "../../utils/own";
+
 /**
  * Reading a source's definition, which reaches the transports untyped: a
  * field that is not there, or not what it should be, reads as absent.
@@ -17,7 +19,7 @@
 export function fieldOf(value: unknown, key: string): unknown {
   if ((typeof value !== "object" && typeof value !== "function") || value === null)
     return undefined;
-  return Object.hasOwn(value, key) ? Reflect.get(value, key) : undefined;
+  return ownField(value as Record<string, unknown>, key);
 }
 
 /**

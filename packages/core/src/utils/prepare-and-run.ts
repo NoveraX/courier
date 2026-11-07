@@ -15,6 +15,7 @@ import { applyCallSession, startCallSession } from "./execute-session";
 import { callInstruments, type StudioContext, type TimingState } from "./execute-studio";
 import type { CallTarget } from "./execute-target";
 import { idempotencyHeader } from "./idempotency-header";
+import { ownField, ownFields } from "./own";
 import { settleCallSession } from "./settle-call-session";
 
 /* The endpoint's own options — timeout, middleware, retry — are applied
@@ -62,7 +63,7 @@ async function runHeld(
     /* Read where the call took its hold; nothing `fetch` is given. */
     cancelPrevious: _cancelPrevious,
     ...baseOptions
-  } = target.options ?? {};
+  } = ownFields(target.options);
   const bounded = withCallerSignal(
     withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
     context?.req,
@@ -71,11 +72,11 @@ async function runHeld(
     studio.report?.callUploads(bounded, studio, { source, group, method }) ?? bounded;
   /* A newer call cancels this one through its hold, in its middleware's waits too. */
   if (hold) {
-    const own = callOptions.signal;
+    const own = ownField(callOptions, "signal");
     callOptions = { ...callOptions, signal: own ? anySignal([own, hold.signal]) : hold.signal };
   }
 
-  const signal = callOptions.signal ?? undefined;
+  const signal = ownField(callOptions, "signal") ?? undefined;
   const middlewareCtx = buildMiddlewareContext({
     source,
     group,
@@ -88,7 +89,7 @@ async function runHeld(
     namedHeaders,
     kind: schema?.type,
     signal,
-    idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
+    idempotencyHeader: idempotencyHeader(ownField(endpointOptions, "idempotencyKey")),
     purpose: target.purpose,
   });
 
@@ -97,7 +98,7 @@ async function runHeld(
      retry policy is the outermost of the endpoint's own, so it re-runs them. */
   const middlewares = resolveMiddlewareChain(
     dataSource,
-    sourceOptions?.middleware,
+    ownField(sourceOptions, "middleware"),
     endpointOptions,
   );
 
@@ -108,8 +109,8 @@ async function runHeld(
     ...target,
     mode: context?.mode ?? (context?.proxyMethod ? "proxy" : "direct"),
     middlewareCount: middlewares.length,
-    agent: middlewareCtx.agent,
-    idempotencyKey: middlewareCtx.idempotencyKey,
+    agent: ownField(middlewareCtx, "agent"),
+    idempotencyKey: ownField(middlewareCtx, "idempotencyKey"),
   });
 
   /* The token a write asks for first goes as calls go, under an id of its own. */

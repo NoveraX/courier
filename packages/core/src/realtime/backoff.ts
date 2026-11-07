@@ -1,4 +1,5 @@
 import { ConfigurationError } from "../errors/configuration-error";
+import { ownFields } from "../utils/own";
 import type { BackoffConfig } from "./types";
 
 /** A source of numbers in [0, 1), as `Math.random` is; a test hands in its own. */
@@ -31,7 +32,8 @@ const MAX_EXPONENT = 30;
  * resolveBackoff({ maxMs: 10_000 }); // → { initialMs: 1000, maxMs: 10000, factor: 2, jitter: true }
  * ```
  */
-export function resolveBackoff(config: BackoffConfig = {}): Backoff {
+export function resolveBackoff(given?: BackoffConfig): Backoff {
+  const config = ownFields(given);
   const backoff: Backoff = {
     initialMs: config.initialMs ?? DEFAULTS.initialMs,
     maxMs: config.maxMs ?? DEFAULTS.maxMs,

@@ -1,4 +1,5 @@
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
+import { ONCE, ownFields } from "../../utils/own";
 import { type Backoff, resolveBackoff } from "../backoff";
 import { CLIENT_LIMITS } from "../client-limits";
 import { onResume } from "../resume-signals";
@@ -28,8 +29,10 @@ import type { SubscribeSSEOptions } from "./sse-types";
  */
 export function subscribeSSE<TData = unknown>(
   url: string,
-  options: SubscribeSSEOptions = {},
+  given?: SubscribeSSEOptions,
 ): Subscription<TData> {
+  /* The subscription's options, as each part of it reads them: their own. */
+  const options = ownFields(given);
   assertAbsoluteUrl(url);
   const backoff = resolveBackoff(options.backoff);
   const subscription = new SubscriptionHandle<TData>(
@@ -38,7 +41,7 @@ export function subscribeSSE<TData = unknown>(
   );
   const { signal } = options;
   if (signal?.aborted) subscription.close();
-  else signal?.addEventListener("abort", () => subscription.close(), { once: true });
+  else signal?.addEventListener("abort", () => subscription.close(), ONCE);
   return subscription;
 }
 
@@ -65,9 +68,9 @@ function sseDriver<TData>(
         heartbeatTimeout: options.heartbeatTimeout ?? CLIENT_LIMITS.SSE_SILENCE_TIMEOUT_MS,
         maxAttempts: options.maxAttempts ?? Infinity,
         parse: options.parse ?? JSON.parse,
-        ...(options.onResponse && { onResponse: options.onResponse }),
-        ...(options.beforeConnect && { beforeConnect: options.beforeConnect }),
-        ...(options.fetch && { fetch: options.fetch }),
+        onResponse: options.onResponse,
+        beforeConnect: options.beforeConnect,
+        fetch: options.fetch,
       },
       lastEventId: ctx?.lastEventId ?? lastEventId,
       serverRetryMs: undefined,

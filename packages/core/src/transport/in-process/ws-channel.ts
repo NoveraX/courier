@@ -4,6 +4,7 @@ import { streamLabel } from "../../realtime/stream-label";
 import type { ChannelHandlers } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
+import { ONCE } from "../../utils/own";
 import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { instrumentWSChannel } from "../instrument";
@@ -107,7 +108,7 @@ export async function executeDirectWSChannel(
 
   if (options.signal) {
     if (options.signal.aborted) state.client.close();
-    else options.signal.addEventListener("abort", () => state.client.close(), { once: true });
+    else options.signal.addEventListener("abort", () => state.client.close(), ONCE);
   }
 
   return instrumentWSChannel(

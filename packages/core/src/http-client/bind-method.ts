@@ -1,6 +1,7 @@
 import { HTTPError } from "../errors";
 import type { EndpointHold } from "../utils/cancel-previous";
 import { cancellation } from "../utils/cancellation";
+import { ownField, ownFields } from "../utils/own";
 import { compileUrl, resolveBasePath } from "../utils/url";
 import { stripUndefined } from "./body-builder";
 import { type RequestOptions, withCallTransport } from "./call-transport";
@@ -39,16 +40,51 @@ type BoundMethod = <TResponse>(
   ...arguments_: MethodParameters<HttpMethod>
 ) => Promise<HttpResponse<TResponse>>;
 
+/** What a call's methods are bound with, read once for all of them. */
+export interface BoundParts {
+  readonly cleanedVars: unknown;
+  readonly boundHeaders: HeadersInit | undefined;
+  readonly stream: boolean | undefined;
+  readonly boundFetchOptions: Record<string, unknown>;
+  readonly prefix: string;
+  readonly pathOptions: PathOptions | undefined;
+}
+
+/**
+ * What a call's methods are bound with: the call's options and its group's,
+ * each read as its own fields once, for every verb the call may send with.
+ *
+ * @param boundOptions - The call's options
+ * @param groupOptions - The settings its group gives, merged down its path
+ * @returns The parts each method is bound with
+ * @example
+ * ```ts
+ * const bound = boundParts(options, groupOptions);
+ * const get = bindMethod(deps, "get", bound);
+ * ```
+ */
+export function boundParts(
+  boundOptions?: BoundMethodOptions,
+  groupOptions?: GroupOptions,
+): BoundParts {
+  const { variables: vars, headers: boundHeaders, stream, ...boundRest } = ownFields(boundOptions);
+  const { prefix = "", pathOptions } = ownFields(groupOptions);
+  return {
+    cleanedVars: stripUndefined(vars),
+    boundHeaders,
+    stream,
+    boundFetchOptions: withCallTransport(boundRest, groupOptions),
+    prefix,
+    pathOptions,
+  };
+}
+
 export function bindMethod(
   deps: BindMethodDeps,
   method: HttpMethod,
-  boundOptions?: BoundMethodOptions,
-  groupOptions?: GroupOptions,
+  bound: BoundParts,
 ): BoundMethod {
-  const { variables: vars, headers: boundHeaders, stream, ...boundRest } = boundOptions || {};
-  const { prefix = "", pathOptions } = groupOptions || {};
-  const boundFetchOptions = withCallTransport(boundRest, groupOptions);
-  const cleanedVars = stripUndefined(vars);
+  const { cleanedVars, boundHeaders, stream, boundFetchOptions, prefix, pathOptions } = bound;
 
   return async <TResponse>(...arguments_: MethodParameters<HttpMethod>) => {
     const commonPathOptions = (await deps.pathOptions?.(deps.context?.req)) || {};
@@ -78,7 +114,7 @@ export function bindMethod(
 
     /* A call that names how its answer is read overrides the source's
        reading, its parser included. */
-    const { responseType: readAs, ...options } = requested;
+    const { responseType: readAs, ...options } = ownFields(requested);
     /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
     if (stream) options.coalesce = false;
     const { hold } = deps;
@@ -118,7 +154,8 @@ export function bindMethod(
          caller's reason, and the reader reports that as a body it could
          not parse; it is rethrown as the cancellation it is. */
       hold?.returned();
-      if (options.signal?.aborted) throw cancellation(options.signal);
+      const signal = ownField(options, "signal");
+      if (signal?.aborted) throw cancellation(signal);
       throw error;
     }
   };

@@ -3,6 +3,7 @@ import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
+import { ownFields } from "../utils/own";
 import type { ConnectResult } from "./connection-meta";
 import { assertListedSettings } from "./runtime-policy";
 import { createHandlerCounters, type WSHandlerStats } from "./ws-handler-stats";
@@ -42,7 +43,9 @@ export type { WSSocketContext } from "./ws-context";
 export function createWSHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: WSHandlerConfig<TConnect>,
 ): WSHandler;
-export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
+export function createWSHandler(given?: WSHandlerConfig): WSHandler {
+  /* The handler's settings, as each of its parts reads them: their own. */
+  const config = ownFields(given);
   provideServerCapabilities();
   assertListedSettings(config, "createWSHandler");
   if (config.sources !== undefined) {

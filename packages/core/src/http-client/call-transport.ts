@@ -1,3 +1,4 @@
+import { ownField } from "../utils/own";
 import { resolveTransport } from "./resolve-transport";
 import type { PlatformFetch } from "./source-transport";
 import { TRANSPORT_KEYS } from "./transport-options";
@@ -28,7 +29,8 @@ export function withCallTransport(
   group: GroupOptions | undefined,
 ): Record<string, unknown> {
   const sets = (layer: object | undefined) =>
-    layer !== undefined && TRANSPORT_KEYS.some((key) => Reflect.get(layer, key) !== undefined);
+    layer !== undefined &&
+    TRANSPORT_KEYS.some((key) => ownField(layer as Record<string, unknown>, key) !== undefined);
   if (!sets(group) && !sets(options)) return { ...options };
   const transport = resolveTransport(undefined, [group, options]);
   const rest: Record<string, unknown> = {};

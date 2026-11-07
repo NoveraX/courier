@@ -12,6 +12,7 @@ import { executeInner, type InnerExecuteDeps } from "./execute-inner";
 import { buildResponse } from "./execute-response";
 import type { StudioContext, TimingState } from "./execute-studio";
 import { validateVariables } from "./execute-validation";
+import { ownField } from "./own";
 
 /** A call ready to run: its endpoint, its middleware and how to answer it. */
 export interface PreparedCall {
@@ -119,7 +120,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
         namedHeaders: call.answer.namedHeaders,
         timing,
         middlewareCount: middlewares.length,
-        signal: call.inner.baseOptions.signal ?? undefined,
+        signal: ownField(call.inner.baseOptions, "signal") ?? undefined,
         variables: ctx.variables,
       }),
       relayed,
@@ -131,7 +132,7 @@ function withSignal<TOptions extends { signal?: AbortSignal | null | undefined }
   options: TOptions,
   signal: AbortSignal | undefined,
 ): TOptions {
-  const own = options.signal ?? undefined;
+  const own = ownField(options, "signal") ?? undefined;
   if (signal === undefined || signal === own) return options;
   return { ...options, signal: own ? anySignal([own, signal]) : signal };
 }

@@ -21,6 +21,7 @@ import { resolveMiddlewareChain } from "./execute-options";
 import { namedHeadersOf, resolveEndpoint } from "./execute-resolve";
 import { applyCallSession } from "./execute-session";
 import { forwardedFor } from "./forwarded-for";
+import { ownField, ownFields } from "./own";
 
 export interface TransportMiddlewareInput {
   /** Which transport is asking, so the context reports it accurately. */
@@ -73,7 +74,8 @@ export async function runTransportMiddleware(
   const options = dataSource.options as BaseOptions | undefined;
   const { options: endpointOptions, schema } = resolveEndpoint(dataSource, group, method);
 
-  const context: Context = { req: request, mode: "proxy" };
+  /* Of no prototype, as every call's context is read: its own fields alone. */
+  const context = ownFields<Context>({ req: request, mode: "proxy" });
   /* A stream reads: it carries the session and the forwarded headers as a
      read over HTTP does, for the upstream a relayed stream is opened on —
      asked for first, so a server checks them before anything reads them. */
@@ -101,7 +103,11 @@ export async function runTransportMiddleware(
   applyCallSession(await pending, middlewareCtx, {}, undefined);
   carryForwardedFor(middlewareCtx.headers, forwardedFor(request));
 
-  const middlewares = resolveMiddlewareChain(dataSource, options?.middleware, endpointOptions);
+  const middlewares = resolveMiddlewareChain(
+    dataSource,
+    ownField(options, "middleware"),
+    endpointOptions,
+  );
 
   if (middlewares.length > 0) {
     const timeoutMs = input.timeoutMs ?? LIMITS.MIDDLEWARE_TIMEOUT_MS;

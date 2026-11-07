@@ -2,6 +2,7 @@ import { studioHooksHere } from "../capabilities/studio-hooks";
 import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import { filterResponseHeaders } from "./merge-headers";
+import { ownFields } from "./own";
 import { setCookiesOf } from "./set-cookies";
 import { toWireAnswer } from "./wire-answer";
 
@@ -32,10 +33,9 @@ const STREAMED_ANSWER_HEADERS: Readonly<Record<string, string>> = {
   "X-Content-Type-Options": "nosniff",
 };
 
-export const buildResponse = (
-  context: Context | undefined,
-  response: InternalResponse,
-): unknown => {
+export const buildResponse = (context: Context | undefined, answer: InternalResponse): unknown => {
+  /* The answer as the call built it: its own fields alone. */
+  const response = ownFields(answer);
   if (response.stream) {
     if (context?.res instanceof Response && response.data instanceof ReadableStream) {
       /* The upstream's own headers went straight to the browser here, so a

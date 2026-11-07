@@ -52,8 +52,9 @@ const NO_OPTIONS: object = Object.freeze({});
  * server refuses an API that cannot work as written before its first call,
  * whatever `NODE_ENV` says — a bundler replaces `NODE_ENV` in a server's
  * build too. Each option is read once, into a copy of its data, and the
- * checks read the copy alone: what each option is first — data, a list of
- * names — then what they mean together. The copy is what a server holds:
+ * checks read the server's view of the copy alone, its own fields: what
+ * each option is first — data, a list of names — then what they mean
+ * together; a call takes the same view. The copy is what a server holds:
  * in place of the session, `forward` and the header lists of the API and
  * its endpoints, and of how each endpoint is offered to agents, frozen to
  * its depths, so a change made through the API later fails where it is
@@ -150,13 +151,14 @@ function takeUp(
   if (before?.apis.has(api) === true && beside.size === 0) return before;
   const own = before === undefined ? readApiOptions(options, where) : [];
   const endpoints = [...beside].map(readEndpointOptions);
-  const [session, forward, list] = own.map(({ copy }) => copy);
+  const [session, forward, list] = own.map(({ view }) => view);
   assertSessionApi(before === undefined ? session : before.session, [
     ...(before === undefined ? [[where, list] as const] : []),
     ...endpoints.map(({ at, list: listed }) => [at, listed] as const),
   ] as ReadonlyArray<readonly [string, readonly string[] | undefined]>);
   for (const { agent } of endpoints) agentOptionsOf(agent as AgentMark | undefined);
   holdInPlace([...own, ...endpoints.flatMap(({ read }) => read)]);
+  /* What a call takes is the server's view of the copies: read as its own fields alone. */
   const taken: TakenUp = before ?? {
     options,
     session: session as SessionOptions | undefined,
@@ -184,8 +186,8 @@ function readApiOptions(options: object, where: string): ReadOption[] {
     "allowedHeaders",
     where,
   );
-  assertSessionOptions(session.copy, fieldOf(options, "baseURL") as string | undefined, where);
-  assertForwardOptions(forward.copy, where);
+  assertSessionOptions(session.view, fieldOf(options, "baseURL") as string | undefined, where);
+  assertForwardOptions(forward.view, where);
   assertHeaderList(list);
   return [session, forward, list];
 }
@@ -216,7 +218,7 @@ function readEndpointOptions([owner, at]: [object, string]): EndpointRead {
   const list = readOption(owner, "allowedHeaders", "HEADER_LIST_INVALID", ".headers()", at);
   const agent = readOption(owner, "agent", "AGENT_OPTIONS_INVALID", ".agent()", at);
   assertHeaderList(list);
-  return { owner, at, list: list.copy, agent: agent.copy, read: [list, agent] };
+  return { owner, at, list: list.view, agent: agent.view, read: [list, agent] };
 }
 
 /* A header list is data a server reads as written: a list of names, not a Set or a Map. */

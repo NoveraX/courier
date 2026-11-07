@@ -1,4 +1,5 @@
 import { ConfigurationError } from "../../errors/configuration-error";
+import { ownFields } from "../../utils/own";
 import type { SSEEvent } from "../types";
 import { kindOfValue } from "./kind-of-value";
 
@@ -8,11 +9,9 @@ function isOptional(value: unknown, type: "string" | "number"): boolean {
 
 function isSSEEvent(value: unknown): value is SSEEvent<unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  return (
-    isOptional("event" in value ? value.event : undefined, "string") &&
-    isOptional("id" in value ? value.id : undefined, "string") &&
-    isOptional("retry" in value ? value.retry : undefined, "number")
-  );
+  /* The fields the event has of its own, as the stream writes them. */
+  const { event, id, retry } = ownFields(value as SSEEvent<unknown>);
+  return isOptional(event, "string") && isOptional(id, "string") && isOptional(retry, "number");
 }
 
 /**

@@ -1,4 +1,5 @@
 import { abortReason } from "./abort-reason";
+import { ONCE } from "./own";
 
 /**
  * An answer whose body fails with the call's own reason when the call stops
@@ -41,7 +42,7 @@ export function readUntilLeft(response: Response, signal: AbortSignal | undefine
       output?.error(abortReason(signal));
       void reader.cancel(abortReason(signal)).catch(() => undefined);
     },
-    { once: true },
+    ONCE,
   );
   const copy = new Response(stream, {
     status: response.status,

@@ -38,19 +38,20 @@ const holdsBySource = new WeakMap<object, EndpointHolds>();
 export function holdOf(target: CallTarget, context?: Context): EndpointHold | undefined {
   const own = target.options?.cancelPrevious;
   assertCancelPrevious(own, "A call");
+  /* Asked first: a server's call is many users', and none of their options is read for a hold. */
+  const oneUsers =
+    supportsAbortController &&
+    isOneUsersCall(context) &&
+    context?.proxyMethod === undefined &&
+    target.schema?.type === "query";
+  if (!oneUsers) return undefined;
   const nearest =
     own ??
     target.endpointOptions?.cancelPrevious ??
     target.endpointGroup?.options.cancelPrevious ??
     context?.defaultCancelPrevious ??
     target.sourceOptions?.cancelPrevious;
-  const held =
-    nearest === true &&
-    supportsAbortController &&
-    isOneUsersCall(context) &&
-    context?.proxyMethod === undefined &&
-    target.schema?.type === "query";
-  if (!held) return undefined;
+  if (nearest !== true) return undefined;
   const path = [target.group, target.method].filter((part) => part !== undefined && part !== "");
   return holdEndpoint(holdsOf(target.dataSource), path.join("."));
 }

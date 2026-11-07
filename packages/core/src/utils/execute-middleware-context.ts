@@ -5,6 +5,7 @@ import { forwardedRequestHeaders } from "./forwarded-request-headers";
 import { headersToObject } from "./helpers";
 import { mergeHeaders } from "./merge-headers";
 import { agentOf } from "./one-users-call";
+import { ownField, ownFields } from "./own";
 import { randomId } from "./random-id";
 
 export interface MiddlewareContextInput {
@@ -62,14 +63,15 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     namedHeaders,
     kind,
     signal,
-  } = input;
+    idempotencyHeader: keyHeader,
+    purpose,
+  } = ownFields(input);
   const { req: nextRequest, headers: nextHeaders } = context || {};
   const agent = agentOf(context);
   const mergedNextHeaders = {
     ...headersToObject(nextRequest?.headers),
     ...headersToObject(nextHeaders),
   };
-  const keyHeader = input.idempotencyHeader;
   /* The caller's own headers go on top of the ones it forwards. A header it
      set — a service token for a backend the end user may not reach — is its
      explicit choice, which the incoming request's copy must not replace;
@@ -77,7 +79,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
   const newHeaders = forwardedRequestHeaders(
     mergedNextHeaders,
     keyHeader ? [...namedHeaders, keyHeader] : namedHeaders,
-    sourceOptions?.headers,
+    ownField(sourceOptions, "headers"),
     String(source),
   );
   const forwarded = new Set(newHeaders.keys());
@@ -103,7 +105,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     request: nextRequest,
     kind,
     signal,
-    ...(input.purpose && { purpose: input.purpose }),
+    ...(purpose && { purpose }),
     ...(agent && { agent }),
     ...(idempotencyKey && { idempotencyKey }),
     _requestId: requestId || undefined,

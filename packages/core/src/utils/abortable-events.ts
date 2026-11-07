@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { isCancellation } from "./abort";
+import { ONCE } from "./own";
 
 const log = createLogger("Stream");
 const ABORTED = Symbol("aborted");
@@ -36,7 +37,7 @@ export async function* abortableEvents<TEvent>(
     open = false;
     void closeSource(iterator, true);
   };
-  signal.addEventListener("abort", release, { once: true });
+  signal.addEventListener("abort", release, ONCE);
   try {
     while (!signal.aborted) {
       const step = await nextOrAbort(iterator, signal);
@@ -82,7 +83,7 @@ function nextOrAbort<TEvent>(
       pending.catch((error: unknown) => lateFailure("after its stream closed", error));
       resolve(ABORTED);
     };
-    signal.addEventListener("abort", onAbort, { once: true });
+    signal.addEventListener("abort", onAbort, ONCE);
     pending.then(
       (step) => {
         signal.removeEventListener("abort", onAbort);

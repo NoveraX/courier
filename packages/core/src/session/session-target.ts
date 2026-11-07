@@ -1,5 +1,6 @@
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { BaseOptions } from "../http-client/types";
+import { ownField } from "../utils/own";
 import type { ForwardOptions, SessionOptions } from "./types";
 
 /* Verbs that only read, which a double-submit check lets through without its token. */
@@ -56,20 +57,24 @@ export interface SessionTargetInput {
  */
 export function sessionTargetOf(input: SessionTargetInput): SessionTarget {
   const { options } = input;
+  const prefixUrl = ownField(input, "prefixUrl");
   const endpoint = input.endpointOptions;
+  /* The fields it needs of the API's and the endpoint's own options, each alone: a server checks
+     the options when it is asked, and reads each of them first. */
+  const how = ownField(endpoint, "session");
   const writes = input.kind === "mutation";
   const verb = input.httpMethod?.toUpperCase();
   return {
     api: input.dataSource,
     options,
     endpoint,
-    session: endpoint?.session === false ? undefined : options?.session,
-    forward: endpoint?.forward === false ? undefined : options?.forward,
+    session: how === false ? undefined : ownField(options, "session"),
+    forward: ownField(endpoint, "forward") === false ? undefined : ownField(options, "forward"),
     writes,
     unsafeMethod: verb === undefined ? writes : !SAFE_VERBS.has(verb),
-    unguarded: endpoint?.session === "unguarded",
-    url: typeof input.prefixUrl === "string" ? input.prefixUrl : options?.baseURL,
-    credentials: options?.credentials,
+    unguarded: how === "unguarded",
+    url: typeof prefixUrl === "string" ? prefixUrl : ownField(options, "baseURL"),
+    credentials: ownField(options, "credentials"),
     name: input.name,
   };
 }

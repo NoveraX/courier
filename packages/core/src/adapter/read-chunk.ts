@@ -1,3 +1,4 @@
+import { ONCE } from "../utils/own";
 import { BodyError } from "./body-error";
 
 /* The longest delay a timer takes as given (2^31 - 1 ms). */
@@ -66,7 +67,7 @@ export function readChunk(
         : undefined;
     /* A wait for a client must not keep a server that is shutting down alive. */
     if (typeof timer === "object" && "unref" in timer) timer.unref();
-    signal.addEventListener("abort", onAbort, { once: true });
+    signal.addEventListener("abort", onAbort, ONCE);
 
     reader.read().then(
       (result) => {

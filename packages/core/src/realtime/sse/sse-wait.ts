@@ -1,3 +1,4 @@
+import { ONCE } from "../../utils/own";
 import type { SSEConnectionCtx } from "./sse-connection";
 
 /**
@@ -37,7 +38,7 @@ export function waitToReconnect<TData>(ms: number, ctx: SSEConnectionCtx<TData>)
     };
     const end = (): void => wake();
     timer = setTimeout(() => wake(), ms);
-    signal.addEventListener("abort", end, { once: true });
+    signal.addEventListener("abort", end, ONCE);
     ctx.now = wake;
   });
 }

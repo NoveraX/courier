@@ -1,5 +1,5 @@
 import { ConfigurationError, type ConfigurationErrorCode } from "../errors/configuration-error";
-import { dataCopy } from "./plain-data";
+import { dataCopy, dataView } from "./plain-data";
 
 /** An option a server checks, read once. */
 export interface ReadOption {
@@ -8,8 +8,10 @@ export interface ReadOption {
   readonly key: string;
   /** Its property, as the owner had it */
   readonly own: PropertyDescriptor | undefined;
-  /** The copy of its value, which the checks read and a server holds in its place */
+  /** The copy of its value, which a server holds in its place: its user's, an object as written */
   readonly copy: unknown;
+  /** What the checks and the calls read of the copy: its own fields alone */
+  readonly view: unknown;
   /** The code it is refused with, and what the refusal names it and what it is of */
   readonly code: ConfigurationErrorCode;
   readonly name: string;
@@ -18,7 +20,8 @@ export interface ReadOption {
 
 /**
  * An option's value read once — by its getter, where it has one — into a
- * copy of its data, which the checks read and a server holds in its place.
+ * copy of its data, which a server holds in its place, and the server's
+ * view of the copy, which the checks and the calls read.
  * Options are data, read as they are: an option is the owner's own
  * property alone, and one the owner does not have is unset, whatever its
  * prototype answers.
@@ -44,7 +47,8 @@ export function readOption(
   const own = Reflect.getOwnPropertyDescriptor(owner, key);
   const value: unknown =
     own === undefined ? undefined : "value" in own ? own.value : own.get?.call(owner);
-  return { owner, key, own, copy: dataCopy(value), code, name, at };
+  const copy = dataCopy(value);
+  return { owner, key, own, copy, view: dataView(copy), code, name, at };
 }
 
 /**

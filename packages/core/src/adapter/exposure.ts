@@ -21,6 +21,7 @@
 
 import { GROUP_PATH_SEPARATOR, groupChain, groupNames } from "../define/group-tree";
 import { isRecord } from "../utils/is-record";
+import { ownField } from "../utils/own";
 import type { SchemaMetadata } from "../validation";
 
 /** Whether a page may reach an endpoint, and the mark that decided it. */
@@ -59,13 +60,13 @@ export function exposureOf(
     isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
   if (!options) return UNMARKED;
 
-  const own = exposeFlag(schema?.expose);
+  const own = exposeFlag(ownField(schema, "expose"));
   if (own !== undefined) return { exposed: own, by: "endpoint" };
 
   const byGroup = group === undefined ? undefined : groupExposureOf(dataSource, group);
   if (byGroup) return byGroup;
 
-  const api = exposeFlag(options.expose);
+  const api = exposeFlag(ownField(options, "expose"));
   return api === undefined ? UNMARKED : { exposed: api, by: "api" };
 }
 
@@ -102,7 +103,7 @@ function groupExposureOf(dataSource: unknown, group: string): ExposureDecision |
   const chain = groupChain(dataSource, group) ?? [];
   const names = groupNames(group);
   for (let depth = chain.length; depth > 0; depth--) {
-    const flag = exposeFlag(chain[depth - 1]?.options?.expose);
+    const flag = exposeFlag(ownField(chain[depth - 1]?.options, "expose"));
     if (flag === undefined) continue;
     return { exposed: flag, by: "group", group: names.slice(0, depth).join(GROUP_PATH_SEPARATOR) };
   }

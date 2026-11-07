@@ -78,7 +78,7 @@ export function applyCallSession<TOptions extends object>(
   ctx.carriesSession = session.carries;
   ctx.sessionPartition = session.partition;
   const init = Object.entries(session.fetchInit ?? {}).filter(
-    ([key]) => sourceOptions === undefined || !(key in sourceOptions),
+    ([key]) => sourceOptions === undefined || !Object.hasOwn(sourceOptions, key),
   );
   const within = session.carries && session.incoming !== undefined;
   return { ...Object.fromEntries(init), ...options, ...(within && { withinOrigin: true }) };

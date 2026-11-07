@@ -1,4 +1,5 @@
 import { ConfigurationError } from "../errors/configuration-error";
+import { ownFields } from "../utils/own";
 import { notAFunction } from "./source-transport";
 import type { TransportOwner } from "./transport-options";
 
@@ -24,12 +25,14 @@ export function assertTransportOptions(
   },
   owner: TransportOwner,
 ): void {
+  /* Their own fields alone, as every option is read. */
+  const own = ownFields(options);
   for (const option of ["fetch", "webSocket"] as const) {
-    const value = options[option];
+    const value = own[option];
     if (value !== undefined && typeof value !== "function")
       throw notAFunction(option, value, owner);
   }
-  const { dispatcher } = options;
+  const { dispatcher } = own;
   if (dispatcher === undefined || isDispatcher(dispatcher)) return;
   throw new ConfigurationError(
     "SOURCE_TRANSPORT_INVALID",

@@ -5,6 +5,7 @@ import type { ResolvedEndpointOptions } from "../define/options";
 import type { GroupOptions } from "../http-client/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 import { normalizeHttpMethod } from "./helpers";
+import { ownFields } from "./own";
 
 /** The group an endpoint sits in, with the settings it takes from every group above it. */
 type ResolvedGroup = { options: GroupOptions };
@@ -116,8 +117,8 @@ function readSchema(endpoint: unknown): SchemaMetadata | undefined {
     return undefined;
   }
   const schema = endpoint[ENDPOINT_SCHEMA];
-  /* Every field of the metadata is optional: any object stamped there is one. */
-  return typeof schema === "object" && schema !== null ? schema : undefined;
+  /* Every field of the metadata is optional: any object stamped there is one, read as its own. */
+  return typeof schema === "object" && schema !== null ? ownFields(schema) : undefined;
 }
 
 /* Options that may name the headers they carry across the proxy. */

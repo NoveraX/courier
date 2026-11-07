@@ -2,6 +2,7 @@ import { createLogger } from "../logger";
 import type { StreamFailure } from "../realtime/describe-failure";
 import { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 import type { StudioHooks } from "../studio/hooks";
+import { ONCE } from "../utils/own";
 import type { SSESender } from "./sse-sender";
 import type { SSECloseReason, SSEStreamOptions } from "./sse-types";
 
@@ -140,7 +141,7 @@ function pause(ms: number, signal: AbortSignal): Promise<void> {
       resolve();
     };
     const timer = setTimeout(done, ms);
-    signal.addEventListener("abort", done, { once: true });
+    signal.addEventListener("abort", done, ONCE);
   });
 }
 

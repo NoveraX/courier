@@ -1,5 +1,6 @@
 import { createLogger } from "../../logger";
 import { layerHeaders } from "../../utils/layer-headers";
+import { ONCE } from "../../utils/own";
 import { CLIENT_LIMITS } from "../client-limits";
 import { fingerprintOf } from "../credentials-fingerprint";
 import { ConnectionError, type RealtimeError } from "../errors";
@@ -39,9 +40,13 @@ export async function openStream<TData>(
     const refused = sameAsRefused(ctx, opened);
     if (refused) return refused;
     const send = ctx.config.fetch ?? fetch;
+    /* What the request is, said of its own, as an HTTP call's is: the platform reads a field
+       its init does not have from the init's prototype. */
     const request = send(ctx.url, {
       ...opened?.init,
+      method: "GET",
       headers: layerHeaders(opened?.headers, requestHeaders(ctx)),
+      body: null,
       signal,
     });
     const response = await within(signal, request, (answer) => {
@@ -80,7 +85,7 @@ function within<T>(
   return new Promise<T>((resolve, reject) => {
     const abandon = () => reject(signal.reason);
     if (signal.aborted) abandon();
-    else signal.addEventListener("abort", abandon, { once: true });
+    else signal.addEventListener("abort", abandon, ONCE);
     Promise.resolve(step).then(
       (value) => {
         signal.removeEventListener("abort", abandon);

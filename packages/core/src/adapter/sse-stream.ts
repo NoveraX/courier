@@ -7,6 +7,7 @@ import { streamLabel } from "../realtime/stream-label";
 import type { SSEContext } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
 import { anySignal } from "../utils/any-signal";
+import { ONCE } from "../utils/own";
 import { SSE_HEARTBEAT } from "./format-sse";
 import { createSSESender } from "./sse-sender";
 import {
@@ -86,9 +87,7 @@ export function createSSEStream(
           );
         }
 
-        combinedSignal.addEventListener("abort", () => clearInterval(heartbeatTimer), {
-          once: true,
-        });
+        combinedSignal.addEventListener("abort", () => clearInterval(heartbeatTimer), ONCE);
         heartbeatTimer = setInterval(() => sender.comment(SSE_HEARTBEAT), HEARTBEAT_INTERVAL);
         /* At once: a host writes the answer's headers with its first bytes, and
            a client hears the stream open only then — at its first event, or the

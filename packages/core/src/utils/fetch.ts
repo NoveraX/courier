@@ -10,6 +10,7 @@ import { fetchWithinOrigin } from "./fetch-within-origin";
 import { flightKey, isRead } from "./flight-key";
 import { sendableHeaders } from "./header-value";
 import { isFormData, normalizeHttpMethod } from "./helpers";
+import { ownFields } from "./own";
 import { trackDownload } from "./progress";
 import { answerRead, forgetRenderReads } from "./render-memo";
 import { sendStreamed } from "./send-streamed";
@@ -62,6 +63,7 @@ export async function coreFetch(
   url: string,
   options: CoreFetchInit = {},
 ): Promise<Response> {
+  const own = ownFields(options);
   const {
     json,
     searchParams,
@@ -78,7 +80,9 @@ export async function coreFetch(
     reads,
     call,
     ...rest
-  } = options;
+  } = own;
+  /* Followed within the request's origin unless the request says how itself. */
+  const within = withinOrigin === true && own.redirect === undefined;
 
   let fullUrl = url;
   if (searchParams) {
@@ -133,7 +137,7 @@ export async function coreFetch(
             fullUrl,
             { ...sent, body: requestBody },
             onUploadProgress ?? ignoreProgress,
-            { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
+            { withinOrigin: within, fetch: send },
           ),
         (cause: unknown) => {
           uploadWithoutProgress(requestBody, cause);
@@ -153,12 +157,10 @@ export async function coreFetch(
         : sendStreamed(
             fullUrl,
             { ...sent, body: requestBody },
-            { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
+            { withinOrigin: within, fetch: send },
           );
     if (streamed) return streamed;
-    return withinOrigin && rest.redirect === undefined
-      ? fetchWithinOrigin(fullUrl, sent, send)
-      : send(fullUrl, sent);
+    return within ? fetchWithinOrigin(fullUrl, sent, send) : send(fullUrl, sent);
   };
   const read = isRead(init.method, reads);
   /* A write the render makes may change what its reads answered. */

@@ -1,6 +1,7 @@
 import type { AgentMark } from "../define/agent-mark";
 import { ConfigurationError } from "../errors/configuration-error";
 import { isRecord } from "../utils/is-record";
+import { ownFields } from "../utils/own";
 import type { AgentAccess, AgentLimit, AgentOptions } from "./types";
 
 const ACCESS: ReadonlySet<string> = new Set<AgentAccess>(["read", "write", "destructive"]);
@@ -30,7 +31,7 @@ const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 export function agentOptions(value: unknown, where: string): AgentOptions | false {
   if (value === false) return false;
   if (!isRecord(value)) refuse(where, "takes an object: { description, access } — or false");
-  const { description, access, name, title, limit, ...unknown } = value;
+  const { description, access, name, title, limit, ...unknown } = ownFields(value);
   const extra = Object.keys(unknown);
   if (extra.length > 0) refuse(where, `has no option ${extra.map((key) => `"${key}"`).join(", ")}`);
   if (typeof description !== "string" || description.trim() === "") {
@@ -62,7 +63,7 @@ function limitOf(value: unknown, where: string): AgentLimit {
       "takes a limit of { maxCalls, window }: at most maxCalls calls in any window of milliseconds",
     );
   }
-  const { maxCalls, window, ...unknown } = value;
+  const { maxCalls, window, ...unknown } = ownFields(value);
   const extra = Object.keys(unknown);
   if (extra.length > 0)
     refuse(where, `has no limit option ${extra.map((key) => `"${key}"`).join(", ")}`);

@@ -1,5 +1,6 @@
 import { TRANSPORT_KEYS } from "../http-client/transport-options";
 import type { GroupOptions, PathOptions } from "../http-client/types";
+import { ownFields } from "../utils/own";
 import { pathJoin } from "../utils/path-join";
 import type { GroupNode } from "./group-tree";
 
@@ -18,14 +19,15 @@ import type { GroupNode } from "./group-tree";
  * ```
  */
 export function groupOptionsOf(chain: readonly GroupNode[]): GroupOptions {
-  if (chain.length <= 1) return chain[0]?.options ?? {};
-  const options = chain.map((group) => group.options ?? {});
+  /* Each group's own settings, and the merge of them, read as their own. */
+  const options = chain.map((group) => ownFields(group.options));
+  if (options.length <= 1) return options[0] ?? ownFields<GroupOptions>(undefined);
   const pathOptions = options.flatMap((o) => (o.pathOptions ? [o.pathOptions] : []));
-  return {
+  return ownFields({
     prefix: pathJoin(options.map((o) => o.prefix ?? "")),
     ...(pathOptions.length > 0 && { pathOptions: mergedPathOptions(pathOptions) }),
     ...nearestSettings(options),
-  };
+  });
 }
 
 /* The settings a lower group's own replace rather than add to. */

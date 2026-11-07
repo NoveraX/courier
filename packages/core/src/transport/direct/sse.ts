@@ -64,7 +64,7 @@ export function createDirectSSEFactory(
       { Accept: "text/event-stream" },
       request.sourceHeaders,
       defaultHeaders,
-      options.headers,
+      fieldOf(options, "headers"),
     );
     const url = request.url;
 

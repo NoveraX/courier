@@ -1,3 +1,4 @@
+import { ownField } from "../utils/own";
 import { assertTransportOptions } from "./assert-transport-options";
 import {
   type PlatformFetch,
@@ -73,9 +74,10 @@ export function resolveTransport(
   for (const key of FETCH_CONNECTION_KEYS) {
     if (chosen.has(key)) connection[key] = chosen.get(key);
   }
+  /* Each said of its own, though it be nothing: what reads the transport finds no other. */
   return {
-    ...(typeof send === "function" && { fetch: sendingFetch(send as SourceFetch) }),
-    ...(typeof webSocket === "function" && { webSocket: webSocket as SourceWebSocket }),
+    fetch: typeof send === "function" ? sendingFetch(send as SourceFetch) : undefined,
+    webSocket: typeof webSocket === "function" ? (webSocket as SourceWebSocket) : undefined,
     connection,
     /* Read only where sockets are shared by key, never on a call's way out. */
     get key() {
@@ -104,9 +106,9 @@ export function sendingFetch(send: SourceFetch): PlatformFetch {
   return platform;
 }
 
-/* One option of a layer, read as nothing in particular until it is checked. */
+/* One option of a layer, its own, read as nothing in particular until it is checked. */
 function valueAt(layer: object | undefined, key: TransportKey): unknown {
-  return layer === undefined ? undefined : Reflect.get(layer, key);
+  return ownField(layer as Record<string, unknown> | undefined, key);
 }
 
 /* The same options give the same key: objects and functions by identity, strings as written. */

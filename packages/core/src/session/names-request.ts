@@ -1,4 +1,5 @@
 import type { Context } from "../http-client/types";
+import { ownFields } from "../utils/own";
 
 /**
  * Whether a call's context names the request it serves — an adapter's
@@ -13,7 +14,6 @@ import type { Context } from "../http-client/types";
  * ```
  */
 export function namesRequest(context: Context): boolean {
-  return (
-    context.incoming !== undefined || context.req !== undefined || context.headers !== undefined
-  );
+  const { incoming, req, headers } = ownFields(context);
+  return incoming !== undefined || req !== undefined || headers !== undefined;
 }

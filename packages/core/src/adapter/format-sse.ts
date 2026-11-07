@@ -1,6 +1,7 @@
 import { ConfigurationError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 import type { SSEEvent } from "../realtime/types";
+import { ownFields } from "../utils/own";
 
 /** Standard SSE response headers */
 export const SSE_HEADERS: Record<string, string> = {
@@ -54,24 +55,26 @@ export function buildSSECorsHeaders(origin: string, credentials = true): Record<
  *   stream's own end-of-stream events
  */
 export function formatSSEEvent<TData>(event: SSEEvent<TData>, seq?: number): string {
-  if (event.event?.startsWith(SSE_CONTROL_EVENTS.prefix)) {
+  /* What the event says of its own: a field a prototype answers for is none of its. */
+  const { id: named, event: name, retry, data } = ownFields(event);
+  if (name?.startsWith(SSE_CONTROL_EVENTS.prefix)) {
     throw new ConfigurationError(
       "RESERVED_SSE_EVENT",
-      `SSE event name "${event.event}" is reserved: names starting with "${SSE_CONTROL_EVENTS.prefix}" tell the client how the stream ended`,
+      `SSE event name "${name}" is reserved: names starting with "${SSE_CONTROL_EVENTS.prefix}" tell the client how the stream ended`,
     );
   }
   const lines: string[] = [];
 
-  const id = event.id ?? (seq !== undefined ? String(seq) : undefined);
+  const id = named ?? (seq !== undefined ? String(seq) : undefined);
   if (id !== undefined) lines.push(`id: ${sanitizeField(id)}`);
-  if (event.event) lines.push(`event: ${sanitizeField(event.event)}`);
-  if (event.retry !== undefined) lines.push(`retry: ${event.retry}`);
+  if (name) lines.push(`event: ${sanitizeField(name)}`);
+  if (retry !== undefined) lines.push(`retry: ${retry}`);
 
   /* Always JSON, strings included: the client reads every event as JSON,
      so a string written raw would be dropped ("hello") or come back as
      another type ("42" as a number). JSON also keeps the payload on one
      line. */
-  lines.push(`data: ${JSON.stringify(event.data ?? null)}`);
+  lines.push(`data: ${JSON.stringify(data ?? null)}`);
 
   return `${lines.join("\n")}\n\n`;
 }

@@ -4,6 +4,7 @@ import type { CallOptions, Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import { resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse } from "./execute-response";
+import { ownFields } from "./own";
 
 /**
  * What variables may be: named values, a list, a JSON scalar, form data or a
@@ -154,6 +155,8 @@ export function resolveCallTarget(
 
   const target = {
     ...call,
+    /* Read as their own fields alone, wherever the call takes them. */
+    options: options && ownFields(options),
     variables: withVariableDefaults(schema?.defaults, call.variables),
     dataSource,
     sourceOptions: dataSource.options,

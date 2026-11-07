@@ -2,6 +2,7 @@ import { peerAddressOf } from "../../adapter/peer-address";
 import type { Context } from "../../http-client/types";
 import type { IncomingRequest } from "../../session/incoming-request";
 import { forwardedChain } from "../../utils/forwarded-for";
+import { ownFields } from "../../utils/own";
 import { parseUrl } from "../../utils/parse-url";
 import { addressedOrigin } from "./addressed-origin";
 
@@ -20,8 +21,7 @@ import { addressedOrigin } from "./addressed-origin";
  * ```
  */
 export function incomingFromContext(context: Context | undefined): IncomingRequest | undefined {
-  const request = context?.req;
-  const extra = context?.headers;
+  const { req: request, headers: extra } = ownFields(context);
   if (request === undefined && extra === undefined) return undefined;
   const headers = request && extra ? overlay(request.headers, extra) : (extra ?? request?.headers);
   if (headers === undefined) return undefined;

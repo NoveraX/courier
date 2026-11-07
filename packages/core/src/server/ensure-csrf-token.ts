@@ -4,6 +4,7 @@ import { ConfigurationError } from "../errors/configuration-error";
 import { csrfSource } from "../session/csrf-source";
 import { askForToken, askOnce, tokenCall } from "../utils/csrf-prime";
 import { callInstruments } from "../utils/execute-studio";
+import { ownFields } from "../utils/own";
 import { prepareAndRun } from "../utils/prepare-and-run";
 import { heldOptionsOf } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
@@ -52,7 +53,7 @@ export async function ensureCsrfToken(api: AnyDefinedApi): Promise<boolean> {
   const call = tokenCall({ source, dataSource: api, sourceOptions }, path);
   const { studio, timing } = callInstruments(undefined);
   await askOnce(incoming.key, `${source} ${path}`, () =>
-    askForToken(prepareAndRun(call, studio, timing, { incoming }), path, "the page"),
+    askForToken(prepareAndRun(call, studio, timing, ownFields({ incoming })), path, "the page"),
   );
   return cookieJarFor(incoming).has(csrf.cookie);
 }

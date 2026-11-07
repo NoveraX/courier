@@ -4,6 +4,7 @@ import { ConfigurationError } from "../errors/configuration-error";
 import type { Context } from "../http-client/types";
 import { isReactNative } from "../utils/is-react-native";
 import { agentOf, isOneUsersCall } from "../utils/one-users-call";
+import { ownFields } from "../utils/own";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
 import { namesRequest } from "./names-request";
@@ -150,7 +151,7 @@ export function sameRequestContext(
 ): Context | undefined {
   if (session.incoming === undefined) return context;
   if (context !== undefined && namesRequest(context)) return context;
-  return { ...context, incoming: session.incoming };
+  return ownFields({ ...context, incoming: session.incoming });
 }
 
 let native: Promise<typeof NativeSession> | undefined;

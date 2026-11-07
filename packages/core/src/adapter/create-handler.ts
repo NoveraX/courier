@@ -2,6 +2,7 @@ import { createRefusalLog } from "../logger/refusal-log";
 import { provideServerCapabilities } from "../server/provide-server-capabilities";
 import { prepareSources } from "../server/sources";
 import { studioHooks } from "../studio";
+import { ownFields } from "../utils/own";
 import { assertBodyOptions } from "./assert-body-options";
 import type { ConnectResult } from "./connection-meta";
 import { discardBody } from "./discard-body";
@@ -60,18 +61,21 @@ export type AdapterHandler = {
 export function createHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: HandlerConfig<TConnect>,
 ): AdapterHandler;
-export function createHandler(config?: HandlerConfig): AdapterHandler {
+export function createHandler(given?: HandlerConfig): AdapterHandler {
+  /* The handler's settings, as each of its parts reads them: their own. */
+  const config = ownFields(given);
   provideServerCapabilities();
-  assertListedSettings(config ?? {}, "createHandler");
-  assertRateLimit(config?.rateLimit, "createHandler");
+  assertListedSettings(config, "createHandler");
+  assertRateLimit(config.rateLimit, "createHandler");
   assertBodyOptions(config, "createHandler");
-  if (config?.sources !== undefined) {
+  if (config.sources !== undefined) {
     prepareSources(config.sources, "createHandler", "createHandler({ sources: { api } })");
   }
   const execute: ExecuteFn = (request, payload, proxyMethod, proxyReceiveAt, requestId) =>
-    executeWireRequest(servedSources(config?.sources), payload, {
+    executeWireRequest(servedSources(config.sources), payload, {
       req: request,
-      res: new Response(),
+      /* Given headers of its own: the platform reads its init's, and a prototype's where it has none. */
+      res: new Response(null, { headers: {} }),
       proxyMethod,
       mode: "proxy",
       proxyReceiveAt,

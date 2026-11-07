@@ -24,6 +24,24 @@ const said = (name: string, text: string, rank: number, most = TEXT): Ranked => 
   rank,
 })
 
+/* Header names as a description lists them: as many as fit whole, then how many more there were.
+   A name is a token, ASCII already, so its length is its length written. */
+function namesText(names: readonly string[]): string {
+  let text = ""
+  for (const [index, name] of names.entries()) {
+    const next = text === "" ? name : `${text} ${name}`
+    const left = names.length - index - 1
+    if (next.length + (left > 0 ? ` +${left}`.length : 0) > TEXT) {
+      return `${text} +${names.length - index}`.trim()
+    }
+    text = next
+  }
+  return text
+}
+
+const listed = (name: string, names: readonly string[], rank: number): Ranked[] =>
+  names.length === 0 ? [] : [{ metric: { name, description: namesText(names) }, rank }]
+
 const timed = (name: string, ms: number, text: string, rank: number): Ranked => ({
   metric: { name, duration: ms, description: escapeTimingText(text, TEXT) },
   rank,
@@ -39,7 +57,7 @@ function rankedMetrics(trace: CallTrace): Ranked[] {
       ? []
       : [
           said("in", `${received.method} ${received.target}`, 9),
-          said("in-headers", received.headers.join(" "), 5),
+          ...listed("in-headers", received.headers, 5),
           ...(received.body === undefined ? [] : [said("in-body", received.body, 7)]),
         ]),
     ...(trace.variables === undefined ? [] : [said("vars", trace.variables, 4, VARIABLES)]),
@@ -51,17 +69,15 @@ function rankedMetrics(trace: CallTrace): Ranked[] {
         index === last ? 8 : 6
       )
     ),
-    ...(trace.sent.length === 0 ? [] : [said("api-headers", trace.sent.join(" "), 5)]),
-    ...(trace.answered.length === 0
-      ? []
-      : [said("api-answer-headers", trace.answered.join(" "), 3)]),
+    ...listed("api-headers", trace.sent, 5),
+    ...listed("api-answer-headers", trace.answered, 3),
     ...trace.chain.map((link) =>
       timed("mw", link.ms, [link.name, link.phase, link.added.join(",")].join(" ").trim(), 2)
     ),
     ...trace.log.map((line) => said("log", line, 1)),
     ...trace.cache.map((entry) => said("cache", entry, 7)),
     ...(trace.status === undefined ? [] : [said("out", String(trace.status), 9)]),
-    ...(trace.passedBack.length === 0 ? [] : [said("out-headers", trace.passedBack.join(" "), 3)]),
+    ...listed("out-headers", trace.passedBack, 3),
   ]
 }
 

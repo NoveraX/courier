@@ -59,7 +59,7 @@ export default function CrudExamplesPage() {
     <ExamplePage name="crud">
       <ExampleSection
         title="Full CRUD"
-        description="Manage the users of the docs backend with every HTTP method: create one, pick one to update or patch, or delete one."
+        description="Manage the users of the docs backend with every HTTP method: create one, pick one to update or patch, or delete one. The requests below show each change, then the list fetched again after it."
         code={fullCode}
         learnMore={{ href: "/docs/react-query/use-mutation", label: "useMutation docs" }}
       >

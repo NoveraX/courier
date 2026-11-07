@@ -3,10 +3,13 @@
 import { useState } from "react"
 
 import { q } from "@/lib/query"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
 import { SandboxChoice } from "@/site/sandbox/sandbox-choice"
+import { SandboxField } from "@/site/sandbox/sandbox-field"
+import { DEMO_LIMITS } from "../../../../../server/limits"
 
 export function SimpleParamDemo() {
   const [id, setId] = useState(1)
@@ -28,6 +31,7 @@ export function SimpleParamDemo() {
         </>
       }
       result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["api.users.getById"]} />}
     />
   )
 }
@@ -59,6 +63,7 @@ export function NestedParamsDemo() {
         </>
       }
       result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["api.users.getUserPost"]} />}
     />
   )
 }
@@ -85,6 +90,33 @@ export function MixedParamsDemo() {
         </>
       }
       result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["api.users.getAll"]} />}
+    />
+  )
+}
+
+export function EncodedParamDemo() {
+  const [search, setSearch] = useState("Ann & co / 50%")
+  const { data, isFetching, error, refetch } = q.users.useQuery("getAll", {
+    variables: { search },
+    enabled: false,
+  })
+  return (
+    <Sandbox
+      label="caller.users.getAll({ search })"
+      controls={
+        <>
+          <SandboxField
+            label="search"
+            value={search}
+            maxLength={DEMO_LIMITS.searchLength}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <RunButton loading={isFetching} label="Search" onClick={() => void refetch()} />
+        </>
+      }
+      result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["api.users.getAll"]} />}
     />
   )
 }

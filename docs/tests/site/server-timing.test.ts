@@ -181,6 +181,17 @@ describe("a call's trace in Server-Timing", () => {
     expect(read?.attempts).toEqual(TRACE.attempts)
   })
 
+  it("lists as many header names as fit whole, then how many more there were", () => {
+    const names = Array.from({ length: 24 }, (_, index) => `x-a-long-header-name-${index}`)
+    const read = seen({ ...TRACE, sent: names })
+    const shown = read?.sent ?? []
+    expect(shown.at(-1)).toMatch(/^\+\d+$/)
+    const whole = shown.slice(0, -1)
+    expect(whole).toEqual(names.slice(0, whole.length))
+    expect(whole.length + Number(shown.at(-1)?.slice(1))).toBe(names.length)
+    expect(whole.join(" ").length).toBeLessThanOrEqual(200)
+  })
+
   it("cuts a long description with a mark", () => {
     const long = { ...TRACE, variables: JSON.stringify({ note: "x".repeat(1000) }) }
     const read = seen(long)

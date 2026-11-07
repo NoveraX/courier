@@ -9,6 +9,8 @@ interface SandboxProps {
   controls: ReactNode
   /** What the call answered. */
   result: ReactNode
+  /** The requests its calls made, under the rest, across its width. */
+  inspector?: ReactNode
 }
 
 /**
@@ -18,19 +20,21 @@ interface SandboxProps {
  * so the answer always has the width to be read. A name too long for the
  * header wraps between its members rather than being cut. It is a region
  * named for the call, so a reader can move from one sandbox to the next,
- * and a test can find each by its call.
+ * and a test can find each by its call. Under them, across its width, the
+ * requests its calls made, where it has an inspector.
  *
- * @param props - The call's name, its controls and its result
+ * @param props - The call's name, its controls, its result and its inspector
  * @returns The sandbox
  * @example
  * ```tsx
  * <Sandbox label="caller.users.getAll" controls={<RunButton onClick={run} />} result={<ResponseView data={data} />} />
  * ```
  */
-export function Sandbox({ label, controls, result }: SandboxProps) {
+export function Sandbox({ label, controls, result, inspector }: SandboxProps) {
   return (
     <section
       aria-label={label}
+      data-sandbox=""
       className="overflow-hidden rounded-panel border border-line bg-panel shadow-panel"
     >
       <div className="flex min-h-9.5 items-center gap-2.5 border-b border-line bg-bg-subtle px-3.5 py-1.5">
@@ -48,6 +52,7 @@ export function Sandbox({ label, controls, result }: SandboxProps) {
           </div>
           <div className="min-w-0 p-4.5">{result}</div>
         </div>
+        {inspector}
       </div>
     </section>
   )

@@ -59,7 +59,7 @@ export default function GroupsExamplesPage() {
       </ExampleSection>
       <ExampleSection
         title="Calling Across Groups"
-        description="Each group is a property of the client — q.users, q.posts — and every call of a group goes under its prefix."
+        description="Each group is a property of the client — q.users, q.posts — and every call of a group goes under its prefix: each request below names the path the site's server asked the API for, the group's prefix and the endpoint's own path together."
         code={usageCode}
       >
         <GroupsDemo />

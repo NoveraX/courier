@@ -2,7 +2,7 @@ import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
 
-import { MixedParamsDemo, NestedParamsDemo, SimpleParamDemo } from "./_components"
+import { EncodedParamDemo, MixedParamsDemo, NestedParamsDemo, SimpleParamDemo } from "./_components"
 
 const simpleCode = `// Method definition with :id placeholder
 getById: endpoint.get(":id").variables<{ id: number }>().response<User>()
@@ -27,6 +27,11 @@ getAll: endpoint.get("").variables<{ page?: number; limit?: number }>().response
 // No path params — all variables become ?query params
 await caller.users.getAll({ page: 1, limit: 5 })
 // → GET /users?page=1&limit=5`
+
+const encodedCode = `// A value is encoded where it goes in the address: a space, &, / or %
+// cannot end the value or start another
+await caller.users.getAll({ search: "Ann & co / 50%" })
+// → GET /users?search=Ann+%26+co+%2F+50%25`
 
 export const metadata = exampleMetadata("path-params")
 
@@ -56,6 +61,14 @@ export default function PathParamsExamplesPage() {
         code={mixedCode}
       >
         <MixedParamsDemo />
+      </ExampleSection>
+
+      <ExampleSection
+        title="Encoded in the Address"
+        description="A value with characters the address uses itself is encoded on its way: type any, and the request below shows the path the site's server asked the API for."
+        code={encodedCode}
+      >
+        <EncodedParamDemo />
       </ExampleSection>
     </ExamplePage>
   )

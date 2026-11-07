@@ -1,6 +1,7 @@
 "use client"
 
 import { q } from "@/lib/query"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { LabeledResponse } from "@/site/sandbox/labeled-response"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -67,6 +68,9 @@ export function GroupsDemo() {
             pending={user.isLoading}
           />
         </div>
+      }
+      inspector={
+        <RequestInspector calls={["api.users.getAll", "api.posts.getAll", "api.users.getById"]} />
       }
     />
   )

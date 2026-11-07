@@ -1,6 +1,7 @@
 "use client"
 
-import { q } from "@/lib/query"
+import { keys, q } from "@/lib/query"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -14,12 +15,15 @@ export function GetDemo() {
         <RunButton loading={isFetching} label="Fetch again" onClick={() => void refetch()} />
       }
       result={<ResponseView data={data} error={error?.message} pending={isLoading} />}
+      inspector={<RequestInspector calls={["api.users.getAll"]} />}
     />
   )
 }
 
 export function PostDemo() {
-  const { mutate, data, isPending, error } = q.users.useMutation("create")
+  const { mutate, data, isPending, error } = q.users.useMutation("create", {
+    invalidate: [keys("users", "getAll")],
+  })
   return (
     <Sandbox
       label='q.users.useMutation("create")'
@@ -31,6 +35,7 @@ export function PostDemo() {
         />
       }
       result={<ResponseView data={data} error={error?.message} pending={isPending} />}
+      inspector={<RequestInspector calls={["api.users.create"]} followUps={["api.users.getAll"]} />}
     />
   )
 }
@@ -47,6 +52,7 @@ export function ManualDemo() {
         <RunButton loading={isFetching} label="Get user #1" onClick={() => void refetch()} />
       }
       result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["api.users.getById"]} />}
     />
   )
 }

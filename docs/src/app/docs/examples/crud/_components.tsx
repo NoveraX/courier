@@ -3,11 +3,17 @@
 import { useState } from "react"
 
 import { q } from "@/lib/query"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
 import type { User } from "./user-rows"
 import { UserRows } from "./user-rows"
+
+/* The calls of the cycle: each change, and the list fetched again after it. */
+const CRUD_CALLS = ["create", "update", "patch", "remove", "getAll"].map(
+  (call) => `api.users.${call}`
+)
 
 export function CrudDemo() {
   const [selected, setSelected] = useState<User | null>(null)
@@ -78,6 +84,7 @@ export function CrudDemo() {
           <ResponseView data={latest?.data} error={latest?.error?.message} />
         </>
       }
+      inspector={<RequestInspector calls={CRUD_CALLS} />}
     />
   )
 }

@@ -36,7 +36,10 @@ export function UserRows({
   onRemove: (user: User) => void
 }) {
   return (
-    <ul className="m-0 mb-3.5 list-none divide-y divide-line overflow-hidden rounded-control border border-line p-0">
+    <ul
+      aria-label="Users"
+      className="m-0 mb-3.5 list-none divide-y divide-line overflow-hidden rounded-control border border-line p-0"
+    >
       {users.map((user) => (
         <li
           key={user.id}

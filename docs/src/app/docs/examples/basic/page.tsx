@@ -9,9 +9,12 @@ const getCode = `import { q } from "@/lib/query"
 // useQuery fetches on mount, and caches what it fetched
 const { data, isLoading, error } = q.users.useQuery("getAll")`
 
-const postCode = `import { q } from "@/lib/query"
+const postCode = `import { keys, q } from "@/lib/query"
 
-const { mutate, data, isPending } = q.users.useMutation("create")
+// invalidate: the list above is fetched again once the user is created
+const { mutate, data, isPending } = q.users.useMutation("create", {
+  invalidate: [keys("users", "getAll")],
+})
 
 mutate({ name: "Jane Doe", email: "jane@example.com", role: "user" })`
 
@@ -40,7 +43,7 @@ export default function BasicExamplesPage() {
       </ExampleSection>
       <ExampleSection
         title="POST — Create User"
-        description="useMutation sends on demand. Run it to create a user."
+        description="useMutation sends on demand. Run it to create a user: once it is created, the list above is fetched again and holds it."
         code={postCode}
         learnMore={{ href: "/docs/react-query/use-mutation", label: "useMutation docs" }}
       >

@@ -7,25 +7,53 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { codeGroupSamples } from "./code-group-samples.mjs";
 import { sampleFile } from "./page-modules.mjs";
 
 /* A fence may sit indented inside a component; its closing fence matches the opening indent. */
 const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
 
 /**
- * Every ts, tsx and typescript fence of a Markdown or MDX text.
+ * Every ts, tsx and typescript fence of a Markdown or MDX text, and every
+ * TypeScript tab of its tabbed code, in the order the page writes them.
  *
  * @param {string} text - The page
- * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string, file?: string }>}
+ * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string, file?: string, flat?: boolean }>}
  *   Each sample: the line of its first code line, whether it holds JSX,
  *   whether it lists the packages' types or signatures rather than using
- *   them, its code without the fence's indentation, and the file it says
- *   it is, when it names one
+ *   them, its code without the fence's indentation, the file it says it
+ *   is, when it names one, and for a tab written on one line, `flat`
  * @example
  * extractSamples("# A\n\n```ts\nconst a = 1\n```\n");
  * // → [{ line: 4, jsx: false, listing: false, code: "const a = 1\n", file: undefined }]
  */
 export function extractSamples(text) {
+  return [...fenceSamples(text), ...codeGroupSamples(text)]
+    .sort((a, b) => a.line - b.line)
+    .flatMap(fileParts);
+}
+
+/* A comment naming a file, on a line of its own after a blank one: where the next file of a sample starts. */
+const NEXT_FILE = /\n\n(?=\/\/\s*[\w@$.[\]/-]+\.(?:ts|tsx|mts)\b[^\n]*\n)/;
+
+/*
+ * A sample that shows two files, each under a comment naming it, is two
+ * modules: the server handler's Nuxt tab sets up a plugin and a route,
+ * each with its own default export.
+ */
+function fileParts(sample) {
+  const parts = sample.code.split(NEXT_FILE);
+  if (parts.length === 1) return [sample];
+  let offset = 0;
+  return parts.map((code, index) => {
+    const part = index === parts.length - 1 ? code : `${code}\n`;
+    const line = sample.flat ? sample.line : sample.line + offset;
+    offset += part.split("\n").length;
+    return { ...sample, line, code: part, file: index === 0 ? sample.file : sampleFile("", part) };
+  });
+}
+
+function fenceSamples(text) {
   return [...text.matchAll(FENCE)].map((match) => {
     const indent = match[1] ?? "";
     const code = (match[4] ?? "")

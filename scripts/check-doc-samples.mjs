@@ -150,9 +150,9 @@ export function checkSamples(samples) {
     if (isOmission(diagnostic.code, text, { ...sample, standIn })) continue;
     const { line } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
     const shift = shifts.get(diagnostic.file.fileName) ?? 0;
-    problems.push(
-      `${sample.page}:${sample.line + Math.max(0, line - shift)} TS${diagnostic.code} ${text}`,
-    );
+    /* A tab written on one line of its page, its line ends escaped, is reported at that line. */
+    const at = sample.flat ? sample.line : sample.line + Math.max(0, line - shift);
+    problems.push(`${sample.page}:${at} TS${diagnostic.code} ${text}`);
   }
   rmSync(OUT, { recursive: true, force: true });
   return problems;

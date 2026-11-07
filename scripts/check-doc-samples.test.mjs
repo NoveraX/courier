@@ -4,10 +4,18 @@
  * took a name, a phase and a handler, in pages that imported it and in
  * fragments that did not; nothing compiled a sample.
  */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { jsxObjects, jsxText } from "../docs/src/site/content/jsx-literals.ts";
 import { checkSamples } from "./check-doc-samples.mjs";
-import { extractSamples, importHeader } from "./doc-samples.mjs";
+import { codeGroupSamples } from "./code-group-samples.mjs";
+import { extractSamples, importHeader, samplePages } from "./doc-samples.mjs";
+
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const TS_TAB = /^(ts|tsx|typescript)$/;
 
 describe("extractSamples", () => {
   it("takes every ts, tsx and typescript fence, from its first code line", () => {
@@ -59,6 +67,91 @@ describe("extractSamples", () => {
     const page = ["```ts", "const el = <Users />", "```"].join("\n");
 
     expect(extractSamples(page)[0]?.jsx).toBe(true);
+  });
+
+  it("takes each TypeScript tab of tabbed code, on the line its code is written; a shell tab is none", () => {
+    const page = [
+      "# Page",
+      "",
+      "<CodeGroup",
+      "  items={[",
+      '    { label: "npm", code: "npm install express", language: "bash" },',
+      '    { label: "Express", code: `// server.ts\\nimport express from "express"\\n`, language: "ts" },',
+      '    { label: "Hono", code: "const app = 1\\n" },',
+      "  ]}",
+      "/>",
+    ].join("\n");
+
+    expect(extractSamples(page)).toEqual([
+      {
+        line: 6,
+        jsx: false,
+        listing: false,
+        flat: true,
+        code: '// server.ts\nimport express from "express"\n',
+        file: "server.ts",
+      },
+      { line: 7, jsx: false, listing: false, flat: true, code: "const app = 1\n" },
+    ]);
+  });
+
+  it("takes each file of a sample that shows two, under the comments naming them, as a sample of its own", () => {
+    const page = [
+      '```ts title="server/plugins/courier.ts"',
+      "export default 1",
+      "",
+      "// server/api/request.ts",
+      "export default 2",
+      "```",
+    ].join("\n");
+
+    expect(extractSamples(page)).toEqual([
+      {
+        line: 2,
+        jsx: false,
+        listing: false,
+        code: "export default 1\n",
+        file: "server/plugins/courier.ts",
+      },
+      {
+        line: 4,
+        jsx: false,
+        listing: false,
+        code: "// server/api/request.ts\nexport default 2\n",
+        file: "server/api/request.ts",
+      },
+    ]);
+  });
+
+  it("reads no tabbed code that a fence shows as code", () => {
+    const page = [
+      "```tsx",
+      '<CodeGroup items={[{ label: "a", code: "const a: number = 1" }]} />',
+      "```",
+    ].join("\n");
+
+    expect(extractSamples(page)).toHaveLength(1);
+  });
+});
+
+describe("the docs' tabbed code", () => {
+  it("is read alike here and by the site's Markdown, every TypeScript tab with its code", () => {
+    const pages = samplePages(ROOT).filter((page) => page.endsWith(".mdx"));
+    let tabs = 0;
+    for (const page of pages) {
+      const text = readFileSync(page, "utf8");
+      if (!text.includes("<CodeGroup")) continue;
+      const read = codeGroupSamples(text).map((sample) => sample.code);
+      const site = text
+        .split("<CodeGroup")
+        .slice(1)
+        .flatMap((group) => jsxObjects(group, "items"))
+        .filter((item) => TS_TAB.test(jsxText(item, "language") ?? "ts"))
+        .map((item) => jsxText(item, "code"));
+      expect(read, page).toEqual(site);
+      tabs += read.length;
+    }
+    expect(tabs).toBeGreaterThan(0);
   });
 });
 
@@ -262,8 +355,24 @@ describe("checkSamples", () => {
           "",
         ].join("\n"),
       },
+      {
+        page: "tabbed.mdx",
+        line: 150,
+        jsx: false,
+        flat: true,
+        code: [
+          'import { defineMiddleware } from "@noverax/courier/middleware"',
+          "",
+          "const timing = defineMiddleware(async (ctx, next) => next())",
+          "",
+        ].join("\n"),
+      },
     ]);
   }, 60_000);
+
+  it("reports a problem in tabbed code at the line the tab is written on", () => {
+    expect(problems).toContainEqual(expect.stringMatching(/^tabbed\.mdx:150 TS2554 /));
+  });
 
   it("takes the routes Courier's plugin builds as the reader's config types them, which no sample shows", () => {
     expect(problems.filter((problem) => problem.startsWith("plugin-routes.mdx"))).toEqual([]);

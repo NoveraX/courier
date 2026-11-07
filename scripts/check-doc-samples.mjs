@@ -134,7 +134,7 @@ export function checkSamples(samples) {
     writeFileSync(file, sample.code + module);
   }
   const roots = [...files.keys(), app, routeTree];
-  const { shifts, routed } = addMissingImports(roots, exportedNames());
+  const { shifts, routed } = addMissingImports(roots, exportedNames(), files);
   const problems = [];
   const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS));
   const leavingOut = samplesLeavingOut(diagnostics);
@@ -174,8 +174,8 @@ function exportedNames() {
   return exported;
 }
 
-/* Give each sample the imports of the package names it uses; how many lines each got. */
-function addMissingImports(roots, exported) {
+/* Give each sample the imports of the package names it uses, from its side's entry; how many lines each got. */
+function addMissingImports(roots, exported, files) {
   const missing = new Map();
   for (const diagnostic of ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS))) {
     if ((diagnostic.code !== 2304 && diagnostic.code !== 2552) || !diagnostic.file) continue;
@@ -191,7 +191,7 @@ function addMissingImports(roots, exported) {
   /* A fragment the routes are imported for builds on the reader's config, as one that imports them itself does. */
   const routed = new Set();
   for (const [file, names] of missing) {
-    const header = importHeader(names, exported);
+    const header = importHeader(names, exported, files.get(normalize(file))?.side);
     if (header.length === 0) continue;
     writeFileSync(file, `${header.join("\n")}\n${readFileSync(file, "utf8")}`);
     shifts.set(file, header.length);

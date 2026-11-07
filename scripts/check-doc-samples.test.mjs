@@ -123,6 +123,18 @@ describe("extractSamples", () => {
     ]);
   });
 
+  it("reads the side a fence or a tab says loads it", () => {
+    const page = [
+      '```ts title="lib/caller.ts" side="page"',
+      "const a = 1",
+      "```",
+      "",
+      '<CodeGroup items={[{ label: "Hono", side: "server", code: "const b = 2\\n" }]} />',
+    ].join("\n");
+
+    expect(extractSamples(page).map((sample) => sample.side)).toEqual(["page", "server"]);
+  });
+
   it("reads no tabbed code that a fence shows as code", () => {
     const page = [
       "```tsx",
@@ -171,6 +183,25 @@ describe("importHeader", () => {
     expect(header).toEqual([
       'import { defineApi, courier } from "@noverax/courier/define";',
       'import { createCaller } from "@noverax/courier";',
+    ]);
+  });
+
+  it("imports a name of the core's from the entry the sample's side takes it from", () => {
+    const exported = new Map([
+      ["createCaller", "@noverax/courier"],
+      ["isHTTPError", "@noverax/courier"],
+      ["registerSources", "@noverax/courier"],
+    ]);
+
+    expect(importHeader(["createCaller", "isHTTPError"], exported, "page")).toEqual([
+      'import { createCaller, isHTTPError } from "@noverax/courier/client";',
+    ]);
+    expect(importHeader(["createCaller", "registerSources"], exported, "server")).toEqual([
+      'import { createCaller, registerSources } from "@noverax/courier/server";',
+    ]);
+    expect(importHeader(["createCaller", "isHTTPError"], exported, "both")).toEqual([
+      'import { createCaller } from "@noverax/courier";',
+      'import { isHTTPError } from "@noverax/courier/client";',
     ]);
   });
 });

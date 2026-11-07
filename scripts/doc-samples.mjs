@@ -9,6 +9,11 @@ import { join } from "node:path";
 
 import { codeGroupSamples } from "./code-group-samples.mjs";
 import { sampleFile } from "./page-modules.mjs";
+import { sideEntryOf } from "./sample-entries.mjs";
+
+/* The side a fence says loads it, ```ts side="page", and why it shows the root, ```ts root="…". */
+const SIDE = /\bside="([^"]*)"/;
+const ROOT_SHOWN = /\broot="([^"]*)"/;
 
 /* A fence may sit indented inside a component; its closing fence matches the opening indent. */
 const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
@@ -65,7 +70,18 @@ function fenceSamples(text) {
     const listing =
       /title="(types|signature)"/.test(match[3] ?? "") || /^declare (function|class) /m.test(code);
     const file = sampleFile(match[3] ?? "", code);
-    return { line: text.slice(0, match.index).split("\n").length + 1, jsx, listing, code, file };
+    const side = SIDE.exec(match[3] ?? "")?.[1];
+    const root = ROOT_SHOWN.exec(match[3] ?? "")?.[1];
+    const line = text.slice(0, match.index).split("\n").length + 1;
+    return {
+      line,
+      jsx,
+      listing,
+      code,
+      file,
+      ...(side !== undefined && { side }),
+      ...(root !== undefined && { root }),
+    };
   });
 }
 
@@ -85,19 +101,23 @@ export function samplePages(root) {
 }
 
 /**
- * The import lines a sample is missing, for names a package exports.
+ * The import lines a sample is missing, for names a package exports. A
+ * name of the core's is imported from the entry the sample's side takes
+ * it from, so a page's sample is checked against the page's caller.
  *
  * @param {Iterable<string>} missing - Names the sample uses without declaring them
  * @param {Map<string, string>} exported - Each exported name and the entry that exports it
+ * @param {string} [side] - The side the sample says loads it
  * @returns {string[]} One `import { … } from "…"` line per entry
  * @example
  * importHeader(["defineApi", "courier", "users"], new Map([["defineApi", "@noverax/courier/define"], ["courier", "@noverax/courier/define"]]));
  * // → ['import { defineApi, courier } from "@noverax/courier/define";']
  */
-export function importHeader(missing, exported) {
+export function importHeader(missing, exported, side) {
   const byEntry = new Map();
   for (const name of new Set(missing)) {
-    const entry = exported.get(name);
+    const found = exported.get(name);
+    const entry = found === "@noverax/courier" ? (sideEntryOf(name, side) ?? found) : found;
     if (entry) byEntry.set(entry, [...(byEntry.get(entry) ?? []), name]);
   }
   return [...byEntry].map(([entry, names]) => `import { ${names.join(", ")} } from "${entry}";`);

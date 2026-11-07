@@ -67,6 +67,7 @@ function tabsAt(text, start) {
     if (!ts.isObjectLiteralExpression(item)) return [];
     const code = literal(item, "code");
     if (!code || !TYPESCRIPT.has(literal(item, "language")?.text ?? "ts")) return [];
+    const side = literal(item, "side")?.text;
     const written = code.getText(source);
     const line = text.slice(0, start + code.getStart(source)).split("\n").length;
     return [
@@ -77,6 +78,7 @@ function tabsAt(text, start) {
         flat: !written.includes("\n"),
         code: code.text,
         file: sampleFile("", code.text),
+        ...(side !== undefined && { side }),
       },
     ];
   });

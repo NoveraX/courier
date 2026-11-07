@@ -41,8 +41,9 @@ export function changedByEdits(edits: readonly PlannedEdit[]): Map<string, Set<n
  * files and its changes, run what writes the types they read, and import
  * the specification if one was given; any of it failing, or Ctrl+C,
  * undoes what it did. Once it holds, the types of what it added and
- * changed are checked, and the person is told what is left to them and
- * what to run.
+ * changed are checked — none where what writes the types they read
+ * failed, which is said — and the person is told what is left to them
+ * and what to run.
  *
  * @param ctx - The project, and what is set up in it
  * @param plan - The plan the person agreed to
@@ -64,6 +65,7 @@ export async function applyPlan(
 ): Promise<number> {
   const { root } = ctx.project;
   const installing = run.install !== false;
+  let unprepared: string | undefined;
   const result = await transact(
     {
       root,
@@ -74,7 +76,7 @@ export async function applyPlan(
         : undefined,
       afterWrites: installing
         ? async (signal) => {
-            await prepare(ctx, plan, io.report, signal);
+            unprepared = await prepare(ctx, plan, io.report, signal);
             const { openapi, name } = ctx.choices;
             if (openapi !== undefined)
               await importSpecification(root, openapi, name, signal, io.toolOutput);
@@ -89,7 +91,7 @@ export async function applyPlan(
     return 0;
   }
   const touched: Touched = { added: result.written, changed: changedByEdits(plan.edits) };
-  const outcome = await typecheckTouched(root, touched);
+  const outcome = await typecheckTouched(root, touched, unprepared);
   io.report.typechecked(outcome);
   if (outcome.kind === "errors") {
     io.report.end({ kind: "typecheck-failed" });

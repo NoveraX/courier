@@ -1,0 +1,30 @@
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 4 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                0.09 kB │ gzip: 0.10 kB
+dist/assets/index-BPbF0S2e.js  0.72 kB │ gzip: 0.42 kB
+
+✗ Build failed in 23ms
+error during build:
+Build failed with 1 error:
+
+Error: [vite]: Rolldown failed to resolve import "made-up-package" from "/work/shop/src/main.ts".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rolldownOptions.external`
+    at viteLog (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:34942:57)
+    at onRollupLog (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:34975:7)
+    at onLog (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:34734:4)
+    at file:///work/shop/node_modules/rolldown/dist/shared/create-bundler-option-DzNR1xQS.mjs:48:26
+    at logger (file:///work/shop/node_modules/rolldown/dist/shared/create-bundler-option-DzNR1xQS.mjs:39:3)
+    at aggregateBindingErrorsIntoJsError (file:///work/shop/node_modules/rolldown/dist/shared/error-D0SD8_tL.mjs:49:18)
+    at unwrapBindingResult (file:///work/shop/node_modules/rolldown/dist/shared/error-D0SD8_tL.mjs:19:128)
+    at #build (file:///work/shop/node_modules/rolldown/dist/shared/rolldown-CMhwwZPA.mjs:145:34)
+    at async buildEnvironment (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:34849:66)
+    at async Object.build (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:35270:19)
+    at async Object.buildApp (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:35267:153)
+    at async CAC.<anonymous> (file:///work/shop/node_modules/vite/dist/node/cli.js:790:3) {
+  errors: [Getter/Setter]
+}

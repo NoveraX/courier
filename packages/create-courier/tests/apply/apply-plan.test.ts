@@ -3,7 +3,15 @@
  * tests' own that installs, fails or hangs as each case needs: what the
  * project holds after it fails at each step, and after it holds.
  */
-import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +22,10 @@ import { applyPlan } from "../../src/apply/apply-plan";
 import type { CreateRun } from "../../src/create-run";
 import { buildPlan } from "../../src/plan/build-plan";
 import type { PackageManager } from "../../src/project/package-manager";
+import { astroRecipe } from "../../src/recipes/astro";
 import { reactViteRecipe } from "../../src/recipes/react-vite";
+import type { Recipe, RecipeContext } from "../../src/recipes/recipe-types";
+import { svelteKitRecipe } from "../../src/recipes/sveltekit";
 import type { SetupEnd } from "../../src/report/setup-report";
 import { textReport } from "../../src/report/text-report";
 import { contextOf, manifest, projectWith, removeProjects } from "../recipes/project-fixture";
@@ -22,6 +33,9 @@ import { contextOf, manifest, projectWith, removeProjects } from "../recipes/pro
 afterAll(removeProjects);
 
 const FAKE = fileURLToPath(new URL("./fake-package-manager.mjs", import.meta.url));
+const FAILING = fileURLToPath(new URL("./fake-failing-tool.mjs", import.meta.url));
+const PRINTING = fileURLToPath(new URL("./fake-printing-tool.mjs", import.meta.url));
+const TYPESCRIPT = fileURLToPath(new URL("../../../../node_modules/typescript", import.meta.url));
 
 const VITE_CONFIG =
   'import react from "@vitejs/plugin-react";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [react()] });\n';
@@ -172,4 +186,148 @@ describe("applyPlan", () => {
     expect(end).toMatchObject({ kind: "failed", code: "CANCELLED" });
     expect(tree(root)).toEqual(before);
   });
+});
+
+describe("applyPlan, where what writes the types the added files read fails", () => {
+  const SVELTE_VITE =
+    "import { sveltekit } from '@sveltejs/kit/vite';\nimport { defineConfig } from 'vite';\n\nexport default defineConfig({ plugins: [sveltekit()] });\n";
+  const cases: Array<
+    [string, string, (ctx: RecipeContext) => Recipe, Record<string, string>, string]
+  > = [
+    ["Astro", "astro", astroRecipe, { "astro.config.mjs": "export default {};\n" }, "astro sync"],
+    [
+      "SvelteKit",
+      "@sveltejs/kit",
+      svelteKitRecipe,
+      { "vite.config.ts": SVELTE_VITE },
+      "svelte-kit sync",
+    ],
+  ];
+
+  /* Set the framework's project up where its program that writes the types runs as the tool given: the status, and what the setup printed. */
+  async function setUpWith(
+    marker: string,
+    recipeOf: (ctx: RecipeContext) => Recipe,
+    files: Record<string, string>,
+    tool: readonly string[],
+    installed = true,
+  ) {
+    const root = projectWith({
+      "package.json": manifest({ [marker]: "^5.0.0" }),
+      "tsconfig.json": "{}",
+      ...files,
+    });
+    mkdirSync(join(root, "node_modules"), { recursive: true });
+    symlinkSync(TYPESCRIPT, join(root, "node_modules/typescript"), "dir");
+    const ctx = {
+      ...contextOf(root, marker),
+      manager: {
+        ...fakeManager("ok"),
+        exec: (bin: string, args: readonly string[]) => [...tool, bin, ...args],
+      },
+    };
+    const plan = buildPlan(ctx, recipeOf(ctx));
+    mkdirSync(join(root, "node_modules/.bin"), { recursive: true });
+    for (const { bin } of installed ? plan.prepare : [])
+      writeFileSync(join(root, "node_modules/.bin", bin), "#!/bin/sh\n");
+    const printed: string[] = [];
+    const report = textReport(createTerminalStyle(0, false), (lines) => printed.push(...lines));
+    const status = await applyPlan(
+      ctx,
+      plan,
+      { yes: true },
+      { questions: undefined, report, toolOutput: "stdout" },
+    );
+    return { status, text: printed.join("\n") };
+  }
+
+  it.each(cases)(
+    "leaves the types of %s's files unchecked, and says why in a line",
+    async (_, marker, recipeOf, files, program) => {
+      const { status, text } = await setUpWith(marker, recipeOf, files, [
+        process.execPath,
+        FAILING,
+      ]);
+
+      expect(status).toBe(0);
+      expect(text).toContain(`${program} failed (exit 1)`);
+      expect(text).toContain(`  Error: ${program} could not read the project's config`);
+      expect(text).not.toMatch(/^\s+at /m);
+      expect(text).toContain(
+        `TypeScript could not check the project: ${program} did not write the types the added files read`,
+      );
+      expect(text).not.toContain("type-check against");
+    },
+    60_000,
+  );
+
+  it.each(cases)(
+    "runs nothing it would have to install to write %s's types, and says it is not in the project",
+    async (_, marker, recipeOf, files, program) => {
+      const bin = program.split(" ")[0] ?? "";
+      const { status, text } = await setUpWith(
+        marker,
+        recipeOf,
+        files,
+        [process.execPath, FAILING],
+        false,
+      );
+
+      expect(status).toBe(0);
+      expect(text).not.toContain("could not read the project's config");
+      expect(text).not.toContain(`${program} failed`);
+      expect(text).toContain(`${program} was not run`);
+      expect(text).toContain(`  ${bin} is not installed in the project`);
+      expect(text).toContain(
+        `TypeScript could not check the project: ${bin} is not installed in the project`,
+      );
+    },
+    60_000,
+  );
+
+  it("runs what writes the types under Yarn's Plug'n'Play, which holds the program with no node_modules", async () => {
+    const { status, text } = await setUpWith(
+      "astro",
+      astroRecipe,
+      { "astro.config.mjs": "export default {};\n", ".pnp.cjs": "module.exports = {};\n" },
+      [process.execPath, FAILING],
+      false,
+    );
+
+    expect(status).toBe(0);
+    expect(text).toContain("astro sync failed (exit 1)");
+    expect(text).toContain("  Error: astro sync could not read the project's config");
+    expect(text).not.toContain("was not run");
+  }, 60_000);
+
+  it.each([
+    [
+      "a file",
+      "vite-build-unresolved-file.txt",
+      "[UNRESOLVED_IMPORT] Could not resolve './not-there' in src/main.ts",
+    ],
+    [
+      "a package",
+      "vite-build-unresolved-package.txt",
+      'Error: [vite]: Rolldown failed to resolve import "made-up-package" from "/work/shop/src/main.ts".',
+    ],
+  ])(
+    "says why Vite failed to find %s by the line below its heading",
+    async (_, output, reason) => {
+      const printed = fileURLToPath(new URL(`./${output}`, import.meta.url));
+      const { status, text } = await setUpWith(
+        "astro",
+        astroRecipe,
+        { "astro.config.mjs": "export default {};\n" },
+        [process.execPath, PRINTING, printed],
+      );
+
+      expect(status).toBe(0);
+      expect(text).toContain("astro sync failed (exit 1)");
+      expect(text).toContain(`  ${reason}`);
+      expect(text).not.toContain("error during build:");
+      expect(text).not.toContain("Build failed with 1 error:");
+    },
+    60_000,
+  );
 });

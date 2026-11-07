@@ -102,17 +102,23 @@ function uncoveredConfig(root: string, base: string, files: readonly string[]): 
  *
  * @param root - The project's folder
  * @param touched - What the setup added and changed
+ * @param unprepared - Why what their types read is not there, where a program that writes it failed: nothing is checked then
  * @returns How it went: clean, the errors, or why nothing could be checked
  * @example
  * ```ts
  * const outcome = await typecheckTouched(root, { added: written, changed: new Map() });
  * ```
  */
-export async function typecheckTouched(root: string, touched: Touched): Promise<TypecheckOutcome> {
+export async function typecheckTouched(
+  root: string,
+  touched: Touched,
+  unprepared?: string,
+): Promise<TypecheckOutcome> {
   /* vue-tsc is tsc that reads .vue files too, where a Vue project has it. */
   const vueTsc = resolveBin(root, "vue-tsc", "vue-tsc");
   const tsc = vueTsc ?? resolveBin(root, "typescript", "tsc");
   if (tsc === undefined) return { kind: "no-typescript" };
+  if (unprepared !== undefined) return { kind: "unchecked", reason: unprepared };
   const checked = (path: string) =>
     TS_FILE.test(path) || (vueTsc !== undefined && VUE_FILE.test(path));
   const ours = [...touched.added, ...touched.changed.keys()].filter(checked);

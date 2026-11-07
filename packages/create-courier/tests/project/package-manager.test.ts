@@ -48,10 +48,33 @@ describe("packageManager", () => {
     expect(packageManager("bun").add(["zod"], true)).toEqual(["bun", "add", "-d", "zod"]);
     expect(packageManager("yarn").run("dev")).toBe("yarn dev");
     expect(packageManager("bun").run("dev")).toBe("bun run dev");
+  });
+
+  it("runs a program the project installed, never one it would have to install first", () => {
     expect(packageManager("npm").exec("astro", ["sync"])).toEqual([
       "npm",
       "exec",
+      "--no",
       "--",
+      "astro",
+      "sync",
+    ]);
+    expect(packageManager("pnpm").exec("astro", ["sync"])).toEqual([
+      "pnpm",
+      "exec",
+      "astro",
+      "sync",
+    ]);
+    expect(packageManager("yarn").exec("astro", ["sync"])).toEqual([
+      "yarn",
+      "run",
+      "astro",
+      "sync",
+    ]);
+    expect(packageManager("bun").exec("astro", ["sync"])).toEqual([
+      "bun",
+      "x",
+      "--no-install",
       "astro",
       "sync",
     ]);

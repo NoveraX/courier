@@ -11,7 +11,7 @@ export interface PackageManager {
   add(packages: readonly string[], dev: boolean): string[];
   /** What the person types to run a script: `npm run dev`, `pnpm dev`. */
   run(script: string): string;
-  /** The command that runs a program the project installed: `npm exec -- astro sync`. */
+  /** The command that runs a program the project installed, and never installs one it does not have: `npm exec --no -- astro sync`. */
   exec(bin: string, args: readonly string[]): string[];
   /** The command that installs what package.json lists. */
   install(): string[];
@@ -137,7 +137,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         name,
         add: (p, dev) => ["yarn", "add", ...(dev ? ["-D"] : []), ...p],
         run: (s) => `yarn ${s}`,
-        exec: (bin, args) => ["yarn", bin, ...args],
+        exec: (bin, args) => ["yarn", "run", bin, ...args],
         install: () => ["yarn", "install"],
       };
     case "bun":
@@ -145,7 +145,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         name,
         add: (p, dev) => ["bun", "add", ...(dev ? ["-d"] : []), ...p],
         run: (s) => `bun run ${s}`,
-        exec: (bin, args) => ["bun", "x", bin, ...args],
+        exec: (bin, args) => ["bun", "x", "--no-install", bin, ...args],
         install: () => ["bun", "install"],
       };
     default:
@@ -153,7 +153,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         name,
         add: (p, dev) => ["npm", "install", ...(dev ? ["--save-dev"] : []), ...p],
         run: (s) => `npm run ${s}`,
-        exec: (bin, args) => ["npm", "exec", "--", bin, ...args],
+        exec: (bin, args) => ["npm", "exec", "--no", "--", bin, ...args],
         install: () => ["npm", "install"],
       };
   }

@@ -112,7 +112,7 @@ export interface SetupReport {
   /** The install ran, with these commands, and held. */
   installed(commands: ReadonlyArray<readonly string[]>): void;
   wrote(view: WrittenView): void;
-  /** A program that writes the types the added files read failed: what failed, and its last lines. */
+  /** A program that writes the types the added files read failed: what failed, and the line of its output that says why. */
   prepareFailed(said: string, lines: readonly string[]): void;
   typechecked(outcome: TypecheckOutcome): void;
   end(end: SetupEnd): void;

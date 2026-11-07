@@ -204,6 +204,8 @@ describe("nextRecipe", () => {
 
     const recipe = nextRecipe(contextOf(root, "next", { studio: false, routes: "file" }));
 
-    expect(recipe.next.map((step) => step.command)).toContain("npm exec -- courier-cli routes");
+    expect(recipe.next.map((step) => step.command)).toContain(
+      "npm exec --no -- courier-cli routes",
+    );
   });
 });

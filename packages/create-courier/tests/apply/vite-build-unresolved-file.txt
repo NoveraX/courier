@@ -1,0 +1,28 @@
+vite v8.3.5 building client environment for production...
+transforming...
+✓ 4 modules transformed.
+✗ Build failed in 31ms
+error during build:
+Build failed with 1 error:
+
+[31m[UNRESOLVED_IMPORT] [0mCould not resolve './not-there' in src/main.ts
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/main.ts:1:25 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m1 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mm[0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249ms[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249mg[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m"./not-there"[38;5;249m;[0m
+ [38;5;240m  │[0m                         ──────┬──────  
+ [38;5;240m  │[0m                               ╰──────── Module not found.
+ [38;5;240m  │[0m 
+ [38;5;240m  │[0m [38;5;115mHelp[0m: 'src/main.ts' is imported by the following path:
+ [38;5;240m  │[0m         - src/main.ts
+ [38;5;240m  │[0m         - index.html
+[38;5;246m───╯[0m
+
+    at aggregateBindingErrorsIntoJsError (file:///work/shop/node_modules/rolldown/dist/shared/error-D0SD8_tL.mjs:49:18)
+    at unwrapBindingResult (file:///work/shop/node_modules/rolldown/dist/shared/error-D0SD8_tL.mjs:19:128)
+    at #build (file:///work/shop/node_modules/rolldown/dist/shared/rolldown-CMhwwZPA.mjs:145:34)
+    at async buildEnvironment (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:34849:66)
+    at async Object.build (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:35270:19)
+    at async Object.buildApp (file:///work/shop/node_modules/vite/dist/node/chunks/node.js:35267:153)
+    at async CAC.<anonymous> (file:///work/shop/node_modules/vite/dist/node/cli.js:790:3) {
+  errors: [Getter/Setter]
+}

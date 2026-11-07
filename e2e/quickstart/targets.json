@@ -60,6 +60,20 @@
     "routes": "plugin"
   },
   {
+    "id": "tanstack-start-react",
+    "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
+    "build": ["npm", "run", "build"],
+    "page": "/courier",
+    "routes": "plugin"
+  },
+  {
+    "id": "tanstack-start-solid",
+    "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
+    "build": ["npm", "run", "build"],
+    "page": "/courier",
+    "routes": "plugin"
+  },
+  {
     "id": "react",
     "start": ["npx", "vite", "--port", "{port}", "--strictPort"],
     "build": ["npm", "run", "build"],

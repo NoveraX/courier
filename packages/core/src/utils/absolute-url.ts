@@ -1,5 +1,5 @@
 import { ConfigurationError } from "../errors";
-import { isRecord } from "./is-record";
+import { pageLocation } from "./page-location";
 
 const SCHEME = /^[a-z][a-z\d+.-]*:/i;
 
@@ -26,6 +26,6 @@ export function assertAbsoluteUrl(url: string): void {
 }
 
 function hasPageAddress(): boolean {
-  const location: unknown = Reflect.get(globalThis, "location");
-  return isRecord(location) && typeof location.host === "string" && location.host !== "";
+  const host = pageLocation()?.host;
+  return typeof host === "string" && host !== "";
 }

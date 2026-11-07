@@ -14,10 +14,12 @@ import { isReactNative } from "../../utils/is-react-native";
  */
 export function handshakeHeadersSupported(): boolean {
   if (isReactNative()) return true;
-  if (Reflect.get(globalThis, "document") !== undefined) return false;
-  if (Reflect.get(globalThis, "Deno") !== undefined) return false;
+  if (Object.hasOwn(globalThis, "document")) return false;
+  if (Object.hasOwn(globalThis, "Deno")) return false;
   if (userAgent() === "Cloudflare-Workers") return false;
-  const proc: unknown = Reflect.get(globalThis, "process");
+  const proc: unknown = Object.hasOwn(globalThis, "process")
+    ? Reflect.get(globalThis, "process")
+    : undefined;
   const versions: unknown =
     typeof proc === "object" && proc !== null ? Reflect.get(proc, "versions") : undefined;
   return (
@@ -28,8 +30,11 @@ export function handshakeHeadersSupported(): boolean {
 }
 
 function userAgent(): unknown {
+  /* A browser's and a worker's navigator stand on the global's prototype; one Object.prototype holds is none. */
   const navigator: unknown = Reflect.get(globalThis, "navigator");
-  return typeof navigator === "object" && navigator !== null
+  return typeof navigator === "object" &&
+    navigator !== null &&
+    navigator !== Reflect.get(Object.prototype, "navigator")
     ? Reflect.get(navigator, "userAgent")
     : undefined;
 }

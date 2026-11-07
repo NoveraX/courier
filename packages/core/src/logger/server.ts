@@ -16,8 +16,10 @@
  */
 
 import { styleFor } from "../terminal/style-for";
+import { inBrowserPage } from "../utils/browser-page";
 import { redact } from "../utils/redact/redact";
 import { UNREADABLE } from "../utils/redact/unreadable";
+import { browserLogger } from "./browser";
 import { formatLine } from "./format-line";
 import { jsonLine } from "./json-line";
 import { readLogFormat } from "./log-format";
@@ -142,9 +144,13 @@ function write(level: LogLevel, context: string, message: string, cause?: unknow
   emit(level, context, message, cause, format.json);
 }
 
-export const serverLogger: Logger = {
+const terminalLogger: Logger = {
   debug: (ctx, msg, cause) => write("debug", ctx, msg, cause),
   info: (ctx, msg, cause) => write("info", ctx, msg, cause),
   warn: (ctx, msg, cause) => write("warn", ctx, msg, cause),
   error: (ctx, msg, cause) => write("error", ctx, msg, cause),
 };
+
+/* Where Node runs as a page — a test under jsdom — lines go to the console as a page's do; a
+   server has no window and document of its own, whatever Object.prototype holds. */
+export const serverLogger: Logger = inBrowserPage() ? browserLogger : terminalLogger;

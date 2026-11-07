@@ -1,9 +1,8 @@
-import { browserLogger } from "./browser";
 import { serverLogger } from "./server";
 import type { Logger } from "./types";
 
-const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
-const impl: Logger = isBrowser ? browserLogger : serverLogger;
+/* The terminal's on a server, the console's in a page: a page's bundle takes the console's. */
+const impl: Logger = serverLogger;
 
 /**
  * Scoped logger returned by {@link createLogger}.

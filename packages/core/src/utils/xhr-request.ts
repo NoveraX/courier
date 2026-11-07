@@ -108,7 +108,9 @@ function toResponse(xhr: XMLHttpRequest): Response {
 }
 
 function warnAboutIgnoredOptions(init: XhrRequestInit): void {
-  const runtime: unknown = Reflect.get(globalThis, "process");
+  const runtime: unknown = Object.hasOwn(globalThis, "process")
+    ? Reflect.get(globalThis, "process")
+    : undefined;
   const env = isRecord(runtime) && isRecord(runtime.env) ? runtime.env : undefined;
   if (env?.NODE_ENV === "production") return;
   const ignored = FETCH_ONLY.filter((option) => init[option] !== undefined);

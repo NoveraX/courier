@@ -91,7 +91,6 @@ export function isOneUsersCall(context?: Context): boolean {
   const marked: Marked | undefined = context;
   if (marked?.[SERVER_CALL] === true || marked?.[AGENT] !== undefined) return false;
   return (
-    Reflect.get(globalThis, "document") !== undefined &&
-    serverCapability("session")?.servesRequest() !== true
+    Object.hasOwn(globalThis, "document") && serverCapability("session")?.servesRequest() !== true
   );
 }

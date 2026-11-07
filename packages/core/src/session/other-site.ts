@@ -1,4 +1,5 @@
 import { createLogger } from "../logger";
+import { pageLocation } from "../utils/page-location";
 import { parseUrl } from "../utils/parse-url";
 import type { SessionTarget } from "./session-target";
 import type { SessionOptions } from "./types";
@@ -77,8 +78,8 @@ function isAddress(host: string): boolean {
 
 /* The page's address as the browser holds it, read without parsing; none outside a page served over HTTP. */
 function pageAddress(): { origin: string; hostname: string; href: string } | undefined {
-  const location: unknown = Reflect.get(globalThis, "location");
-  if (typeof location !== "object" || location === null) return undefined;
+  const location = pageLocation();
+  if (!location) return undefined;
   const [origin, hostname, href]: unknown[] = ["origin", "hostname", "href"].map((field) =>
     Reflect.get(location, field),
   );

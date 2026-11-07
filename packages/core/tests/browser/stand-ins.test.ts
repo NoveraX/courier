@@ -48,6 +48,12 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/studio/singleton": "src/browser/studio/singleton.ts",
       "utils/request-members": "src/utils/request-members.ts",
       "browser/utils/request-members": "src/browser/utils/request-members.ts",
+      "utils/browser-page": "src/utils/browser-page.ts",
+      "browser/utils/browser-page": "src/browser/utils/browser-page.ts",
+      "utils/page-location": "src/utils/page-location.ts",
+      "browser/utils/page-location": "src/browser/utils/page-location.ts",
+      "utils/is-react-native": "src/utils/is-react-native.ts",
+      "browser/utils/is-react-native": "src/browser/utils/is-react-native.ts",
     });
   });
 });

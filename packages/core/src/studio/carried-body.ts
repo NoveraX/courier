@@ -91,7 +91,9 @@ const NON_ASCII = /[\u0080-\uffff]/;
 const nativeByteLength = byteLengthOfPlatform();
 
 function byteLengthOfPlatform(): ((text: string) => number) | undefined {
-  const buffer: unknown = Reflect.get(globalThis, "Buffer");
+  const buffer: unknown = Object.hasOwn(globalThis, "Buffer")
+    ? Reflect.get(globalThis, "Buffer")
+    : undefined;
   const byteLength: unknown =
     typeof buffer === "function" ? Reflect.get(buffer, "byteLength") : undefined;
   return typeof byteLength === "function"

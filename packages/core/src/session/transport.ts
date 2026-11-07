@@ -1,5 +1,6 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { isLocalAddress } from "../utils/local-address";
+import { pageLocation } from "../utils/page-location";
 import { parseUrl } from "../utils/parse-url";
 
 /* Names only a private network resolves: mDNS, the ICANN private-use TLD,
@@ -82,7 +83,6 @@ export function assertSecureTransport(target: { url?: string | undefined; name: 
 
 /* The address of the page the code runs on, where there is one. */
 function pageAddress(): string | undefined {
-  const href: unknown = (Reflect.get(globalThis, "location") as { href?: unknown } | undefined)
-    ?.href;
+  const href = pageLocation()?.href;
   return typeof href === "string" ? href : undefined;
 }

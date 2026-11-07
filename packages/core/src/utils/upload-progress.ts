@@ -27,7 +27,7 @@ export async function sendWithUploadProgress(
     fetch: send,
   }: { withinOrigin?: boolean; fetch?: PlatformFetch | undefined } = {},
 ): Promise<Response> {
-  if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);
+  if (Object.hasOwn(globalThis, "XMLHttpRequest")) return xhrRequest(url, init, onProgress);
 
   const request = {
     __proto__: null,

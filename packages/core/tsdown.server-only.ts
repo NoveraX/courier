@@ -28,6 +28,9 @@ export const SERVER_ONLY_MODULES = [
   "utils/one-users-call",
   "studio/singleton",
   "utils/request-members",
+  "utils/browser-page",
+  "utils/page-location",
+  "utils/is-react-native",
 ] as const;
 
 const SOURCE = resolve(import.meta.dirname, "src");

@@ -91,9 +91,9 @@ type PlatformKey =
   | keyof AddEventListenerOptions
   | keyof StreamPipeOptions;
 
-/* Every key of the options a call is made with, of each kind, of what defines an API, and of
-   what the platform reads of the core's objects: one added to their types is missing here until
-   it is written in. */
+/* Every key of the options a call is made with, of each kind, of what defines an API, of what
+   the platform reads of the core's objects, and the names by which the core tells a page from a
+   server: one added to their types is missing here until it is written in. */
 const EVERY_KEY = [
   ...Object.keys({
     agent: 0,
@@ -238,6 +238,15 @@ const EVERY_KEY = [
     transform: 0,
     writableType: 0,
   } satisfies Record<Exclude<PlatformKey, OptionKey | DefinitionKey>, 0>),
+  /* The names a page's or an app's platform defines and a server's does not — `window` is the
+     request's init's too — by which the core tells which it runs in. */
+  "document",
+  "location",
+  "navigator",
+  "product",
+  "XMLHttpRequest",
+  "Deno",
+  "Buffer",
 ];
 
 /* What the platform reads of the stream it builds itself, for an answer's body that is not a

@@ -59,7 +59,9 @@ export function browserSession(
 
 /* React Native has no document, and keeps its cookies where no script reads them. */
 function documentCookie(): string | undefined {
-  const document: unknown = Reflect.get(globalThis, "document");
+  const document: unknown = Object.hasOwn(globalThis, "document")
+    ? Reflect.get(globalThis, "document")
+    : undefined;
   const cookie: unknown =
     typeof document === "object" && document !== null ? Reflect.get(document, "cookie") : undefined;
   return typeof cookie === "string" ? cookie : undefined;

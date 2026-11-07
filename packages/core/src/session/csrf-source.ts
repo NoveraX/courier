@@ -1,3 +1,5 @@
+import { pageLocation } from "../utils/page-location";
+
 /* A scheme makes an address of its own; the token is the API's to hand out. */
 const SCHEME = /^[a-z][a-z\d+.-]*:/i;
 /* What a bare path cannot hold: spaces and control characters, a query, a
@@ -51,8 +53,6 @@ export function csrfSource(from: string, baseURL: string | undefined): string | 
 }
 
 function pageOrigin(): string | undefined {
-  const location: unknown = Reflect.get(globalThis, "location");
-  const origin: unknown =
-    typeof location === "object" && location !== null ? Reflect.get(location, "origin") : undefined;
+  const origin = pageLocation()?.origin;
   return typeof origin === "string" && ORIGIN.test(origin) ? origin : undefined;
 }

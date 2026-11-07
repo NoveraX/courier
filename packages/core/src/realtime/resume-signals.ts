@@ -65,7 +65,9 @@ function listen(page: { window?: EventSource; document?: EventSource }): () => v
   const online = (): void => tell("online");
   const focus = (): void => tell("focus");
   const visibility = (): void => {
-    const document: unknown = Reflect.get(globalThis, "document");
+    const document: unknown = Object.hasOwn(globalThis, "document")
+      ? Reflect.get(globalThis, "document")
+      : undefined;
     if (isObject(document) && Reflect.get(document, "visibilityState") === "visible") {
       tell("visible");
     }
@@ -96,7 +98,9 @@ function pageTargets(): { window?: EventSource; document?: EventSource } | undef
 }
 
 function eventSourceAt(name: "window" | "document"): EventSource | undefined {
-  const target: unknown = Reflect.get(globalThis, name);
+  const target: unknown = Object.hasOwn(globalThis, name)
+    ? Reflect.get(globalThis, name)
+    : undefined;
   return isEventSource(target) ? target : undefined;
 }
 

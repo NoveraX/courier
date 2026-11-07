@@ -9,10 +9,14 @@
  * ```
  */
 export function isReactNative(): boolean {
-  const navigator: unknown = Reflect.get(globalThis, "navigator");
+  /* React Native's navigator and its product are its own: what Object.prototype holds is a server's. */
+  const navigator: unknown = Object.hasOwn(globalThis, "navigator")
+    ? Reflect.get(globalThis, "navigator")
+    : undefined;
   return (
     typeof navigator === "object" &&
     navigator !== null &&
+    Object.hasOwn(navigator, "product") &&
     Reflect.get(navigator, "product") === "ReactNative"
   );
 }

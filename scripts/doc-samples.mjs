@@ -11,9 +11,11 @@ import { codeGroupSamples } from "./code-group-samples.mjs";
 import { sampleFile } from "./page-modules.mjs";
 import { sideEntryOf } from "./sample-entries.mjs";
 
-/* The side a fence says loads it, ```ts side="page", and why it shows the root, ```ts root="…". */
+/* The side a fence says loads it, ```ts side="page"; why it shows the root, ```ts root="…"; and
+   the framework of its file's package, where that is not the guide's, ```ts framework="vite". */
 const SIDE = /\bside="([^"]*)"/;
 const ROOT_SHOWN = /\broot="([^"]*)"/;
+const FRAMEWORK = /\bframework="([^"]*)"/;
 
 /* A fence may sit indented inside a component; its closing fence matches the opening indent. */
 const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
@@ -23,7 +25,7 @@ const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
  * TypeScript tab of its tabbed code, in the order the page writes them.
  *
  * @param {string} text - The page
- * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string, file?: string, flat?: boolean }>}
+ * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string, file?: string, flat?: boolean, side?: string, root?: string, framework?: string }>}
  *   Each sample: the line of its first code line, whether it holds JSX,
  *   whether it lists the packages' types or signatures rather than using
  *   them, its code without the fence's indentation, the file it says it
@@ -72,6 +74,7 @@ function fenceSamples(text) {
     const file = sampleFile(match[3] ?? "", code);
     const side = SIDE.exec(match[3] ?? "")?.[1];
     const root = ROOT_SHOWN.exec(match[3] ?? "")?.[1];
+    const framework = FRAMEWORK.exec(match[3] ?? "")?.[1];
     const line = text.slice(0, match.index).split("\n").length + 1;
     return {
       line,
@@ -81,6 +84,7 @@ function fenceSamples(text) {
       file,
       ...(side !== undefined && { side }),
       ...(root !== undefined && { root }),
+      ...(framework !== undefined && { framework }),
     };
   });
 }

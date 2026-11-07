@@ -1,4 +1,4 @@
-export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy", updated: "2026-11-08" }
 
 The `@noverax/courier-nestjs` adapter provides a middleware that integrates Courier into your NestJS application using the standard `MiddlewareConsumer`.
 
@@ -260,7 +260,7 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 
 The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it, or from `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose#the-routes):
 
-```ts title="lib/caller.ts" side="page"
+```ts title="src/lib/caller.ts" side="page" framework="vite"
 import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 

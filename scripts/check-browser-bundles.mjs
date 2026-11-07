@@ -12,6 +12,11 @@
  *  - no module only a server runs is taken, in any chunk, a dynamic
  *    import's too: neither one of the areas `module-sides.json` names, nor
  *    one taken as it is where its browser stand-in belongs;
+ *  - no module of the workspace, in any chunk, names freely a global of
+ *    Node no browser has — `Buffer`, `global`, `__dirname`, `__filename`,
+ *    `setImmediate`, `clearImmediate`, or `process` past `process.env` —
+ *    even to check for it, as Parcel answers such a name with a polyfill;
+ *    a read off `globalThis` is no such name;
  *  - what loads at start stays within its budget for each bundler,
  *    minified and gzipped;
  *  - no browser API newer than the browsers the requirements name —
@@ -36,6 +41,7 @@ import { viteStart } from "./browser-bundles/build-vite.mjs";
 import { webpackStart } from "./browser-bundles/build-webpack.mjs";
 import { breachesOrFailure, builtOrFailed } from "./browser-bundles/built-or-failed.mjs";
 import { newerApiCalls } from "./browser-bundles/newer-api-calls.mjs";
+import { nodeGlobalReads } from "./browser-bundles/node-globals.mjs";
 import { GLOBAL_PROCESS, processReads } from "./browser-bundles/process-reads.mjs";
 import { PROVIDED, SCENARIOS } from "./browser-bundles/scenarios.mjs";
 import { serverOnlyModules } from "./browser-bundles/server-only-modules.mjs";
@@ -126,6 +132,15 @@ function sideBreaches(scenario, bundler, everyModule) {
   return breaches;
 }
 
+/* What a bundler's build of a scenario breaches in any chunk: a module of the workspace that
+   refers to a global of Node. */
+function globalBreaches(esbuild, scenario, bundler, everyModule) {
+  return nodeGlobalReads(esbuild, everyModule).map(
+    (read) =>
+      `${scenario.name} takes ${read.module} under ${bundler}, which refers to ${read.global}, a global of Node no browser has`,
+  );
+}
+
 /* What a bundler's start of a scenario breaches: its budget. */
 function startBreaches(scenario, bundler, { bytes, gzipped }) {
   const [budget, budgetGzipped] = scenario.budget[bundler];
@@ -143,7 +158,7 @@ function startBreaches(scenario, bundler, { bytes, gzipped }) {
 }
 
 /* The scenario built by webpack and by Vite, as an application built with either takes it. */
-async function otherBundlersBreaches(bundlers, work, scenario) {
+async function otherBundlersBreaches(esbuild, bundlers, work, scenario) {
   const dir = join(work, scenario.name.replace(/\W+/g, "-"));
   mkdirSync(dir, { recursive: true });
   const entry = join(dir, "page.js");
@@ -161,6 +176,7 @@ async function otherBundlersBreaches(bundlers, work, scenario) {
     }
     const { code, everyModule } = built.start;
     breaches.push(...sideBreaches(scenario, bundler, everyModule));
+    breaches.push(...globalBreaches(esbuild, scenario, bundler, everyModule));
     breaches.push(
       ...startBreaches(scenario, bundler, { bytes: code.length, gzipped: gzipSync(code).length }),
     );
@@ -174,6 +190,7 @@ function breachesOf(esbuild, work, scenario) {
     (builtin) => `${scenario.name} reaches ${builtin}, which no browser has`,
   );
   breaches.push(...sideBreaches(scenario, "esbuild", inputs));
+  breaches.push(...globalBreaches(esbuild, scenario, "esbuild", inputs));
   breaches.push(...startBreaches(scenario, "esbuild", { bytes, gzipped }));
   const whole = build(esbuild, work, scenario, { minify: false, splitting: false }).result;
   for (const call of newerApiCalls(whole.outputFiles[0]?.text ?? "")) {
@@ -244,7 +261,7 @@ async function main() {
     ...breachesOrFailure("the core on the edge", "esbuild", () => edgeBreaches(esbuild, work)),
   ];
   for (const scenario of SCENARIOS) {
-    breaches.push(...(await otherBundlersBreaches(bundlers, work, scenario)));
+    breaches.push(...(await otherBundlersBreaches(esbuild, bundlers, work, scenario)));
   }
   rmSync(work, { recursive: true, force: true });
   const unique = [...new Set(breaches)];

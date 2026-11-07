@@ -73,8 +73,14 @@ Seven of them are easy to skip by accident and worth understanding:
   Next.js's edge runtime may take of the core reads a Node API off the
   global `process` — anything but `process.env` — which Next.js's build of a
   middleware refuses or warns of: such code reads it off
-  `globalThis.process`, checking for it. A bundler that cannot build a
-  scenario fails it in the bundler's own words.
+  `globalThis.process`, checking for it. It fails as well when a module of
+  the workspace a page takes, in any chunk under any of the three, refers
+  to a global of Node no browser has — `Buffer`, `global`, `__dirname`,
+  `__filename`, `setImmediate`, `clearImmediate`, or `process` past
+  `process.env` — even to check for it, which Parcel takes for a use and
+  answers with a polyfill: a page's code reads such a global off
+  `globalThis`, or a server's side of a module holds it. A bundler that
+  cannot build a scenario fails it in the bundler's own words.
 - `npm run check:graph` follows every module the page entries reach — the
   core's `@noverax/courier/client`, `/define`, `/middleware`, `/routes`,
   `/fetch`, `/internal-client` and `/realtime`, and `@noverax/courier-react`

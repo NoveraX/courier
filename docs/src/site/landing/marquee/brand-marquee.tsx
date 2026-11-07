@@ -58,7 +58,7 @@ export function BrandMarquee() {
           />
         </p>
         <p className="m-0 max-w-[52ch] text-[15.5px] leading-[1.55] text-fg-muted">
-          Ten official server adapters, each one line to mount — and any client that can call{" "}
+          Eleven official server adapters, each one line to mount — and any client that can call{" "}
           <code className="text-[14px] text-brand">fetch</code>.
         </p>
       </div>

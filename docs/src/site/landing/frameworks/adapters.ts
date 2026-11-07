@@ -97,6 +97,15 @@ export const ADAPTERS: readonly Adapter[] = [
     code: 'import { courierHandler } from "@noverax/courier-solid"\n\nconst handler = courierHandler()\nexport const GET = handler\nexport const POST = handler',
   },
   {
+    label: "TanStack Start",
+    framework: "tanstack-start-react",
+    file: "src/routes/api/request.ts",
+    pkg: "@noverax/courier-tanstack-start",
+    guide: "/docs/frameworks/tanstack-start",
+    handler: "apiRoute()",
+    code: 'import { createFileRoute } from "@tanstack/react-router"\nimport { apiRoute } from "@noverax/courier-tanstack-start"\n\nexport const Route = createFileRoute("/api/request")({\n  server: { handlers: apiRoute() },\n})',
+  },
+  {
     label: "Hono",
     framework: "hono",
     file: "src/index.ts",

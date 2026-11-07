@@ -15,6 +15,7 @@ import {
   siRemix,
   siSolid,
   siSvelte,
+  siTanstack,
   siVuedotjs,
 } from "simple-icons"
 
@@ -49,6 +50,7 @@ export const ADAPTER_BRANDS: readonly Brand[] = [
   brand(siAstro, "Astro", "courierHandler()", "#bc52ee"),
   brand(siRemix, "Remix", "courierHandler()", "#e6e8eb"),
   brand(siSolid, "SolidStart", "courierHandler()", "#76b3e1"),
+  brand(siTanstack, "TanStack Start", "apiRoute()", "#ece8d1"),
   brand(siHono, "Hono", "courierHandler()", "#ff7a2f"),
   brand(siExpress, "Express", "courierHandler()", "#e6e8eb"),
   brand(siFastify, "Fastify", "courierPlugin", "#e6e8eb"),

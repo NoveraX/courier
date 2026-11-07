@@ -29,6 +29,7 @@ describe("the adapters on the landing page", () => {
       "@noverax/courier-astro",
       "@noverax/courier-remix",
       "@noverax/courier-solid",
+      "@noverax/courier-tanstack-start",
       "@noverax/courier-hono",
       "@noverax/courier-express",
       "@noverax/courier-fastify",
@@ -54,11 +55,17 @@ describe("the adapters on the landing page", () => {
 })
 
 describe("the landing page's adapter count", () => {
-  it("matches the words that name it: ten adapters, in the list and on the tiles", async () => {
+  it("matches the words that name it: eleven adapters, in the list and on the tiles", async () => {
     const { ADAPTER_BRANDS } = await import("@/site/landing/brands")
 
-    expect(ADAPTERS).toHaveLength(10)
+    const marquee = readFileSync(
+      new URL("../../src/site/landing/marquee/brand-marquee.tsx", import.meta.url),
+      "utf8"
+    )
+
+    expect(ADAPTERS).toHaveLength(11)
     expect(ADAPTER_BRANDS.map((b) => b.name)).toEqual(ADAPTERS.map((a) => a.label))
+    expect(marquee).toContain("Eleven official server adapters")
   })
 })
 

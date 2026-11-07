@@ -49,10 +49,10 @@ export const sources = { myApi: api }
 
 Create a Fastify server with the Courier plugin:
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./lib/sources"
 
@@ -83,10 +83,10 @@ The `courierPlugin` registers a route handler at the specified prefix that reads
 
 Add the Courier plugin alongside your existing routes and plugins:
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./lib/sources"
 
@@ -128,10 +128,10 @@ The `courierPlugin` follows Fastify's plugin system. It encapsulates its routes 
 
 For production, restrict the allowed origins:
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import Fastify from "fastify"
 import cors from "@fastify/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./lib/sources"
 
@@ -215,8 +215,8 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 
 The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it, or from `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose#the-routes):
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.myApi, {

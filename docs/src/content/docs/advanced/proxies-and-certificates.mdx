@@ -1,4 +1,4 @@
-export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both", updated: "2026-10-14" }
+export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both", updated: "2026-11-07" }
 
 ## Where they are set
 
@@ -166,10 +166,10 @@ The group's dispatcher reaches its calls, its streams, its channels' sockets and
 
 `.with()` gives the calls made through what it returns a transport of their own, over their group's and their API's:
 
-```ts title="lib/payments.ts"
+```ts title="lib/payments.ts" side="server"
 import type { Company } from "./companies"
 import { Agent } from "undici"
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { bank } from "./sources"
 
 const client = createCaller(bank)

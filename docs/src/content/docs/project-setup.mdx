@@ -1,4 +1,4 @@
-export const metadata = { title: "Project Setup", description: "Recommended file structure, patterns, and configuration for production apps.", updated: "2026-11-04" }
+export const metadata = { title: "Project Setup", description: "Recommended file structure, patterns, and configuration for production apps.", updated: "2026-11-07" }
 
 ## Recommended file structure
 
@@ -82,8 +82,8 @@ export const q = createProxyQueryCaller(routes.api)
 // In components: q.users.useQuery("getAll"), q.users.useMutation("create")
 ```
 
-```ts title="lib/caller.ts (Vanilla / Vue / Svelte)"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts (Vanilla / Vue / Svelte)" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api)
@@ -103,8 +103,8 @@ declare module "@noverax/courier/routes" {
 
 See [Exposing Endpoints](/docs/proxy-mode/expose) for the plugin your build takes.
 
-```ts title="lib/server-caller.ts (Server-side)"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/server-caller.ts (Server-side)" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export const caller = createCaller(api)

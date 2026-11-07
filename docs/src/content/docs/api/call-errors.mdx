@@ -4,7 +4,7 @@ A call that got no successful answer rejects with one of three errors, each tell
 
 ## Import
 
-```ts
+```ts side="both"
 import {
   AbortError,
   isAbortError,
@@ -14,13 +14,15 @@ import {
   NetworkError,
   type RequestFailure,
   TimeoutError,
-} from "@noverax/courier"
+} from "@noverax/courier/client"
 ```
+
+`@noverax/courier/server` exports them as well, for code only a server loads.
 
 ## NetworkError
 
-```ts
-import { CourierError } from "@noverax/courier"
+```ts side="both"
+import { CourierError } from "@noverax/courier/client"
 
 declare class NetworkError extends CourierError<"NETWORK_ERROR"> {
   readonly systemCode: string | undefined // "ECONNREFUSED", "ENOTFOUND", "UND_ERR_SOCKET", "CERT_HAS_EXPIRED", …
@@ -34,8 +36,8 @@ Thrown when a request got no answer: its host could not be resolved or reached, 
 
 ## TimeoutError
 
-```ts
-import { CourierError } from "@noverax/courier"
+```ts side="both"
+import { CourierError } from "@noverax/courier/client"
 
 declare class TimeoutError extends CourierError<"TIMEOUT"> {
   readonly scope: "attempt" | "deadline"
@@ -53,8 +55,8 @@ An attempt that ran out of time may have reached the server, which may still be 
 
 ## AbortError
 
-```ts
-import { CourierError } from "@noverax/courier"
+```ts side="both"
+import { CourierError } from "@noverax/courier/client"
 
 declare class AbortError extends CourierError<"ABORTED" | "SUPERSEDED"> {}
 ```
@@ -70,8 +72,8 @@ A retry policy's `deadline` that runs out is a `TimeoutError` of scope `"deadlin
 
 ## Telling Them Apart
 
-```ts
-import { isAbortError, isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
+```ts side="both"
+import { isAbortError, isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier/client"
 
 try {
   await caller.users.getAll()
@@ -90,8 +92,8 @@ try {
 
 Every HTTP endpoint's method has `.safe()`, which calls it as the method does and resolves to its data, or to why it failed, rather than rejecting:
 
-```ts
-import { isHTTPError } from "@noverax/courier"
+```ts side="both"
+import { isHTTPError } from "@noverax/courier/client"
 
 async function showUser(id: string) {
   const { data, error } = await caller.users.getById.safe({ id })

@@ -4,8 +4,8 @@ export const metadata = { title: "Realtime Connections", description: "The conne
 
 Every channel and push subscription of one caller on one URL shares a socket. The caller's `ws` option sets that socket up, in `createCaller`, `createProxyCaller`, `createQueryCaller` and `createProxyQueryCaller` alike:
 
-```ts title="lib/client.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/client.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const client = createProxyCaller(routes.api, {

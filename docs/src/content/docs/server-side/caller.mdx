@@ -41,8 +41,8 @@ type CallerDefaults = {
 
 These defaults are merged with per-request options. Per-request headers are merged (not replaced). The default `timeout` is the least specific: a timeout given for the call wins, then the endpoint's own `.timeout()`, then the default. Where `cancelPrevious` cancels a call, and which say decides, is in [Deduplication & Abort](/docs/advanced/abort#where-to-turn-it-on).
 
-```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export const caller = createCaller(api, {
@@ -152,9 +152,9 @@ Handing a call `await headers()` whole — `.with({ headers: await headers() })`
 
 In route handlers, give a caller the `Request` as its context. Courier extracts the headers from it, through the whitelist below:
 
-```ts title="app/api/dashboard/route.ts"
+```ts title="app/api/dashboard/route.ts" side="server"
 import { NextResponse } from "next/server"
-import { createCaller } from "@noverax/courier"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export async function GET(req: Request) {

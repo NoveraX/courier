@@ -1,4 +1,4 @@
-export const metadata = { title: "Server-Side Usage", description: "Call your backend directly from any server runtime — no proxy hop, no client bundle, zero overhead.", mode: "direct", updated: "2026-10-13" }
+export const metadata = { title: "Server-Side Usage", description: "Call your backend directly from any server runtime — no proxy hop, no client bundle, zero overhead.", mode: "direct", updated: "2026-11-07" }
 
 ## What is direct mode?
 
@@ -50,8 +50,8 @@ Use direct mode whenever your code runs on the server:
 
 Create a caller by passing your sources to `createCaller`:
 
-```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export const caller = createCaller(api)

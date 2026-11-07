@@ -49,9 +49,9 @@ export const sources = { myApi: api }
 
 Apply the `courierMiddleware` in your root `AppModule` using the `MiddlewareConsumer`:
 
-```ts title="src/app.module.ts"
+```ts title="src/app.module.ts" side="server"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./lib/sources"
 
@@ -137,9 +137,9 @@ bootstrap()
 
 The Courier middleware sits alongside your existing NestJS controllers and modules:
 
-```ts title="src/app.module.ts"
+```ts title="src/app.module.ts" side="server"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./lib/sources"
 import { HealthModule } from "./health/health.module"
@@ -169,9 +169,9 @@ The `forRoutes("api/request")` call limits the middleware to the proxy path only
 
 For larger applications, you can isolate the Courier setup into its own module:
 
-```ts title="src/courier/courier.module.ts"
+```ts title="src/courier/courier.module.ts" side="server"
 import { Module, NestModule, MiddlewareConsumer } from "@nestjs/common"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "../lib/sources"
 
@@ -260,8 +260,8 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 
 The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it, or from `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose#the-routes):
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.myApi, {

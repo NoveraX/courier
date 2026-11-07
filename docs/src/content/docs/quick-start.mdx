@@ -1,4 +1,4 @@
-export const metadata = { title: "Quick Start", description: "Set Courier up in one command, or by hand in three steps: define your API, set up a caller, make your first typed request.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "Quick Start", description: "Set Courier up in one command, or by hand in three steps: define your API, set up a caller, make your first typed request.", mode: "both", updated: "2026-11-07" }
 
 ## In one command
 
@@ -66,8 +66,8 @@ Choose the mode that fits your use case:
 
 **Direct mode** — call your backend from any runtime:
 
-```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api/sources"
 
 export const caller = createCaller(api)
@@ -84,8 +84,8 @@ export default defineConfig({ sources: { api } })
 
 From the marks, Courier's plugin for your build gives a page's caller its routes — each endpoint a page may call, and how it reaches it — as `routes` from `@noverax/courier/routes`, built again as you change a mark; see [the plugin for your build](/docs/proxy-mode/expose#the-plugin-for-your-build). The browser's caller takes them in place of the API, and the module that makes it registers the config, so they are typed from it:
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 import type config from "../courier.config"
@@ -161,8 +161,8 @@ export default async function DashboardPage() {
 
 **Vanilla TypeScript (no framework):**
 
-```ts
-import { createCaller } from "@noverax/courier"
+```ts side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "./api/sources"
 
 const caller = createCaller(api)

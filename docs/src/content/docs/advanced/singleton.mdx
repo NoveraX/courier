@@ -2,16 +2,16 @@ export const metadata = {
   title: "Singleton Pattern",
   description: "Build each client once, in a module of its own, and import it wherever a call is made.",
   mode: "both",
-  updated: "2026-11-04",
+  updated: "2026-11-07",
 }
 
 ## The pattern
 
 Every Courier factory learns your API's type in one place: from the API object you pass to `createCaller` or `createQueryCaller`, or from the routes you pass to `createProxyCaller` and `createProxyQueryCaller`. Build each client once, in a module of its own, and export it. Components, loaders and server code import that client, so none of them repeats an import or a default, and a change to the API reaches every call site through that one module.
 
-```ts
+```ts side="page"
 // Without it, every file builds its own client and repeats its options:
-import { createProxyCaller } from "@noverax/courier"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const users = await createProxyCaller(routes.api, { timeout: 10_000 }).users.getAll()
@@ -63,8 +63,8 @@ export const api = defineApi({
 
 Give each client a module that builds it and exports it. In the browser, pass the routes Courier's plugin gives the page from your marks — see [Exposing Endpoints](/docs/proxy-mode/expose). They carry every group, endpoint, variable and response type a page may use, and how each endpoint is reached, so the definition itself — its upstream host, its middleware, every endpoint path — stays out of the bundle.
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api)
@@ -81,8 +81,8 @@ The proxy serves only what the marks open, whichever client calls it.
 
 On the server, where the definition is already present, pass the API object and the type comes with it:
 
-```ts title="lib/server-caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/server-caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export const serverCaller = createCaller(api, { timeout: 10_000 })

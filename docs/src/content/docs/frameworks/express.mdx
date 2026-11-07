@@ -50,10 +50,10 @@ export const sources = { myApi: api }
 
 Create an Express server with the Courier handler:
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import express from "express"
 import cors from "cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./lib/sources"
 
@@ -80,10 +80,10 @@ app.listen(3001, () => {
 
 If you already have an Express server, add the Courier handler alongside your existing routes:
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import express from "express"
 import cors from "cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./lib/sources"
 
@@ -121,10 +121,10 @@ Either register the proxy route before the parser, as above, or scope the parser
 
 For production, restrict the allowed origins:
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import express from "express"
 import cors from "cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./lib/sources"
 
@@ -197,8 +197,8 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 
 The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it, or from `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose#the-routes):
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.myApi, {

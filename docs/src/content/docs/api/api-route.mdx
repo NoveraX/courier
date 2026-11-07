@@ -2,8 +2,8 @@ export const metadata = { title: "createHandler", description: "Universal adapte
 
 ## Import
 
-```ts
-import { createHandler } from "@noverax/courier"
+```ts side="server"
+import { createHandler } from "@noverax/courier/server"
 ```
 
 ## Signature
@@ -91,8 +91,8 @@ Each framework has a dedicated adapter package that wraps `createHandler()`. Eve
 
 ### Next.js
 
-```ts title="instrumentation.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="instrumentation.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -110,8 +110,8 @@ export const { GET, POST } = apiRoute()
 
 ### Express
 
-```ts title="server.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="server.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "./api"
 
@@ -121,8 +121,8 @@ app.use("/api/request", courierHandler())
 
 ### Hono
 
-```ts title="server.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="server.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./api"
 
@@ -132,8 +132,8 @@ app.all("/api/request/*", courierHandler())
 
 ### Fastify
 
-```ts title="server.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="server.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 import { courierPlugin } from "@noverax/courier-fastify"
 import { sources } from "./api"
 
@@ -143,8 +143,8 @@ fastify.register(courierPlugin, { prefix: "/api/request" })
 
 ### NestJS
 
-```ts title="courier.middleware.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="courier.middleware.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 import { courierMiddleware } from "@noverax/courier-nestjs"
 import { sources } from "./api"
 
@@ -157,8 +157,8 @@ export class CourierMiddleware {
 
 ### Nuxt
 
-```ts title="server/plugins/courier.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="server/plugins/courier.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "~/api"
 
 export default defineNitroPlugin(() => registerSources(sources))

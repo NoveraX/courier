@@ -180,10 +180,10 @@ Progress events only fire when the browser knows the total size. For FormData up
 
 A browser reports an upload's progress every 100 ms or so — on a slow link a step of several percent each — and a server reports in bursts, as `fetch` takes the body. `smoothProgress` wraps the callback and moves the bar every 30 ms toward what the upload last reported, closing two thirds of the gap every 120 ms. It never runs ahead of the upload, never goes back, and comes to rest where the upload is, 100% included. Give each upload a wrapper of its own:
 
-```tsx title="components/avatar-upload.tsx"
+```tsx title="components/avatar-upload.tsx" side="page"
 "use client"
 
-import { smoothProgress } from "@noverax/courier"
+import { smoothProgress } from "@noverax/courier/client"
 import { caller } from "@/lib/caller"
 
 export async function uploadAvatar(form: FormData, setProgress: (percent: number) => void) {

@@ -38,7 +38,7 @@ A Solid app imports `createFileRoute` from `@tanstack/solid-router`; the routes 
 
 The handlers read the APIs the server registered. Register them once, in a module only the server loads, such as the server entry:
 
-```ts title="src/server.ts"
+```ts title="src/server.ts" side="server"
 import handler from "@tanstack/react-start/server-entry"
 import { registerSources } from "@noverax/courier/server"
 
@@ -90,7 +90,7 @@ export default defineConfig({ plugins: [pluginReact(), tanstackStart(), courierR
 
 Pair with `createProxyCaller` on the client, given those routes, in a module that registers the config, so they are typed from it — see [Exposing Endpoints](/docs/proxy-mode/expose):
 
-```ts title="src/caller.ts"
+```ts title="src/caller.ts" side="page"
 import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 

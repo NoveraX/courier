@@ -42,8 +42,8 @@ Some runtimes can't host WebSocket upgrades in-process. In those cases the stand
 
 For runtimes in the bottom half of the table, run `@noverax/courier-server` alongside your app and configure the browser client like this:
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api, {

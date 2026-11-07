@@ -52,8 +52,8 @@ export const sources = { myApi: api }
 
 Create a Nuxt server route that proxies client requests to your backend:
 
-```ts title="server/plugins/courier.ts"
-import { registerSources } from "@noverax/courier"
+```ts title="server/plugins/courier.ts" side="server"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "~/lib/sources"
 
 export default defineNitroPlugin(() => {
@@ -92,8 +92,8 @@ export default defineNuxtConfig({ modules: [courierRoutesModule] })
 
 Create a composable using `createProxyCaller` for client-side requests, from the routes of `myApi`, in a module that registers the config, so they are typed from it:
 
-```ts title="composables/useCaller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="composables/useCaller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 import type config from "../courier.config"
@@ -143,8 +143,8 @@ const { data: posts, status } = await useAsyncData("posts", () =>
 
 For server-side data fetching in event handlers, use `createCaller` directly:
 
-```ts title="lib/server-caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/server-caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "~/lib/sources"
 
 export const caller = createCaller(api)
@@ -253,8 +253,8 @@ The plugin wraps the handler Nitro serves every request with, as Nitro does for 
 
 WebSocket channels are not served by the Nuxt adapter: Nitro's WebSocket layer (`crossws`) is still flagged experimental, and its behavior differs across deployment targets (`node-server`, `bun`, `cloudflare`, `vercel-edge`). Run a [standalone Courier server](/docs/deployment/standalone-server) alongside Nuxt for WebSocket endpoints, and point `proxyPath.ws` at it:
 
-```ts title="composables/useCaller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="composables/useCaller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export function useCaller() {

@@ -115,7 +115,7 @@ Read the types back off an endpoint. This is how a caller knows what a method
 takes and returns:
 
 ```ts
-import type { InferClient } from "@noverax/courier" // InferClient<TApi>: the client createCaller(api) returns
+import type { InferClient } from "@noverax/courier/client" // InferClient<TApi>: the client createCaller(api) returns
 import type {
   InferKind,          // InferKind<E>: "query" | "mutation" | "stream" | "channel"
   InferResponse,      // InferResponse<E>: what the endpoint resolves to

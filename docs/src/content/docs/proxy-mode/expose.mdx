@@ -1,4 +1,4 @@
-export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-07" }
+export const metadata = { title: "Exposing Endpoints", description: "Mark the endpoints a page may call through the proxy. Everything else stays the server's, and the page's client takes its routes from the marks.", mode: "proxy", updated: "2026-11-08" }
 
 ## Overview
 
@@ -90,8 +90,8 @@ import { api } from "./api"
 export default defineConfig({ sources: { api } })
 ```
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 import type config from "../courier.config"
@@ -172,8 +172,8 @@ export const apiRoutes: CourierRoutes<Sources["api"], typeof apiEndpoints> = {
 
 The client takes the module's export in place of `routes.api`, and needs no registration: the module is typed from the config itself.
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { apiRoutes } from "@/courier.routes"
 
 export const client = createProxyCaller(apiRoutes)
@@ -212,8 +212,8 @@ With the plugin there is no module to review: the marks are, where each endpoint
 
 Give the client the routes of the API it calls:
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const client = createProxyCaller(routes.api)
@@ -230,8 +230,8 @@ The client is typed from the API the routes were read from, with the endpoints t
 
 The routes do not say where the proxy is, since that depends on where the page is served. The client sends to `/api/request` and `/api/sse` on the page's own origin, and opens a socket only where its `proxyPath` names one — see [createProxyCaller](/docs/proxy-mode/proxy-caller#realtime-sse-and-ws-proxy-paths):
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const client = createProxyCaller(routes.api, {

@@ -1,15 +1,17 @@
-export const metadata = { title: "HTTPError", description: "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "HTTPError", description: "Custom error class for HTTP responses with typed data, status code, and headers. Includes the isHTTPError type guard.", mode: "both", updated: "2026-11-07" }
 
 ## Import
 
-```ts
-import { HTTPError, isHTTPError } from "@noverax/courier"
+```ts side="both"
+import { HTTPError, isHTTPError } from "@noverax/courier/client"
 ```
+
+`@noverax/courier/server` exports them as well, for code only a server loads.
 
 ## HTTPError Class
 
-```ts
-import { CourierError, type HttpResponse } from "@noverax/courier"
+```ts side="both"
+import { CourierError, type HttpResponse } from "@noverax/courier/client"
 
 declare class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
   readonly status: number
@@ -42,7 +44,7 @@ error.data       // Parsed response body (typed as R)
 Type guard function to check if an error is an HTTPError:
 
 ```ts
-import type { HTTPError } from "@noverax/courier"
+import type { HTTPError } from "@noverax/courier/client"
 
 declare function isHTTPError<TData = unknown>(error: unknown): error is HTTPError<TData>
 ```
@@ -53,8 +55,8 @@ declare function isHTTPError<TData = unknown>(error: unknown): error is HTTPErro
 
 ## Basic Usage
 
-```ts
-import { isHTTPError } from "@noverax/courier"
+```ts side="both"
+import { isHTTPError } from "@noverax/courier/client"
 
 try {
   const user = await caller.users.getById({ id: "999" })
@@ -69,8 +71,8 @@ try {
 
 Pass a type parameter to `isHTTPError` to type the error's `data`:
 
-```ts
-import { isHTTPError } from "@noverax/courier"
+```ts side="both"
+import { isHTTPError } from "@noverax/courier/client"
 
 type ErrorResponse = {
   success: false
@@ -90,8 +92,8 @@ try {
 
 ## Status Code Handling
 
-```ts
-import { isHTTPError } from "@noverax/courier"
+```ts side="both"
+import { isHTTPError } from "@noverax/courier/client"
 
 try {
   await caller.users.getAll()
@@ -114,9 +116,9 @@ try {
 
 Use middleware to handle errors globally across all requests:
 
-```ts
+```ts side="both"
 import { defineMiddleware } from "@noverax/courier/middleware"
-import { isHTTPError } from "@noverax/courier"
+import { isHTTPError } from "@noverax/courier/client"
 
 const errorMiddleware = defineMiddleware("errors", "wrap", async (ctx, next) => {
   try {
@@ -134,8 +136,8 @@ const errorMiddleware = defineMiddleware("errors", "wrap", async (ctx, next) => 
 
 A request that got no answer — a host that does not resolve, a connection refused or dropped — rejects with a `NetworkError`, and one whose time ran out with a `TimeoutError`, never with an `HTTPError`: see [NetworkError, TimeoutError & AbortError](/docs/api/call-errors). Through the proxy, the server's side of the call answers the browser, so a browser gets an `HTTPError` `502` with `code: "UPSTREAM_UNREACHABLE"` or `504` with `code: "UPSTREAM_TIMEOUT"`:
 
-```ts
-import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier"
+```ts side="both"
+import { isHTTPError, isNetworkError, isTimeoutError } from "@noverax/courier/client"
 
 try {
   await caller.users.getAll()

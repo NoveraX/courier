@@ -2,8 +2,8 @@ export const metadata = { title: "createProxyCaller", description: "Factory func
 
 ## Import
 
-```ts
-import { createProxyCaller } from "@noverax/courier"
+```ts side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 ```
 
 ## Signature
@@ -11,7 +11,7 @@ import { createProxyCaller } from "@noverax/courier"
 `createProxyCaller` takes the routes of an API — the endpoints a page may call and how it reaches each, as Courier's plugin for your build gives them to the page from the endpoints marked `.expose()` — and options, and returns a typed client. The routes carry the type of the API they were read from, so the client has its groups, methods, variables and response types, for the endpoints the routes name alone.
 
 ```ts
-import type { InferClient, ProxyCallerOptions } from "@noverax/courier"
+import type { InferClient, ProxyCallerOptions } from "@noverax/courier/client"
 import type { CourierRoutes, RoutedApi, RouteShape } from "@noverax/courier/define"
 
 declare function createProxyCaller<TApi, TEndpoints extends Readonly<Record<string, RouteShape>>>(
@@ -101,8 +101,8 @@ An endpoint the routes do not name is not on the type. Called anyway — from Ja
 
 ## Basic Usage
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api, {
@@ -117,8 +117,8 @@ const user = await caller.users.getById({ id: "123" })
 
 ## Configuring Options
 
-```ts title="lib/caller.ts"
-import { createProxyCaller, isHTTPError } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller, isHTTPError } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api, {

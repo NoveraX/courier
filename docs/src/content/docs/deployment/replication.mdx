@@ -173,10 +173,10 @@ const server = await createCourierServer({
 
 ## Express
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import http from "node:http"
 import express from "express"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler, courierSSEHandler, courierWSAttach } from "@noverax/courier-express"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
@@ -249,11 +249,11 @@ process.on("SIGTERM", async () => {
 
 ## Fastify
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import Fastify from "fastify"
 import fastifyWebsocket from "@fastify/websocket"
 import { wsFrameLimit } from "@noverax/courier/node"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierPlugin, courierSSEHandler, courierWSHandler } from "@noverax/courier-fastify"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
@@ -326,11 +326,11 @@ process.on("SIGTERM", async () => {
 
 Hono is runtime-agnostic — this example uses Node.js with `@hono/node-server`, which carries its own WebSocket upgrade helper.
 
-```ts title="server.ts"
+```ts title="server.ts" side="server"
 import { Hono } from "hono"
 import { serve, upgradeWebSocket } from "@hono/node-server"
 import { WebSocketServer } from "ws"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler, courierSSEHandler, courierWSHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 import { pubsub, connectAdapters, disconnectAdapters } from "./lib/adapters"
@@ -394,9 +394,9 @@ process.on("SIGTERM", async () => {
 
 ## NestJS
 
-```ts title="main.ts"
+```ts title="main.ts" side="server"
 import { NestFactory } from "@nestjs/core"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierWSAttach } from "@noverax/courier-nestjs"
 import { AppModule } from "./app.module"
 import { sources } from "./api/sources"
@@ -477,8 +477,8 @@ export class AppModule implements NestModule, BeforeApplicationShutdown {
 
 `connections.disconnect()` and `connections.requireAuth()` reach the connections a selector names on every replica that shares the pub/sub adapter, so signing a user out, or banning one, closes their connections wherever the load balancer sent them:
 
-```ts title="sign-out.ts"
-import type { ConnectionRegistry } from "@noverax/courier"
+```ts title="sign-out.ts" side="server"
+import type { ConnectionRegistry } from "@noverax/courier/server"
 
 export async function signOutEverywhere(connections: ConnectionRegistry, userId: string) {
   // Each connection whose onConnect returned this userId, on every replica

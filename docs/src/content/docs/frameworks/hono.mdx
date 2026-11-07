@@ -48,10 +48,10 @@ export const sources = { myApi: api }
 
 Create a Hono app with the Courier handler:
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
@@ -72,11 +72,11 @@ That is all you need. The `courierHandler` function returns a standard Hono hand
 
 ### Node.js
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { serve } from "@hono/node-server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
@@ -94,10 +94,10 @@ serve({ fetch: app.fetch, port: 3001 }, (info) => {
 
 ### Bun
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
@@ -116,10 +116,10 @@ export default {
 
 ### Deno
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources.ts"
 
@@ -135,10 +135,10 @@ Deno.serve({ port: 3001 }, app.fetch)
 
 ### Cloudflare Workers
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
@@ -160,10 +160,10 @@ The `courierHandler` function uses the standard Web API `Request`/`Response` obj
 
 The Courier handler only handles the proxy route. You can add any other Hono routes alongside it:
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-hono"
 import { sources } from "./lib/sources"
 
@@ -239,8 +239,8 @@ On the client, point your caller to this server's proxy URL. Choose the guide fo
 
 The caller takes the routes of the endpoints your sources mark `.expose()`, never the definition itself: from `@noverax/courier/routes`, which Courier's plugin in the frontend's build gives it, or from `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose#the-routes):
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.myApi, {

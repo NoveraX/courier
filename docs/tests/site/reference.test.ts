@@ -44,8 +44,8 @@ describe("a reference entry", () => {
 
     expect(entry).toMatchObject({
       kind: "TYPE",
-      from: "@noverax/courier",
-      importLine: 'import type { CallOptions, WithOptions } from "@noverax/courier"',
+      from: "@noverax/courier/client",
+      importLine: 'import type { CallOptions, WithOptions } from "@noverax/courier/client"',
     })
     expect(entry.params.map((p) => p.name)).toContain("onUploadProgress")
   })

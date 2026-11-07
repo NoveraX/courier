@@ -1,4 +1,4 @@
-export const metadata = { title: "useQuery", description: "Fetch data with automatic caching, refetching, and full type inference from your API definitions.", mode: "proxy", updated: "2026-11-05" }
+export const metadata = { title: "useQuery", description: "Fetch data with automatic caching, refetching, and full type inference from your API definitions.", mode: "proxy", updated: "2026-11-07" }
 
 ## Signature
 
@@ -148,10 +148,10 @@ Unlike flat key formats, hierarchical keys let you invalidate all queries for a 
 
 The `error` property is typed as `Error`, as TanStack Query types it, because not every failure is an HTTP one. It is an `HTTPError` for an error answer, a `NetworkError` for a call that got no answer, a `TimeoutError` for one whose time ran out, a `ValidationError` when variables or the answer fail their schema, a `ConfigurationError` when the client is set up wrongly, the reason a call was cancelled with through your own signal, or whatever a `select` threw. The same holds for `useSuspenseQuery`, `useInfiniteQuery`, `useMutation` and `useComputedQuery`. Use `isHTTPError` to check if it's an HTTP error with status and response details, and `isNetworkError`, `isTimeoutError`, `isValidationError` or `isConfigurationError` for the others:
 
-```ts title="components/user-list.tsx"
+```ts title="components/user-list.tsx" side="page"
 "use client"
 
-import { isHTTPError } from "@noverax/courier"
+import { isHTTPError } from "@noverax/courier/client"
 import { q } from "@/lib/query"
 
 export function UserList() {

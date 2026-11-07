@@ -2,7 +2,7 @@ export const metadata = { title: "createCaller", description: "Factory function 
 
 ## Import
 
-```ts
+```ts root="the root's caller is the server's, as the text below says"
 import { createCaller } from "@noverax/courier"
 ```
 
@@ -13,7 +13,7 @@ import { createCaller } from "@noverax/courier"
 `createCaller` takes your API definition and optional defaults, returning a `TypedClient`. Direct mode calls the backend directly without going through a proxy.
 
 ```ts
-import type { CallerDefaults, TypedClient } from "@noverax/courier"
+import type { CallerDefaults, TypedClient } from "@noverax/courier/client"
 import type { DefinedApi } from "@noverax/courier/define"
 
 declare function createCaller<TApi extends DefinedApi>(
@@ -78,8 +78,8 @@ type HttpResponse<T> = {
 
 ## Basic Usage
 
-```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export const caller = createCaller(api, {
@@ -107,8 +107,8 @@ type Context = {
 }
 ```
 
-```ts title="app/api/profile/route.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="app/api/profile/route.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api"
 
 export async function GET(req: Request) {

@@ -75,9 +75,9 @@ import { api } from "@/api"
 export const server = createServerCaller(api)
 ```
 
-```ts title="SvelteKit 2.20+ — src/hooks.server.ts"
+```ts title="SvelteKit 2.20+ — src/hooks.server.ts" side="server"
 import { getRequestEvent } from "$app/server"
-import { registerRequestContext } from "@noverax/courier"
+import { registerRequestContext } from "@noverax/courier/server"
 import { svelteKitRequestContext } from "@noverax/courier-sveltekit"
 
 registerRequestContext(svelteKitRequestContext(getRequestEvent))
@@ -132,8 +132,8 @@ app.use(requestContext())
 app.all("*", createRequestHandler({ build }))
 ```
 
-```tsx title="SolidStart 1 and 2 — src/entry-server.tsx"
-import { registerRequestContext } from "@noverax/courier"
+```tsx title="SolidStart 1 and 2 — src/entry-server.tsx" side="server"
+import { registerRequestContext } from "@noverax/courier/server"
 import { solidStartRequestContext } from "@noverax/courier-solid"
 import { getRequestEvent } from "solid-js/web"
 
@@ -203,8 +203,8 @@ export const api = defineApi({
 
 A page whose writes come later — from the browser, or while it renders — can ask for the token as it is served, as Django's `ensure_csrf_cookie` does. `ensureCsrfToken(api)` asks once, as a write would, where the request does not carry the token, and the token reaches the browser with the response being prepared:
 
-```ts title="server.ts"
-import { ensureCsrfToken } from "@noverax/courier"
+```ts title="server.ts" side="server"
+import { ensureCsrfToken } from "@noverax/courier/server"
 import { api } from "./api"
 
 app.get("/account", async (_req, res) => {

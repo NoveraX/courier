@@ -1,4 +1,4 @@
-export const metadata = { title: "Uploads Through the Proxy", description: "How the proxy route holds an upload on its way to your backend — in memory, on disk, or sent on as it arrives — and what it takes of one: its parts, their headers and the forms it refuses.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "Uploads Through the Proxy", description: "How the proxy route holds an upload on its way to your backend — in memory, on disk, or sent on as it arrives — and what it takes of one: its parts, their headers and the forms it refuses.", mode: "proxy", updated: "2026-11-08" }
 
 An upload in proxy mode travels twice, from the browser to the proxy route and from the proxy to your backend. This page is about the proxy's part: where it keeps the upload meanwhile, how it sends one on as it arrives, and what it takes of one. The client's side — the call, its progress and its limits — is on [File Upload](/docs/advanced/upload).
 
@@ -22,7 +22,7 @@ Every upload the process keeps shares 64 MB in memory (`totalUploadMemoryBytes`)
 
 With `uploadMode: "stream"` the proxy keeps nothing of an upload. It reads the call's options, which the client writes first, runs the call, and sends the rest to your backend as it arrives: a file's bytes pass through as the backend reads them, and the browser's upload goes no faster than that. A 100 MB upload holds a few megabytes of the proxy's memory, however slowly the backend reads, and nothing is written to disk. It suits an endpoint that only hands the upload on, on an edge runtime as under Node.
 
-The call's variables are then not a `FormData` but a `StreamedUpload`: a `ReadableStream` of the multipart body your backend receives, with its content type, boundary included, in `type`. `isStreamedUpload(variables)`, from `@noverax/courier`, tells it apart. So:
+The call's variables are then not a `FormData` but a `StreamedUpload`: a `ReadableStream` of the multipart body your backend receives, with its content type, boundary included, in `type`. `isStreamedUpload(variables)`, from `@noverax/courier/server`, tells it apart. So:
 
 - a schema for the endpoint's variables, a middleware or a closure sees a stream, not fields, and one that reads it reads it in your backend's place;
 - the form a record goes as starts with its source's `defaultBody`, the record's fields over it, as a direct call merges them — unless the endpoint's closure names its own body, which takes none;

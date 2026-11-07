@@ -1,4 +1,4 @@
-export const metadata = { title: "SvelteKit", description: "Serve Courier's proxy from a SvelteKit endpoint, with @noverax/courier-sveltekit.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "SvelteKit", description: "Serve Courier's proxy from a SvelteKit endpoint, with @noverax/courier-sveltekit.", mode: "proxy", updated: "2026-11-07" }
 
 `@noverax/courier-sveltekit` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -18,9 +18,9 @@ npm install @noverax/courier-sveltekit @noverax/courier @sveltejs/kit
 
 ## Usage
 
-```ts
+```ts side="server"
 // src/hooks.server.ts
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "$lib/api"
 
 registerSources(sources)
@@ -65,8 +65,8 @@ export default defineConfig({ plugins: [sveltekit(), courierRoutes()] })
 
 Pair with `createProxyCaller` on the client, given those routes, in a module that registers the config, so they are typed from it — see [Exposing Endpoints](/docs/proxy-mode/expose):
 
-```ts title="src/lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="src/lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 import type config from "../../courier.config"
@@ -90,9 +90,9 @@ A project that takes `courier.routes.ts` moves to the plugin with `npx @noverax/
 
 An API that keeps a `session` gets the user's session with every call a hook, a `load` function, a form action or an endpoint makes, once the request being served can be found — and a proxy caller in universal code, rendered on the server, reaches the proxy in process with it:
 
-```ts title="src/hooks.server.ts — SvelteKit 2.20 and later"
+```ts title="src/hooks.server.ts — SvelteKit 2.20 and later" side="server"
 import { getRequestEvent } from "$app/server"
-import { registerRequestContext, registerSources } from "@noverax/courier"
+import { registerRequestContext, registerSources } from "@noverax/courier/server"
 import { svelteKitRequestContext } from "@noverax/courier-sveltekit"
 import { sources } from "$lib/api"
 

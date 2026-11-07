@@ -1,4 +1,4 @@
-export const metadata = { title: "Test Client", description: "In-memory test client with mock support and request history -- no real HTTP calls.", mode: "direct", updated: "2026-10-05" }
+export const metadata = { title: "Test Client", description: "In-memory test client with mock support and request history -- no real HTTP calls.", mode: "direct", updated: "2026-11-07" }
 
 ## Overview
 
@@ -166,8 +166,8 @@ expect(getAllCalls).toHaveLength(2)
 
 Mock a failing endpoint with `.rejects()` and verify your error handling code works:
 
-```ts title="tests/error-handling.test.ts"
-import { isHTTPError } from "@noverax/courier"
+```ts title="tests/error-handling.test.ts" side="server"
+import { isHTTPError } from "@noverax/courier/server"
 
 it("handles 404 errors", async () => {
   mock("users", "getById").rejects(404, { message: "User not found" })

@@ -6,8 +6,8 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 
 It takes the routes of an API: the endpoints a page may call and how the page reaches each, which Courier's plugin for your build gives the page from the endpoints you marked `.expose()` — or which Courier writes into `courier.routes.ts` — see [Exposing Endpoints](/docs/proxy-mode/expose).
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 // createProxyCaller(routes, options?) returns a client typed from the API
@@ -71,8 +71,8 @@ type ProxyCallerOptions = {
 
 A typical setup creates a single caller instance and exports it for use across all client components:
 
-```ts title="lib/caller.ts"
-import { createProxyCaller, isHTTPError } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller, isHTTPError } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api, {
@@ -164,8 +164,8 @@ const user = await caller.users
 
 The `onError` and `onSuccess` callbacks run for every request made by this factory. Use them for cross-cutting concerns like authentication redirects or logging:
 
-```ts title="Global error handling"
-import { createProxyCaller, isHTTPError } from "@noverax/courier"
+```ts title="Global error handling" side="page"
+import { createProxyCaller, isHTTPError } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 const caller = createProxyCaller(routes.api, {
@@ -194,8 +194,8 @@ const caller = createProxyCaller(routes.api, {
 
 By default, HTTP requests are sent to `/api/request`. Override it via `proxyPath.http`:
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api, {
@@ -211,8 +211,8 @@ If you change the proxy URL, make sure your server handler is mounted at the sam
 
 `proxyPath` carries per-transport configuration. SSE has a sensible default; WS does not — you must point it at a WebSocket-capable server explicitly.
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api, {
@@ -234,8 +234,8 @@ Calling a WS endpoint without `proxyPath.ws` throws `ConfigurationError("WS_PATH
 
 The routes say nothing of where the proxy is: that depends on where the page runs, so the page says it. Read it from what your bundler gives each build — the WS server of local development, a staging host — and leave out what stays the default:
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api, {

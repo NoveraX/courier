@@ -18,8 +18,8 @@ A call that was cancelled rejects with an `AbortError` instead, which is no fail
 
 When a request gets an answer with an HTTP error status (400 or above), Courier throws an `HTTPError`. It adds `status`, `headers`, and a typed `data` property containing the parsed response body:
 
-```typescript
-import { CourierError } from "@noverax/courier"
+```typescript side="both"
+import { CourierError } from "@noverax/courier/client"
 
 declare class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
   readonly status: number    // The answer's HTTP status code (400, 404, 500, ...): always 100 to 599
@@ -39,8 +39,8 @@ The `HTTPError<TData>` generic lets you type the error response body. If your ba
 
 Use `isHTTPError()` to narrow an unknown error to `HTTPError`. It works as a TypeScript type guard, giving you access to `status`, `headers`, and `data` inside the if block:
 
-```ts title="lib/api-helpers.ts"
-import { isHTTPError } from "@noverax/courier"
+```ts title="lib/api-helpers.ts" side="both"
+import { isHTTPError } from "@noverax/courier/client"
 
 try {
   const user = await caller.users.getById({ id: "999" })
@@ -65,8 +65,8 @@ try {
 
 In Server Components and Server Actions, use standard try/catch to handle errors from `createCaller`:
 
-```ts title="app/users/[id]/page.tsx"
-import { isHTTPError } from "@noverax/courier"
+```ts title="app/users/[id]/page.tsx" side="server"
+import { isHTTPError } from "@noverax/courier/server"
 import { caller } from "@/lib/caller"
 
 export default async function UserPage({ params }: { params: { id: string } }) {
@@ -102,10 +102,10 @@ async function showUser(id: string) {
 
 When using `createProxyQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
 
-```ts title="components/users.tsx"
+```ts title="components/users.tsx" side="page"
 "use client"
 
-import { isHTTPError } from "@noverax/courier"
+import { isHTTPError } from "@noverax/courier/client"
 import { q } from "@/lib/query"
 
 export function UsersList() {
@@ -147,10 +147,10 @@ export function CreateUserForm() {
 
 For cross-cutting error handling (logging, authentication redirects, toast notifications), define a custom middleware with `defineMiddleware`. This middleware wraps every request in the source and can intercept errors before they reach your components:
 
-```ts title="api/sources.ts"
+```ts title="api/sources.ts" side="both"
 import { defineApi } from "@noverax/courier/define"
 import { defineMiddleware } from "@noverax/courier/middleware"
-import { isHTTPError } from "@noverax/courier"
+import { isHTTPError } from "@noverax/courier/client"
 import { users } from "./users"
 import { posts } from "./posts"
 

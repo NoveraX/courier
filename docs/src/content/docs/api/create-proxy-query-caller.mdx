@@ -1,4 +1,4 @@
-export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "createProxyQueryCaller", description: "Creates a proxy-mode React Query client with dot-notation hooks for every endpoint group, routed through the server adapter.", mode: "proxy", updated: "2026-11-08" }
 
 ## Import
 
@@ -15,7 +15,7 @@ import { createProxyQueryCaller } from "@noverax/courier-react"
 Accepts the routes of an API — the endpoints a page may call and how it reaches each, as Courier's plugin for your build gives them to the page from the endpoints marked `.expose()` — and `ProxyCallerOptions`, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group, typed from the API the routes were read from, for the endpoints they name alone.
 
 ```ts
-import type { ProxyCallerOptions } from "@noverax/courier"
+import type { ProxyCallerOptions } from "@noverax/courier/client"
 import type { CourierRoutes, DefinedApi, RoutedApi, RouteShape } from "@noverax/courier/define"
 import type { QueryCallerClient } from "@noverax/courier-react"
 
@@ -42,7 +42,7 @@ type QueryGroupClient<G> = {
 }
 ```
 
-A hook's error is typed `Error`, as TanStack Query types it, because not every failure is an HTTP one: narrow it with `isHTTPError`, `isValidationError` or `isConfigurationError` from `@noverax/courier`. See [useQuery — Error handling](/docs/react-query/use-query#error-handling).
+A hook's error is typed `Error`, as TanStack Query types it, because not every failure is an HTTP one: narrow it with `isHTTPError`, `isValidationError` or `isConfigurationError` from `@noverax/courier/client`. See [useQuery — Error handling](/docs/react-query/use-query#error-handling).
 
 ## Setup
 

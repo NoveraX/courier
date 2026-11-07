@@ -125,10 +125,10 @@ TanStack Query already cancels a query's request once its variables change and n
 
 A cancelled call is no failure the user needs to hear about:
 
-```tsx title="components/search-users.tsx"
+```tsx title="components/search-users.tsx" side="page"
 "use client"
 
-import { isAbortError } from "@noverax/courier"
+import { isAbortError } from "@noverax/courier/client"
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
@@ -161,10 +161,10 @@ export function SearchUsers() {
 
 Pass a `signal` with the call. It works on any call, alongside both of the above:
 
-```tsx title="components/cancellable-report.tsx"
+```tsx title="components/cancellable-report.tsx" side="page"
 "use client"
 
-import { isAbortError } from "@noverax/courier"
+import { isAbortError } from "@noverax/courier/client"
 import { useEffect, useRef } from "react"
 
 import { caller } from "@/lib/caller"

@@ -51,10 +51,10 @@ export const sources = { myApi: api }
 
 You need a backend server to host the Courier proxy route. Here is an example using Express:
 
-```ts title="server/index.ts"
+```ts title="server/index.ts" side="server"
 import express from "express"
 import cors from "cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "../shared/sources"
 

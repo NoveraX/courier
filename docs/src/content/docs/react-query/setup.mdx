@@ -1,4 +1,4 @@
-export const metadata = { title: "React Query Setup", description: "Integrate Courier with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "React Query Setup", description: "Integrate Courier with @tanstack/react-query for automatic caching, refetching, and type-safe hooks.", mode: "proxy", updated: "2026-11-07" }
 
 ## Overview
 
@@ -92,9 +92,9 @@ Keep the query caller in one file. This ensures all components share the same cl
 
 `createProxyQueryCaller` accepts optional options to configure the underlying proxy caller. They apply to every request:
 
-```ts title="lib/query.ts"
+```ts title="lib/query.ts" side="page"
 // lib/query.ts
-import { isHTTPError } from "@noverax/courier"
+import { isHTTPError } from "@noverax/courier/client"
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import { routes } from "@noverax/courier/routes"
 

@@ -1,4 +1,4 @@
-export const metadata = { title: "Astro", description: "Serve Courier's proxy from an Astro API route rendered on demand, with @noverax/courier-astro.", mode: "proxy", updated: "2026-11-04" }
+export const metadata = { title: "Astro", description: "Serve Courier's proxy from an Astro API route rendered on demand, with @noverax/courier-astro.", mode: "proxy", updated: "2026-11-07" }
 
 `@noverax/courier-astro` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -21,10 +21,10 @@ The proxy answers each call as it arrives, so its route renders on demand, and t
 
 ## Usage
 
-```ts
+```ts side="server"
 // src/middleware.ts
 import { defineMiddleware } from "astro:middleware"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { sources } from "./api"
 
 registerSources(sources)
@@ -84,8 +84,8 @@ export default defineConfig({ integrations: [courierRoutesIntegration()] })
 
 Pair with `createProxyCaller` on the client, given those routes, in a module that registers the config, so they are typed from it — see [Exposing Endpoints](/docs/proxy-mode/expose):
 
-```ts title="src/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="src/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 import type config from "../courier.config"

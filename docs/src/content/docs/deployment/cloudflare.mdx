@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Cloudflare Workers",
   description: "Deploy Courier on Cloudflare Workers — SSE with 100s idle timeout, heartbeat tuning, and WebSocket via Durable Objects.",
-  updated: "2026-10-05",
+  updated: "2026-11-07",
 }
 
 ## Overview
@@ -20,9 +20,9 @@ Courier SSE works on Workers because it uses the Web Standard `fetch` + `Readabl
 
 ### Hono on Workers
 
-```ts title="src/index.ts"
+```ts title="src/index.ts" side="server"
 import { Hono } from "hono"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler, courierSSEHandler } from "@noverax/courier-hono"
 import { sources } from "./api/sources"
 

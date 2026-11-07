@@ -1,8 +1,14 @@
-export const metadata = { title: "redact", description: "Cut every credential out of a text, headers, an error or data before it is logged or sent elsewhere — the rules Courier's own log and Studio use.", mode: "both", updated: "2026-11-08" }
+export const metadata = { title: "redact", description: "Cut every credential out of a text, headers, an error or data before it is logged or sent elsewhere — the rules Courier's own log and Studio use.", mode: "both", updated: "2026-11-11" }
 
 ## Import
 
-```ts
+```ts side="server"
+import { redact } from "@noverax/courier/server"
+```
+
+A server's code takes `redact` from `@noverax/courier/server`, with the rest of what a server runs. `@noverax/courier/client` leaves it out: no call of a page needs its rules for what a credential looks like, and a bundler that keeps the exports any page of an app uses — Next.js's Turbopack — would load them on every page that imports the client's entry. A page that cuts what it sends elsewhere takes `redact` from the root:
+
+```ts side="page" root="@noverax/courier/client leaves redact out, so a page takes it from the root"
 import { redact } from "@noverax/courier"
 ```
 
@@ -28,8 +34,8 @@ declare function redact(value: unknown): unknown
 
 A name reads its value alike wherever the two stand — a parameter of an address, a field of a record, a pair in a text or a body, a header — so a call's variables lose whatever the address made of them loses by its names. A name that says its value is a credential hides whatever it is given: a one-time password's few digits, a session's `sid`, a signature's `sig`. `key` alone, which names a sort key or a cache key as often as an API's, hides only a value that reads as a credential: `key: "id"` stays, `key: 123456` does not. An address cuts one thing more, a value that reads as a token under a name that says nothing, `?id=` or `?t=`, as a credential travels in one under any name; a record keeps such a value, an id or a trace id, as a pair in a text does.
 
-```ts
-import { redact } from "@noverax/courier"
+```ts side="server"
+import { redact } from "@noverax/courier/server"
 
 redact('Headers.set: "Bearer t0k3n\r\nX-Injected: 1" is an invalid header value.')
 // → 'Headers.set: "[redacted]" is an invalid header value.'

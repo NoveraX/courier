@@ -273,8 +273,8 @@ The stages run where the call is made — on the server for a browser's call thr
 
 An API that wraps each answer — `{ success: true, data }`, or `{ success: false, error }` — is unwrapped where its endpoints are described. The envelope's schema checks the answer, and one stage hands on the data or fails the call with an `HTTPError` that carries the envelope:
 
-```ts
-import { HTTPError } from "@noverax/courier"
+```ts side="both"
+import { HTTPError } from "@noverax/courier/client"
 import { type AnswerHead, courier } from "@noverax/courier/define"
 import { z } from "zod"
 
@@ -354,19 +354,23 @@ export type Sources = typeof sources
 An API holds endpoints of its own beside its groups — a health check, its root, anything no group is about — and the client calls them on itself:
 
 ```ts title="api/sources.ts"
-import { createCaller } from "@noverax/courier"
 import { courier, defineApi } from "@noverax/courier/define"
 import { users } from "./users"
 
 const { endpoint } = courier()
 
-const api = defineApi({
+export const api = defineApi({
   baseURL: process.env.API_URL!,
   endpoints: {
     health: endpoint.get("health"),
   },
   groups: { users },
 })
+```
+
+```ts title="lib/caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
+import { api } from "@/api/sources"
 
 const caller = createCaller(api)
 await caller.health()

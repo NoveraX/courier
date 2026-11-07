@@ -50,10 +50,10 @@ export const sources = { myApi: api }
 
 You need a backend server to host the Courier proxy route. Here is an example using Express:
 
-```ts title="server/index.ts"
+```ts title="server/index.ts" side="server"
 import express from "express"
 import cors from "cors"
-import { registerSources } from "@noverax/courier"
+import { registerSources } from "@noverax/courier/server"
 import { courierHandler } from "@noverax/courier-express"
 import { sources } from "../shared/sources"
 
@@ -102,8 +102,8 @@ export default defineConfig({ plugins: [vue(), courierRoutes()] })
 
 The module that makes the caller registers the config, so the routes are typed from it. The app's tsconfig then compiles your definitions through the config's type: where they read `process.env`, add `"node"` to its `types`, with `@types/node` installed.
 
-```ts title="src/composables/useCaller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="src/composables/useCaller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 import type config from "../../courier.config"

@@ -1,4 +1,4 @@
-export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes.", mode: "both", updated: "2026-11-04" }
+export const metadata = { title: "Request Lifecycle", description: "How requests flow through callers, middleware, and the HTTP client in direct and proxy modes.", mode: "both", updated: "2026-11-07" }
 
 ## Overview
 
@@ -25,8 +25,8 @@ In direct mode, the caller invokes `executeRequest` directly with the `api` obje
 
 ### Direct mode — server-side <ModeBadge mode="direct" />
 
-```ts title="lib/caller.ts"
-import { createCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api/sources"
 
 export const caller = createCaller(api)
@@ -47,8 +47,8 @@ Use direct mode whenever you have access to the `api` object: Server Components,
 
 ### Proxy mode — browser-side <ModeBadge mode="proxy" />
 
-```ts title="lib/caller.ts"
-import { createProxyCaller } from "@noverax/courier"
+```ts title="lib/caller.ts" side="page"
+import { createProxyCaller } from "@noverax/courier/client"
 import { routes } from "@noverax/courier/routes"
 
 export const caller = createProxyCaller(routes.api)
@@ -162,8 +162,8 @@ executeRequest
 
 In direct mode, a caller built with a `Context` forwards the incoming request's headers (useful in Server Components and API routes). A context belongs to one incoming request, so the caller is built for that request:
 
-```ts
-import { createCaller } from "@noverax/courier"
+```ts side="server"
+import { createCaller } from "@noverax/courier/server"
 import { api } from "@/api/sources"
 
 // In a Server Component or API route

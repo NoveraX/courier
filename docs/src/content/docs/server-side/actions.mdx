@@ -1,4 +1,4 @@
-export const metadata = { title: "Server Actions", description: "Type-safe server actions with createAction — automatic header forwarding for Next.js Server Actions.", mode: "direct", updated: "2026-10-07" }
+export const metadata = { title: "Server Actions", description: "Type-safe server actions with createAction — automatic header forwarding for Next.js Server Actions.", mode: "direct", updated: "2026-11-07" }
 
 ## Overview
 
@@ -27,7 +27,7 @@ export async function createUser(data: { name: string; email: string }) {
 ## API signature
 
 ```ts
-import type { InferClient } from "@noverax/courier"
+import type { InferClient } from "@noverax/courier/server"
 import type { Sources } from "@noverax/courier/define"
 import type { ActionDefaults } from "@noverax/courier-next"
 
@@ -110,12 +110,12 @@ type ActionState<T = unknown> = {
 
 You can use it to wrap your server actions with consistent error handling:
 
-```ts title="app/actions/users.ts"
+```ts title="app/actions/users.ts" side="server"
 "use server"
 
 import type { ActionState } from "@noverax/courier-next"
 import { revalidatePath } from "next/cache"
-import { HTTPError } from "@noverax/courier"
+import { HTTPError } from "@noverax/courier/server"
 import { action } from "@/lib/actions"
 
 export async function createUser(

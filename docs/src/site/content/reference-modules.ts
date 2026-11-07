@@ -10,13 +10,21 @@ export interface EntryPoint {
  *
  * @example
  * ```ts
- * ENTRY_POINTS[0].module // "@noverax/courier"
+ * ENTRY_POINTS[0].module // "@noverax/courier/client"
  * ```
  */
 export const ENTRY_POINTS: readonly EntryPoint[] = [
   {
+    module: "@noverax/courier/client",
+    note: "a page's or an app's calls — createCaller, createProxyCaller, createFetch, HTTPError, isHTTPError — and none of the server's part",
+  },
+  {
+    module: "@noverax/courier/server",
+    note: "a server's side — createCaller, createHandler, registerSources, registerRequestContext, ensureCsrfToken",
+  },
+  {
     module: "@noverax/courier",
-    note: "createCaller, createProxyCaller, createHandler, HTTPError, isHTTPError, registerSources",
+    note: "both entries' names, its createCaller the server's caller",
   },
   {
     module: "@noverax/courier/define",

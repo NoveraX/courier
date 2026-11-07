@@ -5,63 +5,62 @@ import { ExampleSection } from "@/site/sandbox/example-section"
 import { MiddlewareDemo, OnErrorDemo } from "./_components"
 
 const middlewareConfigCode = `import { defineApi } from "@noverax/courier/define"
-import { logMiddleware, authMiddleware } from "@noverax/courier/middleware"
+import { authMiddleware, logMiddleware } from "@noverax/courier/middleware"
+import { defineMiddleware, isHTTPError } from "@noverax/courier/server"
 
-const api = defineApi({
+// \`log\` takes each line: here, the docs' request inspector; in an app, your logger
+const middlewareApi = defineApi({
   baseURL: "http://localhost:4000",
   middleware: [
-    logMiddleware(),
-    authMiddleware(() => getAuthToken()),
-    // Custom middleware
-    async (ctx, next) => {
-      console.log(\`[\${ctx.source}] \${ctx.method}\`)
-      const response = await next()
-      return {
-        ...response,
-        data: {
-          ...response.data as Record<string, unknown>,
-          _meta: { timestamp: new Date().toISOString() },
-        },
+    logMiddleware({ logger: log }),
+    // A made-up token: the backend reads none, and the inspector names its header
+    authMiddleware({ getToken: () => "made-up-docs-token" }),
+    // Custom: stamp every answer that is a record
+    defineMiddleware("stamp", "after", (_ctx, response) => ({
+      ...response,
+      data: { ...(response.data as object), _meta: { timestamp: new Date().toISOString() } },
+    })),
+    // Custom: tell a failure, then pass it on
+    defineMiddleware("failures", "wrap", async (ctx, next) => {
+      try {
+        return await next()
+      } catch (error) {
+        log(\`[\${ctx.source}] \${ctx.group}.\${ctx.method} failed: \${isHTTPError(error) ? error.status : "error"}\`)
+        throw error
       }
-    },
+    }),
   ],
   groups: { users, misc },
 })`
 
-const middlewareExampleCode = `// Middleware transforms responses — adds _meta to every response
-const data = await caller.users.getAll()
+const middlewareExampleCode = `// The stamp adds _meta to what the API answered
+const data = await middlewareCaller.users.getAll()
 
-// data now contains:
+// data now holds:
 // {
 //   data: [...users],
 //   total: 3,
-//   _meta: {
-//     timestamp: "2025-01-01T00:00:00.000Z"
-//   }
+//   page: 1,
+//   limit: 10,
+//   _meta: { timestamp: "2026-11-07T12:00:00.000Z" }
 // }`
 
-const onErrorCode = `// Error middleware catches errors before they reach the client
-// Useful for server-side logging, monitoring, error tracking
-
-async (ctx, next) => {
+const onErrorCode = `// The failures link tells a failure, then passes it on to the caller
+defineMiddleware("failures", "wrap", async (ctx, next) => {
   try {
     return await next()
   } catch (error) {
-    console.error(\`[\${ctx.source}] \${ctx.method}\`, error)
-    throw error // re-throw to let the caller handle it
+    log(\`[\${ctx.source}] \${ctx.group}.\${ctx.method} failed: \${isHTTPError(error) ? error.status : "error"}\`)
+    throw error // the caller still gets the HTTPError
   }
-}`
+})`
 
-const logCode = `// Built-in logMiddleware logs every request
+const logCode = `// The built-in log middleware: one line a call, with its status and time
 import { logMiddleware } from "@noverax/courier/middleware"
 
-const api = defineApi({
-  baseURL: "...",
-  middleware: [logMiddleware()],
-  groups: { ... },
-})
+logMiddleware({ logger: (line) => log(line) })
 
-// Logs: [courier] api users:getAll 200 45ms`
+// middlewareApi:users:getAll → 200 (5ms)`
 
 export const metadata = exampleMetadata("middleware")
 
@@ -70,19 +69,20 @@ export default function MiddlewareExamplesPage() {
     <ExamplePage name="middleware">
       <ExampleSection
         title="Middleware Configuration"
-        description="Middleware functions are defined on the source. They run in order for every request."
+        description="Middleware functions are defined on the source. They run in order for every request, on the server: for a call through the proxy route as for one made on the server."
         code={middlewareConfigCode}
         learnMore={{ href: "/docs/middleware/overview", label: "Middleware docs" }}
       >
         <p className="m-0 text-body text-fg-muted">
-          Middleware receives a context object and a next function. Call next() to continue the
-          chain and get the response. You can modify both the request context and the response.
+          This is the chain the sandboxes below call through. Under each, its requests show the
+          chain link by link — each with its phase and the time it took, the header the auth link
+          added, by name alone — and the lines the chain logged.
         </p>
       </ExampleSection>
 
       <ExampleSection
         title="Response Transformation"
-        description="Middleware can transform responses — for example, adding metadata to every response."
+        description="Middleware can transform responses: the stamp adds _meta to every answer that is a record."
         code={middlewareExampleCode}
       >
         <MiddlewareDemo />
@@ -90,7 +90,7 @@ export default function MiddlewareExamplesPage() {
 
       <ExampleSection
         title="Error Handling"
-        description="Wrap next() in try/catch to handle errors. Useful for logging and monitoring."
+        description="Wrap next() in try/catch to handle errors: the failures link tells the failure, then passes it on, and the caller still catches the HTTPError."
         code={onErrorCode}
       >
         <OnErrorDemo />
@@ -102,8 +102,10 @@ export default function MiddlewareExamplesPage() {
         code={logCode}
       >
         <p className="m-0 text-body text-fg-muted">
-          Check your server terminal after running the demos above — logMiddleware logs every
-          request with source, endpoint, status, and duration.
+          logMiddleware writes one line a call: its source, group and endpoint, its status and how
+          long it took. Here its logger hands each line to the request inspector — under each
+          sandbox above, beside the call it is about — rather than to the server&apos;s own log,
+          which a visitor cannot read.
         </p>
       </ExampleSection>
     </ExamplePage>

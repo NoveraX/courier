@@ -1,10 +1,10 @@
 import { defineApi } from "@noverax/courier/define"
-import { logMiddleware } from "@noverax/courier/middleware"
 
 import { VISITOR_ADDRESS_HEADER } from "../../server/visitor-address"
 import { VISITOR_COOKIE } from "../../server/visitor-cookie"
 import { echo } from "./echo"
 import { files } from "./files"
+import { MIDDLEWARE_CHAIN } from "./middleware-chain"
 import { misc } from "./misc"
 import { posts } from "./posts"
 import { users } from "./users"
@@ -58,12 +58,14 @@ export const encodedApi = defineApi({
 
 // --- Middleware demo source ---
 
+/* The chain the middleware page shows, link by link, as it runs: its log lines go to the request
+   inspector, so no visitor's call writes to the server's own log. */
 export const middlewareApi = defineApi({
   baseURL: API_URL,
   expose: true,
   session: visitorSession,
   forward: visitorAddress,
-  middleware: [logMiddleware()],
+  middleware: MIDDLEWARE_CHAIN,
   groups: { users, misc },
 })
 

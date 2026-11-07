@@ -25,21 +25,40 @@ test("answers each error a page asks for, caught as an HTTPError", async ({ page
   await expect(guard).toContainText('"isHttpError": true')
 })
 
-test("runs the middleware source's calls, its error caught past the middleware", async ({
+test("runs the middleware source's chain link by link, its error caught past it", async ({
   page,
+  context,
 }) => {
+  const timings = proxyTimings(page)
   await page.goto("/docs/examples/middleware")
+  await expect(page.getByText("Check your server terminal")).toHaveCount(0)
   const users = sandbox(page, 'middlewareQ.users.useQuery("getAll")')
   const listed = answerTo(page, "middlewareApi.users.getAll")
   await users.getByRole("button", { name: "Fetch users" }).click()
   expect((await listed).status()).toBe(200)
   await expect(users).toContainText("Alice Johnson")
+  await expect(users).toContainText('"_meta"')
+  const chain = newestRequest(inspectorOf(users)).getByRole("list").filter({ hasText: "stamp" })
+  await expect(chain.getByRole("listitem")).toHaveText([
+    /^log · wrap · /,
+    /^auth · wrap · .* · added authorization$/,
+    /^stamp · after · /,
+    /^failures · wrap · /,
+  ])
+  await expect(inspectorOf(users)).toContainText(/middlewareApi:users:getAll → 200 \(\d+ms\)/)
 
   const failing = sandbox(page, "middlewareCaller.misc.error({ code: 500 })")
   const failed = answerTo(page, "middlewareApi.misc.error")
   await failing.getByRole("button", { name: "Trigger a 500" }).click()
   expect((await failed).status()).toBe(500)
   await expect(failing).toContainText("Caught here, after the server's middleware ran")
+  const told = newestRequest(inspectorOf(failing))
+  await expect(told).toContainText("[middlewareApi] misc.error failed: 500")
+  await expect(told).toContainText("GET /error/500 → 500")
+  await expectNoSecrets(page, context, timings)
+  for (const said of [...timings, ...(await inspectorOf(users).allTextContents())]) {
+    expect(said).not.toContain("made-up-docs-token")
+  }
 })
 
 test("cancels a slow call, shares three reads, and cancels a call with the next", async ({

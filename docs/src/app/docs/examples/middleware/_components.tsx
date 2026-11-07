@@ -5,6 +5,7 @@ import { useState } from "react"
 
 import { middlewareCaller } from "@/lib/caller"
 import { middlewareQ } from "@/lib/query"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -20,6 +21,7 @@ export function MiddlewareDemo() {
         <RunButton loading={isFetching} label="Fetch users" onClick={() => void refetch()} />
       }
       result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["middlewareApi.users.getAll"]} />}
     />
   )
 }
@@ -69,6 +71,7 @@ export function OnErrorDemo() {
           pending={loading}
         />
       }
+      inspector={<RequestInspector calls={["middlewareApi.misc.error"]} />}
     />
   )
 }

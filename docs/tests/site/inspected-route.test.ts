@@ -12,6 +12,7 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
+import { DEMO_TOKEN } from "@/api/middleware-chain"
 import { EXAMPLES_PROXY } from "@/app/api/request/examples-proxy"
 import { inspectedRoute } from "@/app/api/request/inspected-route"
 import { traceOfTiming } from "@/site/inspector/seen-trace"
@@ -154,10 +155,29 @@ describe("an answer of the inspected route", () => {
     expectNoSecrets(header)
   })
 
-  it("tells the chain the call ran through, link by link", async () => {
-    const { trace } = traceIn(await call("middlewareApi.users.getAll", envelope({})))
-    expect(trace?.chain).toEqual([expect.objectContaining({ name: "log", phase: "wrap" })])
+  it("tells the chain the call ran through, link by link, and what it logged", async () => {
+    const { header, trace } = traceIn(await call("middlewareApi.users.getAll", envelope({})))
+    expect(trace?.chain.map((link) => [link.name, link.phase])).toEqual([
+      ["log", "wrap"],
+      ["auth", "wrap"],
+      ["stamp", "after"],
+      ["failures", "wrap"],
+    ])
+    expect(trace?.chain[1]?.added).toEqual(["authorization"])
+    expect(trace?.sent).toContain("authorization")
+    expect(trace?.log).toEqual([
+      expect.stringMatching(/^middlewareApi:users:getAll → 200 \(\d+ms\)$/),
+    ])
     expect(trace?.attempts[0]).toMatchObject({ method: "GET", target: "/users", outcome: "200" })
+    expect(header).not.toContain(DEMO_TOKEN)
+  })
+
+  it("tells what the chain logged of a call that failed", async () => {
+    const { trace } = traceIn(await call("middlewareApi.misc.error", envelope({ code: 500 })))
+    expect(trace?.log).toEqual([
+      "[middlewareApi] misc.error failed: 500",
+      expect.stringMatching(/^middlewareApi:misc:error → 500 \(\d+ms\)$/),
+    ])
   })
 
   it("tells each attempt of a call retried on the server, and one that ran out of time", async () => {

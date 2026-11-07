@@ -46,6 +46,26 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
       "default": "./lib/index.js"
+    },
+    "./react": {
+      "types": "./lib/react.d.ts",
+      "import": "./lib/react.js",
+      "default": "./lib/react.js"
+    },
+    "./solid": {
+      "types": "./lib/solid.d.ts",
+      "import": "./lib/solid.js",
+      "default": "./lib/solid.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "./lib/react.d.ts"
+      ],
+      "solid": [
+        "./lib/solid.d.ts"
+      ]
     }
   },
   "files": [
@@ -62,7 +82,17 @@
     "access": "public"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.4.0"
+    "@noverax/courier": "^0.4.0",
+    "@tanstack/react-start": ">=1.169.0",
+    "@tanstack/solid-start": ">=1.169.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-start": {
+      "optional": true
+    },
+    "@tanstack/solid-start": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@noverax/courier": "*"

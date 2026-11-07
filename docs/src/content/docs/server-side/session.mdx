@@ -140,6 +140,18 @@ import { getRequestEvent } from "solid-js/web"
 registerRequestContext(solidStartRequestContext(getRequestEvent))
 ```
 
+```ts title="TanStack Start 1 — src/start.ts"
+import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start"
+import { requestContext } from "@noverax/courier-tanstack-start/react"
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [
+    createCsrfMiddleware({ filter: (ctx) => ctx.handlerType === "serverFn" }),
+    createMiddleware().server(requestContext()),
+  ],
+}))
+```
+
 ```ts title="NestJS 10 to 12, Express or Fastify — src/main.ts"
 import { requestContext } from "@noverax/courier-nestjs"
 

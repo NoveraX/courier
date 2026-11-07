@@ -1,6 +1,6 @@
-export const metadata = { title: "TanStack Start", description: "Serve Courier's proxy from TanStack Start's server routes, for React and for Solid, with @noverax/courier-tanstack-start.", mode: "proxy", updated: "2026-11-07" }
+export const metadata = { title: "TanStack Start", description: "Serve Courier's proxy from TanStack Start's server routes and carry the user's session in server functions, loaders and routes, for React and for Solid, with @noverax/courier-tanstack-start.", mode: "proxy", updated: "2026-11-07" }
 
-`@noverax/courier-tanstack-start` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call from two server routes of a TanStack Start app: the calls go to one, reads over `GET` and writes over `POST`, and the streams of server-sent events to the other. It works with TanStack Start for React and for Solid.
+`@noverax/courier-tanstack-start` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call from two server routes of a TanStack Start app: the calls go to one, reads over `GET` and writes over `POST`, and the streams of server-sent events to the other. Every call your server code makes — a server function, a server route, a page while the server renders it — carries the user's session. It works with TanStack Start for React and for Solid.
 
 ## Install
 
@@ -55,3 +55,74 @@ The user's address that a call forwards is the address of the connection the req
 ## Cancelled calls
 
 When the browser cancels a call — an aborted upload, a query it no longer needs, a stream it closes — the proxy stops its own upstream request. TanStack Start's servers end the request's signal when the client leaves, in development and in production alike.
+
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call server code makes for a request. TanStack Start keeps the request it is serving itself, and the entry for your framework finds it: `@noverax/courier-tanstack-start/react`, or `/solid` for Solid.
+
+### In server functions
+
+```ts title="src/api.server.ts"
+import { createServerCaller } from "@noverax/courier-tanstack-start/react"
+
+import { api } from "./api"
+
+export const server = createServerCaller(api)
+```
+
+```ts title="src/users.ts"
+import { createServerFn } from "@tanstack/react-start"
+
+import { server } from "./api.server"
+
+export const getMe = createServerFn().handler(() => server.users.me())
+```
+
+`createServerCaller(api)` registers where to find the request as it is made, so nothing else needs setting up. Keep it where only the server loads it. TanStack Start keeps a `*.server.ts` module out of the browser's code — a build that would ship one fails — and drops a server function's handler from it, with what only the handler imports. A loader is no such place: it runs in the browser too, on every navigation after the first.
+
+`/react` and `/solid` carry TanStack Start's `server-only` marker, so a build whose page takes either stops — under Vite with TanStack Start's own trace of the imports that led there — rather than ship Courier's server code to the browser.
+
+### In code the server renders
+
+A call made through `@noverax/courier/client` — in a loader, or a component the server renders — takes the session while the server renders the page once every request is served with it at hand. Add Courier's request middleware in `src/start.ts`:
+
+```ts title="src/start.ts"
+import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start"
+import { requestContext } from "@noverax/courier-tanstack-start/react"
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [
+    createCsrfMiddleware({ filter: (ctx) => ctx.handlerType === "serverFn" }),
+    createMiddleware().server(requestContext()),
+  ],
+}))
+```
+
+- `requestContext()` is the middleware's server part. The browser loads `src/start.ts` too, and TanStack Start drops what `.server()` is given from the browser's code, Courier's package with it.
+- Keep TanStack Start's own `createCsrfMiddleware` in the list. Without a `src/start.ts`, TanStack Start protects your server functions with it by itself; once the file is there, it adds none of its own.
+
+### The cookies the API sets
+
+The cookies the API sets reach the browser on the response TanStack Start prepares — a page's, a server function's, a server route's, a redirect's and an error's too — merged with the ones your own code sets, one for each name, domain and path. The calls the same request makes after them send the renewed session at once.
+
+A page streams, and its headers leave with its first part. A cookie the API sets after that — for data a loader returns without waiting for it — cannot reach the browser:
+
+- with `requestContext()` in `src/start.ts`, the log says so;
+- without it, the cookie is lost as quietly as one set with TanStack Start's own `setCookie`.
+
+Await in the loader what may renew the session, so the page waits for it. The user's address a call forwards is the connection's, after the chain a local proxy recorded. See [User Sessions](/docs/server-side/session).
+
+## Server functions
+
+A server function is TanStack Start's own typed call from the browser to the server, its input validated with `.inputValidator()`. Call your API from its handler through `createServerCaller`, as above.
+
+Courier adds no wrapper for them. TanStack Start's compiler turns each `createServerFn()` into a call where your module declares it, so a function a package declared for you would not be one.
+
+## TanStack Start for Solid
+
+A Solid app takes the same steps with Solid's packages:
+
+- `@noverax/courier-tanstack-start/solid` in place of `/react`;
+- `createServerFn`, `createMiddleware` and `createCsrfMiddleware` from `@tanstack/solid-start`;
+- `createFileRoute` from `@tanstack/solid-router`;
+- the server entry from `@tanstack/solid-start/server-entry`.

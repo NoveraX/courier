@@ -26,6 +26,7 @@ export function generateRequestId(): string {
 }
 
 /* The hooks and the calls' view of them are lent together: whatever sets a
-   hook has loaded this module, and a page, which loads none of Studio,
-   tells it nothing. */
+   hook has loaded this module. In a page, the view goes to the page's own
+   slot, where Studio's runtime runs in its bundle; a page that runs none
+   tells Studio nothing. */
 provideServerCapability("studio", createStudioReport(studioHooks, generateRequestId));

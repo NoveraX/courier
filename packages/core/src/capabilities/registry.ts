@@ -78,6 +78,22 @@ export function serverCapability<TName extends ServerCapabilityName>(
   return capabilitySlots()[name];
 }
 
+/**
+ * Studio's view of the calls made here, where Studio's runtime attached:
+ * on a server, the slot its runtime fills as it sets its hooks. A page's
+ * bundle takes a stand-in that reads the page's own slot, so a page's
+ * calls reach the hooks Studio's runtime sets in the page.
+ *
+ * @returns Studio's view, or `undefined` where Studio is not attached
+ * @example
+ * ```ts
+ * studioCapability()?.hooks.onProxyClientTiming?.(timing);
+ * ```
+ */
+export function studioCapability(): StudioCapability | undefined {
+  return serverCapability("studio");
+}
+
 /* Every contract's key starts so: another one on the global object is another copy's registry. */
 const KEY_PREFIX = "courier.serverCapabilities.";
 

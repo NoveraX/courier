@@ -1,12 +1,13 @@
 import type { StudioHooks } from "../studio/hooks";
-import { serverCapability } from "./registry";
+import { studioCapability } from "./registry";
 
 /** What a call tells while Studio does not listen: no hook at all. */
 export const NO_HOOKS: StudioHooks = Object.freeze({});
 
 /**
- * The hooks Studio listens on, where a server attached Studio — none in a
- * page, which never has it, so a call there tells nothing.
+ * The hooks Studio listens on, where Studio's runtime attached — a
+ * server's, or a page's whose bundle runs it — and none elsewhere, so a
+ * call there tells nothing.
  *
  * @returns The hooks Studio's runtime set, or none
  * @example
@@ -15,5 +16,5 @@ export const NO_HOOKS: StudioHooks = Object.freeze({});
  * ```
  */
 export function studioHooksHere(): StudioHooks {
-  return serverCapability("studio")?.hooks ?? NO_HOOKS;
+  return studioCapability()?.hooks ?? NO_HOOKS;
 }

@@ -1,5 +1,5 @@
 import type { AgentCall } from "../agent/types";
-import { serverCapability } from "../capabilities/registry";
+import { studioCapability } from "../capabilities/registry";
 import type { StudioCapability } from "../capabilities/studio";
 import { NO_HOOKS } from "../capabilities/studio-hooks";
 import type { Context } from "../http-client/types";
@@ -22,7 +22,7 @@ export type TimingState = {
 /** Whether Studio listens to a call, and how it is told: the server's report, its hooks, the call's id. */
 export type StudioContext = {
   hasStudio: boolean;
-  /** The server's report on the call; absent where nothing attached Studio, a page above all */
+  /** Studio's report on the call; absent where its runtime is not attached */
   report: StudioCapability | undefined;
   requestId: string;
   dt: StudioHooks;
@@ -65,8 +65,8 @@ export interface FailureReport {
 
 /**
  * What a call is measured and told to Studio with: the id its events carry,
- * a new one unless the proxy gave it one, and its timings. Studio is the
- * server's to attach: a page, which runs no Studio, measures nothing.
+ * a new one unless the proxy gave it one, and its timings. Where Studio's
+ * runtime is not attached — a page that runs none — nothing is measured.
  *
  * @param requestId - The id the proxy gave the call, if it did
  * @returns The call's Studio context and timing
@@ -79,7 +79,7 @@ export function callInstruments(requestId: string | undefined): {
   studio: StudioContext;
   timing: TimingState;
 } {
-  const report = serverCapability("studio");
+  const report = studioCapability();
   const timing = { t0: 0, tVarValidation: 0, tRespValidation: 0, tFetch: 0 };
   if (report === undefined || report.hooks.onRequestStart === undefined) {
     return {

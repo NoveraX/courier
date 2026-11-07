@@ -22,10 +22,11 @@ export interface CallAnswer {
 }
 
 /**
- * Studio's view of the calls of the process it is attached to — a server,
- * the one place Studio runs. Studio's own runtime sets the hooks; what a
- * call tells them, and how its values are described to Studio, is built
- * here, so a page, which never has Studio attached, carries none of it.
+ * Studio's view of the calls made where its runtime is attached — a
+ * server, or a page whose bundle runs it. Studio's own runtime sets the
+ * hooks and lends this view with them; what a call tells them, and how its
+ * values are described to Studio, is built here, so a page that runs no
+ * Studio carries none of it.
  */
 export interface StudioCapability {
   /** The hooks Studio listens on, each told of one kind of event as it happens */

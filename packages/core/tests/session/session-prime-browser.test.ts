@@ -13,6 +13,7 @@ import { courier } from "../../src/define/courier";
 import type { CsrfOptions } from "../../src/session/types";
 
 vi.mock("../../src/capabilities/registry", () => import("../../src/browser/capabilities/registry"));
+vi.mock("../../src/studio/singleton", () => import("../../src/browser/studio/singleton"));
 
 const { endpoint } = courier();
 const fetchSpy = vi.fn();
@@ -205,16 +206,20 @@ describe("the request for the token", () => {
     expect(asked).toHaveLength(2);
   });
 
-  it("tells Studio nothing, whatever a script on the page set on its hooks", async () => {
-    const { studioHooks } = await import("../../src/studio");
+  it("tells a script on the page nothing, whatever it sets on the global object's hooks", async () => {
+    /* Studio's runtime in the page's bundle keeps its hooks there; a script reaches the global object alone. */
+    await import("../../src/studio");
+    const HOOKS = Symbol.for("courier.studio.hooks");
+    const planted: Record<string, unknown> = {};
     const events: string[] = [];
-    studioHooks.onRequestStart = (event) => events.push(`start ${event.method}`);
-    studioHooks.onRequestEnd = (event) => events.push(`end ${event.id}`);
+    planted.onRequestStart = (event: { method: string }) => events.push(`start ${event.method}`);
+    planted.onRequestEnd = (event: { id: string }) => events.push(`end ${event.id}`);
+    const before: unknown = Reflect.get(globalThis, HOOKS);
+    Reflect.set(globalThis, HOOKS, planted);
     try {
       await apiWith(SANCTUM).rename({ name: "Ada" });
     } finally {
-      studioHooks.onRequestStart = undefined;
-      studioHooks.onRequestEnd = undefined;
+      Reflect.set(globalThis, HOOKS, before);
     }
 
     expect(events).toEqual([]);

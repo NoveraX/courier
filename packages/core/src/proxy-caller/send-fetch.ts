@@ -1,4 +1,4 @@
-import { serverCapability } from "../capabilities/registry";
+import { studioCapability } from "../capabilities/registry";
 import { isRequestFailure, type RequestFailure } from "../errors";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
@@ -16,7 +16,7 @@ export async function sendFetch(
     onError?: ((error: RequestFailure) => void | Promise<void>) | undefined;
   },
 ): Promise<unknown> {
-  const studio = serverCapability("studio");
+  const studio = studioCapability();
   const instrumented = studio?.proxyUploads(options) ?? options;
   /* A streamed answer is read as it arrives, by one reader: never shared, never kept. */
   const fetchOptions = ctx.stream ? { ...instrumented, coalesce: false } : instrumented;

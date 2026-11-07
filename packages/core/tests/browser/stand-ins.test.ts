@@ -44,6 +44,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/upload-without-progress": "src/browser/utils/upload-without-progress.ts",
       "utils/one-users-call": "src/utils/one-users-call.ts",
       "browser/utils/one-users-call": "src/browser/utils/one-users-call.ts",
+      "studio/singleton": "src/studio/singleton.ts",
+      "browser/studio/singleton": "src/browser/studio/singleton.ts",
     });
   });
 });

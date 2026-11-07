@@ -1,4 +1,4 @@
-import { serverCapability } from "../../capabilities/registry";
+import { studioCapability } from "../../capabilities/registry";
 import type { StreamStatusEvent } from "../../studio/hooks-stream";
 import { byteLength, safeStringify, truncatePreview } from "./message-preview";
 import { streamStatusEvent } from "./stream-status";
@@ -77,7 +77,7 @@ export function beginStream(
   meta: StreamMeta,
   externalRequestId?: string,
 ): StreamInstrumentation | null {
-  const studio = serverCapability("studio");
+  const studio = studioCapability();
   const hooks = studio?.hooks;
   if (studio === undefined || hooks?.onStreamOpen === undefined) return null;
 

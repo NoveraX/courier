@@ -39,24 +39,28 @@ export function proxyTimings(page: Page): string[] {
 }
 
 /**
- * Expect the site's server to have told of each call, and nothing the
- * page's inspectors show — open or not — nor any `Server-Timing` the
- * route answered with, to hold a cookie's value, the visitor's address or
- * the API's own address.
+ * Expect nothing the page's inspectors and server traces show — open or
+ * not — nor any `Server-Timing` the route answered with, to hold a
+ * cookie's value, the visitor's address or the API's own address; and,
+ * given the route's headers, the site's server to have told of each call.
  *
  * @param page - The page
  * @param context - The page's browser context, which holds its cookies
- * @param timings - The headers {@link proxyTimings} kept
+ * @param timings - The headers {@link proxyTimings} kept, on a page whose calls went through the route
  */
 export async function expectNoSecrets(
   page: Page,
   context: BrowserContext,
-  timings: readonly string[]
+  timings?: readonly string[]
 ): Promise<void> {
-  expect(timings.length).toBeGreaterThan(0)
-  for (const timing of timings) expect(timing).toContain("rid;desc=")
-  const shown = await page.getByRole("region", { name: "Requests" }).allTextContents()
-  const said = [...shown, ...timings].join("\n")
+  if (timings !== undefined) {
+    expect(timings.length).toBeGreaterThan(0)
+    for (const timing of timings) expect(timing).toContain("rid;desc=")
+  }
+  const shown = await page
+    .getByRole("region", { name: /^(Requests|The call on the server)$/ })
+    .allTextContents()
+  const said = [...shown, ...(timings ?? [])].join("\n")
   const cookies = (await context.cookies()).map((cookie) => cookie.value)
   const address = DEPLOYED ? [] : [visitorAddress(test.info().workerIndex)]
   for (const secret of [...cookies.filter((value) => value.length >= 8), ...address]) {

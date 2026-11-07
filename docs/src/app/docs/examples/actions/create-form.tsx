@@ -2,6 +2,8 @@
 
 import { useActionState, useId } from "react"
 
+import { RequestInspector } from "@/site/inspector/request-inspector"
+import { ServerTrace } from "@/site/inspector/server-trace"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -44,12 +46,16 @@ export function CreateUserForm() {
         </form>
       }
       result={
-        <ResponseView
-          data={state.success ? state.data : undefined}
-          error={state.error}
-          pending={isPending}
-        />
+        <div className="flex flex-col gap-3.5">
+          <ResponseView
+            data={state.success ? state.data : undefined}
+            error={state.error}
+            pending={isPending}
+          />
+          {state.trace !== undefined && <ServerTrace trace={state.trace} />}
+        </div>
       }
+      inspector={<RequestInspector actions />}
     />
   )
 }

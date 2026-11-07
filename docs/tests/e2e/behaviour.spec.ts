@@ -169,7 +169,9 @@ test("answers a call as data, and as the raw answer with its status", async ({ p
   await expect(passed.getByRole("definition").last()).not.toContainText("keep-alive")
 })
 
-test("shows the typed singleton without calling anything", async ({ page }) => {
+test("shows the typed singleton without calling anything, two readers then sharing one request", async ({
+  page,
+}) => {
   const proxied: string[] = []
   page.on("request", (request) => {
     if (new URL(request.url()).pathname === "/api/request") proxied.push(request.url())
@@ -178,4 +180,12 @@ test("shows the typed singleton without calling anything", async ({ page }) => {
   expect(response?.status()).toBe(200)
   await expect(page.getByRole("heading", { name: "Multiple Instances" })).toBeVisible()
   expect(proxied).toEqual([])
+
+  const shared = sandbox(page, "Two readers, one q")
+  const read = answerTo(page, "api.users.getAll")
+  await shared.getByRole("button", { name: "Show two readers" }).click()
+  expect((await read).status()).toBe(200)
+  await expect(shared.getByText('"total": 3')).toHaveCount(2)
+  await expect(inspectorOf(shared).getByRole("group")).toHaveCount(1)
+  expect(proxied).toHaveLength(1)
 })

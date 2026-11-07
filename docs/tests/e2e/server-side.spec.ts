@@ -8,6 +8,7 @@
  * so it calls the backend on no visitor's budget.
  */
 import { expect, sandbox, test } from "./support/fixtures"
+import { expectNoSecrets, inspectorOf, newestRequest } from "./support/inspector"
 
 test("refuses an example page another site loads as an image, a script, a frame or a fetch, and opens one it links to", async ({
   page,
@@ -26,6 +27,7 @@ test("refuses an example page another site loads as an image, a script, a frame 
 
 test("renders the direct page's answers on the server, with no call from the browser", async ({
   page,
+  context,
 }) => {
   const proxied: string[] = []
   page.on("request", (request) => {
@@ -36,7 +38,18 @@ test("renders the direct page's answers on the server, with no call from the bro
   await expect(sandbox(page, "caller.users.getAll()")).toContainText("Carol Williams")
   await expect(sandbox(page, "caller.users.getById({ id: 1 })")).toContainText("alice@example.com")
   await expect(sandbox(page, "caller.posts.getAll()")).toContainText("Proxy Mode vs Direct Mode")
+  const traced = sandbox(page, "caller.users.getAll()").getByRole("region", {
+    name: "The call on the server",
+  })
+  await expect(traced).toContainText(
+    "on the server, as the page rendered → API (demo): GET /users → 200"
+  )
+  await expect(traced).toContainText("x-visitor-address")
+  await expect(page.getByRole("status").filter({ hasText: "/api/request" })).toContainText(
+    "sent 0 requests"
+  )
   expect(proxied).toEqual([])
+  await expectNoSecrets(page, context)
 })
 
 test("creates a user with a Server Action and deletes it, the list rendered again holding each change", async ({
@@ -54,6 +67,17 @@ test("creates a user with a Server Action and deletes it, the list rendered agai
   await form.getByRole("button", { name: "Create" }).click()
   await expect(form).toContainText("grace@example.com")
   await expect(list).toContainText("Grace Hopper")
+  await expect(form.getByRole("region", { name: "The call on the server" })).toContainText(
+    "in a Server Action → API (demo): POST /users → 201"
+  )
+  await expect(newestRequest(inspectorOf(form))).toContainText(
+    "browser → Server Action (POST /docs/examples/actions)"
+  )
+  const rendered = page
+    .getByRole("region", { name: "The call on the server" })
+    .filter({ hasText: "as the page rendered" })
+  await expect(rendered).toContainText("API (demo): GET /users → 200")
+  await expectNoSecrets(page, context)
   expect(await context.cookies()).toContainEqual(
     expect.objectContaining({ name: "__Host-courier-demo", secure: true, httpOnly: true })
   )

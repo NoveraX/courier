@@ -1,9 +1,10 @@
 import { createAction } from "@noverax/courier-next"
 import { sources } from "@/api"
+import { traced } from "@/site/inspector/server/traced"
+import { ServerTrace } from "@/site/inspector/server-trace"
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
-import { answerOf } from "@/site/sandbox/server-call"
 
 import { CreateUserForm } from "./create-form"
 import { UserList } from "./user-list"
@@ -70,7 +71,7 @@ function UserRow({ user }) {
 export const metadata = exampleMetadata("actions")
 
 export default async function ActionsExamplesPage() {
-  const users = await answerOf(action.users.getAll())
+  const { answer: users, trace } = await traced("render", () => action.users.getAll())
 
   return (
     <ExamplePage name="actions">
@@ -89,7 +90,7 @@ export default async function ActionsExamplesPage() {
 
       <ExampleSection
         title="Create User"
-        description="useActionState connects the form to the server action. Pending state and results are handled automatically."
+        description="useActionState connects the form to the server action. Pending state and results are handled automatically. Below the form: the action's POST, as the browser recorded it, and its call to the API, as the site's server traced it."
         code={formCode}
       >
         <CreateUserForm />
@@ -97,16 +98,19 @@ export default async function ActionsExamplesPage() {
 
       <ExampleSection
         title="User List + Delete"
-        description="Server-fetched list with per-row delete actions. Deleted rows disappear after revalidation."
+        description="Server-fetched list with per-row delete actions. Deleted rows disappear after revalidation: the page renders again on the server, and the call under the list is the one that render made."
         code={deleteCode}
       >
-        {users.error === undefined ? (
-          <UserList users={users.data.data} />
-        ) : (
-          <p role="alert" className="m-0 font-mono text-meta text-err">
-            {users.status} · {users.error}
-          </p>
-        )}
+        <div className="flex flex-col gap-3.5">
+          {users.error === undefined ? (
+            <UserList users={users.data.data} />
+          ) : (
+            <p role="alert" className="m-0 font-mono text-meta text-err">
+              {users.status} · {users.error}
+            </p>
+          )}
+          {trace !== undefined && <ServerTrace trace={trace} />}
+        </div>
       </ExampleSection>
     </ExamplePage>
   )

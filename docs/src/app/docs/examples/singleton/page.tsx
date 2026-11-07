@@ -1,7 +1,20 @@
 import { exampleMetadata } from "@/site/sandbox/example-metadata"
 import { ExamplePage } from "@/site/sandbox/example-page"
 import { ExampleSection } from "@/site/sandbox/example-section"
+import { SharedInstanceDemo } from "./_components"
 import { SINGLETON_SAMPLES } from "./singleton-samples"
+
+const sharedCode = `// lib/query.ts: one instance, made once and imported everywhere
+export const q = createProxyQueryCaller(apiRoutes)
+
+// Two components read the users through it, each on its own
+function Header() {
+  const { data } = q.users.useQuery("getAll")
+}
+function Sidebar() {
+  const { data } = q.users.useQuery("getAll")
+}
+// One request between them: they share the instance, and its cache`
 
 export const metadata = exampleMetadata("singleton")
 
@@ -19,6 +32,14 @@ export default function SingletonExamplesPage() {
           API's group, endpoint, response and variable types. Every call site gets full
           autocompletion and type checking via dot-notation.
         </p>
+      </ExampleSection>
+
+      <ExampleSection
+        title="One Instance, Every Call"
+        description="Components that read the same thing through the one instance share its request: show the two readers, and the requests below hold one."
+        code={sharedCode}
+      >
+        <SharedInstanceDemo />
       </ExampleSection>
 
       <ExampleSection

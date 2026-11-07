@@ -3,12 +3,19 @@
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
+import { RequestInspector } from "@/site/inspector/request-inspector"
+import { duration } from "@/site/inspector/summary"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
 
 interface StreamChunk {
   chunk: string
   index: number
+}
+
+/** A chunk, and when it reached the page, in ms after the call was made. */
+interface ArrivedChunk extends StreamChunk {
+  at: number
 }
 
 function chunkOf(data: string): StreamChunk | null {
@@ -25,7 +32,7 @@ function chunkOf(data: string): StreamChunk | null {
 }
 
 export function StreamDemo() {
-  const [chunks, setChunks] = useState<StreamChunk[]>([])
+  const [chunks, setChunks] = useState<ArrivedChunk[]>([])
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
@@ -34,6 +41,7 @@ export function StreamDemo() {
     setDone(false)
     setError(undefined)
     setLoading(true)
+    const sent = performance.now()
     try {
       const reader = (await caller.misc.with({ stream: true }).stream()).getReader()
       const decoder = new TextDecoder()
@@ -46,7 +54,8 @@ export function StreamDemo() {
           const line = event.trim()
           if (!line.startsWith("data: ") || line === "data: [DONE]") continue
           const chunk = chunkOf(line.slice("data: ".length))
-          if (chunk) setChunks((shown) => [...shown, chunk])
+          const at = performance.now() - sent
+          if (chunk) setChunks((shown) => [...shown, { ...chunk, at }])
         }
       }
       setDone(true)
@@ -62,6 +71,7 @@ export function StreamDemo() {
       controls={
         <RunButton loading={loading} label="Start the stream" onClick={() => void start()} />
       }
+      inspector={<RequestInspector calls={["api.misc.stream"]} />}
       result={
         <div className="flex flex-col gap-3">
           <p className="m-0 font-mono text-meta">
@@ -73,17 +83,29 @@ export function StreamDemo() {
               <span className="text-fg-subtle">{loading ? "streaming…" : "idle"}</span>
             )}
           </p>
-          <div className="flex min-h-10 flex-wrap gap-1.5 rounded-control border border-line bg-bg-subtle p-3">
+          <ol
+            aria-label="Chunks"
+            className="m-0 flex min-h-10 list-none flex-wrap gap-1.5 rounded-control border border-line bg-bg-subtle p-3"
+          >
             {chunks.map((chunk) => (
-              <span
+              <li
                 key={chunk.index}
                 className="inline-flex animate-site-in items-center gap-1.5 rounded-chip bg-raised px-2.5 py-1 text-control text-fg"
               >
                 <span className="font-mono text-[11px] text-fg-subtle">#{chunk.index}</span>
                 {chunk.chunk}
-              </span>
+                <span className="font-mono text-[11px] text-fg-subtle">
+                  +{Math.round(chunk.at)} ms
+                </span>
+              </li>
             ))}
-          </div>
+          </ol>
+          <p className="m-0 text-[11.5px] text-fg-subtle">
+            Each chunk with the time it reached the page after the call was made
+            {chunks.length > 1 &&
+              `: ${duration((chunks.at(-1)?.at ?? 0) - (chunks[0]?.at ?? 0))} from the first to the last`}
+            . This call reads one streamed answer: it does not reconnect.
+          </p>
         </div>
       }
     />

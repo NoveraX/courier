@@ -38,7 +38,7 @@ export default function RawDataExamplesPage() {
 
       <ExampleSection
         title="Raw Data Mode"
-        description="Returns status, headers, and data."
+        description="Returns status, headers, and data. The headers are the API's, as the site's proxy route passed them on: its request below names those the API answered with and those the route answered the browser with, so you see which went through and which stayed behind — a connection's own, as keep-alive."
         code={rawDataCode}
         learnMore={{ href: "/docs/advanced/raw-data", label: "Raw data docs" }}
       >

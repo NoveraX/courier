@@ -12,11 +12,11 @@ const misc = defineGroup({
   },
 })
 
-// Call with stream: true via .with() — returns raw Response instead of parsed JSON
-const response = await caller.misc.with({ stream: true }).stream()
+// Call with stream: true via .with(): the answer's body, unread, instead of parsed JSON
+const stream = await caller.misc.with({ stream: true }).stream()
 
 // Read the stream
-const reader = response.body.getReader()
+const reader = stream.getReader()
 const decoder = new TextDecoder()
 
 while (true) {
@@ -67,7 +67,7 @@ export default function StreamingExamplesPage() {
 
       <ExampleSection
         title="Progressive Rendering"
-        description="Watch chunks arrive in real time. Each chunk appears as the server sends it."
+        description="Watch chunks arrive in real time. Each chunk appears as the server sends it, with the time it reached the page. This call reads one answer, streamed: it does not reconnect, as a channel or a subscription does."
         code={streamConfigCode}
       >
         <StreamDemo />

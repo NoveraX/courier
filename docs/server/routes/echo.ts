@@ -1,9 +1,12 @@
 import { Router } from "express"
 
+import { rawBodyOf } from "../raw-bodies"
+
 /**
  * The encoding example's endpoint: the request as it arrived — its method,
- * its address and query, the type and the body it was sent with — so a
- * page sees what its serializers made of a call.
+ * its address and query, the type and the body it was sent with, as the
+ * parser read it and as the bytes it came as — so a page sees what its
+ * serializers put on the wire.
  *
  * @returns The router, mounted at `/echo`
  * @example
@@ -20,6 +23,7 @@ export function echoRouter(): Router {
       url: req.originalUrl,
       contentType: req.headers["content-type"] ?? null,
       body: req.body ?? null,
+      rawBody: rawBodyOf(req),
       query: req.query,
       rawQuery: query === -1 ? null : req.originalUrl.slice(query + 1),
     })

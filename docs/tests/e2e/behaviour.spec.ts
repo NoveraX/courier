@@ -6,6 +6,7 @@
  * singleton's page, which calls nothing.
  */
 import { answerTo, expect, sandbox, test } from "./support/fixtures"
+import { expectNoSecrets, inspectorOf, newestRequest, proxyTimings } from "./support/inspector"
 
 test("answers each error a page asks for, caught as an HTTPError", async ({ page }) => {
   await page.goto("/docs/examples/errors")
@@ -84,12 +85,24 @@ test("times out a call that answers later than its timeout, and not one that ans
   await expect(timed).toContainText("This response was delayed by 3 seconds")
 })
 
-test("reads a stream chunk by chunk to its end", async ({ page }) => {
+test("reads a stream chunk by chunk to its end, each when it came", async ({ page, context }) => {
+  const timings = proxyTimings(page)
   await page.goto("/docs/examples/streaming")
   const stream = sandbox(page, "caller.misc.with({ stream: true }).stream()")
   await stream.getByRole("button", { name: "Start the stream" }).click()
   await expect(stream).toContainText("complete · 5 chunks")
   await expect(stream).toContainText("#4endpoint!")
+  const times = await stream
+    .getByRole("list", { name: "Chunks" })
+    .getByRole("listitem")
+    .allTextContents()
+  const at = times.map((chunk) => Number(/\+(\d+) ms$/.exec(chunk)?.[1]))
+  expect(at).toHaveLength(5)
+  for (const [index, ms] of at.entries()) {
+    if (index > 0) expect(ms - (at[index - 1] ?? 0)).toBeGreaterThan(250)
+  }
+  await expect(newestRequest(inspectorOf(stream))).toContainText("API (demo): GET /stream → 200")
+  await expectNoSecrets(page, context, timings)
 })
 
 test("answers a call as data, and as the raw answer with its status", async ({ page }) => {
@@ -106,6 +119,10 @@ test("answers a call as data, and as the raw answer with its status", async ({ p
   expect((await answer).status()).toBe(200)
   await expect(raw).toContainText('"status": 200')
   await expect(raw).toContainText("no-store")
+  const passed = newestRequest(inspectorOf(raw))
+  await expect(passed).toContainText("headers the API answered with")
+  await expect(passed).toContainText("keep-alive")
+  await expect(passed.getByRole("definition").last()).not.toContainText("keep-alive")
 })
 
 test("shows the typed singleton without calling anything", async ({ page }) => {

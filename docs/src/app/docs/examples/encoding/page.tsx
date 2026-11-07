@@ -34,20 +34,22 @@ const encodedApi = defineApi({
       Object.fromEntries(new URLSearchParams(str).entries()),
   },
 
-  // Auto-merged into every POST/PUT/PATCH body
+  // Merged into every call's variables: a write's body, a read's query
   defaultBody: { apiVersion: "v2" },
-  // Auto-merged into every GET/DELETE query string
+  // Merged into every call's query string, a write's too
   defaultQueryParams: { format: "json" },
 })`
 
 const bodyEncodingCode = `// Default (api): JSON body
 await caller.echo.send({ name: "John", role: "admin" })
+// POST /echo
 // Content-Type: application/json
-// Body: { "name": "John", "role": "admin" }
+// Body: {"name":"John","role":"admin"}
 
 // Custom (encodedApi): URL-encoded body + defaultBody merged
 await encodedCaller.echo.send({ name: "John", role: "admin" })
-// Content-Type: application/x-www-form-urlencoded
+// POST /echo?format=json
+// Content-Type: application/x-www-form-urlencoded;charset=UTF-8
 // Body: apiVersion=v2&name=John&role=admin`
 
 const searchParamsCode = `// Custom searchParamsSerializer supports arrays
@@ -55,15 +57,17 @@ await encodedCaller.echo.retrieve({
   tags: ["javascript", "react"],
   page: 1,
 })
-// GET /echo?format=json&apiVersion=v2&tags[]=javascript&tags[]=react&page=1`
+// GET /echo?format=json&apiVersion=v2&tags%5B%5D=javascript&tags%5B%5D=react&page=1
+// — tags[]=javascript&tags[]=react, its brackets encoded`
 
-const defaultsCode = `// defaultBody auto-merges into POST body
+const defaultsCode = `// A write: defaultBody in its body, defaultQueryParams in its query
 await encodedCaller.echo.send({ name: "John" })
-// Body includes: apiVersion=v2&name=John
+// POST /echo?format=json
+// Body: apiVersion=v2&name=John
 
-// defaultQueryParams auto-merges into GET query
+// A read: both in its query, as a read's variables are
 await encodedCaller.echo.retrieve({ page: 1 })
-// Query includes: format=json&page=1`
+// GET /echo?format=json&apiVersion=v2&page=1`
 
 export const metadata = exampleMetadata("encoding")
 
@@ -84,7 +88,7 @@ export default function EncodingExamplesPage() {
 
       <ExampleSection
         title="Body Encoding"
-        description="Compare JSON (default) vs URL-encoded body. Both send the same data to the echo endpoint."
+        description="Compare JSON (default) vs URL-encoded body. Both send the same data to the echo endpoint, which answers with the type and the bytes it was sent: rawBody."
         code={bodyEncodingCode}
       >
         <BodyEncodingDemo />
@@ -100,7 +104,7 @@ export default function EncodingExamplesPage() {
 
       <ExampleSection
         title="Default Data & Query Params"
-        description="defaultBody merges into POST body. defaultQueryParams merges into GET query string."
+        description="defaultBody merges into a write's body and a read's query, as a read's variables go; defaultQueryParams into every call's query string. The requests below show each address the site's server asked the API for, and the echo answers with the bytes it got."
         code={defaultsCode}
       >
         <DefaultsDemo />

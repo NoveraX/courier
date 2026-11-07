@@ -4,6 +4,7 @@ import { answerFailures, noSuchRoute } from "./answers"
 import { budgetsFor } from "./budgets"
 import { SandboxStore } from "./data/sandbox-store"
 import { DEMO_LIMITS, type DemoLimits } from "./limits"
+import { keepRawBody } from "./raw-bodies"
 import { type RefusalLog, refusalLog } from "./refusal-log"
 import { echoRouter } from "./routes/echo"
 import { miscRouter } from "./routes/misc"
@@ -65,12 +66,13 @@ export function createDemoApp({
   })
   /* Before a body is read: a call past its budget costs no more than its headers. */
   app.use(budgets.calls)
-  app.use(express.json({ limit: limits.bodyBytes }))
+  app.use(express.json({ limit: limits.bodyBytes, verify: keepRawBody }))
   app.use(
     express.urlencoded({
       extended: true,
       limit: limits.bodyBytes,
       parameterLimit: limits.formFields,
+      verify: keepRawBody,
     })
   )
 

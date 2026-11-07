@@ -46,7 +46,7 @@ export default function UploadExamplesPage() {
     <ExamplePage name="upload">
       <ExampleSection
         title="Simple Upload"
-        description="Single-request file upload. FormData is auto-detected by courier."
+        description="Single-request file upload. FormData is auto-detected by courier, and the site's proxy route sends the file on to the API as it arrives. One past the example's limit is refused by the route itself, which then calls no API."
         code={simpleCode}
         learnMore={{ href: "/docs/advanced/upload", label: "Upload docs" }}
       >

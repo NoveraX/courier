@@ -7,6 +7,8 @@ type EchoResponse = {
   url: string
   contentType: string | null
   body: Record<string, unknown> | null
+  /** The body's bytes as they came, as text: `null` for a call that sent none. */
+  rawBody: string | null
   query: Record<string, unknown>
   rawQuery: string | null
 }

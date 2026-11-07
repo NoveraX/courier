@@ -1,6 +1,7 @@
 "use client"
 
 import { encodedQ, q } from "@/lib/query"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { LabeledResponse } from "@/site/sandbox/labeled-response"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
@@ -45,6 +46,7 @@ export function BodyEncodingDemo() {
           />
         </div>
       }
+      inspector={<RequestInspector calls={["api.echo.send", "encodedApi.echo.send"]} />}
     />
   )
 }
@@ -61,6 +63,7 @@ export function SearchParamsDemo() {
         <RunButton loading={isFetching} label="Fetch with arrays" onClick={() => void refetch()} />
       }
       result={<ResponseView data={data} error={error?.message} pending={isFetching} />}
+      inspector={<RequestInspector calls={["encodedApi.echo.retrieve"]} />}
     />
   )
 }
@@ -102,6 +105,7 @@ export function DefaultsDemo() {
           />
         </div>
       }
+      inspector={<RequestInspector calls={["encodedApi.echo.send", "encodedApi.echo.retrieve"]} />}
     />
   )
 }

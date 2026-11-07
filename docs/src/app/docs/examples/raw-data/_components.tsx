@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
+import { RequestInspector } from "@/site/inspector/request-inspector"
 import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
@@ -26,6 +27,9 @@ function useCall(call: () => Promise<unknown>) {
   return { data, error, loading, run }
 }
 
+/* Both calls go through the proxy route as `users.getAll`: `.raw` asks the route for the answer whole. */
+const USERS = ["api.users.getAll"]
+
 export function NormalFetchDemo() {
   const users = useCall(() => caller.users.getAll())
   return (
@@ -35,6 +39,7 @@ export function NormalFetchDemo() {
         <RunButton loading={users.loading} label="Fetch users" onClick={() => void users.run()} />
       }
       result={<ResponseView data={users.data} error={users.error} pending={users.loading} />}
+      inspector={<RequestInspector calls={USERS} />}
     />
   )
 }
@@ -57,6 +62,7 @@ export function RawFetchDemo() {
       result={
         <ResponseView data={raw.data} status={status} error={raw.error} pending={raw.loading} />
       }
+      inspector={<RequestInspector calls={USERS} />}
     />
   )
 }

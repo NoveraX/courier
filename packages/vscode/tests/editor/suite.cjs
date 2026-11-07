@@ -35,11 +35,22 @@ async function auditMarks(file) {
   return [];
 }
 
+/* The editor offers an extension's snippets only once it has read them, which a window
+   just started may not have done when the suite first asks: an empty list is asked again. */
 async function snippetLabels() {
   const document = await vscode.workspace.openTextDocument({
     language: "typescript",
     content: "courier-",
   });
+  for (let attempt = 0; attempt < 75; attempt++) {
+    const labels = await completionLabels(document);
+    if (labels.length > 0) return labels;
+    await sleep(200);
+  }
+  return [];
+}
+
+async function completionLabels(document) {
   const list = await vscode.commands.executeCommand(
     "vscode.executeCompletionItemProvider",
     document.uri,

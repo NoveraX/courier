@@ -1,4 +1,4 @@
-export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both", updated: "2026-11-08" }
 
 ## Overview
 
@@ -41,7 +41,7 @@ The API specifications Studio imported, by key. Studio writes an entry when it i
 | `groupBy` | `"tag"` \| `"path"` \| `"single"` | How endpoints are grouped: by tag, by the resource their path names, or in no group at all. An endpoint with no tag, or with no segment of its path to group by, sits in the API itself, beside the groups — see [Import an API](/docs/studio/import-api) |
 | `generateTypes`, `generateSchemas` | `boolean` | Whether types and schemas are written |
 | `generateClient` | `"direct"` \| `"proxy"` \| `"both"` \| `"none"` | Which callers are generated: the direct caller in the import's `index.ts`, the proxy caller in `proxy.ts`, which browser code imports |
-| `addAuthMiddleware` | `boolean` | Whether the specification's security scheme becomes middleware |
+| `addAuthMiddleware` | `boolean` | Whether the specification's security scheme becomes middleware, which reads its secret on each call from a variable the environment holds of its own — one `Object.prototype` holds counts as unset — and refuses the call where it is not set |
 | `includeComments` | `boolean` | Whether descriptions become doc comments. Each endpoint keeps its operation's description as `.meta({ description })` either way: an agent's tool describes itself by it, and the OpenAPI written from the definition keeps it |
 | `include`, `exclude` | `{ tags?, paths?, operationIds? }` | The endpoints generated: `include` names the ones kept, then `exclude` the ones left out |
 | `transform` | `(spec) => spec \| void` | Run on a copy of the parsed specification before anything is generated from it |

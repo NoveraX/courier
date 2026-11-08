@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+import { transformSync } from "esbuild";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_OPTIONS, generateCode } from "../src/apis/generator";
 import { parseSpec } from "../src/apis/parser";
@@ -25,6 +27,22 @@ function source(options: Record<string, unknown> = {}): string {
     }).find((f) => f.path.endsWith("source.ts"))?.content ?? ""
   );
 }
+
+/* The reader the source declares, made JavaScript and run where `setup` says: the token it read, or why not. */
+function readWith(setup: string): string {
+  const out = source({ addAuthMiddleware: true });
+  const start = out.indexOf("function requireEnv");
+  const reader = out.slice(start, out.indexOf("\n}\n", start) + 2);
+  const { code } = transformSync(reader, { loader: "ts" });
+  return runInNewContext(
+    `${setup};\n${code}\ntry { requireEnv("PET_TOKEN"); } catch (error) { "refused: " + error.message; }`,
+    {},
+  ) as string;
+}
+
+/* A variable, and a whole process, that code elsewhere in the app's process put on Object.prototype. */
+const PLANTED_TOKEN = `Object.defineProperty(Object.prototype, "PET_TOKEN", { value: "made-up-planted-token", configurable: true })`;
+const PLANTED_PROCESS = `Object.defineProperty(Object.prototype, "process", { value: { env: { PET_TOKEN: "made-up-planted-token" } }, configurable: true })`;
 
 describe("generated authentication", () => {
   it("is off unless asked for", () => {
@@ -56,5 +74,19 @@ describe("generated authentication", () => {
   it("writes the reader only when a header needs it", () => {
     expect(source({ addAuthMiddleware: true })).toContain("function requireEnv");
     expect(source()).not.toContain("function requireEnv");
+  });
+
+  it("sends the environment's own token, and refuses one Object.prototype holds as it refuses none", () => {
+    expect(readWith(`globalThis.process = { env: { PET_TOKEN: "made-up-own-token" } }`)).toBe(
+      "made-up-own-token",
+    );
+    expect(readWith("globalThis.process = { env: {} }")).toMatch(/^refused: PET_TOKEN is not set/);
+    expect(readWith(`${PLANTED_TOKEN}; globalThis.process = { env: {} }`)).toMatch(
+      /^refused: PET_TOKEN is not set/,
+    );
+  });
+
+  it("reads no process the runtime does not own", () => {
+    expect(readWith(PLANTED_PROCESS)).toMatch(/^refused: PET_TOKEN is not set/);
   });
 });

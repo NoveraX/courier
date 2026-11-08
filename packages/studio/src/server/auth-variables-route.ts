@@ -3,7 +3,7 @@
  * sets the variables an import's auth names.
  */
 
-import { isSecretVariableName } from "@noverax/courier/internal";
+import { isSecretVariableName, ownEnvironment } from "@noverax/courier/internal";
 import { isRecord } from "@noverax/courier-cli/devkit";
 
 import { IMPORT_AUTH_LIMITS } from "./import-auth";
@@ -37,7 +37,7 @@ const MAX_NAMES = IMPORT_AUTH_LIMITS.headers + 2;
  */
 export function registerAuthVariablesRoute(
   app: AuthVariablesRouteApp,
-  env: Readonly<Record<string, string | undefined>> = process.env,
+  env: Readonly<Record<string, string | undefined>> = ownEnvironment(),
 ): void {
   app.post("/api/apis/auth-variables", (req, res) => {
     /* Whether a variable is set is the environment's to tell, as its value is. */

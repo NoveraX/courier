@@ -1,4 +1,5 @@
 import { createLogger } from "@noverax/courier";
+import { ownEnvironment } from "@noverax/courier/internal";
 
 const log = createLogger("Studio");
 
@@ -27,7 +28,7 @@ const unknownSettings = new Set<string>();
  * ```
  */
 export function pollsEverywhere(
-  env: Readonly<Record<string, string | undefined>> = process.env,
+  env: Readonly<Record<string, string | undefined>> = ownEnvironment(),
 ): boolean {
   const raw = env.COURIER_WATCH_POLLING;
   if (raw === undefined) return false;

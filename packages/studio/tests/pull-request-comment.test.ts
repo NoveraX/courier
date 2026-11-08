@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { commentOnPullRequest } from "../src/commands/diff/comment-on-pull-request";
 import { postReportComment } from "../src/commands/diff/pull-request-comment";
 import { type PullRequestTarget, pullRequestOf } from "../src/commands/diff/pull-request-target";
 
@@ -350,5 +351,51 @@ describe("the pull request a job runs for", () => {
     expect(pullRequestOf(job)).toBe(
       "GITHUB_EVENT_PATH is not set — --comment posts from a GitHub Actions job",
     );
+  });
+});
+
+describe("the job's environment", () => {
+  /* What a job's step sets, all of it read by the report's post. */
+  const NAMES = [
+    "GITHUB_TOKEN",
+    "GH_TOKEN",
+    "GITHUB_REPOSITORY",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_API_URL",
+    "GITHUB_WORKSPACE",
+  ];
+
+  it("is read as its own: a token, a repository and an API Object.prototype holds post nothing", async () => {
+    const seen: string[] = [];
+    const api = createServer((request, response) => {
+      seen.push(`${request.method} ${request.url}`);
+      response.setHeader("content-type", "application/json");
+      response.end("[]");
+    });
+    await new Promise<void>((done) => api.listen(0, "127.0.0.1", done));
+    const path = join(mkdtempSync(join(tmpdir(), "courier-event-")), "event.json");
+    writeFileSync(path, JSON.stringify({ pull_request: { number: 12 } }));
+    const planted: Record<string, string> = {
+      GITHUB_TOKEN: "made-up-planted-token",
+      GITHUB_REPOSITORY: "acme/shop",
+      GITHUB_EVENT_PATH: path,
+      GITHUB_API_URL: `http://127.0.0.1:${(api.address() as AddressInfo).port}`,
+    };
+    const own = NAMES.filter((name) => Object.hasOwn(process.env, name)).map(
+      (name) => [name, process.env[name]] as const,
+    );
+    for (const name of NAMES) Reflect.deleteProperty(process.env, name);
+    for (const [name, value] of Object.entries(planted)) {
+      Object.defineProperty(Object.prototype, name, { value, configurable: true, writable: true });
+    }
+    try {
+      await commentOnPullRequest(tmpdir(), "made-up report", true);
+    } finally {
+      for (const name of Object.keys(planted)) Reflect.deleteProperty(Object.prototype, name);
+      for (const [name, value] of own) Reflect.set(process.env, name, value);
+      await new Promise((done) => api.close(done));
+    }
+
+    expect(seen).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 import { createLogger } from "@noverax/courier";
+import { ownEnvironment } from "@noverax/courier/internal";
 import { recordStartupIssue } from "../startup-issues";
 
 const log = createLogger("Studio");
@@ -31,7 +32,7 @@ const MAX_BUDGET_MS = 86_400_000;
 export function budgetFromEnv(
   name: string,
   fallbackMs: number,
-  env: Readonly<Record<string, string | undefined>> = process.env,
+  env: Readonly<Record<string, string | undefined>> = ownEnvironment(),
 ): number {
   const raw = env[name]?.trim();
   if (raw === undefined || raw === "") return fallbackMs;

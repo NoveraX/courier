@@ -1,5 +1,5 @@
 import type { CourierImportAuth, CourierSecretValue } from "@noverax/courier/config";
-import { sendableValue } from "@noverax/courier/internal";
+import { ownEnvironment, sendableValue } from "@noverax/courier/internal";
 
 import { IMPORT_AUTH_LIMITS, ImportAuthError } from "./import-auth";
 
@@ -63,7 +63,7 @@ function secretValue(
  */
 export function importAuthHeaders(
   auth: CourierImportAuth | undefined,
-  env: Readonly<Record<string, string | undefined>> = process.env,
+  env: Readonly<Record<string, string | undefined>> = ownEnvironment(),
 ): Record<string, string> {
   if (auth === undefined) return {};
   /* Checked as fetch checks a value, and refused as the auth's own error, by its field. */

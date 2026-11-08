@@ -50,7 +50,7 @@ export function withCourierStudio(
   pluginOptions?: StudioPluginOptions,
 ): (nextConfig: NextConfig) => NextConfig {
   return (nextConfig) => {
-    if (process.env.TURBOPACK) {
+    if (Object.hasOwn(process.env, "TURBOPACK") && process.env.TURBOPACK) {
       hintClientInstrumentation(pluginOptions);
       return nextConfig;
     }

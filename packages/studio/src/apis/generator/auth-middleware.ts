@@ -15,6 +15,10 @@ import { jsLiteral } from "./literals";
  * The reader every generated middleware goes through. Interpolating
  * `process.env.X` sent `Bearer undefined` when the variable was unset, and
  * Vite replaces `process.env` with `{}`, so the value was always missing.
+ * It takes a variable, and the `process` it reads, only where they are the
+ * runtime's own: a name the environment does not have is looked up on
+ * `Object.prototype`, and a token code elsewhere in the app's process put
+ * there would go with every call in place of the refusal.
  */
 const REQUIRE_ENV = [
   "/**",
@@ -27,9 +31,13 @@ const REQUIRE_ENV = [
   "function requireEnv(name: string): string {",
   "  /* Reached through globalThis so this file needs no Node type",
   "     definitions to compile in a project that has none, and typed",
-  "     with no global type a schema of the file could stand for. */",
+  "     with no global type a schema of the file could stand for. A",
+  "     process or a variable Object.prototype holds is none: only the",
+  "     runtime's own environment says what to send. */",
   "  const runtime = globalThis as { process?: { env?: { [name: string]: string | undefined } } };",
-  "  const value = runtime.process?.env?.[name];",
+  "  const owns = (holder: object, key: string) => Object.prototype.hasOwnProperty.call(holder, key);",
+  '  const env = owns(runtime, "process") ? runtime.process?.env : undefined;',
+  '  const value = typeof env === "object" && env !== null && owns(env, name) ? env[name] : undefined;',
   "  if (!value) {",
   "    throw new Error(",
   '      name + " is not set. This client sends it on every request. Set it in the environment" +',

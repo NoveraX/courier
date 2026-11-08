@@ -62,6 +62,9 @@ export function shareFirstRequestOrigin(): (
 
 function share(source: ServerOrigin | undefined): void {
   if (source === undefined) return;
-  process.env[DEV_SERVER_ORIGIN_ENV] ??= source.serverOrigin;
+  /* Set where the environment holds none of its own: one Object.prototype holds is none. */
+  if (!Object.hasOwn(process.env, DEV_SERVER_ORIGIN_ENV)) {
+    process.env[DEV_SERVER_ORIGIN_ENV] = source.serverOrigin;
+  }
   adoptListenOrigin(source.serverOrigin);
 }

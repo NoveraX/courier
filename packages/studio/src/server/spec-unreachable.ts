@@ -1,5 +1,6 @@
 /* The module itself: http.setGlobalProxyFromEnv() replaces its global agent. */
 import https from "node:https";
+import { environmentVariable } from "@noverax/courier/internal";
 import { errnoCode } from "@noverax/courier-cli/devkit";
 import { SpecFetchError } from "./spec-fetch-error";
 import type { SpecProxy } from "./spec-proxy";
@@ -96,7 +97,7 @@ function hintFor(code: string, proxy: SpecProxy | undefined): string {
   if (UNTRUSTED.has(code)) {
     return " Node does not trust the authority that signed its certificate: name that authority's certificate in NODE_EXTRA_CA_CERTS, or start Studio with NODE_USE_SYSTEM_CA=1 to trust the ones this machine trusts.";
   }
-  const proxied = PROXY_VARIABLES.some((name) => process.env[name]);
+  const proxied = PROXY_VARIABLES.some((name) => environmentVariable(name));
   if (proxy !== undefined || !proxied || https.globalAgent.options.proxyEnv !== undefined)
     return "";
   return " A proxy is set in the environment, and Node sends requests through it only when started with NODE_USE_ENV_PROXY=1: start Studio with it to fetch through the proxy, or download the file and import it from disk.";

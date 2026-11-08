@@ -1,5 +1,6 @@
 import { relative } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { ownEnvironment } from "@noverax/courier/internal";
 
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { type CommentOutcome, postReportComment } from "./pull-request-comment";
@@ -34,7 +35,7 @@ export async function commentOnPullRequest(
   root: string,
   markdown: string,
   changed: boolean,
-  env: JobEnvironment = process.env,
+  env: JobEnvironment = ownEnvironment(),
 ): Promise<void> {
   const target = pullRequestOf(env);
   if (typeof target === "string") {

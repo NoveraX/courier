@@ -1,6 +1,11 @@
 import { existsSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import { styleFor, type TerminalStyle, urlWithoutSecrets } from "@noverax/courier/internal";
+import {
+  environmentVariable,
+  styleFor,
+  type TerminalStyle,
+  urlWithoutSecrets,
+} from "@noverax/courier/internal";
 import { closeFormatProcesses, loadProjectEnv } from "@noverax/courier-cli/devkit";
 import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
@@ -151,7 +156,7 @@ export async function runImport(given: string, run: ImportRun): Promise<number> 
   const root = realpathSync(asked);
   loadProjectEnv(root, run.dotenv);
   /* The command says what it did itself; Studio's own info lines would say it twice. */
-  const level = process.env.COURIER_LOG_LEVEL;
+  const level = environmentVariable("COURIER_LOG_LEVEL");
   process.env.COURIER_LOG_LEVEL = level ?? "warn";
   try {
     return await importInto(root, given, run, styleFor(process.stdout));

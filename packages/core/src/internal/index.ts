@@ -116,6 +116,7 @@ export {
   environmentVariable,
   inProduction,
   nodeEnvironment,
+  ownEnvironment,
   writtenOrOwn,
 } from "../utils/environment";
 export { executeRequest } from "../utils/execute";

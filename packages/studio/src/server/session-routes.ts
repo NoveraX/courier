@@ -21,6 +21,7 @@ import {
 } from "./session-body";
 import { buildSession } from "./session-builder";
 import { exportAsHar, exportAsJson, exportAsPostman } from "./session-export";
+import { scrubbedSession } from "./session-file/scrub-secrets";
 import type { SessionEnvironment } from "./session-file/session-environment";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
@@ -105,7 +106,7 @@ export function registerSessionRoutes(
     if ("error" in read) return refuse(res, read);
     answer(res, "Failed to export the session", () => {
       const session = sessions.load(read.id);
-      return session === null ? null : EXPORTERS[read.format](session);
+      return session === null ? null : EXPORTERS[read.format](scrubbedSession(session));
     });
   });
 
@@ -113,6 +114,8 @@ export function registerSessionRoutes(
   app.post("/api/sessions/export-live", (req, res) => {
     const read = readLiveExportBody(req.body);
     if ("error" in read) return refuse(res, read);
-    answer(res, "Failed to export the requests", () => EXPORTERS[read.format](buildSession(read)));
+    answer(res, "Failed to export the requests", () =>
+      EXPORTERS[read.format](scrubbedSession(buildSession(read))),
+    );
   });
 }

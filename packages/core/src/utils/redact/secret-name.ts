@@ -1,3 +1,4 @@
+import { isCredentialHeader } from "../is-credential-header";
 import { isSecretLike } from "./is-secret-like";
 
 /* A name whose last word is one of these holds a credential whatever its value reads like. A
@@ -101,4 +102,24 @@ export function isSecretValue(name: string, value: unknown): boolean {
     !WHITESPACE.test(written) &&
     isSecretLike(written)
   );
+}
+
+/**
+ * Whether a header's value is kept out of sight: a credential header's by
+ * its name alone — `Authorization`, a cookie, a word such as `auth`,
+ * `session` or `token` anywhere in the name — and any other's as a field
+ * of its name reads it, `sid` or `x-otp`.
+ *
+ * @param name - The header's name, in any case
+ * @param value - Its value
+ * @returns `true` when the value is not to be shown
+ * @example
+ * ```ts
+ * isSecretHeader("x-auth-user", "ana"); // → true
+ * isSecretHeader("x-otp", "1234"); // → true
+ * isSecretHeader("accept", "*\/*"); // → false
+ * ```
+ */
+export function isSecretHeader(name: string, value: unknown): boolean {
+  return isCredentialHeader(name) || isSecretValue(name, value);
 }

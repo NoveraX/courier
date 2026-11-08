@@ -1,4 +1,4 @@
-export const metadata = { title: "Session Files", description: "Share what Studio recorded as one file — the requests, their answers and timings, and the environment they ran in, with secrets left out — and open a colleague's in your own Studio.", mode: "both", updated: "2026-10-18" }
+export const metadata = { title: "Session Files", description: "Share what Studio recorded as one file — the requests, their answers and timings, and the environment they ran in, with secrets left out — and open a colleague's in your own Studio.", mode: "both", updated: "2026-11-08" }
 
 A session file is a bug report Studio writes for you: every request on the Timeline with its variables, its answer, its headers and its timing, and the environment it was recorded in — Studio's and Node.js's versions, the platform, the version of each package that bears on a request, and a fingerprint of each API definition. Credentials and values named like secrets are left out, and you look the file over before it is saved. A colleague drops it on their Timeline and sees what you saw, set beside their own environment.
 
@@ -27,8 +27,8 @@ A session saved in **Settings → Session history** keeps the environment it was
 
 ## What is left out
 
-- **Credentials.** The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf` or `api-key` in it is never saved, so no file carries it — see [Studio](/docs/studio/overview).
-- **Values named like secrets.** Every field of the variables or the answer whose name reads as such a header's would — `password`, `accessToken`, `client_secret`, `sessionId` — at any depth, and every such parameter in a request's query string, is replaced with `[redacted]`. Each one is listed before you save, by request and place.
+- **Credentials.** The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf` or `api-key` in it, or names a secret as a field's name would, `sid` or `x-otp`, is never saved, so no file carries it — see [Studio](/docs/studio/overview).
+- **Values named like secrets.** Every value of the variables or the answer, at any depth, and every parameter of a request's query string, that [`redact()`](/docs/api/redact) hides by its name is replaced with `[redacted]`: under a name that says its value is a credential — `password`, `accessToken`, `client_secret`, `sessionId`, `sid`, `otp`, `sig` — whatever it is, and under `key` when it reads as one. Each one is listed before you save, by request and place.
 - **Credentials in texts.** An error's text and its cause, and a request's address, keep their words and lose their credentials — a URL's password and secret parameters, a token after `Bearer`, a provider's key — as everything that leaves [Studio's page](/docs/studio/overview#start-studio) does.
 - **Not a secret under an ordinary name.** A token in a field called `value` or `data` stays in: the list shows what was replaced, and the bodies are yours to look over before you share the file.
 

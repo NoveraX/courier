@@ -1,17 +1,17 @@
-import { REDACTED } from "@noverax/courier/internal";
+import { isSecretValue, REDACTED } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
-import { isSecretName } from "../mcp/without-secrets";
-import type { SavedRequest } from "../session-types";
+import type { SavedRequest, SavedSession } from "../session-types";
 
 /* Deep enough for any body a request carries; what lies deeper is cut, not walked. */
 const DEEPEST = 64;
 
 /**
- * A request as a session file carries it: every body field named like a
- * secret — in its variables and in its answer — and every such parameter of
- * its address's query replaced, each replaced value's place added to
- * `found`: `requests[2].variables.password`, `requests[2].url?token`.
+ * A request as it leaves Studio — in a session file, an export, a recorded
+ * test: every value of its variables and its answer, and of its address's
+ * query, that Courier's one rule for a name and its value hides replaced,
+ * each replaced value's place added to `found`:
+ * `requests[2].variables.password`, `requests[2].url?token`.
  *
  * @param request - The request, credential headers already left out
  * @param at - Its place in the session
@@ -33,6 +33,40 @@ export function scrubbedRequest(request: SavedRequest, at: number, found: string
   };
 }
 
+/**
+ * A session as it is exported, as HAR, for Postman or as JSON: each request
+ * as {@link scrubbedRequest} leaves it, the places not listed.
+ *
+ * @param session - The session, credential headers already left out
+ * @returns The session with its secrets replaced
+ * @example
+ * ```ts
+ * exportAsHar(scrubbedSession(session));
+ * ```
+ */
+export function scrubbedSession(session: SavedSession): SavedSession {
+  return {
+    ...session,
+    requests: session.requests.map((request, at) => scrubbedRequest(request, at, [])),
+  };
+}
+
+/**
+ * A body as a page without the project's token is sent it: every value
+ * Courier's rule for a name hides replaced, as {@link scrubbedRequest}
+ * replaces them, the places not listed.
+ *
+ * @param value - A request's variables or its answer
+ * @returns The body with its secrets replaced
+ * @example
+ * ```ts
+ * bodyWithoutSecrets({ email: "a@b.c", otp: 1234 }); // { email: "a@b.c", otp: "[redacted]" }
+ * ```
+ */
+export function bodyWithoutSecrets(value: unknown): unknown {
+  return scrubbed(value, "", [], 0);
+}
+
 function scrubbed(value: unknown, path: string, found: string[], depth: number): unknown {
   if (depth > DEEPEST) return "[cut]";
   if (Array.isArray(value)) {
@@ -41,7 +75,7 @@ function scrubbed(value: unknown, path: string, found: string[], depth: number):
   if (!isPlainObject(value)) return value;
   const copy: Record<string, unknown> = {};
   for (const [key, inner] of Object.entries(value)) {
-    if (isSecretName(key) && inner !== undefined && inner !== null) {
+    if (isSecretValue(key, inner)) {
       found.push(`${path}.${key}`);
       copy[key] = REDACTED;
     } else copy[key] = scrubbed(inner, `${path}.${key}`, found, depth + 1);
@@ -59,18 +93,20 @@ function scrubbedUrl(url: string, path: string, found: string[]): string {
   const kept = pairs.map((pair) => {
     const equals = pair.indexOf("=");
     const name = equals === -1 ? pair : pair.slice(0, equals);
-    if (equals === -1 || !isSecretName(decoded(name))) return pair;
+    if (equals === -1 || !isSecretValue(decoded(name), decoded(pair.slice(equals + 1)))) {
+      return pair;
+    }
     found.push(`${path}?${decoded(name)}`);
     return `${name}=${REDACTED}`;
   });
   return `${url.slice(0, query + 1)}${kept.join("&")}${url.slice(end)}`;
 }
 
-function decoded(name: string): string {
+function decoded(text: string): string {
   try {
-    return decodeURIComponent(name.replace(/\+/g, " "));
+    return decodeURIComponent(text.replace(/\+/g, " "));
   } catch {
-    /* A name that is not valid percent-encoding is read as it is written. */
-    return name;
+    /* A name or a value that is not valid percent-encoding is read as it is written. */
+    return text;
   }
 }

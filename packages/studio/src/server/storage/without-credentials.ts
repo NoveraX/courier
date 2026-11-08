@@ -1,4 +1,4 @@
-import { isCredentialHeader, REDACTED, urlWithoutSecrets } from "@noverax/courier/internal";
+import { isSecretHeader, REDACTED, urlWithoutSecrets } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
 import { withoutSecretTexts } from "../secrets/without-secret-texts";
@@ -16,9 +16,10 @@ import { withoutSecretTexts } from "../secrets/without-secret-texts";
  * replaced, the way a browser's sanitized HAR keeps it; an address is kept
  * without its password or its secret parameters, in a header's `Location`
  * too; and an error's text, and why a request got no answer, are kept with
- * what could be a credential cut out. The live view, which nothing writes
- * down, shows all of it whole to a page that presented Studio's token
- * alone (see `emitLiveEvents`).
+ * what could be a credential cut out. A header is read as Courier's
+ * `redact` reads it, by its name and its value: `sid` and `x-otp` too. The
+ * live view, which nothing writes down, shows all of it whole to a page
+ * that presented Studio's token alone (see `emitLiveEvents`).
  */
 
 /** The fields of an event or a history entry that hold headers. */
@@ -93,7 +94,7 @@ function redacted<TValue>(
 ): Record<string, TValue | string> {
   const kept: Record<string, TValue | string> = {};
   for (const [name, value] of Object.entries(headers)) {
-    if (isCredentialHeader(name)) kept[name] = replacement;
+    if (isSecretHeader(name, value)) kept[name] = replacement;
     else if (name.toLowerCase() === "location" && typeof value === "string") {
       kept[name] = urlWithoutSecrets(value);
     } else kept[name] = value;

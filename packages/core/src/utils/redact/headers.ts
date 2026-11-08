@@ -1,7 +1,6 @@
 import { defineOwn } from "../define-own";
-import { isCredentialHeader } from "../is-credential-header";
 import { REDACTED } from "./redacted";
-import { isSecretValue } from "./secret-name";
+import { isSecretHeader } from "./secret-name";
 
 /**
  * A response's headers as an error prints them: every one, with what a
@@ -39,8 +38,7 @@ function setCookiesShown(headers: Headers): string[] | undefined {
 }
 
 function shownValue(name: string, value: string): string {
-  if (isCredentialHeader(name)) return hidden(name, value);
-  return isSecretValue(name, value) ? REDACTED : value;
+  return isSecretHeader(name, value) ? hidden(name, value) : value;
 }
 
 function hidden(name: string, value: string): string {

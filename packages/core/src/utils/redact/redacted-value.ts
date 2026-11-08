@@ -1,11 +1,10 @@
 import { defineOwn } from "../define-own";
-import { isCredentialHeader } from "../is-credential-header";
 import { CUT, REDACT_BOUNDS } from "./bounds";
 import { headersWithoutSecrets } from "./headers";
 import { REDACTED } from "./redacted";
 import { readEach, redactedError } from "./redacted-error";
 import { redactedText } from "./redacted-text";
-import { isSecretValue } from "./secret-name";
+import { isSecretHeader, isSecretValue } from "./secret-name";
 import { attempt, FAILED, UNREADABLE } from "./unreadable";
 
 /**
@@ -85,7 +84,7 @@ function redactedEntry(
 function holdsCredential(headers: Headers): boolean {
   let holds = false;
   headers.forEach((value, name) => {
-    holds ||= isCredentialHeader(name) || isSecretValue(name, value);
+    holds ||= isSecretHeader(name, value);
   });
   return holds;
 }

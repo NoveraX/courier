@@ -4,12 +4,17 @@
  * A page opened from Studio's link sees each event whole, as the developer
  * sent it. Any other page — or a process on the machine that reached Studio
  * without the token, another account's — sees it as Studio writes it down,
- * each credential's value replaced: it still sees every request, but not the
- * `Authorization` or the cookies they carried.
+ * each credential's value replaced, and what the call carried as an export
+ * carries it: it still sees every request, but not the `Authorization` or
+ * the cookies they carried, nor a value of the variables, the answer or a
+ * stream message's preview that Courier's rule for a name hides.
  */
 
+import { cutText } from "@noverax/courier/internal";
 import type { Namespace, Socket } from "socket.io";
 
+import { isPlainObject } from "./is-plain-object";
+import { bodyWithoutSecrets } from "./session-file/scrub-secrets";
 import { withoutCredentials } from "./storage/without-credentials";
 
 /** The room of the pages that presented the project's token. */
@@ -38,7 +43,7 @@ export function emitLiveEvents(
   if (events.length === 0) return;
   if (hasPages(uiNamespace, TOKEN_PAGES)) uiNamespace.to(TOKEN_PAGES).emit("events", events);
   if (hasPages(uiNamespace, READ_ONLY_PAGES)) {
-    uiNamespace.to(READ_ONLY_PAGES).emit("events", events.map(withoutCredentials));
+    uiNamespace.to(READ_ONLY_PAGES).emit("events", events.map(shownWithoutToken));
   }
 }
 
@@ -55,7 +60,20 @@ export function emitLiveEvents(
  * ```
  */
 export function emitLiveEventTo(socket: Socket, event: Record<string, unknown>): void {
-  socket.emit("events", [socket.rooms.has(TOKEN_PAGES) ? event : withoutCredentials(event)]);
+  socket.emit("events", [socket.rooms.has(TOKEN_PAGES) ? event : shownWithoutToken(event)]);
+}
+
+/* An event as a page without the token is sent it: credentials cut as Studio writes them down, and
+   the variables, the answer and a stream message's preview as an export carries them. */
+function shownWithoutToken(event: Record<string, unknown>): unknown {
+  const kept = withoutCredentials(event);
+  if (!isPlainObject(kept)) return kept;
+  return {
+    ...kept,
+    ...(kept.variables !== undefined && { variables: bodyWithoutSecrets(kept.variables) }),
+    ...(kept.data !== undefined && { data: bodyWithoutSecrets(kept.data) }),
+    ...(typeof kept.dataPreview === "string" && { dataPreview: cutText(kept.dataPreview) }),
+  };
 }
 
 function hasPages(uiNamespace: Namespace, room: string): boolean {

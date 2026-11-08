@@ -1,7 +1,7 @@
 import type { Socket } from "socket.io";
 
 import { keptImportValue } from "./kept-import-value";
-import { TOKEN_PAGES } from "./live-events";
+import { toOtherPages } from "./page-outlet";
 import type { PageState, PageStateKey } from "./storage/page-state";
 
 /* The import left unfinished: an address as it is typed, a part of one or a value pasted in a field. */
@@ -37,7 +37,7 @@ export function bindPageState(socket: Socket, pages: PageState, writable: boolea
     const given: unknown = Reflect.get(raw, "value");
     const value = key === IMPORT ? keptImportValue(given) : given;
     if (!pages.write(key, value)) return;
-    const others = key === IMPORT ? socket.to(TOKEN_PAGES) : socket.broadcast;
-    others.emit("page:state:changed", { key, value });
+    /* The page outlet sends a page without the token no import left unfinished. */
+    toOtherPages(socket, "page:state:changed", { key, value });
   });
 }

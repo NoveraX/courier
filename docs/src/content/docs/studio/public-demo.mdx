@@ -13,7 +13,7 @@ createStudioServer({
 })
 ```
 
-A visitor — a page opened without the token — sees everything Studio shows, the credentials of live traffic and every value named like a secret in it redacted, and may also send from the Playground and drive the mocks: start and stop them, set their latency and failures, apply scenarios, change their data. Limits keep one visitor from crowding out the rest, counted every ten seconds for each page, for each visitor's address — so opening more pages does not widen a share — and for all visitors together:
+A visitor — a page opened without the token — sees everything Studio shows — the live traffic, the requests it replays as the page loads, a saved session the pages show, a request's whole body or a mock's records the page asks for, the Playground's drafts — with every credential, every value named like a secret and every secret written into a string redacted, as a [session file](/docs/studio/session-files) has them; what another visitor sent reaches it only so. A visitor may also send from the Playground and drive the mocks: start and stop them, set their latency and failures, apply scenarios, change their data. Limits keep one visitor from crowding out the rest, counted every ten seconds for each page, for each visitor's address — so opening more pages does not widen a share — and for all visitors together:
 
 - **Playground:** ten calls from a page, twenty from an address and sixty from all, with four open at once from a page.
 - **Mocks:** twenty commands and five starts or stops from a page, thirty and ten from an address; a seed of up to 200 records, records added to a collection only while it holds fewer than a thousand, and a latency of up to ten seconds.

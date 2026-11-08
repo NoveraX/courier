@@ -15,12 +15,12 @@ import { courier, defineApi } from "@noverax/courier/define";
 import { defineMockServer } from "@noverax/courier-mock/managed";
 import type { Namespace, Socket } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TOKEN_PAGES } from "../src/server/live-events";
 import type {
   ProcessManagerEvents,
   ProcessManagerOptions,
 } from "../src/server/mock-manager/process-manager";
 import type { SpawnRequest } from "../src/server/mock-manager/types";
+import { TOKEN_PAGES } from "../src/server/page-outlet";
 
 const fake = {
   events: undefined as ProcessManagerEvents | undefined,

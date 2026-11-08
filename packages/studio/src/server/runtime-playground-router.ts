@@ -34,6 +34,7 @@
 
 import type { Namespace, Socket } from "socket.io";
 import type { BindingTable } from "./catalog/binding-table";
+import { toPage } from "./page-outlet";
 import { armTimeout, endCancelled, failedAnswer, stopAtRuntime } from "./playground-endings";
 import { createPlaygroundForwarders, type PlaygroundForwarders } from "./playground-forwarders";
 import {
@@ -133,7 +134,7 @@ export function createRuntimePlaygroundRouter(
     send(
       uiSocket.id,
       (answer) => {
-        deps.uiNamespace.to(uiSocket.id).emit(answer.event, answer.payload);
+        toPage(uiSocket, answer.event, answer.payload);
       },
       payload,
     );

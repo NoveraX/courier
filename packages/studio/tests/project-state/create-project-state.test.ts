@@ -33,8 +33,8 @@ vi.mock("../../src/server/last-modified-at", async (importOriginal) => {
 });
 
 import { BindingTable } from "../../src/server/catalog/binding-table";
-import { TOKEN_PAGES } from "../../src/server/live-events";
 import { createMockRegistry } from "../../src/server/mock-registry";
+import { TOKEN_PAGES } from "../../src/server/page-outlet";
 import { createProjectState } from "../../src/server/project-state/create-project-state";
 import { clearStartupIssues } from "../../src/server/startup-issues";
 import { createWatcherStatus } from "../../src/server/watcher-status";

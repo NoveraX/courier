@@ -12,7 +12,7 @@ import type { CourierConfig } from "@noverax/courier/config";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { LoadedCourierConfig } from "../../src/server/config-loader";
-import { READ_ONLY_PAGES, TOKEN_PAGES } from "../../src/server/live-events";
+import { READ_ONLY_PAGES, TOKEN_PAGES } from "../../src/server/page-outlet";
 import { sendImportLists } from "../../src/server/project-state/send-import-lists";
 import type { ProjectSnapshot } from "../../src/server/project-state/types";
 import { createUpdateChecks, type UpdateChecks } from "../../src/server/update-checks";

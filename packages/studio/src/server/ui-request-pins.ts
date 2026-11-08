@@ -1,5 +1,6 @@
 import type { Socket } from "socket.io";
 
+import { toOtherPages } from "./page-outlet";
 import type { RequestPins } from "./storage/request-pins";
 
 /**
@@ -23,6 +24,6 @@ export function bindRequestPins(socket: Socket, pins: RequestPins): void {
     const pinned: unknown = Reflect.get(raw, "pinned");
     if (typeof id !== "string" || typeof pinned !== "boolean") return;
     pins.set(id, pinned);
-    socket.broadcast.emit("requests:pinned:changed", { id, pinned });
+    toOtherPages(socket, "requests:pinned:changed", { id, pinned });
   });
 }

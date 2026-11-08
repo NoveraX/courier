@@ -4,6 +4,7 @@ import { messageOf } from "@noverax/courier-cli/devkit";
 import { type Namespace, type Socket, Server as SocketIOServer } from "socket.io";
 import type { CountedSocket, DemoConnections } from "./demo/demo-connections";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
+import { guardPageBroadcasts } from "./page-outlet";
 import type { StudioOriginPolicy } from "./studio-origin";
 
 const log = createLogger("Studio");
@@ -84,6 +85,7 @@ export function createStudioSockets(
   });
 
   const uiNamespace = io.of("/ui");
+  guardPageBroadcasts(uiNamespace);
   uiNamespace.use((socket, next) => {
     const { origin, host } = socket.handshake.headers;
     const caller = origin ?? "a caller that names no origin";

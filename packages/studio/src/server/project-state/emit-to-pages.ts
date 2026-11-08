@@ -1,4 +1,6 @@
-import { READ_ONLY_PAGES, TOKEN_PAGES } from "../live-events";
+import type { Namespace, Socket } from "socket.io";
+
+import { toPage, toPages } from "../page-outlet";
 import type { ProjectEventTarget } from "./types";
 
 /** A page's socket: in the room of the pages with the token, or of the others. */
@@ -20,11 +22,10 @@ function isPages(target: ProjectEventTarget): target is Pages {
 }
 
 /**
- * Send an event to every page, or to the one page given: whole to a page
- * that presented the project's token, as `shown` to any other. When the
- * two are the same, every page is sent it in one message. A page's socket
- * is told apart from every page's first: a socket's `to` sends to the
- * other pages, never to itself.
+ * Send an event to every page, or to the one page given, through the page
+ * outlet: whole to a page that presented the project's token, as `shown`
+ * to any other. A page's socket is told apart from every page's first: a
+ * socket's `to` sends to the other pages, never to itself.
  *
  * @param target - Every page, or the one that connected
  * @param event - The event's name
@@ -41,14 +42,7 @@ export function emitToPages(
   whole: unknown,
   shown: unknown,
 ): void {
-  if (shown === whole) {
-    target.emit(event, whole);
-  } else if (isPageSocket(target)) {
-    target.emit(event, target.rooms.has(TOKEN_PAGES) ? whole : shown);
-  } else if (isPages(target)) {
-    target.to(TOKEN_PAGES).emit(event, whole);
-    target.to(READ_ONLY_PAGES).emit(event, shown);
-  } else {
-    target.emit(event, shown);
-  }
+  if (isPageSocket(target)) toPage(target as unknown as Socket, event, whole, shown);
+  else if (isPages(target)) toPages(target as unknown as Namespace, event, whole, shown);
+  else target.emit(event, shown);
 }

@@ -8,7 +8,12 @@ import type { Socket } from "socket.io";
 import type { TrustedProxies } from "./demo/trusted-proxies";
 import { visitorAddress } from "./demo/visitor-address";
 import { isPlainObject } from "./is-plain-object";
-import { READ_ONLY_PAGES, TOKEN_PAGES } from "./live-events";
+import {
+  answeredWithoutToken,
+  guardPageWithoutToken,
+  READ_ONLY_PAGES,
+  TOKEN_PAGES,
+} from "./page-outlet";
 import type { StudioToken } from "./studio-token";
 import { TOKEN_REFUSAL } from "./token-guard";
 
@@ -75,8 +80,9 @@ export const READ_ONLY_VISITORS: VisitorPolicy = {
  * through its acknowledgement when it waits for one, as the end of its call
  * when it sends a Playground call — so the call stops waiting — and as
  * `studio:read-only` otherwise.
- * The page still receives everything it shows, live traffic without its
- * credentials (see `emitLiveEvents`).
+ * The page still receives everything it shows, as the page outlet leaves
+ * it for a page without the token: its socket's own messages and the
+ * answers to what it asks pass the outlet's rules (see `page-outlet.ts`).
  *
  * @param socket - The page's socket, just connected
  * @param token - The project's token
@@ -100,6 +106,8 @@ export function guardUiWrites(
     return true;
   }
   void socket.join(READ_ONLY_PAGES);
+  /* What it is sent, it is sent past the outlet's rules alone: the answers to what it asks too. */
+  guardPageWithoutToken(socket);
   socket.on("disconnect", () => visitors.forget(socket.id));
   const { address: peer, headers } = socket.handshake;
   const visitor = {
@@ -110,8 +118,15 @@ export function guardUiWrites(
     const [event] = packet;
     const args: readonly unknown[] = packet.slice(1);
     const decision = visitors.decide(visitor, event, args);
-    if (decision.kind === "run") next();
-    else if (decision.kind === "refuse") refuse(socket, event, args, decision.reason);
+    if (decision.kind === "refuse") refuse(socket, event, args, decision.reason);
+    if (decision.kind !== "run") return;
+    const last: unknown = packet.at(-1);
+    if (typeof last === "function") {
+      const ack = last as (reply: unknown) => void;
+      const answered = (reply: unknown) => ack(answeredWithoutToken(event, reply));
+      Reflect.set(packet, packet.length - 1, answered);
+    }
+    next();
   });
   return false;
 }

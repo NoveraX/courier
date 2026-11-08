@@ -19,8 +19,9 @@ import type { Namespace } from "socket.io";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
-import { emitLiveEvents, READ_ONLY_PAGES } from "../src/server/live-events";
+import { emitLiveEvents } from "../src/server/live-events";
 import { withoutSecrets } from "../src/server/mcp/without-secrets";
+import { READ_ONLY_PAGES } from "../src/server/page-outlet";
 import type { StudioServer } from "../src/server/types";
 
 /* Names whose value is a credential, whatever it is. */

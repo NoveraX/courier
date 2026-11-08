@@ -17,12 +17,16 @@ function wired() {
   const root = mkdtempSync(join(tmpdir(), "courier-storage-wiring-"));
   const stores = openStudioStores(root);
   const emit = vi.fn();
+  /* A message to a room of pages is told by the room it went to. */
+  const to = (room: string) => ({
+    emit: (event: string, payload: unknown) => emit(`${event} to ${room}`, payload),
+  });
   const mocks = { summarizeServers: () => [], forwardStoreCommand: () => undefined };
   const storage = wireStorage({
     stores,
     root,
     mocks,
-    uiNamespace: { emit } as unknown as Namespace,
+    uiNamespace: { emit, to } as unknown as Namespace,
   });
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   cleanups.push(() => stores.close());
@@ -51,9 +55,10 @@ describe("Studio's storage, as its pages are told it", () => {
 
     storage.routes.announce(["sessions"]);
 
-    expect(emit.mock.calls.map(([event]) => event).slice(0, 3)).toEqual([
+    expect(emit.mock.calls.map(([event]) => event).slice(0, 4)).toEqual([
       "storage:cleared",
-      "events:replay",
+      "events:replay to pages:token",
+      "events:replay to pages:read-only",
       "requests:pinned",
     ]);
   });
@@ -63,7 +68,9 @@ describe("Studio's storage, as its pages are told it", () => {
 
     storage.routes.announce(["requests", "mockLogs"]);
 
-    expect(emit.mock.calls.map(([event]) => event)).not.toContain("events:replay");
+    expect(emit.mock.calls.map(([event]) => String(event).split(" ")[0])).not.toContain(
+      "events:replay",
+    );
   });
 
   it("tells every page the size every ten minutes, until stopped", () => {

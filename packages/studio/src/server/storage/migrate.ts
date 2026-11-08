@@ -58,6 +58,13 @@ const STEPS: readonly string[] = [
      places TEXT NOT NULL,
      PRIMARY KEY (source, endpoint, path, type)
    );`,
+  /* Each event as a page without the project's token is sent it, cut once, the first time such a
+     page is sent it: none until then, a Studio before this step's events too, and empty where
+     cutting changed nothing. */
+  `ALTER TABLE request_events ADD COLUMN shown TEXT;
+   CREATE INDEX request_events_uncut ON request_events (seq) WHERE shown IS NULL;
+   ALTER TABLE mock_events ADD COLUMN shown TEXT;
+   CREATE INDEX mock_events_uncut ON mock_events (seq) WHERE shown IS NULL;`,
 ];
 
 /** A database a newer Studio made, which this one cannot read. */

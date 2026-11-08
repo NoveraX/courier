@@ -164,6 +164,10 @@ export function createRequestLog(
       writes.flush();
       return Buffer.from(rows.replayText(), "utf8");
     },
+    shownReplayPayload() {
+      writes.flush();
+      return Buffer.from(rows.shownReplayText(), "utf8");
+    },
     keyEvents: outline.events,
     version: () => changes,
     eventsOf(id) {

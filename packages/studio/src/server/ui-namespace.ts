@@ -16,6 +16,7 @@ import type { BindingTable } from "./catalog/binding-table";
 import { clearedMockOf } from "./mock-log-clear";
 import type { LifecycleCoordinator } from "./mock-manager";
 import type { CommandReply } from "./mock-manager/command-replies";
+import { replayToPage } from "./page-outlet";
 import { sendProject } from "./project-state/send-project";
 import type { ProjectImports } from "./project-state/types";
 import type { RequestLog } from "./request-log";
@@ -129,7 +130,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     /* After the mocks, the requests they answered: a page that reloads shows each mock's log
        again, unless a page cleared that mock's log. */
     if (mockLog) {
-      socket.emit("mock:events:replay", mockLog.replayPayload());
+      replayToPage(socket, "mock:events:replay", mockLog);
       socket.on("mock:logs:clear", (raw: unknown) => {
         const serverId = clearedMockOf(raw);
         if (serverId) mockLog.forget(serverId);
@@ -148,7 +149,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
        or reloads shows them. Clearing the log in one page forgets them here
        too, except the ones it keeps. */
     if (requestLog) {
-      if (!shown) socket.emit("events:replay", requestLog.replayPayload());
+      if (!shown) replayToPage(socket, "events:replay", requestLog);
       if (pins) bindRequestPins(socket, pins);
       socket.on("requests:clear", (raw: unknown) => {
         const keep = keptIdsOf(raw);

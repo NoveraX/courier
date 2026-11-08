@@ -6,17 +6,12 @@
  * sends it so; this is the list it reads.
  */
 
-import { createHash } from "node:crypto";
-import { cutSecrets, cutText } from "@noverax/courier/internal";
+import { cutSecrets } from "@noverax/courier/internal";
 
+import { eventWithoutSecrets } from "./event-without-secrets";
 import { isPlainObject } from "./is-plain-object";
-import {
-  bodyWithoutSecrets,
-  headersWithoutSecrets,
-  scrubbedSession,
-} from "./session-file/scrub-secrets";
+import { bodyWithoutSecrets, scrubbedSession } from "./session-file/scrub-secrets";
 import type { SavedSession } from "./session-types";
-import { withoutCredentials } from "./storage/without-credentials";
 
 /** What a page without the token is sent of an event it may not be sent at all. */
 export const WITHHELD: unique symbol = Symbol("withheld");
@@ -25,16 +20,20 @@ type Shown = (payload: unknown) => unknown;
 
 const same: Shown = (payload) => payload;
 
-/* The events whose callers cut them for a page without the token, knowing what only they know:
-   such a page is sent what they cut, and nothing when one is sent past them. */
-export const CUT_BY_CALLER: ReadonlySet<string> = new Set(["config:status", "registry:updated"]);
+/* The events whose callers cut them for a page without the token, knowing what only they know —
+   a log's replay is the text the log cut as it kept each event: such a page is sent what they
+   cut, and nothing when one is sent past them. */
+export const CUT_BY_CALLER: ReadonlySet<string> = new Set([
+  "config:status",
+  "registry:updated",
+  "events:replay",
+  "mock:events:replay",
+]);
 
 /* Each other event Studio sends a page, and what of it a page without the token is sent. */
 const WITHOUT_TOKEN: ReadonlyMap<string, Shown> = new Map<string, Shown>([
   /* What calls carried, as an export carries it. */
   ["events", (events) => (Array.isArray(events) ? events.map(eventWithoutSecrets) : WITHHELD)],
-  ["events:replay", replayWithoutSecrets],
-  ["mock:events:replay", replayWithoutSecrets],
   ["view:session", (session) => scrubbedSession(session as SavedSession)],
   ["playground:history", (entries) => bodyWithoutSecrets(entries)],
   ["page:state", pageStateWithoutSecrets],
@@ -101,59 +100,6 @@ export function answeredWithoutToken(event: string, reply: unknown): unknown {
   if (event !== "request:body" && event !== "mock:body") return bodyWithoutSecrets(reply);
   if (!isPlainObject(reply) || reply.ok !== true || typeof reply.data !== "string") return reply;
   return { ...reply, data: bodyTextWithoutSecrets(reply.data) };
-}
-
-/* An event as a page without the token is sent it: credentials cut as Studio writes them down, and
-   the variables, the answer, the headers and a stream message's preview as an export carries them. */
-function eventWithoutSecrets(event: unknown): unknown {
-  const kept = withoutCredentials(event);
-  if (!isPlainObject(kept)) return kept;
-  return {
-    ...kept,
-    ...(kept.variables !== undefined && { variables: bodyWithoutSecrets(kept.variables) }),
-    ...(kept.data !== undefined && { data: bodyWithoutSecrets(kept.data) }),
-    ...(typeof kept.dataPreview === "string" && { dataPreview: cutText(kept.dataPreview) }),
-    ...headerFieldsWithoutSecrets(kept),
-  };
-}
-
-/* The fields of an event that hold headers, each value its name keeps read as a text. */
-function headerFieldsWithoutSecrets(event: Record<string, unknown>): Record<string, unknown> {
-  const cut: Record<string, unknown> = {};
-  for (const field of ["headers", "requestHeaders", "responseHeaders"]) {
-    const headers = event[field];
-    if (isPlainObject(headers)) {
-      cut[field] = headersWithoutSecrets(headers as Record<string, string>);
-    }
-  }
-  return cut;
-}
-
-/* A replay is the JSON array its database's rows make, as bytes: read, each event cut, written
-   again. A page that reconnects while nothing new was logged is sent the one cut before, found by
-   the replay's hash — the requests' and the mocks' replays each. */
-const replays = new Map<string, Uint8Array>();
-const KEPT_REPLAYS = 2;
-
-function replayWithoutSecrets(payload: unknown): unknown {
-  if (!(payload instanceof Uint8Array)) return WITHHELD;
-  const key = createHash("sha256").update(payload).digest("hex");
-  const kept = replays.get(key);
-  if (kept) return kept;
-  let events: unknown;
-  try {
-    events = JSON.parse(
-      Buffer.from(payload.buffer, payload.byteOffset, payload.byteLength).toString("utf8"),
-    );
-  } catch {
-    return WITHHELD;
-  }
-  if (!Array.isArray(events)) return WITHHELD;
-  const shown = Buffer.from(JSON.stringify(events.map(eventWithoutSecrets)), "utf8");
-  const oldest = replays.keys().next().value;
-  if (replays.size >= KEPT_REPLAYS && oldest !== undefined) replays.delete(oldest);
-  replays.set(key, shown);
-  return shown;
 }
 
 /* What the pages keep — settings, drafts — sent to a page without the token: no import left

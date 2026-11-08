@@ -4,8 +4,10 @@
  * restarts, shows a mock's log again.
  */
 
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
+
 import { REPLAY_BYTES } from "./replay-bytes";
+import { uncutRows } from "./uncut-rows";
 import { withoutCredentials } from "./without-credentials";
 
 type MockEvent = Record<string, unknown>;
@@ -23,6 +25,8 @@ export interface MockLog {
   events(): MockEvent[];
   /** What `events` returns, as the message a page is sent: their JSON array in UTF-8, as the database keeps it — never parsed and written out again. */
   replayPayload(): Uint8Array;
+  /** The same events as `replayPayload`, as a page without the token is sent them: each the text cut the first time such a page was sent it, copied — an event is parsed and cut once. */
+  shownReplayPayload(): Uint8Array;
   /** Forget every request every mock answered, as the Storage settings' Clear does. */
   forgetAll(): void;
   /** Forget every request one mock answered, as its page's Clear does. */
@@ -45,18 +49,24 @@ export interface MockLog {
  * ```
  */
 export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYTES): MockLog {
+  /* Kept with no text for a page without the token: it is cut the first time such a page is sent it. */
   const insert = db.prepare("INSERT INTO mock_events (request_id, body) VALUES (?, ?)");
   const drop = db.prepare("DELETE FROM mock_events WHERE request_id = ?");
   const selectAll = db.prepare("SELECT request_id, body FROM mock_events ORDER BY seq");
-  /* The newest requests whose events fit the replay, each whole, oldest first. */
-  const selectReplay = db.prepare(
-    "WITH sized AS (SELECT request_id, MIN(seq) AS first, SUM(LENGTH(body)) AS bytes " +
-      "FROM mock_events GROUP BY request_id), " +
-      "kept AS (SELECT request_id, " +
-      "SUM(bytes) OVER (ORDER BY first DESC ROWS UNBOUNDED PRECEDING) AS upto FROM sized) " +
-      "SELECT m.body FROM mock_events m JOIN kept k ON k.request_id = m.request_id " +
-      "WHERE k.upto <= ? ORDER BY m.seq",
-  );
+  /* The newest requests whose events fit the replay, each whole, oldest first: a page without the
+     token is sent the same ones, each event as it was cut. */
+  const replayed = (text: string) =>
+    db.prepare(
+      "WITH sized AS (SELECT request_id, MIN(seq) AS first, SUM(LENGTH(body)) AS bytes " +
+        "FROM mock_events GROUP BY request_id), " +
+        "kept AS (SELECT request_id, " +
+        "SUM(bytes) OVER (ORDER BY first DESC ROWS UNBOUNDED PRECEDING) AS upto FROM sized) " +
+        `SELECT ${text} AS body FROM mock_events m JOIN kept k ON k.request_id = m.request_id ` +
+        "WHERE k.upto <= ? ORDER BY m.seq",
+    );
+  const selectReplay = replayed("m.body");
+  const selectShownReplay = replayed("CASE WHEN m.shown = '' THEN m.body ELSE m.shown END");
+  const cutUncut = uncutRows(db, "mock_events");
   const requests = new Set<string>();
   /* The mock each kept request was answered by, so one mock's log can be forgotten alone. */
   const owners = new Map<string, string>();
@@ -132,8 +142,12 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
     },
     replayPayload() {
       flush();
-      const bodies = selectReplay.all(replayBytes).map((row) => String(row.body));
-      return Buffer.from(`[${bodies.join(",")}]`, "utf8");
+      return arrayPayload(selectReplay.all(replayBytes));
+    },
+    shownReplayPayload() {
+      flush();
+      cutUncut();
+      return arrayPayload(selectShownReplay.all(replayBytes));
     },
     events() {
       flush();
@@ -157,6 +171,13 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
       closed = true;
     },
   };
+}
+
+/* The rows' events as one JSON array in UTF-8, each as the database keeps it; a row that has no
+   text — one another Studio kept as this one read the log — is left out. */
+function arrayPayload(rows: ReadonlyArray<Record<string, SQLOutputValue>>): Uint8Array {
+  const bodies = rows.flatMap((row) => (typeof row.body === "string" ? [row.body] : []));
+  return Buffer.from(`[${bodies.join(",")}]`, "utf8");
 }
 
 function serverIdOf(value: unknown): string | undefined {

@@ -6,6 +6,7 @@
 
 import type { Socket } from "socket.io";
 
+import { replayToPage } from "./page-outlet";
 import type { RequestLog } from "./request-log";
 import type { SavedSession } from "./session-types";
 import type { RequestPins } from "./storage/request-pins";
@@ -30,7 +31,7 @@ export interface ViewDeps {
  * @example
  * ```ts
  * const shown = shownSession({ sessions, view });
- * if (!shown) socket.emit("events:replay", requestLog.replayPayload());
+ * if (!shown) replayToPage(socket, "events:replay", requestLog);
  * ```
  */
 export function shownSession({
@@ -70,7 +71,7 @@ export function bindView(
   socket.on("view:live", () => {
     view.showLive();
     if (!requestLog) return;
-    socket.emit("events:replay", requestLog.replayPayload());
+    replayToPage(socket, "events:replay", requestLog);
     /* The replay carries no pins: without them, the requests a page pinned came back unpinned. */
     if (pins) socket.emit("requests:pinned", pins.ids());
   });

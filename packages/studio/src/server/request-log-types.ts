@@ -8,6 +8,8 @@ export interface RequestLog {
   events: () => RuntimeEvent[];
   /** What `events` returns, as the message a page is sent: their JSON array in UTF-8, as the database keeps it — never parsed and written out again. */
   replayPayload: () => Uint8Array;
+  /** The same events as `replayPayload`, as a page without the token is sent them: each the text cut the first time such a page was sent it, copied — an event is parsed and cut once. */
+  shownReplayPayload: () => Uint8Array;
   /** The events that open and end every kept request, without the bodies and headers they carry, the earliest request first: what a list of requests, and each endpoint's figures, are made of. */
   keyEvents: () => RuntimeEvent[];
   /** One kept request's events, whole, in the order they arrived; none for a request the log does not keep. */

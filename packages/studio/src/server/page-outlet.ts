@@ -31,6 +31,15 @@ export const READ_ONLY_PAGES = "pages:read-only";
 const unruled = new WeakMap<Socket, Socket["emit"]>();
 const unruledPages = new WeakMap<Namespace, Namespace["emit"]>();
 
+/** A log a page is replayed as it connects: whole, and as its log cut it for a page without the token. */
+export interface ReplayedLog {
+  replayPayload(): Uint8Array;
+  shownReplayPayload(): Uint8Array;
+}
+
+/** The replays of the logs. */
+export type ReplayEvent = "events:replay" | "mock:events:replay";
+
 /**
  * Send one page an event: whole when it presented the token, and to any
  * other what {@link shownToPageWithoutToken} leaves of it — or what the
@@ -55,6 +64,24 @@ export function toPage(socket: Socket, event: string, whole: unknown, cut?: unkn
 }
 
 /**
+ * Send one page a log's replay: whole when it presented the token, and to
+ * any other the replay its log cut as it kept each event — a copy, nothing
+ * read or cut again as the page connects, however much was logged since.
+ *
+ * @param socket - The page's socket
+ * @param event - The replay's name
+ * @param log - The log
+ * @example
+ * ```ts
+ * replayToPage(socket, "mock:events:replay", mockLog);
+ * ```
+ */
+export function replayToPage(socket: Socket, event: ReplayEvent, log: ReplayedLog): void {
+  if (socket.rooms?.has(TOKEN_PAGES)) socket.emit(event, log.replayPayload());
+  else (unruled.get(socket) ?? socket.emit.bind(socket))(event, log.shownReplayPayload());
+}
+
+/**
  * Send every page an event, as {@link toPage} sends one: in one message
  * when a page without the token is sent it as it is.
  *
@@ -75,6 +102,25 @@ export function toPages(pages: Namespace, event: string, whole: unknown, cut?: u
   }
   pages.to(TOKEN_PAGES).emit(event, whole);
   if (shown !== WITHHELD) pages.to(READ_ONLY_PAGES).emit(event, shown);
+}
+
+/**
+ * Send every page a log's replay, as {@link replayToPage} sends one: each
+ * of its two forms made only where a page is open to be sent it.
+ *
+ * @param pages - The pages' namespace
+ * @param event - The replay's name
+ * @param log - The log
+ * @example
+ * ```ts
+ * replayToPages(uiNamespace, "events:replay", requestLog);
+ * ```
+ */
+export function replayToPages(pages: Namespace, event: ReplayEvent, log: ReplayedLog): void {
+  if (hasPages(pages, TOKEN_PAGES)) pages.to(TOKEN_PAGES).emit(event, log.replayPayload());
+  if (hasPages(pages, READ_ONLY_PAGES)) {
+    pages.to(READ_ONLY_PAGES).emit(event, log.shownReplayPayload());
+  }
 }
 
 /**

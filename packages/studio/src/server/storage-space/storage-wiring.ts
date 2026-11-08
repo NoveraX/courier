@@ -1,5 +1,6 @@
 import type { Namespace } from "socket.io";
 
+import { replayToPages } from "../page-outlet";
 import type { StudioStores } from "../storage/studio-stores";
 import { databaseOnDisk } from "./database-size";
 import type { StoreMocks } from "./reset-mock-stores";
@@ -55,7 +56,7 @@ export function wireStorage(deps: {
         /* A page that showed a saved session goes back to the live requests:
            sent them and their pins, it shows them rather than nothing. */
         if (kinds.includes("sessions")) {
-          uiNamespace.emit("events:replay", stores.requestLog.replayPayload());
+          replayToPages(uiNamespace, "events:replay", stores.requestLog);
           uiNamespace.emit("requests:pinned", stores.pins.ids());
         }
         tell();

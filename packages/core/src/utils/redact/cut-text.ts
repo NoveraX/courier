@@ -46,6 +46,24 @@ function readable(text: string, maxLength: number): string {
   return end > 0 ? text.slice(0, end) : REDACTED;
 }
 
+/**
+ * A text with what could be a credential cut out, by the rules
+ * {@link cutText} cuts it by, and the rest as it was: read whole, of any
+ * length, every character kept. For a value that is kept or handed on
+ * whole rather than printed — a string a body holds, a header's value.
+ *
+ * @param text - The text
+ * @returns The text, its credentials cut
+ * @example
+ * ```ts
+ * cutSecrets("Reset it at https://app.example/reset?token=t0k3n");
+ * // → "Reset it at https://app.example/reset?token=[redacted]"
+ * ```
+ */
+export function cutSecrets(text: string): string {
+  return textWithoutSecrets(urlsWithoutSecrets(text));
+}
+
 /* A line break and a tab are text; any other control character could only garble the line it lands on. */
 function printable(text: string): string {
   let shown = "";

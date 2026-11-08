@@ -1,4 +1,4 @@
-import { isSecretValue, REDACTED } from "@noverax/courier/internal";
+import { cutSecrets, isSecretValue, REDACTED } from "@noverax/courier/internal";
 
 import { isPlainObject } from "../is-plain-object";
 
@@ -9,9 +9,11 @@ const DEEPEST = 12;
  * A copy of a body with the value of every field a credential's name gives
  * away replaced, at any depth, by Courier's one rule for a name and its
  * value — a password, a token, a session's id, a one-time password, and a
- * `key` that reads as a credential: what Studio hands an agent leaves the
- * machine with the model's provider, so a secret a request carried in its
- * body stays behind, as the core's own log and a session file leave it.
+ * `key` that reads as a credential — and every string a name keeps read as
+ * the core's `redact()` reads a text, a credential in an address or a pair
+ * within it cut: what Studio hands an agent leaves the machine with the
+ * model's provider, so a secret a request carried in its body stays behind,
+ * as the core's own log and a session file leave it.
  *
  * @param value - A request's variables, an answer, or anything holding them
  * @returns The copy
@@ -22,6 +24,7 @@ const DEEPEST = 12;
  */
 export function withoutSecrets(value: unknown, depth = 0): unknown {
   if (depth > DEEPEST) return "[cut]";
+  if (typeof value === "string") return cutSecrets(value);
   if (Array.isArray(value)) return value.map((item) => withoutSecrets(item, depth + 1));
   if (!isPlainObject(value)) return value;
   const copy: Record<string, unknown> = {};

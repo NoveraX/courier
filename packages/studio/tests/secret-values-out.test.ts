@@ -6,11 +6,14 @@
  * A strong name hides whatever it is given, a one-time password and a
  * session's id among them; `key`, the one weak name, hides a value that
  * reads as a credential, a number as the digits it is written in; any other
- * name keeps its value.
+ * name keeps its value — but a string it keeps is read by the core's rules
+ * for a text, as `redact()` reads it: a credential in an address or a pair
+ * within it is cut, and a place that changed is listed.
  */
 import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { redact } from "@noverax/courier";
 import { REDACTED } from "@noverax/courier/internal";
 import type { Namespace } from "socket.io";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -223,4 +226,123 @@ describe("a value a call carried, as it leaves Studio", () => {
       expect(differing).toEqual([]);
     });
   }
+});
+
+/* Strings under names that say nothing, a credential inside each or none. */
+const VARIABLES = {
+  callback: "https://app.example/cb?token=made-up-callback-token",
+  note: "sent with otp=123456 by mail",
+  items: [
+    { redirect: "https://app.example/r?sig=made-up-sig&sid=made-up-sid" },
+    { comment: "password=made-up-comment" },
+  ],
+  label: "Order 1042 shipped",
+};
+const ANSWER = {
+  raw: '{"password":"made-up-password","user":"ana"}',
+  uploadUrl:
+    "https://bucket.s3.amazonaws.com/f.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=made0up0signature0value0123456789",
+  message: "Reset it at https://app.example/reset?token=made-up-reset-token within an hour",
+  link: "https://shop.example/orders?page=2&sort=name",
+};
+
+/* What redact() makes of a value, each string read as a text. */
+const expectedOf = (value: unknown) => redact(value);
+
+/* The request that carried them, as each place has it back: its variables and its answer. */
+type Carried = { variables: unknown; data: unknown };
+
+const TEXT_PLACES: Readonly<Record<string, () => Promise<Carried>>> = {
+  "what an agent is shown": async () => ({
+    variables: withoutSecrets(VARIABLES),
+    data: withoutSecrets(ANSWER),
+  }),
+  "a session file": async () => {
+    const file = (await posted("/api/sessions/file", { requests: [textRequest()] })) as {
+      session: { requests: Record_[] };
+    };
+    const [request] = file.session.requests;
+    return { variables: request?.variables, data: request?.data };
+  },
+  "an export as HAR": async () => {
+    const har = (await posted("/api/sessions/export-live", {
+      format: "har",
+      requests: [textRequest()],
+    })) as { log: { entries: Record_[] } };
+    const entry = har.log.entries[0] as {
+      request: { postData: { text: string } };
+      response: { content: { text: string } };
+    };
+    return {
+      variables: JSON.parse(entry.request.postData.text),
+      data: JSON.parse(entry.response.content.text),
+    };
+  },
+  "an export for Postman": async () => {
+    const collection = (await posted("/api/sessions/export-live", {
+      format: "postman",
+      requests: [textRequest()],
+    })) as { item: { request: { body: { raw: string } }; response: Record_[] }[] };
+    const item = collection.item[0];
+    return {
+      variables: JSON.parse(item?.request.body.raw ?? "null"),
+      data: JSON.parse(String(item?.response[0]?.body)),
+    };
+  },
+  "an export as JSON": async () => {
+    const session = (await posted("/api/sessions/export-live", {
+      format: "json",
+      requests: [textRequest()],
+    })) as { requests: Record_[] };
+    return { variables: session.requests[0]?.variables, data: session.requests[0]?.data };
+  },
+  "a page without the token": async () => {
+    const [start, end] = sentToPagesWithoutToken([
+      { type: "request:start", requestId: "t1", variables: VARIABLES },
+      { type: "request:end", requestId: "t1", status: 200, data: ANSWER },
+    ]);
+    return { variables: start?.variables, data: end?.data };
+  },
+};
+
+function textRequest(): Record<string, unknown> {
+  return {
+    id: "t1",
+    source: "shop",
+    method: "reset",
+    httpMethod: "POST",
+    startedAt: 1,
+    variables: VARIABLES,
+    data: ANSWER,
+    statusCode: 200,
+  };
+}
+
+describe("a secret inside a string under a name that says nothing, as it leaves Studio", () => {
+  for (const [place, read] of Object.entries(TEXT_PLACES)) {
+    it(`is cut in ${place} as redact() cuts it, the rest kept`, async () => {
+      const carried = await read();
+
+      expect(carried).toEqual({ variables: expectedOf(VARIABLES), data: expectedOf(ANSWER) });
+      expect(carried.variables).toMatchObject({ label: "Order 1042 shipped" });
+      expect(carried.data).toMatchObject({ link: "https://shop.example/orders?page=2&sort=name" });
+      expect(JSON.stringify(carried)).not.toMatch(/made-up|made0up|otp=123456/);
+    });
+  }
+
+  it("is listed in a session file by its place", async () => {
+    const file = (await posted("/api/sessions/file", { requests: [textRequest()] })) as {
+      redactions: string[];
+    };
+
+    expect(file.redactions).toEqual([
+      "requests[0].variables.callback",
+      "requests[0].variables.note",
+      "requests[0].variables.items[0].redirect",
+      "requests[0].variables.items[1].comment",
+      "requests[0].data.raw",
+      "requests[0].data.uploadUrl",
+      "requests[0].data.message",
+    ]);
+  });
 });

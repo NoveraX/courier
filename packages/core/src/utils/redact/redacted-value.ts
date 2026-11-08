@@ -1,5 +1,6 @@
 import { defineOwn } from "../define-own";
 import { CUT, REDACT_BOUNDS } from "./bounds";
+import { cutSecrets } from "./cut-text";
 import { headersWithoutSecrets } from "./headers";
 import { REDACTED } from "./redacted";
 import { readEach, redactedError } from "./redacted-error";
@@ -84,7 +85,7 @@ function redactedEntry(
 function holdsCredential(headers: Headers): boolean {
   let holds = false;
   headers.forEach((value, name) => {
-    holds ||= isSecretHeader(name, value);
+    holds ||= isSecretHeader(name, value) || cutSecrets(value) !== value;
   });
   return holds;
 }

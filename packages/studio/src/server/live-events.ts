@@ -14,7 +14,7 @@ import { cutText } from "@noverax/courier/internal";
 import type { Namespace, Socket } from "socket.io";
 
 import { isPlainObject } from "./is-plain-object";
-import { bodyWithoutSecrets } from "./session-file/scrub-secrets";
+import { bodyWithoutSecrets, headersWithoutSecrets } from "./session-file/scrub-secrets";
 import { withoutCredentials } from "./storage/without-credentials";
 
 /** The room of the pages that presented the project's token. */
@@ -73,7 +73,19 @@ function shownWithoutToken(event: Record<string, unknown>): unknown {
     ...(kept.variables !== undefined && { variables: bodyWithoutSecrets(kept.variables) }),
     ...(kept.data !== undefined && { data: bodyWithoutSecrets(kept.data) }),
     ...(typeof kept.dataPreview === "string" && { dataPreview: cutText(kept.dataPreview) }),
+    ...headerFieldsWithoutSecrets(kept),
   };
+}
+
+/* The fields of an event that hold headers, each value its name keeps read as a text. */
+function headerFieldsWithoutSecrets(event: Record<string, unknown>): Record<string, unknown> {
+  const cut: Record<string, unknown> = {};
+  for (const field of ["headers", "requestHeaders", "responseHeaders"]) {
+    const headers = event[field];
+    if (isPlainObject(headers))
+      cut[field] = headersWithoutSecrets(headers as Record<string, string>);
+  }
+  return cut;
 }
 
 function hasPages(uiNamespace: Namespace, room: string): boolean {

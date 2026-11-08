@@ -143,7 +143,13 @@ export {
 } from "../utils/path-template";
 export { proxyRefusal } from "../utils/proxy-refusal";
 export { RECORD_UPLOAD_TYPE } from "../utils/record-upload";
-export { cutText, REDACTED, splitUrlsWithoutSecrets, urlWithoutSecrets } from "../utils/redact";
+export {
+  cutSecrets,
+  cutText,
+  REDACTED,
+  splitUrlsWithoutSecrets,
+  urlWithoutSecrets,
+} from "../utils/redact";
 export { isSecretHeader, isSecretValue } from "../utils/redact/secret-name";
 export { registerRenderMemo } from "../utils/render-memo";
 export { sliceWhole } from "../utils/slice-whole";

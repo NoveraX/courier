@@ -1,4 +1,5 @@
 import { defineOwn } from "../define-own";
+import { cutSecrets } from "./cut-text";
 import { REDACTED } from "./redacted";
 import { isSecretHeader } from "./secret-name";
 
@@ -8,7 +9,8 @@ import { isSecretHeader } from "./secret-name";
  * attributes, an `Authorization` its scheme — so a log line tells what was
  * sent without handing on the user's session. A header's name reads its
  * value as a record's field or an address's parameter of that name does,
- * too: `sid`, `x-otp`.
+ * too: `sid`, `x-otp`; and a value its name keeps is read as a text, as a
+ * field's string is.
  *
  * @param headers - The headers
  * @returns Them by name, a `Set-Cookie` repeated as a list
@@ -37,8 +39,9 @@ function setCookiesShown(headers: Headers): string[] | undefined {
   return headers.has("set-cookie") ? [REDACTED] : undefined;
 }
 
+/* A header its name keeps is read as a text is: an address in a `Location` or a `Link` loses its secrets. */
 function shownValue(name: string, value: string): string {
-  return isSecretHeader(name, value) ? hidden(name, value) : value;
+  return isSecretHeader(name, value) ? hidden(name, value) : cutSecrets(value);
 }
 
 function hidden(name: string, value: string): string {

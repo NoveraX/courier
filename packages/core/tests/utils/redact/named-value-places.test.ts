@@ -104,3 +104,20 @@ describe("a call's attempt and its variables, in one record", () => {
     });
   });
 });
+
+describe("a credential inside a header's value, under a name that says nothing", () => {
+  it("is cut as the same text is in a record's field", () => {
+    const values = {
+      link: '<https://api.test/v1/users?page=2&token=made-up-link-token>; rel="next"',
+      location: "https://app.test/next?sig=made-up-sig",
+      "x-callback": "sent with otp=123456",
+      "x-request-id": "r1",
+    };
+
+    const shown = redact(new Headers(values));
+
+    expect(shown).toEqual(redact(values));
+    expect(JSON.stringify(shown)).not.toMatch(/made-up|123456/);
+    expect(shown["x-request-id"]).toBe("r1");
+  });
+});

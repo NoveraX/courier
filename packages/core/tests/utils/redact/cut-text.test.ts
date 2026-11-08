@@ -56,7 +56,7 @@ describe("what is cut", () => {
   it("a strong name's value whatever it reads like, a weak one's only when it reads as a credential", () => {
     expect(cutText("failed: token=s3cret&page=2")).toBe("failed: token=[redacted]&page=2");
     expect(cutText("pass=hunter key=k1 sid=42 key=Zq9x7Kp2")).toBe(
-      "pass=[redacted] key=k1 sid=42 key=[redacted]",
+      "pass=[redacted] key=k1 sid=[redacted] key=[redacted]",
     );
     expect(cutText('body {"password":"hunter","name":"ana"}')).toBe(
       'body {"password":"[redacted]","name":"ana"}',

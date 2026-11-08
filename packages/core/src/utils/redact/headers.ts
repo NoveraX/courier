@@ -1,12 +1,15 @@
 import { defineOwn } from "../define-own";
 import { isCredentialHeader } from "../is-credential-header";
 import { REDACTED } from "./redacted";
+import { isSecretValue } from "./secret-name";
 
 /**
  * A response's headers as an error prints them: every one, with what a
  * credential's value says hidden — a cookie the API set keeps its name and
  * attributes, an `Authorization` its scheme — so a log line tells what was
- * sent without handing on the user's session.
+ * sent without handing on the user's session. A header's name reads its
+ * value as a record's field or an address's parameter of that name does,
+ * too: `sid`, `x-otp`.
  *
  * @param headers - The headers
  * @returns Them by name, a `Set-Cookie` repeated as a list
@@ -19,8 +22,7 @@ import { REDACTED } from "./redacted";
 export function headersWithoutSecrets(headers: Headers): Record<string, string | string[]> {
   const shown: Record<string, string | string[]> = {};
   headers.forEach((value, name) => {
-    if (name !== "set-cookie")
-      defineOwn(shown, name, isCredentialHeader(name) ? hidden(name, value) : value);
+    if (name !== "set-cookie") defineOwn(shown, name, shownValue(name, value));
   });
   const cookies = setCookiesShown(headers);
   if (cookies !== undefined) shown["set-cookie"] = cookies;
@@ -34,6 +36,11 @@ function setCookiesShown(headers: Headers): string[] | undefined {
   }
   /* React Native's Headers has no getSetCookie and joins the cookies into one value, hidden whole. */
   return headers.has("set-cookie") ? [REDACTED] : undefined;
+}
+
+function shownValue(name: string, value: string): string {
+  if (isCredentialHeader(name)) return hidden(name, value);
+  return isSecretValue(name, value) ? REDACTED : value;
 }
 
 function hidden(name: string, value: string): string {

@@ -1,7 +1,7 @@
 import { parseUrl } from "../parse-url";
 import { isSecretLike } from "./is-secret-like";
 import { REDACTED } from "./redacted";
-import { secretName } from "./secret-name";
+import { isSecretValue } from "./secret-name";
 
 /*
  * Every quantifier is bounded, no two neighbours share a character, and a
@@ -22,10 +22,10 @@ const ADDRESS = /^[a-z][a-z0-9+.-]{0,31}:\/\//i;
 /**
  * An address with what could be a credential cut out, and the rest as it
  * was written: no user and no password, the value of each query or
- * fragment parameter a secret's name or a token's look gives away, and
- * any path segment that reads as a token — a webhook's secret, a signed
- * link's key. `page=2`, a UUID, `report-2026-10-18.pdf` and a page's
- * `#anchor` stay.
+ * fragment parameter a secret's name gives away — read as a record's field
+ * of that name is — or a token's look, and any path segment that reads as
+ * a token — a webhook's secret, a signed link's key. `page=2`, `key=id`, a
+ * UUID, `report-2026-10-18.pdf` and a page's `#anchor` stay.
  *
  * A URL parser reads a user and a password in more spellings than
  * `scheme://user:password@` — after a space or a tab, with `\\`, one slash
@@ -82,10 +82,12 @@ function paramsWithoutSecrets(params: string): string {
     .map((param) => {
       const at = param.indexOf("=");
       if (at === -1) return looksLikeToken(decoded(param)) ? REDACTED : param;
-      const strength = secretName(decoded(param.slice(0, at)));
       const value = decoded(param.slice(at + 1));
-      /* In an address a weak name is a credential too: `?key=`, `?sig=`, `?session=`. */
-      const secret = strength !== undefined || (!ADDRESS.test(value) && looksLikeToken(value));
+      /* A name reads its value as a record, a text and a header read it; a value no name gives
+         away is cut here by its look too, as an address carries a credential under any name. */
+      const secret =
+        isSecretValue(decoded(param.slice(0, at)), value) ||
+        (!ADDRESS.test(value) && looksLikeToken(value));
       return secret && value !== "" ? `${param.slice(0, at)}=${REDACTED}` : param;
     });
   return `${params[0]}${cut.join("&")}`;

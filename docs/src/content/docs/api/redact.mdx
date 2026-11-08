@@ -1,4 +1,4 @@
-export const metadata = { title: "redact", description: "Cut every credential out of a text, headers, an error or data before it is logged or sent elsewhere — the rules Courier's own log and Studio use.", mode: "both", updated: "2026-11-05" }
+export const metadata = { title: "redact", description: "Cut every credential out of a text, headers, an error or data before it is logged or sent elsewhere — the rules Courier's own log and Studio use.", mode: "both", updated: "2026-11-08" }
 
 ## Import
 
@@ -22,9 +22,11 @@ declare function redact(value: unknown): unknown
 | Given | Comes back |
 |---|---|
 | A text | Without a private key, a JWT, a key in a known provider's format, the value after an authorization scheme, a word that reads as a credential after one that says it is one — `bad credentials …`, `secret …` — the value of a pair whose name says it is secret — `password=`, `"token":`, `api_key` — and a header value the platform repeated as it refused it. An id no such word names — a trace id, a hash — is kept. In every address, the user and password, secret query parameters and a path segment that reads as a token are cut. |
-| `Headers` | A record by name. A credential header's value is hidden — `Authorization` keeps its scheme, `Set-Cookie` its name and attributes; the rest are kept. |
+| `Headers` | A record by name. A credential header's value is hidden — `Authorization` keeps its scheme, `Set-Cookie` its name and attributes — and so is the value of a header named as a field that would be hidden, `sid` or `x-otp`; the rest are kept. |
 | An error | The error itself when it carries nothing to cut. Otherwise a copy that prints as it does: its name, its message and the message its stack starts with cut, the stack's frames kept, its own fields and every error in its `cause` chain read the same way. |
-| A list or a record | Read entry by entry: an entry whose name says it is secret — `password`, `token`, `apiKey`, `credentials` — is hidden whole, a weak name such as `key` or `session` only when its value reads as a credential. |
+| A list or a record | Read entry by entry: an entry whose name says it is secret — `password`, `token`, `apiKey`, `session`, `otp` — is hidden whole, and one named `key` only when its value reads as a credential. |
+
+A name reads its value alike wherever the two stand — a parameter of an address, a field of a record, a pair in a text or a body, a header — so a call's variables lose whatever the address made of them loses by its names. A name that says its value is a credential hides whatever it is given: a one-time password's few digits, a session's `sid`, a signature's `sig`. `key` alone, which names a sort key or a cache key as often as an API's, hides only a value that reads as a credential: `key: "id"` stays, `key: 123456` does not. An address cuts one thing more, a value that reads as a token under a name that says nothing, `?id=` or `?t=`, as a credential travels in one under any name; a record keeps such a value, an id or a trace id, as a pair in a text does.
 
 ```ts
 import { redact } from "@noverax/courier"

@@ -2,7 +2,7 @@ import { isCredentialHeader } from "../is-credential-header";
 
 import { isSecretLike } from "./is-secret-like";
 import { REDACTED } from "./redacted";
-import { type SecretName, secretName } from "./secret-name";
+import { isSecretValue, type SecretName, secretName } from "./secret-name";
 import { TEXT_PATTERNS as P } from "./text-patterns";
 
 /**
@@ -62,17 +62,24 @@ function cutAuthValue(
   return `${before}${scheme}${between}${REDACTED}`;
 }
 
+/* A strong column's values are cut whatever they are; a weak one's where one reads as a credential. */
 function cutPostgresKey(
   match: string,
   open: string,
   columns: string,
   between: string,
-  _values: string,
+  values: string,
   close: string,
 ): string {
-  const secret = columns.split(/[\s,]+/).some((column) => secretName(column) !== undefined);
+  const named = columns.split(/[\s,]+/).map((column) => secretName(column));
+  const secret =
+    named.includes("strong") ||
+    (named.includes("weak") && values.split(/[\s,]+/).some((value) => isSecretLike(value)));
   return secret ? `${open}${columns}${between}${REDACTED}${close}` : match;
 }
+
+/* A number or a flag after a key in quotes is that key's value, as a record's field holds it. */
+const JSON_LITERAL = /^(?:-?\d{1,64}(?:\.\d{1,64})?(?:[eE][+-]?\d{1,4})?|true|false)$/;
 
 /* A JSON key in quotes is a key wherever it stands: `fetch = "token": "…"` names no pair `fetch`. */
 function cutJsonPair(
@@ -84,7 +91,9 @@ function cutJsonPair(
 ): string {
   const strength = secretName(name);
   if (strength === undefined || value === REDACTED) return match;
-  return cutValue(`${quote}${name}${quote}${between}`, value, strength, ":", " ") ?? match;
+  const head = `${quote}${name}${quote}${between}`;
+  if (JSON_LITERAL.test(value)) return isSecretValue(name, value) ? `${head}${REDACTED}` : match;
+  return cutValue(head, value, strength, ":", " ") ?? match;
 }
 
 /* A pair a value is read for, how deep: `Error: password=…` holds its secret one level down. */

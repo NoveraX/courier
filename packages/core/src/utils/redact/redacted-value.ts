@@ -2,11 +2,10 @@ import { defineOwn } from "../define-own";
 import { isCredentialHeader } from "../is-credential-header";
 import { CUT, REDACT_BOUNDS } from "./bounds";
 import { headersWithoutSecrets } from "./headers";
-import { isSecretLike } from "./is-secret-like";
 import { REDACTED } from "./redacted";
 import { readEach, redactedError } from "./redacted-error";
 import { redactedText } from "./redacted-text";
-import { secretName } from "./secret-name";
+import { isSecretValue } from "./secret-name";
 import { attempt, FAILED, UNREADABLE } from "./unreadable";
 
 /**
@@ -70,26 +69,23 @@ function redactedRecord(
   return shown;
 }
 
-/* A strong name hides what it holds whatever it is; a weak one — `key`, `session` — only a value
-   that reads as a credential, so `key: "id"` stays. */
+/* A name reads its value as an address, a text and a header read it: a strong one hides what it
+   holds whatever it is, the weak one — `key` — only a value that reads as a credential, so
+   `key: "id"` stays. */
 function redactedEntry(
   name: string,
   value: unknown,
   depth: number,
   below: ReadonlySet<object>,
 ): unknown {
-  const strength = secretName(name);
-  if (strength === "strong" && value !== undefined && value !== null && value !== "") {
-    return value === REDACTED ? value : REDACTED;
-  }
-  if (strength === "weak" && typeof value === "string" && isSecretLike(value)) return REDACTED;
+  if (isSecretValue(name, value)) return value === REDACTED ? value : REDACTED;
   return redactedValue(value, depth + 1, below);
 }
 
 function holdsCredential(headers: Headers): boolean {
   let holds = false;
-  headers.forEach((_value, name) => {
-    holds ||= isCredentialHeader(name);
+  headers.forEach((value, name) => {
+    holds ||= isCredentialHeader(name) || isSecretValue(name, value);
   });
   return holds;
 }

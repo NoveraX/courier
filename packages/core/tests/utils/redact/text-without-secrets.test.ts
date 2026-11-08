@@ -63,6 +63,18 @@ describe("a text's credentials", () => {
     expect(textWithoutSecrets("Key (api_key)=(Zq9x7Kp2Lm) already exists.")).toBe(
       "Key (api_key)=([redacted]) already exists.",
     );
+    expect(textWithoutSecrets("Key (sid)=(42) already exists.")).toBe(
+      "Key (sid)=([redacted]) already exists.",
+    );
+  });
+
+  it("are the values Postgres quoted for a key column only where one reads as a credential", () => {
+    expect(textWithoutSecrets("Key (key)=(id) already exists.")).toBe(
+      "Key (key)=(id) already exists.",
+    );
+    expect(textWithoutSecrets("Key (tenant, key)=(42, Zq9x7Kp2Lm) already exists.")).toBe(
+      "Key (tenant, key)=([redacted]) already exists.",
+    );
   });
 
   it("are cut after a word that says a credential follows, when the next reads as one", () => {

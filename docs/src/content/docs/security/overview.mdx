@@ -1,4 +1,4 @@
-export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Security Model", description: "Where your users' credentials travel through Courier — browser, proxy, server and API — what each layer passes on, refuses and writes down, and what to set in production.", mode: "both", updated: "2026-11-08" }
 
 ## What Courier secures, and what it leaves to your API
 
@@ -116,7 +116,7 @@ Subscribing, leaving and re-authenticating are counted apart from other messages
 | The app's origin, for Studio's Playground | Taken, when not configured, from a request whose own `Host` is `localhost`, `127.0.0.1` or `[::1]` on the port the server accepted it on, sent from this machine, as far as the framework tells — see [`appOrigin`](/docs/api/config) | Never taken from a request |
 | Studio's Playground under `browsersOnly` | Let through on a one-time pass only Studio's runtime in the process serving the route redeems — see [Studio's Playground](/docs/proxy-mode/rate-limits#studios-playground) | Refused, as a script is: no pass is honoured |
 
-Courier counts as in development wherever `NODE_ENV` is not `production`, so set it on every server you deploy, a custom Node server included. It reads each variable of its own — `NODE_ENV`, `COURIER_ALLOWED_ORIGINS`, `COURIER_ALLOWED_HOSTS`, `COURIER_TRUSTED_PROXIES` among them — as the environment's own: Node looks a name the environment does not have up on `Object.prototype`, and a variable code elsewhere in the process put there leaves the setting unset. A `NODE_ENV` your bundler writes into the build is read as written.
+Courier counts as in development wherever `NODE_ENV` is not `production`, so set it on every server you deploy, a custom Node server included. It reads each variable of its own — `NODE_ENV`, `COURIER_ALLOWED_ORIGINS`, `COURIER_ALLOWED_HOSTS`, `COURIER_TRUSTED_PROXIES` among them — as the environment's own: Node looks a name the environment does not have up on `Object.prototype`, and a variable code elsewhere in the process put there leaves the setting unset. A `NODE_ENV` your bundler writes into the build is read as written. A `production` closes every allowance development makes wherever it is found, on `Object.prototype` too unless your bundler wrote `development` into the build, and only a `process` the runtime owns can say development: a value there may make a check stricter, never weaker. The one setting production loosens — a host no `allowedHosts` names is served in production — takes `production` only from the environment's own `NODE_ENV` or your bundler's.
 
 ## In production
 

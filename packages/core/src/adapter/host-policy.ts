@@ -99,6 +99,8 @@ export function isHostServed(
   if (name === undefined) return false;
   if (isAlwaysServed(name)) return true;
   if (hosts !== undefined) return isHostNamed(name, hosts);
+  /* The one check production loosens: it reads the mode beyond doubt, so a `"production"`
+     Object.prototype alone may hold serves no host. */
   return nodeEnvironment() === "production";
 }
 

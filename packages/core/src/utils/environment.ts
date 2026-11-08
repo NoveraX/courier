@@ -53,6 +53,20 @@ export function ownEnvironment(): Readonly<Record<string, string | undefined>> {
 }
 
 /**
+ * Whether the runtime has a `process` of its own, an environment in it: a
+ * `process` Object.prototype holds, or one set to nothing, is none.
+ *
+ * @returns `true` where a `process` with an environment is the runtime's own
+ * @example
+ * ```ts
+ * if (hasOwnProcess() && !inProduction()) warnInDevelopment();
+ * ```
+ */
+export function hasOwnProcess(): boolean {
+  return environment() !== undefined;
+}
+
+/**
  * A variable as a bundler may write it in — `process.env.NODE_ENV`, or one an
  * application's build inlines into a page — or else as the environment has
  * it of its own. The caller writes the plain member access, which a bundler
@@ -75,7 +89,10 @@ export function writtenOrOwn(name: string, written: string | undefined): string 
 }
 
 /**
- * `NODE_ENV`, as a bundler writes it in or the environment has it of its own.
+ * `NODE_ENV`, as a bundler writes it in or the environment has it of its own:
+ * what the one check production loosens reads — a host no setting names —
+ * as a `"production"` it may have found on Object.prototype alone is none.
+ * A check production tightens asks {@link inProduction}.
  *
  * @returns Its value, or `undefined` where neither says one
  * @example
@@ -88,4 +105,22 @@ export function nodeEnvironment(): string | undefined {
     "NODE_ENV",
     typeof process === "undefined" ? undefined : process.env.NODE_ENV,
   );
+}
+
+/**
+ * Whether the process runs in production, as a check that production makes
+ * stricter reads it: `NODE_ENV` of `"production"` wherever it is found —
+ * the bundler's literal, the environment's own variable, or what
+ * Object.prototype holds, which can only close a development allowance.
+ * Any other value, or none, is no production.
+ *
+ * @returns `true` when `NODE_ENV` reads `"production"`
+ * @example
+ * ```ts
+ * if (!inProduction()) attachStudio();
+ * ```
+ */
+export function inProduction(): boolean {
+  /* A plain member access, so that a bundler writes the build's mode in. */
+  return typeof process !== "undefined" && process.env.NODE_ENV === "production";
 }

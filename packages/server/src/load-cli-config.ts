@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { nodeEnvironment } from "@noverax/courier/internal";
+import { inProduction } from "@noverax/courier/internal";
 import {
   type LoadedCourierConfig,
   loadCourierConfig,
@@ -38,7 +38,7 @@ async function discover(cwd: string): Promise<CliConfig> {
   const loaded = await loadCourierConfig({
     cwd,
     requireAtCwd: true,
-    projectTransforms: nodeEnvironment() !== "production",
+    projectTransforms: !inProduction(),
   });
   return (
     loaded ?? {
@@ -50,7 +50,6 @@ async function discover(cwd: string): Promise<CliConfig> {
 async function named(cwd: string, file: string): Promise<CliConfig> {
   const path = resolve(cwd, file);
   if (!existsSync(path)) return { problem: `--config ${file}: there is no file at ${path}.` };
-  const transformCache =
-    nodeEnvironment() === "production" ? undefined : projectTransformCache(dirname(path));
+  const transformCache = inProduction() ? undefined : projectTransformCache(dirname(path));
   return loadCourierConfigFile(path, { transformCache });
 }

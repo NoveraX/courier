@@ -7,8 +7,8 @@ import { createLogger, getAppOrigin, getSources } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import {
   createKeptBodies,
+  inProduction,
   KEPT_BODY_BYTES,
-  nodeEnvironment,
   studioHooks,
 } from "@noverax/courier/internal";
 import { EventBus } from "../event-bus";
@@ -140,7 +140,7 @@ async function attachFresh(
 
   // ── Dev-only: studio observability + Studio /runtime socket ───────────
 
-  const isProduction = nodeEnvironment() === "production";
+  const isProduction = inProduction();
   if (!isProduction) {
     const bus = new EventBus();
     const resolveSourceName = createSourceNameResolver(getSources);

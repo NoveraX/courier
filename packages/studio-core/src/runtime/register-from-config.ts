@@ -2,7 +2,7 @@ import { dirname } from "node:path";
 
 import { createLogger, detectAppOrigin, registerSources, setAppOrigin } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
-import { nodeEnvironment } from "@noverax/courier/internal";
+import { inProduction } from "@noverax/courier/internal";
 import type { LoadedCourierConfig } from "@noverax/courier-build/config";
 import type { ServerRuntimeSetup } from "./attach-runtime-core";
 import { readStudioToken } from "./read-studio-token";
@@ -43,7 +43,7 @@ export async function registerFromConfig(
     const modules = new Set<string>();
     const loaded: LoadedCourierConfig | null = await loadCourierConfig({
       /* A server in production writes nothing into its node_modules: they may be read-only. */
-      projectTransforms: nodeEnvironment() !== "production",
+      projectTransforms: !inProduction(),
       ...(registration.followFiles === true && { onModule: (file) => modules.add(file) }),
     });
     if (loaded) {
@@ -63,7 +63,7 @@ export async function registerFromConfig(
           reloaded(config);
           registerSources(config.sources);
         });
-      } else if (nodeEnvironment() !== "production") {
+      } else if (!inProduction()) {
         await followConfig(() => loadCourierConfig({ projectTransforms: true }), reloaded);
       }
       const projectRoot = dirname(loaded.configFile);

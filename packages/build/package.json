@@ -204,8 +204,8 @@
     "jest": "^30.5.2",
     "metro": "^0.87.2",
     "metro-config": "^0.87.2",
-    "rolldown": "^1.2.15",
-    "rollup": "^4.65.0",
+    "rolldown": "^1.2.16",
+    "rollup": "^4.67.4",
     "webpack": "^5.112.2"
   }
 }

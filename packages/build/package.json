@@ -150,7 +150,7 @@
     "access": "public"
   },
   "dependencies": {
-    "confbox": "^0.3.1",
+    "confbox": "^0.3.2",
     "jiti": "^2.7.0"
   },
   "peerDependencies": {

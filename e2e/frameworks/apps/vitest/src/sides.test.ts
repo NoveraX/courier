@@ -7,7 +7,7 @@ import { expect, it } from "vitest";
 /* Vitest's jsdom takes the core's modules for a server, not the page's: what a server lends in a
    test is read by the calls of its process. A page's caller's call made while no request is being
    served keeps the page's session, as in a page; the root's caller is the server's, and its call
-   carries none of it. */
+   carries none of it, and asks the platform's fetch to send none of its own credentials. */
 const { endpoint } = courier();
 const sent: RequestInit[] = [];
 
@@ -47,5 +47,5 @@ it("carries no page's session for the server's caller's call no request is being
   await createCaller(api).rename();
 
   expect(new Headers(sent.at(-1)?.headers).get("x-csrftoken")).toBeNull();
-  expect(sent.at(-1)?.credentials).toBeUndefined();
+  expect(sent.at(-1)?.credentials).toBe("omit");
 });

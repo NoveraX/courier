@@ -20,6 +20,8 @@ export interface StreamCall {
   readonly options: BaseOptions | undefined;
   /** What the user's session gives it; none for one that takes neither the session nor `forward` */
   readonly session: StreamSession | undefined;
+  /** What the caller adds to the init of each request it opens with: a server's sends none of the platform's credentials */
+  readonly init?: RequestInit | undefined;
 }
 
 /* What each stream call's options were handed with, beside what the caller set. */
@@ -97,9 +99,10 @@ export function withStreamCall(
   options: Record<string, unknown>,
   sourceOptions: BaseOptions | undefined,
   session: StreamSession | undefined,
+  init?: RequestInit,
 ): Record<string, unknown> {
   const handed = { ...options };
-  calls.set(handed, { options: sourceOptions, session });
+  calls.set(handed, { options: sourceOptions, session, init });
   return handed;
 }
 

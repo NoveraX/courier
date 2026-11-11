@@ -81,7 +81,7 @@ export function createDirectSSEFactory(
     };
     const instr = beginStream(meta, studioRequestIdOption(options));
     const transport = transportOf(api, source, group, options);
-    const connection = streamConnection(source, call?.session, transport);
+    const connection = streamConnection(source, call?.session, transport, call?.init);
 
     const send = transport.fetch;
     const subscription = subscribeSSE(url, {

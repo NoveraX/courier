@@ -1,5 +1,7 @@
 import type { AgentCall } from "../agent/types";
 import type { Context } from "../http-client/types";
+import { isReactNative } from "./is-react-native";
+import { REQUEST_MEMBERS } from "./request-members";
 
 /* The marks of a server's call, under keys no code outside this module can name: only the
    server's own code marks a call, and no context a caller writes passes for one. A spread of
@@ -80,4 +82,31 @@ export function agentOf(context: Context | undefined): AgentCall | undefined {
 export function isServersCall(context: Context | undefined): boolean {
   const marked: Marked | undefined = context;
   return marked?.[SERVER_CALL] === true || marked?.[AGENT] !== undefined;
+}
+
+/* What a server's call tells the platform's fetch: to send none of its own credentials. */
+const SENDS_NONE: RequestInit = Object.freeze({ credentials: "omit" });
+
+/**
+ * What a call of the server's caller, or one an MCP server makes for an
+ * agent, adds to its request's init: that the platform's fetch send none of
+ * its own credentials, so no fetch that keeps a page's cookies — a DOM's on
+ * the server, where a test runs a server's code under one — sends them for
+ * a server's call. The call's own session, read of the request it serves,
+ * it carries in its headers. Named where the core names the platform's
+ * members, Node's, and where a DOM is on the global object; a platform
+ * that refuses the member, Cloudflare's, has neither. React Native's
+ * caller is the app's own.
+ *
+ * @param context - The call's context
+ * @returns `{ credentials: "omit" }` for a server's call there, or `undefined`
+ * @example
+ * ```ts
+ * coreFetch(method, url, { ...options, ...serversCallInit(context) });
+ * ```
+ */
+export function serversCallInit(context: Context | undefined): RequestInit | undefined {
+  if (!isServersCall(context) || isReactNative()) return undefined;
+  const named = REQUEST_MEMBERS !== undefined || Object.hasOwn(globalThis, "document");
+  return named ? SENDS_NONE : undefined;
 }

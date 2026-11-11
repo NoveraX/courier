@@ -61,3 +61,19 @@ export function agentOf(_context: Context | undefined): AgentCall | undefined {
 export function isServersCall(_context: Context | undefined): boolean {
   return false;
 }
+
+/**
+ * What a server's call adds to its request's init, as a page's bundle has
+ * it: nothing — a page makes no server's call, and its fetch sends what the
+ * call's session asks.
+ *
+ * @param _context - The call's context
+ * @returns `undefined`
+ * @example
+ * ```ts
+ * coreFetch(method, url, { ...options, ...serversCallInit(context) });
+ * ```
+ */
+export function serversCallInit(_context: Context | undefined): RequestInit | undefined {
+  return undefined;
+}

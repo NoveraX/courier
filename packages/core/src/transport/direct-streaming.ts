@@ -3,6 +3,7 @@ import { assertTransportOptions } from "../http-client/assert-transport-options"
 import type { RequestContext } from "../http-client/types";
 import type { CallerWSOptions } from "../realtime/ws/ws-types";
 import { ownFields } from "../utils/own";
+import { serversCallInit } from "../utils/server-call-marks";
 import type { StreamingFactories } from "./compose-backend";
 import { assertDirectlyReachable } from "./direct/assert-reachable";
 import { channelAddress } from "./direct/channel-address";
@@ -67,6 +68,7 @@ export function directStreamingFactories(
         options,
         read,
         startStreamSession(source, read, group, method, context),
+        serversCallInit(context),
       );
     };
   const streamOptions = opening(streamRefused);

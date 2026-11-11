@@ -2,6 +2,7 @@ import type { EndpointHold } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { ownFields } from "../utils/own";
+import { serversCallInit } from "../utils/server-call-marks";
 import { bindMethod, boundParts } from "./bind-method";
 import type { RequestOptions } from "./call-transport";
 import { httpPath } from "./http-path";
@@ -141,6 +142,8 @@ export class HttpClient {
     return coreFetch(method, fullUrl, {
       ...this.baseFetchInit,
       ...fetchOptions,
+      /* A server's call sends none of the platform's own credentials, whatever its options name. */
+      ...serversCallInit(this.context),
       headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, own.headers)),
       timeout: own.timeout ?? this.baseTimeout,
       withinOrigin: withinOrigin === true || this.context?.proxyMethod !== undefined,

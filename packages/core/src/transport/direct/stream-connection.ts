@@ -31,6 +31,8 @@ export interface StreamConnection {
  * @param options - The source's options, as the stream's call read them
  * @param session - What the user's session gives the stream
  * @param transport - The stream's transport: the call's, its group's or its source's
+ * @param callInit - What the caller adds to each request's init, over the API's: a server's sends
+ *   none of the platform's credentials
  * @returns How its connections open; `undefined` for a stream that takes
  *   no session, of an API whose options give a stream nothing
  * @example
@@ -43,8 +45,9 @@ export function streamConnection(
   options: unknown,
   session: StreamSession | undefined,
   transport: ResolvedTransport,
+  callInit?: RequestInit,
 ): StreamConnection | undefined {
-  const init = streamInitOf(options, transport);
+  const init = { ...streamInitOf(options, transport), ...callInit };
   if (session === undefined && Object.keys(init).length === 0) return undefined;
   let connected: CallSession | undefined;
   return {

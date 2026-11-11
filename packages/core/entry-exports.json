@@ -257,6 +257,9 @@
       "WithOptions",
       "WrapHandler",
       "WrapMiddleware"
-    ]
+    ],
+    "otherThanRoot": {
+      "createCaller": "The server's caller, refused where the core's modules are a page's — the browser condition, Jest's jsdom environment among them; the root's is a page's there"
+    }
   }
 }

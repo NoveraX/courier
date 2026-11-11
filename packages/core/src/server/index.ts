@@ -32,9 +32,9 @@ export { ConnectionError, RealtimeError } from "../realtime/realtime-error";
 export { redact } from "../utils/redact/redact";
 export { isStreamedUpload } from "../utils/streamed-upload";
 export { isValidationError, ValidationError } from "../validation";
-export { createCaller } from "./create-caller";
 export { ensureCsrfToken } from "./ensure-csrf-token";
 /* Its own types, each from the module that declares it, are named in public-types.ts. */
 export type * from "./public-types";
+export { createCaller } from "./servers-caller";
 export { registerRequestContext } from "./session/request-context";
 export { getSources, registerSources } from "./sources";

@@ -48,6 +48,8 @@ describe("the stand-ins of the modules only a server runs", () => {
       "browser/utils/one-users-call": "src/browser/utils/one-users-call.ts",
       "utils/server-call-marks": "src/utils/server-call-marks.ts",
       "browser/utils/server-call-marks": "src/browser/utils/server-call-marks.ts",
+      "utils/servers-modules": "src/utils/servers-modules.ts",
+      "browser/utils/servers-modules": "src/browser/utils/servers-modules.ts",
       "studio/singleton": "src/studio/singleton.ts",
       "browser/studio/singleton": "src/browser/studio/singleton.ts",
       "utils/request-members": "src/utils/request-members.ts",

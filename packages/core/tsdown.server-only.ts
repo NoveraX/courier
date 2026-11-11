@@ -28,6 +28,7 @@ export const SERVER_ONLY_MODULES = [
   "utils/upload-without-progress",
   "utils/one-users-call",
   "utils/server-call-marks",
+  "utils/servers-modules",
   "studio/singleton",
   "utils/request-members",
   "utils/browser-page",

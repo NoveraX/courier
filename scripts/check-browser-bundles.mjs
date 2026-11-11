@@ -23,8 +23,9 @@
  *    Safari 15.4, Chrome 97, Firefox 104 — nor one a page served over plain
  *    HTTP lacks, is called where its module does not check for it first.
  *
- * And the core, built for Node, an edge runtime and React Native, takes
- * those modules as they are, never the browser's stand-ins; what
+ * And the core's root and its server's entry, built for Node, an edge
+ * runtime, Cloudflare Workers and React Native, take those modules as they
+ * are, never the browser's stand-ins; what
  * Next.js's edge runtime may take of the core — each entry but Node's own —
  * reads no Node API off the global `process` but `process.env`: Next.js's
  * build of a middleware refuses one, or warns of it.
@@ -43,6 +44,7 @@ import { breachesOrFailure, builtOrFailed } from "./browser-bundles/built-or-fai
 import { newerApiCalls } from "./browser-bundles/newer-api-calls.mjs";
 import { nodeGlobalReads } from "./browser-bundles/node-globals.mjs";
 import { GLOBAL_PROCESS, processReads } from "./browser-bundles/process-reads.mjs";
+import { runtimeSideBreaches, SERVER_TAKES } from "./browser-bundles/runtime-sides.mjs";
 import { PROVIDED, SCENARIOS } from "./browser-bundles/scenarios.mjs";
 import { serverOnlyModules } from "./browser-bundles/server-only-modules.mjs";
 import { publishedModules, sidesTaken } from "./browser-bundles/sides-taken.mjs";
@@ -201,20 +203,11 @@ function breachesOf(esbuild, work, scenario) {
   return breaches;
 }
 
-/* What a server or an app takes in place of the server's own modules: the browser's stand-ins.
-   The root offers both sides, so it reaches every one of those modules. */
-const UNIVERSAL = { name: "the core's root", code: 'export * from "@noverax/courier";' };
-
+/* What a server or an app takes of the core, built for where it runs: every module only a server
+   runs, as it is, and none of their browser stand-ins. */
 function runtimeBreaches(esbuild, work, runtime) {
-  const { result } = build(esbuild, work, UNIVERSAL, { ...runtime.options, splitting: false });
-  const { server, browser } = sidesTaken(Object.keys(result.metafile.inputs), SERVER_ONLY);
-  const missing = SERVER_ONLY.filter((module) => !server.includes(module));
-  return [
-    ...browser.map(
-      (module) => `${runtime.name} takes the browser's ${module} in place of the server's`,
-    ),
-    ...missing.map((module) => `${runtime.name} does not take the server's ${module}`),
-  ];
+  const { result } = build(esbuild, work, SERVER_TAKES, { ...runtime.options, splitting: false });
+  return runtimeSideBreaches(runtime.name, Object.keys(result.metafile.inputs), SERVER_ONLY);
 }
 
 /* The Node APIs read off the global `process` by what Next.js's edge runtime may take of the
@@ -254,7 +247,7 @@ async function main() {
       breachesOrFailure(scenario.name, "esbuild", () => breachesOf(esbuild, work, scenario)),
     ),
     ...RUNTIMES.flatMap((runtime) =>
-      breachesOrFailure(UNIVERSAL.name, runtime.name, () =>
+      breachesOrFailure(SERVER_TAKES.name, runtime.name, () =>
         runtimeBreaches(esbuild, work, runtime),
       ),
     ),

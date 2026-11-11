@@ -132,7 +132,6 @@ export {
 export { isCredentialHeader } from "../utils/is-credential-header";
 export { isLoopbackHostname } from "../utils/loopback-host";
 export { middlewareChainOf } from "../utils/middleware-chain-of";
-export { agentCallContext } from "../utils/one-users-call";
 export { parseUrl } from "../utils/parse-url";
 export {
   encodePathValue,
@@ -152,6 +151,7 @@ export {
 } from "../utils/redact";
 export { isSecretHeader, isSecretValue } from "../utils/redact/secret-name";
 export { registerRenderMemo } from "../utils/render-memo";
+export { agentCallContext } from "../utils/server-call-marks";
 export { sliceWhole } from "../utils/slice-whole";
 export { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 export { formOf } from "../utils/variables-encoding";

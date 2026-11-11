@@ -7,7 +7,7 @@
  * code was built for a page.
  */
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import * as Browser from "../../../src/browser/capabilities/registry";
+import { missingCapabilityCause } from "../../../src/browser/capabilities/missing-capability";
 import { createCaller } from "../../../src/caller";
 import type { SessionCapability } from "../../../src/capabilities/session";
 import { defineApi } from "../../../src/define/api";
@@ -18,6 +18,10 @@ import { sendJson, startUpstream, type Upstream } from "../../helpers/middleware
 vi.mock(
   "../../../src/capabilities/registry",
   () => import("../../../src/browser/capabilities/registry"),
+);
+vi.mock(
+  "../../../src/capabilities/missing-capability",
+  () => import("../../../src/browser/capabilities/missing-capability"),
 );
 
 const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
@@ -80,7 +84,7 @@ describe("a page's calls, beside a registry a script planted", () => {
     expect(refused).toBeInstanceOf(ConfigurationError);
     expect(refused).toMatchObject({ code: "SERVER_CAPABILITY_MISSING" });
     expect((refused as Error).message).toBe(
-      `[courier] accounts.me names the request it serves in its context, and nothing here reads one: only a server does. On a server, make the caller with createCaller from @noverax/courier/server, or register the framework's request context with registerRequestContext; ${Browser.missingCapabilityCause()}.`,
+      `[courier] accounts.me names the request it serves in its context, and nothing here reads one: only a server does. On a server, make the caller with createCaller from @noverax/courier/server, or register the framework's request context with registerRequestContext; ${missingCapabilityCause()}.`,
     );
     expect(planted.contextSession).not.toHaveBeenCalled();
     expect(upstream.seen).toEqual([]);

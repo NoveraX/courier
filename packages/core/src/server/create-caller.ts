@@ -10,8 +10,8 @@ import type {
   GroupRecord,
 } from "../define";
 import { getSourceName } from "../define/api";
-import { serverCallContext } from "../utils/one-users-call";
 import { ownField } from "../utils/own";
+import { serverCallContext } from "../utils/server-call-marks";
 import { heldOptionsOf } from "./assert-server-options";
 import { provideServerCapabilities } from "./provide-server-capabilities";
 

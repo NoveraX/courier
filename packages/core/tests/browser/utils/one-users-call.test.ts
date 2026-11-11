@@ -7,11 +7,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentCall } from "../../../src/agent/types";
-import {
-  agentCallContext,
-  agentOf,
-  isOneUsersCall,
-} from "../../../src/browser/utils/one-users-call";
+import { isOneUsersCall } from "../../../src/browser/utils/one-users-call";
+import { agentCallContext, agentOf } from "../../../src/browser/utils/server-call-marks";
 import { courier, defineApi } from "../../../src/define/index";
 import { AbortError } from "../../../src/errors";
 import { createCaller } from "../../../src/index";
@@ -23,6 +20,10 @@ vi.mock(
 vi.mock(
   "../../../src/utils/one-users-call",
   () => import("../../../src/browser/utils/one-users-call"),
+);
+vi.mock(
+  "../../../src/utils/server-call-marks",
+  () => import("../../../src/browser/utils/server-call-marks"),
 );
 
 const { endpoint } = courier();
@@ -66,8 +67,8 @@ afterEach(() => {
 describe("a call in a page", () => {
   it("is one user's, whatever its context says", async () => {
     const { serverCallContext } = await vi.importActual<
-      typeof import("../../../src/utils/one-users-call")
-    >("../../../src/utils/one-users-call");
+      typeof import("../../../src/utils/server-call-marks")
+    >("../../../src/utils/server-call-marks");
 
     expect(isOneUsersCall()).toBe(true);
     expect(isOneUsersCall(serverCallContext(undefined))).toBe(true);

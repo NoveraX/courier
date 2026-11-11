@@ -1,10 +1,12 @@
-import { missingCapabilityCause, serverCapability } from "../capabilities/registry";
+import { missingCapabilityCause } from "../capabilities/missing-capability";
+import { serverCapability } from "../capabilities/registry";
 import type { SessionCapability } from "../capabilities/session";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Context } from "../http-client/types";
 import { isReactNative } from "../utils/is-react-native";
-import { agentOf, isOneUsersCall } from "../utils/one-users-call";
+import { isOneUsersCall } from "../utils/one-users-call";
 import { ownFields } from "../utils/own";
+import { agentOf } from "../utils/server-call-marks";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
 import { namesRequest } from "./names-request";

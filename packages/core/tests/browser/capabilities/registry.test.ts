@@ -5,6 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { missingCapabilityCause } from "../../../src/browser/capabilities/missing-capability";
 import * as Browser from "../../../src/browser/capabilities/registry";
 import type { SessionCapability } from "../../../src/capabilities/session";
 
@@ -32,7 +33,7 @@ describe("the registry in a page", () => {
   });
 
   it("says the code was built for a page, and what to do on a server", () => {
-    expect(Browser.missingCapabilityCause()).toMatch(
+    expect(missingCapabilityCause()).toMatch(
       /^this code was built for a page, which serves no request: .* Jest's jsdom .* test it in a node environment$/,
     );
   });

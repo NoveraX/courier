@@ -8,12 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentCall } from "../../src/agent/types";
 import type { Context } from "../../src/http-client/types";
-import {
-  agentCallContext,
-  agentOf,
-  isOneUsersCall,
-  serverCallContext,
-} from "../../src/utils/one-users-call";
+import { isOneUsersCall } from "../../src/utils/one-users-call";
+import { agentCallContext, agentOf, serverCallContext } from "../../src/utils/server-call-marks";
 
 const AGENT: AgentCall = { tool: "orders_cancel", access: "destructive" };
 

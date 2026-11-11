@@ -4,6 +4,11 @@
  * with them. The handlers, the request being served and the rest a server
  * runs come from `@noverax/courier/server`.
  *
+ * `redact`, and the rules for what a credential looks like behind it,
+ * come from the root: no call of a page needs them, and a bundler that
+ * keeps every module an entry reaches — Next.js 15's Turbopack — keeps
+ * none of them on a page that imports from here.
+ *
  * Universal code — a page rendered on the server too — imports this entry
  * as well: on the server, its calls take the user's session and reach the
  * application's own proxy as the server lends them, once a request context
@@ -29,7 +34,6 @@ export { createProxyCaller } from "../proxy-caller/create-proxy-caller";
 /* The realtime errors' base and a connection's; the others come with the
    realtime client, from `@noverax/courier/realtime`, and load with it. */
 export { ConnectionError, RealtimeError } from "../realtime/realtime-error";
-export { redact } from "../utils/redact/redact";
 export { smoothProgress } from "../utils/smooth-progress";
 export { isStreamedUpload } from "../utils/streamed-upload";
 export { isValidationError, ValidationError } from "../validation";

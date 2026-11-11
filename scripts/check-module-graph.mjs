@@ -4,7 +4,8 @@
  *
  * Each workspace package with a `module-sides.json` puts every entry it
  * exports on a side — what a page imports, what a server does, or both —
- * and names the areas of its build only a server runs, the packages
+ * and names the areas of its build only a server runs, the ones a page
+ * takes from its root alone, the packages
  * outside the workspace its page code may take, and the modules whose
  * dynamic import names no module a bundler can tell, or modules by a
  * pattern, each with why. From each page entry, every module it reaches
@@ -19,7 +20,10 @@
  * bundler drops what is unused: what a page's bundle holds then depends on
  * no bundler. A breach is:
  *
- *  - a module of a server's area reached, with the way it was reached;
+ *  - a module of a server's area reached, with the way it was reached, and
+ *    one of an area a page takes from the package's root alone: a bundler
+ *    that keeps every module an entry reaches — Next.js 15's Turbopack —
+ *    would keep it on every page the entry is imported by;
  *  - a built-in module of Node reached, or a package outside the workspace
  *    that the importing package does not let a page take — any other one,
  *    so a server's package is caught whatever it is;
@@ -63,9 +67,10 @@ function workspacePackages() {
     const sidesFile = join(root, "module-sides.json");
     const sides = existsSync(sidesFile) ? readJson(sidesFile) : undefined;
     const areas = Object.keys(sides?.serverAreas ?? {});
+    const rootAreas = Object.keys(sides?.rootAreas ?? {});
     const depends = Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies });
     const lib = join(root, "lib");
-    return [{ name, root, exports, imports: imports ?? {}, lib, areas, sides, depends }];
+    return [{ name, root, exports, imports: imports ?? {}, lib, areas, rootAreas, sides, depends }];
   });
 }
 
@@ -81,7 +86,7 @@ function strayPagePackages(pkg) {
 
 /* An area the build has none of would match nothing, and pass whatever reached it. */
 function missingAreas(pkg) {
-  return pkg.areas
+  return [...pkg.areas, ...pkg.rootAreas]
     .filter((area) => {
       const path = join(pkg.lib, area);
       return !existsSync(path) || statSync(path).isDirectory() !== area.endsWith("/");

@@ -44,6 +44,9 @@
     "web-request-context.js": "The request a web server serves",
     "discover-app-origin.js": "The address the application listens at"
   },
+  "rootAreas": {
+    "utils/redact/": "The rules behind redact for what a credential looks like, which no call of a page needs: the root and the server's entry export redact, and a page that wants it imports it from the root, so a bundler that keeps every module an entry reaches keeps none of them on a page that only calls"
+  },
   "pagePackages": {
     "@standard-schema/spec": "The types of the schemas a definition validates with, which the core depends on"
   }

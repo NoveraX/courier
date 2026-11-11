@@ -3,7 +3,8 @@
  * callers, the errors a call fails with and the helpers a page uses with
  * them. The server entry is what a server takes: its handlers, its caller
  * and what an adapter registers, with the errors and helpers server code
- * uses beside them. The root offers both, and nothing either does not.
+ * uses beside them — `redact` among them, which a page takes from the
+ * root. The root offers both, and nothing either does not.
  */
 import { describe, expect, it } from "vitest";
 
@@ -47,7 +48,6 @@ const SHARED = [
   "isTimeoutError",
   "isValidationError",
   "logger",
-  "redact",
 ];
 
 const PAGE_ONLY = ["createFetch", "smoothProgress"];
@@ -61,6 +61,7 @@ const SERVER_ONLY = [
   "getSources",
   "handleWhileConnected",
   "memoryRateLimitStore",
+  "redact",
   "registerRequestContext",
   "registerSources",
   "setAppOrigin",

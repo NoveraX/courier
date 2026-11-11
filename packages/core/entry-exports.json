@@ -28,7 +28,6 @@
       "isTimeoutError",
       "isValidationError",
       "logger",
-      "redact",
       "smoothProgress"
     ],
     "types": [
@@ -104,6 +103,9 @@
     ],
     "otherThanRoot": {
       "createCaller": "The caller of a page or an app; the root's and /server's is the server's caller, which lends the server's part to the calls of its process"
+    },
+    "rootOnly": {
+      "redact": "Cuts what a value would show of a credential: a page takes it from the root, which keeps the rules behind it off a page that only calls; /server has it for a server"
     }
   },
   "./server": {

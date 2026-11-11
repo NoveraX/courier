@@ -7,11 +7,16 @@
  * change. A name an entry binds to another value than the root does is
  * marked, as the built entries have it: moved to it, an import of that
  * name takes another function, which only a file no server imports may.
+ * The values a page takes from the root alone are named beside the page's
+ * entry, apart from the server's: those of the areas `module-sides.json`
+ * names the root's, which the page's entry leaves out, so a tool sends a
+ * page's import of one to no other entry, and calls it no server's name.
  * The built entries are imported with the module, as the sources are, and
  * compared once loaded: a load that waits on other files' builds counts
  * against no test's time.
  */
 import { readFileSync } from "node:fs";
+import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as builtRoot from "@noverax/courier";
 import * as builtClient from "@noverax/courier/client";
@@ -27,6 +32,8 @@ interface Names {
   types: string[];
   /** The values it binds to another value than the root does, each with what it is */
   otherThanRoot?: Record<string, string>;
+  /** The values a page takes from the root alone, which the page's entry leaves out, each with what it is */
+  rootOnly?: Record<string, string>;
 }
 
 const ENTRIES = {
@@ -36,12 +43,16 @@ const ENTRIES = {
 
 function isNames(value: unknown): value is Names {
   if (typeof value !== "object" || value === null) return false;
-  const { values, types, otherThanRoot } = value as Record<string, unknown>;
-  const marks = otherThanRoot === undefined ? {} : otherThanRoot;
+  const { values, types, otherThanRoot, rootOnly } = value as Record<string, unknown>;
   return (
     [values, types].every(
       (list) => Array.isArray(list) && list.every((name) => typeof name === "string"),
-    ) &&
+    ) && [otherThanRoot ?? {}, rootOnly ?? {}].every(isMarks)
+  );
+}
+
+function isMarks(marks: unknown): boolean {
+  return (
     typeof marks === "object" &&
     marks !== null &&
     Object.values(marks).every((what) => typeof what === "string")
@@ -62,18 +73,20 @@ function listed(): Record<string, Names> {
   );
 }
 
+const COMPILED: ts.CompilerOptions = {
+  strict: true,
+  target: ts.ScriptTarget.ES2022,
+  module: ts.ModuleKind.ESNext,
+  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  skipLibCheck: true,
+  noEmit: true,
+  types: [],
+};
+
 /* The types each entry exports, as the compiler reads its module: a name with no value. */
 function typesOf(files: readonly string[]): string[][] {
   const paths = files.map((file) => fileURLToPath(new URL(file, import.meta.url)));
-  const program = ts.createProgram(paths, {
-    strict: true,
-    target: ts.ScriptTarget.ES2022,
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-    skipLibCheck: true,
-    noEmit: true,
-    types: [],
-  });
+  const program = ts.createProgram(paths, COMPILED);
   const checker = program.getTypeChecker();
   return paths.map((path) => {
     const source = program.getSourceFile(path);
@@ -89,6 +102,38 @@ function typesOf(files: readonly string[]): string[][] {
       .map((exported) => exported.name)
       .sort();
   });
+}
+
+/* The values the root exports from the areas module-sides.json names its own, as the compiler reads
+   where each is declared: an area is a folder or a file of the build, whose sources lie the same way. */
+function rootValuesOfItsAreas(): string[] {
+  const sides: unknown = JSON.parse(
+    readFileSync(new URL("../module-sides.json", import.meta.url), "utf8"),
+  );
+  const areas = Object.keys(
+    typeof sides === "object" && sides !== null ? (Reflect.get(sides, "rootAreas") ?? {}) : {},
+  );
+  const sources = fileURLToPath(new URL("../src/", import.meta.url));
+  const path = fileURLToPath(new URL("../src/index.ts", import.meta.url));
+  const program = ts.createProgram([path], COMPILED);
+  const checker = program.getTypeChecker();
+  const source = program.getSourceFile(path);
+  const symbol = source && checker.getSymbolAtLocation(source);
+  if (symbol === undefined) throw new Error(`${path} is no module`);
+  const inArea = (file: string) => {
+    const built = relative(sources, file).replaceAll("\\", "/").replace(/\.ts$/, ".js");
+    return areas.some((area) => (area.endsWith("/") ? built.startsWith(area) : built === area));
+  };
+  return checker
+    .getExportsOfModule(symbol)
+    .filter((exported) => {
+      const target =
+        exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
+      const file = target.declarations?.[0]?.getSourceFile().fileName;
+      return (target.flags & ts.SymbolFlags.Value) !== 0 && file !== undefined && inArea(file);
+    })
+    .map((exported) => exported.name)
+    .sort();
 }
 
 describe("the names each entry offers", () => {
@@ -118,6 +163,16 @@ describe("the names each entry offers", () => {
       ).toEqual([]);
     },
   );
+
+  it("name the values a page takes from the root alone beside the page's entry: the root's of its areas, which the entry leaves out", () => {
+    const named = Object.keys(listed()["./client"]?.rootOnly ?? {}).sort();
+    const root: Record<string, unknown> = builtRoot;
+
+    expect(named).toEqual(rootValuesOfItsAreas());
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((name) => !(name in root) || name in builtClient)).toEqual([]);
+    expect(listed()["./server"]?.rootOnly).toBeUndefined();
+  });
 
   it("offer the types their lists name", () => {
     const entries = Object.entries(ENTRIES);

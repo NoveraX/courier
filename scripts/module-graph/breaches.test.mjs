@@ -1,7 +1,7 @@
 /**
  * What an entry a page imports breaches: a module of an area only a server
  * runs, reached through a relative import or through the package's own
- * name; a package outside the workspace that the importing package's
+ * name; a module of an area a page takes from the package's root alone; a package outside the workspace that the importing package's
  * `module-sides.json` lets no page take; a package of the workspace with
  * no `module-sides.json`; a dynamic import or `require()` whose name a
  * bundler cannot tell, and an `import.meta.glob` of a pattern — each with
@@ -35,6 +35,7 @@ function workspace() {
     imports: {},
     lib: join(root, dir, "lib"),
     areas: Object.keys(sides?.serverAreas ?? {}),
+    rootAreas: Object.keys(sides?.rootAreas ?? {}),
     sides,
   });
   return [
@@ -44,6 +45,7 @@ function workspace() {
       { "./server": { import: "./lib/server/index.js" } },
       {
         serverAreas: { "server/": "What a server runs" },
+        rootAreas: { "utils/redact/": "What a page takes from the root alone" },
         pagePackages: { "@standard-schema/spec": "The schemas' types" },
         computedImports: { "client/allowed.js": "Loads what the page's own address names" },
       },
@@ -78,6 +80,17 @@ describe("entryBreaches", () => {
 
     expect(breachesOf("@noverax/courier/client", "core/lib/client/index.js").breaches).toEqual([
       "@noverax/courier/client reaches server/, which only a server runs: client/index.js → client/proxy.js → server/index.js",
+    ]);
+  });
+
+  it("breaches with an area a page takes from the root alone, reached from a page's entry, naming the way", () => {
+    writeFiles({
+      "core/lib/client/index.js": 'export { redact } from "../utils/redact/redact.js";',
+      "core/lib/utils/redact/redact.js": "export const redact = (value) => value;",
+    });
+
+    expect(breachesOf("@noverax/courier/client", "core/lib/client/index.js").breaches).toEqual([
+      "@noverax/courier/client reaches utils/redact/, which a page takes from the root alone: client/index.js → utils/redact/redact.js",
     ]);
   });
 

@@ -365,7 +365,7 @@ import {
 
 ### `@noverax/courier/client` — A Page's Calls
 
-What a page or an app calls an API with, and none of the server's part: a page that imports from here loads less than one that imports the same names from the root.
+What a page or an app calls an API with, and none of the server's part: a page that imports from here loads less than one that imports the same names from the root. `redact` is the root's and the server's, so no bundler keeps its rules on a page that only calls.
 
 ```ts
 import {

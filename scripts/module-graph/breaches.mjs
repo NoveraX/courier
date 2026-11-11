@@ -3,9 +3,9 @@ import { packageOf, underLib } from "./resolve-import.mjs";
 import { serverAreaOf } from "./server-area.mjs";
 
 /**
- * @typedef {import("./resolve-import.mjs").Package & { lib: string, areas: string[], sides?: Sides }} SidedPackage
- *   A package of the workspace, with its `lib` folder, the areas of it only a server runs, and its
- *   `module-sides.json` when it has one
+ * @typedef {import("./resolve-import.mjs").Package & { lib: string, areas: string[], rootAreas?: string[], sides?: Sides }} SidedPackage
+ *   A package of the workspace, with its `lib` folder, the areas of it only a server runs, the ones
+ *   a page takes from its root alone, and its `module-sides.json` when it has one
  * @typedef {{ pagePackages?: Record<string, string>, computedImports?: Record<string, string> }} Sides
  *   What a package's `module-sides.json` lets its page code do: the packages outside the workspace
  *   it may take, and its modules whose dynamic import names no module a bundler can tell, or
@@ -18,6 +18,9 @@ import { serverAreaOf } from "./server-area.mjs";
  * among them:
  *
  *  - a module of an area of its package that only a server runs;
+ *  - a module of an area of its package that a page takes from the
+ *    package's root alone, which a bundler keeping every module an entry
+ *    reaches would keep on a page that never imports it;
  *  - a built-in module of Node;
  *  - a package outside the workspace that the `pagePackages` of the
  *    importing module's package do not list;
@@ -61,6 +64,13 @@ export function entryBreaches(ts, label, file, packages) {
     if (area !== undefined) {
       const of = pkg === home ? area : `${area} of ${pkg.name}`;
       breaches.push(`${label} reaches ${of}, which only a server runs: ${way(module)}`);
+    }
+    const rooted = pkg && serverAreaOf(underLib(pkg.lib, module), pkg.rootAreas ?? []);
+    if (rooted !== undefined) {
+      const of = pkg === home ? rooted : `${rooted} of ${pkg.name}`;
+      breaches.push(
+        `${label} reaches ${of}, which a page takes from the root alone: ${way(module)}`,
+      );
     }
   }
   for (const [name, module] of unsided) {

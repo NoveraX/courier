@@ -6,13 +6,16 @@
  * takes none of the page's cookies, and tells the platform's fetch to send
  * none of its own, so a fetch that keeps the page's cookies, as a DOM
  * shim's may, sends it none either. The page's caller keeps the page's
- * session there, as in a page. The side is the entry's.
+ * session there, as in a page. So does the proxy's handler, whose calls
+ * and relayed streams are the server's too. The side is the entry's.
  */
 import { afterEach, describe, expect, it } from "vitest";
-
+import { relayStream } from "../src/adapter/sse-relay";
 import { createCaller as createPageCaller } from "../src/client/index";
 import { courier, defineApi } from "../src/define/index";
 import { createCaller } from "../src/index";
+import { createHandler, registerSources } from "../src/server/index";
+import { _resetSourcesForTests } from "../src/server/sources";
 
 const { endpoint, stream } = courier();
 
@@ -55,6 +58,7 @@ const api = defineApi({
 
 afterEach(() => {
   sent.length = 0;
+  _resetSourcesForTests();
 });
 
 // biome-ignore lint/suspicious/noDocumentCookie: the cookies a page keeps are what the test sets
@@ -88,6 +92,54 @@ describe("the server's caller under a DOM shim", () => {
     const live = createCaller(api).live();
     for await (const _event of live) break;
     live.close();
+
+    const [opened] = sent;
+    expect(opened?.url).toMatch(/\/live$/);
+    expect(opened?.init.credentials).toBe("omit");
+    expect(opened?.pageCookies).toBeUndefined();
+  });
+});
+
+describe("the proxy's handler under a DOM shim", () => {
+  it("calls the API with the session of the request it serves, and none of the page's", async () => {
+    registerSources({
+      accounts: defineApi({
+        name: "accounts",
+        expose: true,
+        baseURL: `${window.location.origin}/api`,
+        session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) => keepingCookies(input, init),
+        endpoints: { rename: endpoint.post("me/name") },
+      }),
+    });
+    const request = new Request(`${window.location.origin}/api/request?_s=accounts&_m=rename`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: window.location.origin,
+        cookie: "sid=made-up-request-session; csrftoken=made-up-request-token",
+        "x-csrftoken": "made-up-request-token",
+      },
+      body: "{}",
+    });
+
+    const answer = await createHandler().handle(request);
+
+    const [call] = sent;
+    expect(answer.status).toBe(200);
+    expect(new Headers(call?.init.headers).get("cookie")).toContain("made-up-request-session");
+    expect(call?.init.credentials).toBe("omit");
+    expect(call?.pageCookies).toBeUndefined();
+  });
+
+  it("relays a stream with none of the page's session", async () => {
+    const relay = relayStream(api, api.options, "", "live");
+    for await (const _event of relay({
+      variables: undefined,
+      headers: {},
+      signal: new AbortController().signal,
+    } as never))
+      break;
 
     const [opened] = sent;
     expect(opened?.url).toMatch(/\/live$/);

@@ -61,7 +61,7 @@ Courier finds the request being served as a call starts, before it first waits �
 | A React Native app | Its own cookies, sent by the platform as a browser sends them; what a page would read from `document.cookie` is kept from the API's answers — see [React Native](/docs/frameworks/react-native#the-users-session) |
 | Server code with no request — a script, a cron job, a build | Nothing |
 
-A call of the server's caller asks the platform's `fetch` to send no credentials of its own, `credentials: "omit"`, whatever the API's options name, and so does one an MCP server makes for an agent: on a server with a DOM on its global object — a test that runs server code under jsdom, say — no `fetch` that keeps a page's cookies sends them with it. It carries the session it reads of a request in its headers.
+A call of the server's caller asks the platform's `fetch` to send no credentials of its own, `credentials: "omit"`, whatever the API's options name, and so do one an MCP server makes for an agent and one the proxy's handler makes for a page, a stream it relays among them: on a server with a DOM on its global object — a test that runs server code under jsdom, say — no `fetch` that keeps a page's cookies sends them with it. It carries the session it reads of a request in its headers.
 
 A header the call sets itself — in a caller's `headers`, or with `.with({ headers })` — wins over the one the session would send.
 

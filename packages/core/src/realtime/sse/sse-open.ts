@@ -1,6 +1,6 @@
 import { createLogger } from "../../logger";
 import { layerHeaders } from "../../utils/layer-headers";
-import { ONCE } from "../../utils/own";
+import { ONCE, ownFields } from "../../utils/own";
 import { REQUEST_MEMBERS } from "../../utils/request-members";
 import { CLIENT_LIMITS } from "../client-limits";
 import { fingerprintOf } from "../credentials-fingerprint";
@@ -37,7 +37,9 @@ export async function openStream<TData>(
     connection.abort();
   }, CLIENT_LIMITS.SSE_CONNECT_TIMEOUT_MS);
   try {
-    const opened = await within(signal, ctx.config.beforeConnect?.());
+    /* What it gave, read as its own fields: a field it does not have, the platform's prototype
+       answers for none of the stream's. */
+    const opened = ownFields(await within(signal, ctx.config.beforeConnect?.()));
     const refused = sameAsRefused(ctx, opened);
     if (refused) return refused;
     const send = ctx.config.fetch ?? fetch;
@@ -46,9 +48,9 @@ export async function openStream<TData>(
     const request = send(ctx.url, {
       __proto__: null,
       ...REQUEST_MEMBERS,
-      ...opened?.init,
+      ...opened.init,
       method: "GET",
-      headers: layerHeaders(opened?.headers, requestHeaders(ctx)),
+      headers: layerHeaders(opened.headers, requestHeaders(ctx)),
       body: null,
       signal,
     } as RequestInit);
@@ -111,9 +113,9 @@ function within<T>(
  */
 function sameAsRefused<TData>(
   ctx: SSEConnectionCtx<TData>,
-  opened: SSEConnectInit | undefined,
+  opened: Partial<SSEConnectInit>,
 ): RealtimeError | undefined {
-  ctx.opened = fingerprintOf(opened?.headers ?? {});
+  ctx.opened = fingerprintOf(opened.headers ?? {});
   const { refused } = ctx;
   if (refused === undefined || refused.retried) return undefined;
   if (refused.fingerprint === ctx.opened) return refused.error;

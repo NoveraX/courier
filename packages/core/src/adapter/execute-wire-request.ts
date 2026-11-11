@@ -4,6 +4,7 @@ import { executeCall } from "../utils/execute";
 import { buildErrorResponse } from "../utils/execute-response";
 import { ownField } from "../utils/own";
 import { parseRequestPayload, type RequestPayloadInput } from "../utils/request-payload";
+import { serverCallContext } from "../utils/server-call-marks";
 import { unsentUpload } from "./unsent-upload";
 import { parseWireOptions } from "./wire-options";
 import { refuseWireCall } from "./wire-refusal";
@@ -48,7 +49,9 @@ export async function executeWireRequest(
   const call = parseRequestPayload(requestPayload);
   const accepted = parseWireOptions(call.options);
   if (!accepted.ok) return buildErrorResponse(context, 400, accepted.reason);
-  const wire = { ...context, unsentUpload };
+  /* The server's call, made for the page whose request it serves: it carries that request's
+     session, and the platform's fetch sends none of its own credentials. */
+  const wire = { ...serverCallContext(context), unsentUpload };
   return executeCall(sources, { ...call, options: accepted.options }, wire, (found) =>
     refuseWireCall({
       dataSource: found.dataSource,

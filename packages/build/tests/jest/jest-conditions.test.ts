@@ -8,9 +8,11 @@
  * otherwise — the page's, whose registry reads no slot: server code under
  * test runs in the node environment. The root's caller is a page's there;
  * the caller of `@noverax/courier/server` is the server's or none, refused
- * as it is made rather than sent with the page's session, and so it is
- * under Node's own `--conditions=browser`. Requires a build of the core
- * first.
+ * as it is made rather than sent with the page's session, and so is the
+ * proxy's handler, and so they are under Node's own `--conditions=browser`;
+ * under the node environment the handler's call, as the server's caller's,
+ * tells the platform's fetch to send none of its own credentials. Requires
+ * a build of the core first.
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -38,7 +40,7 @@ test("side", () => {
 
 /* A page's DOM on the global object, as jsdom puts it there, the page's session in its cookies, and
    an API on the page's site that keeps a session: what each caller sends it, or why it refuses. */
-const CALLS = `import { createCaller } from "@noverax/courier/server";
+const CALLS = `import { createCaller, createHandler, registerSources } from "@noverax/courier/server";
 import { createCaller as createPageCaller } from "@noverax/courier/client";
 import { courier, defineApi } from "@noverax/courier/define";
 
@@ -48,6 +50,7 @@ const { endpoint } = courier();
 const sent = [];
 const api = defineApi({
   name: "accounts",
+  expose: true,
   baseURL: "https://app.example.test/api",
   session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
   fetch: async (_input, init) => {
@@ -70,6 +73,31 @@ export async function tell(label, make) {
 
 export const server = () => createCaller(api);
 export const page = () => createPageCaller(api);
+
+/* A page's call as the proxy's handler serves it, with the session of the page's request. */
+export async function tellProxy(label) {
+  sent.length = 0;
+  try {
+    registerSources({ accounts: api });
+    const answer = await createHandler().handle(
+      new Request("http://localhost/api/request?_s=accounts&_m=rename", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+          cookie: "sid=made-up-request-session; csrftoken=made-up-request-token",
+          "x-csrftoken": "made-up-request-token",
+        },
+        body: "{}",
+      }),
+    );
+    const init = sent.at(-1);
+    if (init) console.log(label + " sent " + init.credentials + " " + new Headers(init.headers).get("x-csrftoken"));
+    else console.log(label + " answered " + answer.status + " " + sent.length);
+  } catch (error) {
+    console.log(label + " refused " + error.code + " " + sent.length);
+  }
+}
 `;
 
 let project: TempProject | undefined;
@@ -109,7 +137,7 @@ function callsUnder(conditions?: readonly string[]): string[] {
   project = tempProject({
     "jest.config.cjs": `module.exports = { testEnvironment: "node", ${options} cacheDirectory: "<rootDir>/.jest-cache" };\n`,
     "tests/calls.mjs": CALLS,
-    "tests/calls.test.mjs": `import { page, server, tell } from "./calls.mjs";\ntest("calls", async () => {\n  await tell("SERVER", server);\n  await tell("PAGE", page);\n});\n`,
+    "tests/calls.test.mjs": `import { page, server, tell, tellProxy } from "./calls.mjs";\ntest("calls", async () => {\n  await tell("SERVER", server);\n  await tell("PAGE", page);\n  await tellProxy("HANDLER");\n});\n`,
   });
   const run = spawnSync(
     process.execPath,
@@ -121,7 +149,9 @@ function callsUnder(conditions?: readonly string[]): string[] {
     },
   );
   return [
-    ...`${run.stdout}${run.stderr}`.matchAll(/(?:SERVER|PAGE) (?:sent|refused) \S+ \S+/g),
+    ...`${run.stdout}${run.stderr}`.matchAll(
+      /(?:SERVER|PAGE|HANDLER) (?:sent|refused|answered) \S+ \S+/g,
+    ),
   ].map((found) => found[0]);
 }
 
@@ -134,23 +164,28 @@ describe("Jest", () => {
     expect(sideUnder(["browser"])).toBe("page");
   }, 120_000);
 
-  it("refuses the server's caller under the browser condition, and the page's keeps the page's session", () => {
+  it("refuses the server's caller and the proxy's handler under the browser condition, and the page's keeps the page's session", () => {
     expect(callsUnder(["browser"])).toEqual([
       "SERVER refused SERVER_CAPABILITY_MISSING 0",
       "PAGE sent include made-up-page-token",
+      "HANDLER refused SERVER_CAPABILITY_MISSING 0",
     ]);
   }, 120_000);
 
-  it("sends the server's caller with none of the page's session under the node environment", () => {
-    expect(callsUnder()).toEqual(["SERVER sent omit null", "PAGE sent include made-up-page-token"]);
+  it("sends the server's caller and the proxy's handler with none of the page's session under the node environment", () => {
+    expect(callsUnder()).toEqual([
+      "SERVER sent omit null",
+      "PAGE sent include made-up-page-token",
+      "HANDLER sent omit made-up-request-token",
+    ]);
   }, 120_000);
 });
 
 describe("Node with the browser condition", () => {
-  it("refuses the server's caller, and the page's keeps the page's session", () => {
+  it("refuses the server's caller and the proxy's handler, and the page's keeps the page's session", () => {
     project = tempProject({
       "calls.mjs": CALLS,
-      "run.mjs": `import { page, server, tell } from "./calls.mjs";\nawait tell("SERVER", server);\nawait tell("PAGE", page);\n`,
+      "run.mjs": `import { page, server, tell, tellProxy } from "./calls.mjs";\nawait tell("SERVER", server);\nawait tell("PAGE", page);\nawait tellProxy("HANDLER");\n`,
     });
     const run = spawnSync(process.execPath, ["--conditions=browser", "run.mjs"], {
       cwd: project.root,
@@ -158,12 +193,15 @@ describe("Node with the browser condition", () => {
     });
 
     expect(
-      [...`${run.stdout}${run.stderr}`.matchAll(/(?:SERVER|PAGE) (?:sent|refused) \S+ \S+/g)].map(
-        (found) => found[0],
-      ),
+      [
+        ...`${run.stdout}${run.stderr}`.matchAll(
+          /(?:SERVER|PAGE|HANDLER) (?:sent|refused|answered) \S+ \S+/g,
+        ),
+      ].map((found) => found[0]),
     ).toEqual([
       "SERVER refused SERVER_CAPABILITY_MISSING 0",
       "PAGE sent include made-up-page-token",
+      "HANDLER refused SERVER_CAPABILITY_MISSING 0",
     ]);
   }, 120_000);
 });

@@ -13,6 +13,7 @@ import { type StatusTeller, watchConnection } from "../transport/instrument/watc
 import { fetchWithinOrigin } from "../utils/fetch-within-origin";
 import { layerHeaders } from "../utils/layer-headers";
 import { ownField } from "../utils/own";
+import { serverCallContext, serversCallInit } from "../utils/server-call-marks";
 
 /**
  * The handler that relays a stream another server serves.
@@ -64,7 +65,12 @@ export function relayStream(
     ]);
     const request = streamRequest(api, options, group, method, ctx.variables);
     const transport = transportOf(api, options, group);
-    const init = streamInitOf(options, transport);
+    /* A stream the proxy relays is the server's call: the platform's fetch sends none of its own
+       credentials for it. */
+    const init = {
+      ...streamInitOf(options, transport),
+      ...serversCallInit(serverCallContext(undefined)),
+    };
     const send = relayFetch(transport.fetch, init);
     const upstream = subscribeSSE(request.url, {
       headers: layerHeaders({ Accept: "text/event-stream" }, request.sourceHeaders, ctx.headers),

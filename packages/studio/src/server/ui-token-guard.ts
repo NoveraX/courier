@@ -8,12 +8,7 @@ import type { Socket } from "socket.io";
 import type { TrustedProxies } from "./demo/trusted-proxies";
 import { visitorAddress } from "./demo/visitor-address";
 import { isPlainObject } from "./is-plain-object";
-import {
-  answeredWithoutToken,
-  guardPageWithoutToken,
-  READ_ONLY_PAGES,
-  TOKEN_PAGES,
-} from "./page-outlet";
+import { admitPage, answerToPage } from "./page-outlet";
 import type { StudioToken } from "./studio-token";
 import { TOKEN_REFUSAL } from "./token-guard";
 
@@ -102,12 +97,11 @@ export function guardUiWrites(
 ): boolean {
   const auth: unknown = socket.handshake.auth;
   if (token.matches(isPlainObject(auth) ? auth.token : undefined)) {
-    void socket.join(TOKEN_PAGES);
+    admitPage(socket, true);
     return true;
   }
-  void socket.join(READ_ONLY_PAGES);
   /* What it is sent, it is sent past the outlet's rules alone: the answers to what it asks too. */
-  guardPageWithoutToken(socket);
+  admitPage(socket, false);
   socket.on("disconnect", () => visitors.forget(socket.id));
   const { address: peer, headers } = socket.handshake;
   const visitor = {
@@ -122,9 +116,7 @@ export function guardUiWrites(
     if (decision.kind !== "run") return;
     const last: unknown = packet.at(-1);
     if (typeof last === "function") {
-      const ack = last as (reply: unknown) => void;
-      const answered = (reply: unknown) => ack(answeredWithoutToken(event, reply));
-      Reflect.set(packet, packet.length - 1, answered);
+      Reflect.set(packet, packet.length - 1, answerToPage(event, last as (reply: unknown) => void));
     }
     next();
   });

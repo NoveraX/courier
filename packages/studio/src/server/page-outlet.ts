@@ -7,17 +7,28 @@
  * every value Courier's rules for a name and a text hide replaced, and an
  * event the list of `shown-without-token.ts` does not name not at all.
  *
- * A page without the token is sent nothing past here: {@link guardPageWithoutToken}
- * takes its socket's own `emit` and the answers to what it asks, and
- * {@link guardPageBroadcasts} the namespace's `emit`. The rooms of the
- * pages, a message to the others and one to a page by its id are this
- * module's alone.
+ * A page without the token is sent nothing past here, by construction:
+ * {@link guardPageWithoutToken} takes its socket's own `emit` and the
+ * answers to what it asks, `page-packets.ts` the packets its connection
+ * writes, which every emit and packet of the socket ends in, and
+ * `page-broadcasts.ts` the pages' adapter, which every operator of
+ * socket.io sends more than one page a message through. Which pages
+ * presented the token, and the pages' rooms, are this module's alone.
  */
 
 import type { Namespace, Socket } from "socket.io";
 
-import { CUT_BY_CALLER, shownToPageWithoutToken, WITHHELD } from "./shown-without-token";
+import { isPlainObject } from "./is-plain-object";
+import { admitTokenPage, decided } from "./page-broadcasts";
+import { guardPagePackets } from "./page-packets";
+import {
+  answeredWithoutToken,
+  CUT_BY_CALLER,
+  shownToPageWithoutToken,
+  WITHHELD,
+} from "./shown-without-token";
 
+export { guardPageBroadcasts } from "./page-broadcasts";
 export { answeredWithoutToken, shownToPageWithoutToken, WITHHELD } from "./shown-without-token";
 
 /** The room of the pages that presented the project's token. */
@@ -26,10 +37,8 @@ export const TOKEN_PAGES = "pages:token";
 /** The room of every other page. */
 export const READ_ONLY_PAGES = "pages:read-only";
 
-/* What the sockets of the pages without the token, and the pages' namespace, send with past this
-   module's rules. */
+/* What the sockets of the pages without the token send with past this module's rules. */
 const unruled = new WeakMap<Socket, Socket["emit"]>();
-const unruledPages = new WeakMap<Namespace, Namespace["emit"]>();
 
 /** A log a page is replayed as it connects: whole, and as its log cut it for a page without the token. */
 export interface ReplayedLog {
@@ -60,7 +69,8 @@ export function toPage(socket: Socket, event: string, whole: unknown, cut?: unkn
     return;
   }
   const shown = shownFor(event, whole, cut);
-  if (shown !== WITHHELD) (unruled.get(socket) ?? socket.emit.bind(socket))(event, shown);
+  if (shown !== WITHHELD)
+    decided(() => (unruled.get(socket) ?? socket.emit.bind(socket))(event, shown));
 }
 
 /**
@@ -78,7 +88,10 @@ export function toPage(socket: Socket, event: string, whole: unknown, cut?: unkn
  */
 export function replayToPage(socket: Socket, event: ReplayEvent, log: ReplayedLog): void {
   if (socket.rooms?.has(TOKEN_PAGES)) socket.emit(event, log.replayPayload());
-  else (unruled.get(socket) ?? socket.emit.bind(socket))(event, log.shownReplayPayload());
+  else {
+    const shown = log.shownReplayPayload();
+    decided(() => (unruled.get(socket) ?? socket.emit.bind(socket))(event, shown));
+  }
 }
 
 /**
@@ -97,11 +110,11 @@ export function replayToPage(socket: Socket, event: ReplayEvent, log: ReplayedLo
 export function toPages(pages: Namespace, event: string, whole: unknown, cut?: unknown): void {
   const shown = shownFor(event, whole, cut);
   if (shown === whole) {
-    (unruledPages.get(pages) ?? pages.emit.bind(pages))(event, whole);
+    decided(() => pages.emit(event, whole));
     return;
   }
   pages.to(TOKEN_PAGES).emit(event, whole);
-  if (shown !== WITHHELD) pages.to(READ_ONLY_PAGES).emit(event, shown);
+  if (shown !== WITHHELD) decided(() => pages.to(READ_ONLY_PAGES).emit(event, shown));
 }
 
 /**
@@ -119,7 +132,7 @@ export function toPages(pages: Namespace, event: string, whole: unknown, cut?: u
 export function replayToPages(pages: Namespace, event: ReplayEvent, log: ReplayedLog): void {
   if (hasPages(pages, TOKEN_PAGES)) pages.to(TOKEN_PAGES).emit(event, log.replayPayload());
   if (hasPages(pages, READ_ONLY_PAGES)) {
-    pages.to(READ_ONLY_PAGES).emit(event, log.shownReplayPayload());
+    decided(() => pages.to(READ_ONLY_PAGES).emit(event, log.shownReplayPayload()));
   }
 }
 
@@ -141,7 +154,7 @@ export function toOpenPages(pages: Namespace, event: string, whole: unknown): vo
   if (hasPages(pages, TOKEN_PAGES)) pages.to(TOKEN_PAGES).emit(event, whole);
   if (!hasPages(pages, READ_ONLY_PAGES)) return;
   const shown = shownToPageWithoutToken(event, whole);
-  if (shown !== WITHHELD) pages.to(READ_ONLY_PAGES).emit(event, shown);
+  if (shown !== WITHHELD) decided(() => pages.to(READ_ONLY_PAGES).emit(event, shown));
 }
 
 /**
@@ -159,17 +172,46 @@ export function toOpenPages(pages: Namespace, event: string, whole: unknown): vo
 export function toOtherPages(socket: Socket, event: string, whole: unknown): void {
   const shown = shownFor(event, whole, undefined);
   if (shown === whole) {
-    socket.broadcast.emit(event, whole);
+    decided(() => socket.broadcast.emit(event, whole));
     return;
   }
   socket.to(TOKEN_PAGES).emit(event, whole);
-  if (shown !== WITHHELD) socket.to(READ_ONLY_PAGES).emit(event, shown);
+  if (shown !== WITHHELD) decided(() => socket.to(READ_ONLY_PAGES).emit(event, shown));
+}
+
+/**
+ * Take a page that just connected into the outlet: one that presented the
+ * project's token is sent everything whole, and any other is held to the
+ * outlet's rules, by its own socket and by every message to more than one
+ * page.
+ *
+ * @param socket - The page's socket, just connected
+ * @param presented - Whether it presented the token
+ * @example
+ * ```ts
+ * admitPage(socket, token.matches(socket.handshake.auth.token));
+ * ```
+ */
+export function admitPage(socket: Socket, presented: boolean): void {
+  if (presented) {
+    admitTokenPage(socket);
+    void socket.join(TOKEN_PAGES);
+    return;
+  }
+  void socket.join(READ_ONLY_PAGES);
+  guardPageWithoutToken(socket);
 }
 
 /**
  * Hold the socket of a page that presented no token to the outlet's
- * rules: every event Studio sends it by its own `emit` is sent as
- * {@link shownToPageWithoutToken} leaves it, and none it does not name.
+ * rules: every event Studio sends it by its own `emit` — by `send`,
+ * `volatile`, `compress`, `timeout` and `emitWithAck` too, which go through
+ * it — is sent as {@link shownToPageWithoutToken} leaves it, and none it
+ * does not name, nor one with more than the one payload the rules read.
+ * So is every packet its connection writes it past that `emit` — by the
+ * emit of its prototype, by its `packet` under any name and off any
+ * prototype, by the connection itself — as `page-packets.ts` holds them;
+ * an answer written so is cut as an answer is.
  *
  * @param socket - The page's socket, just connected without the token
  * @example
@@ -180,29 +222,52 @@ export function toOtherPages(socket: Socket, event: string, whole: unknown): voi
 export function guardPageWithoutToken(socket: Socket): void {
   const send = socket.emit.bind(socket);
   unruled.set(socket, send);
-  socket.emit = ((event: string, payload?: unknown) => {
-    const shown = shownToPageWithoutToken(event, payload);
-    return shown === WITHHELD ? false : send(event, shown);
+  socket.emit = ((event: string, ...args: unknown[]) => {
+    const last = args.at(-1);
+    const answer = typeof last === "function" ? (last as Answer) : undefined;
+    const payloads = answer ? args.slice(0, -1) : args;
+    const shown = payloads.length > 1 ? WITHHELD : shownToPageWithoutToken(event, payloads[0]);
+    if (shown === WITHHELD) return withheld(socket, answer);
+    const rest = [...(payloads.length === 0 ? [] : [shown]), ...(answer ? [answer] : [])];
+    return decided(() => send(event, ...rest));
   }) as Socket["emit"];
+  guardPagePackets(socket);
 }
 
 /**
- * Hold the namespace of the pages to this module's rules: a message to
- * every page is sent whole to those with the token and as
- * {@link shownToPageWithoutToken} leaves it to the others.
+ * The answer a page without the token is given to what it asked, as
+ * {@link answeredWithoutToken} leaves it, written as this module decided.
  *
- * @param pages - The pages' namespace, just made
+ * @param event - The event the page sent
+ * @param ack - What answers it
+ * @returns What answers it in its place
  * @example
  * ```ts
- * guardPageBroadcasts(io.of("/ui"));
+ * Reflect.set(packet, packet.length - 1, answerToPage(event, ack));
  * ```
  */
-export function guardPageBroadcasts(pages: Namespace): void {
-  unruledPages.set(pages, pages.emit.bind(pages));
-  pages.emit = ((event: string, payload?: unknown) => {
-    toPages(pages, event, payload);
-    return true;
-  }) as Namespace["emit"];
+export function answerToPage(
+  event: string,
+  ack: (reply: unknown) => void,
+): (reply: unknown) => void {
+  return (reply) => decided(() => ack(answeredWithoutToken(event, reply)));
+}
+
+/* What an emit that waits for the page's answer is called back with. */
+type Answer = (...reply: unknown[]) => void;
+
+/* An event a page without the token is not sent: one that waits for its answer is told, once its
+   timeout passes, that none came, as from a page that never answers, and what `volatile`,
+   `compress` or `timeout` set for it does not pass to the next — socket.io keeps both in the
+   socket's flags, which its own emit clears as it sends. */
+function withheld(socket: Socket, answer: Answer | undefined): false {
+  const flags: unknown = Reflect.get(socket, "flags");
+  Reflect.set(socket, "flags", {});
+  const timeout = isPlainObject(flags) ? flags.timeout : undefined;
+  if (answer && typeof timeout === "number") {
+    setTimeout(() => answer(new Error("operation has timed out")), timeout);
+  }
+  return false;
 }
 
 function shownFor(event: string, whole: unknown, cut: unknown): unknown {

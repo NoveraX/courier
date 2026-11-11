@@ -4,9 +4,11 @@
  * Courier's rules leave it, by every path Studio sends a page anything:
  * the requests replayed as it connects and after the saved sessions are
  * cleared, the saved session the pages show, and a request's whole body it
- * asks for. A page with the token is sent each whole. And no module but
- * one sends a page anything: the rooms of the pages, a broadcast and a
- * page by its id are that module's alone.
+ * asks for. A page with the token is sent each whole. And nothing writes
+ * to a page past the outlet: it holds the adapter every operator of
+ * socket.io sends more than one page a message through, the socket of each
+ * page without the token, the pages' rooms and which pages presented the
+ * token, and no other module reaches below socket.io's operators.
  */
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -262,16 +264,24 @@ function serverSources(): Array<{ file: string; text: string }> {
   }));
 }
 
+/* What only the outlet may touch: the pages' adapter, their rooms, which pages presented the token,
+   what its adapter passes on as decided, and — the token guard too — a page admitted as it connects;
+   and what writes to a page below socket.io's operators, which no module may: a socket's packets, its
+   connection's, its transport, the engine's clients, the outgoing listeners, the operators' own
+   prototypes, by getPrototypeOf or __proto__ — named in a call or as a string. */
+const BELOW_THE_OUTLET =
+  /\.adapter\b|\bTOKEN_PAGES\b|\bREAD_ONLY_PAGES\b|pages:(?:token|read-only)|\badmitTokenPage\b|\bdecided\(|\badmitPage\(|\.packet\(|\b_packet\b|writeToEngine|\.conn\b|engine\.clients|notifyOutgoingListeners|AnyOutgoing\b|prototype\.(?:emit|send|write|packet)\b|(?:getPrototypeOf\([^)]*\)|\.__proto__)\s*\??\.\s*(?:emit|send|write|packet)\b|["'`](?:packet|_packet|writeToEngine|conn)["'`]/g;
+
+/* The outlet's own modules. */
+const OUTLET = new Set(["page-outlet.ts", "page-broadcasts.ts", "page-packets.ts"]);
+
 describe("what Studio sends a page", () => {
-  it("leaves one module alone to send to the pages' rooms, broadcast, or a page by its id", () => {
+  it("leaves the outlet alone to hold the pages' adapter, rooms and token, and none to write below socket.io", () => {
+    const admitted = "ui-token-guard.ts: admitPage(";
     const found = serverSources()
-      .filter(({ file }) => file !== "page-outlet.ts")
+      .filter(({ file }) => !OUTLET.has(file))
       .flatMap(({ file, text }) =>
-        [
-          ...text.matchAll(
-            /\.broadcast\b(?!\s*\()|\.except\(|\.in\(|READ_ONLY_PAGES|\.to\((?!TOKEN_PAGES\))/g,
-          ),
-        ]
+        [...text.matchAll(BELOW_THE_OUTLET)]
           .filter(
             (match) =>
               !/^\s*(\*|\/\/)/.test(
@@ -280,7 +290,7 @@ describe("what Studio sends a page", () => {
           )
           .map((match) => `${file}: ${match[0]}`),
       )
-      .filter((line) => !line.startsWith("ui-token-guard.ts: READ_ONLY_PAGES"));
+      .filter((line) => line !== admitted);
 
     expect(found).toEqual([]);
   });

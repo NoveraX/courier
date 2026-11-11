@@ -130,7 +130,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     /* After the mocks, the requests they answered: a page that reloads shows each mock's log
        again, unless a page cleared that mock's log. */
     if (mockLog) {
-      replayToPage(socket, "mock:events:replay", mockLog);
+      void replayToPage(socket, "mock:events:replay", mockLog);
       socket.on("mock:logs:clear", (raw: unknown) => {
         const serverId = clearedMockOf(raw);
         if (serverId) mockLog.forget(serverId);
@@ -149,8 +149,10 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
        or reloads shows them. Clearing the log in one page forgets them here
        too, except the ones it keeps. */
     if (requestLog) {
-      if (!shown) replayToPage(socket, "events:replay", requestLog);
-      if (pins) bindRequestPins(socket, pins);
+      /* The pins name the replay's requests: a page is sent them once it was sent the replay, a
+         page without the token too, whose replay waits for its log to be cut. */
+      const replayed = shown ? undefined : replayToPage(socket, "events:replay", requestLog);
+      if (pins) bindRequestPins(socket, pins, replayed);
       socket.on("requests:clear", (raw: unknown) => {
         const keep = keptIdsOf(raw);
         if (!keep) return;

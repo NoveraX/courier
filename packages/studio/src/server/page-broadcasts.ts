@@ -6,12 +6,14 @@
  * holds it here. A page that presented the project's token is sent such a
  * message whole; any other as `shown-without-token.ts` leaves it, and an
  * event the list does not name not at all, nor one that waits for each
- * page's answer.
+ * page's answer. One that waits for a replay is held the message behind
+ * it, as `page-holds.ts` holds it.
  */
 
 import type { Namespace, Socket } from "socket.io";
 
 import { isPlainObject } from "./is-plain-object";
+import { holdsBack } from "./page-holds";
 import { shownToPageWithoutToken, WITHHELD } from "./shown-without-token";
 
 type Adapter = Namespace["adapter"];
@@ -88,18 +90,21 @@ export function guardPageBroadcasts(pages: Namespace): void {
   const broadcastWithAck = adapter.broadcastWithAck.bind(adapter);
   adapter.broadcast = (packet: unknown, opts: BroadcastOptions): void => {
     const { withToken, without } = reached(pages, opts);
-    if (without.length === 0 || deciding) {
-      if (withToken.length + without.length > 0) broadcast(packet, opts);
+    if (without.length === 0) {
+      if (withToken.length > 0) broadcast(packet, opts);
       return;
     }
-    const shown = shownPacket(packet);
+    const shown = deciding ? packet : shownPacket(packet);
+    const held = shown === WITHHELD ? new Set<string>() : heldBack(pages, without, shown, opts);
+    const open = without.filter((id) => !held.has(id));
     if (shown === packet) {
-      broadcast(packet, opts);
+      if (withToken.length + open.length > 0)
+        broadcast(packet, held.size > 0 ? leaving(opts, [...held]) : opts);
       return;
     }
     if (withToken.length > 0) broadcast(packet, leaving(opts, without));
-    if (shown !== WITHHELD)
-      broadcast(shown, { ...opts, rooms: new Set(without), except: new Set() });
+    if (shown !== WITHHELD && open.length > 0)
+      broadcast(shown, { ...opts, rooms: new Set(open), except: new Set() });
   };
   /* A message that waits for each page's answer reaches no page without the token: Studio sends
      none, and such a page's answer would be counted with the others'. */
@@ -129,6 +134,37 @@ function reached(pages: Namespace, { rooms, except }: BroadcastOptions) {
     if (socket) (tokenPages.has(socket) ? found.withToken : found.without).push(id);
   }
   return found;
+}
+
+/* The pages without the token a message is held for, behind a replay each waits for: written it
+   with the namespace the adapter names it as it sends it. */
+function heldBack(
+  pages: Namespace,
+  ids: readonly string[],
+  shown: unknown,
+  { flags }: BroadcastOptions,
+): Set<string> {
+  const packet = isPlainObject(shown) ? { ...shown, nsp: pages.name } : shown;
+  const opts = { compress: flags?.compress, volatile: flags?.volatile };
+  return new Set(ids.filter((id) => holdsBack(pages.sockets.get(id), packet, opts)));
+}
+
+/**
+ * The sockets of the pages in a room, as the adapter finds them.
+ *
+ * @param pages - The pages' namespace
+ * @param room - The room
+ * @returns Their sockets; none for a room no page is in
+ * @example
+ * ```ts
+ * for (const socket of socketsIn(pages, READ_ONLY_PAGES)) void replayToPage(socket, event, log);
+ * ```
+ */
+export function socketsIn(pages: Namespace, room: string): Socket[] {
+  return [...(pages.adapter?.rooms?.get(room) ?? [])].flatMap((id) => {
+    const socket = pages.sockets?.get(id);
+    return socket ? [socket] : [];
+  });
 }
 
 function leaving(opts: BroadcastOptions, pages: readonly string[]): BroadcastOptions {

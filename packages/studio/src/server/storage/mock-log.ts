@@ -7,7 +7,7 @@
 import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
 
 import { REPLAY_BYTES } from "./replay-bytes";
-import { uncutRows } from "./uncut-rows";
+import { shownReplayReader } from "./uncut-rows";
 import { withoutCredentials } from "./without-credentials";
 
 type MockEvent = Record<string, unknown>;
@@ -25,8 +25,8 @@ export interface MockLog {
   events(): MockEvent[];
   /** What `events` returns, as the message a page is sent: their JSON array in UTF-8, as the database keeps it — never parsed and written out again. */
   replayPayload(): Uint8Array;
-  /** The same events as `replayPayload`, as a page without the token is sent them: each the text cut the first time such a page was sent it, copied — an event is parsed and cut once. */
-  shownReplayPayload(): Uint8Array;
+  /** The same events as `replayPayload`, as the read begins, as a page without the token is sent them: each the text cut the first time such a page was sent it, copied — an event is parsed and cut once — the window counted once and the events read a few milliseconds at a time, so Studio answers everyone else as it reads. */
+  shownReplayPayload(): Promise<Uint8Array>;
   /** Forget every request every mock answered, as the Storage settings' Clear does. */
   forgetAll(): void;
   /** Forget every request one mock answered, as its page's Clear does. */
@@ -55,18 +55,22 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
   const selectAll = db.prepare("SELECT request_id, body FROM mock_events ORDER BY seq");
   /* The newest requests whose events fit the replay, each whole, oldest first: a page without the
      token is sent the same ones, each event as it was cut. */
-  const replayed = (text: string) =>
+  const inReplay = (select: string, rest: string) =>
     db.prepare(
       "WITH sized AS (SELECT request_id, MIN(seq) AS first, SUM(LENGTH(body)) AS bytes " +
         "FROM mock_events GROUP BY request_id), " +
         "kept AS (SELECT request_id, " +
         "SUM(bytes) OVER (ORDER BY first DESC ROWS UNBOUNDED PRECEDING) AS upto FROM sized) " +
-        `SELECT ${text} AS body FROM mock_events m JOIN kept k ON k.request_id = m.request_id ` +
-        "WHERE k.upto <= ? ORDER BY m.seq",
+        `SELECT ${select} FROM mock_events m JOIN kept k ON k.request_id = m.request_id ` +
+        `WHERE k.upto <= ? ${rest}`,
     );
-  const selectReplay = replayed("m.body");
-  const selectShownReplay = replayed("CASE WHEN m.shown = '' THEN m.body ELSE m.shown END");
-  const cutUncut = uncutRows(db, "mock_events");
+  const selectReplay = inReplay("m.body AS body", "ORDER BY m.seq");
+  const readShownReplay = shownReplayReader(
+    db,
+    "mock_events",
+    inReplay("m.seq AS seq", "ORDER BY m.seq"),
+    replayBytes,
+  );
   const requests = new Set<string>();
   /* The mock each kept request was answered by, so one mock's log can be forgotten alone. */
   const owners = new Map<string, string>();
@@ -146,8 +150,7 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
     },
     shownReplayPayload() {
       flush();
-      cutUncut();
-      return arrayPayload(selectShownReplay.all(replayBytes));
+      return readShownReplay();
     },
     events() {
       flush();

@@ -407,7 +407,7 @@ describe("the requests a managed mock answered", () => {
       record,
       events: () => [],
       replayPayload: () => new Uint8Array(),
-      shownReplayPayload: () => new Uint8Array(),
+      shownReplayPayload: async () => new Uint8Array(),
       forget: vi.fn(),
       forgetAll: vi.fn(),
       close: () => undefined,

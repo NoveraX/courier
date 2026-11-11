@@ -327,6 +327,7 @@ async function page(): Promise<{
   shown: unknown[];
   replays: unknown[];
   pinned: unknown[];
+  order: string[];
 }> {
   const socket = connect(`${url}/ui`, {
     transports: ["websocket"],
@@ -338,10 +339,15 @@ async function page(): Promise<{
     shown: [] as unknown[],
     replays: [] as unknown[],
     pinned: [] as unknown[],
+    order: [] as string[],
   };
   socket.on("view:session", (session: unknown) => seen.shown.push(session));
   socket.on("events:replay", (payload: unknown) => seen.replays.push(replayed(payload)));
   socket.on("requests:pinned", (ids: unknown) => seen.pinned.push(ids));
+  socket.onAny((event: string) => {
+    if (["view:session", "events:replay", "requests:pinned"].includes(event))
+      seen.order.push(event);
+  });
   await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
   return seen;
 }
@@ -365,6 +371,17 @@ describe("the session a page loads", () => {
     expect(reloaded.shown[0]).toMatchObject({ name: "login flow" });
     expect(next.shown).toEqual([]);
     next.socket.disconnect();
+  });
+
+  it("is sent after the pins, which name the live requests: the session keeps its own", async () => {
+    const saved = await call("save", { name: "login flow", requests: REQUESTS });
+    await call("load", { id: field(saved.body, "id") });
+
+    const reloaded = await page();
+    await expect.poll(() => reloaded.order.length).toBe(2);
+
+    expect(reloaded.order).toEqual(["requests:pinned", "view:session"]);
+    reloaded.socket.disconnect();
   });
 
   it("sends a page that goes back to live the pins with the live requests", async () => {

@@ -56,8 +56,9 @@ export function wireStorage(deps: {
         /* A page that showed a saved session goes back to the live requests:
            sent them and their pins, it shows them rather than nothing. */
         if (kinds.includes("sessions")) {
-          replayToPages(uiNamespace, "events:replay", stores.requestLog);
-          uiNamespace.emit("requests:pinned", stores.pins.ids());
+          void replayToPages(uiNamespace, "events:replay", stores.requestLog).then(() =>
+            uiNamespace.emit("requests:pinned", stores.pins.ids()),
+          );
         }
         tell();
       },

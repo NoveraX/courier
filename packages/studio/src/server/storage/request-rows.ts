@@ -6,7 +6,7 @@
 import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
 
 import { REPLAY_BYTES } from "./replay-bytes";
-import { uncutRows } from "./uncut-rows";
+import { shownReplayReader } from "./uncut-rows";
 import { withoutCredentials } from "./without-credentials";
 
 type RuntimeEvent = Record<string, unknown>;
@@ -38,8 +38,8 @@ export interface RequestRows {
   events(): RuntimeEvent[];
   /** What `events` returns, as the JSON array text the database's rows make, none of them parsed */
   replayText(): string;
-  /** The same events as `replayText`, each as the text kept for a page without the token: a copy, the events not cut yet cut first, once */
-  shownReplayText(): string;
+  /** The same events as `replayText`, as the read begins, each as the text kept for a page without the token — cut the first time, copied after — read a few milliseconds at a time: their JSON array in UTF-8 */
+  shownReplay(): Promise<Uint8Array>;
   /** The events that open and end each request, without the bodies and headers they carry, in the order they came */
   keyEvents(): Array<{ id: string; event: RuntimeEvent }>;
   /** One request's events, whole, in the order they came */
@@ -66,19 +66,18 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
   );
   /* The newest requests whose events fit the replay, each whole, oldest first: a page without the
      token is sent the same ones, each event as it was cut. */
-  const replayed = (text: string) =>
+  const inReplay = (select: string, rest: string) =>
     db.prepare(
       "WITH sized AS (SELECT r.id, r.position, " +
         "(SELECT COALESCE(SUM(LENGTH(body)), 0) FROM request_events WHERE request_id = r.id) AS bytes " +
         "FROM requests r), " +
         "kept AS (SELECT id, position, " +
         "SUM(bytes) OVER (ORDER BY position DESC ROWS UNBOUNDED PRECEDING) AS upto FROM sized) " +
-        `SELECT ${text} AS body FROM request_events e JOIN kept k ON k.id = e.request_id ` +
-        "WHERE k.upto <= ? ORDER BY k.position, e.seq",
+        `SELECT ${select} FROM request_events e JOIN kept k ON k.id = e.request_id ` +
+        `WHERE k.upto <= ? ${rest}`,
     );
-  const listEvents = replayed("e.body");
-  const listShownEvents = replayed("CASE WHEN e.shown = '' THEN e.body ELSE e.shown END");
-  const cutUncut = uncutRows(db, "request_events");
+  const listEvents = inReplay("e.body AS body", "ORDER BY k.position, e.seq");
+  const listReplaySeqs = inReplay("e.seq AS seq", "ORDER BY k.position, e.seq");
   /* The database reads each event's type and leaves out its bodies, so a list never parses an answer. */
   const listKeyEvents = db.prepare(
     "SELECT request_id, json_remove(body, '$.data', '$.variables', '$.headers', '$.requestHeaders') AS body " +
@@ -116,10 +115,7 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
         return event ? [event] : [];
       }),
     replayText: () => arrayText(listEvents.all(replayBytes)),
-    shownReplayText() {
-      cutUncut();
-      return arrayText(listShownEvents.all(replayBytes));
-    },
+    shownReplay: shownReplayReader(db, "request_events", listReplaySeqs, replayBytes),
     keyEvents: () =>
       listKeyEvents.all().flatMap((row) => {
         const event = eventOf(row.body);

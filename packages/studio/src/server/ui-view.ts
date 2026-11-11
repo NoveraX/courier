@@ -71,8 +71,9 @@ export function bindView(
   socket.on("view:live", () => {
     view.showLive();
     if (!requestLog) return;
-    replayToPage(socket, "events:replay", requestLog);
     /* The replay carries no pins: without them, the requests a page pinned came back unpinned. */
-    if (pins) socket.emit("requests:pinned", pins.ids());
+    void replayToPage(socket, "events:replay", requestLog).then(() => {
+      if (pins) socket.emit("requests:pinned", pins.ids());
+    });
   });
 }

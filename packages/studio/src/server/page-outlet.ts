@@ -12,14 +12,17 @@
  * answers to what it asks, `page-packets.ts` the packets its connection
  * writes, which every emit and packet of the socket ends in, and
  * `page-broadcasts.ts` the pages' adapter, which every operator of
- * socket.io sends more than one page a message through. Which pages
- * presented the token, and the pages' rooms, are this module's alone.
+ * socket.io sends more than one page a message through, and
+ * `page-holds.ts` what such a page is sent while its replay is read. Which
+ * pages presented the token, and the pages' rooms, are this module's alone.
  */
 
+import { logger } from "@noverax/courier";
 import type { Namespace, Socket } from "socket.io";
 
 import { isPlainObject } from "./is-plain-object";
-import { admitTokenPage, decided } from "./page-broadcasts";
+import { admitTokenPage, decided, socketsIn } from "./page-broadcasts";
+import { replayInOrder } from "./page-holds";
 import { guardPagePackets } from "./page-packets";
 import {
   answeredWithoutToken,
@@ -43,7 +46,7 @@ const unruled = new WeakMap<Socket, Socket["emit"]>();
 /** A log a page is replayed as it connects: whole, and as its log cut it for a page without the token. */
 export interface ReplayedLog {
   replayPayload(): Uint8Array;
-  shownReplayPayload(): Uint8Array;
+  shownReplayPayload(): Promise<Uint8Array>;
 }
 
 /** The replays of the logs. */
@@ -75,23 +78,26 @@ export function toPage(socket: Socket, event: string, whole: unknown, cut?: unkn
 
 /**
  * Send one page a log's replay: whole when it presented the token, and to
- * any other the replay its log cut as it kept each event — a copy, nothing
- * read or cut again as the page connects, however much was logged since.
+ * any other the replay its log cut, each event once, read a while at a
+ * time, so Studio answers everyone else meanwhile — what such a page is
+ * sent meanwhile waits behind the replay, as it would were it sent at once.
  *
  * @param socket - The page's socket
  * @param event - The replay's name
  * @param log - The log
+ * @returns Settled once the page was sent it, so what names its requests goes after it
  * @example
  * ```ts
- * replayToPage(socket, "mock:events:replay", mockLog);
+ * void replayToPage(socket, "events:replay", requestLog).then(sendPins);
  * ```
  */
-export function replayToPage(socket: Socket, event: ReplayEvent, log: ReplayedLog): void {
+export async function replayToPage(
+  socket: Socket,
+  event: ReplayEvent,
+  log: ReplayedLog,
+): Promise<void> {
   if (socket.rooms?.has(TOKEN_PAGES)) socket.emit(event, log.replayPayload());
-  else {
-    const shown = log.shownReplayPayload();
-    decided(() => (unruled.get(socket) ?? socket.emit.bind(socket))(event, shown));
-  }
+  else await replayInOrder(socket, () => cutForPage(log), sender(socket, event));
 }
 
 /**
@@ -119,20 +125,55 @@ export function toPages(pages: Namespace, event: string, whole: unknown, cut?: u
 
 /**
  * Send every page a log's replay, as {@link replayToPage} sends one: each
- * of its two forms made only where a page is open to be sent it.
+ * of its two forms made only where a page is open to be sent it, the cut
+ * one read once for every such page.
  *
  * @param pages - The pages' namespace
  * @param event - The replay's name
  * @param log - The log
+ * @returns Settled once every page was sent it
  * @example
  * ```ts
- * replayToPages(uiNamespace, "events:replay", requestLog);
+ * void replayToPages(uiNamespace, "events:replay", requestLog).then(sendPins);
  * ```
  */
-export function replayToPages(pages: Namespace, event: ReplayEvent, log: ReplayedLog): void {
+export async function replayToPages(
+  pages: Namespace,
+  event: ReplayEvent,
+  log: ReplayedLog,
+): Promise<void> {
   if (hasPages(pages, TOKEN_PAGES)) pages.to(TOKEN_PAGES).emit(event, log.replayPayload());
-  if (hasPages(pages, READ_ONLY_PAGES)) {
-    decided(() => pages.to(READ_ONLY_PAGES).emit(event, log.shownReplayPayload()));
+  const readers = socketsIn(pages, READ_ONLY_PAGES);
+  if (readers.length === 0) return;
+  /* A page that was written what it waited for before the replay was read reads its own again. */
+  const read = cutForPage(log);
+  await Promise.all(
+    readers.map((socket) => {
+      let shared: Promise<Uint8Array | undefined> | undefined = read;
+      const reads = () => {
+        const replay = shared ?? cutForPage(log);
+        shared = undefined;
+        return replay;
+      };
+      return replayInOrder(socket, reads, sender(socket, event));
+    }),
+  );
+}
+
+/* What sends a page without the token a replay as the outlet decided it. */
+function sender(socket: Socket, event: ReplayEvent): (replay: Uint8Array) => void {
+  return (replay) =>
+    decided(() => (unruled.get(socket) ?? socket.emit.bind(socket))(event, replay));
+}
+
+/* A log's replay as a page without the token is sent it, or nothing where cutting failed — the
+   database closed as Studio stopped. */
+async function cutForPage(log: ReplayedLog): Promise<Uint8Array | undefined> {
+  try {
+    return await log.shownReplayPayload();
+  } catch (error) {
+    logger.warn("Studio", "A page without the token was sent no replay: cutting failed", error);
+    return undefined;
   }
 }
 

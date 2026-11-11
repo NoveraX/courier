@@ -17,16 +17,34 @@ function wired() {
   const root = mkdtempSync(join(tmpdir(), "courier-storage-wiring-"));
   const stores = openStudioStores(root);
   const emit = vi.fn();
-  /* A message to a room of pages is told by the room it went to. */
+  /* A message to a room of pages is told by the room it went to, one to a page by the page: a page
+     with the token is open, and one without it. */
   const to = (room: string) => ({
     emit: (event: string, payload: unknown) => emit(`${event} to ${room}`, payload),
   });
+  const reader = {
+    id: "reader",
+    rooms: new Set(["pages:read-only"]),
+    emit: (event: string, payload: unknown) =>
+      emit(`${event} to a page without the token`, payload),
+  };
+  const uiNamespace = {
+    emit,
+    to,
+    adapter: {
+      rooms: new Map([
+        ["pages:token", new Set(["owner"])],
+        ["pages:read-only", new Set([reader.id])],
+      ]),
+    },
+    sockets: new Map([[reader.id, reader]]),
+  };
   const mocks = { summarizeServers: () => [], forwardStoreCommand: () => undefined };
   const storage = wireStorage({
     stores,
     root,
     mocks,
-    uiNamespace: { emit, to } as unknown as Namespace,
+    uiNamespace: uiNamespace as unknown as Namespace,
   });
   cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   cleanups.push(() => stores.close());
@@ -50,15 +68,21 @@ describe("Studio's storage, as its pages are told it", () => {
     expect(emit).toHaveBeenCalledWith("storage:size", { onDisk: expect.any(Number) });
   });
 
-  it("sends every page the live requests and their pins once the sessions are cleared", () => {
+  it("sends every page the live requests, and their pins after them, once the sessions are cleared", async () => {
     const { storage, emit } = wired();
 
     storage.routes.announce(["sessions"]);
+    /* A page without the token is sent the replay once its log is cut, and the pins after it. */
+    await vi.waitFor(() =>
+      expect(emit.mock.calls.map(([event]) => event)).toContain("requests:pinned"),
+    );
 
-    expect(emit.mock.calls.map(([event]) => event).slice(0, 4)).toEqual([
+    expect(
+      emit.mock.calls.map(([event]) => event).filter((event) => event !== "storage:size"),
+    ).toEqual([
       "storage:cleared",
       "events:replay to pages:token",
-      "events:replay to pages:read-only",
+      "events:replay to a page without the token",
       "requests:pinned",
     ]);
   });

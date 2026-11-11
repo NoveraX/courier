@@ -273,7 +273,12 @@ const BELOW_THE_OUTLET =
   /\.adapter\b|\bTOKEN_PAGES\b|\bREAD_ONLY_PAGES\b|pages:(?:token|read-only)|\badmitTokenPage\b|\bdecided\(|\badmitPage\(|\.packet\(|\b_packet\b|writeToEngine|\.conn\b|engine\.clients|notifyOutgoingListeners|AnyOutgoing\b|prototype\.(?:emit|send|write|packet)\b|(?:getPrototypeOf\([^)]*\)|\.__proto__)\s*\??\.\s*(?:emit|send|write|packet)\b|["'`](?:packet|_packet|writeToEngine|conn)["'`]/g;
 
 /* The outlet's own modules. */
-const OUTLET = new Set(["page-outlet.ts", "page-broadcasts.ts", "page-packets.ts"]);
+const OUTLET = new Set([
+  "page-outlet.ts",
+  "page-broadcasts.ts",
+  "page-packets.ts",
+  "page-holds.ts",
+]);
 
 describe("what Studio sends a page", () => {
   it("leaves the outlet alone to hold the pages' adapter, rooms and token, and none to write below socket.io", () => {

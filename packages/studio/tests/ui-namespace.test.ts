@@ -3,7 +3,10 @@
  * it: socket.io calls the connection handler outside any promise, so a throw
  * there would take Studio down on every connect.
  */
+import { mkdtempSync, rmSync } from "node:fs";
 import { createServer, type Server as HttpServer } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Server } from "socket.io";
 import { io as connect } from "socket.io-client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +14,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import type { LifecycleCoordinator } from "../src/server/mock-manager";
 import type { ProjectImports } from "../src/server/project-state/types";
+import { createRequestLog, MAX_REQUESTS } from "../src/server/request-log";
+import { createRequestPins } from "../src/server/storage/request-pins";
+import { openStudioDb } from "../src/server/storage/studio-db";
 import type { StudioToken } from "../src/server/studio-token";
 import { setupUiNamespace } from "../src/server/ui-namespace";
 import { createUpdateChecks } from "../src/server/update-checks";
@@ -151,5 +157,65 @@ describe("setupUiNamespace", () => {
     expect(answered).toEqual({ ok: false, error: "users has no record with id 9" });
     expect(unknownMock).toEqual({ ok: false, error: 'No mock is named "other".' });
     expect(unreadable).toEqual({ ok: false, error: "Studio could not read the command." });
+  });
+});
+
+describe("the pins a page is sent", () => {
+  it("are taken from a page without the token as its replay is cut, and sent it after the replay", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "courier-ui-pins-"));
+    const opened = openStudioDb(dir);
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+    cleanups.push(() => opened.close());
+    const pins = createRequestPins(opened.db);
+    const requestLog = createRequestLog(opened.db, undefined, (id) => pins.has(id));
+    /* A log long enough that its replay is cut over many turns of the event loop. */
+    for (let n = 0; n < MAX_REQUESTS; n++) {
+      requestLog.record(
+        { type: "request:start", id: `r${n}`, source: "api", method: "login", variables: { n } },
+        "s1",
+      );
+      requestLog.record({ type: "request:end", requestId: `r${n}`, status: 200, data: {} }, "s1");
+    }
+    const { io, url } = await listening();
+    const uiNamespace = io.of("/ui");
+    setupUiNamespace({
+      uiNamespace,
+      bindingTable: new BindingTable(),
+      project: {
+        snapshot: () => STARTING,
+        fresh: async () => ({ ...STARTING, settling: false }),
+        importsChanged: () => undefined,
+        updateChecks: createUpdateChecks(),
+      },
+      projectRoot: "/app",
+      requestLog,
+      pins,
+      token: TOKEN,
+      /* As the public demo's visitors may: pin a request. */
+      visitors: {
+        decide: (_visitor, event) =>
+          event === "requests:pin" ? { kind: "run" } : { kind: "drop" },
+        forget: () => {},
+      },
+    });
+
+    const socket = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+    });
+    cleanups.push(() => {
+      socket.disconnect();
+    });
+    const order: string[] = [];
+    socket.onAny((event: string) => {
+      order.push(event);
+      if (event === "studio:info") socket.emit("requests:pin", { id: "r7", pinned: true });
+    });
+    await vi.waitFor(() => expect(order).toContain("requests:pinned"), { timeout: 10_000 });
+
+    expect(pins.ids()).toEqual(["r7"]);
+    expect(order.indexOf("events:replay")).toBeGreaterThan(-1);
+    expect(order.indexOf("events:replay")).toBeLessThan(order.indexOf("requests:pinned"));
   });
 });

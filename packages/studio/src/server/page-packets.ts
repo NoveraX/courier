@@ -7,13 +7,15 @@
  * to what the page asked, a packet encoded already not at all, and one
  * that carries nothing a call carried as it is. What the outlet decided
  * goes as it decided it, and so does a packet of another namespace the
- * same connection carries.
+ * same connection carries. While a replay is read for the page, what
+ * carries a call waits behind it, as `page-holds.ts` holds it.
  */
 
 import type { Socket } from "socket.io";
 
 import { isPlainObject } from "./is-plain-object";
 import { isDecided, shownPacket } from "./page-broadcasts";
+import { forgetHeld, holdsBack, writePast } from "./page-holds";
 import { answeredWithoutToken, WITHHELD } from "./shown-without-token";
 
 /* socket.io-parser's packet types that carry what a call carried: an event and an answer, each with
@@ -23,8 +25,14 @@ const ACK = 3;
 const BINARY_EVENT = 5;
 const BINARY_ACK = 6;
 
-/* The namespaces each connection holds to the rules: those a page without the token is connected to. */
-const held = new WeakMap<object, Set<string>>();
+/* What each connection holds to the rules: the pages without the token on it, by their namespace,
+   and what writes its packets as they are. */
+interface HeldConnection {
+  pages: Map<string, Socket>;
+  write: (packet: unknown, opts: unknown) => void;
+}
+
+const held = new WeakMap<object, HeldConnection>();
 
 /**
  * Hold every packet the connection of a page that presented no token
@@ -40,32 +48,55 @@ const held = new WeakMap<object, Set<string>>();
 export function guardPagePackets(socket: Socket): void {
   const client: unknown = Reflect.get(socket, "client");
   if (typeof client !== "object" || client === null) return;
-  const names = held.get(client) ?? holdConnection(client);
-  if (!names) return;
+  const connection = held.get(client) ?? holdConnection(client);
+  if (!connection) return;
   const { name } = socket.nsp;
-  names.add(name);
-  socket.once("disconnect", () => names.delete(name));
+  connection.pages.set(name, socket);
+  writePast(socket, connection.write);
+  socket.once("disconnect", () => {
+    if (connection.pages.get(name) === socket) connection.pages.delete(name);
+    forgetHeld(socket);
+  });
 }
 
 /* Hold a connection's packets, once for all its pages: none is held until a namespace is. */
-function holdConnection(client: object): Set<string> | undefined {
+function holdConnection(client: object): HeldConnection | undefined {
   const write: unknown = Reflect.get(client, "_packet");
   if (typeof write !== "function") return undefined;
   const written = write as (packet: unknown, opts?: unknown) => void;
-  const names = new Set<string>();
-  held.set(client, names);
+  const connection: HeldConnection = {
+    pages: new Map(),
+    write: (packet, opts) => written.call(client, packet, opts),
+  };
+  held.set(client, connection);
   Reflect.set(client, "_packet", (packet: unknown, opts?: unknown) => {
-    const shown = isDecided() || !isHeld(packet, names) ? packet : packetToPage(packet);
-    if (shown !== WITHHELD) written.call(client, shown, opts);
+    const ruled = isHeld(packet, connection.pages);
+    const shown = isDecided() || !ruled ? packet : packetToPage(packet);
+    if (shown === WITHHELD) return;
+    if (ruled && carriesCall(shown) && holdsBack(pageOf(shown, connection.pages), shown, opts))
+      return;
+    written.call(client, shown, opts);
   });
-  return names;
+  return connection;
 }
 
 /* Whether a packet goes to a namespace held: the one it names, or — one encoded already, or one
    naming none — any, while one is. */
-function isHeld(packet: unknown, names: ReadonlySet<string>): boolean {
+function isHeld(packet: unknown, pages: ReadonlyMap<string, Socket>): boolean {
   const nsp: unknown = isPlainObject(packet) ? packet.nsp : undefined;
-  return typeof nsp === "string" ? names.has(nsp) : names.size > 0;
+  return typeof nsp === "string" ? pages.has(nsp) : pages.size > 0;
+}
+
+/* The page a packet is written to, of those held. */
+function pageOf(packet: unknown, pages: ReadonlyMap<string, Socket>): Socket | undefined {
+  const nsp: unknown = isPlainObject(packet) ? packet.nsp : undefined;
+  return typeof nsp === "string" ? pages.get(nsp) : undefined;
+}
+
+/* Whether a packet carries what a call carried: an event or an answer. */
+function carriesCall(packet: unknown): boolean {
+  const type: unknown = isPlainObject(packet) ? packet.type : undefined;
+  return type === EVENT || type === ACK || type === BINARY_EVENT || type === BINARY_ACK;
 }
 
 /* A packet as a page without the token is written it: an event as the list leaves it, an answer as

@@ -2,12 +2,11 @@ import { REDACT_BOUNDS } from "./bounds";
 import { redactedText } from "./redacted-text";
 import { attempt, FAILED, UNREADABLE } from "./unreadable";
 
-/* Where an error's stack leaves its message for the frames that say where it was thrown: the first
-   line that starts, after its indent, with `at`, as V8 writes each frame. The indent stops at the
-   line's end, so each line break is read on to its line's first word alone: a pattern that read on
-   over line breaks would read the rest of a run of them from each, in time growing with the square
-   of the run, and an error's message can quote what anyone sent. */
-const FRAMES = /\n[^\S\n]+at\s/;
+/* One frame of a stack as an engine writes each after the error's header: a line that starts,
+   after its indent, with `at`. Each is read from where the one before ended, so a stack is read
+   once, whatever runs of line breaks or spaces it holds. */
+const FRAME = /\n[^\S\n]+at[^\S\n][^\n]*/y;
+const LINE_FEED = 0x0a;
 /* The fields of an error read by name, not copied as its own. */
 const ERROR_FIELDS: ReadonlySet<string> = new Set(["name", "message", "stack", "cause", "errors"]);
 
@@ -17,9 +16,10 @@ export type ReadPart = (part: unknown, field?: string) => unknown;
 /**
  * An error with what could be a credential cut out: the error itself where
  * nothing in it needed cutting, or a copy that prints as it does — its
- * name, its message and the message its stack starts with cut, the stack's
- * frames kept, its own fields and its causes read in turn. The copy is an
- * `Error`, or an `AggregateError` for one, whatever class the error was.
+ * name, its message and the header its stack starts with cut, the frames
+ * after that header kept, its own fields and its causes read in turn. The
+ * copy is an `Error`, or an `AggregateError` for one, whatever class the
+ * error was.
  *
  * @param error - The error
  * @param read - Reads its cause, its errors and its fields
@@ -30,8 +30,7 @@ export function redactedError(error: Error, read: ReadPart): Error {
   const said = attempt(() => error.message);
   const text = said === FAILED ? FAILED : attempt(() => String(said));
   const message = text === FAILED ? UNREADABLE : redactedText(text);
-  const trace = attempt(() => error.stack);
-  const stack = typeof trace === "string" ? stackWithoutSecrets(trace) : undefined;
+  const name = attempt(() => error.name);
   const hasCause = attempt(() => "cause" in error) === true;
   const given = hasCause ? attempt(() => error.cause) : undefined;
   const cause = given === FAILED ? UNREADABLE : hasCause ? read(given) : undefined;
@@ -44,6 +43,10 @@ export function redactedError(error: Error, read: ReadPart): Error {
       const value = attempt(() => (error as unknown as Record<string, unknown>)[field]);
       return [field, value, value === FAILED ? UNREADABLE : read(value, field)] as const;
     });
+  const code = fields.find(([field]) => field === "code")?.[1];
+  const trace = attempt(() => error.stack);
+  const headers = headersOf(name, said === undefined ? "" : text, code);
+  const stack = typeof trace === "string" ? stackWithoutSecrets(trace, headers) : undefined;
   const unchanged =
     message === said &&
     stack === trace &&
@@ -55,7 +58,6 @@ export function redactedError(error: Error, read: ReadPart): Error {
 
   const options = hasCause ? { cause } : undefined;
   const copy = errors ? new AggregateError(errors, message, options) : new Error(message, options);
-  const name = attempt(() => error.name);
   Object.defineProperty(copy, "name", {
     value: name === FAILED ? "Error" : name,
     configurable: true,
@@ -93,9 +95,47 @@ export function readEach(
   return kept.every((item, at) => item === list[at]) ? list : kept;
 }
 
-function stackWithoutSecrets(stack: string): string {
-  const at = stack.search(FRAMES);
-  return at === -1 ? redactedText(stack) : `${redactedText(stack.slice(0, at))}${stack.slice(at)}`;
+/**
+ * The headers an error's stack may start with, each its name and its
+ * message: joined as `Error.prototype.toString` joins them, the name alone
+ * for no message and the message alone for no name, as V8 and Node write
+ * one; with the code beside the name, as Node writes its own errors'; and
+ * as source-map-support and Vite's module runner write one, `Error` for no
+ * name and the colon kept for no message.
+ */
+function headersOf(name: unknown, message: string | typeof FAILED, code: unknown): string[] {
+  const called =
+    name === FAILED ? FAILED : name === undefined ? "Error" : attempt(() => String(name));
+  if (called === FAILED || message === FAILED) return [];
+  const header = called === "" ? message : message === "" ? called : `${called}: ${message}`;
+  const coded = typeof code === "string" ? [`${called} [${code}]: ${message}`] : [];
+  return [header, ...coded, `${called || "Error"}: ${message}`];
+}
+
+/**
+ * The stack with what could be a credential cut. An engine starts a stack
+ * with the error's header, then writes a frame a line: where the stack
+ * starts with a header read from the error, that header is cut as text, the
+ * frames after it are kept as they are, and what code wrote past them —
+ * another error's stack, a note — is cut as text. A line of the message can
+ * take a frame's shape, so the message is told by itself, never by the first
+ * line shaped like a frame. A stack that starts otherwise — set by code,
+ * formatted before its name or message changed, written by an engine with no
+ * header or by a formatter of its own — is cut whole, as text.
+ */
+function stackWithoutSecrets(stack: string, headers: readonly string[]): string {
+  const header = headers.find(
+    (start) =>
+      stack.startsWith(start) &&
+      (stack.length === start.length || stack.charCodeAt(start.length) === LINE_FEED),
+  );
+  if (header === undefined) return redactedText(stack);
+  let end = header.length;
+  FRAME.lastIndex = end;
+  while (FRAME.test(stack)) end = FRAME.lastIndex;
+  /* Cut text loses the line break it starts with: it is put back. */
+  const past = end < stack.length ? `\n${redactedText(stack.slice(end + 1))}` : "";
+  return `${redactedText(header)}${stack.slice(header.length, end)}${past}`;
 }
 
 /* Not every runtime has AggregateError; one that has none throws none. */

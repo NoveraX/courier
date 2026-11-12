@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { HTTPError } from "../../../src/errors";
 import { redact } from "../../../src/utils/redact";
+import { REDACT_BOUNDS } from "../../../src/utils/redact/bounds";
 
 /* Made up, and joined at run time so no literal sits in the source for a secret scanner. */
 const SECRET = ["Zq9x7", "Kp2Lm", "4Nw8"].join("");
@@ -22,9 +23,54 @@ const fastest = (run: () => void): number =>
     }),
   );
 
-/* Where V8 starts an error's frames: the first line it indents and starts with `at`. */
+/* What V8 writes after an error's header, its name and message joined: its frames. */
 const framesOf = (error: Error): string =>
-  error.stack?.slice(error.stack.indexOf("\n    at ")) ?? "";
+  error.stack?.slice(`${error.name}: ${error.message}`.length) ?? "";
+
+/* An error made `depth` calls down, its stack holding every frame: longer than a text is kept. */
+function deepError(depth: number, make: () => Error): Error {
+  const limit = Error.stackTraceLimit;
+  Error.stackTraceLimit = depth + 50;
+  try {
+    const down = (left: number): Error => (left === 0 ? make() : down(left - 1));
+    return down(depth);
+  } finally {
+    Error.stackTraceLimit = limit;
+  }
+}
+
+/* Node's own error, its code in its header: `RangeError [ERR_ENCODING_NOT_SUPPORTED]: …`. */
+function decoderError(label: string): Error {
+  try {
+    new TextDecoder(label);
+  } catch (error) {
+    return error as Error;
+  }
+  throw new Error(`${label} was taken for an encoding`);
+}
+
+/* A class that names itself once its stack is taken, as most do. */
+class Refused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "Refused";
+  }
+}
+
+/* An error whose stack is written as source-map-support and Vite's module runner write one:
+   `Error: ` for an error with no message, `Error: …` for one with no name. */
+function headedAsSourceMaps(make: () => Error): Error {
+  const prepare = Error.prepareStackTrace;
+  Error.prepareStackTrace = (error: Error, frames: readonly unknown[]) =>
+    `${error.name || "Error"}: ${error.message || ""}${frames.map((frame) => `\n    at ${frame}`).join("")}`;
+  try {
+    const error = make();
+    void error.stack;
+    return error;
+  } finally {
+    Error.prepareStackTrace = prepare;
+  }
+}
 
 /** A seeded generator, so a run that fails can be run again exactly. */
 function generator(seed: number): () => number {
@@ -144,6 +190,102 @@ describe("redact an error", () => {
     expect(copy.stack?.endsWith(framesOf(error))).toBe(true);
     expect(inspect(copy)).not.toContain(SECRET);
   });
+
+  it("cuts a line of its message shaped like a frame, and keeps its frames as they are", () => {
+    const error = new Error(`refused\n    at the gate with token=${SECRET}`);
+
+    const copy = redact(error);
+
+    expect(inspect(copy)).not.toContain(SECRET);
+    expect(copy.stack).toBe(`Error: ${copy.message}${framesOf(error)}`);
+  });
+
+  it("cuts the stack of another error its message quotes, and the address it called after it", () => {
+    const inner = new Error("connect ECONNREFUSED");
+    const error = new Error(
+      `upstream failed: ${inner.stack}\nwhile calling postgres://app:${SECRET}@db.internal/shop`,
+    );
+
+    const copy = redact(error);
+
+    expect(inspect(copy)).not.toContain(SECRET);
+    expect(copy.stack).toBe(`Error: ${copy.message}${framesOf(error)}`);
+  });
+
+  it("cuts what code wrote past its frames, another error's stack among it", () => {
+    const error = new Error("request failed");
+    const own = error.stack ?? "";
+    error.stack = `${own}\nCaused by: ${new Error(`refused with token=${SECRET}`).stack}`;
+
+    const copy = redact(error);
+
+    expect(inspect(copy)).not.toContain(SECRET);
+    expect(copy.stack?.startsWith(`${own}\nCaused by: Error: refused with token=`)).toBe(true);
+  });
+
+  it.each([
+    ["Node's own, its code in its header", () => decoderError(`token=${SECRET}`)],
+    ["a class's, named after super()", () => new Refused(`refused with token=${SECRET}`)],
+  ])("keeps every frame of an error's stack as V8 headed it: %s", (_kind, make) => {
+    const error = deepError(150, make);
+    const frames = error.stack?.slice(error.stack.indexOf("\n    at ")) ?? "";
+
+    const copy = redact(error);
+
+    expect(frames.length).toBeGreaterThan(REDACT_BOUNDS.text);
+    expect(inspect(copy)).not.toContain(SECRET);
+    expect(copy.stack?.endsWith(frames)).toBe(true);
+  });
+
+  it.each([
+    ["no message", () => new Error()],
+    ["no name", () => Object.assign(new Error(`refused with token=${SECRET}`), { name: "" })],
+  ])(
+    "keeps every frame of a stack headed as source maps head it, for an error with %s",
+    (_kind, make) => {
+      const error = deepError(150, () => headedAsSourceMaps(make));
+      const frames = error.stack?.slice(error.stack.indexOf("\n    at ")) ?? "";
+
+      const copy = redact(error);
+
+      expect(error.stack).toMatch(/^Error: /);
+      expect(frames.length).toBeGreaterThan(REDACT_BOUNDS.text);
+      expect(inspect(copy)).not.toContain(SECRET);
+      expect(copy.stack?.endsWith(frames)).toBe(true);
+    },
+  );
+
+  it("gives back an error with nothing to cut as it is, whichever way its stack is headed", () => {
+    const errors = [new Error("refused"), new Error(), headedAsSourceMaps(() => new Error())];
+
+    expect(errors.filter((error) => redact(error) !== error)).toEqual([]);
+  });
+
+  it.each([
+    [
+      "set by code",
+      (error: Error) => {
+        error.stack = `token=${SECRET}\n    at the gate`;
+      },
+    ],
+    [
+      "formatted before its message changed",
+      (error: Error) => {
+        error.message = "refused";
+      },
+    ],
+  ])(
+    "cuts its stack whole, as text, where it does not start with its header: %s",
+    (_kind, change) => {
+      const error = new Error(`refused with token=${SECRET}`);
+      void error.stack;
+      change(error);
+
+      const copy = redact(error);
+
+      expect(inspect(copy)).not.toContain(SECRET);
+    },
+  );
 
   it("cuts every cause in its chain, and an AggregateError's errors", () => {
     const refused = new AggregateError([new Error(`password=${SECRET}`)], "");

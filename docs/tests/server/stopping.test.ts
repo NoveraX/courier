@@ -43,7 +43,9 @@ function streamed(
   })
 }
 
-describe("the backend, asked to stop", () => {
+/* Not on Windows, which has no SIGTERM: Node ends a process sent one at once, before any handler
+   runs, and no other signal it sends reaches one. The backend runs in its container's Linux. */
+describe.skipIf(process.platform === "win32")("the backend, asked to stop", () => {
   it("finishes the answer it is streaming, then exits by itself", async () => {
     backend = startBackend()
     const url = await addressOf(backend)

@@ -57,6 +57,8 @@
     "packages/studio/tests/port-problem-listeners.test.ts > portProblem with another listener on the port > ends its connection to a server that greets its clients without resetting it"
   ],
   "win32": [
+    "docs/tests/server/stopping.test.ts > the backend, asked to stop > cuts off a call still arriving once its time is up, then exits by itself",
+    "docs/tests/server/stopping.test.ts > the backend, asked to stop > finishes the answer it is streaming, then exits by itself",
     "packages/build/tests/config/find-config-file.test.ts > assertOwnConfig > refuses a file of another user, the owner of neither this process nor the folder",
     "packages/build/tests/config/find-config-file.test.ts > findConfigFile > refuses a config above the folder that any user may write",
     "packages/build/tests/config/find-config-file.test.ts > findConfigFile > takes a config in the folder itself, whoever may write it",

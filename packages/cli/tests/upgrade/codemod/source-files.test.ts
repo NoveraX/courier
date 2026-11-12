@@ -180,4 +180,79 @@ describe("codePieces", () => {
     );
     expect(codePieces("src/Page.svelte", `<script>\n${NAMES}</script>`)[0]?.parseAs).toBe(".js");
   });
+
+  /* Each script block of a component's file: its language, its text, and the text found in the file where it says it starts. */
+  const scripts = (path: string, text: string) =>
+    codePieces(path, text)
+      .filter((piece) => piece.kind === "script")
+      .map((piece) => [
+        piece.parseAs,
+        piece.text,
+        text.slice(piece.offset, piece.offset + piece.text.length),
+      ]);
+  const at = (parseAs: string, text: string) => [parseAs, text, text];
+
+  it("reads a start tag whole, a `>` in the value of an attribute in quotes and all", () => {
+    const type = '"T extends Record<string, unknown>"';
+
+    expect(
+      scripts(
+        "src/List.vue",
+        `<script setup generic=${type} lang="ts">\n${NAMES}</script>\n<template />\n`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`)]);
+    expect(
+      scripts(
+        "src/List.svelte",
+        `<script generics=${type} lang="ts">\n${NAMES}</script>\n<p>Hi</p>\n`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`)]);
+    expect(
+      scripts("src/list.astro", `<p>Hi</p>\n<script data-note='1 > 0'>\n${NAMES}</script>\n`),
+    ).toEqual([at(".ts", `\n${NAMES}`)]);
+  });
+
+  it("ends a block at an end tag as HTML ends one, with white space, attributes or a `/` before its `>`", () => {
+    const second = "\nexport const size = 2;\n";
+
+    expect(
+      scripts(
+        "src/List.vue",
+        `<script setup lang="ts">\n${NAMES}</script >\n<template />\n<script>${second}</script\n>`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`), at(".js", second)]);
+    expect(
+      scripts(
+        "src/List.svelte",
+        `<script module>${second}</SCRIPT\t>\n<p>Hi</p>\n<script lang="ts">\n${NAMES}</script/>`,
+      ),
+    ).toEqual([at(".js", second), at(".ts", `\n${NAMES}`)]);
+    expect(
+      scripts(
+        "src/list.astro",
+        `<p>Hi</p>\n<script>\n${NAMES}</script data-end=">">\n<script>${second}</script>`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`), at(".ts", second)]);
+  });
+
+  it("finds no block in a comment, in an Astro file's frontmatter, or in a tag whose name only starts with script", () => {
+    expect(
+      scripts(
+        "src/List.vue",
+        `<script-notes>\nNot code.\n</script-notes>\n<script setup lang="ts">\n${NAMES}</script>`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`)]);
+    expect(
+      scripts(
+        "src/List.svelte",
+        `<!-- <script>old()</script> -->\n<script lang="ts">\n${NAMES}</script>`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`)]);
+    expect(
+      scripts(
+        "src/list.astro",
+        `---\n// The <script> below runs in the browser.\n${NAMES}---\n<script>\n${NAMES}</script>`,
+      ),
+    ).toEqual([at(".ts", `\n${NAMES}`)]);
+  });
 });

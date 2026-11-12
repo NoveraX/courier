@@ -3,6 +3,7 @@ import { extname, join } from "node:path";
 
 import { isRecord } from "../../util/is-record";
 import { mentions } from "./mentions";
+import { scriptTags } from "./script-tags";
 import { type Unread, walkFolders } from "./source-walk";
 
 /** Which piece of its file a piece of code is: the module whole, a `<script>` block, or an Astro file's frontmatter. */
@@ -98,15 +99,16 @@ export function writtenByStudio(text: string): boolean {
 }
 
 /* `lang="ts"` on a script tag, or TypeScript's own `lang='tsx'`. */
-function langOf(attributes: string): string {
-  const lang = /\blang\s*=\s*["']?([a-z]+)/i.exec(attributes)?.[1]?.toLowerCase();
-  return lang === "ts" || lang === "tsx" ? `.${lang}` : ".js";
+function langOf(lang: string | undefined): string {
+  const name = lang?.toLowerCase();
+  return name === "ts" || name === "tsx" ? `.${name}` : ".js";
 }
 
 /**
  * The pieces of a file's code: the module whole, or each script block of
- * a Vue, Svelte or Astro component's file — and an Astro file's
- * frontmatter, which is TypeScript — each where it starts in the file.
+ * a Vue, Svelte or Astro component's file, read as HTML reads it
+ * ({@link scriptTags}) — and an Astro file's frontmatter, which is
+ * TypeScript, and so holds no block — each where it starts in the file.
  *
  * @param path - The file, relative to the root
  * @param text - Its text
@@ -121,9 +123,10 @@ export function codePieces(path: string, text: string): CodePiece[] {
   if (extension !== ".vue" && extension !== ".svelte" && extension !== ".astro")
     return [{ path, text, offset: 0, parseAs: extension, kind: "module" }];
   const pieces: CodePiece[] = [];
+  let markup = 0;
   if (extension === ".astro") {
     const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
-    if (front?.[1] !== undefined)
+    if (front?.[1] !== undefined) {
       pieces.push({
         path,
         text: front[1],
@@ -131,15 +134,15 @@ export function codePieces(path: string, text: string): CodePiece[] {
         parseAs: ".ts",
         kind: "frontmatter",
       });
+      markup = front[0].length;
+    }
   }
-  for (const block of text.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
-    const [whole, attributes = "", body = ""] = block;
-    const offset = (block.index ?? 0) + whole.indexOf(">") + 1;
+  for (const block of scriptTags(text, markup)) {
     pieces.push({
       path,
-      text: body,
-      offset,
-      parseAs: extension === ".astro" ? ".ts" : langOf(attributes),
+      text: block.text,
+      offset: block.offset,
+      parseAs: extension === ".astro" ? ".ts" : langOf(block.attributes.get("lang")),
       kind: "script",
     });
   }

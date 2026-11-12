@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import nodePath, { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { samplePages } from "./doc-samples.mjs";
+import { readSamplePages } from "./doc-samples.mjs";
 import { proseProblems } from "./prose-entries.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -125,10 +125,10 @@ describe("the docs' prose", () => {
   });
 
   it("names a side's entry on every page of the docs and every README", () => {
-    const pages = samplePages(ROOT).map((page) => ({
-      page: relative(ROOT, page),
-      text: readFileSync(page, "utf8"),
-    }));
-    expect(proseProblems(pages)).toEqual([]);
+    expect(proseProblems(readSamplePages(ROOT))).toEqual([]);
+  });
+
+  it("reads the pages alike however the system names them, as Windows does too", () => {
+    expect(proseProblems(readSamplePages(ROOT, nodePath.win32))).toEqual([]);
   });
 });

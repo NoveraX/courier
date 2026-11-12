@@ -28,11 +28,11 @@
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, normalize, relative, resolve } from "node:path";
+import { join, normalize, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { extractSamples, importHeader, samplePages } from "./doc-samples.mjs";
+import { extractSamples, importHeader, readSamplePages } from "./doc-samples.mjs";
 import { placeSamples } from "./page-modules.mjs";
 import { proseProblems } from "./prose-entries.mjs";
 import { entryProblems } from "./sample-entries.mjs";
@@ -209,10 +209,7 @@ function addMissingImports(roots, exported, files) {
 }
 
 function main() {
-  const pages = samplePages(ROOT).map((page) => ({
-    page: relative(ROOT, page),
-    text: readFileSync(page, "utf8"),
-  }));
+  const pages = readSamplePages(ROOT);
   const samples = pages.flatMap(({ page, text }) =>
     extractSamples(text).map((sample) => ({ ...sample, page })),
   );

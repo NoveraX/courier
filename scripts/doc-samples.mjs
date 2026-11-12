@@ -4,12 +4,13 @@
  * module of its own for `scripts/check-doc-samples.mjs` to compile.
  */
 
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import nodePath, { join } from "node:path";
 
 import { codeGroupSamples } from "./code-group-samples.mjs";
 import { sampleFile } from "./page-modules.mjs";
 import { sideEntryOf } from "./sample-entries.mjs";
+import { pathFrom } from "./slashed-paths.mjs";
 
 /* The side a fence says loads it, ```ts side="page"; why it shows the root, ```ts root="…"; and
    the framework of its file's package, where that is not the guide's, ```ts framework="vite". */
@@ -102,6 +103,24 @@ export function samplePages(root) {
     .map((name) => join(root, "packages", name, "README.md"))
     .filter((path) => existsSync(path));
   return [...mdxFiles(join(root, "docs/src/content/docs")), join(root, "README.md"), ...readmes];
+}
+
+/**
+ * The pages that hold samples, each read, and named by its path from the
+ * repository's root in the one form the checks compare: by `/`, on
+ * Windows too, so that a check finds a page by its name on every system.
+ *
+ * @param {string} root - The repository root
+ * @param {Pick<typeof nodePath, "relative" | "sep">} [paths] - The system's paths: Node's own by default
+ * @returns {Array<{ page: string, text: string }>} Each page's name and text
+ * @example
+ * readSamplePages("/repo")[0]; // → { page: "docs/src/content/docs/quick-start.mdx", text: "export const metadata …" }
+ */
+export function readSamplePages(root, paths = nodePath) {
+  return samplePages(root).map((file) => ({
+    page: pathFrom(root, file, paths),
+    text: readFileSync(file, "utf8"),
+  }));
 }
 
 /**

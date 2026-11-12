@@ -12,6 +12,20 @@ import { redact } from "../../../src/utils/redact";
 /* Made up, and joined at run time so no literal sits in the source for a secret scanner. */
 const SECRET = ["Zq9x7", "Kp2Lm", "4Nw8"].join("");
 
+/* The fastest of three runs: one the machine's load or a collection held up says nothing of the reading. */
+const fastest = (run: () => void): number =>
+  Math.min(
+    ...[0, 1, 2].map(() => {
+      const started = performance.now();
+      run();
+      return performance.now() - started;
+    }),
+  );
+
+/* Where V8 starts an error's frames: the first line it indents and starts with `at`. */
+const framesOf = (error: Error): string =>
+  error.stack?.slice(error.stack.indexOf("\n    at ")) ?? "";
+
 /** A seeded generator, so a run that fails can be run again exactly. */
 function generator(seed: number): () => number {
   let state = seed >>> 0;
@@ -105,6 +119,30 @@ describe("redact an error", () => {
     expect(copy.stack?.split("\n").slice(1)).toEqual(error.stack?.split("\n").slice(1));
     expect(inspect(copy)).not.toContain(SECRET);
     expect(error.message).toContain(SECRET);
+  });
+
+  it.each([
+    ["line feeds", "\n"],
+    ["line feeds and spaces", "\n "],
+    ["CRLF", "\r\n"],
+  ])("finds its frames in one pass, however long a run of %s its message holds", (_kind, unit) => {
+    const error = new Error(`refused with token=${SECRET}${unit.repeat(65_536 / unit.length)}end`);
+
+    const copy = redact(error);
+
+    expect(framesOf(error)).toMatch(/^\n {4}at /);
+    expect(copy.stack?.endsWith(framesOf(error))).toBe(true);
+    expect(inspect(copy)).not.toContain(SECRET);
+    expect(fastest(() => redact(error))).toBeLessThan(100);
+  });
+
+  it("takes a line for a frame only as V8 writes one, so a message's line starting with at is cut", () => {
+    const error = new Error(`refused\n\nat once with token=${SECRET}`);
+
+    const copy = redact(error);
+
+    expect(copy.stack?.endsWith(framesOf(error))).toBe(true);
+    expect(inspect(copy)).not.toContain(SECRET);
   });
 
   it("cuts every cause in its chain, and an AggregateError's errors", () => {

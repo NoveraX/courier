@@ -2,8 +2,12 @@ import { REDACT_BOUNDS } from "./bounds";
 import { redactedText } from "./redacted-text";
 import { attempt, FAILED, UNREADABLE } from "./unreadable";
 
-/* Where an error's stack leaves its message for the frames that say where it was thrown. */
-const FRAMES = /\n\s+at\s/;
+/* Where an error's stack leaves its message for the frames that say where it was thrown: the first
+   line that starts, after its indent, with `at`, as V8 writes each frame. The indent stops at the
+   line's end, so each line break is read on to its line's first word alone: a pattern that read on
+   over line breaks would read the rest of a run of them from each, in time growing with the square
+   of the run, and an error's message can quote what anyone sent. */
+const FRAMES = /\n[^\S\n]+at\s/;
 /* The fields of an error read by name, not copied as its own. */
 const ERROR_FIELDS: ReadonlySet<string> = new Set(["name", "message", "stack", "cause", "errors"]);
 

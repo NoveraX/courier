@@ -17,8 +17,8 @@ export interface StudioLaunch {
 const POSIX_SCRIPT =
   'npx @noverax/courier-studio "$@"; [ -n "$SHELL" ] && exec "$SHELL"; exec /bin/sh';
 
-/* What cmd reads as its own: each escaped with ^. */
-const CMD_META = /([()\][%!^"`<>&|;, *?])/g;
+/* What cmd reads as its own, and the character after a `%`, where cmd starts a variable's name: each escaped with ^. */
+const CMD_READS = /[()\][%!^"`<>&|;, *?]|(?<=%)./gs;
 
 /* A word as the C runtime npx's node reads its arguments with takes it whole: quoted, a quote and the backslashes before one escaped. */
 function quotedForArgv(word: string): string {
@@ -39,10 +39,14 @@ function quotedForArgv(word: string): string {
  * A word for cmd, as https://qntm.org/cmd lays it out: quoted for argv, then
  * each character cmd reads as its own escaped with ^ — twice, as npx is a
  * .cmd file, whose %* cmd reads once more. No quote is left for cmd to
- * read, so no ^ goes unread, and a `%` broken by one is no variable.
+ * read, so no ^ goes unread. A `%` is the one ^ does not hold: cmd puts a
+ * variable's value in place of %NAME%, %NAME:a=b% or %NAME:~0,4% before it
+ * reads any ^, the name running from a `%` to the next or to a `:`. So the
+ * character after each `%` is escaped as well, and every name cmd could
+ * read starts with a ^, which no variable's does.
  */
 function cmdWord(word: string): string {
-  return quotedForArgv(word).replace(CMD_META, "^$1").replace(CMD_META, "^$1");
+  return quotedForArgv(word).replace(CMD_READS, "^^^$&");
 }
 
 /**
@@ -52,7 +56,8 @@ function cmdWord(word: string): string {
  * arguments, then the user's shell; on Windows through `cmd`, every
  * character it reads as its own escaped, then `cmd` on its own. No
  * PowerShell reads the line, which would run a `$(…)` inside an address
- * even in quotes, and no shell keeps it in its history.
+ * even in quotes; `cmd` puts no variable's value in place of a `%…%` or
+ * `!…!` in it; and no shell keeps it in its history.
  *
  * @param args - The command and its arguments: `["import", spec]`
  * @param platform - The platform the terminal runs on
@@ -71,7 +76,8 @@ export function studioLaunch(
     return { shellPath: "/bin/sh", shellArgs: ["-c", POSIX_SCRIPT, "courier-studio", ...args] };
   }
   const line = ["npx", "@noverax/courier-studio", ...args.map(cmdWord)].join(" ");
-  return { shellPath: "cmd.exe", shellArgs: `/d /s /k "${line}"` };
+  /* Delayed expansion off, whatever the registry says: on, cmd would read a `!NAME!` once its ^ is gone. */
+  return { shellPath: "cmd.exe", shellArgs: `/d /v:off /s /k "${line}"` };
 }
 
 /**

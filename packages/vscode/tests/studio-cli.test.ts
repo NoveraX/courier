@@ -2,8 +2,9 @@
  * Courier Studio's commands run in a terminal with each argument whole and
  * never read by a shell — an address with `$(…)`, a backtick, `&`, `%` or a
  * quote in it included: on macOS and Linux as `sh`'s positional arguments,
- * on Windows through `cmd` with every character it reads escaped, never
- * through PowerShell, which runs a `$(…)` even in double quotes. Each runs
+ * on Windows through `cmd` with every character it reads escaped and no
+ * `%…%` or `!…!` it would take for a variable's value, never through
+ * PowerShell, which runs a `$(…)` even in double quotes. Each runs
  * under its own shell on the system that has it. No line is typed into a
  * shell, so none is kept in its history. Values are made up.
  */
@@ -56,22 +57,38 @@ describe("a command of Studio's, on macOS and Linux", () => {
 });
 
 describe("a command of Studio's, on Windows", () => {
+  /* Delayed expansion off, which a registry value can turn on: cmd would then read !NAME! too. */
+  const start = '/d /v:off /s /k "npx @noverax/courier-studio ';
+  /* cmd reads the line once, then npx's .cmd file reads its %* again: each takes one ^ off. */
+  const read = (words: string) => words.replace(/\^(.)/g, "$1").replace(/\^(.)/g, "$1");
+
   it("goes through cmd, never PowerShell, every character cmd reads escaped at both of its readings", () => {
     const { shellPath, shellArgs } = studioLaunch(["import", HOSTILE], "win32");
-    const start = '/d /s /k "npx @noverax/courier-studio ';
 
     expect(shellPath).toBe("cmd.exe");
     expect(typeof shellArgs === "string" && shellArgs.startsWith(start)).toBe(true);
     const words = String(shellArgs).slice(start.length, -1);
-    /* cmd reads the line once, then npx's .cmd file reads its %* again: each takes one ^ off. */
-    const read = words.replace(/\^(.)/g, "$1").replace(/\^(.)/g, "$1");
-    expect(read).toBe(
+    expect(read(words)).toBe(
       '"import" "https://x.example/spec?q=$(calc)&v=' +
         "`$x`" +
         String.raw`&w=%PATH%&n='\"1\"'&s=a\\\"b c"`,
     );
     /* Nothing cmd reads as its own is left bare at either reading, but the space between words. */
     expect(words.replace(/\^\^\^./g, "")).not.toMatch(/[()%!^"`<>&|;,*?]/);
+  });
+
+  it("leaves cmd no variable to put in place of a %…% in a word, in any form that names one", () => {
+    const word = "https://x.example/spec?w=%PATH%&x=%PATH:a=b%&y=%PATH:~0,4%&z=%%&end=%";
+    const words = String(studioLaunch(["import", word], "win32").shellArgs).slice(start.length, -1);
+
+    /*
+     * cmd puts a variable's value in place of %NAME%, %NAME:a=b% or
+     * %NAME:~0,4% before it reads any ^, by the name from a % up to the next
+     * or up to a `:`. A ^ right after each % starts every such name, and no
+     * variable's name starts with one.
+     */
+    expect(words).not.toMatch(/%[^^]/);
+    expect(read(words)).toBe(`"import" "${word}"`);
   });
 
   /* Only Windows has cmd, and npx as a .cmd file. */
@@ -92,7 +109,10 @@ describe("a command of Studio's, on Windows", () => {
         `@"${process.execPath}" "${join(dir, "args.cjs")}" %*\r\n`,
       );
       /* PowerShell would make the file at $(…); cmd at a bare & or >, or put a value for %…%. */
-      const address = `${HOSTILE}&t=$(New-Item '${ran}')&u=1&echo>"${ran}"&h=%COURIER_LAUNCH_PROBE%`;
+      const probe = "COURIER_LAUNCH_PROBE";
+      const address =
+        `${HOSTILE}&t=$(New-Item '${ran}')&u=1&echo>"${ran}"` +
+        `&h=%${probe}%&k=%${probe}:made=kept%&l=%${probe}:~0,4%&m=!${probe}!`;
 
       const { shellPath, shellArgs } = studioLaunch(["import", address], "win32");
       const run = spawnSync(shellPath, [String(shellArgs)], {
@@ -101,7 +121,7 @@ describe("a command of Studio's, on Windows", () => {
           PATH: `${dir};${join(windows, "System32")}`,
           PATHEXT: ".COM;.EXE;.BAT;.CMD",
           SystemRoot: windows,
-          COURIER_LAUNCH_PROBE: "made-up",
+          [probe]: "made-up",
         },
         input: "",
         encoding: "utf8",

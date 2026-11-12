@@ -99,4 +99,30 @@ describe("the multipart parser's time", () => {
     /* Ten times the parts take about ten times as long; a parser that went back over earlier parts would take a hundred. */
     expect(largeTime / smallTime, `${smallTime} ms, ${largeTime} ms`).toBeLessThan(30);
   });
+
+  it("grows in step with a run of spaces and tabs inside a part's header", TIMED, async () => {
+    const boundary = "----courier-blank-runs";
+    /* Two hundred parts, each with a type that holds one run of blanks inside it. */
+    const form = (run: number): Uint8Array<ArrayBuffer> =>
+      concat(
+        ...Array.from(
+          { length: 200 },
+          (_, at) =>
+            `--${boundary}\r\nContent-Disposition: form-data; name="p${at}"\r\n` +
+            `Content-Type: text/plain;${" \t".repeat(run / 2)}charset=utf-8\r\n\r\nv\r\n`,
+        ),
+        `--${boundary}--\r\n`,
+      );
+    const short = form(1_000);
+    /* As long as the lines of a part's headers may be together. */
+    const long = form(8_000);
+
+    const [shortTime, longTime] = await fastestOfEach(
+      () => drain(short, boundary, 200),
+      () => drain(long, boundary, 200),
+    );
+
+    /* Eight times the run takes about eight times as long; a strip tried again at every blank of it would take sixty-four. */
+    expect(longTime / shortTime, `${shortTime} ms, ${longTime} ms`).toBeLessThan(24);
+  });
 });

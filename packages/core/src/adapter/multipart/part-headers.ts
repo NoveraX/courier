@@ -18,8 +18,12 @@ const CR = 0x0d;
 const LF = 0x0a;
 /* RFC 9110 §5.6.2 token characters, a header's name. */
 const TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
-/* The space and tabs around a header's value (RFC 9110 §5.6.3). */
-const OWS = /^[ \t]+|[ \t]+$/g;
+/* A header's value without the space and tabs around it (RFC 9110 §5.6.3): the run at the start,
+   then what lies from the first other character to the last. No two neighbours in it take the
+   same character but `.*` and the one after it, so it reads a value at most twice; one tried at
+   every blank of a run for the value's end would take time growing with the square of a run
+   inside, and an uploader writes the headers. */
+const WITHOUT_OWS = /^[ \t]*([^ \t](?:.*[^ \t])?)?/s;
 /* The encodings that leave the bytes as they are; RFC 7578 §4.7 retired the others. */
 const IDENTITY_ENCODINGS: ReadonlySet<string> = new Set(["7bit", "8bit", "binary"]);
 /* A filename arrives in the header as the bytes of its UTF-8, as browsers send it. */
@@ -77,7 +81,8 @@ function headerOf(line: Uint8Array): [string, string] {
   const name = colon === -1 ? "" : decoder.decode(line.subarray(0, colon));
   /* A line that starts with space or tab folds onto the one before it (RFC 9112 §5.2). */
   if (!TOKEN.test(name)) throw malformed("a header line has no name, or is folded");
-  return [name.toLowerCase(), decoder.decode(line.subarray(colon + 1)).replace(OWS, "")];
+  const value = decoder.decode(line.subarray(colon + 1));
+  return [name.toLowerCase(), WITHOUT_OWS.exec(value)?.[1] ?? ""];
 }
 
 function malformed(reason: string): BodyError {

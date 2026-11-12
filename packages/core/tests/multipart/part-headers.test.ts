@@ -55,6 +55,15 @@ describe("parsePartHeaders", () => {
     expect(parsePartHeaders(block)).toEqual({ name: "f", filename: "a.png", type: "image/png" });
   });
 
+  it("keeps a run of spaces and tabs inside a value, and drops those around it", () => {
+    const run = " \t".repeat(1300);
+    const block = bytes(
+      `Content-Disposition: form-data; name="f"\r\nContent-Type:${run}text/plain;${run}charset=utf-8${run}\r\n`,
+    );
+
+    expect(parsePartHeaders(block).type).toBe(`text/plain;${run}charset=utf-8`);
+  });
+
   it("passes over headers a form gives no meaning, and takes an encoding that keeps the bytes", () => {
     const block = bytes(
       'X-Trace: 1\r\nContent-Disposition: form-data; name="f"\r\nContent-Transfer-Encoding: 8bit\r\n',

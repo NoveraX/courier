@@ -49,12 +49,14 @@
     "packages/redis/tests/redis-topic-log.test.ts > a Redis adapter's topic log > refuses to keep part of an event",
     "packages/redis/tests/redis-topic-log.test.ts > a Redis adapter's topic log > sends back a range it keeps, and none for another epoch, past its sequence or trimmed",
     "packages/studio/tests/create-module-cache.test.ts > createModuleCache > finds a module by the name with forward slashes the loader gives a file it resolves itself",
-    "packages/studio/tests/describe-error.test.ts > describeError > takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes"
+    "packages/studio/tests/describe-error.test.ts > describeError > takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes",
+    "packages/vscode/tests/studio-cli.test.ts > a command of Studio's, on Windows > hands cmd each argument whole, so nothing in it is expanded or run"
   ],
   "linux": [
     "packages/studio/tests/create-module-cache.test.ts > createModuleCache > finds a module by the name with forward slashes the loader gives a file it resolves itself",
     "packages/studio/tests/describe-error.test.ts > describeError > takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes",
-    "packages/studio/tests/port-problem-listeners.test.ts > portProblem with another listener on the port > ends its connection to a server that greets its clients without resetting it"
+    "packages/studio/tests/port-problem-listeners.test.ts > portProblem with another listener on the port > ends its connection to a server that greets its clients without resetting it",
+    "packages/vscode/tests/studio-cli.test.ts > a command of Studio's, on Windows > hands cmd each argument whole, so nothing in it is expanded or run"
   ],
   "win32": [
     "docs/tests/server/stopping.test.ts > the backend, asked to stop > cuts off a call still arriving once its time is up, then exits by itself",
@@ -250,6 +252,7 @@
     "packages/studio/tests/studio-token.test.ts > studioToken > keeps a token of its own when the token file is another account's",
     "packages/studio/tests/studio-token.test.ts > studioToken > lets only its owner read the token file",
     "packages/studio/tests/studio-token.test.ts > studioToken > narrows a token file others can read to its owner",
-    "packages/studio/tests/watched-state.test.ts > watchedState > is the error of a path that cannot be looked up"
+    "packages/studio/tests/watched-state.test.ts > watchedState > is the error of a path that cannot be looked up",
+    "packages/vscode/tests/studio-cli.test.ts > a command of Studio's, on macOS and Linux > hands sh each argument whole, so nothing in it is expanded or run"
   ]
 }

@@ -3,10 +3,11 @@
  * never read by a shell — an address with `$(…)`, a backtick, `&`, `%` or a
  * quote in it included: on macOS and Linux as `sh`'s positional arguments,
  * on Windows through `cmd` with every character it reads escaped, never
- * through PowerShell, which runs a `$(…)` even in double quotes. No line is
- * typed into a shell, so none is kept in its history. Values are made up.
+ * through PowerShell, which runs a `$(…)` even in double quotes. Each runs
+ * under its own shell on the system that has it. No line is typed into a
+ * shell, so none is kept in its history. Values are made up.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,24 +31,28 @@ afterEach(() => {
 });
 
 describe("a command of Studio's, on macOS and Linux", () => {
-  it("hands sh each argument whole, so nothing in it is expanded or run", () => {
-    dir = mkdtempSync(join(tmpdir(), "courier-launch-"));
-    const ran = join(dir, "ran");
-    /* An npx that writes down the arguments it was given, one to a line. */
-    writeFileSync(join(dir, "npx"), `#!/bin/sh\nprintf '%s\\n' "$@" > "${join(dir, "args")}"\n`);
-    chmodSync(join(dir, "npx"), 0o755);
-    const address = `${HOSTILE}&t=$(touch ${ran})&u=\`touch ${ran}\`&h=$HOME`;
+  /* Windows has no sh: there the launch goes through cmd, run below. */
+  it.skipIf(process.platform === "win32")(
+    "hands sh each argument whole, so nothing in it is expanded or run",
+    () => {
+      dir = mkdtempSync(join(tmpdir(), "courier-launch-"));
+      const ran = join(dir, "ran");
+      /* An npx that writes down the arguments it was given, one to a line. */
+      writeFileSync(join(dir, "npx"), `#!/bin/sh\nprintf '%s\\n' "$@" > "${join(dir, "args")}"\n`);
+      chmodSync(join(dir, "npx"), 0o755);
+      const address = `${HOSTILE}&t=$(touch ${ran})&u=\`touch ${ran}\`&h=$HOME`;
 
-    const { shellPath, shellArgs } = studioLaunch(["import", address], "darwin");
-    execFileSync(shellPath, [...shellArgs], {
-      env: { PATH: `${dir}:/usr/bin:/bin`, SHELL: "/bin/sh", NODE_ENV: "test" },
-      input: "",
-    });
+      const { shellPath, shellArgs } = studioLaunch(["import", address], "darwin");
+      execFileSync(shellPath, [...shellArgs], {
+        env: { PATH: `${dir}:/usr/bin:/bin`, SHELL: "/bin/sh", NODE_ENV: "test" },
+        input: "",
+      });
 
-    const given = readFileSync(join(dir, "args"), "utf8").split("\n").slice(0, -1);
-    expect(given).toEqual(["@noverax/courier-studio", "import", address]);
-    expect(existsSync(ran)).toBe(false);
-  });
+      const given = readFileSync(join(dir, "args"), "utf8").split("\n").slice(0, -1);
+      expect(given).toEqual(["@noverax/courier-studio", "import", address]);
+      expect(existsSync(ran)).toBe(false);
+    },
+  );
 });
 
 describe("a command of Studio's, on Windows", () => {
@@ -68,6 +73,51 @@ describe("a command of Studio's, on Windows", () => {
     /* Nothing cmd reads as its own is left bare at either reading, but the space between words. */
     expect(words.replace(/\^\^\^./g, "")).not.toMatch(/[()%!^"`<>&|;,*?]/);
   });
+
+  /* Only Windows has cmd, and npx as a .cmd file. */
+  it.runIf(process.platform === "win32")(
+    "hands cmd each argument whole, so nothing in it is expanded or run",
+    () => {
+      dir = mkdtempSync(join(tmpdir(), "courier-launch-"));
+      const ran = join(dir, "ran");
+      const windows = process.env.SystemRoot ?? "C:\\Windows";
+      /*
+       * An npx.cmd as npm writes one, whose %* cmd reads once more, and a
+       * node that writes down the arguments it was given.
+       */
+      const record = `require("node:fs").writeFileSync(${JSON.stringify(join(dir, "args.json"))}, JSON.stringify(process.argv.slice(2)));\n`;
+      writeFileSync(join(dir, "args.cjs"), record);
+      writeFileSync(
+        join(dir, "npx.cmd"),
+        `@"${process.execPath}" "${join(dir, "args.cjs")}" %*\r\n`,
+      );
+      /* PowerShell would make the file at $(…); cmd at a bare & or >, or put a value for %…%. */
+      const address = `${HOSTILE}&t=$(New-Item '${ran}')&u=1&echo>"${ran}"&h=%COURIER_LAUNCH_PROBE%`;
+
+      const { shellPath, shellArgs } = studioLaunch(["import", address], "win32");
+      const run = spawnSync(shellPath, [String(shellArgs)], {
+        cwd: dir,
+        env: {
+          PATH: `${dir};${join(windows, "System32")}`,
+          PATHEXT: ".COM;.EXE;.BAT;.CMD",
+          SystemRoot: windows,
+          COURIER_LAUNCH_PROBE: "made-up",
+        },
+        input: "",
+        encoding: "utf8",
+        /* cmd stays once the command ends, until its input does: one that waited fails, not hangs. */
+        timeout: 30_000,
+        /* The string as VS Code hands it to cmd, with no quotes of Node's around it. */
+        windowsVerbatimArguments: true,
+      });
+
+      const said = [run.error?.message, run.stdout, run.stderr].filter(Boolean).join("\n");
+      expect(existsSync(join(dir, "args.json")), said).toBe(true);
+      const given: unknown = JSON.parse(readFileSync(join(dir, "args.json"), "utf8"));
+      expect(given).toEqual(["@noverax/courier-studio", "import", address]);
+      expect(existsSync(ran)).toBe(false);
+    },
+  );
 });
 
 describe("running a command of Studio's", () => {

@@ -1,6 +1,7 @@
 import { defineConfig } from "tsdown";
 
 import { sharedBuild } from "../../tsdown.shared.ts";
+import { emptiedImports } from "./tsdown.emptied-imports.ts";
 import { serverOnlyEntries, serverOnlyImports } from "./tsdown.server-only.ts";
 
 const entry = {
@@ -32,15 +33,12 @@ export default defineConfig([
        made a browser load at start what it needs only later or never, and a
        stack trace names the module each frame is in. */
     unbundle: true,
-    /* Each module imports what it uses of another, as its source does. A
-       constant the build wrote in place left the import of its module
-       binding nothing, which an app's bundler drops, since the core declares
-       that its modules do nothing as they load, and warns of. The app's
-       bundler writes a constant in place itself where it will. */
-    inputOptions: { optimization: { inlineConst: false } },
     /* A module only a server runs is imported through `#courier-server/…`, so a
-       page's bundle takes its browser stand-in instead. */
-    plugins: [serverOnlyImports()],
+       page's bundle takes its browser stand-in instead. The build writes a
+       constant of another module in place where it is used: a bundler that
+       does not, as Turbopack does not, would read it by name in each place.
+       The import of that module, left binding no name, is dropped. */
+    plugins: [serverOnlyImports(), emptiedImports()],
     dts: false,
   },
   {

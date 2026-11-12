@@ -9,7 +9,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { courier, defineApi } from "@noverax/courier/define";
 import express from "express";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { registerOpenApiExportRoutes } from "../src/server/openapi-export/openapi-export-routes";
@@ -29,6 +29,7 @@ const shop = defineApi({
 
 const servers: Server[] = [];
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await Promise.all(servers.splice(0).map((s) => new Promise((done) => s.close(done))));
 });
 
@@ -109,5 +110,26 @@ describe("exporting a source as OpenAPI", () => {
       body: { error: "openapi is 3.1.0 or 3.2.0, not 3.0.0." },
     });
     expect(await ask({ source: "shop", title: "x".repeat(201) })).toMatchObject({ status: 400 });
+  });
+
+  it("says what the definition threw with no value of the environment, nor a credential", async () => {
+    vi.stubEnv("SHOP_KEY", "FAKE-0000-PROBE-SECRET");
+    const failing = {
+      baseURL: "https://shop.example",
+      get endpoints(): never {
+        throw new Error(
+          `key ${process.env.SHOP_KEY} refused by postgres://app:hunter2@db.internal/app`,
+        );
+      },
+    };
+    const ask = await exportRoute({ failing });
+
+    expect(await ask({ source: "failing" })).toEqual({
+      status: 422,
+      body: {
+        error:
+          "No document could be written for failing: key [redacted] refused by postgres://db.internal/app",
+      },
+    });
   });
 });

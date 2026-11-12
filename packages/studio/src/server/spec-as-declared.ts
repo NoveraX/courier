@@ -1,4 +1,5 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
+import { maskedError, withoutSecrets } from "@noverax/courier-build/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { computeSpecHash, type ParsedSpec } from "../apis";
 import { filterSpec } from "../apis/filter-spec";
@@ -39,7 +40,12 @@ async function transformed(
   try {
     result = await transform(copy);
   } catch (error) {
-    throw new ImportTransformError(name, `threw: ${messageOf(error)}`, error);
+    /* The project's code, quoted on a page as a load error quotes it: with no secret in it. */
+    throw new ImportTransformError(
+      name,
+      `threw: ${withoutSecrets(messageOf(error))}`,
+      maskedError(error),
+    );
   }
   const next = result === undefined ? copy : result;
   if (!isParsedSpec(next))

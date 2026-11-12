@@ -2,6 +2,7 @@ import type { AgentAccess } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import type { Sources } from "@noverax/courier/define";
 import { eachEndpoint } from "@noverax/courier/internal";
+import { withoutSecrets } from "@noverax/courier-build/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { buildCatalog, checkedPolicy, decisionReason } from "@noverax/courier-mcp/internal";
 
@@ -54,7 +55,9 @@ export function agentMarks(
     }
     return marks;
   } catch (error) {
-    return everyEndpointKept(sources, `the MCP server would not start: ${messageOf(error)}`);
+    /* The reason quotes the policy as the project wrote it: with no secret in it. */
+    const said = withoutSecrets(messageOf(error));
+    return everyEndpointKept(sources, `the MCP server would not start: ${said}`);
   }
 }
 

@@ -52,6 +52,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   process.exitCode = undefined;
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
 });
@@ -110,6 +111,35 @@ describe("courier-studio openapi", () => {
     process.exitCode = undefined;
     await run();
     expect(error.mock.calls.join(" ")).toContain("Several sources go to a folder");
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("says what the project's code threw with no value of the environment, nor a credential", async () => {
+    vi.stubEnv("SHOP_KEY", "FAKE-0000-PROBE-SECRET");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `
+        export default {
+          sources: {
+            shop: {
+              baseURL: "https://api.example.com",
+              get endpoints() {
+                throw new Error("key " + process.env.SHOP_KEY + " refused by postgres://app:hunter2@db.internal/app");
+              },
+            },
+          },
+        };
+      `,
+      "utf-8",
+    );
+
+    await run("--source", "shop");
+
+    expect(error.mock.calls.join(" ")).toContain(
+      "key [redacted] refused by postgres://db.internal/app",
+    );
+    expect(error.mock.calls.join(" ")).not.toMatch(/FAKE-0000-PROBE-SECRET|hunter2/);
     expect(process.exitCode).toBe(1);
   });
 });

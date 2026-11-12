@@ -2,7 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type OpenAPIOptions, toOpenAPI } from "@noverax/courier/openapi";
-import { DOTENV_ARG, loadProjectEnv } from "@noverax/courier-cli/devkit";
+import { withoutSecrets } from "@noverax/courier-build/config";
+import { DOTENV_ARG, loadProjectEnv, messageOf } from "@noverax/courier-cli/devkit";
 import { type ArgsDef, defineCommand } from "citty";
 import { loadCourierConfig } from "../server/config-loader";
 
@@ -62,8 +63,9 @@ export const openapiCommand = defineCommand({
     try {
       await writeDocuments(args);
     } catch (error) {
-      /* One line naming the problem, as the server's own start does, and a failing status. */
-      log.error(error instanceof Error ? error.message : String(error));
+      /* One line naming the problem, as the server's own start does, and a failing status; what
+         the project's code threw is quoted with no secret in it, for a CI log may be public. */
+      log.error(withoutSecrets(messageOf(error)));
       process.exitCode = 1;
     }
   },

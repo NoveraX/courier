@@ -1,4 +1,4 @@
-export const metadata = { title: "Files Studio Writes", description: "What an import changes in your project — the generated files and courier.config.ts — the copies Studio keeps of what it replaces, how a change it was stopped in the middle of is undone, and how Studio formats what it writes.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Files Studio Writes", description: "What an import changes in your project — the generated files and courier.config.ts — the copies Studio keeps of what it replaces, how a change it was stopped in the middle of is undone, and how Studio formats what it writes.", mode: "both", updated: "2026-11-12" }
 
 What Studio writes into your project when it imports an API, updates one or removes one, and how it formats it. Importing itself is on [Import an API](/docs/studio/import-api).
 
@@ -51,7 +51,7 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 | `STUDIO_DEMO_REFUSED` | 403 | A visitor of a public demo asked Studio to read a specification from a file of the project. |
 | `SPEC_UNREADABLE` | 502 | The import's `from` answered with something that is not a specification Studio reads, such as a page. |
 | `SPEC_PIN_MISMATCH` | 409 | The specification's hash is not the one the import's `pinHash` names. |
-| `IMPORT_TRANSFORM_FAILED` | 400 | The import's `transform` threw, or returned something that is not a specification or one holding a value `INVALID_SPEC` describes; the message names where it is. |
+| `IMPORT_TRANSFORM_FAILED` | 400 | The import's `transform` threw, or returned something that is not a specification or one holding a value `INVALID_SPEC` describes; the message names where it is. What it threw is quoted as a [load error](/docs/reading-your-project#when-the-project-does-not-load) quotes it: the environment's values masked, every credential cut. |
 
 ## How Studio formats the files
 

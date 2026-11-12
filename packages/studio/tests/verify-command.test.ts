@@ -115,4 +115,33 @@ describe("courier-studio verify", () => {
       "No recordings to check: tests/recorded does not exist",
     );
   }, 60_000);
+
+  it("says what the project's code threw with no value of the environment, nor a credential", () => {
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      `export default {
+  sources: {
+    shop: {
+      baseURL: "https://shop.example",
+      get endpoints() {
+        throw new Error("key " + process.env.SHOP_KEY + " refused by postgres://app:hunter2@db.internal/app");
+      },
+    },
+  },
+};
+`,
+    );
+    const run = spawnSync(process.execPath, ["--import", TSX, CLI, "verify", "--cwd", root], {
+      encoding: "utf8",
+      timeout: 30_000,
+      env: { ...process.env, NO_COLOR: "1", SHOP_KEY: "FAKE-0000-PROBE-SECRET" },
+    });
+    writeFileSync(join(root, "courier.config.ts"), config("products/:id"));
+
+    expect(run.status).toBe(1);
+    expect(run.stderr + run.stdout).toContain(
+      "key [redacted] refused by postgres://db.internal/app",
+    );
+    expect(run.stderr + run.stdout).not.toMatch(/FAKE-0000-PROBE-SECRET|hunter2/);
+  }, 60_000);
 });

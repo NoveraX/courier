@@ -55,6 +55,7 @@ afterEach(async () => {
   await studio?.close();
   studio = undefined;
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -369,6 +370,27 @@ describe("updating a declared import as its entry says", () => {
     expect(preview.status).toBe(400);
     expect(field(preview.body, "code")).toBe("IMPORT_TRANSFORM_FAILED");
     expect(field(preview.body, "error")).toContain("no such tag");
+  });
+
+  it("says what its transform threw with no value of the environment, nor a credential", async () => {
+    vi.stubEnv("PETSTORE_KEY", "FAKE-0000-PROBE-SECRET");
+    const spec = await specServer(privateSpec);
+    servers.push(spec);
+    const failing = declared(`${spec.url}/private/spec.json`).replace(
+      '(spec) => ({ ...spec, baseURL: "https://transformed.example" })',
+      '() => { throw new Error("key " + process.env.PETSTORE_KEY + " refused by postgres://app:hunter2@db.internal/app"); }',
+    );
+    const url = await start(failing);
+
+    const preview = await post(url, "/api/apis/update/preview", {
+      name: "petstore",
+      newSpec: parseSpec(PRIVATE_SPEC),
+    });
+
+    expect(preview.status).toBe(400);
+    expect(field(preview.body, "error")).toBe(
+      'The transform of the import "petstore" in courier.config threw: key [redacted] refused by postgres://db.internal/app.',
+    );
   });
 
   it("names the import when its transform returns a value Studio does not generate from", async () => {

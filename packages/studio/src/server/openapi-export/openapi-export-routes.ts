@@ -1,4 +1,5 @@
 import { type SkippedEndpoint, toOpenAPI } from "@noverax/courier/openapi";
+import { withoutSecrets } from "@noverax/courier-build/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { ownValue } from "../../apis/own-value";
 import type { ProjectState } from "../project-state/types";
@@ -82,9 +83,9 @@ export function registerOpenApiExportRoutes(app: RouteApp, { project }: OpenApiE
         leftOut,
       });
     } catch (error) {
-      res
-        .status(422)
-        .json({ error: `No document could be written for ${asked.source}: ${messageOf(error)}` });
+      /* What the definition threw is the project's code: quoted with no secret in it. */
+      const said = withoutSecrets(messageOf(error));
+      res.status(422).json({ error: `No document could be written for ${asked.source}: ${said}` });
     }
   });
 }

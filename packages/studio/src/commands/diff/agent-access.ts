@@ -1,6 +1,7 @@
 import type { AgentAccess } from "@noverax/courier";
 import type { CourierConfig } from "@noverax/courier/config";
 import type { Sources } from "@noverax/courier/define";
+import { withoutSecrets } from "@noverax/courier-build/config";
 import { messageOf } from "@noverax/courier-cli/devkit";
 import { buildCatalog, checkedPolicy, decisionReason } from "@noverax/courier-mcp/internal";
 
@@ -74,7 +75,8 @@ export function agentSurfaceOf(config: Pick<CourierConfig, "sources" | "agents">
     );
     return { tools };
   } catch (error) {
-    return { problem: messageOf(error) };
+    /* The report goes to a CI log and a pull request: the policy as written, with no secret in it. */
+    return { problem: withoutSecrets(messageOf(error)) };
   }
 }
 

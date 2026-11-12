@@ -4,7 +4,7 @@
  * differently — and where the MCP server would not start at all.
  */
 import { courier, defineApi } from "@noverax/courier/define";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { agentChanges, agentSurfaceOf } from "../src/commands/diff/agent-access";
 import {
@@ -23,6 +23,10 @@ const shop = defineApi({
     create: endpoint.post("orders"),
     cancel: endpoint.del("orders/:id").agent({ description: "Cancel", access: "destructive" }),
   },
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("what agents may call, before and after a change", () => {
@@ -95,6 +99,16 @@ describe("what agents may call, before and after a change", () => {
       added: [],
       offered: 1,
       baseRecorded: false,
+    });
+  });
+
+  it("says why the server would not start with no value of the environment, nor a credential", () => {
+    vi.stubEnv("AGENT_OFFER", "FAKE-0000-PROBE-VALUE");
+    const offer = `${process.env.AGENT_OFFER} token=abc123def`;
+
+    expect(agentSurfaceOf({ sources: { shop }, agents: { offer: offer as never } })).toEqual({
+      problem:
+        '[courier] agents.offer takes "marked", "reads", "all", not "[redacted] token=[redacted]".',
     });
   });
 });

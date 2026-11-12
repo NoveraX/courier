@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { withoutSecrets } from "@noverax/courier-build/config";
 import { DOTENV_ARG, loadProjectEnv, messageOf } from "@noverax/courier-cli/devkit";
 import type * as Testing from "@noverax/courier-mock/testing";
 import { type ArgsDef, defineCommand } from "citty";
@@ -62,7 +63,8 @@ export const verifyCommand = defineCommand({
     try {
       process.exitCode = (await verify(args)) ? 0 : 1;
     } catch (error) {
-      log.error(error instanceof Error ? error.message : String(error));
+      /* What the project's code threw, quoted with no secret in it: a CI log may be public. */
+      log.error(withoutSecrets(messageOf(error)));
       process.exitCode = 1;
     }
   },

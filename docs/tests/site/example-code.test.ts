@@ -23,7 +23,7 @@
  * and a name it uses without importing it is imported from them.
  */
 import { readdirSync, readFileSync } from "node:fs"
-import { dirname, join, relative } from "node:path"
+import path, { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
@@ -34,6 +34,7 @@ import { ENTRIES } from "../../../scripts/check-doc-samples.mjs"
 import { importHeader } from "../../../scripts/doc-samples.mjs"
 import { entryProblems } from "../../../scripts/sample-entries.mjs"
 import { isOmission, samplesLeavingOut } from "../../../scripts/sample-omissions.mjs"
+import { pathFrom, slashedPath } from "../../../scripts/slashed-paths.mjs"
 
 const DOCS = fileURLToPath(new URL("../../", import.meta.url))
 const EXAMPLES = join(DOCS, "src/app/docs/examples")
@@ -114,7 +115,7 @@ function shownCode(file: string): { shown: ShownCode[]; unread: string[] } {
     true,
     ts.ScriptKind.TSX
   )
-  const page = relative(DOCS, file)
+  const page = pathFrom(DOCS, file)
   const shown: ShownCode[] = []
   const unread: string[] = []
   const take = (name: string, value: ts.Expression, declared: ts.Node) => {
@@ -147,9 +148,17 @@ function shownCode(file: string): { shown: ShownCode[]; unread: string[] } {
   return { shown, unread }
 }
 
-const read = readdirSync(EXAMPLES, { recursive: true, encoding: "utf8" })
-  .filter((path) => /(?:^|\/)(?:page\.tsx|[\w-]+-samples\.ts)$/.test(path))
-  .map((path) => shownCode(join(EXAMPLES, path)))
+/* The files of the examples that hold the code a page shows — the pages, and the singleton
+   page's samples — from the folder's listing as the system writes it, each by `/`. */
+function shownFiles(listing: readonly string[], paths: Pick<typeof path, "sep"> = path): string[] {
+  return listing
+    .map((listed) => slashedPath(listed, paths))
+    .filter((listed) => /(?:^|\/)(?:page\.tsx|[\w-]+-samples\.ts)$/.test(listed))
+}
+
+const read = shownFiles(readdirSync(EXAMPLES, { recursive: true, encoding: "utf8" })).map(
+  (listed) => shownCode(join(EXAMPLES, listed))
+)
 const shown = read.flatMap((page) => page.shown)
 
 /* Where a string compiles: a module beside its page, so its relative imports are the page's. */
@@ -218,7 +227,7 @@ function ownProblems(program: ts.Program, file: string): string[] {
     .filter((diagnostic) => diagnostic.file !== undefined)
     .map((diagnostic) => {
       const text = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")
-      return `${relative(DOCS, file)} TS${diagnostic.code} ${text}`
+      return `${pathFrom(DOCS, file)} TS${diagnostic.code} ${text}`
     })
 }
 
@@ -303,6 +312,21 @@ const ofReader = (code: ShownCode) =>
   [...code.code.matchAll(/\broutes\.(\w+)/g)].some(([, name]) => !SOURCES.has(name))
 
 describe("the code an example page shows", () => {
+  it("is found in the examples' folder however the system lists it, as Windows does too", () => {
+    const listing = [
+      "page.tsx",
+      "actions\\page.tsx",
+      "actions\\actions.ts",
+      "upload\\upload-samples.ts",
+      "upload\\_components.tsx",
+    ]
+    expect(shownFiles(listing, path.win32)).toEqual([
+      "page.tsx",
+      "actions/page.tsx",
+      "upload/upload-samples.ts",
+    ])
+  })
+
   it("is read on every examples page, each string of it", () => {
     expect(new Set(shown.map((code) => dirname(code.page))).size).toBe(15)
     expect(shown.length).toBeGreaterThanOrEqual(50)

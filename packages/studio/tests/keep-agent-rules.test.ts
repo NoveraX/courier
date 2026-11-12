@@ -68,8 +68,10 @@ describe("Courier's block in AGENTS.md as Studio starts", () => {
     expect(logged[0]).toContain(`${AGENTS()} was left as it is: `);
   });
 
-  /* A folder that takes no new file: the block is written beside the file and renamed in. Its
-     owner's permissions are what stop the write, which root's would not. */
+  /* A file the system will not let Studio replace: the block is written beside it and renamed in,
+     which a folder that takes no new file stops on macOS and Linux — by its owner's permissions,
+     which root's would not — and a read-only file stops on Windows, whose folders take new files
+     whatever their mode. */
   it.skipIf(process.getuid?.() === 0)(
     "leaves a file it cannot write as it is, and the log says why",
     () => {
@@ -78,11 +80,13 @@ describe("Courier's block in AGENTS.md as Studio starts", () => {
         `${OLD}
 `,
       );
+      chmodSync(AGENTS(), 0o444);
       chmodSync(root, 0o555);
       try {
         keepAgentRules(root);
       } finally {
         chmodSync(root, 0o755);
+        chmodSync(AGENTS(), 0o644);
       }
 
       expect(readFileSync(AGENTS(), "utf8")).toBe(`${OLD}\n`);

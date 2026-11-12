@@ -83,8 +83,9 @@ async function overTheProxy(api: ReturnType<typeof accountsApi>, during: () => v
   const sent: Array<string | null> = [];
   let answered: Response | undefined;
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = input instanceof Request ? input.url : String(input);
-    if (url.startsWith(UPSTREAM)) {
+    /* The page's own calls are relative: they go to its origin. */
+    const url = new URL(input instanceof Request ? input.url : String(input), "http://app.local");
+    if (url.origin === UPSTREAM) {
       sent.push(
         new Headers(input instanceof Request ? input.headers : init?.headers).get("cookie"),
       );
@@ -97,9 +98,7 @@ async function overTheProxy(api: ReturnType<typeof accountsApi>, during: () => v
     }
     const headers = new Headers(init?.headers);
     headers.set("cookie", "other=made-up-other");
-    const pending = handler.handle(
-      new Request(new URL(url, "http://app.local"), { ...init, headers }),
-    );
+    const pending = handler.handle(new Request(url, { ...init, headers }));
     during();
     answered = await pending;
     return answered;

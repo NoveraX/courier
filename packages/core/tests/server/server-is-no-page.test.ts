@@ -170,7 +170,8 @@ async function proxyRequestOf(api: ReturnType<typeof accountsApi>, call: string)
 }
 
 const PAGE = { window: {}, document: {} };
-const elsewhere = (sent: Sent[]) => sent.filter(({ url }) => url.startsWith(ELSEWHERE));
+const elsewhere = (sent: Sent[]) =>
+  sent.filter(({ url }) => new URL(url, APP).origin === ELSEWHERE);
 
 afterEach(() => {
   vi.unstubAllGlobals();

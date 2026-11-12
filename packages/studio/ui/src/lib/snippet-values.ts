@@ -74,9 +74,9 @@ export function codeValue(value: unknown, indent = 0, bareKeys = false): string 
   return json.replace(JSON_STRING, (_found: string, token: string, colon: string) => {
     const literal = token.replace(ENDS_CODE, written);
     if (colon === "") return literal;
-    const key = JSON.parse(token) as string;
+    const key: unknown = JSON.parse(token);
     if (key === "__proto__") return `[${literal}]:`;
-    return bareKeys && IDENTIFIER.test(key) ? `${key}:` : `${literal}:`;
+    return bareKeys && typeof key === "string" && IDENTIFIER.test(key) ? `${key}:` : `${literal}:`;
   });
 }
 

@@ -6,6 +6,7 @@
  * route and its streams, from server code given the request, while a page
  * renders, on every attempt a retry makes; and the API's own id comes back.
  */
+import { once } from "node:events";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -125,6 +126,9 @@ describe("a request id nginx wrote", () => {
   it("opens a relayed stream with it", async () => {
     registerSources({ site: siteApi() });
     const controller = new AbortController();
+    /* The relay answers the page first, then loads its stream client and opens the upstream:
+       the request is awaited as it arrives, however long a loaded machine takes to send it. */
+    const arrived = once(upstream, "request");
 
     const response = await proxied("sse?_s=site&_m=live", {
       method: "GET",
@@ -133,7 +137,7 @@ describe("a request id nginx wrote", () => {
     });
     /* The API ends each stream after its event and the relay opens it
        again, as often as its wait allows: every attempt carries the ids. */
-    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    await arrived;
     controller.abort();
     await response.body?.cancel().catch(() => undefined);
 

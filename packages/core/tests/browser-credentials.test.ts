@@ -5,6 +5,7 @@
  * endpoint names `authorization`. A token a script set, `Bearer` or any
  * scheme of the API's own, goes on as before.
  */
+import { once } from "node:events";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -130,6 +131,9 @@ describe("a proxied call", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     registerSources({ api: api() });
     const controller = new AbortController();
+    /* The relay answers the page first, then loads its stream client and opens the upstream:
+       the request is awaited as it arrives, however long a loaded machine takes to send it. */
+    const arrived = once(upstream, "request");
 
     const response = await proxied("sse?_s=api&_m=live", BASIC, {
       method: "GET",
@@ -138,7 +142,7 @@ describe("a proxied call", () => {
     });
     /* The upstream ends each stream after its event and the relay opens it
        again, as often as its wait allows: no attempt carries the credentials. */
-    await vi.waitFor(() => expect(seen.length).toBeGreaterThan(0));
+    await arrived;
     controller.abort();
     await response.body?.cancel().catch(() => undefined);
 

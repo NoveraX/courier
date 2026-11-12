@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runTool, toolFailure } from "../../src/apply/run-tool";
@@ -168,7 +167,9 @@ describe("runTool", () => {
   );
 
   it("shows a program's output on standard error where standard output carries the JSON document", () => {
-    const runner = fileURLToPath(new URL("../../src/apply/run-tool.ts", import.meta.url));
+    /* By its URL: Windows writes an absolute path with its drive first, which the loader
+       reads as a URL's scheme. */
+    const runner = new URL("../../src/apply/run-tool.ts", import.meta.url).href;
     const script = `
       import { runTool } from ${JSON.stringify(runner)};
       await runTool([process.execPath, "-e", "console.log('installing')"], {

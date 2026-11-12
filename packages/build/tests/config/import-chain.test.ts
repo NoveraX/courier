@@ -17,8 +17,9 @@ afterEach(() => {
   if (PLATFORM !== undefined) Object.defineProperty(process, "platform", PLATFORM);
 });
 
-function onWindows(): void {
-  Object.defineProperty(process, "platform", { ...PLATFORM, value: "win32" });
+/* Each test runs on the system it is about, whichever the runner is: a path is named as that system names it. */
+function on(platform: NodeJS.Platform): void {
+  Object.defineProperty(process, "platform", { ...PLATFORM, value: platform });
 }
 
 /* A module as the loader keeps it: its file, what it imported, and whether it ran to its end. */
@@ -36,7 +37,7 @@ function project(entry: string, folder: string): ModuleCache {
 
 describe("importChain", () => {
   it("names each module as Windows does, where the loader writes a path with /", () => {
-    onWindows();
+    on("win32");
     const entry = "D:/a/_temp/shop/courier.config.ts";
     const cache = project(entry, "D:/a/_temp/shop");
 
@@ -49,7 +50,7 @@ describe("importChain", () => {
   });
 
   it("finds the failed module on Windows whichever separator and case the error names it with", () => {
-    onWindows();
+    on("win32");
     const entry = "D:\\a\\_temp\\shop\\courier.config.ts";
     const cache = project(entry, "D:/a/_temp/shop");
     const chain = [
@@ -64,6 +65,7 @@ describe("importChain", () => {
   });
 
   it("names each module by its path on POSIX, and follows the newest unfinished import", () => {
+    on("linux");
     const entry = "/srv/shop/courier.config.ts";
     const cache = project(entry, "/srv/shop");
 

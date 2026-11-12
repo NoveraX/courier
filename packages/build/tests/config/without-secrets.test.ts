@@ -209,23 +209,25 @@ describe("a variable that names a place", () => {
     if (PLATFORM !== undefined) Object.defineProperty(process, "platform", PLATFORM);
   });
 
-  function onWindows(): void {
-    Object.defineProperty(process, "platform", { ...PLATFORM, value: "win32" });
+  /* A test of how a system reads a name or a path runs on that system, whichever the runner is. */
+  function on(platform: NodeJS.Platform): void {
+    Object.defineProperty(process, "platform", { ...PLATFORM, value: platform });
   }
 
-  it("is left alone where its value is an absolute path, or a list of them", () => {
+  it("is left alone on POSIX where its value is an absolute path, or a list of them", () => {
+    on("linux");
     const env = {
       RUNNER_TEMP: "/home/runner/work/_temp",
       NPM_CONFIG_USERCONFIG: "/home/runner/work/_temp/.npmrc",
       NODE_PATH: "/usr/lib/node_modules:/usr/local/lib/node_modules",
     };
-    const said = "reading /home/runner/work/_temp/.npmrc for /home/runner/work/_temp/x/api.ts";
+    const said = `reading /home/runner/work/_temp/.npmrc for /home/runner/work/_temp/x/api.ts from ${env.NODE_PATH}`;
 
     expect(withoutSecrets(said, env)).toBe(said);
   });
 
   it("is left alone on Windows, a path written with either separator and a system name in any case", () => {
-    onWindows();
+    on("win32");
     const env = {
       USERPROFILE: "C:\\Users\\ana",
       HOMEPATH: "\\Users\\ana",
@@ -280,6 +282,7 @@ describe("a variable that names a place", () => {
   });
 
   it("is masked on POSIX where its name only reads as a system name's in another case", () => {
+    on("linux");
     expect(withoutSecrets("signed in as runneradmin", { UserName: "runneradmin" })).toBe(
       `signed in as ${REDACTED}`,
     );

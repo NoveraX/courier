@@ -1,7 +1,6 @@
-import { parseSync } from "oxc-parser";
-
 import { type AstNode, isNode, programOf } from "../codemod/ast";
 import { keyOf } from "../codemod/literals";
+import { parseCode } from "../codemod/oxc-parse";
 import type { Targets } from "./import-resolution";
 import type { ModuleRecord, PieceRecord } from "./module-records";
 import {
@@ -167,7 +166,7 @@ export function startResolver(
       piece?.startTree?.program ??
       (kept === undefined
         ? undefined
-        : programOf(parseSync(`piece${kept.parseAs}`, kept.text).program));
+        : programOf(parseCode(`piece${kept.parseAs}`, kept.text).program));
     const exports = program === undefined ? undefined : startExportsOf(program);
     read.set(path, exports);
     return exports;

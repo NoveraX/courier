@@ -1,7 +1,7 @@
 import type { Project } from "@noverax/create-courier/engine";
-import { parseSync } from "oxc-parser";
 
 import { type AstNode, isNode, nameOf, programOf, unparenthesized } from "../codemod/ast";
+import { parseCode } from "../codemod/oxc-parse";
 
 /** What a package's config of code gives as data: the object its default export is, or what of it is not data the upgrade reads. */
 export type ConfigObject =
@@ -101,7 +101,7 @@ export function configObject(project: Project, files: readonly string[]): Config
   const file = files.find((each) => project.exists(each));
   if (file === undefined) return undefined;
   const text = project.read(file) ?? "";
-  const parsed = text.length > CONFIG_CHARS ? undefined : parseSync(file, text);
+  const parsed = text.length > CONFIG_CHARS ? undefined : parseCode(file, text);
   if (parsed === undefined || parsed.errors.length > 0) return { file, unread: "it" };
   const program = programOf(parsed.program);
   const object = objectOf(program, defaultOf(program));

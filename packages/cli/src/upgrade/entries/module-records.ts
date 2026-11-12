@@ -1,8 +1,8 @@
 import { closeSync, lstatSync, openSync, readFileSync, readSync } from "node:fs";
 import { join } from "node:path";
-import { parseSync } from "oxc-parser";
 
 import { type AstNode, programOf } from "../codemod/ast";
+import { parseCode } from "../codemod/oxc-parse";
 import { type CodePiece, codePieces, type PieceKind } from "../codemod/source-files";
 import { lineAt } from "../codemod/text-edits";
 import type { Directive } from "./framework-roots";
@@ -83,9 +83,9 @@ function dynamicSpecifier(
   return at === -1 ? { literal: written.slice(1, -1) } : { prefix: written.slice(1, at) };
 }
 
-/* A piece's record, from oxc's record of its module: the tree, which costs more than the parse itself to hand over, is asked for only where a call of import.meta's is not told from its own text. */
+/* A piece's record, from oxc's record of its module: the tree, which as JSON costs more than the parse itself to hand over, is asked for only where a call of import.meta's is not told from its own text. */
 function pieceRecord({ kind, parseAs, text }: CodePiece, keep: boolean): PieceRecord | undefined {
-  const parsed = parseSync(`piece${parseAs}`, text);
+  const parsed = parseCode(`piece${parseAs}`, text);
   if (parsed.errors.length > 0) return undefined;
   const { staticImports, staticExports, dynamicImports, importMetas } = parsed.module;
   const ofValues = (span: { readonly start: number; readonly end: number }) =>
@@ -113,7 +113,7 @@ function pieceRecord({ kind, parseAs, text }: CodePiece, keep: boolean): PieceRe
       alone.set(written.literal, false);
     } else madeUp.push(written.prefix);
   }
-  /* Each call of import.meta's is read from its own text: the tree costs more than the parse, the larger the file the more, and is read once, where asked for. */
+  /* Each call of import.meta's is read from its own text: as JSON the tree costs more than the parse, the larger the file the more, and is read once, where asked for. */
   let tree: AstNode | undefined;
   const program = () => (tree ??= programOf(parsed.program));
   const meta = metaLoads({ text, parseAs, metas: importMetas }, program);

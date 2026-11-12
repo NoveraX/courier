@@ -1,6 +1,5 @@
-import { parseSync } from "oxc-parser";
-
 import { type AstNode, programOf } from "./ast";
+import { parseCode } from "./oxc-parse";
 import type { CodePiece } from "./source-files";
 
 /** A piece's parse: its first problem, and its tree, which oxc builds only when a migration asks for it. */
@@ -23,7 +22,7 @@ export interface PieceParse {
  * ```
  */
 export function parsePiece(piece: CodePiece, text: string): PieceParse {
-  const parsed = parseSync(`piece${piece.parseAs}`, text);
+  const parsed = parseCode(`piece${piece.parseAs}`, text);
   const [first] = parsed.errors;
   let program: AstNode | undefined;
   return {

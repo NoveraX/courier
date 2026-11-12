@@ -1,9 +1,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
-import { parseSync } from "oxc-parser";
 
 import { isRecord } from "../../util/is-record";
 import { type AstNode, isNode, nameOf } from "../codemod/ast";
+import { parseCode } from "../codemod/oxc-parse";
 
 /** The layers of a workspace's Nuxt apps, and the configs whose layers could not be read. */
 export interface NuxtLayers {
@@ -68,7 +68,7 @@ function configObject(program: unknown): AstNode | undefined {
 /* The layers a config's `extends` names as it writes them: none where it names none, `undefined` where it is not data. */
 function extendsOf(file: string, text: string): string[] | undefined {
   if (!/\bextends\b/.test(text)) return [];
-  const parsed = parseSync(file, text);
+  const parsed = parseCode(file, text);
   const config = parsed.errors.length > 0 ? undefined : configObject(parsed.program);
   if (config === undefined) return undefined;
   const properties = listOf(config, "properties").filter(isNode);

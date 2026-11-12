@@ -1,6 +1,5 @@
-import { parseSync } from "oxc-parser";
-
 import { type AstNode, isNode, nameOf, programOf, walk } from "../codemod/ast";
+import { parseCode } from "../codemod/oxc-parse";
 
 /** A piece of code, as its calls of `import.meta` are read from it: its text, the extension it parses as, and where oxc's record of its module puts each `import.meta`. */
 export interface MetaPiece {
@@ -66,7 +65,7 @@ function firstParsed(piece: MetaPiece, start: number, after: number, budget: { l
     if (end - start > CALL_CHARS) return undefined;
     budget.left -= end - start;
     if (budget.left < 0) return "over";
-    const parsed = parseSync(`call${piece.parseAs}`, piece.text.slice(start, end));
+    const parsed = parseCode(`call${piece.parseAs}`, piece.text.slice(start, end));
     if (parsed.errors.length > 0) continue;
     const body = programOf(parsed.program).body;
     const [statement, ...more] = Array.isArray(body) ? body.filter(isNode) : [];

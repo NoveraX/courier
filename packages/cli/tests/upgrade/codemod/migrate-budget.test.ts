@@ -11,14 +11,21 @@
  * Parsed again before each migration, and walked with the nodes above
  * each node copied, such a project took 23 s. Parsed once, and again only
  * after a change, for the migrations whose words a file writes, and
- * walked down a list read once per tree, it takes about 2.2 s; a project
- * whose every file has every change to make, about 10 s. The graph of the
- * project's imports, which tells a page's code from the server's, is read
- * with it, once, from oxc's record of each module: about 0.3 s more.
+ * walked down a list read once per tree, it took about 2.7 s, half of it
+ * oxc handing each tree over as JSON. Taken through the memory oxc shares
+ * with JavaScript instead, a tree costs a sixth as much: the project
+ * takes about 1.3 s on Node 26 and 1.45 s on Node 22, and one whose every
+ * file has every change to make about 4.5 s, against 10 s. The graph of
+ * the project's imports, which tells a page's code from the server's, is
+ * read with it, once, from oxc's record of each module: about 0.3 s of
+ * that. With the trees as JSON, as on Windows, the same machine takes
+ * about 2.7 s, and under coverage, which counts each block of code as it
+ * runs, about 3.1 s on Node 24.
  *
- * The time counted is the test's own thread's, so the suites run beside
- * it do not count; it is held to twice the budget, for CI's slower
- * machines.
+ * The time counted is the test's own thread's: the other test files run
+ * in processes of their own, and the threads V8 compiles and collects on
+ * beside it do not count either. It is held to twice the budget, for
+ * CI's slower machines.
  */
 import { afterAll, describe, expect, it } from "vitest";
 

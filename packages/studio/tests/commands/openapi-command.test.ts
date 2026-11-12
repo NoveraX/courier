@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../../src/apis/parser/parse-spec";
 import { openapiCommand } from "../../src/commands/openapi-command";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../../node_modules");
 let dir: string;
@@ -115,7 +116,9 @@ describe("courier-studio openapi", () => {
   });
 
   it("says what the project's code threw with no value of the environment, nor a credential", async () => {
-    vi.stubEnv("SHOP_KEY", "FAKE-0000-PROBE-SECRET");
+    const key = "FAKE-0000-PROBE-SECRET";
+    const thrown = `key ${key} refused by postgres://app:hunter2@db.internal/app`;
+    stubOwnEnvironment({ SHOP_KEY: key }, thrown);
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     writeFileSync(
       join(dir, "courier.config.ts"),
@@ -125,7 +128,7 @@ describe("courier-studio openapi", () => {
             shop: {
               baseURL: "https://api.example.com",
               get endpoints() {
-                throw new Error("key " + process.env.SHOP_KEY + " refused by postgres://app:hunter2@db.internal/app");
+                throw new Error(${JSON.stringify(thrown)});
               },
             },
           },

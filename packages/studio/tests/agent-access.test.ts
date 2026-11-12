@@ -12,6 +12,7 @@ import {
   agentAccessText,
   changesAgentAccess,
 } from "../src/commands/diff/agent-access-report";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 
 const { endpoint } = courier();
 
@@ -103,12 +104,15 @@ describe("what agents may call, before and after a change", () => {
   });
 
   it("says why the server would not start with no value of the environment, nor a credential", () => {
-    vi.stubEnv("AGENT_OFFER", "FAKE-0000-PROBE-VALUE");
-    const offer = `${process.env.AGENT_OFFER} token=abc123def`;
+    const value = "FAKE-0000-PROBE-VALUE";
+    const offer = `${value} token=abc123def`;
+    /* What the MCP server says of the policy as it refuses it. */
+    const refusal = (quoted: string) =>
+      `[courier] agents.offer takes "marked", "reads", "all", not "${quoted}".`;
+    stubOwnEnvironment({ AGENT_OFFER: value }, refusal(offer));
 
     expect(agentSurfaceOf({ sources: { shop }, agents: { offer: offer as never } })).toEqual({
-      problem:
-        '[courier] agents.offer takes "marked", "reads", "all", not "[redacted] token=[redacted]".',
+      problem: refusal("[redacted] token=[redacted]"),
     });
   });
 });

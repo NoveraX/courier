@@ -15,6 +15,8 @@ import { pathToFileURL } from "node:url";
 import { fixturesToHar } from "@noverax/courier-mock/testing";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { ownEnvironment } from "./helpers/own-environment";
+
 const CLI = join(__dirname, "../src/cli.ts");
 const TSX = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 
@@ -117,6 +119,8 @@ describe("courier-studio verify", () => {
   }, 60_000);
 
   it("says what the project's code threw with no value of the environment, nor a credential", () => {
+    const key = "FAKE-0000-PROBE-SECRET";
+    const thrown = `key ${key} refused by postgres://app:hunter2@db.internal/app`;
     writeFileSync(
       join(root, "courier.config.ts"),
       `export default {
@@ -124,7 +128,7 @@ describe("courier-studio verify", () => {
     shop: {
       baseURL: "https://shop.example",
       get endpoints() {
-        throw new Error("key " + process.env.SHOP_KEY + " refused by postgres://app:hunter2@db.internal/app");
+        throw new Error(${JSON.stringify(thrown)});
       },
     },
   },
@@ -134,7 +138,7 @@ describe("courier-studio verify", () => {
     const run = spawnSync(process.execPath, ["--import", TSX, CLI, "verify", "--cwd", root], {
       encoding: "utf8",
       timeout: 30_000,
-      env: { ...process.env, NO_COLOR: "1", SHOP_KEY: "FAKE-0000-PROBE-SECRET" },
+      env: ownEnvironment({ NO_COLOR: "1", SHOP_KEY: key }, thrown),
     });
     writeFileSync(join(root, "courier.config.ts"), config("products/:id"));
 

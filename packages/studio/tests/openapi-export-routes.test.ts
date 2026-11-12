@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { registerOpenApiExportRoutes } from "../src/server/openapi-export/openapi-export-routes";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 
 const { endpoint, channel } = courier();
 const shop = defineApi({
@@ -113,13 +114,13 @@ describe("exporting a source as OpenAPI", () => {
   });
 
   it("says what the definition threw with no value of the environment, nor a credential", async () => {
-    vi.stubEnv("SHOP_KEY", "FAKE-0000-PROBE-SECRET");
+    const key = "FAKE-0000-PROBE-SECRET";
+    const thrown = `key ${key} refused by postgres://app:hunter2@db.internal/app`;
+    stubOwnEnvironment({ SHOP_KEY: key }, thrown);
     const failing = {
       baseURL: "https://shop.example",
       get endpoints(): never {
-        throw new Error(
-          `key ${process.env.SHOP_KEY} refused by postgres://app:hunter2@db.internal/app`,
-        );
+        throw new Error(thrown);
       },
     };
     const ask = await exportRoute({ failing });

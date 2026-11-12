@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createProcessEvents } from "../src/server/mock-manager/lifecycle-process-events";
 import type { ServerState } from "../src/server/mock-manager/types";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 
 let output: string[];
 
@@ -100,15 +101,14 @@ describe("a managed mock that fails", () => {
   });
 
   it("says why in the terminal and on every page with no value of the environment, nor a credential", () => {
-    vi.stubEnv("SHOP_SIGNING_KEY", "shop-signing-7f3a9c2e5b1d");
+    const held = "a record holds shop-signing-7f3a9c2e5b1d";
+    const refused =
+      "the seed refused shop-signing-7f3a9c2e5b1d at https://app:hunter2@db.example.com/";
+    stubOwnEnvironment({ SHOP_SIGNING_KEY: "shop-signing-7f3a9c2e5b1d" }, held, refused);
     const { state, handlers } = events();
 
-    handlers.onError("apiMock", "a record holds shop-signing-7f3a9c2e5b1d", false);
-    handlers.onError(
-      "apiMock",
-      "the seed refused shop-signing-7f3a9c2e5b1d at https://app:hunter2@db.example.com/",
-      true,
-    );
+    handlers.onError("apiMock", held, false);
+    handlers.onError("apiMock", refused, true);
 
     const said = output.join("\n");
     expect(said).toContain("a record holds [redacted]");

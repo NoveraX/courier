@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConfigNotFoundError } from "../../src/server/config-loader-errors";
 import { failureOf } from "../../src/server/project-state/failure-of";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 const ROOT = join(homedir(), "work", "shop");
 
@@ -36,8 +37,9 @@ describe("failureOf", () => {
   });
 
   it("keeps what the project's code threw for the log with no value of the environment, nor a credential", () => {
-    vi.stubEnv("SHOP_SIGNING_KEY", "shop-signing-7f3a9c2e5b1d");
-    const thrown = new TypeError("the shop refused shop-signing-7f3a9c2e5b1d with token=abc123def");
+    const said = "the shop refused shop-signing-7f3a9c2e5b1d with token=abc123def";
+    stubOwnEnvironment({ SHOP_SIGNING_KEY: "shop-signing-7f3a9c2e5b1d" }, said);
+    const thrown = new TypeError(said);
 
     const { cause } = failureOf(thrown, ROOT, 1);
 

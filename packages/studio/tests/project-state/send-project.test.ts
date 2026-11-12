@@ -16,6 +16,7 @@ import { failureOf } from "../../src/server/project-state/failure-of";
 import { sendProject } from "../../src/server/project-state/send-project";
 import type { ProjectSnapshot } from "../../src/server/project-state/types";
 import { createUpdateChecks } from "../../src/server/update-checks";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 let root: string;
 
@@ -108,8 +109,6 @@ describe("sendProject", () => {
   });
 
   it("tells a config that failed whole to the pages with the token, and cut to the others", () => {
-    /* Unset as a CI runner may set it: its value stands in the address below. */
-    vi.stubEnv("PGUSER", undefined);
     const rooms = new Map<string, unknown[]>();
     const pages = {
       emit: vi.fn(),
@@ -124,6 +123,7 @@ describe("sendProject", () => {
       at: 2_000,
       cause: new Error("cannot reach the database"),
     };
+    stubOwnEnvironment({}, failure.message);
 
     sendProject(
       pages,
@@ -147,8 +147,6 @@ describe("sendProject", () => {
   });
 
   it("cuts the credential for a page without the token where a variable's value stands in it", () => {
-    /* As GitHub's Windows runner sets it. */
-    vi.stubEnv("PGUSER", "postgres");
     const { rooms, pages } = pagesByRoom();
     const failure = {
       code: "UNKNOWN" as const,
@@ -156,6 +154,8 @@ describe("sendProject", () => {
       at: 2_000,
       cause: new Error("cannot reach the database"),
     };
+    /* As GitHub's Windows runner sets it. */
+    stubOwnEnvironment({ PGUSER: "postgres" }, failure.message);
 
     sendProject(
       pages,
@@ -175,12 +175,10 @@ describe("sendProject", () => {
   });
 
   it("masks the values of the environment in a failed config's text, for every page", () => {
-    vi.stubEnv("PROBE_API_KEY", "FAKE-0000-PROBE-SECRET");
+    const thrown = "cannot reach db.invalid with key FAKE-0000-PROBE-SECRET";
+    stubOwnEnvironment({ PROBE_API_KEY: "FAKE-0000-PROBE-SECRET" }, thrown);
     const { rooms, pages } = pagesByRoom();
-    const failure = failureOf(
-      new Error("cannot reach db.invalid with key FAKE-0000-PROBE-SECRET"),
-      root,
-    );
+    const failure = failureOf(new Error(thrown), root);
 
     sendProject(
       pages,
@@ -198,7 +196,6 @@ describe("sendProject", () => {
   });
 
   it("masks the values of the environment for a page without the token, whatever wrote the text", () => {
-    vi.stubEnv("PROBE_API_KEY", "FAKE-0000-PROBE-SECRET");
     const { rooms, pages } = pagesByRoom();
     const failure = {
       code: "UNKNOWN" as const,
@@ -206,6 +203,7 @@ describe("sendProject", () => {
       at: 2_000,
       cause: new Error("refused"),
     };
+    stubOwnEnvironment({ PROBE_API_KEY: "FAKE-0000-PROBE-SECRET" }, failure.message);
 
     sendProject(
       pages,

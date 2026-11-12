@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { describeError } from "../src/server/describe-error";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -10,16 +11,15 @@ afterEach(() => {
 
 describe("describeError", () => {
   it("masks the values of the environment: every page shows the line, and the log writes it", () => {
-    vi.stubEnv("PROBE_API_KEY", "FAKE-0000-PROBE-SECRET");
+    const thrown = "cannot reach db.invalid with key FAKE-0000-PROBE-SECRET";
+    stubOwnEnvironment({ PROBE_API_KEY: "FAKE-0000-PROBE-SECRET" }, thrown);
 
-    expect(
-      describeError(new Error("cannot reach db.invalid with key FAKE-0000-PROBE-SECRET")),
-    ).toBe("cannot reach db.invalid with key [redacted]");
+    expect(describeError(new Error(thrown))).toBe("cannot reach db.invalid with key [redacted]");
   });
 
   it("cuts a credential the environment does not hold, and one a variable's value stands in", () => {
-    vi.stubEnv("PGUSER", undefined);
     const error = new Error("cannot reach postgres://app:hunter2@db.internal/app");
+    stubOwnEnvironment({}, error.message);
 
     expect(describeError(error)).toBe("cannot reach postgres://db.internal/app");
 

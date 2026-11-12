@@ -30,6 +30,7 @@ import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
 import type { Forked } from "./helpers/forked-processes";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 import { tokenHeader } from "./helpers/token-header";
 
 const forks = vi.hoisted((): Forked[] => []);
@@ -373,12 +374,14 @@ describe("updating a declared import as its entry says", () => {
   });
 
   it("says what its transform threw with no value of the environment, nor a credential", async () => {
-    vi.stubEnv("PETSTORE_KEY", "FAKE-0000-PROBE-SECRET");
+    const key = "FAKE-0000-PROBE-SECRET";
+    const thrown = `key ${key} refused by postgres://app:hunter2@db.internal/app`;
+    stubOwnEnvironment({ PETSTORE_KEY: key }, thrown);
     const spec = await specServer(privateSpec);
     servers.push(spec);
     const failing = declared(`${spec.url}/private/spec.json`).replace(
       '(spec) => ({ ...spec, baseURL: "https://transformed.example" })',
-      '() => { throw new Error("key " + process.env.PETSTORE_KEY + " refused by postgres://app:hunter2@db.internal/app"); }',
+      `() => { throw new Error(${JSON.stringify(thrown)}); }`,
     );
     const url = await start(failing);
 

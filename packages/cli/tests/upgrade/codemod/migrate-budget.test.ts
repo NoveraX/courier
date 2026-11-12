@@ -24,8 +24,19 @@
  *
  * The time counted is the test's own thread's: the other test files run
  * in processes of their own, and the threads V8 compiles and collects on
- * beside it do not count either. It is held to twice the budget, for
- * CI's slower machines.
+ * beside it do not count either. It is counted in seconds of the
+ * developer's machine: right before the migration, in the same thread,
+ * the test times a fixed piece of work that shares no code with the
+ * migration (`reference-work.ts`), and takes the migration's time at what
+ * that work costs there against here. The work slows as the migration
+ * does — on the Mac's efficiency cores, three to four times slower, the
+ * migration reads as on its performance cores to within a fifth — so on
+ * a slower machine, as CI's are, it reads as it does on the developer's:
+ * on Node 24, about 1.5 s, and 3.1 to 3.6 s with the trees as JSON. Under
+ * coverage, whose counters slow the work too, though less than the
+ * migration, it reads about 2.4 s, and 3.4 s as JSON. It is held to twice
+ * the budget, for what the work cannot tell of a machine, such as how
+ * fast it reads files.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -34,6 +45,7 @@ import { projectCode } from "../../../src/upgrade/codemod/source-files";
 import { projectSides } from "../../../src/upgrade/entries/piece-sides";
 import { RELEASES } from "../../../src/upgrade/releases";
 import { workspaceOf } from "../../../src/upgrade/workspace";
+import { REFERENCE_MS, referenceMs } from "../../helpers/reference-work";
 import { manifest, projectWith, removeProjects } from "../../helpers/temp-project";
 
 afterAll(removeProjects);
@@ -125,13 +137,19 @@ describe("carrying a large project's code over", () => {
       ...Object.fromEntries(Array.from({ length: FILES }, (_, at) => [pathOf(at), fileOf(at)])),
     });
 
+    const reference = referenceMs();
     const started = process.threadCpuUsage();
     const code = projectCode(root);
     const migrated = migrateCode(code, MIGRATIONS, projectSides(workspaceOf(root), code));
     const spent = process.threadCpuUsage(started);
+    const here = (spent.user + spent.system) / 1000;
+    /* The time the developer's machine would take: this one's, at what the reference work costs there against here. */
+    const there = here * (REFERENCE_MS / reference);
 
     expect(code.files).toHaveLength(FILES);
     expect(migrated.edits).toHaveLength(FILES / 10);
-    expect((spent.user + spent.system) / 1000).toBeLessThan(2 * BUDGET_MS);
+    expect(there, `${Math.round(here)} ms here, the reference work ${reference} ms`).toBeLessThan(
+      2 * BUDGET_MS,
+    );
   });
 });

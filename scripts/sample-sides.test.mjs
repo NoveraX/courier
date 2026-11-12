@@ -19,16 +19,16 @@
  * upgrade does not know, a guide the test reads by no framework, a file
  * the upgrade cannot read are each refused, with the sample named.
  */
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import nodePath, { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { rootsOf } from "../packages/cli/src/upgrade/entries/framework-roots.ts";
 import { moduleRecord } from "../packages/cli/src/upgrade/entries/module-records.ts";
-import { extractSamples, samplePages } from "./doc-samples.mjs";
+import { extractSamples, readSamplePages } from "./doc-samples.mjs";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
@@ -162,12 +162,7 @@ function judge(pages) {
   return { judged, problems };
 }
 
-const docs = judge(
-  samplePages(ROOT).map((page) => ({
-    page: relative(ROOT, page),
-    text: readFileSync(page, "utf8"),
-  })),
-);
+const docs = judge(readSamplePages(ROOT));
 
 /* A page of one fence, as the guide named writes it. */
 const guidePage = (guide, fence, code) => ({
@@ -186,6 +181,12 @@ describe("a sample's side", () => {
   it("is the side the upgrade gives its file, wherever the upgrade reads the file", () => {
     expect(docs.problems).toEqual([]);
     expect(apartOf(docs)).toEqual([]);
+  });
+
+  it("is judged alike however the system names the pages, as Windows does too", () => {
+    const named = judge(readSamplePages(ROOT, nodePath.win32));
+    expect(named.problems).toEqual([]);
+    expect(named.judged.map(({ at }) => at)).toEqual(docs.judged.map(({ at }) => at));
   });
 
   it("is held to the upgrade's reading in enough samples to say so", () => {

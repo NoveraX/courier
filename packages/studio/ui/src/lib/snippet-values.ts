@@ -21,8 +21,10 @@ const JSON_STRING = /("(?:[^"\\]|\\.)*")(:?)/g;
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
-/* A word the shell reads as it is: nothing in it expands, splits or quotes. */
-const PLAIN_WORD = /^[\w@%+=:,./-]+$/;
+/* A word the shell reads as it is: nothing in it expands, splits or quotes. Not `=`:
+   zsh puts a command's path in place of a word that starts with one, and with
+   magic_equal_subst set, in place of what follows one inside a word. */
+const PLAIN_WORD = /^[\w@%+:,./-]+$/;
 
 /* `</` as `<\/`, `<!--` with its `<` escaped, a separator or a line end as its `\u` escape. */
 function written(found: string): string {

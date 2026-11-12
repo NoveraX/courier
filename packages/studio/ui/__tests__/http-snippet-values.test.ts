@@ -21,7 +21,7 @@ const TOKEN_METHOD = "LIST|ALL";
 /* A body with a key an object literal reads as the prototype's, not as a key. */
 const BODY: unknown = JSON.parse(`{"note":${JSON.stringify(AWKWARD)},"__proto__":{"kept":true}}`);
 /* What the shell reads as it is: anything else outside quotes is its own syntax. */
-const PLAIN = /^[\w@%+=:,./\s-]*$/;
+const PLAIN = /^[\w@%+:,./\s-]*$/;
 
 function stream(fields: Partial<RequestEntry>): RequestEntry {
   return requestEntry({ transport: "sse", method: "events", ...fields });

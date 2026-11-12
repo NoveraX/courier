@@ -31,6 +31,9 @@ export function slotShape(registry: string, home: string): SlotShape {
     noEmit: true,
     skipLibCheck: true,
     types: [],
+    /* The walk reads no type outside `home`, and the standard library, longer alone than the
+       core's sources, least of all. */
+    noLib: true,
     target: ts.ScriptTarget.ES2022,
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,

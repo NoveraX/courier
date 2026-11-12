@@ -1,3 +1,5 @@
+import { codeString } from "@/lib/snippet-values";
+
 /** A line of a JSON tree: an object or array opening, its closing, or a value. */
 export interface JsonTreeRow {
   /** The value's path, keys and indices joined by dots, as validation issues name it; `""` for the root. */
@@ -40,11 +42,12 @@ const join = (path: string, key: string) => (path ? `${path}.${key}` : key);
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
-/* How code reaches a child: an index in brackets, a name after a dot, any other key quoted in brackets. */
+/* How code reaches a child: an index in brackets, a name after a dot, any other key in
+   brackets as a string literal that reads the same in a page's script. */
 function childAccessor(parent: string, key: string, index: boolean): string {
   if (index) return `${parent}[${key}]`;
   if (IDENTIFIER.test(key)) return parent ? `${parent}.${key}` : key;
-  return `${parent}[${JSON.stringify(key)}]`;
+  return `${parent}[${codeString(key)}]`;
 }
 
 /** Which rows a tree keeps, and the most it keeps. */

@@ -164,24 +164,49 @@ async function replayedWithoutToken(log: Replayed, event: "events:replay" | "moc
   return text(reader.sent[0]?.[1]);
 }
 
-/* The quickest of a few runs: a pause of the collector in one does not count. */
-async function fastest(run: () => Promise<void>): Promise<number> {
-  let best = Number.POSITIVE_INFINITY;
-  for (let n = 0; n < 5; n++) {
-    const started = performance.now();
-    await run();
-    best = Math.min(best, performance.now() - started);
-  }
-  return best;
+/* What a busy machine does to Studio now and then: the system gives its thread to others a while,
+   and the thread does nothing meanwhile. */
+function pausedFor(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-/* The longest Studio's main thread went without a turn of the event loop while a run went on. */
+/* The time Studio's main thread spent at work, in milliseconds: neither a pause the system takes from
+   it nor the suites run beside it count. */
+function threadTime(): number {
+  const { user, system } = process.threadCpuUsage();
+  return (user + system) / 1000;
+}
+
+/* What each of two runs taken in turn spends all told, at the least: a system that counts a thread's
+   time by its clock's ticks, some 16 ms apart on Windows, counts a short run as no time or a whole
+   tick, and only many of them as what they took. */
+const SPENT_MS = 100;
+
+/* What each of two runs takes Studio's main thread, over runs taken in turn until each spent SPENT_MS. */
+async function threadTimeOfEach(
+  first: () => Promise<void>,
+  second: () => Promise<void>,
+): Promise<[number, number]> {
+  const runs = [first, second] as const;
+  const spent: [number, number] = [0, 0];
+  const counted: [number, number] = [0, 0];
+  while (Math.min(...spent) < SPENT_MS) {
+    const at = spent[0] <= spent[1] ? 0 : 1;
+    const started = threadTime();
+    await runs[at]();
+    spent[at] += threadTime() - started;
+    counted[at] += 1;
+  }
+  return [spent[0] / counted[0], spent[1] / counted[1]];
+}
+
+/* The longest Studio's main thread spent at work in one turn of the event loop while a run went on. */
 async function longestTurn(run: () => Promise<void>): Promise<number> {
   let longest = 0;
-  let last = performance.now();
+  let last = threadTime();
   let going = true;
   const tick = () => {
-    const now = performance.now();
+    const now = threadTime();
     longest = Math.max(longest, now - last);
     last = now;
     if (going) setTimeout(tick, 0);
@@ -189,7 +214,7 @@ async function longestTurn(run: () => Promise<void>): Promise<number> {
   setTimeout(tick, 0);
   await run();
   going = false;
-  return Math.max(longest, performance.now() - last);
+  return Math.max(longest, threadTime() - last);
 }
 
 describe("the request log, replayed to a page without the token", () => {
@@ -381,13 +406,16 @@ describe("the request log, replayed to a page without the token", () => {
       for (let n = 0; n < MAX_REQUESTS; n++) large(log, `r${n}`);
       log.replayPayload();
 
-      const started = performance.now();
+      const started = threadTime();
       await replayToPage(pageSocket(true, false).socket, "events:replay", log);
-      withToken.push(performance.now() - started);
+      withToken.push(threadTime() - started);
       withoutToken.push(
-        await longestTurn(() =>
-          replayToPage(pageSocket(false, false).socket, "events:replay", log),
-        ),
+        await longestTurn(() => {
+          /* The machine is busy as the replay is read: the system pauses the thread longer than a
+             replay with the token takes. */
+          setTimeout(() => pausedFor(250), 0);
+          return replayToPage(pageSocket(false, false).socket, "events:replay", log);
+        }),
       );
     }
 
@@ -402,20 +430,24 @@ describe("the request log, replayed to a page without the token", () => {
       for (let n = 0; n < requests; n++) large(log, `r${n}`);
       const bytes = log.replayPayload().byteLength;
       let added = 0;
-      /* Each page connects after new requests came, so the replay it is sent changed since the last. */
+      /* Each page connects after a new request came, so the replay it is sent changed since the last;
+         the machine is busy, and the system pauses the thread as each page without the token connects. */
       const connects = (token: boolean) => {
         const { socket } = pageSocket(token, false);
         return async () => {
-          for (let n = 0; n < 3; n++) large(log, `new${added++}`);
+          large(log, `new${added++}`);
+          if (!token) pausedFor(30);
           await replayToPage(socket, "events:replay", log);
         };
       };
+      const withoutToken = connects(false);
+      /* Such a page connected once already, so it cuts only what came since. */
+      await withoutToken();
 
-      const withToken = await fastest(connects(true));
-      const withoutToken = await fastest(connects(false));
+      const [withTime, withoutTime] = await threadTimeOfEach(connects(true), withoutToken);
 
       expect(bytes).toBeGreaterThan(requests * 7000);
-      expect(withoutToken, `${requests} requests, ${bytes} bytes`).toBeLessThan(withToken * 10);
+      expect(withoutTime, `${requests} requests, ${bytes} bytes`).toBeLessThan(withTime * 10);
     }
   }, 120_000);
 });

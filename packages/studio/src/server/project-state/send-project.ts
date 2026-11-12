@@ -1,6 +1,6 @@
 import { createLogger } from "@noverax/courier";
-import { cutText } from "@noverax/courier/internal";
-import { maskEnvironmentValues } from "@noverax/courier-build/config";
+import { sliceWhole } from "@noverax/courier/internal";
+import { withoutSecrets } from "@noverax/courier-build/config";
 
 import type { UpdateChecks } from "../update-checks";
 import { type ConfigStatusPayload, configStatusOf } from "./config-status";
@@ -10,6 +10,9 @@ import type { ProjectEventTarget, ProjectSnapshot } from "./types";
 
 const log = createLogger("Studio");
 
+/** The longest text of a failed config a page without Studio's token is told, in characters. */
+const MAX_SHOWN_LENGTH = 2_000;
+
 /**
  * Tell the UI the project Studio runs: the imports list and the source
  * catalogue, then `config:status`. The status comes last, so a UI that has
@@ -17,10 +20,11 @@ const log = createLogger("Studio");
  * starting there are no lists yet, and only the status is sent.
  *
  * The status is sent even when the lists cannot be built: the UI must still
- * learn how the config loads. A config that failed is told to every page
- * with the environment's values masked in its error's text, whole otherwise
- * to a page with Studio's token, and with what could be a credential cut to
- * any other: a config that throws as it loads can say anything it held.
+ * learn how the config loads. A config that failed is told to a page with
+ * Studio's token as its failure says it, with no secret in what the code
+ * threw, as `describeError` leaves none; any other page is told it with no
+ * secret in the whole text, whatever wrote it, and cut to 2000 characters:
+ * a config that throws as it loads can say anything it held.
  *
  * Synchronous on purpose, and it must stay so: the UI takes the order its
  * packets arrive in as the order of the project's states, and socket.io
@@ -56,6 +60,8 @@ export function sendProject(
 
 function statusWithoutSecrets(status: ConfigStatusPayload): ConfigStatusPayload {
   if (status.state !== "failed") return status;
-  const message = cutText(maskEnvironmentValues(status.error.message));
+  const said = withoutSecrets(status.error.message).trim();
+  const message =
+    said.length > MAX_SHOWN_LENGTH ? `${sliceWhole(said, MAX_SHOWN_LENGTH - 1)}…` : said;
   return { ...status, error: { ...status.error, message } };
 }

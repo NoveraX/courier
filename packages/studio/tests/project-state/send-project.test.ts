@@ -108,6 +108,8 @@ describe("sendProject", () => {
   });
 
   it("tells a config that failed whole to the pages with the token, and cut to the others", () => {
+    /* Unset as a CI runner may set it: its value stands in the address below. */
+    vi.stubEnv("PGUSER", undefined);
     const rooms = new Map<string, unknown[]>();
     const pages = {
       emit: vi.fn(),
@@ -142,6 +144,34 @@ describe("sendProject", () => {
       }),
     ]);
     expect(pages.emit).not.toHaveBeenCalled();
+  });
+
+  it("cuts the credential for a page without the token where a variable's value stands in it", () => {
+    /* As GitHub's Windows runner sets it. */
+    vi.stubEnv("PGUSER", "postgres");
+    const { rooms, pages } = pagesByRoom();
+    const failure = {
+      code: "UNKNOWN" as const,
+      message: "courier.config.ts threw: cannot reach postgres://app:hunter2@db.internal/app",
+      at: 2_000,
+      cause: new Error("cannot reach the database"),
+    };
+
+    sendProject(
+      pages,
+      { revision: 2, starting: true, running: null, loadedAt: null, failure },
+      root,
+      createUpdateChecks(),
+    );
+
+    expect(rooms.get("pages:read-only")).toEqual([
+      expect.objectContaining({
+        error: {
+          code: "UNKNOWN",
+          message: "courier.config.ts threw: cannot reach [redacted]://db.internal/app",
+        },
+      }),
+    ]);
   });
 
   it("masks the values of the environment in a failed config's text, for every page", () => {

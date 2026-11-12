@@ -26,6 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -94,5 +95,24 @@ describe("createRoutesModuleWriter", () => {
     const said = warn.mock.calls.flat().join("\n");
     expect(said.match(/holds code Courier did not write/g)).toHaveLength(1);
     expect(readFileSync(join(dir, "routes.ts"), "utf8")).toBe("export const mine = 1;\n");
+  });
+
+  it("says why a write failed with no variable's value in it, nor a credential", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("SHOP_TOKEN", "tok_live_4f9c2e7a");
+    const config = {
+      get sources(): never {
+        throw new Error(`the shop refused ${process.env.SHOP_TOKEN} with token=abc123def`);
+      },
+    } as unknown as CourierConfig;
+    const writer = createRoutesModuleWriter(projectRootAt(dir));
+
+    writer.loaded({ config, configFile: join(dir, "courier.config.ts") });
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    await writer.close();
+
+    const said = warn.mock.calls.flat().join("\n");
+    expect(said).toContain("the shop refused [redacted] with token=[redacted]");
+    expect(said).not.toMatch(/tok_live|abc123def/);
   });
 });

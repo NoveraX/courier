@@ -17,6 +17,18 @@ describe("describeError", () => {
     ).toBe("cannot reach db.invalid with key [redacted]");
   });
 
+  it("cuts a credential the environment does not hold, and one a variable's value stands in", () => {
+    vi.stubEnv("PGUSER", undefined);
+    const error = new Error("cannot reach postgres://app:hunter2@db.internal/app");
+
+    expect(describeError(error)).toBe("cannot reach postgres://db.internal/app");
+
+    /* As GitHub's Windows runner sets it. */
+    vi.stubEnv("PGUSER", "postgres");
+
+    expect(describeError(error)).toBe("cannot reach [redacted]://db.internal/app");
+  });
+
   it("folds a multi-line loader message onto one line, with paths relative to the root", () => {
     const error = new Error("ParseError: Unexpected token  \n /app/courier.mocks.ts:3:2");
 

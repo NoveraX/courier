@@ -8,7 +8,7 @@ import {
   loadCourierConfigFile,
   projectTransformCache,
 } from "../config/load-config";
-import { ConfigLoadError } from "../config/load-error/config-load-error";
+import { configLoadError } from "../config/load-error/explain-load-failure";
 import { UntrustedConfigError } from "../config/untrusted-config-error";
 import { RoutesReadError, type RoutesReadErrorCode } from "./routes-read-error";
 import type { RoutesRequest } from "./routes-snapshot";
@@ -85,19 +85,15 @@ export async function loadProjectConfig(
     const transformCache = projectTransformCache(dirname(configFile));
     return await loadCourierConfigFile(configFile, { ...options, transformCache });
   } catch (error) {
-    const said =
-      error instanceof ConfigLoadError
-        ? `${error.message} ${error.hint}`
-        : error instanceof Error
-          ? error.message
-          : String(error);
-    const message = `${basename(configFile)} did not load, so the routes a page takes were not read: ${said}`;
-    const cause: unknown = error instanceof ConfigLoadError ? error.cause : error;
+    /* The loader's own words say why. Whatever else failed is said the same way, so nothing
+       the project's code wrote goes on unmasked. */
+    const failure = configLoadError(error, { entry: configFile });
+    const message = `${basename(configFile)} did not load, so the routes a page takes were not read: ${failure.message} ${failure.hint}`;
     throw new RoutesReadError(
       "CONFIG_NOT_LOADED",
       message,
       { root: request.root, configFile },
-      { stack: cause instanceof Error ? cause.stack : undefined },
+      { stack: failure.cause instanceof Error ? failure.cause.stack : undefined },
     );
   }
 }

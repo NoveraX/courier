@@ -156,7 +156,8 @@ function warnUnread({ config, configFile }: LoadedCourierConfig): void {
 /* A project without a config is normal at startup; one deleted while Studio
    runs it is said once, and every other failure each time — in one line, as
    the UI says it, with the error whole at debug level. A failure that is not
-   the loader's report of the project is Studio's own, and keeps its stack. */
+   the loader's report of the project — Studio's own, or what a getter of the
+   config threw — keeps its stack, masked as `failureOf` masks it. */
 function report(failure: ConfigFailure, previous: ProjectSnapshot): void {
   if (failure.code === "UNKNOWN") {
     log.warn("Failed to load courier.config", failure.cause);

@@ -302,6 +302,26 @@ readdirSync(${JSON.stringify(`${dir}/./defs/`)});
     expect(error.context.configFile).toBe(join(dir, "courier.config.ts"));
   }, 30_000);
 
+  it("says what reading the sources threw with no value of the env files in it, nor a credential", async () => {
+    writeFileSync(join(dir, ".env"), "SHOP_SIGNING_KEY=shop-signing-7f3a9c2e5b1d\n");
+    project(`export default {
+  get sources() {
+    throw new Error(\`the shop refused \${process.env.SHOP_SIGNING_KEY} with token=abc123def\`);
+  },
+};
+`);
+
+    const error = await failure(evaluateInChild({ root: dir, envFiles: [join(dir, ".env")] }));
+
+    expect(error.code).toBe("CONFIG_NOT_LOADED");
+    expect(error.message).toBe(
+      "The routes a page takes were not read: the shop refused [redacted] with token=[redacted]",
+    );
+    expect(error.stack).toContain("the shop refused [redacted] with token=[redacted]");
+    expect(error.stack).toContain("courier.config.ts");
+    expect(error.stack).not.toMatch(/shop-signing-7f3a9c2e5b1d|abc123def/);
+  }, 30_000);
+
   it("gives up a config that never finishes loading, ROUTES_NOT_READ", async () => {
     project(`${CONFIG}\nwhile (true) {}\n`);
 

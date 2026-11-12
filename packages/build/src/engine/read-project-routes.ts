@@ -8,8 +8,9 @@ import { defineOwn } from "../util/define-own";
 import { isRecord } from "../util/is-record";
 import { loadProjectConfig, projectConfigFile } from "./project-config";
 import { readEnvFiles } from "./read-env-files";
+import { readingFailure } from "./reading-failure";
 import { RoutesReadError } from "./routes-read-error";
-import type { RoutesInputs, RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
+import type { RoutesRequest, RoutesSnapshot } from "./routes-snapshot";
 import { trackReading } from "./track-reading";
 
 type RoutesOf = typeof routesOf;
@@ -43,7 +44,9 @@ export async function readProjectRoutes(request: RoutesRequest): Promise<RoutesS
     const routes = await routesOfSources(loaded, request.root);
     return { ...(await reading.inputs()), configFile: loaded.configFile, routes };
   } catch (error) {
-    throw withInputs(error, await reading.inputs(), request);
+    /* The failure names what the reading had read: a change to any of it may mend the config. */
+    const inputs = await reading.inputs();
+    throw readingFailure(error, { root: request.root, configFile: inputs.configFile }, inputs);
   }
 }
 
@@ -82,21 +85,6 @@ async function projectRoutesOf(configFile: string, root: string): Promise<Routes
     `The @noverax/courier at ${path} reads no routes: update it to the version of @noverax/courier-build.`,
     { root, configFile },
   );
-}
-
-/* The failure, naming what the reading had read: a change to any of it may mend the config. */
-function withInputs(error: unknown, inputs: RoutesInputs, request: RoutesRequest): RoutesReadError {
-  const stack = error instanceof Error ? error.stack : undefined;
-  if (!(error instanceof RoutesReadError)) {
-    return new RoutesReadError(
-      "CONFIG_NOT_LOADED",
-      `The routes a page takes were not read: ${error instanceof Error ? error.message : String(error)}`,
-      { root: request.root, configFile: inputs.configFile },
-      { stack, inputs },
-    );
-  }
-  if (error.inputs !== undefined) return error;
-  return new RoutesReadError(error.code, error.message, error.context, { stack, inputs });
 }
 
 function byCodeUnits(a: string, b: string): number {

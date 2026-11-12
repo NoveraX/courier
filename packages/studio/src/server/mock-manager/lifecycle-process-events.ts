@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from "@noverax/courier";
+import { withoutSecrets } from "@noverax/courier-build/config";
 import { describeError } from "../describe-error";
 import { isPlainObject } from "../is-plain-object";
 import type { MockLog } from "../storage/mock-log";
@@ -66,18 +67,20 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
 
     /* Every failure is said where the developer is looking — the terminal —
        and kept on the mock for the UI, so a mock that could not start says
-       why. */
+       why. The worker's words quote what the mock's code threw, so neither
+       is told a secret in them. */
     onError(serverId, message, fatal) {
       const name = nameOf(serverId);
+      const said = withoutSecrets(message);
       if (!fatal) {
-        log.warn(`[${name}] ${message}`);
+        log.warn(`[${name}] ${said}`);
         return;
       }
-      log.error(`[${name}] failed: ${message}`);
+      log.error(`[${name}] failed: ${said}`);
       /* A message can run over several lines — a module that failed to load
          lists its require stack — so the terminal gets it whole and the UI
          the line that says why. */
-      const [reason = message] = message.split("\n", 1);
+      const [reason = said] = said.split("\n", 1);
       /* What every page is told, one without the token too: a path in the
          project named from its root, any other from `~`. */
       updateAndEmit(serverId, {

@@ -35,7 +35,7 @@ export {
   type FailedLoad,
   loadTimedOut,
 } from "./load-error/explain-load-failure";
-export { maskEnvironmentValues, maskedError, withoutSecrets } from "./load-error/mask-env-values";
+export { maskedError, withoutSecrets } from "./load-error/without-secrets";
 export { type PathAliases, readPathAliases } from "./path-aliases";
 export { profileOf } from "./profiles/profile-of";
 export { type RefusedModuleContext, RefusedModuleError } from "./profiles/refused-module-error";

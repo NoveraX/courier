@@ -23,6 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 /* A project under the home directory, as most are. */
@@ -96,6 +97,24 @@ describe("a managed mock that fails", () => {
       status: "crashed",
       lastError: "Cannot find package '@hono/node-server'",
     });
+  });
+
+  it("says why in the terminal and on every page with no value of the environment, nor a credential", () => {
+    vi.stubEnv("SHOP_SIGNING_KEY", "shop-signing-7f3a9c2e5b1d");
+    const { state, handlers } = events();
+
+    handlers.onError("apiMock", "a record holds shop-signing-7f3a9c2e5b1d", false);
+    handlers.onError(
+      "apiMock",
+      "the seed refused shop-signing-7f3a9c2e5b1d at https://app:hunter2@db.example.com/",
+      true,
+    );
+
+    const said = output.join("\n");
+    expect(said).toContain("a record holds [redacted]");
+    expect(said).toContain("the seed refused [redacted] at https://db.example.com/");
+    expect(said).not.toMatch(/shop-signing-7f3a9c2e5b1d|hunter2/);
+    expect(state.lastError).toBe("the seed refused [redacted] at https://db.example.com/");
   });
 
   it("keeps the reason's first line for the UI, and its stack for the terminal", () => {

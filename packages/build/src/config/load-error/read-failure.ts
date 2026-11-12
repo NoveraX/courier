@@ -5,8 +5,8 @@
  * line to quote.
  */
 
-import { describedValue } from "./mask-env-values";
 import { shownText } from "./shown-text";
+import { describedValue } from "./without-secrets";
 
 /** What the transformer said of a module that failed. */
 export interface FailedTransform {

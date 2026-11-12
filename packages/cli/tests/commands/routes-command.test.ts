@@ -55,6 +55,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   process.exitCode = undefined;
   delete process.env.COURIER_PHASE;
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
@@ -149,6 +150,26 @@ describe("courier-cli routes", () => {
       "courier-cli reads the project's variables from .env.development.local",
     );
     vi.unstubAllEnvs();
+  });
+
+  it("says what reading the sources threw with no variable's value in it, nor a credential", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.stubEnv("SHOP_TOKEN", "tok_live_4f9c2e7a");
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `export default {
+        get sources() {
+          throw new Error("the shop refused " + process.env.SHOP_TOKEN + " with token=abc123def");
+        },
+      };\n`,
+    );
+
+    await run("--check");
+
+    expect(process.exitCode).toBe(1);
+    expect(said(error)).toContain("the shop refused [redacted] with token=[redacted]");
+    expect(said(error)).not.toMatch(/tok_live|abc123def/);
   });
 
   it("reads a Next.js project whose API module imports server-only, as Next's server does", async () => {

@@ -16,9 +16,9 @@ import type { ResolutionProfile } from "../profiles/resolution-profile";
 import { ConfigLoadError, type ConfigLoadErrorCode } from "./config-load-error";
 import { importChain, packageOfFile, shownChain, shownModule } from "./import-chain";
 import { evaluationHint, notFoundHint, TIMEOUT_HINT, TRANSFORM_HINT } from "./load-hints";
-import { maskedError } from "./mask-env-values";
 import { described, failedTransform, missingImport } from "./read-failure";
 import { shownText } from "./shown-text";
+import { maskedError } from "./without-secrets";
 
 /** What a loader knows of a load that failed. */
 export interface FailedLoad {

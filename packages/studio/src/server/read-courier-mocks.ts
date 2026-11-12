@@ -1,3 +1,4 @@
+import { maskedError } from "@noverax/courier-build/config";
 import { readMocksExport } from "@noverax/courier-studio-core/mocks";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { hashStillOnDisk } from "./hash-still-on-disk";
@@ -67,6 +68,8 @@ export function readCourierMocks(
       ...(fingerprints && { fingerprints }),
     };
   } catch (error) {
-    return { file, entries: {}, contentHash, error };
+    /* A getter of the export may have thrown it, in the project's words: the terminal prints
+       it whole, with no secret in it. */
+    return { file, entries: {}, contentHash, error: maskedError(error) };
   }
 }

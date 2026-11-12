@@ -1,6 +1,10 @@
 import { createLogger } from "@noverax/courier";
 
-import type { LoadedCourierConfig } from "@noverax/courier-build/config";
+import {
+  type LoadedCourierConfig,
+  maskedError,
+  withoutSecrets,
+} from "@noverax/courier-build/config";
 import type { ProjectRoot } from "../project-fs/project-root";
 import { messageOf } from "../util/message-of";
 import { composeRoutesModule } from "./compose-routes-module";
@@ -67,8 +71,12 @@ export function createRoutesModuleWriter(root: ProjectRoot): RoutesModuleWriter 
       try {
         await write(loaded);
       } catch (error) {
-        say("warn", `Studio could not write the routes module: ${messageOf(error)}`);
-        log.debug("Studio could not write the routes module", error);
+        /* What reading the config's sources threw is in the project's words: no secret is said. */
+        say(
+          "warn",
+          `Studio could not write the routes module: ${withoutSecrets(messageOf(error))}`,
+        );
+        log.debug("Studio could not write the routes module", maskedError(error));
       }
     }
     running = null;

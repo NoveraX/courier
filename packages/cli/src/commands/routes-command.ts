@@ -6,6 +6,7 @@ import {
   enterDefinitionsPhase,
   type LoadedCourierConfig,
   loadCourierConfig,
+  withoutSecrets,
 } from "@noverax/courier-build/config";
 import { type ArgsDef, defineCommand } from "citty";
 import { DOTENV_ARG, loadProjectEnv } from "../project-env";
@@ -16,6 +17,7 @@ import { routesModulePath } from "../routes-module/routes-module-path";
 import { routesSaid } from "../routes-module/routes-said";
 import { routesSettingProblem } from "../routes-module/routes-setting-problem";
 import { writeRoutesModule } from "../routes-module/write-routes-module";
+import { messageOf } from "../util/message-of";
 
 const log = createLogger("Routes");
 
@@ -76,10 +78,12 @@ export const routesCommand = defineCommand({
   },
 });
 
-/* One line naming the problem, and for a config that did not load, one saying what to do. */
+/* One line naming the problem, and for a config that did not load, one saying what to do. A
+   problem of any other kind may be what a getter of the config threw as its sources were read,
+   in the project's words, for a CI log: it is said with no secret in it, as the loader says one. */
 function report(error: unknown): void {
   if (!(error instanceof ConfigLoadError)) {
-    log.error(error instanceof Error ? error.message : String(error));
+    log.error(withoutSecrets(messageOf(error)));
     return;
   }
   log.error(error.message);

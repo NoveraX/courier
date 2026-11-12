@@ -7,6 +7,9 @@
  * scanner to flag.
  */
 
+/* A path as Windows writes it: its folders apart by backslashes. */
+const windows = (path: string): string => path.replaceAll("/", "\\");
+
 /** Texts that hold no credential: any change is a false positive. */
 export const PROSE: readonly string[] = [
   "getaddrinfo ENOTFOUND api.example.com",
@@ -96,6 +99,10 @@ export const PROSE: readonly string[] = [
   "Error: listen EADDRINUSE: address already in use :::3000",
   "Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'zod' imported from /app/src/api.ts",
   "SyntaxError: Unexpected token ':' at /app/src/config.ts:12:7",
+  `Error: Cannot find module '${windows("D:/a/shop/node_modules/@noverax/courier-mock/index.js")}'`,
+  `Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'zod' imported from ${windows("D:/a/shop/node_modules/.pnpm/@noverax+courier-mock@0.4.0/node_modules/@noverax/courier-mock/index.js")}`,
+  `ENOENT: no such file or directory, open '${windows("C:/npm/cache/_npx/4f1c2b3a9d8e7f60/node_modules/@noverax/courier-mock/package.json")}'`,
+  JSON.stringify({ path: windows("D:/a/shop/node_modules/@noverax/courier-mock/index.js") }),
   "TypeError: fetch failed",
   "AbortError: The user aborted a request.",
   "net::ERR_CERT_AUTHORITY_INVALID",
@@ -146,6 +153,12 @@ export const SECRETS: readonly (readonly [text: string, secret: string])[] = [
   ],
   ["Key (api_key)=(Zx9sk3cr3t) already exists.", "Zx9sk3cr3t"],
   ["basic auth failed for ana:hunter2", "hunter2"],
+  /* A Windows path beside a user and password is no part of them, and a domain's user is a user. */
+  [
+    `${windows("D:/a/shop/node_modules/@noverax/courier-mock/index.js")} could not reach ana:hunter2@db.internal:5432`,
+    "hunter2",
+  ],
+  ["tunnel through CORP\\ana:hunter2@proxy.corp:8080 refused", "hunter2"],
   ["Proxy-Authorization: Basic YW5hOmh1bnRlcjI=", "YW5hOmh1bnRlcjI="],
   ["Authorization: Basic YW5hOmh1bnRlcjI=", "YW5hOmh1bnRlcjI="],
   ["token: 'abc def ghi'", "abc def ghi"],

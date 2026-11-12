@@ -9,6 +9,9 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+/* A path as Windows writes it: its folders apart by backslashes. */
+const windows = (path: string): string => path.replaceAll("/", "\\");
+
 describe("describeError", () => {
   it("masks the values of the environment: every page shows the line, and the log writes it", () => {
     const thrown = "cannot reach db.invalid with key FAKE-0000-PROBE-SECRET";
@@ -77,4 +80,33 @@ describe("describeError", () => {
       expect(describeError(new Error("open /app/a\\b.ts"), "/app")).toBe("open a\\b.ts");
     },
   );
+});
+
+describe("describeError on Windows, whichever the runner is", () => {
+  const PLATFORM = Object.getOwnPropertyDescriptor(process, "platform");
+
+  afterEach(() => {
+    if (PLATFORM !== undefined) Object.defineProperty(process, "platform", PLATFORM);
+  });
+
+  /* Studio reads how its platform spells a path as it loads, so the module is loaded anew on Windows. */
+  async function onWindows(): Promise<typeof describeError> {
+    Object.defineProperty(process, "platform", { ...PLATFORM, value: "win32" });
+    vi.resetModules();
+    return (await import("../src/server/describe-error")).describeError;
+  }
+
+  it("names a scoped package's file relative to the project, cutting a credential beside it first", async () => {
+    const describeOnWindows = await onWindows();
+    const root = windows("D:/srv/shop");
+    const outside = windows("C:/npm/_npx/4f1c/node_modules/@noverax/courier-cli/bin.js");
+    const error = new Error(
+      `broken in ${root}${windows("/node_modules/@noverax/courier-mock/index.js")}, required from ${outside} for ana:hunter2@db.internal`,
+    );
+    stubOwnEnvironment({}, error.message);
+
+    expect(describeOnWindows(error, root)).toBe(
+      `broken in node_modules/@noverax/courier-mock/index.js, required from ${outside} for [redacted]@db.internal`,
+    );
+  });
 });

@@ -12,9 +12,9 @@
  * masked where it is 8 characters long or more; a shorter one — `true`, a
  * port — would mask words of the message itself and is rarely a secret. A
  * value the code changed some other way — cut, encoded otherwise — is not
- * found. The values of the variables a system sets for every process —
- * paths, the user's name, the locale — are left alone: they are no secret,
- * and masking `HOME` would take the path out of every file a message names.
+ * found. A variable the system sets for every process, and one that names
+ * places, are left alone, as `shownVariables` reads them: masking `HOME`
+ * or `RUNNER_TEMP` would take the path out of every file a message names.
  */
 
 import { inspect } from "node:util";
@@ -22,39 +22,10 @@ import { inspect } from "node:util";
 import { redact } from "@noverax/courier";
 import { REDACTED } from "@noverax/courier/internal";
 
+import { shownVariables } from "./shown-variables";
+
 /** The shortest value masked. */
 const MIN_MASKED_LENGTH = 8;
-
-/** Variables every process has whose values are paths and settings, never secrets. */
-const SYSTEM_VARIABLES = new Set([
-  "PATH",
-  "HOME",
-  "PWD",
-  "OLDPWD",
-  "INIT_CWD",
-  "TMPDIR",
-  "TMP",
-  "TEMP",
-  "SHELL",
-  "USER",
-  "USERNAME",
-  "LOGNAME",
-  "HOSTNAME",
-  "LANG",
-  "LANGUAGE",
-  "TERM",
-  "TERM_PROGRAM",
-  "TERM_PROGRAM_VERSION",
-  "COLORTERM",
-  "EDITOR",
-  "VISUAL",
-  "PAGER",
-  "NODE",
-  "NODE_ENV",
-  "CI",
-  "COURIER_PHASE",
-]);
-const SYSTEM_PREFIXES = ["LC_", "XDG_", "npm_config_", "npm_package_", "npm_lifecycle_"];
 
 /**
  * The text with every value of the environment that could be a secret,
@@ -74,9 +45,10 @@ export function maskEnvironmentValues(
   text: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
+  const shown = shownVariables(env);
   const values = new Set<string>();
   for (const [name, value] of Object.entries(env)) {
-    if (value === undefined || value.length < MIN_MASKED_LENGTH || isSystem(name)) continue;
+    if (value === undefined || value.length < MIN_MASKED_LENGTH || shown(name, value)) continue;
     for (const form of formsOf(value)) if (form.length >= MIN_MASKED_LENGTH) values.add(form);
   }
   let masked = text;
@@ -103,10 +75,6 @@ export function withoutSecrets(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
   return redact(maskEnvironmentValues(text, env));
-}
-
-function isSystem(name: string): boolean {
-  return SYSTEM_VARIABLES.has(name) || SYSTEM_PREFIXES.some((prefix) => name.startsWith(prefix));
 }
 
 /* A value, and the forms code writes it in: escaped in JSON, encoded for an address, trimmed, and

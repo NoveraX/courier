@@ -6,7 +6,7 @@
  */
 
 import { REDACTED } from "@noverax/courier/internal";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { maskEnvironmentValues, maskedError } from "../../src/config/load-error/mask-env-values";
 import { shownText } from "../../src/config/load-error/shown-text";
@@ -183,5 +183,89 @@ describe("the forms a value takes in a message", () => {
 
     expect(shownText(`bad key ${PEM} given`)).toBe(`bad key ${REDACTED} given`);
     vi.unstubAllEnvs();
+  });
+});
+
+describe("a variable that names a place", () => {
+  const PLATFORM = Object.getOwnPropertyDescriptor(process, "platform");
+
+  afterEach(() => {
+    if (PLATFORM !== undefined) Object.defineProperty(process, "platform", PLATFORM);
+  });
+
+  function onWindows(): void {
+    Object.defineProperty(process, "platform", { ...PLATFORM, value: "win32" });
+  }
+
+  it("is left alone where its value is an absolute path, or a list of them", () => {
+    const env = {
+      RUNNER_TEMP: "/home/runner/work/_temp",
+      NPM_CONFIG_USERCONFIG: "/home/runner/work/_temp/.npmrc",
+      NODE_PATH: "/usr/lib/node_modules:/usr/local/lib/node_modules",
+    };
+    const said = "reading /home/runner/work/_temp/.npmrc for /home/runner/work/_temp/x/api.ts";
+
+    expect(maskEnvironmentValues(said, env)).toBe(said);
+  });
+
+  it("is left alone on Windows, a path written with either separator and a system name in any case", () => {
+    onWindows();
+    const env = {
+      USERPROFILE: "C:\\Users\\ana",
+      HOMEPATH: "\\Users\\ana",
+      APPDATA: "C:\\Users\\ana\\AppData\\Roaming",
+      ProgramData: "C:/ProgramData",
+      RUNNER_TEMP: "D:\\a\\_temp",
+      PSModulePath:
+        "C:\\Program Files\\PowerShell\\Modules;C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules",
+      ComputerName: "fv-az1234-567",
+      PathExt: ".COM;.EXE;.BAT;.CMD",
+    };
+    const said =
+      "reading C:\\Users\\ana\\.npmrc for D:\\a\\_temp\\x\\api.ts on fv-az1234-567, which runs .COM;.EXE;.BAT;.CMD";
+
+    expect(maskEnvironmentValues(said, env)).toBe(said);
+  });
+
+  it("is masked where the path holds a key, or the variable's name says it holds a secret", () => {
+    /* A key in base64 that starts with `/`, a token in a webhook's path, and a path under a
+       name that gives it away; every value here is made up. */
+    const env = {
+      SEED: "/Xq9+kZ2mL7vB4nR8wY1cE5tH0jU6oP3sA=",
+      WEBHOOK_PATH: "/hooks/inbound/9f8a7c6b5e4d3c2b1a0f7e6d",
+      RELEASE_SIGNING_SECRET: "/srv/keys/release",
+    };
+    const said = `tried ${env.SEED}, ${env.WEBHOOK_PATH} and ${env.RELEASE_SIGNING_SECRET}`;
+
+    expect(maskEnvironmentValues(said, env)).toBe(`tried ${REDACTED}, ${REDACTED} and ${REDACTED}`);
+  });
+
+  it("is read past the folders the system's own variables name, which it may name at random", () => {
+    /* A temporary folder named at random, as macOS names a user's. */
+    const temp = "/tmp/build-4f9c2e7a1b3d5f6e8a0c";
+    const env = {
+      TMPDIR: `${temp}/`,
+      NODE_COMPILE_CACHE: `${temp}/node-compile-cache`,
+      UPLOADS: `${temp}/9f8a7c6b5e4d3c2b1a0f7e6d`,
+    };
+
+    expect(
+      maskEnvironmentValues(`cache ${env.NODE_COMPILE_CACHE}, uploads ${env.UPLOADS}`, env),
+    ).toBe(`cache ${env.NODE_COMPILE_CACHE}, uploads ${REDACTED}`);
+  });
+
+  it("is masked where a system variable's name says it holds a secret", () => {
+    /* npm's `_auth`, a user and a password in base64; made up. */
+    const env = { npm_config__auth: "YW5hOnMzY3IzdC1wNHNz" };
+
+    expect(maskEnvironmentValues(`npm refused ${env.npm_config__auth}`, env)).toBe(
+      `npm refused ${REDACTED}`,
+    );
+  });
+
+  it("is masked on POSIX where its name only reads as a system name's in another case", () => {
+    expect(maskEnvironmentValues("signed in as runneradmin", { UserName: "runneradmin" })).toBe(
+      `signed in as ${REDACTED}`,
+    );
   });
 });

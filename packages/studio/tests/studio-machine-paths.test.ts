@@ -8,7 +8,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
 import { TOKEN_HEADER } from "../src/server/token-guard";
@@ -34,6 +34,7 @@ async function start(config: string): Promise<void> {
 }
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   for (const socket of sockets.splice(0)) socket.disconnect();
   await studio?.close();
   studio = undefined;
@@ -74,6 +75,9 @@ describe("Studio's API, as its server mounts it", () => {
 
 describe("Studio's pages", () => {
   it("are told why the config does not load with no path of this machine, a page without the token too", async () => {
+    /* Variables that hold the home and temporary folders, as Windows and a CI runner set them. */
+    vi.stubEnv("USERPROFILE", homedir());
+    vi.stubEnv("RUNNER_TEMP", tmpdir());
     const npmrc = join(homedir(), ".npmrc");
     await start(
       `throw new Error(${JSON.stringify(`reading ${npmrc} for ${join(tmpdir(), "x", "api.ts")}`)});\n`,

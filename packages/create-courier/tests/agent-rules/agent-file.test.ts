@@ -105,6 +105,7 @@ describe("bringing Courier's block in AGENTS.md up to date, as Studio does as it
     expect(agentsOf(root)).toBe(`${STALE}\n${STALE}\n`);
   });
 
+  /* Not on Windows, whose folders take new files whatever their mode, nor as root, whom no mode stops. */
   it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
     "says why where the folder takes no file, and leaves AGENTS.md as it was",
     () => {

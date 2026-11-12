@@ -1,4 +1,5 @@
 import { isCredentialHeader } from "@noverax/courier/internal";
+import { codeString, shellEscape } from "@/lib/snippet-values";
 import { buildCurlSnippet, buildFetchSnippet, wholeBodyNote } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
 import { courierArgs } from "./courier-args";
@@ -90,17 +91,19 @@ function courierCall(r: SnippetRequest): string {
 
 function streamShell(r: SnippetRequest, url: string, headers: Record<string, string>): string {
   if (r.transport === "ws") return wsShellSnippet(r, url, headers);
-  const flags = Object.entries(headers).map(([k, v]) => `-H '${k}: ${v}'`);
-  return ["curl -N", `'${url}'`, "-H 'accept: text/event-stream'", ...flags].join(" \\\n  ");
+  const flags = Object.entries(headers).map(([k, v]) => `-H '${shellEscape(`${k}: ${v}`)}'`);
+  return ["curl -N", `'${shellEscape(url)}'`, "-H 'accept: text/event-stream'", ...flags].join(
+    " \\\n  ",
+  );
 }
 
 function streamBrowser(r: SnippetRequest, url: string, headers: Record<string, string>): string {
   if (r.transport === "ws") return wsBrowserSnippet(r, url, headers);
   const named = r.streamEvents?.find((e) => e.eventType && e.eventType !== "data")?.eventType;
   const listen = named
-    ? `events.addEventListener("${named}", (event) => console.log(JSON.parse(event.data)));`
+    ? `events.addEventListener(${codeString(named)}, (event) => console.log(JSON.parse(event.data)));`
     : "events.onmessage = (event) => console.log(JSON.parse(event.data));";
-  return `const events = new EventSource("${url}");\n\n${listen}`;
+  return `const events = new EventSource(${codeString(url)});\n\n${listen}`;
 }
 
 /**

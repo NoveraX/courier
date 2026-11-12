@@ -10,25 +10,10 @@
 import { describe, expect, it } from "vitest";
 import { requestSnippet } from "@/features/requests/request-snippets";
 import type { RequestEntry } from "@/store";
+import { AWKWARD, expectNothingEndsTheCode } from "./awkward-text";
 import { requestEntry } from "./request-entry-fixture";
 import { shellRead } from "./shell-read";
 
-const LINE_SEPARATOR = String.fromCharCode(0x2028);
-const PARAGRAPH_SEPARATOR = String.fromCharCode(0x2029);
-/* What a string, a template, a page's script and a line each end or change at. */
-const AWKWARD = [
-  'a"b',
-  "'c",
-  "`d",
-  "\\e",
-  "$",
-  "{f}",
-  "</script>",
-  "<!--g-->",
-  LINE_SEPARATOR,
-  "h",
-  PARAGRAPH_SEPARATOR,
-].join("");
 /* An address as a URL parser keeps it: a quote in the host, a backslash in the query. */
 const ADDRESS = "ws://we\"ird/p'ath?q=a\\b";
 /* Variables with a key an object literal reads as the prototype's, not as a key. */
@@ -88,9 +73,7 @@ describe("the browser snippet of a WebSocket request", () => {
       "browser",
     );
 
-    expect(code).not.toMatch(/<\/|<!--/);
-    expect(code).not.toContain(LINE_SEPARATOR);
-    expect(code).not.toContain(PARAGRAPH_SEPARATOR);
+    expectNothingEndsTheCode(code);
   });
 });
 

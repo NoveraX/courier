@@ -2,7 +2,7 @@
  * Shared snippet builders for cURL / fetch — used by both Timeline and Playground.
  */
 
-import { shellEscape } from "./snippet-values";
+import { codeComment, codeString, codeValue, shellEscape, shellWord } from "./snippet-values";
 
 export interface SnippetInput {
   url: string;
@@ -18,7 +18,7 @@ export function buildCurlSnippet(input: SnippetInput): string {
   const { url, method, body, bodyFile } = input;
   const headers = mergeContentType(input.headers, bodyFile ?? body, method);
   const parts: string[] = ["curl"];
-  if (method !== "GET") parts.push(`-X ${method}`);
+  if (method !== "GET") parts.push(`-X ${shellWord(method)}`);
   parts.push(`'${shellEscape(url)}'`);
   for (const [k, v] of Object.entries(headers)) {
     parts.push(`-H '${shellEscape(`${k}: ${v}`)}'`);
@@ -36,30 +36,29 @@ export function buildFetchSnippet(input: SnippetInput): string {
   const { url, method, body, bodyFile } = input;
   const headers = mergeContentType(input.headers, bodyFile ?? body, method);
   const opts: string[] = [];
-  if (method !== "GET") opts.push(`  method: "${method}",`);
+  if (method !== "GET") opts.push(`  method: ${codeString(method)},`);
 
   if (Object.keys(headers).length > 0) {
-    const hdrStr = Object.entries(headers)
-      .map(([k, v]) => `    ${JSON.stringify(k)}: ${JSON.stringify(v)}`)
-      .join(",\n");
-    opts.push(`  headers: {\n${hdrStr}\n  },`);
+    opts.push(`  headers: ${codeValue(headers, 2).replace(/\n/g, "\n  ")},`);
   }
 
   if (bodyFile !== undefined && method !== "GET") {
     opts.push("  body: JSON.stringify(wholeBody),");
   } else if (body && method !== "GET") {
-    const json = safeStringify(body, 2).replace(/\n/g, "\n  ");
+    const json = codeValue(body, 2).replace(/\n/g, "\n  ");
     opts.push(`  body: JSON.stringify(${json}),`);
   }
 
   const lead = bodyFile !== undefined && method !== "GET" ? `${wholeBodyNote(bodyFile)}\n` : "";
-  if (opts.length === 0) return `${lead}const response = await fetch("${url}");`;
-  return `${lead}const response = await fetch("${url}", {\n${opts.join("\n")}\n});`;
+  if (opts.length === 0) return `${lead}const response = await fetch(${codeString(url)});`;
+  return `${lead}const response = await fetch(${codeString(url)}, {\n${opts.join("\n")}\n});`;
 }
 
 /**
  * The line over a snippet whose body is too large to write out: where the
- * whole body is, for the `wholeBody` the snippet sends.
+ * whole body is, for the `wholeBody` the snippet sends. The file is named
+ * after the request's endpoint, so a line end in its name stays in the
+ * comment.
  *
  * @param bodyFile - The file the whole body downloads as
  * @returns The comment
@@ -69,7 +68,7 @@ export function buildFetchSnippet(input: SnippetInput): string {
  * ```
  */
 export function wholeBodyNote(bodyFile: string): string {
-  return `// wholeBody: the whole body, as Download whole saves it in ${bodyFile}`;
+  return `// wholeBody: the whole body, as Download whole saves it in ${codeComment(bodyFile)}`;
 }
 
 /** Auto-add Content-Type: application/json when body is present */

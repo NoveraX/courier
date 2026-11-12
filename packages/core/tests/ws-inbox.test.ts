@@ -1,15 +1,90 @@
 /**
  * What a socket sends before its connection is admitted is held for it,
  * bounded twice: by how many frames, and by how much they hold together —
- * a frame larger than a message may be is never taken in at all.
+ * a frame larger than a message may be is never taken in at all. Its first
+ * frame is read as it comes, before any after it is taken in.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { holdFrames } from "../src/adapter/ws-inbox";
+import { type HeldCount, holdFrames } from "../src/adapter/ws-inbox";
 import { createFakeSocket } from "./helpers/fake-socket";
 import { seededIntegers } from "./helpers/seeded-random";
 
 const LIMITS = { frames: 50, size: 4_000, frameSize: 1_000 };
+
+describe("holdFrames, its first frame", () => {
+  it("is read as it comes, and once it is refused nothing after it is kept, nor let go of", () => {
+    const ws = createFakeSocket();
+    const told: HeldCount[] = [];
+    const inbox = holdFrames(ws, { ...LIMITS, frames: 2 }, (held) => told.push(held));
+    const read: Array<string | undefined> = [];
+    inbox.first(1_000, (raw) => {
+      read.push(raw);
+      return false;
+    });
+
+    for (const data of ["first", "a", "b", "c"]) ws.emit("message", { data });
+
+    const routed: string[] = [];
+    inbox.open((raw) => routed.push(raw));
+    expect(read).toEqual(["first"]);
+    expect(told).toEqual([]);
+    expect(routed).toEqual([]);
+  });
+
+  it("counts among what the socket may send, and is not held with what follows it", () => {
+    const ws = createFakeSocket();
+    const told: HeldCount[] = [];
+    const inbox = holdFrames(ws, { ...LIMITS, frames: 3 }, (held) => told.push(held));
+    inbox.first(1_000, () => true);
+
+    for (const data of ["auth", "a", "b"]) ws.emit("message", { data });
+    expect(told).toEqual([]);
+    ws.emit("message", { data: "c" });
+
+    expect(told).toEqual([{ frames: 3, size: 6 }]);
+  });
+
+  it("is read at once when it came before it was asked for", () => {
+    const ws = createFakeSocket();
+    const inbox = holdFrames(ws, LIMITS, () => {});
+    ws.emit("message", { data: "auth" });
+    ws.emit("message", { data: "a" });
+    const read: Array<string | undefined> = [];
+
+    inbox.first(1_000, (raw) => {
+      read.push(raw);
+      return true;
+    });
+
+    const routed: string[] = [];
+    inbox.open((raw) => routed.push(raw));
+    expect(read).toEqual(["auth"]);
+    expect(routed).toEqual(["a"]);
+  });
+
+  it("is read as none when it does not come in time, or the socket closes first", () => {
+    vi.useFakeTimers();
+    try {
+      const late = holdFrames(createFakeSocket(), LIMITS, () => {});
+      const closing = createFakeSocket();
+      const closed = holdFrames(closing, LIMITS, () => {});
+      const read: Array<[string, string | undefined]> = [];
+      late.first(3_000, (raw) => read.push(["late", raw]) > 0);
+      closed.first(3_000, (raw) => read.push(["closed", raw]) > 0);
+
+      closing.emit("close", { code: 1006 });
+      vi.advanceTimersByTime(3_000);
+
+      expect(read).toEqual([
+        ["closed", undefined],
+        ["late", undefined],
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
 
 describe("holdFrames", () => {
   it("lets go of a socket once what it holds would grow past its size, saying how much it held", () => {

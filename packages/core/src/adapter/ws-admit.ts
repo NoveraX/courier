@@ -19,7 +19,9 @@ export type Admission =
  * request, its `auth` to `onConnect`. A first frame of another kind, an
  * `auth` naming no version or another one, or none within `timeoutMs`, is
  * refused — the version with 1002 and why, so a page left from an older
- * build is told to reload rather than retry.
+ * build is told to reload rather than retry. It is read as it comes: a
+ * first frame that is refused is refused for itself, whatever the client
+ * sent after it, and nothing more is kept.
  *
  * @param ctx - The connection
  * @param inbox - What its socket has sent
@@ -31,14 +33,23 @@ export type Admission =
  * if ("refused" in admission) ctx.session.close(admission.refused);
  * ```
  */
-export async function awaitCredentials(
+export function awaitCredentials(
   ctx: WSSocketContext,
   inbox: WSInbox,
   timeoutMs: number,
 ): Promise<Admission> {
-  const raw = await inbox.first(timeoutMs);
-  if (raw === undefined) return { refused: { kind: "no-auth-frame", timeoutMs } };
-  inbox.takeFirst();
+  return new Promise((resolve) => {
+    inbox.first(timeoutMs, (raw) => {
+      const admission: Admission =
+        raw === undefined ? { refused: { kind: "no-auth-frame", timeoutMs } } : admitted(ctx, raw);
+      resolve(admission);
+      return !("refused" in admission);
+    });
+  });
+}
+
+/* What a first frame admits its connection with; its headers go on the connection's request. */
+function admitted(ctx: WSSocketContext, raw: string): Admission {
   const first = readFirstFrame(raw, ctx.maxMessageSize);
   if ("refused" in first) return first;
   const id = typeof first.auth.id === "string" ? first.auth.id : undefined;

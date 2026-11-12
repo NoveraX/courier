@@ -61,10 +61,12 @@ describe("the shape of a registry's slots", () => {
   });
 
   it("changes no line where members, an inner type's too, are put in another order, or a comment changes", () => {
-    const reordered = SESSION.replace(
-      "/** Served first. */\n  served(call: Call): boolean;\n",
-      "",
-    ).replace("}", "  // Served last.\n  served(call: Call): boolean;\n}");
+    const reordered = `export interface Session {
+  lend(call: Call, name: string): Call | undefined;
+  lend(call: Call): Call;
+  // Served last.
+  served(call: Call): boolean;
+}`;
     const inner =
       "export interface Call { fetchInit?: { cache: string; mode: string }; readonly headers: string[] }";
 

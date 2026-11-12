@@ -5,15 +5,14 @@
  * calls, lets the ones it is answering finish, cuts off one that would
  * outlast the time it gives them, and exits on its own.
  */
-import { type ChildProcess, spawn } from "node:child_process"
+import type { ChildProcess } from "node:child_process"
 import { once } from "node:events"
 import { get, request } from "node:http"
-import { fileURLToPath } from "node:url"
 
 import { afterEach, describe, expect, it } from "vitest"
 
-const DOCS = fileURLToPath(new URL("../..", import.meta.url))
-const LISTENING = /listens on (http:\/\/127\.0\.0\.1:\d+)/
+import { addressOf, startBackend } from "./backend-process"
+
 /* As `server/limits.ts` has them: what the backend gives its calls once asked to stop, and how
    long it waits for a call to arrive, which a backend with no time to give would wait instead. */
 const SHUTDOWN_MS = 5_000
@@ -24,22 +23,6 @@ let backend: ChildProcess | undefined
 afterEach(() => {
   if (backend?.exitCode === null && backend.signalCode === null) backend.kill("SIGKILL")
 })
-
-/* The backend's address, from the line it writes once it listens; its output, should it end first. */
-function addressOf(child: ChildProcess): Promise<string> {
-  let output = ""
-  return new Promise((resolve, reject) => {
-    child.stdout?.on("data", (chunk: Buffer) => {
-      output += chunk.toString()
-      const found = LISTENING.exec(output)?.[1]
-      if (found !== undefined) resolve(found)
-    })
-    child.stderr?.on("data", (chunk: Buffer) => {
-      output += chunk.toString()
-    })
-    child.once("exit", () => reject(new Error(`The backend exited before it listened:\n${output}`)))
-  })
-}
 
 /* A streamed answer's whole body, and how it ended: complete, or cut off. */
 function streamed(
@@ -57,13 +40,6 @@ function streamed(
       response.once("error", () => resolve({ body, complete: false }))
     })
     call.once("error", () => resolve({ body, complete: false }))
-  })
-}
-
-function startBackend(): ChildProcess {
-  return spawn(process.execPath, ["--import", "tsx", "server/index.ts"], {
-    cwd: DOCS,
-    env: { ...process.env, EXPRESS_HOST: "127.0.0.1", EXPRESS_PORT: "0" },
   })
 }
 

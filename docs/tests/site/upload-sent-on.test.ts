@@ -5,7 +5,17 @@
  * before any of the file has come — refusing one past it at once — and an
  * upload still being sent holds no more of the site's memory than its
  * pieces in flight, however large its file.
+ *
+ * The backend runs in a process of its own, as the site's container runs
+ * it, so that the memory measured is the site's alone: a backend in the
+ * site's process would add what it is still taking in. Between the two is
+ * a link that takes all the route sends at once — as Linux's socket
+ * buffers take a whole file before the backend has read any of it — and
+ * hands it on once the files are sent, so that on every system the backend
+ * is still taking them in as the site's memory is measured.
  */
+import type { ChildProcess } from "node:child_process"
+import { once } from "node:events"
 import { setFlagsFromString } from "node:v8"
 import { runInNewContext } from "node:vm"
 
@@ -13,27 +23,35 @@ import { createHandler, registerSources } from "@noverax/courier/server"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { EXAMPLES_PROXY } from "@/app/api/request/examples-proxy"
-import { createDemoApp } from "../../server/app"
 import { DEMO_LIMITS } from "../../server/limits"
-import { type Served, serve } from "../server/serve"
+import { addressOf, startBackend } from "../server/backend-process"
+import { type Link, startLink } from "../server/link"
 
 /* A loopback name: outside production, Courier's proxy serves no other host. */
 const SITE = "https://courier.localhost"
 const BOUNDARY = "----example-upload"
 const CHUNK = 64 * 1024
 
-let backend: Served
+let backend: ChildProcess
+let link: Link
 let proxy: ReturnType<typeof createHandler>
 
 beforeAll(async () => {
-  backend = await serve(createDemoApp({ log: () => {} }))
+  backend = startBackend()
+  link = await startLink(await addressOf(backend))
   /* The sources read the backend's address as they load. */
-  process.env.API_URL = backend.url
+  process.env.API_URL = link.url
   registerSources((await import("@/api")).sources)
   proxy = createHandler(EXAMPLES_PROXY)
 })
 
-afterAll(() => backend.close())
+afterAll(async () => {
+  link.close()
+  if (backend.exitCode !== null || backend.signalCode !== null) return
+  const exited = once(backend, "exit")
+  backend.kill("SIGKILL")
+  await exited
+})
 
 function collectGarbage(): void {
   setFlagsFromString("--expose-gc")
@@ -158,6 +176,8 @@ describe("an upload", () => {
     const sentWhole = () => reads.every(({ bytes }) => bytes > DEMO_LIMITS.uploadBytes)
     const { held, release } = holdBack()
     const before = await heldArrayBuffers()
+    /* None of the files reaches the backend before all of them are sent. */
+    await link.hold()
     const answers = reads.map((read, index) =>
       call(
         `198.51.100.${40 + index}`,
@@ -172,6 +192,8 @@ describe("an upload", () => {
         await new Promise((resolve) => setTimeout(resolve, 20))
       }
       expect(sentWhole()).toBe(true)
+      /* The backend takes them in as the site's memory is measured. */
+      await link.release()
       const grown = (await heldArrayBuffers()) - before
       console.info(`${uploads} uploads being sent hold ${(grown / 1024).toFixed(0)} KiB`)
       /* Kept, as Courier keeps an upload by default, each would hold its whole file. */

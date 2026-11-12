@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Standalone Server",
   description: "Run a dedicated Courier HTTP + WebSocket server with createCourierServer — health checks, CORS, graceful shutdown, and connection registries.",
-  updated: "2026-11-06",
+  updated: "2026-11-12",
 }
 
 ## Installation
@@ -150,14 +150,14 @@ const server = await createCourierServer({
     console.log(`SSE ${connectionId} closed: ${reason}, ${eventCount} events in ${duration}ms`)
   },
   onSSEError: ({ connectionId, meta, error }) => {
-    console.error(`SSE error for ${meta.userId}:`, error)
+    console.error("SSE error for %s:", meta.userId, error)
   },
 })
 ```
 
 The `reason` field is one of: `"complete"`, `"error"`, `"disconnect"`, `"shutdown"`, `"max_lifetime"`.
 
-What `onSSEConnect` returns is the stream's metadata, and it types `meta` in the SSE hooks written after it, so `meta.userId` above is a string. Return an object, or nothing for a stream with no metadata; anything else refuses the stream with 403, as a throw does.
+What `onSSEConnect` returns is the stream's metadata, and it types `meta` in the SSE hooks written after it, so `meta.userId` above is a string. Return an object, or nothing for a stream with no metadata; anything else refuses the stream with 403, as a throw does. The error hooks log `meta.userId` after a fixed format, not in it: Node reads a `%` in the first argument of `console.error` as a directive, and an id a user chose may hold one.
 
 ### WebSocket Hooks
 
@@ -173,7 +173,7 @@ const server = await createCourierServer({
     console.log(`WS ${connectionId} of ${meta.userId} closed with code ${code}`)
   },
   onError: ({ connectionId, meta, error }) => {
-    console.error(`WS error for ${meta.userId}:`, error)
+    console.error("WS error for %s:", meta.userId, error)
   },
 })
 ```

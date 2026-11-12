@@ -53,7 +53,9 @@ export function answerFailures(log: RefusalLog, bodyBytes: number): ErrorRequest
         .json({ success: false, message: refusal.message, code: refusal.code })
       return
     }
-    console.error(`The examples' backend failed to answer ${req.method} ${req.path}`, error)
+    /* The call is named as data, not as the format: its path is the caller's, and a % in it would
+       be read as a directive, taking the failure's place. */
+    console.error("The examples' backend failed to answer %s %s", req.method, req.path, error)
     res
       .status(500)
       .json({ success: false, message: "The backend failed to answer", code: "INTERNAL" })

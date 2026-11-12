@@ -62,6 +62,7 @@ export async function answerOf<TData>(call: Promise<TData>): Promise<ServerAnswe
  */
 export function actionFailure(failure: unknown, doing: string): string {
   if (isHTTPError(failure)) return refusalMessage(failure)
-  console.error(doing, failure)
+  /* What the action was doing is data, not the format: a % in it would take the failure's place. */
+  console.error("%s", doing, failure)
   return doing
 }

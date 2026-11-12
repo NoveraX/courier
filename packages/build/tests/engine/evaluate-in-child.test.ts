@@ -305,7 +305,11 @@ readdirSync(${JSON.stringify(`${dir}/./defs/`)});
   }, 30_000);
 
   it("says what reading the sources threw with no value of the env files in it, nor a credential", async () => {
-    stubOwnEnvironment({}, "the shop refused shop-signing-7f3a9c2e5b1d with token=abc123def");
+    stubOwnEnvironment(
+      {},
+      "the shop refused shop-signing-7f3a9c2e5b1d with token=abc123def",
+      join(dir, "courier.config.ts"),
+    );
     writeFileSync(join(dir, ".env"), "SHOP_SIGNING_KEY=shop-signing-7f3a9c2e5b1d\n");
     project(`export default {
   get sources() {

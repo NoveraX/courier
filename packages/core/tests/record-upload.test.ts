@@ -6,6 +6,7 @@
  * what a direct call sees. The upstream gets the parts it gets from a direct
  * call, whether the proxy keeps the upload or sends it on as it arrives.
  */
+import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -31,15 +32,31 @@ type Part = [name: string, filename: string | undefined, type: string | undefine
 
 let upstream: Server | undefined;
 const got: Array<{ url: string; parts: Part[] }> = [];
+/* Each request the upstream took whose form never came whole, and why: one the proxy cut short
+   fails as aborted. */
+const failed: Array<{ url: string; error: unknown }> = [];
+/* What becomes of each request the upstream took: its form kept, or its failure. */
+const arrivals: Array<Promise<void>> = [];
 
 afterEach(async () => {
   vi.unstubAllGlobals();
   _resetSourcesForTests();
   got.length = 0;
+  failed.length = 0;
+  arrivals.length = 0;
   const server = upstream;
   upstream = undefined;
   await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
 });
+
+/* The upstream closed, its connections ended and each request it took through: what reached it
+   is then all there is. */
+async function settled(): Promise<void> {
+  const server = upstream;
+  upstream = undefined;
+  await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
+  await Promise.all(arrivals);
+}
 
 async function partsOf(req: IncomingMessage): Promise<Part[]> {
   const boundary = /boundary=(.+)$/.exec(req.headers["content-type"] ?? "")?.[1];
@@ -55,14 +72,25 @@ async function partsOf(req: IncomingMessage): Promise<Part[]> {
   ]);
 }
 
-/** The API, in front of an upstream that keeps the parts of each form it gets. */
+/**
+ * The API, in front of an upstream that keeps the parts of each form it gets, and why each
+ * request it took failed where its form never came whole.
+ */
 async function apiWith(endpoints: Record<string, unknown>, options: Record<string, unknown> = {}) {
   upstream = createServer((req, res) => {
-    void partsOf(req).then((parts) => {
-      got.push({ url: req.url ?? "", parts });
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ok: true }));
-    });
+    arrivals.push(
+      partsOf(req).then(
+        (parts) => {
+          got.push({ url: req.url ?? "", parts });
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        },
+        (error: unknown) => {
+          failed.push({ url: req.url ?? "", error });
+          if (!res.socket?.destroyed) res.writeHead(500).end();
+        },
+      ),
+    );
   });
   await new Promise<void>((resolve) => upstream?.listen(0, "127.0.0.1", resolve));
   const { port } = upstream.address() as AddressInfo;
@@ -313,22 +341,55 @@ describe("a record upload the proxy cannot restore", () => {
     return form;
   }
 
-  async function sent(form: FormData, config: HandlerConfig = {}): Promise<Response> {
-    const api = await apiWith({
-      setCover: endpoint.post("cover").variables<Record<string, unknown>>(),
-    });
+  /* The API, its one endpoint the one each upload calls. */
+  const coverApi = () =>
+    apiWith({ setCover: endpoint.post("cover").variables<Record<string, unknown>>() });
+
+  /**
+   * The form sent to the proxy as a record upload: whole, or, given `until`, with its closing
+   * delimiter held back until `until` settles. The proxy, sending a form on, has then opened the
+   * upstream's request before it learns that the form ends there.
+   */
+  async function sent(
+    api: Api,
+    form: FormData,
+    config: HandlerConfig = {},
+    until?: Promise<unknown>,
+  ): Promise<Response> {
     const { handlePost } = createHandler({ sources: { api }, ...config });
     const framed = new Response(form);
-    const type = framed.headers
-      .get("content-type")
-      ?.replace("multipart/form-data", RECORD_UPLOAD_TYPE);
-    return handlePost(
+    const type =
+      framed.headers.get("content-type")?.replace("multipart/form-data", RECORD_UPLOAD_TYPE) ?? "";
+    const bytes = new Uint8Array(await framed.arrayBuffer());
+    const request = (body: BodyInit) =>
       new Request("http://localhost/api/request?_s=api&_g=books&_m=setCover", {
         method: "POST",
-        headers: { origin: "http://localhost", "content-type": type ?? "" },
-        body: await framed.arrayBuffer(),
-      }),
-    );
+        headers: { origin: "http://localhost", "content-type": type },
+        body,
+        // @ts-expect-error -- required by the platform for a streaming body
+        duplex: "half",
+      });
+    if (until === undefined) return handlePost(request(bytes));
+
+    const closing = `--${type.slice(type.indexOf("boundary=") + "boundary=".length)}--\r\n`;
+    const head = bytes.subarray(0, bytes.length - closing.length);
+    if (new TextDecoder().decode(bytes.subarray(head.length)) !== closing) {
+      throw new Error("the form does not end with its closing delimiter");
+    }
+    let held = false;
+    const body = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        if (!held) {
+          held = true;
+          controller.enqueue(head);
+          return;
+        }
+        await until;
+        controller.enqueue(bytes.subarray(head.length));
+        controller.close();
+      },
+    });
+    return handlePost(request(body));
   }
 
   const record = (variables: unknown, files: unknown) => JSON.stringify({ variables, files });
@@ -405,16 +466,46 @@ describe("a record upload the proxy cannot restore", () => {
         ["cover", "png"],
       ],
     ],
-  ])("is refused with 400 when it %s, and nothing reaches the upstream", async (_, parts) => {
-    for (const config of [{}, { uploadMode: "stream" } as const]) {
-      const answer = await sent(body(parts), config);
+  ])(
+    "is refused with 400 when it %s, and the upstream gets at most a request cut short",
+    async (_, parts) => {
+      const api = await coverApi();
+      for (const config of [{}, { uploadMode: "stream" } as const]) {
+        const answer = await sent(api, body(parts), config);
 
-      expect.soft(answer.status, JSON.stringify(config)).toBeGreaterThanOrEqual(400);
-      expect
-        .soft(await answer.json(), JSON.stringify(config))
-        .toMatchObject({ code: "BODY_MALFORMED" });
-    }
+        expect.soft(answer.status, JSON.stringify(config)).toBeGreaterThanOrEqual(400);
+        expect
+          .soft(await answer.json(), JSON.stringify(config))
+          .toMatchObject({ code: "BODY_MALFORMED" });
+      }
+      await settled();
+
+      /* A kept upload is refused before any call; one sent on may have its request opened first. */
+      expect(got).toHaveLength(0);
+      expect(failed.length).toBeLessThanOrEqual(1);
+      for (const { error } of failed) {
+        expect(error).toMatchObject({ code: "ECONNRESET", message: "aborted" });
+      }
+    },
+  );
+
+  it("has the upstream's request cut short where the form ends before a file it names, sent on", async () => {
+    const api = await coverApi();
+    const reached = once(upstream as Server, "request");
+    const form = body([
+      ["_options", "{}"],
+      ["_variables", record({ cover: null, back: null }, [["cover"], ["back"]])],
+      ["cover", "png", "c.png"],
+    ]);
+
+    const answer = await sent(api, form, { uploadMode: "stream" }, reached);
+    await settled();
+
+    expect(answer.status).toBe(400);
     expect(got).toHaveLength(0);
+    expect(failed).toMatchObject([
+      { url: "/cover", error: { code: "ECONNRESET", message: "aborted" } },
+    ]);
   });
 
   it("puts nothing on any object's prototype", async () => {
@@ -427,7 +518,7 @@ describe("a record upload the proxy cannot restore", () => {
       ["cover", "png", "c.png"],
     ];
 
-    const answer = await sent(body(parts));
+    const answer = await sent(await coverApi(), body(parts));
 
     expect(answer.status).toBe(200);
     expect(Reflect.get({}, "polluted")).toBeUndefined();
@@ -441,7 +532,7 @@ describe("a record upload the proxy cannot restore", () => {
       ["cover", "png", "c.png"],
     ];
 
-    const answer = await sent(body(parts), { maxBodyBytes: 1_024 });
+    const answer = await sent(await coverApi(), body(parts), { maxBodyBytes: 1_024 });
 
     expect(answer.status).toBe(413);
     expect(await answer.json()).toMatchObject({ code: "UPLOAD_FIELDS_TOO_LARGE" });

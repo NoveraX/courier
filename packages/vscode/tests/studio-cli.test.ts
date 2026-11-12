@@ -113,8 +113,33 @@ describe("a command of Studio's, on Windows", () => {
       const address =
         `${HOSTILE}&t=$(New-Item '${ran}')&u=1&echo>"${ran}"` +
         `&h=%${probe}%&k=%${probe}:made=kept%&l=%${probe}:~0,4%&m=!${probe}!`;
+      /*
+       * Besides, each of cmd's own characters in a word of its own, the
+       * backslashes and quotes the C runtime reads, and an empty word.
+       */
+      const words = [
+        address,
+        "%PATH%",
+        "%",
+        "%%",
+        "%~dp0",
+        `%${probe}:made=kept%`,
+        "a&b|c<d>e",
+        "(x)",
+        '"',
+        "^",
+        "!PATH!",
+        "[*?;,]",
+        "`$x`",
+        "a b",
+        "",
+        "\\",
+        "x\\",
+        'a\\"b',
+        'a\\\\"b',
+      ];
 
-      const { shellPath, shellArgs } = studioLaunch(["import", address], "win32");
+      const { shellPath, shellArgs } = studioLaunch(["import", ...words], "win32");
       const run = spawnSync(shellPath, [String(shellArgs)], {
         cwd: dir,
         env: {
@@ -134,7 +159,7 @@ describe("a command of Studio's, on Windows", () => {
       const said = [run.error?.message, run.stdout, run.stderr].filter(Boolean).join("\n");
       expect(existsSync(join(dir, "args.json")), said).toBe(true);
       const given: unknown = JSON.parse(readFileSync(join(dir, "args.json"), "utf8"));
-      expect(given).toEqual(["@noverax/courier-studio", "import", address]);
+      expect(given).toEqual(["@noverax/courier-studio", "import", ...words]);
       expect(existsSync(ran)).toBe(false);
     },
   );

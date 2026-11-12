@@ -10,7 +10,7 @@
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, type Sources } from "@noverax/courier/define";
 import { NextRequest } from "next/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { _resetSourcesForTests } from "../../core/src/server/sources";
 import { startUpstream, type Upstream } from "../../core/tests/helpers/upstream";
@@ -33,11 +33,13 @@ afterEach(async () => {
   _resetSourcesForTests();
 });
 
-async function siteApi() {
+/** The site's API, its upstream telling `streamOpened` each time it opens its stream. */
+async function siteApi(streamOpened: () => void = () => {}) {
   upstream = await startUpstream((request, res) => {
     if (request.url.startsWith("/live")) {
       res.writeHead(200, { "content-type": "text/event-stream" });
       res.end("data: 1\n\n");
+      streamOpened();
       return;
     }
     res.writeHead(200, { "content-type": "application/json" });
@@ -56,8 +58,8 @@ async function siteApi() {
   });
 }
 
-async function sources(): Promise<Sources> {
-  return { site: await siteApi() };
+async function sources(streamOpened?: () => void): Promise<Sources> {
+  return { site: await siteApi(streamOpened) };
 }
 
 function sent(): Array<[unknown, unknown]> {
@@ -90,7 +92,8 @@ describe("the Next.js proxy route", () => {
   });
 
   it("opens a relayed stream with them", async () => {
-    const { GET } = sseRoute({ sources: await sources() });
+    const opened = Promise.withResolvers<void>();
+    const { GET } = sseRoute({ sources: await sources(() => opened.resolve()) });
     const controller = new AbortController();
 
     const response = await GET(
@@ -99,11 +102,14 @@ describe("the Next.js proxy route", () => {
         signal: controller.signal,
       }),
     );
-    await vi.waitFor(() => expect(upstream?.received).toHaveLength(1));
+    /* The API ends each stream after its event, and the relay opens it again as soon as its
+       wait allows: every attempt made before the client left carries them. */
+    await opened.promise;
     controller.abort();
     await response.body?.cancel().catch(() => undefined);
 
-    expect(sent()).toEqual([KEPT]);
+    const attempts = sent();
+    expect(attempts).toEqual(attempts.map(() => KEPT));
   });
 });
 

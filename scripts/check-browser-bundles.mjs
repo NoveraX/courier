@@ -30,6 +30,11 @@
  * reads no Node API off the global `process` but `process.env`: Next.js's
  * build of a middleware refuses one, or warns of it.
  *
+ * No module of the workspace any of these builds takes imports another
+ * binding nothing where the other's package declares that it does nothing
+ * as it loads: an app's bundler drops that import, and with it whatever
+ * the module was imported to do, warning of each.
+ *
  * Requires a build first. Exits 1 with each breach.
  */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -41,6 +46,7 @@ import { gzipSync } from "node:zlib";
 import { viteStart } from "./browser-bundles/build-vite.mjs";
 import { webpackStart } from "./browser-bundles/build-webpack.mjs";
 import { breachesOrFailure, builtOrFailed } from "./browser-bundles/built-or-failed.mjs";
+import { ignoredImports } from "./browser-bundles/ignored-imports.mjs";
 import { newerApiCalls } from "./browser-bundles/newer-api-calls.mjs";
 import { nodeGlobalReads } from "./browser-bundles/node-globals.mjs";
 import { GLOBAL_PROCESS, processReads } from "./browser-bundles/process-reads.mjs";
@@ -143,6 +149,14 @@ function globalBreaches(esbuild, scenario, bundler, everyModule) {
   );
 }
 
+/* What an esbuild build breaches in any module it took: an import its bundler leaves out. */
+function ignoredBreaches(result) {
+  return ignoredImports(result).map(
+    (ignored) =>
+      `${ignored.module} imports ${ignored.imported} binding nothing, though its package declares the module does nothing as it loads: an app's bundler drops the import`,
+  );
+}
+
 /* What a bundler's start of a scenario breaches: its budget. */
 function startBreaches(scenario, bundler, { bytes, gzipped }) {
   const [budget, budgetGzipped] = scenario.budget[bundler];
@@ -195,6 +209,7 @@ function breachesOf(esbuild, work, scenario) {
   breaches.push(...globalBreaches(esbuild, scenario, "esbuild", inputs));
   breaches.push(...startBreaches(scenario, "esbuild", { bytes, gzipped }));
   const whole = build(esbuild, work, scenario, { minify: false, splitting: false }).result;
+  breaches.push(...ignoredBreaches(whole));
   for (const call of newerApiCalls(whole.outputFiles[0]?.text ?? "")) {
     breaches.push(
       `${call.module} calls ${call.api}, which ${call.lacking} lack, without checking for it first`,
@@ -207,7 +222,10 @@ function breachesOf(esbuild, work, scenario) {
    runs, as it is, and none of their browser stand-ins. */
 function runtimeBreaches(esbuild, work, runtime) {
   const { result } = build(esbuild, work, SERVER_TAKES, { ...runtime.options, splitting: false });
-  return runtimeSideBreaches(runtime.name, Object.keys(result.metafile.inputs), SERVER_ONLY);
+  return [
+    ...runtimeSideBreaches(runtime.name, Object.keys(result.metafile.inputs), SERVER_ONLY),
+    ...ignoredBreaches(result),
+  ];
 }
 
 /* The Node APIs read off the global `process` by what Next.js's edge runtime may take of the
@@ -228,10 +246,11 @@ function edgeBreaches(esbuild, work) {
       define: { "process.env.NODE_ENV": '"production"', process: GLOBAL_PROCESS },
     },
   );
-  return processReads(result.outputFiles[0]?.text ?? "").map(
+  const reads = processReads(result.outputFiles[0]?.text ?? "").map(
     (read) =>
       `${read.module} reads ${read.api}, which Next.js's build of a middleware refuses or warns of: read it off globalThis.process`,
   );
+  return [...reads, ...ignoredBreaches(result)];
 }
 
 async function main() {

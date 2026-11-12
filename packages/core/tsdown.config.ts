@@ -32,6 +32,12 @@ export default defineConfig([
        made a browser load at start what it needs only later or never, and a
        stack trace names the module each frame is in. */
     unbundle: true,
+    /* Each module imports what it uses of another, as its source does. A
+       constant the build wrote in place left the import of its module
+       binding nothing, which an app's bundler drops, since the core declares
+       that its modules do nothing as they load, and warns of. The app's
+       bundler writes a constant in place itself where it will. */
+    inputOptions: { optimization: { inlineConst: false } },
     /* A module only a server runs is imported through `#courier-server/…`, so a
        page's bundle takes its browser stand-in instead. */
     plugins: [serverOnlyImports()],

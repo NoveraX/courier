@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  headersToObject,
-  isFormData,
-  isHeaders,
-  parseEndpointKey,
-  parseRequestPayload,
-} from "../src/utils/helpers";
+import { headersToObject, isFormData, isHeaders, parseEndpointKey } from "../src/utils/helpers";
+import { parseRequestPayload } from "../src/utils/request-payload";
 
 describe("parseEndpointKey", () => {
   it("parses simple method (no group)", () => {

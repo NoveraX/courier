@@ -9,21 +9,29 @@
  * entry made by then for one that was there. A watcher that stops at a depth
  * is handed every path, as it lists the folders below it unread.
  */
+import { resolve } from "node:path";
 import type { ViteDevServer, WatchOptions } from "vite";
 import { describe, expect, it } from "vitest";
 
 import { watchOnce } from "../../src/vite/watch-once";
 
-/* A dev server whose watcher follows `watched`: each folder, with the names of its entries. */
+/*
+ * A dev server whose watcher follows `watched`: each folder, with the names
+ * of its entries. chokidar names a folder it follows by `path.resolve`, as
+ * `D:\app` on Windows and `/app` elsewhere, and so does this watcher.
+ */
 function server(
   watched: Record<string, string[]> = {},
   options: WatchOptions = {},
 ): { server: ViteDevServer; added: string[][] } {
   const added: string[][] = [];
+  const folders = Object.fromEntries(
+    Object.entries(watched).map(([folder, entries]) => [resolve(folder), entries]),
+  );
   const watcher = {
     options,
     add: (paths: string[]) => added.push(paths),
-    getWatched: () => watched,
+    getWatched: () => folders,
   };
   return { server: { watcher } as unknown as ViteDevServer, added };
 }

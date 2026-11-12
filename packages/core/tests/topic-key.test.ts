@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
+import type { Subscription } from "../src/realtime/subscription-types";
 import { qualifyTopic, unqualifyTopic } from "../src/realtime/ws/topic-key";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
@@ -98,17 +99,39 @@ describe("a channel whose variables have an optional field set to undefined", ()
       room: "r2",
       nick: undefined,
     });
-    const data: string[] = [];
-    const errors: string[] = [];
-    ch.on("data", (message) => data.push(message));
-    ch.on("error", (error) => errors.push(`${error.code} ${error.message}`));
-    await settle(80);
+    const heard = listen(ch);
 
+    await heard.after(1);
     ch.send({ text: "hi" });
+    await heard.after(2);
+    /* A refusal, or a message heard twice, would come about when the echo did. */
     await settle(80);
     ch.close();
 
-    expect(errors).toEqual([]);
-    expect(data).toEqual(["welcome", "echo hi"]);
+    expect(heard.errors).toEqual([]);
+    expect(heard.data).toEqual(["welcome", "echo hi"]);
   });
 });
+
+/* What a channel hears; `after(count)` waits until it has heard `count` messages, or an error, however long the server takes. */
+function listen(ch: Subscription<string>) {
+  const data: string[] = [];
+  const errors: string[] = [];
+  let heard = (): void => {};
+  ch.on("data", (message) => {
+    data.push(message);
+    heard();
+  });
+  ch.on("error", (error) => {
+    errors.push(`${error.code} ${error.message}`);
+    heard();
+  });
+  const after = (count: number) =>
+    new Promise<void>((resolve) => {
+      heard = () => {
+        if (data.length >= count || errors.length > 0) resolve();
+      };
+      heard();
+    });
+  return { data, errors, after };
+}

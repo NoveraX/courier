@@ -13,7 +13,10 @@
  * page's import of one to no other entry, and calls it no server's name.
  * The built entries are imported with the module, as the sources are, and
  * compared once loaded: a load that waits on other files' builds counts
- * against no test's time.
+ * against no test's time. The compiler reads the sources once, for every
+ * test that reads what they export, and reads only what an export may lie
+ * in: neither the standard library, longer alone than the sources, nor a
+ * doc comment.
  */
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
@@ -81,27 +84,50 @@ const COMPILED: ts.CompilerOptions = {
   skipLibCheck: true,
   noEmit: true,
   types: [],
+  noLib: true,
 };
+
+const ROOT = "../src/index.ts";
+
+function pathOf(file: string): string {
+  return fileURLToPath(new URL(file, import.meta.url));
+}
+
+/* The compiler's reading of the root and of each entry, made by the first test that reads one:
+   a program for the three, which lie on the same sources, that reads no doc comment. */
+let compiled: ts.Program | undefined;
+
+function program(): ts.Program {
+  if (compiled === undefined) {
+    const host = ts.createCompilerHost(COMPILED);
+    host.jsDocParsingMode = ts.JSDocParsingMode.ParseNone;
+    const files = [ROOT, ...Object.values(ENTRIES).map(({ file }) => file)];
+    compiled = ts.createProgram(files.map(pathOf), COMPILED, host);
+  }
+  return compiled;
+}
+
+/* What a module exports, as the compiler reads it: each name, with the symbol it stands for. */
+function exportsOf(file: string): { name: string; target: ts.Symbol }[] {
+  const path = pathOf(file);
+  const checker = program().getTypeChecker();
+  const source = program().getSourceFile(path);
+  const symbol = source && checker.getSymbolAtLocation(source);
+  if (symbol === undefined) throw new Error(`${path} is no module`);
+  return checker.getExportsOfModule(symbol).map((exported) => ({
+    name: exported.name,
+    target: exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported,
+  }));
+}
 
 /* The types each entry exports, as the compiler reads its module: a name with no value. */
 function typesOf(files: readonly string[]): string[][] {
-  const paths = files.map((file) => fileURLToPath(new URL(file, import.meta.url)));
-  const program = ts.createProgram(paths, COMPILED);
-  const checker = program.getTypeChecker();
-  return paths.map((path) => {
-    const source = program.getSourceFile(path);
-    const symbol = source && checker.getSymbolAtLocation(source);
-    if (symbol === undefined) throw new Error(`${path} is no module`);
-    return checker
-      .getExportsOfModule(symbol)
-      .filter((exported) => {
-        const target =
-          exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
-        return (target.flags & ts.SymbolFlags.Value) === 0;
-      })
-      .map((exported) => exported.name)
-      .sort();
-  });
+  return files.map((file) =>
+    exportsOf(file)
+      .filter(({ target }) => (target.flags & ts.SymbolFlags.Value) === 0)
+      .map(({ name }) => name)
+      .sort(),
+  );
 }
 
 /* The values the root exports from the areas module-sides.json names its own, as the compiler reads
@@ -114,25 +140,16 @@ function rootValuesOfItsAreas(): string[] {
     typeof sides === "object" && sides !== null ? (Reflect.get(sides, "rootAreas") ?? {}) : {},
   );
   const sources = fileURLToPath(new URL("../src/", import.meta.url));
-  const path = fileURLToPath(new URL("../src/index.ts", import.meta.url));
-  const program = ts.createProgram([path], COMPILED);
-  const checker = program.getTypeChecker();
-  const source = program.getSourceFile(path);
-  const symbol = source && checker.getSymbolAtLocation(source);
-  if (symbol === undefined) throw new Error(`${path} is no module`);
   const inArea = (file: string) => {
     const built = relative(sources, file).replaceAll("\\", "/").replace(/\.ts$/, ".js");
     return areas.some((area) => (area.endsWith("/") ? built.startsWith(area) : built === area));
   };
-  return checker
-    .getExportsOfModule(symbol)
-    .filter((exported) => {
-      const target =
-        exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
+  return exportsOf(ROOT)
+    .filter(({ target }) => {
       const file = target.declarations?.[0]?.getSourceFile().fileName;
       return (target.flags & ts.SymbolFlags.Value) !== 0 && file !== undefined && inArea(file);
     })
-    .map((exported) => exported.name)
+    .map(({ name }) => name)
     .sort();
 }
 

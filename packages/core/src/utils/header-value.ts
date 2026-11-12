@@ -7,9 +7,10 @@ const UNSENDABLE = /[^\t\x20-\x7e\x80-\xff]/;
 
 /* A value without the tabs, spaces and line breaks at its ends, all fetch trims: `trim()` takes
    more — a no-break space, a vertical tab — and would let pass a line break fetch keeps inside.
-   Anchored at the start alone, it reads the value once: one anchored at the end too would take
-   time growing with the square of a run of spaces inside, which a proxied request can carry. */
-const WITHOUT_ENDS = /^[\t\n\r ]*(.*[^\t\n\r ])?/s;
+   The run at the start, then what lies from the first other character to the last: no two
+   neighbours in it take the same character but `.*` and the one after it, so it reads a value at
+   most twice, whatever runs of whitespace a proxied request carries. */
+const WITHOUT_ENDS = /^[\t\n\r ]*([^\t\n\r ](?:.*[^\t\n\r ])?)?/s;
 
 /**
  * A header value as `fetch` sends it — without the tabs, spaces and line

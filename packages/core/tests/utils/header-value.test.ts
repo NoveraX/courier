@@ -115,11 +115,29 @@ describe("a header value", () => {
     }
   });
 
-  it("is read in one pass, however long the runs of spaces at its ends and inside it", () => {
-    const run = " ".repeat(32 * 1024);
-    const value = `${run}a${run}b${run}`;
+  it.each([
+    ["spaces", " "],
+    ["tabs", "\t"],
+    ["tabs and spaces", "\t "],
+  ])(
+    "is read in one pass, however long the runs of %s at its ends and inside it",
+    (_kind, blank) => {
+      const run = blank.repeat((32 * 1024) / blank.length);
+      const value = `${run}a${run}b${run}`;
 
-    expect(sendableHeaders({ "x-note": value }).get("x-note")).toBe(`a${run}b`);
-    expect(fastest(() => sendableHeaders({ "x-note": value }))).toBeLessThan(100);
+      expect(sendableHeaders({ "x-note": value }).get("x-note")).toBe(`a${run}b`);
+      expect(fastest(() => sendableHeaders({ "x-note": value }))).toBeLessThan(100);
+    },
+  );
+
+  it("is read in one pass, however long the line breaks at its ends, and refused as fast for those inside", () => {
+    const run = "\r\n".repeat(16 * 1024);
+    const ends = `${run}a\tb${run}`;
+    const inside = `a${run}b`;
+
+    expect(sendableHeaders({ "x-note": ends }).get("x-note")).toBe("a\tb");
+    expect(byCourier(inside)).toBe("refused");
+    expect(fastest(() => sendableHeaders({ "x-note": ends }))).toBeLessThan(100);
+    expect(fastest(() => byCourier(inside))).toBeLessThan(100);
   });
 });

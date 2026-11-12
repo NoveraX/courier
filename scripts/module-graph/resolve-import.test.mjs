@@ -7,7 +7,7 @@
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, win32 } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { packageOf, pageTarget, resolveImport, underLib } from "./resolve-import.mjs";
@@ -143,5 +143,52 @@ describe("resolveImport of a workspace package by its name", () => {
 describe("underLib", () => {
   it("names a module by its path under lib, with forward slashes", () => {
     expect(underLib("/pkg/lib", "/pkg/lib/adapter/limits.js")).toBe("adapter/limits.js");
+    expect(underLib("C:\\pkg\\lib", "C:\\pkg\\lib\\adapter\\limits.js", win32)).toBe(
+      "adapter/limits.js",
+    );
+  });
+});
+
+describe("a module's package, where Windows writes paths with \\", () => {
+  const core = {
+    name: "@noverax/courier",
+    root: "C:\\repo\\packages\\core",
+    exports: {},
+    imports: { "#courier-server/*": { node: "./lib/*" } },
+  };
+  const studio = { ...core, name: "@noverax/courier-studio", root: "C:\\repo\\packages\\studio" };
+  const ui = { ...core, name: "@noverax/courier-studio-ui", root: `${studio.root}\\ui` };
+
+  it("is found by the module's path in either form, / or \\", () => {
+    for (const path of [
+      "C:\\repo\\packages\\core\\lib\\a.js",
+      "C:/repo/packages/core/lib/a.js",
+      "C:\\repo/packages\\core/lib\\a.js",
+    ]) {
+      expect(packageOf(path, [core, studio], win32)?.name, path).toBe("@noverax/courier");
+    }
+    expect(packageOf("/nowhere/lib/a.js", [{ ...core, root: "/nowhere" }], win32)?.name).toBe(
+      "@noverax/courier",
+    );
+  });
+
+  it("is the innermost package holding it, and none whose folder only starts its path", () => {
+    expect(packageOf("C:\\repo\\packages\\studio\\ui\\src\\a.ts", [studio, ui], win32)?.name).toBe(
+      "@noverax/courier-studio-ui",
+    );
+    expect(packageOf("C:\\repo\\packages\\core-extra\\a.js", [core], win32)).toBeUndefined();
+  });
+
+  it("is the one whose imports a module's own import is read from", () => {
+    for (const [root, importer] of [
+      ["/nowhere", "/nowhere/lib/a.js"],
+      [core.root, "C:\\repo\\packages\\core\\lib\\a.js"],
+      [core.root, "C:/repo/packages/core/lib/a.js"],
+    ]) {
+      expect(resolveImport("#courier-server/x.js", importer, [{ ...core, root }], win32)).toEqual({
+        kind: "missing",
+        reason: "#courier-server/x.js has no target for a page",
+      });
+    }
   });
 });

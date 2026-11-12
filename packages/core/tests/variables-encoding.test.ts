@@ -14,7 +14,7 @@ import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";
 import { isConfigurationError } from "../src/errors";
 import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";
-import { type ReadPart, readParts } from "./helpers/multipart-fixtures";
+import { boundaryIn, type ReadPart, readParts } from "./helpers/multipart-fixtures";
 
 const { endpoint } = courier();
 
@@ -49,7 +49,7 @@ async function client(endpoints: Record<string, unknown>) {
 /** The parts of the form the upstream got, read as its content type says. */
 async function sentParts(index = 0): Promise<Array<Omit<ReadPart, "bytes"> & { text: string }>> {
   const body = bodies[index];
-  const boundary = /boundary=(.+)$/.exec(body?.type ?? "")?.[1];
+  const boundary = boundaryIn(body?.type ?? "");
   if (body === undefined || boundary === undefined) throw new Error(`no form: ${body?.type}`);
   const parts = await readParts(new Blob([body.bytes]).stream(), boundary);
   return parts.map(({ bytes, ...head }) => ({ ...head, text: new TextDecoder().decode(bytes) }));

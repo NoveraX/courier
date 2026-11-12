@@ -58,6 +58,17 @@ export function bytewise(body: Uint8Array<ArrayBuffer>): ReadableStream<Uint8Arr
   ).stream;
 }
 
+/**
+ * The boundary a form's content type names: all that follows its `boundary=`. Read without a
+ * pattern: one ending `(.+)$` reads on to the end of the text from each `boundary=` it holds,
+ * in time that grows with the square of its length.
+ */
+export function boundaryIn(contentType: string): string | undefined {
+  const at = contentType.indexOf("boundary=");
+  const boundary = at === -1 ? "" : contentType.slice(at + "boundary=".length);
+  return boundary === "" ? undefined : boundary;
+}
+
 /** Read every part of a body, each one whole. */
 export async function readParts(
   stream: ReadableStream<Uint8Array<ArrayBuffer>>,

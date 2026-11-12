@@ -22,7 +22,7 @@ import { createProxyCaller } from "../src/proxy-caller";
 import { buildPostPayload } from "../src/proxy-caller/post-payload";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { RECORD_UPLOAD_TYPE } from "../src/utils/record-upload";
-import { readParts } from "./helpers/multipart-fixtures";
+import { boundaryIn, readParts } from "./helpers/multipart-fixtures";
 import { seededIntegers } from "./helpers/seeded-random";
 
 const { endpoint } = courier();
@@ -59,7 +59,7 @@ async function settled(): Promise<void> {
 }
 
 async function partsOf(req: IncomingMessage): Promise<Part[]> {
-  const boundary = /boundary=(.+)$/.exec(req.headers["content-type"] ?? "")?.[1];
+  const boundary = boundaryIn(req.headers["content-type"] ?? "");
   if (boundary === undefined) throw new Error(`no form: ${req.headers["content-type"]}`);
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(chunk as Buffer);
@@ -371,7 +371,7 @@ describe("a record upload the proxy cannot restore", () => {
       });
     if (until === undefined) return handlePost(request(bytes));
 
-    const closing = `--${type.slice(type.indexOf("boundary=") + "boundary=".length)}--\r\n`;
+    const closing = `--${boundaryIn(type)}--\r\n`;
     const head = bytes.subarray(0, bytes.length - closing.length);
     if (new TextDecoder().decode(bytes.subarray(head.length)) !== closing) {
       throw new Error("the form does not end with its closing delimiter");

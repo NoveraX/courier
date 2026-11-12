@@ -2,6 +2,8 @@ import type { Context, HttpMethods } from "../http-client/types";
 import { createLogger } from "../logger";
 import { type CallSession, sameRequestContext, sessionFor } from "../session/call-session";
 import { csrfSource } from "../session/csrf-source";
+import type { SessionTarget } from "../session/session-target";
+import { storedPageSession } from "../session/stored-page-session";
 import { cancellation } from "./cancellation";
 import { callSessionTarget } from "./execute-session";
 import type { CallTarget } from "./execute-target";
@@ -42,9 +44,11 @@ const warned = new Set<string>();
  * Studio's view of it — marked `purpose: "csrf-token"`, since it is none of
  * the API's endpoints; the cookies its answer sets are kept as any answer's
  * are. Writes waiting on the same user's token share one request, and one
- * whose signal aborts stops waiting without stopping it. A request that
- * fails, or whose answer sets no token, leaves the write to go without, and
- * the API to refuse it as it would.
+ * whose signal aborts stops waiting without stopping it. A browser's page
+ * whose copy of its cookies shows no token yet reads the session from the
+ * cookies the browser keeps. A request that fails, or whose answer sets no
+ * token, leaves the write to go without, and the API to refuse it as it
+ * would.
  *
  * @param call - The write, and what runs the request for its token
  * @param signal - The write's signal: aborted, the write stops waiting for the token
@@ -74,7 +78,7 @@ export async function primeCsrfToken(
     askForToken(call.run(tokenCall(target, path), again), path),
   );
   const primed = await unlessAborted(asked, signal);
-  const reread = await sessionFor(again, callSessionTarget(target));
+  const reread = await sessionAgain(again, callSessionTarget(target));
   if (reread?.primeFrom !== undefined) {
     warnOnce(
       key,
@@ -82,6 +86,18 @@ export async function primeCsrfToken(
     );
   }
   return { session: reread, primed };
+}
+
+/* The write's session read again once the token's answer came. A browser's page reads its cookies
+   from a copy that WebKit's brings up to date only after the answer reaches the page: where it
+   shows no token yet, the cookies the browser keeps are read. A request being served has none. */
+async function sessionAgain(
+  context: Context | undefined,
+  target: SessionTarget,
+): Promise<CallSession | undefined> {
+  const reread = await sessionFor(context, target);
+  if (reread?.primeFrom === undefined || reread.incoming !== undefined) return reread;
+  return (await storedPageSession(target)) ?? reread;
 }
 
 /**

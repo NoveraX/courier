@@ -93,6 +93,47 @@ test("signing out from the page ends the session in the browser", async () => {
   await expect.poll(async () => await cookie("sid")).toBeUndefined();
 });
 
+test("a sign-in on a page that reads its cookies from a copy the token's cookie reaches late repeats the token", async ({
+  browser,
+}) => {
+  const visitor = await browser.newContext();
+  /* WebKit's page reads its cookies from such a copy, which a cookie an answer set reaches only
+     after the answer reaches the page; here it reaches it not at all, but for the page's own writes. */
+  await visitor.addInitScript(() => {
+    const own = Object.getOwnPropertyDescriptor(Document.prototype, "cookie");
+    let copy: string | undefined;
+    Object.defineProperty(Document.prototype, "cookie", {
+      configurable: true,
+      get(this: Document) {
+        copy ??= own?.get?.call(this) as string | undefined;
+        return copy;
+      },
+      set(this: Document, value: string) {
+        own?.set?.call(this, value);
+        copy = own?.get?.call(this) as string | undefined;
+      },
+    });
+  });
+  try {
+    const tab = await visitor.newPage();
+    await clearReceived();
+    await tab.goto(`${APP}/`);
+    await expect(tab.locator("#me")).not.toBeEmpty();
+    test.skip(
+      !(await tab.evaluate(() => "cookieStore" in globalThis)),
+      "the browser gives the page no store of its cookies to ask",
+    );
+
+    await tab.click("#sign-in");
+    await expect(tab.locator("#me")).toContainText("s%3Aspa.sig");
+    const [signIn] = await received("POST", "/login");
+
+    expect(signIn?.headers["x-csrftoken"]).toBe("t-fresh");
+  } finally {
+    await visitor.close();
+  }
+});
+
 test("a page on another site than its API is told once, in the console, that the browser keeps its cookies from it", async ({
   browser,
 }) => {

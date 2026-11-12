@@ -59,6 +59,10 @@ describe("bringing Courier's block in AGENTS.md up to date, as Studio does as it
       "AGENTS.md": `# Rules\r\n\r\n${STALE.replace(/\n/g, "\r\n")}\r\nUse pnpm.\r\n`,
     });
     chmodSync(join(root, "AGENTS.md"), 0o640);
+    /* The mode as the system keeps it: whole on macOS and Linux; on Windows only whether the file
+       is read-only, so one its owner may write reads as anyone's to read and write. */
+    const mode = statSync(join(root, "AGENTS.md")).mode & 0o777;
+    expect(mode).toBe(process.platform === "win32" ? 0o666 : 0o640);
 
     const update = updateAgentRules(root);
 
@@ -66,7 +70,7 @@ describe("bringing Courier's block in AGENTS.md up to date, as Studio does as it
     expect(agentsOf(root)).toBe(
       `# Rules\r\n\r\n${AGENT_RULES.replace(/\n/g, "\r\n")}\r\nUse pnpm.\r\n`,
     );
-    expect(statSync(join(root, "AGENTS.md")).mode & 0o777).toBe(0o640);
+    expect(statSync(join(root, "AGENTS.md")).mode & 0o777).toBe(mode);
     expect(updateAgentRules(root)).toBeNull();
   });
 

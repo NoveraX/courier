@@ -1,3 +1,4 @@
+import { codeString } from "@/lib/snippet-values";
 import { wholeBodyNote } from "@/lib/snippets";
 import { courierArgs } from "./courier-args";
 import { requestBodyFile } from "./request-body-file";
@@ -28,7 +29,7 @@ export function deliverySnippet(r: SnippetRequest, url: string): string {
     "",
     ...(cut ? [wholeBodyNote(requestBodyFile(r, "request"))] : []),
     `const response = await deliverWebhook(${webhook}, {`,
-    `  to: "${url}",`,
+    `  to: ${codeString(url)},`,
     `  body: ${cut ? "wholeBody" : bodyOf(r.variables)},`,
     "});",
   ].join("\n");

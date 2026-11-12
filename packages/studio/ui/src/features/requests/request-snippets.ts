@@ -1,5 +1,5 @@
 import { isCredentialHeader } from "@noverax/courier/internal";
-import { codeString, shellEscape } from "@/lib/snippet-values";
+import { codeProperty, codeString, shellEscape } from "@/lib/snippet-values";
 import { buildCurlSnippet, buildFetchSnippet, wholeBodyNote } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
 import { courierArgs } from "./courier-args";
@@ -75,11 +75,13 @@ function redactedHeaders(
 }
 
 function courierCall(r: SnippetRequest): string {
-  const path = r.group ? `${r.group}.${r.method}` : r.method;
+  /* A nested group's name is its path from the top, a dot between each name. */
+  const names = [...(r.group ? r.group.split(".") : []), r.method];
+  const endpoint = `caller${names.map(codeProperty).join("")}`;
   if (r.variablesCutFrom !== undefined) {
-    return `${wholeBodyNote(requestBodyFile(r, "request"))}\nconst data = await caller.${path}(wholeBody);`;
+    return `${wholeBodyNote(requestBodyFile(r, "request"))}\nconst data = await ${endpoint}(wholeBody);`;
   }
-  const call = `caller.${path}(${courierArgs(r.variables)})`;
+  const call = `${endpoint}(${courierArgs(r.variables)})`;
   if (r.transport === "sse")
     return `for await (const event of ${call}) {\n  console.log(event.data);\n}`;
   if (r.transport === "ws") {

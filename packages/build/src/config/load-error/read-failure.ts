@@ -8,6 +8,13 @@
 import { shownText } from "./shown-text";
 import { describedValue } from "./without-secrets";
 
+/* The line and column of a place, between its brackets. */
+const PLACE = /^\d+:\d+$/;
+/* What Node writes between the import and the module that made it. */
+const IMPORTED_FROM = " imported from ";
+/* What ends a line where `.` stops: a carriage return and Unicode's two line ends. */
+const LINE_ENDS = ["\r", "\u2028", "\u2029"];
+
 /** What the transformer said of a module that failed. */
 export interface FailedTransform {
   readonly file: string;
@@ -53,8 +60,19 @@ function parseError(
   return {
     line: typeof line === "number" ? line : undefined,
     column: typeof column === "number" ? column + 1 : undefined,
-    said: text.replace(`${file}: `, "").replace(/\s*\(\d+:\d+\)\s*$/, ""),
+    said: withoutPlace(text.replace(`${file}: `, "")),
   };
+}
+
+/* The message without the place it ends with — "(3:12)" — and the space around it, read from
+   its end: a pattern tried at each space of a long run, as /\s*\(\d+:\d+\)\s*$/ is, takes time
+   growing with the square of the run. */
+function withoutPlace(text: string): string {
+  const ended = text.trimEnd();
+  if (!ended.endsWith(")")) return text;
+  const open = ended.lastIndexOf("(");
+  if (open === -1 || !PLACE.test(ended.slice(open + 1, -1))) return text;
+  return ended.slice(0, open).trimEnd();
 }
 
 /**
@@ -81,7 +99,17 @@ export function missingImport(
   if (specifier === undefined) return undefined;
   const stack: unknown = Reflect.get(error, "requireStack");
   const required = Array.isArray(stack) && typeof stack[0] === "string" ? stack[0] : undefined;
-  return { specifier, importer: required ?? / imported from (.+)$/.exec(line)?.[1] };
+  return { specifier, importer: required ?? importerIn(line) };
+}
+
+/* The module after the first " imported from " that no line's end follows, to the line's end,
+   found once: a pattern tried at each " imported from ", as / imported from (.+)$/ is, reads
+   the rest of the line for each, in time growing with the square of the line. */
+function importerIn(line: string): string | undefined {
+  const after = Math.max(...LINE_ENDS.map((end) => line.lastIndexOf(end))) + 1;
+  const at = line.indexOf(IMPORTED_FROM, after);
+  const importer = at === -1 ? "" : line.slice(at + IMPORTED_FROM.length);
+  return importer === "" ? undefined : importer;
 }
 
 /**

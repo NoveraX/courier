@@ -2,6 +2,8 @@ import { isAbsolute, relative, sep } from "node:path";
 
 import type { ModuleCache, NodeModule } from "jiti";
 
+import { localPath } from "../../util/local-path";
+
 /**
  * The modules a load ran from its entry to the one that failed, read off the
  * module cache the loader filled: each module it ran is there, with the
@@ -9,6 +11,11 @@ import type { ModuleCache, NodeModule } from "jiti";
  * end. The failure is in the deepest module that has not: every module above
  * it waits on its import. A module whose failure an importer caught ended
  * too, so the newest unfinished child is followed.
+ *
+ * Each file is named as the system names it, by `localPath`: the loader
+ * writes the path of a module it imports with `/` on Windows, where the
+ * entry and the error name it with `\`. The failed module is found by its
+ * path so named, and on Windows in any case, as Windows reads a path.
  *
  * @param cache - The load's module cache
  * @param entry - The entry's key in it, as the loader registered it
@@ -22,18 +29,28 @@ import type { ModuleCache, NodeModule } from "jiti";
  */
 export function importChain(cache: ModuleCache, entry: string, failed?: string): string[] {
   const root = cache[entry];
-  if (root === undefined) return [entry];
-  const towardFailed = failed === undefined ? undefined : pathTo(root, failed);
-  if (towardFailed !== undefined) return towardFailed;
-  const chain = [root.filename];
+  if (root === undefined) return [localPath(entry)];
+  const towardFailed = failed === undefined ? undefined : pathTo(root, fileKey(failed));
+  return (towardFailed ?? newestUnfinished(root)).map((module) => localPath(module.filename));
+}
+
+/* The modules from the entry down, each the newest import of the one before that has not ended. */
+function newestUnfinished(root: NodeModule): NodeModule[] {
+  const chain = [root];
   const seen = new Set<NodeModule>([root]);
   for (let current = root; ; ) {
     const next = current.children.findLast((child) => !child.loaded && !seen.has(child));
     if (next === undefined) return chain;
     seen.add(next);
-    chain.push(next.filename);
+    chain.push(next);
     current = next;
   }
+}
+
+/* What a module's file is told apart by: its path as the system names it, on Windows in any case. */
+function fileKey(path: string): string {
+  const local = localPath(path);
+  return process.platform === "win32" ? local.toLowerCase() : local;
 }
 
 /**
@@ -94,20 +111,20 @@ export function packageOfFile(file: string, folder: string): string | undefined 
   return first.startsWith("@") && second !== undefined ? `${first}/${second}` : first;
 }
 
-/* The path from a module to one whose file is `failed`, through what each imported: the shortest. */
-function pathTo(root: NodeModule, failed: string): string[] | undefined {
-  const queue: Array<{ module: NodeModule; chain: string[] }> = [
-    { module: root, chain: [root.filename] },
+/* The path from a module to one whose file's key is `failed`, through what each imported: the shortest. */
+function pathTo(root: NodeModule, failed: string): NodeModule[] | undefined {
+  const queue: Array<{ module: NodeModule; chain: NodeModule[] }> = [
+    { module: root, chain: [root] },
   ];
   const seen = new Set<NodeModule>([root]);
   for (let at = 0; at < queue.length; at += 1) {
     const step = queue[at];
     if (step === undefined) break;
-    if (step.module.filename === failed) return step.chain;
+    if (fileKey(step.module.filename) === failed) return step.chain;
     for (const child of step.module.children) {
       if (seen.has(child)) continue;
       seen.add(child);
-      queue.push({ module: child, chain: [...step.chain, child.filename] });
+      queue.push({ module: child, chain: [...step.chain, child] });
     }
   }
   return undefined;

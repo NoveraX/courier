@@ -21,7 +21,8 @@ export interface ConfigLoadErrorContext extends Record<string, unknown> {
   readonly specifier: string | undefined;
   /**
    * The modules from the entry to the one that failed, the entry first: each
-   * of the project's by its absolute path, an installed package by its name.
+   * of the project's by its absolute path, as the system names it — with `\`
+   * on Windows — and an installed package by its name.
    */
   readonly importChain: readonly string[];
 }

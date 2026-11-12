@@ -1,6 +1,6 @@
 import { PROTOCOL_VERSION } from "@noverax/courier/internal";
 import { qualifyTopic } from "@noverax/courier/realtime";
-import { shellEscape } from "@/lib/snippets";
+import { codeString, codeValue, shellEscape } from "@/lib/snippet-values";
 import type { SnippetRequest } from "./request-snippets";
 
 /*
@@ -29,7 +29,18 @@ function framesOf(r: SnippetRequest, frameHeaders?: Record<string, string>) {
     topic: topicOf(r),
     ...(r.variables !== undefined && { payload: r.variables }),
   };
-  return { auth: JSON.stringify(auth), subscribe: JSON.stringify(subscribe) };
+  return { auth, subscribe };
+}
+
+/* websocat reads an address as a socket's URL only when it starts with
+   ws:// or wss://: one that starts with another name and a colon it reads
+   as another kind of address, and some of those run a program or open a
+   file. An HTTP address names its socket; any other is written under a
+   host for the reader to fill in. */
+function socketAddress(url: string): string {
+  const scheme = /^(?:ws|http)s?(?=:\/\/)/i.exec(url)?.[0];
+  if (scheme === undefined) return `ws://<host>${url.startsWith("/") ? "" : "/"}${url}`;
+  return `${scheme.toLowerCase().replace("http", "ws")}${url.slice(scheme.length)}`;
 }
 
 /**
@@ -54,12 +65,12 @@ export function wsBrowserSnippet(
 ): string {
   const { auth, subscribe } = framesOf(r, headers);
   return [
-    `const socket = new WebSocket("${url}");`,
+    `const socket = new WebSocket(${codeString(url)});`,
     "",
-    `socket.onopen = () => socket.send(JSON.stringify(${auth}));`,
+    `socket.onopen = () => socket.send(JSON.stringify(${codeValue(auth)}));`,
     "socket.onmessage = (event) => {",
     "  const frame = JSON.parse(event.data);",
-    `  if (frame.type === "auth_ok") socket.send(JSON.stringify(${subscribe}));`,
+    `  if (frame.type === "auth_ok") socket.send(JSON.stringify(${codeValue(subscribe)}));`,
     `  else if (frame.type === "ping") socket.send(JSON.stringify({ type: "pong" }));`,
     "  else console.log(frame);",
     "};",
@@ -70,7 +81,9 @@ export function wsBrowserSnippet(
  * A websocat command for a WebSocket request. Its headers go on the
  * handshake; it sends `auth` and the subscribe at once — the server holds
  * what comes after `auth` until it has let the socket in — then a `pong`
- * every 5 s, within the 10 s the server gives each of its pings.
+ * every 5 s, within the 10 s the server gives each of its pings. An
+ * address that names no socket, as the path of a recorded request, is
+ * written under `ws://<host>`, for the reader to fill in.
  *
  * @param r - The request
  * @param url - Its socket's address
@@ -91,9 +104,9 @@ export function wsShellSnippet(
   return [
     "{",
     `  printf '%s\\n' \\`,
-    `    '${shellEscape(auth)}' \\`,
-    `    '${shellEscape(subscribe)}'`,
+    `    '${shellEscape(JSON.stringify(auth))}' \\`,
+    `    '${shellEscape(JSON.stringify(subscribe))}'`,
     `  while sleep 5; do echo '{"type":"pong"}'; done`,
-    `} | ${["websocat", `'${shellEscape(url)}'`, ...flags].join(" \\\n  ")}`,
+    `} | ${["websocat", `'${shellEscape(socketAddress(url))}'`, ...flags].join(" \\\n  ")}`,
   ].join("\n");
 }

@@ -2,6 +2,8 @@
  * Shared snippet builders for cURL / fetch — used by both Timeline and Playground.
  */
 
+import { shellEscape } from "./snippet-values";
+
 export interface SnippetInput {
   url: string;
   method: string;
@@ -90,9 +92,4 @@ export function safeStringify(value: unknown, indent = 0): string {
   } catch {
     return String(value);
   }
-}
-
-/** A string as it goes between single quotes in a shell command: each quote closed, escaped and opened again. */
-export function shellEscape(s: string): string {
-  return s.replace(/'/g, "'\\''");
 }

@@ -11,7 +11,7 @@
  */
 import { rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
-import { createLogger, createServer, type ViteDevServer, type WatchOptions } from "vite";
+import { createLogger, createServer, type ViteDevServer } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 import { ROUTES_MODULE_ID } from "../../src/util/routes-module-id";
 import { courierRoutes } from "../../src/vite/courier-routes";
@@ -32,22 +32,14 @@ afterEach(async () => {
 /* The errors the dev server logged, the plugin's among them. */
 const logged: string[] = [];
 
-/**
- * How chokidar watches on Linux and Windows: through `fs.watch`. On macOS
- * it takes FSEvents, and polls once told not to, unless told not to poll
- * either. A test that names this holds the plugin to the same watcher on
- * every system.
- */
-const FS_WATCH: WatchOptions = { useFsEvents: false, usePolling: false };
-
-async function serve(root: string, watch?: WatchOptions): Promise<ViteDevServer> {
+async function serve(root: string): Promise<ViteDevServer> {
   logged.length = 0;
   const logger = createLogger("silent");
   return createServer({
     root,
     configFile: false,
     customLogger: { ...logger, error: (message) => logged.push(message) },
-    server: { middlewareMode: true, ws: false, ...(watch === undefined ? {} : { watch }) },
+    server: { middlewareMode: true, ws: false },
     plugins: [courierRoutes()],
   });
 }
@@ -211,12 +203,14 @@ export default { sources: flags.payments || switches.includes("payments") ? { sh
 
   /* chokidar reads a folder it is handed as one just added: an entry made before
      it read the folder would pass for one that was there, and no notice of it
-     would follow. */
+     would follow. Each system watches as it does by default, macOS with FSEvents:
+     there `fs.watch` follows every folder through one FSEvents stream, which it
+     starts anew for each folder added, and drops a notice that comes meanwhile. */
   it("serves them anew once a folder the config lists gains an entry as the watcher is handed it", async () => {
     project = tempProject({ "src/apis.ts": APIS, "src/entry.ts": ENTRY, "switches/.keep": "" });
     const root = project.root;
     project.write("courier.config.ts", switchedConfig(root));
-    server = await serve(root, FS_WATCH);
+    server = await serve(root);
     const dev = server;
     const sources = () => sourcesOf(dev);
     /* Vite's watcher follows the folder already, as it follows the whole root. */

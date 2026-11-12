@@ -5,11 +5,13 @@
  * it get the routes; an edit to a definition they came from serves them
  * anew without a restart; a config that breaks leaves the routes read last
  * in force until it is mended; and with no config yet, the module fails
- * with why until one is saved. Requires a build of this package and of the
- * core first.
+ * with why until one is saved. An entry added to a folder the config lists
+ * serves them anew too, however soon after the routes were served.
+ * Requires a build of this package and of the core first.
  */
 import { rmSync, symlinkSync } from "node:fs";
-import { createLogger, createServer, type ViteDevServer } from "vite";
+import { join } from "node:path";
+import { createLogger, createServer, type ViteDevServer, type WatchOptions } from "vite";
 import { afterEach, describe, expect, it } from "vitest";
 import { ROUTES_MODULE_ID } from "../../src/util/routes-module-id";
 import { courierRoutes } from "../../src/vite/courier-routes";
@@ -30,16 +32,61 @@ afterEach(async () => {
 /* The errors the dev server logged, the plugin's among them. */
 const logged: string[] = [];
 
-async function serve(root: string): Promise<ViteDevServer> {
+/**
+ * How chokidar watches on Linux and Windows: through `fs.watch`. On macOS
+ * it takes FSEvents, and polls once told not to, unless told not to poll
+ * either. A test that names this holds the plugin to the same watcher on
+ * every system.
+ */
+const FS_WATCH: WatchOptions = { useFsEvents: false, usePolling: false };
+
+async function serve(root: string, watch?: WatchOptions): Promise<ViteDevServer> {
   logged.length = 0;
   const logger = createLogger("silent");
   return createServer({
     root,
     configFile: false,
     customLogger: { ...logger, error: (message) => logged.push(message) },
-    server: { middlewareMode: true, ws: false },
+    server: { middlewareMode: true, ws: false, ...(watch === undefined ? {} : { watch }) },
     plugins: [courierRoutes()],
   });
+}
+
+/* A config that serves the payments too once its folder of switches holds `payments`. */
+function switchedConfig(root: string): string {
+  return `import { readdirSync } from "node:fs";
+import { payments, shop } from "./src/apis";
+
+const switches = readdirSync(${JSON.stringify(`${root}/switches`)});
+export default { sources: switches.includes("payments") ? { shop, payments } : { shop } };
+`;
+}
+
+/* The names of the sources whose routes a server rendering the page gets now. */
+async function sourcesOf(dev: ViteDevServer): Promise<string[]> {
+  const loaded: Record<string, unknown> = await dev.ssrLoadModule("/src/entry.ts");
+  return Object.keys((loaded.routes as object | undefined) ?? {});
+}
+
+/**
+ * Keep `path` from the dev server's watcher, whenever it is handed over,
+ * until the call returned hands it on, as a busy machine takes it late:
+ * the watcher reads it then as it is by that time. Every other path, and
+ * chokidar's own calls, go through as they come.
+ */
+function handOverLate(dev: ViteDevServer, path: string): () => void {
+  const { watcher } = dev;
+  const add = watcher.add;
+  const late: string[] = [];
+  watcher.add = (paths: string | readonly string[], ...rest: unknown[]) => {
+    const all = [paths].flat();
+    const now = all.filter((each) => each !== path);
+    if (now.length < all.length) late.push(path);
+    return now.length === 0 ? watcher : Reflect.apply(add, watcher, [now, ...rest]);
+  };
+  return () => {
+    if (late.length > 0) Reflect.apply(add, watcher, [late.splice(0)]);
+  };
 }
 
 /* The paths of the shop's routes a server rendering the page gets now. */
@@ -145,24 +192,13 @@ export default { sources: flags.payments || switches.includes("payments") ? { sh
   it("serves them anew once a folder the config lists gains an entry, in a project opened through a link", async () => {
     project = tempProject({ "src/apis.ts": APIS, "src/entry.ts": ENTRY, "switches/.keep": "" });
     const root = project.root;
-    project.write(
-      "courier.config.ts",
-      `import { readdirSync } from "node:fs";
-import { payments, shop } from "./src/apis";
-
-const switches = readdirSync(${JSON.stringify(`${root}/switches`)});
-export default { sources: switches.includes("payments") ? { shop, payments } : { shop } };
-`,
-    );
+    project.write("courier.config.ts", switchedConfig(root));
     const link = `${root}-link`;
     symlinkSync(root, link, "dir");
     try {
       server = await serve(link);
       const dev = server;
-      const sources = async (): Promise<string[]> => {
-        const loaded: Record<string, unknown> = await dev.ssrLoadModule("/src/entry.ts");
-        return Object.keys((loaded.routes as object | undefined) ?? {});
-      };
+      const sources = () => sourcesOf(dev);
       expect(await sources()).toEqual(["shop"]);
 
       project.write("switches/payments", "");
@@ -171,6 +207,29 @@ export default { sources: switches.includes("payments") ? { shop, payments } : {
     } finally {
       rmSync(link);
     }
+  }, 90_000);
+
+  /* chokidar reads a folder it is handed as one just added: an entry made before
+     it read the folder would pass for one that was there, and no notice of it
+     would follow. */
+  it("serves them anew once a folder the config lists gains an entry as the watcher is handed it", async () => {
+    project = tempProject({ "src/apis.ts": APIS, "src/entry.ts": ENTRY, "switches/.keep": "" });
+    const root = project.root;
+    project.write("courier.config.ts", switchedConfig(root));
+    server = await serve(root, FS_WATCH);
+    const dev = server;
+    const sources = () => sourcesOf(dev);
+    /* Vite's watcher follows the folder already, as it follows the whole root. */
+    await expect
+      .poll(() => dev.watcher.getWatched()[root]?.includes("switches"), { timeout: 20_000 })
+      .toBe(true);
+    const handOver = handOverLate(dev, join(root, "switches"));
+    expect(await sources()).toEqual(["shop"]);
+
+    project.write("switches/payments", "");
+    handOver();
+
+    await expect.poll(sources, { timeout: 20_000 }).toEqual(["payments", "shop"]);
   }, 90_000);
 
   it("serves a module that fails with why while there is no config, and the routes once one is saved", async () => {

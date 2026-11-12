@@ -32,8 +32,9 @@ function inTemplate(text: string): string {
 /* A name an environment variable may take, in capitals: `api-key` → `API_KEY`. */
 function variablePart(text: string): string {
   return text
-    .replace(/[^A-Za-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
+    .split(/[^A-Za-z0-9]+/)
+    .filter((piece) => piece !== "")
+    .join("_")
     .toUpperCase();
 }
 

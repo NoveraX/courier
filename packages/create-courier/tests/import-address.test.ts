@@ -40,4 +40,16 @@ describe("an import's from as the config may keep it", () => {
     expect(secretsPrefix("1st")).toBe("SPEC");
     expect(secretsPrefix("pets")).toBe("PETS_SPEC");
   });
+
+  it("names the variables after the letters and digits alone, whatever runs between and around them", () => {
+    const from = importFrom(`https://specs.example/pets.json?--pet__id--=${TOKEN}`, "pets");
+
+    expect(from.line).toBe(
+      `from: \`https://specs.example/pets.json?--pet__id--=${read("PETS_SPEC_PET_ID")}\`,`,
+    );
+    expect(secretsPrefix("--pet  shop__v2--")).toBe("PET_SHOP_V2_SPEC");
+    expect(secretsPrefix("Café menu")).toBe("CAF_MENU_SPEC");
+    expect(secretsPrefix("_-_")).toBe("SPEC");
+    expect(secretsPrefix("")).toBe("SPEC");
+  });
 });

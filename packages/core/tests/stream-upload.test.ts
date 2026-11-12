@@ -100,7 +100,7 @@ async function proxyTo(
 }
 
 /** A browser's upload of `body`, a kilobyte at a time, declaring `declared` bytes. */
-function upload(body: Uint8Array<ArrayBuffer>, declared = body.length, signal?: AbortSignal) {
+function upload(body: Uint8Array<ArrayBuffer>, declared = body.length) {
   const { stream, pulls } = chunked(
     body,
     Array.from({ length: Math.ceil(body.length / 1024) }, (_, at) => at * 1024),
@@ -113,7 +113,6 @@ function upload(body: Uint8Array<ArrayBuffer>, declared = body.length, signal?: 
       "content-length": String(declared),
     },
     body: stream,
-    signal,
     // @ts-expect-error -- required by the platform for a streaming body
     duplex: "half",
   });
@@ -143,6 +142,42 @@ function slowUpload(body: Uint8Array<ArrayBuffer>, gapMs: number): Request {
       "content-length": String(body.length),
     },
     body: stream,
+    // @ts-expect-error -- required by the platform for a streaming body
+    duplex: "half",
+  });
+}
+
+/**
+ * A browser's upload that stops partway, as on a link gone quiet: it sends
+ * `sent` a kilobyte at a time, declaring `declared` bytes, then neither sends
+ * more nor ends. However much the sockets hold, the upstream never has it
+ * whole; the client leaves when `signal` aborts.
+ */
+function stalledUpload(
+  sent: Uint8Array<ArrayBuffer>,
+  declared: number,
+  signal: AbortSignal,
+): Request {
+  let at = 0;
+  const stream = new ReadableStream<Uint8Array<ArrayBuffer>>(
+    {
+      async pull(controller) {
+        if (at >= sent.length) await new Promise(() => {});
+        controller.enqueue(sent.slice(at, at + 1024));
+        at += 1024;
+      },
+    },
+    { highWaterMark: 0 },
+  );
+  return new Request("http://localhost/api/request?_s=api&_g=files&_m=upload", {
+    method: "POST",
+    headers: {
+      origin: "http://localhost",
+      "content-type": `multipart/form-data; boundary=${B}`,
+      "content-length": String(declared),
+    },
+    body: stream,
+    signal,
     // @ts-expect-error -- required by the platform for a streaming body
     duplex: "half",
   });
@@ -273,22 +308,34 @@ describe("an upload sent on as it arrives", () => {
   });
 
   it("stops the upstream's request when the client leaves partway", async () => {
-    const leaving = new AbortController();
-    const { handlePost, arrivals } = await proxyTo((req, res) => {
+    let underWay: (request: IncomingMessage) => void = () => {};
+    const receiving = new Promise<IncomingMessage>((resolve) => {
+      underWay = resolve;
+    });
+    const { handlePost, arrivals } = await proxyTo((req) => {
       let bytes = 0;
       req.on("data", (chunk: Buffer) => {
         bytes += chunk.length;
-        if (bytes > 50_000) leaving.abort();
+        if (bytes > 50_000) underWay(req);
       });
-      req.on("end", () => res.end("{}"));
     });
-    const { request } = upload(
-      concat(field("note", "hi"), fileHead("file", "a.zip"), "z".repeat(2_000_000), "\r\n", close),
-      undefined,
-      leaving.signal,
+    const whole = concat(
+      field("note", "hi"),
+      fileHead("file", "a.zip"),
+      "z".repeat(2_000_000),
+      "\r\n",
+      close,
     );
+    const leaving = new AbortController();
+    /* The client sends 100 KB of its form and no more; once the upstream has half of that, it leaves. */
+    const request = stalledUpload(whole.slice(0, 100_000), whole.length, leaving.signal);
 
-    const response = await handlePost(request);
+    const answered = handlePost(request);
+    const upstreamRequest = await receiving;
+    expect(upstreamRequest.destroyed).toBe(false);
+    leaving.abort();
+    /* Left open, the upstream's request would wait for the rest of a body that never comes, and the test would run out of time. */
+    const response = await answered;
     const arrival = await arrivals[0];
 
     expect(response.status).toBe(499);

@@ -17,7 +17,7 @@
 import { createCaller } from "@noverax/courier/client";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { getConfig, renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createQueryCaller } from "../src/create-query-caller";
@@ -27,6 +27,8 @@ const { endpoint } = courier();
 
 let server: TestServer;
 let queryClient: QueryClient;
+/* Who waits for a request of a path to reach the server. */
+let waiting: Array<{ path: string; reached: PromiseWithResolvers<void> }>;
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client: queryClient }, children);
@@ -53,8 +55,43 @@ function sent(path: string): number {
   return server.requests.filter((request) => request.path === path).length;
 }
 
+/* When a request of `path` reaches the server. */
+function arrival(path: string): Promise<void> {
+  const reached = Promise.withResolvers<void>();
+  waiting.push({ path, reached });
+  return reached.promise;
+}
+
+/**
+ * What `promise` gives, awaited as `waitFor` awaits, with React rendering
+ * what comes meanwhile, but with no deadline of its own: the test waits on
+ * the state it names, the hook's or the server's, as long as a slow or
+ * busy machine takes to reach it.
+ */
+function until<T>(promise: Promise<T>): Promise<T> {
+  return getConfig().asyncWrapper(() => promise);
+}
+
+/* The hook rendered, and a wait for its first result that is no longer pending. */
+function renderToSettle<T extends { status: string }>(hook: () => T) {
+  const settled = Promise.withResolvers<void>();
+  const { result } = renderHook(
+    () => {
+      const state = hook();
+      if (state.status !== "pending") settled.resolve();
+      return state;
+    },
+    { wrapper },
+  );
+  return { result, settled: () => until(settled.promise) };
+}
+
 beforeEach(async () => {
+  waiting = [];
   server = await startTestServer((_req, res, url) => {
+    for (const { path, reached } of waiting) {
+      if (path === url.pathname) reached.resolve();
+    }
     if (url.pathname === "/users/failing") return sendJson(res, { message: "down" }, 503);
     const wait = url.pathname === "/users/slow" ? 2_000 : 200;
     const timer = setTimeout(() => sendJson(res, { q: url.searchParams.get("q"), ok: true }), wait);
@@ -72,18 +109,17 @@ describe("a query hook", () => {
   it("does not retry a read a newer call of its endpoint cancelled, though the hook retries", async () => {
     const api = makeApi();
     const q = createQueryCaller(api);
-    const { result } = renderHook(
-      () => q.users.useQuery("search", { variables: { q: "a" }, retry: 3 }),
-      { wrapper },
+    const reached = arrival("/users/search");
+    const { result, settled } = renderToSettle(() =>
+      q.users.useQuery("search", { variables: { q: "a" }, retry: 3 }),
     );
-    await waitFor(() => expect(sent("/users/search")).toBe(1));
+    await until(reached);
 
     const newer = createCaller(api).users.search({ q: "ab" });
 
-    await expect(newer).resolves.toEqual({ q: "ab", ok: true });
-    await waitFor(() =>
-      expect(result.current.error).toMatchObject({ name: "AbortError", code: "SUPERSEDED" }),
-    );
+    await expect(until(newer)).resolves.toEqual({ q: "ab", ok: true });
+    await settled();
+    expect(result.current.error).toMatchObject({ name: "AbortError", code: "SUPERSEDED" });
     expect(result.current.failureCount).toBe(1);
     expect(sent("/users/search")).toBe(2);
   });
@@ -91,24 +127,26 @@ describe("a query hook", () => {
   it("does not retry a read whose own signal aborted, though the hook retries", async () => {
     const q = createQueryCaller(makeApi());
     const controller = new AbortController();
-    const { result } = renderHook(
-      () => q.users.useQuery("slow", { retry: 3, requestOptions: { signal: controller.signal } }),
-      { wrapper },
+    const reached = arrival("/users/slow");
+    const { result, settled } = renderToSettle(() =>
+      q.users.useQuery("slow", { retry: 3, requestOptions: { signal: controller.signal } }),
     );
-    await waitFor(() => expect(sent("/users/slow")).toBe(1));
+    await until(reached);
 
     controller.abort();
 
-    await waitFor(() => expect(result.current.status).toBe("error"));
+    await settled();
+    expect(result.current.status).toBe("error");
     expect(result.current.failureCount).toBe(1);
   });
 
   it("retries any other failure as the hook says", async () => {
     const q = createQueryCaller(makeApi());
 
-    const { result } = renderHook(() => q.users.useQuery("failing", { retry: 2 }), { wrapper });
+    const { result, settled } = renderToSettle(() => q.users.useQuery("failing", { retry: 2 }));
 
-    await waitFor(() => expect(result.current.status).toBe("error"));
+    await settled();
+    expect(result.current.status).toBe("error");
     expect(result.current.failureCount).toBe(3);
     expect(sent("/users/failing")).toBe(3);
   });
@@ -119,18 +157,20 @@ describe("a query hook", () => {
     });
     const q = createQueryCaller(makeApi());
 
-    const { result } = renderHook(() => q.users.useQuery("failing"), { wrapper });
+    const { result, settled } = renderToSettle(() => q.users.useQuery("failing"));
 
-    await waitFor(() => expect(result.current.status).toBe("error"));
+    await settled();
+    expect(result.current.status).toBe("error");
     expect(sent("/users/failing")).toBe(2);
   });
 
   it("retries nothing of its own where nothing says", async () => {
     const q = createQueryCaller(makeApi());
 
-    const { result } = renderHook(() => q.users.useQuery("failing"), { wrapper });
+    const { result, settled } = renderToSettle(() => q.users.useQuery("failing"));
 
-    await waitFor(() => expect(result.current.status).toBe("error"));
+    await settled();
+    expect(result.current.status).toBe("error");
     expect(result.current.failureCount).toBe(1);
     expect(sent("/users/failing")).toBe(1);
   });
@@ -138,9 +178,10 @@ describe("a query hook", () => {
   it("leaves a failure to the endpoint's own retry policy, one layer and not two", async () => {
     const q = createQueryCaller(makeApi());
 
-    const { result } = renderHook(() => q.users.useQuery("retried"), { wrapper });
+    const { result, settled } = renderToSettle(() => q.users.useQuery("retried"));
 
-    await waitFor(() => expect(result.current.status).toBe("error"));
+    await settled();
+    expect(result.current.status).toBe("error");
     expect(sent("/users/failing")).toBe(3);
   });
 });

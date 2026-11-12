@@ -7,6 +7,13 @@
  * every message; a heartbeat after a sweep brought a connection back
  * without its metadata; a sweep over 8000 stale connections failed on Lua's
  * `unpack` limit, forever; and error listeners outlived disconnect().
+ *
+ * `subscribe()` resolves at once, and Redis holds a channel once it has
+ * read the SUBSCRIBE, which nothing orders before another connection's
+ * PUBLISH: the tests publish once `stats()` says Redis confirmed the
+ * channel. Their subscriber's commands reach Redis late, through a relay
+ * that holds them, so a test that published sooner fails on any machine,
+ * not only where the two connections happen to cross.
  */
 import { randomUUID } from "node:crypto";
 import { Redis } from "ioredis";
@@ -14,8 +21,11 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createRedisPresence } from "../src/redis-presence";
 import { createRedisPubSub } from "../src/redis-pubsub";
+import { type RedisRelay, startRelay } from "./helpers/redis-relay";
 
 const REDIS_URL = process.env.REDIS_URL ?? "redis://127.0.0.1:6379";
+/** How long the relay holds each piece a subscriber sends before it goes on to Redis. */
+const SUBSCRIBER_LATE_MS = 50;
 
 async function redisAnswers(): Promise<boolean> {
   const probe = new Redis(REDIS_URL, {
@@ -37,12 +47,22 @@ async function redisAnswers(): Promise<boolean> {
 
 const available = await redisAnswers();
 const clients: Redis[] = [];
+const relays: RedisRelay[] = [];
 const prefix = `courier-test:${randomUUID()}:`;
 
-function client(): Redis {
-  const redis = new Redis(REDIS_URL);
+function client(through?: RedisRelay): Redis {
+  const redis = through
+    ? new Redis({ host: "127.0.0.1", port: through.port })
+    : new Redis(REDIS_URL);
   clients.push(redis);
   return redis;
+}
+
+/* A subscriber connection whose commands reach Redis after those another connection sends with them. */
+async function lateSubscriber(): Promise<Redis> {
+  const relay = await startRelay(new URL(REDIS_URL), { holdMs: SUBSCRIBER_LATE_MS });
+  relays.push(relay);
+  return client(relay);
 }
 
 afterEach(async () => {
@@ -52,13 +72,16 @@ afterEach(async () => {
     if (keys.length > 0) await cleaner.del(...keys);
   }
   for (const redis of clients.splice(0)) redis.disconnect();
+  for (const relay of relays.splice(0)) await relay.close();
 });
-
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 describe.skipIf(!available)("createRedisPubSub", () => {
   it("delivers to every subscriber of a topic, and one leaving keeps the other", async () => {
-    const sub = createRedisPubSub({ publisher: client(), subscriber: client(), prefix });
+    const sub = createRedisPubSub({
+      publisher: client(),
+      subscriber: await lateSubscriber(),
+      prefix,
+    });
     const pub = createRedisPubSub({ publisher: client(), subscriber: client(), prefix });
     await sub.connect();
     await pub.connect();
@@ -66,31 +89,38 @@ describe.skipIf(!available)("createRedisPubSub", () => {
     const b: unknown[] = [];
     const offA = await sub.subscribe("room", (m) => a.push(m));
     await sub.subscribe("room", (m) => b.push(m));
+    await expect.poll(() => sub.stats().channels).toEqual({ wanted: 1, confirmed: 1 });
 
     await pub.publish("room", 1);
-    await settle();
+    await expect.poll(() => [a, b]).toEqual([[1], [1]]);
     offA();
-    await settle();
     await pub.publish("room", 2);
-    await settle();
+    await expect.poll(() => b).toEqual([1, 2]);
 
+    /* A message reaches every handler of its channel at once: once b heard 2, a would have. */
     expect(a).toEqual([1]);
-    expect(b).toEqual([1, 2]);
   });
 
   it("delivers once after connect() is called twice", async () => {
-    const sub = createRedisPubSub({ publisher: client(), subscriber: client(), prefix });
+    const sub = createRedisPubSub({
+      publisher: client(),
+      subscriber: await lateSubscriber(),
+      prefix,
+    });
     const pub = createRedisPubSub({ publisher: client(), subscriber: client(), prefix });
     await sub.connect();
     await sub.connect();
     await pub.connect();
     const got: unknown[] = [];
     await sub.subscribe("t", (m) => got.push(m));
+    await expect.poll(() => sub.stats().channels).toEqual({ wanted: 1, confirmed: 1 });
 
     await pub.publish("t", { n: 42 });
-    await settle();
+    await pub.publish("t", "after");
+    await expect.poll(() => got.at(-1)).toBe("after");
 
-    expect(got).toEqual([{ n: 42 }]);
+    /* Redis sends a channel's messages to its subscriber in order: a second { n: 42 } would have come before "after". */
+    expect(got).toEqual([{ n: 42 }, "after"]);
   });
 });
 

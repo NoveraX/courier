@@ -1,4 +1,15 @@
 import { createConnection, createServer, type Socket } from "node:net";
+import { Transform } from "node:stream";
+
+/** How the relay carries what a client sends. */
+export interface RelayOptions {
+  /**
+   * How long each piece a client sends waits before it goes on to Redis, in
+   * the order it came: that client's way to Redis is longer than another's,
+   * and Redis reads its commands after theirs
+   */
+  readonly holdMs?: number;
+}
 
 /**
  * What the relay does with a connection.
@@ -25,6 +36,7 @@ export interface RedisRelay {
  * does with each connection instead.
  *
  * @param target - The address of the test's Redis
+ * @param options - How it carries what a client sends
  * @returns The relay, carrying connections
  * @example
  * ```ts
@@ -33,7 +45,7 @@ export interface RedisRelay {
  * relay.cut();
  * ```
  */
-export async function startRelay(target: URL): Promise<RedisRelay> {
+export async function startRelay(target: URL, options: RelayOptions = {}): Promise<RedisRelay> {
   const open = new Set<Socket>();
   let mode: RelayMode = "up";
   const keep = (socket: Socket): void => {
@@ -50,7 +62,8 @@ export async function startRelay(target: URL): Promise<RedisRelay> {
     if (mode === "silent") return;
     const upstream = createConnection({ port: Number(target.port || 6379), host: target.hostname });
     keep(upstream);
-    client.pipe(upstream).pipe(client);
+    const sent = options.holdMs ? client.pipe(heldFor(options.holdMs)) : client;
+    sent.pipe(upstream).pipe(client);
     client.on("close", () => upstream.destroy());
     upstream.on("close", () => client.destroy());
   });
@@ -71,4 +84,15 @@ export async function startRelay(target: URL): Promise<RedisRelay> {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     },
   };
+}
+
+/* Each piece waits `ms` before it goes on, one after another in the order they came. */
+function heldFor(ms: number): Transform {
+  const held = new Transform({
+    transform(chunk, _encoding, done) {
+      setTimeout(() => done(null, chunk), ms);
+    },
+  });
+  held.on("error", () => undefined);
+  return held;
 }

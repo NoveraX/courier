@@ -147,6 +147,8 @@ describe("a command of Studio's, on Windows", () => {
           PATHEXT: ".COM;.EXE;.BAT;.CMD",
           SystemRoot: windows,
           [probe]: "made-up",
+          /* As in the test of sh: Next's types, in the root's program, require it of every environment. */
+          NODE_ENV: "test",
         },
         input: "",
         encoding: "utf8",

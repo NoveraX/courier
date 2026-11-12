@@ -140,6 +140,37 @@ describe("resolveImport of a workspace package by its name", () => {
   });
 });
 
+describe("a pattern's target, filled in", () => {
+  let root;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "courier-pattern-"));
+    for (const path of ["lib/icons/close/close.js", "lib/icons/a$&b/a$&b.js"]) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      writeFileSync(join(root, path), "export {};");
+    }
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("holds what the key's `*` stands for at each `*` of the target, `$` and all, as Node puts it", () => {
+    const pkg = {
+      name: "icons",
+      root,
+      exports: { "./icons/*": "./lib/icons/*/*.js" },
+      imports: { "#icons/*": { default: "./lib/icons/*/*.js" } },
+    };
+
+    for (const name of ["close", "a$&b"]) {
+      const module = { kind: "module", path: join(root, `lib/icons/${name}/${name}.js`) };
+      expect(resolveImport(`#icons/${name}`, join(root, "lib/a.js"), [pkg])).toEqual(module);
+      expect(resolveImport(`icons/icons/${name}`, join(root, "lib/a.js"), [pkg])).toEqual(module);
+    }
+  });
+});
+
 describe("underLib", () => {
   it("names a module by its path under lib, with forward slashes", () => {
     expect(underLib("/pkg/lib", "/pkg/lib/adapter/limits.js")).toBe("adapter/limits.js");

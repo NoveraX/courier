@@ -109,7 +109,8 @@ export function isSubpathMap(exports) {
   );
 }
 
-/* The file an entry of `imports` or `exports` sends a key to, a pattern's `*` filled in. */
+/* The file an entry of `imports` or `exports` sends a key to, a pattern's target holding what
+   the key's `*` stands for at each `*` of its own, as Node puts it: as it is, `$` and all. */
 function fromMap(map, key, pkg, specifier, where, paths) {
   for (const [pattern, entry] of Object.entries(map ?? {})) {
     const star = pattern.indexOf("*");
@@ -121,10 +122,8 @@ function fromMap(map, key, pkg, specifier, where, paths) {
     const target = pageTarget(entry);
     if (target === undefined)
       return { kind: "missing", reason: `${specifier} has no target for a page` };
-    const filled =
-      star === -1
-        ? target
-        : target.replace("*", key.slice(star, key.length - (pattern.length - star - 1)));
+    const standsFor = key.slice(star, key.length - (pattern.length - star - 1));
+    const filled = star === -1 ? target : target.replaceAll("*", () => standsFor);
     return asFile(paths.join(pkg.root, filled), specifier);
   }
   return { kind: "missing", reason: `${specifier} is not in ${where}` };

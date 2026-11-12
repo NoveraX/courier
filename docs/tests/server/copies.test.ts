@@ -7,7 +7,7 @@
  * copy rather than drop data a visitor is using. The addresses are
  * documentation ones.
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { createDemoApp } from "../../server/app"
 import { SandboxStore } from "../../server/data/sandbox-store"
@@ -130,8 +130,9 @@ describe("a visitor's data", () => {
 
 describe("a network's copies", () => {
   it("are not taken by a first change refused for room, which goes through once there is room", async () => {
-    const clock = { now: 0 }
-    const store = new SandboxStore({ ...DEMO_LIMITS, visitors: 2 }, () => clock.now)
+    /* The clock stands still but for the step the test takes; the timers run as they would. */
+    vi.setSystemTime(Date.now())
+    const store = new SandboxStore({ ...DEMO_LIMITS, visitors: 2 })
     const small = await serve(createDemoApp({ store, log: () => {} }))
     try {
       expect((await create("198.51.100.1", undefined, small)).status).toBe(201)
@@ -142,10 +143,11 @@ describe("a network's copies", () => {
       }
       expect(refused).toEqual(Array(TRIES).fill(503))
 
-      clock.now += DEMO_LIMITS.inUseMs
+      vi.setSystemTime(Date.now() + DEMO_LIMITS.inUseMs)
       expect((await create("198.51.100.3", undefined, small)).status).toBe(201)
       expect(DEMO_LIMITS.copies).toBeLessThan(TRIES)
     } finally {
+      vi.useRealTimers()
       await small.close()
     }
   })

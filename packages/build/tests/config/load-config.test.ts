@@ -17,6 +17,7 @@ import { createJiti } from "jiti";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadCourierConfig, loadCourierConfigFile } from "../../src/config/load-config";
 import { createTransformCache, type TransformCache } from "../../src/config/transform-cache";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 vi.mock("jiti", async (importOriginal) => {
   const actual = await importOriginal<typeof JitiModule>();
@@ -380,7 +381,7 @@ describe("loadCourierConfigFile — a config exported as a promise", () => {
   });
 
   it("fails as the config's code failing, with the environment's values masked, when the promise rejects", async () => {
-    vi.stubEnv("PROBE_API_KEY", KEY);
+    stubOwnEnvironment({ PROBE_API_KEY: KEY }, `cannot reach db.invalid with key ${KEY}`);
     writeConfig(
       "courier.config.mjs",
       `export default new Promise((_, reject) =>

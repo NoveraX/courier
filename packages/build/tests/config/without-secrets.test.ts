@@ -10,6 +10,7 @@ import { REDACTED } from "@noverax/courier/internal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { shownText } from "../../src/config/load-error/shown-text";
 import { maskedError, withoutSecrets } from "../../src/config/load-error/without-secrets";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 import { seededRandom } from "../helpers/seeded-random";
 
 describe("withoutSecrets", () => {
@@ -79,9 +80,10 @@ describe("shownText", () => {
   });
 
   it("cuts a long message short, after masking it whole", () => {
-    vi.stubEnv("LONG_SECRET", "s3cr3t-value-that-is-long");
+    const quoted = `${"x".repeat(290)}s3cr3t-value-that-is-long${"y".repeat(50)}`;
+    stubOwnEnvironment({ LONG_SECRET: "s3cr3t-value-that-is-long" }, quoted);
 
-    const text = shownText(`${"x".repeat(290)}s3cr3t-value-that-is-long${"y".repeat(50)}`);
+    const text = shownText(quoted);
 
     expect(text).not.toContain("s3cr3t");
     expect(text).toHaveLength(301);
@@ -188,16 +190,18 @@ describe("the forms a value takes in a message", () => {
   });
 
   it("masks a value in a quoted message before its control characters are taken out", () => {
-    vi.stubEnv("BELL_KEY", "abc\u0007defghij");
+    const quoted = "refused abc\u0007defghij, try again";
+    stubOwnEnvironment({ BELL_KEY: "abc\u0007defghij" }, quoted);
 
-    expect(shownText("refused abc\u0007defghij, try again")).toBe(`refused ${REDACTED}, try again`);
+    expect(shownText(quoted)).toBe(`refused ${REDACTED}, try again`);
     vi.unstubAllEnvs();
   });
 
   it("masks a value that spans lines in a quoted message, whose first line alone is shown", () => {
-    vi.stubEnv("PROBE_PEM", PEM);
+    const quoted = `bad key ${PEM} given`;
+    stubOwnEnvironment({ PROBE_PEM: PEM }, quoted);
 
-    expect(shownText(`bad key ${PEM} given`)).toBe(`bad key ${REDACTED} given`);
+    expect(shownText(quoted)).toBe(`bad key ${REDACTED} given`);
     vi.unstubAllEnvs();
   });
 });
@@ -300,11 +304,10 @@ describe("a value of the environment where a credential stands", () => {
   });
 
   it("is masked in a quoted message, its credential cut", () => {
-    vi.stubEnv("PGUSER", "postgres");
+    const quoted = "upstream refused postgres://app:hunter2@db.internal/shop with token=abc123def";
+    stubOwnEnvironment({ PGUSER: "postgres" }, quoted);
 
-    const said = shownText(
-      "upstream refused postgres://app:hunter2@db.internal/shop with token=abc123def",
-    );
+    const said = shownText(quoted);
 
     expect(said).toBe(`upstream refused ${REDACTED}://db.internal/shop with token=${REDACTED}`);
     vi.unstubAllEnvs();

@@ -15,6 +15,7 @@ import {
   createRoutesModuleWriter,
   type LoadedForRoutes,
 } from "../../src/routes-module/routes-module-writer";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 const { endpoint } = courier();
 
@@ -99,7 +100,10 @@ describe("createRoutesModuleWriter", () => {
 
   it("says why a write failed with no variable's value in it, nor a credential", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubEnv("SHOP_TOKEN", "tok_live_4f9c2e7a");
+    stubOwnEnvironment(
+      { SHOP_TOKEN: "tok_live_4f9c2e7a" },
+      "the shop refused tok_live_4f9c2e7a with token=abc123def",
+    );
     const config = {
       get sources(): never {
         throw new Error(`the shop refused ${process.env.SHOP_TOKEN} with token=abc123def`);

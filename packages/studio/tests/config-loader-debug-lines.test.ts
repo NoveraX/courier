@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadCourierConfig } from "../src/server/config-loader";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 
 /* A key no environment holds, put there for the test alone. */
 const KEY = "FAKE-0000-PROBE-SECRET";
@@ -37,8 +38,10 @@ function debugLines(debug: { mock: { calls: unknown[][] } }): string {
 
 describe("Studio's loader at debug level", () => {
   it("masks the environment's values in what a courier.config.cjs threw as Node ran it", async () => {
-    vi.stubEnv("COURIER_LOG_LEVEL", "debug");
-    vi.stubEnv("PROBE_API_KEY", KEY);
+    stubOwnEnvironment(
+      { COURIER_LOG_LEVEL: "debug", PROBE_API_KEY: KEY },
+      `cannot reach db.invalid with key ${KEY}`,
+    );
     const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
     writeFileSync(
       join(dir, "courier.config.cjs"),

@@ -35,8 +35,8 @@ export function ownEnvironment(own: Variables, ...thrown: readonly string[]): No
 }
 
 /**
- * Give the test its {@link ownEnvironment} in this process, until
- * `vi.unstubAllEnvs()` gives the runner's back.
+ * Give the test its {@link ownEnvironment} in this process, and so in each
+ * process it starts, until `vi.unstubAllEnvs()` gives the runner's back.
  *
  * @param own - The variables the test sets
  * @param thrown - What the test's code throws

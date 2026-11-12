@@ -11,6 +11,7 @@ import { runCommand } from "citty";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { routesCommand } from "../../src/commands/routes-command";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../../node_modules");
 let dir: string;
@@ -134,7 +135,10 @@ describe("courier-cli routes", () => {
   it("names the env files it reads when the config's code threw, and no variable's value", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
-    vi.stubEnv("SHOP_TOKEN", "tok_live_4f9c2e7a");
+    stubOwnEnvironment(
+      { SHOP_TOKEN: "tok_live_4f9c2e7a" },
+      "Invalid environment variables: tok_live_4f9c2e7a",
+    );
     writeFileSync(
       join(dir, "courier.config.ts"),
       `throw new Error("Invalid environment variables: " + process.env.SHOP_TOKEN);\n`,
@@ -155,7 +159,10 @@ describe("courier-cli routes", () => {
   it("says what reading the sources threw with no variable's value in it, nor a credential", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "info").mockImplementation(() => {});
-    vi.stubEnv("SHOP_TOKEN", "tok_live_4f9c2e7a");
+    stubOwnEnvironment(
+      { SHOP_TOKEN: "tok_live_4f9c2e7a" },
+      "the shop refused tok_live_4f9c2e7a with token=abc123def",
+    );
     writeFileSync(
       join(dir, "courier.config.ts"),
       `export default {

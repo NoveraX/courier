@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loadCourierConfig } from "../../src/config/load-config";
 import { ConfigLoadError } from "../../src/config/load-error/config-load-error";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 let dir: string;
 
@@ -213,7 +214,10 @@ describe("a module that does not compile", () => {
 
 describe("code that throws while the config is read", () => {
   it("is quoted with every value of the environment masked", async () => {
-    vi.stubEnv("PAYMENTS_TOKEN", "tok_live_4f9c2e7a");
+    stubOwnEnvironment(
+      { PAYMENTS_TOKEN: "tok_live_4f9c2e7a" },
+      "token tok_live_4f9c2e7a was refused",
+    );
     project(
       {},
       `if (process.env.PAYMENTS_TOKEN) throw new Error("token " + process.env.PAYMENTS_TOKEN + " was refused");\nexport const api = {};\n`,

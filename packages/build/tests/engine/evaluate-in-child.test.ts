@@ -25,6 +25,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { evaluateInChild } from "../../src/engine/evaluate-in-child";
 import { RoutesReadError } from "../../src/engine/routes-read-error";
+import { stubOwnEnvironment } from "../helpers/own-environment";
 
 /* The repository's packages, where a config's `@noverax/courier` resolves from. */
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../../node_modules");
@@ -67,6 +68,7 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const pid of started.splice(0)) if (isAlive(pid)) process.kill(pid, "SIGKILL");
+  vi.unstubAllEnvs();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -303,6 +305,7 @@ readdirSync(${JSON.stringify(`${dir}/./defs/`)});
   }, 30_000);
 
   it("says what reading the sources threw with no value of the env files in it, nor a credential", async () => {
+    stubOwnEnvironment({}, "the shop refused shop-signing-7f3a9c2e5b1d with token=abc123def");
     writeFileSync(join(dir, ".env"), "SHOP_SIGNING_KEY=shop-signing-7f3a9c2e5b1d\n");
     project(`export default {
   get sources() {

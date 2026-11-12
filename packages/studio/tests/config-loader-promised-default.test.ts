@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadCourierConfig } from "../src/server/config-loader";
 import { failureOf } from "../src/server/project-state/failure-of";
+import { stubOwnEnvironment } from "./helpers/own-environment";
 
 /* A key no environment holds, put there for the test alone. */
 const KEY = "FAKE-0000-PROBE-SECRET";
@@ -39,7 +40,7 @@ describe("loadCourierConfig on a config exported as a promise", () => {
   });
 
   it("says the promise's rejection as the config's code failing, with the environment's values masked", async () => {
-    vi.stubEnv("PROBE_API_KEY", KEY);
+    stubOwnEnvironment({ PROBE_API_KEY: KEY }, `cannot reach db.invalid with key ${KEY}`);
     writeFileSync(
       join(dir, "courier.config.mjs"),
       `export default new Promise((_, reject) =>

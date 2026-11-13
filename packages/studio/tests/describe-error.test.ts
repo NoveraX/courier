@@ -64,40 +64,39 @@ describe("describeError", () => {
   it("leaves a path outside the root whole", () => {
     expect(describeError(new Error("/other/app/x.ts"), "/app")).toBe("/other/app/x.ts");
   });
-
-  it.runIf(process.platform === "win32")(
-    "takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes",
-    () => {
-      const error = new Error("Cannot find d:/proj/src\\api.ts, nor 'D:\\Proj\\src\\gone.ts'");
-
-      expect(describeError(error, "D:\\proj")).toBe("Cannot find src/api.ts, nor 'src/gone.ts'");
-    },
-  );
-
-  it.runIf(process.platform !== "win32")(
-    "keeps a backslash a name holds on macOS and Linux",
-    () => {
-      expect(describeError(new Error("open /app/a\\b.ts"), "/app")).toBe("open a\\b.ts");
-    },
-  );
 });
 
-describe("describeError on Windows, whichever the runner is", () => {
+describe("describeError on each system, whichever the runner is", () => {
   const PLATFORM = Object.getOwnPropertyDescriptor(process, "platform");
 
   afterEach(() => {
     if (PLATFORM !== undefined) Object.defineProperty(process, "platform", PLATFORM);
   });
 
-  /* Studio reads how its platform spells a path as it loads, so the module is loaded anew on Windows. */
-  async function onWindows(): Promise<typeof describeError> {
-    Object.defineProperty(process, "platform", { ...PLATFORM, value: "win32" });
+  /* Studio reads how its platform spells a path as it loads, so the module is loaded anew on `platform`. */
+  async function on(platform: NodeJS.Platform): Promise<typeof describeError> {
+    Object.defineProperty(process, "platform", { ...PLATFORM, value: platform });
     vi.resetModules();
     return (await import("../src/server/describe-error")).describeError;
   }
 
-  it("names a scoped package's file relative to the project, cutting a credential beside it first", async () => {
-    const describeOnWindows = await onWindows();
+  it("takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes", async () => {
+    const describeOnWindows = await on("win32");
+    const error = new Error("Cannot find d:/proj/src\\api.ts, nor 'D:\\Proj\\src\\gone.ts'");
+
+    expect(describeOnWindows(error, "D:\\proj")).toBe("Cannot find src/api.ts, nor 'src/gone.ts'");
+  });
+
+  it("keeps a backslash a name holds on macOS and Linux", async () => {
+    for (const platform of ["darwin", "linux"] as const) {
+      const describeThere = await on(platform);
+
+      expect(describeThere(new Error("open /app/a\\b.ts"), "/app")).toBe("open a\\b.ts");
+    }
+  });
+
+  it("names a scoped package's file on Windows relative to the project, cutting a credential beside it first", async () => {
+    const describeOnWindows = await on("win32");
     const root = windows("D:/srv/shop");
     const outside = windows("C:/npm/_npx/4f1c/node_modules/@noverax/courier-cli/bin.js");
     const error = new Error(

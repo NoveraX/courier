@@ -49,12 +49,10 @@
     "packages/redis/tests/redis-topic-log.test.ts > a Redis adapter's topic log > refuses to keep part of an event",
     "packages/redis/tests/redis-topic-log.test.ts > a Redis adapter's topic log > sends back a range it keeps, and none for another epoch, past its sequence or trimmed",
     "packages/studio/tests/create-module-cache.test.ts > createModuleCache > finds a module by the name with forward slashes the loader gives a file it resolves itself",
-    "packages/studio/tests/describe-error.test.ts > describeError > takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes",
     "packages/vscode/tests/studio-cli.test.ts > a command of Studio's, on Windows > hands cmd each argument whole, so nothing in it is expanded or run"
   ],
   "linux": [
     "packages/studio/tests/create-module-cache.test.ts > createModuleCache > finds a module by the name with forward slashes the loader gives a file it resolves itself",
-    "packages/studio/tests/describe-error.test.ts > describeError > takes the root off a path on Windows written with either slash or in another case, naming the rest with forward slashes",
     "packages/studio/tests/port-problem-listeners.test.ts > portProblem with another listener on the port > ends its connection to a server that greets its clients without resetting it",
     "packages/vscode/tests/studio-cli.test.ts > a command of Studio's, on Windows > hands cmd each argument whole, so nothing in it is expanded or run"
   ],
@@ -178,7 +176,6 @@
     "packages/studio/tests/contract-drift/source-modules.test.ts > sourceModules > reads a module through a link that stays in the project, and none through one that leads out",
     "packages/studio/tests/contract-drift/source-modules.test.ts > sourceModules > reads no module whose folder became a link outside after it was resolved",
     "packages/studio/tests/demo/demo-rest-guard.test.ts > a demo's visitor that goes quiet on its turn > keeps its address's place until the answer it does not read is dropped",
-    "packages/studio/tests/describe-error.test.ts > describeError > keeps a backslash a name holds on macOS and Linux",
     "packages/studio/tests/editor/site-index.test.ts > the call sites, when Git lists the files > follow a link that stays in the project, and not one that leads out",
     "packages/studio/tests/editor/site-index.test.ts > the call sites, when Git lists the files > read nothing from a folder that became a link outside after the files were listed",
     "packages/studio/tests/editor/site-index.test.ts > the call sites, when Studio walks the folders > follow a link that stays in the project, and not one that leads out",

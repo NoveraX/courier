@@ -19,6 +19,7 @@ import { inspect } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createLogger, logger } from "../src/logger";
+import { redactAlso } from "../src/utils/redact/redacted-text";
 
 const ESC = "\x1b[";
 const LEVELS = ["debug", "info", "warn", "error"] as const;
@@ -244,6 +245,25 @@ describe("a credential in the line or its cause", () => {
       message: "token=[redacted]",
       error: { message: "api_key=[redacted]" },
     });
+  });
+});
+
+describe("a secret only the process knows of", () => {
+  const KEY = ["q7Vn2", "LwXk9", "Rt4Yp"].join("");
+
+  afterEach(() => redactAlso(undefined));
+
+  it("is cut from the line and its cause, its chain kept, as the process says to cut it", () => {
+    redactAlso((text) => text.replaceAll(KEY, "[redacted]"));
+    const cause = new Error(`the shop refused key ${KEY}`, { cause: new Error(`key ${KEY}`) });
+
+    createLogger("MockWorker").error(`The mock did not start: ${KEY}`, cause);
+
+    const [, line, copy] = firstCall("error");
+    expect(String(line)).toContain("The mock did not start: [redacted]");
+    expect(inspect(copy)).not.toContain(KEY);
+    expect(copy).toMatchObject({ message: "the shop refused key [redacted]" });
+    expect((copy as Error).cause).toMatchObject({ message: "key [redacted]" });
   });
 });
 

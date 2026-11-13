@@ -1,4 +1,4 @@
-export const metadata = { title: "How a Mock Answers", description: "The rules a mock server goes by beyond its declaration: which route answers a request — QUERY, HEAD and OPTIONS, nested groups, a baseURL's path, {+name} and a path that fixes a query — what its records are made from, how mocks run and fail, and what an upload reaches.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "How a Mock Answers", description: "The rules a mock server goes by beyond its declaration: which route answers a request — QUERY, HEAD and OPTIONS, nested groups, a baseURL's path, {+name} and a path that fixes a query — what its records are made from, how mocks run and fail, and what an upload reaches.", mode: "both", updated: "2026-11-13" }
 
 A mock server answers as its source declares; these are the rules it goes by beyond that. Declaring one is on [Mock Servers](/docs/studio/mock-servers).
 
@@ -18,7 +18,7 @@ A mock server answers as its source declares; these are the rules it goes by bey
 ## How mocks run, and fail
 
 - Each running mock is a process of its own that Studio starts: it loads the mocks file with Studio's loader, reusing the transforms Studio keeps, and serves that one mock on the port Studio chose.
-- A mock that fails — a definition Studio cannot read, a missing package, a taken port, a crash — is reported in Studio's terminal, and its status in the Mocks view gives the reason on hover or keyboard focus. A running mock whose edited definition cannot be read keeps serving the last one that could, and says so the same way. The mock's own request log appears in Studio's terminal too; `log: "silent"` turns it off.
+- A mock that fails — a definition Studio cannot read, a missing package, a taken port, a crash — is reported in Studio's terminal, and its status in the Mocks view gives the reason on hover or keyboard focus. A running mock whose edited definition cannot be read keeps serving the last one that could, and says so the same way. The mock's own request log appears in Studio's terminal too; `log: "silent"` turns it off. What the mock writes there holds the environment's values masked, as a [load error](/docs/reading-your-project#when-the-project-does-not-load) quotes the project's message.
 - A `courier.mocks.ts` that does not load — a syntax error, an import that cannot be resolved, no default export — leaves the config and its sources working, and the mocks keep serving the definitions that loaded last. Studio's terminal logs why, and a banner above the Mocks view says so until the file loads again.
 
 ## Uploads and large bodies

@@ -149,6 +149,7 @@ export {
   splitUrlsWithoutSecrets,
   urlWithoutSecrets,
 } from "../utils/redact";
+export { redactAlso } from "../utils/redact/redacted-text";
 export { isSecretHeader, isSecretValue } from "../utils/redact/secret-name";
 export { registerRenderMemo } from "../utils/render-memo";
 export { agentCallContext } from "../utils/server-call-marks";

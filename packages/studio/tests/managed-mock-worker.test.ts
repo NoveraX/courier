@@ -9,6 +9,7 @@
  * stops at once when asked while its mocks file is still loading, also
  * while the file's own code keeps the worker from reading any message.
  */
+import { fork } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -380,4 +381,44 @@ describe("a managed mock server started with Studio's transforms", () => {
     ]);
     expect(snapshot(directory)).toEqual(before);
   }, 30_000);
+});
+
+describe("a managed mock worker's log", () => {
+  it("holds the environment's values masked in what the project's code threw at start", async () => {
+    const key = ["q7Vn2", "LwXk9", "Rt4Yp"].join("");
+    const mocksFile = project("", {
+      exportLine:
+        "export default defineMocks({ shop: defineMockServer({ source: api, overrides: () => {\n" +
+        '  throw new Error("the shop refused key " + process.env.SHOP_API_KEY);\n' +
+        "} }) });",
+    });
+    /* Forked as Studio forks it, but with its stderr read here rather than inherited. */
+    const worker = fork(join(__dirname, "../lib/mock-worker.js"), [], {
+      cwd: dirname(mocksFile),
+      execArgv: [],
+      stdio: ["ignore", "ignore", "pipe", "ipc"],
+      env: { ...process.env, SHOP_API_KEY: key },
+    });
+    cleanups.push(() => void worker.kill());
+    let log = "";
+    worker.stderr?.on("data", (chunk: Buffer) => {
+      log += chunk.toString();
+    });
+
+    worker.send({
+      type: "start",
+      mocksFile,
+      mockKey: "shop",
+      port: await freePort(),
+      strictPort: false,
+      avoidPorts: [],
+      transformCacheDirectory: null,
+      storeFile: null,
+    });
+
+    await vi.waitFor(() => expect(log).toContain("the shop refused key [redacted]"), {
+      timeout: 15_000,
+    });
+    expect(log).not.toContain(key);
+  }, 20_000);
 });

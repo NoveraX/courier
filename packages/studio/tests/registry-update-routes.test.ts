@@ -379,9 +379,10 @@ describe("updating a declared import as its entry says", () => {
     stubOwnEnvironment({ PETSTORE_KEY: key }, thrown);
     const spec = await specServer(privateSpec);
     servers.push(spec);
+    /* It throws `thrown`, reading the key from its environment. */
     const failing = declared(`${spec.url}/private/spec.json`).replace(
       '(spec) => ({ ...spec, baseURL: "https://transformed.example" })',
-      `() => { throw new Error(${JSON.stringify(thrown)}); }`,
+      '() => { throw new Error("key " + process.env.PETSTORE_KEY + " refused by postgres://app:hunter2@db.internal/app"); }',
     );
     const url = await start(failing);
 

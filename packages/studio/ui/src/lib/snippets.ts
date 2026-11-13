@@ -13,13 +13,32 @@ export interface SnippetInput {
   bodyFile?: string | undefined;
 }
 
+/* What curl reads in a URL as a pattern of several: a range in brackets, a set in braces. */
+const CURL_PATTERN = /[[\]{}]/;
+
+/**
+ * A URL as curl's argument: quoted, and after `--globoff` where it holds
+ * brackets or braces, which curl reads as a pattern of several URLs.
+ *
+ * @param url - The URL
+ * @returns The argument
+ * @example
+ * ```ts
+ * curlUrl("https://api.example/users?filter[name]=ada"); // "--globoff 'https://api.example/users?filter[name]=ada'"
+ * ```
+ */
+export function curlUrl(url: string): string {
+  const word = `'${shellEscape(url)}'`;
+  return CURL_PATTERN.test(url) ? `--globoff ${word}` : word;
+}
+
 /** Build a cURL command */
 export function buildCurlSnippet(input: SnippetInput): string {
   const { url, method, body, bodyFile } = input;
   const headers = mergeContentType(input.headers, bodyFile ?? body, method);
   const parts: string[] = ["curl"];
   if (method !== "GET") parts.push(`-X ${shellWord(method)}`);
-  parts.push(`'${shellEscape(url)}'`);
+  parts.push(curlUrl(url));
   for (const [k, v] of Object.entries(headers)) {
     parts.push(`-H '${shellEscape(`${k}: ${v}`)}'`);
   }

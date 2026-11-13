@@ -1,6 +1,6 @@
 import { isCredentialHeader } from "@noverax/courier/internal";
 import { codeProperty, codeString, shellEscape } from "@/lib/snippet-values";
-import { buildCurlSnippet, buildFetchSnippet, wholeBodyNote } from "@/lib/snippets";
+import { buildCurlSnippet, buildFetchSnippet, curlUrl, wholeBodyNote } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
 import { courierArgs } from "./courier-args";
 import { deliverySnippet } from "./delivery-snippet";
@@ -94,9 +94,7 @@ function courierCall(r: SnippetRequest): string {
 function streamShell(r: SnippetRequest, url: string, headers: Record<string, string>): string {
   if (r.transport === "ws") return wsShellSnippet(r, url, headers);
   const flags = Object.entries(headers).map(([k, v]) => `-H '${shellEscape(`${k}: ${v}`)}'`);
-  return ["curl -N", `'${shellEscape(url)}'`, "-H 'accept: text/event-stream'", ...flags].join(
-    " \\\n  ",
-  );
+  return ["curl -N", curlUrl(url), "-H 'accept: text/event-stream'", ...flags].join(" \\\n  ");
 }
 
 function streamBrowser(r: SnippetRequest, url: string, headers: Record<string, string>): string {

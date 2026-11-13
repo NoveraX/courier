@@ -52,6 +52,22 @@ describe("the cURL snippet", () => {
       JSON.stringify(BODY),
     ]);
   });
+
+  it("turns curl's patterns off for an address with brackets or braces, a stream's too", () => {
+    const url = "https://api.example.com/users?filter[name]={a,b}";
+
+    expect(shellRead(buildCurlSnippet({ url, method: "GET" })).words).toEqual([
+      "curl",
+      "--globoff",
+      url,
+    ]);
+    expect(shellRead(requestSnippet(stream({ url }), "shell").code).words.slice(0, 4)).toEqual([
+      "curl",
+      "-N",
+      "--globoff",
+      url,
+    ]);
+  });
 });
 
 describe("the fetch snippet", () => {

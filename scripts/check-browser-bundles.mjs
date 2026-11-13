@@ -39,7 +39,7 @@
  */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { builtinModules, createRequire } from "node:module";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { argv } from "node:process";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -56,6 +56,7 @@ import { serverOnlyModules } from "./browser-bundles/server-only-modules.mjs";
 import { publishedModules, sidesTaken } from "./browser-bundles/sides-taken.mjs";
 import { startClosure } from "./browser-bundles/start-closure.mjs";
 import { serverAreaOf } from "./module-graph/server-area.mjs";
+import { pathFrom } from "./slashed-paths.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const KIB = 1024;
@@ -98,7 +99,8 @@ function build(esbuild, work, scenario, options) {
     logLevel: "silent",
     ...options,
   });
-  return { result, entry: relative(process.cwd(), entry) };
+  /* By `/`, as the metafile names it on every system. */
+  return { result, entry: pathFrom(process.cwd(), entry) };
 }
 
 function measure(esbuild, work, scenario) {

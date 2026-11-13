@@ -79,8 +79,17 @@ function eventFolder(path: string, details: unknown): string | undefined {
   return isAbsolute(folder) ? resolve(folder) : undefined;
 }
 
-/* Forget the routes module in every graph, and reload the page that took it. */
-function reloadRoutes(server: ViteDevServer): void {
+/**
+ * Forget the routes module in every graph of a dev server, and reload the
+ * page that took it: the routes are read again as it loads.
+ *
+ * @param server - The dev server
+ * @example
+ * ```ts
+ * for (const server of state.servers) reloadRoutes(server);
+ * ```
+ */
+export function reloadRoutes(server: ViteDevServer): void {
   /* Every environment's graph from Vite 6 on; before it, the one graph a server had. */
   const environments = server.environments as typeof server.environments | undefined;
   const graphs =

@@ -2,6 +2,7 @@ import { routesModuleCode, unreadRoutesModuleCode } from "../engine/routes-modul
 import { RoutesReadError } from "../engine/routes-read-error";
 import { followRoutesInputs, type WatchContext } from "./follow-routes-inputs";
 import type { RoutesPluginState } from "./routes-plugin-state";
+import { reloadRoutes } from "./watch-routes-inputs";
 
 /** What of Vite's plugin context the routes module is loaded with. */
 export interface LoadContext extends WatchContext {
@@ -10,7 +11,8 @@ export interface LoadContext extends WatchContext {
 
 /**
  * The routes module for a page: the routes read from the config, with every
- * project path they came from followed, so a change loads the module again.
+ * project path they came from followed, so a change loads the module again,
+ * one saved to a file as it was read for the first time too.
  *
  * When they cannot be read, what the failed reading read is followed
  * instead, so mending the config or a module it imports brings the routes
@@ -36,9 +38,12 @@ export async function loadRoutesModule(
     const why = "The routes were asked for before Vite resolved its config";
     throw new RoutesReadError("ROUTES_NOT_READ", why, { root: process.cwd() });
   }
+  const began = Date.now();
   try {
     const snapshot = await engine.read();
-    followRoutesInputs(context, state, snapshot);
+    if (followRoutesInputs(context, state, snapshot, began)) {
+      for (const server of state.servers) reloadRoutes(server);
+    }
     return routesModuleCode(snapshot);
   } catch (error) {
     const failure = asError(error);

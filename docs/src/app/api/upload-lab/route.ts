@@ -1,7 +1,7 @@
 import { requestClientAddress } from "@noverax/courier/internal"
+import { callerKeyOf } from "@noverax/courier/server"
 
 import { isLabPace, LAB_MAX_BYTES, LAB_PACE_HEADER, MB } from "@/site/upload-lab/lab-settings"
-import { addressKey } from "../../../../server/address-key"
 import { takeLabSlot } from "./lab-slots"
 import { LabRefusal, readPaced } from "./paced-read"
 
@@ -14,11 +14,10 @@ const DEADLINE_MS = 30_000
 const refuse = (status: number, error: string, headers?: Record<string, string>) =>
   Response.json({ error }, { status, headers })
 
-/* Whom an upload comes from, as the examples' budgets count a visitor: their address, read past
-   the proxies the deployment names as Courier reads it for its own limit — no public entry of
-   Courier's names it yet — an IPv6 one by its /64. */
+/* Whom an upload comes from, as Courier's own limit counts a caller: their address, read past
+   the proxies the deployment names, an IPv6 one by its /64. */
 function callerOf(request: Request): string {
-  return addressKey(requestClientAddress(request))
+  return callerKeyOf(requestClientAddress(request))
 }
 
 /* What stops an upload before a byte of it is read, if anything does. */

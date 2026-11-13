@@ -30,7 +30,7 @@ export function slashedPath(path, paths = nodePath) {
  * @param {Pick<typeof nodePath, "relative" | "sep">} [paths] - The system's paths: Node's own by default
  * @returns {string} The path from the folder to the file, by `/`
  * @example
- * pathFrom("C:\\repo", "C:\\repo\\docs\\upgrading.mdx", nodePath.win32); // → "docs/upgrading.mdx"
+ * pathFrom("C:\\repo", "C:\\repo\\docs\\installation.mdx", nodePath.win32); // → "docs/installation.mdx"
  */
 export function pathFrom(from, file, paths = nodePath) {
   return slashedPath(paths.relative(from, file), paths);

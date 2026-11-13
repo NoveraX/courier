@@ -4,7 +4,7 @@
  * `@noverax/courier/client` and a server's from `@noverax/courier/server`,
  * and the prose beside them says so too: prose that takes names from the
  * root, `@noverax/courier`, sends a reader's page back to the server's
- * code, which the upgrade moved out of it.
+ * code, which `/client` leaves out.
  *
  * The prose is read a paragraph at a time, its lines together, so a line
  * break does not hide what a sentence takes; a table's row is read alone.
@@ -16,10 +16,6 @@
  * `import { x } from "@noverax/courier"`. An entry under the root,
  * `@noverax/courier/client` or `/realtime`, is not the root, nor is
  * another package, `@noverax/courier-react`.
- *
- * The upgrading guide's tables of the previous release, headed by its
- * version, name the imports the upgrade moves, the root's among them; the
- * rest of the guide is read as any page is.
  *
  * A page takes a name the root alone gives it, as `redact`, from the root,
  * and the prose says so in words: "the root". What a refusal tells the
@@ -49,10 +45,6 @@ const STOP = /[.!?](?=\s|$)/g;
 /* A fence opens and closes a block of code. */
 const FENCE = /^\s*(`{3,}|~{3,})/;
 const TABLE_ROW = /^\s*\|/;
-/* A table of the previous release, headed by its version: `| 0.4 | Now |`. */
-const RELEASE_HEADER = /^\s*\|\s*\d+(?:\.\d+)+\s*\|/;
-/* The page that names the imports the upgrade moves, the root's among them. */
-const UPGRADING = "docs/src/content/docs/upgrading.mdx";
 
 const ROOT = "@noverax/courier";
 const CLIENT = "@noverax/courier/client";
@@ -60,8 +52,8 @@ const SERVER = "@noverax/courier/server";
 /* What to name in place of the root for a sentence that names none of the core's names. */
 const ANY = `"${CLIENT}" for a page's code, or the root, as "the root", for ${[...ROOT_ONLY].join(", ")}, which it leaves out, and "${SERVER}" for a server's`;
 
-/* Whether each line of a page is prose: none of a fence, of tabbed code, or of the upgrading guide's tables of the previous release. */
-function proseLines(page, text) {
+/* Whether each line of a page is prose: none of a fence, nor of tabbed code. */
+function proseLines(text) {
   const lines = text.split("\n");
   const prose = lines.map(() => true);
   for (const [from, to] of codeGroupSpans(text)) {
@@ -69,7 +61,6 @@ function proseLines(page, text) {
     for (let n = text.slice(0, from).split("\n").length - 1; n <= last; n++) prose[n] = false;
   }
   let fence;
-  let releaseTable = false;
   lines.forEach((line, n) => {
     const marker = FENCE.exec(line)?.[1];
     if (marker !== undefined && (fence === undefined || line.trim().startsWith(fence))) {
@@ -77,10 +68,6 @@ function proseLines(page, text) {
       prose[n] = false;
     } else if (fence !== undefined) {
       prose[n] = false;
-    } else if (TABLE_ROW.test(line)) {
-      const header = n === 0 || !TABLE_ROW.test(lines[n - 1] ?? "");
-      if (header) releaseTable = page === UPGRADING && RELEASE_HEADER.test(line);
-      if (releaseTable) prose[n] = false;
     }
   });
   return { lines, prose };
@@ -172,7 +159,7 @@ function entriesSaid(page, server, it) {
  */
 export function proseProblems(pages) {
   return pages.flatMap(({ page, text }) => {
-    const { lines, prose } = proseLines(page, text);
+    const { lines, prose } = proseLines(text);
     return paragraphsOf(lines, prose).flatMap((paragraph) => {
       /* The lines joined by a space each, so an offset of the paragraph falls on the line it is on. */
       const joined = paragraph.map((n) => lines[n]).join(" ");

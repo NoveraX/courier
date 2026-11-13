@@ -1,4 +1,4 @@
-export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "NetworkError, TimeoutError & AbortError", description: "The errors a call rejects with when no answer came, its time ran out, or it was cancelled — with the platform's code, the scope of the time, the reason given, and the guards that tell them apart.", mode: "both", updated: "2026-11-13" }
 
 A call that got no successful answer rejects with one of three errors, each telling what happened: an `HTTPError` holds an answer, a `NetworkError` says none came, a `TimeoutError` that the time ran out. None of them is ever the other dressed up: there is no `HTTPError` with status 0. A call that was cancelled rejects with an `AbortError`, which is no failure.
 
@@ -118,4 +118,3 @@ The browser's side and the server's side of a proxied call each fail by these ru
 - [HTTPError](/docs/api/http-error) — an answer with an error status
 - [Error Handling Guide](/docs/core-concepts/error-handling) — patterns for handling them, `.safe()` among them
 - [Built-in Middleware](/docs/middleware/built-in#retrymiddleware) — which failures a retry policy repeats
-- [Upgrading from 0.4](/docs/upgrading) — what to write in place of status 0 and 499

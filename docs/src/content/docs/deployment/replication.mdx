@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Replication Guide",
   description: "Production-ready multi-replica setup for every supported framework — Next.js, Express, Fastify, Hono, NestJS, and Standalone Server.",
-  updated: "2026-11-06",
+  updated: "2026-11-13",
 }
 
 This guide shows a complete, production-ready realtime setup with Redis adapters for each supported framework.
@@ -544,7 +544,7 @@ const ws = createWSHandler({
 
 A shorter secret throws `CLUSTER_SECRET_INVALID` when the handler is made. Without one, the commands are taken unsigned, and the server's log says so once for each adapter, as the first handler given it is made — unless the adapter is a bus in the process, `createMemoryBus()` or `createMemoryPubSub()`, which nothing outside it can publish on. Keep the secret out of the repository, as any credential, and keep publishing on the prefix's channels to your application with Redis ACLs as well.
 
-A replica that gets a command of a newer version than its own, as while a rolling upgrade runs, skips it, saying so in its log. The calls and the codes that changed since 0.4 are on [Upgrading from 0.4](/docs/upgrading#realtime).
+A replica that gets a command of a newer version than its own, as while a rolling upgrade runs, skips it, saying so in its log.
 
 ## Resuming Subscriptions
 

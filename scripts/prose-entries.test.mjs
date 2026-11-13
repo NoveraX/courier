@@ -11,14 +11,13 @@ const ENTRY_EXPORTS = JSON.parse(
   readFileSync(join(ROOT, "packages/core/entry-exports.json"), "utf8"),
 );
 const PAGE = "docs/src/content/docs/api/a.mdx";
-const UPGRADING = "docs/src/content/docs/upgrading.mdx";
 
 /* What a refusal says, the line it names left out. */
 const said = (text) =>
   proseProblems([{ page: PAGE, text }]).map((problem) => problem.replace(/^\S+ /, ""));
 /* The lines of a page's prose refused, each as `page:line`. */
-const refused = (text, page = PAGE) =>
-  proseProblems([{ page, text }]).map((problem) => problem.replace(/ .*$/, ""));
+const refused = (text) =>
+  proseProblems([{ page: PAGE, text }]).map((problem) => problem.replace(/ .*$/, ""));
 
 describe("the docs' prose", () => {
   it("is refused the root as the entry to take names from, in each way it is written", () => {
@@ -65,20 +64,15 @@ describe("the docs' prose", () => {
     expect(refused(`${fenced}\n${indented}\n${tilde}\n${tabs}\n`)).toEqual([]);
   });
 
-  it("leaves the upgrading guide's tables of the previous release alone, and reads the rest of it", () => {
+  it("reads each row of a table alone", () => {
     const text = [
-      "| 0.4 | Now |",
-      "|---|---|",
-      "| `TimeoutError` from `@noverax/courier` | `RealtimeTimeoutError` from `@noverax/courier/realtime` |",
-      "",
       "| Import | Where |",
       "|---|---|",
       "| `isHTTPError` | from `@noverax/courier` |",
       "",
       "Narrow it with `isHTTPError` from `@noverax/courier`.",
     ].join("\n");
-    expect(refused(text, UPGRADING)).toEqual([`${UPGRADING}:7`, `${UPGRADING}:9`]);
-    expect(refused(text)).toEqual([`${PAGE}:3`, `${PAGE}:7`, `${PAGE}:9`]);
+    expect(refused(text)).toEqual([`${PAGE}:3`, `${PAGE}:5`]);
   });
 
   it("names each side's entry for the names the root is taken for, by the entries each side takes them from", () => {

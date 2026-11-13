@@ -1,12 +1,13 @@
 /**
  * A specification behind auth, imported by URL: the import wizard names
- * the environment variable that holds each credential, Studio reads it from
- * its own environment as it fetches, sends it to the URL's own origin only,
- * and neither answers it nor logs it. A value sent in the request is
- * refused, and so is a page without the project's token. An import
- * courier.config declares is read by its name, with the auth the config
- * gives it; and the wizard is told whether each variable is set, never its
- * value.
+ * the environment variable that holds each credential, one the project's
+ * .env files set and no other of the shell Studio was started from; Studio
+ * reads it as it fetches, sends it to the URL's own origin only, and
+ * neither answers it nor logs it. A value sent in the request is refused,
+ * and so is a page without the project's token. An import courier.config
+ * declares is read by its name, with the auth the config gives it, from
+ * the process's environment; and the wizard is told whether each variable
+ * is set, never its value.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
@@ -19,10 +20,10 @@ import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
-/* Made up for the test, and set in this process alone. */
+/* Made up for the test: the project's .env.local sets the one, this process alone the other. */
 const SECRET = "spec-token-5f1c-made-up";
 const VARIABLE = "COURIER_TEST_ORDERS_SPEC_TOKEN";
-const DOTENV_VARIABLE = "COURIER_TEST_DOTENV_SPEC_TOKEN";
+const SHELL_VARIABLE = "COURIER_TEST_SHELL_SPEC_TOKEN";
 
 let root: string;
 let studio: StudioServer | undefined;
@@ -33,17 +34,18 @@ beforeEach(() => {
   for (const level of ["warn", "error", "info"] as const) {
     vi.spyOn(console, level).mockImplementation((...args: unknown[]) => void logged.push(args));
   }
-  process.env[VARIABLE] = SECRET;
+  process.env[SHELL_VARIABLE] = SECRET;
   root = mkdtempSync(join(tmpdir(), "courier-import-auth-"));
   writeFileSync(
     join(root, "courier.config.ts"),
     'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
   );
+  writeFileSync(join(root, ".env.local"), `${VARIABLE}=${SECRET}\n`);
 });
 
 afterEach(async () => {
   Reflect.deleteProperty(process.env, VARIABLE);
-  Reflect.deleteProperty(process.env, DOTENV_VARIABLE);
+  Reflect.deleteProperty(process.env, SHELL_VARIABLE);
   await studio?.close();
   studio = undefined;
   await Promise.all(
@@ -60,6 +62,7 @@ function start(): Promise<string> {
       port: 0,
       host: "127.0.0.1",
       projectRoot: root,
+      projectEnv: createProjectEnv(root),
       onReady: resolve,
       onError: reject,
     });
@@ -99,7 +102,7 @@ async function parse(url: string, body: Record<string, unknown>, withToken = tru
 }
 
 describe("POST /api/apis/parse for a specification behind auth", () => {
-  it("reads it with the token the environment variable it names holds", async () => {
+  it("reads it with the token the variable of the project's .env.local it names holds", async () => {
     const url = await start();
     const specUrl = await privateSpec();
 
@@ -115,18 +118,17 @@ describe("POST /api/apis/parse for a specification behind auth", () => {
     expect(JSON.stringify(logged)).not.toContain(SECRET);
   });
 
-  it("reads a variable from the project's .env.local, as Studio takes the file in", async () => {
-    writeFileSync(join(root, ".env.local"), `${DOTENV_VARIABLE}=${SECRET}\n`);
-    createProjectEnv(root);
+  it("reads no variable the project's .env files do not set, though Studio's shell holds it", async () => {
     const url = await start();
 
     const { status, text } = await parse(url, {
       source: "url",
       content: await privateSpec(),
-      auth: { type: "bearer", token: { env: DOTENV_VARIABLE } },
+      auth: { type: "bearer", token: { env: SHELL_VARIABLE } },
     });
 
-    expect(status).toBe(200);
+    expect(status).toBe(400);
+    expect(text).toContain(`${SHELL_VARIABLE}, which is not set`);
     expect(text).not.toContain(SECRET);
   });
 
@@ -176,11 +178,11 @@ describe("POST /api/apis/parse for a specification behind auth", () => {
   });
 });
 
-/* The project imports `orders` from the private specification, with the token the variable holds. */
+/* The project imports `orders` from the private specification, with the token the shell's variable holds. */
 function declareOrders(specUrl: string): void {
   writeFileSync(
     join(root, "courier.config.ts"),
-    `export default { sources: { api: { baseURL: "https://api.example" } }, imports: { orders: { importType: "url", type: "openapi", from: "${specUrl}", auth: { type: "bearer", token: { env: "${VARIABLE}" } }, outputDir: "src/api" } } };\n`,
+    `export default { sources: { api: { baseURL: "https://api.example" } }, imports: { orders: { importType: "url", type: "openapi", from: "${specUrl}", auth: { type: "bearer", token: { env: "${SHELL_VARIABLE}" } }, outputDir: "src/api" } } };\n`,
   );
 }
 
@@ -223,17 +225,18 @@ describe("POST /api/apis/auth-variables", () => {
     return { status: response.status, text: await response.text() };
   }
 
-  it("says whether Studio's environment sets each variable, and never its value", async () => {
+  it("says whether the project's .env files set each variable, and never its value", async () => {
     const url = await start();
 
     const { status, text } = await variables(url, {
-      names: [VARIABLE, "COURIER_TEST_UNSET_TOKEN"],
+      names: [VARIABLE, SHELL_VARIABLE, "COURIER_TEST_UNSET_TOKEN"],
     });
 
     expect(status).toBe(200);
     expect(JSON.parse(text)).toEqual({
       variables: [
         { name: VARIABLE, set: true },
+        { name: SHELL_VARIABLE, set: false },
         { name: "COURIER_TEST_UNSET_TOKEN", set: false },
       ],
     });

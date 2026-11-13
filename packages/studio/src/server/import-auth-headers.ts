@@ -1,5 +1,6 @@
 import type { CourierImportAuth, CourierSecretValue } from "@noverax/courier/config";
 import { ownEnvironment, sendableValue } from "@noverax/courier/internal";
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
 
 import { IMPORT_AUTH_LIMITS, ImportAuthError } from "./import-auth";
 
@@ -24,6 +25,29 @@ export function variableValue(
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+/**
+ * The variables a page may name for a specification's credentials: those
+ * the project's `.env*` files set, each with the value Studio's process
+ * holds for it. The rest of the shell Studio was started from is no page's
+ * to name, as the page names the host a credential goes to; with no env
+ * files read, a page names none.
+ *
+ * @param projectEnv - The project's variables, as Studio reads its env files
+ * @returns The variables, by name
+ * @example
+ * ```ts
+ * importAuthHeaders(auth, pageVariables(projectEnv));
+ * ```
+ */
+export function pageVariables(
+  projectEnv: ProjectEnv | undefined,
+): Readonly<Record<string, string | undefined>> {
+  const own = ownEnvironment();
+  return Object.fromEntries(
+    [...(projectEnv?.variableNames ?? [])].map((name) => [name, own[name]]),
+  );
+}
+
 /* A secret's value: as given, or read from the environment now. */
 function secretValue(
   secret: CourierSecretValue,
@@ -34,7 +58,7 @@ function secretValue(
   if (value === undefined || value === "") {
     throw new ImportAuthError(
       "SECRET_NOT_SET",
-      `${field} reads ${typeof secret === "string" ? "an empty value" : `${secret.env}, which is not set`}: set it in the environment or in one of the project's .env files.`,
+      `${field} reads ${typeof secret === "string" ? "an empty value" : `${secret.env}, which is not set`}: set it in one of the project's .env files.`,
     );
   }
   if (value.length > IMPORT_AUTH_LIMITS.value) {
@@ -49,8 +73,9 @@ function secretValue(
 /**
  * The headers an import's auth sends its specification's host, its
  * references read from the environment now — the process's, which takes
- * the project's `.env*` files in — and every value checked as `fetch`
- * checks one, the error naming the field and never the value.
+ * the project's `.env*` files in, unless a page's names are read from
+ * `pageVariables` — and every value checked as `fetch` checks one, the
+ * error naming the field and never the value.
  *
  * @param auth - The import's auth, if it declares one
  * @param env - Where its references are read from

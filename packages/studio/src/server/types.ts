@@ -21,8 +21,9 @@ export interface StudioServerOptions {
   /**
    * The project's variables, as `courier-studio` reads them from its env
    * files: read again, and the config with them, when the files change.
-   * Studio started inside an application's development server leaves it
-   * out, as that server keeps the variables.
+   * A page's import auth names only the variables they set. Studio started
+   * inside an application's development server leaves it out, as that
+   * server keeps the variables, and a page there names none.
    */
   projectEnv?: ProjectEnv | undefined;
   /**

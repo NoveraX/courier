@@ -184,6 +184,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     agentCalls,
     webhooks,
     serving,
+    projectEnv: options.projectEnv,
   };
   mountStudioHttp(app, policy, http);
   /* Last: an error no route answered gets no page of Express's own, which shows its stack. */

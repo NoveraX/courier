@@ -83,8 +83,8 @@ interface ImportAuthFieldsProps {
 
 /**
  * The auth a spec behind one is read with: its kind, and the environment
- * variable that holds each credential — set where Studio runs, or in a
- * `.env` file of the project — with whether Studio's environment sets it.
+ * variable that holds each credential — one a `.env` file of the project
+ * sets — with whether Studio has it set.
  * A value is never typed here, so none reaches the page.
  *
  * @param props - The auth as filled in, and what changing it does
@@ -111,9 +111,9 @@ export function ImportAuthFields({ auth, onChange }: ImportAuthFieldsProps): Rea
       </div>
       {auth.kind !== "none" && (
         <p className="m-0 text-small text-fg-subtle">
-          Name the environment variable that holds each credential, set where Studio runs or in a
-          .env file of the project. Studio reads it when it fetches the spec, and courier.config
-          names the same variables; no value reaches this page.
+          Name the environment variable that holds each credential, set in a .env file of the
+          project. Studio reads it when it fetches the spec, and courier.config names the same
+          variables; no value reaches this page.
         </p>
       )}
       {auth.kind === "bearer" && (

@@ -17,7 +17,7 @@ const CREDENTIALS_REFUSAL =
   "Studio sends a specification's credentials only for a page opened from the link it printed in its terminal, which carries this project's token.";
 
 const ELSEWHERE_REFUSAL =
-  "Studio reads its environment for a specification's credentials only for a page on the machine it runs on. Import the specification there, or run courier-studio import with --bearer-env, --basic-env or --header-env on that machine.";
+  "Studio reads the project's variables for a specification's credentials only for a page on the machine it runs on. Import the specification there, or run courier-studio import with --bearer-env, --basic-env or --header-env on that machine.";
 
 /** What a declared import is looked up in, and whom the route reads for. */
 export interface DeclaredSpecDeps {
@@ -46,12 +46,11 @@ export function refuseCredentials(res: JsonResponse, demo: boolean): void {
 
 /**
  * Refuse a page on another machine — a phone, a laptop on the same network
- * — what Studio's environment holds: it is the shell Studio was started
- * from, every key and token of it and not only the project's `.env*` files,
- * and the page names the host a credential goes to. So Studio sends a
- * variable, and says whether one is set, only for a page on the machine it
- * runs on, as it edits project files only for one; it is refused 403
- * `NOT_LOCAL_PEER`, even with the project's token.
+ * — the secrets the project's `.env*` files give Studio, as the page names
+ * the host a credential goes to. So Studio sends a variable, and says
+ * whether one is set, only for a page on the machine it runs on, as it
+ * edits project files only for one; it is refused 403 `NOT_LOCAL_PEER`,
+ * even with the project's token.
  *
  * @param req - The request, whose peer says which machine sent it
  * @param res - What the refusal is answered on

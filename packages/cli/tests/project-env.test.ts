@@ -155,6 +155,17 @@ describe("the variables read again when their files change", () => {
     expect(process.env.COURIER_TEST_TIER).toBe("from-the-shell");
   });
 
+  it("are named, each the files set, one the process was started with among them", () => {
+    process.env.COURIER_TEST_TIER = "from-the-shell";
+    write(".env", ["COURIER_TEST_TIER=from-the-file", "COURIER_TEST_REGION=eu"]);
+    const env = createProjectEnv(root);
+
+    expect([...env.variableNames].sort()).toEqual(["COURIER_TEST_REGION", "COURIER_TEST_TIER"]);
+    write(".env", ["COURIER_TEST_REGION=eu"]);
+    env.reread();
+    expect([...env.variableNames]).toEqual(["COURIER_TEST_REGION"]);
+  });
+
   it("leave one something else has given another value since", () => {
     write(".env", ["COURIER_TEST_REGION=eu"]);
     const env = createProjectEnv(root);

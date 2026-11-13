@@ -1,23 +1,25 @@
 /**
  * A page on another machine — a phone, a laptop on the same network — that
- * holds the project's token still has Studio send none of its environment:
+ * holds the project's token still has Studio send none of its variables:
  * a read with credentials is refused 403 `NOT_LOCAL_PEER` before the host
  * it names is reached, and so is the question of which variables are set.
  * The same requests from this machine are answered as before.
  */
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createProjectEnv } from "@noverax/courier-cli/devkit";
 import express from "express";
 import type { RequestHandler } from "express-serve-static-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { registerAuthVariablesRoute } from "../src/server/auth-variables-route";
+import { pageVariables } from "../src/server/import-auth-headers";
 import { registerParseRoute } from "../src/server/parse-route";
 import type { ProjectReads } from "../src/server/project-state/types";
 
-/* Made up for the test, and set in this process alone. */
+/* Made up for the test, and set by the project's .env file. */
 const SECRET = "peer-spec-token-8b2e-made-up";
 const VARIABLE = "COURIER_TEST_PEER_SPEC_TOKEN";
 /* A documentation address: no machine of this one's. */
@@ -28,8 +30,8 @@ const servers: Server[] = [];
 const sent: (string | undefined)[] = [];
 
 beforeEach(() => {
-  process.env[VARIABLE] = SECRET;
   root = mkdtempSync(join(tmpdir(), "courier-import-peer-"));
+  writeFileSync(join(root, ".env"), `${VARIABLE}=${SECRET}\n`);
 });
 
 afterEach(async () => {
@@ -55,13 +57,15 @@ async function studio(peer?: string): Promise<string> {
   };
   if (peer !== undefined) app.use(fromPeer);
   app.use(express.json());
+  const projectEnv = createProjectEnv(root);
   registerParseRoute(app, {
     project: {} as ProjectReads,
     projectRoot: root,
     holdsToken: () => true,
     demo: false,
+    projectEnv,
   });
-  registerAuthVariablesRoute(app);
+  registerAuthVariablesRoute(app, () => pageVariables(projectEnv));
   return listen(createServer(app));
 }
 

@@ -1,9 +1,9 @@
 /**
- * The route the import wizard asks through whether Studio's environment
- * sets the variables an import's auth names.
+ * The route the import wizard asks through whether the variables an
+ * import's auth names are set, as a page's auth reads them.
  */
 
-import { isSecretVariableName, ownEnvironment } from "@noverax/courier/internal";
+import { isSecretVariableName } from "@noverax/courier/internal";
 import { isRecord } from "@noverax/courier-cli/devkit";
 
 import { IMPORT_AUTH_LIMITS } from "./import-auth";
@@ -21,23 +21,24 @@ const MAX_NAMES = IMPORT_AUTH_LIMITS.headers + 2;
 
 /**
  * Mount `POST /api/apis/auth-variables`: given `{ names }`, the environment
- * variables an import's auth names, it answers whether Studio's environment
- * — its process's, which takes the project's `.env*` files in — sets each
- * one. A value is never answered, and the route is open only to a page
+ * variables an import's auth names, it answers whether each is set where a
+ * page's auth reads it: the project's `.env*` files set it, and Studio's
+ * process holds a value for it. A value is never answered, and the route
+ * is open only to a page
  * with the project's token, as every route the token guard does not list,
  * on the machine Studio runs on: another machine's page is refused 403
  * `NOT_LOCAL_PEER`, as it is a read with credentials.
  *
  * @param app - The Studio server's Express app
- * @param env - The environment the variables are looked up in
+ * @param variables - The variables a page may name, as they are now
  * @example
  * ```ts
- * registerAuthVariablesRoute(app);
+ * registerAuthVariablesRoute(app, () => pageVariables(projectEnv));
  * ```
  */
 export function registerAuthVariablesRoute(
   app: AuthVariablesRouteApp,
-  env: Readonly<Record<string, string | undefined>> = ownEnvironment(),
+  variables: () => Readonly<Record<string, string | undefined>>,
 ): void {
   app.post("/api/apis/auth-variables", (req, res) => {
     /* Whether a variable is set is the environment's to tell, as its value is. */
@@ -50,6 +51,7 @@ export function registerAuthVariablesRoute(
       });
       return;
     }
+    const env = variables();
     res.json({
       variables: names.map((name) => ({ name, set: variableValue(env, name) !== undefined })),
     });

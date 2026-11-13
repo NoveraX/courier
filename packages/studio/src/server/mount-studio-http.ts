@@ -1,3 +1,4 @@
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
 import type express from "express";
 
 import type { DemoServing } from "./demo/demo-serving";
@@ -39,6 +40,8 @@ export interface StudioHttpParts {
   webhooks: WebhookDirectory;
   /** How a public demo serves its visitors, when Studio is one */
   serving?: DemoServing | undefined;
+  /** The project's variables, as Studio reads its env files */
+  projectEnv?: ProjectEnv | undefined;
 }
 
 /**
@@ -87,6 +90,7 @@ export function mountStudioHttp(
     webhooks: serving ? undefined : parts.webhooks,
     token,
     demo: serving && { limits: serving.limits, trusted: serving.trusted },
+    projectEnv: parts.projectEnv,
   });
   if (!serving) {
     mountStudioMcp(app, {

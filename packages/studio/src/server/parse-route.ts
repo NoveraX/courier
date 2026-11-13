@@ -4,9 +4,11 @@
  */
 
 import { CourierError } from "@noverax/courier";
+import { ownEnvironment } from "@noverax/courier/internal";
 import {
   errnoCode,
   NotRegularFileError,
+  type ProjectEnv,
   projectRootAt,
   readProjectText,
 } from "@noverax/courier-cli/devkit";
@@ -14,7 +16,7 @@ import { DEMO_FILE_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_SPEC } from "./demo/demo-rest-guard";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
-import { importAuthHeaders } from "./import-auth-headers";
+import { importAuthHeaders, pageVariables } from "./import-auth-headers";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { declaredSpecRead, refuseCredentials, refusedElsewhere } from "./parse-credentials";
 import type { ProjectReads } from "./project-state/types";
@@ -47,7 +49,12 @@ export interface ParseRouteDeps {
   holdsToken(req: RouteRequest): boolean;
   /** Whether Studio serves a public demo, whose visitors are told so. */
   demo: boolean;
+  /** The project's variables: a page's auth names only those its env files set. */
+  projectEnv?: ProjectEnv | undefined;
 }
+
+/** Where an import's auth reads the variables it names. */
+type Variables = Readonly<Record<string, string | undefined>>;
 
 const FILE_REFUSAL =
   "Studio reads a file of the project only for a page opened from the link it printed in its terminal, which carries this project's token. Paste the specification, or give its URL.";
@@ -58,8 +65,9 @@ const DEMO_PUBLIC_ONLY =
 /**
  * Mount `POST /api/apis/parse`. A caller with the project's token has Studio
  * read a file of the project, or a URL on whatever the project allows —
- * with the credentials the environment variables it names hold, from the
- * machine Studio runs on; a caller without it — on a public demo or not —
+ * with the credentials the variables it names hold, those the project's
+ * `.env*` files set, from the machine Studio runs on; a caller without it
+ * — on a public demo or not —
  * has it read the text as pasted, or a URL on the public internet, with
  * none. An import courier.config
  * declares is read by its name, from its URL with its auth, so the page
@@ -98,7 +106,10 @@ export function registerParseRoute(app: ParseRouteApp, deps: ParseRouteDeps): vo
           ? await work.hold(declaredSpecRead(given.content, trusted, res, deps))
           : { ...given, source: given.source };
       if (body === null) return;
-      const json = await work.hold(readSpec(body, trusted, work, deps));
+      /* courier.config's auth names what the project reads, as it does where Studio runs. */
+      const variables =
+        given.source === "import" ? ownEnvironment() : pageVariables(deps.projectEnv);
+      const json = await work.hold(readSpec(body, trusted, work, deps, variables));
       res.setHeader("content-type", "application/json; charset=utf-8");
       res.end(json);
     } catch (err) {
@@ -119,9 +130,10 @@ async function readSpec(
   trusted: boolean,
   { signal }: RequestWork,
   deps: ParseRouteDeps,
+  variables: Variables,
 ): Promise<string> {
   const { source, content } = body;
-  const text = await specText(body, trusted, signal, deps);
+  const text = await specText(body, trusted, signal, deps, variables);
   const url = source === "url" ? content : undefined;
   const maxBytes = deps.demo && !trusted ? DEMO_MAX_SPEC : MAX_MESSAGE_BYTES;
   return readSpecInProcess({ text, url }, { trusted, signal, maxBytes });
@@ -132,11 +144,12 @@ async function specText(
   trusted: boolean,
   signal: AbortSignal,
   { project, projectRoot, demo }: ParseRouteDeps,
+  variables: Variables,
 ): Promise<string> {
   if (source === "raw") return content;
   if (source === "file") return readProjectText(projectRootAt(projectRoot), content);
   return fetchSpec(content, specHostAllowlist(project, projectRoot), {
-    headers: importAuthHeaders(auth),
+    headers: importAuthHeaders(auth, variables),
     reach: trusted ? "project" : "public",
     ...(demo && { publicOnly: DEMO_PUBLIC_ONLY }),
     signal,

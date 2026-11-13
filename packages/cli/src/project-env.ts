@@ -21,6 +21,8 @@ export interface ProjectEnv {
   readonly files: readonly string[];
   /** The files the last reading found, as named. */
   readonly loaded: readonly string[];
+  /** The variables the files set, by name: those the process was started with among them, which keep its value. */
+  readonly variableNames: ReadonlySet<string>;
   /**
    * Read the files again: a variable they set takes the value they give it
    * now, one they no longer set is gone, and one the process was started
@@ -31,25 +33,27 @@ export interface ProjectEnv {
   reread(): string[];
 }
 
-/* What the files there are give, the first to set a variable winning, those the process has left out. */
+/* What the files there are give, the first to set a variable winning, those the process has left out;
+   and every variable they set. */
 function readFiles(
   names: readonly string[],
   files: readonly string[],
   fromProcess: ReadonlySet<string>,
-): { variables: Map<string, string>; read: string[] } {
+): { variables: Map<string, string>; read: string[]; set: Set<string> } {
   const variables = new Map<string, string>();
   const read: string[] = [];
+  const set = new Set<string>();
   names.forEach((name, at) => {
     const path = files[at];
     if (path === undefined || !existsSync(path)) return;
     read.push(name);
     for (const [key, value] of Object.entries(parseEnv(readFileSync(path, "utf8")))) {
-      if (value !== undefined && !fromProcess.has(key) && !variables.has(key)) {
-        variables.set(key, value);
-      }
+      if (value === undefined) continue;
+      set.add(key);
+      if (!fromProcess.has(key) && !variables.has(key)) variables.set(key, value);
     }
   });
-  return { variables, read };
+  return { variables, read, set };
 }
 
 /* Put what the files give now in place of what they gave: a variable they no longer
@@ -110,11 +114,13 @@ export function createProjectEnv(root: string, named?: string): ProjectEnv {
   }
   let applied: ReadonlyMap<string, string> = new Map();
   let loaded: string[] = [];
+  let set: ReadonlySet<string> = new Set();
   function reread(): string[] {
-    const { variables, read } = readFiles(names, files, fromProcess);
-    const changed = applyVariables(applied, variables);
-    applied = variables;
-    loaded = read;
+    const found = readFiles(names, files, fromProcess);
+    const changed = applyVariables(applied, found.variables);
+    applied = found.variables;
+    loaded = found.read;
+    set = found.set;
     return changed;
   }
   reread();
@@ -122,6 +128,9 @@ export function createProjectEnv(root: string, named?: string): ProjectEnv {
     files,
     get loaded() {
       return loaded;
+    },
+    get variableNames() {
+      return set;
     },
     reread,
   };

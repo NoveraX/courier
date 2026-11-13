@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import type { ProjectEnv } from "@noverax/courier-cli/devkit";
 import compression from "compression";
 import express from "express";
 
@@ -16,6 +17,7 @@ import { DEMO_MAX_BODY, demoRestGuard } from "./demo/demo-rest-guard";
 import type { TrustedProxies } from "./demo/trusted-proxies";
 import { type EditorRouteDeps, registerEditorRoutes } from "./editor/editor-routes";
 import { hideMachinePaths } from "./hide-machine-paths";
+import { pageVariables } from "./import-auth-headers";
 import type { MachinePaths } from "./machine-paths";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
@@ -65,6 +67,8 @@ export interface RestApiDeps {
   token: StudioToken;
   /** The visitors' counts, and the proxies a visitor's address is read past, when Studio serves a public demo. */
   demo?: { limits: DemoLimits; trusted?: TrustedProxies | undefined } | undefined;
+  /** The project's variables, of which a page's import auth names only those its env files set. */
+  projectEnv?: ProjectEnv | undefined;
 }
 
 /**
@@ -103,6 +107,7 @@ export function registerRestApi(
     webhooks,
     token,
     demo,
+    projectEnv,
   }: RestApiDeps,
 ): void {
   app.use(compression());
@@ -119,8 +124,8 @@ export function registerRestApi(
   });
 
   const holdsToken = (req: RouteRequest) => token.matches(req.get?.(TOKEN_HEADER));
-  registerParseRoute(app, { ...apis, holdsToken, demo: demo !== undefined });
-  registerAuthVariablesRoute(app);
+  registerParseRoute(app, { ...apis, holdsToken, demo: demo !== undefined, projectEnv });
+  registerAuthVariablesRoute(app, () => pageVariables(projectEnv));
   registerApisRoutes(app, { ...apis, holdsToken });
   registerSessionRoutes(app, sessions);
   registerSessionFileRoutes(app, sessions);

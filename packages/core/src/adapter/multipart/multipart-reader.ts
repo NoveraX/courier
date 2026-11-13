@@ -149,6 +149,9 @@ export class MultipartReader {
   }
 
   async #fill(): Promise<boolean> {
+    /* The chunk read through is let go while the next is awaited, however slow the upload. */
+    this.#chunk = EMPTY;
+    this.#at = 0;
     let read: ReadableStreamReadResult<Uint8Array<ArrayBuffer>>;
     try {
       read = await this.#source.read();
@@ -157,8 +160,7 @@ export class MultipartReader {
       throw error;
     }
     this.#over ||= read.done;
-    this.#chunk = read.done ? EMPTY : read.value;
-    this.#at = 0;
+    if (!read.done) this.#chunk = read.value;
     return !read.done;
   }
 }

@@ -1,8 +1,9 @@
 /**
  * Courier's block in a project's AGENTS.md, as Studio starts: brought up
  * to date where it is there, the rest of the file as it was; a file without
- * it, which is the person's, left alone; and one whose markers repeat, or
- * that cannot be written, left as it is, one line of the log saying why.
+ * it, which is the person's, and a read-only one, left alone; and one whose
+ * markers repeat, or that cannot be written, left as it is, one line of the
+ * log saying why.
  */
 import { chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -68,25 +69,32 @@ describe("Courier's block in AGENTS.md as Studio starts", () => {
     expect(logged[0]).toContain(`${AGENTS()} was left as it is: `);
   });
 
+  /* Its owner's choice, kept as a link is: on Windows, the read-only attribute. */
+  it("leaves a read-only file alone, saying nothing", () => {
+    writeFileSync(AGENTS(), `${OLD}\n`);
+    chmodSync(AGENTS(), 0o444);
+    try {
+      keepAgentRules(root);
+    } finally {
+      chmodSync(AGENTS(), 0o644);
+    }
+
+    expect(readFileSync(AGENTS(), "utf8")).toBe(`${OLD}\n`);
+    expect(logged).toEqual([]);
+  });
+
   /* A file the system will not let Studio replace: the block is written beside it and renamed in,
      which a folder that takes no new file stops on macOS and Linux — by its owner's permissions,
-     which root's would not — and a read-only file stops on Windows, whose folders take new files
-     whatever their mode. */
-  it.skipIf(process.getuid?.() === 0)(
+     which root's would not. Windows' folders take new files whatever their mode. */
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     "leaves a file it cannot write as it is, and the log says why",
     () => {
-      writeFileSync(
-        AGENTS(),
-        `${OLD}
-`,
-      );
-      chmodSync(AGENTS(), 0o444);
+      writeFileSync(AGENTS(), `${OLD}\n`);
       chmodSync(root, 0o555);
       try {
         keepAgentRules(root);
       } finally {
         chmodSync(root, 0o755);
-        chmodSync(AGENTS(), 0o644);
       }
 
       expect(readFileSync(AGENTS(), "utf8")).toBe(`${OLD}\n`);

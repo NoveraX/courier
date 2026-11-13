@@ -4,14 +4,16 @@ import { cacheMiddleware } from "@noverax/courier/middleware"
 import type { MiddlewareContext } from "@noverax/courier/server"
 
 import { VISITOR_ADDRESS_HEADER } from "../../server/visitor-address"
+import { visitorIn } from "../../server/visitor-cookie"
 
 const { endpoint } = courier()
 
 /* Whose copy of the posts a read is: the visitor's address, as the site's server reads it, and
-   the digest of their cookies, which their data is kept under — never a cookie itself. */
+   the digest of the id their data is kept under — never the id itself. No other cookie names
+   them: the CDN in front of the site sets one of its own anew with every answer. */
 function visitorScope(ctx: MiddlewareContext): string {
-  const cookies = ctx.request?.headers.get("cookie") ?? ""
-  const digest = createHash("sha256").update(cookies).digest("base64url")
+  const visitor = visitorIn(ctx.request?.headers.get("cookie") ?? undefined) ?? ""
+  const digest = createHash("sha256").update(visitor).digest("base64url")
   return `${ctx.headers.get(VISITOR_ADDRESS_HEADER) ?? ""} ${digest}`
 }
 

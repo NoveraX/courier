@@ -1,4 +1,4 @@
-export const metadata = { title: "Create Courier Reference", description: "Every option of npx @noverax/create-courier, the JSON document it writes with --json for CI and for agents, and how long each program it runs may take.", mode: "both", updated: "2026-11-07" }
+export const metadata = { title: "Create Courier Reference", description: "Every option of npx @noverax/create-courier, the JSON document it writes with --json for CI and for agents, and how long each program it runs may take.", mode: "both", updated: "2026-11-13" }
 
 `npx @noverax/create-courier`, item by item. What it does for you, and what it will not do, is on [Create Courier](/docs/create-courier).
 
@@ -12,7 +12,7 @@ export const metadata = { title: "Create Courier Reference", description: "Every
 | `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
 | `--name <name>` | The imported API's name (default: from the specification) |
 | `--no-studio` | Leave Studio out, and with it the example's mock, which Studio runs |
-| `--no-mocks` | Leave the example's mock out. `--mocks` beside `--no-studio` or `--openapi` is refused: the mock is the example's, and Studio runs it |
+| `--no-mocks` | Leave the example's mock out. `--mocks` beside `--no-example`, `--no-studio` or `--openapi` is refused: the mock is the example's, and Studio runs it |
 | `--mcp` | Offer the API's reads to AI agents in your editor |
 | `--agents-md` | Point your editor's agent at the docs of the Courier you install: Courier's block in `AGENTS.md`, and `@noverax/courier-docs` |
 | `--routes <mode>` | `plugin`: pages take their routes from Courier's plugin for the app's build; `file`: from `courier.routes.ts` (default: `plugin`, or `file` where the project keeps one) |

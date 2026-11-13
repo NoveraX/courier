@@ -200,12 +200,12 @@ async function coversApi(
 }
 
 /** A page's call of `covers.upload` through the proxy, sent as the proxy client sends it. */
-function throughProxy(
+async function throughProxy(
   api: Awaited<ReturnType<typeof coversApi>>,
   variables: Record<string, unknown>,
   config: HandlerConfig = {},
 ): Promise<Response> {
-  const payload = buildPostPayload(variables, {});
+  const payload = await buildPostPayload(variables, {});
   const { handlePost } = createHandler({ sources: { api }, ...config });
   const sentAs =
     payload.json === undefined
@@ -249,7 +249,7 @@ describe("an endpoint that sends its fields with multipartBody", () => {
   });
 
   it("sends a record upload on, through the proxy, no faster than the upstream takes it, keeping none of it", async () => {
-    const payload = buildPostPayload(
+    const payload = await buildPostPayload(
       { title: "Dune", cover: new File([new Uint8Array(16_000_000)], "cover.bin") },
       {},
     );

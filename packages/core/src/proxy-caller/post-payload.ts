@@ -1,7 +1,9 @@
 import { isFieldRecord } from "../utils/body-kind";
 import { isFormData } from "../utils/helpers";
-import { recordUpload } from "../utils/record-upload";
 import { holdsFile } from "../utils/variables-encoding";
+
+/* Loaded with the first call that sends a record holding a file: a page that sends none never loads its encoding. */
+let recordUploads: Promise<typeof import("../utils/record-upload")> | undefined;
 
 /** The JSON body of a proxy POST: the call's variables and its options. */
 export interface PostEnvelope {
@@ -47,16 +49,22 @@ export function isRecordUpload(variables: unknown): variables is Record<string, 
  *
  * @example
  * ```ts
- * buildPostPayload({ name: "Ada" }, {}); // → { json: { variables: { name: "Ada" }, options: {} } }
- * buildPostPayload(form, { timeout: 30_000 }); // → { body: FormData }
- * buildPostPayload({ cover }, {}); // → { body: Blob, contentType: "multipart/vnd.courier.variables; …" }
+ * await buildPostPayload({ name: "Ada" }, {}); // → { json: { variables: { name: "Ada" }, options: {} } }
+ * await buildPostPayload(form, { timeout: 30_000 }); // → { body: FormData }
+ * await buildPostPayload({ cover }, {}); // → { body: Blob, contentType: "multipart/vnd.courier.variables; …" }
  * ```
  */
-export function buildPostPayload(
+export async function buildPostPayload(
   variables: unknown,
   serverOptions: Record<string, unknown>,
-): PostPayload {
-  if (isRecordUpload(variables)) return recordUpload(variables, serverOptions);
+): Promise<PostPayload> {
+  if (isRecordUpload(variables)) {
+    recordUploads ??= import("../utils/record-upload").catch((cause: unknown) => {
+      recordUploads = undefined;
+      throw cause;
+    });
+    return (await recordUploads).recordUpload(variables, serverOptions);
+  }
   if (!isFormData(variables)) return { json: { variables, options: serverOptions } };
 
   const body = new FormData();

@@ -112,7 +112,7 @@ async function throughProxy(
   record: Record<string, unknown>,
   config: HandlerConfig = {},
 ): Promise<Response> {
-  const payload = buildPostPayload(record, {});
+  const payload = await buildPostPayload(record, {});
   if (payload.contentType === undefined) throw new Error("no record upload");
   const { handlePost } = createHandler({ sources: { api }, ...config });
   return handlePost(
@@ -137,7 +137,7 @@ function directly(api: Api) {
 
 describe("a record that holds a file, through the proxy", () => {
   it("goes as a record upload, under a media type no form has", async () => {
-    const payload = buildPostPayload({ title: "Dune", cover: cover() }, { timeout: 5_000 });
+    const payload = await buildPostPayload({ title: "Dune", cover: cover() }, { timeout: 5_000 });
 
     expect(payload.contentType).toMatch(new RegExp(`^${RECORD_UPLOAD_TYPE}; boundary=`));
     expect(payload.body).toBeInstanceOf(Blob);
@@ -228,7 +228,7 @@ describe("a record that holds a file, through the proxy", () => {
       "variables.meta.value is a BigInt",
     ],
   ])("refuses %s before anything is sent", async (_, record, said) => {
-    expect(() => buildPostPayload(record, {})).toThrow(
+    await expect(buildPostPayload(record, {})).rejects.toThrow(
       expect.objectContaining({
         code: "VARIABLE_NOT_ENCODABLE",
         message: expect.stringContaining(said),
@@ -541,7 +541,7 @@ describe("a record upload the proxy cannot restore", () => {
 
 describe("a record upload read by a server other than the proxy", () => {
   it("is the record the page sent, each file at its place", async () => {
-    const payload = buildPostPayload(
+    const payload = await buildPostPayload(
       { title: "Dune", cover: cover(), photos: ["x", new Blob(["2"])] },
       { timeout: 5_000 },
     );
@@ -567,7 +567,7 @@ describe("a form a page sends", () => {
     const form = new FormData();
     form.append("_variables", "not a record");
     form.append("file", new Blob(["x"]), "x.bin");
-    const payload = buildPostPayload(form, {});
+    const payload = await buildPostPayload(form, {});
     const { handlePost } = createHandler({ sources: { api } });
     const framed = new Response(payload.body);
 

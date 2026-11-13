@@ -116,7 +116,7 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         });
       }
 
-      const { contentType, ...payload } = buildPostPayload(variables, call.server);
+      const { contentType, ...payload } = await buildPostPayload(variables, call.server);
       return sendFetch(
         "post",
         url,

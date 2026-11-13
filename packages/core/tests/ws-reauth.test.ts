@@ -197,7 +197,7 @@ describe("credentials the server asks a connected client for again", () => {
         resolve();
       });
     });
-    await settle(20);
+    await expect.poll(() => served?.handler.connections.count).toBe(1);
     return served!.handler.connections.list()[0]!.connectionId;
   }
 
@@ -229,10 +229,10 @@ describe("credentials the server asks a connected client for again", () => {
     const connectionId = await connect();
 
     void served.handler.connections.requireAuth(connectionId, { timeoutMs: 100 });
-    await settle(300);
 
-    expect(served.handler.connections.count).toBe(0);
-    expect(client?.status).toBe("disconnected");
+    await expect
+      .poll(() => [served?.handler.connections.count, client?.status], { timeout: 2000 })
+      .toEqual([0, "disconnected"]);
   });
 
   it("closes the connection as soon as the credentials come, when no onReauth can accept them", async () => {
@@ -241,10 +241,10 @@ describe("credentials the server asks a connected client for again", () => {
     const connectionId = await connect(() => ({ frame: { auth: { token: "any" } } }));
 
     void served.handler.connections.requireAuth(connectionId, { timeoutMs: 150 });
-    await settle(400);
 
-    expect(served.handler.connections.count).toBe(0);
-    expect(client?.status).toBe("disconnected");
+    await expect
+      .poll(() => [served?.handler.connections.count, client?.status], { timeout: 2000 })
+      .toEqual([0, "disconnected"]);
   });
 
   it("is asked for through the registry of a handler with a pub/sub adapter", async () => {

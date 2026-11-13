@@ -123,6 +123,8 @@ describe("a proxy caller's ws options", () => {
     const first = plain.live.room();
     const second = plain.live.room();
     const third = tuned.live.room();
+    await expect.poll(() => handler?.connections.count, { timeout: 2000 }).toBe(2);
+    /* A third socket, had the plain caller's rooms not shared one, would open about then. */
     await settle(80);
 
     expect(handler?.connections.count).toBe(2);

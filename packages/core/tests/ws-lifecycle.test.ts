@@ -9,7 +9,7 @@ import { wsFrameLimit } from "../src/node";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { authFrame } from "./helpers/fake-socket";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 /* What a socket may send before it is admitted, roomy enough for these tests' frames. */
 const HELD = { frames: 10, size: 1_000_000, frameSize: 100_000 };
@@ -421,9 +421,8 @@ describe("wireEvents", () => {
 
     client.send("x".repeat(wsFrameLimit() + 1));
     await new Promise((resolve) => client.once("close", resolve));
-    await settle(20);
 
-    expect(errors).toHaveLength(1);
+    await expect.poll(() => errors).toHaveLength(1);
     expect(errors[0]).toBeInstanceOf(RangeError);
     expect(String(errors[0])).toContain("Max payload size exceeded");
   });

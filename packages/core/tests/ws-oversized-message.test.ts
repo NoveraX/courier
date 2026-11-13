@@ -21,7 +21,6 @@ import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { authFrame } from "./helpers/fake-socket";
-import { settle } from "./helpers/ws-server";
 
 const { channel } = courier();
 
@@ -94,19 +93,20 @@ describe("a message larger than the limit", () => {
   it("is refused by the client with a 4413 on its channel, and nothing else ends", async () => {
     const url = await serve();
     const both = openBoth(url);
-    await settle(100);
+    await expect
+      .poll(() => [both.ch.status, both.ticks.length > 0], { timeout: 2000 })
+      .toEqual(["connected", true]);
 
     both.ch.send({ text: "x".repeat(70_000) });
-    await settle(100);
+    await expect.poll(() => both.errors.map((error) => error.code)).toEqual([4413]);
     const ticksAfter = both.ticks.length;
     both.ch.send({ text: "small" });
-    await settle(100);
+    await expect.poll(() => both.data, { timeout: 2000 }).toEqual(["heard 5"]);
+    await expect.poll(() => both.ticks.length, { timeout: 2000 }).toBeGreaterThan(ticksAfter);
 
     expect(both.errors.map((error) => error.code)).toEqual([4413]);
     expect(heard).toEqual([5]);
-    expect(both.data).toEqual(["heard 5"]);
     expect(both.ch.status).toBe("connected");
-    expect(both.ticks.length).toBeGreaterThan(ticksAfter);
     both.ch.close();
     both.push.close();
     await both.reading;
@@ -125,13 +125,10 @@ describe("a message larger than the limit", () => {
       JSON.stringify({ type: "message", topic: "api.live.room", payload: "x".repeat(70_000) }),
     );
     socket.send(JSON.stringify({ type: "ping" }));
-    await settle(100);
 
-    expect(frames.map((frame) => frame.error?.code ?? frame.type)).toEqual([
-      "auth_ok",
-      4413,
-      "pong",
-    ]);
+    await expect
+      .poll(() => frames.map((frame) => frame.error?.code ?? frame.type), { timeout: 2000 })
+      .toEqual(["auth_ok", 4413, "pong"]);
     expect(socket.readyState).toBe(WebSocket.OPEN);
   });
 });
@@ -142,7 +139,9 @@ describe("a socket the server closes with 1009", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     const url = await serve(1_024);
     const both = openBoth(url);
-    await settle(100);
+    await expect
+      .poll(() => [both.ch.status, both.ticks.length > 0], { timeout: 2000 })
+      .toEqual(["connected", true]);
 
     both.ch.send({ text: "x".repeat(2_000) });
     await vi.waitFor(() => expect(both.errors.map((error) => error.code)).toEqual([1009]), {
@@ -150,9 +149,8 @@ describe("a socket the server closes with 1009", () => {
     });
     await vi.waitFor(() => expect(both.ch.status).toBe("connected"), { timeout: 5_000 });
     const ticksAfter = both.ticks.length;
-    await settle(150);
 
-    expect(both.ticks.length).toBeGreaterThan(ticksAfter);
+    await expect.poll(() => both.ticks.length, { timeout: 2000 }).toBeGreaterThan(ticksAfter);
     expect(both.push.status).toBe("connected");
     both.ch.close();
     both.push.close();

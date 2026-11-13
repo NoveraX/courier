@@ -201,7 +201,7 @@ describe("a connection the server refuses", () => {
   it("calls the channel back after the server's wait when the address has too many connections", async () => {
     served = await serveWS({ room }, { maxConnectionsPerIP: 1 });
     const first = open(served.url);
-    await settle(100);
+    await expect.poll(() => first.ch.status, { timeout: 2000 }).toBe("connected");
 
     const second = open(`${served.url}?peer=second`);
     await settle(1_500);

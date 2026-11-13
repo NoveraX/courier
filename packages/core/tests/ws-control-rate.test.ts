@@ -57,11 +57,10 @@ describe("control frames", () => {
 
     for (let i = 0; i < 30; i += 1)
       client.send({ type: "subscribe", id: `s${i}`, topic: `api.live.none#${i}` });
-    await settle(100);
 
-    expect(rateLimited(client).map((m) => m.id)).toEqual(
-      Array.from({ length: 20 }, (_, i) => `s${i + 10}`),
-    );
+    await expect
+      .poll(() => rateLimited(client).map((m) => m.id), { timeout: 2000 })
+      .toEqual(Array.from({ length: 20 }, (_, i) => `s${i + 10}`));
   });
 
   it("count credentials sent again too", async () => {
@@ -69,9 +68,8 @@ describe("control frames", () => {
     const client = await connect(5, { onReauth: () => ({}) });
 
     for (let i = 0; i < 15; i += 1) client.send({ type: "auth", payload: { auth: { token: i } } });
-    await settle(100);
 
-    expect(rateLimited(client)).toHaveLength(5);
+    await expect.poll(() => rateLimited(client), { timeout: 2000 }).toHaveLength(5);
   });
 
   it("let a client renew every subscription at once", async () => {

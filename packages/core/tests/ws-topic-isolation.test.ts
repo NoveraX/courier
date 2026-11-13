@@ -14,7 +14,7 @@ import { z } from "zod";
 import { courier } from "../src/define/courier";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { type ServedWS, serveWS, settle, stopWS, subscribers } from "./helpers/ws-server";
 
 const { channel } = courier();
 
@@ -59,7 +59,7 @@ describe("rooms whose variables once hashed alike", () => {
     served = await serveWS({ room });
     const victim = join(served.url, "victim", VICTIM_ROOM);
     const other = join(served.url, "other", OTHER_ROOM);
-    await settle(60);
+    await expect.poll(() => subscribers(served), { timeout: 2000 }).toBe(2);
 
     victim.ch.send({ text: "for this room only" });
     await settle(60);
@@ -84,11 +84,12 @@ describe("the topic a subscription is known by", () => {
     socket.send(
       JSON.stringify({ type: "subscribe", id: "s1", topic, payload: { room: VICTIM_ROOM } }),
     );
-    await settle(60);
 
-    expect(frames).toEqual([
-      expect.objectContaining({ type: "auth_ok", id: "a1" }),
-      expect.objectContaining({ type: "subscribed", topic }),
-    ]);
+    await expect
+      .poll(() => frames, { timeout: 2000 })
+      .toEqual([
+        expect.objectContaining({ type: "auth_ok", id: "a1" }),
+        expect.objectContaining({ type: "subscribed", topic }),
+      ]);
   });
 });

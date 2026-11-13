@@ -11,7 +11,7 @@ import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import { instrumentWSChannel } from "../src/transport/instrument";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 const { channel } = courier();
 
@@ -75,10 +75,10 @@ describe("the Timeline's record of a channel", () => {
     const recorded = record();
 
     open(served.url);
-    await settle(300);
 
-    expect(recorded.closes).toEqual(["error"]);
-    expect(recorded.errors).toEqual(["Not a member of this room"]);
+    await expect
+      .poll(() => [recorded.closes, recorded.errors], { timeout: 2000 })
+      .toEqual([["error"], ["Not a member of this room"]]);
   });
 
   it("is failed when the server refuses the connection", async () => {
@@ -98,10 +98,10 @@ describe("the Timeline's record of a channel", () => {
     const recorded = record();
 
     open(served.url);
-    await settle(1_500);
 
-    expect(recorded.closes).toEqual(["error"]);
-    expect(recorded.errors).toEqual(["Connection rejected"]);
+    await expect
+      .poll(() => [recorded.closes, recorded.errors], { timeout: 2000 })
+      .toEqual([["error"], ["Connection rejected"]]);
   });
 
   it("is complete when the server closes the channel without a reason", async () => {
@@ -117,9 +117,9 @@ describe("the Timeline's record of a channel", () => {
     const recorded = record();
 
     open(served.url);
-    await settle(300);
 
-    expect(recorded.closes).toEqual(["complete"]);
-    expect(recorded.errors).toEqual([]);
+    await expect
+      .poll(() => [recorded.closes, recorded.errors], { timeout: 2000 })
+      .toEqual([["complete"], []]);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-angular",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Courier for Angular: builders that hand a page's bundle the routes its proxy client may call, built from courier.config, with no routes file to generate",
   "keywords": [
     "courier",
@@ -50,12 +50,12 @@
     "dev": "tsdown --watch"
   },
   "dependencies": {
-    "@noverax/courier-build": "0.4.0"
+    "@noverax/courier-build": "0.5.0"
   },
   "peerDependencies": {
     "@angular-devkit/architect": ">=0.2000.0",
     "@angular/build": ">=20.0.0",
-    "@noverax/courier": "^0.4.0"
+    "@noverax/courier": "^0.5.0"
   },
   "devDependencies": {
     "@angular-devkit/architect": "^0.2202.5",

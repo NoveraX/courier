@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-build",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Courier at build time: loads courier.config the way every Courier tool does, and hands a page's bundle the routes its proxy client may call through a plugin for the app's bundler, with no routes file to generate",
   "keywords": [
     "courier",
@@ -154,7 +154,7 @@
     "jiti": "^2.7.0"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.4.0",
+    "@noverax/courier": "^0.5.0",
     "@rsbuild/core": ">=1.0.0",
     "@rspack/core": ">=1.0.0",
     "esbuild": ">=0.17.0",

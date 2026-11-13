@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-studio-core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Courier Studio's runtime: attachRuntime registers your config's sources and, in development, streams every call your server and browser make to Studio",
   "keywords": [
     "courier",
@@ -77,11 +77,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier-build": "0.4.0",
+    "@noverax/courier-build": "0.5.0",
     "socket.io-client": "^4.8.3"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.4.0"
+    "@noverax/courier": "^0.5.0"
   },
   "devDependencies": {
     "@noverax/courier": "*",

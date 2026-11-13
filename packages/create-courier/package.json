@@ -1,6 +1,6 @@
 {
   "name": "@noverax/create-courier",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Set Courier up in one command: a typed API layer, its proxy route, Studio, mock data and AI agent access, in a new project or an existing one, for 13 frameworks",
   "keywords": [
     "courier",
@@ -90,7 +90,7 @@
   },
   "dependencies": {
     "@clack/prompts": "1.8.1",
-    "@noverax/courier": "0.4.0",
+    "@noverax/courier": "0.5.0",
     "citty": "^0.2.2"
   }
 }

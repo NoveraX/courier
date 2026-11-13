@@ -1,6 +1,6 @@
 {
   "name": "@noverax/courier-docs",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Courier's documentation for the version a project installs, as Markdown an editor's agent reads offline — one file a page, an index of them all and a manifest of their sections — and as an MCP server over stdio that searches and reads them",
   "keywords": [
     "courier",
@@ -52,10 +52,10 @@
     "access": "public"
   },
   "dependencies": {
-    "@noverax/courier-mcp": "0.4.0"
+    "@noverax/courier-mcp": "0.5.0"
   },
   "peerDependencies": {
-    "@noverax/courier": "^0.4.0"
+    "@noverax/courier": "^0.5.0"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.3.1",

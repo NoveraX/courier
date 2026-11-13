@@ -9,14 +9,22 @@
  * and a config loaded again that adds no watcher. Requires a build of this
  * package and of the core first.
  */
-import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MetroResolutionContext, MetroResolver } from "../../src/metro/metro-config-shape";
 import { withCourier } from "../../src/metro/with-courier";
-import { forgetRoutesFiles, routesFile } from "../../src/routes-file/routes-file";
+import { forgetRoutesFiles, refreshRoutes, routesFile } from "../../src/routes-file/routes-file";
 import type { TempProject } from "../vite/temp-project";
 import { CONFIG_JS } from "../webpack/js-project";
 import { metroProject } from "./metro-project";
@@ -123,6 +131,19 @@ describe("withCourier for Metro", () => {
     expect(readFileSync(join(project.root, MODULE), "utf8")).toMatch(
       /^throw new Error\("\[courier\] /,
     );
+  }, 60_000);
+
+  it("writes nothing for routes forgotten while they are read: their project may be gone", async () => {
+    project = metroProject({ "src/apis.mjs": "export const shop = ;\n" });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const routes = await routesFile(project.root, undefined, join(project.root, MODULE), ELSEWHERE);
+
+    const reading = refreshRoutes(routes);
+    forgetRoutesFiles();
+    project.remove();
+    await reading;
+
+    expect(existsSync(project.root)).toBe(false);
   }, 60_000);
 
   it("rewrites the module when a file the routes came from changes, saved in place or by replacing it", async () => {

@@ -91,7 +91,8 @@ export async function routesFile(
  * the last one read it. When the routes cannot be read, those read last
  * stay, and why is kept, for a build to fail with, and told in the
  * bundler's terminal; with none read yet, the module fails where it is
- * imported, saying why.
+ * imported, saying why. Routes forgotten while they were read are left
+ * alone: their project may be gone.
  *
  * @param routes - The project's routes
  * @throws RoutesReadError `ROUTES_NOT_WRITTEN` when the module cannot be written
@@ -107,11 +108,13 @@ export async function refreshRoutes(routes: RoutesFile): Promise<void> {
   };
   try {
     const snapshot = await routes.engine.read();
+    if (forgotten(routes)) return;
     routes.failure = undefined;
     writeRoutesFile(routes.file, routesModuleCode(snapshot), routes.root, routes.elsewhere);
     follow(snapshot);
   } catch (error) {
     if (error instanceof RoutesReadError && error.code === "ROUTES_NOT_WRITTEN") throw error;
+    if (forgotten(routes)) return;
     const failure = error instanceof Error ? error : new Error(String(error));
     routes.failure = failure;
     const read = failure instanceof RoutesReadError ? failure.inputs : undefined;
@@ -149,13 +152,17 @@ function refreshSoon(routes: RoutesFile): void {
   clearTimeout(settling.get(routes));
   const timer = setTimeout(() => {
     settling.delete(routes);
-    if (registryOf().get(routes.file) !== routes) return;
+    if (forgotten(routes)) return;
     refreshRoutes(routes).catch((error: unknown) => {
       console.error(`[courier] ${error instanceof Error ? error.message : String(error)}`);
     });
   }, SETTLE_MS);
   timer.unref();
   settling.set(routes, timer);
+}
+
+function forgotten(routes: RoutesFile): boolean {
+  return registryOf().get(routes.file) !== routes;
 }
 
 function registryOf(): Map<string, RoutesFile> {

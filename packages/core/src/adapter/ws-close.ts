@@ -175,12 +175,14 @@ export function noticeOf(why: SessionClose, close: CloseFrame, admitted: boolean
 }
 
 /* The wait a client comes back after: a stopping server's, drawn for each connection, and a
-   limit's on connections, which a place freeing lifts. Too much sent before the connection was
-   let in, or a connection replaced, is told none: coming back would meet the same answer. */
+   limit's on connections, which a place freeing lifts — the server's own, or a `RateLimitError`
+   the application's hook refused credentials with. Too much sent before the connection was let
+   in, or a connection replaced, is told none: coming back would meet the same answer. */
 function pauseOf(why: SessionClose): { readonly retryAfterMs?: number } {
   if (why.kind === "shutdown") return { retryAfterMs: why.retryAfterMs };
-  if (why.kind === "limit") return { retryAfterMs: WS_SERVER_LIMITS.LIMIT_RETRY_AFTER_MS };
-  return {};
+  const limited =
+    why.kind === "limit" || ("failure" in why && why.failure.code === WS_CODE.TOO_MANY);
+  return limited ? { retryAfterMs: WS_SERVER_LIMITS.LIMIT_RETRY_AFTER_MS } : {};
 }
 
 /**

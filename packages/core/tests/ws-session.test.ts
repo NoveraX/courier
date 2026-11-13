@@ -277,6 +277,15 @@ describe("closeOf", () => {
 });
 
 describe("noticeOf", () => {
+  it("tells a client its hook refused with a RateLimitError when to try again, as a limit's", () => {
+    const failure = { code: 4429, message: "Too many sign-ins" };
+    const refused: SessionClose = { kind: "auth-refused", failure };
+    const renewed: SessionClose = { kind: "reauth-refused", failure, id: "r3" };
+
+    expect(noticeOf(refused, closeOf(refused), false)).toMatchObject({ retryAfterMs: 10_000 });
+    expect(noticeOf(renewed, closeOf(renewed), true)).toMatchObject({ retryAfterMs: 10_000 });
+  });
+
   it("answers refused credentials sent again with auth_error, though the connection was let in", () => {
     const why: SessionClose = {
       kind: "reauth-refused",

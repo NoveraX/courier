@@ -1,4 +1,4 @@
-export const metadata = { title: "Realtime Connections", description: "The connection a caller's streams and channels share: what it opens with, how it comes back after a dropped network, a hidden page or a restarted server, what each close code means, and who the server takes it to be.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Realtime Connections", description: "The connection a caller's streams and channels share: what it opens with, how it comes back after a dropped network, a hidden page or a restarted server, what each close code means, and who the server takes it to be.", mode: "both", updated: "2026-11-13" }
 
 ## Connection options
 
@@ -57,7 +57,7 @@ A socket that takes longer than 15 s to open, or a server that takes longer than
 | `4401` | credentials refused, expired or not renewed in time | asks for its credentials anew, once, and signs in with them if they changed; otherwise ends its channels with an `AuthError` |
 | `4403`, `4421` | origin or host not allowed | ends its channels with the error |
 | `4409` | replaced by a newer connection of the same user | ends its channels: reconnecting would replace that one in turn |
-| `4429` | too many connections from the address or the user, or too much sent before the connection was let in | called back after the wait the server names, 10 s for too many connections, as a place may free meanwhile; with none named, as for too much sent, ends its channels with a `RateLimitError` |
+| `4429` | too many connections from the address or the user, a `RateLimitError` that `onConnect` or `onReauth` throws, or too much sent before the connection was let in | called back after the wait the server names, 10 s for too many connections or a `RateLimitError`, as a place may free meanwhile; with none named, as for too much sent, ends its channels with a `RateLimitError` |
 | `1002` | the two ends speak different versions of the protocol | from a server older than the client, reconnects after a wait, as a rollout replaces that server; from a newer one, ends its channels with the error — the page needs loading again |
 | `1003`, `1007`, `1008`, `4000`–`4099` | data or a policy the server will not take, or the application said no | ends its channels with the error |
 | `4400`–`4499`, those above and `4408` aside | a refusal of what the client sent, as an HTTP `4xx` is: a frame the protocol does not take (`4400`), what the connection names is not there (`4404`), too much (`4413`), what its schema refuses (`4422`) — and so a `RealtimeError` of such a code that `onConnect` throws | ends its channels with the error, as a stream ends on a `4xx` |

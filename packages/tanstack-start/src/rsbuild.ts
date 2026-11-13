@@ -13,7 +13,7 @@ const BY_CONTENT = "[name].[contenthash:10].js";
 
 /** An environment's config, as far as the plugin reads and changes it. */
 export interface ScriptsConfig {
-  output: { target?: string; filename?: { js?: unknown } };
+  output: { target?: string; filename?: { js?: unknown }; filenameHash?: unknown };
   dev?: { writeToDisk?: unknown };
 }
 
@@ -95,7 +95,8 @@ function forgetOnDisk(): { apply(compiler: EmittingCompiler): void } {
  * config itself fails the build.
  *
  * Under the dev server it names the scripts of a page by their content, as
- * a build does, unless the app names them itself. A TanStack Start page
+ * a build does, unless the app names them itself or turns the hash in names
+ * off. A TanStack Start page
  * preloads its scripts as modules, and an engine may run a preloaded module
  * again from its memory, whatever the response says — WebKit does, on a
  * reload too: under a name that never changes, a page loaded after an edit
@@ -125,7 +126,7 @@ export function courierRoutes(options: CourierRoutesOptions = {}): StartRsbuildP
       /* Rsbuild knows it serves rather than builds only once it starts. */
       api.modifyEnvironmentConfig(({ output }) => {
         if (api.context.action !== "dev" || output.target !== "web") return;
-        if (output.filename?.js !== undefined) return;
+        if (output.filename?.js !== undefined || output.filenameHash === false) return;
         output.filename = { ...output.filename, js: BY_CONTENT };
       });
       api.modifyRspackConfig((config, { environment }) => {

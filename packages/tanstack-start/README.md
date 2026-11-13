@@ -194,7 +194,7 @@ The handlers of the route the proxy's streams are opened at: a stream over `GET`
 
 ### `courierRoutes(options?)`
 
-From `/plugin` for Vite and `/rsbuild` for Rsbuild: the plugin that builds the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. Under Rsbuild's dev server, `/rsbuild` names a page's scripts by their content, as a build does, so a page loaded after an edit never runs an old copy an engine kept of them; an app that names its scripts itself keeps its names, and one that writes them to disk keeps there those of the last two builds alone. `config` names the config file when it is not the one found from the root.
+From `/plugin` for Vite and `/rsbuild` for Rsbuild: the plugin that builds the routes a page's proxy client may call from `courier.config.ts`, in place of `@noverax/courier/routes`. Under Rsbuild's dev server, `/rsbuild` names a page's scripts by their content, as a build does, so a page loaded after an edit never runs an old copy an engine kept of them; an app that names its scripts itself, or turns the hash in their names off, keeps its names, and one that writes them to disk keeps there those of the last two builds alone. `config` names the config file when it is not the one found from the root.
 
 ### `createServerCaller(api, defaults?)`
 

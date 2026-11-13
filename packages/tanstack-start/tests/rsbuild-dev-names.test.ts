@@ -155,9 +155,13 @@ describe("courierRoutes from /rsbuild, under Rsbuild's dev server", () => {
     expect(written.length).toBeLessThanOrEqual(2);
   }, 240_000);
 
-  it("keeps the names an app gives its scripts itself", async () => {
-    const base = await serve({ filename: { js: "[name].js" } });
+  it.each([[{ filename: { js: "[name].js" } }], [{ filenameHash: false }]])(
+    "keeps the names an app gives its scripts itself: %o",
+    async (output) => {
+      const base = await serve(output);
 
-    expect((await script(base)).address).toBe("/static/js/index.js");
-  }, 60_000);
+      expect((await script(base)).address).toBe("/static/js/index.js");
+    },
+    60_000,
+  );
 });

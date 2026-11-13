@@ -35,10 +35,12 @@ function devServer(): { server: ViteDevServer; sent: unknown[] } {
 /* A reading of the shop's routes, the config and its definitions read; `meanwhile` runs as it does. */
 function loading(followed: readonly string[], meanwhile?: (apis: string) => void) {
   project = tempProject({ "courier.config.ts": CONFIG, "src/apis.ts": APIS });
+  const config = join(project.root, "courier.config.ts");
   const apis = join(project.root, "src/apis.ts");
+  for (const file of [config, apis]) dated(file, -60_000);
   const snapshot: RoutesSnapshot = {
-    configFile: join(project.root, "courier.config.ts"),
-    files: [join(project.root, "courier.config.ts"), apis],
+    configFile: config,
+    files: [config, apis],
     env: [],
     routes: {},
   };
@@ -67,11 +69,17 @@ function loading(followed: readonly string[], meanwhile?: (apis: string) => void
   return { load: () => loadRoutesModule(context, state), sent };
 }
 
-/* A change saved now, dated as it is saved. */
+/* A change saved now, as the reading runs, dated a second on. */
 function save(file: string): void {
   writeFileSync(file, `${APIS}\n`);
-  const now = new Date();
-  utimesSync(file, now, now);
+  dated(file, 1_000);
+}
+
+/* Date a file `ms` from now, clear of the moment the reading began: a time set on a file
+   comes back rounded, and one set in the reading's first millisecond could read as before it. */
+function dated(file: string, ms: number): void {
+  const at = new Date(Date.now() + ms);
+  utimesSync(file, at, at);
 }
 
 describe("the routes module, loaded in a dev server", () => {

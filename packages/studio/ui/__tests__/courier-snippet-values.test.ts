@@ -89,4 +89,22 @@ describe("the Courier snippet of a webhook delivered", () => {
     expect(JSON.stringify(options?.body)).toBe(JSON.stringify(VARIABLES));
     expectNothingEndsTheCode(rest.join("\n"));
   });
+
+  it("names a webhook no variable can be named after as `webhook`", async () => {
+    const delivered: unknown[][] = [];
+    const webhook = requestEntry({
+      mode: "webhook",
+      source: "class",
+      group: undefined,
+      url: ADDRESS,
+    });
+    const [, ...rest] = requestSnippet(webhook, "courier").code.split("\n");
+
+    await runCode(rest.join("\n"), {
+      webhook: "the class webhook",
+      deliverWebhook: async (...args: unknown[]) => delivered.push(args),
+    });
+
+    expect(delivered.map(([named]) => named)).toEqual(["the class webhook"]);
+  });
 });

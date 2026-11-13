@@ -33,38 +33,29 @@ export function isRecordUpload(variables: unknown): variables is Record<string, 
 }
 
 /**
- * The body of a proxy POST: a JSON envelope; the caller's form with the
- * call's options written before its fields; or, for a record that holds a
- * file, a record upload, which the server restores the record from.
+ * The body of a proxy POST: a JSON envelope, or the caller's form with the
+ * call's options written before its fields. A record that holds a file goes
+ * as a record upload instead, which {@link buildRecordUploadPayload} encodes.
  *
  * The endpoint is not in the body — it travels in the URL (see
  * `proxyRouting`). In a form, the server reads the first `_options` field as
  * the options, so a caller's own field of that name, later in the form,
  * reaches the upstream as the caller wrote it.
  *
- * @param variables - The caller's variables, or a form
+ * @param variables - The caller's variables, or a form: not a record that holds a file
  * @param serverOptions - The options the server may act on
  * @returns The body to send
- * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a record value no form carries
  *
  * @example
  * ```ts
- * await buildPostPayload({ name: "Ada" }, {}); // → { json: { variables: { name: "Ada" }, options: {} } }
- * await buildPostPayload(form, { timeout: 30_000 }); // → { body: FormData }
- * await buildPostPayload({ cover }, {}); // → { body: Blob, contentType: "multipart/vnd.courier.variables; …" }
+ * buildPostPayload({ name: "Ada" }, {}); // → { json: { variables: { name: "Ada" }, options: {} } }
+ * buildPostPayload(form, { timeout: 30_000 }); // → { body: FormData }
  * ```
  */
-export async function buildPostPayload(
+export function buildPostPayload(
   variables: unknown,
   serverOptions: Record<string, unknown>,
-): Promise<PostPayload> {
-  if (isRecordUpload(variables)) {
-    recordUploads ??= import("../utils/record-upload").catch((cause: unknown) => {
-      recordUploads = undefined;
-      throw cause;
-    });
-    return (await recordUploads).recordUpload(variables, serverOptions);
-  }
+): PostPayload {
   if (!isFormData(variables)) return { json: { variables, options: serverOptions } };
 
   const body = new FormData();
@@ -73,4 +64,31 @@ export async function buildPostPayload(
     body.append(key, value);
   }
   return { body };
+}
+
+/**
+ * The body of a proxy POST whose variables are a record that holds a file:
+ * a record upload, which the server restores the record from. The encoding
+ * loads with the first call that sends one; a call whose load failed fails
+ * alone, and the next asks for it again.
+ *
+ * @param variables - A record that holds a file
+ * @param serverOptions - The options the server may act on
+ * @returns The body to send, and its content type
+ * @throws ConfigurationError `VARIABLE_NOT_ENCODABLE` for a record value no form carries
+ *
+ * @example
+ * ```ts
+ * await buildRecordUploadPayload({ cover }, {}); // → { body: Blob, contentType: "multipart/vnd.courier.variables; …" }
+ * ```
+ */
+export async function buildRecordUploadPayload(
+  variables: Record<string, unknown>,
+  serverOptions: Record<string, unknown>,
+): Promise<PostPayload> {
+  recordUploads ??= import("../utils/record-upload").catch((cause: unknown) => {
+    recordUploads = undefined;
+    throw cause;
+  });
+  return (await recordUploads).recordUpload(variables, serverOptions);
 }

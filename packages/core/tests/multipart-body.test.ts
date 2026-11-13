@@ -17,7 +17,11 @@ import type { HandlerConfig } from "../src/adapter/handler-config";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup, multipartBody } from "../src/define/index";
 import { toOpenAPI } from "../src/openapi";
-import { buildPostPayload } from "../src/proxy-caller/post-payload";
+import {
+  buildPostPayload,
+  buildRecordUploadPayload,
+  isRecordUpload,
+} from "../src/proxy-caller/post-payload";
 import { _resetSourcesForTests } from "../src/server/sources";
 import { type StreamedUpload, streamedUpload } from "../src/utils/streamed-upload";
 import { formOf } from "../src/utils/variables-encoding";
@@ -205,7 +209,9 @@ async function throughProxy(
   variables: Record<string, unknown>,
   config: HandlerConfig = {},
 ): Promise<Response> {
-  const payload = await buildPostPayload(variables, {});
+  const payload = isRecordUpload(variables)
+    ? await buildRecordUploadPayload(variables, {})
+    : buildPostPayload(variables, {});
   const { handlePost } = createHandler({ sources: { api }, ...config });
   const sentAs =
     payload.json === undefined
@@ -249,7 +255,7 @@ describe("an endpoint that sends its fields with multipartBody", () => {
   });
 
   it("sends a record upload on, through the proxy, no faster than the upstream takes it, keeping none of it", async () => {
-    const payload = await buildPostPayload(
+    const payload = await buildRecordUploadPayload(
       { title: "Dune", cover: new File([new Uint8Array(16_000_000)], "cover.bin") },
       {},
     );

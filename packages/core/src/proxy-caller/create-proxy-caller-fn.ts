@@ -7,7 +7,7 @@ import { isOneUsersCall } from "../utils/one-users-call";
 import { assertJsonValue } from "../utils/variables-encoding";
 import { assertCarriable } from "./assert-carriable";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
-import { buildPostPayload, isRecordUpload } from "./post-payload";
+import { buildPostPayload, buildRecordUploadPayload, isRecordUpload } from "./post-payload";
 import { proxyCancelPreviousOf } from "./proxy-cancel-previous";
 import { proxyRouting } from "./proxy-routing";
 import { resolveProxyPath } from "./resolve-path";
@@ -116,7 +116,12 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
         });
       }
 
-      const { contentType, ...payload } = await buildPostPayload(variables, call.server);
+      /* Handed to fetch with no wait first: under `cancelPrevious` the older calls are cancelled
+         as soon as this function first waits, and an identical newer read joins their request
+         only if it reached fetch by then. A record that holds a file waits for its encoding. */
+      const { contentType, ...payload } = isRecordUpload(variables)
+        ? await buildRecordUploadPayload(variables, call.server)
+        : buildPostPayload(variables, call.server);
       return sendFetch(
         "post",
         url,

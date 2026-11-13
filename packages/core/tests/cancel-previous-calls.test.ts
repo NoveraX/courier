@@ -258,13 +258,16 @@ describe("the proxy", () => {
 
   it("answers the browser client's identical newer call from the request already made", async () => {
     const proxied = vi.mocked(fetch);
+    const made = () => proxied.mock.calls.filter(([input]) => !isUpstream(input, UPSTREAM));
     const client = createProxyCaller(routesOf(api, "api")) as unknown as Client;
     const first = client.search({ q: "ab" }).catch(cancelled);
+    /* The newer call comes once the older one's request is on its way, as a second click does. */
+    await vi.waitFor(() => expect(made()).toHaveLength(1), { interval: 1 });
     const second = client.search({ q: "ab" });
 
     expect(await first).toBe("SUPERSEDED");
     await expect(second).resolves.toEqual({ url: `${UPSTREAM}/search?q=ab` });
-    expect(proxied.mock.calls.filter(([input]) => !isUpstream(input, UPSTREAM))).toHaveLength(1);
+    expect(made()).toHaveLength(1);
   });
 
   it("cancels in the browser client, which takes the endpoint's say from its routes", async () => {

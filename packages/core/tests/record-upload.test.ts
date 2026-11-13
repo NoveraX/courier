@@ -19,7 +19,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup, multipartBody } from "../src/define/index";
 import { routesOf } from "../src/define/routes-of";
 import { createProxyCaller } from "../src/proxy-caller";
-import { buildPostPayload } from "../src/proxy-caller/post-payload";
+import { buildPostPayload, buildRecordUploadPayload } from "../src/proxy-caller/post-payload";
 import { _resetSourcesForTests, registerSources } from "../src/server/sources";
 import { RECORD_UPLOAD_TYPE } from "../src/utils/record-upload";
 import { boundaryIn, readParts } from "./helpers/multipart-fixtures";
@@ -112,7 +112,7 @@ async function throughProxy(
   record: Record<string, unknown>,
   config: HandlerConfig = {},
 ): Promise<Response> {
-  const payload = await buildPostPayload(record, {});
+  const payload = await buildRecordUploadPayload(record, {});
   if (payload.contentType === undefined) throw new Error("no record upload");
   const { handlePost } = createHandler({ sources: { api }, ...config });
   return handlePost(
@@ -137,7 +137,10 @@ function directly(api: Api) {
 
 describe("a record that holds a file, through the proxy", () => {
   it("goes as a record upload, under a media type no form has", async () => {
-    const payload = await buildPostPayload({ title: "Dune", cover: cover() }, { timeout: 5_000 });
+    const payload = await buildRecordUploadPayload(
+      { title: "Dune", cover: cover() },
+      { timeout: 5_000 },
+    );
 
     expect(payload.contentType).toMatch(new RegExp(`^${RECORD_UPLOAD_TYPE}; boundary=`));
     expect(payload.body).toBeInstanceOf(Blob);
@@ -228,7 +231,7 @@ describe("a record that holds a file, through the proxy", () => {
       "variables.meta.value is a BigInt",
     ],
   ])("refuses %s before anything is sent", async (_, record, said) => {
-    await expect(buildPostPayload(record, {})).rejects.toThrow(
+    await expect(buildRecordUploadPayload(record, {})).rejects.toThrow(
       expect.objectContaining({
         code: "VARIABLE_NOT_ENCODABLE",
         message: expect.stringContaining(said),
@@ -541,7 +544,7 @@ describe("a record upload the proxy cannot restore", () => {
 
 describe("a record upload read by a server other than the proxy", () => {
   it("is the record the page sent, each file at its place", async () => {
-    const payload = await buildPostPayload(
+    const payload = await buildRecordUploadPayload(
       { title: "Dune", cover: cover(), photos: ["x", new Blob(["2"])] },
       { timeout: 5_000 },
     );
@@ -567,7 +570,7 @@ describe("a form a page sends", () => {
     const form = new FormData();
     form.append("_variables", "not a record");
     form.append("file", new Blob(["x"]), "x.bin");
-    const payload = await buildPostPayload(form, {});
+    const payload = buildPostPayload(form, {});
     const { handlePost } = createHandler({ sources: { api } });
     const framed = new Response(payload.body);
 

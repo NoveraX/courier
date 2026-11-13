@@ -120,6 +120,7 @@
       "RealtimeError",
       "TimeoutError",
       "ValidationError",
+      "callerKeyOf",
       "createCaller",
       "createHandler",
       "createLogger",

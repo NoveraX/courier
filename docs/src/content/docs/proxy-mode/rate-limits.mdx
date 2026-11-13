@@ -1,4 +1,4 @@
-export const metadata = { title: "Rate Limits", description: "Hold each caller of the proxy route to the calls a person would make, writes counted apart, and keep requests no browser sent off your APIs — with what a refused call is told, who counts as one caller, and how Studio's Playground gets past browsersOnly.", mode: "proxy", updated: "2026-11-06" }
+export const metadata = { title: "Rate Limits", description: "Hold each caller of the proxy route to the calls a person would make, writes counted apart, and keep requests no browser sent off your APIs — with what a refused call is told, who counts as one caller, and how Studio's Playground gets past browsersOnly.", mode: "proxy", updated: "2026-11-13" }
 
 The proxy calls your APIs with your server's keys, for anyone who asks: the origin check refuses another site's page, while a script that sends no `Origin` is served, as a server and a CDN are. `rateLimit` holds each caller to what a person would make. Every call takes one from `requests` in each `window`, a write takes one from `writes` first, and a call past either is answered `429` before its body is read — the API never sees it:
 
@@ -18,14 +18,16 @@ A budget lets its calls go at once and then frees one each `window / requests`, 
 
 ## Who a caller is
 
-A caller is the user's address, read from the right of the forwarding chain past your own proxies — see [The user's address](/docs/deployment/overview#the-users-address) — so a user cannot become another caller by writing an address of their own, and an IPv6 address counts by its /64 network, which one subscriber gets whole. Many users behind one office's address share its budget; count signed-in users apart by their session with `key`, which returns `undefined` to leave a request unlimited:
+A caller is the user's address, read from the right of the forwarding chain past your own proxies — see [The user's address](/docs/deployment/overview#the-users-address) — so a user cannot become another caller by writing an address of their own, and an IPv6 address counts by its /64 network, which one subscriber gets whole. Many users behind one office's address share its budget; count signed-in users apart by their session with `key`, which returns `undefined` to leave a request unlimited. `callerKeyOf(address)` counts an address as the proxy does: an IPv6 address by its /64, and no address, or anything that is not one, as one caller, `"unknown"`:
 
-```ts
+```ts side="server"
+import { callerKeyOf } from "@noverax/courier/server"
+
 courierHandler({
   rateLimit: {
     requests: 300,
     window: 60_000,
-    key: (request) => sessionIdOf(request) ?? addressOf(request),
+    key: (request) => sessionIdOf(request) ?? callerKeyOf(addressOf(request)),
   },
 })
 ```

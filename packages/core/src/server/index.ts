@@ -12,6 +12,7 @@
 export { createHandler } from "../adapter/create-handler";
 export { handleWhileConnected } from "../adapter/handle-while-connected";
 export { createWSHandler } from "../adapter/handle-ws";
+export { callerKeyOf } from "../adapter/rate-limit/caller-key";
 export { memoryRateLimitStore } from "../adapter/rate-limit/memory-store";
 export { detectAppOrigin, getAppOrigin, setAppOrigin } from "../app-origin";
 /* Its client types, each from the module that declares it, are named in client/public-types.ts. */

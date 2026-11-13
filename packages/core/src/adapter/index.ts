@@ -5,6 +5,7 @@ export { buildSSECorsHeaders } from "./format-sse";
 export { type ClientConnection, handleWhileConnected } from "./handle-while-connected";
 export { createWSHandler } from "./handle-ws";
 export type { HandlerConfig } from "./handler-config";
+export { callerKeyOf } from "./rate-limit/caller-key";
 export { type MemoryRateLimitOptions, memoryRateLimitStore } from "./rate-limit/memory-store";
 export type {
   ProxyRateLimit,

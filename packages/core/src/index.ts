@@ -1,6 +1,7 @@
 /* Its types, each from the module that declares it, are named in public-types.ts. */
 
 export {
+  callerKeyOf,
   createHandler,
   createWSHandler,
   handleWhileConnected,

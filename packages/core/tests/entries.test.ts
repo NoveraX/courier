@@ -53,6 +53,7 @@ const SHARED = [
 const PAGE_ONLY = ["createFetch", "smoothProgress"];
 
 const SERVER_ONLY = [
+  "callerKeyOf",
   "createHandler",
   "createWSHandler",
   "detectAppOrigin",

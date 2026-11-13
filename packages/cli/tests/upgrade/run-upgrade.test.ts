@@ -3,7 +3,7 @@
  * own: what it plans, writes and installs, what it puts back when the
  * install fails, and what it refuses before it changes anything.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -170,6 +170,21 @@ describe("runUpgrade", () => {
     expect(status).toBe(0);
     expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe(`# Rules\n\n${AGENT_RULES}\n`);
     expect(plan?.plan.agentRules).toEqual([{ path: "AGENTS.md", state: "update" }]);
+  });
+
+  it("leaves a read-only AGENTS.md as it is, as it raises the packages", async () => {
+    const stale = `# Rules\n\n${AGENT_RULES_BEGIN}\nRead the docs.\n${AGENT_RULES_END}\n`;
+    const root = shop({ "AGENTS.md": stale });
+    chmodSync(join(root, "AGENTS.md"), 0o444);
+    try {
+      const { status, plan } = await upgrade(root, {});
+
+      expect(status).toBe(0);
+      expect(readFileSync(join(root, "AGENTS.md"), "utf8")).toBe(stale);
+      expect(plan?.plan.agentRules ?? []).toEqual([]);
+    } finally {
+      chmodSync(join(root, "AGENTS.md"), 0o644);
+    }
   });
 
   it("leaves the block alone where Courier is at the release already, and names markers that repeat", async () => {

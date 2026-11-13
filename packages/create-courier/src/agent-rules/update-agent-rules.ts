@@ -16,10 +16,10 @@ export type AgentRulesUpdate =
  * none — and only between its markers. The file is written whole, all at
  * once, its mode kept. A file whose markers are repeated or out of order
  * is left as it is, and so is one that cannot be written: why is said,
- * for one line of the log.
+ * for one line of the log. A read-only file is never written.
  *
  * @param dir - The folder AGENTS.md is in: the project's root
- * @returns What was done, with the file's path under `dir`, or `null` where there was nothing to do: no AGENTS.md, a link, a file over 1 MiB or not UTF-8, no block in it, or the block up to date
+ * @returns What was done, with the file's path under `dir`, or `null` where there was nothing to do: no AGENTS.md, a link, a read-only file, one over 1 MiB or not UTF-8, no block in it, or the block up to date
  * @example
  * ```ts
  * const update = updateAgentRules(projectRoot);

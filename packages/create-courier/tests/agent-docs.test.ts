@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, symlinkSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createTerminalStyle } from "@noverax/courier/internal";
 import { afterAll, describe, expect, it } from "vitest";
@@ -107,6 +107,24 @@ describe("pointing the editor's agent at the docs", () => {
     expect(plan.agentRules?.map(({ state }) => state)).toEqual(["kept", "create"]);
   });
 
+  it("leaves a read-only AGENTS.md as it is, and names the block to add to it", () => {
+    const root = honoWith({ "AGENTS.md": "# Rules\n" });
+    chmodSync(join(root, "AGENTS.md"), 0o444);
+    try {
+      const plan = planIn(root);
+
+      expect(plan.edits.map(({ path }) => path)).toEqual([]);
+      expect(plan.manual[0]).toEqual({
+        file: "AGENTS.md",
+        what: "It is read-only, so it was left as it is: add Courier's block to its end",
+        lines: AGENT_RULES.split("\n"),
+      });
+      expect(plan.agentRules?.map(({ state }) => state)).toEqual(["kept", "create"]);
+    } finally {
+      chmodSync(join(root, "AGENTS.md"), 0o644);
+    }
+  });
+
   it("follows no link at AGENTS.md, and leaves the other file alone beside one", () => {
     const root = honoWith({ "docs/rules.md": "# Rules\n" });
     symlinkSync(join(root, "docs/rules.md"), join(root, "AGENTS.md"));
@@ -130,6 +148,14 @@ describe("pointing the editor's agent at the docs", () => {
     symlinkSync("notes.md", join(elsewhere, OWN));
 
     expect(planIn(toAgents).agentRules?.map(({ state }) => state)).toEqual(["create", "same"]);
+    const readOnly = honoWith({ "notes.md": "@AGENTS.md\n" });
+    symlinkSync("notes.md", join(readOnly, OWN));
+    chmodSync(join(readOnly, "notes.md"), 0o444);
+    try {
+      expect(planIn(readOnly).agentRules?.map(({ state }) => state)).toEqual(["create", "same"]);
+    } finally {
+      chmodSync(join(readOnly, "notes.md"), 0o644);
+    }
     expect(planIn(elsewhere).manual).toEqual([
       {
         file: OWN,

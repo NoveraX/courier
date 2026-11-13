@@ -51,6 +51,18 @@ describe("a file of the agents' rules, as Courier reads it", () => {
     });
     expect(readAgentFile(join(root, "limit.md")).kind).toBe("text");
   });
+
+  it("is left as it is where it is read-only, and read where Courier only looks into it", () => {
+    const root = projectWith({ "AGENTS.md": "# Rules\n" });
+    const path = join(root, "AGENTS.md");
+    chmodSync(path, 0o444);
+    try {
+      expect(readAgentFile(path)).toEqual({ kind: "left", why: "it is read-only" });
+      expect(readAgentFile(path, "read")).toEqual({ kind: "text", text: "# Rules\n" });
+    } finally {
+      chmodSync(path, 0o644);
+    }
+  });
 });
 
 describe("bringing Courier's block in AGENTS.md up to date, as Studio does as it starts", () => {
@@ -92,6 +104,17 @@ describe("bringing Courier's block in AGENTS.md up to date, as Studio does as it
 
     expect(updateAgentRules(root)).toBeNull();
     expect(readFileSync(join(root, "docs/rules.md"), "utf8")).toBe(`${STALE}\n`);
+  });
+
+  it("leaves a read-only AGENTS.md as it is, on every system", () => {
+    const root = projectWith({ "AGENTS.md": `${STALE}\n` });
+    chmodSync(join(root, "AGENTS.md"), 0o444);
+    try {
+      expect(updateAgentRules(root)).toBeNull();
+      expect(agentsOf(root)).toBe(`${STALE}\n`);
+    } finally {
+      chmodSync(join(root, "AGENTS.md"), 0o644);
+    }
   });
 
   it("leaves a file whose markers it cannot tell apart as it is, and says why", () => {

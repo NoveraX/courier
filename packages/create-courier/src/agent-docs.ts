@@ -92,7 +92,7 @@ function sameFile(a: string, b: string): boolean {
 /* A link at the editor's own file: to AGENTS.md, or to a file that reads it, it reads the block; to any other, the line is the person's to add there. */
 function linkedPart(root: string, path: string): Part {
   const target = resolve(root, readlinkSync(path));
-  const read = readAgentFile(target);
+  const read = readAgentFile(target, "read");
   if (sameFile(target, join(root, AGENTS)) || (read.kind === "text" && importsAgents(read.text)))
     return { file: { path: OWN_RULES, state: "same" } };
   return kept(OWN_RULES, "it is a link", "the file it leads to reads AGENTS.md with this line", [

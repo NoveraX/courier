@@ -29,8 +29,8 @@ function updated(text: string): string | undefined {
  * up to date as it starts: only in a file that holds the block, and only
  * between its markers — a file without it is the person's, and is left
  * unnamed. A file whose markers are repeated or out of order is left as
- * it is, with a step that says why; a link, or a file over 1 MiB, is not
- * read.
+ * it is, with a step that says why; a link, a read-only file, or one over
+ * 1 MiB, is not read.
  *
  * @param root - The workspace's folder
  * @param packages - Courier's packages, as its manifests list them

@@ -8,7 +8,12 @@
  * One module holds the text and the rules, so the commands and Studio
  * never write two blocks. It is Courier's own, not a public API.
  */
-export { AGENT_FILE_MAX_BYTES, type AgentFile, readAgentFile } from "./agent-file";
+export {
+  AGENT_FILE_MAX_BYTES,
+  type AgentFile,
+  type AgentFilePurpose,
+  readAgentFile,
+} from "./agent-file";
 export {
   AGENT_RULES,
   AGENT_RULES_BEGIN,

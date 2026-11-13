@@ -32,12 +32,13 @@ afterEach(async () => {
 /* The errors the dev server logged, the plugin's among them. */
 const logged: string[] = [];
 
-async function serve(root: string): Promise<ViteDevServer> {
+async function serve(root: string, preserveSymlinks = false): Promise<ViteDevServer> {
   logged.length = 0;
   const logger = createLogger("silent");
   return createServer({
     root,
     configFile: false,
+    resolve: { preserveSymlinks },
     customLogger: { ...logger, error: (message) => logged.push(message) },
     server: { middlewareMode: true, ws: false },
     plugins: [courierRoutes()],
@@ -188,12 +189,17 @@ export default { sources: flags.payments || switches.includes("payments") ? { sh
     const link = `${root}-link`;
     symlinkSync(root, link, "dir");
     try {
-      server = await serve(link);
+      /* Vite keeps the link: its watcher follows the project by the link's path, while the
+         config names the folder by its real one. The folder reaches the watcher, if it is
+         handed it, only once the entry is made: a plugin that waited for it would miss it. */
+      server = await serve(link, true);
       const dev = server;
       const sources = () => sourcesOf(dev);
+      const handOver = handOverLate(dev, join(root, "switches"));
       expect(await sources()).toEqual(["shop"]);
 
       project.write("switches/payments", "");
+      handOver();
 
       await expect.poll(sources, { timeout: 20_000 }).toEqual(["payments", "shop"]);
     } finally {

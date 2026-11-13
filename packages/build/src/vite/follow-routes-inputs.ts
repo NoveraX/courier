@@ -2,6 +2,7 @@ import { type Stats, statSync } from "node:fs";
 import { sep } from "node:path";
 
 import type { RoutesInputs } from "../engine/routes-snapshot";
+import { realFile, realFolder } from "../util/real-path";
 import type { RoutesPluginState } from "./routes-plugin-state";
 import { watchOnce } from "./watch-once";
 
@@ -20,6 +21,8 @@ export interface WatchContext {
  *
  * A file followed only now was not watched while it was read: a change
  * saved to it as the reading ran told no one, and is told by the answer.
+ * The plugin knows each path by its real name, as a watcher of the project
+ * opened through a link reports it under another.
  *
  * @param context - Vite's plugin context, loading the routes module
  * @param state - What the plugin knows, whose followed paths this replaces
@@ -37,21 +40,22 @@ export function followRoutesInputs(
   inputs: RoutesInputs,
   since?: number,
 ): boolean {
+  const files = inputs.files.filter((path) => !isInstalled(path));
+  const folders = (inputs.listed ?? []).filter((folder) => !isInstalled(folder));
   const followed = new Set<string>();
   let missed = false;
-  for (const path of inputs.files) {
-    if (isInstalled(path)) continue;
-    followed.add(path);
+  for (const path of files) {
+    const real = realFile(path);
+    followed.add(real);
     const stats = statOf(path);
     /* Vite takes a watched file for an import of the module: only a file that is there. */
     if (stats?.isFile() !== true) continue;
     context.addWatchFile(path);
-    if (since !== undefined && !state.followed.has(path) && stats.mtimeMs >= since) missed = true;
+    if (since !== undefined && !state.followed.has(real) && stats.mtimeMs >= since) missed = true;
   }
-  const listed = new Set((inputs.listed ?? []).filter((folder) => !isInstalled(folder)));
   state.followed = followed;
-  state.listed = listed;
-  for (const server of state.servers) watchOnce(server, [...followed, ...listed]);
+  state.listed = new Set(folders.map(realFolder));
+  for (const server of state.servers) watchOnce(server, [...files, ...folders]);
   return missed;
 }
 

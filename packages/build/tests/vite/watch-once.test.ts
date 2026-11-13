@@ -9,20 +9,24 @@
  * entry made by then for one that was there. A watcher that stops at a depth
  * is handed every path, as it lists the folders below it unread.
  */
-import { resolve } from "node:path";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import type { ViteDevServer, WatchOptions } from "vite";
 import { describe, expect, it } from "vitest";
 
 import { watchOnce } from "../../src/vite/watch-once";
 
 /*
- * A dev server whose watcher follows `watched`: each folder, with the names
- * of its entries. chokidar names a folder it follows by `path.resolve`, as
- * `D:\app` on Windows and `/app` elsewhere, and so does this watcher.
+ * A dev server at `root` whose watcher follows `watched`: each folder, with
+ * the names of its entries. chokidar names a folder it follows by
+ * `path.resolve`, as `D:\app` on Windows and `/app` elsewhere, and so does
+ * this watcher.
  */
 function server(
   watched: Record<string, string[]> = {},
   options: WatchOptions = {},
+  root = "/app",
 ): { server: ViteDevServer; added: string[][] } {
   const added: string[][] = [];
   const folders = Object.fromEntries(
@@ -33,7 +37,7 @@ function server(
     add: (paths: string[]) => added.push(paths),
     getWatched: () => folders,
   };
-  return { server: { watcher } as unknown as ViteDevServer, added };
+  return { server: { config: { root }, watcher } as unknown as ViteDevServer, added };
 }
 
 describe("watchOnce", () => {
@@ -63,6 +67,27 @@ describe("watchOnce", () => {
     watchOnce(dev, ["/app/switches", "/app/.env.local"]);
 
     expect(added).toEqual([["/app/.env.local", "/lib/flags.json"]]);
+  });
+
+  /* Vite keeps a link the project is opened through, and its watcher follows the
+     project by the link's path; the config names the same folders by their real one. */
+  it("hands the watcher none of the paths it follows by a link to the project", () => {
+    const made = realpathSync.native(mkdtempSync(join(tmpdir(), "courier-watch-once-")));
+    mkdirSync(join(made, "app/switches"), { recursive: true });
+    symlinkSync(join(made, "app"), join(made, "link"), "dir");
+    try {
+      const { server: dev, added } = server(
+        { [join(made, "link")]: ["switches"] },
+        {},
+        join(made, "link"),
+      );
+
+      watchOnce(dev, [join(made, "app/switches"), join(made, "app/.env.local")]);
+
+      expect(added).toEqual([[join(made, "app/.env.local")]]);
+    } finally {
+      rmSync(made, { recursive: true, force: true });
+    }
   });
 
   it("hands a watcher that stops at a depth every path, as it lists the folders below it unread", () => {

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { RoutesEngine } from "../../src/engine/routes-engine";
 import type { RoutesSnapshot } from "../../src/engine/routes-snapshot";
+import { realFile } from "../../src/util/real-path";
 import { ROUTES_MODULE_ID } from "../../src/util/routes-module-id";
 import { loadRoutesModule } from "../../src/vite/load-routes-module";
 import type { RoutesPluginState } from "../../src/vite/routes-plugin-state";
@@ -25,6 +26,7 @@ function devServer(): { server: ViteDevServer; sent: unknown[] } {
     invalidateModule: () => undefined,
   };
   const server = {
+    config: { root: project?.root ?? "" },
     environments: { client: { moduleGraph: graph } },
     watcher: { options: {}, getWatched: () => ({}), add: () => undefined },
     ws: { send: (payload: unknown) => sent.push(payload) },
@@ -56,7 +58,8 @@ function loading(followed: readonly string[], meanwhile?: (apis: string) => void
   const state: RoutesPluginState = {
     engine,
     servers: new Set([server]),
-    followed: new Set(followed.map((path) => join(project?.root ?? "", path))),
+    /* Named as the plugin names them, by the system's own names. */
+    followed: new Set(followed.map((path) => realFile(join(project?.root ?? "", path)))),
     listed: new Set(),
     underVitest: false,
   };

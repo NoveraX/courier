@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type { ViteDevServer } from "vite";
 
 import { isRecord } from "../util/is-record";
+import { realFolder } from "../util/real-path";
 import { ROUTES_MODULE_ID } from "../util/routes-module-id";
 import type { RoutesPluginState } from "./routes-plugin-state";
 import { watchOnce } from "./watch-once";
@@ -23,7 +24,9 @@ const PATH_EVENTS = ["add", "unlink", "addDir", "unlinkDir"] as const;
  * goes, which no change of a watched file reports: a config saved where one
  * is looked for, inside Vite's root or above it, or the config removed; an
  * env file or a module made where the latest reading looked for one; an
- * entry added to or removed from a folder it listed.
+ * entry added to or removed from a folder it listed. A path is told by its
+ * real name: a project opened through a link that Vite keeps is watched by
+ * the link's path, and its config may name the same folder by its own.
  *
  * Vite watches with chokidar 3, which reads a folder it was handed missing
  * files in no more than once a second, and then for the first of them
@@ -53,7 +56,7 @@ export function watchRoutesInputs(
   const there = new Map([...candidates].map((path) => [path, existsSync(path)]));
   const onPath = (path: string): void => {
     const isConfig = candidates.has(path);
-    if (!isConfig && !state.followed.has(path) && !state.listed.has(dirname(path))) return;
+    if (!isConfig && !followsPath(state, path)) return;
     if (isConfig) {
       const now = existsSync(path);
       if (there.get(path) === now) return;
@@ -69,6 +72,13 @@ export function watchRoutesInputs(
     if (folder === undefined || !folders.has(folder)) return;
     for (const candidate of candidates) if (dirname(candidate) === folder) onPath(candidate);
   });
+}
+
+/* Whether a path the watcher reports is one the latest reading followed, or an entry of a folder it listed. */
+function followsPath(state: RoutesPluginState, path: string): boolean {
+  if (state.followed.size === 0 && state.listed.size === 0) return false;
+  const folder = realFolder(dirname(path));
+  return state.listed.has(folder) || state.followed.has(join(folder, basename(path)));
 }
 
 /* The folder a raw event is of, as the system names it: the one a watcher of it names

@@ -1,7 +1,8 @@
-import { basename, dirname } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import type { ViteDevServer } from "vite";
 
 import { localPath } from "../util/local-path";
+import { realFile, realFolder } from "../util/real-path";
 
 /* The paths each dev server's watcher was given already, or followed already: chokidar
    watches a path given again over again, with one more listener each time. */
@@ -13,9 +14,11 @@ const given = new WeakMap<ViteDevServer, Set<string>>();
  * time: each is given to each server once. A path the watcher follows
  * already, as it follows Vite's root, is not given at all: chokidar reads a
  * folder it is handed as one just added, and an entry made since the routes
- * were read would pass for one that was there, with no notice of it. A
- * watcher that stops at a depth lists the folders below it unread: it is
- * handed every path.
+ * were read would pass for one that was there, with no notice of it. The
+ * watcher may follow it by another name: a project opened through a link
+ * that Vite keeps is followed by the link's path, and a reading names its
+ * files by their real one. A watcher that stops at a depth lists the
+ * folders below it unread: it is handed every path.
  *
  * @param server - The dev server
  * @param paths - The paths to watch, there or not
@@ -35,9 +38,22 @@ export function watchOnce(server: ViteDevServer, paths: Iterable<string>): void 
   if (fresh.length === 0) return;
   /* Each folder the watcher follows, with its entries, named as `path.resolve` names it. */
   const watched = server.watcher.options.depth === undefined ? server.watcher.getWatched() : {};
+  const follows = (path: string) => watched[dirname(path)]?.includes(basename(path)) === true;
+  const root = localPath(server.config.root);
+  const realRoot = realFolder(root);
   const unfollowed = fresh.filter((path) => {
     const local = localPath(path);
-    return !watched[dirname(local)]?.includes(basename(local));
+    if (follows(local)) return false;
+    const named = underRoot(root, realRoot, realFile(local));
+    return named === undefined || !follows(named);
   });
   if (unfollowed.length > 0) server.watcher.add(unfollowed);
+}
+
+/* A path by the name the watcher gives it under Vite's root, from its real name: a link to the
+   project, or a short name of a folder above it, names the root another way than the system does. */
+function underRoot(root: string, realRoot: string, real: string): string | undefined {
+  const inside = relative(realRoot, real);
+  if (inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside)) return undefined;
+  return join(root, inside);
 }

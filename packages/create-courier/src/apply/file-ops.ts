@@ -136,8 +136,9 @@ export function createFileOnce(path: string, content: string): void {
 /**
  * Replace a file's content all at once, keeping its mode: the content
  * goes to a new file beside it, which then takes its name, retried on
- * Windows while another program holds the file for a moment. A reader
- * sees the old content or the new, never part of either.
+ * Windows while another program holds the file for a moment; a read-only
+ * file, which Windows never lets a rename replace, is not waited for. A
+ * reader sees the old content or the new, never part of either.
  *
  * @param path - The file, from {@link projectPath}
  * @param content - Its new content
@@ -148,8 +149,9 @@ export function createFileOnce(path: string, content: string): void {
  */
 export function replaceFile(path: string, content: string | Buffer): void {
   const mode = existsSync(path) ? statSync(path).mode & 0o7777 : undefined;
+  const readOnly = mode !== undefined && (mode & 0o200) === 0;
   const temp = writeTempBeside(path, content, mode);
-  for (const delay of [...RENAME_RETRY_MS, undefined]) {
+  for (const delay of [...(readOnly ? [] : RENAME_RETRY_MS), undefined]) {
     try {
       renameSync(temp, path);
       return;

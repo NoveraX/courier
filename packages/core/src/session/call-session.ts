@@ -7,7 +7,7 @@ import { isReactNative } from "../utils/is-react-native";
 import { isOneUsersCall } from "../utils/one-users-call";
 import { ownFields } from "../utils/own";
 import { agentOf } from "../utils/server-call-marks";
-import { browserSession } from "./browser-session";
+import { browserSession, storedPageSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
 import { namesRequest } from "./names-request";
 import type * as NativeSession from "./native-session";
@@ -122,14 +122,18 @@ export function serverSession(target: Pick<SessionTarget, "name">): SessionCapab
   );
 }
 
-/* A browser reads the cookies a page can; a React Native app keeps them from the API's answers,
-   with what a browser never loads. Either sends its session only where nothing reads it on the way. */
+/* A browser reads the cookies a page can, as the browser keeps them for a call that takes a token
+   from them; a React Native app keeps them from the API's answers, with what a browser never loads.
+   Either sends its session only where nothing reads it on the way. */
 function oneUserSession(target: SessionTarget): CallSession | Promise<CallSession> | undefined {
   const session = target.session;
   if (session === undefined) return undefined;
-  if (!isReactNative()) return overSecureTransport(target, browserSession(target, session));
-  return nativePart().then((native) =>
-    overSecureTransport(target, native.nativeSession(target, session)),
+  const secure = (found: CallSession) => overSecureTransport(target, found);
+  if (isReactNative()) {
+    return nativePart().then((native) => secure(native.nativeSession(target, session)));
+  }
+  return (
+    storedPageSession(target, session)?.then(secure) ?? secure(browserSession(target, session))
   );
 }
 

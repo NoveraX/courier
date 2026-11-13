@@ -90,7 +90,7 @@ export const SCENARIOS = [
     budget: {
       esbuild: [89.5, 31.9],
       webpack: [91.3, 31.6],
-      vite: [88.7, 31.1],
+      vite: [88.7, 31.2],
       "next-16": [90.1, 32.1],
       "next-15-turbopack": [105.4, 35.9],
       "next-16-webpack": [87.1, 31.1],

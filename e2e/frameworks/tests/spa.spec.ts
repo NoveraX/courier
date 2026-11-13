@@ -4,7 +4,7 @@
  * only the double-submit token a write repeats. Served from another site,
  * the page is told the browser keeps the API's cookies from it.
  */
-import { type BrowserContext, expect, type Page, test } from "@playwright/test";
+import { type Browser, type BrowserContext, expect, type Page, test } from "@playwright/test";
 
 import { API, APP, clearReceived, received } from "../support/received";
 
@@ -93,12 +93,11 @@ test("signing out from the page ends the session in the browser", async () => {
   await expect.poll(async () => await cookie("sid")).toBeUndefined();
 });
 
-test("a sign-in on a page that reads its cookies from a copy the token's cookie reaches late repeats the token", async ({
-  browser,
-}) => {
+/* A visitor whose page reads its cookies from a copy, as WebKit's does: a cookie an answer set
+   reaches the copy only after the answer reaches the page. Here it reaches it not at all, but for
+   the page's own writes. */
+async function readingACopy(browser: Browser): Promise<BrowserContext> {
   const visitor = await browser.newContext();
-  /* WebKit's page reads its cookies from such a copy, which a cookie an answer set reaches only
-     after the answer reaches the page; here it reaches it not at all, but for the page's own writes. */
   await visitor.addInitScript(() => {
     const own = Object.getOwnPropertyDescriptor(Document.prototype, "cookie");
     let copy: string | undefined;
@@ -114,21 +113,55 @@ test("a sign-in on a page that reads its cookies from a copy the token's cookie 
       },
     });
   });
+  return visitor;
+}
+
+/* The page, once it has read the user, where the browser gives it a store of its cookies to ask. */
+async function openedWithStore(visitor: BrowserContext): Promise<Page> {
+  const tab = await visitor.newPage();
+  await clearReceived();
+  await tab.goto(`${APP}/`);
+  await expect(tab.locator("#me")).not.toBeEmpty();
+  test.skip(
+    !(await tab.evaluate(() => "cookieStore" in globalThis)),
+    "the browser gives the page no store of its cookies to ask",
+  );
+  return tab;
+}
+
+test("a sign-in on a page that reads its cookies from a copy the token's cookie reaches late repeats the token", async ({
+  browser,
+}) => {
+  const visitor = await readingACopy(browser);
   try {
-    const tab = await visitor.newPage();
-    await clearReceived();
-    await tab.goto(`${APP}/`);
-    await expect(tab.locator("#me")).not.toBeEmpty();
-    test.skip(
-      !(await tab.evaluate(() => "cookieStore" in globalThis)),
-      "the browser gives the page no store of its cookies to ask",
-    );
+    const tab = await openedWithStore(visitor);
 
     await tab.click("#sign-in");
     await expect(tab.locator("#me")).toContainText("s%3Aspa.sig");
     const [signIn] = await received("POST", "/login");
 
     expect(signIn?.headers["x-csrftoken"]).toBe("t-fresh");
+  } finally {
+    await visitor.close();
+  }
+});
+
+test("a write on a page that reads its cookies from a copy repeats the token the sign-in just renewed", async ({
+  browser,
+}) => {
+  const visitor = await readingACopy(browser);
+  /* The copy shows the token from before the sign-in, which renews it. */
+  await visitor.addCookies([{ name: "csrftoken", value: "t-fresh", url: API }]);
+  try {
+    const tab = await openedWithStore(visitor);
+    await tab.click("#sign-in");
+    await expect(tab.locator("#me")).toContainText("s%3Aspa.sig");
+
+    await tab.click("#rename");
+    await expect(tab.locator("#renamed")).toContainText("Spa User");
+    const [rename] = await received("POST", "/me/name");
+
+    expect(rename?.headers["x-csrftoken"]).toBe("t-spa");
   } finally {
     await visitor.close();
   }

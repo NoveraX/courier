@@ -1,6 +1,6 @@
-export const metadata = { title: "React Native & Expo", description: "Courier in a React Native app: an absolute address, React Query hooks, streams through expo/fetch, channels, uploads from the device and cancellation, on Hermes.", mode: "direct", updated: "2026-11-07" }
+export const metadata = { title: "React Native & Expo", description: "Courier in a React Native app: an absolute address, React Query hooks, streams through expo/fetch, channels, uploads from the device and cancellation, on Hermes.", mode: "direct", updated: "2026-11-13" }
 
-A React Native app calls its API as a page does in direct mode: the typed client, the React Query hooks, server-sent events, WebSocket channels, uploads with their progress, and cancellation. Each is checked on Hermes, in an Expo SDK 57 app, by the example in [`examples/expo`](https://github.com/NoveraX/courier/tree/master/examples/expo).
+A React Native app calls its API as a page does in direct mode: the typed client, the React Query hooks, server-sent events, WebSocket channels, uploads with their progress, and cancellation. Each is checked on Hermes, in an Expo SDK 58 app, by the example in [`examples/expo`](https://github.com/NoveraX/courier/tree/master/examples/expo).
 
 ## In one command
 
@@ -133,7 +133,7 @@ React Native sends the cookies it keeps for a host with every call to that host,
 
 ## Streams and channels
 
-`useSubscription` reads server-sent events as they arrive, which takes a `fetch` that hands over a response's body as it comes. React Native's own `fetch` hands it over only once all of it has arrived; Expo replaces it with `expo/fetch`, which streams. Expo SDK 57 does so for every app unless `EXPO_PUBLIC_USE_RN_FETCH` is set. A channel needs nothing more: React Native has WebSocket.
+`useSubscription` reads server-sent events as they arrive, which takes a `fetch` that hands over a response's body as it comes. React Native's own `fetch` hands it over only once all of it has arrived; Expo replaces it with `expo/fetch`, which streams. Expo SDK 58 does so for every app unless `EXPO_PUBLIC_USE_RN_FETCH` is set. A channel needs nothing more: React Native has WebSocket.
 
 ```tsx title="src/live.tsx"
 import { Button, Text } from "react-native"

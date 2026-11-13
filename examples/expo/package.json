@@ -16,23 +16,18 @@
     "@noverax/courier": "file:../../packages/core",
     "@noverax/courier-react": "file:../../packages/react",
     "@tanstack/react-query": "^5.104.1",
-    "expo": "~57.0.27",
-    "expo-file-system": "~57.0.7",
-    "expo-status-bar": "~57.0.1",
-    "react": "19.2.3",
-    "react-native": "0.86.3",
+    "expo": "~58.0.23",
+    "expo-file-system": "~58.0.13",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
     "zod": "^4.6.6"
   },
   "devDependencies": {
     "@noverax/courier-mock": "file:../../packages/mock",
     "@noverax/courier-studio": "file:../../packages/studio",
     "@noverax/courier-studio-core": "file:../../packages/studio-core",
-    "@types/react": "~19.2.2",
+    "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
-  },
-  "overrides": {
-    "xcode": {
-      "uuid": "^11.1.1"
-    }
   }
 }

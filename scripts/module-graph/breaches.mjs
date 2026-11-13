@@ -3,9 +3,10 @@ import { packageOf, underLib } from "./resolve-import.mjs";
 import { serverAreaOf } from "./server-area.mjs";
 
 /**
- * @typedef {import("./resolve-import.mjs").Package & { lib: string, areas: string[], rootAreas?: string[], sides?: Sides }} SidedPackage
+ * @typedef {import("./resolve-import.mjs").Package & { lib: string, areas: string[], rootAreas?: string[], studioAreas?: string[], sides?: Sides }} SidedPackage
  *   A package of the workspace, with its `lib` folder, the areas of it only a server runs, the ones
- *   a page takes from its root alone, and its `module-sides.json` when it has one
+ *   a page takes from its root alone, the ones a page takes only with Studio's runtime, and its
+ *   `module-sides.json` when it has one
  * @typedef {{ pagePackages?: Record<string, string>, computedImports?: Record<string, string> }} Sides
  *   What a package's `module-sides.json` lets its page code do: the packages outside the workspace
  *   it may take, and its modules whose dynamic import names no module a bundler can tell, or
@@ -21,6 +22,9 @@ import { serverAreaOf } from "./server-area.mjs";
  *  - a module of an area of its package that a page takes from the
  *    package's root alone, which a bundler keeping every module an entry
  *    reaches would keep on a page that never imports it;
+ *  - from an entry a page imports itself, a module of an area of its
+ *    package that a page takes only with Studio's runtime, which an entry
+ *    Studio's runtime imports in a page may reach;
  *  - a built-in module of Node;
  *  - a package outside the workspace that the `pagePackages` of the
  *    importing module's package do not list;
@@ -40,11 +44,12 @@ import { serverAreaOf } from "./server-area.mjs";
  * @param {string} label - The entry, as a page imports it: `@noverax/courier/client`
  * @param {string} file - The entry's module
  * @param {SidedPackage[]} packages - The workspace's packages
+ * @param {{ studio?: boolean }} [side] - Whether the entry is one Studio's runtime imports in a page
  * @returns {{ breaches: string[], reached: number, foreign: string[] }} The breaches, how many modules it reaches, and the packages outside the workspace it takes
  * @example
  * const { breaches } = entryBreaches(ts, "@noverax/courier/client", file, packages);
  */
-export function entryBreaches(ts, label, file, packages) {
+export function entryBreaches(ts, label, file, packages, { studio = false } = {}) {
   const { parents, builtins, foreign, missing, computed } = reachedFrom(ts, file, packages);
   const home = packageOf(file, packages);
   const step = (path) => {
@@ -70,6 +75,14 @@ export function entryBreaches(ts, label, file, packages) {
       const of = pkg === home ? rooted : `${rooted} of ${pkg.name}`;
       breaches.push(
         `${label} reaches ${of}, which a page takes from the root alone: ${way(module)}`,
+      );
+    }
+    const studied =
+      pkg && !studio ? serverAreaOf(underLib(pkg.lib, module), pkg.studioAreas ?? []) : undefined;
+    if (studied !== undefined) {
+      const of = pkg === home ? studied : `${studied} of ${pkg.name}`;
+      breaches.push(
+        `${label} reaches ${of}, which a page takes only with Studio's runtime: ${way(module)}`,
       );
     }
   }

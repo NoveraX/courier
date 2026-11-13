@@ -1,9 +1,9 @@
 import type { AdapterHandler } from "../adapter/create-handler";
 import type { InProcessRoute } from "../capabilities/in-process-proxy";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
+import { getSources } from "../registered-sources";
 import { serveOnBehalf } from "./session/on-behalf";
 import { captureIncomingRequest } from "./session/request-providers";
-import { getSources } from "./sources";
 
 /* An address that names no other server: the proxy reads a request's path
    and query, and its host rule always serves an address. */

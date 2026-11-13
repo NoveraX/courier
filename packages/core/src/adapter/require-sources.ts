@@ -1,6 +1,6 @@
 import type { Sources } from "../define/types";
 import { ConfigurationError } from "../errors";
-import { getSources } from "../server/sources";
+import { getSources } from "../registered-sources";
 
 /**
  * Read the global sources registry or throw a clear initialization

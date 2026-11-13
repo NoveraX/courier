@@ -4,15 +4,20 @@ import { observeBrowserHttpVersions } from "./http-versions/browser-http-version
 
 /**
  * Connect this browser bundle to a Studio dev server — the build of
- * `attachRuntime` that the `browser` export condition selects.
+ * `attachRuntime` that the `browser` export condition selects, which a
+ * Cloudflare Worker takes too.
  *
- * It is the server one without the config loader. A browser build that
- * reached the loader failed: the bundler followed it into a TypeScript loader
- * and `node:module`, which no browser has.
+ * It is the server one without the config loader, and without what
+ * answers the Playground's calls and a webhook's deliveries, which Studio
+ * sends only a runtime that showed it the project's token: a page and a
+ * Worker never have it. A browser build that reached the loader failed:
+ * the bundler followed it into a TypeScript loader and `node:module`,
+ * which no browser has. One that carried the Playground took the server's
+ * half of the core, and a page built for development kept all of it.
  *
  * @param id - Optional explicit runtime id; `"browser"` by default.
  * @returns The runtime's handle.
  */
 export function attachRuntime(id?: string): Promise<RuntimeHandle> {
-  return attachRuntimeUsing(undefined, id, observeBrowserHttpVersions);
+  return attachRuntimeUsing({ observeVersions: observeBrowserHttpVersions }, id);
 }

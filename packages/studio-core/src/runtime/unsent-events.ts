@@ -1,4 +1,4 @@
-import { createLogger } from "@noverax/courier";
+import { createLogger } from "@noverax/courier/client";
 import type { AnyStudioEvent } from "../events";
 
 const log = createLogger("Studio");

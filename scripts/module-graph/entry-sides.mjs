@@ -1,7 +1,8 @@
 import { isSubpathMap } from "./resolve-import.mjs";
 
-/* The sides an entry is put on: what a page imports, what a server does, or both — the root. */
-const SIDES = ["pageEntries", "serverEntries", "sharedEntries"];
+/* The sides an entry is put on: what a page imports, what Studio's runtime imports in a page, what a
+   server does, or both — the root. */
+const SIDES = ["pageEntries", "studioEntries", "serverEntries", "sharedEntries"];
 
 /**
  * What a package's `module-sides.json` leaves unsaid of its entries: an

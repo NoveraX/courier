@@ -10,8 +10,10 @@
  *
  *  - no built-in module of Node is reached, at start or later;
  *  - no module only a server runs is taken, in any chunk, a dynamic
- *    import's too: neither one of the areas `module-sides.json` names, nor
- *    one taken as it is where its browser stand-in belongs;
+ *    import's too: neither one of the server's areas `module-sides.json`
+ *    names, nor one taken as it is where its browser stand-in belongs; nor
+ *    one of the areas a page takes only with Studio's runtime, which none
+ *    of these pages runs;
  *  - no module of the workspace, in any chunk, names freely a global of
  *    Node no browser has — `Buffer`, `global`, `__dirname`, `__filename`,
  *    `setImmediate`, `clearImmediate`, or `process` past `process.env` —
@@ -61,10 +63,11 @@ import { pathFrom } from "./slashed-paths.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const KIB = 1024;
 const SERVER_ONLY = serverOnlyModules(join(ROOT, "packages/core/lib"));
-/* The areas of the core's build only a server runs, as the module graph's check reads them. */
-const SERVER_AREAS = Object.keys(
-  JSON.parse(readFileSync(join(ROOT, "packages/core/module-sides.json"), "utf8")).serverAreas,
-);
+/* The areas of the core's build only a server runs, and those a page takes only with Studio's
+   runtime, as the module graph's check reads them. */
+const CORE_SIDES = JSON.parse(readFileSync(join(ROOT, "packages/core/module-sides.json"), "utf8"));
+const SERVER_AREAS = Object.keys(CORE_SIDES.serverAreas);
+const STUDIO_AREAS = Object.keys(CORE_SIDES.studioAreas);
 
 /* Next.js's edge runtime, as it resolves a package: a middleware's, and an edge route's. */
 const NEXT_EDGE = { platform: "neutral", conditions: ["edge-light", "worker", "browser"] };
@@ -126,7 +129,8 @@ function measure(esbuild, work, scenario) {
 }
 
 /* What a bundler's build of a scenario breaches in any chunk, a dynamic import's too: a module
-   only a server runs, taken where its browser stand-in belongs or lying in a server's area. */
+   only a server runs, taken where its browser stand-in belongs or lying in a server's area, and
+   one of Studio's, which no scenario's page runs. */
 function sideBreaches(scenario, bundler, everyModule) {
   const breaches = sidesTaken(everyModule, SERVER_ONLY).server.map(
     (module) =>
@@ -137,6 +141,11 @@ function sideBreaches(scenario, bundler, everyModule) {
     if (area !== undefined)
       breaches.push(
         `${scenario.name} takes ${module} under ${bundler}, of ${area}, which only a server runs`,
+      );
+    const studied = serverAreaOf(module, STUDIO_AREAS);
+    if (studied !== undefined)
+      breaches.push(
+        `${scenario.name} takes ${module} under ${bundler}, of ${studied}, which a page takes only with Studio's runtime`,
       );
   }
   return breaches;

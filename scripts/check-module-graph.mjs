@@ -3,12 +3,13 @@
  * Check that no entry a page imports reaches a module only a server runs.
  *
  * Each workspace package with a `module-sides.json` puts every entry it
- * exports on a side — what a page imports, what a server does, or both —
- * and names the areas of its build only a server runs, the ones a page
- * takes from its root alone, the packages
- * outside the workspace its page code may take, and the modules whose
- * dynamic import names no module a bundler can tell, or modules by a
- * pattern, each with why. From each page entry, every module it reaches
+ * exports on a side — what a page imports, what Studio's runtime imports
+ * in a page, what a server does, or both — and names the areas of its
+ * build only a server runs, the ones a page takes from its root alone, the
+ * ones a page takes only with Studio's runtime, the packages outside the
+ * workspace its page code may take, and the modules whose dynamic import
+ * names no module a bundler can tell, or modules by a pattern, each with
+ * why. From each page entry and each of Studio's, every module it reaches
  * is followed, as a page's bundler resolves the published `lib/` — static
  * imports, re-exports, dynamic imports, what a bundler reads as an import
  * though none names it (`import.meta.glob` of a path,
@@ -22,8 +23,10 @@
  *
  *  - a module of a server's area reached, with the way it was reached, and
  *    one of an area a page takes from the package's root alone: a bundler
- *    that keeps every module an entry reaches — Next.js 15's Turbopack —
- *    would keep it on every page the entry is imported by;
+ *    that keeps every module an entry reaches — Next.js 15's Turbopack, or
+ *    any bundler building a page for development — would keep it on every
+ *    page the entry is imported by; and from a page entry, one of an area a
+ *    page takes only with Studio's runtime;
  *  - a built-in module of Node reached, or a package outside the workspace
  *    that the importing package does not let a page take — any other one,
  *    so a server's package is caught whatever it is;
@@ -68,9 +71,23 @@ function workspacePackages() {
     const sides = existsSync(sidesFile) ? readJson(sidesFile) : undefined;
     const areas = Object.keys(sides?.serverAreas ?? {});
     const rootAreas = Object.keys(sides?.rootAreas ?? {});
+    const studioAreas = Object.keys(sides?.studioAreas ?? {});
     const depends = Object.keys({ ...manifest.dependencies, ...manifest.peerDependencies });
     const lib = join(root, "lib");
-    return [{ name, root, exports, imports: imports ?? {}, lib, areas, rootAreas, sides, depends }];
+    return [
+      {
+        name,
+        root,
+        exports,
+        imports: imports ?? {},
+        lib,
+        areas,
+        rootAreas,
+        studioAreas,
+        sides,
+        depends,
+      },
+    ];
   });
 }
 
@@ -86,7 +103,7 @@ function strayPagePackages(pkg) {
 
 /* An area the build has none of would match nothing, and pass whatever reached it. */
 function missingAreas(pkg) {
-  return [...pkg.areas, ...pkg.rootAreas]
+  return [...pkg.areas, ...pkg.rootAreas, ...pkg.studioAreas]
     .filter((area) => {
       const path = join(pkg.lib, area);
       return !existsSync(path) || statSync(path).isDirectory() !== area.endsWith("/");
@@ -102,7 +119,11 @@ function main() {
     breaches.push(...entrySideBreaches(pkg.name, pkg.exports, pkg.sides));
   }
   for (const pkg of packages) {
-    for (const entry of Object.keys(pkg.sides?.pageEntries ?? {})) {
+    const walked = [
+      ...Object.keys(pkg.sides?.pageEntries ?? {}).map((entry) => ({ entry, studio: false })),
+      ...Object.keys(pkg.sides?.studioEntries ?? {}).map((entry) => ({ entry, studio: true })),
+    ];
+    for (const { entry, studio } of walked) {
       const label = entry === "." ? pkg.name : `${pkg.name}${entry.slice(1)}`;
       const found = resolveImport(label, join(pkg.root, "package.json"), packages);
       if (found.kind !== "module") {
@@ -111,7 +132,7 @@ function main() {
         );
         continue;
       }
-      const result = entryBreaches(ts, label, found.path, packages);
+      const result = entryBreaches(ts, label, found.path, packages, { studio });
       breaches.push(...result.breaches);
       const takes =
         result.foreign.length > 0 ? `, and the packages ${result.foreign.join(", ")}` : "";

@@ -29,6 +29,7 @@ import { BROWSERS_ONLY_ADVICE } from "../src/runtime/browsers-only-refusal";
 import { connectRuntimeSocket } from "../src/runtime/connect-runtime-socket";
 import { streamRedirectAdvice, upstreamRedirectAdvice } from "../src/runtime/proxy-redirect";
 import { issueStudioPass } from "../src/runtime/studio-passes";
+import { answerTrustedCalls } from "../src/runtime/trusted-calls";
 
 interface Frame {
   event: string;
@@ -158,10 +159,14 @@ beforeAll(async () => {
   cleanups.push(() => {
     io.close();
   });
-  await connectRuntimeSocket({ runtimeId: "playground", kind: "server", studioUrl }, [], {
-    setDisposer: (dispose) => cleanups.push(dispose),
-    setAnnouncer: () => {},
-  });
+  await connectRuntimeSocket(
+    { runtimeId: "playground", kind: "server", studioUrl, answerTrusted: answerTrustedCalls },
+    [],
+    {
+      setDisposer: (dispose) => cleanups.push(dispose),
+      setAnnouncer: () => {},
+    },
+  );
   await connected;
 });
 

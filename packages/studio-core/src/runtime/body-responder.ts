@@ -1,4 +1,4 @@
-import type { BodyPart, KeptBodies } from "@noverax/courier/internal";
+import type { BodyPart, KeptBodies } from "@noverax/courier/internal-studio";
 import type { Socket } from "socket.io-client";
 
 import { type StudioMessageLimit, studioMessageLimit } from "./studio-message-limit";

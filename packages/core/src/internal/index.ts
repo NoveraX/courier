@@ -5,10 +5,11 @@
  * reach the client proxy, the transports, the request executor and
  * Studio's hooks through it, and the command-line tools the style of their
  * terminal output. React's hooks, which run in a page, take the client's
- * pieces from `@noverax/courier/internal-client` instead. It is not part of
- * the public API: it changes with those packages, with no semver guarantee
- * for anyone else. An application uses the root entry and the documented
- * subpaths.
+ * pieces from `@noverax/courier/internal-client` instead, and Studio's
+ * runtime what it runs in a page from `@noverax/courier/internal-studio`.
+ * It is not part of the public API: it changes with those packages, with no
+ * semver guarantee for anyone else. An application uses the root entry and
+ * the documented subpaths.
  *
  * Its streaming factories load their stream and channel clients on the
  * first stream or channel. The transports' barrel it takes them from also
@@ -71,14 +72,10 @@ export { createHeartbeat } from "../realtime/ws/heartbeat";
 export { WS_CODE } from "../realtime/ws/ws-codes";
 export { decodeMessage, encodeMessage, PROTOCOL_VERSION } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl, parseWSTopic } from "../realtime/ws-address";
+export { getSourcesGeneration, onSourcesChange } from "../registered-sources";
 export { provideServerCapabilities } from "../server/provide-server-capabilities";
 export { addressedOrigin } from "../server/session/addressed-origin";
-export {
-  checkSources,
-  getSourcesGeneration,
-  onSourcesChange,
-  prepareSources,
-} from "../server/sources";
+export { checkSources, prepareSources } from "../server/sources";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
 export { serverOriginOf } from "../socket-origin";
 export {
@@ -117,7 +114,6 @@ export {
   inProduction,
   nodeEnvironment,
   ownEnvironment,
-  writtenOrOwn,
 } from "../utils/environment";
 export { executeRequest } from "../utils/execute";
 export { absentAs } from "../utils/execute-validation";

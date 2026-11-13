@@ -1,7 +1,8 @@
 /**
- * Every entry a package exports is put on one side — a page's, a
- * server's, or both — so a new entry cannot pass the check of a page's
- * modules unclassified, and no side names an entry the package lacks.
+ * Every entry a package exports is put on one side — a page's, the one
+ * Studio's runtime takes in a page, a server's, or both — so a new entry
+ * cannot pass the check of a page's modules unclassified, and no side names
+ * an entry the package lacks.
  */
 import { describe, expect, it } from "vitest";
 
@@ -11,13 +12,17 @@ const EXPORTS = {
   "./package.json": "./package.json",
   ".": "./lib/index.js",
   "./client": "./lib/client/index.js",
+  "./internal-studio": "./lib/internal-studio/index.js",
   "./server": "./lib/server/index.js",
 };
+
+const STUDIO = { "./internal-studio": "Studio's runtime in a page" };
 
 describe("entrySideBreaches", () => {
   it("passes a package each of whose entries is on one side, its manifest left out", () => {
     const sides = {
       pageEntries: { "./client": "a page's calls" },
+      studioEntries: STUDIO,
       serverEntries: { "./server": "a server's side" },
       sharedEntries: { ".": "both" },
     };
@@ -26,16 +31,21 @@ describe("entrySideBreaches", () => {
   });
 
   it("breaches with an entry on no side, as a new one would be", () => {
-    const sides = { pageEntries: { "./client": "a page's calls" }, sharedEntries: { ".": "both" } };
+    const sides = {
+      pageEntries: { "./client": "a page's calls" },
+      studioEntries: STUDIO,
+      sharedEntries: { ".": "both" },
+    };
 
     expect(entrySideBreaches("@noverax/courier", EXPORTS, sides)).toEqual([
-      "@noverax/courier exports ./server, which its module-sides.json puts on no side: pageEntries, serverEntries, sharedEntries",
+      "@noverax/courier exports ./server, which its module-sides.json puts on no side: pageEntries, studioEntries, serverEntries, sharedEntries",
     ]);
   });
 
   it("breaches with an entry on two sides, and a side naming an entry the package lacks", () => {
     const sides = {
       pageEntries: { "./client": "a page's calls", "./gone": "nothing" },
+      studioEntries: STUDIO,
       serverEntries: { "./server": "a server's side", "./client": "again" },
       sharedEntries: { ".": "both" },
     };

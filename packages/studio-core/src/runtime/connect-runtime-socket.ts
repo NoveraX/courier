@@ -10,10 +10,12 @@
  *    UI can render the timeline + waterfall views, including what was
  *    reported before the socket connected — in batches, one message for
  *    every event a turn of the event loop reports
- *  - `playground-responder` setup so the Studio playground can dispatch
- *    `playground:execute` to this runtime via the rid-keyed wire
- *  - `runtime:webhooks` for the webhooks the app defines, and
- *    `webhook:deliver` answered by delivering one, signed here
+ *  - `runtime:body` answered with a whole body this runtime keeps
+ *  - on a server's runtime, the calls Studio sends only a runtime that
+ *    showed it the project's token: the Playground's `playground:execute`
+ *    over the rid-keyed wire, `runtime:webhooks` for the webhooks the app
+ *    defines, and `webhook:deliver` answered by delivering one, signed
+ *    here — see `trusted-calls`, which the browser build never takes
  *
  * Best-effort: if `socket.io-client` fails to load, this warns and returns
  * without throwing — the runtime stays locally attached. Synchronous throws
@@ -21,21 +23,18 @@
  * sidecar failure never propagates up to the user-app's startup path.
  */
 
-import { createLogger, getSources } from "@noverax/courier";
-import type { KeptBodies } from "@noverax/courier/internal";
-import type { io as ioFn } from "socket.io-client";
+import { createLogger } from "@noverax/courier/client";
+import type { KeptBodies } from "@noverax/courier/internal-studio";
+import type { io as ioFn, Socket } from "socket.io-client";
 import type { EventBus } from "../event-bus";
 import type { BufferedAnnouncement } from "./announce-hosting";
 import { buildAnnouncePayload } from "./announce-payload";
 import type { RuntimeKind } from "./attach-runtime-types";
 import { answerBodyRequests } from "./body-responder";
 import { eventBatches } from "./event-batches";
-import { limitedResponderSocket } from "./limited-responder-socket";
-import { type ResponderSocket, setupPlaygroundResponder } from "./playground-responder";
 import { timersCanUnref } from "./runtime-environment";
-import { studioMessageLimit } from "./studio-message-limit";
+import { type StudioMessageLimit, studioMessageLimit } from "./studio-message-limit";
 import { keepUnsentEvents } from "./unsent-events";
-import { answerWebhookDeliveries } from "./webhook-responder";
 
 const log = createLogger("Studio");
 
@@ -69,7 +68,34 @@ interface ConnectInput {
   readToken?: (() => string | undefined) | undefined;
   /** The bodies this runtime keeps whole, of the requests whose events carry a part. */
   bodies?: KeptBodies | undefined;
+  /**
+   * Answers the calls Studio sends only a runtime that showed it the
+   * project's token: a server runtime's, which reads the token. A browser
+   * runtime has none.
+   */
+  answerTrusted?: AnswerTrustedCalls | undefined;
 }
+
+/** The runtime's socket as the calls only a trusted runtime is sent are answered on. */
+export interface TrustedCallsSocket {
+  /** The runtime's socket to Studio */
+  readonly socket: Socket;
+  /** The largest message Studio takes, as it said */
+  readonly limit: StudioMessageLimit;
+  /** Sends the events reported so far, which an answer follows */
+  readonly flushEvents: () => void;
+}
+
+/** What answers those calls, as the socket connects and as it goes. */
+export interface TrustedCalls {
+  /** Tells Studio again what the previous connection told it */
+  readonly connected: () => void;
+  /** Stops answering */
+  readonly stop: () => void;
+}
+
+/** Starts answering the calls only a trusted runtime is sent, on the runtime's socket. */
+export type AnswerTrustedCalls = (on: TrustedCallsSocket) => TrustedCalls;
 
 /** Hook that lets `attachRuntime` install the real socket disposer once ready. */
 export interface RuntimeSocketHandle {
@@ -158,7 +184,6 @@ export async function connectRuntimeSocket(
   };
 
   const unsent = keepUnsentEvents();
-  const webhooks = answerWebhookDeliveries(socket);
   /* Studio says it in answer to hello. An event is small by design — its
      bodies cut, a stream's messages previewed — but a Playground answer or
      a whole body is as large as the app made it. */
@@ -169,6 +194,7 @@ export async function connectRuntimeSocket(
     keep: unsent.keep,
     most: limit.most,
   });
+  const trusted = input.answerTrusted?.({ socket, limit, flushEvents: batches.flush });
 
   socket.on("connect", () => {
     const listenOrigin = input.listenOrigin?.();
@@ -184,7 +210,7 @@ export async function connectRuntimeSocket(
       socket.emit("runtime:announce", buildAnnouncePayload(entry));
     }
     drain();
-    webhooks.announce();
+    trusted?.connected();
     for (const event of unsent.take()) batches.add(event);
     batches.flush();
   });
@@ -207,28 +233,11 @@ export async function connectRuntimeSocket(
     });
   }
 
-  // Wire the rid-keyed playground responder onto this socket so Studio
-  // can dispatch `playground:execute` here. The responder reads the live
-  // sources registry on every dispatch. Its answer follows the events of
-  // the call it ran: Studio names the agent a call ran for on its start,
-  // and forgets the call once the answer arrives.
-  const ordered: ResponderSocket = {
-    on: (event, listener) => socket.on(event, listener),
-    emit(event, payload) {
-      batches.flush();
-      socket.emit(event, payload);
-    },
-  };
-  const disposeResponder = setupPlaygroundResponder(
-    limitedResponderSocket(ordered, limit),
-    () => getSources() ?? {},
-  );
   if (input.bodies) answerBodyRequests(socket, input.bodies, limit);
 
   handle.setDisposer(() => {
     unsubBus?.();
-    disposeResponder();
-    webhooks.stop();
+    trusted?.stop();
     socket.removeAllListeners();
     socket.disconnect();
   });

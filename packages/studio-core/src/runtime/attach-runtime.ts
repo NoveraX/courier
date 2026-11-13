@@ -54,6 +54,7 @@ import type { HttpVersions } from "./http-versions/http-version";
 import { observeNodeHttpVersions } from "./http-versions/node-http-versions";
 import { type ConfigRegistration, registerFromConfig } from "./register-from-config";
 import { detectBrowser } from "./runtime-environment";
+import { answerTrustedCalls } from "./trusted-calls";
 
 /**
  * Connect this runtime to a Studio dev server.
@@ -74,7 +75,14 @@ export function attachRuntime(
   id?: string,
   registration: ConfigRegistration = {},
 ): Promise<RuntimeHandle> {
-  return attachRuntimeUsing(() => registerFromConfig(registration), id, observeHttpVersions);
+  return attachRuntimeUsing(
+    {
+      loadServerConfig: () => registerFromConfig(registration),
+      observeVersions: observeHttpVersions,
+      answerTrusted: answerTrustedCalls,
+    },
+    id,
+  );
 }
 
 /* A page runs this build where its bundler resolved the package without the

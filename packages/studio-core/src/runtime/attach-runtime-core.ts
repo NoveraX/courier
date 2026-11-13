@@ -3,18 +3,20 @@
  * registry, the in-flight attach sharing, and the connection to Studio.
  */
 
-import { createLogger, getAppOrigin, getSources } from "@noverax/courier";
+import { createLogger } from "@noverax/courier/client";
 import type { CourierConfig } from "@noverax/courier/config";
 import {
   createKeptBodies,
+  getAppOrigin,
+  getSources,
   inProduction,
   KEPT_BODY_BYTES,
   studioHooks,
-} from "@noverax/courier/internal";
+} from "@noverax/courier/internal-studio";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle } from "./attach-runtime-types";
-import { connectRuntimeSocket } from "./connect-runtime-socket";
+import { type AnswerTrustedCalls, connectRuntimeSocket } from "./connect-runtime-socket";
 import { wireHooks, wireHttpHooks } from "./hooks";
 import type { HttpVersions } from "./http-versions/http-version";
 import {
@@ -56,18 +58,33 @@ export interface ServerRuntimeSetup {
 export type ServerConfigLoader = () => Promise<ServerRuntimeSetup | undefined>;
 
 /**
- * `attachRuntime` for either build: the server one passes its config loader,
- * the browser one passes nothing.
+ * What one build of `attachRuntime` brings to the attach. The server's
+ * brings its config loader, which reads the project's token, and what
+ * answers the calls Studio sends only a runtime that showed it the token;
+ * the browser's brings neither, so its graph reaches none of the server's
+ * half of the core.
+ */
+export interface RuntimeBuild {
+  /** Loads the config when this is a server process */
+  readonly loadServerConfig?: ServerConfigLoader | undefined;
+  /** Follows the HTTP version each of this runtime's calls went over */
+  readonly observeVersions: () => HttpVersions;
+  /** Answers the Playground's calls and a webhook's deliveries */
+  readonly answerTrusted?: AnswerTrustedCalls | undefined;
+}
+
+/**
+ * `attachRuntime` for either build.
  *
- * @param loadServerConfig - Loads the config when this is a server process.
+ * @param build - What the build brings: see {@link RuntimeBuild}
  * @param id - The runtime id; see `attachRuntime`.
  * @returns The runtime's handle.
+ * @example
+ * ```ts
+ * attachRuntimeUsing({ observeVersions: observeBrowserHttpVersions }, "vite-browser");
+ * ```
  */
-export async function attachRuntimeUsing(
-  loadServerConfig: ServerConfigLoader | undefined,
-  id?: string,
-  observeVersions?: () => HttpVersions,
-): Promise<RuntimeHandle> {
+export async function attachRuntimeUsing(build: RuntimeBuild, id?: string): Promise<RuntimeHandle> {
   const isBrowser = detectBrowser();
   const runtimeId = id ?? detectDefaultRuntimeId(isBrowser);
 
@@ -79,8 +96,11 @@ export async function attachRuntimeUsing(
      handle could close. */
   const inFlight = attaching.get(runtimeId);
   if (inFlight) return inFlight;
-  const loader = isBrowser ? undefined : loadServerConfig;
-  const attach = attachFresh(runtimeId, isBrowser, loader, observeVersions).finally(() =>
+  /* A page has neither the config nor the project's token, whichever build
+     of the runtime its bundler took: Studio sends it none of the calls a
+     server's runtime answers. */
+  const taken: RuntimeBuild = isBrowser ? { observeVersions: build.observeVersions } : build;
+  const attach = attachFresh(runtimeId, isBrowser, taken).finally(() =>
     attaching.delete(runtimeId),
   );
   attaching.set(runtimeId, attach);
@@ -90,12 +110,11 @@ export async function attachRuntimeUsing(
 async function attachFresh(
   runtimeId: string,
   isBrowser: boolean,
-  loadServerConfig: ServerConfigLoader | undefined,
-  observeVersions: (() => HttpVersions) | undefined,
+  build: RuntimeBuild,
 ): Promise<RuntimeHandle> {
   // ── Production-relevant: source registry + appOrigin ──
 
-  const setup = await loadServerConfig?.();
+  const setup = await build.loadServerConfig?.();
 
   let detached = false;
   let unsubscribeAnnouncements: (() => void) | null = null;
@@ -147,7 +166,7 @@ async function attachFresh(
     /* A page keeps less of the app's bodies than a server process does. */
     const bodies = createKeptBodies(isBrowser ? BROWSER_KEPT_BODY_BYTES : KEPT_BODY_BYTES);
     wireHooks(bus, runtimeId, resolveSourceName, bodies);
-    versions = observeVersions?.();
+    versions = build.observeVersions();
     wireHttpHooks(bus, runtimeId, resolveSourceName, versions);
 
     const studioUrl = resolveStudioUrl(setup?.studio);
@@ -159,6 +178,7 @@ async function attachFresh(
       readToken: setup?.readToken,
       bodies,
       listenOrigin: isBrowser ? pageOrigin : getAppOrigin,
+      answerTrusted: build.answerTrusted,
     };
     connectRuntimeSocket(input, pending, handle).catch((err: unknown) =>
       log.warn("Studio connection failed to start", err),

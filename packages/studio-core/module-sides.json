@@ -1,9 +1,12 @@
 {
+  "studioEntries": {
+    "./runtime": "Studio's runtime: the application's server runs it; a development page loads its browser file, which Studio's plugins inject, and so does a Cloudflare Worker. That file takes the core's page entries and its entry for Studio, never a server's: only the server's build answers the Playground's calls and a webhook's deliveries, which Studio sends only a runtime that showed it the project's token"
+  },
   "serverEntries": {
     ".": "The sources Studio serves, and what its server reads of them",
     "./mocks": "The project's courier.mocks.ts, found and read from disk"
   },
-  "sharedEntries": {
-    "./runtime": "Studio's runtime: the application's server runs it, and a page its dev server serves loads its browser file, which Studio's plugins load only into a development page. That file takes the core's root and its internal entries to run the Playground's calls as the page does, so the check of a page's modules does not walk it"
+  "pagePackages": {
+    "socket.io-client": "The socket the runtime reaches Studio over, loaded once the runtime attaches"
   }
 }

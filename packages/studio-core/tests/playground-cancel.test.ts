@@ -16,6 +16,7 @@ import { Server, type Socket } from "socket.io";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { connectRuntimeSocket } from "../src/runtime/connect-runtime-socket";
+import { answerTrustedCalls } from "../src/runtime/trusted-calls";
 
 interface Frame {
   event: string;
@@ -130,10 +131,14 @@ beforeAll(async () => {
     io.close();
   });
   const studioUrl = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
-  await connectRuntimeSocket({ runtimeId: "playground", kind: "server", studioUrl }, [], {
-    setDisposer: (dispose) => cleanups.push(dispose),
-    setAnnouncer: () => {},
-  });
+  await connectRuntimeSocket(
+    { runtimeId: "playground", kind: "server", studioUrl, answerTrusted: answerTrustedCalls },
+    [],
+    {
+      setDisposer: (dispose) => cleanups.push(dispose),
+      setAnnouncer: () => {},
+    },
+  );
   await connected;
 });
 

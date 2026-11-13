@@ -1,4 +1,4 @@
-import { carriedBody, type KeptBodies, studioHooks } from "@noverax/courier/internal";
+import { carriedBody, type KeptBodies, studioHooks } from "@noverax/courier/internal-studio";
 import type { EventBus } from "../../event-bus";
 import type {
   AnyStudioEvent,

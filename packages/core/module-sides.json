@@ -8,6 +8,9 @@
     "./internal-client": "What a client built on the core takes in a page",
     "./realtime": "The clients of streams and channels a page opens, and their types"
   },
+  "studioEntries": {
+    "./internal-studio": "What Studio's runtime takes of the core wherever it runs, a page among them"
+  },
   "serverEntries": {
     "./server": "What a server does with an API: its handlers, its caller, what an adapter registers",
     "./node": "Node's requests, responses and sockets as the web's",
@@ -26,12 +29,11 @@
     "adapter/": "The proxy and the realtime servers: requests, bodies, uploads, limits of rate, the cluster",
     "agent/": "How an endpoint is offered to agents, checked, and the project's policy for them",
     "server/": "What a server lends the calls of its process, and the server entry",
-    "studio/": "Studio's view of the calls, where Studio is attached",
     "transport/in-process/": "Streams a server serves its own callers without leaving the process",
     "terminal/": "What a terminal is shown",
     "openapi/": "The OpenAPI document of an API",
     "webhooks/": "Webhooks a server receives",
-    "announce/": "The banner a server prints as it starts",
+    "announce/": "The announcement an adapter makes to Studio once sources are registered",
     "testing/": "What tests run against",
     "node.js": "The Node entry",
     "node-origin.js": "The address a Node server answers at",
@@ -43,6 +45,9 @@
     "socket-origin.js": "The address a socket server answers at",
     "web-request-context.js": "The request a web server serves",
     "discover-app-origin.js": "The address the application listens at"
+  },
+  "studioAreas": {
+    "studio/": "Studio's view of the calls and of what the app hosts, which a page takes only with Studio's runtime, as Studio's plugins load it into a development page"
   },
   "rootAreas": {
     "utils/redact/": "The rules behind redact for what a credential looks like, which no call of a page needs: the root and the server's entry export redact, and a page that wants it imports it from the root, so a bundler that keeps every module an entry reaches keeps none of them on a page that only calls"

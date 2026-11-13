@@ -1,7 +1,11 @@
 /**
  * Public surface for `@noverax/courier-studio-core/runtime` in browser bundles,
- * selected by the `browser` export condition. It matches the server surface
- * except that `attachRuntime` never loads courier.config from disk.
+ * selected by the `browser` export condition, which a Cloudflare Worker
+ * matches too. It matches the server surface except that `attachRuntime`
+ * never loads courier.config from disk, nor answers the calls Studio sends
+ * only a runtime that showed it the project's token — the Playground's and
+ * a webhook's deliveries. Its modules take the core's page entries and
+ * `@noverax/courier/internal-studio`, none of a server's.
  *
  * What follows describes both builds.
  *

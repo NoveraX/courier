@@ -1,4 +1,4 @@
-import { sliceWhole } from "@noverax/courier/internal";
+import { sliceWhole } from "@noverax/courier/internal-studio";
 
 import type { RequestFailureCause } from "./request";
 

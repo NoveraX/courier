@@ -20,6 +20,7 @@ const entry = {
   "internal-streams/index": "src/internal-streams/index.ts",
   "internal/index": "src/internal/index.ts",
   "internal-client/index": "src/internal-client/index.ts",
+  "internal-studio/index": "src/internal-studio/index.ts",
   "announce/index": "src/announce/index.ts",
   "routes/index": "src/routes/index.ts",
 };

@@ -1,12 +1,14 @@
 /**
  * What an entry a page imports breaches: a module of an area only a server
  * runs, reached through a relative import or through the package's own
- * name; a module of an area a page takes from the package's root alone; a package outside the workspace that the importing package's
- * `module-sides.json` lets no page take; a package of the workspace with
- * no `module-sides.json`; a dynamic import or `require()` whose name a
- * bundler cannot tell, and an `import.meta.glob` of a pattern — each with
- * the way it was reached. The packages a page may take are told, not
- * breached.
+ * name; a module of an area a page takes from the package's root alone; one
+ * of an area a page takes only with Studio's runtime, from a page's own
+ * entry and not from one Studio's runtime imports; a package outside the
+ * workspace that the importing package's `module-sides.json` lets no page
+ * take; a package of the workspace with no `module-sides.json`; a dynamic
+ * import or `require()` whose name a bundler cannot tell, and an
+ * `import.meta.glob` of a pattern — each with the way it was reached. The
+ * packages a page may take are told, not breached.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -36,6 +38,7 @@ function workspace() {
     lib: join(root, dir, "lib"),
     areas: Object.keys(sides?.serverAreas ?? {}),
     rootAreas: Object.keys(sides?.rootAreas ?? {}),
+    studioAreas: Object.keys(sides?.studioAreas ?? {}),
     sides,
   });
   return [
@@ -46,6 +49,7 @@ function workspace() {
       {
         serverAreas: { "server/": "What a server runs" },
         rootAreas: { "utils/redact/": "What a page takes from the root alone" },
+        studioAreas: { "studio/": "What a page takes only with Studio's runtime" },
         pagePackages: { "@standard-schema/spec": "The schemas' types" },
         computedImports: { "client/allowed.js": "Loads what the page's own address names" },
       },
@@ -57,8 +61,8 @@ function workspace() {
   ];
 }
 
-function breachesOf(label, file) {
-  return entryBreaches(ts, label, join(root, file), workspace());
+function breachesOf(label, file, side) {
+  return entryBreaches(ts, label, join(root, file), workspace(), side);
 }
 
 beforeEach(() => {
@@ -91,6 +95,38 @@ describe("entryBreaches", () => {
 
     expect(breachesOf("@noverax/courier/client", "core/lib/client/index.js").breaches).toEqual([
       "@noverax/courier/client reaches utils/redact/, which a page takes from the root alone: client/index.js → utils/redact/redact.js",
+    ]);
+  });
+
+  it("breaches with an area a page takes only with Studio's runtime, reached from a page's entry", () => {
+    writeFiles({
+      "core/lib/client/index.js": 'export { studioHooks } from "../studio/singleton.js";',
+      "core/lib/studio/singleton.js": "export const studioHooks = {};",
+    });
+
+    expect(breachesOf("@noverax/courier/client", "core/lib/client/index.js").breaches).toEqual([
+      "@noverax/courier/client reaches studio/, which a page takes only with Studio's runtime: client/index.js → studio/singleton.js",
+    ]);
+  });
+
+  it("lets an entry Studio's runtime imports in a page reach Studio's areas, and no server's", () => {
+    writeFiles({
+      "core/lib/internal-studio/index.js": [
+        'export { studioHooks } from "../studio/singleton.js";',
+        'export { getSources } from "../server/index.js";',
+      ].join("\n"),
+      "core/lib/studio/singleton.js": "export const studioHooks = {};",
+      "core/lib/server/index.js": "export const getSources = () => ({});",
+    });
+
+    const { breaches } = breachesOf(
+      "@noverax/courier/internal-studio",
+      "core/lib/internal-studio/index.js",
+      { studio: true },
+    );
+
+    expect(breaches).toEqual([
+      "@noverax/courier/internal-studio reaches server/, which only a server runs: internal-studio/index.js → server/index.js",
     ]);
   });
 

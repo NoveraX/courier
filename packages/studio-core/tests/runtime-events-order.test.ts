@@ -21,6 +21,7 @@ import { z } from "zod";
 import { EventBus } from "../src/event-bus";
 import { connectRuntimeSocket } from "../src/runtime/connect-runtime-socket";
 import { wireHooks } from "../src/runtime/hooks";
+import { answerTrustedCalls } from "../src/runtime/trusted-calls";
 
 const cleanups: Array<() => void | Promise<void>> = [];
 const arrived: string[] = [];
@@ -64,10 +65,14 @@ beforeAll(async () => {
     io.close();
   });
   const studioUrl = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
-  await connectRuntimeSocket({ runtimeId: "app", kind: "server", studioUrl, bus }, [], {
-    setDisposer: (dispose) => cleanups.push(dispose),
-    setAnnouncer: () => {},
-  });
+  await connectRuntimeSocket(
+    { runtimeId: "app", kind: "server", studioUrl, bus, answerTrusted: answerTrustedCalls },
+    [],
+    {
+      setDisposer: (dispose) => cleanups.push(dispose),
+      setAnnouncer: () => {},
+    },
+  );
   await connected;
 });
 

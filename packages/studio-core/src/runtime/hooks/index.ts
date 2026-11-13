@@ -14,7 +14,7 @@
  * keeps whole for Studio, of the requests whose events carry a part.
  */
 
-import type { KeptBodies } from "@noverax/courier/internal";
+import type { KeptBodies } from "@noverax/courier/internal-studio";
 import type { EventBus } from "../../event-bus";
 import type { HttpVersions } from "../http-versions/http-version";
 import { wireCacheHooks } from "./http-cache";

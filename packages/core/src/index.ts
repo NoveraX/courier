@@ -25,10 +25,11 @@ export type * from "./public-types";
 /* The realtime errors' base and a connection's; the others come with the
    realtime client, from `@noverax/courier/realtime`, and load with it. */
 export { ConnectionError, RealtimeError } from "./realtime/realtime-error";
+export { getSources } from "./registered-sources";
 export { createCaller } from "./server/create-caller";
 export { ensureCsrfToken } from "./server/ensure-csrf-token";
 export { registerRequestContext } from "./server/session/request-context";
-export { getSources, registerSources } from "./server/sources";
+export { registerSources } from "./server/sources";
 export { redact } from "./utils/redact";
 export { smoothProgress } from "./utils/smooth-progress";
 export { isStreamedUpload } from "./utils/streamed-upload";

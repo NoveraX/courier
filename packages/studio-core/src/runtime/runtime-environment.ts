@@ -1,10 +1,11 @@
 import {
+  environmentVariable,
   formatStudioUrl,
   STUDIO_DEFAULT_HOST,
   STUDIO_DEFAULT_PORT,
   STUDIO_DEFAULT_URL,
-} from "@noverax/courier/config";
-import { environmentVariable, writtenOrOwn } from "@noverax/courier/internal";
+  writtenOrOwn,
+} from "@noverax/courier/internal-studio";
 
 const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 

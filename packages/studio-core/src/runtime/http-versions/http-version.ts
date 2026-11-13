@@ -1,4 +1,4 @@
-import { parseUrl } from "@noverax/courier/internal";
+import { parseUrl } from "@noverax/courier/internal-studio";
 
 import type { HttpVersion } from "../../events/http";
 

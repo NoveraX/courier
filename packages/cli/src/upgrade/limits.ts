@@ -9,12 +9,6 @@ export const UPGRADE_LIMITS = {
   workspacePackages: 1_000,
   /** How deep a workspace's `**` glob goes, in folders. */
   workspaceDepth: 8,
-  /** The files of a project's code an upgrade looks at. */
-  sourceFiles: 20_000,
-  /** The largest file of a project's code it reads, in bytes. */
-  sourceBytes: 2 * 1024 * 1024,
-  /** How deep it walks the project's folders for code. */
-  sourceDepth: 16,
   /** One question to the registry: a release's version, or a package's. */
   registryMs: 30_000,
   /** The questions to the registry asked at once. */

@@ -53,7 +53,7 @@ export interface FrameworkMarker {
    * Whether it runs a server alone, which a package may list beside the
    * framework its page is built with: such a package is told by its
    * server, which comes before the page's in the list, and is not a
-   * page's alone. The same servers as the upgrade's, in create-courier.
+   * page's alone.
    */
   readonly server?: boolean;
 }

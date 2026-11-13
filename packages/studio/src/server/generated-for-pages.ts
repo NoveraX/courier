@@ -29,12 +29,11 @@ const PAGE_WITH_SERVER: ReadonlySet<string> = new Set([
 /**
  * Whether a page alone loads an import's files: the package they go in is
  * built with React or Vue that Vite builds, beside no server framework, as
- * Courier tells a package's framework by what its package.json lists —
- * the rule the upgrade to the core's entries reads a package's side by
- * too. A server the package lists among its dev dependencies alone — an
- * Express or a Koa for a mock — is not one: the app it builds runs
- * without it, and its page loads the files alone. The barrel's direct
- * caller is then a page's.
+ * Courier tells a package's framework by what its package.json lists. A
+ * server the package lists among its dev dependencies alone — an Express
+ * or a Koa for a mock — is not one: the app it builds runs without it,
+ * and its page loads the files alone. The barrel's direct caller is then
+ * a page's.
  *
  * @param root - The project root
  * @param layout - Where the import's files go

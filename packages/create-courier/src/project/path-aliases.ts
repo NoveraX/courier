@@ -138,32 +138,12 @@ function targetsOf(project: Project, specifier: string, aliases: readonly Alias[
 }
 
 /**
- * Where a specifier that is not relative may lead, as the project's
- * tsconfig resolves it: a `paths` key — read through what the tsconfig
- * extends, against its `baseUrl` — or a path from the `baseUrl`. Each is
- * an absolute path without its extension, in the project or out of it: a
- * workspace's tsconfig may map an alias to another of its packages.
- * Whether a file is there is the caller's to see, and so is a
- * package.json `imports` key, whose conditions give each side its own.
- *
- * @param project - The project
- * @param specifier - The specifier, as a file of the project's writes it
- * @returns The paths it may lead to, without extension; none for a package
- * @example
- * ```ts
- * aliasTargets(project, "@acme/shared/api"); // ["/work/packages/shared/src/api"] where paths maps "@acme/shared/*" there
- * ```
- */
-export function aliasTargets(project: Project, specifier: string): string[] {
-  return targetsOf(project, specifier, aliasesOf(project).paths);
-}
-
-/**
  * The files of the project's own a specifier that is not relative may
- * name, as the project's tooling resolves it: the targets
- * {@link aliasTargets} gives inside the project, and the first path a
- * package.json import's conditions give — a path from the `baseUrl` only
- * where a file of code is there.
+ * name, as the project's tooling resolves it: the targets a tsconfig
+ * `paths` key or its `baseUrl` gives inside the project — read through
+ * what the tsconfig extends — and the first path a package.json import's
+ * conditions give — a path from the `baseUrl` only where a file of code
+ * is there.
  *
  * @param project - The project
  * @param specifier - The specifier, as a file of the project's writes it

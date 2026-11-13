@@ -87,7 +87,7 @@ describe("textReport", () => {
     ]);
   });
 
-  it("shows what an upgrade moves under its title: the ranges, those left and why, and the breaking changes", () => {
+  it("shows what an upgrade moves under its title: the ranges, and those left and why", () => {
     const { printed, report } = reporting();
 
     report.plan({
@@ -113,25 +113,15 @@ describe("textReport", () => {
             why: "it allows 0.5.0",
           },
         ],
-        notes: [
-          {
-            release: "0.5.0",
-            title: "Call errors",
-            docs: "https://courier.noverax.cloud/docs/upgrading#call-errors",
-          },
-        ],
       },
     });
 
-    expect(printed.slice(0, 9)).toEqual([
+    expect(printed.slice(0, 6)).toEqual([
       "Upgrade Courier in shop",
       "",
       "Courier 0.4.0 → 0.5.0",
       "  ~ @noverax/courier        ^0.4.0 → ^0.5.0",
       "  ! @noverax/courier-react  *  left as written: it allows 0.5.0  apps/web/package.json",
-      "",
-      "Breaking changes",
-      "  0.5.0  Call errors  https://courier.noverax.cloud/docs/upgrading#call-errors",
       "",
     ]);
   });

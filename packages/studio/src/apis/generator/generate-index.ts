@@ -18,11 +18,9 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
  * the server's entry, `@noverax/courier/server`; where a page alone loads
  * the barrel, in a project with no server side, it is a page's, from the
  * page's entry, `@noverax/courier/client`, so the page's bundle holds none
- * of the server's part. Written from the root, the barrel would be moved by
- * the upgrade that takes the root's imports to the entries, which asks that
- * a file Studio wrote be written again instead. The caller is made pure, so
- * a module that takes a schema of the barrel and not the caller — a page's
- * among them — carries no caller, nor the server's part it comes with.
+ * of the server's part. The caller is made pure, so a module that takes a
+ * schema of the barrel and not the caller — a page's among them — carries
+ * no caller, nor the server's part it comes with.
  *
  * @param spec - The parsed specification
  * @param options - The import's resolved options

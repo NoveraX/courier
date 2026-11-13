@@ -61,24 +61,6 @@ function comparePre(a: readonly string[], b: readonly string[]): number {
 }
 
 /**
- * The release line a version is on, as a caret range reads it: its
- * minor under 1.0 — where a minor release may break — and its major from
- * 1.0 on.
- *
- * @param version - The version
- * @returns The line's first release, `0.5.0` for `0.5.3` and `2.0.0` for `2.4.1`
- * @example
- * ```ts
- * releaseLine(parseVersion("0.5.3")!); // { major: 0, minor: 5, patch: 0, pre: "" }
- * ```
- */
-export function releaseLine(version: Version): Version {
-  return version.major === 0
-    ? { major: 0, minor: version.minor, patch: 0, pre: "" }
-    : { major: version.major, minor: 0, patch: 0, pre: "" };
-}
-
-/**
  * A version as npm writes it.
  *
  * @param version - The version

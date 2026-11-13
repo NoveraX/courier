@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
-  changedByEdits,
   gitState,
   goAhead,
   managerFor,
@@ -11,20 +10,14 @@ import {
   type SetupIO,
   SetupRefusal,
   transact,
-  typecheckTouched,
 } from "@noverax/create-courier/engine";
 
 import { isRecord } from "../util/is-record";
 import { agentRulesEdits } from "./agent-rules-edits";
-import { migrateCode } from "./codemod/run-migrations";
-import { projectCode } from "./codemod/source-files";
 import { docsNote } from "./docs-note";
-import { projectSides } from "./entries/piece-sides";
 import { manifestEdits } from "./manifest-edits";
-import { additionsOf } from "./package-needs";
 import { courierPackages } from "./project-packages";
 import { managerRegistry, type Registry } from "./registry";
-import { releasesBetween } from "./releases";
 import { upgradeVersions } from "./upgrade-versions";
 import { formatVersion } from "./versions";
 import { workspaceOf } from "./workspace";
@@ -42,7 +35,6 @@ const REACH: UpgradeReach = { registry: managerRegistry, manager: managerFor };
 export interface UpgradeRun {
   readonly cwd?: string | undefined;
   readonly to?: string | undefined;
-  readonly from?: string | undefined;
   readonly "package-manager"?: string | undefined;
   /** `false` to write the changes and name the install command. */
   readonly install?: boolean | undefined;
@@ -64,7 +56,7 @@ function nameOf(root: string): string {
   return isRecord(parsed) && typeof parsed.name === "string" ? parsed.name : basename(root);
 }
 
-/* What to run once the upgrade holds: the whole project's type check, which shows what is left to the person. */
+/* What to run once the upgrade holds: the whole project's type check, which shows what the new release asks of its code. */
 function nextSteps(manager: PackageManager): NextStep[] {
   return [
     {
@@ -77,28 +69,25 @@ function nextSteps(manager: PackageManager): NextStep[] {
 /**
  * Upgrade Courier in a project: find its workspace and every one of
  * Courier's packages its manifests list, the release it is on and the one
- * to move to, and show the plan — each package's range raised, the
- * breaking changes of each release it crosses, the code carried over,
- * and Courier's block in AGENTS.md brought up to date where a file holds
- * it — then, once the person agrees or with `--yes`, write the ranges and
+ * to move to, and show the plan — each package's range raised, and
+ * Courier's block in AGENTS.md brought up to date where a file holds it —
+ * then, once the person agrees or with `--yes`, write the ranges and
  * install them with one command at the workspace's root, undone together
- * when the install fails; then check the types of what changed.
+ * when the install fails.
  *
  * @param run - What the command line asked for
  * @param io - Where to tell what it does, and whether to ask
- * @param own - The command's own version: it knows the changes up to its release
  * @param reach - The registry and the package manager: the person's own, unless a test gives others
  * @returns The exit status
  * @throws {SetupRefusal} Naming why the upgrade cannot be made, before anything is changed
  * @example
  * ```ts
- * process.exitCode = await runUpgrade({ yes: true }, io, cliVersion());
+ * process.exitCode = await runUpgrade({ yes: true }, io);
  * ```
  */
 export async function runUpgrade(
   run: UpgradeRun,
   io: SetupIO,
-  own: string,
   reach: UpgradeReach = REACH,
 ): Promise<number> {
   const workspace = workspaceOf(run.cwd ?? process.cwd());
@@ -110,37 +99,27 @@ export async function runUpgrade(
       `No package of Courier's is listed in ${root}: set Courier up with npx @noverax/create-courier`,
     );
   const manager = reach.manager(root, run["package-manager"]);
-  const { from, to } = await upgradeVersions(run, reach.registry(root, manager), packages, own);
+  const { from, to } = await upgradeVersions(run, reach.registry(root, manager), packages);
   const target = formatVersion(to);
-  const releases = releasesBetween(from, to);
-  const migrations = releases.flatMap((release) => release.migrations);
-  const read = migrations.length === 0 ? undefined : projectCode(root);
-  const code =
-    read === undefined ? undefined : migrateCode(read, migrations, projectSides(workspace, read));
-  const additions = additionsOf(workspace, packages, code?.needs ?? [], target);
-  const manifests = manifestEdits(root, packages, to, additions);
-  const notes = releases.flatMap((release) =>
-    release.notes.map((note) => ({ release: release.version, ...note })),
-  );
+  const manifests = manifestEdits(root, packages, to);
   /* Courier's block in AGENTS.md goes with an upgrade that moves anything; Studio brings it up to date as it starts. */
-  const moves = manifests.edits.length > 0 || (code?.edits.length ?? 0) > 0;
-  const rules = moves ? agentRulesEdits(root, packages) : undefined;
+  const rules = manifests.edits.length > 0 ? agentRulesEdits(root, packages) : undefined;
   const plan: Plan = {
     files: [],
-    edits: [...manifests.edits, ...(code?.edits ?? []), ...(rules?.edits ?? [])],
+    edits: [...manifests.edits, ...(rules?.edits ?? [])],
     dependencies: [],
     devDependencies: [],
     otherReleases: [],
     notInstalled: [],
     typescript: undefined,
-    manual: [...(code?.manual ?? []), ...(rules?.manual ?? [])],
+    manual: rules?.manual ?? [],
     next: nextSteps(manager),
     leftOut: docsNote(packages, to),
     prepare: [],
     agentRules: rules === undefined || rules.files.length === 0 ? undefined : rules.files,
   };
   const git = await gitState(root);
-  const upgrade = { from: formatVersion(from), to: target, packages: manifests.packages, notes };
+  const upgrade = { from: formatVersion(from), to: target, packages: manifests.packages };
   const title = `Upgrade Courier in ${nameOf(root)} to ${target} (${manager.name})`;
   io.report.plan({ title, plan, git, upgrade });
   if (plan.edits.length === 0) {
@@ -160,12 +139,6 @@ export async function runUpgrade(
   if (!installing) {
     io.report.end({ kind: "install-left", plan, commands });
     return 0;
-  }
-  const outcome = await typecheckTouched(root, { added: [], changed: changedByEdits(plan.edits) });
-  io.report.typechecked(outcome);
-  if (outcome.kind === "errors") {
-    io.report.end({ kind: "typecheck-failed" });
-    return 1;
   }
   io.report.end({ kind: "applied", plan, said: `Courier is upgraded to ${target}.` });
   return 0;

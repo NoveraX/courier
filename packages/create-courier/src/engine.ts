@@ -6,24 +6,14 @@
  * It is Courier's own, not a public API: its shape follows what the CLI
  * needs, release to release.
  */
-export { changedByEdits } from "./apply/apply-plan";
 export { runTool, type ToolOptions, type ToolResult, toolFailure } from "./apply/run-tool";
 export { type FailureCode, SetupFailure } from "./apply/setup-failure";
 export { SetupRefusal } from "./apply/setup-refusal";
 export { type Changes, type Done, transact } from "./apply/transaction";
-export { type Touched, typecheckTouched } from "./apply/typecheck";
 export { withJsonStrings } from "./edit/json-strings";
 export { type ChangedLine, changedLines } from "./edit/line-diff";
 export { frameworkOf } from "./framework-of";
-export {
-  detectFramework,
-  detectFrameworks,
-  type FrameworkId,
-  SERVER_FRAMEWORKS,
-  type ServerFramework,
-  type ServerId,
-} from "./frameworks";
-export { type ImportFrom, importFrom, secretsPrefix } from "./import-address";
+export { detectFramework } from "./frameworks";
 export type { Plan, PlannedEdit, PlannedFile } from "./plan/build-plan";
 export { type GitState, gitState } from "./preflight/git-state";
 export { type GoAheadRun, type GoAheadWords, goAhead } from "./preflight/go-ahead";
@@ -34,15 +24,7 @@ export {
   type PackageManager,
   type PackageManagerName,
 } from "./project/package-manager";
-export { aliasTargets } from "./project/path-aliases";
-export {
-  manifestOf,
-  type PackageManifest,
-  type Project,
-  readProject,
-} from "./project/read-project";
-export { type RouteList, routeList } from "./project/route-list";
-export { type TsconfigLevel, tsconfigProjects } from "./project/tsconfig-chain";
+export { manifestOf, type PackageManifest } from "./project/read-project";
 export { isRoutesFramework } from "./recipes/edits/framework-routes";
 export type { ManualStep, NextStep } from "./recipes/recipe-types";
 export type { PlanView, SetupEnd, SetupReport, UpgradeView } from "./report/setup-report";

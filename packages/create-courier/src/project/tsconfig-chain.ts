@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 
@@ -57,34 +57,4 @@ function levelsOf(file: string, depth: number): TsconfigLevel[] {
 export function tsconfigChain(root: string): TsconfigLevel[] {
   const tsconfig = join(root, "tsconfig.json");
   return existsSync(tsconfig) ? levelsOf(tsconfig, 0) : [];
-}
-
-/**
- * Each tsconfig project a project's code is checked by, as
- * {@link tsconfigChain} reads its levels: `tsconfig.json`'s own, then
- * those of each project its `references` name — a tsconfig file, or a
- * folder's `tsconfig.json` — as Vite's templates keep the app's options
- * in a project `tsconfig.json` refers to. A reference to nothing is left
- * out.
- *
- * @param root - The project's folder
- * @returns The projects' levels, `tsconfig.json`'s first; none without one
- * @example
- * ```ts
- * tsconfigProjects("/work/shop").some((levels) => levels[0]?.options.verbatimModuleSyntax === true);
- * ```
- */
-export function tsconfigProjects(root: string): TsconfigLevel[][] {
-  const tsconfig = join(root, "tsconfig.json");
-  if (!existsSync(tsconfig)) return [];
-  const parsed = parseJsonc(readFileSync(tsconfig, "utf8"));
-  const references = isRecord(parsed) && Array.isArray(parsed.references) ? parsed.references : [];
-  const named = references.flatMap((reference) => {
-    if (!isRecord(reference) || typeof reference.path !== "string") return [];
-    const path = resolve(root, reference.path);
-    const file =
-      existsSync(path) && statSync(path).isDirectory() ? join(path, "tsconfig.json") : path;
-    return existsSync(file) ? [levelsOf(file, 0)] : [];
-  });
-  return [levelsOf(tsconfig, 0), ...named];
 }

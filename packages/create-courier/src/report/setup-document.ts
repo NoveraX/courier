@@ -43,7 +43,7 @@ export interface PlanDocument {
   readonly next: readonly NextStep[];
   /** What the setup leaves out that the person might look for, and why, a sentence each. */
   readonly leftOut: readonly string[];
-  /** What an upgrade moves: the releases, each package's range, the breaking changes it crosses; `null` for a setup. */
+  /** What an upgrade moves: the releases and each package's range; `null` for a setup. */
   readonly upgrade: UpgradeView | null;
   /**
    * What becomes of the files of the agents' rules — AGENTS.md, which takes

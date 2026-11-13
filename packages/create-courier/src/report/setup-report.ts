@@ -19,23 +19,13 @@ export interface UpgradedPackage {
   readonly to: string | undefined;
   /** Why it is left as written, where it is. */
   readonly why?: string | undefined;
-  /** Whether the upgrade adds it: code it changed imports it. */
-  readonly added?: boolean | undefined;
 }
 
-/** A breaking change of a release an upgrade crosses, and where its notes say what to write instead. */
-export interface UpgradeNote {
-  readonly release: string;
-  readonly title: string;
-  readonly docs: string;
-}
-
-/** What an upgrade shows beside its plan: the release it moves from and to, each package's range, and the breaking changes it crosses. */
+/** What an upgrade shows beside its plan: the release it moves from and to, and each package's range. */
 export interface UpgradeView {
   readonly from: string;
   readonly to: string;
   readonly packages: readonly UpgradedPackage[];
-  readonly notes: readonly UpgradeNote[];
 }
 
 /** The plan, as a run shows it before anything is asked or changed. */

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  compareVersions,
-  formatVersion,
-  parseVersion,
-  releaseLine,
-} from "../../src/upgrade/versions";
+import { compareVersions, formatVersion, parseVersion } from "../../src/upgrade/versions";
 
 const v = (text: string) => {
   const version = parseVersion(text);
@@ -42,9 +37,8 @@ describe("versions", () => {
     expect(compareVersions(v("0.5.0"), v("0.5.0"))).toBe(0);
   });
 
-  it("puts a version on its line: the minor under 1.0, the major from 1.0", () => {
-    expect(formatVersion(releaseLine(v("0.5.3")))).toBe("0.5.0");
-    expect(formatVersion(releaseLine(v("2.4.1")))).toBe("2.0.0");
+  it("writes a version as npm does, its pre-release tag after a hyphen", () => {
+    expect(formatVersion(v("0.5.3"))).toBe("0.5.3");
     expect(formatVersion(v("0.5.0-rc.1"))).toBe("0.5.0-rc.1");
   });
 });

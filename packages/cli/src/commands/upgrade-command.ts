@@ -16,12 +16,6 @@ export const UPGRADE_ARGS = {
     valueHint: "version",
     description: "The release to move to (default: the registry's latest)",
   },
-  from: {
-    type: "string",
-    valueHint: "version",
-    description:
-      "Read the project as on this release, where its packages were moved by hand (default: the oldest installed)",
-  },
   "package-manager": {
     type: "string",
     valueHint: "npm|pnpm|yarn|bun",
@@ -47,9 +41,9 @@ export const UPGRADE_ARGS = {
 
 /**
  * `courier-cli upgrade` — move a project to a new release of Courier:
- * every one of Courier's packages in its workspace raised at once, the
- * breaking changes of each release it crosses shown, and one install at
- * the workspace's root, undone with the changes when it fails.
+ * every one of Courier's packages in its workspace raised at once, and
+ * one install at the workspace's root, undone with the changes when it
+ * fails.
  *
  * @example
  * ```sh
@@ -66,6 +60,6 @@ export const upgradeCommand = defineCommand({
       logScope: "Upgrade",
       json: args.json === true,
     };
-    process.exitCode = await runSetupCommand(command, (io) => runUpgrade(args, io, cliVersion()));
+    process.exitCode = await runSetupCommand(command, (io) => runUpgrade(args, io));
   },
 });

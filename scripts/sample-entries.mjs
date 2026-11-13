@@ -12,12 +12,10 @@
  * a server's name, as `createHandler`, into code a page loads.
  *
  * The docs taught `@noverax/courier` in every sample after the core gave a
- * page and a server an entry each, page code with "use client" among them,
- * and a project the upgrade had moved took the root back from the docs.
+ * page and a server an entry each, page code with "use client" among them.
  *
- * The entries' names are `packages/core/entry-exports.json`'s, which the
- * upgrade's migration of a project's imports reads as well, and so are the
- * names a page takes from the root alone.
+ * The entries' names are `packages/core/entry-exports.json`'s, and so are
+ * the names a page takes from the root alone.
  */
 
 import { readFileSync } from "node:fs";

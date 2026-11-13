@@ -1,16 +1,15 @@
 /**
  * The names each entry a page or a server imports offers, written down in
- * `entry-exports.json` for the tools that move an import from one entry to
- * another — the upgrade sends a page's import to `/client` when every name
- * it takes is there — and held to what the entries export, values and
+ * `entry-exports.json` for the checks that hold the docs' samples to the
+ * entry of their side, and held to what the entries export, values and
  * types alike. A name added to an entry is added to the list in the same
  * change. A name an entry binds to another value than the root does is
- * marked, as the built entries have it: moved to it, an import of that
- * name takes another function, which only a file no server imports may.
+ * marked, as the built entries have it: taken from that entry, the name is
+ * another function, which only a file no server imports may take.
  * The values a page takes from the root alone are named beside the page's
  * entry, apart from the server's: those of the areas `module-sides.json`
- * names the root's, which the page's entry leaves out, so a tool sends a
- * page's import of one to no other entry, and calls it no server's name.
+ * names the root's, which the page's entry leaves out, so the checks let a
+ * page's sample take one from the root, and call it no server's name.
  * The built entries are imported with the module, as the sources are, and
  * compared once loaded: a load that waits on other files' builds counts
  * against no test's time. The compiler reads the sources once, for every

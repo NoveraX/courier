@@ -37,7 +37,9 @@ export default defineConfig([
        page's bundle takes its browser stand-in instead. The build writes a
        constant of another module in place where it is used: a bundler that
        does not, as Turbopack does not, would read it by name in each place.
-       The import of that module, left binding no name, is dropped. */
+       The import of that module, left binding no name, is dropped. The way it
+       is written in is pinned: a release of rolldown may change its default. */
+    inputOptions: { optimization: { inlineConst: { mode: "smart", pass: 1 } } },
     plugins: [serverOnlyImports(), emptiedImports()],
     dts: false,
   },

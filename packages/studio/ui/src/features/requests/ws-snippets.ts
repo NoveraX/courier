@@ -32,15 +32,19 @@ function framesOf(r: SnippetRequest, frameHeaders?: Record<string, string>) {
   return { auth, subscribe };
 }
 
+/* A socket's address as a ws:// or wss:// URL, an HTTP address too, which a
+   browser released before the standard took one refuses; none for any other. */
+function socketUrl(url: string): string | undefined {
+  const scheme = /^(?:ws|http)s?(?=:\/\/)/i.exec(url)?.[0];
+  return scheme && `${scheme.toLowerCase().replace("http", "ws")}${url.slice(scheme.length)}`;
+}
+
 /* websocat reads an address as a socket's URL only when it starts with
    ws:// or wss://: one that starts with another name and a colon it reads
    as another kind of address, and some of those run a program or open a
-   file. An HTTP address names its socket; any other is written under a
-   host for the reader to fill in. */
+   file. Any other is written under a host for the reader to fill in. */
 function socketAddress(url: string): string {
-  const scheme = /^(?:ws|http)s?(?=:\/\/)/i.exec(url)?.[0];
-  if (scheme === undefined) return `ws://<host>${url.startsWith("/") ? "" : "/"}${url}`;
-  return `${scheme.toLowerCase().replace("http", "ws")}${url.slice(scheme.length)}`;
+  return socketUrl(url) ?? `ws://<host>${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 /**
@@ -65,7 +69,7 @@ export function wsBrowserSnippet(
 ): string {
   const { auth, subscribe } = framesOf(r, headers);
   return [
-    `const socket = new WebSocket(${codeString(url)});`,
+    `const socket = new WebSocket(${codeString(socketUrl(url) ?? url)});`,
     "",
     `socket.onopen = () => socket.send(JSON.stringify(${codeValue(auth)}));`,
     "socket.onmessage = (event) => {",

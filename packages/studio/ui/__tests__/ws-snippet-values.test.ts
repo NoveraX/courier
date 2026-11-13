@@ -67,6 +67,16 @@ describe("the browser snippet of a WebSocket request", () => {
     );
   });
 
+  it.each([
+    ["an HTTP address", "http://localhost:5173/ws", "ws://localhost:5173/ws"],
+    ["an HTTPS address", "https://api.example.com/ws", "wss://api.example.com/ws"],
+    ["the page's own path", "/api/users/room", "/api/users/room"],
+  ])("opens the socket of %s at a WebSocket URL", (_what, url, address) => {
+    const { opened } = runInBrowser(requestSnippet(room({ url }), "browser").code);
+
+    expect(opened).toEqual([address]);
+  });
+
   it("holds nothing that ends a page's script, or a line, around it", () => {
     const { code } = requestSnippet(
       room({ url: ADDRESS, requestHeaders: { "x-note": AWKWARD } }),

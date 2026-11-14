@@ -29,7 +29,7 @@ export type Slots = { -readonly [TName in ServerCapabilityName]?: ServerCapabili
    copy makes must find what the other's server provided. The version of the
    slots' contract is in the key: a copy whose slots take other arguments
    keeps a registry of its own rather than calling one it does not know. */
-const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
+const REGISTRY = Symbol.for("courier.serverCapabilities.v2");
 
 function isSlots(value: unknown): value is Slots {
   return typeof value === "object" && value !== null;

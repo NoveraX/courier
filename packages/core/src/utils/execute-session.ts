@@ -51,9 +51,9 @@ export function callSessionTarget(target: CallTarget): SessionTarget {
 /**
  * Put what the session gives a call on it: its headers under any the call
  * set itself but over the copies the incoming request forwarded — the
- * session is the API's own — and what `fetch` has to be given under the
- * API's own options and the call's. A call that carries the user's
- * credentials from a server follows redirects only on the API's own origin.
+ * session is the API's own — what `fetch` has to be given under the API's
+ * own options and the call's, and what the session sends the call with
+ * over both.
  *
  * @param session - What the session gives the call
  * @param ctx - The middleware context, whose headers the call is sent with
@@ -80,13 +80,5 @@ export function applyCallSession<TOptions extends object>(
   const init = Object.entries(session.fetchInit ?? {}).filter(
     ([key]) => sourceOptions === undefined || !Object.hasOwn(sourceOptions, key),
   );
-  const within = session.carries && session.incoming !== undefined;
-  /* The API's answer may start or renew the session of the visitor it was made for. */
-  const servedFor = session.options === undefined ? undefined : session.incoming?.key;
-  return {
-    ...Object.fromEntries(init),
-    ...options,
-    ...(within && { withinOrigin: true }),
-    ...(servedFor !== undefined && { servedFor }),
-  };
+  return { ...Object.fromEntries(init), ...options, ...session.sendsWith };
 }

@@ -33,7 +33,7 @@ import { courier, defineApi } from "@noverax/courier/define";
 test("side", () => {
   const { endpoint } = courier();
   createCaller(defineApi({ name: "a", baseURL: "https://api.example.com", endpoints: { me: endpoint.get("me") } }));
-  const lent = globalThis[Symbol.for("courier.serverCapabilities.v1")] !== undefined;
+  const lent = globalThis[Symbol.for("courier.serverCapabilities.v2")] !== undefined;
   console.log("SIDE " + (lent ? "server" : "page"));
 });
 `;

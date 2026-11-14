@@ -13,7 +13,7 @@ import {
 } from "../../src/capabilities/provide-server-capability";
 import { serverCapability } from "../../src/capabilities/registry";
 
-const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
+const REGISTRY = Symbol.for("courier.serverCapabilities.v2");
 
 function capability(): InProcessProxyCapability {
   return { route: () => undefined };
@@ -45,7 +45,7 @@ describe("serverCapability", () => {
   });
 
   it("reads no registry of another contract's version", () => {
-    const other = Symbol.for("courier.serverCapabilities.v2");
+    const other = Symbol.for("courier.serverCapabilities.v1");
     Reflect.set(globalThis, other, { inProcessProxy: capability() });
     try {
       expect(serverCapability("inProcessProxy")).toBeUndefined();

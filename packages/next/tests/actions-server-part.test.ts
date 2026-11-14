@@ -23,7 +23,7 @@ vi.mock("next/headers", () => ({
   cookies: vi.fn().mockResolvedValue({ set: vi.fn(), getAll: () => [{ name: "sid", value: SID }] }),
 }));
 
-const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
+const REGISTRY = Symbol.for("courier.serverCapabilities.v2");
 const { endpoint } = courier();
 
 const accounts = defineApi({

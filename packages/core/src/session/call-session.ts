@@ -54,6 +54,22 @@ export interface CallSession {
   readonly partition?: string | undefined;
   /** Whether the call is a write that renews that partition once it is answered */
   readonly renewsPartition?: boolean | undefined;
+  /** What the call is sent with over whatever its own options say */
+  readonly sendsWith?: SessionSendOptions | undefined;
+}
+
+/** What a session sends its call with over the options the call gave itself. */
+export interface SessionSendOptions {
+  /**
+   * Follow redirects only while they stay on the API's origin: a server's
+   * call that carries the user's credentials
+   */
+  readonly withinOrigin?: true | undefined;
+  /**
+   * The request being served, for whose visitor the answer may start or
+   * renew the session: the call's reads join no other request's
+   */
+  readonly servedFor?: object | undefined;
 }
 
 /**

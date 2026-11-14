@@ -75,7 +75,7 @@ describe("a call that names the request it serves", () => {
 
   it("is refused saying what to do on a server, and naming a copy of the core under another contract", async () => {
     /* Another copy makes its registry the first time it reads one: its key may hold no slot. */
-    const other = Symbol.for("courier.serverCapabilities.v2");
+    const other = Symbol.for("courier.serverCapabilities.v1");
     Reflect.set(globalThis, other, {});
     try {
       const refused = await createPageCaller(api(), { context: { req: userRequest() } })
@@ -84,7 +84,7 @@ describe("a call that names the request it serves", () => {
 
       expect(refused).toMatchObject({ code: "SERVER_CAPABILITY_MISSING" });
       expect((refused as Error).message).toBe(
-        "[courier] accounts.me names the request it serves in its context, and nothing here reads one: only a server does. On a server, make the caller with createCaller from @noverax/courier/server, or register the framework's request context with registerRequestContext; this process runs another copy of the core too, under another contract: its registry is kept under courier.serverCapabilities.v2, which this copy, under courier.serverCapabilities.v1, does not read. Have one version of @noverax/courier installed, as npm ls @noverax/courier, pnpm why @noverax/courier or yarn why @noverax/courier shows.",
+        "[courier] accounts.me names the request it serves in its context, and nothing here reads one: only a server does. On a server, make the caller with createCaller from @noverax/courier/server, or register the framework's request context with registerRequestContext; this process runs another copy of the core too, under another contract: its registry is kept under courier.serverCapabilities.v1, which this copy, under courier.serverCapabilities.v2, does not read. Have one version of @noverax/courier installed, as npm ls @noverax/courier, pnpm why @noverax/courier or yarn why @noverax/courier shows.",
       );
     } finally {
       Reflect.deleteProperty(globalThis, other);

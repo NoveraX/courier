@@ -24,7 +24,7 @@ vi.mock(
   () => import("../../../src/browser/capabilities/missing-capability"),
 );
 
-const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
+const REGISTRY = Symbol.for("courier.serverCapabilities.v2");
 const { endpoint } = courier();
 let upstream: Upstream;
 

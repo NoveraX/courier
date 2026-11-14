@@ -9,7 +9,7 @@ import { missingCapabilityCause } from "../../../src/browser/capabilities/missin
 import * as Browser from "../../../src/browser/capabilities/registry";
 import type { SessionCapability } from "../../../src/capabilities/session";
 
-const REGISTRY = Symbol.for("courier.serverCapabilities.v1");
+const REGISTRY = Symbol.for("courier.serverCapabilities.v2");
 
 afterEach(() => {
   Reflect.deleteProperty(globalThis, REGISTRY);

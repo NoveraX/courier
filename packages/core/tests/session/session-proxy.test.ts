@@ -22,7 +22,15 @@ let proxy: Server;
 let proxyUrl: string;
 
 beforeAll(async () => {
+  let guests = 0;
   upstream = await startUpstream((req, res) => {
+    /* A read the API starts a guest session on, answered late enough for two to be in flight. */
+    if (req.url === "/catalog") {
+      guests += 1;
+      res.setHeader("set-cookie", `sid=guest-${guests}; Path=/; HttpOnly`);
+      setTimeout(() => sendJson(res, 200, { items: [] }), 100);
+      return;
+    }
     if (req.url === "/login") {
       res.setHeader("set-cookie", [
         "sid=s3cr3t; Path=/auth; Domain=127.0.0.1; HttpOnly; SameSite=Strict",
@@ -40,6 +48,7 @@ beforeAll(async () => {
       session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
       endpoints: {
         me: endpoint.get("me"),
+        catalog: endpoint.get("catalog"),
         login: endpoint.post("login"),
       },
     }),
@@ -93,5 +102,16 @@ describe("the proxy, for an API that keeps a session", () => {
     expect(response.headers.getSetCookie()).toEqual([
       "sid=s3cr3t; Path=/; HttpOnly; SameSite=Strict",
     ]);
+  });
+
+  it("sends two visitors' identical reads apart, so the session the API starts for one is not the other's", async () => {
+    const read = () =>
+      fetch(`${proxyUrl}?_s=accounts&_m=catalog`, { headers: { "sec-fetch-site": "same-origin" } });
+
+    const [first, second] = await Promise.all([read(), read()]);
+
+    expect(upstream.seen.filter((request) => request.url === "/catalog")).toHaveLength(2);
+    const handed = [first, second].map((answer) => answer.headers.getSetCookie()[0]);
+    expect(new Set(handed).size).toBe(2);
   });
 });

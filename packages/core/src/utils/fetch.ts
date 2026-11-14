@@ -46,6 +46,12 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
    */
   coalesce?: boolean | undefined;
   /**
+   * The request being served the call is made for, when the answer may set
+   * that visitor's session: a read made for one never joins a read made for
+   * another, however alike they are.
+   */
+  servedFor?: object | undefined;
+  /**
    * The endpoint is declared a read, whatever verb carries it, or a write:
    * which of them an identical request in flight may join. Unsaid, a request
    * sent as `GET`, `HEAD` or `QUERY` reads.
@@ -78,6 +84,7 @@ export async function coreFetch(
     transport,
     fetch: send = fetch,
     coalesce,
+    servedFor,
     reads,
     call,
     ...rest
@@ -177,6 +184,7 @@ export async function coreFetch(
           withinOrigin,
           fetch: send,
           transport,
+          servedFor,
         });
   let response: Response;
   try {

@@ -193,6 +193,7 @@ const EVERY_KEY = [
     searchParams: 0,
     searchParamsSerializer: 0,
     sensitiveVariables: 0,
+    servedFor: 0,
     session: 0,
     signal: 0,
     stream: 0,

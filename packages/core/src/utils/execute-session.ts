@@ -81,5 +81,12 @@ export function applyCallSession<TOptions extends object>(
     ([key]) => sourceOptions === undefined || !Object.hasOwn(sourceOptions, key),
   );
   const within = session.carries && session.incoming !== undefined;
-  return { ...Object.fromEntries(init), ...options, ...(within && { withinOrigin: true }) };
+  /* The API's answer may start or renew the session of the visitor it was made for. */
+  const servedFor = session.options === undefined ? undefined : session.incoming?.key;
+  return {
+    ...Object.fromEntries(init),
+    ...options,
+    ...(within && { withinOrigin: true }),
+    ...(servedFor !== undefined && { servedFor }),
+  };
 }

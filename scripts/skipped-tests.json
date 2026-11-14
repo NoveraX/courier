@@ -214,6 +214,7 @@
     "packages/studio/tests/import-routes-disk-shapes.test.ts > a symbolic link as the import's folder or above it > outputDir → a folder outside the project: 4xx, nothing written outside",
     "packages/studio/tests/imports-state.test.ts > loadImportsState — backup and validation > says the state was corrupt even when its copy cannot be written",
     "packages/studio/tests/imports-state.test.ts > saving an import's record as an apply's commit > refuses to save over a state it cannot read, which keeps every other import's record",
+    "packages/studio/tests/keep-agent-rules.test.ts > Courier's block in AGENTS.md as Studio starts > leaves a file it cannot write as it is, and the log says why",
     "packages/studio/tests/mock-store-file.test.ts > mockStoreFile > is none, and says so, when .courier is a link",
     "packages/studio/tests/mocks-edit/apply-mocks-edit.test.ts > applyMocksEdit > answers a file that became unreadable after the preview without failing",
     "packages/studio/tests/mocks-edit/apply-mocks-edit.test.ts > applyMocksEdit > restores the file's mode when it takes an edit back",

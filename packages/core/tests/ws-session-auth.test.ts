@@ -182,6 +182,29 @@ describe("credentials sent again on an open connection", () => {
     expect(socket.sent.filter((m) => m.type === "complete")).toHaveLength(1);
     expect(socket.closed).toBeUndefined();
   });
+
+  it("replace the metadata with what onReauth returns: a field it leaves out is gone, and who the connection is has changed", async () => {
+    const handler = serve({
+      onConnect: ({ auth }): { userId: unknown; admin?: true } => ({
+        userId: auth?.userId,
+        admin: true,
+      }),
+      onReauth: ({ auth }) => ({ userId: auth?.userId }),
+      authorize: ({ meta, method }) => method === "lobby" || meta.admin === true,
+    });
+    const { socket, connectionId } = await admitted(handler, { userId: "u1" });
+    const roomTopic = qualifyTopic("api.live.room", {});
+    socket.receive({ type: "subscribe", id: "s1", topic: roomTopic });
+    await expect.poll(() => socket.sent.filter((m) => m.type === "subscribed")).toHaveLength(1);
+
+    socket.receive({ type: "auth", id: "r7", payload: { auth: { userId: "u1" } } });
+
+    await expect
+      .poll(() => socket.sent.find((m) => m.type === "complete"))
+      .toMatchObject({ topic: roomTopic, error: { code: 4403 } });
+    expect(handler.connections.get(connectionId)?.meta).toEqual({ userId: "u1" });
+    expect(handler.connections.list({ meta: { admin: true } })).toEqual([]);
+  });
 });
 
 describe("the credentials a connection is admitted on", () => {

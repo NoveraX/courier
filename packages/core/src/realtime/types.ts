@@ -97,8 +97,8 @@ export interface WSContext<TVariables = unknown> {
   variables: TVariables;
   /** Unique connection identifier */
   connectionId: string;
-  /** Auth/metadata extracted during handshake */
-  meta: Record<string, unknown>;
+  /** The connection's metadata: what `onConnect` returned, or the last `onReauth` */
+  readonly meta: Record<string, unknown>;
   /**
    * Fires when the subscription ends — the client unsubscribes or its socket
    * closes. A handler waiting on an event that may never come releases what

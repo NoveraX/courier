@@ -69,7 +69,9 @@ export async function startChannel(
     topic,
     variables,
     connectionId: ctx.connectionId,
-    meta: ctx.meta,
+    get meta() {
+      return ctx.meta;
+    },
     signal: ended.signal,
     get recovered() {
       return recovered;

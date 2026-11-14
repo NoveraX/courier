@@ -46,7 +46,9 @@ export async function startPush(
     topic,
     variables,
     connectionId: ctx.connectionId,
-    meta: ctx.meta,
+    get meta() {
+      return ctx.meta;
+    },
     signal: ended.signal,
     get recovered() {
       return recovered;

@@ -17,10 +17,11 @@ const TIMED_OUT = Symbol("onReauth did not settle in time");
  * Handle an `auth` frame on an admitted connection: the client proving who
  * it is again, as `connections.requireAuth` asked, or of itself. `onReauth` reads
  * the handshake with the frame's headers on it, and the frame's `auth`, and
- * returns the connection's new metadata; from then on its subscriptions are
- * made with those headers, the deadline `connections.requireAuth` set is lifted,
- * and each subscription it holds is authorized again when who it is
- * changed. Credentials `onReauth` refuses close the connection at once —
+ * returns the connection's new metadata, which replaces the old whole; from
+ * then on its subscriptions are made with those headers, the deadline
+ * `connections.requireAuth` set is lifted, and each subscription it holds is
+ * authorized again when who it is changed — a field added, removed or given
+ * another value. Credentials `onReauth` refuses close the connection at once —
  * and so does any, on a handler with no `onReauth` to check them: the
  * connection holds on to nothing it was not shown to be.
  *
@@ -85,12 +86,22 @@ export async function handleReauth(ctx: WSSocketContext, msg: WSMessage): Promis
   } finally {
     clearTimeout(timer);
   }
-  const changed = Object.entries(next).some(([field, value]) => !Object.is(ctx.meta[field], value));
-  Object.assign(ctx.meta, next);
+  const changed = !sameFields(ctx.meta, next);
+  ctx.meta = next;
   ctx.request = request;
   ctx.registry.updateMeta(ctx.connectionId, ctx.meta);
   ctx.session.credentialsRenewed(msg.id);
   if (changed) await reauthorizeSubscriptions(ctx);
+}
+
+/* Whether two metadata hold the same fields with the same values: one added,
+   removed or changed makes the connection someone else. */
+function sameFields(before: Record<string, unknown>, after: Record<string, unknown>): boolean {
+  const fields = Object.keys(before);
+  if (fields.length !== Object.keys(after).length) return false;
+  return fields.every(
+    (field) => Object.hasOwn(after, field) && Object.is(before[field], after[field]),
+  );
 }
 
 /* Logged on one line with what was thrown, and closed at once with the

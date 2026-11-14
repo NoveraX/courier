@@ -172,7 +172,8 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * Checks the credentials a client sends again on its open connection, as
    * `connections.requireAuth` asks it to — `request` and `auth` as `onConnect`
    * reads them, with the new frame's headers. Return the connection's new
-   * metadata, or throw to refuse them. Refused credentials close the
+   * metadata, which replaces the old whole — a field left out is gone — or
+   * throw to refuse them. Refused credentials close the
    * connection at once with 4401 — and so do any sent again when this is not
    * set, as nothing could check them. Taken, they lift the deadline
    * `connections.requireAuth` set, and when who the connection is changed, each of

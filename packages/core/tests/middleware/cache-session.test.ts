@@ -113,6 +113,32 @@ describe("a cache partitioned by session", () => {
 
     expect(second.data).toBe("public");
   });
+
+  it("keeps no answer sent with credentials a middleware further in added, so no other user gets it", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const handler = cacheMiddleware({ scope: "session" }).handler as WrapHandler;
+    let calls = 0;
+    /* What an authMiddleware placed after the cache does: it adds the user's
+       token once the cache has made its key, then the call is sent. */
+    const signedIn = (ctx: MiddlewareContext, user: string) => (): Promise<MiddlewareResponse> => {
+      calls += 1;
+      ctx.headers.set("authorization", `Bearer ${user}`);
+      return Promise.resolve({ status: 200, data: `${user}'s inbox`, headers: new Headers() });
+    };
+    const alice = contextFor({});
+    const bob = contextFor({});
+    const again = contextFor({});
+
+    await handler(alice, signedIn(alice, "alice"));
+    const second = await handler(bob, signedIn(bob, "bob"));
+    await handler(again, signedIn(again, "bob"));
+
+    expect(second.data).toBe("bob's inbox");
+    expect(calls).toBe(3);
+    const named = warn.mock.calls.filter((call) => String(call[1]).includes("accounts.me"));
+    expect(named).toHaveLength(1);
+    expect(String(named[0]?.[1])).toContain("after the middleware that adds them");
+  });
 });
 
 describe.each([

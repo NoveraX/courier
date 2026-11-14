@@ -1,4 +1,4 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-15" }
 
 Courier ships six production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
@@ -373,6 +373,8 @@ A call that carries the user's [session](/docs/server-side/session) is never ans
 cacheMiddleware({ scope: "session", ttl: 10_000 })
 ```
 
+An API with no `session` of its own sends the credentials its middleware adds, and the cache reads them where it stands in the chain: put it after the middleware that adds them, such as `authMiddleware`. Placed before it, the cache sees none, so it keeps no answer the call was sent with credentials added further in — that answer would wait in the partition every caller without credentials shares — and names the endpoint once in the log.
+
 In a browser or a React Native app, the platform sends the session's cookies itself, out of a script's reach. There, every call of an API with a `session` counts as carrying it, so a `"public"` cache keeps none of its answers, and `scope: "session"` partitions by what a script can read — a bearer token, the double-submit token an API renews with the session — and starts a new partition with every write made with the session, as it starts and once it is answered. A user who signs out and another who signs in on the same device, in the same tab or another, never share a cached answer, nor see one read while the sign-in was under way.
 
 ### Custom storage
@@ -456,15 +458,17 @@ import {
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
-    logMiddleware(),                                    // 1. Log everything
-    cacheMiddleware({ scope: "public", ttl: 30_000 }),  // 2. Return cached if available
-    rateLimitMiddleware({ maxRequests: 10, window: 1000 }), // 3. Throttle outgoing
-    retryMiddleware({ limit: 3, delay: 300 }),          // 4. Retry on failure
-    authMiddleware({ getToken: () => getToken() }),     // 5. Attach token last
+    logMiddleware(),                                        // 1. Log everything
+    retryMiddleware({ limit: 3, delay: 300 }),              // 2. Retry on failure
+    authMiddleware({ getToken: () => getToken() }),         // 3. Attach the user's token
+    cacheMiddleware({ scope: "session", ttl: 30_000 }),     // 4. Return the user's cached answer
+    rateLimitMiddleware({ maxRequests: 10, window: 1000 }), // 5. Throttle what goes out
   ],
   groups: { /* ... */ },
 })
 ```
+
+The cache comes after `authMiddleware`, since its partition is named by the token the call carries at the cache's place, and the rate limit after the cache, so that an answer the cache gives counts against no limit.
 
 ## Next Steps
 

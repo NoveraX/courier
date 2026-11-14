@@ -37,7 +37,20 @@ async function credentialsOf(ctx: MiddlewareContext): Promise<string> {
   return `session:${await sha256Hex(material)}`;
 }
 
-function credentialHeaders(ctx: MiddlewareContext): string {
+/**
+ * The credentials a call carries in its headers, its `Cookie` and its
+ * `Authorization` as they stand at this point of its chain, or `""` for
+ * none: what a `"session"` partition is named by when the API keeps no
+ * session of its own.
+ *
+ * @param ctx - The call
+ * @returns The credentials, joined, or `""`
+ * @example
+ * ```ts
+ * const sentWith = credentialHeaders(ctx);
+ * ```
+ */
+export function credentialHeaders(ctx: MiddlewareContext): string {
   const cookie = ctx.headers.get("cookie") ?? "";
   const authorization = ctx.headers.get("authorization") ?? "";
   return cookie === "" && authorization === "" ? "" : `${cookie}\u0000${authorization}`;

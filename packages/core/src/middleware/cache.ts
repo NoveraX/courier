@@ -2,7 +2,7 @@ import { studioHooksHere } from "../capabilities/studio-hooks";
 import { createLogger } from "../logger";
 import { cloneData } from "../utils/clone-data";
 import { fetchingMiss, type MissesInFlight, waitForMiss } from "./cache-in-flight";
-import { cacheKey } from "./cache-key";
+import { cacheKey, credentialHeaders } from "./cache-key";
 import { defineMiddleware } from "./define";
 import type { Middleware, MiddlewareContext, MiddlewareResponse } from "./types";
 
@@ -35,7 +35,9 @@ export interface CacheStore {
  *    session — its API's `session` — is never answered from it.
  *  - `"session"` — one partition per set of credentials the call sends, its
  *    `Cookie` and `Authorization`, kept as their SHA-256 digest; calls that
- *    send none share one.
+ *    send none share one. Without the API's `session` they are read at the
+ *    cache's place in the chain, so it goes after the middleware that adds
+ *    them: an answer sent with others than it read is not kept.
  *  - a function — returns the part of the key that identifies the caller.
  *    Read `ctx.request`, not `ctx.headers`: the latter has already been
  *    narrowed to what the allowlist forwards upstream.
@@ -104,6 +106,13 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
     }
 
     const key = await cacheKey(ctx, scope);
+    /* With no session of the API's, a "session" partition is named by the
+       credentials at the cache's place in the chain; those the call is sent
+       with are compared once it is answered. */
+    const keyedBy =
+      scope === "session" && ctx.sessionPartition === undefined
+        ? credentialHeaders(ctx)
+        : undefined;
     const cached = storage.get(key);
     const hit = cached && cached.expiry > Date.now() ? copyOf(cached.data) : undefined;
     if (cached && hit) {
@@ -131,7 +140,7 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
 
     const answered = next();
     const stored = answered.then((response) =>
-      isStorable(response) ? copyOf(response) : undefined,
+      isStorable(response) && sentAsKeyed(ctx, keyedBy) ? copyOf(response) : undefined,
     );
     /* A failed call is answered by its rejection below; what it would have stored is nothing. */
     void stored.catch(() => undefined);
@@ -199,16 +208,39 @@ function isStream(data: unknown): boolean {
   );
 }
 
-const warnedPublic = new Set<string>();
-
-/* Said once an endpoint: every call to it would say it again. */
-function warnSessionInPublic(ctx: MiddlewareContext): void {
-  const name = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(".");
-  if (warnedPublic.has(name)) return;
-  warnedPublic.add(name);
-  log.warn(
-    `${name} carries the user's session, so its answer is not shared through a public cache. Give the endpoint { session: false } if it answers everyone alike, or cache it with scope "session"`,
+/* Whether the call was sent with the credentials its partition is named by.
+   One a middleware further in gave others — the user's token, added after
+   the cache — would be kept where every caller without credentials at the
+   cache's place finds it, so it is not kept. */
+function sentAsKeyed(ctx: MiddlewareContext, keyedBy: string | undefined): boolean {
+  if (keyedBy === undefined || credentialHeaders(ctx) === keyedBy) return true;
+  warnOnce(
+    ctx,
+    "credentials added",
+    (name) =>
+      `${name}'s answers are not cached: the call's credentials were set after its cache with scope "session" made its key. Place cacheMiddleware after the middleware that adds them, such as authMiddleware`,
   );
+  return false;
+}
+
+function warnSessionInPublic(ctx: MiddlewareContext): void {
+  warnOnce(
+    ctx,
+    "session in public",
+    (name) =>
+      `${name} carries the user's session, so its answer is not shared through a public cache. Give the endpoint { session: false } if it answers everyone alike, or cache it with scope "session"`,
+  );
+}
+
+const warned = new Set<string>();
+
+/* Said once an endpoint and reason: every call to it would say it again. */
+function warnOnce(ctx: MiddlewareContext, reason: string, message: (name: string) => string): void {
+  const name = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(".");
+  const said = `${reason}\u0000${name}`;
+  if (warned.has(said)) return;
+  warned.add(said);
+  log.warn(message(name));
 }
 
 /** Drop the oldest entries so a client-shaped key cannot grow the store forever. */

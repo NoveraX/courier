@@ -21,7 +21,7 @@
     "@noverax/courier": "file:../packages/core",
     "@noverax/courier-next": "file:../packages/next",
     "@noverax/courier-react": "file:../packages/react",
-    "@tanstack/react-query": "^5.106.1",
+    "@tanstack/react-query": "^5.107.1",
     "@types/mdx": "^2.0.13",
     "algoliasearch": "^5.61.0",
     "clsx": "^2.1.1",

@@ -1,6 +1,6 @@
 {
   "studioEntries": {
-    "./runtime": "Studio's runtime: the application's server runs it; a development page loads its browser file, which Studio's plugins inject, and so does a Cloudflare Worker. That file takes the core's page entries and its entry for Studio, never a server's: only the server's build answers the Playground's calls and a webhook's deliveries, which Studio sends only a runtime that showed it the project's token"
+    "./runtime": "Studio's runtime: the application's server runs it; a development page loads its browser file, which Studio's plugins inject, and so does a Cloudflare Worker, where it attaches nothing. That file takes the core's page entries and its entry for Studio, never a server's: only the server's build answers the Playground's calls and a webhook's deliveries, which Studio sends only a runtime that showed it the project's token"
   },
   "serverEntries": {
     ".": "The sources Studio serves, and what its server reads of them",

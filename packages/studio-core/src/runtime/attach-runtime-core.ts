@@ -9,6 +9,7 @@ import {
   createKeptBodies,
   getAppOrigin,
   getSources,
+  inCloudflareWorker,
   inProduction,
   KEPT_BODY_BYTES,
   studioHooks,
@@ -32,12 +33,16 @@ const log = createLogger("Runtime");
 /* The most bytes of whole bodies a page keeps for Studio. */
 const BROWSER_KEPT_BODY_BYTES = 16 * 1024 * 1024;
 
+const IN_A_WORKER =
+  "Studio's runtime attaches nothing in a Cloudflare Worker, which keeps no connection open " +
+  "between requests: for Studio to see the app's calls, serve its routes on Node in development.";
+
 interface InternalHandle extends RuntimeHandle {
   setDisposer(fn: () => void): void;
   setAnnouncer(fn: () => void): void;
 }
 
-const handles = new Map<string, InternalHandle>();
+const handles = new Map<string, RuntimeHandle>();
 const attaching = new Map<string, Promise<RuntimeHandle>>();
 
 /** What a server runtime learns from its courier.config about reaching Studio. */
@@ -74,7 +79,8 @@ export interface RuntimeBuild {
 }
 
 /**
- * `attachRuntime` for either build.
+ * `attachRuntime` for either build. In a Cloudflare Worker it attaches
+ * nothing, whatever the build, and says so once.
  *
  * @param build - What the build brings: see {@link RuntimeBuild}
  * @param id - The runtime id; see `attachRuntime`.
@@ -90,6 +96,7 @@ export async function attachRuntimeUsing(build: RuntimeBuild, id?: string): Prom
 
   const existing = handles.get(runtimeId);
   if (existing) return existing;
+  if (inCloudflareWorker()) return attachNothing(runtimeId);
 
   /* A second call made while the first still loads the config shares its
      attach, rather than opening a second socket under the same id that no
@@ -185,6 +192,22 @@ async function attachFresh(
     );
   }
 
+  return handle;
+}
+
+/* A Cloudflare Worker hosts no connection to Studio: it may open none as it loads, and one a
+   request opens serves that request alone. Its runtime attaches nothing, and says so once. */
+function attachNothing(runtimeId: string): RuntimeHandle {
+  if (!inProduction()) log.info(IN_A_WORKER);
+  const handle: RuntimeHandle = {
+    runtimeId,
+    kind: "server",
+    config: () => undefined,
+    detach() {
+      handles.delete(runtimeId);
+    },
+  };
+  handles.set(runtimeId, handle);
   return handle;
 }
 

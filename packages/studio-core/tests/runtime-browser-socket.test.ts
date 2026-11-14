@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * The browser build of the runtime on its socket to Studio, as a page and
- * a Cloudflare Worker run it: it says hello as a browser and tells Studio
+ * The browser build of the runtime on its socket to Studio, as a page runs
+ * it: it says hello as a browser and tells Studio
  * what the application's adapters announced, and answers none of the calls
  * Studio sends only a runtime that showed it the project's token — the
  * Playground's, a webhook's delivery. A page never has the token: those

@@ -39,6 +39,7 @@ export {
   type KeptBodies,
 } from "../studio/kept-bodies";
 export { studioHooks } from "../studio/singleton";
+export { inCloudflareWorker } from "../utils/cloudflare-worker";
 export { environmentVariable, inProduction, writtenOrOwn } from "../utils/environment";
 export { parseUrl } from "../utils/parse-url";
 export { sliceWhole } from "../utils/slice-whole";

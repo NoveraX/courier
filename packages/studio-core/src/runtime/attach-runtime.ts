@@ -25,6 +25,10 @@
  *    upload), open the `/runtime` Socket.IO connection, install the
  *    playground responder.
  *
+ * In a Cloudflare Worker it does neither and attaches nothing: a Worker may
+ * open no connection as it loads, and one a request opens serves that
+ * request alone.
+ *
  * # User-facing usage
  *
  * Server side (Next.js instrumentation, Express startup, etc.):

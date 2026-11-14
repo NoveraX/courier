@@ -195,7 +195,7 @@
     }
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^8.1.0",
     "@babel/plugin-transform-modules-commonjs": "^7.29.7",
     "@noverax/courier": "*",
     "@rsbuild/core": "^2.3.1",

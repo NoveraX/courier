@@ -1,7 +1,7 @@
 export const metadata = {
   title: "Cloudflare Workers",
-  description: "Deploy Courier on Cloudflare Workers — SSE with 100s idle timeout, heartbeat tuning, and WebSocket via Durable Objects.",
-  updated: "2026-11-07",
+  description: "Deploy Courier on Cloudflare Workers — HTTP and SSE at the edge, the 100s idle timeout and its heartbeat, and where WebSockets run instead.",
+  updated: "2026-11-14",
 }
 
 ## Overview
@@ -12,7 +12,7 @@ Cloudflare Workers run at the edge with specific constraints for long-lived conn
 |---------|---------|-------|
 | HTTP | Full | Standard request limits |
 | SSE | Supported | **100 second idle timeout** |
-| WebSocket | Via Durable Objects | Requires paid plan |
+| WebSocket | Not in a Worker | A Node.js server, or a Durable Object you bridge |
 
 ## SSE on Workers
 
@@ -67,11 +67,11 @@ courierSSEHandler({
 })
 ```
 
-The client automatically reconnects with `Last-Event-ID` — no events are lost.
+The client reconnects with `Last-Event-ID`, which the proxy sends upstream: a backend that resumes after it loses no events.
 
 ## WebSocket on Workers
 
-Standard Cloudflare Workers do **not** support WebSocket server-side handling (only client-side WebSocket connections). For WebSocket support, you need **Durable Objects**.
+A Worker accepts WebSocket connections, but Courier's sockets do not run in one. `upgradeWebSocket` from `hono/cloudflare-workers` never calls `onOpen`, where `courierWSHandler` takes a connection up, so the connection opens and nothing answers it. And a Worker serves each connection in its own request, which cannot reach a socket another request opened: a topic's broadcast needs every connection of the topic in one place.
 
 ### Option A: Separate WS Server (Recommended)
 
@@ -87,7 +87,7 @@ This gives you the best of both — edge latency for SSE, full WS support on a d
 ### Option B: Durable Objects
 
 <Callout variant="warning" title="Advanced setup">
-  Durable Objects require a Cloudflare paid plan and a custom WebSocket handler. This is not a standard Courier adapter — you need to bridge the Durable Object WebSocket API to Courier manually.
+  A Durable Object keeps the connections it accepts in one place, on the Workers Free plan too with SQLite storage. It is not a Courier adapter: you bridge the Durable Object WebSocket API to Courier manually.
 </Callout>
 
 ```ts title="src/durable-object.ts"
@@ -134,7 +134,8 @@ ALLOWED_ORIGIN = "https://app.example.com"
 | Limitation | Impact | Workaround |
 |-----------|--------|------------|
 | 100s idle timeout | SSE must keep-alive | Built-in heartbeat (25s) handles this |
-| No native WS server | Cannot use `courierWSHandler` directly | Use Durable Objects or separate server |
+| Courier's sockets do not run in a Worker | `courierWSHandler` never takes a connection up | A Node.js server, or a Durable Object you bridge |
+| Studio's runtime attaches nothing | Studio sees none of the Worker's calls, and its Playground has no proxy mode for it | Serve the routes on Node.js in development — see [Hono](/docs/frameworks/hono#studio-app-origin) |
 | No persistent connections across deploys | Connections drop on new deployment | Client auto-reconnects via `Last-Event-ID` |
 | CPU time limits (10ms free / 30s paid) | Long SSE generators may hit limits | Keep event generation lightweight |
 | No `node:http` module | Express/Fastify won't work | Use Hono (Web Standard APIs) |

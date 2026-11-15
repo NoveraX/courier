@@ -1,4 +1,4 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-15" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both", updated: "2026-11-16" }
 
 Courier ships six production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
@@ -87,7 +87,7 @@ Where `retryOn` says nothing:
 | A response that fails its schema, a middleware that throws | never | whatever `retryOn` says |
 | A redirect an upload cannot follow — one its call refuses with `redirect: "error"`, one more than 20 hops in, one to another scheme — a `NetworkError` | never | the upstream would answer it with the same redirect, whatever `retryOn` says |
 
-Give `retryOn` the statuses of answers, `"network"` for a request that got no answer, `"timeout"` for one whose time ran out — or a test of why the attempt failed. A list takes the default's place: its `"network"` is every request that got no answer, a refused certificate and undici's own `headersTimeout` and `bodyTimeout` among them, so the default written out with one more status retries those too:
+Give `retryOn` the statuses of answers, `"network"` for a request that got no answer, `"timeout"` for one whose time ran out — or a test of why the attempt failed:
 
 ```ts title="lib/sources.ts"
 retryMiddleware({ retryOn: ["network", "timeout", 429, 502, 503, 504] })
@@ -98,6 +98,8 @@ retryMiddleware({
     (failure.kind === "status" && failure.headers.get("x-retryable") === "true"),
 })
 ```
+
+A list takes the default's place. Its `"network"` is every request that got no answer, a refused certificate and undici's own `headersTimeout` and `bodyTimeout` among them, which the default leaves out, so the default written out as a list retries those too.
 
 <Callout variant="tip" title="What the condition sees">
 A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer rejects with a `NetworkError`, shown as `kind: "network"`, and one whose time ran out with a `TimeoutError`, shown as `kind: "timeout"`, each with the error. A success is never shown to it. After the last attempt, its error is re-thrown.

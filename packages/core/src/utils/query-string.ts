@@ -10,7 +10,7 @@
  * machine ran the call.
  */
 
-import { isPlainRecord } from "./is-record";
+import { isPlainRecord } from "./is-plain-record";
 import { ADDRESS_HOLDS_TEXT, fieldText, jsonValueOf } from "./variables-encoding";
 
 /**

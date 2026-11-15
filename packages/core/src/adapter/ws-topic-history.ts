@@ -6,7 +6,11 @@ export interface TopicHistoryOptions {
   maxAgeMs?: number | undefined;
   /** Bytes of frames kept in all, every topic's together (default 8 MiB) */
   maxBytes?: number | undefined;
-  /** Topics held without a subscriber at most (default 10 000) */
+  /**
+   * Topics held without a subscriber at most (default 10 000), each
+   * keeping its name, which `maxBytes` does not count: as long as the
+   * subscription's variables made it
+   */
   maxTopics?: number | undefined;
 }
 

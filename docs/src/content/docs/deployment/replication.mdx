@@ -554,9 +554,11 @@ A client that lost its connection subscribes again with the position it counted,
 ```ts title="ws.ts"
 const ws = createWSHandler({
   pubsub,
-  history: {}, // 100 events a topic, each kept a minute, 8 MiB in all
+  history: {}, // 100 events a topic, each kept a minute, 8 MiB of frames in all
 })
 ```
+
+`maxBytes` counts the frames kept. A topic held without a subscriber, `maxTopics` of them at most (10 000 by default), keeps its name besides, as long as the subscription's variables made it: where nothing bounds them, a name runs to `maxMessageSize`, 64 KiB by default, over half a GiB for all the topics held. Bound the variables in the endpoint's schema, or hold fewer topics.
 
 Each event of a topic carries `seq`, dense from 1 on the replica that delivers it, and `subscribed` states the position with the epoch that names its sequence. Frames sent to one connection, such as a snapshot from `onJoin`, carry no number. A topic its last subscriber left is held for `maxAgeMs`, its events numbered and kept, so a client back within that time is sent them before `onJoin` runs — after the middleware and `authorize`, which is where to check who may hold the topic. `onJoin` reads `ctx.recovered` and need not send its snapshot again. The client has to come back to the same replica, which sticky sessions give it. A position the history no longer reaches, another epoch or another replica answers `recovered: false`, and the client starts over from `onJoin`. Once the pub/sub adapter reaches its server, back from an outage or for the first time after a replica started without it, each subscription is told `resync`: what other replicas published meanwhile never arrived.
 

@@ -40,7 +40,8 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * Keep each topic's recent events, so a subscription that comes back —
    * its client lost the connection — is sent what it missed instead of
    * starting over: `{}` for the defaults, 100 events a topic for a minute,
-   * 8 MiB in all. Off unless given: what is kept is memory.
+   * 8 MiB of frames in all, and the names of the topics held besides. Off
+   * unless given: what is kept is memory.
    */
   history?: TopicHistoryOptions | undefined;
   /**

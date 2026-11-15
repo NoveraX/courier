@@ -1,6 +1,6 @@
 import type { EndpointHold } from "../utils/cancel-previous";
 import type { CoreFetchInit } from "../utils/fetch";
-import { coreFetch } from "../utils/fetch";
+import { coreFetch, withSearchParams } from "../utils/fetch";
 import { ownFields } from "../utils/own";
 import { serversCallInit } from "../utils/server-call-marks";
 import { bindMethod, boundParts } from "./bind-method";
@@ -117,20 +117,7 @@ export class HttpClient {
       fullUrl = `${base}${path}`;
     }
 
-    if (this.onBeforeFetch) {
-      let hookUrl = fullUrl;
-      const sp = fetchOptions.searchParams;
-      if (sp) {
-        const qs =
-          sp instanceof URLSearchParams
-            ? sp.toString()
-            : typeof sp === "string"
-              ? sp
-              : new URLSearchParams(sp as Record<string, string>).toString();
-        if (qs) hookUrl += (hookUrl.includes("?") ? "&" : "?") + qs;
-      }
-      this.onBeforeFetch(method, hookUrl);
-    }
+    this.onBeforeFetch?.(method, withSearchParams(fullUrl, fetchOptions.searchParams));
 
     /* The call always carries a header set of its own, so spreading it over
        the source's replaced the source's headers wholesale; they are laid

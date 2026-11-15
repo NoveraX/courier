@@ -92,19 +92,7 @@ export async function coreFetch(
   /* Followed within the request's origin unless the request says how itself. */
   const within = withinOrigin === true && own.redirect === undefined;
 
-  let fullUrl = url;
-  if (searchParams) {
-    const paramStr =
-      searchParams instanceof URLSearchParams
-        ? searchParams.toString()
-        : typeof searchParams === "string"
-          ? searchParams
-          : new URLSearchParams(searchParams as Record<string, string>).toString();
-    if (paramStr) {
-      fullUrl += (fullUrl.includes("?") ? "&" : "?") + paramStr;
-    }
-  }
-
+  const fullUrl = withSearchParams(url, searchParams);
   const requestHeaders = sendableHeaders(headers);
 
   let requestBody: WebBody | null | undefined = body;
@@ -196,6 +184,30 @@ export async function coreFetch(
     throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   }
   return onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
+}
+
+/**
+ * A request's address with its query: `searchParams` — a string, a
+ * `URLSearchParams` or a record — after a `?`, or after an `&` where the
+ * address holds a query already.
+ *
+ * @param url - The address
+ * @param searchParams - The query to add, if any
+ * @returns The address the request is sent to
+ * @example
+ * ```ts
+ * withSearchParams("https://api.example.com/users?page=2", { sort: "name" }); // "https://api.example.com/users?page=2&sort=name"
+ * ```
+ */
+export function withSearchParams(url: string, searchParams: CoreFetchInit["searchParams"]): string {
+  if (!searchParams) return url;
+  const query =
+    searchParams instanceof URLSearchParams
+      ? searchParams.toString()
+      : typeof searchParams === "string"
+        ? searchParams
+        : new URLSearchParams(searchParams).toString();
+  return query ? `${url}${url.includes("?") ? "&" : "?"}${query}` : url;
 }
 
 function ignoreProgress(): void {}

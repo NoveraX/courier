@@ -215,7 +215,7 @@ describe("an attempt that does not get through", () => {
         deadline: { ms: 1000, fires: "retry" },
       },
       effects: [
-        { type: "drop-socket", code: 1002, reason: "Protocol mismatch" },
+        { type: "drop-socket", code: 4100, reason: "Protocol mismatch" },
         { type: "subscriptions-wait" },
       ],
     });

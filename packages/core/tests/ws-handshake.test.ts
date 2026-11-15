@@ -3,7 +3,8 @@
  * test speaks for the server: `auth_ok` admits it, with the heartbeat the
  * socket is watched by and the largest message the server takes; the frame
  * before a close says why, and the client acts on that code; and a first
- * frame that answers no `auth` comes from a server of another version.
+ * frame that answers no `auth` comes from a server of another version,
+ * whose socket the client closes with a code a page's WebSocket takes.
  *
  * What a real server answers is checked against one in the admission tests;
  * here are the answers no test server gives on demand — another version, a
@@ -31,7 +32,14 @@ class ServerSide implements WSClientSocket {
     this.sent.push(data);
   }
 
+  /** As a browser's WebSocket closes: on a code but 1000 or 3000–4999 it throws, and stays open. */
   close(code?: number, reason?: string): void {
+    if (code !== undefined && code !== 1000 && (code < 3000 || code > 4999)) {
+      throw new DOMException(
+        `${code} is no code a page closes a socket with`,
+        "InvalidAccessError",
+      );
+    }
     this.closedWith = { code, reason };
     this.readyState = 3;
   }
@@ -144,7 +152,7 @@ describe("a server's answer to the first auth", () => {
       retryIn: 1_000,
       cause: { kind: "mismatch" },
     });
-    expect(socket().closedWith).toEqual({ code: 1002, reason: "Protocol mismatch" });
+    expect(socket().closedWith).toEqual({ code: 4100, reason: "Protocol mismatch" });
     vi.advanceTimersByTime(1_000);
     expect(sockets).toHaveLength(2);
   });

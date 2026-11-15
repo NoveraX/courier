@@ -159,13 +159,21 @@ export type MachineEvent =
   | { readonly type: "resume"; readonly signal: ResumeSignal }
   | { readonly type: "close" };
 
+/**
+ * A code the client closes its own socket with: 1000 when it is done with
+ * it, 4000 to connect again, 4100 when it gives up on a server that does
+ * not answer as it should. A browser's WebSocket takes 1000 and 3000–4999
+ * alone, and on any other `close()` throws and the socket stays open.
+ */
+export type ClientCloseCode = 1000 | 4000 | 4100;
+
 /** What the connection does on a transition, in order. */
 export type MachineEffect =
   | { readonly type: "ask-credentials" }
   | { readonly type: "open-socket" }
   /** The `auth` frame; on a socket that just opened, its subscriptions follow it */
   | { readonly type: "send-auth"; readonly id: string; readonly opening: boolean }
-  | { readonly type: "drop-socket"; readonly code: number; readonly reason: string }
+  | { readonly type: "drop-socket"; readonly code: ClientCloseCode; readonly reason: string }
   /** The socket is gone: subscriptions wait for the next, each told `error` when there is one */
   | { readonly type: "subscriptions-wait"; readonly error?: RealtimeError | undefined }
   | { readonly type: "subscriptions-end"; readonly error?: RealtimeError | undefined }

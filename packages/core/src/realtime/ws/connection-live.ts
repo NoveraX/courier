@@ -1,5 +1,11 @@
 import type { ResumeSignal } from "../resume-signals";
-import type { MachineContext, MachineEvent, Phase, Step } from "./connection-machine-types";
+import type {
+  ClientCloseCode,
+  MachineContext,
+  MachineEvent,
+  Phase,
+  Step,
+} from "./connection-machine-types";
 import { connect, onClosed, schedule, stay } from "./connection-steps";
 
 /** Where an admitted connection goes next: renewing its credentials, or leaving its socket. */
@@ -67,7 +73,7 @@ function backToOpen(state: Phase<"reauthenticating">): Phase<"open"> {
 }
 
 /* Leave an open socket: let it go, stop watching it, and hold the subscriptions for the next. */
-function dropped(code: number, reason: string) {
+function dropped(code: ClientCloseCode, reason: string) {
   return [
     { type: "drop-socket", code, reason },
     { type: "unwatch" },

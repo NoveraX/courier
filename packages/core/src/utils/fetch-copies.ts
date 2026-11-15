@@ -34,12 +34,34 @@ export function fetchCopies(version: string | undefined): FetchCopies {
   return { forms: true, streams: !(major >= 8) };
 }
 
+/* The runtime's undici, read off `globalThis.process`, as code an edge runtime may take reads
+   Node's APIs: Next.js refuses to build `process.versions` into a middleware, even after
+   `typeof process` is checked. */
+const RUNTIME_UNDICI = globalThis.process?.versions?.undici;
+
+/** What this runtime's own `fetch` copies. */
+export const FETCH_COPIES: FetchCopies = fetchCopies(RUNTIME_UNDICI);
+
+/* What a fetch is taken to copy where the runtime is built on undici and nothing tells which
+   undici that fetch is: one older than the runtime's copies what the runtime's does not. */
+const UNKNOWN_UNDICI: FetchCopies = fetchCopies("7.0.0");
+
 /**
- * What this runtime's own `fetch` copies — and a source's own, taken to copy
- * no more: nothing tells which undici, if any, that one is built on, and one
- * older than the runtime's copies what the runtime's does not. Its undici is
- * read off `globalThis.process`, as code an edge runtime may take reads
- * Node's APIs: Next.js refuses to build `process.versions` into a
- * middleware, even after `typeof process` is checked.
+ * What the `fetch` that sends a request copies. The runtime's own copies
+ * what its undici does. Any other — a source's own — is taken, where the
+ * runtime is built on undici, to copy what an undici before 8 does: nothing
+ * tells which undici, if any, it is built on, and `undici@7` on Node 26
+ * would keep every stream twice. Elsewhere it copies what the runtime's does.
+ *
+ * @param send - The `fetch` that sends it
+ * @returns What it is taken to copy
+ * @example
+ * ```ts
+ * copiesOf(globalThis.fetch).streams; // false under Node 26
+ * copiesOf(sourceFetch).streams; // true under any Node
+ * ```
  */
-export const FETCH_COPIES: FetchCopies = fetchCopies(globalThis.process?.versions?.undici);
+export function copiesOf(send: unknown): FetchCopies {
+  if (send === globalThis.fetch || RUNTIME_UNDICI === undefined) return FETCH_COPIES;
+  return UNKNOWN_UNDICI;
+}

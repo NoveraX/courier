@@ -3,7 +3,7 @@ import type { UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { anySignal } from "./any-signal";
 import { countedStream } from "./counted-stream";
-import { FETCH_COPIES } from "./fetch-copies";
+import { copiesOf, type FetchCopies } from "./fetch-copies";
 import { sendAsStream } from "./send-as-stream";
 import { isStreamedUpload } from "./streamed-upload";
 import { sendingOf } from "./upload-sending";
@@ -23,12 +23,13 @@ export interface StreamedSend {
  *
  * A server has no XMLHttpRequest, so an upload whose progress is asked for
  * is streamed and counted as fetch takes it. A form, a `Blob` or a stream
- * is streamed too where the platform's fetch would keep a copy of it for as
- * long as it sends it, as Node's does — every version a form or a `Blob`,
- * Node 22 and 24 a stream — and so is a `StreamedUpload`, which goes with
- * its own content type, and stops the request when it is refused while the
- * upstream takes none of it. Code a page never runs: a bundler that builds
- * for the browser takes a stand-in that sends nothing.
+ * is streamed too where the fetch that sends it would keep a copy of it for
+ * as long as it sends it, as Node's does — every version a form or a `Blob`,
+ * Node 22 and 24 a stream, and a source's own fetch on Node is taken to
+ * (`copiesOf`) — and so is a `StreamedUpload`, which goes with its own
+ * content type, and stops the request when it is refused while the upstream
+ * takes none of it. Code a page never runs: a bundler that builds for the
+ * browser takes a stand-in that sends nothing.
  *
  * @param url - Where to send it
  * @param init - The request as fetch would take it; its body is set
@@ -56,7 +57,7 @@ export function sendStreamed(
       options,
     );
   }
-  if (isStreamedUpload(init.body) || copied(init.body)) {
+  if (isStreamedUpload(init.body) || copied(init.body, copiesOf(fetch ?? globalThis.fetch))) {
     return sendAsStream(url, sent, (stream) => stream, options);
   }
   return undefined;
@@ -70,8 +71,8 @@ function stoppedWithUpload<TInit extends RequestInit>(init: TInit): TInit {
   return { ...init, signal: init.signal ? anySignal([init.signal, refused]) : refused };
 }
 
-/* Whether the platform's fetch would hold the whole body while it sends it. */
-function copied(body: WebBody): boolean {
-  if (body instanceof FormData || body instanceof Blob) return FETCH_COPIES.forms;
-  return body instanceof ReadableStream && FETCH_COPIES.streams;
+/* Whether the fetch that sends it would hold the whole body while it sends it. */
+function copied(body: WebBody, copies: FetchCopies): boolean {
+  if (body instanceof FormData || body instanceof Blob) return copies.forms;
+  return body instanceof ReadableStream && copies.streams;
 }

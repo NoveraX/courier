@@ -1,9 +1,9 @@
 /**
- * An upload whose redirects are followed by hand, as under Node 26, whose
- * fetch keeps no copy of a stream. A redirect it cannot follow — one more
- * than 20 hops in, or to an address whose scheme is not HTTP's — fails it
- * as a network error does, once, whatever its retry policy: the upstream
- * would answer it the same way again.
+ * An upload whose redirects are followed by hand, a form's, read again for
+ * each hop. A redirect it cannot follow — one more than 20 hops in, or to an
+ * address whose scheme is not HTTP's — fails it as a network error does,
+ * once, whatever its retry policy: the upstream would answer it the same
+ * way again.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,7 +13,11 @@ import { NetworkError } from "../src/errors";
 import { retryMiddleware } from "../src/middleware/index";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
-vi.mock("../src/utils/fetch-copies", () => ({ FETCH_COPIES: { forms: true, streams: false } }));
+/* The runtime's fetch copying this, and each fetch a test sends with taken for it. */
+vi.mock("../src/utils/fetch-copies", () => {
+  const copies = { forms: true, streams: false };
+  return { FETCH_COPIES: copies, copiesOf: () => copies };
+});
 
 let upstream: Upstream | undefined;
 

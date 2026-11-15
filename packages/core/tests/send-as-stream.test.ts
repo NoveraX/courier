@@ -13,7 +13,11 @@ import { startUpstream, type Upstream } from "./helpers/upstream";
 
 /* Redirects followed as a fetch that keeps no copy of a stream, Node 26's, follows them;
    where one would, an upload follows none (upload-redirects-refused.test.ts). */
-vi.mock("../src/utils/fetch-copies", () => ({ FETCH_COPIES: { forms: true, streams: false } }));
+/* The runtime's fetch copying this, and each fetch a test sends with taken for it. */
+vi.mock("../src/utils/fetch-copies", () => {
+  const copies = { forms: true, streams: false };
+  return { FETCH_COPIES: copies, copiesOf: () => copies };
+});
 
 const { endpoint } = courier();
 let upstream: Upstream | undefined;

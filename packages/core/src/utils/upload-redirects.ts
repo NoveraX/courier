@@ -3,15 +3,18 @@
  *
  * Fetch cannot replay a body it was given as a stream, so a 307 or 308 —
  * which keeps the method and the body — failed an upload with progress that
- * succeeded without it. The body here can be streamed again, so redirects are
- * followed by hand, applying the steps of the Fetch standard's redirect
- * handling: at most 20 hops, a POST that a 301, 302 or 303 turns into a GET
- * without its body, and no credentials carried to another origin.
+ * succeeded without it. A body that can be streamed again is, so its
+ * redirects are followed by hand, applying the steps of the Fetch standard's
+ * redirect handling: at most 20 hops, a POST that a 301, 302 or 303 turns
+ * into a GET without its body, and no credentials carried to another origin.
  *
- * Node 22's and 24's fetch keeps a copy of the whole stream while it sends
+ * A fetch built on undici before 8 — Node 22's and 24's, or a source's own,
+ * which may be (see `copiesOf`) — keeps a copy of a stream while it sends
  * it, for a redirect it may have to follow, unless it is told to follow
- * none (see `fetchCopies`). There an upload follows no redirect: one fails
- * it, as a network error does, unless the caller set `redirect` itself.
+ * none. A body that can be streamed again goes as a stream whose copies are
+ * readings of their own (`replayableStream`), and holds no copy anywhere. A
+ * stream read once follows no redirect through such a fetch: one fails it,
+ * as a network error does, unless the caller set `redirect` itself.
  *
  * A redirect the upload cannot follow — one fetch was told to refuse, one
  * more than 20 hops in, one to another scheme than HTTP's — fails it once:
@@ -20,7 +23,8 @@
  */
 
 import { NetworkError } from "../errors/network-error";
-import { FETCH_COPIES } from "./fetch-copies";
+import { copiesOf } from "./fetch-copies";
+import { replayableStream } from "./replayable-stream";
 import { unrepeatable } from "./unrepeatable";
 import type { UploadSource } from "./upload-source";
 
@@ -67,10 +71,10 @@ export async function sendUpload(
     fetch?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
   } = {},
 ): Promise<Response> {
-  /* A fetch that would keep a copy of the whole stream for a redirect it might follow
-     is told to follow none: a redirect then fails the upload, as a network error does. */
-  const refuses = FETCH_COPIES.streams && init.redirect === undefined;
-  const follows = !refuses && source.replayable && (init.redirect ?? "follow") === "follow";
+  /* A fetch that would keep a copy of a stream read once, for a redirect it might follow, is told
+     to follow none: a redirect then fails the upload, as a network error does. */
+  const refuses = !source.replayable && copiesOf(send).streams && init.redirect === undefined;
+  const follows = source.replayable && (init.redirect ?? "follow") === "follow";
   /* Followed by hand, or not at all: fetch's own following goes to any origin. */
   const manual = follows || (withinOrigin && !refuses);
   const redirect = refuses ? "error" : manual ? "manual" : init.redirect;
@@ -85,7 +89,7 @@ export async function sendUpload(
         ...init,
         method: hop.method,
         headers: hop.headers,
-        body: hop.withBody ? wrap(source.open()) : null,
+        body: hop.withBody ? bodyOf(source, wrap) : null,
         redirect,
         duplex: "half",
       } as RequestInit);
@@ -100,6 +104,16 @@ export async function sendUpload(
     if (count === MAX_REDIRECTS) throw cannotFollow(new TypeError("Too many redirects"));
     hop = nextHop(hop, response.status, location);
   }
+}
+
+/* The body as a hop sends it: one read again from where it is gives a fetch's copy of it a reading
+   of its own, counted by no `wrap`, as fetch sends what it was handed. */
+function bodyOf(
+  source: UploadSource,
+  wrap: (stream: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  const stream = wrap(source.open());
+  return source.replayable ? replayableStream(stream, () => source.open()) : stream;
 }
 
 /* What Node's fetch rejects a request with for a redirect it was told to refuse: its cause says

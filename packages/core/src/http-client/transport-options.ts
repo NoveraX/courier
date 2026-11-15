@@ -31,7 +31,11 @@ export type TransportOptions = {
    * one that records. Whatever else the transport gives — a `dispatcher`,
    * Bun's `proxy` and `tls`, Deno's `client` — reaches it in its `init`. In
    * a browser and in React Native an upload that reports its progress goes
-   * through `XMLHttpRequest`, which can report it, instead.
+   * through `XMLHttpRequest`, which can report it, instead. On Node nothing
+   * tells which undici it is built on, and one before 8 keeps a copy of a
+   * body it may send again, so an upload hands it none to copy: a form's or
+   * a `Blob`'s copy reads the body again, and a stream read once goes with
+   * `redirect: "error"`, unless the call sets `redirect`.
    */
   fetch?: SourceFetch | undefined;
   /**
@@ -45,10 +49,7 @@ export type TransportOptions = {
    * Node — an `Agent` holding a client certificate or an authority of its
    * own, a `ProxyAgent`, an `EnvHttpProxyAgent` — handed to `fetch` and to
    * the `WebSocket`. Take `fetch` and `webSocket` from the same undici:
-   * Node's own refuses a dispatcher of another major version. Take it at
-   * the runtime's major or newer: a body goes as the runtime's own `fetch`
-   * needs it, and an older undici keeps a copy of each body it may send
-   * again — unless `redirect` is `"error"` — for as long as it sends it.
+   * Node's own refuses a dispatcher of another major version.
    */
   dispatcher?: SourceDispatcher | undefined;
   /** Bun: the proxy requests and sockets go through, `http://proxy.corp:3128`. */

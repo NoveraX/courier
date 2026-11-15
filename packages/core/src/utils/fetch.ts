@@ -147,9 +147,10 @@ export async function coreFetch(
     }
     return sendPlainly(sent);
   };
-  /* Handed over as it is, a form or a Blob — under Node 22 and 24 a stream too — is copied
-     whole by Node's fetch for as long as it is sent; sent as the stream of its bytes, it is
-     read as it goes out. A streamed upload goes with the content type that names its boundary. */
+  /* Handed over as it is, a form or a Blob — under Node 22 and 24, or to a source's own fetch,
+     a stream too — is copied whole by Node's fetch for as long as it is sent; sent as the stream
+     of its bytes, it is read as it goes out. A streamed upload goes with the content type that
+     names its boundary. */
   const sendPlainly = (sent: typeof init): Promise<Response> => {
     const streamed =
       requestBody == null

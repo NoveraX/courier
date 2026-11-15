@@ -17,7 +17,11 @@ import { courier, defineApi, defineGroup } from "../src/define/index";
 import type { Middleware } from "../src/middleware/types";
 import { readParts } from "./helpers/multipart-fixtures";
 
-vi.mock("../src/utils/fetch-copies", () => ({ FETCH_COPIES: { forms: false, streams: false } }));
+/* The runtime's fetch copying this, and each fetch a test sends with taken for it. */
+vi.mock("../src/utils/fetch-copies", () => {
+  const copies = { forms: false, streams: false };
+  return { FETCH_COPIES: copies, copiesOf: () => copies };
+});
 
 const { endpoint } = courier();
 const JSON_TYPE = { "content-type": "application/json" };

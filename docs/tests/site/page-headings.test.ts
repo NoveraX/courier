@@ -55,6 +55,15 @@ describe("a page's headings", () => {
     expect(pages.length).toBeGreaterThan(100)
   })
 
+  it("end their ids in a word on every page: a component after a heading's words follows them with no space", () => {
+    const dangling = docPages(PAGES).flatMap((page) =>
+      pageHeadings(page.source)
+        .filter((heading) => heading.id.endsWith("-"))
+        .map((heading) => `${page.slug.join("/")}#${heading.id}`)
+    )
+    expect(dangling).toEqual([])
+  })
+
   it("are numbered when two say the same, and leave out what an id has no room for", () => {
     const words = [
       "Proxy mode — the default",

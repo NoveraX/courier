@@ -255,7 +255,7 @@ export function DocumentUpload() {
 }
 ```
 
-## FormData composition <ModeBadge mode="proxy" />
+## FormData composition<ModeBadge mode="proxy" />
 
 When FormData is sent through the proxy, Courier names the endpoint in the URL and writes the call's options as one field before yours. The server handler takes that field off before forwarding to your endpoint. In direct mode, FormData is sent as-is:
 
@@ -280,7 +280,7 @@ The options field always comes first, and only the first part is read as the opt
 
 Because the endpoint is in the URL, the proxy knows which call an upload is for as soon as it arrives. Studio shows the call while the upload is still on its way, and an upload over `maxUploadBytes` ends there with its `413` rather than never appearing.
 
-## Binary data outside FormData <ModeBadge mode="proxy" />
+## Binary data outside FormData<ModeBadge mode="proxy" />
 
 A record of variables that holds a file in a field, or in a list there, reaches the server through the proxy as it was — see [A file among the variables](#a-file-among-the-variables). Other variables travel to the proxy as JSON, which has no binary type: a `Blob`, `File`, `ArrayBuffer`, typed array or `ReadableStream` would arrive as `{}`. A proxy call whose variables hold one where no form carries it — a file deeper than a field, a stream in a field, binary data in a list — is therefore refused before it is sent, with a `ConfigurationError` whose `code` is `VARIABLE_NOT_ENCODABLE` and whose message names where it sits. A direct call from the server carries any body as it is.
 

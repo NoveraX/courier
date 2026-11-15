@@ -41,6 +41,14 @@ function manifestPages(): number {
   return manifest.pages.length;
 }
 
+/* A page a tool's description names, by its id or its address under /docs. */
+const EXAMPLE_PAGE = /(?:\/docs\/)?[a-z-]+\/[a-z-]+(?:#[a-z-]+)?/g;
+
+type ListedTool = {
+  name: string;
+  inputSchema: { properties: Record<string, { description?: string } | undefined> };
+};
+
 /* A client's connection over stdio, opened with `initialize`. */
 async function opened(server: Server): Promise<Connection> {
   const connection: Connection = { transport: "stdio", listening: new Map() };
@@ -123,6 +131,19 @@ describe("the docs server", () => {
     const { result } = await tool(server, connection, "docs_list", {});
     const sections = (result.structuredContent as { sections: { pages: unknown[] }[] }).sections;
     expect(sections.flatMap((section) => section.pages)).toHaveLength(manifestPages());
+  });
+
+  it("reads each page docs_read's own schema gives as an example", async () => {
+    const server = docsServer(folder.dir);
+    const connection = await opened(server);
+    const listed = await call(server, connection, "tools/list");
+    const read = (listed.tools as ListedTool[]).find((t) => t.name === "docs_read");
+    const examples = read?.inputSchema.properties.page?.description?.match(EXAMPLE_PAGE) ?? [];
+    expect(examples).toHaveLength(2);
+    for (const page of examples) {
+      const { result, text } = await tool(server, connection, "docs_read", { page });
+      expect(result.isError, text).toBe(false);
+    }
   });
 
   it.each([

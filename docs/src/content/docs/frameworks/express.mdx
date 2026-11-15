@@ -1,4 +1,4 @@
-export const metadata = { title: "Express", description: "Express server adapter using courierHandler for hosting the Courier proxy route.", mode: "proxy", updated: "2026-11-08" }
+export const metadata = { title: "Express", description: "Express server adapter using courierHandler for hosting the Courier proxy route.", mode: "proxy", updated: "2026-11-15" }
 
 The `@noverax/courier-express` adapter provides a handler for Express that serves as the Courier proxy route.
 
@@ -161,7 +161,7 @@ app.use(requestContext())
 
 Mount it before the routes that call APIs. The session cookies the API sets reach the browser on the response, and the user's address follows the rule the proxy route follows. See [User Sessions](/docs/server-side/session).
 
-## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
+## Studio integration & `appOrigin`<a id="studio-app-origin"></a>
 
 Wire your Express server into Studio with one `attachRuntime()` call, in development alone — [Connect the server](/docs/studio/overview#connect-the-server) says what it does. The Playground sends its proxy calls to the app's origin, which the app learns from the first request a Courier route serves, or from `runtime.appOrigin` in `courier.config.ts` or `COURIER_APP_URL` where Studio cannot see the server: see [How the app learns its origin](/docs/api/config#app-origin).
 

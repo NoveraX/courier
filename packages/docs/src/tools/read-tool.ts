@@ -23,7 +23,7 @@ export function readPageTool(source: DocsSource): ServedTool {
           minLength: 1,
           maxLength: 300,
           description:
-            "The page: core-concepts/caller, /docs/core-concepts/caller#direct-mode, or its address on the site",
+            "The page: core-concepts/caller, /docs/core-concepts/caller#createcaller-direct-mode, or its address on the site",
         },
         section: {
           type: "string",

@@ -1,4 +1,4 @@
-export const metadata = { title: "Error Handling", description: "Tell an error answer, a request that got no answer and one that ran out of time apart, with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Error Handling", description: "Tell an error answer, a request that got no answer and one that ran out of time apart, with typed error data, type guards, and middleware-based error hooks.", mode: "both", updated: "2026-11-15" }
 
 ## What a Failed Call Rejects With
 
@@ -61,7 +61,7 @@ try {
 
 ## Error Handling Patterns
 
-### Direct mode — try/catch <ModeBadge mode="direct" />
+### Direct mode — try/catch<ModeBadge mode="direct" />
 
 In Server Components and Server Actions, use standard try/catch to handle errors from `createCaller`:
 
@@ -98,7 +98,7 @@ async function showUser(id: string) {
 }
 ```
 
-### Proxy mode — React Query <ModeBadge mode="proxy" />
+### Proxy mode — React Query<ModeBadge mode="proxy" />
 
 When using `createProxyQueryCaller`, React Query catches errors automatically and exposes them via the `error` property:
 

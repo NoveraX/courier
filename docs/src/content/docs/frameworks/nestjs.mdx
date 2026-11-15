@@ -1,4 +1,4 @@
-export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy", updated: "2026-11-08" }
+export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy", updated: "2026-11-15" }
 
 The `@noverax/courier-nestjs` adapter provides a middleware that integrates Courier into your NestJS application using the standard `MiddlewareConsumer`.
 
@@ -202,7 +202,7 @@ export class AppModule {}
 NestJS guards and interceptors applied globally or to the `api/request` route will execute before the Courier middleware. This lets you add authentication or logging on top of the proxy route using standard NestJS patterns.
 </Callout>
 
-## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
+## Studio integration & `appOrigin`<a id="studio-app-origin"></a>
 
 Wire your NestJS app into Studio with one `attachRuntime()` call, in development alone — [Connect the server](/docs/studio/overview#connect-the-server) says what it does. The Playground sends its proxy calls to the app's origin, which the app learns from the first request a Courier route serves, or from `runtime.appOrigin` in `courier.config.ts` or `COURIER_APP_URL` where Studio cannot see the server: see [How the app learns its origin](/docs/api/config#app-origin).
 

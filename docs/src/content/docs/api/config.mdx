@@ -90,7 +90,7 @@ What `attachRuntime()` needs in the application's process.
 | --- | --- |
 | `appOrigin` | The origin the application listens on, such as `http://localhost:3000`, where Studio's Playground sends its proxy calls — requests, streams and channels alike. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then, in development, the address the server tells of itself: see [How the app learns its origin](#app-origin). A deployed server never learns one. With none of them, a Playground call in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |
 
-### How the app learns its origin <a id="app-origin"></a>
+### How the app learns its origin<a id="app-origin"></a>
 
 In development, with no `appOrigin`, `COURIER_APP_URL` or `APP_URL`, the app learns its origin from the server itself, never from a header a request sends, so a reverse proxy, a tunnel, a container or a `*.localhost` name in front of it needs no setting:
 

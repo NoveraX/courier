@@ -1,4 +1,4 @@
-export const metadata = { title: "Nuxt", description: "Nuxt integration with courierHandler for server routes, createProxyCaller for client-side, and createCaller for server-side data fetching.", mode: "both", updated: "2026-11-06" }
+export const metadata = { title: "Nuxt", description: "Nuxt integration with courierHandler for server routes, createProxyCaller for client-side, and createCaller for server-side data fetching.", mode: "both", updated: "2026-11-15" }
 
 Courier works with Nuxt through the `@noverax/courier-nuxt` adapter. Use `courierHandler` for the server proxy route, `createProxyCaller` for client-side requests, and `createCaller` for server-side data fetching.
 
@@ -269,7 +269,7 @@ export function useCaller() {
 }
 ```
 
-## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
+## Studio integration & `appOrigin`<a id="studio-app-origin"></a>
 
 Wire your Nuxt server into Studio with one `attachRuntime()` call from a Nitro plugin, in development alone — [Connect the server](/docs/studio/overview#connect-the-server) says what it does. The Playground sends its proxy calls to the app's origin, which [Studio's Nuxt module](/docs/studio/overview#nuxt) hands Nitro as `nuxt dev` starts listening. Where Studio cannot see the server, set `runtime.appOrigin` in `courier.config.ts` or `COURIER_APP_URL`: see [How the app learns its origin](/docs/api/config#app-origin).
 

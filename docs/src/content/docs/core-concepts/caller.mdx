@@ -1,4 +1,4 @@
-export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface.", mode: "both", updated: "2026-11-07" }
+export const metadata = { title: "Caller & Proxy", description: "Two transport modes for calling your API — direct and proxy — with the same type-safe interface.", mode: "both", updated: "2026-11-15" }
 
 ## Overview
 
@@ -9,7 +9,7 @@ Courier provides two ways to call your API endpoints. Both share the same `Typed
 | `createCaller(api)` | Direct | Server-side, Node.js, Bun, Deno, scripts |
 | `createProxyCaller(routes.api)` | Proxy | Browser → your server → backend |
 
-## createCaller (Direct Mode) <ModeBadge mode="direct" />
+## createCaller (Direct Mode)<ModeBadge mode="direct" />
 
 Calls your backend directly. Works in any JavaScript runtime with `fetch`.
 
@@ -33,7 +33,7 @@ const user = await caller.users.getById({ id: "1" })
 Use direct mode for server-side code where you have access to the `api` object: Server Components, Server Actions, API routes, CLI scripts, cron jobs.
 </Callout>
 
-## createProxyCaller (Proxy Mode) <ModeBadge mode="proxy" />
+## createProxyCaller (Proxy Mode)<ModeBadge mode="proxy" />
 
 Sends requests through your server's proxy route. The browser never sees your backend URL. The caller takes the routes Courier's plugin for your build gives the page from the endpoints you marked `.expose()`: what a page may call, and how it reaches each — see [Exposing Endpoints](/docs/proxy-mode/expose).
 

@@ -1,12 +1,12 @@
 /**
  * What ends a WebSocket subscription ends that one alone, on a real handler:
  * a push the client subscribes to again in the turn it left it hears the
- * topic; a channel's join refused once its client has left it says nothing
- * to, and ends nothing of, the subscription that took its place; a channel
- * its client left while the log was asked where the topic stands neither
- * joins nor leaves; and of two subscribes to a topic sent while the
- * subscription before them still leaves, the one replaced is ended before
- * it joins, and the one before leaves once.
+ * topic; a channel's join refused, or still sending, once its client has
+ * left it says nothing to, and ends nothing of, the subscription that took
+ * its place; a channel its client left while the log was asked where the
+ * topic stands neither joins nor leaves; and of two subscribes to a topic
+ * sent while the subscription before them still leaves, the one replaced is
+ * ended before it joins, and the one before leaves once.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -127,6 +127,35 @@ describe("ending a subscription", () => {
 
     await expect.poll(() => payloadsOf(socket)).toEqual(["live"]);
     expect(framesFor(socket, "s1")).toEqual([]);
+  });
+
+  it("sends nothing of a join still running once its client left and subscribed again", async () => {
+    const late = Promise.withResolvers<void>();
+    let joins = 0;
+    const room = channel
+      .send<string>()
+      .response<string>()
+      .implement(() => ({
+        onJoin: async (ctx) => {
+          joins += 1;
+          if (joins > 1) return ctx.send("joined again");
+          await late.promise;
+          ctx.send("joined late");
+        },
+        onMessage: () => undefined,
+      }));
+    const { socket } = serve(room);
+    subscribe(socket, "s1");
+    await expect.poll(() => joins).toBe(1);
+    unsubscribe(socket, "u1");
+    await expect.poll(() => answered(socket, "unsubscribed", "u1")).toBe(true);
+    subscribe(socket, "s2");
+    await expect.poll(() => answered(socket, "subscribed", "s2")).toBe(true);
+
+    late.resolve();
+    await settle();
+
+    expect(payloadsOf(socket)).toEqual(["joined again"]);
   });
 
   it("neither joins nor leaves a channel its client left while the log was asked where the topic stands", async () => {

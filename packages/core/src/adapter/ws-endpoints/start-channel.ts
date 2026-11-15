@@ -21,12 +21,13 @@ const log = createLogger("WS");
  * Creates the channel handlers via factory, registers subscription with onMessage,
  * then awaits onJoin. If onJoin throws, the subscription is rolled back.
  *
- * `onLeave` follows each `onJoin`, one that threw too, once. A subscription
- * ended while it opens — the client left it, or subscribed to the topic
- * again, while what it missed was read or `onJoin` ran — is done with: one
- * ended before it joined runs neither, the refusal of an `onJoin` it
- * outlived is logged and said to no one, and nothing it does reaches the
- * subscription that took its place.
+ * `onLeave` runs once for each `onJoin` called — one that threw, or is
+ * still running, too. A subscription ended while it opens — the client left
+ * it, or subscribed to the topic again, while what it missed was read or
+ * `onJoin` ran — is done with: one ended before it joined runs neither,
+ * what an `onJoin` it outlived sends or refuses is said to no one, the
+ * refusal logged, and nothing it does reaches the subscription that took
+ * its place.
  *
  * Error handling:
  * - Factory init throws → rethrown, no subscription registered
@@ -90,6 +91,8 @@ export async function startChannel(
     },
     send: (data) => {
       const payload = outbound(data);
+      /* Ended, it reaches no one: the topic may be another subscription's by now. */
+      if (ended.signal.aborted) return;
       ctx.sendMessage({ type: "data", topic, payload });
       emitChannelMessage(ctx, topic, payload, "data");
     },

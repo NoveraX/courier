@@ -30,7 +30,7 @@ export const chat = defineGroup({
 })
 ```
 
-A channel's `onJoin` runs once its subscription is set up and sent what it missed, and `onLeave` once the subscription ends — its client leaves it or subscribes again, its connection closes, or the channel closes it — after every `onJoin`, one that refused the join too. A subscription its client leaves before it joins runs neither.
+A channel's `onJoin` runs once its subscription is set up and sent what it missed. When the subscription ends — its client leaves it or subscribes again, its connection closes, or the channel closes it — `ctx.signal` fires and `onLeave` runs, once for each `onJoin` called: one that refused the join too, and one still running, which it does not wait for and whose `ctx.send` reaches no one now. A subscription its client leaves before it joins runs neither.
 
 ## Serving a stream
 

@@ -120,6 +120,7 @@ export interface WSChannelContext<TResponse = unknown, TVariables = unknown>
    * Send a typed message to this specific client. It is held to the
    * channel's response schema first: what goes out is the schema's output,
    * and a value that does not match throws a `RealtimeValidationError` here.
+   * Once the subscription has ended, nothing is sent.
    */
   send(data: TResponse): void;
   /**
@@ -154,8 +155,10 @@ export interface ChannelHandlers<TReceive = unknown, TResponse = unknown, TVaria
   onMessage(ctx: WSChannelContext<TResponse, TVariables>, message: TReceive): void | Promise<void>;
   /**
    * Called once the subscription ends — the client unsubscribes, subscribes
-   * again or disconnects, or the channel closes it — after its `onJoin`, one
-   * that threw too; a subscription that never joined calls neither
+   * again or disconnects, or the channel closes it — when its `onJoin` was
+   * called: one that threw too, and one still running, which it does not
+   * wait for; `ctx.signal` has fired by then. A subscription that ended
+   * before it joined calls neither
    */
   onLeave?(ctx: WSChannelContext<TResponse, TVariables>): void | Promise<void>;
 }

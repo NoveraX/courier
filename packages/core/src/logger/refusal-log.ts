@@ -152,7 +152,7 @@ function lineOf(head: string, cause: unknown, fields: RefusalFields | undefined)
 function reasonOf(cause: unknown): string {
   let said: string;
   if (cause instanceof Error) {
-    const message = String(cause.message);
+    const message = messageOf(cause);
     said = message === "" ? cause.name : `${cause.name}: ${message}`;
   } else if (typeof cause === "string") {
     said = cause;
@@ -162,6 +162,19 @@ function reasonOf(cause: unknown): string {
     said = `a thrown ${cause === null ? "null" : typeof cause}`;
   }
   return oneLine(said);
+}
+
+/* An error's message; one with none of its own that gathers others, as the AggregateError Node's
+   connect throws when every address of a host refused, says theirs, each once. */
+function messageOf(error: Error): string {
+  const message = String(error.message);
+  if (message !== "" || !(error instanceof AggregateError) || !Array.isArray(error.errors)) {
+    return message;
+  }
+  const gathered = error.errors.map((inner) =>
+    inner instanceof Error ? String(inner.message) : "",
+  );
+  return [...new Set(gathered.filter((said) => said !== ""))].join("; ");
 }
 
 /* The reason on one line, at most MAX_REASON characters. A cut — of what is read, then of what is

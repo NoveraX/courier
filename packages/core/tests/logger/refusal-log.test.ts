@@ -146,6 +146,23 @@ describe("createRefusalLog", () => {
     expect(printed.warn[1]).not.toContain("s3cr3t");
   });
 
+  it("tells an error with no message that gathers others by their messages, each once", () => {
+    const refusals = createRefusalLog("RedisPubSub");
+    const refused = (address: string) =>
+      Object.assign(new Error(`connect ECONNREFUSED ${address}`), { code: "ECONNREFUSED" });
+
+    refusals.warn(
+      { event: "redis error", code: "ECONNREFUSED" },
+      new AggregateError([refused("::1:6390"), refused("127.0.0.1:6390"), refused("::1:6390")]),
+    );
+    refusals.warn({ event: "redis error", code: "AggregateError" }, new AggregateError([]));
+
+    expect(printed.warn[0]).toContain(
+      'reason="AggregateError: connect ECONNREFUSED ::1:6390; connect ECONNREFUSED 127.0.0.1:6390"',
+    );
+    expect(printed.warn[1]).toContain('reason="AggregateError"');
+  });
+
   it("prints the thrown error with its stack at the debug level only, on a line of its own", () => {
     const refusals = createRefusalLog("WS");
     const error = new Error("invalid token");
